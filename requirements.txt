@@ -4,3 +4,5 @@ djangorestframework
 markdown
 django-filter
 django-reversion
+django-hstore
+pytz
