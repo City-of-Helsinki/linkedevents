@@ -1,0 +1,6 @@
+Django
+django-modeltranslation
+djangorestframework
+markdown
+django-filter
+django-reversion
