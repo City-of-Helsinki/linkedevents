@@ -6,3 +6,7 @@ django-filter
 django-reversion
 django-hstore
 pytz
+requests
+requests_cache
+lxml
+python-dateutil

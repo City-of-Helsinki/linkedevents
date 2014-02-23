@@ -44,6 +44,8 @@ class Event(UpdatableModel):
     description = models.TextField(null=True)
 
     publisher = models.ForeignKey(Organization, db_index=True)
+    origin_id = models.CharField(max_length=50, db_index=True)
+
     location = models.ForeignKey(EventLocation, db_index=True, null=True)
     language = models.ForeignKey(Language, db_index=True, help_text="Set if the event is in a given language")
     image_url = models.URLField(null=True)
@@ -58,5 +60,8 @@ class Event(UpdatableModel):
 
     categories = models.ManyToManyField(EventCategory)
     parent = models.ForeignKey('self', db_index=True)
+
+    class Meta:
+        unique_together = (('publisher', 'origin_id'),)
 
 reversion.register(Event)
