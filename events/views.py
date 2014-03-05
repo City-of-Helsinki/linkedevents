@@ -25,9 +25,9 @@ class EventViewSet(viewsets.ModelViewSet):
         return Response(data)
 
 
-class LocationViewSet(viewsets.ModelViewSet):
-    queryset = EventLocation.objects.all()
-    serializer_class = LocationSerializer
+class PlaceViewSet(viewsets.ModelViewSet):
+    queryset = Place.objects.all()
+    serializer_class = PlaceSerializer
 
 
 class CategoryViewSet(viewsets.ModelViewSet):

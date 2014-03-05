@@ -29,9 +29,9 @@ class CategorySerializer(TranslationAwareSerializer):
         model = EventCategory
 
 
-class LocationSerializer(TranslationAwareSerializer):
+class PlaceSerializer(TranslationAwareSerializer):
     class Meta(TranslationAwareSerializer.Meta):
-        model = EventLocation
+        model = Place
 
 
 class OrganizationSerializer(serializers.HyperlinkedModelSerializer):

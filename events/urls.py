@@ -4,7 +4,7 @@ from events import views
 
 router = routers.DefaultRouter()
 router.register(r'events', views.EventViewSet)
-router.register(r'locations', views.LocationViewSet)
+router.register(r'places', views.PlaceViewSet)
 router.register(r'organizations', views.OrganizationViewSet)
 router.register(r'categories', views.CategoryViewSet)
 router.register(r'languages', views.LanguageViewSet)

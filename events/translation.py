@@ -12,9 +12,9 @@ class EventCategoryTranslationOptions(TranslationOptions):
 translator.register(EventCategory, EventCategoryTranslationOptions)
 
 
-class EventLocationTranslationOptions(TranslationOptions):
+class PlaceTranslationOptions(TranslationOptions):
     fields = ('name', 'description')
-translator.register(EventLocation, EventLocationTranslationOptions)
+translator.register(Place, PlaceTranslationOptions)
 
 
 class EventTranslationOptions(TranslationOptions):
