@@ -8,3 +8,4 @@ local_settings.py
 static/CACHE
 media/
 .vagrant/
+.idea

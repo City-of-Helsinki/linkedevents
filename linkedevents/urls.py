@@ -1,12 +1,11 @@
-from django.conf.urls import patterns, include, url
+from django.conf.urls import *
+from django.views.generic import RedirectView
 
 from django.contrib import admin
 admin.autodiscover()
 
 urlpatterns = patterns('',
-    # Examples:
-    # url(r'^$', 'linkedevents.views.home', name='home'),
-    # url(r'^blog/', include('blog.urls')),
-
+    url(r'^v1/', include('events.urls')),
     url(r'^admin/', include(admin.site.urls)),
+    url(r'^$', RedirectView.as_view(url='v1/', permanent=False)),
 )

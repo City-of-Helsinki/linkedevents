@@ -1,5 +1,5 @@
 from modeltranslation.translator import translator, TranslationOptions
-from events.models import Language, EventCategory, EventLocation, Event
+from models import *
 
 
 class LanguageTranslationOptions(TranslationOptions):
