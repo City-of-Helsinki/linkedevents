@@ -11,7 +11,7 @@ class EventViewSet(viewsets.ModelViewSet):
     serializer_class = EventSerializer
 
     def list(self, request, *args, **kwargs):
-        args = {} if 'show_all' in request.QUERY_PARAMS else {'event_status': 'scheduled'}
+        args = {} if 'show_all' in request.QUERY_PARAMS else {'event_status': Event.SCHEDULED}
 
         if 'from' in request.QUERY_PARAMS:
             args['start_date__gte'] = request.QUERY_PARAM['from']
@@ -31,7 +31,7 @@ class PlaceViewSet(viewsets.ModelViewSet):
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
-    queryset = EventCategory.objects.all()
+    queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
 

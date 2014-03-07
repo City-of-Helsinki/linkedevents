@@ -9,3 +9,4 @@ static/CACHE
 media/
 .vagrant/
 .idea
+*.iml

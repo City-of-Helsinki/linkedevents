@@ -7,9 +7,9 @@ class LanguageTranslationOptions(TranslationOptions):
 translator.register(Language, LanguageTranslationOptions)
 
 
-class EventCategoryTranslationOptions(TranslationOptions):
+class CategoryTranslationOptions(TranslationOptions):
     fields = ('name', 'description')
-translator.register(EventCategory, EventCategoryTranslationOptions)
+translator.register(Category, CategoryTranslationOptions)
 
 
 class PlaceTranslationOptions(TranslationOptions):

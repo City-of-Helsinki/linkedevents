@@ -7,7 +7,7 @@ class EventModelAdmin(TranslationAdmin, reversion.VersionAdmin):
     pass
 
 
-class EventCategoryAdmin(TranslationAdmin, reversion.VersionAdmin):
+class CategoryAdmin(TranslationAdmin, reversion.VersionAdmin):
     pass
 
 
@@ -23,7 +23,7 @@ class LanguageAdmin(reversion.VersionAdmin):
     pass
 
 admin.site.register(Event, EventModelAdmin)
-admin.site.register(EventCategory, EventCategoryAdmin)
+admin.site.register(Category, CategoryAdmin)
 admin.site.register(Place, PlaceAdmin)
 admin.site.register(Offer)
 admin.site.register(Organization, OrganizationAdmin)
