@@ -1,6 +1,19 @@
 # -*- coding: utf-8 -*-
 from django.conf import settings
 from rest_framework import serializers
+from events.models import Event
+
+
+class EventStatusTypeField(serializers.WritableField):
+    def to_native(self, obj):
+        for i, v in enumerate(Event.STATUSES):
+            if v[0] == obj:
+                return v[1]
+
+    def from_native(self, data):
+        for i, v in enumerate(Event.STATUSES):
+            if v[1] == data:
+                return v[0]
 
 
 class TranslatedField(serializers.WritableField):

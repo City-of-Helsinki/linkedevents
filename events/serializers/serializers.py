@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+import re
 
 from rest_framework import serializers
 
 from events.models import *
-from fields import TranslatedField
+from fields import TranslatedField, EventStatusTypeField
 from django.conf import settings
 from itertools import chain
 
@@ -38,8 +39,13 @@ class LinkedEventsSerializer(serializers.ModelSerializer):
         self.hide_ld_context = hide_ld_context
 
     @staticmethod
-    def convert_to_camel_case(word):
-        return ''.join(word.title() if i else word for i, word in enumerate(word.split('_')))
+    def convert_to_camelcase(s):
+        return ''.join(word.title() if i else word for i, word in enumerate(s.split('_')))
+
+    @staticmethod
+    def convert_from_camelcase(s):
+        return re.sub(r'(^|[a-z])([A-Z])',
+                      lambda m: '_'.join([i.lower() for i in m.groups() if i]), s)
 
     def to_native(self, obj):
         ret = self._dict_class()
@@ -53,7 +59,7 @@ class LinkedEventsSerializer(serializers.ModelSerializer):
             if field.read_only and obj is None:
                 continue
             field.initialize(parent=self, field_name=field_name)
-            key = LinkedEventsSerializer.convert_to_camel_case(self.get_field_key(field_name))
+            key = LinkedEventsSerializer.convert_to_camelcase(self.get_field_key(field_name))
             value = field.field_to_native(obj, field_name)
             method = getattr(self, 'transform_%s' % field_name, None)
             if callable(method):
@@ -61,8 +67,33 @@ class LinkedEventsSerializer(serializers.ModelSerializer):
             if not getattr(field, 'write_only', False):
                 ret[key] = value
             ret.fields[key] = self.augment_field(field, field_name, key, value)
-
         return ret
+
+    @staticmethod
+    def rename_fields(dataz):
+        if isinstance(dataz, dict):
+            new_data = dict()
+            for key, value in dataz.iteritems():
+                newkey = LinkedEventsSerializer.convert_from_camelcase(key)
+                if isinstance(value, (dict, list)):
+                    new_data[newkey] = LinkedEventsSerializer.rename_fields(value)
+                else:
+                    new_data[newkey] = value
+            return new_data
+        elif isinstance(dataz, list):
+            new_data = []
+            for value in dataz:
+                if isinstance(value, (dict, list)):
+                    new_data.append(LinkedEventsSerializer.rename_fields(value))
+                else:
+                    new_data.append(value)
+            return new_data
+
+    def from_native(self, data, files):
+        converted_data = LinkedEventsSerializer.rename_fields(data)
+        instance = super(LinkedEventsSerializer, self).from_native(converted_data, files)
+        if not self._errors:
+            return self.full_clean(instance)
 
 
 class TranslationAwareSerializer(LinkedEventsSerializer):
@@ -105,6 +136,7 @@ class EventSerializer(TranslationAwareSerializer):
     publisher = OrganizationSerializer(hide_ld_context=True)
     categories = CategorySerializer(many=True, allow_add_remove=True, hide_ld_context=True)
     offers = OfferSerializer(many=True, allow_add_remove=True, hide_ld_context=True)
+    event_status = EventStatusTypeField()
 
     class Meta(TranslationAwareSerializer.Meta):
         model = Event
