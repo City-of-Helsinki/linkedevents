@@ -1,10 +1,11 @@
 import os
-
+import logging
 
 class Importer(object):
     def __init__(self, options):
         super(Importer, self).__init__()
         self.options = options
+        self.logger = logging.getLogger(__name__)
 
 importers = {}
 

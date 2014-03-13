@@ -2,6 +2,7 @@ import re
 import dateutil.parser
 import requests
 import requests_cache
+from collections import defaultdict
 from lxml import etree
 
 from .sync import ModelSyncher
@@ -28,28 +29,169 @@ def clean_text(text):
 def matko_tag(tag):
     return '{https://aspicore-asp.net/matkoschema/}' + tag
 
+def matko_status(num):
+    return {
+        2: 'EventScheduled',
+        3: 'EventCancelled'
+    }[num]
+
+def text(item, tag):
+    return item.find(matko_tag(tag)).text
+
+def standardize_event_types(types):
+    # fixme align with existing categories
+    pass
+
+# Using a recursive default dictionary
+# allows easy updating of same data
+# with different languages on different passes.
+def recur_dict(): return defaultdict(recur_dict)
+
+def put(rdict, key, val):
+    if key not in rdict:
+        rdict[key] = val
+    elif val != rdict[key]:
+        logger.info('Values differ for %s, key %s, values %s and %s ' % (
+                rdict, key, val, rdict[key]))
+
+def zipcode_and_muni(text):
+    if text is None:
+        return None, None
+    m = re.match(r'(\d+)\s+(\D+)', text)
+    if m is not None:
+        return m.group(1, 2)
+    return None, None
+
 @register_importer
 class MatkoImporter(Importer):
     name = "matko"
 
-    def _import_events_from_feed(self, lang_code, items):
-        for item in items:
-            title = clean_text(item.find('title').text)
-            print title.encode('utf8')
-            start_time = dateutil.parser.parse(item.find(matko_tag('starttime')).text)
-            print start_time
+    def _import_common(self, lang_code, item, result):
+        result['source'] = 'matko'
 
-    def import_events(self):
-        print("Importing Matko events")
-        url = MATKO_URLS['events']['fi']
-        requests_cache.install_cache('matko')
+        result['name'][lang_code] = clean_text(item.find('title').text)
+        result['description'][lang_code] = item.find('description').text
+
+        link = item.find('link')
+        if link is not None:
+            result['link'][lang_code] = link.text
+
+        result['published'] = dateutil.parser.parse(item.find('pubDate').text)
+
+        typestring = text(item, 'type2') or text(item, 'type1')
+        if typestring is not None:
+            types = [t.strip() for t in typestring.split(",")]
+            # The first letter is always capitalized in the source.
+            types[0] = types[0].lower()
+            put(result, 'types', types)
+
+    def _import_events_from_feed(self, lang_code, items, events):
+        for item in items:
+            eid = int(text(item, 'uniqueid'))
+            event = events[eid]
+
+            if eid != int(text(item, 'id')):
+                self.logger.info(
+                    'Unique id and id values differ for id %d uid %s' % (
+                        eid, text(item, 'id')))
+
+            event['id'] = eid
+
+            self._import_common(lang_code, item, event)
+
+            organizer = text(item, 'organizer')
+            organizer_phone = text(item, 'organizerphone')
+
+            if organizer is not None:
+                event['organizer']['name'][lang_code] = clean_text(organizer)
+            if organizer_phone is not None:
+                event['organizer']['phone'][lang_code] = [
+                    clean_text(t) for t in organizer_phone.split(",")]
+
+            start_time = dateutil.parser.parse(
+                text(item, 'starttime'))
+            end_time = dateutil.parser.parse(
+                text(item, 'endtime'))
+
+            standardize_event_types(event['types'])
+
+            put(event, 'start', start_time)
+            put(event, 'end', end_time)
+            put(event, 'status', matko_status(int(
+                text(item, 'status'))))
+            put(event, 'matko_location_id', int(
+                text(item, 'placeuniqueid')))
+
+        return events
+
+    def _import_locations_from_feed(self, lang_code, items, locations):
+        for item in items:
+            if text(item, 'isvenue') == 'False':
+                continue
+
+            lid = int(text(item, 'id'))
+            location = locations[lid]
+
+            location['id'] = lid
+            location['source'] = 'matko'
+
+            self._import_common(lang_code, item, location)
+            address = text(item, 'address')
+            if address is not None:
+                location['address']['street'][lang_code] = clean_text(address)
+
+            zipcode, muni = zipcode_and_muni(text(item, 'zipcode'))
+            location['address']['zip'] = zipcode
+            location['address']['municipality'][lang_code] = muni
+
+            location['phone'][lang_code] = text(item, 'phone')
+            location['fax'][lang_code] = text(item, 'fax')
+            # There was at least one case with different
+            # email addresses for different languages.
+            location['email'][lang_code] = text(item, 'email')
+            location['directions'][lang_code] = text(item, 'location')
+            location['opening_hours'][lang_code] = text(item, 'open')
+            location['admission_fee'][lang_code] = text(item, 'admission')
+            location['accessibility'][lang_code] = text(item, 'disabled')
+
+            lon, lat = text(item, 'longitude'), text(item, 'latitude')
+            if lon != '0' and lat != '0':
+                put(location, 'geo', {
+                    'longitude': lon,
+                    'latitude':  lat})
+
+        return locations
+
+    def _import_organizers_from_events(self, events):
+        organizers = recur_dict()
+        for k, event in events.items():
+            if 'organizer' in event:
+                organizer = event['organizer']
+                oid = organizer['name']['fi']
+                organizers[oid]['name'].update(organizer['name'])
+                organizers[oid]['phone'].update(organizer['phone'])
+        return organizers
+
+    def items_from_url(self, url):
         resp = requests.get(url)
         assert resp.status_code == 200
         root = etree.fromstring(resp.content)
-        items = root.xpath('channel/item')
-        self._import_events_from_feed('fi', items)
-        pass
+        return root.xpath('channel/item')
+
+    def import_events(self):
+        print("Importing Matko events")
+        requests_cache.install_cache('matko')
+        events = recur_dict()
+        for lang, url in MATKO_URLS['events'].iteritems():
+            items = self.items_from_url(url)
+            self._import_events_from_feed(lang, items, events)
+            organizers = self._import_organizers_from_events(events)
+        #return events, organizers
 
     def import_locations(self):
         print("Importing Matko locations")
-        pass
+        locations = recur_dict()
+        for lang, url in MATKO_URLS['locations'].iteritems():
+            items = self.items_from_url(url)
+            self._import_locations_from_feed(lang, items, locations)
+        #return locations
