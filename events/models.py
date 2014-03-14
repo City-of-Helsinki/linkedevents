@@ -70,8 +70,8 @@ class Language(BaseModel):
 class Person(BaseModel):
     family_name = models.CharField(max_length=255, null=True, blank=True)
     email = models.EmailField(null=True, blank=True)
-    #creator = models.ForeignKey('self', null=True, blank=True, related_name='person_creators')  # TODO: Person or Organization
-    #editor = models.ForeignKey('self', null=True, blank=True, related_name='person_editors')  # TODO: Person or Organization
+    creator = models.ForeignKey('self', null=True, blank=True, related_name='person_creators')  # TODO: Person or Organization
+    editor = models.ForeignKey('self', null=True, blank=True, related_name='person_editors')  # TODO: Person or Organization
     # Custom fields
     username = models.CharField(max_length=255, null=True, blank=True)
     password = models.CharField(max_length=255, null=True, blank=True)
@@ -86,8 +86,8 @@ class Organization(BaseModel):
     description = models.TextField(null=True, blank=True)
     base_IRI = models.CharField(max_length=200, null=True, blank=True)
     compact_IRI_name = models.CharField(max_length=200, null=True, blank=True)
-    #creator = models.ForeignKey(Person, null=True, blank=True, related_name='organization_creators')  # TODO: Person or Organization
-    #editor = models.ForeignKey(Person, null=True, blank=True, related_name='organization_editors')  # TODO: Person or Organization
+    creator = models.ForeignKey(Person, null=True, blank=True, related_name='organization_creators')  # TODO: Person or Organization
+    editor = models.ForeignKey(Person, null=True, blank=True, related_name='organization_editors')  # TODO: Person or Organization
 
     class Meta:
         verbose_name = _('Organization')
@@ -102,8 +102,8 @@ class Category(MPTTModel, BaseModel, SchemalessFieldMixin):
     # category_for = models.CharField(max_length=255, null=True, blank=True)
     same_as = models.CharField(max_length=255, null=True, blank=True)
     parent_category = TreeForeignKey('self', null=True, blank=True)
-    #creator = models.ForeignKey(Person, null=True, blank=True, related_name='category_creators')  # TODO: Person or Organization
-    #editor = models.ForeignKey(Person, null=True, blank=True, related_name='category_editors')  # TODO: Person or Organization
+    creator = models.ForeignKey(Person, null=True, blank=True, related_name='category_creators')  # TODO: Person or Organization
+    editor = models.ForeignKey(Person, null=True, blank=True, related_name='category_editors')  # TODO: Person or Organization
 
     class Meta:
         verbose_name = _('Category')
@@ -137,8 +137,8 @@ class Place(BaseModel, SchemalessFieldMixin):
     logo = models.CharField(max_length=255, null=True, blank=True)
     map = models.CharField(max_length=255, null=True, blank=True)
     #contained_in = TreeForeignKey('self', null=True, blank=True, related_name='children')
-    #creator = models.ForeignKey(Person, null=True, blank=True, related_name='place_creators')  # TODO: Person or Organization
-    #editor = models.ForeignKey(Person, null=True, blank=True, related_name='place_editors')  # TODO: Person or Organization
+    creator = models.ForeignKey(Person, null=True, blank=True, related_name='place_creators')  # TODO: Person or Organization
+    editor = models.ForeignKey(Person, null=True, blank=True, related_name='place_editors')  # TODO: Person or Organization
 
     class Meta:
         verbose_name = _('Place')
@@ -218,8 +218,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     description = models.TextField(null=True)
 
     # Properties from schema.org/CreativeWork
-    # creator = models.ForeignKey(Person, null=True, blank=True, related_name='event_creators')  # TODO: Person or Organization
-    # editor = models.ForeignKey(Person, null=True, blank=True, related_name='event_editors')  # TODO: Person or Organization
+    creator = models.ForeignKey(Person, null=True, blank=True, related_name='event_creators')  # TODO: Person or Organization
+    editor = models.ForeignKey(Person, null=True, blank=True, related_name='event_editors')  # TODO: Person or Organization
 
     # Properties from schema.org/Event
     door_time = models.TimeField(null=True, blank=True)
