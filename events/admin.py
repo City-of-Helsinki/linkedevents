@@ -22,9 +22,14 @@ class OrganizationAdmin(reversion.VersionAdmin):
 class LanguageAdmin(reversion.VersionAdmin):
     pass
 
+
+class PersonAdmin(reversion.VersionAdmin):
+    pass
+
 admin.site.register(Event, EventModelAdmin)
 admin.site.register(Category, CategoryAdmin)
 admin.site.register(Place, PlaceAdmin)
 admin.site.register(Offer)
 admin.site.register(Organization, OrganizationAdmin)
 admin.site.register(Language, LanguageAdmin)
+admin.site.register(Person, PersonAdmin)

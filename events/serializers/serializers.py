@@ -119,13 +119,29 @@ class TranslationAwareSerializer(LinkedEventsSerializer):
                                             for code, _ in settings.LANGUAGES)))
 
 
+class PersonSerializer(TranslationAwareSerializer):
+    # Fallback to URL references to get around of circular serializer problem
+    creator = serializers.HyperlinkedRelatedField(view_name='person-detail')
+    editor = serializers.HyperlinkedRelatedField(view_name='person-detail')
+
+    class Meta(TranslationAwareSerializer.Meta):
+        model = Person
+        exclude = TranslationAwareSerializer.Meta.exclude + mptt_fields
+
+
 class CategorySerializer(TranslationAwareSerializer):
+    creator = PersonSerializer(hide_ld_context=True)
+    editor = PersonSerializer(hide_ld_context=True)
+
     class Meta(TranslationAwareSerializer.Meta):
         model = Category
         exclude = TranslationAwareSerializer.Meta.exclude + mptt_fields
 
 
 class PlaceSerializer(TranslationAwareSerializer):
+    creator = PersonSerializer(hide_ld_context=True)
+    editor = PersonSerializer(hide_ld_context=True)
+
     class Meta(TranslationAwareSerializer.Meta):
         model = Place
 
@@ -146,6 +162,9 @@ class GeoShapeSerializer(LinkedEventsSerializer):
 
 
 class OrganizationSerializer(LinkedEventsSerializer):
+    creator = PersonSerializer(hide_ld_context=True)
+    editor = PersonSerializer(hide_ld_context=True)
+
     class Meta(TranslationAwareSerializer.Meta):
         model = Organization
 
@@ -160,16 +179,14 @@ class OfferSerializer(LinkedEventsSerializer):
         model = Offer
 
 
-class PersonSerializer(LinkedEventsSerializer):
-    class Meta:
-        model = Person
-
-
 class EventSerializer(TranslationAwareSerializer):
     location = PlaceSerializer(hide_ld_context=True)
     publisher = OrganizationSerializer(hide_ld_context=True)
     category = CategorySerializer(many=True, allow_add_remove=True, hide_ld_context=True)
     offers = OfferSerializer(many=True, allow_add_remove=True, hide_ld_context=True)
+    creator = PersonSerializer(hide_ld_context=True)
+    editor = PersonSerializer(hide_ld_context=True)
+
     event_status = EnumChoiceField(Event.STATUSES)
 
     class Meta(TranslationAwareSerializer.Meta):

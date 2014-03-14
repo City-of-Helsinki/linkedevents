@@ -68,6 +68,7 @@ class Language(BaseModel):
 
 
 class Person(BaseModel):
+    description = models.TextField(null=True, blank=True)
     family_name = models.CharField(max_length=255, null=True, blank=True)
     email = models.EmailField(null=True, blank=True)
     creator = models.ForeignKey('self', null=True, blank=True, related_name='person_creators')  # TODO: Person or Organization
@@ -80,6 +81,8 @@ class Person(BaseModel):
 
     class Meta:
         verbose_name = _('Person')
+
+reversion.register(Person)
 
 
 class Organization(BaseModel):
@@ -136,15 +139,15 @@ class Place(BaseModel, SchemalessFieldMixin):
     point = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     logo = models.CharField(max_length=255, null=True, blank=True)
     map = models.CharField(max_length=255, null=True, blank=True)
-    contained_in = TreeForeignKey('self', null=True, blank=True, related_name='children')
+    #contained_in = TreeForeignKey('self', null=True, blank=True, related_name='children')
     creator = models.ForeignKey(Person, null=True, blank=True, related_name='place_creators')  # TODO: Person or Organization
     editor = models.ForeignKey(Person, null=True, blank=True, related_name='place_editors')  # TODO: Person or Organization
 
     class Meta:
         verbose_name = _('Place')
 
-    class MPTTMeta:
-        parent_attr = 'contained_in'
+    # class MPTTMeta:
+    #     parent_attr = 'contained_in'
 
 reversion.register(Place)
 
@@ -182,7 +185,7 @@ class GeoCoordinates(models.Model):
 
 
 class Offer(BaseModel):
-    #available_at_or_from = models.ForeignKey(Place, null=True, blank=True)
+    available_at_or_from = models.ForeignKey(Place, null=True, blank=True)
     price = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     price_currency = models.CharField(max_length=3, null=True, blank=True)
     seller = models.CharField(max_length=255, null=True, blank=True)

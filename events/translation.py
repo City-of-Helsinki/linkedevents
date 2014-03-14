@@ -20,3 +20,7 @@ translator.register(Place, PlaceTranslationOptions)
 class EventTranslationOptions(TranslationOptions):
     fields = ('name', 'description')
 translator.register(Event, EventTranslationOptions)
+
+class PersonTranslationOptions(TranslationOptions):
+    fields = ('name', 'description')
+translator.register(Person, PersonTranslationOptions)
