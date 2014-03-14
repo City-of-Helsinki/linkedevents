@@ -136,7 +136,7 @@ class Place(BaseModel, SchemalessFieldMixin):
     point = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     logo = models.CharField(max_length=255, null=True, blank=True)
     map = models.CharField(max_length=255, null=True, blank=True)
-    #contained_in = TreeForeignKey('self', null=True, blank=True, related_name='children')
+    contained_in = TreeForeignKey('self', null=True, blank=True, related_name='children')
     creator = models.ForeignKey(Person, null=True, blank=True, related_name='place_creators')  # TODO: Person or Organization
     editor = models.ForeignKey(Person, null=True, blank=True, related_name='place_editors')  # TODO: Person or Organization
 
