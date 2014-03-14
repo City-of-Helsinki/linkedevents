@@ -8,6 +8,7 @@ router.register(r'places', views.PlaceViewSet)
 router.register(r'organizations', views.OrganizationViewSet)
 router.register(r'categories', views.CategoryViewSet)
 router.register(r'languages', views.LanguageViewSet)
+router.register(r'persons', views.PersonViewSet)
 
 #urlpatterns = router.urls
 urlpatterns = patterns(

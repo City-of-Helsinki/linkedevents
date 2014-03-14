@@ -12,7 +12,7 @@ class LinkedEventsSerializerTestCase(SimpleTestCase):
         self.assertEquals(LinkedEventsSerializer.convert_from_camelcase('LoremIpsumIndaHouse'), 'lorem_ipsum_inda_house')
         self.assertEquals(LinkedEventsSerializer.convert_from_camelcase('startsWithSmall'), 'starts_with_small')
 
-    def test_from_camelcase_conversions(self):
+    def test_to_camelcase_conversions(self):
         self.assertEquals(LinkedEventsSerializer.convert_to_camelcase('lorem_ipsum_inda_house'), 'loremIpsumIndaHouse')
 
     def test_dict_structure_conversions(self):

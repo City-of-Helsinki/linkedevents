@@ -160,6 +160,11 @@ class OfferSerializer(LinkedEventsSerializer):
         model = Offer
 
 
+class PersonSerializer(LinkedEventsSerializer):
+    class Meta:
+        model = Person
+
+
 class EventSerializer(TranslationAwareSerializer):
     location = PlaceSerializer(hide_ld_context=True)
     publisher = OrganizationSerializer(hide_ld_context=True)
