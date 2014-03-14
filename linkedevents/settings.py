@@ -35,6 +35,7 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.contenttypes',
     'south',
     'corsheaders',
     'rest_framework',
@@ -43,6 +44,8 @@ INSTALLED_APPS = (
     'modeltranslation',
     'reversion',
     'events',
+    'polymorphic',
+
 )
 
 MIDDLEWARE_CLASSES = (

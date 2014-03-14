@@ -4,19 +4,43 @@ from rest_framework import serializers
 from events.models import Event
 
 
-class EventStatusTypeField(serializers.WritableField):
+def get_value_from_tuple_list(list_of_tuples, search_key, value_index):
+    """
+    Find "value" from list of tuples by using the other value in tuple as a search key and other as a returned value
+    :param list_of_tuples: tuples to be searched
+    :param search_key: search key used to find right tuple
+    :param value_index: Index telling which side of tuple is returned and which is used as a key
+    :return: Value from either side of tuple
+    """
+    for i, v in enumerate(list_of_tuples):
+        if v[value_index ^ 1] == search_key:
+            return v[value_index]
+
+
+class EnumChoiceField(serializers.WritableField):
+    """
+    Database value of tinyint is converted to and from a string representation of choice field
+
+    TODO: Find if there's standardized way to render Schema.org enumeration instances in JSON-LD
+    """
+
+    def __init__(self, choices, prefix=''):
+        self.choices = choices
+        self.prefix = prefix
+        super(EnumChoiceField, self).__init__()
+
     def to_native(self, obj):
-        for i, v in enumerate(Event.STATUSES):
-            if v[0] == obj:
-                return v[1]
+        return self.prefix + get_value_from_tuple_list(self.choices, obj, 1)
 
     def from_native(self, data):
-        for i, v in enumerate(Event.STATUSES):
-            if v[1] == data:
-                return v[0]
+        return get_value_from_tuple_list(self.choices, self.prefix + data, 0)
 
 
 class TranslatedField(serializers.WritableField):
+    """
+    Modeltranslation library generates i18n fields to given languages.
+    Here i18n data is converted to more JSON friendly syntax.
+    """
     def field_to_native(self, obj, field_name):
         # If source is given, use it as the attribute(chain) of obj to be
         # translated and ignore the original field_name

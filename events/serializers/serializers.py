@@ -5,10 +5,11 @@ import re
 from rest_framework import serializers
 
 from events.models import *
-from fields import TranslatedField, EventStatusTypeField
+from fields import *
 from django.conf import settings
 from itertools import chain
 
+# JSON exclusion list of MPTT's custom fields
 mptt_fields = ['lft', 'rght', 'tree_id', 'level']
 
 
@@ -48,12 +49,22 @@ class LinkedEventsSerializer(serializers.ModelSerializer):
                       lambda m: '_'.join([i.lower() for i in m.groups() if i]), s)
 
     def to_native(self, obj):
+        """
+        Before sending response there's a need to do additional work on to-be-JSON dictionary data
+            1. Add @context and @type fields
+            2. Convert underscored Django fields to Schema.org's camelCase format.
+        """
         ret = self._dict_class()
         ret.fields = self._dict_class()
 
         if not self.hide_ld_context:
             ret['@context'] = 'http://schema.org'
-        ret['@type'] = obj.__class__.__name__
+        # use schema_org_type attribute present,
+        # if not fallback to automatic resolution by model name.
+        if hasattr(obj, 'schema_org_type'):
+            ret['@type'] = obj.schema_org_type
+        else:
+            ret['@type'] = obj.__class__.__name__
 
         for field_name, field in self.fields.items():
             if field.read_only and obj is None:
@@ -90,6 +101,9 @@ class LinkedEventsSerializer(serializers.ModelSerializer):
             return new_data
 
     def from_native(self, data, files):
+        """
+        Convert camelCased JSON fields to django/db friendly underscore format before validating/saving
+        """
         converted_data = LinkedEventsSerializer.rename_fields(data)
         instance = super(LinkedEventsSerializer, self).from_native(converted_data, files)
         if not self._errors:
@@ -116,6 +130,21 @@ class PlaceSerializer(TranslationAwareSerializer):
         model = Place
 
 
+class OpeningHoursSpecificationSerializer(LinkedEventsSerializer):
+    class Meta:
+        model = OpeningHoursSpecification
+
+
+class PostalAddressSerializer(LinkedEventsSerializer):
+    class Meta:
+        model = PostalAddress
+
+
+class GeoShapeSerializer(LinkedEventsSerializer):
+    class Meta:
+        model = GeoShape
+
+
 class OrganizationSerializer(LinkedEventsSerializer):
     class Meta(TranslationAwareSerializer.Meta):
         model = Organization
@@ -134,9 +163,9 @@ class OfferSerializer(LinkedEventsSerializer):
 class EventSerializer(TranslationAwareSerializer):
     location = PlaceSerializer(hide_ld_context=True)
     publisher = OrganizationSerializer(hide_ld_context=True)
-    categories = CategorySerializer(many=True, allow_add_remove=True, hide_ld_context=True)
+    category = CategorySerializer(many=True, allow_add_remove=True, hide_ld_context=True)
     offers = OfferSerializer(many=True, allow_add_remove=True, hide_ld_context=True)
-    event_status = EventStatusTypeField()
+    event_status = EnumChoiceField(Event.STATUSES)
 
     class Meta(TranslationAwareSerializer.Meta):
         model = Event

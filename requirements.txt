@@ -8,10 +8,12 @@ django-filter==0.7
 django-hstore==1.2.1
 django-modeltranslation==0.7.3
 django-mptt==0.6.0
+django-polymorphic==0.5.3
 django-reversion==1.8.0
 djangorestframework==2.3.12
 docutils==0.11
 lxml==3.3.1
+pdoc==0.2.1
 psycopg2==2.5.2
 python-dateutil==2.2
 pytz==2013.9
