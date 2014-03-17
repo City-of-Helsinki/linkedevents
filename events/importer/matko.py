@@ -32,13 +32,17 @@ def matko_tag(tag):
     return '{https://aspicore-asp.net/matkoschema/}' + tag
 
 def matko_status(num):
-    return {
-        2: 'EventScheduled',
-        3: 'EventCancelled'
-    }[num]
+    if num == 2:
+        return Event.SCHEDULED
+    if num == 3:
+        return Event.CANCELLED
+    return None
+
+def unicodetext(item):
+    return etree.tostring(item, encoding='unicode', method='text')
 
 def text(item, tag):
-    return item.find(matko_tag(tag)).text
+    return unicodetext(item.find(matko_tag(tag)))
 
 def standardize_event_types(types):
     # fixme align with existing categories
@@ -73,15 +77,15 @@ class MatkoImporter(Importer):
 
     def _import_common(self, lang_code, item, result):
         result['source'] = 'matko'
-
-        result['name'][lang_code] = clean_text(item.find('title').text)
-        result['description'][lang_code] = item.find('description').text
+        
+        result['name'][lang_code] = clean_text(unicodetext(item.find('title')))
+        result['description'][lang_code] = unicodetext(item.find('description'))
 
         link = item.find('link')
         if link is not None:
-            result['link'][lang_code] = link.text
+            result['link'][lang_code] = unicodetext(link)
 
-        result['published'] = dateutil.parser.parse(item.find('pubDate').text)
+        result['published'] = dateutil.parser.parse(unicodetext(item.find('pubDate')))
 
         typestring = text(item, 'type2') or text(item, 'type1')
         if typestring is not None:
@@ -101,7 +105,7 @@ class MatkoImporter(Importer):
                         eid, text(item, 'id')))
 
             event['id'] = eid
-            event['sameas'] = item.find('guid').text
+            event['same_as'] = unicodetext(item.find('guid'))
 
             self._import_common(lang_code, item, event)
 
@@ -126,7 +130,7 @@ class MatkoImporter(Importer):
 
             put(event, 'start', start_time)
             put(event, 'end', end_time)
-            put(event, 'status', matko_status(int(
+            put(event, 'event_status', matko_status(int(
                 text(item, 'status'))))
             put(event, 'matko_location_id', int(
                 text(item, 'placeuniqueid')))
@@ -196,15 +200,11 @@ class MatkoImporter(Importer):
             organizers = self._import_organizers_from_events(events)
 
         events = events.values()
-        events = self.link_recurring_events(
-            events, instance_fields=['id', 'sameas', 'start', 'end', 'published'])
-
-        # for eid, event in events:
-        #     eventobject = Event.objects.get_or_create(
-        #         same_as = ""
-        #     )
+        parents, events = self.link_recurring_events(
+            events, instance_fields=['id', 'same_as', 'start', 'end', 'published'])
+        for parent in parents:
+            self.save_children_through_parent(parent)
         return events, organizers
-        #return events, organizers
 
     def import_locations(self):
         print("Importing Matko locations")
