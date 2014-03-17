@@ -5,6 +5,8 @@ import requests_cache
 from collections import defaultdict
 from lxml import etree
 
+from events.models import *
+
 from .sync import ModelSyncher
 from .base import Importer, register_importer
 
@@ -66,6 +68,9 @@ def zipcode_and_muni(text):
 class MatkoImporter(Importer):
     name = "matko"
 
+    def setup(self):
+        requests_cache.install_cache('matko')
+
     def _import_common(self, lang_code, item, result):
         result['source'] = 'matko'
 
@@ -96,6 +101,7 @@ class MatkoImporter(Importer):
                         eid, text(item, 'id')))
 
             event['id'] = eid
+            event['sameas'] = item.find('guid').text
 
             self._import_common(lang_code, item, event)
 
@@ -110,8 +116,11 @@ class MatkoImporter(Importer):
 
             start_time = dateutil.parser.parse(
                 text(item, 'starttime'))
-            end_time = dateutil.parser.parse(
-                text(item, 'endtime'))
+
+            # The feed doesn't contain proper end times.
+            end_time = None
+            # end_time = dateutil.parser.parse(
+            #     text(item, 'endtime'))
 
             standardize_event_types(event['types'])
 
@@ -180,12 +189,21 @@ class MatkoImporter(Importer):
 
     def import_events(self):
         print("Importing Matko events")
-        requests_cache.install_cache('matko')
         events = recur_dict()
         for lang, url in MATKO_URLS['events'].iteritems():
             items = self.items_from_url(url)
             self._import_events_from_feed(lang, items, events)
             organizers = self._import_organizers_from_events(events)
+
+        events = events.values()
+        events = self.link_recurring_events(
+            events, instance_fields=['id', 'sameas', 'start', 'end', 'published'])
+
+        # for eid, event in events:
+        #     eventobject = Event.objects.get_or_create(
+        #         same_as = ""
+        #     )
+        return events, organizers
         #return events, organizers
 
     def import_locations(self):
