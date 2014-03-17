@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Models are modeled after schema.org.
 
@@ -21,6 +22,8 @@ from django_hstore import hstore
 from django.utils.translation import ugettext_lazy as _
 from mptt.models import MPTTModel, TreeForeignKey
 from django.utils.text import slugify
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes import generic
 
 
 class SchemalessFieldMixin(models.Model):
@@ -99,14 +102,19 @@ reversion.register(Organization)
 
 
 class Category(MPTTModel, BaseModel, SchemalessFieldMixin):
+    schema_org_type = "Thing/LinkedEventCategory"
+
+    CATEGORY_TYPES = (
+        (0, 'Event'), (1, 'Place'), (2, 'Organization'), (3, 'Person')
+    )
+
     # category ids from: http://finto.fi/ysa/fi/
     description = models.TextField(null=True, blank=True)
-    # dynamically created?
-    # category_for = models.CharField(max_length=255, null=True, blank=True)
     same_as = models.CharField(max_length=255, null=True, blank=True)
     parent_category = TreeForeignKey('self', null=True, blank=True)
     creator = models.ForeignKey(Person, null=True, blank=True, related_name='category_creators')  # TODO: Person or Organization
     editor = models.ForeignKey(Person, null=True, blank=True, related_name='category_editors')  # TODO: Person or Organization
+    category_for = models.SmallIntegerField(choices=CATEGORY_TYPES, null=True, blank=True)
 
     class Meta:
         verbose_name = _('Category')
@@ -135,7 +143,6 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     description = models.TextField(null=True)
     address = models.ForeignKey(PostalAddress, null=True, blank=True)
     publishing_principles = models.CharField(max_length=255, null=True, blank=True)
-    elevation = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     point = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     logo = models.CharField(max_length=255, null=True, blank=True)
     map = models.CharField(max_length=255, null=True, blank=True)
@@ -160,7 +167,7 @@ class OpeningHoursSpecification(models.Model):
         (5, "Friday"), (6, "Saturday"), (7, "Sunday"), (8, "PublicHolidays")
     )
 
-    place = models.OneToOneField(Place, primary_key=True)
+    place = models.OneToOneField(Place, primary_key=True, related_name='opening_hour_specification')
     opens = models.TimeField(null=True, blank=True)
     closes = models.TimeField(null=True, blank=True)
     days_of_week = models.SmallIntegerField(choices=WEEK_DAYS, null=True, blank=True)
@@ -169,7 +176,7 @@ class OpeningHoursSpecification(models.Model):
 
 
 class GeoShape(models.Model):
-    place = models.OneToOneField(Place, primary_key=True)
+    place = models.OneToOneField(Place, primary_key=True, related_name='geo_shapes')
     elevation = models.CharField(max_length=255, null=True, blank=True)
     box = models.CharField(max_length=255, null=True, blank=True)
     circle = models.CharField(max_length=255, null=True, blank=True)
@@ -178,7 +185,7 @@ class GeoShape(models.Model):
 
 
 class GeoCoordinates(models.Model):
-    place = models.OneToOneField(Place, primary_key=True)
+    #place = models.OneToOneField(Place, primary_key=True, related_name='geo_coordinates')
     elevation = models.CharField(max_length=255, null=True, blank=True)
     latitude = models.CharField(max_length=255, null=True, blank=True)
     longitude = models.CharField(max_length=255, null=True, blank=True)
@@ -221,8 +228,11 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     description = models.TextField(null=True)
 
     # Properties from schema.org/CreativeWork
-    creator = models.ForeignKey(Person, null=True, blank=True, related_name='event_creators')  # TODO: Person or Organization
+    creator = models.ManyToManyField(Person, blank=True, related_name='event_creators')  # TODO: Person or Organization
     editor = models.ForeignKey(Person, null=True, blank=True, related_name='event_editors')  # TODO: Person or Organization
+    date_published = models.DateTimeField(null=True, blank=True)
+    performer = models.ManyToManyField(Person, blank=True)  # TODO: Person or Organization
+    publisher = models.ForeignKey(Organization, null=True, blank=True)
 
     # Properties from schema.org/Event
     door_time = models.TimeField(null=True, blank=True)
@@ -230,18 +240,15 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     end_date = models.DateField(null=True, db_index=True, blank=True)
     event_status = models.SmallIntegerField(choices=STATUSES, default=SCHEDULED)
     location = models.ForeignKey(Place, null=True, blank=True)
-    offers = models.ManyToManyField(Offer, blank=True)
+    # Just ONE offer in offer field at schema.org
+    offers = models.ForeignKey(Offer, null=True, blank=True)
     previous_start_date = models.DateTimeField(null=True, blank=True)
     start_date = models.DateField(null=True, db_index=True, blank=True)
     super_event = TreeForeignKey('self', null=True, blank=True, related_name='children')
     typical_age_range = models.CharField(max_length=255, null=True, blank=True)
 
-    # Properties from schema.org/CreativeWork
-    date_published = models.DateTimeField()
-    performer = models.ForeignKey(Person, null=True, blank=True)  # TODO: Person or Organization
-    publisher = models.ForeignKey(Organization, null=True, blank=True)
-
     # Custom fields not from schema.org
+    origin_id = models.CharField(max_length=255, null=True, blank=True)
     target_group = models.CharField(max_length=255, null=True, blank=True)
     category = models.ManyToManyField(Category, null=True, blank=True)
     slug = models.SlugField(blank=True)

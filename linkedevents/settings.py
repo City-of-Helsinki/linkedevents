@@ -115,3 +115,7 @@ REST_FRAMEWORK = {
 
 # Add whitelisted hostnames to allow cross-site HTTP request API access
 CORS_ORIGIN_WHITELIST = ()
+
+TEMPLATE_DIRS = (
+    os.path.join(BASE_DIR, 'templates'),
+)

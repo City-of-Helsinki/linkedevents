@@ -132,6 +132,7 @@ class PersonSerializer(TranslationAwareSerializer):
 class CategorySerializer(TranslationAwareSerializer):
     creator = PersonSerializer(hide_ld_context=True)
     editor = PersonSerializer(hide_ld_context=True)
+    category_for = EnumChoiceField(Category.CATEGORY_TYPES)
 
     class Meta(TranslationAwareSerializer.Meta):
         model = Category
@@ -144,6 +145,7 @@ class PlaceSerializer(TranslationAwareSerializer):
 
     class Meta(TranslationAwareSerializer.Meta):
         model = Place
+        exclude = TranslationAwareSerializer.Meta.exclude + mptt_fields
 
 
 class OpeningHoursSpecificationSerializer(LinkedEventsSerializer):
@@ -179,6 +181,20 @@ class OfferSerializer(LinkedEventsSerializer):
         model = Offer
 
 
+class SubEventSerializer(TranslationAwareSerializer):
+    location = PlaceSerializer(hide_ld_context=True)
+    publisher = OrganizationSerializer(hide_ld_context=True)
+    category = CategorySerializer(many=True, allow_add_remove=True, hide_ld_context=True)
+    offers = OfferSerializer(many=True, allow_add_remove=True, hide_ld_context=True)
+    creator = serializers.HyperlinkedRelatedField(view_name='person-detail')
+    editor = serializers.HyperlinkedRelatedField(view_name='person-detail')
+    super_event = serializers.HyperlinkedRelatedField(view_name='event-detail')
+
+    class Meta(TranslationAwareSerializer.Meta):
+        model = Event
+        exclude = TranslationAwareSerializer.Meta.exclude + mptt_fields
+
+
 class EventSerializer(TranslationAwareSerializer):
     location = PlaceSerializer(hide_ld_context=True)
     publisher = OrganizationSerializer(hide_ld_context=True)
@@ -186,6 +202,7 @@ class EventSerializer(TranslationAwareSerializer):
     offers = OfferSerializer(many=True, allow_add_remove=True, hide_ld_context=True)
     creator = PersonSerializer(hide_ld_context=True)
     editor = PersonSerializer(hide_ld_context=True)
+    super_event = SubEventSerializer()
 
     event_status = EnumChoiceField(Event.STATUSES)
 
