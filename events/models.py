@@ -189,7 +189,7 @@ class GeoInfo(models.Model):
     )
 
     @property
-    def schema_org_type(self):
+    def jsonld_type(self):
         return self.GEO_TYPES[self.geo_type][1]
 
     place = models.OneToOneField(Place, primary_key=True, related_name='geo')
