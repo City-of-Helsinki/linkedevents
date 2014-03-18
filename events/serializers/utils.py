@@ -1,3 +1,12 @@
+def convert_to_camelcase(s):
+    return ''.join(word.title() if i else word for i, word in enumerate(s.split('_')))
+
+
+def convert_from_camelcase(s):
+    return re.sub(r'(^|[a-z])([A-Z])',
+                  lambda m: '_'.join([i.lower() for i in m.groups() if i]), s)
+
+
 def get_value_from_tuple_list(list_of_tuples, search_key, value_index):
     """
     Find "value" from list of tuples by using the other value in tuple as a search key and other as a returned value

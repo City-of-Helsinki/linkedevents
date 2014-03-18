@@ -279,7 +279,6 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
             self.created_time = BaseModel.now()
         if not self.slug:
             self.slug = slugify(self.name)
-        #self.mark_checked()
         self.last_modified_time = BaseModel.now()
         super(Event, self).save(*args, **kwargs)
 

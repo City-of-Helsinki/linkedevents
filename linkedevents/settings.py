@@ -111,6 +111,11 @@ STATIC_URL = '/static/'
 REST_FRAMEWORK = {
     #'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.IsAdminUser',),
     'PAGINATE_BY': 10,
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.UnicodeJSONRenderer',
+        'events.renderers.JSONLDRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    ),
 }
 
 # Add whitelisted hostnames to allow cross-site HTTP request API access

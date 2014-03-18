@@ -5,6 +5,7 @@ import re
 from rest_framework import serializers
 
 from events.models import *
+from events.serializers import utils
 from fields import *
 from django.conf import settings
 from itertools import chain
@@ -40,15 +41,6 @@ class LinkedEventsSerializer(serializers.ModelSerializer):
                                                      allow_add_remove, **kwargs)
         self.hide_ld_context = hide_ld_context
 
-    @staticmethod
-    def convert_to_camelcase(s):
-        return ''.join(word.title() if i else word for i, word in enumerate(s.split('_')))
-
-    @staticmethod
-    def convert_from_camelcase(s):
-        return re.sub(r'(^|[a-z])([A-Z])',
-                      lambda m: '_'.join([i.lower() for i in m.groups() if i]), s)
-
     def to_native(self, obj):
         """
         Before sending response there's a need to do additional work on to-be-JSON dictionary data
@@ -74,7 +66,7 @@ class LinkedEventsSerializer(serializers.ModelSerializer):
             if field.read_only and obj is None:
                 continue
             field.initialize(parent=self, field_name=field_name)
-            key = LinkedEventsSerializer.convert_to_camelcase(self.get_field_key(field_name))
+            key = utils.convert_to_camelcase(self.get_field_key(field_name))
             value = field.field_to_native(obj, field_name)
             method = getattr(self, 'transform_%s' % field_name, None)
             if callable(method):
@@ -89,7 +81,7 @@ class LinkedEventsSerializer(serializers.ModelSerializer):
         if isinstance(dataz, dict):
             new_data = dict()
             for key, value in dataz.iteritems():
-                newkey = LinkedEventsSerializer.convert_from_camelcase(key)
+                newkey = utils.convert_from_camelcase(key)
                 if isinstance(value, (dict, list)):
                     new_data[newkey] = LinkedEventsSerializer.rename_fields(value)
                 else:
