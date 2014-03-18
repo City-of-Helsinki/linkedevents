@@ -4,17 +4,18 @@ Models are modeled after schema.org.
 
 When model is going to be serialized as JSON(-LD), model name must be same as Schema.org schema name,
 the model name is automatically published in @type JSON-LD field.
-Note: schema_org_type attribute value can be used to override @type definition in rendering phase.
+Note: jsonld_type attribute value can be used to override @type definition in rendering phase.
 
 Schema definitions: http://schema.org/<ModelName> (e.g. http://schema.org/Event)
 
-TODO:
-    Some models have custom fields not found from schema.org. Decide if there's a need for
-    custom extension types (e.g. Event/MyCustomEvent) as schema.org documentation is suggesting:
-    http://schema.org/docs/extension.html. Override schema_org_type can be used to define custom
-    types.
+Some models have custom fields not found from schema.org. Decide if there's a need for
+custom extension types (e.g. Event/MyCustomEvent) as schema.org documentation is suggesting:
+http://schema.org/docs/extension.html. Override schema_org_type can be used to define custom
+types.
+Override jsonld_context attribute to change @context when need to define schemas for custom fields.
 """
 import datetime
+from django.contrib.auth.models import User
 import pytz
 from django.db import models
 import reversion
@@ -24,6 +25,15 @@ from mptt.models import MPTTModel, TreeForeignKey
 from django.utils.text import slugify
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic
+from events.contexts import EVENT_CONTEXT
+
+
+class SystemMetaMixin(models.Model):
+    created_by = models.ForeignKey(User, null=True, blank=True, related_name="%(app_label)s_%(class)s_created_by")
+    modified_by = models.ForeignKey(User, null=True, blank=True, related_name="%(app_label)s_%(class)s_modified_by")
+
+    class Meta:
+        abstract = True
 
 
 class SchemalessFieldMixin(models.Model):
@@ -35,7 +45,7 @@ class SchemalessFieldMixin(models.Model):
         abstract = True
 
 
-class BaseModel(models.Model):
+class BaseModel(SystemMetaMixin):
     # Properties from schema.org/Thing
     name = models.CharField(max_length=255)
     image = models.URLField(null=True, blank=True)
@@ -71,16 +81,14 @@ class Language(BaseModel):
 
 
 class Person(BaseModel):
-    description = models.TextField(null=True, blank=True)
+    description = models.TextField(blank=True)
     family_name = models.CharField(max_length=255, null=True, blank=True)
     email = models.EmailField(null=True, blank=True)
     creator = models.ForeignKey('self', null=True, blank=True, related_name='person_creators')  # TODO: Person or Organization
     editor = models.ForeignKey('self', null=True, blank=True, related_name='person_editors')  # TODO: Person or Organization
     # Custom fields
-    username = models.CharField(max_length=255, null=True, blank=True)
-    password = models.CharField(max_length=255, null=True, blank=True)
     member_of = models.ForeignKey('Organization', null=True, blank=True)
-    role = models.CharField(max_length=255, null=True, blank=True)
+    user = models.ForeignKey(User, null=True, blank=True)
 
     class Meta:
         verbose_name = _('Person')
@@ -89,7 +97,7 @@ reversion.register(Person)
 
 
 class Organization(BaseModel):
-    description = models.TextField(null=True, blank=True)
+    description = models.TextField(blank=True)
     base_IRI = models.CharField(max_length=200, null=True, blank=True)
     compact_IRI_name = models.CharField(max_length=200, null=True, blank=True)
     creator = models.ForeignKey(Person, null=True, blank=True, related_name='organization_creators')  # TODO: Person or Organization
@@ -109,7 +117,7 @@ class Category(MPTTModel, BaseModel, SchemalessFieldMixin):
     )
 
     # category ids from: http://finto.fi/ysa/fi/
-    description = models.TextField(null=True, blank=True)
+    description = models.TextField(blank=True)
     same_as = models.CharField(max_length=255, null=True, blank=True)
     parent_category = TreeForeignKey('self', null=True, blank=True)
     creator = models.ForeignKey(Person, null=True, blank=True, related_name='category_creators')  # TODO: Person or Organization
@@ -140,7 +148,7 @@ class PostalAddress(BaseModel):
 
 class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     same_as = models.CharField(max_length=255, null=True, blank=True)
-    description = models.TextField(null=True)
+    description = models.TextField(blank=True)
     address = models.ForeignKey(PostalAddress, null=True, blank=True)
     publishing_principles = models.CharField(max_length=255, null=True, blank=True)
     point = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -175,20 +183,24 @@ class OpeningHoursSpecification(models.Model):
     valid_through = models.DateTimeField(null=True, blank=True)
 
 
-class GeoShape(models.Model):
-    place = models.OneToOneField(Place, primary_key=True, related_name='geo_shapes')
+class GeoInfo(models.Model):
+    GEO_TYPES = (
+        (0, "GeoShape"), (1, "GeoCoordinates")
+    )
+
+    @property
+    def schema_org_type(self):
+        return self.GEO_TYPES[self.geo_type][1]
+
+    place = models.OneToOneField(Place, primary_key=True, related_name='geo')
     elevation = models.CharField(max_length=255, null=True, blank=True)
+    latitude = models.CharField(max_length=255, null=True, blank=True)
+    longitude = models.CharField(max_length=255, null=True, blank=True)
     box = models.CharField(max_length=255, null=True, blank=True)
     circle = models.CharField(max_length=255, null=True, blank=True)
     line = models.CharField(max_length=255, null=True, blank=True)
     polygon = models.TextField(null=True, blank=True)
-
-
-class GeoCoordinates(models.Model):
-    #place = models.OneToOneField(Place, primary_key=True, related_name='geo_coordinates')
-    elevation = models.CharField(max_length=255, null=True, blank=True)
-    latitude = models.CharField(max_length=255, null=True, blank=True)
-    longitude = models.CharField(max_length=255, null=True, blank=True)
+    geo_type = models.SmallIntegerField(choices=GEO_TYPES, default=GEO_TYPES[0][0])
 
 
 class Offer(BaseModel):
@@ -206,7 +218,8 @@ class Offer(BaseModel):
 
 class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
 
-    schema_org_type = "Event/LinkedEvent"
+    jsonld_type = "Event/LinkedEvent"
+    jsonld_context = EVENT_CONTEXT
 
     """
     Status enumeration is based on http://schema.org/EventStatusType
@@ -225,7 +238,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
 
     # Properties from schema.org/Thing
     same_as = models.CharField(max_length=255, null=True, blank=True, unique=True)
-    description = models.TextField(null=True)
+    description = models.TextField(blank=True)
 
     # Properties from schema.org/CreativeWork
     creator = models.ManyToManyField(Person, blank=True, related_name='event_creators')  # TODO: Person or Organization
@@ -244,7 +257,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     offers = models.ForeignKey(Offer, null=True, blank=True)
     previous_start_date = models.DateTimeField(null=True, blank=True)
     start_date = models.DateField(null=True, db_index=True, blank=True)
-    super_event = TreeForeignKey('self', null=True, blank=True, related_name='children')
+    super_event = TreeForeignKey('self', null=True, blank=True, related_name='sub_event')
     typical_age_range = models.CharField(max_length=255, null=True, blank=True)
 
     # Custom fields not from schema.org

@@ -2,19 +2,7 @@
 from django.conf import settings
 from rest_framework import serializers
 from events.models import Event
-
-
-def get_value_from_tuple_list(list_of_tuples, search_key, value_index):
-    """
-    Find "value" from list of tuples by using the other value in tuple as a search key and other as a returned value
-    :param list_of_tuples: tuples to be searched
-    :param search_key: search key used to find right tuple
-    :param value_index: Index telling which side of tuple is returned and which is used as a key
-    :return: Value from either side of tuple
-    """
-    for i, v in enumerate(list_of_tuples):
-        if v[value_index ^ 1] == search_key:
-            return v[value_index]
+from events.serializers.utils import get_value_from_tuple_list
 
 
 class EnumChoiceField(serializers.WritableField):
@@ -39,7 +27,9 @@ class EnumChoiceField(serializers.WritableField):
 class TranslatedField(serializers.WritableField):
     """
     Modeltranslation library generates i18n fields to given languages.
-    Here i18n data is converted to more JSON friendly syntax.
+    Here i18n data is converted to more JSON-LD friendly syntax.
+
+    Accompany with appropriate @context definition.
     """
     def field_to_native(self, obj, field_name):
         # If source is given, use it as the attribute(chain) of obj to be
@@ -51,7 +41,7 @@ class TranslatedField(serializers.WritableField):
                 obj = getattr(obj, name)
 
         return {
-            code: getattr(obj, field_name + "_" + code, None)
+            code: getattr(obj, field_name + "_" + code, '')
             for code, _ in settings.LANGUAGES
         }
 

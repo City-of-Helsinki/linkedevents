@@ -1,29 +1,41 @@
 from django.contrib import admin
 from models import *
 from modeltranslation.admin import TranslationAdmin
+from polymorphic.admin import PolymorphicParentModelAdmin, PolymorphicChildModelAdmin
 
 
-class EventModelAdmin(TranslationAdmin, reversion.VersionAdmin):
+class BaseAdmin(admin.ModelAdmin):
+    exclude = ("created_by", "modified_by",)
+
+    def save_model(self, request, obj, form, change):
+        if obj.pk is None:
+            obj.created_by = request.user
+        else:
+            obj.modified_by = request.user
+        obj.save()
+
+
+class EventModelAdmin(BaseAdmin, TranslationAdmin, reversion.VersionAdmin):
     pass
 
 
-class CategoryAdmin(TranslationAdmin, reversion.VersionAdmin):
+class CategoryAdmin(BaseAdmin, TranslationAdmin, reversion.VersionAdmin):
     pass
 
 
-class PlaceAdmin(TranslationAdmin, reversion.VersionAdmin):
+class PlaceAdmin(BaseAdmin, TranslationAdmin, reversion.VersionAdmin):
     pass
 
 
-class OrganizationAdmin(reversion.VersionAdmin):
+class OrganizationAdmin(BaseAdmin, reversion.VersionAdmin):
     pass
 
 
-class LanguageAdmin(reversion.VersionAdmin):
+class LanguageAdmin(BaseAdmin, reversion.VersionAdmin):
     pass
 
 
-class PersonAdmin(reversion.VersionAdmin):
+class PersonAdmin(BaseAdmin, reversion.VersionAdmin):
     pass
 
 admin.site.register(Event, EventModelAdmin)
@@ -35,3 +47,4 @@ admin.site.register(Language, LanguageAdmin)
 admin.site.register(Person, PersonAdmin)
 admin.site.register(PostalAddress)
 admin.site.register(OpeningHoursSpecification)
+admin.site.register(GeoInfo)
