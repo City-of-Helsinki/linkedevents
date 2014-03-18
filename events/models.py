@@ -25,7 +25,7 @@ from mptt.models import MPTTModel, TreeForeignKey
 from django.utils.text import slugify
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic
-from events.contexts import EVENT_CONTEXT
+from events import contexts
 
 
 class SystemMetaMixin(models.Model):
@@ -219,7 +219,6 @@ class Offer(BaseModel):
 class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
 
     jsonld_type = "Event/LinkedEvent"
-    jsonld_context = EVENT_CONTEXT
 
     """
     Status enumeration is based on http://schema.org/EventStatusType
@@ -285,3 +284,4 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         super(Event, self).save(*args, **kwargs)
 
 reversion.register(Event)
+contexts.create_context(Event)
