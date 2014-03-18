@@ -245,7 +245,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     editor = models.ForeignKey(Person, null=True, blank=True, related_name='event_editors')  # TODO: Person or Organization
     date_published = models.DateTimeField(null=True, blank=True)
     performer = models.ManyToManyField(Person, blank=True)  # TODO: Person or Organization
-    publisher = models.ForeignKey(Organization, null=True, blank=True)
+    publisher = models.ForeignKey(Organization, null=True, blank=True, related_name='event_publishers')
+    provider = models.ForeignKey(Organization, null=True, blank=True, related_name='event_providers')
 
     # Properties from schema.org/Event
     door_time = models.TimeField(null=True, blank=True)
