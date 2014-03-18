@@ -71,21 +71,20 @@ def zipcode_and_muni(text):
 @register_importer
 class MatkoImporter(Importer):
     name = "matko"
+    data_source = DataSource.objects.get(pk=name)
 
     def setup(self):
         requests_cache.install_cache('matko')
 
     def _import_common(self, lang_code, item, result):
-        result['source'] = 'matko'
-        
         result['name'][lang_code] = clean_text(unicodetext(item.find('title')))
         result['description'][lang_code] = unicodetext(item.find('description'))
 
         link = item.find('link')
         if link is not None:
-            result['link'][lang_code] = unicodetext(link)
+            result['url'][lang_code] = unicodetext(link)
 
-        result['published'] = dateutil.parser.parse(unicodetext(item.find('pubDate')))
+        result['date_published'] = dateutil.parser.parse(unicodetext(item.find('pubDate')))
 
         typestring = text(item, 'type2') or text(item, 'type1')
         if typestring is not None:
@@ -104,8 +103,8 @@ class MatkoImporter(Importer):
                     'Unique id and id values differ for id %d uid %s' % (
                         eid, text(item, 'id')))
 
-            event['id'] = eid
-            event['same_as'] = unicodetext(item.find('guid'))
+            event['origin_id'] = eid
+            event['data_source'] = self.data_source
 
             self._import_common(lang_code, item, event)
 
@@ -128,8 +127,8 @@ class MatkoImporter(Importer):
 
             standardize_event_types(event['types'])
 
-            put(event, 'start', start_time)
-            put(event, 'end', end_time)
+            put(event, 'start_date', start_time)
+            put(event, 'end_date', end_time)
             put(event, 'event_status', matko_status(int(
                 text(item, 'status'))))
             put(event, 'matko_location_id', int(
@@ -200,11 +199,12 @@ class MatkoImporter(Importer):
             organizers = self._import_organizers_from_events(events)
 
         events = events.values()
-        parents, events = self.link_recurring_events(
-            events, instance_fields=['id', 'same_as', 'start', 'end', 'published'])
-        for parent in parents:
-            self.save_children_through_parent(parent)
-        return events, organizers
+        events = self.link_recurring_events(
+            events, instance_fields=[
+                'origin_id', 'start_date', 'end_date',
+                'date_published', 'event_status'])
+        for event in events:
+            self.save_children_through_parent(event)
 
     def import_locations(self):
         print("Importing Matko locations")

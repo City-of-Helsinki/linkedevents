@@ -3,8 +3,9 @@ import logging
 import itertools
 
 from django.db import DataError
+from django.conf import settings
 
-from util import partial_copy, partial_equals
+from util import copy_without_keys, partial_equals, active_language
 from events.models import Event
 
 class Importer(object):
@@ -22,68 +23,65 @@ class Importer(object):
         event by comparing the fields that do not differ between
         instances, for example different nights of the same play.
 
-        Returns pair of (parent events, normal events)"""
+        Returns a list of events."""
 
-        event_name = lambda x: x['name']['fi']
+        event_name = lambda e: e['name']['fi']
         events = sorted(events, key=event_name)
         parent_events = []
         for name_fi, subevents in itertools.groupby(events, event_name):
             subevents = list(subevents)
-            if(len(subevents) < 2): continue
-            potential_parent = partial_copy(subevents[0], instance_fields)
+            if(len(subevents) < 2):
+                parent_events.extend(subevents)
+                continue
+            potential_parent = copy_without_keys(subevents[0], instance_fields)
+            is_subevent = lambda e: (
+                partial_equals(e, potential_parent, instance_fields))
+
             children = []
-            for matching_event in (
-                    itertools.ifilter(
-                        lambda e: partial_equals(
-                            e, potential_parent, instance_fields),
-                        subevents)):
+            for matching_event in (filter(is_subevent, subevents)):
                 for k in matching_event.keys():
                     if k not in instance_fields: del matching_event[k]
-                matching_event['parent_event'] = potential_parent
                 children.append(matching_event)
+
             if len(children) > 0:
                 potential_parent['children'] = children
                 parent_events.append(potential_parent)
-        return parent_events, events
+        return parent_events
 
     def save_children_through_parent(self, parent_dict):
-        children_ids = [c['same_as'] for c in parent_dict['children']]
+        model_values = copy_without_keys(
+            parent_dict, [
+                'children',
+                'name', 'description', 'url', # translatable fields
+                'types', # todo: add to model
+                'organizer', # todo: add to model
+                'matko_location_id', # todo: add to model
+            ])
+        parent = Event(**model_values)
 
-        # todo: add proper fields below
-        del parent_dict['source']
-        del parent_dict['link']
-        del parent_dict['types']
-        del parent_dict['children']
-        if 'organizer' in parent_dict: del parent_dict['organizer']
-        del parent_dict['matko_location_id']
-        # todo: add proper fields above
+        for l, _ in settings.LANGUAGES:
+            with active_language(l):
+                for key in ['name', 'description', 'url']:
+                    field = parent_dict[key]
+                    if l in field: setattr(parent, key, field[l])
 
-        for key in ['name', 'description']:
-            for lang, val in parent_dict[key].items():
-                parent_dict[key + '_' + lang] = val
-            del parent_dict[key]
-        
-        parent = Event(**parent_dict)
-
-        existing_parent_id = None
-        for child in Event.objects.filter(same_as__in=children_ids):
-            # Todo: ensure previously
-            # separate super events haven't been merged in new
-            # version of source data (theoretical?).
-            existing_parent_id = child.super_event.id
-#            parent.children.add(child)
-
-        if existing_parent_id is not None:
-            parent.id =  existing_parent_id
+        children_ids = [c['origin_id'] for c in parent_dict['children']]
+        try:
+            child = Event.objects.filter(origin_id__in=children_ids)[0]
+            parent.id = child.super_event.id
+        except IndexError:
+            pass
 
         parent.save()
 
-    def save_event(self, event_dict):
-        same_as = event_dict.get('same_as')
-        del event_dict['same_as']
-        Event.objects.get_or_create(
-            same_as=same_as,
-            defaults = event_dict)
+        for child_dict in parent_dict['children']:
+            origin_id = child_dict.get('origin_id')
+            del child_dict['origin_id']
+            Event.objects.get_or_create(
+                origin_id=origin_id,
+                super_event=parent,
+                data_source=parent.data_source,
+                defaults = child_dict)
 
 importers = {}
 
