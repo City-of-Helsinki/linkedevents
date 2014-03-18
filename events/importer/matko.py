@@ -119,17 +119,19 @@ class MatkoImporter(Importer):
                 event['common']['organizer']['phone'][lang_code] = [
                     clean_text(t) for t in organizer_phone.split(",")]
 
-            start_time = dateutil.parser.parse(
+            start_date = dateutil.parser.parse(
                 text(item, 'starttime'))
+            start_time = start_date.time()
 
             # The feed doesn't contain proper end times.
-            end_time = None
+            end_date = None
             # end_time = dateutil.parser.parse(
             #     text(item, 'endtime'))
 
             standardize_event_types(event['common']['types'])
 
             put(event['instance'], 'start_date', start_time)
+            put(event['instance'], 'door_time', start_time)
             put(event['instance'], 'end_date', end_time)
             put(event['instance'], 'event_status', matko_status(int(
                 text(item, 'status'))))
