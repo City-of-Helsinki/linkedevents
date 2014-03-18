@@ -28,23 +28,6 @@ from django.contrib.contenttypes.models import ContentType
 from events import contexts
 
 
-class SystemMetaMixin(models.Model):
-    created_by = models.ForeignKey(User, null=True, blank=True, related_name="%(app_label)s_%(class)s_created_by")
-    modified_by = models.ForeignKey(User, null=True, blank=True, related_name="%(app_label)s_%(class)s_modified_by")
-
-    class Meta:
-        abstract = True
-
-
-class SchemalessFieldMixin(models.Model):
-    # Custom field not from schema.org
-    custom_fields = hstore.DictionaryField(null=True, blank=True)
-    objects = hstore.HStoreManager()
-
-    class Meta:
-        abstract = True
-
-
 class DataSource(models.Model):
     id = models.CharField(max_length=100, primary_key=True)
     name = models.CharField(max_length=255)
@@ -57,8 +40,25 @@ class DataSource(models.Model):
             return None
 
     def __unicode__(self):
-        return self.name
+        return self.id
 
+class SystemMetaMixin(models.Model):
+    created_by = models.ForeignKey(User, null=True, blank=True, related_name="%(app_label)s_%(class)s_created_by")
+    modified_by = models.ForeignKey(User, null=True, blank=True, related_name="%(app_label)s_%(class)s_modified_by")
+    data_source = models.ForeignKey(DataSource, null=True, blank=True)
+    origin_id = models.CharField(max_length=255, null=True, blank=True)
+
+    class Meta:
+        abstract = True
+
+
+class SchemalessFieldMixin(models.Model):
+    # Custom field not from schema.org
+    custom_fields = hstore.DictionaryField(null=True, blank=True)
+    objects = hstore.HStoreManager()
+
+    class Meta:
+        abstract = True
 
 class BaseModel(SystemMetaMixin):
     # Properties from schema.org/Thing
@@ -158,8 +158,13 @@ class PostalAddress(BaseModel):
     postal_code = models.CharField(max_length=128, null=True, blank=True)
     post_office_box_num = models.CharField(max_length=128, null=True, blank=True)
     address_country = models.CharField(max_length=2, null=True, blank=True)
-    available_language = models.ForeignKey(Language, db_index=True)
+    available_language = models.ForeignKey(Language, null=True, blank=True)
 
+    def __unicode__(self):
+        values = filter(lambda x: x, [
+            self.street_address, self.postal_code, self.address_locality
+        ])
+        return u', '.join(values)
 
 class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     same_as = models.CharField(max_length=255, null=True, blank=True)
@@ -172,6 +177,9 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     contained_in = TreeForeignKey('self', null=True, blank=True, related_name='children')
     creator = models.ForeignKey(Person, null=True, blank=True, related_name='place_creators')  # TODO: Person or Organization
     editor = models.ForeignKey(Person, null=True, blank=True, related_name='place_editors')  # TODO: Person or Organization
+
+    def __unicode__(self):
+        return u', '.join([self.name, unicode(self.address if self.address else '')])
 
     class Meta:
         verbose_name = _('Place')
@@ -280,13 +288,11 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     typical_age_range = models.CharField(max_length=255, null=True, blank=True)
 
     # Custom fields not from schema.org
-    origin_id = models.CharField(max_length=255, null=True, blank=True)
     target_group = models.CharField(max_length=255, null=True, blank=True)
     category = models.ManyToManyField(Category, null=True, blank=True)
     slug = models.SlugField(blank=True)
     language = models.ForeignKey(Language, blank=True, null=True,
                                  help_text=_("Set if the event is in a given language"))
-    data_source = models.ForeignKey(DataSource, null=True, blank=True)
 
     class Meta:
         verbose_name = _('Event')
@@ -304,6 +310,16 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
 
     def same_as(self):
         return self.data_source.event_same_as(self.origin_id)
+
+    def __unicode__(self):
+        val = [self.name]
+        dcount = self.get_descendant_count()
+        if dcount > 0:
+            val.append(u" (%d children)" % dcount)
+        else:
+            val.append(unicode(self.start_date))
+            val.append(unicode(self.door_time))
+        return u" ".join(val)
 
 reversion.register(Event)
 contexts.create_context(Event)

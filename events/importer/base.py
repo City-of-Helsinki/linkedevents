@@ -6,8 +6,13 @@ from django.db import DataError
 from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
 
+from modeltranslation.translator import translator
+
 from util import active_language
-from events.models import Event, PostalAddress
+from events.models import *
+
+def place_not_found(data_source, pid):
+    return ('Place not found', (unicode(data_source), unicode(pid)))
 
 class Importer(object):
     def __init__(self, options):
@@ -45,7 +50,36 @@ class Importer(object):
                 parent_events.append(potential_parent)
         return parent_events
 
+    def save_location(self, location_dict):
+        location_dict.default_factory = None
+        postal_address, created = PostalAddress.objects.get_or_create(
+            street_address_fi = location_dict['address']['street_address']['fi'],
+            address_locality_fi = location_dict['address']['address_locality']['fi'],
+            postal_code = location_dict['address'].get('postal_code')
+        )
+        place, created = Place.objects.get_or_create(
+            data_source=location_dict['data_source'],
+            origin_id=location_dict['origin_id']
+        )
+        place.address = postal_address
+        place.geo = GeoInfo(**location_dict['geo'])
+
+        for l, _ in settings.LANGUAGES:
+            with active_language(l):
+                name = location_dict['name']
+                if l in name:
+                    place.name = name[l]
+                for key in ['email', 'street_address', 'address_locality']:
+                    val = location_dict['address'][key]
+                    if l in val:
+                        setattr(postal_address, key, val[l])
+
+        place.save()
+        place.geo.save()
+        postal_address.save()
+
     def save_children_through_parent(self, parent_dict):
+        errors = set()
         model_values = parent_dict['common']
         model_values.default_factory = None
 
@@ -58,10 +92,19 @@ class Importer(object):
         # Try to find the possible existing parent
         # in the database.
         if no_children:
-            parent, created = Event.objects.get_or_create(
-                origin_id=model_values['origin_id'],
-                data_source=data_source
-            )
+            try:
+                parent, created = Event.objects.get_or_create(
+                    origin_id=model_values['origin_id'],
+                    data_source=data_source
+                )
+                place = Place.objects.get(
+                    data_source=data_source,
+                    origin_id=model_values['matko_location_id']
+                )
+                parent.location = place
+            except ObjectDoesNotExist as e:
+                errors.add(place_not_found(data_source, model_values['matko_location_id']))
+
         else:
             children_ids = [c['origin_id'] for c in parent_dict['children']]
             try:
@@ -77,11 +120,12 @@ class Importer(object):
         remove_keys = [
             'types', # todo: add to model
             'organizer', # todo: add to model
-            'matko_location_id', # todo: add to model
+            'matko_location_id',
         ]
         for key in remove_keys: model_values.pop(key, None)
 
-        trans_fields = {key: None for key in ['name', 'description', 'url']}
+        trans_fields = {key: None for key
+                        in translator.get_options_for_model(Event).fields}
         for key in trans_fields.iterkeys():
             value = model_values.pop(key, None)
             if value is not None:
@@ -99,13 +143,23 @@ class Importer(object):
 
         for child_dict in parent_dict['children']:
             origin_id = child_dict.get('origin_id')
+            try:
+                place = Place.objects.get(
+                    data_source=data_source,
+                    origin_id=child_dict['matko_location_id']
+                )
+                child_dict['location'] = place
+            except ObjectDoesNotExist as e:
+                errors.add(place_not_found(data_source, child_dict['matko_location_id']))
+
             del child_dict['origin_id']
             del child_dict['matko_location_id']
-            Event.objects.get_or_create(
+            event, created = Event.objects.get_or_create(
                 origin_id=origin_id,
                 super_event=parent,
                 data_source=parent.data_source,
                 defaults = child_dict)
+        return errors
 
 importers = {}
 

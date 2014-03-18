@@ -66,9 +66,9 @@ def put(rdict, key, val):
 def zipcode_and_muni(text):
     if text is None:
         return None, None
-    m = re.match(r'(\d+)\s+(\D+)', text)
+    m = re.match(r'\D*(\d+)\s+(\D+)', text)
     if m is not None:
-        return m.group(1, 2)
+        return m.group(1), m.group(2).strip()
     return None, None
 
 @register_importer
@@ -106,7 +106,9 @@ class MatkoImporter(Importer):
 
             event['instance']['origin_id'] = eid
             event['common']['data_source'] = self.data_source
-            event['instance']['date_published'] = dateutil.parser.parse(unicodetext(item.find('pubDate')))
+            event['instance']['date_published'] = dateutil.parser.parse(
+                unicodetext(item.find('pubDate'))
+            )
 
             self._import_common(lang_code, item, event['common'])
 
@@ -123,16 +125,15 @@ class MatkoImporter(Importer):
                 text(item, 'starttime'))
             start_time = start_date.time()
 
-            # The feed doesn't contain proper end times.
-            end_date = None
-            # end_time = dateutil.parser.parse(
-            #     text(item, 'endtime'))
+            # The feed doesn't contain proper end times (clock).
+            end_date = dateutil.parser.parse(
+                text(item, 'endtime'))
 
             standardize_event_types(event['common']['types'])
 
-            put(event['instance'], 'start_date', start_time)
+            put(event['instance'], 'start_date', start_date)
             put(event['instance'], 'door_time', start_time)
-            put(event['instance'], 'end_date', end_time)
+            put(event['instance'], 'end_date', end_date)
             put(event['instance'], 'event_status', matko_status(int(
                 text(item, 'status'))))
             put(event['instance'], 'matko_location_id', int(
@@ -149,7 +150,7 @@ class MatkoImporter(Importer):
             location = locations[lid]
 
             location['origin_id'] = lid
-            location['data_source'] = data_source
+            location['data_source'] = self.data_source
 
             self._import_common(lang_code, item, location)
 
@@ -158,8 +159,9 @@ class MatkoImporter(Importer):
                 location['address']['street_address'][lang_code] = clean_text(address)
 
             zipcode, muni = zipcode_and_muni(text(item, 'zipcode'))
-            location['address']['postal_code'] = zipcode
-            location['address']['locality'][lang_code] = muni
+            if zipcode and len(zipcode) == 5:
+                location['address']['postal_code'] = zipcode
+            location['address']['address_locality'][lang_code] = muni
             location['address']['phone'][lang_code] = text(item, 'phone')
             # There was at least one case with different
             # email addresses for different languages.
@@ -175,14 +177,14 @@ class MatkoImporter(Importer):
             location['custom_fields']['accessibility'][lang_code] = text(item, 'disabled')
 
             standardize_accessibility(
-                location['custom_fields']['accessibility'][lang_code], lang)
+                location['custom_fields']['accessibility'][lang_code], lang_code)
 
             lon, lat = text(item, 'longitude'), text(item, 'latitude')
             if lon != '0' and lat != '0':
                 put(location, 'geo', {
                     'longitude': lon,
                     'latitude':  lat,
-                    'geotype': 1})
+                    'geo_type': 1})
 
         return locations
 
@@ -209,8 +211,13 @@ class MatkoImporter(Importer):
             items = self.items_from_url(url)
             self._import_events_from_feed(lang, items, events)
             organizers = self._import_organizers_from_events(events)
+        errors = set()
         for event in self.link_recurring_events(events.values()):
-            self.save_children_through_parent(event)
+            errors.update(self.save_children_through_parent(event))
+        if len(errors) > 0:
+            print 'Errors:'
+        for e in errors:
+            print "%s: %s" % (e[0], u" ".join(e[1]))
 
     def import_locations(self):
         print("Importing Matko locations")
@@ -218,3 +225,5 @@ class MatkoImporter(Importer):
         for lang, url in MATKO_URLS['locations'].iteritems():
             items = self.items_from_url(url)
             self._import_locations_from_feed(lang, items, locations)
+        for location in locations.values():
+            self.save_location(location)
