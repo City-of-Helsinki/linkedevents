@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-import re
 
-from rest_framework import serializers
-
-from events.models import *
-from events.serializers import utils
-from fields import *
-from django.conf import settings
 from itertools import chain
-from events.serializers.utils import get_value_from_tuple_list
+
+from django.conf import settings
+
+from events import utils
+from events.models import *
+from fields import *
+from events.utils import get_value_from_tuple_list
 
 # JSON exclusion list of MPTT's custom fields
 mptt_fields = ['lft', 'rght', 'tree_id', 'level']
@@ -43,9 +42,10 @@ class LinkedEventsSerializer(serializers.ModelSerializer):
 
     def to_native(self, obj):
         """
-        Before sending response there's a need to do additional work on to-be-JSON dictionary data
+        Before sending to renderer there's a need to do additional work on to-be-JSON dictionary data
             1. Add @context and @type fields
-            2. Convert underscored Django fields to Schema.org's camelCase format.
+            2. Convert field names to camelCase,
+            renderer is the right place for this but now loop is done just once. Reversal conversion is done in parser.
         """
         ret = self._dict_class()
         ret.fields = self._dict_class()
@@ -75,35 +75,6 @@ class LinkedEventsSerializer(serializers.ModelSerializer):
                 ret[key] = value
             ret.fields[key] = self.augment_field(field, field_name, key, value)
         return ret
-
-    @staticmethod
-    def rename_fields(dataz):
-        if isinstance(dataz, dict):
-            new_data = dict()
-            for key, value in dataz.iteritems():
-                newkey = utils.convert_from_camelcase(key)
-                if isinstance(value, (dict, list)):
-                    new_data[newkey] = LinkedEventsSerializer.rename_fields(value)
-                else:
-                    new_data[newkey] = value
-            return new_data
-        elif isinstance(dataz, list):
-            new_data = []
-            for value in dataz:
-                if isinstance(value, (dict, list)):
-                    new_data.append(LinkedEventsSerializer.rename_fields(value))
-                else:
-                    new_data.append(value)
-            return new_data
-
-    def from_native(self, data, files):
-        """
-        Convert camelCased JSON fields to django/db friendly underscore format before validating/saving
-        """
-        converted_data = LinkedEventsSerializer.rename_fields(data)
-        instance = super(LinkedEventsSerializer, self).from_native(converted_data, files)
-        if not self._errors:
-            return self.full_clean(instance)
 
     class Meta:
         exclude = ['created_by', 'modified_by']

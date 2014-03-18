@@ -1,3 +1,6 @@
+import re
+
+
 def convert_to_camelcase(s):
     return ''.join(word.title() if i else word for i, word in enumerate(s.split('_')))
 

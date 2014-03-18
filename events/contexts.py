@@ -3,7 +3,7 @@ Most of the types and properties used are found from schema.org
 but customized properties and types should be defined in @context
 to add semantic spice in JSONs.
 """
-from events.serializers import utils
+from events import utils
 
 LINKED_EVENTS_SCHEMA_URL = "http://example.com/le/"
 

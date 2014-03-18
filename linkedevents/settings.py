@@ -116,6 +116,12 @@ REST_FRAMEWORK = {
         'events.renderers.JSONLDRenderer',
         'rest_framework.renderers.BrowsableAPIRenderer',
     ),
+    'DEFAULT_PARSER_CLASSES': (
+        'events.parsers.CamelCaseJSONParser',
+        'events.parsers.JSONLDParser',
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
+    ),
 }
 
 # Add whitelisted hostnames to allow cross-site HTTP request API access

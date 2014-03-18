@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 from django.conf import settings
 from rest_framework import serializers
-from events.models import Event
-from events.serializers.utils import get_value_from_tuple_list
+
+from events.utils import get_value_from_tuple_list
 
 
 class EnumChoiceField(serializers.WritableField):
