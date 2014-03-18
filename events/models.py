@@ -44,6 +44,16 @@ class SchemalessFieldMixin(models.Model):
     class Meta:
         abstract = True
 
+class DataSource(models.Model):
+    id = models.CharField(max_length=100, primary_key=True)
+    name = models.CharField(max_length=255)
+    event_url_template = models.CharField(max_length=200)
+
+    def event_same_as(self, origin_id):
+        if origin_id is not None:
+            return self.event_url_template.format(origin_id=origin_id)
+        else:
+            return None
 
 class BaseModel(SystemMetaMixin):
     # Properties from schema.org/Thing
@@ -236,7 +246,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     )
 
     # Properties from schema.org/Thing
-    same_as = models.CharField(max_length=255, null=True, blank=True, unique=True)
+    url = models.URLField('Event home page', null=True, blank=True)
     description = models.TextField(blank=True)
 
     # Properties from schema.org/CreativeWork
@@ -267,6 +277,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     slug = models.SlugField(blank=True)
     language = models.ForeignKey(Language, blank=True, null=True,
                                  help_text=_("Set if the event is in a given language"))
+    data_source = models.ForeignKey(DataSource, null=True, blank=True)
 
     class Meta:
         verbose_name = _('Event')
@@ -282,6 +293,9 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         #self.mark_checked()
         self.last_modified_time = BaseModel.now()
         super(Event, self).save(*args, **kwargs)
+
+    def same_as(self):
+        return self.data_source.event_same_as(self.origin_id)
 
 reversion.register(Event)
 contexts.create_context(Event)

@@ -1,0 +1,6 @@
+
+- model: events.DataSource
+  pk: 'matko'
+  fields:
+    name: 'Matkailu- ja kongressitoimisto'
+    event_url_template: 'https://aspicore-asp.net/helsinki/xml/tapahtuma{origin_id}'

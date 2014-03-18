@@ -21,3 +21,4 @@ requests==2.2.1
 requests-cache==0.4.4
 six==1.5.2
 wsgiref==0.1.2
+pyyaml==3.10
