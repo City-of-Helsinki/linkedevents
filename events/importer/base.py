@@ -3,9 +3,10 @@ import logging
 import itertools
 
 from django.db import DataError
+from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
 
-from util import copy_without_keys, partial_equals, active_language
+from util import active_language
 from events.models import Event
 
 class Importer(object):
@@ -25,7 +26,7 @@ class Importer(object):
 
         Returns a list of events."""
 
-        event_name = lambda e: e['name']['fi']
+        event_name = lambda e: e['common']['name']['fi']
         events = sorted(events, key=event_name)
         parent_events = []
         for name_fi, subevents in itertools.groupby(events, event_name):
@@ -33,50 +34,73 @@ class Importer(object):
             if(len(subevents) < 2):
                 parent_events.extend(subevents)
                 continue
-            potential_parent = copy_without_keys(subevents[0], instance_fields)
+            potential_parent = subevents[0]
             is_subevent = lambda e: (
-                partial_equals(e, potential_parent, instance_fields))
-
+                e['common'] == potential_parent['common'])
             children = []
-            for matching_event in (filter(is_subevent, subevents)):
-                for k in matching_event.keys():
-                    if k not in instance_fields: del matching_event[k]
-                children.append(matching_event)
-
+            for matching_event in filter(is_subevent, subevents):
+                children.append(matching_event['instance'])
             if len(children) > 0:
                 potential_parent['children'] = children
                 parent_events.append(potential_parent)
         return parent_events
 
     def save_children_through_parent(self, parent_dict):
-        model_values = copy_without_keys(
-            parent_dict, [
-                'children',
-                'name', 'description', 'url', # translatable fields
-                'types', # todo: add to model
-                'organizer', # todo: add to model
-                'matko_location_id', # todo: add to model
-            ])
-        parent = Event(**model_values)
+        model_values = parent_dict['common']
+        model_values.default_factory = None
 
+        no_children = len(parent_dict['children']) < 1
+        if no_children:
+            model_values.update(parent_dict['instance'])
+
+        data_source = model_values['data_source']
+
+        # Try to find the possible existing parent
+        # in the database.
+        if no_children:
+            parent, created = Event.objects.get_or_create(
+                origin_id=model_values['origin_id'],
+                data_source=data_source
+            )
+        else:
+            children_ids = [c['origin_id'] for c in parent_dict['children']]
+            try:
+                child = Event.objects.filter(
+                    data_source=data_source
+                ).filter(
+                    origin_id__in=children_ids
+                ) [0]
+                parent = child.super_event
+            except IndexError:
+                parent = Event()
+
+        remove_keys = [
+            'types', # todo: add to model
+            'organizer', # todo: add to model
+            'matko_location_id', # todo: add to model
+        ]
+        for key in remove_keys: model_values.pop(key, None)
+
+        trans_fields = {key: None for key in ['name', 'description', 'url']}
+        for key in trans_fields.iterkeys():
+            value = model_values.pop(key, None)
+            if value is not None:
+                trans_fields[key] = value
+
+        for key, value in model_values.iteritems():
+            setattr(parent, key, value)
         for l, _ in settings.LANGUAGES:
             with active_language(l):
-                for key in ['name', 'description', 'url']:
-                    field = parent_dict[key]
-                    if l in field: setattr(parent, key, field[l])
-
-        children_ids = [c['origin_id'] for c in parent_dict['children']]
-        try:
-            child = Event.objects.filter(origin_id__in=children_ids)[0]
-            parent.id = child.super_event.id
-        except IndexError:
-            pass
+                for key, value in trans_fields.iteritems():
+                    if value and l in value:
+                        setattr(parent, key, value[l])
 
         parent.save()
 
         for child_dict in parent_dict['children']:
             origin_id = child_dict.get('origin_id')
             del child_dict['origin_id']
+            del child_dict['matko_location_id']
             Event.objects.get_or_create(
                 origin_id=origin_id,
                 super_event=parent,

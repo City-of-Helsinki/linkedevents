@@ -77,21 +77,21 @@ class MatkoImporter(Importer):
         requests_cache.install_cache('matko')
 
     def _import_common(self, lang_code, item, result):
-        result['name'][lang_code] = clean_text(unicodetext(item.find('title')))
-        result['description'][lang_code] = unicodetext(item.find('description'))
+        result['common']['name'][lang_code] = clean_text(unicodetext(item.find('title')))
+        result['common']['description'][lang_code] = unicodetext(item.find('description'))
 
         link = item.find('link')
         if link is not None:
-            result['url'][lang_code] = unicodetext(link)
+            result['common']['url'][lang_code] = unicodetext(link)
 
-        result['date_published'] = dateutil.parser.parse(unicodetext(item.find('pubDate')))
+        result['instance']['date_published'] = dateutil.parser.parse(unicodetext(item.find('pubDate')))
 
         typestring = text(item, 'type2') or text(item, 'type1')
         if typestring is not None:
             types = [t.strip() for t in typestring.split(",")]
             # The first letter is always capitalized in the source.
             types[0] = types[0].lower()
-            put(result, 'types', types)
+            put(result['common'], 'types', types)
 
     def _import_events_from_feed(self, lang_code, items, events):
         for item in items:
@@ -103,8 +103,8 @@ class MatkoImporter(Importer):
                     'Unique id and id values differ for id %d uid %s' % (
                         eid, text(item, 'id')))
 
-            event['origin_id'] = eid
-            event['data_source'] = self.data_source
+            event['instance']['origin_id'] = eid
+            event['common']['data_source'] = self.data_source
 
             self._import_common(lang_code, item, event)
 
@@ -112,9 +112,9 @@ class MatkoImporter(Importer):
             organizer_phone = text(item, 'organizerphone')
 
             if organizer is not None:
-                event['organizer']['name'][lang_code] = clean_text(organizer)
+                event['common']['organizer']['name'][lang_code] = clean_text(organizer)
             if organizer_phone is not None:
-                event['organizer']['phone'][lang_code] = [
+                event['common']['organizer']['phone'][lang_code] = [
                     clean_text(t) for t in organizer_phone.split(",")]
 
             start_time = dateutil.parser.parse(
@@ -125,13 +125,13 @@ class MatkoImporter(Importer):
             # end_time = dateutil.parser.parse(
             #     text(item, 'endtime'))
 
-            standardize_event_types(event['types'])
+            standardize_event_types(event['common']['types'])
 
-            put(event, 'start_date', start_time)
-            put(event, 'end_date', end_time)
-            put(event, 'event_status', matko_status(int(
+            put(event['instance'], 'start_date', start_time)
+            put(event['instance'], 'end_date', end_time)
+            put(event['instance'], 'event_status', matko_status(int(
                 text(item, 'status'))))
-            put(event, 'matko_location_id', int(
+            put(event['instance'], 'matko_location_id', int(
                 text(item, 'placeuniqueid')))
 
         return events
@@ -178,7 +178,7 @@ class MatkoImporter(Importer):
         organizers = recur_dict()
         for k, event in events.items():
             if 'organizer' in event:
-                organizer = event['organizer']
+                organizer = event['common']['organizer']
                 oid = organizer['name']['fi']
                 organizers[oid]['name'].update(organizer['name'])
                 organizers[oid]['phone'].update(organizer['phone'])
@@ -197,13 +197,7 @@ class MatkoImporter(Importer):
             items = self.items_from_url(url)
             self._import_events_from_feed(lang, items, events)
             organizers = self._import_organizers_from_events(events)
-
-        events = events.values()
-        events = self.link_recurring_events(
-            events, instance_fields=[
-                'origin_id', 'start_date', 'end_date',
-                'date_published', 'event_status'])
-        for event in events:
+        for event in self.link_recurring_events(events.values()):
             self.save_children_through_parent(event)
 
     def import_locations(self):
@@ -212,4 +206,3 @@ class MatkoImporter(Importer):
         for lang, url in MATKO_URLS['locations'].iteritems():
             items = self.items_from_url(url)
             self._import_locations_from_feed(lang, items, locations)
-        #return locations
