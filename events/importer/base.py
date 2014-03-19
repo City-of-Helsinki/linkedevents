@@ -7,7 +7,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
 
 from util import active_language
-from events.models import Event
+from events.models import Event, PostalAddress
 
 class Importer(object):
     def __init__(self, options):

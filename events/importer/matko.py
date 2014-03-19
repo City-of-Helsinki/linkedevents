@@ -48,6 +48,9 @@ def standardize_event_types(types):
     # fixme align with existing categories
     pass
 
+def standardize_accessibility(accessibility, lang):
+    pass
+
 # Using a recursive default dictionary
 # allows easy updating of same data
 # with different languages on different passes.
@@ -77,21 +80,19 @@ class MatkoImporter(Importer):
         requests_cache.install_cache('matko')
 
     def _import_common(self, lang_code, item, result):
-        result['common']['name'][lang_code] = clean_text(unicodetext(item.find('title')))
-        result['common']['description'][lang_code] = unicodetext(item.find('description'))
+        result['name'][lang_code] = clean_text(unicodetext(item.find('title')))
+        result['description'][lang_code] = unicodetext(item.find('description'))
 
         link = item.find('link')
         if link is not None:
-            result['common']['url'][lang_code] = unicodetext(link)
-
-        result['instance']['date_published'] = dateutil.parser.parse(unicodetext(item.find('pubDate')))
+            result['url'][lang_code] = unicodetext(link)
 
         typestring = text(item, 'type2') or text(item, 'type1')
         if typestring is not None:
             types = [t.strip() for t in typestring.split(",")]
             # The first letter is always capitalized in the source.
             types[0] = types[0].lower()
-            put(result['common'], 'types', types)
+            put(result, 'types', types)
 
     def _import_events_from_feed(self, lang_code, items, events):
         for item in items:
@@ -105,8 +106,9 @@ class MatkoImporter(Importer):
 
             event['instance']['origin_id'] = eid
             event['common']['data_source'] = self.data_source
+            event['instance']['date_published'] = dateutil.parser.parse(unicodetext(item.find('pubDate')))
 
-            self._import_common(lang_code, item, event)
+            self._import_common(lang_code, item, event['common'])
 
             organizer = text(item, 'organizer')
             organizer_phone = text(item, 'organizerphone')
@@ -144,33 +146,41 @@ class MatkoImporter(Importer):
             lid = int(text(item, 'id'))
             location = locations[lid]
 
-            location['id'] = lid
-            location['source'] = 'matko'
+            location['origin_id'] = lid
+            location['data_source'] = data_source
 
             self._import_common(lang_code, item, location)
+
             address = text(item, 'address')
             if address is not None:
-                location['address']['street'][lang_code] = clean_text(address)
+                location['address']['street_address'][lang_code] = clean_text(address)
 
             zipcode, muni = zipcode_and_muni(text(item, 'zipcode'))
-            location['address']['zip'] = zipcode
-            location['address']['municipality'][lang_code] = muni
-
-            location['phone'][lang_code] = text(item, 'phone')
-            location['fax'][lang_code] = text(item, 'fax')
+            location['address']['postal_code'] = zipcode
+            location['address']['locality'][lang_code] = muni
+            location['address']['phone'][lang_code] = text(item, 'phone')
             # There was at least one case with different
             # email addresses for different languages.
-            location['email'][lang_code] = text(item, 'email')
-            location['directions'][lang_code] = text(item, 'location')
-            location['opening_hours'][lang_code] = text(item, 'open')
-            location['admission_fee'][lang_code] = text(item, 'admission')
-            location['accessibility'][lang_code] = text(item, 'disabled')
+            location['address']['email'][lang_code] = text(item, 'email')
+
+            # not available in schema.org:
+            #location['address']['fax'][lang_code] = text(item, 'fax')
+            #location['directions'][lang_code] = text(item, 'location')
+            #location['admission_fee'][lang_code] = text(item, 'admission')
+
+            # todo: parse
+            #location['opening_hours'][lang_code] = text(item, 'open')
+            location['custom_fields']['accessibility'][lang_code] = text(item, 'disabled')
+
+            standardize_accessibility(
+                location['custom_fields']['accessibility'][lang_code], lang)
 
             lon, lat = text(item, 'longitude'), text(item, 'latitude')
             if lon != '0' and lat != '0':
                 put(location, 'geo', {
                     'longitude': lon,
-                    'latitude':  lat})
+                    'latitude':  lat,
+                    'geotype': 1})
 
         return locations
 

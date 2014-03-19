@@ -16,6 +16,9 @@ class PlaceTranslationOptions(TranslationOptions):
     fields = ('name', 'description')
 translator.register(Place, PlaceTranslationOptions)
 
+class PostalAddressTranslationOptions(TranslationOptions):
+    fields = ('street_address', 'address_locality', 'telephone')
+translator.register(PostalAddress, PostalAddressTranslationOptions)
 
 class EventTranslationOptions(TranslationOptions):
     fields = ('name', 'description', 'url')
