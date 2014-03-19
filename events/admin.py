@@ -1,7 +1,6 @@
 from django.contrib import admin
 from models import *
 from modeltranslation.admin import TranslationAdmin
-from polymorphic.admin import PolymorphicParentModelAdmin, PolymorphicChildModelAdmin
 
 
 class BaseAdmin(admin.ModelAdmin):
@@ -27,6 +26,10 @@ class PlaceAdmin(BaseAdmin, TranslationAdmin, reversion.VersionAdmin):
     pass
 
 
+class OfferAdmin(BaseAdmin):
+    pass
+
+
 class OrganizationAdmin(BaseAdmin, reversion.VersionAdmin):
     pass
 
@@ -38,10 +41,11 @@ class LanguageAdmin(BaseAdmin, reversion.VersionAdmin):
 class PersonAdmin(BaseAdmin, reversion.VersionAdmin):
     pass
 
+
 admin.site.register(Event, EventModelAdmin)
 admin.site.register(Category, CategoryAdmin)
 admin.site.register(Place, PlaceAdmin)
-admin.site.register(Offer)
+admin.site.register(Offer, OfferAdmin)
 admin.site.register(Organization, OrganizationAdmin)
 admin.site.register(Language, LanguageAdmin)
 admin.site.register(Person, PersonAdmin)

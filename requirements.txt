@@ -2,6 +2,7 @@ Django==1.6.2
 Mako==0.9.1
 Markdown==2.4
 MarkupSafe==0.19
+PyYAML==3.10
 South==0.8.4
 django-cors-headers==0.12
 django-filter==0.7
@@ -21,4 +22,3 @@ requests==2.2.1
 requests-cache==0.4.4
 six==1.5.2
 wsgiref==0.1.2
-pyyaml==3.10

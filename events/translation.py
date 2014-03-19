@@ -21,6 +21,7 @@ class EventTranslationOptions(TranslationOptions):
     fields = ('name', 'description', 'url')
 translator.register(Event, EventTranslationOptions)
 
+
 class PersonTranslationOptions(TranslationOptions):
     fields = ('name', 'description')
 translator.register(Person, PersonTranslationOptions)

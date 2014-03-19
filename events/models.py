@@ -16,6 +16,7 @@ Override jsonld_context attribute to change @context when need to define schemas
 """
 import datetime
 from django.contrib.auth.models import User
+from django.contrib.contenttypes.generic import GenericForeignKey
 import pytz
 from django.db import models
 import reversion
@@ -24,7 +25,6 @@ from django.utils.translation import ugettext_lazy as _
 from mptt.models import MPTTModel, TreeForeignKey
 from django.utils.text import slugify
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.contenttypes import generic
 from events import contexts
 
 
@@ -44,6 +44,7 @@ class SchemalessFieldMixin(models.Model):
     class Meta:
         abstract = True
 
+
 class DataSource(models.Model):
     id = models.CharField(max_length=100, primary_key=True)
     name = models.CharField(max_length=255)
@@ -54,6 +55,10 @@ class DataSource(models.Model):
             return self.event_url_template.format(origin_id=origin_id)
         else:
             return None
+
+    def __unicode__(self):
+        return self.name
+
 
 class BaseModel(SystemMetaMixin):
     # Properties from schema.org/Thing
@@ -217,10 +222,14 @@ class Offer(BaseModel):
     available_at_or_from = models.ForeignKey(Place, null=True, blank=True)
     price = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     price_currency = models.CharField(max_length=3, null=True, blank=True)
-    seller = models.CharField(max_length=255, null=True, blank=True)
     valid_from = models.DateTimeField(null=True, blank=True)
     valid_through = models.DateTimeField(null=True, blank=True)
     sku = models.CharField(max_length=255, null=True, blank=True)
+
+    limiter = {"model__in": ["organization", "person"]}
+    seller_object_id = models.PositiveIntegerField(null=True, blank=True)
+    seller_content_type = models.ForeignKey(ContentType, limit_choices_to=limiter, null=True, blank=True)
+    seller = GenericForeignKey('seller_content_type', 'seller_object_id')
 
     class Meta:
         verbose_name = _('Offer')
@@ -231,7 +240,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     jsonld_type = "Event/LinkedEvent"
 
     """
-    Status enumeration is based on http://schema.org/EventStatusType
+    eventStatus enumeration is based on http://schema.org/EventStatusType
     """
     SCHEDULED = 1
     CANCELLED = 2
@@ -246,7 +255,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     )
 
     # Properties from schema.org/Thing
-    url = models.URLField('Event home page', null=True, blank=True)
+    url = models.URLField(_('Event home page'), blank=True)
     description = models.TextField(blank=True)
 
     # Properties from schema.org/CreativeWork
@@ -263,7 +272,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     end_date = models.DateField(null=True, db_index=True, blank=True)
     event_status = models.SmallIntegerField(choices=STATUSES, default=SCHEDULED)
     location = models.ForeignKey(Place, null=True, blank=True)
-    # Just ONE offer in offer field at schema.org
+    # Just ONE offer in offers field at schema.org (???)
     offers = models.ForeignKey(Offer, null=True, blank=True)
     previous_start_date = models.DateTimeField(null=True, blank=True)
     start_date = models.DateField(null=True, db_index=True, blank=True)
@@ -290,7 +299,6 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
             self.created_time = BaseModel.now()
         if not self.slug:
             self.slug = slugify(self.name[:50])
-        #self.mark_checked()
         self.last_modified_time = BaseModel.now()
         super(Event, self).save(*args, **kwargs)
 

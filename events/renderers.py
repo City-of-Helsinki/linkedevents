@@ -1,6 +1,6 @@
-from rest_framework.renderers import UnicodeJSONRenderer
+from rest_framework.renderers import JSONRenderer
 
 
-class JSONLDRenderer(UnicodeJSONRenderer):
+class JSONLDRenderer(JSONRenderer):
     media_type = 'application/ld+json'
     format = 'json-ld'

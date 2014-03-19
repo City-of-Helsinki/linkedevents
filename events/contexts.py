@@ -19,16 +19,13 @@ def create_context(klass):
             klass.jsonld_context[name] = CONTEXTS[name]
 
 CONTEXTS = {
-    "id": {
-        "@id": "linkedEvents:id",
-        "@type": "Integer"
-    },
     "name": {
-        "@id": "name",
+        "@container": "@language"
+    },
+    "url": {
         "@container": "@language"
     },
     "description": {
-        "@id": "description",
         "@container": "@language"
     },
     "originId": {

@@ -16,9 +16,13 @@ def rename_fields(dataz):
                 new_data[newkey] = value
         return new_data
     elif isinstance(dataz, (list, tuple)):
-        for i in range(len(dataz)):
-            dataz[i] = rename_fields(dataz[i])
-        return dataz
+        new_data = []
+        for value in dataz:
+            if isinstance(value, (dict, list, tuple)):
+                new_data.append(rename_fields(value))
+            else:
+                new_data.append(value)
+        return new_data
 
 
 class CamelCaseJSONParser(JSONParser):

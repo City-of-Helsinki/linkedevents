@@ -1,19 +1,20 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import json
-
 from django.test import SimpleTestCase
-from events.serializers.serializers import LinkedEventsSerializer
+from events import utils
+from events.parsers import rename_fields
+from django.core.urlresolvers import reverse
+from rest_framework import status
+from rest_framework.test import APITestCase
 
 
-class LinkedEventsSerializerTestCase(SimpleTestCase):
-
+class FieldRenamingTestCase(SimpleTestCase):
     def test_from_camelcase_conversions(self):
-        self.assertEquals(LinkedEventsSerializer.convert_from_camelcase('LoremIpsumIndaHouse'), 'lorem_ipsum_inda_house')
-        self.assertEquals(LinkedEventsSerializer.convert_from_camelcase('startsWithSmall'), 'starts_with_small')
+        self.assertEquals(utils.convert_from_camelcase('LoremIpsumIndaHouse'), 'lorem_ipsum_inda_house')
+        self.assertEquals(utils.convert_from_camelcase('startsWithSmall'), 'starts_with_small')
 
     def test_to_camelcase_conversions(self):
-        self.assertEquals(LinkedEventsSerializer.convert_to_camelcase('lorem_ipsum_inda_house'), 'loremIpsumIndaHouse')
+        self.assertEquals(utils.convert_to_camelcase('lorem_ipsum_inda_house'), 'loremIpsumIndaHouse')
 
     def test_dict_structure_conversions(self):
         obj1 = {
@@ -30,4 +31,104 @@ class LinkedEventsSerializerTestCase(SimpleTestCase):
             "nested_array": [1, {"val_val_one": 1}, {"val_val_two": 2}, {"nested_nested_array": ["lorem", "ipsum"]}]
         }
 
-        self.assertTrue(LinkedEventsSerializer.rename_fields(obj1) == obj2)
+        self.assertTrue(rename_fields(obj1) == obj2)
+
+
+class EventTests(APITestCase):
+
+    def test_create_organization(self):
+        url = reverse('organization-list')
+        response = self.client.post(url, ORG_POST_JSON, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["name"], ORG_POST_JSON["name"])
+
+    def test_create_event(self):
+        url = reverse('event-list')
+        response = self.client.post(url, EVENT_POST_JSON, format='json')
+        #print(response.data['offers'])
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['name'], EVENT_POST_JSON['name'])
+
+
+ORG_POST_JSON = {
+    "@context": "http://schema.org",
+    "@type": "Organization",
+    "creator": None,
+    "editor": None,
+    "id": 1,
+    "name": "Org 1",
+    "image": "",
+    "dateCreated": None,
+    "dateModified": None,
+    "discussionUrl": "",
+    "thumbnailUrl": "",
+    "description": "",
+    "baseIri": "",
+    "compactIriName": ""
+}
+
+EVENT_POST_JSON = {
+    "type": "Event/LinkedEvent",
+    "name": {
+        "fi": "Tapahtuma 1",
+        "en": "Event 1",
+        "sv": u"Händelse 1"
+    },
+    "description": {
+        "fi": "lorem",
+        "en": "ipsum",
+        "sv": "lorem"
+    },
+    "url": {
+        "fi": "",
+        "en": "",
+        "sv": ""
+    },
+    "location": None,
+    "publisher": None,
+    "provider": None,
+    "category": [],
+    "offers": {
+        "@type": "Offer",
+        "seller": ORG_POST_JSON,
+        "id": 1,
+        "name": "asdasd",
+        "image": "",
+        "dateCreated": None,
+        "dateModified": None,
+        "discussionUrl": "",
+        "thumbnailUrl": "",
+        "availableAtOrFrom": None,
+        "price": None,
+        "priceCurrency": "",
+        "validFrom": None,
+        "validThrough": None,
+        "sku": "",
+    },
+    "creator": [],
+    "editor": None,
+    "superEvent": None,
+    "subEvent": [],
+    "eventStatus": "EventScheduled",
+    "customFields": {
+        "dasda": "asdads",
+        "sad": "asdads",
+    },
+    "image": "",
+    "dateCreated": None,
+    "dateModified": None,
+    "discussionUrl": "",
+    "thumbnailUrl": "",
+    "datePublished": "2014-03-06T15:10:32Z",
+    "doorTime": "",
+    "duration": "",
+    "endDate": "2014-03-06",
+    "previousStartDate": None,
+    "startDate": "",
+    "typicalAgeRange": "",
+    "originId": "",
+    "targetGroup": "",
+    "slug": "dasdadad",
+    "dataSource": None,
+    "performer": []
+}
