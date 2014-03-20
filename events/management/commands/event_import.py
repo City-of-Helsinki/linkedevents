@@ -6,6 +6,7 @@ from django.utils.translation import activate, get_language
 
 from events.importer.base import get_importers
 
+
 class Command(BaseCommand):
     args = '<module>'
     help = "Import event data"

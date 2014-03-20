@@ -1,6 +1,7 @@
 from .sync import ModelSyncher
 from .base import Importer, register_importer
 
+
 @register_importer
 class KulkeImporter(Importer):
     name = "kulke"

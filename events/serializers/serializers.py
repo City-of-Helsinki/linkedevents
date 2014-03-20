@@ -262,7 +262,7 @@ class SubOrSuperEventSerializer(TranslationAwareSerializer):
     publisher = OrganizationSerializer(hide_ld_context=True)
     category = CategorySerializer(many=True, allow_add_remove=True, hide_ld_context=True)
     offers = OfferSerializer(hide_ld_context=True)
-    creator = serializers.HyperlinkedRelatedField(many=True,view_name='person-detail')
+    creator = serializers.HyperlinkedRelatedField(many=True, view_name='person-detail')
     editor = serializers.HyperlinkedRelatedField(view_name='person-detail')
     super_event = serializers.HyperlinkedRelatedField(view_name='event-detail')
 

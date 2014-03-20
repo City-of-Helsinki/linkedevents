@@ -11,8 +11,10 @@ from modeltranslation.translator import translator
 from util import active_language
 from events.models import *
 
+
 def place_not_found(data_source, pid):
     return ('Place not found', (unicode(data_source), unicode(pid)))
+
 
 class Importer(object):
     def __init__(self, options):
@@ -36,7 +38,7 @@ class Importer(object):
         parent_events = []
         for name_fi, subevents in itertools.groupby(events, event_name):
             subevents = list(subevents)
-            if(len(subevents) < 2):
+            if (len(subevents) < 2):
                 parent_events.extend(subevents)
                 continue
             potential_parent = subevents[0]
@@ -53,9 +55,9 @@ class Importer(object):
     def save_location(self, location_dict):
         location_dict.default_factory = None
         postal_address, created = PostalAddress.objects.get_or_create(
-            street_address_fi = location_dict['address']['street_address']['fi'],
-            address_locality_fi = location_dict['address']['address_locality']['fi'],
-            postal_code = location_dict['address'].get('postal_code')
+            street_address_fi=location_dict['address']['street_address']['fi'],
+            address_locality_fi=location_dict['address']['address_locality']['fi'],
+            postal_code=location_dict['address'].get('postal_code')
         )
         place, created = Place.objects.get_or_create(
             data_source=location_dict['data_source'],
@@ -116,14 +118,14 @@ class Importer(object):
                     data_source=data_source
                 ).filter(
                     origin_id__in=children_ids
-                ) [0]
+                )[0]
                 parent = child.super_event
             except IndexError:
                 parent = Event()
 
         remove_keys = [
-            'types', # todo: add to model
-            'organizer', # todo: add to model
+            'types',  # todo: add to model
+            'organizer',  # todo: add to model
             'matko_location_id',
         ]
         for key in remove_keys: model_values.pop(key, None)
@@ -162,14 +164,17 @@ class Importer(object):
                 origin_id=origin_id,
                 super_event=parent,
                 data_source=parent.data_source,
-                defaults = child_dict)
+                defaults=child_dict)
         return errors
 
+
 importers = {}
+
 
 def register_importer(klass):
     importers[klass.name] = klass
     return klass
+
 
 def get_importers():
     if importers:

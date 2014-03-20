@@ -42,6 +42,7 @@ class DataSource(models.Model):
     def __unicode__(self):
         return self.id
 
+
 class SystemMetaMixin(models.Model):
     created_by = models.ForeignKey(User, null=True, blank=True, related_name="%(app_label)s_%(class)s_created_by")
     modified_by = models.ForeignKey(User, null=True, blank=True, related_name="%(app_label)s_%(class)s_modified_by")
@@ -59,6 +60,7 @@ class SchemalessFieldMixin(models.Model):
 
     class Meta:
         abstract = True
+
 
 class BaseModel(SystemMetaMixin):
     # Properties from schema.org/Thing
@@ -165,6 +167,7 @@ class PostalAddress(BaseModel):
             self.street_address, self.postal_code, self.address_locality
         ])
         return u', '.join(values)
+
 
 class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     same_as = models.CharField(max_length=255, null=True, blank=True)

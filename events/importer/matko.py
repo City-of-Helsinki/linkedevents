@@ -23,13 +23,16 @@ MATKO_URLS = {
     }
 }
 
+
 def clean_text(text):
     text = text.replace('\n', ' ')
     # remove consecutive whitespaces
     return re.sub(r'\s\s+', ' ', text, re.U).strip()
 
+
 def matko_tag(tag):
     return '{https://aspicore-asp.net/matkoschema/}' + tag
+
 
 def matko_status(num):
     if num == 2:
@@ -38,30 +41,37 @@ def matko_status(num):
         return Event.CANCELLED
     return None
 
+
 def unicodetext(item):
     return etree.tostring(item, encoding='unicode', method='text')
 
+
 def text(item, tag):
     return unicodetext(item.find(matko_tag(tag)))
+
 
 def standardize_event_types(types):
     # fixme align with existing categories
     pass
 
+
 def standardize_accessibility(accessibility, lang):
     pass
+
 
 # Using a recursive default dictionary
 # allows easy updating of same data
 # with different languages on different passes.
 def recur_dict(): return defaultdict(recur_dict)
 
+
 def put(rdict, key, val):
     if key not in rdict:
         rdict[key] = val
     elif val != rdict[key]:
         logger.info('Values differ for %s, key %s, values %s and %s ' % (
-                rdict, key, val, rdict[key]))
+            rdict, key, val, rdict[key]))
+
 
 def zipcode_and_muni(text):
     if text is None:
@@ -70,6 +80,7 @@ def zipcode_and_muni(text):
     if m is not None:
         return m.group(1), m.group(2).strip()
     return None, None
+
 
 @register_importer
 class MatkoImporter(Importer):
@@ -168,7 +179,7 @@ class MatkoImporter(Importer):
             location['address']['email'][lang_code] = text(item, 'email')
 
             # not available in schema.org:
-            #location['address']['fax'][lang_code] = text(item, 'fax')
+            # location['address']['fax'][lang_code] = text(item, 'fax')
             #location['directions'][lang_code] = text(item, 'location')
             #location['admission_fee'][lang_code] = text(item, 'admission')
 
@@ -183,7 +194,7 @@ class MatkoImporter(Importer):
             if lon != '0' and lat != '0':
                 put(location, 'geo', {
                     'longitude': lon,
-                    'latitude':  lat,
+                    'latitude': lat,
                     'geo_type': 1})
 
         return locations
