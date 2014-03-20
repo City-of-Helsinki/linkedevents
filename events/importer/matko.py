@@ -48,6 +48,9 @@ def standardize_event_types(types):
     # fixme align with existing categories
     pass
 
+def standardize_accessibility(accessibility, lang):
+    pass
+
 # Using a recursive default dictionary
 # allows easy updating of same data
 # with different languages on different passes.
@@ -63,9 +66,9 @@ def put(rdict, key, val):
 def zipcode_and_muni(text):
     if text is None:
         return None, None
-    m = re.match(r'(\d+)\s+(\D+)', text)
+    m = re.match(r'\D*(\d+)\s+(\D+)', text)
     if m is not None:
-        return m.group(1, 2)
+        return m.group(1), m.group(2).strip()
     return None, None
 
 @register_importer
@@ -84,8 +87,6 @@ class MatkoImporter(Importer):
         if link is not None:
             result['url'][lang_code] = unicodetext(link)
 
-        result['date_published'] = dateutil.parser.parse(unicodetext(item.find('pubDate')))
-
         typestring = text(item, 'type2') or text(item, 'type1')
         if typestring is not None:
             types = [t.strip() for t in typestring.split(",")]
@@ -103,35 +104,39 @@ class MatkoImporter(Importer):
                     'Unique id and id values differ for id %d uid %s' % (
                         eid, text(item, 'id')))
 
-            event['origin_id'] = eid
-            event['data_source'] = self.data_source
+            event['instance']['origin_id'] = eid
+            event['common']['data_source'] = self.data_source
+            event['instance']['date_published'] = dateutil.parser.parse(
+                unicodetext(item.find('pubDate'))
+            )
 
-            self._import_common(lang_code, item, event)
+            self._import_common(lang_code, item, event['common'])
 
             organizer = text(item, 'organizer')
             organizer_phone = text(item, 'organizerphone')
 
             if organizer is not None:
-                event['organizer']['name'][lang_code] = clean_text(organizer)
+                event['common']['organizer']['name'][lang_code] = clean_text(organizer)
             if organizer_phone is not None:
-                event['organizer']['phone'][lang_code] = [
+                event['common']['organizer']['phone'][lang_code] = [
                     clean_text(t) for t in organizer_phone.split(",")]
 
-            start_time = dateutil.parser.parse(
+            start_date = dateutil.parser.parse(
                 text(item, 'starttime'))
+            start_time = start_date.time()
 
-            # The feed doesn't contain proper end times.
-            end_time = None
-            # end_time = dateutil.parser.parse(
-            #     text(item, 'endtime'))
+            # The feed doesn't contain proper end times (clock).
+            end_date = dateutil.parser.parse(
+                text(item, 'endtime'))
 
-            standardize_event_types(event['types'])
+            standardize_event_types(event['common']['types'])
 
-            put(event, 'start_date', start_time)
-            put(event, 'end_date', end_time)
-            put(event, 'event_status', matko_status(int(
+            put(event['instance'], 'start_date', start_date)
+            put(event['instance'], 'door_time', start_time)
+            put(event['instance'], 'end_date', end_date)
+            put(event['instance'], 'event_status', matko_status(int(
                 text(item, 'status'))))
-            put(event, 'matko_location_id', int(
+            put(event['instance'], 'matko_location_id', int(
                 text(item, 'placeuniqueid')))
 
         return events
@@ -144,33 +149,42 @@ class MatkoImporter(Importer):
             lid = int(text(item, 'id'))
             location = locations[lid]
 
-            location['id'] = lid
-            location['source'] = 'matko'
+            location['origin_id'] = lid
+            location['data_source'] = self.data_source
 
             self._import_common(lang_code, item, location)
+
             address = text(item, 'address')
             if address is not None:
-                location['address']['street'][lang_code] = clean_text(address)
+                location['address']['street_address'][lang_code] = clean_text(address)
 
             zipcode, muni = zipcode_and_muni(text(item, 'zipcode'))
-            location['address']['zip'] = zipcode
-            location['address']['municipality'][lang_code] = muni
-
-            location['phone'][lang_code] = text(item, 'phone')
-            location['fax'][lang_code] = text(item, 'fax')
+            if zipcode and len(zipcode) == 5:
+                location['address']['postal_code'] = zipcode
+            location['address']['address_locality'][lang_code] = muni
+            location['address']['phone'][lang_code] = text(item, 'phone')
             # There was at least one case with different
             # email addresses for different languages.
-            location['email'][lang_code] = text(item, 'email')
-            location['directions'][lang_code] = text(item, 'location')
-            location['opening_hours'][lang_code] = text(item, 'open')
-            location['admission_fee'][lang_code] = text(item, 'admission')
-            location['accessibility'][lang_code] = text(item, 'disabled')
+            location['address']['email'][lang_code] = text(item, 'email')
 
-            lon, lat = text(item, 'longitude'), text(item, 'latitude')
+            # not available in schema.org:
+            #location['address']['fax'][lang_code] = text(item, 'fax')
+            #location['directions'][lang_code] = text(item, 'location')
+            #location['admission_fee'][lang_code] = text(item, 'admission')
+
+            # todo: parse
+            #location['opening_hours'][lang_code] = text(item, 'open')
+            location['custom_fields']['accessibility'][lang_code] = text(item, 'disabled')
+
+            standardize_accessibility(
+                location['custom_fields']['accessibility'][lang_code], lang_code)
+
+            lon, lat = clean_text(text(item, 'longitude')), clean_text(text(item, 'latitude'))
             if lon != '0' and lat != '0':
                 put(location, 'geo', {
                     'longitude': lon,
-                    'latitude':  lat})
+                    'latitude':  lat,
+                    'geo_type': 1})
 
         return locations
 
@@ -178,7 +192,7 @@ class MatkoImporter(Importer):
         organizers = recur_dict()
         for k, event in events.items():
             if 'organizer' in event:
-                organizer = event['organizer']
+                organizer = event['common']['organizer']
                 oid = organizer['name']['fi']
                 organizers[oid]['name'].update(organizer['name'])
                 organizers[oid]['phone'].update(organizer['phone'])
@@ -197,14 +211,13 @@ class MatkoImporter(Importer):
             items = self.items_from_url(url)
             self._import_events_from_feed(lang, items, events)
             organizers = self._import_organizers_from_events(events)
-
-        events = events.values()
-        events = self.link_recurring_events(
-            events, instance_fields=[
-                'origin_id', 'start_date', 'end_date',
-                'date_published', 'event_status'])
-        for event in events:
-            self.save_children_through_parent(event)
+        errors = set()
+        for event in self.link_recurring_events(events.values()):
+            errors.update(self.save_children_through_parent(event))
+        if len(errors) > 0:
+            print 'Errors:'
+        for e in errors:
+            print "%s: %s" % (e[0], u" ".join(e[1]))
 
     def import_locations(self):
         print("Importing Matko locations")
@@ -212,4 +225,5 @@ class MatkoImporter(Importer):
         for lang, url in MATKO_URLS['locations'].iteritems():
             items = self.items_from_url(url)
             self._import_locations_from_feed(lang, items, locations)
-        #return locations
+        for location in locations.values():
+            self.save_location(location)
