@@ -279,7 +279,7 @@ class EventSerializer(TranslationAwareSerializer):
     offers = OfferSerializer(hide_ld_context=True)
     creator = PersonSerializer(many=True, hide_ld_context=True)
     editor = PersonSerializer(hide_ld_context=True)
-    super_event = serializers.HyperlinkedRelatedField(view_name='event-detail')
+    super_event = serializers.HyperlinkedRelatedField(required=False, view_name='event-detail')
     url = TranslatedField()
 
     event_status = EnumChoiceField(Event.STATUSES)

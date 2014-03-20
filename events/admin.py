@@ -1,6 +1,8 @@
 from django.contrib import admin
-from models import *
 from modeltranslation.admin import TranslationAdmin
+import reversion
+from events.models import Event, Category, Place, Offer, Organization, Language, PostalAddress, Person, \
+    OpeningHoursSpecification, GeoInfo
 
 
 class BaseAdmin(admin.ModelAdmin):

@@ -1,5 +1,5 @@
 """
-Django settings for linkedevents project.
+Django base settings for linkedevents project.
 
 For more information on this file, see
 https://docs.djangoproject.com/en/1.6/topics/settings/
@@ -67,16 +67,7 @@ WSGI_APPLICATION = 'linkedevents.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/1.6/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'linkedevents',
-        'USER': 'linkedevents',
-        'PASSWORD': 'linkedevents',
-        'HOST': 'localhost',
-        'PORT': '',
-    }
-}
+DATABASES = {}
 
 ATOMIC_REQUESTS = True
 
@@ -100,7 +91,7 @@ USE_L10N = True
 USE_TZ = True
 
 LOCALE_PATHS = (
-    os.path.join(BASE_DIR, 'locale'),
+    os.path.join(BASE_DIR, '../locale'),
 )
 
 # Static files (CSS, JavaScript, Images)
@@ -128,5 +119,5 @@ REST_FRAMEWORK = {
 CORS_ORIGIN_WHITELIST = ()
 
 TEMPLATE_DIRS = (
-    os.path.join(BASE_DIR, 'templates'),
+    os.path.join(BASE_DIR, '../templates'),
 )
