@@ -179,7 +179,7 @@ class MatkoImporter(Importer):
             standardize_accessibility(
                 location['custom_fields']['accessibility'][lang_code], lang_code)
 
-            lon, lat = text(item, 'longitude'), text(item, 'latitude')
+            lon, lat = clean_text(text(item, 'longitude')), clean_text(text(item, 'latitude'))
             if lon != '0' and lat != '0':
                 put(location, 'geo', {
                     'longitude': lon,

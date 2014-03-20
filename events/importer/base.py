@@ -62,7 +62,11 @@ class Importer(object):
             origin_id=location_dict['origin_id']
         )
         place.address = postal_address
-        place.geo = GeoInfo(**location_dict['geo'])
+        geodata = location_dict.get('geo')
+        if geodata:
+            place.geo = GeoInfo(**geodata)
+        else:
+            place.geo = GeoInfo()
 
         for l, _ in settings.LANGUAGES:
             with active_language(l):
