@@ -152,7 +152,9 @@ class Category(MPTTModel, BaseModel, SchemalessFieldMixin):
     )
 
     # category ids from: http://finto.fi/ysa/fi/
+    url = models.CharField(max_length=255, db_index=True, null=False, blank=False, default='unknown')
     description = models.TextField(blank=True)
+    label = models.CharField(max_length=255, null=False, blank=False, default='unknown')
     same_as = models.CharField(max_length=255, null=True, blank=True)
     parent_category = TreeForeignKey('self', null=True, blank=True)
     creator = models.ForeignKey(Person, null=True, blank=True,

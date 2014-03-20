@@ -20,3 +20,4 @@ pytz
 requests
 requests-cache
 six
+rdflib

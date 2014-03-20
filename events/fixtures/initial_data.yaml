@@ -12,7 +12,7 @@
     event_url_template: 'https://{origin_id}'
 
 - model: events.DataSource
-  pk: 'servicemap'
+  pk: 'ysa'
   fields:
-    name: 'Palvelukartan toimipisterekisteri'
+    name: 'Yleinen suomalainen asiasanasto'
     event_url_template: ''
