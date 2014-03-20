@@ -3,6 +3,7 @@ from models import *
 from rest_framework import viewsets
 from serializers.serializers import *
 
+
 class EventViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
@@ -14,15 +15,14 @@ class EventViewSet(viewsets.ModelViewSet):
         args = {} if 'show_all' in request.QUERY_PARAMS else {'event_status': Event.SCHEDULED}
 
         if 'from' in request.QUERY_PARAMS:
-            args['start_date__gte'] = request.QUERY_PARAM['from']
+            args['start_date__gte'] = request.QUERY_PARAMS['from']
 
         if 'to' in request.QUERY_PARAMS:
-            args['end_date__lte'] = request.QUERY_PARAM['to']
+            args['end_date__lte'] = request.QUERY_PARAMS['to']
 
-        events = Event.objects.filter(**args)
-        obj = self.serializer_class(events, many=True)
-        data = obj.data
-        return Response(data)
+        self.queryset = Event.objects.filter(**args)
+
+        return super(EventViewSet, self).list(request, *args, **kwargs)
 
 
 class PlaceViewSet(viewsets.ModelViewSet):

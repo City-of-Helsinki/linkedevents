@@ -13,12 +13,9 @@ mptt_fields = ['lft', 'rght', 'tree_id', 'level']
 class OrganizationOrPersonRelatedField(serializers.RelatedField):
     def __init__(self, hide_ld_context=False):
         self.hide_ld_context = hide_ld_context
-        super(OrganizationOrPersonRelatedField, self).__init__()
+        super(OrganizationOrPersonRelatedField, self).__init__(queryset=Organization.objects, read_only=False)
 
     def to_native(self, value):
-        """
-        Serialize tagged objects to a simple textual representation.
-        """
         if isinstance(value, Organization):
             serializer = OrganizationSerializer(value, hide_ld_context=self.hide_ld_context)
         elif isinstance(value, Person):
@@ -27,6 +24,19 @@ class OrganizationOrPersonRelatedField(serializers.RelatedField):
             raise Exception('Unexpected type of related object')
 
         return serializer.data
+
+    def from_native(self, data):
+        """
+        TODO: fix, this is just a skeleton. We should save and fetch right content_type (and content_id) to parent.
+        """
+        if data["@type"] == 'Organization':
+            pass  # Organization is the default queryset
+        elif data["@type"] == 'Person':
+            self.queryset = Person.objects
+        else:
+            raise Exception('Unexpected type of related object')
+
+        super(OrganizationOrPersonRelatedField, self).from_native(data)
 
 
 class EnumChoiceField(serializers.WritableField):
@@ -104,6 +114,13 @@ class LinkedEventsSerializer(serializers.ModelSerializer):
                                                      allow_add_remove, **kwargs)
         self.hide_ld_context = hide_ld_context
 
+        if 'request' in self.context:
+            request = self.context['request']
+            self.base_url_for_id = '%s://%s%s' % ('https' if request.is_secure() else 'http',
+                                                  request.get_host(), request.path)
+        else:
+            self.base_url_for_id = ''
+
     def to_native(self, obj):
         """
         Before sending to renderer there's a need to do additional work on to-be-JSON dictionary data
@@ -134,7 +151,7 @@ class LinkedEventsSerializer(serializers.ModelSerializer):
             key = utils.convert_to_camelcase(self.get_field_key(field_name))
             value = field.field_to_native(obj, field_name)
             if field_name == 'id':
-                ret['@id'] = str(value)
+                ret['@id'] = self.base_url_for_id + ((str(value) + '/') if not self.object else '')
             method = getattr(self, 'transform_%s' % field_name, None)
             if callable(method):
                 value = method(obj, value)
@@ -262,7 +279,7 @@ class EventSerializer(TranslationAwareSerializer):
     offers = OfferSerializer(hide_ld_context=True)
     creator = PersonSerializer(many=True, hide_ld_context=True)
     editor = PersonSerializer(hide_ld_context=True)
-    super_event = SubOrSuperEventSerializer(hide_ld_context=True)
+    super_event = serializers.HyperlinkedRelatedField(view_name='event-detail')
     url = TranslatedField()
 
     event_status = EnumChoiceField(Event.STATUSES)
