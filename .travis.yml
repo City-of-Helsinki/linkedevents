@@ -3,9 +3,16 @@ language: python
 python:
   - "2.7"
 
+addons:
+  postgresql: "9.3"
+
+before_script:
+  - psql -d template1 -c 'create extension hstore;' -U postgres
+  - psql -c 'create database linkedevents;' -U postgres
+
 # command to install dependencies
 install:
-  - pip install -r requirements.txt --use-mirrors
+  - pip install -r requirements.txt
 
 # command to run tests
 script: python manage.py test
