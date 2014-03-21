@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+from isodate import Duration, duration_isoformat, parse_duration
 from rest_framework import serializers
 from events.models import *
 from django.conf import settings
@@ -86,6 +87,23 @@ class TranslatedField(serializers.WritableField):
             into[field_name + '_' + code] = value
             if code == settings.LANGUAGE_CODE:
                 into[field_name] = value
+
+
+class ISO8601DurationField(serializers.WritableField):
+    def to_native(self, obj):
+        if obj:
+            d = Duration(milliseconds=obj)
+            return duration_isoformat(d)
+        else:
+            return None
+
+    def from_native(self, data):
+        value = parse_duration(data)
+        return (
+            value.days * 24 * 3600 * 1000000
+            + value.seconds * 1000
+            + value.microseconds / 1000
+        )
 
 
 class LinkedEventsSerializer(serializers.ModelSerializer):
@@ -279,6 +297,7 @@ class EventSerializer(TranslationAwareSerializer):
     offers = OfferSerializer(hide_ld_context=True)
     creator = PersonSerializer(many=True, hide_ld_context=True)
     editor = PersonSerializer(hide_ld_context=True)
+    duration = ISO8601DurationField()
     super_event = serializers.HyperlinkedRelatedField(required=False, view_name='event-detail')
     url = TranslatedField()
 

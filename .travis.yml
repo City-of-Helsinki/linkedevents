@@ -13,6 +13,9 @@ before_script:
 # command to install dependencies
 install:
   - pip install -r requirements.txt
+  - pip install pep8
 
 # command to run tests
-script: python manage.py test
+script:
+  - pep8 --exclude=migrations --ignore=E501,E701 events
+  - python manage.py test

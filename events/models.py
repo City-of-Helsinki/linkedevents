@@ -279,7 +279,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
 
     # Properties from schema.org/Event
     door_time = models.TimeField(null=True, blank=True)
-    duration = models.CharField(max_length=50, null=True, blank=True)
+    duration = models.BigIntegerField(null=True, blank=True)
     end_date = models.DateField(null=True, db_index=True, blank=True)
     event_status = models.SmallIntegerField(choices=STATUSES, default=SCHEDULED)
     location = models.ForeignKey(Place, null=True, blank=True)

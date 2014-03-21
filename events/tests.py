@@ -6,6 +6,7 @@ from events.parsers import rename_fields
 from django.core.urlresolvers import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
+from events.serializers.serializers import ISO8601DurationField
 
 
 class FieldRenamingTestCase(SimpleTestCase):
@@ -35,7 +36,6 @@ class FieldRenamingTestCase(SimpleTestCase):
 
 
 class EventTests(APITestCase):
-
     def test_create_organization(self):
         url = reverse('organization-list')
         response = self.client.post(url, ORG_POST_JSON, format='json')
@@ -47,6 +47,18 @@ class EventTests(APITestCase):
         response = self.client.post(url, EVENT_POST_JSON, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['name'], EVENT_POST_JSON['name'])
+
+
+class SerializerTests(SimpleTestCase):
+    def test_iso8601_serializing(self):
+        ser = ISO8601DurationField()
+        formatted_str = ser.to_native(5 * 60 * 60 * 1000 + 45 * 60 * 1000)
+        self.assertEqual(formatted_str, 'PT5H45M')
+
+    def test_iso8601_deserializing(self):
+        ser = ISO8601DurationField()
+        duration = ser.from_native('PT5H45M')
+        self.assertEqual(duration, 5 * 60 * 60 * 1000 + 45 * 60 * 1000)
 
 
 ORG_POST_JSON = {
@@ -120,7 +132,7 @@ EVENT_POST_JSON = {
     "thumbnailUrl": "",
     "datePublished": "2014-03-06T15:10:32Z",
     "doorTime": "",
-    "duration": "",
+    "duration": "PT7H55M22S",
     "endDate": "2014-03-06",
     "previousStartDate": None,
     "startDate": "",

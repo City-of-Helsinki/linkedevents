@@ -44,7 +44,7 @@ INSTALLED_APPS = (
     'modeltranslation',
     'reversion',
     'events',
-    'polymorphic',
+    'isodate',
 
 )
 
