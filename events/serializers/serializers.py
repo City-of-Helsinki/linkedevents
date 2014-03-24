@@ -1,14 +1,34 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+from django.core.exceptions import ValidationError
 from isodate import Duration, duration_isoformat, parse_duration
 from rest_framework import serializers
+from rest_framework import pagination
+from rest_framework import relations
 from events.models import *
 from django.conf import settings
 from itertools import chain
 from events import utils
+from django.utils.translation import ugettext_lazy as _
 
 # JSON exclusion list of MPTT's custom fields
 mptt_fields = ['lft', 'rght', 'tree_id', 'level']
+
+
+class JSONLDHyperLinkedRelatedField(relations.HyperlinkedRelatedField):
+    invalid_json_error = _('Incorrect JSON.  Expected JSON, received %s.')
+
+    def to_native(self, obj):
+        link = super(JSONLDHyperLinkedRelatedField, self).to_native(obj)
+        return {
+            '@id': link
+        }
+
+    def from_native(self, value):
+        if '@id' in value:
+            super(JSONLDHyperLinkedRelatedField, self).from_native(value['@id'])
+        else:
+            raise ValidationError(self.invalid_json_error % type(value).__name__)
 
 
 class OrganizationOrPersonRelatedField(serializers.RelatedField):
@@ -98,12 +118,15 @@ class ISO8601DurationField(serializers.WritableField):
             return None
 
     def from_native(self, data):
-        value = parse_duration(data)
-        return (
-            value.days * 24 * 3600 * 1000000
-            + value.seconds * 1000
-            + value.microseconds / 1000
-        )
+        if data:
+            value = parse_duration(data)
+            return (
+                value.days * 24 * 3600 * 1000000
+                + value.seconds * 1000
+                + value.microseconds / 1000
+            )
+        else:
+            return 0
 
 
 class LinkedEventsSerializer(serializers.ModelSerializer):
@@ -149,11 +172,15 @@ class LinkedEventsSerializer(serializers.ModelSerializer):
         ret = self._dict_class()
         ret.fields = self._dict_class()
 
-        if not self.hide_ld_context:
+        # Context is hidden if:
+        #   1) hide_ld_context is set to True
+        #   2) self.object is None, e.g. we are in the list of stuff
+        if not self.hide_ld_context and self.object is not None:
             if hasattr(obj, 'jsonld_context') and isinstance(obj.jsonld_context, (dict, list)):
                 ret['@context'] = obj.jsonld_context
             else:
                 ret['@context'] = 'http://schema.org'
+
         # Use jsonld_type attribute if present,
         # if not fallback to automatic resolution by model name.
         # Note: Plan 'type' could be aliased to @type in context definition to conform JSON-LD spec.
@@ -193,8 +220,8 @@ class TranslationAwareSerializer(LinkedEventsSerializer):
 
 class PersonSerializer(TranslationAwareSerializer):
     # Fallback to URL references to get around of circular serializer problem
-    creator = serializers.HyperlinkedRelatedField(view_name='person-detail')
-    editor = serializers.HyperlinkedRelatedField(view_name='person-detail')
+    creator = JSONLDHyperLinkedRelatedField(view_name='person-detail')
+    editor = JSONLDHyperLinkedRelatedField(view_name='person-detail')
 
     class Meta(TranslationAwareSerializer.Meta):
         model = Person
@@ -280,9 +307,9 @@ class SubOrSuperEventSerializer(TranslationAwareSerializer):
     publisher = OrganizationSerializer(hide_ld_context=True)
     category = CategorySerializer(many=True, allow_add_remove=True, hide_ld_context=True)
     offers = OfferSerializer(hide_ld_context=True)
-    creator = serializers.HyperlinkedRelatedField(many=True, view_name='person-detail')
-    editor = serializers.HyperlinkedRelatedField(view_name='person-detail')
-    super_event = serializers.HyperlinkedRelatedField(view_name='event-detail')
+    creator = JSONLDHyperLinkedRelatedField(many=True, view_name='person-detail')
+    editor = JSONLDHyperLinkedRelatedField(view_name='person-detail')
+    super_event = JSONLDHyperLinkedRelatedField(view_name='event-detail')
 
     class Meta(TranslationAwareSerializer.Meta):
         model = Event
@@ -298,7 +325,7 @@ class EventSerializer(TranslationAwareSerializer):
     creator = PersonSerializer(many=True, hide_ld_context=True)
     editor = PersonSerializer(hide_ld_context=True)
     duration = ISO8601DurationField()
-    super_event = serializers.HyperlinkedRelatedField(required=False, view_name='event-detail')
+    super_event = JSONLDHyperLinkedRelatedField(required=False, view_name='event-detail')
     url = TranslatedField()
 
     event_status = EnumChoiceField(Event.STATUSES)
@@ -307,3 +334,14 @@ class EventSerializer(TranslationAwareSerializer):
         model = Event
         exclude = TranslationAwareSerializer.Meta.exclude + \
             mptt_fields + ['url_' + code for code, _ in settings.LANGUAGES]
+
+
+class CustomPaginationSerializer(pagination.PaginationSerializer):
+    def to_native(self, obj):
+        native = super(CustomPaginationSerializer, self).to_native(obj)
+        try:
+            native['@context'] = obj.object_list.model.jsonld_context
+        except (NameError, AttributeError):
+            native['@context'] = 'http://schema.org'
+            pass
+        return native

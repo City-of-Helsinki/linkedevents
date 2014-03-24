@@ -10,6 +10,7 @@ class EventViewSet(viewsets.ModelViewSet):
     """
     queryset = Event.objects.all()
     serializer_class = EventSerializer
+    pagination_serializer_class = CustomPaginationSerializer
 
     def list(self, request, *args, **kwargs):
         args = {} if 'show_all' in request.QUERY_PARAMS else {'event_status': Event.SCHEDULED}
@@ -26,6 +27,8 @@ class EventViewSet(viewsets.ModelViewSet):
 
 
 class PlaceViewSet(viewsets.ModelViewSet):
+    pagination_serializer_class = CustomPaginationSerializer
+
     queryset = Place.objects.all()
     serializer_class = PlaceSerializer
 

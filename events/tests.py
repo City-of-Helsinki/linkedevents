@@ -6,7 +6,7 @@ from events.parsers import rename_fields
 from django.core.urlresolvers import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-from events.serializers.serializers import ISO8601DurationField
+from events.serializers.serializers import ISO8601DurationField, JSONLDHyperLinkedRelatedField
 
 
 class FieldRenamingTestCase(SimpleTestCase):
@@ -48,6 +48,15 @@ class EventTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['name'], EVENT_POST_JSON['name'])
 
+    def test_get_event(self):
+        url = reverse('event-list')
+        response_one = self.client.post(url, EVENT_POST_JSON, format='json')
+        child_json = EVENT_POST_JSON.copy()
+        child_json['superEvent'] = {'@id': 'http://testserver' + url + str(response_one.data['id']) + '/'}
+        response_two = self.client.post(url, child_json, format='json')
+        response_three = self.client.get(url + str(response_two.data['id']) + '/', format='json')
+        self.assertEqual(response_three.data['name'], EVENT_POST_JSON['name'])
+
 
 class SerializerTests(SimpleTestCase):
     def test_iso8601_serializing(self):
@@ -59,6 +68,7 @@ class SerializerTests(SimpleTestCase):
         ser = ISO8601DurationField()
         duration = ser.from_native('PT5H45M')
         self.assertEqual(duration, 5 * 60 * 60 * 1000 + 45 * 60 * 1000)
+
 
 
 ORG_POST_JSON = {
@@ -139,7 +149,6 @@ EVENT_POST_JSON = {
     "typicalAgeRange": "",
     "originId": "",
     "targetGroup": "",
-    "slug": "dasdadad",
     "dataSource": None,
     "performer": []
 }

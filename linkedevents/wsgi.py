@@ -8,7 +8,12 @@ https://docs.djangoproject.com/en/1.6/howto/deployment/wsgi/
 """
 
 import os
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "linkedevents.settings")
+if os.environ.get('PRODUCTION', None):
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "linkedevents.prod")
+elif os.environ.get('CD', None):
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "linkedevents.cd")
+else:
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "linkedevents.dev")
 
 from django.core.wsgi import get_wsgi_application
 application = get_wsgi_application()

@@ -43,5 +43,9 @@ CONTEXTS = {
     "customFields": {
         "@id": "linkedEvents:customFields",
         "@container": "@index"
+    },
+    "dataSource": {
+        "@id": "linkedEvents:dataSource",
+        "@type": "Text"
     }
 }
