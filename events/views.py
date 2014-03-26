@@ -13,7 +13,8 @@ class EventViewSet(viewsets.ModelViewSet):
     pagination_serializer_class = CustomPaginationSerializer
 
     def list(self, request, *args, **kwargs):
-        args = {} if 'show_all' in request.QUERY_PARAMS else {'event_status': Event.SCHEDULED}
+        args = {} if 'show_all' in request.QUERY_PARAMS else {
+            'event_status': Event.SCHEDULED}
 
         if 'from' in request.QUERY_PARAMS:
             args['start_date__gte'] = request.QUERY_PARAMS['from']

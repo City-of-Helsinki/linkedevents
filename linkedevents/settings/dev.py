@@ -11,5 +11,5 @@ DATABASES = {
         'PASSWORD': 'linkedevents',
         'HOST': 'localhost',
         'PORT': '',
-        }
+    }
 }

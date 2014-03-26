@@ -2,17 +2,20 @@
 """
 Models are modeled after schema.org.
 
-When model is going to be serialized as JSON(-LD), model name must be same as Schema.org schema name,
-the model name is automatically published in @type JSON-LD field.
-Note: jsonld_type attribute value can be used to override @type definition in rendering phase.
+When model is going to be serialized as JSON(-LD), model name must be same as
+Schema.org schema name, the model name is automatically published in @type
+JSON-LD field.
+Note: jsonld_type attribute value can be used to override @type definition in
+rendering phase.
 
-Schema definitions: http://schema.org/<ModelName> (e.g. http://schema.org/Event)
+Schema definitions: http://schema.org/<ModelName>
+(e.g. http://schema.org/Event)
 
-Some models have custom fields not found from schema.org. Decide if there's a need for
-custom extension types (e.g. Event/MyCustomEvent) as schema.org documentation is suggesting:
-http://schema.org/docs/extension.html. Override schema_org_type can be used to define custom
-types.
-Override jsonld_context attribute to change @context when need to define schemas for custom fields.
+Some models have custom fields not found from schema.org. Decide if there's a
+need for custom extension types (e.g. Event/MyCustomEvent) as schema.org
+documentation is suggesting: http://schema.org/docs/extension.html. Override
+schema_org_type can be used to define custom types. Override jsonld_context
+attribute to change @context when need to define schemas for custom fields.
 """
 import datetime
 from django.contrib.auth.models import User
@@ -44,8 +47,12 @@ class DataSource(models.Model):
 
 
 class SystemMetaMixin(models.Model):
-    created_by = models.ForeignKey(User, null=True, blank=True, related_name="%(app_label)s_%(class)s_created_by")
-    modified_by = models.ForeignKey(User, null=True, blank=True, related_name="%(app_label)s_%(class)s_modified_by")
+    created_by = models.ForeignKey(
+        User, null=True, blank=True,
+        related_name="%(app_label)s_%(class)s_created_by")
+    modified_by = models.ForeignKey(
+        User, null=True, blank=True,
+        related_name="%(app_label)s_%(class)s_modified_by")
     data_source = models.ForeignKey(DataSource, null=True, blank=True)
     origin_id = models.CharField(max_length=255, null=True, blank=True)
 
@@ -101,8 +108,10 @@ class Person(BaseModel):
     description = models.TextField(blank=True)
     family_name = models.CharField(max_length=255, null=True, blank=True)
     email = models.EmailField(null=True, blank=True)
-    creator = models.ForeignKey('self', null=True, blank=True, related_name='person_creators')  # TODO: Person or Organization
-    editor = models.ForeignKey('self', null=True, blank=True, related_name='person_editors')  # TODO: Person or Organization
+    creator = models.ForeignKey('self', null=True, blank=True,
+                                related_name='person_creators')
+    editor = models.ForeignKey('self', null=True, blank=True,
+                               related_name='person_editors')
     # Custom fields
     member_of = models.ForeignKey('Organization', null=True, blank=True)
     user = models.ForeignKey(User, null=True, blank=True)
@@ -117,8 +126,10 @@ class Organization(BaseModel):
     description = models.TextField(blank=True)
     base_IRI = models.CharField(max_length=200, null=True, blank=True)
     compact_IRI_name = models.CharField(max_length=200, null=True, blank=True)
-    creator = models.ForeignKey(Person, null=True, blank=True, related_name='organization_creators')  # TODO: Person or Organization
-    editor = models.ForeignKey(Person, null=True, blank=True, related_name='organization_editors')  # TODO: Person or Organization
+    creator = models.ForeignKey(Person, null=True, blank=True,
+                                related_name='organization_creators')
+    editor = models.ForeignKey(Person, null=True, blank=True,
+                               related_name='organization_editors')
 
     class Meta:
         verbose_name = _('Organization')
@@ -137,9 +148,12 @@ class Category(MPTTModel, BaseModel, SchemalessFieldMixin):
     description = models.TextField(blank=True)
     same_as = models.CharField(max_length=255, null=True, blank=True)
     parent_category = TreeForeignKey('self', null=True, blank=True)
-    creator = models.ForeignKey(Person, null=True, blank=True, related_name='category_creators')  # TODO: Person or Organization
-    editor = models.ForeignKey(Person, null=True, blank=True, related_name='category_editors')  # TODO: Person or Organization
-    category_for = models.SmallIntegerField(choices=CATEGORY_TYPES, null=True, blank=True)
+    creator = models.ForeignKey(Person, null=True, blank=True,
+                                related_name='category_creators')
+    editor = models.ForeignKey(Person, null=True, blank=True,
+                               related_name='category_editors')
+    category_for = models.SmallIntegerField(
+        choices=CATEGORY_TYPES, null=True, blank=True)
 
     class Meta:
         verbose_name = _('Category')
@@ -158,7 +172,8 @@ class PostalAddress(BaseModel):
     address_locality = models.CharField(max_length=255, null=True, blank=True)
     address_region = models.CharField(max_length=255, null=True, blank=True)
     postal_code = models.CharField(max_length=128, null=True, blank=True)
-    post_office_box_num = models.CharField(max_length=128, null=True, blank=True)
+    post_office_box_num = models.CharField(max_length=128, null=True,
+                                           blank=True)
     address_country = models.CharField(max_length=2, null=True, blank=True)
     available_language = models.ForeignKey(Language, null=True, blank=True)
 
@@ -173,16 +188,22 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     same_as = models.CharField(max_length=255, null=True, blank=True)
     description = models.TextField(blank=True)
     address = models.ForeignKey(PostalAddress, null=True, blank=True)
-    publishing_principles = models.CharField(max_length=255, null=True, blank=True)
-    point = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    logo = models.CharField(max_length=255, null=True, blank=True)
-    map = models.CharField(max_length=255, null=True, blank=True)
-    contained_in = TreeForeignKey('self', null=True, blank=True, related_name='children')
-    creator = models.ForeignKey(Person, null=True, blank=True, related_name='place_creators')  # TODO: Person or Organization
-    editor = models.ForeignKey(Person, null=True, blank=True, related_name='place_editors')  # TODO: Person or Organization
+    publishing_principles = models.CharField(max_length=255, null=True,
+                                             blank=True)
+    point = models.DecimalField(max_digits=10, decimal_places=2, null=True,
+                                blank=True)
+    logo = models.URLField(null=True, blank=True)
+    map = models.URLField(null=True, blank=True)  # TODO: multiple urls array
+    contained_in = TreeForeignKey('self', null=True, blank=True,
+                                  related_name='children')
+    creator = models.ForeignKey(Person, null=True, blank=True,
+                                related_name='place_creators')
+    editor = models.ForeignKey(Person, null=True, blank=True,
+                               related_name='place_editors')
 
     def __unicode__(self):
-        return u', '.join([self.name, unicode(self.address if self.address else '')])
+        return u', '.join([self.name, unicode(self.address if self.address
+                                              else '')])
 
     class Meta:
         verbose_name = _('Place')
@@ -201,10 +222,12 @@ class OpeningHoursSpecification(models.Model):
         (5, "Friday"), (6, "Saturday"), (7, "Sunday"), (8, "PublicHolidays")
     )
 
-    place = models.OneToOneField(Place, primary_key=True, related_name='opening_hour_specification')
+    place = models.OneToOneField(Place, primary_key=True,
+                                 related_name='opening_hour_specification')
     opens = models.TimeField(null=True, blank=True)
     closes = models.TimeField(null=True, blank=True)
-    days_of_week = models.SmallIntegerField(choices=WEEK_DAYS, null=True, blank=True)
+    days_of_week = models.SmallIntegerField(choices=WEEK_DAYS, null=True,
+                                            blank=True)
     valid_from = models.DateTimeField(null=True, blank=True)
     valid_through = models.DateTimeField(null=True, blank=True)
 
@@ -226,12 +249,14 @@ class GeoInfo(models.Model):
     circle = models.CharField(max_length=255, null=True, blank=True)
     line = models.CharField(max_length=255, null=True, blank=True)
     polygon = models.TextField(null=True, blank=True)
-    geo_type = models.SmallIntegerField(choices=GEO_TYPES, default=GEO_TYPES[0][0])
+    geo_type = models.SmallIntegerField(choices=GEO_TYPES,
+                                        default=GEO_TYPES[0][0])
 
 
 class Offer(BaseModel):
     available_at_or_from = models.ForeignKey(Place, null=True, blank=True)
-    price = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    price = models.DecimalField(max_digits=8, decimal_places=2, null=True,
+                                blank=True)
     price_currency = models.CharField(max_length=3, null=True, blank=True)
     valid_from = models.DateTimeField(null=True, blank=True)
     valid_through = models.DateTimeField(null=True, blank=True)
@@ -239,7 +264,9 @@ class Offer(BaseModel):
 
     limiter = {"model__in": ["organization", "person"]}
     seller_object_id = models.PositiveIntegerField(null=True, blank=True)
-    seller_content_type = models.ForeignKey(ContentType, limit_choices_to=limiter, null=True, blank=True)
+    seller_content_type = models.ForeignKey(ContentType,
+                                            limit_choices_to=limiter,
+                                            null=True, blank=True)
     seller = GenericForeignKey('seller_content_type', 'seller_object_id')
 
     class Meta:
@@ -270,24 +297,31 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     description = models.TextField(blank=True)
 
     # Properties from schema.org/CreativeWork
-    creator = models.ManyToManyField(Person, blank=True, related_name='event_creators')  # TODO: Person or Organization
-    editor = models.ForeignKey(Person, null=True, blank=True, related_name='event_editors')  # TODO: Person or Organization
+    creator = models.ManyToManyField(Person, blank=True,
+                                     related_name='event_creators')
+    editor = models.ForeignKey(Person, null=True, blank=True,
+                               related_name='event_editors')
     date_published = models.DateTimeField(null=True, blank=True)
-    performer = models.ManyToManyField(Person, blank=True)  # TODO: Person or Organization
-    publisher = models.ForeignKey(Organization, null=True, blank=True, related_name='event_publishers')
-    provider = models.ForeignKey(Organization, null=True, blank=True, related_name='event_providers')
+    # TODO: Person or Organization
+    performer = models.ManyToManyField(Person, blank=True)
+    publisher = models.ForeignKey(Organization, null=True, blank=True,
+                                  related_name='event_publishers')
+    provider = models.ForeignKey(Organization, null=True, blank=True,
+                                 related_name='event_providers')
 
     # Properties from schema.org/Event
     door_time = models.TimeField(null=True, blank=True)
     duration = models.BigIntegerField(null=True, blank=True)
     end_date = models.DateField(null=True, db_index=True, blank=True)
-    event_status = models.SmallIntegerField(choices=STATUSES, default=SCHEDULED)
+    event_status = models.SmallIntegerField(choices=STATUSES,
+                                            default=SCHEDULED)
     location = models.ForeignKey(Place, null=True, blank=True)
     # Just ONE offer in offers field at schema.org (???)
     offers = models.ForeignKey(Offer, null=True, blank=True)
     previous_start_date = models.DateTimeField(null=True, blank=True)
     start_date = models.DateField(null=True, db_index=True, blank=True)
-    super_event = TreeForeignKey('self', null=True, blank=True, related_name='sub_event')
+    super_event = TreeForeignKey('self', null=True, blank=True,
+                                 related_name='sub_event')
     typical_age_range = models.CharField(max_length=255, null=True, blank=True)
 
     # Custom fields not from schema.org
@@ -295,7 +329,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     category = models.ManyToManyField(Category, null=True, blank=True)
     slug = models.SlugField(blank=True)
     language = models.ForeignKey(Language, blank=True, null=True,
-                                 help_text=_("Set if the event is in a given language"))
+                                 help_text=_("Set if the event is in a given "
+                                             "language"))
 
     class Meta:
         verbose_name = _('Event')

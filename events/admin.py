@@ -1,7 +1,8 @@
 from django.contrib import admin
 from modeltranslation.admin import TranslationAdmin
 import reversion
-from events.models import Event, Category, Place, Offer, Organization, Language, PostalAddress, Person, \
+from events.models import Event, Category, Place, Offer, Organization, \
+    Language, PostalAddress, Person, \
     OpeningHoursSpecification, GeoInfo
 
 
