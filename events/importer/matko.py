@@ -154,7 +154,7 @@ class MatkoImporter(Importer):
 
     def _import_locations_from_feed(self, lang_code, items, locations):
         for item in items:
-            if text(item, 'isvenue') == 'False':
+            if clean_text(text(item, 'isvenue')) == 'False':
                 continue
 
             lid = int(text(item, 'id'))
