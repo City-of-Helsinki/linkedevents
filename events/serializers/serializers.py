@@ -312,38 +312,9 @@ class CategorySerializer(TranslationAwareSerializer):
         exclude = TranslationAwareSerializer.Meta.exclude + mptt_fields
 
 
-class GeoInfoSerializer(LinkedEventsSerializer):
-    """
-    Serializer renders GeoShape or GeoCoordinate style JSON object depending
-    on geo_type field
-    """
-
-    class Meta:
-        model = GeoInfo
-        exclude = ["place", "geo_type"]
-
-    def to_native(self, obj):
-        if obj.geo_type == GeoInfo.GEO_TYPES[0][0]:
-            exclude_fields = ['longitude', 'latitude']
-        else:
-            exclude_fields = ['box', 'circle', 'line', 'polygon']
-        for field_name in exclude_fields:
-            if field_name in self.fields:
-                del self.fields[field_name]
-        return super(GeoInfoSerializer, self).to_native(obj)
-
-    def from_native(self, data, files):
-        if data['@type'] in ('GeoShape', 'GeoCoordinates'):
-            data['geo_type'] = utils.get_value_from_tuple_list(
-                GeoInfo.GEO_TYPES, data['@type'], 0)
-
-        return super(GeoInfoSerializer, self).from_native(data, files)
-
-
 class PlaceSerializer(TranslationAwareSerializer):
     creator = PersonSerializer(hide_ld_context=True)
     editor = PersonSerializer(hide_ld_context=True)
-    geo = GeoInfoSerializer(hide_ld_context=True)
 
     view_name = 'place-detail'
 

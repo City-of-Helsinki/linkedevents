@@ -232,27 +232,6 @@ class OpeningHoursSpecification(models.Model):
     valid_through = models.DateTimeField(null=True, blank=True)
 
 
-class GeoInfo(models.Model):
-    GEO_TYPES = (
-        (0, "GeoShape"), (1, "GeoCoordinates")
-    )
-
-    @property
-    def jsonld_type(self):
-        return self.GEO_TYPES[self.geo_type][1]
-
-    place = models.OneToOneField(Place, primary_key=True, related_name='geo')
-    elevation = models.CharField(max_length=255, null=True, blank=True)
-    latitude = models.CharField(max_length=255, null=True, blank=True)
-    longitude = models.CharField(max_length=255, null=True, blank=True)
-    box = models.CharField(max_length=255, null=True, blank=True)
-    circle = models.CharField(max_length=255, null=True, blank=True)
-    line = models.CharField(max_length=255, null=True, blank=True)
-    polygon = models.TextField(null=True, blank=True)
-    geo_type = models.SmallIntegerField(choices=GEO_TYPES,
-                                        default=GEO_TYPES[0][0])
-
-
 class Offer(BaseModel):
     available_at_or_from = models.ForeignKey(Place, null=True, blank=True)
     price = models.DecimalField(max_digits=8, decimal_places=2, null=True,

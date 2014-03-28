@@ -3,7 +3,7 @@ from modeltranslation.admin import TranslationAdmin
 import reversion
 from events.models import Event, Category, Place, Offer, Organization, \
     Language, PostalAddress, Person, \
-    OpeningHoursSpecification, GeoInfo
+    OpeningHoursSpecification
 
 
 class BaseAdmin(admin.ModelAdmin):
@@ -54,4 +54,3 @@ admin.site.register(Language, LanguageAdmin)
 admin.site.register(Person, PersonAdmin)
 admin.site.register(PostalAddress)
 admin.site.register(OpeningHoursSpecification)
-admin.site.register(GeoInfo)

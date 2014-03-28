@@ -36,6 +36,7 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.contenttypes',
+    'django.contrib.gis',
     'south',
     'corsheaders',
     'rest_framework',
@@ -113,6 +114,7 @@ REST_FRAMEWORK = {
         'rest_framework.parsers.FormParser',
         'rest_framework.parsers.MultiPartParser',
     ),
+    'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',),
 }
 
 # Add whitelisted hostnames to allow cross-site HTTP request API access
@@ -124,7 +126,7 @@ TEMPLATE_DIRS = (
 
 SWAGGER_SETTINGS = {
     "exclude_namespaces": [], # List URL namespaces to ignore
-    "api_version": '0.1',  # Specify your API's version
+    "api_version": '1.0',  # Specify your API's version
     "api_path": "/",  # Specify the path to your API not a root level
     "enabled_methods": [  # Specify which methods to enable in Swagger UI
                           'get',
