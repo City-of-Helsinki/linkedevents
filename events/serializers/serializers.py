@@ -264,7 +264,9 @@ class LinkedEventsSerializer(serializers.ModelSerializer):
             if field_name == 'id':
                 if 'request' in self.context:
                     try:
-                        ret['@id'] = reverse(self.view_name, kwargs={u'pk': value}, request=self.context['request'])
+                        ret['@id'] = reverse(self.view_name,
+                                             kwargs={u'pk': value},
+                                             request=self.context['request'])
                     except NoReverseMatch:
                         ret['@id'] = str(value)
             method = getattr(self, 'transform_%s' % field_name, None)
