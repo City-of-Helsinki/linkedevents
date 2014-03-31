@@ -140,3 +140,7 @@ SWAGGER_SETTINGS = {
     "is_superuser": False,  # Set to True to enforce admin only access
 }
 
+# Use ETRS-TM35FIN projection by default
+PROJECTION_SRID=3067
+# Bounding box of Finland and then some
+BOUNDING_BOX = [-548576, 6291456, 1548576, 8388608]

@@ -1,7 +1,8 @@
 class ModelSyncher(object):
-    def __init__(self, queryset, generate_obj_id):
+    def __init__(self, queryset, generate_obj_id, delete_func=None):
         d = {}
         self.generate_obj_id = generate_obj_id
+        self.delete_func = delete_func
         # Generate a list of all objects
         for obj in queryset:
             d[generate_obj_id(obj)] = obj
@@ -32,4 +33,7 @@ class ModelSyncher(object):
         if len(delete_list) > 5 and len(delete_list) > len(self.obj_dict) * 0.2:
             raise Exception("Attempting to delete more than 20% of total items")
         for obj in delete_list:
-            obj.delete()
+            if self.delete_func:
+                self.delete_func(obj)
+            else:
+                obj.delete()

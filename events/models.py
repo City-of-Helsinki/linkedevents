@@ -18,10 +18,11 @@ schema_org_type can be used to define custom types. Override jsonld_context
 attribute to change @context when need to define schemas for custom fields.
 """
 import datetime
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.generic import GenericForeignKey
 import pytz
-from django.db import models
+from django.contrib.gis.db import models
 import reversion
 from django_hstore import hstore
 from django.utils.translation import ugettext_lazy as _
@@ -36,7 +37,7 @@ from django.utils.encoding import python_2_unicode_compatible
 class DataSource(models.Model):
     id = models.CharField(max_length=100, primary_key=True)
     name = models.CharField(max_length=255)
-    event_url_template = models.CharField(max_length=200)
+    event_url_template = models.CharField(max_length=200, null=True)
 
     def event_same_as(self, origin_id):
         if origin_id is not None:
@@ -55,8 +56,8 @@ class SystemMetaMixin(models.Model):
     modified_by = models.ForeignKey(
         User, null=True, blank=True,
         related_name="%(app_label)s_%(class)s_modified_by")
-    data_source = models.ForeignKey(DataSource, null=True, blank=True)
-    origin_id = models.CharField(max_length=255, null=True, blank=True)
+    data_source = models.ForeignKey(DataSource, db_index=True, null=True, blank=True)
+    origin_id = models.CharField(max_length=255, db_index=True, null=True, blank=True)
 
     class Meta:
         abstract = True
@@ -78,10 +79,8 @@ class BaseModel(SystemMetaMixin):
     image = models.URLField(null=True, blank=True)
 
     # Properties from schema.org/CreativeWork
-    date_created = models.DateTimeField(null=True, blank=True)
-    date_modified = models.DateTimeField(null=True, blank=True)
-    discussion_url = models.URLField(null=True, blank=True)
-    thumbnail_url = models.URLField(null=True, blank=True)
+    created_time = models.DateTimeField(null=True, blank=True)
+    last_modified_time = models.DateTimeField(null=True, blank=True)
 
     @staticmethod
     def now():
@@ -94,7 +93,7 @@ class BaseModel(SystemMetaMixin):
         abstract = True
 
     def save(self, *args, **kwargs):
-        if not self.id:
+        if not self.id and not self.created_time:
             self.created_time = BaseModel.now()
         self.last_modified_time = BaseModel.now()
         super(BaseModel, self).save(*args, **kwargs)
@@ -167,7 +166,14 @@ class Category(MPTTModel, BaseModel, SchemalessFieldMixin):
 reversion.register(Category)
 
 
-class PostalAddress(BaseModel):
+class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
+    same_as = models.CharField(max_length=255, db_index=True, null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+    parent = TreeForeignKey('self', null=True, blank=True,
+                            related_name='children')
+
+    location = models.PointField(srid=settings.PROJECTION_SRID, null=True, blank=True)
+
     email = models.EmailField(null=True, blank=True)
     telephone = models.CharField(max_length=128, null=True, blank=True)
     contact_type = models.CharField(max_length=255, null=True, blank=True)
@@ -178,41 +184,12 @@ class PostalAddress(BaseModel):
     post_office_box_num = models.CharField(max_length=128, null=True,
                                            blank=True)
     address_country = models.CharField(max_length=2, null=True, blank=True)
-    available_language = models.ForeignKey(Language, null=True, blank=True)
 
-    def __str__(self):
-        values = filter(lambda x: x, [
-            self.street_address, self.postal_code, self.address_locality
-        ])
-        return u', '.join(values)
-
-
-class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
-    same_as = models.CharField(max_length=255, null=True, blank=True)
-    description = models.TextField(blank=True)
-    address = models.ForeignKey(PostalAddress, null=True, blank=True)
-    publishing_principles = models.CharField(max_length=255, null=True,
-                                             blank=True)
-    point = models.DecimalField(max_digits=10, decimal_places=2, null=True,
-                                blank=True)
-    logo = models.URLField(null=True, blank=True)
-    map = models.URLField(null=True, blank=True)  # TODO: multiple urls array
-    contained_in = TreeForeignKey('self', null=True, blank=True,
-                                  related_name='children')
-    creator = models.ForeignKey(Person, null=True, blank=True,
-                                related_name='place_creators')
-    editor = models.ForeignKey(Person, null=True, blank=True,
-                               related_name='place_editors')
-
-    def __str__(self):
-        return u', '.join([self.name, unicode(self.address if self.address
-                                              else '')])
+    deleted = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = _('Place')
-
-    class MPTTMeta:
-        parent_attr = 'contained_in'
+        unique_together = (('data_source', 'origin_id'),)
 
 reversion.register(Place)
 
