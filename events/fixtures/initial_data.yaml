@@ -4,3 +4,15 @@
   fields:
     name: 'Matkailu- ja kongressitoimisto'
     event_url_template: 'https://aspicore-asp.net/helsinki/xml/tapahtuma{origin_id}'
+
+- model: events.DataSource
+  pk: 'helmet'
+  fields:
+    name: 'HelMet-kirjastot'
+    event_url_template: 'https://{origin_id}'
+
+- model: events.DataSource
+  pk: 'servicemap'
+  fields:
+    name: 'Palvelukartan toimipisterekisteri'
+    event_url_template: ''
