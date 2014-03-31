@@ -10,3 +10,5 @@ media/
 .vagrant/
 .idea
 *.iml
+*.kate-swp
+data/
