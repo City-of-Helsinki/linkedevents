@@ -5,7 +5,7 @@ from base import *
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'ENGINE': 'django.db.backends.psycopg2',
         'NAME': 'linkedevents',
         'USER': 'linkedevents',
         'PASSWORD': 'linkedevents',
@@ -13,3 +13,10 @@ DATABASES = {
         'PORT': '',
     }
 }
+
+# local_settings.py can be used to override environment-specific settings
+# like database and email that differ between development and production.
+try:
+    from local_settings import *
+except ImportError:
+    pass
