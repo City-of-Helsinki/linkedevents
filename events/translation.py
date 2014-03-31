@@ -1,5 +1,5 @@
 from modeltranslation.translator import translator, TranslationOptions
-from models import *
+from .models import *
 
 
 class LanguageTranslationOptions(TranslationOptions):
@@ -17,17 +17,10 @@ translator.register(Category, CategoryTranslationOptions)
 
 
 class PlaceTranslationOptions(TranslationOptions):
-    fields = ('name', 'description')
+    fields = ('name', 'description', 'street_address', 'address_locality', 'telephone')
 
 
 translator.register(Place, PlaceTranslationOptions)
-
-
-class PostalAddressTranslationOptions(TranslationOptions):
-    fields = ('street_address', 'address_locality', 'telephone')
-
-
-translator.register(PostalAddress, PostalAddressTranslationOptions)
 
 
 class EventTranslationOptions(TranslationOptions):

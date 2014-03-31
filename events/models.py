@@ -18,6 +18,7 @@ schema_org_type can be used to define custom types. Override jsonld_context
 attribute to change @context when need to define schemas for custom fields.
 """
 import datetime
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.generic import GenericForeignKey
 import pytz
@@ -29,12 +30,14 @@ from mptt.models import MPTTModel, TreeForeignKey
 from django.utils.text import slugify
 from django.contrib.contenttypes.models import ContentType
 from events import contexts
+from django.utils.encoding import python_2_unicode_compatible
 
 
+@python_2_unicode_compatible
 class DataSource(models.Model):
     id = models.CharField(max_length=100, primary_key=True)
     name = models.CharField(max_length=255)
-    event_url_template = models.CharField(max_length=200)
+    event_url_template = models.CharField(max_length=200, null=True)
 
     def event_same_as(self, origin_id):
         if origin_id is not None:
@@ -42,7 +45,7 @@ class DataSource(models.Model):
         else:
             return None
 
-    def __unicode__(self):
+    def __str__(self):
         return self.id
 
 
@@ -53,8 +56,10 @@ class SystemMetaMixin(models.Model):
     modified_by = models.ForeignKey(
         User, null=True, blank=True,
         related_name="%(app_label)s_%(class)s_modified_by")
-    data_source = models.ForeignKey(DataSource, null=True, blank=True)
-    origin_id = models.CharField(max_length=255, null=True, blank=True)
+    data_source = models.ForeignKey(DataSource, db_index=True, null=True,
+                                    blank=True)
+    origin_id = models.CharField(max_length=255, db_index=True, null=True,
+                                 blank=True)
 
     class Meta:
         abstract = True
@@ -69,29 +74,27 @@ class SchemalessFieldMixin(models.Model):
         abstract = True
 
 
+@python_2_unicode_compatible
 class BaseModel(SystemMetaMixin):
     # Properties from schema.org/Thing
     name = models.CharField(max_length=255)
     image = models.URLField(null=True, blank=True)
 
-    # Properties from schema.org/CreativeWork
-    date_created = models.DateTimeField(null=True, blank=True)
-    date_modified = models.DateTimeField(null=True, blank=True)
-    discussion_url = models.URLField(null=True, blank=True)
-    thumbnail_url = models.URLField(null=True, blank=True)
+    created_time = models.DateTimeField(null=True, blank=True)
+    last_modified_time = models.DateTimeField(null=True, blank=True)
 
     @staticmethod
     def now():
         return datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
     class Meta:
         abstract = True
 
     def save(self, *args, **kwargs):
-        if not self.id:
+        if not self.id and not self.created_time:
             self.created_time = BaseModel.now()
         self.last_modified_time = BaseModel.now()
         super(BaseModel, self).save(*args, **kwargs)
@@ -169,7 +172,16 @@ class Category(MPTTModel, BaseModel, SchemalessFieldMixin):
 reversion.register(Category)
 
 
-class PostalAddress(BaseModel):
+class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
+    same_as = models.CharField(max_length=255, db_index=True, null=True,
+                               blank=True)
+    description = models.TextField(null=True, blank=True)
+    parent = TreeForeignKey('self', null=True, blank=True,
+                            related_name='children')
+
+    location = models.PointField(srid=settings.PROJECTION_SRID, null=True,
+                                 blank=True)
+
     email = models.EmailField(null=True, blank=True)
     telephone = models.CharField(max_length=128, null=True, blank=True)
     contact_type = models.CharField(max_length=255, null=True, blank=True)
@@ -180,11 +192,6 @@ class PostalAddress(BaseModel):
     post_office_box_num = models.CharField(max_length=128, null=True,
                                            blank=True)
     address_country = models.CharField(max_length=2, null=True, blank=True)
-    available_language = models.ForeignKey(Language, null=True, blank=True)
-
-    class Meta:
-        verbose_name = _('address')
-        verbose_name_plural = _('addresses')
 
     def __unicode__(self):
         values = filter(lambda x: x, [
@@ -194,35 +201,32 @@ class PostalAddress(BaseModel):
 
 
 class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
-    same_as = models.CharField(max_length=255, null=True, blank=True)
-    description = models.TextField(blank=True)
-    address = models.ForeignKey(PostalAddress, null=True, blank=True)
-    publishing_principles = models.CharField(max_length=255, null=True,
-                                             blank=True)
-    point = models.DecimalField(max_digits=10, decimal_places=2, null=True,
-                                blank=True)
-    logo = models.URLField(null=True, blank=True)
-    map = models.URLField(null=True, blank=True)  # TODO: multiple urls array
-    contained_in = TreeForeignKey('self', null=True, blank=True,
-                                  related_name='children')
-    creator = models.ForeignKey(Person, null=True, blank=True,
-                                related_name='place_creators')
-    editor = models.ForeignKey(Person, null=True, blank=True,
-                               related_name='place_editors')
+    same_as = models.CharField(max_length=255, db_index=True, null=True,
+                               blank=True)
+    description = models.TextField(null=True, blank=True)
+    parent = TreeForeignKey('self', null=True, blank=True,
+                            related_name='children')
 
-    geo = models.PointField(null=True, blank=True)
-    objects = models.GeoManager()
+    location = models.PointField(srid=settings.PROJECTION_SRID, null=True,
+                                 blank=True)
 
-    def __unicode__(self):
-        return u', '.join([self.name, unicode(self.address if self.address
-                                              else '')])
+    email = models.EmailField(null=True, blank=True)
+    telephone = models.CharField(max_length=128, null=True, blank=True)
+    contact_type = models.CharField(max_length=255, null=True, blank=True)
+    street_address = models.CharField(max_length=255, null=True, blank=True)
+    address_locality = models.CharField(max_length=255, null=True, blank=True)
+    address_region = models.CharField(max_length=255, null=True, blank=True)
+    postal_code = models.CharField(max_length=128, null=True, blank=True)
+    post_office_box_num = models.CharField(max_length=128, null=True,
+                                           blank=True)
+    address_country = models.CharField(max_length=2, null=True, blank=True)
+
+    deleted = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = _('place')
         verbose_name_plural = _('places')
-
-    class MPTTMeta:
-        parent_attr = 'contained_in'
+        unique_together = (('data_source', 'origin_id'),)
 
 reversion.register(Place)
 
@@ -347,7 +351,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     def same_as(self):
         return self.data_source.event_same_as(self.origin_id)
 
-    def __unicode__(self):
+    def __str__(self):
         val = [self.name]
         dcount = self.get_descendant_count()
         if dcount > 0:

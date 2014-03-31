@@ -6,7 +6,7 @@ from events.parsers import rename_fields
 from django.core.urlresolvers import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-from events.serializers.serializers import ISO8601DurationField
+from events.serializers import ISO8601DurationField
 
 
 class FieldRenamingTestCase(SimpleTestCase):
@@ -106,7 +106,7 @@ class APITests(APITestCase):
     def test_create_place_with_geojson(self):
         url = reverse('place-list')
         place_with_geo = PLACE.copy()
-        place_with_geo['geo'] = {
+        place_with_geo['location'] = {
             "type": "Point",
             "coordinates": [
                 24.1, 62.2
@@ -114,7 +114,7 @@ class APITests(APITestCase):
         }
         response = self.client.post(url, place_with_geo, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data['geo'], place_with_geo['geo'])
+        self.assertEqual(response.data['location'], place_with_geo['location'])
 
     def test_delete_event(self):
         url = reverse('event-list')
@@ -169,7 +169,7 @@ PLACE = {
     },
     "creator": None,
     "editor": None,
-    "geo": None,
+    "location": None,
     "dataSource": None,
     "originId": None,
     "customFields": {},

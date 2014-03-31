@@ -176,7 +176,8 @@ class GeoPointField(serializers.WritableField):
 
     def from_native(self, data):
         if data is not None:
-            if 'type' in data and data['type'] == 'Point' and 'coordinates' in data:
+            if 'type' in data and data['type'] == 'Point' \
+                    and 'coordinates' in data:
                 return Point(data['coordinates'][0], data['coordinates'][1])
             else:
                 raise ValidationError('Unexpected syntax of GeoJSON object')
@@ -353,9 +354,7 @@ class CategorySerializer(TranslationAwareSerializer):
 
 
 class PlaceSerializer(TranslationAwareSerializer):
-    creator = PersonSerializer(hide_ld_context=True)
-    editor = PersonSerializer(hide_ld_context=True)
-    geo = GeoPointField(required=False)
+    location = GeoPointField(required=False)
 
     view_name = 'place-detail'
 
@@ -367,11 +366,6 @@ class PlaceSerializer(TranslationAwareSerializer):
 class OpeningHoursSpecificationSerializer(LinkedEventsSerializer):
     class Meta(LinkedEventsSerializer.Meta):
         model = OpeningHoursSpecification
-
-
-class PostalAddressSerializer(LinkedEventsSerializer):
-    class Meta(LinkedEventsSerializer.Meta):
-        model = PostalAddress
 
 
 class OrganizationSerializer(LinkedEventsSerializer):

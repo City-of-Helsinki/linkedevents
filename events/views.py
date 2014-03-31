@@ -1,6 +1,10 @@
 import django_filters
+from rest_framework.response import Response
+from .models import Event, Place, Category, Organization, Language, Person
 from rest_framework import viewsets
-from serializers.serializers import *
+from .serializers import EventSerializer, CustomPaginationSerializer, \
+    PlaceSerializer, CategorySerializer, OrganizationSerializer, \
+    LanguageSerializer, PersonSerializer
 
 
 class EventViewSet(viewsets.ModelViewSet):

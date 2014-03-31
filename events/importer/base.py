@@ -8,7 +8,7 @@ from django.conf import settings
 
 from modeltranslation.translator import translator
 
-from util import active_language
+from .util import active_language
 from events.models import *
 
 

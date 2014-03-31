@@ -141,3 +141,9 @@ SWAGGER_SETTINGS = {
 }
 
 POSTGIS_VERSION = (2, 1, 1)
+
+# Use ETRS-TM35FIN projection by default
+PROJECTION_SRID=3067
+# Bounding box of Finland and then some
+
+BOUNDING_BOX = [-548576, 6291456, 1548576, 8388608]
