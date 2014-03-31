@@ -1,7 +1,7 @@
 from rest_framework.response import Response
-from models import *
+from .models import *
 from rest_framework import viewsets
-from serializers.serializers import *
+from .serializers import *
 
 
 class EventViewSet(viewsets.ModelViewSet):

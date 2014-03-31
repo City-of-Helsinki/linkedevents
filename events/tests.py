@@ -6,7 +6,7 @@ from events.parsers import rename_fields
 from django.core.urlresolvers import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-from events.serializers.serializers import ISO8601DurationField
+from events.serializers import ISO8601DurationField
 
 
 class FieldRenamingTestCase(SimpleTestCase):
