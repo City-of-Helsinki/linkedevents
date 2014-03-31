@@ -226,9 +226,9 @@ class MatkoImporter(Importer):
         for event in self.link_recurring_events(events.values()):
             errors.update(self.save_children_through_parent(event))
         if len(errors) > 0:
-            print 'Errors:'
+            print('Errors:')
         for e in errors:
-            print "%s: %s" % (e[0], u" ".join(e[1]))
+            print("%s: %s" % (e[0], u" ".join(e[1])))
 
     def import_locations(self):
         print("Importing Matko locations")
