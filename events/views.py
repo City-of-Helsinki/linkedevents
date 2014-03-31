@@ -1,5 +1,4 @@
-from rest_framework.response import Response
-from models import *
+import django_filters
 from rest_framework import viewsets
 from serializers.serializers import *
 
@@ -13,6 +12,9 @@ class EventViewSet(viewsets.ModelViewSet):
     pagination_serializer_class = CustomPaginationSerializer
 
     def list(self, request, *args, **kwargs):
+        """
+        TODO: convert to use proper filter framework
+        """
         args = {} if 'show_all' in request.QUERY_PARAMS else {
             'event_status': Event.SCHEDULED}
 
@@ -28,10 +30,9 @@ class EventViewSet(viewsets.ModelViewSet):
 
 
 class PlaceViewSet(viewsets.ModelViewSet):
-    pagination_serializer_class = CustomPaginationSerializer
-
     queryset = Place.objects.all()
     serializer_class = PlaceSerializer
+    pagination_serializer_class = CustomPaginationSerializer
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -42,6 +43,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
 class OrganizationViewSet(viewsets.ModelViewSet):
     queryset = Organization.objects.all()
     serializer_class = OrganizationSerializer
+    pagination_serializer_class = CustomPaginationSerializer
 
 
 class LanguageViewSet(viewsets.ModelViewSet):
@@ -52,3 +54,4 @@ class LanguageViewSet(viewsets.ModelViewSet):
 class PersonViewSet(viewsets.ModelViewSet):
     queryset = Person.objects.all()
     serializer_class = PersonSerializer
+    pagination_serializer_class = CustomPaginationSerializer

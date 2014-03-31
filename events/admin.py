@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.gis import admin as geoadmin
 from modeltranslation.admin import TranslationAdmin
 import reversion
 from events.models import Event, Category, Place, Offer, Organization, \
@@ -25,7 +26,8 @@ class CategoryAdmin(BaseAdmin, TranslationAdmin, reversion.VersionAdmin):
     pass
 
 
-class PlaceAdmin(BaseAdmin, TranslationAdmin, reversion.VersionAdmin):
+class PlaceAdmin(geoadmin.GeoModelAdmin, BaseAdmin, TranslationAdmin,
+                 reversion.VersionAdmin):
     pass
 
 

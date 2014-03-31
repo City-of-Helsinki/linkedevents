@@ -5,7 +5,7 @@ from base import *
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
         'NAME': os.environ.get('SQL_DB', None),
         'USER': os.environ.get('SQL_USERNAME', None),
         'PASSWORD': os.environ.get('SQL_PASSWORD', None),

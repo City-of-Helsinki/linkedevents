@@ -140,3 +140,4 @@ SWAGGER_SETTINGS = {
     "is_superuser": False,  # Set to True to enforce admin only access
 }
 
+POSTGIS_VERSION = (2, 1, 1)

@@ -21,7 +21,7 @@ import datetime
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.generic import GenericForeignKey
 import pytz
-from django.db import models
+from django.contrib.gis.db import models
 import reversion
 from django_hstore import hstore
 from django.utils.translation import ugettext_lazy as _
@@ -63,7 +63,7 @@ class SystemMetaMixin(models.Model):
 class SchemalessFieldMixin(models.Model):
     # Custom field not from schema.org
     custom_fields = hstore.DictionaryField(null=True, blank=True)
-    objects = hstore.HStoreManager()
+    hstore_objects = hstore.HStoreManager()
 
     class Meta:
         abstract = True
@@ -101,7 +101,8 @@ class Language(BaseModel):
     code = models.CharField(max_length=6)
 
     class Meta:
-        verbose_name = _('Language')
+        verbose_name = _('language')
+        verbose_name_plural = _('languages')
 
 
 class Person(BaseModel):
@@ -117,7 +118,8 @@ class Person(BaseModel):
     user = models.ForeignKey(User, null=True, blank=True)
 
     class Meta:
-        verbose_name = _('Person')
+        verbose_name = _('person')
+        verbose_name_plural = _('persons')
 
 reversion.register(Person)
 
@@ -132,7 +134,9 @@ class Organization(BaseModel):
                                related_name='organization_editors')
 
     class Meta:
-        verbose_name = _('Organization')
+        verbose_name = _('organization')
+        verbose_name_plural = _('organizations')
+
 
 reversion.register(Organization)
 
@@ -156,7 +160,8 @@ class Category(MPTTModel, BaseModel, SchemalessFieldMixin):
         choices=CATEGORY_TYPES, null=True, blank=True)
 
     class Meta:
-        verbose_name = _('Category')
+        verbose_name = _('category')
+        verbose_name_plural = _('categories')
 
     class MPTTMeta:
         parent_attr = 'parent_category'
@@ -176,6 +181,10 @@ class PostalAddress(BaseModel):
                                            blank=True)
     address_country = models.CharField(max_length=2, null=True, blank=True)
     available_language = models.ForeignKey(Language, null=True, blank=True)
+
+    class Meta:
+        verbose_name = _('address')
+        verbose_name_plural = _('addresses')
 
     def __unicode__(self):
         values = filter(lambda x: x, [
@@ -201,12 +210,16 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     editor = models.ForeignKey(Person, null=True, blank=True,
                                related_name='place_editors')
 
+    geo = models.PointField(null=True, blank=True)
+    objects = models.GeoManager()
+
     def __unicode__(self):
         return u', '.join([self.name, unicode(self.address if self.address
                                               else '')])
 
     class Meta:
-        verbose_name = _('Place')
+        verbose_name = _('place')
+        verbose_name_plural = _('places')
 
     class MPTTMeta:
         parent_attr = 'contained_in'
@@ -231,6 +244,10 @@ class OpeningHoursSpecification(models.Model):
     valid_from = models.DateTimeField(null=True, blank=True)
     valid_through = models.DateTimeField(null=True, blank=True)
 
+    class Meta:
+        verbose_name = _('opening hour specification')
+        verbose_name_plural = _('opening hour specifications')
+
 
 class Offer(BaseModel):
     available_at_or_from = models.ForeignKey(Place, null=True, blank=True)
@@ -249,7 +266,8 @@ class Offer(BaseModel):
     seller = GenericForeignKey('seller_content_type', 'seller_object_id')
 
     class Meta:
-        verbose_name = _('Offer')
+        verbose_name = _('offer')
+        verbose_name_plural = _('offers')
 
 
 class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
@@ -312,7 +330,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
                                              "language"))
 
     class Meta:
-        verbose_name = _('Event')
+        verbose_name = _('event')
+        verbose_name_plural = _('events')
 
     class MPTTMeta:
         parent_attr = 'super_event'
@@ -339,4 +358,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         return u" ".join(val)
 
 reversion.register(Event)
+
 contexts.create_context(Event)
+contexts.create_context(Organization)
+contexts.create_context(Place)
+contexts.create_context(Person)

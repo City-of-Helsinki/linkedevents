@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 import re
+from django.contrib.gis.geos import Point
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import NoReverseMatch
 from django.utils.datastructures import MultiValueDictKeyError
@@ -108,7 +109,7 @@ class OrganizationOrPersonRelatedField(serializers.RelatedField):
         elif data["@type"] == 'Person':
             self.queryset = Person.objects
         else:
-            raise Exception('Unexpected type of related object')
+            raise ValidationError('Unexpected type of related object')
 
         super(OrganizationOrPersonRelatedField, self).from_native(data)
 
@@ -168,6 +169,41 @@ class TranslatedField(serializers.WritableField):
                 into[field_name] = value
 
 
+class GeoPointField(serializers.WritableField):
+    """
+    Serialize GeoDjango field as proper looking GeoJSON
+    """
+
+    def from_native(self, data):
+        if data is not None:
+            if 'type' in data and data['type'] == 'Point' and 'coordinates' in data:
+                return Point(data['coordinates'][0], data['coordinates'][1])
+            else:
+                raise ValidationError('Unexpected syntax of GeoJSON object')
+        else:
+            return super(GeoPointField, self).from_native(data)
+
+    def field_to_native(self, obj, field_name):
+        """
+        GeoDjango provides it's own easy GeoJSON serialization by
+        calling 'json', but to prevent escaping of raw JSON literal,
+        GeoJSON is constructed here manually.
+
+        :param obj: Object to be serialized
+        :param field_name: Field to be serialized
+        :return: Serialized field as a dict representation
+        """
+        if obj:
+            if getattr(obj, field_name) is not None:
+                return {
+                    "type": "Point",
+                    "coordinates": super(GeoPointField, self)
+                    .field_to_native(obj, field_name)
+                }
+        else:
+            return None
+
+
 class ISO8601DurationField(serializers.WritableField):
     def to_native(self, obj):
         if obj:
@@ -216,13 +252,12 @@ class LinkedEventsSerializer(serializers.ModelSerializer):
                                                      allow_add_remove,
                                                      **kwargs)
         self.hide_ld_context = hide_ld_context
+
+        self.disable_camelcase = False
         if 'request' in self.context:
             request = self.context['request']
-            protocol = 'https' if request.is_secure() else 'http'
-            self.base_url_for_id = '%s://%s%s' % (
-                protocol, request.get_host(), request.path)
-        else:
-            self.base_url_for_id = ''
+            if 'disable_camelcase' in request.QUERY_PARAMS:
+                self.disable_camelcase = True
 
     def to_native(self, obj):
         """
@@ -259,7 +294,10 @@ class LinkedEventsSerializer(serializers.ModelSerializer):
             if field.read_only and obj is None:
                 continue
             field.initialize(parent=self, field_name=field_name)
-            key = utils.convert_to_camelcase(self.get_field_key(field_name))
+            if self.disable_camelcase:
+                key = self.get_field_key(field_name)
+            else:
+                key = utils.convert_to_camelcase(self.get_field_key(field_name))
             value = field.field_to_native(obj, field_name)
             if field_name == 'id':
                 if 'request' in self.context:
@@ -297,6 +335,8 @@ class PersonSerializer(TranslationAwareSerializer):
     creator = JSONLDHyperLinkedRelatedField(view_name='person-detail')
     editor = JSONLDHyperLinkedRelatedField(view_name='person-detail')
 
+    view_name = 'person-detail'
+
     class Meta(TranslationAwareSerializer.Meta):
         model = Person
         exclude = TranslationAwareSerializer.Meta.exclude + mptt_fields
@@ -315,6 +355,7 @@ class CategorySerializer(TranslationAwareSerializer):
 class PlaceSerializer(TranslationAwareSerializer):
     creator = PersonSerializer(hide_ld_context=True)
     editor = PersonSerializer(hide_ld_context=True)
+    geo = GeoPointField(required=False)
 
     view_name = 'place-detail'
 
@@ -344,6 +385,8 @@ class OrganizationSerializer(LinkedEventsSerializer):
 
 
 class LanguageSerializer(LinkedEventsSerializer):
+    view_name = 'language-detail'
+
     class Meta(TranslationAwareSerializer.Meta):
         model = Language
 

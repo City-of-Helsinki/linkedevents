@@ -1,11 +1,10 @@
 """Development server settings and globals."""
 
-
 from base import *
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
         'NAME': 'linkedevents',
         'USER': 'linkedevents',
         'PASSWORD': 'linkedevents',
@@ -13,3 +12,9 @@ DATABASES = {
         'PORT': '',
     }
 }
+
+# Local overrides
+try:
+    from local_settings import *
+except ImportError:
+    pass

@@ -180,11 +180,11 @@ class MatkoImporter(Importer):
 
             # not available in schema.org:
             # location['address']['fax'][lang_code] = text(item, 'fax')
-            #location['directions'][lang_code] = text(item, 'location')
-            #location['admission_fee'][lang_code] = text(item, 'admission')
+            # location['directions'][lang_code] = text(item, 'location')
+            # location['admission_fee'][lang_code] = text(item, 'admission')
 
             # todo: parse
-            #location['opening_hours'][lang_code] = text(item, 'open')
+            # location['opening_hours'][lang_code] = text(item, 'open')
             location['custom_fields']['accessibility'][lang_code] = text(item, 'disabled')
 
             standardize_accessibility(

@@ -47,5 +47,11 @@ CONTEXTS = {
     "dataSource": {
         "@id": "linkedEvents:dataSource",
         "@type": "Text"
+    },
+    "geo": {
+        "@id": "linkedEvents:geo",
+        "Point": "http://geovocab.org/geometry#Point",
+        "coordinates": "_:n1",
+        "type": "@type"
     }
 }
