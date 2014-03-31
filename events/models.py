@@ -29,8 +29,10 @@ from mptt.models import MPTTModel, TreeForeignKey
 from django.utils.text import slugify
 from django.contrib.contenttypes.models import ContentType
 from events import contexts
+from django.utils.encoding import python_2_unicode_compatible
 
 
+@python_2_unicode_compatible
 class DataSource(models.Model):
     id = models.CharField(max_length=100, primary_key=True)
     name = models.CharField(max_length=255)
@@ -42,7 +44,7 @@ class DataSource(models.Model):
         else:
             return None
 
-    def __unicode__(self):
+    def __str__(self):
         return self.id
 
 
@@ -69,6 +71,7 @@ class SchemalessFieldMixin(models.Model):
         abstract = True
 
 
+@python_2_unicode_compatible
 class BaseModel(SystemMetaMixin):
     # Properties from schema.org/Thing
     name = models.CharField(max_length=255)
@@ -84,7 +87,7 @@ class BaseModel(SystemMetaMixin):
     def now():
         return datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
     class Meta:
@@ -177,7 +180,7 @@ class PostalAddress(BaseModel):
     address_country = models.CharField(max_length=2, null=True, blank=True)
     available_language = models.ForeignKey(Language, null=True, blank=True)
 
-    def __unicode__(self):
+    def __str__(self):
         values = filter(lambda x: x, [
             self.street_address, self.postal_code, self.address_locality
         ])
@@ -201,7 +204,7 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     editor = models.ForeignKey(Person, null=True, blank=True,
                                related_name='place_editors')
 
-    def __unicode__(self):
+    def __str__(self):
         return u', '.join([self.name, unicode(self.address if self.address
                                               else '')])
 
@@ -328,7 +331,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     def same_as(self):
         return self.data_source.event_same_as(self.origin_id)
 
-    def __unicode__(self):
+    def __str__(self):
         val = [self.name]
         dcount = self.get_descendant_count()
         if dcount > 0:

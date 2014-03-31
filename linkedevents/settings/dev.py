@@ -1,11 +1,11 @@
 """Development server settings and globals."""
 
 
-from base import *
+from .base import *
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.psycopg2',
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
         'NAME': 'linkedevents',
         'USER': 'linkedevents',
         'PASSWORD': 'linkedevents',

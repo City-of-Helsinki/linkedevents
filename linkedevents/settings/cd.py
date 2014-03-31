@@ -1,6 +1,6 @@
 """Continuous deployment settings and globals."""
 
-from base import *
+from .base import *
 
 
 DATABASES = {

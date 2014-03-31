@@ -3,4 +3,4 @@
 
 from os import environ
 
-from base import *
+from .base import *
