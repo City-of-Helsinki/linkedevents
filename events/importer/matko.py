@@ -7,7 +7,8 @@ from lxml import etree
 from events.models import *
 
 from .sync import ModelSyncher
-from .base import Importer, register_importer
+from .base import Importer, register_importer, recur_dict
+from .util import clean_text, unicodetext
 
 MATKO_URLS = {
     'locations': {
@@ -28,6 +29,8 @@ MATKO_URLS = {
 def matko_tag(tag):
     return '{https://aspicore-asp.net/matkoschema/}' + tag
 
+def text(item, tag):
+    return unicodetext(item.find(matko_tag(tag)))
 
 def matko_status(num):
     if num == 2:
@@ -36,19 +39,9 @@ def matko_status(num):
         return Event.CANCELLED
     return None
 
-
-def unicodetext(item):
-    return etree.tostring(item, encoding='unicode', method='text')
-
-
-def text(item, tag):
-    return unicodetext(item.find(matko_tag(tag)))
-
-
 def standardize_event_types(types):
     # fixme align with existing categories
     pass
-
 
 def standardize_accessibility(accessibility, lang):
     pass
@@ -79,7 +72,7 @@ class MatkoImporter(Importer):
         requests_cache.install_cache('matko')
 
     def _import_common(self, lang_code, item, result):
-        result['name'][lang_code] = self.clean_text(unicodetext(item.find('title')))
+        result['name'][lang_code] = clean_text(unicodetext(item.find('title')))
         result['description'][lang_code] = unicodetext(item.find('description'))
 
         link = item.find('link')
@@ -115,10 +108,10 @@ class MatkoImporter(Importer):
             organizer_phone = text(item, 'organizerphone')
 
             if organizer is not None:
-                event['common']['organizer']['name'][lang_code] = self.clean_text(organizer)
+                event['common']['organizer']['name'][lang_code] = clean_text(organizer)
             if organizer_phone is not None:
                 event['common']['organizer']['phone'][lang_code] = [
-                    self.clean_text(t) for t in organizer_phone.split(",")]
+                    clean_text(t) for t in organizer_phone.split(",")]
 
             start_date = dateutil.parser.parse(
                 text(item, 'starttime'))
@@ -142,7 +135,7 @@ class MatkoImporter(Importer):
 
     def _import_locations_from_feed(self, lang_code, items, locations):
         for item in items:
-            if self.clean_text(text(item, 'isvenue')) == 'False':
+            if clean_text(text(item, 'isvenue')) == 'False':
                 continue
 
             lid = int(text(item, 'id'))
@@ -155,7 +148,7 @@ class MatkoImporter(Importer):
 
             address = text(item, 'address')
             if address is not None:
-                location['address']['street_address'][lang_code] = self.clean_text(address)
+                location['address']['street_address'][lang_code] = clean_text(address)
 
             zipcode, muni = zipcode_and_muni(text(item, 'zipcode'))
             if zipcode and len(zipcode) == 5:
@@ -178,7 +171,7 @@ class MatkoImporter(Importer):
             standardize_accessibility(
                 location['custom_fields']['accessibility'][lang_code], lang_code)
 
-            lon, lat = self.clean_text(text(item, 'longitude')), self.clean_text(text(item, 'latitude'))
+            lon, lat = clean_text(text(item, 'longitude')), clean_text(text(item, 'latitude'))
             if lon != '0' and lat != '0':
                 put(location, 'geo', {
                     'longitude': lon,

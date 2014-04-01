@@ -38,6 +38,13 @@ class Importer(object):
         # remove consecutive whitespaces
         return re.sub(r'\s\s+', ' ', text, re.U).strip()
 
+    @staticmethod
+    def unicodetext(item):
+        return etree.tostring(item, encoding='unicode', method='text')
+
+    @staticmethod
+    def text(item, tag):
+        return unicodetext(item.find(matko_tag(tag)))
 
     def link_recurring_events(self, events, instance_fields=[]):
         """Finds events that are instances of a common parent

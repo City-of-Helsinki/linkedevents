@@ -1,16 +1,22 @@
 # -*- coding: utf-8 -*-
 
 import re
+from lxml import etree
 from django.utils.translation.trans_real import activate, deactivate
 
-
 def clean_text(text):
+    text = text.replace('\n', ' ')
+    # remove consecutive whitespaces
+    return re.sub(r'\s\s+', ' ', text, re.U).strip()
+
+def unicodetext(item):
+    return etree.tostring(item, encoding='unicode', method='text')
+
+def reduced_text(text):
     return re.sub(r'\W', '', text, flags=re.U).lower()
 
-
 def text_match(a, b):
-    return clean_text(a) == clean_text(b)
-
+    return reduced_text(a) == reduced_text(b)
 
 def address_eq(a, b):
     if ('postal_code' in a and 'postal_code' in b and
