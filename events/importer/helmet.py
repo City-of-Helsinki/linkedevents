@@ -97,7 +97,11 @@ HELMET_LANGUAGES = {
 @register_importer
 class HelmetImporter(Importer):
     name = "helmet"
-    data_source = DataSource.objects.get(pk=name)
+
+    def setup(self):
+        ds_args = dict(id=self.name)
+        defaults = dict(name='HelMet-kirjastot', event_url_template='https://{origin_id}')
+        self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
 
     def import_locations(self):
         print("Importing HelMet libraries as locations")
@@ -118,7 +122,7 @@ class HelmetImporter(Importer):
             detailed_resp = requests.get(UNIT_URL)
             assert detailed_resp.status_code == 200
             unit_details = json.loads(detailed_resp.content)
-            servicemap_datasource = DataSource.objects.get(pk='servicemap')
+            servicemap_datasource = DataSource.objects.get(id='tprek')
 
             name_keys = filter(lambda x: re.match(r'name_\w+', x), unit_details.keys())
             available_languages = [key.split('_')[1] for key in name_keys]
