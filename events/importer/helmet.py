@@ -7,7 +7,7 @@ import re
 
 from .base import Importer, register_importer, recur_dict
 from events.models import *
-from util import active_language
+from .util import active_language
 
 LOCATIONS = {
     # Library name in Finnish -> (library node ids in event feed)
@@ -111,7 +111,7 @@ class HelmetImporter(Importer):
             result = json.loads(resp.content)
             result = filter(lambda x: x['name_fi'] == name_fi, result)
             if len(result) != 1:
-                print 'Not found:', len(result), name_fi, name_fi.replace('@', ' ')
+                print('Not found:', len(result), name_fi, name_fi.replace('@', ' '))
                 return None
 
             UNIT_URL = SERVICEMAP_API_URL + str(result[0]['id'])

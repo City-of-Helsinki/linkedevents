@@ -1,7 +1,9 @@
 import os
+from datetime import timezone
 from lxml import etree
 import dateutil
 from django.conf import settings
+from django.utils.timezone import get_default_timezone
 from .sync import ModelSyncher
 from .base import Importer, register_importer, recur_dict
 from .util import unicodetext
@@ -33,7 +35,7 @@ class KulkeImporter(Importer):
                 event['common']['name'][lang] = name
                 event['common']['description'][lang] = clean(text('caption'))
 
-                # todo: process ? 
+                # todo: process extra links? 
                 # event_links = event_el.find(tag('links'))
 
                 event['instance']['url'][lang] = clean(text('www'))
@@ -51,6 +53,7 @@ class KulkeImporter(Importer):
                 start_date = dateutil.parser.parse(
                     text('starttime')
                 )
+                # todo: verify the input data time zones are correct.
                 event['instance']['start_date'] = start_date
                 event['instance']['door_time'] = start_date.time()
                 event['instance']['end_date'] = dateutil.parser.parse(
@@ -109,7 +112,8 @@ class KulkeImporter(Importer):
 
         import pprint
         for eid, event in events.items():
-            pprint.pprint(event)
+            # First save children, then parent
+            pass
 
     def import_locations(self):
         print("Importing Kulke locations")

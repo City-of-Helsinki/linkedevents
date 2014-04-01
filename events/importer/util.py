@@ -10,6 +10,8 @@ def clean_text(text):
     return re.sub(r'\s\s+', ' ', text, re.U).strip()
 
 def unicodetext(item):
+    if item is None:
+        return None
     return etree.tostring(item, encoding='unicode', method='text')
 
 def reduced_text(text):
