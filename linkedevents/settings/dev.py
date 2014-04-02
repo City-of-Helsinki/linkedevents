@@ -1,6 +1,5 @@
 """Development server settings and globals."""
 
-
 from .base import *
 
 DATABASES = {

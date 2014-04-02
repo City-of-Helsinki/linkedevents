@@ -8,9 +8,9 @@ addons:
 
 before_script:
   - psql -d template1 -c 'create extension hstore;' -U postgres
-  - psql -d template1 -c 'create extension postgis;' -U postgres
-  - psql -d template1 -c 'create extension postgis_topology;' -U postgres
   - psql -c 'create database linkedevents;' -U postgres
+  - psql -d linkedevents -c 'create extension postgis;' -U postgres
+  - psql -d linkedevents -c 'create extension postgis_topology;' -U postgres
 
 # command to install dependencies
 install:
