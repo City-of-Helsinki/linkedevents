@@ -193,40 +193,18 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
                                            blank=True)
     address_country = models.CharField(max_length=2, null=True, blank=True)
 
-    def __unicode__(self):
-        values = filter(lambda x: x, [
-            self.street_address, self.postal_code, self.address_locality
-        ])
-        return u', '.join(values)
-
-
-class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
-    same_as = models.CharField(max_length=255, db_index=True, null=True,
-                               blank=True)
-    description = models.TextField(null=True, blank=True)
-    parent = TreeForeignKey('self', null=True, blank=True,
-                            related_name='children')
-
-    location = models.PointField(srid=settings.PROJECTION_SRID, null=True,
-                                 blank=True)
-
-    email = models.EmailField(null=True, blank=True)
-    telephone = models.CharField(max_length=128, null=True, blank=True)
-    contact_type = models.CharField(max_length=255, null=True, blank=True)
-    street_address = models.CharField(max_length=255, null=True, blank=True)
-    address_locality = models.CharField(max_length=255, null=True, blank=True)
-    address_region = models.CharField(max_length=255, null=True, blank=True)
-    postal_code = models.CharField(max_length=128, null=True, blank=True)
-    post_office_box_num = models.CharField(max_length=128, null=True,
-                                           blank=True)
-    address_country = models.CharField(max_length=2, null=True, blank=True)
-
     deleted = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = _('place')
         verbose_name_plural = _('places')
         unique_together = (('data_source', 'origin_id'),)
+
+    def __unicode__(self):
+        values = filter(lambda x: x, [
+            self.street_address, self.postal_code, self.address_locality
+        ])
+        return u', '.join(values)
 
 reversion.register(Place)
 
