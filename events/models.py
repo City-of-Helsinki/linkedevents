@@ -75,7 +75,7 @@ class SchemalessFieldMixin(models.Model):
 @python_2_unicode_compatible
 class BaseModel(SystemMetaMixin):
     # Properties from schema.org/Thing
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, db_index=True)
     image = models.URLField(null=True, blank=True)
 
     # Properties from schema.org/CreativeWork
