@@ -2,13 +2,13 @@ import re
 import dateutil.parser
 import requests
 import requests_cache
-from collections import defaultdict
 from lxml import etree
 
 from events.models import *
 
 from .sync import ModelSyncher
-from .base import Importer, register_importer
+from .base import Importer, register_importer, recur_dict
+from .util import clean_text, unicodetext
 
 MATKO_URLS = {
     'locations': {
@@ -24,15 +24,13 @@ MATKO_URLS = {
 }
 
 
-def clean_text(text):
-    text = text.replace('\n', ' ')
-    # remove consecutive whitespaces
-    return re.sub(r'\s\s+', ' ', text, re.U).strip()
 
 
 def matko_tag(tag):
     return '{https://aspicore-asp.net/matkoschema/}' + tag
 
+def text(item, tag):
+    return unicodetext(item.find(matko_tag(tag)))
 
 def matko_status(num):
     if num == 2:
@@ -41,29 +39,12 @@ def matko_status(num):
         return Event.CANCELLED
     return None
 
-
-def unicodetext(item):
-    return etree.tostring(item, encoding='unicode', method='text')
-
-
-def text(item, tag):
-    return unicodetext(item.find(matko_tag(tag)))
-
-
 def standardize_event_types(types):
     # fixme align with existing categories
     pass
 
-
 def standardize_accessibility(accessibility, lang):
     pass
-
-
-# Using a recursive default dictionary
-# allows easy updating of same data
-# with different languages on different passes.
-def recur_dict(): return defaultdict(recur_dict)
-
 
 def put(rdict, key, val):
     if key not in rdict:
@@ -154,7 +135,7 @@ class MatkoImporter(Importer):
 
     def _import_locations_from_feed(self, lang_code, items, locations):
         for item in items:
-            if text(item, 'isvenue') == 'False':
+            if clean_text(text(item, 'isvenue')) == 'False':
                 continue
 
             lid = int(text(item, 'id'))

@@ -1,6 +1,8 @@
 import os
+import re
 import logging
 import itertools
+from collections import defaultdict
 
 from django.db import DataError
 from django.core.exceptions import ObjectDoesNotExist
@@ -15,6 +17,10 @@ from events.models import *
 def place_not_found(data_source, pid):
     return ('Place not found', (unicode(data_source), unicode(pid)))
 
+# Using a recursive default dictionary
+# allows easy updating of the same data keys
+# with different languages on different passes.
+def recur_dict(): return defaultdict(recur_dict)
 
 class Importer(object):
     def __init__(self, options):
@@ -25,6 +31,20 @@ class Importer(object):
 
     def setup(self):
         pass
+
+    @staticmethod
+    def clean_text(text):
+        text = text.replace('\n', ' ')
+        # remove consecutive whitespaces
+        return re.sub(r'\s\s+', ' ', text, re.U).strip()
+
+    @staticmethod
+    def unicodetext(item):
+        return etree.tostring(item, encoding='unicode', method='text')
+
+    @staticmethod
+    def text(item, tag):
+        return unicodetext(item.find(matko_tag(tag)))
 
     def link_recurring_events(self, events, instance_fields=[]):
         """Finds events that are instances of a common parent
