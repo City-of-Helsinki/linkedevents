@@ -15,7 +15,7 @@ from events.models import *
 
 
 def place_not_found(data_source, pid):
-    return ('Place not found', (unicode(data_source), unicode(pid)))
+    return ('Place not found', (str(data_source), str(pid)))
 
 # Using a recursive default dictionary
 # allows easy updating of the same data keys
@@ -40,7 +40,10 @@ class Importer(object):
 
     @staticmethod
     def unicodetext(item):
-        return etree.tostring(item, encoding='unicode', method='text')
+        s = item.text
+        if not s:
+            return None
+        return Importer.clean_text(s)
 
     @staticmethod
     def text(item, tag):
@@ -53,8 +56,14 @@ class Importer(object):
 
         Returns a list of events."""
 
-        event_name = lambda e: e['common']['name']['fi']
-        events = sorted(events, key=event_name)
+        def event_name(e):
+            # recur_dict ouch
+            if not 'fi' in e['common']['name']:
+                return ''
+            else:
+                return e['common']['name']['fi']
+
+        events.sort(key=event_name)
         parent_events = []
         for name_fi, subevents in itertools.groupby(events, event_name):
             subevents = list(subevents)
@@ -152,16 +161,16 @@ class Importer(object):
 
         trans_fields = {key: None for key
                         in translator.get_options_for_model(Event).fields}
-        for key in trans_fields.iterkeys():
+        for key in trans_fields.keys():
             value = model_values.pop(key, None)
             if value is not None:
                 trans_fields[key] = value
 
-        for key, value in model_values.iteritems():
+        for key, value in model_values.items():
             setattr(parent, key, value)
         for l, _ in settings.LANGUAGES:
             with active_language(l):
-                for key, value in trans_fields.iteritems():
+                for key, value in trans_fields.items():
                     if value and l in value:
                         setattr(parent, key, value[l])
 
