@@ -113,92 +113,86 @@ class Importer(object):
         place.geo.save()
         postal_address.save()
 
-    def save_children_through_parent(self, parent_dict):
+
+    def _set_field(self, obj, field_name, val):
+        if not hasattr(obj, field_name):
+            print(vars(obj))
+        if getattr(obj, field_name) == val:
+            return
+        setattr(obj, field_name, val)
+        obj._changed = True
+
+
+    def save_event(self, event):
         errors = set()
-        model_values = parent_dict['common']
-        model_values.default_factory = None
 
-        no_children = len(parent_dict['children']) < 1
-        if no_children:
-            model_values.update(parent_dict['instance'])
+        args = dict(data_source=event['data_source'], origin_id=event['origin_id'])
+        try:
+            obj = Event.objects.get(**args)
+            obj._created = False
+        except Event.DoesNotExist:
+            obj = Event(**args)
+            obj._created = True
+        obj._changed = False
 
-        data_source = model_values['data_source']
+        obj_fields = obj._meta.fields.copy()
+        trans_fields = translator.get_options_for_model(Event).fields
+        delete_fields = ['id']
 
-        # Try to find the possible existing parent
-        # in the database.
-        if no_children:
-            try:
-                parent, created = Event.objects.get_or_create(
-                    origin_id=model_values['origin_id'],
-                    data_source=data_source
-                )
-                place = Place.objects.get(
-                    data_source=data_source,
-                    origin_id=model_values['matko_location_id']
-                )
-                parent.location = place
-            except ObjectDoesNotExist as e:
-                errors.add(place_not_found(data_source, model_values['matko_location_id']))
+        for field_name, lang_fields in trans_fields.items():
+            lang_fields = list(lang_fields)
+            for lf in lang_fields:
+                lang = lf.language
+                # Do not process this field later
+                delete_fields.append(lf.name)
 
-        else:
-            children_ids = [c['origin_id'] for c in parent_dict['children']]
-            try:
-                child = Event.objects.filter(
-                    data_source=data_source
-                ).filter(
-                    origin_id__in=children_ids
-                )[0]
-                parent = child.super_event
-            except IndexError:
-                parent = Event()
+                if field_name not in event:
+                    continue
 
-        remove_keys = [
-            'types',  # todo: add to model
-            'organizer',  # todo: add to model
-            'matko_location_id',
-        ]
-        for key in remove_keys: model_values.pop(key, None)
+                data = event[field_name]
+                if lang in data:
+                    val = data[lang]
+                else:
+                    val = None
+                self._set_field(obj, lf.name, val)
 
-        trans_fields = {key: None for key
-                        in translator.get_options_for_model(Event).fields}
-        for key in trans_fields.keys():
-            value = model_values.pop(key, None)
-            if value is not None:
-                trans_fields[key] = value
+            # Remove original translated field
+            delete_fields.append(field_name)
 
-        for key, value in model_values.items():
-            setattr(parent, key, value)
-        for l, _ in settings.LANGUAGES:
-            with active_language(l):
-                for key, value in trans_fields.items():
-                    if value and l in value:
-                        setattr(parent, key, value[l])
+        for d in delete_fields:
+            for f in obj_fields:
+                if f.name == d:
+                    obj_fields.remove(f)
+                    break
 
-        parent.save()
+        if 'origin_id' in event:
+            event['origin_id'] = str(event['origin_id'])
 
-        for child_dict in parent_dict['children']:
-            origin_id = child_dict.get('origin_id')
-            try:
-                place = Place.objects.get(
-                    data_source=data_source,
-                    origin_id=child_dict['matko_location_id']
-                )
-                child_dict['location'] = place
-            except ObjectDoesNotExist as e:
-                errors.add(place_not_found(data_source, child_dict['matko_location_id']))
+        for field in obj_fields:
+            field_name = field.name
+            if field_name not in event:
+                continue
+            self._set_field(obj, field_name, event[field_name])
 
-            del child_dict['origin_id']
-            del child_dict['matko_location_id']
-            event, created = Event.objects.get_or_create(
-                origin_id=origin_id,
-                super_event=parent,
-                data_source=parent.data_source,
-                defaults=child_dict)
+        location_id = None
+        if 'place' in event:
+            place = event['place']
+            if 'id' in place:
+                location_id = place['id']
+        self._set_field(obj, 'location_id', location_id)
+
+        if obj._changed or obj._created:
+            if obj._created:
+                verb = "created"
+            else:
+                verb = "changed"
+            print("%s %s" % (str(obj), verb))
+            obj.save()
+
         return errors
 
 
 importers = {}
-
 
 def register_importer(klass):
     importers[klass.name] = klass

@@ -104,7 +104,7 @@ class MatkoImporter(Importer):
             self.put(result, 'types', types)
 
     def _find_place(self, event):
-        place_name = event['instance']['place_name']['fi']
+        place_name = event['place']['name']['fi']
         if not place_name:
             return
         place_name = place_name.lower()
@@ -120,59 +120,54 @@ class MatkoImporter(Importer):
         if tprek_id and not place_id:
             place_id = Place.objects.get(data_source=self.tprek_data_source, origin_id=tprek_id).id
 
-        event['instance']['place'] = place_id
+        event['place']['id'] = place_id
 
-    def _import_events_from_feed(self, lang_code, items, events):
-        for item in items:
-            eid = int(text(item, 'uniqueid'))
-            event = events[eid]
+    def _import_event_from_feed(self, lang_code, item, events):
+        eid = int(text(item, 'uniqueid'))
+        event = events[eid]
 
-            if eid != int(text(item, 'id')):
-                self.logger.info(
-                    'Unique id and id values differ for id %d uid %s' % (
-                        eid, text(item, 'id')))
+        if eid != int(text(item, 'id')):
+            self.logger.info(
+                'Unique id and id values differ for id %d uid %s' % (
+                    eid, text(item, 'id')))
 
-            event['instance']['origin_id'] = eid
-            event['common']['data_source'] = self.data_source
-            event['instance']['date_published'] = dateutil.parser.parse(
-                unicodetext(item.find('pubDate'))
-            )
+        event['origin_id'] = eid
+        event['data_source'] = self.data_source
+        event['date_published'] = dateutil.parser.parse(
+            unicodetext(item.find('pubDate'))
+        )
 
-            self._import_common(lang_code, item, event['common'])
+        self._import_common(lang_code, item, event)
 
-            organizer = text(item, 'organizer')
-            organizer_phone = text(item, 'organizerphone')
+        organizer = text(item, 'organizer')
+        organizer_phone = text(item, 'organizerphone')
 
-            if organizer is not None:
-                event['common']['organizer']['name'][lang_code] = clean_text(organizer)
-            if organizer_phone is not None:
-                event['common']['organizer']['phone'][lang_code] = [
-                    clean_text(t) for t in organizer_phone.split(",")]
+        if organizer is not None:
+            event['organizer']['name'][lang_code] = clean_text(organizer)
+        if organizer_phone is not None:
+            event['organizer']['phone'][lang_code] = [
+                clean_text(t) for t in organizer_phone.split(",")]
 
-            start_date = dateutil.parser.parse(
-                text(item, 'starttime'))
-            start_time = start_date.time()
+        start_time = dateutil.parser.parse(
+            text(item, 'starttime'))
 
-            # The feed doesn't contain proper end times (clock).
-            end_date = dateutil.parser.parse(
-                text(item, 'endtime'))
+        # The feed doesn't contain proper end times (clock).
+        end_time = dateutil.parser.parse(
+            text(item, 'endtime'))
 
-            standardize_event_types(event['common']['types'])
+        standardize_event_types(event['types'])
 
-            event['instance']['place_name'][lang_code] = text(item, 'place')
-            event['instance']['place_info'][lang_code] = text(item, 'placeinfo')
+        event['place']['name'][lang_code] = text(item, 'place')
+        event['place']['info'][lang_code] = text(item, 'placeinfo')
 
-            self.put(event['instance'], 'start_date', start_date)
-            self.put(event['instance'], 'door_time', start_time)
-            self.put(event['instance'], 'end_date', end_date)
-            self.put(event['instance'], 'event_status',
-                     matko_status(int(text(item, 'status'))))
-            self.put(event['instance'], 'matko_location_id',
-                     int(text(item, 'placeuniqueid')))
+        self.put(event, 'start_time', start_time)
+        self.put(event, 'end_time', end_time)
+        self.put(event, 'event_status', matko_status(int(text(item, 'status'))))
+        self.put(event['place'], 'matko_location_id', int(text(item, 'placeuniqueid')))
 
-            # FIXME: Place matching for only English (or Swedish) events
-            if lang_code == 'fi':
-                self._find_place(event)
+        # FIXME: Place matching for events that are only in English (or Swedish)
+        if lang_code == 'fi':
+            self._find_place(event)
 
         return events
 
@@ -228,7 +223,7 @@ class MatkoImporter(Importer):
         for k, event in events.items():
             if not 'organizer' in event:
                 continue
-            organizer = event['common']['organizer']
+            organizer = event['organizer']
             if not 'name' in organizer or not 'fi' in organizer['name']:
                 continue
             oid = organizer['name']['fi']
@@ -247,12 +242,15 @@ class MatkoImporter(Importer):
         events = recur_dict()
         for lang, url in MATKO_URLS['events'].items():
             items = self.items_from_url(url)
-            self._import_events_from_feed(lang, items, events)
+            for item in items:
+                self._import_event_from_feed(lang, item, events)
             organizers = self._import_organizers_from_events(events)
 
         errors = set()
-        for event in self.link_recurring_events(list(events.values())):
-            errors.update(self.save_children_through_parent(event))
+        for event in events.values():
+            event_errors = self.save_event(event)
+            errors.update(event_errors)
+        print("%d events added" % len(events.values()))
         if len(errors) > 0:
             print('Errors:')
         for e in errors:
