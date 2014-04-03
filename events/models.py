@@ -269,16 +269,14 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
                                  related_name='event_providers')
 
     # Properties from schema.org/Event
-    door_time = models.TimeField(null=True, blank=True)
-    duration = models.BigIntegerField(null=True, blank=True)
-    end_date = models.DateField(null=True, db_index=True, blank=True)
     event_status = models.SmallIntegerField(choices=STATUSES,
                                             default=SCHEDULED)
     location = models.ForeignKey(Place, null=True, blank=True)
     # Just ONE offer in offers field at schema.org (???)
     offers = models.ForeignKey(Offer, null=True, blank=True)
     previous_start_date = models.DateTimeField(null=True, blank=True)
-    start_date = models.DateField(null=True, db_index=True, blank=True)
+    start_time = models.DateTimeField(null=True, db_index=True, blank=True)
+    end_time = models.DateTimeField(null=True, db_index=True, blank=True)
     super_event = TreeForeignKey('self', null=True, blank=True,
                                  related_name='sub_event')
     typical_age_range = models.CharField(max_length=255, null=True, blank=True)
@@ -314,8 +312,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         if dcount > 0:
             val.append(u" (%d children)" % dcount)
         else:
-            val.append(unicode(self.start_date))
-            val.append(unicode(self.door_time))
+            val.append(str(self.start_date))
+            val.append(str(self.door_time))
         return u" ".join(val)
 
 reversion.register(Event)
