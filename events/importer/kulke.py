@@ -3,6 +3,7 @@ from datetime import timezone
 from lxml import etree
 from modeltranslation.translator import translator
 import dateutil
+from pytz import timezone
 from django.conf import settings
 from django.utils.timezone import get_default_timezone
 from .sync import ModelSyncher
@@ -33,6 +34,7 @@ ADDRESS_TPREK_MAP = {
     'ala-malmin tori 1': 'malmitalo',
 }
 
+LOCAL_TZ = timezone('Europe/Helsinki')
 
 @register_importer
 class KulkeImporter(Importer):
@@ -44,11 +46,17 @@ class KulkeImporter(Importer):
         self.tprek_data_source = DataSource.objects.get(id='tprek')
         self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
 
+        # Build a cached list of Places to avoid frequent hits to the db
+        id_list = LOCATION_TPREK_MAP.values()
+        place_list = Place.objects.filter(data_source=self.tprek_data_source).filter(origin_id__in=id_list)
+        self.tprek_by_id = {p.origin_id: p.id for p in place_list}
+
     def find_place(self, event):
         tprek_id = None
         location = event['location']
         if location['name'] is None:
-            print("Missing place for event '%s'" % event['id'])
+            print("Missing place for event %s (%s)" % (
+                event['name']['fi'], event['origin_id']))
             return None
 
         loc_name = location['name'].lower()
@@ -77,157 +85,125 @@ class KulkeImporter(Importer):
                     tprek_id = LOCATION_TPREK_MAP[ADDRESS_TPREK_MAP[addr]]
 
         if tprek_id:
-            return Place.objects.get(data_source=self.tprek_data_source,
-                                     origin_id=tprek_id)
+            event['location']['id'] = self.tprek_by_id[tprek_id]
         else:
             print("No match found for place '%s' (event %s)" % (loc_name, event['name']['fi']))
-            return None
+
+    def _import_event(self, lang, event_el, events):
+        tag = lambda t: 'event' + t
+        text = lambda t: unicodetext(event_el.find(tag(t)))
+        clean = lambda t: t.strip() if t is not None else None
+        text_content = lambda k: clean(text(k))
+
+        eid = int(event_el.attrib['id'])
+        event = events[eid]
+        event['data_source'] = self.data_source
+        event['origin_id'] = eid
+
+        event['name'][lang] = text_content('title')
+        subtitle = text_content('subtitle')
+        if subtitle:
+            event['custom']['subtitle'][lang] = subtitle
+
+        caption = text_content('caption')
+        bodytext = text_content('bodytext')
+        description = ''
+        if caption:
+            description += caption
+        if caption and bodytext:
+            description += "\n\n"
+        if bodytext:
+            description += bodytext
+        event['description'][lang] = description
+
+        event['url'][lang] = text_content('www')
+        # todo: process extra links?
+        # event_links = event_el.find(tag('links'))
+
+        eventattachments = event_el.find(tag('attachments'))
+        if eventattachments is not None:
+            for attachment in eventattachments:
+                if attachment.get('teaserimage'):
+                    event['image'] = unicodetext(attachment).strip()
+                    break
+
+        start_time = dateutil.parser.parse(text('starttime'))
+        # Start and end times are in GMT. Sometimes only dates are provided.
+        # If it's just a date, tzinfo is None.
+        # FIXME: Mark that time is missing somehow?
+        if not start_time.tzinfo:
+            start_time = start_time.replace(tzinfo=LOCAL_TZ)
+        event['start_time'] = start_time
+        if text('endtime'):
+            end_time = dateutil.parser.parse(text('endtime'))
+            if not end_time.tzinfo:
+                end_time = end_time.replace(tzinfo=LOCAL_TZ)
+            event['end_time'] = end_time
+
+        # todo: verify enrolment use cases, proper fields
+        event['custom']['enrolment']['start_time'] = dateutil.parser.parse(
+            text('enrolmentstarttime')
+        )
+        event['custom']['enrolment']['end_time'] = dateutil.parser.parse(
+            text('enrolmentendtime')
+        )
+
+        price = text_content('price')
+        price_el = event_el.find(tag('price'))
+        free = (price_el.attrib['free'] == "true")
+        url = price_el.get('ticketlink')
+        info = price_el.get('ticketinfo')
+
+        offers = event['offers']
+        if free:
+            offers['price'] = '0'
+            if price and len(price) > 0:
+                if info is not None:
+                    offers['description'] = info + '; ' + price
+                else:
+                    offers['description'] = price
+            else:
+                offers['description'] = info
+        else:
+            offers['price'] = price
+        offers['url'] = url
+
+        # todo categories
+
+        location = event['location']
+
+        location['street_address'][lang] = text_content('address')
+        location['postal_code'] = text_content('postalcode')
+        municipality = text_content('postaloffice')
+        if municipality == 'Helsingin kaupunki':
+            municipality = 'Helsinki'
+        location['address_locality'][lang] = municipality
+        location['telephone'][lang] = text_content('phone')
+        location['name'] = text_content('location')
+
+        if not 'place' in location:
+            self.find_place(event)
+
+        references = event_el.find(tag('references'))
+        event['children'] = []
+        if references is not None:
+            for reference in references:
+                event['children'].append(int(reference.get('id')))
+
 
     def import_events(self):
         print("Importing Kulke events")
         events = recur_dict()
-        tag = lambda t: 'event' + t
-
         for lang in ['fi', 'sv', 'en']:
             events_file = os.path.join(
                 settings.IMPORT_FILE_PATH, 'kulke', 'events-%s.xml' % lang)
             root = etree.parse(events_file)
             for event_el in root.xpath('/eventdata/event'):
-                text = lambda t: unicodetext(event_el.find(tag(t)))
-                clean = lambda t: t.strip() if t is not None else None
-                text_content = lambda k: clean(text(k))
-
-                eid = int(event_el.attrib['id'])
-                event = events[eid]
-                event['id'] = eid
-
-                event['name'][lang] = text_content('title')
-                subtitle = text_content('subtitle')
-                if subtitle:
-                    event['custom']['subtitle'][lang] = subtitle
-
-                caption = text_content('caption')
-                bodytext = text_content('bodytext')
-                description = ''
-                if caption:
-                    description += caption
-                if caption and bodytext:
-                    description += "\n\n"
-                if bodytext:
-                    description += bodytext
-                event['description'][lang] = description
-
-                event['url'][lang] = text_content('www')
-                # todo: process extra links?
-                # event_links = event_el.find(tag('links'))
-
-                eventattachments = event_el.find(tag('attachments'))
-                if eventattachments is not None:
-                    for attachment in eventattachments:
-                        if attachment.get('teaserimage'):
-                            event['image'] = unicodetext(attachment).strip()
-                            break
-
-                start_date = dateutil.parser.parse(
-                    text('starttime')
-                )
-                # todo: verify the input data time zones are correct.
-                event['start_date'] = start_date
-                event['door_time'] = start_date.time()
-                if text('endtime'):
-                    event['end_date'] = dateutil.parser.parse(
-                        text('endtime')
-                    )
-
-                # todo: verify enrolment use cases, proper fields
-                event['custom']['enrolment']['start'] = dateutil.parser.parse(
-                    text('enrolmentstarttime')
-                )
-                event['custom']['enrolment']['end'] = dateutil.parser.parse(
-                    text('enrolmentendtime')
-                )
-
-                price = text_content('price')
-                price_el = event_el.find(tag('price'))
-                free = (price_el.attrib['free'] == "true")
-                url = price_el.get('ticketlink')
-                info = price_el.get('ticketinfo')
-
-                offers = event['offers']
-                if free:
-                    offers['price'] = '0'
-                    if price and len(price) > 0:
-                        if info is not None:
-                            offers['description'] = info + '; ' + price
-                        else:
-                            offers['description'] = price
-                    else:
-                        offers['description'] = info
-                else:
-                    offers['price'] = price
-                offers['url'] = url
-
-                # todo categories
-
-                location = event['location']
-
-                location['street_address'][lang] = text_content('address')
-                location['postal_code'] = text_content('postalcode')
-                municipality = text_content('postaloffice')
-                if municipality == 'Helsingin kaupunki':
-                    municipality = 'Helsinki'
-                location['address_locality'][lang] = municipality
-                location['telephone'][lang] = text_content('phone')
-                location['name'] = text_content('location')
-
-                if not 'place' in location:
-                    event['location']['place'] = self.find_place(event)
-
-                references = event_el.find(tag('references'))
-                event['children'] = []
-                if references is not None:
-                    for reference in references:
-                        event['children'].append(int(reference.get('id')))
+                self._import_event(lang, event_el, events)
 
         events.default_factory = None
         for eid, event in events.items():
-            self.save_event_as_model(event)
-
-    def save_event_as_model(self, event_dict):
-        event_dict['location'] = event_dict['location']['place']
-        del event_dict['offers']    # todo
-        del event_dict['children']  # todo
-        del event_dict['custom']    # todo
-        trans_fields = {
-            key: None for key
-            in translator.get_options_for_model(Event).fields
-        }
-        try:
-            event = Event.objects.get(
-                data_source=self.data_source,
-                origin_id=event_dict['id']
-            )
-        except Event.DoesNotExist:
-            event = Event(
-                data_source=self.data_source,
-                origin_id=event_dict['id']
-            )
-
-        for key in trans_fields.keys():
-            value = event_dict.pop(key, None)
-            if value is not None:
-                trans_fields[key] = value
-        for key, value in event_dict.items():
-            setattr(event, key, value)
-        for l in trans_fields['name'].keys():
-            # Don't overwrite existing values
-            # with Nones.
-            with active_language(l):
-                for key, value in trans_fields.items():
-                    if value and l in value:
-                        setattr(event, key, value[l])
-
-        event.save()
+            self.save_event(event)
 
     def _gather_recurrings_groups(self, events):
         # Currently unused.

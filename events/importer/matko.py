@@ -104,7 +104,7 @@ class MatkoImporter(Importer):
             self.put(result, 'types', types)
 
     def _find_place(self, event):
-        place_name = event['place']['name']['fi']
+        place_name = event['location']['name']['fi']
         if not place_name:
             return
         place_name = place_name.lower()
@@ -120,7 +120,7 @@ class MatkoImporter(Importer):
         if tprek_id and not place_id:
             place_id = Place.objects.get(data_source=self.tprek_data_source, origin_id=tprek_id).id
 
-        event['place']['id'] = place_id
+        event['location']['id'] = place_id
 
     def _import_event_from_feed(self, lang_code, item, events):
         eid = int(text(item, 'uniqueid'))
@@ -157,13 +157,13 @@ class MatkoImporter(Importer):
 
         standardize_event_types(event['types'])
 
-        event['place']['name'][lang_code] = text(item, 'place')
-        event['place']['info'][lang_code] = text(item, 'placeinfo')
+        event['location']['name'][lang_code] = text(item, 'place')
+        event['location']['info'][lang_code] = text(item, 'placeinfo')
 
         self.put(event, 'start_time', start_time)
         self.put(event, 'end_time', end_time)
         self.put(event, 'event_status', matko_status(int(text(item, 'status'))))
-        self.put(event['place'], 'matko_location_id', int(text(item, 'placeuniqueid')))
+        self.put(event['location'], 'matko_location_id', int(text(item, 'placeuniqueid')))
 
         # FIXME: Place matching for events that are only in English (or Swedish)
         if lang_code == 'fi':

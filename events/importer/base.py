@@ -137,14 +137,14 @@ class Importer(object):
 
         obj_fields = obj._meta.fields.copy()
         trans_fields = translator.get_options_for_model(Event).fields
-        delete_fields = ['id']
+        skip_fields = ['id', 'location', 'offers']
 
         for field_name, lang_fields in trans_fields.items():
             lang_fields = list(lang_fields)
             for lf in lang_fields:
                 lang = lf.language
                 # Do not process this field later
-                delete_fields.append(lf.name)
+                skip_fields.append(lf.name)
 
                 if field_name not in event:
                     continue
@@ -157,9 +157,9 @@ class Importer(object):
                 self._set_field(obj, lf.name, val)
 
             # Remove original translated field
-            delete_fields.append(field_name)
+            skip_fields.append(field_name)
 
-        for d in delete_fields:
+        for d in skip_fields:
             for f in obj_fields:
                 if f.name == d:
                     obj_fields.remove(f)
@@ -175,10 +175,10 @@ class Importer(object):
             self._set_field(obj, field_name, event[field_name])
 
         location_id = None
-        if 'place' in event:
-            place = event['place']
-            if 'id' in place:
-                location_id = place['id']
+        if 'location' in event:
+            location = event['location']
+            if 'id' in location:
+                location_id = location['id']
         self._set_field(obj, 'location_id', location_id)
 
         if obj._changed or obj._created:
