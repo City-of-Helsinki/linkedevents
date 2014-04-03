@@ -314,8 +314,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         if dcount > 0:
             val.append(u" (%d children)" % dcount)
         else:
-            val.append(unicode(self.start_date))
-            val.append(unicode(self.door_time))
+            val.append(str(self.start_date))
+            val.append(str(self.door_time))
         return u" ".join(val)
 
 reversion.register(Event)
