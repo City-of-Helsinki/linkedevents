@@ -103,6 +103,19 @@ class APITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['name'], PLACE['name'])
 
+    def test_create_place_with_geojson(self):
+        url = reverse('place-list')
+        place_with_geo = PLACE.copy()
+        place_with_geo['location'] = {
+            "type": "Point",
+            "coordinates": [
+                24.1, 62.2
+            ]
+        }
+        response = self.client.post(url, place_with_geo, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['location'], place_with_geo['location'])
+
     def test_delete_event(self):
         url = reverse('event-list')
         response_post = self.client.post(url, EVENT, format='json')
@@ -156,14 +169,7 @@ PLACE = {
     },
     "creator": None,
     "editor": None,
-    "geo": {
-        "@type": "GeoShape",
-        "elevation": "212",
-        "box": "boxbox",
-        "circle": "circlecircle",
-        "line": "lineline",
-        "polygon": "polygon"
-    },
+    "location": None,
     "dataSource": None,
     "originId": None,
     "customFields": {},

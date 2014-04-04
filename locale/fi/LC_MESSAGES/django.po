@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-03-05 15:12+0200\n"
+"POT-Creation-Date: 2014-03-31 10:28+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,26 +18,87 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: events/models.py:39
-msgid "Language"
-msgstr "Kieli"
+#: events/models.py:104
+msgid "language"
+msgstr "kieli"
 
-#: events/models.py:46
-msgid "Organization"
-msgstr "Organisaatio"
+#: events/models.py:105
+msgid "languages"
+msgstr "kielet"
 
-#: events/models.py:56
-msgid "Category"
-msgstr "Kategoria"
+#: events/models.py:121
+msgid "person"
+msgstr "henkilö"
 
-#: events/models.py:65
-msgid "Place"
-msgstr "Paikka"
+#: events/models.py:122
+msgid "persons"
+msgstr "henkilöt"
 
-#: events/models.py:99
+#: events/models.py:137
+msgid "organization"
+msgstr "organisaatio"
+
+#: events/models.py:138
+msgid "organizations"
+msgstr "organisaatiot"
+
+#: events/models.py:163
+msgid "category"
+msgstr "kategoria"
+
+#: events/models.py:164
+msgid "categories"
+msgstr "kategoriat"
+
+#: events/models.py:186
+msgid "address"
+msgstr "osoite"
+
+#: events/models.py:187
+msgid "addresses"
+msgstr "osoitteet"
+
+#: events/models.py:221
+msgid "place"
+msgstr "paikka"
+
+#: events/models.py:222
+msgid "places"
+msgstr "paikat"
+
+#: events/models.py:248
+msgid "opening hour specification"
+msgstr "aukioloaika"
+
+#: events/models.py:249
+msgid "opening hour specifications"
+msgstr "aukioloajat"
+
+#: events/models.py:269
+msgid "offer"
+msgstr "tarjous"
+
+#: events/models.py:270
+msgid "offers"
+msgstr "tarjoukset"
+
+#: events/models.py:293
+msgid "Event home page"
+msgstr "Tapahtuman kotisivu"
+
+#: events/models.py:329
 msgid "Set if the event is in a given language"
 msgstr "Aseta jos tapahtuma järjestetään tietyllä kielellä"
 
-#: events/models.py:117
-msgid "Event"
-msgstr "Tapahtuma"
+#: events/models.py:333
+msgid "event"
+msgstr "tapahtuma"
+
+#: events/models.py:334
+msgid "events"
+msgstr "tapahtumat"
+
+#: events/serializers/serializers.py:23 events/serializers/serializers.py:49
+#, python-format
+msgid "Incorrect JSON.  Expected JSON, received %s."
+msgstr ""

@@ -56,8 +56,10 @@ class SystemMetaMixin(models.Model):
     modified_by = models.ForeignKey(
         User, null=True, blank=True,
         related_name="%(app_label)s_%(class)s_modified_by")
-    data_source = models.ForeignKey(DataSource, db_index=True, null=True, blank=True)
-    origin_id = models.CharField(max_length=255, db_index=True, null=True, blank=True)
+    data_source = models.ForeignKey(DataSource, db_index=True, null=True,
+                                    blank=True)
+    origin_id = models.CharField(max_length=255, db_index=True, null=True,
+                                 blank=True)
 
     class Meta:
         abstract = True
@@ -66,7 +68,7 @@ class SystemMetaMixin(models.Model):
 class SchemalessFieldMixin(models.Model):
     # Custom field not from schema.org
     custom_fields = hstore.DictionaryField(null=True, blank=True)
-    objects = hstore.HStoreManager()
+    hstore_objects = hstore.HStoreManager()
 
     class Meta:
         abstract = True
@@ -78,7 +80,6 @@ class BaseModel(SystemMetaMixin):
     name = models.CharField(max_length=255, db_index=True)
     image = models.URLField(null=True, blank=True)
 
-    # Properties from schema.org/CreativeWork
     created_time = models.DateTimeField(null=True, blank=True)
     last_modified_time = models.DateTimeField(null=True, blank=True)
 
@@ -103,7 +104,8 @@ class Language(BaseModel):
     code = models.CharField(max_length=6)
 
     class Meta:
-        verbose_name = _('Language')
+        verbose_name = _('language')
+        verbose_name_plural = _('languages')
 
 
 class Person(BaseModel):
@@ -119,7 +121,8 @@ class Person(BaseModel):
     user = models.ForeignKey(User, null=True, blank=True)
 
     class Meta:
-        verbose_name = _('Person')
+        verbose_name = _('person')
+        verbose_name_plural = _('persons')
 
 reversion.register(Person)
 
@@ -134,7 +137,9 @@ class Organization(BaseModel):
                                related_name='organization_editors')
 
     class Meta:
-        verbose_name = _('Organization')
+        verbose_name = _('organization')
+        verbose_name_plural = _('organizations')
+
 
 reversion.register(Organization)
 
@@ -158,7 +163,8 @@ class Category(MPTTModel, BaseModel, SchemalessFieldMixin):
         choices=CATEGORY_TYPES, null=True, blank=True)
 
     class Meta:
-        verbose_name = _('Category')
+        verbose_name = _('category')
+        verbose_name_plural = _('categories')
 
     class MPTTMeta:
         parent_attr = 'parent_category'
@@ -167,12 +173,14 @@ reversion.register(Category)
 
 
 class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
-    same_as = models.CharField(max_length=255, db_index=True, null=True, blank=True)
+    same_as = models.CharField(max_length=255, db_index=True, null=True,
+                               blank=True)
     description = models.TextField(null=True, blank=True)
     parent = TreeForeignKey('self', null=True, blank=True,
                             related_name='children')
 
-    location = models.PointField(srid=settings.PROJECTION_SRID, null=True, blank=True)
+    location = models.PointField(srid=settings.PROJECTION_SRID, null=True,
+                                 blank=True)
 
     email = models.EmailField(null=True, blank=True)
     telephone = models.CharField(max_length=128, null=True, blank=True)
@@ -188,8 +196,15 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     deleted = models.BooleanField(default=False)
 
     class Meta:
-        verbose_name = _('Place')
+        verbose_name = _('place')
+        verbose_name_plural = _('places')
         unique_together = (('data_source', 'origin_id'),)
+
+    def __unicode__(self):
+        values = filter(lambda x: x, [
+            self.street_address, self.postal_code, self.address_locality
+        ])
+        return u', '.join(values)
 
 reversion.register(Place)
 
@@ -211,6 +226,10 @@ class OpeningHoursSpecification(models.Model):
     valid_from = models.DateTimeField(null=True, blank=True)
     valid_through = models.DateTimeField(null=True, blank=True)
 
+    class Meta:
+        verbose_name = _('opening hour specification')
+        verbose_name_plural = _('opening hour specifications')
+
 
 class Offer(BaseModel):
     available_at_or_from = models.ForeignKey(Place, null=True, blank=True)
@@ -229,7 +248,8 @@ class Offer(BaseModel):
     seller = GenericForeignKey('seller_content_type', 'seller_object_id')
 
     class Meta:
-        verbose_name = _('Offer')
+        verbose_name = _('offer')
+        verbose_name_plural = _('offers')
 
 
 class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
@@ -290,7 +310,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
                                              "language"))
 
     class Meta:
-        verbose_name = _('Event')
+        verbose_name = _('event')
+        verbose_name_plural = _('events')
 
     class MPTTMeta:
         parent_attr = 'super_event'
@@ -316,4 +337,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         return u" ".join(val)
 
 reversion.register(Event)
+
 contexts.create_context(Event)
+contexts.create_context(Organization)
+contexts.create_context(Place)
+contexts.create_context(Person)
