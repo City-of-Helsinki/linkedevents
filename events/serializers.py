@@ -423,7 +423,6 @@ class EventSerializer(TranslationAwareSerializer):
     offers = OfferSerializer(hide_ld_context=True)
     creator = PersonSerializer(many=True, hide_ld_context=True)
     editor = PersonSerializer(hide_ld_context=True)
-    duration = ISO8601DurationField()
     super_event = JSONLDHyperLinkedRelatedField(required=False,
                                                 view_name='event-detail')
     url = TranslatedField()
