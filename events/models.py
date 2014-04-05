@@ -171,6 +171,9 @@ class Category(MPTTModel, BaseModel, SchemalessFieldMixin):
     category_for = models.SmallIntegerField(
         choices=CATEGORY_TYPES, null=True, blank=True)
 
+    def __str__(self):
+        return self.label
+
     class Meta:
         verbose_name = _('category')
         verbose_name_plural = _('categories')
