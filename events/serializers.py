@@ -221,7 +221,7 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
         ret = super(TranslatedModelSerializer, self).to_native(obj)
         if obj is None:
             return ret
-        return self.translated_fields_to_native(self, obj, ret)
+        return self.translated_fields_to_native(obj, ret)
 
     def translated_fields_to_native(self, obj, ret):
         for field_name in self.translated_fields:
