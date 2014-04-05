@@ -14,7 +14,7 @@ def create_context(klass):
         "linkedEvents": LINKED_EVENTS_SCHEMA_URL
     }
     for name in klass._meta.get_all_field_names():
-        name = utils.convert_to_camelcase(name)
+        #name = utils.convert_to_camelcase(name)
         if klass.__name__ in CONTEXTS and name in CONTEXTS[klass.__name__]:
             klass.jsonld_context[name] = CONTEXTS[klass.__name__][name]
         elif name in CONTEXTS:
@@ -31,11 +31,17 @@ CONTEXTS = {
     "description": {
         "@container": "@language"
     },
-    "originId": {
+    "street_address": {
+        "@container": "@language"
+    },
+    "address_locality": {
+        "@container": "@language"
+    },
+    "origin_id": {
         "@id": "linkedEvents:originId",
         "@type": "Text"
     },
-    "targetGroup": {
+    "target_group": {
         "@id": "linkedEvents:targetGroup",
         "@type": "Text"
     },
@@ -43,11 +49,11 @@ CONTEXTS = {
         "@id": "linkedEvents:slug",
         "@type": "Text"
     },
-    "customFields": {
+    "custom_fields": {
         "@id": "linkedEvents:customFields",
         "@container": "@index"
     },
-    "dataSource": {
+    "data_source": {
         "@id": "linkedEvents:dataSource",
         "@type": "Text"
     },

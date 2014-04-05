@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-import re
 from django.contrib.gis.geos import Point
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import NoReverseMatch
@@ -12,12 +11,9 @@ from rest_framework import relations
 from rest_framework.reverse import reverse
 from events.models import *
 from django.conf import settings
-from itertools import chain
 from events import utils
+from modeltranslation.translator import translator, NotRegistered
 from django.utils.translation import ugettext_lazy as _
-
-# JSON exclusion list of MPTT's custom fields
-mptt_fields = ['lft', 'rght', 'tree_id', 'level']
 
 
 class JSONLDHyperLinkedRelatedField(relations.HyperlinkedRelatedField):
@@ -49,9 +45,9 @@ class JSONLDHyperLinkedRelatedFieldNested(JSONLDHyperLinkedRelatedField):
     """
     invalid_json_error = _('Incorrect JSON.  Expected JSON, received %s.')
 
-    def __init__(self, klass, hide_ld_context=False, *args, **kwargs):
+    def __init__(self, klass, *args, **kwargs):
         self.model = klass
-        self.hide_ld_context = hide_ld_context
+        self.hide_ld_context = kwargs.pop('hide_ld_context', False)
         super(JSONLDHyperLinkedRelatedFieldNested, self).__init__(*args,
                                                                   **kwargs)
 
@@ -137,38 +133,6 @@ class EnumChoiceField(serializers.WritableField):
                                                self.prefix + data, 0)
 
 
-class TranslatedField(serializers.WritableField):
-    """
-    Modeltranslation library generates i18n fields to given languages.
-    Here i18n data is converted to more JSON-LD friendly syntax.
-
-    Accompany with appropriate @context definition.
-    """
-
-    def field_to_native(self, obj, field_name):
-        # If source is given, use it as the attribute(chain) of obj to be
-        # translated and ignore the original field_name
-        if self.source:
-            bits = self.source.split(".")
-            field_name = bits[-1]
-            for name in bits[:-1]:
-                obj = getattr(obj, name)
-
-        return {
-            code: getattr(obj, field_name + "_" + code, '')
-            for code, _ in settings.LANGUAGES
-        }
-
-    def field_from_native(self, data, files, field_name, into):
-        super(TranslatedField, self).field_from_native(data, files, field_name,
-                                                       into)
-
-        for code, value in data.get(field_name).iteritems():
-            into[field_name + '_' + code] = value
-            if code == settings.LANGUAGE_CODE:
-                into[field_name] = value
-
-
 class GeoPointField(serializers.WritableField):
     """
     Serialize GeoDjango field as proper looking GeoJSON
@@ -225,7 +189,64 @@ class ISO8601DurationField(serializers.WritableField):
             return 0
 
 
-class LinkedEventsSerializer(serializers.ModelSerializer):
+class MPTTModelSerializer(serializers.ModelSerializer):
+    def __init__(self, *args, **kwargs):
+        super(MPTTModelSerializer, self).__init__(*args, **kwargs)
+        for field_name in 'lft', 'rght', 'tree_id', 'level':
+            if field_name in self.fields:
+                del self.fields[field_name]
+
+
+class TranslatedModelSerializer(serializers.ModelSerializer):
+    def __init__(self, *args, **kwargs):
+        super(TranslatedModelSerializer, self).__init__(*args, **kwargs)
+        model = self.opts.model
+        try:
+            trans_opts = translator.get_options_for_model(model)
+        except NotRegistered:
+            self.translated_fields = []
+            return
+
+        self.translated_fields = trans_opts.fields.keys()
+        lang_codes = [x[0] for x in settings.LANGUAGES]
+        # Remove the pre-existing data in the bundle.
+        for field_name in self.translated_fields:
+            for lang in lang_codes:
+                key = "%s_%s" % (field_name, lang)
+                if key in self.fields:
+                    del self.fields[key]
+            del self.fields[field_name]
+
+    def to_native(self, obj):
+        ret = super(TranslatedModelSerializer, self).to_native(obj)
+        if obj is None:
+            return ret
+        return self.translated_fields_to_native(self, obj, ret)
+
+    def translated_fields_to_native(self, obj, ret):
+        for field_name in self.translated_fields:
+            d = {}
+            default_lang = settings.LANGUAGES[0][0]
+            d[default_lang] = getattr(obj, field_name)
+            for lang in [x[0] for x in settings.LANGUAGES[1:]]:
+                key = "%s_%s" % (field_name, lang)  
+                val = getattr(obj, key, None)
+                if val == None:
+                    continue 
+                d[lang] = val
+
+            # If no text provided, leave the field as null
+            for key, val in d.items():
+                if val != None:
+                    break
+            else:
+                d = None
+            ret[field_name] = d
+
+        return ret
+
+
+class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
     """Serializer with the support for JSON-LD/Schema.org.
 
     JSON-LD/Schema.org syntax::
@@ -254,7 +275,7 @@ class LinkedEventsSerializer(serializers.ModelSerializer):
                                                      **kwargs)
         self.hide_ld_context = hide_ld_context
 
-        self.disable_camelcase = False
+        self.disable_camelcase = True
         if 'request' in self.context:
             request = self.context['request']
             if 'disable_camelcase' in request.QUERY_PARAMS:
@@ -314,57 +335,44 @@ class LinkedEventsSerializer(serializers.ModelSerializer):
             if not getattr(field, 'write_only', False):
                 ret[key] = value
             ret.fields[key] = self.augment_field(field, field_name, key, value)
-        return ret
+
+        return self.translated_fields_to_native(obj, ret)
 
     class Meta:
         exclude = ['created_by', 'modified_by']
 
 
-class TranslationAwareSerializer(LinkedEventsSerializer):
-    name = TranslatedField()
-    description = TranslatedField()
-
-    class Meta(LinkedEventsSerializer.Meta):
-        exclude = LinkedEventsSerializer.Meta.exclude + list(
-            chain.from_iterable((
-                ('name_' + code, 'description_' + code) for code, _ in
-                settings.LANGUAGES)))
-
-
-class PersonSerializer(TranslationAwareSerializer):
+class PersonSerializer(LinkedEventsSerializer):
     # Fallback to URL references to get around of circular serializer problem
     creator = JSONLDHyperLinkedRelatedField(view_name='person-detail')
     editor = JSONLDHyperLinkedRelatedField(view_name='person-detail')
 
     view_name = 'person-detail'
 
-    class Meta(TranslationAwareSerializer.Meta):
+    class Meta:
         model = Person
-        exclude = TranslationAwareSerializer.Meta.exclude + mptt_fields
 
 
-class CategorySerializer(TranslationAwareSerializer):
+class CategorySerializer(LinkedEventsSerializer):
     creator = PersonSerializer(hide_ld_context=True)
     editor = PersonSerializer(hide_ld_context=True)
     category_for = EnumChoiceField(Category.CATEGORY_TYPES)
 
-    class Meta(TranslationAwareSerializer.Meta):
+    class Meta:
         model = Category
-        exclude = TranslationAwareSerializer.Meta.exclude + mptt_fields
 
 
-class PlaceSerializer(TranslationAwareSerializer):
+class PlaceSerializer(LinkedEventsSerializer):
     location = GeoPointField(required=False)
 
     view_name = 'place-detail'
 
-    class Meta(TranslationAwareSerializer.Meta):
+    class Meta:
         model = Place
-        exclude = TranslationAwareSerializer.Meta.exclude + mptt_fields
 
 
 class OpeningHoursSpecificationSerializer(LinkedEventsSerializer):
-    class Meta(LinkedEventsSerializer.Meta):
+    class Meta:
         model = OpeningHoursSpecification
 
 
@@ -374,14 +382,14 @@ class OrganizationSerializer(LinkedEventsSerializer):
 
     view_name = 'organization-detail'
 
-    class Meta(TranslationAwareSerializer.Meta):
+    class Meta:
         model = Organization
 
 
 class LanguageSerializer(LinkedEventsSerializer):
     view_name = 'language-detail'
 
-    class Meta(TranslationAwareSerializer.Meta):
+    class Meta:
         model = Language
 
 
@@ -390,12 +398,12 @@ class OfferSerializer(LinkedEventsSerializer):
 
     view_name = 'offer-detail'
 
-    class Meta(LinkedEventsSerializer.Meta):
+    class Meta:
         model = Offer
         exclude = ["seller_object_id", "seller_content_type"]
 
 
-class SubOrSuperEventSerializer(TranslationAwareSerializer):
+class SubOrSuperEventSerializer(TranslatedModelSerializer, MPTTModelSerializer):
     location = PlaceSerializer(hide_ld_context=True)
     publisher = OrganizationSerializer(hide_ld_context=True)
     category = CategorySerializer(many=True, allow_add_remove=True,
@@ -406,16 +414,13 @@ class SubOrSuperEventSerializer(TranslationAwareSerializer):
     editor = JSONLDHyperLinkedRelatedField(view_name='person-detail')
     super_event = JSONLDHyperLinkedRelatedField(view_name='event-detail')
 
-    class Meta(TranslationAwareSerializer.Meta):
+    class Meta:
         model = Event
-        exclude = TranslationAwareSerializer.Meta.exclude + mptt_fields
 
 
-class EventSerializer(TranslationAwareSerializer):
-    location = JSONLDHyperLinkedRelatedFieldNested(PlaceSerializer,
-                                                   required=False,
-                                                   hide_ld_context=True,
-                                                   view_name='place-detail')
+class EventSerializer(TranslatedModelSerializer, MPTTModelSerializer):
+    location = JSONLDHyperLinkedRelatedField(required=False,
+                                             view_name='place-detail')
     publisher = OrganizationSerializer(hide_ld_context=True)
     provider = OrganizationSerializer(hide_ld_context=True)
     category = CategorySerializer(many=True, allow_add_remove=True,
@@ -425,17 +430,12 @@ class EventSerializer(TranslationAwareSerializer):
     editor = PersonSerializer(hide_ld_context=True)
     super_event = JSONLDHyperLinkedRelatedField(required=False,
                                                 view_name='event-detail')
-    url = TranslatedField()
-
     view_name = 'event-detail'
 
     event_status = EnumChoiceField(Event.STATUSES)
 
-    class Meta(TranslationAwareSerializer.Meta):
+    class Meta:
         model = Event
-        exclude = TranslationAwareSerializer.Meta.exclude + \
-            mptt_fields + ['url_' + code for code, _ in
-                           settings.LANGUAGES]
 
 
 class CustomPaginationSerializer(pagination.PaginationSerializer):
