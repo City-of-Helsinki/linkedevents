@@ -34,7 +34,7 @@ class YsaImporter(Importer):
     def import_categories(self):
         stdout.write("Importing YSA and Allärs categories")
         for lang, url in URLS.items():
-            graph = load_graph_into_memory(url)
+            graph = self.load_graph_into_memory(url)
             self.save_categories(lang, graph)
 
     def load_graph_into_memory(self, url):
