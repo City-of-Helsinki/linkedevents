@@ -143,6 +143,10 @@ class Organization(BaseModel):
 
 reversion.register(Organization)
 
+class CategoryLabel(SystemMetaMixin):
+    label = models.CharField(max_length=255, null=False, blank=False, db_index=True)
+
+reversion.register(CategoryLabel)
 
 class Category(MPTTModel, BaseModel, SchemalessFieldMixin):
     schema_org_type = "Thing/LinkedEventCategory"
@@ -154,7 +158,10 @@ class Category(MPTTModel, BaseModel, SchemalessFieldMixin):
     # category ids from: http://finto.fi/ysa/fi/
     url = models.CharField(max_length=255, db_index=True, null=False, blank=False, default='unknown')
     description = models.TextField(blank=True)
+    # label: preferred label
     label = models.CharField(max_length=255, null=False, blank=False, default='unknown')
+    # labels: preferred label and alternative labels (for lookups)
+    labels = models.ManyToManyField(CategoryLabel, blank=True, related_name='categories')
     same_as = models.CharField(max_length=255, null=True, blank=True)
     parent_category = TreeForeignKey('self', null=True, blank=True)
     creator = models.ForeignKey(Person, null=True, blank=True,
@@ -252,7 +259,6 @@ class Offer(BaseModel):
     class Meta:
         verbose_name = _('offer')
         verbose_name_plural = _('offers')
-
 
 class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
 

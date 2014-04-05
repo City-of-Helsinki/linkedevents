@@ -19,12 +19,14 @@ URLS = {
     'fi': 'http://finto.fi/rest/v1/ysa/data',
     'sv': 'http://finto.fi/rest/v1/allars/data'
 }
-
+DATASOURCES = {
+    'fi': 'ysa',
+    'sv': 'allars'
+}
 
 @register_importer
 class YsaImporter(Importer):
     name = "ysa"
-    data_source = DataSource.objects.get(pk=name)
 
     def setup(self):
         requests_cache.install_cache('ysa')
@@ -32,22 +34,23 @@ class YsaImporter(Importer):
     def import_categories(self):
         stdout.write("Importing YSA and Allärs categories")
         for lang, url in URLS.items():
-            resp = requests.get(url)
-            assert resp.status_code == 200
-            resp.encoding = 'UTF-8'
-            graph = rdflib.Graph()
-            graph.parse(data=resp.text, format='turtle')
+            graph = load_graph_into_memory(url)
             self.save_categories(lang, graph)
 
-    def save_categories(self, lang, graph):
-        with active_language(lang):
-#            i = 0
-            for subject in graph.subjects(RDF.type, SKOS.Concept):
-#                i += 1
-#                if i == 1000: break
-                self.save_category(graph, subject)
+    def load_graph_into_memory(self, url):
+        resp = requests.get(url)
+        assert resp.status_code == 200
+        resp.encoding = 'UTF-8'
+        graph = rdflib.Graph()
+        graph.parse(data=resp.text, format='turtle')
+        return graph
 
-    def save_category(self, graph, subject):
+    def save_categories(self, lang, graph):
+        data_source = DataSource.objects.get(pk=DATASOURCES[lang])
+        for subject in graph.subjects(RDF.type, SKOS.Concept):
+             self.save_category(graph, subject, data_source)
+
+    def save_category(self, graph, subject, data_source):
         parent_category_subject = graph.value(
             subject=subject,
             predicate=SKOS.broader
@@ -55,7 +58,7 @@ class YsaImporter(Importer):
         if parent_category_subject is None:
             parent_category = None
         else:
-            parent_category = self.save_category(graph, parent_category_subject)
+            parent_category = self.save_category(graph, parent_category_subject, data_source)
         translation_objects = graph.objects(
             subject=subject,
             predicate=SKOS.exactMatch
@@ -67,11 +70,26 @@ class YsaImporter(Importer):
             subject=subject,
             predicate=SKOS.exactMatch
         )
-        category = Category.objects.get_or_create(
+        alt_labels = graph.objects(
+            subject=subject,
+            predicate=SKOS.altLabel
+        )
+        # todo: update & delete
+        category, created = Category.objects.get_or_create(
             url=str(subject),
             defaults={
+                'data_source': data_source,
                 'label': graph.preferredLabel(subject)[0][1],
                 'parent_category': parent_category,
                 'same_as': str(translation_subject)
             }
         )
+        for l in alt_labels:
+            l, created = CategoryLabel.objects.get_or_create(
+                label=str(l))
+            category.labels.add(l)
+
+        l, created = CategoryLabel.objects.get_or_create(
+            label=graph.preferredLabel(subject)[0][1]
+        )
+        category.labels.add(l)
