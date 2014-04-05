@@ -37,6 +37,7 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'django.contrib.contenttypes',
     'django.contrib.gis',
+    'django_extensions',
     'south',
     'corsheaders',
     'rest_framework',
