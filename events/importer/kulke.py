@@ -9,7 +9,7 @@ from django.utils.timezone import get_default_timezone
 from .sync import ModelSyncher
 from .base import Importer, register_importer, recur_dict
 from .util import unicodetext, active_language
-from events.models import DataSource, Place, Event
+from events.models import DataSource, Place, Event, Category, CategoryLabel
 
 LOCATION_TPREK_MAP = {
     'malmitalo': '8740',
@@ -46,6 +46,40 @@ class KulkeImporter(Importer):
         self.tprek_data_source = DataSource.objects.get(id='tprek')
         self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
 
+        categories, places = {}, {}
+        categories_file = os.path.join(
+            settings.IMPORT_FILE_PATH, 'kulke', 'category.xml')
+        root = etree.parse(categories_file)
+        special_categories = {
+
+        }
+        for ctype in root.xpath('/data/categories/category'):
+            cid = int(ctype.attrib['id'])
+            typeid = int(ctype.attrib['typeid'])
+            if typeid == 2:
+                pass  # kulke internal use
+            elif typeid == 3:
+                places[cid] = {'text': ctype.text}
+            else:
+                categories[cid] = {
+                    'type': typeid, 'text': ctype.text}
+
+
+        from pprint import pprint as pp
+
+        # pp(category_types)
+        # pp(categories)
+
+        # todo process: ja-sana
+
+        for cid, c in categories.items():
+            if c is None:
+                continue
+            exact_matches = CategoryLabel.objects.filter(label=c['text'].lower())
+            if not exact_matches.exists():
+                print(cid, c['text'], "--->", [(m.label, len(list(m.category_labels.all()))) for m in exact_matches])
+            else:
+                print(cid, c['text'], "--->", [(m.label, len(list(m.categories.all()))) for m in exact_matches])
         # Build a cached list of Places to avoid frequent hits to the db
         id_list = LOCATION_TPREK_MAP.values()
         place_list = Place.objects.filter(data_source=self.tprek_data_source).filter(origin_id__in=id_list)
