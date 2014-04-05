@@ -16,3 +16,9 @@
   fields:
     name: 'Yleinen suomalainen asiasanasto'
     event_url_template: ''
+
+- model: events.DataSource
+  pk: 'allars'
+  fields:
+    name: 'Allmän tesaurus på svenska - Allärs'
+    event_url_template: ''
