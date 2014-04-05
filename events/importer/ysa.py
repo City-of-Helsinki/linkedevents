@@ -93,3 +93,4 @@ class YsaImporter(Importer):
             label=graph.preferredLabel(subject)[0][1]
         )
         category.labels.add(l)
+        return category
