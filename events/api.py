@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from functools import wraps
+from datetime import datetime, timedelta
 
 from django.contrib.gis.geos import Point
 from django.core.exceptions import ValidationError
@@ -10,12 +11,13 @@ from isodate import Duration, duration_isoformat, parse_duration
 from rest_framework import serializers, pagination, relations, viewsets
 from rest_framework.reverse import reverse
 from rest_framework.response import Response
-from events.models import *
+from events.models import Place, Event, Category, Language, OpeningHoursSpecification
 from django.conf import settings
 from events import utils
 from modeltranslation.translator import translator, NotRegistered
 from django.utils.translation import ugettext_lazy as _
 from dateutil.parser import parse as dateutil_parse
+import pytz
 
 all_views = []
 def register_view(klass, name):
@@ -402,10 +404,35 @@ class EventSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         model = Event
 
 
+LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
+
+def parse_time(time_str, is_start):
+    time_str = time_str.strip()
+    # Handle dates first. Assume dates are given in local timezone.
+    # FIXME: What if there's no local timezone?
+    try:
+        dt = datetime.strptime(time_str, '%Y-%m-%d')
+        dt = dt.replace(tzinfo=LOCAL_TZ)
+    except ValueError:
+        dt = None
+    if not dt:
+        if time_str.lower() == 'today':
+            dt = datetime.now().replace(hour=0, minute=0, microsecond=0)
+    if dt:
+        # With start timestamps, we treat dates as beginning
+        # at midnight the same day. End timestamps are taken to
+        # mean midnight on the following day.
+        if not is_start:
+            dt = dt + timedelta(days=1)
+    else:
+        try:
+            # Handle all other times through dateutil.
+            dt = dateutil_parse(time_str)
+        except TypeError:
+            return None
+    return dt
+
 class EventViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    API endpoint that allows users to be viewed or edited.
-    """
     queryset = Event.objects.all()
     serializer_class = EventSerializer
     pagination_serializer_class = CustomPaginationSerializer
@@ -418,10 +445,14 @@ class EventViewSet(viewsets.ReadOnlyModelViewSet):
             'event_status': Event.SCHEDULED}
 
         if 'from' in request.QUERY_PARAMS:
-            args['start_time__gte'] = dateutil_parse(request.QUERY_PARAMS['from'])
+            dt = parse_time(request.QUERY_PARAMS['from'], is_start=True)
+            if dt:
+                args['start_time__gte'] = dt
 
         if 'to' in request.QUERY_PARAMS:
-            args['end_time__lte'] = dateutil_parse(request.QUERY_PARAMS['to'])
+            dt = parse_time(request.QUERY_PARAMS['to'], is_start=False)
+            if dt:
+                args['end_time__lte'] = dt
 
         self.queryset = Event.objects.filter(**args)
 
