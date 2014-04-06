@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
 import re
-from datetime import timezone
 from lxml import etree
 from modeltranslation.translator import translator
 import dateutil
