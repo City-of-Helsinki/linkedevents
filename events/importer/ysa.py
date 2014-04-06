@@ -17,11 +17,11 @@ from .base import Importer, register_importer
 
 URLS = {
     'fi': 'http://finto.fi/rest/v1/ysa/data',
-    'sv': 'http://finto.fi/rest/v1/allars/data'
+#    'sv': 'http://finto.fi/rest/v1/allars/data'
 }
 DATASOURCES = {
     'fi': 'ysa',
-    'sv': 'allars'
+#    'sv': 'allars'
 }
 
 @register_importer
