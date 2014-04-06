@@ -390,13 +390,13 @@ class EventSerializer(TranslatedModelSerializer, MPTTModelSerializer):
     location = JSONLDHyperLinkedRelatedField(required=False,
                                              view_name='place-detail')
     # provider = OrganizationSerializer(hide_ld_context=True)
-    category = CategorySerializer(many=True, allow_add_remove=True,
-                                  hide_ld_context=True)
+    categories = CategorySerializer(many=True, allow_add_remove=True,
+                                    hide_ld_context=True)
     super_event = JSONLDHyperLinkedRelatedField(required=False,
                                                 view_name='event-detail')
-    view_name = 'event-detail'
-
     event_status = EnumChoiceField(Event.STATUSES)
+
+    view_name = 'event-detail'
 
     class Meta:
         model = Event
