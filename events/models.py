@@ -108,41 +108,6 @@ class Language(BaseModel):
         verbose_name_plural = _('languages')
 
 
-class Person(BaseModel):
-    description = models.TextField(blank=True)
-    family_name = models.CharField(max_length=255, null=True, blank=True)
-    email = models.EmailField(null=True, blank=True)
-    creator = models.ForeignKey('self', null=True, blank=True,
-                                related_name='person_creators')
-    editor = models.ForeignKey('self', null=True, blank=True,
-                               related_name='person_editors')
-    # Custom fields
-    member_of = models.ForeignKey('Organization', null=True, blank=True)
-    user = models.ForeignKey(User, null=True, blank=True)
-
-    class Meta:
-        verbose_name = _('person')
-        verbose_name_plural = _('persons')
-
-reversion.register(Person)
-
-
-class Organization(BaseModel):
-    description = models.TextField(blank=True)
-    base_IRI = models.CharField(max_length=200, null=True, blank=True)
-    compact_IRI_name = models.CharField(max_length=200, null=True, blank=True)
-    creator = models.ForeignKey(Person, null=True, blank=True,
-                                related_name='organization_creators')
-    editor = models.ForeignKey(Person, null=True, blank=True,
-                               related_name='organization_editors')
-
-    class Meta:
-        verbose_name = _('organization')
-        verbose_name_plural = _('organizations')
-
-
-reversion.register(Organization)
-
 class CategoryLabel(SystemMetaMixin):
     label = models.CharField(max_length=255, null=False, blank=False, db_index=True)
 
@@ -261,8 +226,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
 
     # Properties from schema.org/CreativeWork
     date_published = models.DateTimeField(null=True, blank=True)
-    provider = models.ForeignKey(Organization, null=True, blank=True,
-                                 related_name='event_providers')
+    # provider = models.ForeignKey(Organization, null=True, blank=True,
+    #                             related_name='event_providers')
 
     # Properties from schema.org/Event
     event_status = models.SmallIntegerField(choices=STATUSES,
@@ -308,6 +273,4 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
 reversion.register(Event)
 
 contexts.create_context(Event)
-contexts.create_context(Organization)
 contexts.create_context(Place)
-contexts.create_context(Person)

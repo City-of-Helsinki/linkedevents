@@ -2,8 +2,7 @@ from django.contrib import admin
 from django.contrib.gis import admin as geoadmin
 from modeltranslation.admin import TranslationAdmin
 import reversion
-from events.models import Event, Category, Place, Organization, \
-    Language, Person, \
+from events.models import Event, Category, Place, Language, \
     OpeningHoursSpecification
 
 
@@ -46,7 +45,5 @@ class PersonAdmin(BaseAdmin, reversion.VersionAdmin):
 admin.site.register(Event, EventModelAdmin)
 admin.site.register(Category, CategoryAdmin)
 admin.site.register(Place, PlaceAdmin)
-admin.site.register(Organization, OrganizationAdmin)
 admin.site.register(Language, LanguageAdmin)
-admin.site.register(Person, PersonAdmin)
 admin.site.register(OpeningHoursSpecification)

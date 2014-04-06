@@ -28,10 +28,3 @@ class EventTranslationOptions(TranslationOptions):
 
 
 translator.register(Event, EventTranslationOptions)
-
-
-class PersonTranslationOptions(TranslationOptions):
-    fields = ('name', 'description')
-
-
-translator.register(Person, PersonTranslationOptions)

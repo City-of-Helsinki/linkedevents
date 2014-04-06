@@ -1,19 +1,36 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+from functools import wraps
+
 from django.contrib.gis.geos import Point
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import NoReverseMatch
 from django.utils.datastructures import MultiValueDictKeyError
 from isodate import Duration, duration_isoformat, parse_duration
-from rest_framework import serializers
-from rest_framework import pagination
-from rest_framework import relations
+from rest_framework import serializers, pagination, relations, viewsets
 from rest_framework.reverse import reverse
+from rest_framework.response import Response
 from events.models import *
 from django.conf import settings
 from events import utils
 from modeltranslation.translator import translator, NotRegistered
 from django.utils.translation import ugettext_lazy as _
+from dateutil.parser import parse as dateutil_parse
+
+all_views = []
+def register_view(klass, name):
+    all_views.append({'class': klass, 'name': name})
+
+
+class CustomPaginationSerializer(pagination.PaginationSerializer):
+    def to_native(self, obj):
+        native = super(CustomPaginationSerializer, self).to_native(obj)
+        try:
+            native['@context'] = obj.object_list.model.jsonld_context
+        except (NameError, AttributeError):
+            native['@context'] = 'http://schema.org'
+            pass
+        return native
 
 
 class JSONLDHyperLinkedRelatedField(relations.HyperlinkedRelatedField):
@@ -75,39 +92,6 @@ class JSONLDHyperLinkedRelatedFieldNested(JSONLDHyperLinkedRelatedField):
                 return True
         except MultiValueDictKeyError:
             return True
-
-
-class OrganizationOrPersonRelatedField(serializers.RelatedField):
-    def __init__(self, hide_ld_context=False):
-        self.hide_ld_context = hide_ld_context
-        super(OrganizationOrPersonRelatedField, self).__init__(
-            queryset=Organization.objects, read_only=False)
-
-    def to_native(self, value):
-        if isinstance(value, Organization):
-            serializer = OrganizationSerializer(
-                value, hide_ld_context=self.hide_ld_context)
-        elif isinstance(value, Person):
-            serializer = PersonSerializer(value,
-                                          hide_ld_context=self.hide_ld_context)
-        else:
-            raise Exception('Unexpected type of related object')
-
-        return serializer.data
-
-    def from_native(self, data):
-        """
-        TODO: fix, this is just a skeleton. We should save and fetch right
-        content_type (and content_id) to parent.
-        """
-        if data["@type"] == 'Organization':
-            pass  # Organization is the default queryset
-        elif data["@type"] == 'Person':
-            self.queryset = Person.objects
-        else:
-            raise ValidationError('Unexpected type of related object')
-
-        super(OrganizationOrPersonRelatedField, self).from_native(data)
 
 
 class EnumChoiceField(serializers.WritableField):
@@ -342,22 +326,18 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         exclude = ['created_by', 'modified_by']
 
 
-class PersonSerializer(LinkedEventsSerializer):
-    # Fallback to URL references to get around of circular serializer problem
-    creator = JSONLDHyperLinkedRelatedField(view_name='person-detail')
-    editor = JSONLDHyperLinkedRelatedField(view_name='person-detail')
-
-    view_name = 'person-detail'
-
-    class Meta:
-        model = Person
-
-
 class CategorySerializer(LinkedEventsSerializer):
     category_for = EnumChoiceField(Category.CATEGORY_TYPES)
 
     class Meta:
         model = Category
+
+
+class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+
+register_view(CategoryViewSet, 'category')
 
 
 class PlaceSerializer(LinkedEventsSerializer):
@@ -369,19 +349,17 @@ class PlaceSerializer(LinkedEventsSerializer):
         model = Place
 
 
+class PlaceViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Place.objects.all()
+    serializer_class = PlaceSerializer
+    pagination_serializer_class = CustomPaginationSerializer
+
+register_view(PlaceViewSet, 'place')
+
+
 class OpeningHoursSpecificationSerializer(LinkedEventsSerializer):
     class Meta:
         model = OpeningHoursSpecification
-
-
-class OrganizationSerializer(LinkedEventsSerializer):
-    creator = PersonSerializer(hide_ld_context=True)
-    editor = PersonSerializer(hide_ld_context=True)
-
-    view_name = 'organization-detail'
-
-    class Meta:
-        model = Organization
 
 
 class LanguageSerializer(LinkedEventsSerializer):
@@ -389,6 +367,13 @@ class LanguageSerializer(LinkedEventsSerializer):
 
     class Meta:
         model = Language
+
+
+class LanguageViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Language.objects.all()
+    serializer_class = LanguageSerializer
+
+register_view(LanguageViewSet, 'language')
 
 
 class SubOrSuperEventSerializer(TranslatedModelSerializer, MPTTModelSerializer):
@@ -404,7 +389,7 @@ class SubOrSuperEventSerializer(TranslatedModelSerializer, MPTTModelSerializer):
 class EventSerializer(TranslatedModelSerializer, MPTTModelSerializer):
     location = JSONLDHyperLinkedRelatedField(required=False,
                                              view_name='place-detail')
-    provider = OrganizationSerializer(hide_ld_context=True)
+    # provider = OrganizationSerializer(hide_ld_context=True)
     category = CategorySerializer(many=True, allow_add_remove=True,
                                   hide_ld_context=True)
     super_event = JSONLDHyperLinkedRelatedField(required=False,
@@ -417,12 +402,29 @@ class EventSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         model = Event
 
 
-class CustomPaginationSerializer(pagination.PaginationSerializer):
-    def to_native(self, obj):
-        native = super(CustomPaginationSerializer, self).to_native(obj)
-        try:
-            native['@context'] = obj.object_list.model.jsonld_context
-        except (NameError, AttributeError):
-            native['@context'] = 'http://schema.org'
-            pass
-        return native
+class EventViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API endpoint that allows users to be viewed or edited.
+    """
+    queryset = Event.objects.all()
+    serializer_class = EventSerializer
+    pagination_serializer_class = CustomPaginationSerializer
+
+    def list(self, request, *args, **kwargs):
+        """
+        TODO: convert to use proper filter framework
+        """
+        args = {} if 'show_all' in request.QUERY_PARAMS else {
+            'event_status': Event.SCHEDULED}
+
+        if 'from' in request.QUERY_PARAMS:
+            args['start_time__gte'] = dateutil_parse(request.QUERY_PARAMS['from'])
+
+        if 'to' in request.QUERY_PARAMS:
+            args['end_time__lte'] = dateutil_parse(request.QUERY_PARAMS['to'])
+
+        self.queryset = Event.objects.filter(**args)
+
+        return super(EventViewSet, self).list(request, *args, **kwargs)
+
+register_view(EventViewSet, 'event')

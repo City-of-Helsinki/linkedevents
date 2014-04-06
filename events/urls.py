@@ -1,16 +1,11 @@
 from django.conf.urls import patterns, include, url
 from rest_framework import routers
-from events import views
+from events import api
 
 router = routers.DefaultRouter()
-router.register(r'events', views.EventViewSet)
-router.register(r'places', views.PlaceViewSet)
-router.register(r'organizations', views.OrganizationViewSet)
-router.register(r'categories', views.CategoryViewSet)
-router.register(r'languages', views.LanguageViewSet)
-router.register(r'persons', views.PersonViewSet)
+for view in api.all_views:
+    router.register(view['name'], view['class'])
 
-urlpatterns = patterns(
-    '',
+urlpatterns = patterns('',
     url(r'^', include(router.urls)),
 )
