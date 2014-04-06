@@ -10,6 +10,7 @@ django-mptt
 django-rest-swagger
 django-reversion
 djangorestframework
+djangorestframework-gis
 lxml
 isodate
 psycopg2

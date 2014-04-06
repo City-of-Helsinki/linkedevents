@@ -7,16 +7,20 @@ from django.contrib.gis.geos import Point
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import NoReverseMatch
 from django.utils.datastructures import MultiValueDictKeyError
+from django.db.models import Q
 from isodate import Duration, duration_isoformat, parse_duration
 from rest_framework import serializers, pagination, relations, viewsets
 from rest_framework.reverse import reverse
 from rest_framework.response import Response
+from rest_framework.exceptions import ParseError
 from events.models import Place, Event, Category, Language, OpeningHoursSpecification
 from django.conf import settings
 from events import utils
 from modeltranslation.translator import translator, NotRegistered
 from django.utils.translation import ugettext_lazy as _
 from dateutil.parser import parse as dateutil_parse
+from rest_framework_gis.serializers import GeoModelSerializer
+
 import pytz
 
 all_views = []
@@ -117,42 +121,6 @@ class EnumChoiceField(serializers.WritableField):
     def from_native(self, data):
         return utils.get_value_from_tuple_list(self.choices,
                                                self.prefix + data, 0)
-
-
-class GeoPointField(serializers.WritableField):
-    """
-    Serialize GeoDjango field as proper looking GeoJSON
-    """
-
-    def from_native(self, data):
-        if data is not None:
-            if 'type' in data and data['type'] == 'Point' \
-                    and 'coordinates' in data:
-                return Point(data['coordinates'][0], data['coordinates'][1])
-            else:
-                raise ValidationError('Unexpected syntax of GeoJSON object')
-        else:
-            return super(GeoPointField, self).from_native(data)
-
-    def field_to_native(self, obj, field_name):
-        """
-        GeoDjango provides it's own easy GeoJSON serialization by
-        calling 'json', but to prevent escaping of raw JSON literal,
-        GeoJSON is constructed here manually.
-
-        :param obj: Object to be serialized
-        :param field_name: Field to be serialized
-        :return: Serialized field as a dict representation
-        """
-        if obj:
-            if getattr(obj, field_name) is not None:
-                return {
-                    "type": "Point",
-                    "coordinates": super(GeoPointField, self)
-                    .field_to_native(obj, field_name)
-                }
-        else:
-            return None
 
 
 class ISO8601DurationField(serializers.WritableField):
@@ -276,8 +244,14 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         Renderer is the right place for this but now loop is done just once.
         Reversal conversion is done in parser.
         """
-        ret = self._dict_class()
-        ret.fields = self._dict_class()
+        ret = super(LinkedEventsSerializer, self).to_native(obj)
+        if 'id' in ret and 'request' in self.context:
+            try:
+                ret['@id'] = reverse(self.view_name,
+                                        kwargs={u'pk': ret['id']},
+                                        request=self.context['request'])
+            except NoReverseMatch:
+                ret['@id'] = str(value)
 
         # Context is hidden if:
         # 1) hide_ld_context is set to True
@@ -291,38 +265,14 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
 
         # Use jsonld_type attribute if present,
         # if not fallback to automatic resolution by model name.
-        # Note: Plan 'type' could be aliased to @type in context definition to
+        # Note: Plan 'type' could be aliased to @type in context definition to
         # conform JSON-LD spec.
         if hasattr(obj, 'jsonld_type'):
             ret['@type'] = obj.jsonld_type
         else:
             ret['@type'] = obj.__class__.__name__
 
-        for field_name, field in self.fields.items():
-            if field.read_only and obj is None:
-                continue
-            field.initialize(parent=self, field_name=field_name)
-            if self.disable_camelcase:
-                key = self.get_field_key(field_name)
-            else:
-                key = utils.convert_to_camelcase(self.get_field_key(field_name))
-            value = field.field_to_native(obj, field_name)
-            if field_name == 'id':
-                if 'request' in self.context:
-                    try:
-                        ret['@id'] = reverse(self.view_name,
-                                             kwargs={u'pk': value},
-                                             request=self.context['request'])
-                    except NoReverseMatch:
-                        ret['@id'] = str(value)
-            method = getattr(self, 'transform_%s' % field_name, None)
-            if callable(method):
-                value = method(obj, value)
-            if not getattr(field, 'write_only', False):
-                ret[key] = value
-            ret.fields[key] = self.augment_field(field, field_name, key, value)
-
-        return self.translated_fields_to_native(obj, ret)
+        return ret
 
     class Meta:
         exclude = ['created_by', 'modified_by']
@@ -342,9 +292,7 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
 register_view(CategoryViewSet, 'category')
 
 
-class PlaceSerializer(LinkedEventsSerializer):
-    location = GeoPointField(required=False)
-
+class PlaceSerializer(LinkedEventsSerializer, GeoModelSerializer):
     view_name = 'place-detail'
 
     class Meta:
@@ -388,7 +336,7 @@ class SubOrSuperEventSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         model = Event
 
 
-class EventSerializer(TranslatedModelSerializer, MPTTModelSerializer):
+class EventSerializer(LinkedEventsSerializer):
     location = JSONLDHyperLinkedRelatedField(required=False,
                                              view_name='place-detail')
     # provider = OrganizationSerializer(hide_ld_context=True)
@@ -429,33 +377,39 @@ def parse_time(time_str, is_start):
             # Handle all other times through dateutil.
             dt = dateutil_parse(time_str)
         except TypeError:
-            return None
+            raise ParseError('time in invalid format (try ISO 8601 or yyyy-mm-dd)')
     return dt
 
-class EventViewSet(viewsets.ReadOnlyModelViewSet):
+class JSONAPIViewSet(viewsets.ReadOnlyModelViewSet):
+    def get_serializer_context(self):
+        context = super(JSONAPIViewSet, self).get_serializer_context()
+
+        include = self.request.QUERY_PARAMS.get('include', '')
+        context['include'] = [x.strip() for x in include.split(',')]
+        return context
+
+class EventViewSet(JSONAPIViewSet):
     queryset = Event.objects.all()
     serializer_class = EventSerializer
     pagination_serializer_class = CustomPaginationSerializer
 
-    def list(self, request, *args, **kwargs):
+    def filter_queryset(self, queryset):
         """
         TODO: convert to use proper filter framework
         """
-        args = {} if 'show_all' in request.QUERY_PARAMS else {
-            'event_status': Event.SCHEDULED}
 
-        if 'from' in request.QUERY_PARAMS:
-            dt = parse_time(request.QUERY_PARAMS['from'], is_start=True)
-            if dt:
-                args['start_time__gte'] = dt
+        queryset = super(EventViewSet, self).filter_queryset(queryset)
+        if 'show_all' not in self.request.QUERY_PARAMS:
+            queryset = queryset.filter(Q(event_status=Event.SCHEDULED))
+        val = self.request.QUERY_PARAMS.get('from', None)
+        if val:
+            dt = parse_time(val, is_start=True)
+            queryset = queryset.filter(Q(end_time__gte=dt) | Q(start_time__gte=dt))
+        val = self.request.QUERY_PARAMS.get('to', None)
+        if val:
+            dt = parse_time(val, is_start=False)
+            queryset = queryset.filter(Q(end_time__lte=dt) | Q(start_time__lte=dt))
 
-        if 'to' in request.QUERY_PARAMS:
-            dt = parse_time(request.QUERY_PARAMS['to'], is_start=False)
-            if dt:
-                args['end_time__lte'] = dt
-
-        self.queryset = Event.objects.filter(**args)
-
-        return super(EventViewSet, self).list(request, *args, **kwargs)
+        return queryset
 
 register_view(EventViewSet, 'event')
