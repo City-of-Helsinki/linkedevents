@@ -88,6 +88,11 @@ class KulkeImporter(Importer):
         self.tprek_data_source = DataSource.objects.get(id='tprek')
         self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
 
+        # Build a cached list of Places to avoid frequent hits to the db
+        id_list = LOCATION_TPREK_MAP.values()
+        place_list = Place.objects.filter(data_source=self.tprek_data_source).filter(origin_id__in=id_list)
+        self.tprek_by_id = {p.origin_id: p.id for p in place_list}
+
         print('Preprocessing categories')
         categories, places = {}, {}
         categories_file = os.path.join(
@@ -128,10 +133,6 @@ class KulkeImporter(Importer):
             c['categories'] = match_categories(ctext)
 
         self.categories = categories
-        # Build a cached list of Places to avoid frequent hits to the db
-        id_list = LOCATION_TPREK_MAP.values()
-        place_list = Place.objects.filter(data_source=self.tprek_data_source).filter(origin_id__in=id_list)
-        self.tprek_by_id = {p.origin_id: p.id for p in place_list}
 
     def find_place(self, event):
         tprek_id = None

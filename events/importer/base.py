@@ -26,6 +26,7 @@ class Importer(object):
     def __init__(self, options):
         super(Importer, self).__init__()
         self.options = options
+        self.verbosity = options['verbosity']
         self.logger = logging.getLogger(__name__)
         self.setup()
 
@@ -191,7 +192,7 @@ class Importer(object):
 
         if 'category' in event:
            for c in event['category']:
-               obj.category.add(c)
+               obj.categories.add(c)
 
         return errors
 

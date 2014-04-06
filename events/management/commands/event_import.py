@@ -35,7 +35,8 @@ class Command(BaseCommand):
             root_dir = settings.PROJECT_ROOT
         else:
             root_dir = settings.BASE_DIR
-        importer = imp_class({'data_path': os.path.join(root_dir, 'data')})
+        importer = imp_class({'data_path': os.path.join(root_dir, 'data'),
+                              'verbosity': int(options['verbosity'])})
 
         # Activate the default language for the duration of the import
         # to make sure translated fields are populated correctly.

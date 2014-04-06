@@ -32,23 +32,31 @@ class YsaImporter(Importer):
         requests_cache.install_cache('ysa')
 
     def import_categories(self):
-        stdout.write("Importing YSA and Allärs categories")
+        print("Importing YSA and Allärs categories")
         for lang, url in URLS.items():
+            print("Importing %s" % lang)
             graph = self.load_graph_into_memory(url)
             self.save_categories(lang, graph)
 
     def load_graph_into_memory(self, url):
+        if self.verbosity >= 2:
+            print("Fetching %s" % url)
         resp = requests.get(url)
         assert resp.status_code == 200
         resp.encoding = 'UTF-8'
         graph = rdflib.Graph()
+        if self.verbosity >= 2:
+            print("Parsing RDF")
         graph.parse(data=resp.text, format='turtle')
         return graph
 
     def save_categories(self, lang, graph):
+        if self.verbosity >= 2:
+            print("Saving data")
         data_source = DataSource.objects.get(pk=DATASOURCES[lang])
         for subject in graph.subjects(RDF.type, SKOS.Concept):
-             self.save_category(graph, subject, data_source)
+            print(subject)
+            self.save_category(graph, subject, data_source)
 
     def save_category(self, graph, subject, data_source):
         parent_category_subject = graph.value(
