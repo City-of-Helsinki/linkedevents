@@ -165,6 +165,8 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
 
     deleted = models.BooleanField(default=False)
 
+    geo_objects = models.GeoManager()
+
     class Meta:
         verbose_name = _('place')
         verbose_name_plural = _('places')

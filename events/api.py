@@ -8,6 +8,7 @@ from django.contrib.gis.geos import Point
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import NoReverseMatch
 from django.utils.datastructures import MultiValueDictKeyError
+from django.contrib.gis.db.models.fields import GeometryField
 from django.db.models import Q
 from isodate import Duration, duration_isoformat, parse_duration
 from rest_framework import serializers, pagination, relations, viewsets
@@ -20,7 +21,7 @@ from events import utils
 from modeltranslation.translator import translator, NotRegistered
 from django.utils.translation import ugettext_lazy as _
 from dateutil.parser import parse as dateutil_parse
-from rest_framework_gis.serializers import GeoModelSerializer
+from .geoapi import GeoModelSerializer, build_bbox_filter, srid_to_srs
 
 import pytz
 
@@ -204,6 +205,11 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                                                      context, partial, many,
                                                      allow_add_remove,
                                                      **kwargs)
+        if 'created_by' in self.fields:
+            del self.fields['created_by']
+        if 'modified_by' in self.fields:
+            del self.fields['modified_by']
+
         if context is not None:
             include_fields = context.get('include', [])
             for field_name in include_fields:
@@ -260,9 +266,6 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
             ret['@type'] = obj.__class__.__name__
 
         return ret
-
-    class Meta:
-        exclude = ['created_by', 'modified_by']
 
 
 class CategorySerializer(LinkedEventsSerializer):
@@ -366,12 +369,20 @@ def parse_time(time_str, is_start):
             raise ParseError('time in invalid format (try ISO 8601 or yyyy-mm-dd)')
     return dt
 
+
 class JSONAPIViewSet(viewsets.ReadOnlyModelViewSet):
+    def initial(self, request, *args, **kwargs):
+        ret = super(JSONAPIViewSet, self).initial(request, *args, **kwargs)
+        self.srs = srid_to_srs(self.request.QUERY_PARAMS.get('srid', None))
+        return ret
+
     def get_serializer_context(self):
         context = super(JSONAPIViewSet, self).get_serializer_context()
 
         include = self.request.QUERY_PARAMS.get('include', '')
         context['include'] = [x.strip() for x in include.split(',') if x]
+        context['srs'] = self.srs
+
         return context
 
 class EventViewSet(JSONAPIViewSet):
@@ -385,8 +396,10 @@ class EventViewSet(JSONAPIViewSet):
         """
 
         queryset = super(EventViewSet, self).filter_queryset(queryset)
+
         if 'show_all' not in self.request.QUERY_PARAMS:
             queryset = queryset.filter(Q(event_status=Event.SCHEDULED))
+
         val = self.request.QUERY_PARAMS.get('from', None)
         if val:
             dt = parse_time(val, is_start=True)
@@ -395,6 +408,12 @@ class EventViewSet(JSONAPIViewSet):
         if val:
             dt = parse_time(val, is_start=False)
             queryset = queryset.filter(Q(end_time__lte=dt) | Q(start_time__lte=dt))
+
+        val = self.request.QUERY_PARAMS.get('bbox', None)
+        if val:
+            bbox_filter = build_bbox_filter(self.srs, val, 'location')
+            places = Place.geo_objects.filter(**bbox_filter)
+            queryset = queryset.filter(location__in=places)
 
         return queryset
 
