@@ -93,6 +93,9 @@ class KulkeImporter(Importer):
         place_list = Place.objects.filter(data_source=self.tprek_data_source).filter(origin_id__in=id_list)
         self.tprek_by_id = {p.origin_id: p.id for p in place_list}
 
+        if not Category.objects.filter(data_source='ysa').exists():
+            return
+
         print('Preprocessing categories')
         categories, places = {}, {}
         categories_file = os.path.join(
@@ -251,16 +254,17 @@ class KulkeImporter(Importer):
             offers['price'] = price
         offers['url'] = url
 
-        event_categories = set()
-        for category_id in event_el.find(tag('categories')):
-            category = self.categories.get(int(category_id.text))
-            if category:
-                if not category.get('categories'):
-                    print('missing categories', category)
-                else:
-                    for c in category.get('categories', []):
-                        event_categories.add(c)
-        event['category'] = event_categories
+        if hasattr(self, 'categories'):
+            event_categories = set()
+            for category_id in event_el.find(tag('categories')):
+                category = self.categories.get(int(category_id.text))
+                if category:
+                    if not category.get('categories'):
+                        print('missing categories', category)
+                    else:
+                        for c in category.get('categories', []):
+                            event_categories.add(c)
+            event['categories'] = event_categories
 
         location = event['location']
 
