@@ -163,11 +163,7 @@ class Category(MPTTModel, BaseModel, SchemalessFieldMixin):
     # labels: preferred label and alternative labels (for lookups)
     labels = models.ManyToManyField(CategoryLabel, blank=True, related_name='categories')
     same_as = models.CharField(max_length=255, null=True, blank=True)
-    parent_category = TreeForeignKey('self', null=True, blank=True)
-    creator = models.ForeignKey(Person, null=True, blank=True,
-                                related_name='category_creators')
-    editor = models.ForeignKey(Person, null=True, blank=True,
-                               related_name='category_editors')
+    parent = TreeForeignKey('self', null=True, blank=True)
     category_for = models.SmallIntegerField(
         choices=CATEGORY_TYPES, null=True, blank=True)
 
@@ -177,9 +173,6 @@ class Category(MPTTModel, BaseModel, SchemalessFieldMixin):
     class Meta:
         verbose_name = _('category')
         verbose_name_plural = _('categories')
-
-    class MPTTMeta:
-        parent_attr = 'parent_category'
 
 reversion.register(Category)
 
@@ -243,26 +236,6 @@ class OpeningHoursSpecification(models.Model):
         verbose_name_plural = _('opening hour specifications')
 
 
-class Offer(BaseModel):
-    available_at_or_from = models.ForeignKey(Place, null=True, blank=True)
-    price = models.DecimalField(max_digits=8, decimal_places=2, null=True,
-                                blank=True)
-    price_currency = models.CharField(max_length=3, null=True, blank=True)
-    valid_from = models.DateTimeField(null=True, blank=True)
-    valid_through = models.DateTimeField(null=True, blank=True)
-    sku = models.CharField(max_length=255, null=True, blank=True)
-
-    limiter = {"model__in": ["organization", "person"]}
-    seller_object_id = models.PositiveIntegerField(null=True, blank=True)
-    seller_content_type = models.ForeignKey(ContentType,
-                                            limit_choices_to=limiter,
-                                            null=True, blank=True)
-    seller = GenericForeignKey('seller_content_type', 'seller_object_id')
-
-    class Meta:
-        verbose_name = _('offer')
-        verbose_name_plural = _('offers')
-
 class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
 
     jsonld_type = "Event/LinkedEvent"
@@ -287,15 +260,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     description = models.TextField(blank=True)
 
     # Properties from schema.org/CreativeWork
-    creator = models.ManyToManyField(Person, blank=True,
-                                     related_name='event_creators')
-    editor = models.ForeignKey(Person, null=True, blank=True,
-                               related_name='event_editors')
     date_published = models.DateTimeField(null=True, blank=True)
-    # TODO: Person or Organization
-    performer = models.ManyToManyField(Person, blank=True)
-    publisher = models.ForeignKey(Organization, null=True, blank=True,
-                                  related_name='event_publishers')
     provider = models.ForeignKey(Organization, null=True, blank=True,
                                  related_name='event_providers')
 
@@ -303,19 +268,14 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     event_status = models.SmallIntegerField(choices=STATUSES,
                                             default=SCHEDULED)
     location = models.ForeignKey(Place, null=True, blank=True)
-    # Just ONE offer in offers field at schema.org (???)
-    offers = models.ForeignKey(Offer, null=True, blank=True)
-    previous_start_date = models.DateTimeField(null=True, blank=True)
     start_time = models.DateTimeField(null=True, db_index=True, blank=True)
     end_time = models.DateTimeField(null=True, db_index=True, blank=True)
     super_event = TreeForeignKey('self', null=True, blank=True,
                                  related_name='sub_event')
-    typical_age_range = models.CharField(max_length=255, null=True, blank=True)
 
     # Custom fields not from schema.org
     target_group = models.CharField(max_length=255, null=True, blank=True)
     category = models.ManyToManyField(Category, null=True, blank=True)
-    slug = models.SlugField(blank=True)
     language = models.ForeignKey(Language, blank=True, null=True,
                                  help_text=_("Set if the event is in a given "
                                              "language"))
@@ -330,8 +290,6 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     def save(self, *args, **kwargs):
         if not self.id:
             self.created_time = BaseModel.now()
-        if not self.slug:
-            self.slug = slugify(self.name[:50])
         self.last_modified_time = BaseModel.now()
         super(Event, self).save(*args, **kwargs)
 

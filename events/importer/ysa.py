@@ -80,7 +80,7 @@ class YsaImporter(Importer):
             defaults={
                 'data_source': data_source,
                 'label': graph.preferredLabel(subject)[0][1],
-                'parent_category': parent_category,
+                'parent': parent_category,
                 'same_as': str(translation_subject)
             }
         )

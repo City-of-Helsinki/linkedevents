@@ -354,8 +354,6 @@ class PersonSerializer(LinkedEventsSerializer):
 
 
 class CategorySerializer(LinkedEventsSerializer):
-    creator = PersonSerializer(hide_ld_context=True)
-    editor = PersonSerializer(hide_ld_context=True)
     category_for = EnumChoiceField(Category.CATEGORY_TYPES)
 
     class Meta:
@@ -393,25 +391,10 @@ class LanguageSerializer(LinkedEventsSerializer):
         model = Language
 
 
-class OfferSerializer(LinkedEventsSerializer):
-    seller = OrganizationOrPersonRelatedField(hide_ld_context=True)
-
-    view_name = 'offer-detail'
-
-    class Meta:
-        model = Offer
-        exclude = ["seller_object_id", "seller_content_type"]
-
-
 class SubOrSuperEventSerializer(TranslatedModelSerializer, MPTTModelSerializer):
     location = PlaceSerializer(hide_ld_context=True)
-    publisher = OrganizationSerializer(hide_ld_context=True)
     category = CategorySerializer(many=True, allow_add_remove=True,
                                   hide_ld_context=True)
-    offers = OfferSerializer(hide_ld_context=True)
-    creator = JSONLDHyperLinkedRelatedField(many=True,
-                                            view_name='person-detail')
-    editor = JSONLDHyperLinkedRelatedField(view_name='person-detail')
     super_event = JSONLDHyperLinkedRelatedField(view_name='event-detail')
 
     class Meta:
@@ -421,13 +404,9 @@ class SubOrSuperEventSerializer(TranslatedModelSerializer, MPTTModelSerializer):
 class EventSerializer(TranslatedModelSerializer, MPTTModelSerializer):
     location = JSONLDHyperLinkedRelatedField(required=False,
                                              view_name='place-detail')
-    publisher = OrganizationSerializer(hide_ld_context=True)
     provider = OrganizationSerializer(hide_ld_context=True)
     category = CategorySerializer(many=True, allow_add_remove=True,
                                   hide_ld_context=True)
-    offers = OfferSerializer(hide_ld_context=True)
-    creator = PersonSerializer(many=True, hide_ld_context=True)
-    editor = PersonSerializer(hide_ld_context=True)
     super_event = JSONLDHyperLinkedRelatedField(required=False,
                                                 view_name='event-detail')
     view_name = 'event-detail'
