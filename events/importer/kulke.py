@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import timezone
 from lxml import etree
 from modeltranslation.translator import translator
@@ -9,7 +10,8 @@ from django.utils.timezone import get_default_timezone
 from .sync import ModelSyncher
 from .base import Importer, register_importer, recur_dict
 from .util import unicodetext, active_language
-from events.models import DataSource, Place, Event
+from events.models import DataSource, Place, Event, Category, CategoryLabel
+from events.categories import match_categories
 
 LOCATION_TPREK_MAP = {
     'malmitalo': '8740',
@@ -34,6 +36,46 @@ ADDRESS_TPREK_MAP = {
     'ala-malmin tori 1': 'malmitalo',
 }
 
+CATEGORIES_TO_IGNORE = [
+    286, 596, 614, 307, 632, 645, 675, 231, 616, 364, 325, 324, 319, 646, 640,
+    641, 642, 643, 670, 671, 673, 674, 725, 312, 344, 365, 239, 240, 308, 623,
+    229, 230, 323, 320, 357, 358,
+    # languages, ignore as categories
+    53, 54, 55 # todo: add as event languages
+]
+
+SPORTS = ['http://www.yso.fi/onto/ysa/Y99900']
+GYMS = ['http://www.yso.fi/onto/ysa/Y102830']
+MANUAL_CATEGORIES = {
+    # urheilu
+    546: SPORTS, 547: SPORTS, 431: SPORTS,
+    # kuntosalit
+    607: GYMS, 615: GYMS,
+    # harrastukset
+    626: ['http://www.yso.fi/onto/ysa/Y95295'],
+    # erityisliikunta
+    634: ['http://www.yso.fi/onto/ysa/Y125591'],
+    # monitaiteisuus
+    223: ['http://www.yso.fi/onto/ysa/Y177739'],
+    # seniorit > ikääntyneet
+    354: ['http://www.yso.fi/onto/ysa/Y112391'],
+    # saunominen
+    371: ['http://www.yso.fi/onto/ysa/Y98750'],
+    # lastentapahtumat > lapset (!)
+    105: ['http://www.yso.fi/onto/ysa/Y96738'],
+    # steppi
+    554: ['http://www.yso.fi/onto/ysa/Y104410'],
+    # liikuntaleiri
+    710: ['http://www.yso.fi/onto/ysa/Y103087',
+          'http://www.yso.fi/onto/ysa/Y96915'],
+    # teatteri ja sirkus
+    351: ['http://www.yso.fi/onto/ysa/Y106371'],
+    # elokuva (ja media)
+    205: ['http://www.yso.fi/onto/ysa/Y94995'],
+    668: ['http://www.yso.fi/onto/ysa/Y96656']
+}
+
+
 LOCAL_TZ = timezone('Europe/Helsinki')
 
 @register_importer
@@ -46,6 +88,46 @@ class KulkeImporter(Importer):
         self.tprek_data_source = DataSource.objects.get(id='tprek')
         self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
 
+        print('Preprocessing categories')
+        categories, places = {}, {}
+        categories_file = os.path.join(
+            settings.IMPORT_FILE_PATH, 'kulke', 'category.xml')
+        root = etree.parse(categories_file)
+        for ctype in root.xpath('/data/categories/category'):
+            cid = int(ctype.attrib['id'])
+            typeid = int(ctype.attrib['typeid'])
+            if typeid == 2:
+                pass  # kulke internal use
+            elif typeid == 3:
+                places[cid] = {'text': ctype.text}
+            else:
+                categories[cid] = {
+                    'type': typeid, 'text': ctype.text}
+
+        for cid, c in list(categories.items()):
+            if c is None:
+                continue
+            match_type = 'no match'
+            ctext = c['text']
+            # ignore list (not used and/or weird category)
+            # These are ignored for now, could be used for
+            # target group extraction or for other info
+            # were they actually used in the data:
+            if cid in CATEGORIES_TO_IGNORE:
+                del categories[cid]
+                continue
+
+            manual = MANUAL_CATEGORIES.get(cid)
+            if manual:
+                c['categories'] = [Category.objects.get(url=url) for url in manual]
+                continue
+
+            replacements = [('jumppa', 'voimistelu')]
+            for src, dest in replacements:
+                ctext = re.sub(src, dest, ctext, flags=re.IGNORECASE)
+            c['categories'] = match_categories(ctext)
+
+        self.categories = categories
         # Build a cached list of Places to avoid frequent hits to the db
         id_list = LOCATION_TPREK_MAP.values()
         place_list = Place.objects.filter(data_source=self.tprek_data_source).filter(origin_id__in=id_list)
@@ -168,7 +250,16 @@ class KulkeImporter(Importer):
             offers['price'] = price
         offers['url'] = url
 
-        # todo categories
+        event_categories = set()
+        for category_id in event_el.find(tag('categories')):
+            category = self.categories.get(int(category_id.text))
+            if category:
+                if not category.get('categories'):
+                    print('missing categories', category)
+                else:
+                    for c in category.get('categories', []):
+                        event_categories.add(c)
+        event['category'] = event_categories
 
         location = event['location']
 

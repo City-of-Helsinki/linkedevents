@@ -137,7 +137,7 @@ class Importer(object):
 
         obj_fields = obj._meta.fields.copy()
         trans_fields = translator.get_options_for_model(Event).fields
-        skip_fields = ['id', 'location', 'offers']
+        skip_fields = ['id', 'location', 'offers', 'category']
 
         for field_name, lang_fields in trans_fields.items():
             lang_fields = list(lang_fields)
@@ -188,6 +188,10 @@ class Importer(object):
                 verb = "changed"
             print("%s %s" % (str(obj), verb))
             obj.save()
+
+        if 'category' in event:
+           for c in event['category']:
+               obj.category.add(c)
 
         return errors
 

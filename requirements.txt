@@ -21,3 +21,4 @@ requests
 requests-cache
 six
 django-extensions
+rdflib

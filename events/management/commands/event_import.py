@@ -14,7 +14,7 @@ class Command(BaseCommand):
         make_option('--all', action='store_true', dest='all', help='Import all entities'),
     ))
 
-    importer_types = ['locations', 'events']
+    importer_types = ['locations', 'events', 'categories']
 
     def __init__(self):
         super(Command, self).__init__()
