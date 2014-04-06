@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 from functools import wraps
 from datetime import datetime, timedelta
+from pprint import pprint
 
 from django.contrib.gis.geos import Point
 from django.core.exceptions import ValidationError
@@ -39,25 +40,7 @@ class CustomPaginationSerializer(pagination.PaginationSerializer):
         return native
 
 
-class JSONLDHyperLinkedRelatedField(relations.HyperlinkedRelatedField):
-    invalid_json_error = _('Incorrect JSON.  Expected JSON, received %s.')
-
-    def to_native(self, obj):
-        link = super(JSONLDHyperLinkedRelatedField, self).to_native(obj)
-        return {
-            '@id': link
-        }
-
-    def from_native(self, value):
-        if '@id' in value:
-            return super(JSONLDHyperLinkedRelatedField,
-                         self).from_native(value['@id'])
-        else:
-            raise ValidationError(
-                self.invalid_json_error % type(value).__name__)
-
-
-class JSONLDHyperLinkedRelatedFieldNested(JSONLDHyperLinkedRelatedField):
+class JSONLDRelatedField(relations.HyperlinkedRelatedField):
     """
     Support of showing and saving of expanded JSON nesting or just a resource
     URL.
@@ -66,38 +49,32 @@ class JSONLDHyperLinkedRelatedFieldNested(JSONLDHyperLinkedRelatedField):
 
     Default serializing is expand=true.
     """
-    invalid_json_error = _('Incorrect JSON.  Expected JSON, received %s.')
 
-    def __init__(self, klass, *args, **kwargs):
-        self.model = klass
+    invalid_json_error = _('Incorrect JSON. Expected JSON, received %s.')
+
+    def __init__(self, *args, **kwargs):
+        self.related_serializer = kwargs.pop('serializer', None)
         self.hide_ld_context = kwargs.pop('hide_ld_context', False)
-        super(JSONLDHyperLinkedRelatedFieldNested, self).__init__(*args,
-                                                                  **kwargs)
+        super(JSONLDRelatedField, self).__init__(*args, **kwargs)
 
     def to_native(self, obj):
         if self.is_expanded():
-            return self.model(obj, hide_ld_context=self.hide_ld_context,
-                              context=self.context).data
-        else:
-            return super(JSONLDHyperLinkedRelatedFieldNested,
-                         self).to_native(obj)
+            return self.related_serializer(obj, hide_ld_context=self.hide_ld_context,
+                                           context=self.context).data
+        link = super(JSONLDRelatedField, self).to_native(obj)
+        return {
+            '@id': link
+        }
 
     def from_native(self, value):
-        if '@id' in value and len(value) == 1:
-            return super(JSONLDHyperLinkedRelatedField,
-                         self).from_native(value['@id'])
+        if '@id' in value:
+            return super(JSONLDRelatedField, self).from_native(value['@id'])
         else:
-            serializer = self.model()
-            return serializer.from_native(value, None)
+            raise ValidationError(
+                self.invalid_json_error % type(value).__name__)
 
     def is_expanded(self):
-        try:
-            if self.context['request'].QUERY_PARAMS['expand'] == 'false':
-                return False
-            else:
-                return True
-        except MultiValueDictKeyError:
-            return True
+        return getattr(self, 'expanded', False)
 
 
 class EnumChoiceField(serializers.WritableField):
@@ -227,6 +204,16 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                                                      context, partial, many,
                                                      allow_add_remove,
                                                      **kwargs)
+        if context is not None:
+            include_fields = context.get('include', [])
+            for field_name in include_fields:
+                if not field_name in self.fields:
+                    continue
+                field = self.fields[field_name]
+                if not isinstance(field, JSONLDRelatedField):
+                    continue
+                field.expanded = True
+
         self.hide_ld_context = hide_ld_context
 
         self.disable_camelcase = True
@@ -330,20 +317,19 @@ class SubOrSuperEventSerializer(TranslatedModelSerializer, MPTTModelSerializer):
     location = PlaceSerializer(hide_ld_context=True)
     category = CategorySerializer(many=True, allow_add_remove=True,
                                   hide_ld_context=True)
-    super_event = JSONLDHyperLinkedRelatedField(view_name='event-detail')
+    super_event = JSONLDRelatedField(view_name='event-detail')
 
     class Meta:
         model = Event
 
 
 class EventSerializer(LinkedEventsSerializer):
-    location = JSONLDHyperLinkedRelatedField(required=False,
-                                             view_name='place-detail')
+    location = JSONLDRelatedField(serializer=PlaceSerializer, required=False,
+                                  view_name='place-detail')
     # provider = OrganizationSerializer(hide_ld_context=True)
     categories = CategorySerializer(many=True, allow_add_remove=True,
                                     hide_ld_context=True)
-    super_event = JSONLDHyperLinkedRelatedField(required=False,
-                                                view_name='event-detail')
+    super_event = JSONLDRelatedField(required=False, view_name='event-detail')
     event_status = EnumChoiceField(Event.STATUSES)
 
     view_name = 'event-detail'
@@ -385,7 +371,7 @@ class JSONAPIViewSet(viewsets.ReadOnlyModelViewSet):
         context = super(JSONAPIViewSet, self).get_serializer_context()
 
         include = self.request.QUERY_PARAMS.get('include', '')
-        context['include'] = [x.strip() for x in include.split(',')]
+        context['include'] = [x.strip() for x in include.split(',') if x]
         return context
 
 class EventViewSet(JSONAPIViewSet):
