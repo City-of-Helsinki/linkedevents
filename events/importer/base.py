@@ -136,7 +136,7 @@ class Importer(object):
             obj._created = True
         obj._changed = False
 
-        obj_fields = obj._meta.fields.copy()
+        obj_fields = list(obj._meta.fields)
         trans_fields = translator.get_options_for_model(Event).fields
         skip_fields = ['id', 'location', 'offers', 'category']
 
@@ -187,7 +187,7 @@ class Importer(object):
                 verb = "created"
             else:
                 verb = "changed"
-            print("%s %s" % (str(obj), verb))
+            print("%s %s" % (obj, verb))
             obj.save()
 
         if 'category' in event:
