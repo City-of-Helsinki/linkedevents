@@ -37,7 +37,7 @@ def match_categories(text):
             cmatch = get_close_matches(
                 text.lower(),
                 [m.label.lower() for m in match], n=1)
-            if len(match) == 1:
+            if len(cmatch) == 1:
                 return CategoryLabel.objects.get(label__iexact=cmatch[0]).categories.all()
         else:
             return [m.categories.all()[0] for m in match]
