@@ -68,6 +68,7 @@ def zipcode_and_muni(text):
 @register_importer
 class MatkoImporter(Importer):
     name = "matko"
+    supported_languages = ['fi', 'sv', 'en']
 
     def put(self, rdict, key, val):
         if key not in rdict:

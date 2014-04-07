@@ -28,6 +28,15 @@ class Importer(object):
         self.options = options
         self.verbosity = options['verbosity']
         self.logger = logging.getLogger(__name__)
+
+        importer_langs = set(self.supported_languages)
+        configured_langs = set(l[0] for l in settings.LANGUAGES)
+        # Intersection is all the languages possible for the importer to use.
+        self.languages = {}
+        for lang_code in importer_langs & configured_langs:
+            # FIXME: get language name translations from Django
+            lang_obj, _ = Language.objects.get_or_create(code=lang_code)
+            self.languages[lang_code] = lang_obj
         self.setup()
 
     def setup(self):

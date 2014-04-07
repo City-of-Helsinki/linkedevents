@@ -24,6 +24,7 @@ def mark_deleted(obj):
 @register_importer
 class TprekImporter(Importer):
     name = 'tprek'
+    supported_languages = ['fi', 'sv', 'en']
 
     def __init__(self, *args, **kwargs):
         super(TprekImporter, self).__init__(*args, **kwargs)

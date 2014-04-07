@@ -82,6 +82,7 @@ LOCAL_TZ = timezone('Europe/Helsinki')
 @register_importer
 class KulkeImporter(Importer):
     name = "kulke"
+    supported_languages = ['fi', 'sv', 'en']
 
     def setup(self):
         ds_args = dict(id=self.name)
