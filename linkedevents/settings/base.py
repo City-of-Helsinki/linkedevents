@@ -45,9 +45,11 @@ INSTALLED_APPS = (
     'mptt',
     'modeltranslation',
     'reversion',
-    'events',
     'isodate',
     'rest_framework_swagger',
+    'munigeo',
+
+    'events',
 )
 
 MIDDLEWARE_CLASSES = (
