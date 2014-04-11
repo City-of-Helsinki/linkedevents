@@ -73,6 +73,9 @@ WSGI_APPLICATION = 'linkedevents.wsgi.application'
 
 DATABASES = {}
 
+# Keep the database connection open for 120s
+CONN_MAX_AGE = 120
+
 ATOMIC_REQUESTS = True
 
 # Internationalization
