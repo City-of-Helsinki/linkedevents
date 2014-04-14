@@ -127,6 +127,7 @@ class Category(BaseModel, SchemalessFieldMixin):
     alt_labels = models.ManyToManyField(CategoryLabel, blank=True, related_name='categories')
     same_as = models.CharField(max_length=255, null=True, blank=True)
     parent = TreeForeignKey('self', null=True, blank=True)
+    aggregate = models.BooleanField(default=False)
     category_for = models.SmallIntegerField(
         choices=CATEGORY_TYPES, null=True, blank=True)
 

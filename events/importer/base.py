@@ -199,8 +199,8 @@ class Importer(object):
             print("%s %s" % (obj, verb))
             obj.save()
 
-        if 'category' in event:
-           for c in event['category']:
+        if 'categories' in event:
+           for c in event['categories']:
                obj.categories.add(c)
 
         return errors

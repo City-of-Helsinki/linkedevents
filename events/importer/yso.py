@@ -7,9 +7,7 @@ from rdflib import URIRef
 from rdflib import RDF
 from rdflib.namespace import FOAF, SKOS, OWL
 
-from mptt.exceptions import InvalidMove
-
-from events.models import Category, CategoryLabel, DataSource, BaseModel
+from events.models import Category, CategoryLabel, DataSource, BaseModel, Language
 
 from sys import stdout
 from .util import active_language
@@ -59,7 +57,7 @@ class YsoImporter(Importer):
             print("Saving data")
         data_source = DataSource.objects.get(pk='yso')
 
-        bulk_mode = self.options.get('init', False)
+        bulk_mode = self.options.get('init', True)
         if not bulk_mode:
             delete_func = lambda obj: obj.delete()
             queryset = CategoryLabel.objects.filter(data_source=self.data_source)
@@ -70,12 +68,13 @@ class YsoImporter(Importer):
         labels_to_create = set()
         for subject, label in graph.subject_objects(SKOS.altLabel):
             if (subject, RDF.type, SKOS.Concept) in graph:
+                url = str(subject)
                 if bulk_mode:
                     if label.language is not None:
                         labels_to_create.add((str(label), label.language))
-                        if subject not in category_labels:
-                            category_labels[str(subject)] = []
-                        category_labels[str(subject)].append(label)
+                        if url not in category_labels:
+                            category_labels[url] = []
+                        category_labels[url].append(label)
                 else:
                     label = self.save_alt_label(label_syncher, graph, label, data_source)
                     if label:
@@ -133,10 +132,10 @@ class YsoImporter(Importer):
     def save_categories_in_bulk(self, graph, data_source):
         categories = []
         for subject in graph.subjects(RDF.type, SKOS.Concept):
-            if (is_deprecated(graph, subject) or
-                is_aggregate_concept(graph, subject)):
+            if is_deprecated(graph, subject):
                 continue
             category = Category(data_source=data_source)
+            category.aggregate = is_aggregate_concept(graph, subject)
             category.created_time = BaseModel.now()
             category.last_modified_time = BaseModel.now()
             category.url = str(subject)
