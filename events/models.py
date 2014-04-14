@@ -101,19 +101,20 @@ class BaseModel(SystemMetaMixin):
 
 
 class Language(BaseModel):
-    code = models.CharField(max_length=6)
+    id = models.CharField(max_length=6, primary_key=True)
 
     class Meta:
         verbose_name = _('language')
         verbose_name_plural = _('languages')
 
 
-class CategoryLabel(SystemMetaMixin):
-    label = models.CharField(max_length=255, null=False, blank=False, db_index=True)
+class CategoryLabel(BaseModel):
+    language = models.ForeignKey(Language, blank=False, null=False)
+    class Meta:
+        unique_together = (('name', 'language'),)
 
-reversion.register(CategoryLabel)
-
-class Category(MPTTModel, BaseModel, SchemalessFieldMixin):
+class Category(BaseModel, SchemalessFieldMixin):
+    objects = models.Manager()
     schema_org_type = "Thing/LinkedEventCategory"
 
     CATEGORY_TYPES = (
@@ -123,24 +124,19 @@ class Category(MPTTModel, BaseModel, SchemalessFieldMixin):
     # category ids from: http://finto.fi/ysa/fi/
     url = models.CharField(max_length=255, db_index=True, null=False, blank=False, default='unknown')
     description = models.TextField(blank=True)
-    # label: preferred label
-    label = models.CharField(max_length=255, null=False, blank=False, default='unknown')
-    # labels: preferred label and alternative labels (for lookups)
-    labels = models.ManyToManyField(CategoryLabel, blank=True, related_name='categories')
+    alt_labels = models.ManyToManyField(CategoryLabel, blank=True, related_name='categories')
     same_as = models.CharField(max_length=255, null=True, blank=True)
     parent = TreeForeignKey('self', null=True, blank=True)
+    aggregate = models.BooleanField(default=False)
     category_for = models.SmallIntegerField(
         choices=CATEGORY_TYPES, null=True, blank=True)
 
     def __str__(self):
-        return self.label
+        return self.name
 
     class Meta:
         verbose_name = _('category')
         verbose_name_plural = _('categories')
-
-reversion.register(Category)
-
 
 class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     same_as = models.CharField(max_length=255, db_index=True, null=True,

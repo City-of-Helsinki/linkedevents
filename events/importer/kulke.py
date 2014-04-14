@@ -12,7 +12,7 @@ from .sync import ModelSyncher
 from .base import Importer, register_importer, recur_dict
 from .util import unicodetext, active_language
 from events.models import DataSource, Place, Event, Category, CategoryLabel
-from events.categories import match_categories
+from events.categories import CategoryMatcher
 
 LOCATION_TPREK_MAP = {
     'malmitalo': '8740',
@@ -41,39 +41,38 @@ CATEGORIES_TO_IGNORE = [
     286, 596, 614, 307, 632, 645, 675, 231, 616, 364, 325, 324, 319, 646, 640,
     641, 642, 643, 670, 671, 673, 674, 725, 312, 344, 365, 239, 240, 308, 623,
     229, 230, 323, 320, 357, 358,
-    # languages, ignore as categories
-    53, 54, 55 # todo: add as event languages
+    # below -- languages, ignore as categories -- todo: add as event languages
+    53, 54, 55
 ]
 
-SPORTS = ['http://www.yso.fi/onto/ysa/Y99900']
-GYMS = ['http://www.yso.fi/onto/ysa/Y102830']
+SPORTS = ['http://www.yso.fi/onto/yso/p965']
+GYMS = ['http://www.yso.fi/onto/yso/p8504']
 MANUAL_CATEGORIES = {
     # urheilu
-    546: SPORTS, 547: SPORTS, 431: SPORTS,
+    546: SPORTS, 547: SPORTS, 431: SPORTS, 638: SPORTS,
     # kuntosalit
     607: GYMS, 615: GYMS,
     # harrastukset
-    626: ['http://www.yso.fi/onto/ysa/Y95295'],
+    626: ['http://www.yso.fi/onto/yso/p2901'],
     # erityisliikunta
-    634: ['http://www.yso.fi/onto/ysa/Y125591'],
+    634: ['http://www.yso.fi/onto/yso/p3093'],
     # monitaiteisuus
-    223: ['http://www.yso.fi/onto/ysa/Y177739'],
+    223: ['http://www.yso.fi/onto/yso/p25216'],
     # seniorit > ikääntyneet
-    354: ['http://www.yso.fi/onto/ysa/Y112391'],
+    354: ['http://www.yso.fi/onto/yso/p2433'],
     # saunominen
-    371: ['http://www.yso.fi/onto/ysa/Y98750'],
+    371: ['http://www.yso.fi/onto/yso/p11049'],
     # lastentapahtumat > lapset (!)
-    105: ['http://www.yso.fi/onto/ysa/Y96738'],
+    105: ['http://www.yso.fi/onto/yso/p4354'],
     # steppi
-    554: ['http://www.yso.fi/onto/ysa/Y104410'],
+    554: ['http://www.yso.fi/onto/yso/p19614'],
     # liikuntaleiri
-    710: ['http://www.yso.fi/onto/ysa/Y103087',
-          'http://www.yso.fi/onto/ysa/Y96915'],
+    710: ['http://www.yso.fi/onto/yso/p143',
+          'http://www.yso.fi/onto/yso/p916'],
     # teatteri ja sirkus
-    351: ['http://www.yso.fi/onto/ysa/Y106371'],
+    351: ['http://www.yso.fi/onto/yso/p2850'],
     # elokuva (ja media)
-    205: ['http://www.yso.fi/onto/ysa/Y94995'],
-    668: ['http://www.yso.fi/onto/ysa/Y96656']
+    205: ['http://www.yso.fi/onto/yso/p16327']
 }
 
 
@@ -95,7 +94,7 @@ class KulkeImporter(Importer):
         place_list = Place.objects.filter(data_source=self.tprek_data_source).filter(origin_id__in=id_list)
         self.tprek_by_id = {p.origin_id: p.id for p in place_list}
 
-        if not Category.objects.filter(data_source='ysa').exists():
+        if not Category.objects.filter(data_source='yso').exists():
             return
 
         print('Preprocessing categories')
@@ -114,6 +113,7 @@ class KulkeImporter(Importer):
                 categories[cid] = {
                     'type': typeid, 'text': ctype.text}
 
+        category_matcher = CategoryMatcher()
         for cid, c in list(categories.items()):
             if c is None:
                 continue
@@ -132,10 +132,10 @@ class KulkeImporter(Importer):
                 c['categories'] = [Category.objects.get(url=url) for url in manual]
                 continue
 
-            replacements = [('jumppa', 'voimistelu')]
+            replacements = [('jumppa', 'voimistelu'), ('Stoan', 'Stoa')]
             for src, dest in replacements:
                 ctext = re.sub(src, dest, ctext, flags=re.IGNORECASE)
-            c['categories'] = match_categories(ctext)
+            c['categories'] = category_matcher.match(ctext)
 
         self.categories = categories
 
