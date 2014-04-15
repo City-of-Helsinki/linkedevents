@@ -12,7 +12,6 @@ class Command(BaseCommand):
     help = "Import event data"
     option_list = list(BaseCommand.option_list + (
         make_option('--all', action='store_true', dest='all', help='Import all entities'),
-        make_option('--init', action='store_true', dest='init', help='Import initial data in batch'),
     ))
 
     importer_types = ['locations', 'events', 'categories']
@@ -37,7 +36,6 @@ class Command(BaseCommand):
         else:
             root_dir = settings.BASE_DIR
         importer = imp_class({'data_path': os.path.join(root_dir, 'data'),
-                              'init': options.get('init', False),
                               'verbosity': int(options['verbosity'])})
 
         # Activate the default language for the duration of the import

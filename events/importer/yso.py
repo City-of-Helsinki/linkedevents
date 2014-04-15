@@ -57,7 +57,8 @@ class YsoImporter(Importer):
             print("Saving data")
         data_source = DataSource.objects.get(pk='yso')
 
-        bulk_mode = self.options.get('init', True)
+        assert not Category.objects.filter(data_source=self.data_source).exists()
+        bulk_mode = True
         if not bulk_mode:
             delete_func = lambda obj: obj.delete()
             queryset = CategoryLabel.objects.filter(data_source=self.data_source)
