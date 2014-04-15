@@ -21,7 +21,7 @@ from events import utils
 from modeltranslation.translator import translator, NotRegistered
 from django.utils.translation import ugettext_lazy as _
 from dateutil.parser import parse as dateutil_parse
-from .geoapi import GeoModelSerializer, build_bbox_filter, srid_to_srs
+from munigeo.api import GeoModelSerializer, GeoModelViewSet, build_bbox_filter, srid_to_srs
 
 import pytz
 
@@ -93,6 +93,8 @@ class EnumChoiceField(serializers.WritableField):
         super(EnumChoiceField, self).__init__()
 
     def to_native(self, obj):
+        if obj == None:
+            return None
         return self.prefix + utils.get_value_from_tuple_list(self.choices,
                                                              obj, 1)
 
@@ -271,6 +273,8 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
 class CategorySerializer(LinkedEventsSerializer):
     category_for = EnumChoiceField(Category.CATEGORY_TYPES)
 
+    view_name = 'category-detail'
+
     class Meta:
         model = Category
 
@@ -289,7 +293,7 @@ class PlaceSerializer(LinkedEventsSerializer, GeoModelSerializer):
         model = Place
 
 
-class PlaceViewSet(viewsets.ReadOnlyModelViewSet):
+class PlaceViewSet(GeoModelViewSet, viewsets.ReadOnlyModelViewSet):
     queryset = Place.objects.all()
     serializer_class = PlaceSerializer
     pagination_serializer_class = CustomPaginationSerializer
@@ -326,12 +330,12 @@ class SubOrSuperEventSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         model = Event
 
 
-class EventSerializer(LinkedEventsSerializer):
+class EventSerializer(LinkedEventsSerializer, GeoModelViewSet):
     location = JSONLDRelatedField(serializer=PlaceSerializer, required=False,
                                   view_name='place-detail')
     # provider = OrganizationSerializer(hide_ld_context=True)
-    categories = CategorySerializer(many=True, allow_add_remove=True,
-                                    hide_ld_context=True)
+    categories = JSONLDRelatedField(serializer=CategorySerializer, many=True, required=False,
+                                    view_name='category-detail')
     super_event = JSONLDRelatedField(required=False, view_name='event-detail')
     event_status = EnumChoiceField(Event.STATUSES)
 

@@ -28,7 +28,7 @@ class Command(BaseCommand):
         if len(args) != 1:
             raise CommandError("Enter the name of the event importer module. Valid importers: %s" % imp_list)
         if not args[0] in importers:
-            raise CommandError("Importer %s not found. Valid importers: %s" % imp_list)
+            raise CommandError("Importer %s not found. Valid importers: %s" % (args[0], imp_list))
         imp_class = importers[args[0]]
 
         if hasattr(settings, 'PROJECT_ROOT'):
