@@ -27,7 +27,6 @@ import reversion
 from django_hstore import hstore
 from django.utils.translation import ugettext_lazy as _
 from mptt.models import MPTTModel, TreeForeignKey
-from django.utils.text import slugify
 from django.contrib.contenttypes.models import ContentType
 from events import contexts
 from django.utils.encoding import python_2_unicode_compatible
@@ -110,15 +109,18 @@ class Language(BaseModel):
 
 class CategoryLabel(BaseModel):
     language = models.ForeignKey(Language, blank=False, null=False)
+
     class Meta:
         unique_together = (('name', 'language'),)
 
+
 class Category(BaseModel, SchemalessFieldMixin):
     objects = models.Manager()
+
     schema_org_type = "Thing/LinkedEventCategory"
 
     CATEGORY_TYPES = (
-        (0, 'Event'), (1, 'Place'), (2, 'Organization'), (3, 'Person')
+        (0, 'Event'), (1, 'Place'),
     )
 
     # category ids from: http://finto.fi/ysa/fi/
@@ -126,7 +128,6 @@ class Category(BaseModel, SchemalessFieldMixin):
     description = models.TextField(blank=True)
     alt_labels = models.ManyToManyField(CategoryLabel, blank=True, related_name='categories')
     same_as = models.CharField(max_length=255, null=True, blank=True)
-    parent = TreeForeignKey('self', null=True, blank=True)
     aggregate = models.BooleanField(default=False)
     category_for = models.SmallIntegerField(
         choices=CATEGORY_TYPES, null=True, blank=True)
@@ -137,6 +138,7 @@ class Category(BaseModel, SchemalessFieldMixin):
     class Meta:
         verbose_name = _('category')
         verbose_name_plural = _('categories')
+
 
 class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     same_as = models.CharField(max_length=255, db_index=True, null=True,
@@ -269,6 +271,25 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         return u" ".join(val)
 
 reversion.register(Event)
+
+
+class ExportInfo(models.Model):
+    target_id = models.CharField(max_length=255, db_index=True, null=True,
+                               blank=True)
+    target_system = models.CharField(max_length=255, db_index=True, null=True,
+                                               blank=True)
+    last_exported_time = models.DateTimeField(null=True, blank=True)
+
+    content_type = models.ForeignKey(ContentType)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+
+    class Meta:
+        unique_together = (('target_system', 'content_type', 'object_id'),)
+
+    def save(self, *args, **kwargs):
+        self.last_exported_time = BaseModel.now()
+        super(ExportInfo, self).save(*args, **kwargs)
 
 contexts.create_context(Event)
 contexts.create_context(Place)
