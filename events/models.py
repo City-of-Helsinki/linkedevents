@@ -275,9 +275,9 @@ reversion.register(Event)
 
 class ExportInfo(models.Model):
     target_id = models.CharField(max_length=255, db_index=True, null=True,
-                               blank=True)
+                                 blank=True)
     target_system = models.CharField(max_length=255, db_index=True, null=True,
-                                               blank=True)
+                                     blank=True)
     last_exported_time = models.DateTimeField(null=True, blank=True)
 
     content_type = models.ForeignKey(ContentType)
