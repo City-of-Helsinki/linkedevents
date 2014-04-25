@@ -128,8 +128,6 @@ class Category(BaseModel, SchemalessFieldMixin):
     same_as = models.CharField(max_length=255, null=True, blank=True)
     parent = TreeForeignKey('self', null=True, blank=True)
     aggregate = models.BooleanField(default=False)
-    category_for = models.SmallIntegerField(
-        choices=CATEGORY_TYPES, null=True, blank=True)
 
     def __str__(self):
         return self.name

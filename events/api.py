@@ -271,8 +271,6 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
 
 
 class CategorySerializer(LinkedEventsSerializer):
-    category_for = EnumChoiceField(Category.CATEGORY_TYPES)
-
     view_name = 'category-detail'
 
     class Meta:
@@ -333,7 +331,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     location = JSONLDRelatedField(serializer=PlaceSerializer, required=False,
                                   view_name='place-detail')
     # provider = OrganizationSerializer(hide_ld_context=True)
-    categories = JSONLDRelatedField(serializer=CategorySerializer, many=True, required=False,
+    keywords = JSONLDRelatedField(serializer=CategorySerializer, many=True, required=False,
                                     view_name='category-detail')
     super_event = JSONLDRelatedField(required=False, view_name='event-detail')
     event_status = EnumChoiceField(Event.STATUSES)
