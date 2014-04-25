@@ -7,7 +7,6 @@ django-filter
 django-hstore
 django-modeltranslation
 django-mptt
-django-rest-swagger
 django-reversion
 djangorestframework
 djangorestframework-gis

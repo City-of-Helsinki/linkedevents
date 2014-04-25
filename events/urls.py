@@ -1,8 +1,8 @@
 from django.conf.urls import patterns, include, url
-from rest_framework import routers
+from events.routers import DocumentedRouter
 from events import api
 
-router = routers.DefaultRouter()
+router = DocumentedRouter()
 for view in api.all_views:
     router.register(view['name'], view['class'])
 
