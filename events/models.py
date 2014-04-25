@@ -238,10 +238,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
 
     # Custom fields not from schema.org
     target_group = models.CharField(max_length=255, null=True, blank=True)
-    categories = models.ManyToManyField(Category, null=True, blank=True)
-    language = models.ForeignKey(Language, blank=True, null=True,
-                                 help_text=_("Set if the event is in a given "
-                                             "language"))
+    keywords = models.ManyToManyField(Category, null=True, blank=True)
 
     class Meta:
         verbose_name = _('event')

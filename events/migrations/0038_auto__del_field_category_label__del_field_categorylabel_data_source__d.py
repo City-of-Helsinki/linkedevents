@@ -35,17 +35,18 @@ class Migration(SchemaMigration):
         # Deleting field 'CategoryLabel.modified_by'
         db.delete_column('events_categorylabel', 'modified_by_id')
 
+        # Deleting field 'Language.code'
+        db.delete_column('events_language', 'code')
+
+        db.delete_foreign_key('events_event', 'language_id')
+
+        # Changing field 'Language.id'
+        db.alter_column('events_language', 'id', self.gf('django.db.models.fields.CharField')(primary_key=True, max_length=6))
+
         # Adding field 'CategoryLabel.language'
         db.add_column('events_categorylabel', 'language',
                       self.gf('django.db.models.fields.related.ForeignKey')(default='fi', to=orm['events.Language']),
                       keep_default=False)
-
-        # Deleting field 'Language.code'
-        db.delete_column('events_language', 'code')
-
-
-        # Changing field 'Language.id'
-        db.alter_column('events_language', 'id', self.gf('django.db.models.fields.CharField')(primary_key=True, max_length=6))
 
     def backwards(self, orm):
         # Adding field 'Category.label'
@@ -285,3 +286,4 @@ class Migration(SchemaMigration):
     }
 
     complete_apps = ['events']
+
