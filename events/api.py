@@ -411,6 +411,8 @@ class EventViewSet(JSONAPIViewSet):
 
         event/?start=2014-01-15&end=2014-01-20
 
+    [See the result](?start=2014-01-15&end=2014-01-20 "json")
+
     ## Event location
 
     ### Bounding box
@@ -427,6 +429,22 @@ class EventViewSet(JSONAPIViewSet):
     Example:
 
         event/?bbox=24.9348,60.1762,24.9681,60.1889
+
+    [See the result](?bbox=24.9348,60.1762,24.9681,60.1889 "json")
+
+    # Getting detailed data
+
+    In the default case, keywords, locations, and other fields that
+    refer to separate resources are only displayed as simple references.
+
+    If you want to include the complete data from related resources in
+    the current response, use the keyword `include`. For example:
+
+        event/?include=location,keywords
+
+    [See the result](?include=location,keywords "json")
+
+    # Response data for the current URL
 
     """
     queryset = Event.objects.all()
