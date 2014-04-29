@@ -129,8 +129,6 @@ class Category(BaseModel, SchemalessFieldMixin):
     alt_labels = models.ManyToManyField(CategoryLabel, blank=True, related_name='categories')
     same_as = models.CharField(max_length=255, null=True, blank=True)
     aggregate = models.BooleanField(default=False)
-    category_for = models.SmallIntegerField(
-        choices=CATEGORY_TYPES, null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -240,10 +238,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
 
     # Custom fields not from schema.org
     target_group = models.CharField(max_length=255, null=True, blank=True)
-    categories = models.ManyToManyField(Category, null=True, blank=True)
-    language = models.ForeignKey(Language, blank=True, null=True,
-                                 help_text=_("Set if the event is in a given "
-                                             "language"))
+    keywords = models.ManyToManyField(Category, null=True, blank=True)
 
     class Meta:
         verbose_name = _('event')

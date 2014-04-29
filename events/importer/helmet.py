@@ -102,55 +102,6 @@ class HelmetImporter(Importer):
         ds_args = dict(id=self.name)
         defaults = dict(name='HelMet-kirjastot', event_url_template='https://{origin_id}')
         self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
-
-    def import_locations(self):
-        print("Importing HelMet libraries as locations")
-        for name_fi, node_ids in LOCATIONS.iteritems():
-            resp = requests.get(
-                SERVICEMAP_API_URL,
-                params={'search': name_fi.encode('iso-8859-1')}
-            )
-            time.sleep(0.2)  # Let's not DoS the API.
-            assert resp.status_code == 200
-            result = json.loads(resp.content)
-            result = filter(lambda x: x['name_fi'] == name_fi, result)
-            if len(result) != 1:
-                print('Not found:', len(result), name_fi, name_fi.replace('@', ' '))
-                return None
-
-            UNIT_URL = SERVICEMAP_API_URL + str(result[0]['id'])
-            detailed_resp = requests.get(UNIT_URL)
-            assert detailed_resp.status_code == 200
-            unit_details = json.loads(detailed_resp.content)
-            servicemap_datasource = DataSource.objects.get(id='tprek')
-
-            name_keys = filter(lambda x: re.match(r'name_\w+', x), unit_details.keys())
-            available_languages = [key.split('_')[1] for key in name_keys]
-            location = recur_dict()
-
-            translate = lambda d, k, l: d.get(k + '_' + l)
-            for l in available_languages:
-                location['name'][l] = translate(unit_details, 'name', l)
-                location['address']['street_address'][l] = translate(
-                    unit_details, 'street_address', l
-                )
-                location['address']['address_locality'][l] = translate(
-                    unit_details, 'address_city', l
-                )
-
-            location['address']['postal_code'] = unit_details['address_zip']
-            location['origin_id'] = unit_details['id']
-            location['data_source'] = 'servicemap'
-            location['geo'] = {
-                'longitude': unit_details['longitude'],
-                'latitude': unit_details['latitude'],
-                'geo_type': 1
-            }
-
-            import pprint
-            pprint.pprint(location)
-            
-            break
                 
     def import_events(self):
         import pprint  # todo remove

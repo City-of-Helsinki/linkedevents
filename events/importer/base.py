@@ -201,7 +201,7 @@ class Importer(object):
 
         if 'categories' in event:
            for c in event['categories']:
-               obj.categories.add(c)
+               obj.keywords.add(c)
 
         return errors
 

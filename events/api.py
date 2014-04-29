@@ -21,7 +21,7 @@ from events import utils
 from modeltranslation.translator import translator, NotRegistered
 from django.utils.translation import ugettext_lazy as _
 from dateutil.parser import parse as dateutil_parse
-from munigeo.api import GeoModelSerializer, GeoModelViewSet, build_bbox_filter, srid_to_srs
+from munigeo.api import GeoModelSerializer, GeoModelAPIView, build_bbox_filter, srid_to_srs
 
 import pytz
 
@@ -271,13 +271,10 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
 
 
 class CategorySerializer(LinkedEventsSerializer):
-    category_for = EnumChoiceField(Category.CATEGORY_TYPES)
-
     view_name = 'category-detail'
 
     class Meta:
         model = Category
-
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Category.objects.all()
@@ -293,7 +290,7 @@ class PlaceSerializer(LinkedEventsSerializer, GeoModelSerializer):
         model = Place
 
 
-class PlaceViewSet(GeoModelViewSet, viewsets.ReadOnlyModelViewSet):
+class PlaceViewSet(GeoModelAPIView, viewsets.ReadOnlyModelViewSet):
     queryset = Place.objects.all()
     serializer_class = PlaceSerializer
     pagination_serializer_class = CustomPaginationSerializer
@@ -330,11 +327,11 @@ class SubOrSuperEventSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         model = Event
 
 
-class EventSerializer(LinkedEventsSerializer, GeoModelViewSet):
+class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     location = JSONLDRelatedField(serializer=PlaceSerializer, required=False,
                                   view_name='place-detail')
     # provider = OrganizationSerializer(hide_ld_context=True)
-    categories = JSONLDRelatedField(serializer=CategorySerializer, many=True, required=False,
+    keywords = JSONLDRelatedField(serializer=CategorySerializer, many=True, required=False,
                                     view_name='category-detail')
     super_event = JSONLDRelatedField(required=False, view_name='event-detail')
     event_status = EnumChoiceField(Event.STATUSES)
@@ -390,6 +387,64 @@ class JSONAPIViewSet(viewsets.ReadOnlyModelViewSet):
         return context
 
 class EventViewSet(JSONAPIViewSet):
+    """
+    # Filtering retrieved events
+
+    Query parameters can be used to filter the retrieved events by
+    the following criteria.
+
+    ## Event time
+
+    Use `start` and `end` to restrict the date range of returned events.
+    Any events that intersect with the given date range will be returned.
+
+    The parameters `start` and `end` can be given in the following formats:
+
+    - ISO 8601 (including the time of day)
+    - yyyy-mm-dd
+
+    In addition, `today` can be used as the value.
+
+    Example:
+
+        event/?start=2014-01-15&end=2014-01-20
+
+    [See the result](?start=2014-01-15&end=2014-01-20 "json")
+
+    ## Event location
+
+    ### Bounding box
+
+    To restrict the retrieved events to a geographical region, use
+    the query parameter `bbox` in the format
+
+        bbox=west,south,east,north
+
+    Where `west` is the longitude of the rectangle's western boundary,
+    `south` is the latitude of the rectangle's southern boundary,
+    and so on.
+
+    Example:
+
+        event/?bbox=24.9348,60.1762,24.9681,60.1889
+
+    [See the result](?bbox=24.9348,60.1762,24.9681,60.1889 "json")
+
+    # Getting detailed data
+
+    In the default case, keywords, locations, and other fields that
+    refer to separate resources are only displayed as simple references.
+
+    If you want to include the complete data from related resources in
+    the current response, use the keyword `include`. For example:
+
+        event/?include=location,keywords
+
+    [See the result](?include=location,keywords "json")
+
+    # Response data for the current URL
+
+    """
     queryset = Event.objects.all()
     serializer_class = EventSerializer
     pagination_serializer_class = CustomPaginationSerializer
@@ -404,11 +459,11 @@ class EventViewSet(JSONAPIViewSet):
         if 'show_all' not in self.request.QUERY_PARAMS:
             queryset = queryset.filter(Q(event_status=Event.SCHEDULED))
 
-        val = self.request.QUERY_PARAMS.get('from', None)
+        val = self.request.QUERY_PARAMS.get('start', None)
         if val:
             dt = parse_time(val, is_start=True)
             queryset = queryset.filter(Q(end_time__gte=dt) | Q(start_time__gte=dt))
-        val = self.request.QUERY_PARAMS.get('to', None)
+        val = self.request.QUERY_PARAMS.get('end', None)
         if val:
             dt = parse_time(val, is_start=False)
             queryset = queryset.filter(Q(end_time__lte=dt) | Q(start_time__lte=dt))

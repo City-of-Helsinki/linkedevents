@@ -8,6 +8,7 @@ from django.db.models import Count
 from lxml import etree
 
 from events.models import DataSource, Place, Event
+from events.categories import CategoryMatcher
 
 from .sync import ModelSyncher
 from .base import Importer, register_importer, recur_dict
@@ -124,7 +125,7 @@ class MatkoImporter(Importer):
 
         event['location']['id'] = place_id
 
-    def _import_event_from_feed(self, lang_code, item, events):
+    def _import_event_from_feed(self, lang_code, item, events, category_matcher):
         eid = int(text(item, 'uniqueid'))
         event = events[eid]
 
@@ -166,6 +167,49 @@ class MatkoImporter(Importer):
         self.put(event, 'end_time', end_time)
         self.put(event, 'event_status', matko_status(int(text(item, 'status'))))
         self.put(event['location'], 'matko_location_id', int(text(item, 'placeuniqueid')))
+
+        ignore = [
+            'ekokompassi',
+            'helsinki-päivä',
+            'helsinki-viikko',
+            'top',
+            'muu',
+            'tapahtuma',
+            'kesä',
+            'talvi'
+        ]
+        use_as_target_group = [ # fixme
+            'koko perheelle'
+        ]
+        mapping = {
+            'tanssi ja teatteri': 'tanssi', # following visithelsinki.fi
+            'messu': 'messut',
+            'perinnetapahtuma': 'perinne',
+            'pop/rock': 'populaarimusiikki',
+            'konsertti': 'konsertit',
+            'klassinen': 'klassinen musiikki',
+            'kulttuuri': 'kulttuuritapahtumat'
+        }
+        categories = set()
+        cat1, cat2 = text(item, 'type1'), text(item, 'type2')
+        for c in (cat1, cat2):
+            if c:
+                categories.update(
+                    map(lambda x: x.lower(), c.split(",")))
+
+        keywords = []
+        for c in categories:
+            if c is None or c in ignore or c in use_as_target_group:
+                continue
+            if c in mapping:
+                c = mapping[c]
+            keyword = category_matcher.match(c)
+            if keyword:
+                keywords.append(keyword[0])
+        if len(keywords) > 0:
+            event['categories'] = keywords
+        else:
+            print('Warning: no category matches for', event['name'], categories)
 
         # FIXME: Place matching for events that are only in English (or Swedish)
         if lang_code == 'fi':
@@ -242,10 +286,11 @@ class MatkoImporter(Importer):
     def import_events(self):
         print("Importing Matko events")
         events = recur_dict()
+        category_matcher = CategoryMatcher()
         for lang, url in MATKO_URLS['events'].items():
             items = self.items_from_url(url)
             for item in items:
-                self._import_event_from_feed(lang, item, events)
+                self._import_event_from_feed(lang, item, events, category_matcher)
             organizers = self._import_organizers_from_events(events)
 
         errors = set()

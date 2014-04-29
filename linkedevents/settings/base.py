@@ -47,10 +47,9 @@ INSTALLED_APPS = (
     'reversion',
     'isodate',
     'icalendar',
-    'rest_framework_swagger',
     'munigeo',
-
     'events',
+    'simpleclient',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -109,6 +108,10 @@ IMPORT_FILE_PATH = os.path.join(BASE_DIR, 'data')
 
 STATIC_URL = '/static/'
 
+STATICFILES_DIRS = (
+    os.path.join(BASE_DIR, "assets"),
+)
+
 REST_FRAMEWORK = {
     #'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.IsAdminUser',),
     'PAGINATE_BY': 20,
@@ -132,22 +135,6 @@ CORS_ORIGIN_WHITELIST = ()
 TEMPLATE_DIRS = (
     os.path.join(BASE_DIR, 'templates'),
 )
-
-SWAGGER_SETTINGS = {
-    "exclude_namespaces": [],  # List URL namespaces to ignore
-    "api_version": '1.0',  # Specify your API's version
-    "api_path": "/",  # Specify the path to your API not a root level
-    "enabled_methods": [  # Specify which methods to enable in Swagger UI
-                          'get',
-                          'post',
-                          'put',
-                          'patch',
-                          'delete'
-    ],
-    "api_key": '',  # An API key
-    "is_authenticated": False,  # Set to True to enforce user authentication,
-    "is_superuser": False,  # Set to True to enforce admin only access
-}
 
 POSTGIS_VERSION = (2, 1, 1)
 

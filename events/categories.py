@@ -23,7 +23,7 @@ class CategoryMatcher(object):
                 if without_parenthesis != text:
                     self.name_to_category_ids.setdefault(without_parenthesis, set()).add(cid)
         self.labels = self.name_to_category_ids.keys()
-        print('Initialized', len(self.labels), 'keys')
+        print('Initialized', len(self.labels), 'category keys')
 
     def match(self, text):
         wordsplit = re.compile(r'\s+')
