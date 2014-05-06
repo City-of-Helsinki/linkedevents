@@ -89,7 +89,8 @@ class MatkoImporter(Importer):
         place_list = place_list.annotate(count=Count('name_fi')).filter(count=1).values('id', 'origin_id', 'name_fi')
         self.tprek_by_name = {p['name_fi'].lower(): (p['id'], p['origin_id']) for p in place_list}
 
-        requests_cache.install_cache('matko')
+        if self.options['cached']:
+            requests_cache.install_cache('matko')
 
     def _import_common(self, lang_code, item, result):
         result['name'][lang_code] = clean_text(unicodetext(item.find('title')))

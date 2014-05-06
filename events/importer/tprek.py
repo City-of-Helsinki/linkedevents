@@ -133,7 +133,7 @@ class TprekImporter(Importer):
         syncher.mark(obj)
 
     def import_locations(self):
-        if True:
+        if self.options['cached']:
             requests_cache.install_cache('tprek')
 
         queryset = Place.objects.filter(data_source=self.data_source).filter(deleted=False)
