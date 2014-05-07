@@ -36,6 +36,36 @@ LOCATION_TPREK_MAP = {
     'helsingin kaupunginmuseo/ hakasalmen huvila': '8645',
 }
 
+EXTRA_LOCATIONS = {
+    732: {
+        'name': {
+            'fi': 'Helsinki',
+            'sv': 'Helgingfors',
+            'en': 'Helsinki',
+        },
+        'address': {
+            'address_locality': {
+                'fi': 'Helsinki',
+            }
+        },
+        'latitude': 60.170833,
+        'longitude': 24.9375,
+    },
+    1101: {
+        'name': {
+            'fi': 'Helsingin keskusta',
+            'sv': 'Helgingfors centrum',
+            'en': 'Helsinki City Centre',
+        },
+        'address': {
+            'address_locality': {
+                'fi': 'Helsinki',
+            }
+        },
+        'latitude': 60.170833,
+        'longitude': 24.9375,
+    }
+}
 
 def matko_tag(tag):
     return '{https://aspicore-asp.net/matkoschema/}' + tag
@@ -107,8 +137,8 @@ class MatkoImporter(Importer):
             types[0] = types[0].lower()
             self.put(result, 'types', types)
 
-    def _find_place(self, event):
-        place_name = event['location']['name']['fi']
+    def _find_place_from_tprek(self, location):
+        place_name = location['name']['fi']
         if not place_name:
             return
         place_name = place_name.lower()
@@ -118,13 +148,37 @@ class MatkoImporter(Importer):
         elif place_name in LOCATION_TPREK_MAP:
             tprek_id = LOCATION_TPREK_MAP[place_name]
         else:
-            print("No match found for location %s" % place_name)
-            return
+            return None
 
         if tprek_id and not place_id:
             place_id = Place.objects.get(data_source=self.tprek_data_source, origin_id=tprek_id).id
 
-        event['location']['id'] = place_id
+        return place_id
+
+    def _find_place(self, location):
+        place_id = self._find_place_from_tprek(location)
+        if place_id:
+            return place_id
+
+        # No tprek match found, attempt to find the right entry from matko locations.
+        matko_id = location['origin_id']
+        try:
+            place = Place.objects.get(data_source=self.data_source, origin_id=matko_id)
+        except Place.DoesNotExist:
+            place = None
+
+        # No existing entry, load it from Matko.
+        if not place:
+            locations = self._fetch_locations()
+            from pprint import pprint
+            if matko_id not in locations:
+                print("Matko location %s (%s) not found!" % (
+                    location['name']['fi'], location['origin_id']))
+                return None
+            pprint(locations[matko_id])
+            place = self.save_location(locations[matko_id])
+
+        return place.id
 
     def _import_event_from_feed(self, lang_code, item, events, category_matcher):
         eid = int(text(item, 'uniqueid'))
@@ -162,12 +216,12 @@ class MatkoImporter(Importer):
         standardize_event_types(event['types'])
 
         event['location']['name'][lang_code] = text(item, 'place')
-        event['location']['info'][lang_code] = text(item, 'placeinfo')
+        event['location']['extra_info'][lang_code] = text(item, 'placeinfo')
 
         self.put(event, 'start_time', start_time)
         self.put(event, 'end_time', end_time)
         self.put(event, 'event_status', matko_status(int(text(item, 'status'))))
-        self.put(event['location'], 'matko_location_id', int(text(item, 'placeuniqueid')))
+        self.put(event['location'], 'origin_id', int(text(item, 'placeuniqueid')))
 
         ignore = [
             'ekokompassi',
@@ -191,6 +245,7 @@ class MatkoImporter(Importer):
             'klassinen': 'klassinen musiikki',
             'kulttuuri': 'kulttuuritapahtumat'
         }
+
         categories = set()
         cat1, cat2 = text(item, 'type1'), text(item, 'type2')
         for c in (cat1, cat2):
@@ -208,60 +263,63 @@ class MatkoImporter(Importer):
             if keyword:
                 keywords.append(keyword[0])
         if len(keywords) > 0:
-            event['categories'] = keywords
+            event['keywords'] = keywords
         else:
-            print('Warning: no category matches for', event['name'], categories)
+            print('Warning: no keyword matches for', event['name'], keywords)
 
         # FIXME: Place matching for events that are only in English (or Swedish)
         if lang_code == 'fi':
-            self._find_place(event)
+            place_id = self._find_place(event['location'])
+            if place_id:
+                event['location']['id'] = place_id
 
         return events
 
-    def _import_locations_from_feed(self, lang_code, items, locations):
+    def _parse_location(self, lang_code, item, locations):
+        #if clean_text(text(item, 'isvenue')) == 'False':
+        #    return
+
+        lid = int(text(item, 'id'))
+        location = locations[lid]
+
+        location['origin_id'] = lid
+        location['data_source'] = self.data_source
+
+        self._import_common(lang_code, item, location)
+
+        address = text(item, 'address')
+        if address is not None:
+            location['address']['street_address'][lang_code] = clean_text(address)
+
+        zipcode, muni = zipcode_and_muni(text(item, 'zipcode'))
+        if zipcode and len(zipcode) == 5:
+            location['address']['postal_code'] = zipcode
+        location['address']['address_locality'][lang_code] = muni
+        location['address']['phone'][lang_code] = text(item, 'phone')
+        # There was at least one case with different
+        # email addresses for different languages.
+        location['address']['email'][lang_code] = text(item, 'email')
+
+        # not available in schema.org:
+        # location['address']['fax'][lang_code] = text(item, 'fax')
+        # location['directions'][lang_code] = text(item, 'location')
+        # location['admission_fee'][lang_code] = text(item, 'admission')
+
+        # todo: parse
+        # location['opening_hours'][lang_code] = text(item, 'open')
+        location['custom_fields']['accessibility'][lang_code] = text(item, 'disabled')
+
+        standardize_accessibility(
+            location['custom_fields']['accessibility'][lang_code], lang_code)
+
+        lon, lat = clean_text(text(item, 'longitude')), clean_text(text(item, 'latitude'))
+        if lon != '0' and lat != '0':
+            self.put(location, 'longitude', float(lon))
+            self.put(location, 'latitude', float(lat))
+
+    def _parse_locations_from_feed(self, lang_code, items, locations):
         for item in items:
-            if clean_text(text(item, 'isvenue')) == 'False':
-                continue
-
-            lid = int(text(item, 'id'))
-            location = locations[lid]
-
-            location['origin_id'] = lid
-            location['data_source'] = self.data_source
-
-            self._import_common(lang_code, item, location)
-
-            address = text(item, 'address')
-            if address is not None:
-                location['address']['street_address'][lang_code] = clean_text(address)
-
-            zipcode, muni = zipcode_and_muni(text(item, 'zipcode'))
-            if zipcode and len(zipcode) == 5:
-                location['address']['postal_code'] = zipcode
-            location['address']['address_locality'][lang_code] = muni
-            location['address']['phone'][lang_code] = text(item, 'phone')
-            # There was at least one case with different
-            # email addresses for different languages.
-            location['address']['email'][lang_code] = text(item, 'email')
-
-            # not available in schema.org:
-            # location['address']['fax'][lang_code] = text(item, 'fax')
-            # location['directions'][lang_code] = text(item, 'location')
-            # location['admission_fee'][lang_code] = text(item, 'admission')
-
-            # todo: parse
-            # location['opening_hours'][lang_code] = text(item, 'open')
-            location['custom_fields']['accessibility'][lang_code] = text(item, 'disabled')
-
-            standardize_accessibility(
-                location['custom_fields']['accessibility'][lang_code], lang_code)
-
-            lon, lat = clean_text(text(item, 'longitude')), clean_text(text(item, 'latitude'))
-            if lon != '0' and lat != '0':
-                self.put(location, 'geo', {
-                    'longitude': lon,
-                    'latitude': lat,
-                    'geo_type': 1})
+            self._parse_location(lang_code, item, locations)
 
         return locations
 
@@ -294,21 +352,37 @@ class MatkoImporter(Importer):
                 self._import_event_from_feed(lang, item, events, category_matcher)
             organizers = self._import_organizers_from_events(events)
 
-        errors = set()
         for event in events.values():
-            event_errors = self.save_event(event)
-            errors.update(event_errors)
-        print("%d events added" % len(events.values()))
-        if len(errors) > 0:
-            print('Errors:')
-        for e in errors:
-            print("%s: %s" % (e[0], u" ".join(e[1])))
+            self.save_event(event)
+        print("%d events processed" % len(events.values()))
 
-    def import_locations(self):
-        print("Importing Matko locations")
+    def _fetch_locations(self):
+        if hasattr(self, 'locations'):
+            return self.locations
+
         locations = recur_dict()
+
+        for origin_id, loc_info in EXTRA_LOCATIONS.items():
+            loc = loc_info.copy()
+            loc['data_source'] = self.data_source
+            loc['origin_id'] = origin_id
+            locations[origin_id] = loc
+
         for lang, url in MATKO_URLS['locations'].items():
             items = self.items_from_url(url)
-            self._import_locations_from_feed(lang, items, locations)
-        for location in locations.values():
+            self._parse_locations_from_feed(lang, items, locations)
+
+        self.locations = locations
+
+        return locations
+
+    def import_locations(self):
+        self._fetch_locations()
+        place_list = Place.objects.filter(data_source=self.data_source)
+        for place in place_list:
+            origin_id = int(place.origin_id)
+            if origin_id not in self.locations:
+                self.logger.warning("%s not found in Matko locations" % place)
+                continue
+            location = self.locations[origin_id]
             self.save_location(location)

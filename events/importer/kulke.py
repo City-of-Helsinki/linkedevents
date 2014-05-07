@@ -266,7 +266,7 @@ class KulkeImporter(Importer):
                     else:
                         for c in category.get('categories', []):
                             event_categories.add(c)
-            event['categories'] = event_categories
+            event['keywords'] = event_categories
 
         location = event['location']
 

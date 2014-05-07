@@ -229,6 +229,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     event_status = models.SmallIntegerField(choices=STATUSES,
                                             default=SCHEDULED)
     location = models.ForeignKey(Place, null=True, blank=True)
+    location_extra_info = models.CharField(max_length=400, null=True, blank=True)
+
     start_time = models.DateTimeField(null=True, db_index=True, blank=True)
     end_time = models.DateTimeField(null=True, db_index=True, blank=True)
     super_event = TreeForeignKey('self', null=True, blank=True,

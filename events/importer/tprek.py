@@ -144,17 +144,6 @@ class TprekImporter(Importer):
         else:
             obj_list = self.pk_get('unit')
 
-        self.target_srid = settings.PROJECTION_SRID
-        gps_srs = SpatialReference(4326)
-        target_srs = SpatialReference(self.target_srid)
-        if getattr(settings, 'BOUNDING_BOX'):
-            self.bounding_box = Polygon.from_bbox(settings.BOUNDING_BOX)
-            self.bounding_box.set_srid(self.target_srid)
-            target_to_gps_ct = CoordTransform(target_srs, gps_srs)
-            self.bounding_box.transform(target_to_gps_ct)
-        else:
-            self.bounding_box = None
-        self.gps_to_target_ct = CoordTransform(gps_srs, target_srs)
         syncher = ModelSyncher(queryset, lambda obj: obj.origin_id, delete_func=mark_deleted)
         for idx, info in enumerate(obj_list):
             self._import_unit(syncher, info)
