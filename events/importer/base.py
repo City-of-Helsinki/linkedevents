@@ -128,7 +128,7 @@ class Importer(object):
                     continue
 
                 data = info[field_name]
-                if lang in data:
+                if data is not None and lang in data:
                     val = data[lang]
                 else:
                     val = None
