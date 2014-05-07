@@ -17,8 +17,11 @@ URL_BASE = 'http://www.hel.fi/palvelukarttaws/rest/v3/'
 GK25_SRID = 3879
 
 def mark_deleted(obj):
+    if obj.deleted:
+        return False
     obj.deleted = True
     obj.save(update_fields=['deleted'])
+    return True
 
 
 @register_importer
@@ -128,6 +131,10 @@ class TprekImporter(Importer):
             obj._changed = True
             obj.location = location
 
+        if obj.deleted:
+            obj.deleted = False
+            obj._changed = True
+
         if obj._changed:
             if obj._created:
                 verb = "created"
@@ -142,7 +149,7 @@ class TprekImporter(Importer):
         if self.options['cached']:
             requests_cache.install_cache('tprek')
 
-        queryset = Place.objects.filter(data_source=self.data_source).filter(deleted=False)
+        queryset = Place.objects.filter(data_source=self.data_source, deleted=False)
         if self.options.get('single', None):
             obj_id = self.options['single']
             obj_list = [self.pk_get('unit', obj_id)]
