@@ -109,7 +109,8 @@ class Importer(object):
     def _set_field(self, obj, field_name, val):
         if not hasattr(obj, field_name):
             print(vars(obj))
-        if getattr(obj, field_name) == val:
+        obj_val = getattr(obj, field_name)
+        if obj_val == val:
             return
         setattr(obj, field_name, val)
         obj._changed = True
@@ -177,7 +178,7 @@ class Importer(object):
 
         self._set_field(obj, 'location_id', location_id)
 
-        if obj._created or obj._created:
+        if obj._created or obj._changed:
             obj.save()
 
         keywords = info.get('keywords', [])
