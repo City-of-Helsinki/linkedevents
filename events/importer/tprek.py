@@ -49,13 +49,19 @@ class TprekImporter(Importer):
         assert resp.status_code == 200
         return resp.json()
 
-    def _save_translated_field(self, obj, obj_field_name, info, info_field_name):
+    def _save_translated_field(self, obj, obj_field_name, info,
+                               info_field_name, max_length=None):
         for lang in ('fi', 'sv', 'en'):
             key = '%s_%s' % (info_field_name, lang)
             if key in info:
                 val = self.clean_text(info[key])
             else:
                 val = None
+
+            if max_length and val and len(val) > max_length:
+                self.logger.warning("%s: field %s too long" % (obj, info_field_name))
+                val = None
+
             obj_key = '%s_%s' % (obj_field_name, lang)
             obj_val = getattr(obj, obj_key, None)
             if obj_val == val:
@@ -81,8 +87,8 @@ class TprekImporter(Importer):
         self._save_translated_field(obj, 'street_address', info, 'street_address')
         self._save_translated_field(obj, 'address_locality', info, 'address_city')
 
-        self._save_translated_field(obj, 'www_url', info, 'www')
-        self._save_translated_field(obj, 'picture_caption', info, 'picture_caption')
+        self._save_translated_field(obj, 'url', info, 'www', max_length=200)
+        #self._save_translated_field(obj, 'picture_caption', info, 'picture_caption')
 
         self._save_translated_field(obj, 'telephone', info, 'phone')
 

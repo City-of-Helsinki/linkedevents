@@ -17,7 +17,7 @@ translator.register(Category, CategoryTranslationOptions)
 
 
 class PlaceTranslationOptions(TranslationOptions):
-    fields = ('name', 'description', 'street_address', 'address_locality', 'telephone')
+    fields = ('name', 'description', 'url', 'street_address', 'address_locality', 'telephone')
 
 
 translator.register(Place, PlaceTranslationOptions)
