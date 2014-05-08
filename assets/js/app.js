@@ -73,6 +73,8 @@ var app = angular.module('simpleClient', ['ui.bootstrap', 'ngCookies', 'ngSaniti
                 $scope.totalItems = data.count;
                 $scope.showPagination = true;
             });
+
+            $scope.currentPage = 1;
         };
 
         $scope.pageChanged = function () {
@@ -115,10 +117,10 @@ var app = angular.module('simpleClient', ['ui.bootstrap', 'ngCookies', 'ngSaniti
         };
 
         $scope.toPrettyList = function (lst) {
-            return lst.map(function (item) { return $scope.i18n(item.name) }).join(', ');
+            return lst.map(function (item) {
+                return $scope.i18n(item.name)
+            }).join(', ');
         };
-
-
 
         $scope.openDetails = function (event) {
             $scope.modalInstance = $modal.open({
@@ -131,8 +133,6 @@ var app = angular.module('simpleClient', ['ui.bootstrap', 'ngCookies', 'ngSaniti
                 }
             });
         };
-
-
     })
     .controller('ModalCtrl', function ($scope, event, $modalInstance) {
             $scope.content = dumpObj(event, "Event", "");
