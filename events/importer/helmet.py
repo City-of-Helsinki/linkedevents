@@ -16,7 +16,8 @@ YSO_CATEGORY_MAPS = {
     u'Lapset': u'p12262',
     u'Kirjastot': u'p2787',
     u'Opiskelijat': u'p16486',
-    u'Konsertit ja klubit': (u'p11185', u'p20421'),  # -> konsertit, musiikkiklubit
+    u'Konsertit ja klubit': (u'p11185', u'p20421'),
+    # -> konsertit, musiikkiklubit
     u'Kurssit': u'p9270',
     u'venäjä': u'p7643',  # -> venäjän kieli
     u'Seniorit': u'p2434',  # -> vanhukset
@@ -29,9 +30,10 @@ YSO_CATEGORY_MAPS = {
     u'Pelitapahtumat': u'p6062',  # -> pelit
     u'Satutunnit': u'p14710',
     u'Koululaiset': u'p16485',
-    u'Lasten ja nuorten tapahtumat': (u'p12262', u'p11617'),  # -> lapset, nuoret
+    u'Lasten ja nuorten tapahtumat': (u'p12262', u'p11617'),
+    # -> lapset, nuoret
     u'Lapset ja perheet': (u'p12262', u'p4363'),  # -> lapset, perheet
-    #u'Opastuskalenteri ': '?',
+    # u'Opastuskalenteri ': '?',
     #u'Lukupiirit': '?',
     #u'muut kielet': '?'
 }
@@ -56,8 +58,8 @@ LOCATIONS = {
     u"Kirjasto 10": ((10800, 11303), 8286),
     u"Kirjasto Omena": ((10801, 11305), 15395),
     u"Kivenlahden kirjasto": ((10803, 11309), 15334),
-#    u"Kohtaamispaikka@lasipalatsi": (10804, 11311),     # -> kaupunkiverstas ?
-    u"Kaupunkiverstas": ((10804, 11311), 8145), # former Kohtaamispaikka
+    # u"Kohtaamispaikka@lasipalatsi": (10804, 11311),     # -> kaupunkiverstas ?
+    u"Kaupunkiverstas": ((10804, 11311), 8145),  # former Kohtaamispaikka
     u"Koivukylän kirjasto": ((10805, 11313), 19572),
     u"Kontulan kirjasto u": ((10806, 11315), 8178),
     u"Kotipalvelu": ((10811, 11317), 8285),
@@ -65,7 +67,7 @@ LOCATIONS = {
     u"Laajalahden kirjasto": ((10813, 11321), 15344),
     u"Laajasalon kirjasto": ((10814, 11323), 8143),
     u"Laaksolahden kirjasto": ((10815, 11325), 15309),
-#    u"Laitoskirjastot": ((10816, 11327), ),
+    #    u"Laitoskirjastot": ((10816, 11327), ),
     u"Lauttasaaren kirjasto": ((10817, 11329), 8344),
     u"Lumon kirjasto": ((10818, 11331), 18262),
     u"Länsimäen kirjasto": ((10819, 11333), 18620),
@@ -111,7 +113,7 @@ LOCATIONS = {
 
 HELMET_BASE_URL = 'http://www.helmet.fi'
 HELMET_API_URL = (
-    HELMET_BASE_URL + '/api/opennc/v1/ContentLanguages%28{lang_code}%29' +
+    HELMET_BASE_URL + '/api/opennc/v1/ContentLanguages%28{lang_code}%29'
     '/Contents?$filter=TemplateId%20eq%203&$expand=ExtendedProperties'
     '&$orderby=EventEndDate%20desc&$format=json'
 )
@@ -123,6 +125,7 @@ HELMET_LANGUAGES = {
 
 LOCAL_TZ = timezone('Europe/Helsinki')
 
+
 @register_importer
 class HelmetImporter(Importer):
     name = "helmet"
@@ -130,7 +133,8 @@ class HelmetImporter(Importer):
 
     def setup(self):
         ds_args = dict(id=self.name)
-        defaults = dict(name='HelMet-kirjastot', event_url_template='https://{origin_id}')
+        defaults = dict(name='HelMet-kirjastot',
+                        event_url_template='https://{origin_id}')
         self.data_source, _ = DataSource.objects.get_or_create(
             defaults=defaults, **ds_args)
         self.tprek_data_source = DataSource.objects.get(id='tprek')
@@ -221,12 +225,13 @@ class HelmetImporter(Importer):
             if classification['NodeName'] == 'Tapahtumat':
                 event['location']['id'] = to_le_id(classification['NodeId'])
                 if not event['location']:
-                    print('Missing TPREK location map for NodeId(' +
-                          str(classification['NodeId']) +
-                          ') in event ' + str(eid))
+                    print('Missing TPREK location map for NodeId(%s) '
+                          'in event %s' %
+                          (str(classification['NodeId']), str(eid)))
             else:
                 # Map some classifications to YSO based categories
-                if unicode(classification['NodeName']) in YSO_CATEGORY_MAPS.keys():
+                if unicode(
+                        classification['NodeName']) in YSO_CATEGORY_MAPS.keys():
                     yso = YSO_CATEGORY_MAPS[unicode(classification['NodeName'])]
                     if isinstance(yso, tuple):
                         for t_v in yso:
@@ -244,9 +249,11 @@ class HelmetImporter(Importer):
             self._import_event(lang, doc, events)
         if 'odata.nextLink' in root_doc:
             self._recur_fetch_paginated_url(
-                HELMET_BASE_URL + '/api/opennc/v1/'
-                + root_doc['odata.nextLink']
-                + "&$format=json", lang, events)
+                '%s/api/opennc/v1/%s%s' % (
+                    HELMET_BASE_URL,
+                    root_doc['odata.nextLink'],
+                    "&$format=json"
+                ), lang, events)
 
     def import_events(self):
         print("Importing HelMet events")
