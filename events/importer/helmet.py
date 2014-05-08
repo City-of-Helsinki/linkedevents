@@ -235,17 +235,27 @@ class HelmetImporter(Importer):
                         event_categories.add(yso_to_db(yso))
         event['categories'] = event_categories
 
+    def _recur_fetch_paginated_url(self, url, lang, events):
+        response = requests.get(url)
+        assert response.status_code == 200
+        root_doc = json.loads(response.content)
+        documents = root_doc['value']
+        for doc in documents:
+            self._import_event(lang, doc, events)
+        if 'odata.nextLink' in root_doc:
+            self._recur_fetch_paginated_url(
+                HELMET_BASE_URL + '/api/opennc/v1/'
+                + root_doc['odata.nextLink']
+                + "&$format=json", lang, events)
+
     def import_events(self):
         print("Importing HelMet events")
         events = recur_dict()
         for lang, helmet_lang_id in HELMET_LANGUAGES.iteritems():
             url = HELMET_API_URL.format(lang_code=helmet_lang_id)
             print("Processing lang " + lang)
-            response = requests.get(url)
-            assert response.status_code == 200
-            documents = json.loads(response.content)['value']
-            for doc in documents:
-                self._import_event(lang, doc, events)
+            self._recur_fetch_paginated_url(url, lang, events)
+
         for event in events.values():
             self.save_event(event)
         print("%d events processed" % len(events.values()))
