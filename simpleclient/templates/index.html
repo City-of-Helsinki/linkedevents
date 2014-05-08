@@ -4,13 +4,10 @@
 <head>
     <title>Linked Events Simple Client</title>
     <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/select2/3.4.6/select2.min.css">
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/select2/3.4.6/select2-bootstrap.css">
     <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/select2/3.4.6/select2.min.js"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/angular.js/1.2.15/angular.min.js"></script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/angular-ui-bootstrap/0.10.0/ui-bootstrap-tpls.min.js"></script>
-    <script src="{% static "js/vendor/angular-ui-select2/src/select2.js" %}"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/angular.js/1.2.15/angular-cookies.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/angular-ui-bootstrap/0.11.0/ui-bootstrap-tpls.min.js"></script>
     <script src="{% static "js/app.js" %}"></script>
 </head>
 <body>
@@ -20,7 +17,7 @@
         <div class="row">
             <h1>Linked events</h1>
 
-            <div class="col-md-4">
+            <div class="col-md-5">
                 <div class="form-group">
                     <label for="startDate">Alkupäivämäärä</label>
 
@@ -37,6 +34,8 @@
                       </span>
                     </p>
                 </div>
+            </div>
+            <div class="col-md-5">
                 <div class="form-group">
                     <label for="endDate">Lopetuspäivämäärä</label>
 
@@ -55,41 +54,25 @@
                     </p>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="form-group">
-                    <label for="place">Paikka</label>
-                    <select class="form-control"
-                            ng-model="place"
-                            name="place"
-                            ng-options="p.name.fi for p in places">
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="keywords">Avainsanat</label>
-                    <select class="form-control" multiple ui-select2 ng-model="keywords">
-                        <option ng-repeat="category in categories" value="{{category.id}}">{{i18n(category.name)}}</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-        <div class="row">
             <div class="col-md-2">
-                <div class="form-group">
-                    <button type="button" class="btn btn-primary" ng-click="search()">Hae
-                    </button>
-                </div>
+                    <div class="form-group" style="margin-top: 24px;">
+                        <button type="button" class="btn btn-primary"
+                                ng-click="search()">Hae
+                        </button>
+                    </div>
             </div>
         </div>
     </form>
 
-    <hr>
-    <div class="row">
+    <br><br>
+    <div class="row" ng-show="showPagination">
         <table class="table">
             <tr><th>id</th><th>nimi</th><th>kuvaus</th><th>luontiaika</th></tr>
             <tr ng-repeat="event in events">
                 <td>{{event.id}}</td><td>{{i18n(event.name)}}</td><td>{{i18n(event.description)}}</td><td>{{event.created_time}}</td>
             </tr>
         </table>
+        <pagination total-items="totalItems" ng-model="currentPage" ng-change="pageChanged()" max-size="maxSize" class="pagination-sm" boundary-links="true" rotate="false" num-pages="numPages"></pagination>
     </div>
 </div>
 {% endverbatim %}

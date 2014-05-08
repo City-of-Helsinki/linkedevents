@@ -1,12 +1,19 @@
 window.apiVersion = 'v0.1';
 
-var app = angular.module('simpleClient', ['ui.bootstrap', 'ui.select2'])
-    .controller('SimpleClientCtrl', function ($scope, $http, $filter) {
+var app = angular.module('simpleClient', ['ui.bootstrap', 'ngCookies'])
+    .controller('SimpleClientCtrl', function ($scope, $http, $filter, $cookieStore) {
+
+        $scope.maxSize = 10;
+        $scope.queryString = '?';
+        $scope.currentPage = 1;
 
         $scope.clear = function () {
             $scope.startDate = null;
             $scope.endDate = null;
         };
+
+        $scope.startDate = $cookieStore.get('startDate');
+        $scope.endDate = $cookieStore.get('endDate');
 
         $scope.formats = ['dd-MMMM-yyyy', 'yyyy/MM/dd', 'shortDate'];
         $scope.format = $scope.formats[0];
@@ -22,39 +29,34 @@ var app = angular.module('simpleClient', ['ui.bootstrap', 'ui.select2'])
             $scope.endDateOpened = true;
         };
 
-        $http({
-            method: 'GET',
-            url: '/' + window.apiVersion + '/place/'
-        }).success(function (data) {
-            $scope.places = data.results;
-        });
-
-        $http({
-            method: 'GET',
-            url: '/' + window.apiVersion + '/category/'
-        }).success(function (data) {
-            $scope.categories = data.results;
-        });
-
         $scope.search = function () {
-            var queryString = '?';
             if ($scope.startDate)
-                queryString += 'start=' + $filter('date')($scope.startDate, 'yyyy-MM-dd') + '&';
+                $scope.queryString += 'start=' + $filter('date')($scope.startDate, 'yyyy-MM-dd') + '&';
             if ($scope.startDate)
-                queryString += 'end=' +  $filter('date')($scope.endDate, 'yyyy-MM-dd') + '&';
-            if ($scope.place)
-                queryString += 'place=' + $scope.place.id + '&';
-            if ($scope.keywords) {
-                queryString += 'keywords=' + $scope.keywords.toString() + '&';
-            }
+                $scope. queryString += 'end=' +  $filter('date')($scope.endDate, 'yyyy-MM-dd') + '&';
+
+            $cookieStore.put('startDate', $scope.startDate);
+            $cookieStore.put('endDate', $scope.endDate);
 
             $http({
                 method: 'GET',
-                url: '/' + window.apiVersion + '/event/' + queryString
+                url: '/' + window.apiVersion + '/event/' + $scope.queryString
+            }).success(function (data) {
+                $scope.events = data.results;
+                $scope.totalItems = data.count;
+                $scope.showPagination = true;
+            });
+        }
+
+        $scope.pageChanged = function () {
+            $http({
+                method: 'GET',
+                url: '/' + window.apiVersion + '/event/' + $scope.queryString + 'page=' + $scope.currentPage
             }).success(function (data) {
                 $scope.events = data.results;
             });
-        }
+        };
+
 
         $scope.i18n = function (strObj) {
             var defaultLang = 'fi';
@@ -69,6 +71,21 @@ var app = angular.module('simpleClient', ['ui.bootstrap', 'ui.select2'])
             } else {
                 return 'undefined';
             }
+        }
+
+        $scope.getValues = function (obj) {
+            var keys = ['name', 'description']
+            var arr = [];
+            Object.keys(obj).forEach(function (key) {
+                if ($.inArray(key, keys) > 0) {
+                    if (obj[key])
+                        arr.push(obj[key].toString());
+                    else
+                        arr.push("");
+                }
+            });
+            console.log(arr);
+            return arr;
         }
 
     });
