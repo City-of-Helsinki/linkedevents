@@ -149,7 +149,7 @@ class TprekImporter(Importer):
         if self.options['cached']:
             requests_cache.install_cache('tprek')
 
-        queryset = Place.objects.filter(data_source=self.data_source, deleted=False)
+        queryset = Place.objects.filter(data_source=self.data_source)
         if self.options.get('single', None):
             obj_id = self.options['single']
             obj_list = [self.pk_get('unit', obj_id)]
