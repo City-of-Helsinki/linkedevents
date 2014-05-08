@@ -38,3 +38,11 @@ if [ $? -ne 0 ]; then
     cat $LOG_FILE
     exit 1
 fi
+
+echo Importing HelMet events >> $LOG_FILE
+
+python manage.py event_import helmet --events >> $LOG_FILE 2>&1
+if [ $? -ne 0 ]; then
+    cat $LOG_FILE
+    exit 1
+fi
