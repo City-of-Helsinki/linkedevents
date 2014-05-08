@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from rest_framework.reverse import reverse
 from rest_framework.routers import DefaultRouter
 from rest_framework.response import Response

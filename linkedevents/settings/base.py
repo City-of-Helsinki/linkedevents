@@ -46,9 +46,10 @@ INSTALLED_APPS = (
     'modeltranslation',
     'reversion',
     'isodate',
+    'icalendar',
     'munigeo',
-
     'events',
+    'simpleclient',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -97,7 +98,7 @@ USE_L10N = True
 USE_TZ = True
 
 LOCALE_PATHS = (
-    os.path.join(BASE_DIR, '../locale'),
+    os.path.join(BASE_DIR, 'locale'),
 )
 
 IMPORT_FILE_PATH = os.path.join(BASE_DIR, 'data')
@@ -106,6 +107,10 @@ IMPORT_FILE_PATH = os.path.join(BASE_DIR, 'data')
 # https://docs.djangoproject.com/en/1.6/howto/static-files/
 
 STATIC_URL = '/static/'
+
+STATICFILES_DIRS = (
+    os.path.join(BASE_DIR, "assets"),
+)
 
 REST_FRAMEWORK = {
     #'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.IsAdminUser',),
@@ -128,7 +133,7 @@ REST_FRAMEWORK = {
 CORS_ORIGIN_WHITELIST = ()
 
 TEMPLATE_DIRS = (
-    os.path.join(BASE_DIR, '../templates'),
+    os.path.join(BASE_DIR, 'templates'),
 )
 
 POSTGIS_VERSION = (2, 1, 1)
