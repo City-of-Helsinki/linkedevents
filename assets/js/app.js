@@ -1,10 +1,37 @@
 window.apiVersion = 'v0.1';
 
-var app = angular.module('simpleClient', ['ui.bootstrap', 'ngCookies'])
-    .controller('SimpleClientCtrl', function ($scope, $http, $filter, $cookieStore) {
+window.dumpObj = function (obj, name, indent, depth) {
+    if (depth > 10) {
+        return indent + name + ": max depth reached\n";
+    }
+    if (typeof obj == "object") {
+        var child = null;
+        var output = indent + '<b>' + name + ":</b><br>\n";
+        indent += "&nbsp;&nbsp;&nbsp;&nbsp;";
+        for (var item in obj) {
+            try {
+                child = obj[item];
+            } catch (e) {
+                child = "error";
+            }
+            if (typeof child == "object") {
+                output += dumpObj(child, item, indent, depth + 1);
+            } else {
+                output += indent + '<b>' + item + ":</b> " + child + "<br>\n";
+            }
+        }
+        return output;
+    } else {
+        return obj;
+    }
+};
+
+var app = angular.module('simpleClient', ['ui.bootstrap', 'ngCookies', 'ngSanitize'])
+    .controller('SimpleClientCtrl', function ($scope, $http, $filter, 
+                                              $cookieStore, $modal) {
 
         $scope.maxSize = 10;
-        $scope.queryString = '?';
+        $scope.queryString = '?include=location,keywords&';
         $scope.currentPage = 1;
 
         $scope.clear = function () {
@@ -46,7 +73,7 @@ var app = angular.module('simpleClient', ['ui.bootstrap', 'ngCookies'])
                 $scope.totalItems = data.count;
                 $scope.showPagination = true;
             });
-        }
+        };
 
         $scope.pageChanged = function () {
             $http({
@@ -56,7 +83,6 @@ var app = angular.module('simpleClient', ['ui.bootstrap', 'ngCookies'])
                 $scope.events = data.results;
             });
         };
-
 
         $scope.i18n = function (strObj) {
             var defaultLang = 'fi';
@@ -71,7 +97,7 @@ var app = angular.module('simpleClient', ['ui.bootstrap', 'ngCookies'])
             } else {
                 return 'undefined';
             }
-        }
+        };
 
         $scope.getValues = function (obj) {
             var keys = ['name', 'description']
@@ -86,6 +112,32 @@ var app = angular.module('simpleClient', ['ui.bootstrap', 'ngCookies'])
             });
             console.log(arr);
             return arr;
-        }
+        };
 
+        $scope.toPrettyList = function (lst) {
+            return lst.map(function (item) { return $scope.i18n(item.name) }).join(', ');
+        };
+
+
+
+        $scope.openDetails = function (event) {
+            $scope.modalInstance = $modal.open({
+                templateUrl: 'modal.html',
+                controller: 'ModalCtrl',
+                resolve: {
+                    event: function () {
+                        return event;
+                    }
+                }
+            });
+        };
+
+
+    })
+    .controller('ModalCtrl', function ($scope, event, $modalInstance) {
+            $scope.content = dumpObj(event, "Event", "");
+
+            $scope.close = function () {
+                $modalInstance.close();
+            };
     });

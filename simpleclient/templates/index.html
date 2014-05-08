@@ -7,12 +7,25 @@
     <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/angular.js/1.2.15/angular.min.js"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/angular.js/1.2.15/angular-cookies.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/angular.js/1.2.15/angular-sanitize.min.js"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/angular-ui-bootstrap/0.11.0/ui-bootstrap-tpls.min.js"></script>
     <script src="{% static "js/app.js" %}"></script>
 </head>
 <body>
 {% verbatim %}
 <div class="container" ng-controller="SimpleClientCtrl">
+    <script type="text/ng-template" id="modal.html">
+        <div class="modal-header">
+            <h3 class="modal-title">Yksityiskohdat</h3>
+        </div>
+        <div class="modal-body">
+            <div ng-bind-html="content"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" ng-click="close()">Sulje</button>
+        </div>
+    </script>
+
     <form role="form">
         <div class="row">
             <h1>Linked events</h1>
@@ -67,9 +80,10 @@
     <br><br>
     <div class="row" ng-show="showPagination">
         <table class="table">
-            <tr><th>id</th><th>nimi</th><th>kuvaus</th><th>luontiaika</th></tr>
+            <tr><th>id</th><th>nimi</th><th>kuvaus</th><th>paikka</th><th>alkuaika</th><th>loppuaika</th><th>luontiaika</th><th>avainsanat</th></tr>
             <tr ng-repeat="event in events">
-                <td>{{event.id}}</td><td>{{i18n(event.name)}}</td><td>{{i18n(event.description)}}</td><td>{{event.created_time}}</td>
+                <td ng-click="openDetails(event)">{{event.id}}</td><td ng-click="openDetails(event)">{{i18n(event.name)}}</td><td ng-click="openDetails(event)">{{i18n(event.description) | limitTo:200 }}...</td><td>{{ i18n(event.location.name) }}</td><td>{{event.start_time}}</td>
+                <td>{{event.end_time}}</td><td>{{event.created_time}}</td><td>{{ toPrettyList(event.keywords) }}</td>
             </tr>
         </table>
         <pagination total-items="totalItems" ng-model="currentPage" ng-change="pageChanged()" max-size="maxSize" class="pagination-sm" boundary-links="true" rotate="false" num-pages="numPages"></pagination>
