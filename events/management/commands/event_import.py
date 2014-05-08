@@ -12,6 +12,7 @@ class Command(BaseCommand):
     help = "Import event data"
     option_list = list(BaseCommand.option_list + (
         make_option('--all', action='store_true', dest='all', help='Import all entities'),
+        make_option('--cached', action='store_true', dest='cached', help='Cache requests (if possible)'),
     ))
 
     importer_types = ['locations', 'events', 'categories']
@@ -36,7 +37,8 @@ class Command(BaseCommand):
         else:
             root_dir = settings.BASE_DIR
         importer = imp_class({'data_path': os.path.join(root_dir, 'data'),
-                              'verbosity': int(options['verbosity'])})
+                              'verbosity': int(options['verbosity']),
+                              'cached': options['cached']})
 
         # Activate the default language for the duration of the import
         # to make sure translated fields are populated correctly.

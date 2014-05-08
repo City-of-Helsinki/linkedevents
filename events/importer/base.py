@@ -7,6 +7,8 @@ from collections import defaultdict
 from django.db import DataError
 from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
+from django.contrib.gis.geos import Point, Polygon
+from django.contrib.gis.gdal import SpatialReference, CoordTransform
 
 from modeltranslation.translator import translator
 
@@ -37,6 +39,19 @@ class Importer(object):
             # FIXME: get language name translations from Django
             lang_obj, _ = Language.objects.get_or_create(id=lang_code)
             self.languages[lang_code] = lang_obj
+
+        self.target_srid = settings.PROJECTION_SRID
+        gps_srs = SpatialReference(4326)
+        target_srs = SpatialReference(self.target_srid)
+        if getattr(settings, 'BOUNDING_BOX'):
+            self.bounding_box = Polygon.from_bbox(settings.BOUNDING_BOX)
+            self.bounding_box.set_srid(self.target_srid)
+            target_to_gps_ct = CoordTransform(target_srs, gps_srs)
+            self.bounding_box.transform(target_to_gps_ct)
+        else:
+            self.bounding_box = None
+        self.gps_to_target_ct = CoordTransform(gps_srs, target_srs)
+
         self.setup()
 
     def setup(self):
@@ -91,64 +106,18 @@ class Importer(object):
                 parent_events.append(potential_parent)
         return parent_events
 
-    def save_location(self, location_dict):
-        location_dict.default_factory = None
-        postal_address, created = PostalAddress.objects.get_or_create(
-            street_address_fi=location_dict['address']['street_address']['fi'],
-            address_locality_fi=location_dict['address']['address_locality']['fi'],
-            postal_code=location_dict['address'].get('postal_code')
-        )
-        place, created = Place.objects.get_or_create(
-            data_source=location_dict['data_source'],
-            origin_id=location_dict['origin_id']
-        )
-        place.address = postal_address
-        geodata = location_dict.get('geo')
-        if geodata:
-            place.geo = GeoInfo(**geodata)
-        else:
-            place.geo = GeoInfo()
-
-        for l, _ in settings.LANGUAGES:
-            with active_language(l):
-                name = location_dict['name']
-                if l in name:
-                    place.name = name[l]
-                for key in ['email', 'street_address', 'address_locality']:
-                    val = location_dict['address'][key]
-                    if l in val:
-                        setattr(postal_address, key, val[l])
-
-        place.save()
-        place.geo.save()
-        postal_address.save()
-
-
     def _set_field(self, obj, field_name, val):
         if not hasattr(obj, field_name):
             print(vars(obj))
-        if getattr(obj, field_name) == val:
+        obj_val = getattr(obj, field_name)
+        if obj_val == val:
             return
         setattr(obj, field_name, val)
         obj._changed = True
 
-
-    def save_event(self, event):
-        errors = set()
-
-        args = dict(data_source=event['data_source'], origin_id=event['origin_id'])
-        try:
-            obj = Event.objects.get(**args)
-            obj._created = False
-        except Event.DoesNotExist:
-            obj = Event(**args)
-            obj._created = True
-        obj._changed = False
-
+    def _update_fields(self, obj, info, skip_fields):
         obj_fields = list(obj._meta.fields)
-        trans_fields = translator.get_options_for_model(Event).fields
-        skip_fields = ['id', 'location', 'offers', 'category']
-
+        trans_fields = translator.get_options_for_model(type(obj)).fields
         for field_name, lang_fields in trans_fields.items():
             lang_fields = list(lang_fields)
             for lf in lang_fields:
@@ -156,11 +125,11 @@ class Importer(object):
                 # Do not process this field later
                 skip_fields.append(lf.name)
 
-                if field_name not in event:
+                if field_name not in info:
                     continue
 
-                data = event[field_name]
-                if lang in data:
+                data = info[field_name]
+                if data is not None and lang in data:
                     val = data[lang]
                 else:
                     val = None
@@ -175,21 +144,93 @@ class Importer(object):
                     obj_fields.remove(f)
                     break
 
-        if 'origin_id' in event:
-            event['origin_id'] = str(event['origin_id'])
+        if 'origin_id' in info:
+            info['origin_id'] = str(info['origin_id'])
 
         for field in obj_fields:
             field_name = field.name
-            if field_name not in event:
+            if field_name not in info:
                 continue
-            self._set_field(obj, field_name, event[field_name])
+            self._set_field(obj, field_name, info[field_name])
+
+    def save_event(self, info):
+        info = info.copy()
+
+        args = dict(data_source=info['data_source'], origin_id=info['origin_id'])
+        try:
+            obj = Event.objects.get(**args)
+            obj._created = False
+        except Event.DoesNotExist:
+            obj = Event(**args)
+            obj._created = True
+        obj._changed = False
 
         location_id = None
-        if 'location' in event:
-            location = event['location']
+        location_extra_info = None
+        if 'location' in info:
+            location = info['location']
             if 'id' in location:
                 location_id = location['id']
+            info['location_extra_info'] = location.get('extra_info', None)
+
+        skip_fields = ['id', 'location', 'offers', 'category']
+        self._update_fields(obj, info, skip_fields)
+
         self._set_field(obj, 'location_id', location_id)
+
+        if obj._created or obj._changed:
+            obj.save()
+
+        keywords = info.get('keywords', [])
+        new_keywords = set([kw.id for kw in keywords])
+        old_keywords = set(obj.keywords.values_list('id', flat=True))
+        if new_keywords != old_keywords:
+            obj.keywords = new_keywords
+            obj._changed = True
+
+        if obj._changed or obj._created:
+            if obj._created:
+                verb = "created"
+            else:
+                verb = "changed"
+            print("%s %s" % (obj, verb))
+
+    def save_location(self, info):
+        errors = set()
+
+        args = dict(data_source=info['data_source'], origin_id=info['origin_id'])
+        try:
+            obj = Place.objects.get(**args)
+            obj._created = False
+        except Place.DoesNotExist:
+            obj = Place(**args)
+            obj._created = True
+        obj._changed = False
+
+        skip_fields = ['id', 'location', 'custom_fields']
+        self._update_fields(obj, info, skip_fields)
+
+        n = info.get('latitude', 0)
+        e = info.get('longitude', 0)
+        location = None
+        if n and e:
+            p = Point(e, n, srid=4326) # GPS coordinate system
+            if p.within(self.bounding_box):
+                if self.target_srid != 4326:
+                    p.transform(self.gps_to_target_ct)
+                location = p
+            else:
+                print("Invalid coordinates (%f, %f) for %s" % (n, e, obj))
+
+        if location and obj.location:
+            # If the distance is less than 10cm, assume the location
+            # hasn't changed.
+            assert obj.location.srid == settings.PROJECTION_SRID
+            if location.distance(obj.location) < 0.10:
+                location = obj.location
+        if location != obj.location:
+            obj._changed = True
+            obj.location = location
 
         if obj._changed or obj._created:
             if obj._created:
@@ -199,12 +240,7 @@ class Importer(object):
             print("%s %s" % (obj, verb))
             obj.save()
 
-        if 'categories' in event:
-           for c in event['categories']:
-               obj.keywords.add(c)
-
-        return errors
-
+        return obj
 
 importers = {}
 

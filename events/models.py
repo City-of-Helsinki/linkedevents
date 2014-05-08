@@ -141,6 +141,7 @@ class Category(BaseModel, SchemalessFieldMixin):
 class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     same_as = models.CharField(max_length=255, db_index=True, null=True,
                                blank=True)
+    url = models.URLField(_('Place home page'), blank=True)
     description = models.TextField(null=True, blank=True)
     parent = TreeForeignKey('self', null=True, blank=True,
                             related_name='children')
@@ -231,6 +232,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     event_status = models.SmallIntegerField(choices=STATUSES,
                                             default=SCHEDULED)
     location = models.ForeignKey(Place, null=True, blank=True)
+    location_extra_info = models.CharField(max_length=400, null=True, blank=True)
+
     start_time = models.DateTimeField(null=True, db_index=True, blank=True)
     end_time = models.DateTimeField(null=True, db_index=True, blank=True)
     super_event = TreeForeignKey('self', null=True, blank=True,
