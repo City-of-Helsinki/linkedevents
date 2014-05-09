@@ -365,7 +365,12 @@ class CitySDKExporter(Exporter):
             with HTTMock(citysdk_mock):
                 return requests.request(method, url, **kwargs)
         else:
-            return requests.request(method, url, **kwargs)
+            resp = requests.request(method, url, **kwargs)
+            # if session dies while doing exporting
+            if resp.status_code == 401:
+                self.authenticate()
+                return requests.request(method, url, **kwargs)
+            return resp
 
     def _export_categories(self):
         filters = {'event__in': Event.objects.all()}
