@@ -115,6 +115,7 @@ STATICFILES_DIRS = (
 REST_FRAMEWORK = {
     #'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.IsAdminUser',),
     'PAGINATE_BY': 20,
+    'PAGINATE_BY_PARAM': 'page_size',
     'DEFAULT_RENDERER_CLASSES': (
         'events.renderers.JSONRenderer',
         'events.renderers.JSONLDRenderer',
@@ -143,3 +144,11 @@ PROJECTION_SRID=3067
 # Bounding box of Finland and then some
 
 BOUNDING_BOX = [-548576, 6291456, 1548576, 8388608]
+
+CITYSDK_API_SETTINGS = {
+    'CITYSDK_URL': "http://5.9.148.236/CitySDK/",
+    'USERNAME': 'admin',
+    'PASSWORD': 'defaultCitySDKPassword',
+    'SRS_URL': 'http://www.opengis.net/def/crs/EPSG/0/%d' % PROJECTION_SRID,
+    'DEFAULT_POI_CATEGORY': '53562f3238653c0a842a3bf7'
+}

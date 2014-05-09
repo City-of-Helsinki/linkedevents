@@ -13,11 +13,15 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
 from icalendar import Calendar, Event as CalendarEvent
+from httmock import all_requests, HTTMock, response
 
 BASE_API_URL = settings.CITYSDK_API_SETTINGS['CITYSDK_URL']
 EVENTS_URL = BASE_API_URL + 'events/'
 POIS_URL = BASE_API_URL + 'pois/'
-CATEGORY_URL = BASE_API_URL + 'categories?List='
+CATEGORY_URL = BASE_API_URL + 'categories?List=event'
+
+DRY_RUN_MODE = False  # If set True, do just local DB actions
+VERBOSE = False  # If set to True, print verbose creation logs
 
 # maps ISO 639-1 alpha-2 to BCP 47 tags consumed by CitySDK
 bcp47_lang_map = {
@@ -57,9 +61,6 @@ CITYSDK_POI_DEFAULTS_TPL = {
 
 # Create and set default category before use!
 DEFAULT_POI_CATEGORY = settings.CITYSDK_API_SETTINGS['DEFAULT_POI_CATEGORY']
-
-# local Category.CATEGORY_TYPES to CitySDK category types
-category_types = ["event", "poi"]
 
 
 def jsonize(from_dict):
@@ -107,9 +108,6 @@ class CitySDKExporter(Exporter):
     def setup(self):
         self.authenticate()
 
-        # TODO: create default category for POIs to remote system if
-        # not yet created
-
     def authenticate(self):
         """
         Authenticate, CitySDK uses session based username/password auth
@@ -135,7 +133,7 @@ class CitySDKExporter(Exporter):
 
         # fetch category ID from exported categories
         citysdk_event['category'] = []
-        for category in event.categories.all():
+        for category in event.keywords.all():
             exported_category = ExportInfo.objects.filter(
                 content_type=ContentType.objects.get_for_model(Category),
                 object_id=category.id,
@@ -154,7 +152,7 @@ class CitySDKExporter(Exporter):
                     {
                         "targetPOI": exported_poi.target_id,
                         "term": "equal",
-                        "base": "http://tourism.citysdk.cm-lisboa.pt/pois/"
+                        "base": POIS_URL
                     }
                 ]
             }
@@ -262,81 +260,18 @@ class CitySDKExporter(Exporter):
         self._export_places()
         self._export_events()
 
-    def _export_categories(self):
-        """
-        Categories are a bit special case so code is duplicated from generic
-        export.
-        """
-        category_type = ContentType.objects.get_for_model(Category)
-
-        export_infos = ExportInfo.objects.filter(content_type=category_type,
-                                                 target_system=self.name)
-
-        # deleted or modified
-        for export_info in export_infos:
-            try:
-                category = Category.objects.get(pk=export_info.object_id)
-                category_type_str = category_types[category.category_for]
-                if category.last_modified_time > export_info.last_exported_time:
-                    citysdk_category = self._generate_exportable_category(
-                        category)
-                    citysdk_category['id'] = export_info.target_id
-                    json = jsonize({'list': category_type_str,
-                                    'category': citysdk_category})
-                    response = requests.post(CATEGORY_URL + category_type_str,
-                                             data=json,
-                                             headers=self.response_headers,
-                                             cookies=self.session_cookies)
-                    if response.status_code == 200:
-                        export_info.save()  # refresh last export date
-                        print(
-                            "Category updated (original id: %d, target id: %s)" %
-                            (category.pk, export_info.target_id))
-
-            except ObjectDoesNotExist:
-                # Must delete event category as default as we don't know
-                # the type. It's ok as Linked Events don't have place/poi
-                # categories yet.
-                response = requests.delete(CATEGORY_URL + 'event',
-                                           headers=self.response_headers,
-                                           data=jsonize({
-                                               "id": export_info.target_id}),
-                                           cookies=self.session_cookies)
-                if response.status_code == 200:
-                    export_info.delete()
-                    print("Category removed (original id: %d, target id: %s) "
-                          "from target system" %
-                          (export_info.object_id, export_info.target_id))
-
-        # new
-        for category in Category.objects.exclude(
-                id__in=export_infos.values('object_id')):
-            category_type_str = category_types[category.category_for]
-            citysdk_category = self._generate_exportable_category(category)
-            citysdk_category['created'] = datetime.datetime.utcnow().replace(
-                tzinfo=pytz.utc)
-
-            json = jsonize({'list': category_type_str,
-                            'category': citysdk_category})
-            response = requests.put(CATEGORY_URL + category_type_str,
-                                    data=json,
-                                    headers=self.response_headers,
-                                    cookies=self.session_cookies)
-            if response.status_code == 200:
-                new_category = response.json()
-                new_export_info = ExportInfo(content_object=category,
-                                             target_id=new_category,
-                                             target_system=self.name)
-                new_export_info.save()
-                print("Category exported (original id: %d, target id: %s)" %
-                      (category.pk, new_category))
-
-    def _export_models(self, klass, generate, url, json_wrapper):
-        event_type = ContentType.objects.get_for_model(klass)
+    def _export_models(self, klass, generate, url, json_wrapper,
+                       extra_filters=None):
+        model_type = ContentType.objects.get_for_model(klass)
 
         # get all exported
-        export_infos = ExportInfo.objects.filter(content_type=event_type,
+        export_infos = ExportInfo.objects.filter(content_type=model_type,
                                                  target_system=self.name)
+
+        model_name = klass.__name__
+        modify_count = 0
+        delete_count = 0
+        new_count = 0
 
         # deleted or modified
         for export_info in export_infos:
@@ -345,62 +280,110 @@ class CitySDKExporter(Exporter):
                 if model.last_modified_time > export_info.last_exported_time:
                     citysdk_model = generate(model)
                     citysdk_model['id'] = export_info.target_id
-                    response = requests.post(url,
-                                             data=jsonize({
-                                                 json_wrapper: citysdk_model}),
-                                             headers=self.response_headers,
-                                             cookies=self.session_cookies)
-                    if response.status_code == 200:
+                    if model_name == 'Category':
+                        data = {
+                            'list': 'event',
+                            'category': citysdk_model
+                        }
+                    else:
+                        data = {json_wrapper: citysdk_model}
+                    modify_response = self._do_req('post', url, data)
+                    if modify_response.status_code == 200:
                         export_info.save()  # refresh last export date
                         print("%s updated (original id: %d, target id: %s)" %
-                              (klass.__name__, model.pk, export_info.target_id))
+                              (model_name, model.pk, export_info.target_id))
+                        modify_count += 1
 
             except ObjectDoesNotExist:
-                response = requests.delete(url + export_info.target_id,
-                                           headers=self.response_headers,
-                                           cookies=self.session_cookies)
-                if response.status_code == 200:
+                if model_name == 'Category':
+                    delete_response = self._do_req(
+                        'delete', url,
+                        data={"id": export_info.target_id}
+                    )
+                else:
+                    delete_response = self._do_req(
+                        'delete', url + export_info.target_id)
+                if delete_response.status_code == 200:
                     export_info.delete()
                     print("%s removed (original id: %d, target id: %s) "
                           "from target system" %
-                          (klass.__name__, export_info.object_id,
+                          (model_name, export_info.object_id,
                            export_info.target_id))
+                    delete_count += 1
 
-        # new
-        for model in klass.objects.exclude(
-                id__in=export_infos.values("object_id")):
+        #new
+        imported = {'id__in': export_infos.values("object_id")}
+        if extra_filters:
+            qs = klass.objects.exclude(
+                **imported).filter(**extra_filters).distinct()
+        else:
+            qs = klass.objects.exclude(**imported)
+        for model in qs:
             citysdk_model = generate(model)
             citysdk_model['created'] = datetime.datetime.utcnow().replace(
                 tzinfo=pytz.utc)
-            response = requests.put(url,
-                                    data=jsonize({json_wrapper: citysdk_model}),
-                                    headers=self.response_headers,
-                                    cookies=self.session_cookies)
-            if response.status_code == 200:
-                new_model = response.json()
-                print("%s exported (original id: %d, target id: %s)" %
-                      (klass.__name__, model.pk, new_model['id']))
+            if model_name == 'Category':
+                data = {
+                    'list': 'event',
+                    'category': citysdk_model
+                }
+            else:
+                data = {json_wrapper: citysdk_model}
+            new_response = self._do_req('put', url, data)
+            if new_response.status_code == 200:
+                new = new_response.json()
+                if isinstance(new, dict) and 'id' in new:
+                    new_id = new['id']
+                else:
+                    new_id = new
+                if VERBOSE:
+                    print("%s exported (original id: %d, target id: %s)" %
+                          (model_name, model.pk, new_id))
                 new_export_info = ExportInfo(content_object=model,
-                                             content_type=event_type,
-                                             target_id=new_model['id'],
+                                             content_type=model_type,
+                                             target_id=new_id,
                                              target_system=self.name)
                 new_export_info.save()
+                new_count += 1
             else:
                 print("%s export failed (original id: %d)" %
-                      (klass.__name__, model.pk))
+                      (model_name, model.pk))
+
+        print(model_name + " items added: " + str(new_count))
+        print(model_name + " items modified: " + str(modify_count))
+        print(model_name + " items deleted: " + str(delete_count))
+
+    def _do_req(self, method, url, data=None):
+        kwargs = {
+            'headers': self.response_headers,
+            'cookies': self.session_cookies
+        }
+        if data:
+            kwargs['data'] = jsonize(data)
+
+        if DRY_RUN_MODE:
+            with HTTMock(citysdk_mock):
+                return requests.request(method, url, **kwargs)
+        else:
+            return requests.request(method, url, **kwargs)
+
+    def _export_categories(self):
+        filters = {'event__in': Event.objects.all()}
+        self._export_models(Category, self._generate_exportable_category,
+                            CATEGORY_URL, 'poi', extra_filters=filters)
 
     def _export_places(self):
-            self._export_models(Place, self._generate_exportable_place, POIS_URL,
-                                'poi')
+            filters = {'event__in': Event.objects.all()}
+            self._export_models(Place, self._generate_exportable_place,
+                                POIS_URL, 'poi', extra_filters=filters)
 
     def _export_events(self):
-        self._export_models(Event, self._generate_exportable_event, EVENTS_URL,
-                            'event')
+        self._export_models(Event, self._generate_exportable_event,
+                            EVENTS_URL, 'event')
 
     def __delete_resource(self, resource, url):
-        response = requests.delete('%s/%s' % (url,
-                                              resource.target_id),
-                                   cookies=self.session_cookies)
+        response = self._do_req('delete', '%s/%s' % (
+            url, resource.target_id))
         if response.status_code == 200:
             resource.delete()
             print("%s removed (original id: %d, target id: %s) from "
@@ -429,15 +412,11 @@ class CitySDKExporter(Exporter):
                 content_type=get_type(Category),
                 target_system=self.name):
             try:
-                category = Category.objects.get(pk=category_info.object_id)
-                response = requests.delete(CATEGORY_URL +
-                                           category_types[
-                                               category.category_for],
-                                           headers=self.response_headers,
-                                           data=jsonize({
-                                               "id": category_info.target_id}),
-                                           cookies=self.session_cookies)
-                if response.status_code == 200:
+                category_response = self._do_req(
+                    'delete', CATEGORY_URL + 'event',
+                    data={"id": category_info.target_id}
+                )
+                if category_response.status_code == 200:
                     category_info.delete()
                     print("Category removed (original id: %d, target id: %s) "
                           "from target system" %
@@ -453,3 +432,15 @@ class CitySDKExporter(Exporter):
             self._delete_exported_from_target()
         else:
             self._export_new()
+
+
+# For dry run request mocking
+@all_requests
+def citysdk_mock(url, request):
+    foo = 'foo'
+    if request.method == 'PUT':
+        data = '"'+foo+'"'
+    else:
+        data = {'id': str(foo)}
+    headers = {'content-type': 'application/json'}
+    return response(200, data, headers, None, 0, request)

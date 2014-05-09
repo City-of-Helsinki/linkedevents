@@ -24,3 +24,4 @@ django-extensions
 rdflib
 -e git+https://github.com/juyrjola/munigeo#egg=django-munigeo
 icalendar
+httmock

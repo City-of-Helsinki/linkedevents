@@ -119,10 +119,6 @@ class Category(BaseModel, SchemalessFieldMixin):
 
     schema_org_type = "Thing/LinkedEventCategory"
 
-    CATEGORY_TYPES = (
-        (0, 'Event'), (1, 'Place'),
-    )
-
     # category ids from: http://finto.fi/ysa/fi/
     url = models.CharField(max_length=255, db_index=True, null=False, blank=False, default='unknown')
     description = models.TextField(blank=True)
