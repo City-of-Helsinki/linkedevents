@@ -16,8 +16,7 @@ YSO_CATEGORY_MAPS = {
     u'Lapset': u'p12262',
     u'Kirjastot': u'p2787',
     u'Opiskelijat': u'p16486',
-    u'Konsertit ja klubit': (u'p11185', u'p20421'),
-    # -> konsertit, musiikkiklubit
+    u'Konsertit ja klubit': (u'p11185', u'p20421'), # -> konsertit, musiikkiklubit
     u'Kurssit': u'p9270',
     u'venäjä': u'p7643',  # -> venäjän kieli
     u'Seniorit': u'p2434',  # -> vanhukset
@@ -30,12 +29,11 @@ YSO_CATEGORY_MAPS = {
     u'Pelitapahtumat': u'p6062',  # -> pelit
     u'Satutunnit': u'p14710',
     u'Koululaiset': u'p16485',
-    u'Lasten ja nuorten tapahtumat': (u'p12262', u'p11617'),
-    # -> lapset, nuoret
+    u'Lasten ja nuorten tapahtumat': (u'p12262', u'p11617'), # -> lapset, nuoret
     u'Lapset ja perheet': (u'p12262', u'p4363'),  # -> lapset, perheet
+    u'Lukupiirit': u'p11406',  # -> lukeminen
     # u'Opastuskalenteri ': '?',
-    #u'Lukupiirit': '?',
-    #u'muut kielet': '?'
+    # u'muut kielet': '?'
 }
 
 LOCATIONS = {
@@ -117,11 +115,30 @@ HELMET_API_URL = (
     '/Contents?$filter=TemplateId%20eq%203&$expand=ExtendedProperties'
     '&$orderby=EventEndDate%20desc&$format=json'
 )
+
+HELMET_LANGUAGE_VERSIONS_URL = (
+    HELMET_BASE_URL +
+    '/api/opennc/v1/Contents({content_id})/LanguageVersions?$format=json'
+)
+
+HELMET_CONTENT_URL = (
+    HELMET_BASE_URL +
+    '/api/opennc/v1/Contents({content_id})/?$format=json&$expand=ExtendedProperties'
+)
+
 HELMET_LANGUAGES = {
     'fi': 1,
     'sv': 3,
     'en': 2
 }
+
+TICKS = ['/', '-', '\\', '|']
+
+def get_lang(lang_id):
+    for code, lid in HELMET_LANGUAGES.items():
+        if lid == lang_id:
+            return code
+    return None
 
 LOCAL_TZ = timezone('Europe/Helsinki')
 
@@ -130,6 +147,7 @@ LOCAL_TZ = timezone('Europe/Helsinki')
 class HelmetImporter(Importer):
     name = "helmet"
     supported_languages = ['fi', 'sv', 'en']
+    current_tick_index = 0
 
     def setup(self):
         ds_args = dict(id=self.name)
@@ -159,7 +177,7 @@ class HelmetImporter(Importer):
         self.category_list = Category.objects.filter(
             data_source=self.yso_data_source
         ).filter(url__in=cat_id_set)
-        self.yso_by_id = {p.url: p.id for p in self.category_list}
+        self.yso_by_id = {p.url: p for p in self.category_list}
 
 
     @staticmethod
@@ -174,7 +192,14 @@ class HelmetImporter(Importer):
 
     def _import_event(self, lang, event_el, events):
         eid = int(event_el['ContentId'])
+
         event = events[eid]
+
+        #if marked as ignore, quit
+        if event['ignore'] == True:
+            del events[eid]
+            return None
+
         event['data_source'] = self.data_source
         event['origin_id'] = eid
 
@@ -186,7 +211,7 @@ class HelmetImporter(Importer):
         if ext_props['Description']:
             event['description'][lang] = strip_tags(ext_props['Description'])
 
-        matches = re.findall(r'src="(.*?)"', unicode(ext_props['Images']))
+        matches = re.findall(r'src="(.*?)"', str(ext_props['Images']))
         if matches:
             img_url = matches[0]
             event['image'] = HELMET_BASE_URL + img_url
@@ -212,9 +237,9 @@ class HelmetImporter(Importer):
         event['custom_fields']['ExpiryDate'] = dt_parse(
             event_el['ExpiryDate']).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        to_tprek_id = lambda k: self.tprek_by_id[unicode(k)]
+        to_tprek_id = lambda k: self.tprek_by_id[str(k)]
         to_le_id = lambda nid: next(
-            (to_tprek_id(v[1]) for k, v in LOCATIONS.iteritems()
+            (to_tprek_id(v[1]) for k, v in LOCATIONS.items()
              if nid in v[0]), None)
         yso_to_db = lambda v: self.yso_by_id[YSO_BASE_URL + v]
 
@@ -222,7 +247,8 @@ class HelmetImporter(Importer):
         for classification in event_el['Classifications']:
             # Oddly enough, "Tapahtumat" node includes NodeId pointing to
             # HelMet location, which is mapped to Linked Events category ID
-            if classification['NodeName'] == 'Tapahtumat':
+            if classification['NodeName'] in (
+                    'Tapahtumat', 'Events', 'Evenemang'):
                 event['location']['id'] = to_le_id(classification['NodeId'])
                 if not event['location']:
                     print('Missing TPREK location map for NodeId(%s) '
@@ -230,23 +256,50 @@ class HelmetImporter(Importer):
                           (str(classification['NodeId']), str(eid)))
             else:
                 # Map some classifications to YSO based categories
-                if unicode(
+                if str(
                         classification['NodeName']) in YSO_CATEGORY_MAPS.keys():
-                    yso = YSO_CATEGORY_MAPS[unicode(classification['NodeName'])]
+                    yso = YSO_CATEGORY_MAPS[str(classification['NodeName'])]
                     if isinstance(yso, tuple):
                         for t_v in yso:
                             event_categories.add(yso_to_db(t_v))
                     else:
                         event_categories.add(yso_to_db(yso))
-        event['categories'] = event_categories
+        event['keywords'] = event_categories
+        return event
 
     def _recur_fetch_paginated_url(self, url, lang, events):
         response = requests.get(url)
         assert response.status_code == 200
-        root_doc = json.loads(response.content)
+        try:
+            root_doc = response.json()
+        except ValueError:
+            print("HelMet API is not responding right")
+            quit()
         documents = root_doc['value']
         for doc in documents:
-            self._import_event(lang, doc, events)
+            event = self._import_event(lang, doc, events)
+
+            # fetch possible language versions of document
+            versions_url = HELMET_LANGUAGE_VERSIONS_URL.format(
+                content_id=doc['ContentId'])
+            versions_response = requests.get(versions_url)
+            for version in versions_response.json()['value']:
+                content_url = HELMET_CONTENT_URL.format(
+                    content_id=version['ContentId'])
+                content_response = requests.get(content_url)
+                lang_version_doc = content_response.json()
+                current_lang = get_lang(lang_version_doc['LanguageId'])
+                lang_version_event = self._import_event(
+                    current_lang, lang_version_doc, events)
+                # if start date and place are same, assume that event is the same
+                if lang_version_event \
+                        and doc['EventStartDate'] == lang_version_doc['EventStartDate'] \
+                        and event['location']['id'] == lang_version_event['location']['id'] \
+                        and current_lang is not None:
+                    event['name'][current_lang] = lang_version_event['name'][current_lang]
+                    event['description'][current_lang] = lang_version_event['description'][current_lang]
+                    lang_version_event['ignore'] = True  # mark as ignorable
+            self._ticker()
         if 'odata.nextLink' in root_doc:
             self._recur_fetch_paginated_url(
                 '%s/api/opennc/v1/%s%s' % (
@@ -255,14 +308,21 @@ class HelmetImporter(Importer):
                     "&$format=json"
                 ), lang, events)
 
+    def _ticker(self):
+        if self.current_tick_index > 3:
+            self.current_tick_index = 0
+        print(TICKS[self.current_tick_index], end='\r')
+        self.current_tick_index += 1
+
     def import_events(self):
         print("Importing HelMet events")
         events = recur_dict()
-        for lang, helmet_lang_id in HELMET_LANGUAGES.iteritems():
+        for lang, helmet_lang_id in HELMET_LANGUAGES.items():
             url = HELMET_API_URL.format(lang_code=helmet_lang_id)
             print("Processing lang " + lang)
             self._recur_fetch_paginated_url(url, lang, events)
 
         for event in events.values():
+            self._ticker()
             self.save_event(event)
         print("%d events processed" % len(events.values()))
