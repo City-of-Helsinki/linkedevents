@@ -130,8 +130,7 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',),
 }
 
-# Add whitelisted hostnames to allow cross-site HTTP request API access
-CORS_ORIGIN_WHITELIST = ()
+CORS_ORIGIN_ALLOW_ALL = True
 
 TEMPLATE_DIRS = (
     os.path.join(BASE_DIR, 'templates'),
