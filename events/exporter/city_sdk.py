@@ -8,7 +8,7 @@ from django.core.management import CommandError
 import pytz
 import requests
 from events.exporter.base import register_exporter, Exporter
-from events.models import Event, ExportInfo, Category, Place
+from events.models import Event, ExportInfo, Keyword, Place
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
@@ -135,7 +135,7 @@ class CitySDKExporter(Exporter):
         citysdk_event['category'] = []
         for category in event.keywords.all():
             exported_category = ExportInfo.objects.filter(
-                content_type=ContentType.objects.get_for_model(Category),
+                content_type=ContentType.objects.get_for_model(Keyword),
                 object_id=category.id,
                 target_system=self.name).first()
             citysdk_event['category'].append(
@@ -280,7 +280,7 @@ class CitySDKExporter(Exporter):
                 if model.last_modified_time > export_info.last_exported_time:
                     citysdk_model = generate(model)
                     citysdk_model['id'] = export_info.target_id
-                    if model_name == 'Category':
+                    if model_name == 'Keyword':
                         data = {
                             'list': 'event',
                             'category': citysdk_model
@@ -295,7 +295,7 @@ class CitySDKExporter(Exporter):
                         modify_count += 1
 
             except ObjectDoesNotExist:
-                if model_name == 'Category':
+                if model_name == 'Keyword':
                     delete_response = self._do_req(
                         'delete', url,
                         data={"id": export_info.target_id}
@@ -322,7 +322,7 @@ class CitySDKExporter(Exporter):
             citysdk_model = generate(model)
             citysdk_model['created'] = datetime.datetime.utcnow().replace(
                 tzinfo=pytz.utc)
-            if model_name == 'Category':
+            if model_name == 'Keyword':
                 data = {
                     'list': 'event',
                     'category': citysdk_model
@@ -374,7 +374,7 @@ class CitySDKExporter(Exporter):
 
     def _export_categories(self):
         filters = {'event__in': Event.objects.all()}
-        self._export_models(Category, self._generate_exportable_category,
+        self._export_models(Keyword, self._generate_exportable_category,
                             CATEGORY_URL, 'poi', extra_filters=filters)
 
     def _export_places(self):
@@ -414,7 +414,7 @@ class CitySDKExporter(Exporter):
             self.__delete_resource(place_info, POIS_URL)
 
         for category_info in ExportInfo.objects.filter(
-                content_type=get_type(Category),
+                content_type=get_type(Keyword),
                 target_system=self.name):
             try:
                 category_response = self._do_req(

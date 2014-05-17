@@ -8,7 +8,7 @@ from django.db.models import Count
 from lxml import etree
 
 from events.models import DataSource, Place, Event
-from events.categories import CategoryMatcher
+from events.keywords import KeywordMatcher
 
 from .sync import ModelSyncher
 from .base import Importer, register_importer, recur_dict
@@ -80,13 +80,6 @@ def matko_status(num):
         return Event.CANCELLED
     return None
 
-def standardize_event_types(types):
-    # fixme align with existing categories
-    pass
-
-def standardize_accessibility(accessibility, lang):
-    pass
-
 def zipcode_and_muni(text):
     if text is None:
         return None, None
@@ -129,13 +122,6 @@ class MatkoImporter(Importer):
         link = item.find('link')
         if link is not None:
             result['url'][lang_code] = unicodetext(link)
-
-        typestring = text(item, 'type2') or text(item, 'type1')
-        if typestring is not None:
-            types = [t.strip() for t in typestring.split(",")]
-            # The first letter is always capitalized in the source.
-            types[0] = types[0].lower()
-            self.put(result, 'types', types)
 
     def _find_place_from_tprek(self, location):
         place_name = location['name']['fi']
@@ -180,7 +166,7 @@ class MatkoImporter(Importer):
 
         return place.id
 
-    def _import_event_from_feed(self, lang_code, item, events, category_matcher):
+    def _import_event_from_feed(self, lang_code, item, events, keyword_matcher):
         eid = int(text(item, 'uniqueid'))
         event = events[eid]
 
@@ -213,8 +199,6 @@ class MatkoImporter(Importer):
         end_time = dateutil.parser.parse(
             text(item, 'endtime'))
 
-        standardize_event_types(event['types'])
-
         event['location']['name'][lang_code] = text(item, 'place')
         event['location']['extra_info'][lang_code] = text(item, 'placeinfo')
 
@@ -246,20 +230,20 @@ class MatkoImporter(Importer):
             'kulttuuri': 'kulttuuritapahtumat'
         }
 
-        categories = set()
-        cat1, cat2 = text(item, 'type1'), text(item, 'type2')
-        for c in (cat1, cat2):
-            if c:
-                categories.update(
+        event_types = set()
+        type1, type2 = text(item, 'type1'), text(item, 'type2')
+        for t in (type1, type2):
+            if t:
+                event_types.update(
                     map(lambda x: x.lower(), c.split(",")))
 
         keywords = []
-        for c in categories:
-            if c is None or c in ignore or c in use_as_target_group:
+        for t in event_types:
+            if t is None or t in ignore or t in use_as_target_group:
                 continue
-            if c in mapping:
-                c = mapping[c]
-            keyword = category_matcher.match(c)
+            if t in mapping:
+                t = mapping[t]
+            keyword = keyword_matcher.match(t)
             if keyword:
                 keywords.append(keyword[0])
         if len(keywords) > 0:
@@ -345,11 +329,11 @@ class MatkoImporter(Importer):
     def import_events(self):
         print("Importing Matko events")
         events = recur_dict()
-        category_matcher = CategoryMatcher()
+        keyword_matcher = KeywordMatcher()
         for lang, url in MATKO_URLS['events'].items():
             items = self.items_from_url(url)
             for item in items:
-                self._import_event_from_feed(lang, item, events, category_matcher)
+                self._import_event_from_feed(lang, item, events, keyword_matcher)
             organizers = self._import_organizers_from_events(events)
 
         for event in events.values():

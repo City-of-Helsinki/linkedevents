@@ -173,7 +173,7 @@ class Importer(object):
                 location_id = location['id']
             info['location_extra_info'] = location.get('extra_info', None)
 
-        skip_fields = ['id', 'location', 'offers', 'category']
+        skip_fields = ['id', 'location', 'offers', 'keywords']
         self._update_fields(obj, info, skip_fields)
 
         self._set_field(obj, 'location_id', location_id)

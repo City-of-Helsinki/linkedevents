@@ -11,8 +11,8 @@ from django.utils.timezone import get_default_timezone
 from .sync import ModelSyncher
 from .base import Importer, register_importer, recur_dict
 from .util import unicodetext, active_language
-from events.models import DataSource, Place, Event, Category, CategoryLabel
-from events.categories import CategoryMatcher
+from events.models import DataSource, Place, Event, Keyword, KeywordLabel
+from events.keywords import KeywordMatcher
 
 LOCATION_TPREK_MAP = {
     'malmitalo': '8740',
@@ -94,7 +94,7 @@ class KulkeImporter(Importer):
         place_list = Place.objects.filter(data_source=self.tprek_data_source).filter(origin_id__in=id_list)
         self.tprek_by_id = {p.origin_id: p.id for p in place_list}
 
-        if not Category.objects.filter(data_source='yso').exists():
+        if not Keyword.objects.filter(data_source='yso').exists():
             return
 
         print('Preprocessing categories')
@@ -113,7 +113,7 @@ class KulkeImporter(Importer):
                 categories[cid] = {
                     'type': typeid, 'text': ctype.text}
 
-        category_matcher = CategoryMatcher()
+        keyword_matcher = KeywordMatcher()
         for cid, c in list(categories.items()):
             if c is None:
                 continue
@@ -129,13 +129,13 @@ class KulkeImporter(Importer):
 
             manual = MANUAL_CATEGORIES.get(cid)
             if manual:
-                c['categories'] = [Category.objects.get(url=url) for url in manual]
+                c['keywords'] = [Keyword.objects.get(url=url) for url in manual]
                 continue
 
             replacements = [('jumppa', 'voimistelu'), ('Stoan', 'Stoa')]
             for src, dest in replacements:
                 ctext = re.sub(src, dest, ctext, flags=re.IGNORECASE)
-            c['categories'] = category_matcher.match(ctext)
+            c['keywords'] = keyword_matcher.match(ctext)
 
         self.categories = categories
 
@@ -257,16 +257,16 @@ class KulkeImporter(Importer):
         offers['url'] = url
 
         if hasattr(self, 'categories'):
-            event_categories = set()
+            event_keywords = set()
             for category_id in event_el.find(tag('categories')):
                 category = self.categories.get(int(category_id.text))
                 if category:
-                    if not category.get('categories'):
-                        print('missing categories', category)
+                    if not category.get('keywords'):
+                        print('missing keywords', category)
                     else:
-                        for c in category.get('categories', []):
-                            event_categories.add(c)
-            event['keywords'] = event_categories
+                        for c in category.get('keywords', []):
+                            event_keywords.add(c)
+            event['keywords'] = event_keywords
 
         location = event['location']
 

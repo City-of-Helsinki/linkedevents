@@ -11,7 +11,7 @@ from pytz import timezone
 import pytz
 
 YSO_BASE_URL = 'http://www.yso.fi/onto/yso/'
-YSO_CATEGORY_MAPS = {
+YSO_KEYWORD_MAPS = {
     u'Yrittäjät': u'p1178',
     u'Lapset': u'p12262',
     u'Kirjastot': u'p2787',
@@ -165,19 +165,19 @@ class HelmetImporter(Importer):
         ).filter(origin_id__in=loc_id_list)
         self.tprek_by_id = {p.origin_id: p.id for p in place_list}
 
-        # Build a cached list of YSO categories
+        # Build a cached list of YSO keywords
         cat_id_set = set()
-        for yso_val in YSO_CATEGORY_MAPS.values():
+        for yso_val in YSO_KEYWORD_MAPS.values():
             if isinstance(yso_val, tuple):
                 for t_v in yso_val:
                     cat_id_set.add(YSO_BASE_URL + t_v)
             else:
                 cat_id_set.add(YSO_BASE_URL + yso_val)
 
-        self.category_list = Category.objects.filter(
+        self.keyword_list = Keyword.objects.filter(
             data_source=self.yso_data_source
         ).filter(url__in=cat_id_set)
-        self.yso_by_id = {p.url: p for p in self.category_list}
+        self.yso_by_id = {p.url: p for p in self.keyword_list}
 
 
     @staticmethod
@@ -243,10 +243,10 @@ class HelmetImporter(Importer):
              if nid in v[0]), None)
         yso_to_db = lambda v: self.yso_by_id[YSO_BASE_URL + v]
 
-        event_categories = set()
+        event_keywords = set()
         for classification in event_el['Classifications']:
             # Oddly enough, "Tapahtumat" node includes NodeId pointing to
-            # HelMet location, which is mapped to Linked Events category ID
+            # HelMet location, which is mapped to Linked Events keyword ID
             if classification['NodeName'] in (
                     'Tapahtumat', 'Events', 'Evenemang'):
                 event['location']['id'] = to_le_id(classification['NodeId'])
@@ -255,16 +255,16 @@ class HelmetImporter(Importer):
                           'in event %s' %
                           (str(classification['NodeId']), str(eid)))
             else:
-                # Map some classifications to YSO based categories
+                # Map some classifications to YSO based keywords
                 if str(
-                        classification['NodeName']) in YSO_CATEGORY_MAPS.keys():
-                    yso = YSO_CATEGORY_MAPS[str(classification['NodeName'])]
+                        classification['NodeName']) in YSO_KEYWORD_MAPS.keys():
+                    yso = YSO_KEYWORD_MAPS[str(classification['NodeName'])]
                     if isinstance(yso, tuple):
                         for t_v in yso:
-                            event_categories.add(yso_to_db(t_v))
+                            event_keywords.add(yso_to_db(t_v))
                     else:
-                        event_categories.add(yso_to_db(yso))
-        event['keywords'] = event_categories
+                        event_keywords.add(yso_to_db(yso))
+        event['keywords'] = event_keywords
         return event
 
     def _recur_fetch_paginated_url(self, url, lang, events):

@@ -15,7 +15,7 @@ from rest_framework import serializers, pagination, relations, viewsets
 from rest_framework.reverse import reverse
 from rest_framework.response import Response
 from rest_framework.exceptions import ParseError
-from events.models import Place, Event, Category, Language, OpeningHoursSpecification
+from events.models import Place, Event, Keyword, Language, OpeningHoursSpecification
 from django.conf import settings
 from events import utils
 from modeltranslation.translator import translator, NotRegistered
@@ -270,17 +270,17 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         return ret
 
 
-class CategorySerializer(LinkedEventsSerializer):
-    view_name = 'category-detail'
+class KeywordSerializer(LinkedEventsSerializer):
+    view_name = 'keyword-detail'
 
     class Meta:
-        model = Category
+        model = Keyword
 
-class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Category.objects.all()
-    serializer_class = CategorySerializer
+class KeywordViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Keyword.objects.all()
+    serializer_class = KeywordSerializer
 
-register_view(CategoryViewSet, 'category')
+register_view(KeywordViewSet, 'keyword')
 
 
 class PlaceSerializer(LinkedEventsSerializer, GeoModelSerializer):
@@ -319,7 +319,7 @@ register_view(LanguageViewSet, 'language')
 
 class SubOrSuperEventSerializer(TranslatedModelSerializer, MPTTModelSerializer):
     location = PlaceSerializer(hide_ld_context=True)
-    category = CategorySerializer(many=True, allow_add_remove=True,
+    keyword = KeywordSerializer(many=True, allow_add_remove=True,
                                   hide_ld_context=True)
     super_event = JSONLDRelatedField(view_name='event-detail')
 
@@ -331,8 +331,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     location = JSONLDRelatedField(serializer=PlaceSerializer, required=False,
                                   view_name='place-detail')
     # provider = OrganizationSerializer(hide_ld_context=True)
-    keywords = JSONLDRelatedField(serializer=CategorySerializer, many=True, required=False,
-                                    view_name='category-detail')
+    keywords = JSONLDRelatedField(serializer=KeywordSerializer, many=True, required=False,
+                                    view_name='keyword-detail')
     super_event = JSONLDRelatedField(required=False, view_name='event-detail')
     event_status = EnumChoiceField(Event.STATUSES)
 

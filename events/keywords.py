@@ -1,33 +1,33 @@
 import re
-from events.models import Category, CategoryLabel
+from events.models import Keyword, KeywordLabel
 from difflib import get_close_matches
 
 ENDING_PARENTHESIS_PATTERN = r' \([^)]+\)$'
 
-class CategoryMatcher(object):
+class KeywordMatcher(object):
     def __init__(self):
-        label_to_category_ids = {}
-        self.name_to_category_ids = {}
-        for label_id, category_id in Category.alt_labels.through.objects.all().values_list(
-            'categorylabel_id', 'category_id'):
-            label_to_category_ids.setdefault(label_id, set()).add(category_id)
-        for label_id, name in CategoryLabel.objects.filter(language_id='fi').values_list(
+        label_to_keyword_ids = {}
+        self.name_to_keyword_ids = {}
+        for label_id, keyword_id in Keyword.alt_labels.through.objects.all().values_list(
+            'keywordlabel_id', 'keyword_id'):
+            label_to_keyword_ids.setdefault(label_id, set()).add(keyword_id)
+        for label_id, name in KeywordLabel.objects.filter(language_id='fi').values_list(
             'id', 'name'):
-            self.name_to_category_ids[name.lower()] = label_to_category_ids.get(label_id, set())
-        for cid, preflabel in Category.objects.all().values_list(
+            self.name_to_keyword_ids[name.lower()] = label_to_keyword_ids.get(label_id, set())
+        for kid, preflabel in Keyword.objects.all().values_list(
             'id', 'name_fi'):
             if preflabel is not None:
                 text = preflabel.lower()
-                self.name_to_category_ids.setdefault(text, set()).add(cid)
+                self.name_to_keyword_ids.setdefault(text, set()).add(kid)
                 without_parenthesis = re.sub(ENDING_PARENTHESIS_PATTERN, '', text)
                 if without_parenthesis != text:
-                    self.name_to_category_ids.setdefault(without_parenthesis, set()).add(cid)
-        self.labels = self.name_to_category_ids.keys()
-        print('Initialized', len(self.labels), 'category keys')
+                    self.name_to_keyword_ids.setdefault(without_parenthesis, set()).add(kid)
+        self.labels = self.name_to_keyword_ids.keys()
+        print('Initialized', len(self.labels), 'keyword keys')
 
     def match(self, text):
         wordsplit = re.compile(r'\s+')
-        #labels = CategoryLabel.objects
+        #labels = KeywordLabel.objects
         #match = labels.filter(name__iexact=text)
 
         text = text.lower()
@@ -72,31 +72,31 @@ class CategoryMatcher(object):
             print('no match', text)
             return None
         if success():
-            category_ids = set()
+            keyword_ids = set()
             if match_type not in ['exact', 'subword']:
                 cmatch = get_close_matches(
                     text, [m.lower() for m in matches], n=1)
                 if len(cmatch) == 1:
-                    category_ids = self.name_to_category_ids.get(cmatch[0])
+                    keyword_ids = self.name_to_keyword_ids.get(cmatch[0])
 
             else:
                 for m in matches:
-                    category_ids.update(self.name_to_category_ids[m])
+                    keyword_ids.update(self.name_to_keyword_ids[m])
 
-            if len(category_ids) < 1:
+            if len(keyword_ids) < 1:
                 print('no matches for', text)
                 return None
 
-            objects = Category.objects.filter(id__in=category_ids)
-            if len(category_ids) > 1:
+            objects = Keyword.objects.filter(id__in=keyword_ids)
+            if len(keyword_ids) > 1:
                 try:
-                    aggregate_category = objects.get(aggregate=True)
-                    aggregate_name = re.sub(ENDING_PARENTHESIS_PATTERN, '' , aggregate_category.name_fi)
-                    result = [aggregate_category]
+                    aggregate_keyword = objects.get(aggregate=True)
+                    aggregate_name = re.sub(ENDING_PARENTHESIS_PATTERN, '' , aggregate_keyword.name_fi)
+                    result = [aggregate_keyword]
                     for o in objects.exclude(name_fi__istartswith=aggregate_name):
                         result.append(o)
                     return result
-                except Category.DoesNotExist:
+                except Keyword.DoesNotExist:
                     pass
                 return objects
             return objects

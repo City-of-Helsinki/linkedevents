@@ -107,22 +107,22 @@ class Language(BaseModel):
         verbose_name_plural = _('languages')
 
 
-class CategoryLabel(BaseModel):
+class KeywordLabel(BaseModel):
     language = models.ForeignKey(Language, blank=False, null=False)
 
     class Meta:
         unique_together = (('name', 'language'),)
 
 
-class Category(BaseModel, SchemalessFieldMixin):
+class Keyword(BaseModel, SchemalessFieldMixin):
     objects = models.Manager()
 
-    schema_org_type = "Thing/LinkedEventCategory"
+    schema_org_type = "Thing/LinkedEventKeyword"
 
     # category ids from: http://finto.fi/ysa/fi/
     url = models.CharField(max_length=255, db_index=True, null=False, blank=False, default='unknown')
     description = models.TextField(blank=True)
-    alt_labels = models.ManyToManyField(CategoryLabel, blank=True, related_name='categories')
+    alt_labels = models.ManyToManyField(KeywordLabel, blank=True, related_name='keywords')
     same_as = models.CharField(max_length=255, null=True, blank=True)
     aggregate = models.BooleanField(default=False)
 
@@ -130,8 +130,8 @@ class Category(BaseModel, SchemalessFieldMixin):
         return self.name
 
     class Meta:
-        verbose_name = _('category')
-        verbose_name_plural = _('categories')
+        verbose_name = _('keyword')
+        verbose_name_plural = _('keywords')
 
 
 class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
@@ -237,7 +237,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
 
     # Custom fields not from schema.org
     target_group = models.CharField(max_length=255, null=True, blank=True)
-    keywords = models.ManyToManyField(Category, null=True, blank=True)
+    keywords = models.ManyToManyField(Keyword, null=True, blank=True)
 
     class Meta:
         verbose_name = _('event')

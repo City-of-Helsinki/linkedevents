@@ -15,7 +15,7 @@ class Command(BaseCommand):
         make_option('--cached', action='store_true', dest='cached', help='Cache requests (if possible)'),
     ))
 
-    importer_types = ['locations', 'events', 'categories']
+    importer_types = ['locations', 'events', 'keywords']
 
     def __init__(self):
         super(Command, self).__init__()

@@ -9,11 +9,11 @@ class LanguageTranslationOptions(TranslationOptions):
 translator.register(Language, LanguageTranslationOptions)
 
 
-class CategoryTranslationOptions(TranslationOptions):
+class KeywordTranslationOptions(TranslationOptions):
     fields = ('name', 'description')
 
 
-translator.register(Category, CategoryTranslationOptions)
+translator.register(Keyword, KeywordTranslationOptions)
 
 
 class PlaceTranslationOptions(TranslationOptions):
