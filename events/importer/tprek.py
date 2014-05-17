@@ -111,25 +111,25 @@ class TprekImporter(Importer):
 
         n = info.get('latitude', 0)
         e = info.get('longitude', 0)
-        location = None
+        position = None
         if n and e:
             p = Point(e, n, srid=4326) # GPS coordinate system
             if p.within(self.bounding_box):
                 if self.target_srid != 4326:
                     p.transform(self.gps_to_target_ct)
-                location = p
+                position = p
             else:
                 print("Invalid coordinates (%f, %f) for %s" % (n, e, obj))
 
-        if location and obj.location:
+        if position and obj.position:
             # If the distance is less than 10cm, assume the location
             # hasn't changed.
-            assert obj.location.srid == settings.PROJECTION_SRID
-            if location.distance(obj.location) < 0.10:
-                location = obj.location
-        if location != obj.location:
+            assert obj.position.srid == settings.PROJECTION_SRID
+            if position.distance(obj.position) < 0.10:
+                position = obj.position
+        if position != obj.position:
             obj._changed = True
-            obj.location = location
+            obj.position = position
 
         if obj.deleted:
             obj.deleted = False
@@ -145,7 +145,7 @@ class TprekImporter(Importer):
 
         syncher.mark(obj)
 
-    def import_locations(self):
+    def import_places(self):
         if self.options['cached']:
             requests_cache.install_cache('tprek')
 

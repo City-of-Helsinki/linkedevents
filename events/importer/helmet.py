@@ -4,6 +4,7 @@ import requests
 import json
 import re
 import dateutil.parser
+import time
 from django.utils.html import strip_tags
 from .base import Importer, register_importer, recur_dict
 from events.models import *
@@ -268,13 +269,21 @@ class HelmetImporter(Importer):
         return event
 
     def _recur_fetch_paginated_url(self, url, lang, events):
-        response = requests.get(url)
-        assert response.status_code == 200
-        try:
-            root_doc = response.json()
-        except ValueError:
-            print("HelMet API is not responding right")
-            quit()
+        for _ in range(0,5):
+            response = requests.get(url)
+            if response.status_code != 200:
+                self.logger.error("HelMet API reported HTTP %d" % response.status_code)
+                time.sleep(2)
+                continue
+            try:
+                root_doc = response.json()
+            except ValueError:
+                self.logger.error("HelMet API returned invalid JSON")
+                time.sleep(5)
+                continue
+            break
+        else:
+            raise Exception("HelMet API broken")
         documents = root_doc['value']
         for doc in documents:
             event = self._import_event(lang, doc, events)
@@ -317,7 +326,8 @@ class HelmetImporter(Importer):
     def import_events(self):
         print("Importing HelMet events")
         events = recur_dict()
-        for lang, helmet_lang_id in HELMET_LANGUAGES.items():
+        for lang in self.supported_languages:
+            helmet_lang_id = HELMET_LANGUAGES[lang]
             url = HELMET_API_URL.format(lang_code=helmet_lang_id)
             print("Processing lang " + lang)
             self._recur_fetch_paginated_url(url, lang, events)

@@ -32,22 +32,6 @@ from events import contexts
 from django.utils.encoding import python_2_unicode_compatible
 
 
-@python_2_unicode_compatible
-class DataSource(models.Model):
-    id = models.CharField(max_length=100, primary_key=True)
-    name = models.CharField(max_length=255)
-    event_url_template = models.CharField(max_length=200, null=True)
-
-    def event_same_as(self, origin_id):
-        if origin_id is not None:
-            return self.event_url_template.format(origin_id=origin_id)
-        else:
-            return None
-
-    def __str__(self):
-        return self.id
-
-
 class SystemMetaMixin(models.Model):
     created_by = models.ForeignKey(
         User, null=True, blank=True,
@@ -55,8 +39,6 @@ class SystemMetaMixin(models.Model):
     modified_by = models.ForeignKey(
         User, null=True, blank=True,
         related_name="%(app_label)s_%(class)s_modified_by")
-    data_source = models.ForeignKey(DataSource, db_index=True, null=True,
-                                    blank=True)
     origin_id = models.CharField(max_length=255, db_index=True, null=True,
                                  blank=True)
 
@@ -75,6 +57,7 @@ class SchemalessFieldMixin(models.Model):
 
 @python_2_unicode_compatible
 class BaseModel(SystemMetaMixin):
+    id = models.CharField(max_length=40, primary_key=True)
     # Properties from schema.org/Thing
     name = models.CharField(max_length=255, db_index=True)
     image = models.URLField(null=True, blank=True)
@@ -99,7 +82,11 @@ class BaseModel(SystemMetaMixin):
         super(BaseModel, self).save(*args, **kwargs)
 
 
-class Language(BaseModel):
+class Organization(BaseModel):
+    pass
+
+
+class Language(models.Model):
     id = models.CharField(max_length=6, primary_key=True)
 
     class Meta:
@@ -107,7 +94,8 @@ class Language(BaseModel):
         verbose_name_plural = _('languages')
 
 
-class KeywordLabel(BaseModel):
+class KeywordLabel(models.Model):
+    name = models.CharField(max_length=255, db_index=True)
     language = models.ForeignKey(Language, blank=False, null=False)
 
     class Meta:
@@ -115,16 +103,17 @@ class KeywordLabel(BaseModel):
 
 
 class Keyword(BaseModel, SchemalessFieldMixin):
-    objects = models.Manager()
-
-    schema_org_type = "Thing/LinkedEventKeyword"
-
+    publisher = models.ForeignKey(Organization, db_index=True)
     # category ids from: http://finto.fi/ysa/fi/
     url = models.CharField(max_length=255, db_index=True, null=False, blank=False, default='unknown')
     description = models.TextField(blank=True)
     alt_labels = models.ManyToManyField(KeywordLabel, blank=True, related_name='keywords')
     same_as = models.CharField(max_length=255, null=True, blank=True)
     aggregate = models.BooleanField(default=False)
+
+    objects = models.Manager()
+
+    schema_org_type = "Thing/LinkedEventCategory"
 
     def __str__(self):
         return self.name
@@ -135,6 +124,7 @@ class Keyword(BaseModel, SchemalessFieldMixin):
 
 
 class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
+    publisher = models.ForeignKey(Organization, db_index=True)
     same_as = models.CharField(max_length=255, db_index=True, null=True,
                                blank=True)
     url = models.URLField(_('Place home page'), blank=True)
@@ -142,7 +132,7 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     parent = TreeForeignKey('self', null=True, blank=True,
                             related_name='children')
 
-    location = models.PointField(srid=settings.PROJECTION_SRID, null=True,
+    position = models.PointField(srid=settings.PROJECTION_SRID, null=True,
                                  blank=True)
 
     email = models.EmailField(null=True, blank=True)
@@ -175,15 +165,14 @@ reversion.register(Place)
 
 
 class OpeningHoursSpecification(models.Model):
-
     GR_BASE_URL = "http://purl.org/goodrelations/v1#"
     WEEK_DAYS = (
         (1, "Monday"), (2, "Tuesday"), (3, "Wednesday"), (4, "Thursday"),
         (5, "Friday"), (6, "Saturday"), (7, "Sunday"), (8, "PublicHolidays")
     )
 
-    place = models.OneToOneField(Place, primary_key=True,
-                                 related_name='opening_hour_specification')
+    place = models.ForeignKey(Place, db_index=True,
+                              related_name='opening_hour_specification')
     opens = models.TimeField(null=True, blank=True)
     closes = models.TimeField(null=True, blank=True)
     days_of_week = models.SmallIntegerField(choices=WEEK_DAYS, null=True,
@@ -197,7 +186,6 @@ class OpeningHoursSpecification(models.Model):
 
 
 class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
-
     jsonld_type = "Event/LinkedEvent"
 
     """
@@ -214,6 +202,9 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         (POSTPONED, "EventPostponed"),
         (RESCHEDULED, "EventRescheduled"),
     )
+
+    publisher = models.ForeignKey(Organization, db_index=True, related_name='published_events')
+    provider = models.ForeignKey(Organization, db_index=True, related_name='provided_events')
 
     # Properties from schema.org/Thing
     url = models.URLField(_('Event home page'), blank=True)
@@ -233,11 +224,11 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     start_time = models.DateTimeField(null=True, db_index=True, blank=True)
     end_time = models.DateTimeField(null=True, db_index=True, blank=True)
     super_event = TreeForeignKey('self', null=True, blank=True,
-                                 related_name='sub_event')
+                                 related_name='sub_events')
 
     # Custom fields not from schema.org
-    target_group = models.CharField(max_length=255, null=True, blank=True)
     keywords = models.ManyToManyField(Keyword, null=True, blank=True)
+    audience = models.CharField(max_length=255, null=True, blank=True)
 
     class Meta:
         verbose_name = _('event')

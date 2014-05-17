@@ -355,6 +355,6 @@ class KulkeImporter(Importer):
             )
         return children_set
 
-    def import_locations(self):
-        print("Importing Kulke locations")
+    def import_places(self):
+        print("Importing Kulke places")
         pass

@@ -195,7 +195,7 @@ class Importer(object):
                 verb = "changed"
             print("%s %s" % (obj, verb))
 
-    def save_location(self, info):
+    def save_place(self, info):
         errors = set()
 
         args = dict(data_source=info['data_source'], origin_id=info['origin_id'])
@@ -207,30 +207,30 @@ class Importer(object):
             obj._created = True
         obj._changed = False
 
-        skip_fields = ['id', 'location', 'custom_fields']
+        skip_fields = ['id', 'position', 'custom_fields']
         self._update_fields(obj, info, skip_fields)
 
         n = info.get('latitude', 0)
         e = info.get('longitude', 0)
-        location = None
+        position = None
         if n and e:
             p = Point(e, n, srid=4326) # GPS coordinate system
             if p.within(self.bounding_box):
                 if self.target_srid != 4326:
                     p.transform(self.gps_to_target_ct)
-                location = p
+                position = p
             else:
                 print("Invalid coordinates (%f, %f) for %s" % (n, e, obj))
 
-        if location and obj.location:
-            # If the distance is less than 10cm, assume the location
+        if position and obj.position:
+            # If the distance is less than 10cm, assume the position
             # hasn't changed.
-            assert obj.location.srid == settings.PROJECTION_SRID
-            if location.distance(obj.location) < 0.10:
-                location = obj.location
-        if location != obj.location:
+            assert obj.position.srid == settings.PROJECTION_SRID
+            if position.distance(obj.position) < 0.10:
+                position = obj.position
+        if position != obj.position:
             obj._changed = True
-            obj.location = location
+            obj.position = position
 
         if obj._changed or obj._created:
             if obj._created:

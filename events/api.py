@@ -295,6 +295,7 @@ class PlaceViewSet(GeoModelAPIView, viewsets.ReadOnlyModelViewSet):
     serializer_class = PlaceSerializer
     pagination_serializer_class = CustomPaginationSerializer
 
+
 register_view(PlaceViewSet, 'place')
 
 
@@ -315,16 +316,6 @@ class LanguageViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = LanguageSerializer
 
 register_view(LanguageViewSet, 'language')
-
-
-class SubOrSuperEventSerializer(TranslatedModelSerializer, MPTTModelSerializer):
-    location = PlaceSerializer(hide_ld_context=True)
-    keyword = KeywordSerializer(many=True, allow_add_remove=True,
-                                  hide_ld_context=True)
-    super_event = JSONLDRelatedField(view_name='event-detail')
-
-    class Meta:
-        model = Event
 
 
 class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):

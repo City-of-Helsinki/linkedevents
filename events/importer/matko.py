@@ -155,14 +155,14 @@ class MatkoImporter(Importer):
 
         # No existing entry, load it from Matko.
         if not place:
-            locations = self._fetch_locations()
+            places = self._fetch_places()
             from pprint import pprint
-            if matko_id not in locations:
+            if matko_id not in places:
                 print("Matko location %s (%s) not found!" % (
                     location['name']['fi'], location['origin_id']))
                 return None
-            pprint(locations[matko_id])
-            place = self.save_location(locations[matko_id])
+            pprint(places[matko_id])
+            place = self.save_location(places[matko_id])
 
         return place.id
 
@@ -259,12 +259,12 @@ class MatkoImporter(Importer):
 
         return events
 
-    def _parse_location(self, lang_code, item, locations):
+    def _parse_location(self, lang_code, item, places):
         #if clean_text(text(item, 'isvenue')) == 'False':
         #    return
 
         lid = int(text(item, 'id'))
-        location = locations[lid]
+        location = places[lid]
 
         location['origin_id'] = lid
         location['data_source'] = self.data_source
@@ -301,11 +301,11 @@ class MatkoImporter(Importer):
             self.put(location, 'longitude', float(lon))
             self.put(location, 'latitude', float(lat))
 
-    def _parse_locations_from_feed(self, lang_code, items, locations):
+    def _parse_places_from_feed(self, lang_code, items, places):
         for item in items:
-            self._parse_location(lang_code, item, locations)
+            self._parse_location(lang_code, item, places)
 
-        return locations
+        return places
 
     def _import_organizers_from_events(self, events):
         organizers = recur_dict()
@@ -340,33 +340,33 @@ class MatkoImporter(Importer):
             self.save_event(event)
         print("%d events processed" % len(events.values()))
 
-    def _fetch_locations(self):
-        if hasattr(self, 'locations'):
-            return self.locations
+    def _fetch_places(self):
+        if hasattr(self, 'places'):
+            return self.places
 
-        locations = recur_dict()
+        places = recur_dict()
 
         for origin_id, loc_info in EXTRA_LOCATIONS.items():
             loc = loc_info.copy()
             loc['data_source'] = self.data_source
             loc['origin_id'] = origin_id
-            locations[origin_id] = loc
+            places[origin_id] = loc
 
-        for lang, url in MATKO_URLS['locations'].items():
+        for lang, url in MATKO_URLS['places'].items():
             items = self.items_from_url(url)
-            self._parse_locations_from_feed(lang, items, locations)
+            self._parse_places_from_feed(lang, items, places)
 
-        self.locations = locations
+        self.places = places
 
-        return locations
+        return places
 
-    def import_locations(self):
-        self._fetch_locations()
+    def import_places(self):
+        self._fetch_places()
         place_list = Place.objects.filter(data_source=self.data_source)
         for place in place_list:
             origin_id = int(place.origin_id)
-            if origin_id not in self.locations:
-                self.logger.warning("%s not found in Matko locations" % place)
+            if origin_id not in self.places:
+                self.logger.warning("%s not found in Matko places" % place)
                 continue
-            location = self.locations[origin_id]
-            self.save_location(location)
+            place = self.places[origin_id]
+            self.save_place(place)
