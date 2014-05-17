@@ -45,8 +45,6 @@ INSTALLED_APPS = (
     'mptt',
     'modeltranslation',
     'reversion',
-    'isodate',
-    'icalendar',
     'munigeo',
     'events',
     'simpleclient',
