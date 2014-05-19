@@ -153,13 +153,16 @@ class Importer(object):
     def save_event(self, info):
         info = info.copy()
 
-        args = dict(publisher=info['publisher'], origin_id=info['origin_id'])
+        args = dict(data_source=info['data_source'], origin_id=info['origin_id'])
+        obj_id = "%s:%s" % (info['data_source'].id, info['origin_id'])
         try:
             obj = Event.objects.get(**args)
             obj._created = False
+            assert obj.id == obj_id
         except Event.DoesNotExist:
             obj = Event(**args)
             obj._created = True
+            obj.id = obj_id
         obj._changed = False
 
         location_id = None
@@ -170,10 +173,12 @@ class Importer(object):
                 location_id = location['id']
             info['location_extra_info'] = location.get('extra_info', None)
 
-        skip_fields = ['id', 'location', 'offers', 'keywords']
+        skip_fields = ['id', 'location', 'publisher', 'offers', 'keywords']
         self._update_fields(obj, info, skip_fields)
 
         self._set_field(obj, 'location_id', location_id)
+
+        self._set_field(obj, 'publisher_id', info['publisher'].id)
 
         if obj._created or obj._changed:
             obj.save()
@@ -196,12 +201,15 @@ class Importer(object):
         errors = set()
 
         args = dict(data_source=info['data_source'], origin_id=info['origin_id'])
+        obj_id = "%s:%s" % (info['data_source'].id, origin_id)
         try:
             obj = Place.objects.get(**args)
             obj._created = False
+            assert obj.id == obj_id
         except Place.DoesNotExist:
             obj = Place(**args)
             obj._created = True
+            obj.id = obj_id
         obj._changed = False
 
         skip_fields = ['id', 'position', 'custom_fields']
@@ -228,6 +236,8 @@ class Importer(object):
         if position != obj.position:
             obj._changed = True
             obj.position = position
+
+        self._set_field(obj, 'publisher_id', info['publisher'].id)
 
         if obj._changed or obj._created:
             if obj._created:

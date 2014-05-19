@@ -91,7 +91,7 @@ class TprekImporter(Importer):
             obj = Place(data_source=self.data_source, origin_id=info['id'])
             obj._changed = True
             obj._created = True
-            obj.id = 'tprek:%s' % str(info['id'])
+            obj.id = obj_id
         else:
             assert obj.id == obj_id
             obj._created = False

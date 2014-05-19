@@ -11,7 +11,7 @@ from django.utils.timezone import get_default_timezone
 from .sync import ModelSyncher
 from .base import Importer, register_importer, recur_dict
 from .util import unicodetext, active_language
-from events.models import DataSource, Place, Event, Keyword, KeywordLabel
+from events.models import DataSource, Place, Event, Keyword, KeywordLabel, Organization
 from events.keywords import KeywordMatcher
 
 LOCATION_TPREK_MAP = {
@@ -88,6 +88,14 @@ class KulkeImporter(Importer):
         defaults = dict(name='Kulttuurikeskus')
         self.tprek_data_source = DataSource.objects.get(id='tprek')
         self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
+
+        ds_args = dict(id='ahjo')
+        defaults = dict(name='Ahjo')
+        ahjo_ds, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
+
+        org_args = dict(id='ahjo:46101')
+        defaults = dict(name='Kulttuurikeskus', data_source=ahjo_ds)
+        self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
 
         # Build a cached list of Places to avoid frequent hits to the db
         id_list = LOCATION_TPREK_MAP.values()
@@ -186,6 +194,7 @@ class KulkeImporter(Importer):
         eid = int(event_el.attrib['id'])
         event = events[eid]
         event['data_source'] = self.data_source
+        event['publisher'] = self.organization
         event['origin_id'] = eid
 
         event['name'][lang] = text_content('title')
