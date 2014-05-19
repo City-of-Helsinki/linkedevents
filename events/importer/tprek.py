@@ -86,11 +86,14 @@ class TprekImporter(Importer):
     @db.transaction.atomic
     def _import_unit(self, syncher, info):
         obj = syncher.get(str(info['id']))
+        obj_id = 'tprek:%s' % str(info['id'])
         if not obj:
             obj = Place(data_source=self.data_source, origin_id=info['id'])
             obj._changed = True
             obj._created = True
+            obj.id = 'tprek:%s' % str(info['id'])
         else:
+            assert obj.id == obj_id
             obj._created = False
 
         self._save_translated_field(obj, 'name', info, 'name')
