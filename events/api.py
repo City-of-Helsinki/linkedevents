@@ -31,14 +31,22 @@ def register_view(klass, name):
 
 
 class CustomPaginationSerializer(pagination.PaginationSerializer):
+    results_field = 'data'
     def to_native(self, obj):
-        native = super(CustomPaginationSerializer, self).to_native(obj)
-        try:
-            native['@context'] = obj.object_list.model.jsonld_context
-        except (NameError, AttributeError):
-            native['@context'] = 'http://schema.org'
-            pass
-        return native
+        ret = super(CustomPaginationSerializer, self).to_native(obj)
+        meta_fields = ['count', 'next', 'previous']
+        meta = {}
+        for f in meta_fields:
+            meta[f] = ret[f]
+            del ret[f]
+        ret['meta'] = meta
+        if False: # FIXME: Check for JSON-LD
+            try:
+                ret['@context'] = obj.object_list.model.jsonld_context
+            except (NameError, AttributeError):
+                ret['@context'] = 'http://schema.org'
+                pass
+        return ret
 
 
 class JSONLDRelatedField(relations.HyperlinkedRelatedField):
