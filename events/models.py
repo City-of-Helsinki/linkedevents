@@ -32,23 +32,9 @@ from events import contexts
 from django.utils.encoding import python_2_unicode_compatible
 
 
-class SystemMetaMixin(models.Model):
-    created_by = models.ForeignKey(
-        User, null=True, blank=True,
-        related_name="%(app_label)s_%(class)s_created_by")
-    modified_by = models.ForeignKey(
-        User, null=True, blank=True,
-        related_name="%(app_label)s_%(class)s_modified_by")
-    origin_id = models.CharField(max_length=255, db_index=True, null=True,
-                                 blank=True)
-
-    class Meta:
-        abstract = True
-
-
 class SchemalessFieldMixin(models.Model):
     # Custom field not from schema.org
-    custom_fields = hstore.DictionaryField(null=True, blank=True)
+    custom_data = hstore.DictionaryField(null=True, blank=True)
     hstore_objects = hstore.HStoreManager()
 
     class Meta:
@@ -56,14 +42,35 @@ class SchemalessFieldMixin(models.Model):
 
 
 @python_2_unicode_compatible
-class BaseModel(SystemMetaMixin):
-    id = models.CharField(max_length=40, primary_key=True)
+class DataSource(models.Model):
+    id = models.CharField(max_length=100, primary_key=True)
+    name = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.id
+
+
+@python_2_unicode_compatible
+class BaseModel(models.Model):
+    id = models.CharField(max_length=50, primary_key=True)
+    data_source = models.ForeignKey(DataSource, db_index=True)
+
     # Properties from schema.org/Thing
     name = models.CharField(max_length=255, db_index=True)
     image = models.URLField(null=True, blank=True)
 
+    origin_id = models.CharField(max_length=50, db_index=True, null=True,
+                                 blank=True)
+
     created_time = models.DateTimeField(null=True, blank=True)
     last_modified_time = models.DateTimeField(null=True, blank=True)
+
+    created_by = models.ForeignKey(
+        User, null=True, blank=True,
+        related_name="%(app_label)s_%(class)s_created_by")
+    last_modified_by = models.ForeignKey(
+        User, null=True, blank=True,
+        related_name="%(app_label)s_%(class)s_modified_by")
 
     @staticmethod
     def now():
@@ -88,6 +95,7 @@ class Organization(BaseModel):
 
 class Language(models.Model):
     id = models.CharField(max_length=6, primary_key=True)
+    name = models.CharField(max_length=20)
 
     class Meta:
         verbose_name = _('language')
@@ -102,18 +110,14 @@ class KeywordLabel(models.Model):
         unique_together = (('name', 'language'),)
 
 
-class Keyword(BaseModel, SchemalessFieldMixin):
+class Keyword(BaseModel):
     publisher = models.ForeignKey(Organization, db_index=True)
-    # category ids from: http://finto.fi/ysa/fi/
-    url = models.CharField(max_length=255, db_index=True, null=False, blank=False, default='unknown')
-    description = models.TextField(blank=True)
     alt_labels = models.ManyToManyField(KeywordLabel, blank=True, related_name='keywords')
-    same_as = models.CharField(max_length=255, null=True, blank=True)
     aggregate = models.BooleanField(default=False)
 
     objects = models.Manager()
 
-    schema_org_type = "Thing/LinkedEventCategory"
+    schema_org_type = "Thing/LinkedEventKeyword"
 
     def __str__(self):
         return self.name
@@ -125,9 +129,7 @@ class Keyword(BaseModel, SchemalessFieldMixin):
 
 class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     publisher = models.ForeignKey(Organization, db_index=True)
-    same_as = models.CharField(max_length=255, db_index=True, null=True,
-                               blank=True)
-    url = models.URLField(_('Place home page'), blank=True)
+    info_url = models.URLField(_('Place home page'), null=True)
     description = models.TextField(null=True, blank=True)
     parent = TreeForeignKey('self', null=True, blank=True,
                             related_name='children')
@@ -172,7 +174,7 @@ class OpeningHoursSpecification(models.Model):
     )
 
     place = models.ForeignKey(Place, db_index=True,
-                              related_name='opening_hour_specification')
+                              related_name='opening_hours')
     opens = models.TimeField(null=True, blank=True)
     closes = models.TimeField(null=True, blank=True)
     days_of_week = models.SmallIntegerField(choices=WEEK_DAYS, null=True,
@@ -204,10 +206,10 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     )
 
     publisher = models.ForeignKey(Organization, db_index=True, related_name='published_events')
-    provider = models.ForeignKey(Organization, db_index=True, related_name='provided_events')
+    provider = models.ForeignKey(Organization, db_index=True, null=True, related_name='provided_events')
 
     # Properties from schema.org/Thing
-    url = models.URLField(_('Event home page'), blank=True)
+    info_url = models.URLField(_('Event home page'), blank=True)
     description = models.TextField(blank=True)
 
     # Properties from schema.org/CreativeWork
@@ -242,9 +244,6 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
             self.created_time = BaseModel.now()
         self.last_modified_time = BaseModel.now()
         super(Event, self).save(*args, **kwargs)
-
-    def same_as(self):
-        return self.data_source.event_same_as(self.origin_id)
 
     def __str__(self):
         val = [self.name]

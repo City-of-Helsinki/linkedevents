@@ -16,9 +16,6 @@ from .util import active_language
 from events.models import *
 
 
-def place_not_found(data_source, pid):
-    return ('Place not found', (str(data_source), str(pid)))
-
 # Using a recursive default dictionary
 # allows easy updating of the same data keys
 # with different languages on different passes.
@@ -156,7 +153,7 @@ class Importer(object):
     def save_event(self, info):
         info = info.copy()
 
-        args = dict(data_source=info['data_source'], origin_id=info['origin_id'])
+        args = dict(publisher=info['publisher'], origin_id=info['origin_id'])
         try:
             obj = Event.objects.get(**args)
             obj._created = False

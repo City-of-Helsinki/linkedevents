@@ -35,6 +35,14 @@ class TprekImporter(Importer):
         defaults = dict(name='Toimipisterekisteri')
         self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
 
+        ds_args = dict(id='ahjo')
+        defaults = dict(name='Ahjo')
+        ahjo_ds, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
+
+        org_args = dict(id='ahjo:021600')
+        defaults = dict(name='Tietotekniikka- ja viestintäosasto', data_source=ahjo_ds)
+        self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
+
     def clean_text(self, text):
         # remove consecutive whitespaces
         text = re.sub(r'\s\s+', ' ', text, re.U)
@@ -130,6 +138,10 @@ class TprekImporter(Importer):
         if position != obj.position:
             obj._changed = True
             obj.position = position
+
+        if obj.publisher_id != self.organization.id:
+            obj.publisher = self.organization
+            obj._changed = True
 
         if obj.deleted:
             obj.deleted = False
