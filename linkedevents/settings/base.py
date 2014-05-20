@@ -114,6 +114,7 @@ REST_FRAMEWORK = {
     #'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.IsAdminUser',),
     'PAGINATE_BY': 20,
     'PAGINATE_BY_PARAM': 'page_size',
+    'ORDERING_PARAM': 'sort',
     'DEFAULT_RENDERER_CLASSES': (
         'events.renderers.JSONRenderer',
         'events.renderers.JSONLDRenderer',
@@ -125,7 +126,9 @@ REST_FRAMEWORK = {
         'rest_framework.parsers.FormParser',
         'rest_framework.parsers.MultiPartParser',
     ),
-    'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',),
+    'DEFAULT_FILTER_BACKENDS': (
+        'rest_framework.filters.DjangoFilterBackend',
+    ),
 }
 
 CORS_ORIGIN_ALLOW_ALL = True

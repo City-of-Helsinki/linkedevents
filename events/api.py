@@ -11,7 +11,7 @@ from django.utils.datastructures import MultiValueDictKeyError
 from django.contrib.gis.db.models.fields import GeometryField
 from django.db.models import Q
 from isodate import Duration, duration_isoformat, parse_duration
-from rest_framework import serializers, pagination, relations, viewsets
+from rest_framework import serializers, pagination, relations, viewsets, filters
 from rest_framework.reverse import reverse
 from rest_framework.response import Response
 from rest_framework.exceptions import ParseError
@@ -398,6 +398,9 @@ class JSONAPIViewSet(viewsets.ReadOnlyModelViewSet):
 
         return context
 
+class LinkedEventsOrderingFilter(filters.OrderingFilter):
+    ordering_param = 'sort'
+
 class EventViewSet(JSONAPIViewSet):
     """
     # Filtering retrieved events
@@ -460,6 +463,8 @@ class EventViewSet(JSONAPIViewSet):
     queryset = Event.objects.all()
     serializer_class = EventSerializer
     pagination_serializer_class = CustomPaginationSerializer
+    filter_backends = (LinkedEventsOrderingFilter,)
+    ordering_fields = ('start_time', 'end_time')
 
     def filter_queryset(self, queryset):
         """
