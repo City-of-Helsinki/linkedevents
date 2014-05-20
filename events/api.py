@@ -9,7 +9,7 @@ from django.core.exceptions import ValidationError
 from django.core.urlresolvers import NoReverseMatch
 from django.utils.datastructures import MultiValueDictKeyError
 from django.contrib.gis.db.models.fields import GeometryField
-from django.db.models import Q
+from django.db.models import Q, F
 from isodate import Duration, duration_isoformat, parse_duration
 from rest_framework import serializers, pagination, relations, viewsets, filters
 from rest_framework.reverse import reverse
@@ -349,6 +349,9 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             dt = obj.end_time.astimezone(LOCAL_TZ)
             dt = dt - timedelta(days=1)
             ret['end_time'] = dt.strftime('%Y-%m-%d')
+        if hasattr(obj, 'days_left'):
+            ret['days_left'] = int(obj.days_left)
+
         return ret
 
     class Meta:
@@ -400,6 +403,14 @@ class JSONAPIViewSet(viewsets.ReadOnlyModelViewSet):
 
 class LinkedEventsOrderingFilter(filters.OrderingFilter):
     ordering_param = 'sort'
+
+class EventOrderingFilter(LinkedEventsOrderingFilter):
+    def filter_queryset(self, request, queryset, view):
+        queryset = super(EventOrderingFilter, self).filter_queryset(request, queryset, view)
+        ordering = self.get_ordering(request)
+        if 'days_left' in [x.lstrip('-') for x in ordering]:
+            queryset = queryset.extra(select={'days_left': 'date_part(\'day\', end_time - start_time)'})
+        return queryset
 
 class EventViewSet(JSONAPIViewSet):
     """
@@ -463,8 +474,8 @@ class EventViewSet(JSONAPIViewSet):
     queryset = Event.objects.all()
     serializer_class = EventSerializer
     pagination_serializer_class = CustomPaginationSerializer
-    filter_backends = (LinkedEventsOrderingFilter,)
-    ordering_fields = ('start_time', 'end_time')
+    filter_backends = (EventOrderingFilter,)
+    ordering_fields = ('start_time', 'end_time', 'days_left')
 
     def filter_queryset(self, queryset):
         """
