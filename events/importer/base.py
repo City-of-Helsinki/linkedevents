@@ -2,6 +2,7 @@ import os
 import re
 import logging
 import itertools
+import datetime
 from collections import defaultdict
 
 from django.db import DataError
@@ -172,6 +173,25 @@ class Importer(object):
             if 'id' in location:
                 location_id = location['id']
             info['location_extra_info'] = location.get('extra_info', None)
+
+        assert info['start_time']
+        if not 'has_start_time' in info:
+            info['has_start_time'] = True
+        if not info['has_start_time']:
+            info['start_time'] = info['start_time'].replace(hour=0, minute=0, second=0)
+
+        # If no end timestamp supplied, we treat the event as ending at midnight.
+        if not 'end_time' in info:
+            info['end_time'] = info['start_time']
+            info['has_end_time'] = False
+
+        if not 'has_end_time' in info:
+            info['has_end_time'] = True
+
+        # If end date is supplied but no time, the event ends at midnight as well.
+        if not info['has_end_time']:
+            info['end_time'] = info['end_time'].replace(hour=0, minute=0, second=0)
+            info['end_time'] += datetime.timedelta(days=1)
 
         skip_fields = ['id', 'location', 'publisher', 'offers', 'keywords']
         self._update_fields(obj, info, skip_fields)

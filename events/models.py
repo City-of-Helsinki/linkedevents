@@ -223,6 +223,9 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
 
     start_time = models.DateTimeField(null=True, db_index=True, blank=True)
     end_time = models.DateTimeField(null=True, db_index=True, blank=True)
+    has_start_time = models.BooleanField(default=True)
+    has_end_time = models.BooleanField(default=True)
+
     super_event = TreeForeignKey('self', null=True, blank=True,
                                  related_name='sub_events')
 

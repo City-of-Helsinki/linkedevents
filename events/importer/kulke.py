@@ -188,7 +188,13 @@ class KulkeImporter(Importer):
     def _import_event(self, lang, event_el, events):
         tag = lambda t: 'event' + t
         text = lambda t: unicodetext(event_el.find(tag(t)))
-        clean = lambda t: t.strip() if t is not None else None
+        def clean(t):
+            if t is None:
+                return None
+            t = t.strip()
+            if not t:
+                return None
+            return t
         text_content = lambda k: clean(text(k))
 
         eid = int(event_el.attrib['id'])
@@ -211,9 +217,10 @@ class KulkeImporter(Importer):
             description += "\n\n"
         if bodytext:
             description += bodytext
-        event['description'][lang] = description
+        if description:
+            event['description'][lang] = description
 
-        event['url'][lang] = text_content('www')
+        event['info_url'][lang] = text_content('www')
         # todo: process extra links?
         # event_links = event_el.find(tag('links'))
 
@@ -229,12 +236,21 @@ class KulkeImporter(Importer):
         # If it's just a date, tzinfo is None.
         # FIXME: Mark that time is missing somehow?
         if not start_time.tzinfo:
-            start_time = start_time.replace(tzinfo=LOCAL_TZ)
+            assert start_time.hour == 0 and start_time.minute == 0 and start_time.second == 0
+            start_time = LOCAL_TZ.localize(start_time)
+            event['has_start_time'] = False
+        else:
+            event['has_start_time'] = True
         event['start_time'] = start_time
         if text('endtime'):
             end_time = dateutil.parser.parse(text('endtime'))
             if not end_time.tzinfo:
-                end_time = end_time.replace(tzinfo=LOCAL_TZ)
+                assert end_time.hour == 0 and end_time.minute == 0 and end_time.second == 0
+                end_time = LOCAL_TZ.localize(end_time)
+                event['has_end_time'] = False
+            else:
+                event['has_end_time'] = True
+
             event['end_time'] = end_time
 
         # todo: verify enrolment use cases, proper fields

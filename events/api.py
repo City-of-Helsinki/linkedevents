@@ -337,8 +337,21 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
     view_name = 'event-detail'
 
+    def to_native(self, obj):
+        ret = super(EventSerializer, self).to_native(obj)
+        if 'start_time' in ret and not obj.has_start_time:
+            # Return only the date part
+            ret['start_time'] = obj.start_time.strftime('%Y-%m-%d')
+        if 'end_time' in ret and not obj.has_end_time:
+            # If no end time is supplied, we're storing midnight of the following
+            # day in the database. Correct the value here.
+            dt = obj.end_time - timedelta(days=1)
+            ret['end_time'] = dt.strftime('%Y-%m-%d')
+        return ret
+
     class Meta:
         model = Event
+        exclude = ['has_start_time', 'has_end_time']
 
 
 LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
