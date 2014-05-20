@@ -30,8 +30,7 @@ class YsoImporter(Importer):
     def setup(self):
         requests_cache.install_cache('yso')
         defaults = dict(
-            name='Yleinen suomalainen ontologia',
-            event_url_template='')
+            name='Yleinen suomalainen ontologia')
         self.data_source, _ = DataSource.objects.get_or_create(
             id=self.name, defaults=defaults)
 
@@ -69,24 +68,19 @@ class YsoImporter(Importer):
         labels_to_create = set()
         for subject, label in graph.subject_objects(SKOS.altLabel):
             if (subject, RDF.type, SKOS.Concept) in graph:
-                url = str(subject)
+                yid = self.yso_id(subject)
                 if bulk_mode:
                     if label.language is not None:
                         labels_to_create.add((str(label), label.language))
-                        if url not in keyword_labels:
-                            keyword_labels[url] = []
-                        keyword_labels[url].append(label)
+                        keyword_labels.setdefault(yid, []).append(label)
                 else:
                     label = self.save_alt_label(label_syncher, graph, label, data_source)
                     if label:
-                        if subject not in keyword_labels:
-                            keyword_labels[str(subject)] = []
-                        keyword_labels[str(subject)].append(label)
+                        keyword_labels.setdefault(yid, []).append(label)
 
         if bulk_mode:
             KeywordLabel.objects.bulk_create([
                 KeywordLabel(
-                    data_source=data_source,
                     name=name,
                     language_id=language
                 ) for name, language in labels_to_create])
@@ -108,27 +102,29 @@ class YsoImporter(Importer):
             syncher.finish()
 
     def save_keyword_label_relationships_in_bulk(self, keyword_labels):
-            keywords = Keyword.objects.all().values('id', 'url')
-            labels = KeywordLabel.objects.all().values('id', 'name', 'language')
-            keyword_id_from_url = {
-                k['url']: k['id'] for k in keywords
-            }
-            label_id_from_name_and_language = {
-                (l['name'], l['language']): l['id'] for l in labels
-            }
-            KeywordAltLabels = Keyword.alt_labels.through
-            relations_to_create = []
-            for url, url_labels in keyword_labels.items():
-                for label in url_labels:
-                    params = dict(
-                        keyword_id = keyword_id_from_url.get(url),
-                        keywordlabel_id = (
-                            label_id_from_name_and_language.get(
-                                (str(label), label.language))))
-                    if params['keyword_id'] and params['keywordlabel_id']:
-                        relations_to_create.append(
-                            KeywordAltLabels(**params))
-            KeywordAltLabels.objects.bulk_create(relations_to_create)
+        yids = Keyword.objects.all().values_list('id', flat=True)
+        labels = KeywordLabel.objects.all().values('id', 'name', 'language')
+        label_id_from_name_and_language = {
+            (l['name'], l['language']): l['id'] for l in labels
+        }
+        KeywordAltLabels = Keyword.alt_labels.through
+        relations_to_create = []
+        for yid, url_labels in keyword_labels.items():
+            if yid not in yids:
+                continue
+            for label in url_labels:
+                params = dict(
+                    keyword_id = yid,
+                    keywordlabel_id = (
+                        label_id_from_name_and_language.get(
+                            (str(label), label.language))))
+                if params['keyword_id'] and params['keywordlabel_id']:
+                    relations_to_create.append(
+                        KeywordAltLabels(**params))
+        KeywordAltLabels.objects.bulk_create(relations_to_create)
+
+    def yso_id(self, subject):
+        return ':'.join(subject.split('/')[-2:])
 
     def save_keywords_in_bulk(self, graph, data_source):
         keywords = []
@@ -137,9 +133,9 @@ class YsoImporter(Importer):
                 continue
             keyword = Keyword(data_source=data_source)
             keyword.aggregate = is_aggregate_concept(graph, subject)
+            keyword.id = self.yso_id(subject)
             keyword.created_time = BaseModel.now()
             keyword.last_modified_time = BaseModel.now()
-            keyword.url = str(subject)
             for _, literal in graph.preferredLabel(subject):
                 with active_language(literal.language):
                     keyword.name = str(literal)

@@ -111,10 +111,8 @@ class KeywordLabel(models.Model):
 
 
 class Keyword(BaseModel):
-    publisher = models.ForeignKey(Organization, db_index=True)
     alt_labels = models.ManyToManyField(KeywordLabel, blank=True, related_name='keywords')
     aggregate = models.BooleanField(default=False)
-
     objects = models.Manager()
 
     schema_org_type = "Thing/LinkedEventKeyword"
