@@ -147,17 +147,23 @@ LOCAL_TZ = timezone('Europe/Helsinki')
 @register_importer
 class HelmetImporter(Importer):
     name = "helmet"
-    supported_languages = ['fi', 'sv', 'en']
+    supported_languages = ['fi' #, 'sv', 'en'
+    ]
     current_tick_index = 0
 
     def setup(self):
         ds_args = dict(id=self.name)
-        defaults = dict(name='HelMet-kirjastot',
-                        event_url_template='https://{origin_id}')
+        defaults = dict(name='HelMet-kirjastot')
         self.data_source, _ = DataSource.objects.get_or_create(
             defaults=defaults, **ds_args)
         self.tprek_data_source = DataSource.objects.get(id='tprek')
         self.yso_data_source = DataSource.objects.get(id='yso')
+
+        ahjo_ds, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
+
+        org_args = dict(id='ahjo:45400')
+        defaults = dict(name='Helsingin kaupunginkirjasto', data_source=ahjo_ds)
+        self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
 
         # Build a cached list of Places
         loc_id_list = [l[1] for l in LOCATIONS.values()]
@@ -171,14 +177,14 @@ class HelmetImporter(Importer):
         for yso_val in YSO_KEYWORD_MAPS.values():
             if isinstance(yso_val, tuple):
                 for t_v in yso_val:
-                    cat_id_set.add(YSO_BASE_URL + t_v)
+                    cat_id_set.add('yso:' + t_v)
             else:
-                cat_id_set.add(YSO_BASE_URL + yso_val)
+                cat_id_set.add('yso:' + yso_val)
 
         self.keyword_list = Keyword.objects.filter(
             data_source=self.yso_data_source
-        ).filter(url__in=cat_id_set)
-        self.yso_by_id = {p.url: p for p in self.keyword_list}
+        ).filter(id__in=cat_id_set)
+        self.yso_by_id = {p.id: p for p in self.keyword_list}
 
 
     @staticmethod
@@ -203,6 +209,7 @@ class HelmetImporter(Importer):
 
         event['data_source'] = self.data_source
         event['origin_id'] = eid
+        event['publisher'] = self.organization
 
         ext_props = HelmetImporter._get_extended_properties(event_el)
 
@@ -242,7 +249,7 @@ class HelmetImporter(Importer):
         to_le_id = lambda nid: next(
             (to_tprek_id(v[1]) for k, v in LOCATIONS.items()
              if nid in v[0]), None)
-        yso_to_db = lambda v: self.yso_by_id[YSO_BASE_URL + v]
+        yso_to_db = lambda v: self.yso_by_id['yso:' + v]
 
         event_keywords = set()
         for classification in event_el['Classifications']:
@@ -289,25 +296,25 @@ class HelmetImporter(Importer):
             event = self._import_event(lang, doc, events)
 
             # fetch possible language versions of document
-            versions_url = HELMET_LANGUAGE_VERSIONS_URL.format(
-                content_id=doc['ContentId'])
-            versions_response = requests.get(versions_url)
-            for version in versions_response.json()['value']:
-                content_url = HELMET_CONTENT_URL.format(
-                    content_id=version['ContentId'])
-                content_response = requests.get(content_url)
-                lang_version_doc = content_response.json()
-                current_lang = get_lang(lang_version_doc['LanguageId'])
-                lang_version_event = self._import_event(
-                    current_lang, lang_version_doc, events)
-                # if start date and place are same, assume that event is the same
-                if lang_version_event \
-                        and doc['EventStartDate'] == lang_version_doc['EventStartDate'] \
-                        and event['location']['id'] == lang_version_event['location']['id'] \
-                        and current_lang is not None:
-                    event['name'][current_lang] = lang_version_event['name'][current_lang]
-                    event['description'][current_lang] = lang_version_event['description'][current_lang]
-                    lang_version_event['ignore'] = True  # mark as ignorable
+            # versions_url = HELMET_LANGUAGE_VERSIONS_URL.format(
+            #     content_id=doc['ContentId'])
+            # versions_response = requests.get(versions_url)
+            # for version in versions_response.json()['value']:
+            #     content_url = HELMET_CONTENT_URL.format(
+            #         content_id=version['ContentId'])
+            #     content_response = requests.get(content_url)
+            #     lang_version_doc = content_response.json()
+            #     current_lang = get_lang(lang_version_doc['LanguageId'])
+            #     lang_version_event = self._import_event(
+            #         current_lang, lang_version_doc, events)
+            #     # if start date and place are same, assume that event is the same
+            #     if lang_version_event \
+            #             and doc['EventStartDate'] == lang_version_doc['EventStartDate'] \
+            #             and event['location']['id'] == lang_version_event['location']['id'] \
+            #             and current_lang is not None:
+            #         event['name'][current_lang] = lang_version_event['name'][current_lang]
+            #         event['description'][current_lang] = lang_version_event['description'][current_lang]
+            #         lang_version_event['ignore'] = True  # mark as ignorable
             self._ticker()
         if 'odata.nextLink' in root_doc:
             self._recur_fetch_paginated_url(
