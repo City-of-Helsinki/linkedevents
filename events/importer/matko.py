@@ -133,7 +133,7 @@ class MatkoImporter(Importer):
 
         link = item.find('link')
         if link is not None:
-            result['url'][lang_code] = unicodetext(link)
+            result['info_url'][lang_code] = unicodetext(link)
 
     def _find_place_from_tprek(self, location):
         place_name = location['name']['fi']
