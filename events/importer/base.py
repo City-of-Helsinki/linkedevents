@@ -201,7 +201,7 @@ class Importer(object):
         errors = set()
 
         args = dict(data_source=info['data_source'], origin_id=info['origin_id'])
-        obj_id = "%s:%s" % (info['data_source'].id, origin_id)
+        obj_id = "%s:%s" % (info['data_source'].id, info['origin_id'])
         try:
             obj = Place.objects.get(**args)
             obj._created = False
@@ -212,7 +212,7 @@ class Importer(object):
             obj.id = obj_id
         obj._changed = False
 
-        skip_fields = ['id', 'position', 'custom_fields']
+        skip_fields = ['id', 'position', 'custom_fields', 'publisher']
         self._update_fields(obj, info, skip_fields)
 
         n = info.get('latitude', 0)

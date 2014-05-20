@@ -7,7 +7,7 @@ from django.db.models import Count
 
 from lxml import etree
 
-from events.models import DataSource, Place, Event
+from events.models import DataSource, Place, Event, Organization
 from events.keywords import KeywordMatcher
 
 from .sync import ModelSyncher
@@ -15,7 +15,7 @@ from .base import Importer, register_importer, recur_dict
 from .util import clean_text, unicodetext
 
 MATKO_URLS = {
-    'locations': {
+    'places': {
         'fi': 'http://www.visithelsinki.fi/misc/feeds/helsinki_matkailu_poi.xml',
         'en': 'http://www.visithelsinki.fi/misc/feeds/helsinki_tourism_poi.xml',
         'sv': 'http://www.visithelsinki.fi/misc/feeds/helsingfors_turism_poi.xml',
@@ -94,6 +94,10 @@ class MatkoImporter(Importer):
     name = "matko"
     supported_languages = ['fi', 'sv', 'en']
 
+    def __init__(self, *args, **kwargs):
+        super(MatkoImporter, self).__init__(*args, **kwargs)
+        
+
     def put(self, rdict, key, val):
         if key not in rdict:
             rdict[key] = val
@@ -102,10 +106,17 @@ class MatkoImporter(Importer):
                 rdict, key, val, rdict[key]))
 
     def setup(self):
-        defaults = dict(name='Matkailu- ja kongressitoimisto',
-                        event_url_template='https://aspicore-asp.net/helsinki/xml/tapahtuma{origin_id}')
+        defaults = dict(name='Matkailu- ja kongressitoimisto')
         self.data_source, _ = DataSource.objects.get_or_create(id=self.name, defaults=defaults)
         self.tprek_data_source = DataSource.objects.get(id='tprek')
+
+        ytj_ds, _ = DataSource.objects.get_or_create(defaults={'name':'YTJ'}, id='ytj')
+
+        org_args = dict(id='ytj:0586977-6')
+        defaults = dict(name='Helsingin Markkinointi Oy', data_source=ytj_ds)
+
+        self.organization, _ = Organization.objects.get_or_create(
+            defaults=defaults, **org_args)
 
         place_list = Place.objects.filter(data_source=self.tprek_data_source)
         # Get only places that have unique names
@@ -162,7 +173,7 @@ class MatkoImporter(Importer):
                     location['name']['fi'], location['origin_id']))
                 return None
             pprint(places[matko_id])
-            place = self.save_location(places[matko_id])
+            place = self.save_place(places[matko_id])
 
         return place.id
 
@@ -180,6 +191,7 @@ class MatkoImporter(Importer):
         event['date_published'] = dateutil.parser.parse(
             unicodetext(item.find('pubDate'))
         )
+        event['publisher'] = self.organization
 
         self._import_common(lang_code, item, event)
 
@@ -235,7 +247,7 @@ class MatkoImporter(Importer):
         for t in (type1, type2):
             if t:
                 event_types.update(
-                    map(lambda x: x.lower(), c.split(",")))
+                    map(lambda x: x.lower(), t.split(",")))
 
         keywords = []
         for t in event_types:
@@ -269,6 +281,8 @@ class MatkoImporter(Importer):
         location['origin_id'] = lid
         location['data_source'] = self.data_source
 
+        location['publisher'] = self.organization
+
         self._import_common(lang_code, item, location)
 
         address = text(item, 'address')
@@ -292,9 +306,6 @@ class MatkoImporter(Importer):
         # todo: parse
         # location['opening_hours'][lang_code] = text(item, 'open')
         location['custom_fields']['accessibility'][lang_code] = text(item, 'disabled')
-
-        standardize_accessibility(
-            location['custom_fields']['accessibility'][lang_code], lang_code)
 
         lon, lat = clean_text(text(item, 'longitude')), clean_text(text(item, 'latitude'))
         if lon != '0' and lat != '0':
@@ -350,6 +361,7 @@ class MatkoImporter(Importer):
             loc = loc_info.copy()
             loc['data_source'] = self.data_source
             loc['origin_id'] = origin_id
+            loc['publisher'] = self.organization
             places[origin_id] = loc
 
         for lang, url in MATKO_URLS['places'].items():
