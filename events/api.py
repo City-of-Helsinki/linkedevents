@@ -325,6 +325,7 @@ class LanguageViewSet(viewsets.ReadOnlyModelViewSet):
 
 register_view(LanguageViewSet, 'language')
 
+LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
 
 class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     location = JSONLDRelatedField(serializer=PlaceSerializer, required=False,
@@ -341,11 +342,12 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         ret = super(EventSerializer, self).to_native(obj)
         if 'start_time' in ret and not obj.has_start_time:
             # Return only the date part
-            ret['start_time'] = obj.start_time.strftime('%Y-%m-%d')
+            ret['start_time'] = obj.start_time.astimezone(LOCAL_TZ).strftime('%Y-%m-%d')
         if 'end_time' in ret and not obj.has_end_time:
             # If no end time is supplied, we're storing midnight of the following
             # day in the database. Correct the value here.
-            dt = obj.end_time - timedelta(days=1)
+            dt = obj.end_time.astimezone(LOCAL_TZ)
+            dt = dt - timedelta(days=1)
             ret['end_time'] = dt.strftime('%Y-%m-%d')
         return ret
 
@@ -353,8 +355,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         model = Event
         exclude = ['has_start_time', 'has_end_time']
 
-
-LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
 
 def parse_time(time_str, is_start):
     time_str = time_str.strip()

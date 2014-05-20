@@ -3,6 +3,7 @@ import re
 import dateutil.parser
 import requests
 import requests_cache
+import pytz
 from django.db.models import Count
 
 from lxml import etree
@@ -96,7 +97,7 @@ class MatkoImporter(Importer):
 
     def __init__(self, *args, **kwargs):
         super(MatkoImporter, self).__init__(*args, **kwargs)
-        
+        self.timezone = pytz.timezone('Europe/Helsinki')
 
     def put(self, rdict, key, val):
         if key not in rdict:
@@ -210,6 +211,13 @@ class MatkoImporter(Importer):
         # The feed doesn't contain proper end times (clock).
         end_time = dateutil.parser.parse(
             text(item, 'endtime'))
+
+        # Check if the time of day is at midnight, and if so, treat
+        # the end timestamp as not having the time component.
+        if end_time.hour == 0 and end_time.minute == 0 and end_time.second == 0:
+            self.put(event, 'has_end_time', False)
+        if start_time.hour == 0 and start_time.minute == 0 and start_time.second == 0:
+            self.put(event, 'has_start_time', False)
 
         event['location']['name'][lang_code] = text(item, 'place')
         event['location']['extra_info'][lang_code] = text(item, 'placeinfo')

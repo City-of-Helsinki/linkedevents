@@ -181,7 +181,7 @@ class Importer(object):
             info['start_time'] = info['start_time'].replace(hour=0, minute=0, second=0)
 
         # If no end timestamp supplied, we treat the event as ending at midnight.
-        if not 'end_time' in info:
+        if not 'end_time' in info or not info['end_time']:
             info['end_time'] = info['start_time']
             info['has_end_time'] = False
 
