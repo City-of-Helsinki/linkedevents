@@ -13,6 +13,7 @@ class Command(BaseCommand):
     option_list = list(BaseCommand.option_list + (
         make_option('--all', action='store_true', dest='all', help='Import all entities'),
         make_option('--cached', action='store_true', dest='cached', help='Cache requests (if possible)'),
+        make_option('--single', action='store', dest='single', help='Import only single entity'),
     ))
 
     importer_types = ['places', 'events', 'keywords']
@@ -38,7 +39,8 @@ class Command(BaseCommand):
             root_dir = settings.BASE_DIR
         importer = imp_class({'data_path': os.path.join(root_dir, 'data'),
                               'verbosity': int(options['verbosity']),
-                              'cached': options['cached']})
+                              'cached': options['cached'],
+                              'single': options['single']})
 
         # Activate the default language for the duration of the import
         # to make sure translated fields are populated correctly.

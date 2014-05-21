@@ -198,6 +198,11 @@ class KulkeImporter(Importer):
         text_content = lambda k: clean(text(k))
 
         eid = int(event_el.attrib['id'])
+
+        if self.options['single']:
+            if str(eid) != self.options['single']:
+                return
+
         event = events[eid]
         event['data_source'] = self.data_source
         event['publisher'] = self.organization
@@ -240,6 +245,7 @@ class KulkeImporter(Importer):
             start_time = LOCAL_TZ.localize(start_time)
             event['has_start_time'] = False
         else:
+            start_time = start_time.astimezone(LOCAL_TZ)
             event['has_start_time'] = True
         event['start_time'] = start_time
         if text('endtime'):
@@ -249,6 +255,7 @@ class KulkeImporter(Importer):
                 end_time = LOCAL_TZ.localize(end_time)
                 event['has_end_time'] = False
             else:
+                end_time = end_time.astimezone(LOCAL_TZ)
                 event['has_end_time'] = True
 
             event['end_time'] = end_time
@@ -379,7 +386,3 @@ class KulkeImporter(Importer):
                 events, child, children_set, checked_events
             )
         return children_set
-
-    def import_places(self):
-        print("Importing Kulke places")
-        pass

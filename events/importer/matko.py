@@ -180,6 +180,9 @@ class MatkoImporter(Importer):
 
     def _import_event_from_feed(self, lang_code, item, events, keyword_matcher):
         eid = int(text(item, 'uniqueid'))
+        if self.options['single'] and str(eid) != self.options['single']:
+            return
+
         event = events[eid]
 
         if eid != int(text(item, 'id')):
