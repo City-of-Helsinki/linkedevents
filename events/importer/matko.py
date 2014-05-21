@@ -216,11 +216,14 @@ class MatkoImporter(Importer):
             text(item, 'endtime'))
 
         # Check if the time of day is at midnight, and if so, treat
-        # the end timestamp as not having the time component.
-        if end_time.hour == 0 and end_time.minute == 0 and end_time.second == 0:
-            self.put(event, 'has_end_time', False)
+        # the timestamp as not having the time component.
         if start_time.hour == 0 and start_time.minute == 0 and start_time.second == 0:
             self.put(event, 'has_start_time', False)
+        # The time zone in the incoming data doesn't take into account daylight savings.
+        start_time = self.timezone.localize(start_time.replace(tzinfo=None))
+        end_time = self.timezone.localize(end_time.replace(tzinfo=None))
+        if end_time.hour == 0 and end_time.minute == 0 and end_time.second == 0:
+            self.put(event, 'has_end_time', False)
 
         event['location']['name'][lang_code] = text(item, 'place')
         event['location']['extra_info'][lang_code] = text(item, 'placeinfo')

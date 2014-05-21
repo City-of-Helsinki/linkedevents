@@ -344,11 +344,9 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             # Return only the date part
             ret['start_time'] = obj.start_time.astimezone(LOCAL_TZ).strftime('%Y-%m-%d')
         if 'end_time' in ret and not obj.has_end_time:
-            # If no end time is supplied, we're storing midnight of the following
-            # day in the database. Correct the value here.
-            dt = obj.end_time.astimezone(LOCAL_TZ)
-            dt = dt - timedelta(days=1)
-            ret['end_time'] = dt.strftime('%Y-%m-%d')
+            # If we're storing only the date part, do not pretend we have the exact time.
+            if obj.end_time - obj.start_time <= timedelta(days=1):
+                ret['end_time'] = None
         if hasattr(obj, 'days_left'):
             ret['days_left'] = int(obj.days_left)
 
@@ -370,7 +368,9 @@ def parse_time(time_str, is_start):
         dt = None
     if not dt:
         if time_str.lower() == 'today':
-            dt = datetime.now().replace(hour=0, minute=0, microsecond=0)
+            dt = datetime.utcnow().replace(tzinfo=pytz.utc)
+            dt = dt.astimezone(LOCAL_TZ)
+            dt = dt.replace(hour=0, minute=0, second=0, microsecond=0)
     if dt:
         # With start timestamps, we treat dates as beginning
         # at midnight the same day. End timestamps are taken to
@@ -490,11 +490,11 @@ class EventViewSet(JSONAPIViewSet):
         val = self.request.QUERY_PARAMS.get('start', None)
         if val:
             dt = parse_time(val, is_start=True)
-            queryset = queryset.filter(Q(end_time__gte=dt) | Q(start_time__gte=dt))
+            queryset = queryset.filter(Q(end_time__gt=dt) | Q(start_time__gte=dt))
         val = self.request.QUERY_PARAMS.get('end', None)
         if val:
             dt = parse_time(val, is_start=False)
-            queryset = queryset.filter(Q(end_time__lte=dt) | Q(start_time__lte=dt))
+            queryset = queryset.filter(Q(end_time__lt=dt) | Q(start_time__lte=dt))
 
         val = self.request.QUERY_PARAMS.get('bbox', None)
         if val:

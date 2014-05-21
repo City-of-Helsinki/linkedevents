@@ -188,7 +188,7 @@ class Importer(object):
         if not 'has_end_time' in info:
             info['has_end_time'] = True
 
-        # If end date is supplied but no time, the event ends at midnight as well.
+        # If end date is supplied but no time, the event ends at midnight of the following day.
         if not info['has_end_time']:
             info['end_time'] = info['end_time'].replace(hour=0, minute=0, second=0)
             info['end_time'] += datetime.timedelta(days=1)
