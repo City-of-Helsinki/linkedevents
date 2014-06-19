@@ -408,6 +408,8 @@ class EventOrderingFilter(LinkedEventsOrderingFilter):
     def filter_queryset(self, request, queryset, view):
         queryset = super(EventOrderingFilter, self).filter_queryset(request, queryset, view)
         ordering = self.get_ordering(request)
+        if not ordering:
+            ordering = []
         if 'days_left' in [x.lstrip('-') for x in ordering]:
             queryset = queryset.extra(select={'days_left': 'date_part(\'day\', end_time - start_time)'})
         return queryset
@@ -501,6 +503,10 @@ class EventViewSet(JSONAPIViewSet):
             bbox_filter = build_bbox_filter(self.srs, val, 'location')
             places = Place.geo_objects.filter(**bbox_filter)
             queryset = queryset.filter(location__in=places)
+
+        val = self.request.QUERY_PARAMS.get('data_source', None)
+        if val:
+            queryset = queryset.filter(data_source=val)
 
         return queryset
 
