@@ -257,6 +257,15 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
 
 reversion.register(Event)
 
+class EventLink(models.Model):
+    name = models.CharField(max_length=100, blank=True)
+    event = models.ForeignKey(Event, db_index=True, related_name='external_links')
+    language = models.ForeignKey(Language)
+    link = models.URLField()
+
+    class Meta:
+        unique_together = (('event', 'language', 'link'),)
+
 
 class ExportInfo(models.Model):
     target_id = models.CharField(max_length=255, db_index=True, null=True,
