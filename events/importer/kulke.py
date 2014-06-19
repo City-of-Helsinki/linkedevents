@@ -8,6 +8,9 @@ import dateutil
 from pytz import timezone
 from django.conf import settings
 from django.utils.timezone import get_default_timezone
+from django.core.validators import URLValidator
+from django.core.exceptions import ValidationError
+
 from .sync import ModelSyncher
 from .base import Importer, register_importer, recur_dict
 from .util import unicodetext, active_language
@@ -227,12 +230,28 @@ class KulkeImporter(Importer):
 
         event['info_url'][lang] = text_content('www')
         # todo: process extra links?
-        # event_links = event_el.find(tag('links'))
+        links = event_el.find(tag('links'))
+        if links is not None:
+            links = links.findall(tag('link'))
+            assert len(links)
+        else:
+            links = []
+        external_links = []
+        for link_el in links:
+            link = unicodetext(link_el)
+            if not re.match(r'^\w+?://', link):
+                link = 'http://' + link
+            try:
+                self.url_validator(link)
+            except ValidationError:
+                continue
+            external_links.append({'link': link})
+        event['external_links'][lang] = external_links
 
         eventattachments = event_el.find(tag('attachments'))
         if eventattachments is not None:
             for attachment in eventattachments:
-                if attachment.get('teaserimage'):
+                if attachment.attrib['type'] == 'teaserimage':
                     event['image'] = unicodetext(attachment).strip()
                     break
 
@@ -323,6 +342,7 @@ class KulkeImporter(Importer):
 
     def import_events(self):
         print("Importing Kulke events")
+        self.url_validator = URLValidator()
         events = recur_dict()
         for lang in ['fi', 'sv', 'en']:
             events_file = os.path.join(

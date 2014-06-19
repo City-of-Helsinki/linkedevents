@@ -210,6 +210,32 @@ class Importer(object):
             obj.keywords = new_keywords
             obj._changed = True
 
+
+        links = []
+        if 'external_links' in info:
+            for lang in info['external_links'].keys():
+                for l in info['external_links'][lang]:
+                    l['language'] = lang
+                links += info['external_links'][lang]
+
+        attr_names = ['language', 'name', 'link']
+
+        def obj_make_link_id(obj):
+            return '%s:%s:%s' % (obj.language_id, obj.name, obj.link)
+        def info_make_link_id(info):
+            return '%s:%s:%s' % (info['language'], info.get('name', ''), info['link'])
+
+        new_links = set([info_make_link_id(link) for link in links])
+        old_links = set([obj_make_link_id(link) for link in obj.external_links.all()])
+        if old_links != new_links:
+            obj.external_links.all().delete()
+            for link in links:
+                link_obj = EventLink(event=obj, language_id=link['language'], link=link['link'])
+                if 'name' in link:
+                    link_obj.name = link['name']
+                link_obj.save()
+            obj._changed = True
+
         if obj._changed or obj._created:
             if obj._created:
                 verb = "created"
