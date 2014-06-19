@@ -15,7 +15,7 @@ from rest_framework import serializers, pagination, relations, viewsets, filters
 from rest_framework.reverse import reverse
 from rest_framework.response import Response
 from rest_framework.exceptions import ParseError
-from events.models import Place, Event, Keyword, Language, OpeningHoursSpecification
+from events.models import Place, Event, Keyword, Language, OpeningHoursSpecification, EventLink
 from django.conf import settings
 from events import utils
 from modeltranslation.translator import translator, NotRegistered
@@ -327,6 +327,17 @@ register_view(LanguageViewSet, 'language')
 
 LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
 
+class EventLinkSerializer(serializers.ModelSerializer):
+    def to_native(self, obj):
+        ret = super(EventLinkSerializer, self).to_native(obj)
+        if not ret['name']:
+            ret['name'] = None
+        return ret
+
+    class Meta:
+        model = EventLink
+        exclude = ['id']
+
 class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     location = JSONLDRelatedField(serializer=PlaceSerializer, required=False,
                                   view_name='place-detail')
@@ -335,6 +346,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                                     view_name='keyword-detail')
     super_event = JSONLDRelatedField(required=False, view_name='event-detail')
     event_status = EnumChoiceField(Event.STATUSES)
+    external_links = EventLinkSerializer(many=True)
 
     view_name = 'event-detail'
 
