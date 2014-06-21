@@ -248,7 +248,13 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         super(Event, self).save(*args, **kwargs)
 
     def __str__(self):
-        val = [self.name]
+        name = ''
+        for lang in settings.LANGUAGES:
+            s = getattr(self, 'name_%s' % lang[0], None)
+            if s:
+                name = s
+                break
+        val = [name, '(%s)' % self.id]
         dcount = self.get_descendant_count()
         if dcount > 0:
             val.append(u" (%d children)" % dcount)
