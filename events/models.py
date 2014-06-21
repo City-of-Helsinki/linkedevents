@@ -209,6 +209,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     # Properties from schema.org/Thing
     info_url = models.URLField(_('Event home page'), blank=True)
     description = models.TextField(blank=True)
+    short_description = models.TextField(blank=True)
 
     # Properties from schema.org/CreativeWork
     date_published = models.DateTimeField(null=True, blank=True)
