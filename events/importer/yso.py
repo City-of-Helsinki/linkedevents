@@ -7,7 +7,7 @@ from rdflib import URIRef
 from rdflib import RDF
 from rdflib.namespace import FOAF, SKOS, OWL
 
-from events.models import Keyword, KeywordLabel, DataSource, BaseModel, Language
+from events.models import Keyword, KeywordLabel, DataSource, BaseModel, Language, Organization
 
 from sys import stdout
 from .util import active_language
@@ -33,6 +33,14 @@ class YsoImporter(Importer):
             name='Yleinen suomalainen ontologia')
         self.data_source, _ = DataSource.objects.get_or_create(
             id=self.name, defaults=defaults)
+
+        ds_args = dict(id='system')
+        defaults = dict(name='System')
+        system_ds, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
+
+        org_args = dict(id='hy:kansalliskirjasto')
+        defaults = dict(name='Kansalliskirjasto', data_source=system_ds)
+        self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
 
     def import_keywords(self):
         print("Importing YSO keywords")
