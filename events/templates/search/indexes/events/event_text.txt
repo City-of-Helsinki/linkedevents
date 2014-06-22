@@ -1,0 +1,4 @@
+{{object.name}}
+{{object.short_description}}
+{{object.description}}
+{{object.location.name}}

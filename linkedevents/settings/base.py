@@ -45,6 +45,7 @@ INSTALLED_APPS = (
     'mptt',
     'modeltranslation',
     'reversion',
+    'haystack',
     'munigeo',
     'events',
     'simpleclient',
@@ -152,3 +153,30 @@ CITYSDK_API_SETTINGS = {
     'SRS_URL': 'http://www.opengis.net/def/crs/EPSG/0/%d' % PROJECTION_SRID,
     'DEFAULT_POI_CATEGORY': '53562f3238653c0a842a3bf7'
 }
+
+HAYSTACK_CONNECTIONS = {
+    'default': {
+        'ENGINE': 'multilingual_haystack.backends.MultilingualSearchEngine',
+    },
+    'default-fi': {
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'haystack.backends.elasticsearch_backend.ElasticsearchSearchEngine',
+        'URL': 'http://localhost:9200/',
+        'INDEX_NAME': 'linkedevents-fi',
+    },
+    'default-sv': {
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'haystack.backends.elasticsearch_backend.ElasticsearchSearchEngine',
+        'URL': 'http://localhost:9200/',
+        'INDEX_NAME': 'linkedevents-sv',
+    },
+    'default-en': {
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'haystack.backends.elasticsearch_backend.ElasticsearchSearchEngine',
+        'URL': 'http://localhost:9200/',
+        'INDEX_NAME': 'linkedevents-en',
+    },
+}
+
+#from multilingual_haystack.settings import get_haystack_connections
+#HAYSTACK_CONNECTIONS = get_haystack_connections(HAYSTACK_CONNECTIONS, LANGUAGES)

@@ -26,3 +26,5 @@ rdflib
 icalendar
 httmock
 bleach
+django-haystack
+pyelasticsearch
