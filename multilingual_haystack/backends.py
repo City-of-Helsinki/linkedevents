@@ -8,11 +8,6 @@ from haystack.constants import DEFAULT_ALIAS
 from haystack.utils.loading import load_backend
 
 
-def get_using(language, alias=DEFAULT_ALIAS):
-    new_using = alias + "-" + language
-    using = new_using if new_using in settings.HAYSTACK_CONNECTIONS else alias
-    return using
-
 class MultilingualSearchBackend(BaseSearchBackend):
     def update(self, index, iterable, commit=True):
         initial_language = translation.get_language()[:2]
@@ -33,11 +28,17 @@ class MultilingualSearchBackend(BaseSearchBackend):
     def clear(self, **kwargs):
         return
 
-class MultilingualSearchQuery(BaseSearchQuery):
-    def __init__(self, using=DEFAULT_ALIAS):
+#class MultilingualSearchQuery(BaseSearchQuery):
+#    def __init__(self, using=DEFAULT_ALIAS):
+
+class MultilingualSearchEngine(BaseEngine):
+    backend = MultilingualSearchBackend
+    #query = MultilingualSearchQuery
+
+    def get_query(self):
         language = translation.get_language()[:2]
-        using = get_using(language)
-        super(MultilingualSearchQuery, self).__init__(using=using)
+        using = '%s-%s' % (self.using, language)
+        return connections[using].get_query()
 
 class LanguageSearchBackend(BaseSearchBackend):
     def update(self, *args, **kwargs):
@@ -45,8 +46,7 @@ class LanguageSearchBackend(BaseSearchBackend):
         return
 
 class LanguageSearchQuery(BaseSearchQuery):
-    def __init__(self, **kwargs):
-        pass
+    pass
 
 class LanguageSearchEngine(BaseEngine):
     def __init__(self, **kwargs):
@@ -58,14 +58,6 @@ class LanguageSearchEngine(BaseEngine):
                              {'parent_class': base_engine.backend})
         self.backend = backend_class
 
-        query_bases = (LanguageSearchQuery, base_engine.query)
-        query_class = type('LanguageSearchQuery', query_bases,
-                           {'parent_class': base_engine.query})
-        self.query = query_class
+        self.query = base_engine.query
 
         super(LanguageSearchEngine, self).__init__(**kwargs)
-
-
-class MultilingualSearchEngine(BaseEngine):
-    backend = MultilingualSearchBackend
-    query = MultilingualSearchQuery
