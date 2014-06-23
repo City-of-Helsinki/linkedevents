@@ -231,6 +231,8 @@ class Importer(object):
             obj.external_links.all().delete()
             for link in links:
                 link_obj = EventLink(event=obj, language_id=link['language'], link=link['link'])
+                if len(link['link']) > 200:
+                    continue
                 if 'name' in link:
                     link_obj.name = link['name']
                 link_obj.save()
