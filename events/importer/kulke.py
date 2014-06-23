@@ -48,34 +48,33 @@ CATEGORIES_TO_IGNORE = [
     53, 54, 55
 ]
 
-SPORTS = ['http://www.yso.fi/onto/yso/p965']
-GYMS = ['http://www.yso.fi/onto/yso/p8504']
+SPORTS = ['p965']
+GYMS = ['p8504']
 MANUAL_CATEGORIES = {
     # urheilu
     546: SPORTS, 547: SPORTS, 431: SPORTS, 638: SPORTS,
     # kuntosalit
     607: GYMS, 615: GYMS,
     # harrastukset
-    626: ['http://www.yso.fi/onto/yso/p2901'],
+    626: ['p2901'],
     # erityisliikunta
-    634: ['http://www.yso.fi/onto/yso/p3093'],
+    634: ['p3093'],
     # monitaiteisuus
-    223: ['http://www.yso.fi/onto/yso/p25216'],
+    223: ['p25216'],
     # seniorit > ikääntyneet
-    354: ['http://www.yso.fi/onto/yso/p2433'],
+    354: ['p2433'],
     # saunominen
-    371: ['http://www.yso.fi/onto/yso/p11049'],
+    371: ['p11049'],
     # lastentapahtumat > lapset (!)
-    105: ['http://www.yso.fi/onto/yso/p4354'],
+    105: ['p4354'],
     # steppi
-    554: ['http://www.yso.fi/onto/yso/p19614'],
+    554: ['p19614'],
     # liikuntaleiri
-    710: ['http://www.yso.fi/onto/yso/p143',
-          'http://www.yso.fi/onto/yso/p916'],
+    710: ['p143', 'p916'],
     # teatteri ja sirkus
-    351: ['http://www.yso.fi/onto/yso/p2850'],
+    351: ['p2850'],
     # elokuva (ja media)
-    205: ['http://www.yso.fi/onto/yso/p16327']
+    205: ['p16327']
 }
 
 
@@ -140,7 +139,7 @@ class KulkeImporter(Importer):
 
             manual = MANUAL_CATEGORIES.get(cid)
             if manual:
-                c['keywords'] = [Keyword.objects.get(url=url) for url in manual]
+                c['keywords'] = [Keyword.objects.get(id='yso:%s' % yso_id) for yso_id in manual]
                 continue
 
             replacements = [('jumppa', 'voimistelu'), ('Stoan', 'Stoa')]
