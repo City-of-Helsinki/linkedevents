@@ -154,27 +154,38 @@ CITYSDK_API_SETTINGS = {
     'DEFAULT_POI_CATEGORY': '53562f3238653c0a842a3bf7'
 }
 
+CUSTOM_MAPPINGS = {
+    'autosuggest': {
+        'search_analyzer': 'standard',
+        'index_analyzer': 'edgengram_analyzer',
+        'analyzer': None
+    }
+}
+
 HAYSTACK_CONNECTIONS = {
     'default': {
         'ENGINE': 'multilingual_haystack.backends.MultilingualSearchEngine',
     },
     'default-fi': {
         'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
-        'BASE_ENGINE': 'haystack.backends.elasticsearch_backend.ElasticsearchSearchEngine',
+        'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
         'URL': 'http://localhost:9200/',
         'INDEX_NAME': 'linkedevents-fi',
+        'MAPPINGS': CUSTOM_MAPPINGS
     },
     'default-sv': {
         'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
-        'BASE_ENGINE': 'haystack.backends.elasticsearch_backend.ElasticsearchSearchEngine',
+        'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
         'URL': 'http://localhost:9200/',
         'INDEX_NAME': 'linkedevents-sv',
+        'MAPPINGS': CUSTOM_MAPPINGS
     },
     'default-en': {
         'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
-        'BASE_ENGINE': 'haystack.backends.elasticsearch_backend.ElasticsearchSearchEngine',
+        'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
         'URL': 'http://localhost:9200/',
         'INDEX_NAME': 'linkedevents-en',
+        'MAPPINGS': CUSTOM_MAPPINGS
     },
 }
 
