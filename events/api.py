@@ -520,6 +520,10 @@ class EventViewSet(JSONAPIViewSet):
         if val:
             queryset = queryset.filter(data_source=val)
 
+        val = self.request.QUERY_PARAMS.get('location', None)
+        if val:
+            queryset = queryset.filter(location_id=val)
+
         return queryset
 
 register_view(EventViewSet, 'event')
