@@ -1,5 +1,5 @@
 import re
-
+import collections
 
 def convert_to_camelcase(s):
     return ''.join(word.title() if i else word for i, word in enumerate(
@@ -24,3 +24,17 @@ def get_value_from_tuple_list(list_of_tuples, search_key, value_index):
     for i, v in enumerate(list_of_tuples):
         if v[value_index ^ 1] == search_key:
             return v[value_index]
+
+
+def update(d, u):
+    """
+    Recursively update dict d with
+    values at all levels of dict u
+    """
+    for k, v in u.items():
+        if isinstance(v, collections.Mapping):
+            r = update(d.get(k, {}), v)
+            d[k] = r
+        else:
+            d[k] = u[k]
+    return d

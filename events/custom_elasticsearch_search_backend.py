@@ -1,4 +1,6 @@
+import collections
 from haystack.backends import elasticsearch_backend as es_backend
+from .utils import update
 
 class CustomEsSearchBackend(es_backend.ElasticsearchSearchBackend):
     """ A slight modification of the default Haystack elasticsearch
@@ -14,6 +16,10 @@ class CustomEsSearchBackend(es_backend.ElasticsearchSearchBackend):
             connection_alias, **connection_options
         )
         self.custom_mappings = connection_options.get('MAPPINGS')
+        settings = connection_options.get('SETTINGS')
+        if settings:
+            default_settings = self.DEFAULT_SETTINGS['settings']
+            update(default_settings, settings)
 
     def build_schema(self, fields):
         content_field_name, mappings = (
@@ -23,7 +29,7 @@ class CustomEsSearchBackend(es_backend.ElasticsearchSearchBackend):
             return (content_field_name, mappings)
 
         for index_fieldname, mapping in self.custom_mappings.items():
-            target = mappings.get(index_fieldname, {})
+            target = mappings.setdefault(index_fieldname, {})
             for key, value in mapping.items():
                 if value is None and key in target:
                     del target[key]

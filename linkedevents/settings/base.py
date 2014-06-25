@@ -159,6 +159,9 @@ CUSTOM_MAPPINGS = {
         'search_analyzer': 'standard',
         'index_analyzer': 'edgengram_analyzer',
         'analyzer': None
+    },
+    'text': {
+        'analyzer': 'default'
     }
 }
 
@@ -171,7 +174,22 @@ HAYSTACK_CONNECTIONS = {
         'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
         'URL': 'http://localhost:9200/',
         'INDEX_NAME': 'linkedevents-fi',
-        'MAPPINGS': CUSTOM_MAPPINGS
+        'MAPPINGS': CUSTOM_MAPPINGS,
+        'SETTINGS': {
+            "analysis": {
+                "analyzer": {
+                    "default": {
+                        "tokenizer": "finnish",
+                        "filter": ["lowercase", "voikko_filter"]
+                    }
+                },
+                "filter": {
+                    "voikko_filter": {
+                        "type": "voikko",
+                    }
+                }
+            }
+        }
     },
     'default-sv': {
         'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
