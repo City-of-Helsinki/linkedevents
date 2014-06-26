@@ -17,7 +17,7 @@ cd $ROOT_PATH
 
 echo Importing tprek locations >> $LOG_FILE
 
-python manage.py event_import tprek --locations >> $LOG_FILE 2>&1
+python manage.py event_import tprek --places >> $LOG_FILE 2>&1
 if [ $? -ne 0 ]; then
     cat $LOG_FILE
     exit 1
