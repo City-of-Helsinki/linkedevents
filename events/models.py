@@ -282,7 +282,7 @@ class ExportInfo(models.Model):
     last_exported_time = models.DateTimeField(null=True, blank=True)
 
     content_type = models.ForeignKey(ContentType)
-    object_id = models.PositiveIntegerField()
+    object_id = models.CharField(max_length=50)
     content_object = GenericForeignKey('content_type', 'object_id')
 
     class Meta:

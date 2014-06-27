@@ -147,7 +147,7 @@ PROJECTION_SRID=3067
 BOUNDING_BOX = [-548576, 6291456, 1548576, 8388608]
 
 CITYSDK_API_SETTINGS = {
-    'CITYSDK_URL': "http://5.9.148.236/CitySDK/",
+    'CITYSDK_URL': "http://api.tourism.helsinki.citysdk.eu/CitySDK/",
     'USERNAME': 'admin',
     'PASSWORD': 'defaultCitySDKPassword',
     'SRS_URL': 'http://www.opengis.net/def/crs/EPSG/0/%d' % PROJECTION_SRID,

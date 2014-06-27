@@ -92,7 +92,7 @@ def generate_icalendar_element(event):
     if term:
         return {
             "term": "open",
-            "value": cal.to_ical(),
+            "value": cal.to_ical().decode('utf8'),
             "type": "text/icalendar"
         }
     else:
@@ -165,7 +165,7 @@ class CitySDKExporter(Exporter):
         # -> just generate normal links for all lang versions
         for from_field_name, to_field_name in [("description", "description"),
                                                ("name", "label"),
-                                               ("url", "link")]:
+                                               ("info_url", "link")]:
             citysdk_event[to_field_name] = []
             for lang in [x[0] for x in settings.LANGUAGES]:
                 value = getattr(event, '%s_%s' % (from_field_name, lang))
@@ -216,9 +216,9 @@ class CitySDKExporter(Exporter):
         citysdk_place['category'] = [{"id": DEFAULT_POI_CATEGORY}]
 
         # Support for bboxes later, now Point is only possible value
-        if place.location:
-            coords_as_wkt = place.location.json
-            matches = re.search('POINT \\((.*)\\)', place.location.wkt)
+        if place.position:
+            coords_as_wkt = place.position.json
+            matches = re.search('POINT \\((.*)\\)', place.position.wkt)
             if matches:
                 coords = matches.group(1)
                 citysdk_place['location'] = {
@@ -370,6 +370,7 @@ class CitySDKExporter(Exporter):
             if resp.status_code == 401:
                 self.authenticate()
                 return requests.request(method, url, **kwargs)
+            assert resp.status_code == 200
             return resp
 
     def _export_categories(self):
