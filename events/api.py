@@ -19,10 +19,12 @@ from rest_framework.exceptions import ParseError
 from events.models import Place, Event, Keyword, Language, OpeningHoursSpecification, EventLink
 from django.conf import settings
 from events import utils
+from events.custom_elasticsearch_search_backend import CustomEsSearchQuerySet as SearchQuerySet
 from modeltranslation.translator import translator, NotRegistered
 from django.utils.translation import ugettext_lazy as _
 from dateutil.parser import parse as dateutil_parse
-from haystack.query import SearchQuerySet, AutoQuery
+from haystack.query import AutoQuery
+
 from munigeo.api import GeoModelSerializer, GeoModelAPIView, build_bbox_filter, srid_to_srs
 
 import pytz
@@ -551,6 +553,7 @@ class SearchSerializer(serializers.Serializer):
         data['score'] = search_result.score
         return data
 
+DATE_DECAY_SCALE = '10d'
 
 class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView):
     serializer_class = SearchSerializer
@@ -577,6 +580,12 @@ class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView
         queryset = SearchQuerySet()
         if input_val:
             queryset = queryset.filter(autosuggest=input_val)
+            now = datetime.utcnow()
+            queryset = queryset.filter(end_time__gt=now).decay({
+                'gauss': {
+                    'end_time': {
+                        'origin': now,
+                        'scale': DATE_DECAY_SCALE }}})
         else:
             queryset = queryset.filter(text=AutoQuery(q_val))
 
