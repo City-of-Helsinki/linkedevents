@@ -68,6 +68,10 @@ class CustomEsSearchQuery(es_backend.ElasticsearchSearchQuery):
     def add_decay_function(self, function_dict):
         self.decay_functions.append(function_dict)
 
+    def _clone(self, **kwargs):
+        clone = super(CustomEsSearchQuery, self)._clone(**kwargs)
+        clone.decay_functions = self.decay_functions[:]
+        return clone
 
 class CustomEsSearchQuerySet(SearchQuerySet):
     """
