@@ -553,7 +553,7 @@ class SearchSerializer(serializers.Serializer):
         data['score'] = search_result.score
         return data
 
-DATE_DECAY_SCALE = '10d'
+DATE_DECAY_SCALE = '30d'
 
 class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView):
     serializer_class = SearchSerializer
