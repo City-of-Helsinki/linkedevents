@@ -526,7 +526,7 @@ class EventViewSet(JSONAPIViewSet):
 
         val = self.request.QUERY_PARAMS.get('bbox', None)
         if val:
-            bbox_filter = build_bbox_filter(self.srs, val, 'location')
+            bbox_filter = build_bbox_filter(self.srs, val, 'position')
             places = Place.geo_objects.filter(**bbox_filter)
             queryset = queryset.filter(location__in=places)
 
