@@ -35,7 +35,7 @@ class Command(BaseCommand):
                 "Valid exporters: %s" % imp_list)
         if not args[0] in importers:
             raise CommandError("Exporter %s not found. Valid exporters: %s"
-                               % imp_list)
+                               % (args[0], imp_list))
         imp_class = importers[args[0]]
 
         if hasattr(settings, 'PROJECT_ROOT'):

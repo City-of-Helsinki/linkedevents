@@ -346,7 +346,7 @@ class CitySDKExporter(Exporter):
                 new_export_info.save()
                 new_count += 1
             else:
-                print("%s export failed (original id: %d)" %
+                print("%s export failed (original id: %s)" %
                       (model_name, model.pk))
 
         print(model_name + " items added: " + str(new_count))
