@@ -81,6 +81,7 @@ class TprekImporter(Importer):
             setattr(obj, obj_key, val)
             if lang == 'fi':
                 setattr(obj, obj_field_name, val)
+            obj._changed_fields.append(obj_key)
             obj._changed = True
 
     @db.transaction.atomic
@@ -95,13 +96,14 @@ class TprekImporter(Importer):
         else:
             assert obj.id == obj_id
             obj._created = False
+        obj._changed_fields = []
 
         self._save_translated_field(obj, 'name', info, 'name')
         self._save_translated_field(obj, 'description', info, 'desc')
         self._save_translated_field(obj, 'street_address', info, 'street_address')
         self._save_translated_field(obj, 'address_locality', info, 'address_city')
 
-        self._save_translated_field(obj, 'url', info, 'www', max_length=200)
+        self._save_translated_field(obj, 'url', info, 'info_url', max_length=200)
         #self._save_translated_field(obj, 'picture_caption', info, 'picture_caption')
 
         self._save_translated_field(obj, 'telephone', info, 'phone')
@@ -118,6 +120,7 @@ class TprekImporter(Importer):
             val = info.get(src_field, None)
             if getattr(obj, obj_field) != val:
                 setattr(obj, obj_field, val)
+                obj._changed_fields.append(obj_field)
                 obj._changed = True
 
         n = info.get('latitude', 0)
@@ -140,21 +143,24 @@ class TprekImporter(Importer):
                 position = obj.position
         if position != obj.position:
             obj._changed = True
+            obj._changed_fields.append('position')
             obj.position = position
 
         if obj.publisher_id != self.organization.id:
             obj.publisher = self.organization
+            obj._changed_fields.append('publisher')
             obj._changed = True
 
         if obj.deleted:
             obj.deleted = False
+            obj._changed_fields.append('undeleted')
             obj._changed = True
 
         if obj._changed:
             if obj._created:
                 verb = "created"
             else:
-                verb = "changed"
+                verb = "changed (fields: %s)" % ', '.join(obj._changed_fields)
             print("%s %s" % (obj, verb))
             obj.save()
 
