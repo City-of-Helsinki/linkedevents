@@ -30,9 +30,7 @@ class DocumentedRouter(DefaultRouter):
             In the API, you can search data by date or location as
             well as city neighborhoods.
 
-            The API provides data in JSON and JSON-LD format. The data
-            is modeled after [schema.org/Event](http://www.schema.org/Event) and
-            [schema.org/CreativeWork](http://www.schema.org/CreativeWork).
+            The API provides data in JSON-LD format.
 
             *The API is in beta phase. To help improve the API, please don’t
             hesitate to comment, give feedback or make suggestions on
