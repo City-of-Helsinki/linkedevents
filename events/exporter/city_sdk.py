@@ -290,7 +290,7 @@ class CitySDKExporter(Exporter):
                     modify_response = self._do_req('post', url, data)
                     if modify_response.status_code == 200:
                         export_info.save()  # refresh last export date
-                        print("%s updated (original id: %d, target id: %s)" %
+                        print("%s updated (original id: %s, target id: %s)" %
                               (model_name, model.pk, export_info.target_id))
                         modify_count += 1
 
