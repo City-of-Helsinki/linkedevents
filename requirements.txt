@@ -27,4 +27,4 @@ icalendar
 httmock
 bleach
 django-haystack
-pyelasticsearch
+elasticsearch
