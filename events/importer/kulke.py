@@ -371,7 +371,6 @@ class KulkeImporter(Importer):
         print("Importing Kulke categories as keywords")
         categories = self.parse_kulke_categories()
         for kid, value in categories.items():
-            print('creating keyword ' + str(kid))
             Keyword.objects.get_or_create(
                 id="kulke:{}".format(kid),
                 name=value['text'],
