@@ -10,9 +10,10 @@ from django.core.exceptions import ValidationError
 from django.core.urlresolvers import NoReverseMatch
 from django.utils.datastructures import MultiValueDictKeyError
 from django.contrib.gis.db.models.fields import GeometryField
+from django.db import models as django_db_models
 from django.db.models import Q, F
 from isodate import Duration, duration_isoformat, parse_duration
-from rest_framework import serializers, pagination, relations, viewsets, filters, generics
+from rest_framework import serializers, pagination, relations, viewsets, filters, generics, fields
 from rest_framework.reverse import reverse
 from rest_framework.response import Response
 from rest_framework.exceptions import ParseError
@@ -172,6 +173,18 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
                 if key in self.fields:
                     del self.fields[key]
             del self.fields[field_name]
+
+    def get_field(self, model_field):
+        kwargs = {}
+        if issubclass(
+                model_field.__class__,
+                      (django_db_models.CharField,
+                       django_db_models.TextField)):
+            if model_field.null:
+                kwargs['allow_none'] = True
+            kwargs['max_length'] = getattr(model_field, 'max_length')
+            return fields.CharField(**kwargs)
+        return super(TranslatedModelSerializer, self).get_field(model_field)
 
     def to_native(self, obj):
         ret = super(TranslatedModelSerializer, self).to_native(obj)
