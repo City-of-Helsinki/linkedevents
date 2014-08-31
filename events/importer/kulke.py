@@ -44,7 +44,9 @@ CATEGORIES_TO_IGNORE = [
     286, 596, 614, 307, 632, 645, 675, 231, 616, 364, 325, 324, 319, 646, 640,
     641, 642, 643, 670, 671, 673, 674, 725, 312, 344, 365, 239, 240, 308, 623,
     229, 230, 323, 320, 357, 358,
-    # below -- languages, ignore as categories -- todo: add as event languages
+
+    # The categories below are languages, ignore as categories
+    # todo: add as event languages
     53, 54, 55
 ]
 
@@ -108,20 +110,7 @@ class KulkeImporter(Importer):
             return
 
         print('Preprocessing categories')
-        categories, places = {}, {}
-        categories_file = os.path.join(
-            settings.IMPORT_FILE_PATH, 'kulke', 'category.xml')
-        root = etree.parse(categories_file)
-        for ctype in root.xpath('/data/categories/category'):
-            cid = int(ctype.attrib['id'])
-            typeid = int(ctype.attrib['typeid'])
-            if typeid == 2:
-                pass  # kulke internal use
-            elif typeid == 3:
-                places[cid] = {'text': ctype.text}
-            else:
-                categories[cid] = {
-                    'type': typeid, 'text': ctype.text}
+        categories, places = self.parse_kulke_categories()
 
         keyword_matcher = KeywordMatcher()
         for cid, c in list(categories.items()):
@@ -129,7 +118,8 @@ class KulkeImporter(Importer):
                 continue
             match_type = 'no match'
             ctext = c['text']
-            # ignore list (not used and/or weird category)
+            # Ignore list (not used and/or not a category for general consumption)
+            #
             # These are ignored for now, could be used for
             # target group extraction or for other info
             # were they actually used in the data:
@@ -148,6 +138,24 @@ class KulkeImporter(Importer):
             c['keywords'] = keyword_matcher.match(ctext)
 
         self.categories = categories
+
+    def parse_kulke_categories(self):
+        categories, places = {}, {}
+        categories_file = os.path.join(
+            settings.IMPORT_FILE_PATH, 'kulke', 'category.xml')
+        root = etree.parse(categories_file)
+        for ctype in root.xpath('/data/categories/category'):
+            cid = int(ctype.attrib['id'])
+            typeid = int(ctype.attrib['typeid'])
+            if typeid == 2:
+                pass  # kulke internal use
+            elif typeid == 3:
+                places[cid] = {'text': ctype.text}
+            else:
+                categories[cid] = {
+                    'type': typeid, 'text': ctype.text}
+        return categories, places
+
 
     def find_place(self, event):
         tprek_id = None
@@ -244,6 +252,8 @@ class KulkeImporter(Importer):
                 self.url_validator(link)
             except ValidationError:
                 continue
+            except ValueError:
+                print('value error with event %s and url %s ' % (eid, link))
             external_links.append({'link': link})
         event['external_links'][lang] = external_links
 
@@ -353,6 +363,12 @@ class KulkeImporter(Importer):
         events.default_factory = None
         for eid, event in events.items():
             self.save_event(event)
+
+    def import_keywords(self):
+        print("Importing Kulke categories as keywords")
+        categories, _ = self.parse_kulke_categories()
+        import pprint
+        pprint.pprint(categories)
 
     def _gather_recurrings_groups(self, events):
         # Currently unused.
