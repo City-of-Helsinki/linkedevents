@@ -79,7 +79,11 @@ class YsoImporter(Importer):
                 yid = self.yso_id(subject)
                 if bulk_mode:
                     if label.language is not None:
-                        labels_to_create.add((str(label), label.language))
+                        language = label.language
+                        if label.language == 'se':
+                            # YSO doesn't contain se, assume an error.
+                            language = 'sv'
+                        labels_to_create.add((str(label), language))
                         keyword_labels.setdefault(yid, []).append(label)
                 else:
                     label = self.save_alt_label(label_syncher, graph, label, data_source)

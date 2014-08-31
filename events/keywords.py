@@ -1,5 +1,5 @@
 import re
-from events.models import Keyword, KeywordLabel
+from events.models import Keyword, KeywordLabel, DataSource
 from difflib import get_close_matches
 
 ENDING_PARENTHESIS_PATTERN = r' \([^)]+\)$'
@@ -14,7 +14,14 @@ class KeywordMatcher(object):
         for label_id, name in KeywordLabel.objects.filter(language_id='fi').values_list(
             'id', 'name'):
             self.name_to_keyword_ids[name.lower()] = label_to_keyword_ids.get(label_id, set())
-        for kid, preflabel in Keyword.objects.all().values_list(
+        try:
+            yso_source = DataSource.objects.get(pk='yso')
+            self.skip = False
+        except DataSource.DoesNotExist:
+            print('No YSO keyword data source')
+            self.skip = True
+            return
+        for kid, preflabel in Keyword.objects.filter(data_source=yso_source).values_list(
             'id', 'name_fi'):
             if preflabel is not None:
                 text = preflabel.lower()
@@ -26,6 +33,8 @@ class KeywordMatcher(object):
         print('Initialized', len(self.labels), 'keyword keys')
 
     def match(self, text):
+        if self.skip:
+            return None
         wordsplit = re.compile(r'\s+')
         #labels = KeywordLabel.objects
         #match = labels.filter(name__iexact=text)

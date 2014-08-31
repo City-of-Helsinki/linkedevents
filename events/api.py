@@ -551,6 +551,10 @@ class EventViewSet(JSONAPIViewSet):
         if val:
             queryset = queryset.filter(location_id=val)
 
+        val = self.request.QUERY_PARAMS.get('keyword', None)
+        if val:
+            queryset = queryset.filter(keywords__pk=val)
+
         return queryset
 
 register_view(EventViewSet, 'event')

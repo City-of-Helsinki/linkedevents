@@ -106,11 +106,8 @@ class KulkeImporter(Importer):
         place_list = Place.objects.filter(data_source=self.tprek_data_source).filter(origin_id__in=id_list)
         self.tprek_by_id = {p.origin_id: p.id for p in place_list}
 
-        if not Keyword.objects.filter(data_source='yso').exists():
-            return
-
         print('Preprocessing categories')
-        categories, places = self.parse_kulke_categories()
+        categories = self.parse_kulke_categories()
 
         keyword_matcher = KeywordMatcher()
         for cid, c in list(categories.items()):
@@ -123,38 +120,37 @@ class KulkeImporter(Importer):
             # These are ignored for now, could be used for
             # target group extraction or for other info
             # were they actually used in the data:
-            if cid in CATEGORIES_TO_IGNORE:
-                del categories[cid]
+            if cid in CATEGORIES_TO_IGNORE\
+               or c['type'] == 2 or c['type'] == 3:
                 continue
 
             manual = MANUAL_CATEGORIES.get(cid)
             if manual:
-                c['keywords'] = [Keyword.objects.get(id='yso:%s' % yso_id) for yso_id in manual]
-                continue
-
-            replacements = [('jumppa', 'voimistelu'), ('Stoan', 'Stoa')]
-            for src, dest in replacements:
-                ctext = re.sub(src, dest, ctext, flags=re.IGNORECASE)
-            c['keywords'] = keyword_matcher.match(ctext)
+                try:
+                    yso_ids = ['yso:{}'.format(i) for i in manual]
+                    yso_keywords = Keyword.objects.filter(id__in=yso_ids)
+                    c['yso_keywords'] = yso_keywords
+                except Keyword.DoesNotExist:
+                    pass
+            else:
+                replacements = [('jumppa', 'voimistelu'), ('Stoan', 'Stoa')]
+                for src, dest in replacements:
+                    ctext = re.sub(src, dest, ctext, flags=re.IGNORECASE)
+                    c['yso_keywords'] = keyword_matcher.match(ctext)
 
         self.categories = categories
 
     def parse_kulke_categories(self):
-        categories, places = {}, {}
+        categories = {}
         categories_file = os.path.join(
             settings.IMPORT_FILE_PATH, 'kulke', 'category.xml')
         root = etree.parse(categories_file)
         for ctype in root.xpath('/data/categories/category'):
             cid = int(ctype.attrib['id'])
             typeid = int(ctype.attrib['typeid'])
-            if typeid == 2:
-                pass  # kulke internal use
-            elif typeid == 3:
-                places[cid] = {'text': ctype.text}
-            else:
-                categories[cid] = {
-                    'type': typeid, 'text': ctype.text}
-        return categories, places
+            categories[cid] = {
+                'type': typeid, 'text': ctype.text}
+        return categories
 
 
     def find_place(self, event):
@@ -321,11 +317,18 @@ class KulkeImporter(Importer):
             for category_id in event_el.find(tag('categories')):
                 category = self.categories.get(int(category_id.text))
                 if category:
-                    if not category.get('keywords'):
-                        print('missing keywords', category)
-                    else:
-                        for c in category.get('keywords', []):
+                    # YSO keywords
+                    if category.get('yso_keywords'):
+                        for c in category.get('yso_keywords', []):
                             event_keywords.add(c)
+                # Also save original kulke categories as keywords
+                kulke_id = "kulke:{}".format(category_id.text)
+                try:
+                    kulke_keyword = Keyword.objects.get(pk=kulke_id)
+                    event_keywords.add(kulke_keyword)
+                except Keyword.DoesNotExist:
+                    print('Could not find {}'.format(kulke_id))
+
             event['keywords'] = event_keywords
 
         location = event['location']
@@ -366,9 +369,14 @@ class KulkeImporter(Importer):
 
     def import_keywords(self):
         print("Importing Kulke categories as keywords")
-        categories, _ = self.parse_kulke_categories()
-        import pprint
-        pprint.pprint(categories)
+        categories = self.parse_kulke_categories()
+        for kid, value in categories.items():
+            print('creating keyword ' + str(kid))
+            Keyword.objects.get_or_create(
+                id="kulke:{}".format(kid),
+                name=value['text'],
+                data_source=self.data_source
+            )
 
     def _gather_recurrings_groups(self, events):
         # Currently unused.
