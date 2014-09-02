@@ -213,6 +213,15 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
 
     # Properties from schema.org/CreativeWork
     date_published = models.DateTimeField(null=True, blank=True)
+    # headline and secondary_headline are for cases where
+    # the original event data contains a title and a subtitle - in that
+    # case the name field is combined from these.
+    #
+    # secondary_headline is mapped to schema.org alternative_headline
+    # and is used for subtitles, that is for
+    # secondary, complementary headlines, not "alternative" headlines
+    headline = models.CharField(max_length=255, null=True, db_index=True)
+    secondary_headline = models.CharField(max_length=255, null=True, db_index=True)
     # provider = models.ForeignKey(Organization, null=True, blank=True,
     #                             related_name='event_providers')
 

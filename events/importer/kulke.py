@@ -214,10 +214,14 @@ class KulkeImporter(Importer):
         event['publisher'] = self.organization
         event['origin_id'] = eid
 
-        event['name'][lang] = text_content('title')
+        title = text_content('title')
+        event['headline'][lang] = title
         subtitle = text_content('subtitle')
         if subtitle:
-            event['custom']['subtitle'][lang] = subtitle
+            event['secondary_headline'][lang] = subtitle
+            event['name'][lang] = "{} - {}".format(title, subtitle)
+        else:
+            event['name'][lang] = title
 
         caption = text_content('caption')
         bodytext = text_content('bodytext')
