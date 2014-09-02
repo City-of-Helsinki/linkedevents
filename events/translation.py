@@ -25,7 +25,7 @@ translator.register(Place, PlaceTranslationOptions)
 
 class EventTranslationOptions(TranslationOptions):
     fields = ('name', 'description', 'short_description', 'info_url',
-              'location_extra_info', 'headline', 'secondary_headline')
+              'location_extra_info', 'headline', 'secondary_headline', 'provider')
 
 
 translator.register(Event, EventTranslationOptions)

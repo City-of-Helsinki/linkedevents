@@ -203,9 +203,6 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         (RESCHEDULED, "EventRescheduled"),
     )
 
-    publisher = models.ForeignKey(Organization, db_index=True, related_name='published_events')
-    provider = models.ForeignKey(Organization, db_index=True, null=True, related_name='provided_events')
-
     # Properties from schema.org/Thing
     info_url = models.URLField(_('Event home page'), blank=True)
     description = models.TextField(blank=True)
@@ -222,8 +219,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     # secondary, complementary headlines, not "alternative" headlines
     headline = models.CharField(max_length=255, null=True, db_index=True)
     secondary_headline = models.CharField(max_length=255, null=True, db_index=True)
-    # provider = models.ForeignKey(Organization, null=True, blank=True,
-    #                             related_name='event_providers')
+    provider = models.CharField(max_length=512, null=True)
+    publisher = models.ForeignKey(Organization, db_index=True, related_name='published_events')
 
     # Properties from schema.org/Event
     event_status = models.SmallIntegerField(choices=STATUSES,
