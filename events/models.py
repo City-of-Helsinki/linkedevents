@@ -326,5 +326,11 @@ class ExportInfo(models.Model):
         self.last_exported_time = BaseModel.now()
         super(ExportInfo, self).save(*args, **kwargs)
 
+class EventAggregate(models.Model):
+    super_event = models.OneToOneField(Event, related_name='aggregate', null=True)
+class EventAggregateMember(models.Model):
+    event_aggregate = models.ForeignKey(EventAggregate, related_name='members')
+    event = models.ForeignKey(Event, unique=True)
+
 contexts.create_context(Event)
 contexts.create_context(Place)

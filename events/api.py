@@ -174,17 +174,17 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
                     del self.fields[key]
             del self.fields[field_name]
 
-    def get_field(self, model_field):
-        kwargs = {}
-        if issubclass(
-                model_field.__class__,
-                      (django_db_models.CharField,
-                       django_db_models.TextField)):
-            if model_field.null:
-                kwargs['allow_none'] = True
-            kwargs['max_length'] = getattr(model_field, 'max_length')
-            return fields.CharField(**kwargs)
-        return super(TranslatedModelSerializer, self).get_field(model_field)
+    # def get_field(self, model_field):
+    #     kwargs = {}
+    #     if issubclass(
+    #             model_field.__class__,
+    #                   (django_db_models.CharField,
+    #                    django_db_models.TextField)):
+    #         if model_field.null:
+    #             kwargs['allow_none'] = True
+    #         kwargs['max_length'] = getattr(model_field, 'max_length')
+    #         return fields.CharField(**kwargs)
+    #     return super(TranslatedModelSerializer, self).get_field(model_field)
 
     def to_native(self, obj):
         ret = super(TranslatedModelSerializer, self).to_native(obj)

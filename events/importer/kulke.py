@@ -10,11 +10,12 @@ from django.conf import settings
 from django.utils.timezone import get_default_timezone
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 
 from .sync import ModelSyncher
 from .base import Importer, register_importer, recur_dict
 from .util import unicodetext, active_language
-from events.models import DataSource, Place, Event, Keyword, KeywordLabel, Organization
+from events.models import DataSource, Place, Event, Keyword, KeywordLabel, Organization, EventAggregate, EventAggregateMember
 from events.keywords import KeywordMatcher
 
 LOCATION_TPREK_MAP = {
@@ -81,6 +82,9 @@ MANUAL_CATEGORIES = {
 
 
 LOCAL_TZ = timezone('Europe/Helsinki')
+
+def make_kulke_id(num):
+    return "kulke:{}".format(num)
 
 @register_importer
 class KulkeImporter(Importer):
@@ -329,7 +333,7 @@ class KulkeImporter(Importer):
                         for c in category.get('yso_keywords', []):
                             event_keywords.add(c)
                 # Also save original kulke categories as keywords
-                kulke_id = "kulke:{}".format(category_id.text)
+                kulke_id = make_kulke_id(category_id.text)
                 try:
                     kulke_keyword = Keyword.objects.get(pk=kulke_id)
                     event_keywords.add(kulke_keyword)
@@ -352,23 +356,103 @@ class KulkeImporter(Importer):
         if not 'place' in location:
             self.find_place(event)
 
-        references = event_el.find(tag('references'))
-        event['children'] = []
-        if references is not None:
-            for reference in references:
-                event['children'].append(int(reference.get('id')))
+    def _gather_recurring_events(self, lang, event_el, events, recurring_groups):
+        references = event_el.find('eventreferences')
+        this_id = int(event_el.attrib['id'])
+        if references is None or len(references) < 1:
+            group = set()
+        else:
+            recurs = references.findall('recurring') or []
+            recur_ids = map(lambda x: int(x.attrib['id']), recurs)
+            group = set(recur_ids)
+        group.add(this_id)
+        recurring_groups[this_id] = group
 
+    def _verify_recurs(self, recurring_groups):
+        for key, group in recurring_groups.items():
+            for inner_key in group:
+                inner_group = recurring_groups.get(inner_key)
+                if inner_group and inner_group != group:
+                    print('Differing groups:', key, inner_key)
+                    print('Differing groups:', group, inner_group)
+                    if len(inner_group) == 0:
+                        print(
+                            'Event self-identifies to no group, removing.',
+                            inner_key
+                        )
+                        group.remove(inner_key)
+
+    def _save_recurring_superevents(self, recurring_groups):
+        groups = map(frozenset, recurring_groups.values())
+        for group in groups:
+            kulke_ids = set(map(make_kulke_id, group))
+            superevent_aggregates = EventAggregate.objects.filter(
+                members__event__id__in=kulke_ids
+            ).distinct()
+            cnt = superevent_aggregates.count()
+
+            if cnt > 1:
+                print('Error: the superevent has an ambiguous aggregate group.')
+                print('Aggregate ids: {}, group: {}'.format(
+                    superevent_aggregates.values_list('id', flat=True), group))
+                continue
+
+            events = Event.objects.filter(id__in=kulke_ids)
+            aggregate = None
+            if cnt == 0:
+                if len(group) == 1:
+                    # Do not create aggregates of only one.
+                    continue
+                aggregate = EventAggregate()
+                aggregate.save()
+                super_event = Event(
+                    publisher=self.organization,
+                    data_source=DataSource.objects.get(pk='kulke'), # TODO
+                    id="kulke:s-{}".format(aggregate.id))
+                super_event.save()
+                aggregate.super_event = super_event
+                aggregate.save()
+                for event in events:
+                    aggregate.members.add(
+                        EventAggregateMember(event=event))
+            elif cnt == 1:
+                aggregate = superevent_aggregates.first()
+                if len(group) == 1:
+                    events = Event.objects.get(
+                        pk=make_kulke_id(group.pop()))
+                    # The imported event is not part of an aggregate
+                    # but one was found it in the db. Remove the event
+                    # from the aggregate. This is the only case when
+                    # an event is removed from a recurring aggregate.
+                    aggregate.members.remove(events)
+                else:
+                    for event in events:
+                        try:
+                            aggregate.members.add(EventAggregateMember(event=event))
+                        except IntegrityError:
+                            # Ignore unique violations. They
+                            # ensure that no duplicate members are added.
+                            pass
+
+            for event in events:
+                event.super_event = aggregate.super_event
+                event.save()
 
     def import_events(self):
         print("Importing Kulke events")
         self.url_validator = URLValidator()
         events = recur_dict()
+        recurring_groups = dict()
         for lang in ['fi', 'sv', 'en']:
             events_file = os.path.join(
                 settings.IMPORT_FILE_PATH, 'kulke', 'events-%s.xml' % lang)
             root = etree.parse(events_file)
             for event_el in root.xpath('/eventdata/event'):
-                self._import_event(lang, event_el, events)
+                #self._import_event(lang, event_el, events)
+                self._gather_recurring_events(lang, event_el, events, recurring_groups)
+
+        self._verify_recurs(recurring_groups)
+        self._save_recurring_superevents(recurring_groups)
 
         events.default_factory = None
         for eid, event in events.items():
@@ -379,7 +463,7 @@ class KulkeImporter(Importer):
         categories = self.parse_kulke_categories()
         for kid, value in categories.items():
             Keyword.objects.get_or_create(
-                id="kulke:{}".format(kid),
+                id=make_kulke_id(kid),
                 name=value['text'],
                 data_source=self.data_source
             )
