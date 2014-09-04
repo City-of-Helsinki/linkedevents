@@ -298,21 +298,21 @@ class KulkeImporter(Importer):
             text('enrolmentendtime')
         )
 
+        event['offers'] = []
+        offer = {}
+        event['offers'].append(offer)
+
         price = text_content('price')
         price_el = event_el.find(tag('price'))
         free = (price_el.attrib['free'] == "true")
-        url = price_el.get('ticketlink')
-        info = price_el.get('ticketinfo')
 
-        offers = event['offers']
+        offer['is_free'] = free
+        offer['description'] = price_el.get('ticketinfo')
         if free:
-            offers['price'] = '0'
-            offers['is_free'] = True
-            if info is not None:
-                offers['description'] = info
+            offer['price'] = '0'
         else:
-            offers['price'] = price
-        offers['info_url'] = url
+            offer['price'] = price
+        offer['info_url'] = price_el.get('ticketlink')
 
         if hasattr(self, 'categories'):
             event_keywords = set()

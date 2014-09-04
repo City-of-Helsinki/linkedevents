@@ -29,6 +29,7 @@ from django.utils.translation import ugettext_lazy as _
 from mptt.models import MPTTModel, TreeForeignKey
 from django.contrib.contenttypes.models import ContentType
 from events import contexts
+from events import translation_utils
 from django.utils.encoding import python_2_unicode_compatible
 
 
@@ -49,6 +50,19 @@ class DataSource(models.Model):
     def __str__(self):
         return self.id
 
+class SimpleValueMixin(object):
+    """
+    Used for models which are simple one-to-many fields
+    and can be compared by value when importing as part
+    of their related object.
+    """
+    def value_fields(self):
+        return []
+    def simple_value(self):
+        field_names = translation_utils.expand_model_fields(self, self.value_fields())
+        return tuple((f, getattr(self, f)) for f in field_names)
+    def value_equals(self, other):
+        return self.simple_value() == other.simple_value()
 
 @python_2_unicode_compatible
 class BaseModel(models.Model):
@@ -270,14 +284,17 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
 
 reversion.register(Event)
 
-class Offer(models.Model):
-    event = models.ForeignKey(Event, db_index=True)
+class Offer(models.Model, SimpleValueMixin):
+    event = models.ForeignKey(Event, db_index=True, related_name='offers')
     price = models.CharField(max_length=128)
     info_url = models.URLField(_('Web link to offer'), null=True)
     description = models.TextField(null=True, blank=True)
     # Don't expose is_free as an API field. It is used to distinguish
     # between missing price info and confirmed free entry.
     is_free = models.BooleanField(default=False)
+
+    def value_fields(self):
+        return ['price', 'info_url', 'description', 'is_free']
 
 reversion.register(Offer)
 

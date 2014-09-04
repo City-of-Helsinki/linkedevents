@@ -4,6 +4,7 @@ import logging
 import itertools
 import datetime
 from collections import defaultdict
+from functools import partial
 
 from django.db import DataError
 from django.core.exceptions import ObjectDoesNotExist
@@ -203,6 +204,8 @@ class Importer(object):
         if obj._created or obj._changed:
             obj.save()
 
+        # many-to-many fields
+
         keywords = info.get('keywords', [])
         new_keywords = set([kw.id for kw in keywords])
         old_keywords = set(obj.keywords.values_list('id', flat=True))
@@ -210,6 +213,23 @@ class Importer(object):
             obj.keywords = new_keywords
             obj._changed = True
 
+        # many values per event fields
+
+        offers = set(
+            Offer(
+                event=obj,
+                price=offer['price'],
+                info_url=offer['info_url'],
+                description=offer['description'],
+                is_free=offer['is_free']
+              )
+            for offer in info.get('offers', [])
+        )
+        def val(o): o.simple_value()
+        if set(map(val, offers)) != set(map(val, obj.offers.all())):
+            obj.offers.all().delete()
+            for o in offers: o.save()
+            obj._changed = True
 
         links = []
         if 'external_links' in info:
@@ -218,8 +238,7 @@ class Importer(object):
                     l['language'] = lang
                 links += info['external_links'][lang]
 
-        attr_names = ['language', 'name', 'link']
-
+        # TODO: use simple_value logic like for offers above?
         def obj_make_link_id(obj):
             return '%s:%s:%s' % (obj.language_id, obj.name, obj.link)
         def info_make_link_id(info):
