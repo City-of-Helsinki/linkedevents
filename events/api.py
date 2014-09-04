@@ -17,7 +17,7 @@ from rest_framework import serializers, pagination, relations, viewsets, filters
 from rest_framework.reverse import reverse
 from rest_framework.response import Response
 from rest_framework.exceptions import ParseError
-from events.models import Place, Event, Keyword, Language, OpeningHoursSpecification, EventLink
+from events.models import Place, Event, Keyword, Language, OpeningHoursSpecification, EventLink, Offer
 from django.conf import settings
 from events import utils
 from events.custom_elasticsearch_search_backend import CustomEsSearchQuerySet as SearchQuerySet
@@ -365,6 +365,11 @@ class EventLinkSerializer(serializers.ModelSerializer):
         model = EventLink
         exclude = ['id']
 
+class OfferSerializer(TranslatedModelSerializer):
+    class Meta:
+        model = Offer
+        exclude = ['id', 'event', 'is_free']
+
 class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     location = JSONLDRelatedField(serializer=PlaceSerializer, required=False,
                                   view_name='place-detail')
@@ -374,6 +379,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     super_event = JSONLDRelatedField(required=False, view_name='event-detail')
     event_status = EnumChoiceField(Event.STATUSES)
     external_links = EventLinkSerializer(many=True)
+    offers = OfferSerializer(many=True)
 
     view_name = 'event-detail'
 

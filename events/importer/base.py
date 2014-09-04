@@ -4,7 +4,7 @@ import logging
 import itertools
 import datetime
 from collections import defaultdict
-from functools import partial
+import operator
 
 from django.db import DataError
 from django.core.exceptions import ObjectDoesNotExist
@@ -213,19 +213,15 @@ class Importer(object):
             obj.keywords = new_keywords
             obj._changed = True
 
-        # many values per event fields
+        # one-to-many fields with foreign key pointing to event
 
-        offers = set(
-            Offer(
-                event=obj,
-                price=offer['price'],
-                info_url=offer['info_url'],
-                description=offer['description'],
-                is_free=offer['is_free']
-              )
-            for offer in info.get('offers', [])
-        )
-        def val(o): o.simple_value()
+        offers = []
+        for offer in info.get('offers', []):
+            offer_obj = Offer(event=obj)
+            self._update_fields(offer_obj, offer, skip_fields=['id'])
+            offers.append(offer_obj)
+
+        val = operator.methodcaller('simple_value')
         if set(map(val, offers)) != set(map(val, obj.offers.all())):
             obj.offers.all().delete()
             for o in offers: o.save()

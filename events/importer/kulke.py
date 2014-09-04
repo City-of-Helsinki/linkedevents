@@ -298,21 +298,26 @@ class KulkeImporter(Importer):
             text('enrolmentendtime')
         )
 
-        event['offers'] = []
-        offer = {}
-        event['offers'].append(offer)
+        if 'offers' not in event:
+            event['offers'] = [recur_dict()]
 
+        offer = event['offers'][0]
         price = text_content('price')
         price_el = event_el.find(tag('price'))
         free = (price_el.attrib['free'] == "true")
 
         offer['is_free'] = free
-        offer['description'] = price_el.get('ticketinfo')
+        description = price_el.get('ticketinfo')
+        if description and 'href' in description:
+            # the field sometimes contains some really bad invalid html
+            # snippets
+            description = None
+        offer['description'][lang] = description
         if free:
-            offer['price'] = '0'
+            offer['price'][lang] = '0'
         else:
-            offer['price'] = price
-        offer['info_url'] = price_el.get('ticketlink')
+            offer['price'][lang] = price
+        offer['info_url'][lang] = price_el.get('ticketlink')
 
         if hasattr(self, 'categories'):
             event_keywords = set()
