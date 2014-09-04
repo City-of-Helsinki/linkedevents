@@ -264,6 +264,8 @@ class KulkeImporter(Importer):
                     event['image'] = unicodetext(attachment).strip()
                     break
 
+        event['provider'][lang] = text_content('organizer')
+
         start_time = dateutil.parser.parse(text('starttime'))
         # Start and end times are in GMT. Sometimes only dates are provided.
         # If it's just a date, tzinfo is None.
@@ -305,16 +307,12 @@ class KulkeImporter(Importer):
         offers = event['offers']
         if free:
             offers['price'] = '0'
-            if price and len(price) > 0:
-                if info is not None:
-                    offers['description'] = info + '; ' + price
-                else:
-                    offers['description'] = price
-            else:
+            offers['is_free'] = True
+            if info is not None:
                 offers['description'] = info
         else:
             offers['price'] = price
-        offers['url'] = url
+        offers['info_url'] = url
 
         if hasattr(self, 'categories'):
             event_keywords = set()

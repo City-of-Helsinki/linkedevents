@@ -270,6 +270,17 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
 
 reversion.register(Event)
 
+class Offer(models.Model):
+    event = models.ForeignKey(Event, db_index=True)
+    price = models.CharField(max_length=128)
+    info_url = models.URLField(_('Web link to offer'), null=True)
+    description = models.TextField(null=True, blank=True)
+    # Don't expose is_free as an API field. It is used to distinguish
+    # between missing price info and confirmed free entry.
+    is_free = models.BooleanField(default=False)
+
+reversion.register(Offer)
+
 class EventLink(models.Model):
     name = models.CharField(max_length=100, blank=True)
     event = models.ForeignKey(Event, db_index=True, related_name='external_links')
