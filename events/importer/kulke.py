@@ -11,12 +11,14 @@ from django.utils.timezone import get_default_timezone
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
+from django.db.models import Max, Min
 
 from .sync import ModelSyncher
 from .base import Importer, register_importer, recur_dict
 from .util import unicodetext, active_language
 from events.models import DataSource, Place, Event, Keyword, KeywordLabel, Organization, EventAggregate, EventAggregateMember
 from events.keywords import KeywordMatcher
+from events.translation_utils import expand_model_fields
 
 LOCATION_TPREK_MAP = {
     'malmitalo': '8740',
@@ -382,6 +384,28 @@ class KulkeImporter(Importer):
                         )
                         group.remove(inner_key)
 
+    def _update_super_event(self, super_event, events):
+        time_boundaries = events.aggregate(
+            start_time=Min('start_time'),
+            end_time=Max('end_time'))
+        super_event.start_time = time_boundaries['start_time']
+        super_event.end_time = time_boundaries['end_time']
+
+        common_fields = set(
+            fieldname for fieldname in
+            expand_model_fields(super_event, [
+                'info_url', 'description', 'short_description', 'headline',
+                'secondary_headline', 'provider', 'publisher', 'location',
+                'location_extra_info', 'keywords', 'audience', 'name',
+                'data_source', 'image'])
+            if (fieldname != 'custom_data' and
+                len(set(events.values_list(fieldname, flat=True))) == 1)
+        )
+
+        for fieldname in common_fields:
+            setattr(super_event, fieldname, getattr(events.first(), fieldname))
+        super_event.save()
+
     def _save_recurring_superevents(self, recurring_groups):
         groups = map(frozenset, recurring_groups.values())
         for group in groups:
@@ -408,7 +432,7 @@ class KulkeImporter(Importer):
                 super_event = Event(
                     publisher=self.organization,
                     data_source=DataSource.objects.get(pk='kulke'), # TODO
-                    id="kulke:s-{}".format(aggregate.id))
+                    id="linkedevents:agg-{}".format(aggregate.id))
                 super_event.save()
                 aggregate.super_event = super_event
                 aggregate.save()
@@ -437,6 +461,7 @@ class KulkeImporter(Importer):
             for event in events:
                 event.super_event = aggregate.super_event
                 event.save()
+            self._update_super_event(aggregate.super_event, events)
 
     def import_events(self):
         print("Importing Kulke events")
@@ -447,16 +472,16 @@ class KulkeImporter(Importer):
             events_file = os.path.join(
                 settings.IMPORT_FILE_PATH, 'kulke', 'events-%s.xml' % lang)
             root = etree.parse(events_file)
-            for event_el in root.xpath('/eventdata/event'):
-                #self._import_event(lang, event_el, events)
+            for event_el in root.xpath('/eventdata/event')[0:50]:
+                self._import_event(lang, event_el, events)
                 self._gather_recurring_events(lang, event_el, events, recurring_groups)
-
-        self._verify_recurs(recurring_groups)
-        self._save_recurring_superevents(recurring_groups)
 
         events.default_factory = None
         for eid, event in events.items():
             self.save_event(event)
+
+        self._verify_recurs(recurring_groups)
+        self._save_recurring_superevents(recurring_groups)
 
     def import_keywords(self):
         print("Importing Kulke categories as keywords")
