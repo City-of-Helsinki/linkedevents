@@ -82,6 +82,8 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
         super(JSONLDRelatedField, self).__init__(*args, **kwargs)
 
     def to_native(self, obj):
+        if isinstance(self.related_serializer, str):
+            self.related_serializer = globals().get(self.related_serializer, None)
         if self.is_expanded():
             return self.related_serializer(obj, hide_ld_context=self.hide_ld_context,
                                            context=self.context).data
@@ -373,7 +375,7 @@ class EventLinkSerializer(serializers.ModelSerializer):
 class OfferSerializer(TranslatedModelSerializer):
     class Meta:
         model = Offer
-        exclude = ['id', 'event', 'is_free']
+        exclude = ['id', 'event']
 
 class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     location = JSONLDRelatedField(serializer=PlaceSerializer, required=False,
@@ -385,7 +387,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     event_status = EnumChoiceField(Event.STATUSES)
     external_links = EventLinkSerializer(many=True)
     offers = OfferSerializer(many=True)
-    children = serializers.SerializerMethodField('get_children')
+    sub_events = JSONLDRelatedField(serializer='EventSerializer',
+                                    required=False, view_name='event-detail', many=True)
 
     view_name = 'event-detail'
 
@@ -401,14 +404,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         if hasattr(obj, 'days_left'):
             ret['days_left'] = int(obj.days_left)
         return ret
-
-    def get_children(self, obj):
-        children = obj.get_children()
-        if 'children' in self.context.get('include', []):
-            serializer = EventSerializer(children, many=True)
-        else:
-            serializer = ChildEventSerializer(children, many=True)
-        return serializer.data
 
     class Meta:
         model = Event
