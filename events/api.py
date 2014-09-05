@@ -354,6 +354,11 @@ register_view(LanguageViewSet, 'language')
 
 LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
 
+class ChildEventSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Event
+        fields = ('id',)
+
 class EventLinkSerializer(serializers.ModelSerializer):
     def to_native(self, obj):
         ret = super(EventLinkSerializer, self).to_native(obj)
@@ -380,6 +385,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     event_status = EnumChoiceField(Event.STATUSES)
     external_links = EventLinkSerializer(many=True)
     offers = OfferSerializer(many=True)
+    children = serializers.SerializerMethodField('get_children')
 
     view_name = 'event-detail'
 
@@ -394,8 +400,15 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                 ret['end_time'] = None
         if hasattr(obj, 'days_left'):
             ret['days_left'] = int(obj.days_left)
-
         return ret
+
+    def get_children(self, obj):
+        children = obj.get_children()
+        if 'children' in self.context.get('include', []):
+            serializer = EventSerializer(children, many=True)
+        else:
+            serializer = ChildEventSerializer(children, many=True)
+        return serializer.data
 
     class Meta:
         model = Event
