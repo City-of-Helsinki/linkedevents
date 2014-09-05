@@ -54,7 +54,8 @@ class SimpleValueMixin(object):
     """
     Used for models which are simple one-to-many fields
     and can be compared by value when importing as part
-    of their related object.
+    of their related object. These models have no existence
+    outside their related object.
     """
     def value_fields(self):
         return []
@@ -298,7 +299,7 @@ class Offer(models.Model, SimpleValueMixin):
 
 reversion.register(Offer)
 
-class EventLink(models.Model):
+class EventLink(models.Model, SimpleValueMixin):
     name = models.CharField(max_length=100, blank=True)
     event = models.ForeignKey(Event, db_index=True, related_name='external_links')
     language = models.ForeignKey(Language)
@@ -306,6 +307,9 @@ class EventLink(models.Model):
 
     class Meta:
         unique_together = (('event', 'language', 'link'),)
+
+    def value_fields(self):
+        return ['name', 'language_id', 'link']
 
 
 class ExportInfo(models.Model):
