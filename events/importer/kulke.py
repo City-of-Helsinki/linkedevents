@@ -384,30 +384,61 @@ class KulkeImporter(Importer):
                         )
                         group.remove(inner_key)
 
-    def _update_super_event(self, super_event, events):
+    def _update_super_event(self, super_event):
+        events = super_event.get_children()
+
         time_boundaries = events.aggregate(
             start_time=Min('start_time'),
             end_time=Max('end_time'))
         super_event.start_time = time_boundaries['start_time']
         super_event.end_time = time_boundaries['end_time']
 
-        common_fields = set(
-            fieldname for fieldname in
-            expand_model_fields(super_event, [
+        # Functions which map related models into simple comparable values.
+        def many_to_many(field):
+            frozenset(field.values_list('id', flat=True))
+        def simple(field):
+            frozenset(map(lambda x: x.simple_value(), field.all()))
+        value_mappers = {
+            'keywords': many_to_many,
+            'offers': simple,
+            'external_links': simple
+        }
+        fieldnames = expand_model_fields(
+            super_event, [
                 'info_url', 'description', 'short_description', 'headline',
                 'secondary_headline', 'provider', 'publisher', 'location',
-                'location_extra_info', 'keywords', 'audience', 'name',
-                'data_source', 'image'])
-            if (fieldname != 'custom_data' and
-                len(set(events.values_list(fieldname, flat=True))) == 1)
-        )
+                'location_extra_info', 'audience', 'name', 'data_source',
+                'image', 'keywords', 'offers', 'external_links'])
+
+        # The set of fields which have common values for all events.
+        common_fields = set(
+            fieldname for fieldname in fieldnames
+            if 1 == len(set(map(
+                    value_mappers.get(fieldname, lambda x: x),
+                    (getattr(event, fieldname) for event in events.all())))))
 
         for fieldname in common_fields:
-            setattr(super_event, fieldname, getattr(events.first(), fieldname))
+            value = getattr(events.first(), fieldname)
+            if hasattr(value, 'all'):
+                manager = getattr(super_event, fieldname)
+                simple = False
+                if hasattr(value.first(), 'simple_value'):
+                    # Simple related models can be deleted and copied.
+                    manager.all().delete()
+                    simple = True
+                for m in value.all():
+                    if simple:
+                        m.id = None
+                        m.event_id = super_event.id
+                        m.save()
+                    manager.add(m)
+            else:
+                setattr(super_event, fieldname, value)
         super_event.save()
 
     def _save_recurring_superevents(self, recurring_groups):
         groups = map(frozenset, recurring_groups.values())
+        aggregates = set()
         for group in groups:
             kulke_ids = set(map(make_kulke_id, group))
             superevent_aggregates = EventAggregate.objects.filter(
@@ -457,11 +488,11 @@ class KulkeImporter(Importer):
                             # Ignore unique violations. They
                             # ensure that no duplicate members are added.
                             pass
-
             for event in events:
                 event.super_event = aggregate.super_event
                 event.save()
-            self._update_super_event(aggregate.super_event, events)
+            aggregates.add(aggregate)
+        return aggregates
 
     def import_events(self):
         print("Importing Kulke events")
@@ -472,7 +503,7 @@ class KulkeImporter(Importer):
             events_file = os.path.join(
                 settings.IMPORT_FILE_PATH, 'kulke', 'events-%s.xml' % lang)
             root = etree.parse(events_file)
-            for event_el in root.xpath('/eventdata/event')[0:50]:
+            for event_el in root.xpath('/eventdata/event'):
                 self._import_event(lang, event_el, events)
                 self._gather_recurring_events(lang, event_el, events, recurring_groups)
 
@@ -481,7 +512,9 @@ class KulkeImporter(Importer):
             self.save_event(event)
 
         self._verify_recurs(recurring_groups)
-        self._save_recurring_superevents(recurring_groups)
+        aggregates = self._save_recurring_superevents(recurring_groups)
+        for agg in aggregates:
+            self._update_super_event(agg.super_event)
 
     def import_keywords(self):
         print("Importing Kulke categories as keywords")
@@ -492,55 +525,3 @@ class KulkeImporter(Importer):
                 name=value['text'],
                 data_source=self.data_source
             )
-
-    def _gather_recurrings_groups(self, events):
-        # Currently unused.
-        # Gathers all recurring events in the same
-        # group (some reference ids are missing from some of the events.)
-        checked_for_children = set()
-        recurring_groups = set()
-        for eid, event in events.items():
-            if eid not in checked_for_children:
-                recurring_set = self._find_children(
-                    events, eid, {eid}, checked_for_children
-                )
-                recurring_groups.add(tuple(sorted(recurring_set)))
-
-        for eid in events.keys():
-            matching_groups = [s for s in recurring_groups if int(eid) in s]
-            assert len(matching_groups) == 1
-            if len(matching_groups[0]) == 1:
-                assert len(events[eid]['children']) == 0
-        return recurring_groups
-
-    def _verify_recurring_groups(self, recurring_groups):
-        # Currently unused.
-        for group in recurring_groups:
-            identical_keys = set()
-            eids_found = [eid for eid in group if eid in events]
-            if len(eids_found) == 1:
-                continue
-            for eid in eids_found:
-                identical_keys |= events[eid].keys()
-            event_a = events[eids_found[0]]
-            for eid in eids_found[1:]:
-                event_b = events[eid]
-                for key in list(identical_keys):
-                    if event_a[key] != event_b[key]:
-                        identical_keys.remove(key)
-            if len(identical_keys) == 0:
-                pass
-            else:
-                pass
-
-    def _find_children(self, events, event_id, children_set, checked_events):
-        if event_id in checked_events:
-            return children_set
-        checked_events.add(event_id)
-        if event_id in events:
-            children_set |= set(events[event_id]['children'])
-        for child in list(children_set):
-            children_set |= self.find_children(
-                events, child, children_set, checked_events
-            )
-        return children_set
