@@ -451,6 +451,9 @@ class KulkeImporter(Importer):
                 continue
 
             events = Event.objects.filter(id__in=kulke_ids)
+            if events.count() < 2:
+                continue
+
             aggregate = None
             if cnt == 0:
                 if len(group) == 1:
