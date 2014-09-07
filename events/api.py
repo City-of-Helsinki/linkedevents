@@ -561,8 +561,6 @@ class EventViewSet(JSONAPIViewSet):
         if 'show_all' not in self.request.QUERY_PARAMS:
             queryset = queryset.filter(
                 Q(event_status=Event.SCHEDULED)
-            ).filter(
-                Q(is_recurring_super=False)
             )
 
         val = self.request.QUERY_PARAMS.get('start', None)
