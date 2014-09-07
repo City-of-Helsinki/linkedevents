@@ -393,6 +393,13 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
     view_name = 'event-detail'
 
+    def __init__(self, *args, skip_empties=False, skip_fields=set(), **kwargs):
+        super(EventSerializer, self).__init__(*args, **kwargs)
+        # The following can be used when serializing when
+        # testing and debugging.
+        self.skip_empties = skip_empties
+        self.skip_fields = skip_fields
+
     def to_native(self, obj):
         ret = super(EventSerializer, self).to_native(obj)
         if 'start_time' in ret and not obj.has_start_time:
@@ -404,6 +411,17 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                 ret['end_time'] = None
         if hasattr(obj, 'days_left'):
             ret['days_left'] = int(obj.days_left)
+        if self.skip_empties:
+            for k in list(ret.keys()):
+                val = ret[k]
+                try:
+                    if val is None or len(val) == 0:
+                        del ret[k]
+                except TypeError:
+                    # not list/dict
+                    pass
+        for field in self.skip_fields:
+            del ret[field]
         return ret
 
     class Meta:
