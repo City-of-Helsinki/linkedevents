@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 import os
 import re
+import functools
 from lxml import etree
 from modeltranslation.translator import translator
 import dateutil
@@ -11,7 +12,6 @@ from django.utils.timezone import get_default_timezone
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
-from django.db.models import Max, Min
 
 from .sync import ModelSyncher
 from .base import Importer, register_importer, recur_dict
@@ -229,13 +229,10 @@ class KulkeImporter(Importer):
         event['origin_id'] = eid
 
         title = text_content('title')
-        event['headline'][lang] = title
         subtitle = text_content('subtitle')
-        if subtitle:
-            event['secondary_headline'][lang] = subtitle
-            event['name'][lang] = "{} - {}".format(title, subtitle)
-        else:
-            event['name'][lang] = title
+        event['headline'][lang] = title
+        event['secondary_headline'][lang] = subtitle
+        event['name'][lang] = make_event_name(title, subtitle)
 
         caption = text_content('caption')
         bodytext = text_content('bodytext')
@@ -392,20 +389,17 @@ class KulkeImporter(Importer):
 
     def _update_super_event(self, super_event):
         events = super_event.get_children()
-
-        time_boundaries = events.aggregate(
-            start_time=Min('start_time'),
-            end_time=Max('end_time'))
-        super_event.start_time = time_boundaries['start_time']
-        super_event.end_time = time_boundaries['end_time']
+        first_event = events.order_by('start_time').first()
+        super_event.start_time = first_event.start_time
+        super_event.has_start_time = first_event.has_start_time
+        last_event = events.order_by('-end_time').first()
+        super_event.end_time = last_event.end_time
+        super_event.has_end_time = last_event.has_end_time
 
         # Functions which map related models into simple comparable values.
-        def many_to_many(field):
-            frozenset(field.values_list('id', flat=True))
         def simple(field):
-            frozenset(map(lambda x: x.simple_value(), field.all()))
+            return frozenset(map(lambda x: x.simple_value(), field.all()))
         value_mappers = {
-            'keywords': many_to_many,
             'offers': simple,
             'external_links': simple
         }
@@ -413,15 +407,15 @@ class KulkeImporter(Importer):
             super_event, [
                 'info_url', 'description', 'short_description', 'headline',
                 'secondary_headline', 'provider', 'publisher', 'location',
-                'location_extra_info', 'audience', 'name', 'data_source',
-                'image', 'keywords', 'offers', 'external_links'])
+                'location_extra_info', 'audience', 'data_source',
+                'image', 'offers', 'external_links'])
 
         # The set of fields which have common values for all events.
         common_fields = set(
-            fieldname for fieldname in fieldnames
+            f for f in fieldnames
             if 1 == len(set(map(
-                    value_mappers.get(fieldname, lambda x: x),
-                    (getattr(event, fieldname) for event in events.all())))))
+                    value_mappers.get(f, lambda x: x),
+                    (getattr(event, f) for event in events.all())))))
 
         for fieldname in common_fields:
             value = getattr(events.first(), fieldname)
@@ -440,6 +434,27 @@ class KulkeImporter(Importer):
                     manager.add(m)
             else:
                 setattr(super_event, fieldname, value)
+
+        for lang in self.languages.keys():
+            headline = getattr(
+                super_event, 'headline_{}'.format(lang)
+            )
+            secondary_headline = getattr(
+                super_event, 'secondary_headline_{}'.format(lang)
+            )
+            setattr(super_event, 'name_{}'.format(lang),
+                    make_event_name(headline, secondary_headline)
+            )
+
+        # Gather common keywords present in *all* subevents
+        common_keywords = functools.reduce(
+            lambda x, y: x & y,
+            (set(event.keywords.all()) for event in events.all())
+        )
+        super_event.keywords.clear()
+        for k in common_keywords:
+            super_event.keywords.add(k)
+
         super_event.save()
 
     def _save_recurring_superevents(self, recurring_groups):
