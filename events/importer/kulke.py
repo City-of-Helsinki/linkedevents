@@ -88,6 +88,14 @@ LOCAL_TZ = timezone('Europe/Helsinki')
 def make_kulke_id(num):
     return "kulke:{}".format(num)
 
+def make_event_name(title, subtitle):
+    if title and subtitle:
+        return "{} - {}".format(title, subtitle)
+    elif title:
+        return title
+    elif subtitle:
+        return subtitle
+
 @register_importer
 class KulkeImporter(Importer):
     name = "kulke"
