@@ -421,7 +421,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
     class Meta:
         model = Event
-        exclude = ['has_start_time', 'has_end_time']
+        exclude = ['has_start_time', 'has_end_time', 'is_recurring_super']
 
 
 def parse_time(time_str, is_start):
