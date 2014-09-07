@@ -319,9 +319,7 @@ class KulkeImporter(Importer):
             # snippets
             description = None
         offer['description'][lang] = description
-        if free:
-            offer['price'][lang] = '0'
-        else:
+        if not free:
             offer['price'][lang] = price
         offer['info_url'][lang] = price_el.get('ticketlink')
 
