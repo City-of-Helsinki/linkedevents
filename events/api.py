@@ -357,11 +357,6 @@ register_view(LanguageViewSet, 'language')
 
 LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
 
-class ChildEventSerializer(serializers.HyperlinkedModelSerializer):
-    class Meta:
-        model = Event
-        fields = ('id',)
-
 class EventLinkSerializer(serializers.ModelSerializer):
     def to_native(self, obj):
         ret = super(EventLinkSerializer, self).to_native(obj)
