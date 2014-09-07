@@ -251,6 +251,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     super_event = TreeForeignKey('self', null=True, blank=True,
                                  related_name='sub_events')
 
+    is_recurring_super = models.BooleanField(default=False)
+
     # Custom fields not from schema.org
     keywords = models.ManyToManyField(Keyword, null=True, blank=True)
     audience = models.CharField(max_length=255, null=True, blank=True)
