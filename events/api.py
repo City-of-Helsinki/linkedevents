@@ -12,6 +12,7 @@ from django.utils.datastructures import MultiValueDictKeyError
 from django.contrib.gis.db.models.fields import GeometryField
 from django.db import models as django_db_models
 from django.db.models import Q, F
+from django.shortcuts import get_object_or_404
 from isodate import Duration, duration_isoformat, parse_duration
 from rest_framework import serializers, pagination, relations, viewsets, filters, generics, fields
 from rest_framework.reverse import reverse
@@ -531,6 +532,11 @@ class EventViewSet(JSONAPIViewSet):
     pagination_serializer_class = CustomPaginationSerializer
     filter_backends = (EventOrderingFilter,)
     ordering_fields = ('start_time', 'end_time', 'days_left')
+
+    def get_object(self):
+        # Overridden to prevent queryset filtering from being applied
+        # outside list views.
+        return get_object_or_404(Event.objects.all(), pk=self.kwargs['pk'])
 
     def filter_queryset(self, queryset):
         """
