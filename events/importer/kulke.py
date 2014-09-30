@@ -53,6 +53,28 @@ CATEGORIES_TO_IGNORE = [
     53, 54, 55
 ]
 
+SKIP_EVENTS_WITH_CATEGORY = set(
+    # These events are courses - not to be published
+    [70, 71, 72, 73, 75, 77, 79, 80,
+    81, 83, 84, 85, 87, 316, 629, 632]
+)
+
+def _query_courses():
+    filter_out_keywords = map(
+        make_kulke_id,
+        SKIP_EVENTS_WITH_CATEGORY
+    )
+    return Event.objects.filter(
+        data_source='kulke'
+    ).filter(
+        keywords__id__in=set(filter_out_keywords)
+    )
+
+def _delete_courses():
+    courses_q = _query_courses()
+    courses_q.delete()
+
+
 SPORTS = ['p965']
 GYMS = ['p8504']
 MANUAL_CATEGORIES = {
@@ -533,8 +555,19 @@ class KulkeImporter(Importer):
                 self._gather_recurring_events(lang, event_el, events, recurring_groups)
 
         events.default_factory = None
+
+        filter_out_keywords = set(map(
+            make_kulke_id,
+            SKIP_EVENTS_WITH_CATEGORY
+        ))
         for eid, event in events.items():
-            self.save_event(event)
+            skip = False
+            for kw in event['keywords']:
+                if kw.id in filter_out_keywords:
+                    skip = True
+                    break
+            if not skip:
+                self.save_event(event)
 
         self._verify_recurs(recurring_groups)
         aggregates = self._save_recurring_superevents(recurring_groups)
