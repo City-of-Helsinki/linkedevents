@@ -47,7 +47,7 @@ INSTALLED_APPS = (
     'haystack',
     'munigeo',
     'events',
-    'raven',
+    'raven.contrib.django.raven_compat',
     'simpleclient',
 )
 
