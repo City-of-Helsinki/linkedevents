@@ -241,9 +241,13 @@ class KulkeImporter(Importer):
 
         eid = int(event_el.attrib['id'])
 
+        if text_content('servicecode') != 'Pelkkä ilmoitus':
+            # Skip courses
+            return False
+
         if self.options['single']:
             if str(eid) != self.options['single']:
-                return
+                return False
 
         event = events[eid]
         event['data_source'] = self.data_source
@@ -382,6 +386,7 @@ class KulkeImporter(Importer):
 
         if not 'place' in location:
             self.find_place(event)
+        return True
 
     def _gather_recurring_events(self, lang, event_el, events, recurring_groups):
         references = event_el.find('eventreferences')
@@ -551,8 +556,9 @@ class KulkeImporter(Importer):
                 settings.IMPORT_FILE_PATH, 'kulke', 'events-%s.xml' % lang)
             root = etree.parse(events_file)
             for event_el in root.xpath('/eventdata/event'):
-                self._import_event(lang, event_el, events)
-                self._gather_recurring_events(lang, event_el, events, recurring_groups)
+                success = self._import_event(lang, event_el, events)
+                if success:
+                    self._gather_recurring_events(lang, event_el, events, recurring_groups)
 
         events.default_factory = None
 
