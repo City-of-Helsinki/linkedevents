@@ -28,3 +28,4 @@ httmock
 bleach
 django-haystack
 elasticsearch
+raven

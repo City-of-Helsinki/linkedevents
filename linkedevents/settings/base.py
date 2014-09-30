@@ -47,6 +47,7 @@ INSTALLED_APPS = (
     'haystack',
     'munigeo',
     'events',
+    'raven',
     'simpleclient',
 )
 
