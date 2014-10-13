@@ -541,6 +541,10 @@ class EventViewSet(JSONAPIViewSet):
 
     """
     queryset = Event.objects.all()
+    # Use select_ and prefetch_related() to reduce the amount of queries
+    queryset = queryset.select_related('location')
+    queryset = queryset.prefetch_related(
+        'offers', 'keywords', 'external_links', 'sub_events')
     serializer_class = EventSerializer
     pagination_serializer_class = CustomPaginationSerializer
     filter_backends = (EventOrderingFilter,)
