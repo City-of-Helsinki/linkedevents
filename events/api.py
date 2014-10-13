@@ -614,6 +614,7 @@ DATE_DECAY_SCALE = '30d'
 
 class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView):
     serializer_class = SearchSerializer
+    pagination_serializer_class = CustomPaginationSerializer
 
     def list(self, request, *args, **kwargs):
         languages = [x[0] for x in settings.LANGUAGES]
