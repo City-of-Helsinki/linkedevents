@@ -317,6 +317,7 @@ class KeywordSerializer(LinkedEventsSerializer):
 class KeywordViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Keyword.objects.all()
     serializer_class = KeywordSerializer
+    pagination_serializer_class = CustomPaginationSerializer
 
 register_view(KeywordViewSet, 'keyword')
 
