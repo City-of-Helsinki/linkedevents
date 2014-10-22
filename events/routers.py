@@ -44,6 +44,8 @@ class DocumentedRouter(DefaultRouter):
 
             The use of the data is free under the following license.
 
+            [HRI – tietoaineistojen lisenssi – nimeä](http://www.hri.fi/lisenssit/hri-nimea/)
+
             ## Linked Events – tietoaineistojen lisenssi
 
             Tällä lisenssillä lisenssinantaja (lisensoidun aineiston tekijän- tai

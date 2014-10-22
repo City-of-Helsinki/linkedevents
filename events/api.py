@@ -317,6 +317,7 @@ class KeywordSerializer(LinkedEventsSerializer):
 class KeywordViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Keyword.objects.all()
     serializer_class = KeywordSerializer
+    pagination_serializer_class = CustomPaginationSerializer
 
 register_view(KeywordViewSet, 'keyword')
 
@@ -541,6 +542,10 @@ class EventViewSet(JSONAPIViewSet):
 
     """
     queryset = Event.objects.all()
+    # Use select_ and prefetch_related() to reduce the amount of queries
+    queryset = queryset.select_related('location')
+    queryset = queryset.prefetch_related(
+        'offers', 'keywords', 'external_links', 'sub_events')
     serializer_class = EventSerializer
     pagination_serializer_class = CustomPaginationSerializer
     filter_backends = (EventOrderingFilter,)
@@ -609,6 +614,7 @@ DATE_DECAY_SCALE = '30d'
 
 class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView):
     serializer_class = SearchSerializer
+    pagination_serializer_class = CustomPaginationSerializer
 
     def list(self, request, *args, **kwargs):
         languages = [x[0] for x in settings.LANGUAGES]
