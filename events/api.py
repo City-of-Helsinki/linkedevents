@@ -568,10 +568,19 @@ class EventViewSet(JSONAPIViewSet):
                 Q(event_status=Event.SCHEDULED)
             )
 
+        val = self.request.QUERY_PARAMS.get('last_modified_since', None)
+        # This should be in format which dateutil.parser recognizes, e.g.
+        # 2014-10-29T12:00:00Z == 2014-10-29T12:00:00+0000 (UTC time)
+        # or 2014-10-29T12:00:00+0200 (local time)
+        if val:
+            dt = parse_time(val, is_start=False)
+            queryset = queryset.filter(Q(last_modified_time__gte=dt))
+
         val = self.request.QUERY_PARAMS.get('start', None)
         if val:
             dt = parse_time(val, is_start=True)
             queryset = queryset.filter(Q(end_time__gt=dt) | Q(start_time__gte=dt))
+
         val = self.request.QUERY_PARAMS.get('end', None)
         if val:
             dt = parse_time(val, is_start=False)
