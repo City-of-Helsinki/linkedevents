@@ -431,7 +431,7 @@ def parse_time(time_str, is_start):
     # FIXME: What if there's no local timezone?
     try:
         dt = datetime.strptime(time_str, '%Y-%m-%d')
-        dt = dt.replace(tzinfo=LOCAL_TZ)
+        dt = LOCAL_TZ.localize(dt)
     except ValueError:
         dt = None
     if not dt:
