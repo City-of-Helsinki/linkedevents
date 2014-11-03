@@ -284,7 +284,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                                         kwargs={u'pk': ret['id']},
                                         request=self.context['request'])
             except NoReverseMatch:
-                ret['@id'] = str(value)
+                ret['@id'] = str(ret['id'])
 
         # Context is hidden if:
         # 1) hide_ld_context is set to True
