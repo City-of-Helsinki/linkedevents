@@ -375,6 +375,26 @@ class PlaceViewSet(GeoModelAPIView, viewsets.ReadOnlyModelViewSet):
     serializer_class = PlaceSerializer
     pagination_serializer_class = CustomPaginationSerializer
 
+    def get_queryset(self):
+        """
+        Return Place queryset. If request has parameter show_all_places=1
+        all Places are returned, otherwise only which have events.
+        Additional query parameters:
+        event.data_source
+        event.start
+        event.end
+        """
+        queryset = Place.objects.all()
+        if self.request.QUERY_PARAMS.get('show_all_places'):
+            pass
+        else:
+            events = Event.objects.all()
+            params = _clean_qp(self.request.QUERY_PARAMS)
+            events = _filter_event_queryset(events, params)
+            location_ids = events.values_list('location_id',
+                                              flat=True).distinct().order_by()
+            queryset = queryset.filter(id__in=location_ids)
+        return queryset
 
 register_view(PlaceViewSet, 'place')
 
