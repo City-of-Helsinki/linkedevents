@@ -482,6 +482,52 @@ class EventOrderingFilter(LinkedEventsOrderingFilter):
             queryset = queryset.extra(select={'days_left': 'date_part(\'day\', end_time - start_time)'})
         return queryset
 
+
+def _filter_event_queryset(queryset, params, srs=None):
+    """
+    Filter events queryset by params
+    (e.g. self.request.QUERY_PARAMS in EventViewSet)
+    """
+
+    val = params.get('last_modified_since', None)
+    # This should be in format which dateutil.parser recognizes, e.g.
+    # 2014-10-29T12:00:00Z == 2014-10-29T12:00:00+0000 (UTC time)
+    # or 2014-10-29T12:00:00+0200 (local time)
+    if val:
+        dt = parse_time(val, is_start=False)
+        queryset = queryset.filter(Q(last_modified_time__gte=dt))
+
+    val = params.get('start', None)
+    if val:
+        dt = parse_time(val, is_start=True)
+        queryset = queryset.filter(Q(end_time__gt=dt) | Q(start_time__gte=dt))
+
+    val = params.get('end', None)
+    if val:
+        dt = parse_time(val, is_start=False)
+        queryset = queryset.filter(Q(end_time__lt=dt) | Q(start_time__lte=dt))
+
+    val = params.get('bbox', None)
+    if val:
+        bbox_filter = build_bbox_filter(srs, val, 'position')
+        places = Place.geo_objects.filter(**bbox_filter)
+        queryset = queryset.filter(location__in=places)
+
+    val = params.get('data_source', None)
+    if val:
+        queryset = queryset.filter(data_source=val)
+
+    val = params.get('location', None)
+    if val:
+        queryset = queryset.filter(location_id=val)
+
+    val = params.get('keyword', None)
+    if val:
+        queryset = queryset.filter(keywords__pk=val)
+
+    return queryset
+
+
 class EventViewSet(JSONAPIViewSet):
     """
     # Filtering retrieved events
@@ -567,43 +613,8 @@ class EventViewSet(JSONAPIViewSet):
             queryset = queryset.filter(
                 Q(event_status=Event.SCHEDULED)
             )
-
-        val = self.request.QUERY_PARAMS.get('last_modified_since', None)
-        # This should be in format which dateutil.parser recognizes, e.g.
-        # 2014-10-29T12:00:00Z == 2014-10-29T12:00:00+0000 (UTC time)
-        # or 2014-10-29T12:00:00+0200 (local time)
-        if val:
-            dt = parse_time(val, is_start=False)
-            queryset = queryset.filter(Q(last_modified_time__gte=dt))
-
-        val = self.request.QUERY_PARAMS.get('start', None)
-        if val:
-            dt = parse_time(val, is_start=True)
-            queryset = queryset.filter(Q(end_time__gt=dt) | Q(start_time__gte=dt))
-
-        val = self.request.QUERY_PARAMS.get('end', None)
-        if val:
-            dt = parse_time(val, is_start=False)
-            queryset = queryset.filter(Q(end_time__lt=dt) | Q(start_time__lte=dt))
-
-        val = self.request.QUERY_PARAMS.get('bbox', None)
-        if val:
-            bbox_filter = build_bbox_filter(self.srs, val, 'position')
-            places = Place.geo_objects.filter(**bbox_filter)
-            queryset = queryset.filter(location__in=places)
-
-        val = self.request.QUERY_PARAMS.get('data_source', None)
-        if val:
-            queryset = queryset.filter(data_source=val)
-
-        val = self.request.QUERY_PARAMS.get('location', None)
-        if val:
-            queryset = queryset.filter(location_id=val)
-
-        val = self.request.QUERY_PARAMS.get('keyword', None)
-        if val:
-            queryset = queryset.filter(keywords__pk=val)
-
+        queryset = _filter_event_queryset(queryset, self.request.QUERY_PARAMS,
+                                          srs=self.srs)
         return queryset
 
 register_view(EventViewSet, 'event')
