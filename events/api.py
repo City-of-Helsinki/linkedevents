@@ -333,10 +333,32 @@ class KeywordSerializer(LinkedEventsSerializer):
     class Meta:
         model = Keyword
 
+
 class KeywordViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Keyword.objects.all()
     serializer_class = KeywordSerializer
     pagination_serializer_class = CustomPaginationSerializer
+
+    def get_queryset(self):
+        """
+        Return Keyword queryset. If request has parameter show_all_keywords=1
+        all Keywords are returned, otherwise only which have events.
+        Additional query parameters:
+        event.data_source
+        event.start
+        event.end
+        """
+        queryset = Keyword.objects.all()
+        if self.request.QUERY_PARAMS.get('show_all_keywords'):
+            pass
+        else:
+            events = Event.objects.all()
+            params = _clean_qp(self.request.QUERY_PARAMS)
+            events = _filter_event_queryset(events, params)
+            keyword_ids = events.values_list('keywords',
+                                             flat=True).distinct().order_by()
+            queryset = queryset.filter(id__in=keyword_ids)
+        return queryset
 
 register_view(KeywordViewSet, 'keyword')
 
