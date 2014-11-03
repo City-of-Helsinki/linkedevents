@@ -308,6 +308,25 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         return ret
 
 
+def _clean_qp(query_params):
+    """
+    Strip 'event.' prefix from all query params.
+    :rtype : QueryDict
+    :param query_params: dict self.request.QUERY_PARAMS
+    :return: QueryDict QUERY_PARAMS
+    """
+    query_params = query_params.copy()  # do not alter original dict
+    nspace = 'event.'
+    for key in query_params.keys():
+        if key.startswith(nspace):
+            new_key = key.lstrip(nspace)
+            # .pop() returns a list(?), don't use
+            #query_params[new_key] = query_params.pop(key)
+            query_params[new_key] = query_params[key]
+            del query_params[key]
+    return query_params
+
+
 class KeywordSerializer(LinkedEventsSerializer):
     view_name = 'keyword-detail'
 
