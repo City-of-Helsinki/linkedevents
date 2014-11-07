@@ -9,6 +9,7 @@ from django.db.models import Count
 from lxml import etree
 
 from events.models import DataSource, Place, Event, Organization
+from events.models import Keyword
 from events.keywords import KeywordMatcher
 
 from .sync import ModelSyncher
@@ -94,6 +95,7 @@ def zipcode_and_muni(text):
 class MatkoImporter(Importer):
     name = "matko"
     supported_languages = ['fi', 'sv', 'en']
+    kwcache = {}
 
     def __init__(self, *args, **kwargs):
         super(MatkoImporter, self).__init__(*args, **kwargs)
@@ -265,6 +267,20 @@ class MatkoImporter(Importer):
 
         keywords = []
         for t in event_types:
+            # Save original keyword in the raw too
+            _id = 'matko:{}'.format(t)
+            kwargs = {
+                'id': _id,  # id like matko:konsertti
+                'data_source_id': 'matko',
+                'name': t,
+            }
+            # Try to find Keyword from cache to avoid db hit in every cycle
+            if _id in self.kwcache:
+                keyword_orig = self.kwcache[_id]
+            else:
+                keyword_orig, created = Keyword.objects.get_or_create(**kwargs)
+                self.kwcache[_id] = keyword_orig
+            keywords.append(keyword_orig)
             if t is None or t in ignore or t in use_as_target_group:
                 continue
             if t in mapping:
