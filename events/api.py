@@ -615,6 +615,18 @@ def _filter_event_queryset(queryset, params, srs=None):
         elif val == 'sub':
             queryset = queryset.filter(is_recurring_super=False)
 
+    # Filter only events which are shorter than 1 day if val is 'short'
+    # and longer than 1 day if val is 'long'
+    val = params.get('permanency', None)
+    if val in ['short', 'long']:
+        if val == 'short':
+            cond = '<'
+        elif val == 'long':
+            cond = '>='
+        days = int(1)
+        queryset = queryset.extra(
+            where=["end_time - start_time " + cond + " '%s day'::interval"],
+            params=[days])
     return queryset
 
 
