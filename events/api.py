@@ -590,6 +590,14 @@ def _filter_event_queryset(queryset, params, srs=None):
         val = val.split(',')
         queryset = queryset.filter(keywords__pk__in=val)
 
+    # Filter only super or sub events if recurring has value
+    val = params.get('recurring', None)
+    if val:
+        if val == 'super':
+            queryset = queryset.filter(is_recurring_super=True)
+        elif val == 'sub':
+            queryset = queryset.filter(is_recurring_super=False)
+
     return queryset
 
 
