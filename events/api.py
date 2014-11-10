@@ -594,13 +594,17 @@ def _filter_event_queryset(queryset, params, srs=None):
     if val:
         queryset = queryset.filter(data_source=val)
 
+    # Filter by location id, multiple ids separated by comma
     val = params.get('location', None)
     if val:
-        queryset = queryset.filter(location_id=val)
+        val = val.split(',')
+        queryset = queryset.filter(location_id__in=val)
 
+    # Filter by keyword id, multiple ids separated by comma
     val = params.get('keyword', None)
     if val:
-        queryset = queryset.filter(keywords__pk=val)
+        val = val.split(',')
+        queryset = queryset.filter(keywords__pk__in=val)
 
     # Filter only super or sub events if recurring has value
     val = params.get('recurring', None)
