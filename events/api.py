@@ -22,6 +22,7 @@ from events.models import Place, Event, Keyword, Language, OpeningHoursSpecifica
 from django.conf import settings
 from events import utils
 from events.custom_elasticsearch_search_backend import CustomEsSearchQuerySet as SearchQuerySet
+from events.translation import EventTranslationOptions
 from modeltranslation.translator import translator, NotRegistered
 from django.utils.translation import ugettext_lazy as _
 from dateutil.parser import parse as dateutil_parse
@@ -549,6 +550,21 @@ def _filter_event_queryset(queryset, params, srs=None):
     Filter events queryset by params
     (e.g. self.request.QUERY_PARAMS in EventViewSet)
     """
+    # Filter by string (case insensitive). This searches from all fields
+    # which are marked translatable in translation.py
+    val = params.get('text', None)
+    if val:
+        val = val.lower()
+        # Free string search from all translated fields
+        fields = EventTranslationOptions.fields
+        # and these languages
+        languages = [x[0] for x in settings.LANGUAGES]
+        qset = Q()
+        for field in fields:
+            for lang in languages:
+                kwarg = {field + '_' + lang + '__icontains': val}
+                qset |= Q(**kwarg)
+        queryset = queryset.filter(qset)
 
     val = params.get('last_modified_since', None)
     # This should be in format which dateutil.parser recognizes, e.g.
