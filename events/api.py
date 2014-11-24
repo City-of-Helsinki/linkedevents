@@ -449,7 +449,7 @@ def parse_time(time_str, is_start):
         try:
             # Handle all other times through dateutil.
             dt = dateutil_parse(time_str)
-        except TypeError:
+        except TypeError, ValueError:
             raise ParseError('time in invalid format (try ISO 8601 or yyyy-mm-dd)')
     return dt
 
