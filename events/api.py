@@ -320,9 +320,9 @@ def _clean_qp(query_params):
     nspace = 'event.'
     for key in query_params.keys():
         if key.startswith(nspace):
-            new_key = key.lstrip(nspace)
+            new_key = key[len(nspace):]
             # .pop() returns a list(?), don't use
-            #query_params[new_key] = query_params.pop(key)
+            # query_params[new_key] = query_params.pop(key)
             query_params[new_key] = query_params[key]
             del query_params[key]
     return query_params
