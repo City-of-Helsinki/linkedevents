@@ -148,6 +148,7 @@ class HelmetImporter(Importer):
     name = "helmet"
     supported_languages = ['fi', 'sv', 'en']
     current_tick_index = 0
+    kwcache = {}
 
     def setup(self):
         ds_args = dict(id=self.name)
@@ -293,6 +294,40 @@ class HelmetImporter(Importer):
         event_keywords = event.get('keywords', set())
 
         for classification in event_el['Classifications']:
+            # Save original keyword in the raw too
+            node_id = classification['NodeId']
+            name = classification['NodeName']
+            # Tapahtumat exists tens of times, use pseudo id
+            if name in ('Tapahtumat', 'Events', 'Evenemang'):
+                node_id = 1  # pseudo id
+            keyword_id = 'helmet:{}'.format(node_id)
+            kwargs = {
+                'id': keyword_id,
+                'origin_id': node_id,
+                'data_source_id': 'helmet',
+            }
+            if keyword_id in self.kwcache:
+                keyword_orig = self.kwcache[keyword_id]
+                created = False
+            else:
+                keyword_orig, created = Keyword.objects.get_or_create(**kwargs)
+                self.kwcache[keyword_id] = keyword_orig
+
+            name_key = 'name_{}'.format(lang)
+            if created:
+                keyword_orig.name = name  # Assume default lang Finnish
+                # Set explicitly modeltranslation field
+                setattr(keyword_orig, name_key, name)
+                keyword_orig.save()
+            else:
+                current_name = getattr(keyword_orig, name_key)
+                if not current_name:  # is None or empty
+                    setattr(keyword_orig, name_key, name)
+                    keyword_orig.save()
+
+            event_keywords.add(keyword_orig)
+            ### Saving original keyword ends ###
+
             # Oddly enough, "Tapahtumat" node includes NodeId pointing to
             # HelMet location, which is mapped to Linked Events keyword ID
             if classification['NodeName'] in (
@@ -379,6 +414,7 @@ class HelmetImporter(Importer):
             helmet_lang_id = HELMET_LANGUAGES[lang]
             url = HELMET_API_URL.format(lang_code=helmet_lang_id, start_date='2014-01-01')
             print("Processing lang " + lang)
+            print("from URL " + url)
             self._recur_fetch_paginated_url(url, lang, events)
 
         event_list = sorted(events.values(), key=lambda x: x['start_time'])

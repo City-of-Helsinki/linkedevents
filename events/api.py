@@ -22,6 +22,7 @@ from events.models import Place, Event, Keyword, Language, OpeningHoursSpecifica
 from django.conf import settings
 from events import utils
 from events.custom_elasticsearch_search_backend import CustomEsSearchQuerySet as SearchQuerySet
+from events.translation import EventTranslationOptions
 from modeltranslation.translator import translator, NotRegistered
 from django.utils.translation import ugettext_lazy as _
 from dateutil.parser import parse as dateutil_parse
@@ -284,7 +285,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                                         kwargs={u'pk': ret['id']},
                                         request=self.context['request'])
             except NoReverseMatch:
-                ret['@id'] = str(value)
+                ret['@id'] = str(ret['id'])
 
         # Context is hidden if:
         # 1) hide_ld_context is set to True
@@ -308,16 +309,57 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         return ret
 
 
+def _clean_qp(query_params):
+    """
+    Strip 'event.' prefix from all query params.
+    :rtype : QueryDict
+    :param query_params: dict self.request.QUERY_PARAMS
+    :return: QueryDict QUERY_PARAMS
+    """
+    query_params = query_params.copy()  # do not alter original dict
+    nspace = 'event.'
+    for key in query_params.keys():
+        if key.startswith(nspace):
+            new_key = key[len(nspace):]
+            # .pop() returns a list(?), don't use
+            # query_params[new_key] = query_params.pop(key)
+            query_params[new_key] = query_params[key]
+            del query_params[key]
+    return query_params
+
+
 class KeywordSerializer(LinkedEventsSerializer):
     view_name = 'keyword-detail'
 
     class Meta:
         model = Keyword
 
+
 class KeywordViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Keyword.objects.all()
     serializer_class = KeywordSerializer
     pagination_serializer_class = CustomPaginationSerializer
+
+    def get_queryset(self):
+        """
+        Return Keyword queryset. If request has parameter show_all_keywords=1
+        all Keywords are returned, otherwise only which have events.
+        Additional query parameters:
+        event.data_source
+        event.start
+        event.end
+        """
+        queryset = Keyword.objects.all()
+        if self.request.QUERY_PARAMS.get('show_all_keywords'):
+            pass
+        else:
+            events = Event.objects.all()
+            params = _clean_qp(self.request.QUERY_PARAMS)
+            events = _filter_event_queryset(events, params)
+            keyword_ids = events.values_list('keywords',
+                                             flat=True).distinct().order_by()
+            queryset = queryset.filter(id__in=keyword_ids)
+        return queryset
 
 register_view(KeywordViewSet, 'keyword')
 
@@ -334,6 +376,26 @@ class PlaceViewSet(GeoModelAPIView, viewsets.ReadOnlyModelViewSet):
     serializer_class = PlaceSerializer
     pagination_serializer_class = CustomPaginationSerializer
 
+    def get_queryset(self):
+        """
+        Return Place queryset. If request has parameter show_all_places=1
+        all Places are returned, otherwise only which have events.
+        Additional query parameters:
+        event.data_source
+        event.start
+        event.end
+        """
+        queryset = Place.objects.all()
+        if self.request.QUERY_PARAMS.get('show_all_places'):
+            pass
+        else:
+            events = Event.objects.all()
+            params = _clean_qp(self.request.QUERY_PARAMS)
+            events = _filter_event_queryset(events, params)
+            location_ids = events.values_list('location_id',
+                                              flat=True).distinct().order_by()
+            queryset = queryset.filter(id__in=location_ids)
+        return queryset
 
 register_view(PlaceViewSet, 'place')
 
@@ -482,6 +544,95 @@ class EventOrderingFilter(LinkedEventsOrderingFilter):
             queryset = queryset.extra(select={'days_left': 'date_part(\'day\', end_time - start_time)'})
         return queryset
 
+
+def _filter_event_queryset(queryset, params, srs=None):
+    """
+    Filter events queryset by params
+    (e.g. self.request.QUERY_PARAMS in EventViewSet)
+    """
+    # Filter by string (case insensitive). This searches from all fields
+    # which are marked translatable in translation.py
+    val = params.get('text', None)
+    if val:
+        val = val.lower()
+        # Free string search from all translated fields
+        fields = EventTranslationOptions.fields
+        # and these languages
+        languages = [x[0] for x in settings.LANGUAGES]
+        qset = Q()
+        for field in fields:
+            for lang in languages:
+                kwarg = {field + '_' + lang + '__icontains': val}
+                qset |= Q(**kwarg)
+        queryset = queryset.filter(qset)
+
+    val = params.get('last_modified_since', None)
+    # This should be in format which dateutil.parser recognizes, e.g.
+    # 2014-10-29T12:00:00Z == 2014-10-29T12:00:00+0000 (UTC time)
+    # or 2014-10-29T12:00:00+0200 (local time)
+    if val:
+        dt = parse_time(val, is_start=False)
+        queryset = queryset.filter(Q(last_modified_time__gte=dt))
+
+    val = params.get('start', None)
+    if val:
+        dt = parse_time(val, is_start=True)
+        queryset = queryset.filter(Q(end_time__gt=dt) | Q(start_time__gte=dt))
+
+    val = params.get('end', None)
+    if val:
+        dt = parse_time(val, is_start=False)
+        queryset = queryset.filter(Q(end_time__lt=dt) | Q(start_time__lte=dt))
+
+    val = params.get('bbox', None)
+    if val:
+        bbox_filter = build_bbox_filter(srs, val, 'position')
+        places = Place.geo_objects.filter(**bbox_filter)
+        queryset = queryset.filter(location__in=places)
+
+    val = params.get('data_source', None)
+    if val:
+        queryset = queryset.filter(data_source=val)
+
+    # Filter by location id, multiple ids separated by comma
+    val = params.get('location', None)
+    if val:
+        val = val.split(',')
+        queryset = queryset.filter(location_id__in=val)
+
+    # Filter by keyword id, multiple ids separated by comma
+    val = params.get('keyword', None)
+    if val:
+        val = val.split(',')
+        queryset = queryset.filter(keywords__pk__in=val)
+
+    # Filter only super or sub events if recurring has value
+    val = params.get('recurring', None)
+    if val:
+<<<<<<< HEAD
+        val = val.lower()
+=======
+>>>>>>> 9aea4f7c221cdd1b5234a4579dd3bae1de568ceb
+        if val == 'super':
+            queryset = queryset.filter(is_recurring_super=True)
+        elif val == 'sub':
+            queryset = queryset.filter(is_recurring_super=False)
+
+    # Filter only events which are shorter than 1 day if val is 'short'
+    # and longer than 1 day if val is 'long'
+    val = params.get('permanency', None)
+    if val in ['short', 'long']:
+        if val == 'short':
+            cond = '<'
+        elif val == 'long':
+            cond = '>='
+        days = int(1)
+        queryset = queryset.extra(
+            where=["end_time - start_time " + cond + " '%s day'::interval"],
+            params=[days])
+    return queryset
+
+
 class EventViewSet(JSONAPIViewSet):
     """
     # Filtering retrieved events
@@ -567,43 +718,8 @@ class EventViewSet(JSONAPIViewSet):
             queryset = queryset.filter(
                 Q(event_status=Event.SCHEDULED)
             )
-
-        val = self.request.QUERY_PARAMS.get('last_modified_since', None)
-        # This should be in format which dateutil.parser recognizes, e.g.
-        # 2014-10-29T12:00:00Z == 2014-10-29T12:00:00+0000 (UTC time)
-        # or 2014-10-29T12:00:00+0200 (local time)
-        if val:
-            dt = parse_time(val, is_start=False)
-            queryset = queryset.filter(Q(last_modified_time__gte=dt))
-
-        val = self.request.QUERY_PARAMS.get('start', None)
-        if val:
-            dt = parse_time(val, is_start=True)
-            queryset = queryset.filter(Q(end_time__gt=dt) | Q(start_time__gte=dt))
-
-        val = self.request.QUERY_PARAMS.get('end', None)
-        if val:
-            dt = parse_time(val, is_start=False)
-            queryset = queryset.filter(Q(end_time__lt=dt) | Q(start_time__lte=dt))
-
-        val = self.request.QUERY_PARAMS.get('bbox', None)
-        if val:
-            bbox_filter = build_bbox_filter(self.srs, val, 'position')
-            places = Place.geo_objects.filter(**bbox_filter)
-            queryset = queryset.filter(location__in=places)
-
-        val = self.request.QUERY_PARAMS.get('data_source', None)
-        if val:
-            queryset = queryset.filter(data_source=val)
-
-        val = self.request.QUERY_PARAMS.get('location', None)
-        if val:
-            queryset = queryset.filter(location_id=val)
-
-        val = self.request.QUERY_PARAMS.get('keyword', None)
-        if val:
-            queryset = queryset.filter(keywords__pk=val)
-
+        queryset = _filter_event_queryset(queryset, self.request.QUERY_PARAMS,
+                                          srs=self.srs)
         return queryset
 
 register_view(EventViewSet, 'event')
