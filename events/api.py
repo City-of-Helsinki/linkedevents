@@ -609,6 +609,7 @@ def _filter_event_queryset(queryset, params, srs=None):
     # Filter only super or sub events if recurring has value
     val = params.get('recurring', None)
     if val:
+        val = val.lower()
         if val == 'super':
             queryset = queryset.filter(is_recurring_super=True)
         elif val == 'sub':
