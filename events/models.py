@@ -28,7 +28,6 @@ from django_hstore import hstore
 from django.utils.translation import ugettext_lazy as _
 from mptt.models import MPTTModel, TreeForeignKey
 from django.contrib.contenttypes.models import ContentType
-from events import contexts
 from events import translation_utils
 from django.utils.encoding import python_2_unicode_compatible
 
@@ -332,11 +331,11 @@ class ExportInfo(models.Model):
         self.last_exported_time = BaseModel.now()
         super(ExportInfo, self).save(*args, **kwargs)
 
+
 class EventAggregate(models.Model):
     super_event = models.OneToOneField(Event, related_name='aggregate', null=True)
+
+
 class EventAggregateMember(models.Model):
     event_aggregate = models.ForeignKey(EventAggregate, related_name='members')
     event = models.ForeignKey(Event, unique=True)
-
-contexts.create_context(Event)
-contexts.create_context(Place)

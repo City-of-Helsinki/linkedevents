@@ -10,7 +10,18 @@ https://docs.djangoproject.com/en/1.6/ref/settings/
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': 'linkedevents',
+        'USER': 'linkedevents',
+        'PASSWORD': 'linkedevents',
+        'HOST': 'localhost',
+        'PORT': '',
+    }
+}
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.6/howto/deployment/checklist/
@@ -19,9 +30,9 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 SECRET_KEY = '%ad7)k=_a6l4-@263z(@@xbz81fl(cz&#bq_7l&!i92yxs2-vh'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-TEMPLATE_DEBUG = True
+TEMPLATE_DEBUG = False
 
 ALLOWED_HOSTS = []
 
@@ -37,7 +48,6 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'django.contrib.gis',
     'django_extensions',
-    'south',
     'corsheaders',
     'rest_framework',
     'django_hstore',
@@ -71,9 +81,6 @@ WSGI_APPLICATION = 'linkedevents.wsgi.application'
 # https://docs.djangoproject.com/en/1.6/ref/settings/#databases
 
 DATABASES = {}
-
-# Keep the database connection open for 120s
-CONN_MAX_AGE = 120
 
 ATOMIC_REQUESTS = True
 
@@ -209,3 +216,10 @@ HAYSTACK_CONNECTIONS = {
 
 #from multilingual_haystack.settings import get_haystack_connections
 #HAYSTACK_CONNECTIONS = get_haystack_connections(HAYSTACK_CONNECTIONS, LANGUAGES)
+
+# local_settings.py can be used to override environment-specific settings
+# like database and email that differ between development and production.
+try:
+    from local_settings import *
+except ImportError:
+    pass

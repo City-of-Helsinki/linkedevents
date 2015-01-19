@@ -40,11 +40,3 @@ class LanguageAdmin(BaseAdmin, reversion.VersionAdmin):
 
 class PersonAdmin(BaseAdmin, reversion.VersionAdmin):
     pass
-
-
-admin.site.register(Event, EventModelAdmin)
-admin.site.register(KeywordLabel)
-admin.site.register(Keyword, KeywordAdmin)
-admin.site.register(Place, PlaceAdmin)
-admin.site.register(Language, LanguageAdmin)
-admin.site.register(OpeningHoursSpecification)
