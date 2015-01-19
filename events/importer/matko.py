@@ -265,6 +265,13 @@ class MatkoImporter(Importer):
                 event_types.update(
                     map(lambda x: x.lower(), t.split(",")))
 
+        # Save offers.is_free if 'ilmaistapahtumat' tag is present
+        if 'ilmaistapahtumat' in event_types:
+            if 'offers' not in event:
+                event['offers'] = [recur_dict()]
+            offer = event['offers'][0]
+            offer['is_free'] = True
+
         keywords = []
         for t in event_types:
             # Save original keyword in the raw too
