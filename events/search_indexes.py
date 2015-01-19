@@ -9,7 +9,7 @@ class EventIndex(indexes.SearchIndex, indexes.Indexable):
     end_time = indexes.DateField(model_attr='end_time')
 
     def get_updated_field(self):
-        return 'origin_last_modified_time'
+        return 'last_modified_time'
 
     def get_model(self):
         return Event
