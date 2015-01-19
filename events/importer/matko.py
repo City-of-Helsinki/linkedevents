@@ -268,7 +268,8 @@ class MatkoImporter(Importer):
         keywords = []
         for t in event_types:
             # Save original keyword in the raw too
-            _id = 'matko:{}'.format(t)
+            # Note: / in keyword id breaks URL resolver so we replace it with _
+            _id = 'matko:{}'.format(t.replace('/', '_'))
             kwargs = {
                 'id': _id,  # id like matko:konsertti
                 'data_source_id': 'matko',
