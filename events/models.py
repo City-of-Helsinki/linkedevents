@@ -288,7 +288,7 @@ reversion.register(Event)
 
 class Offer(models.Model, SimpleValueMixin):
     event = models.ForeignKey(Event, db_index=True, related_name='offers')
-    price = models.CharField(max_length=128)
+    price = models.CharField(max_length=512)
     info_url = models.URLField(_('Web link to offer'), null=True)
     description = models.TextField(null=True, blank=True)
     # Don't expose is_free as an API field. It is used to distinguish
