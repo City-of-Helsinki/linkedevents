@@ -615,6 +615,28 @@ def _filter_event_queryset(queryset, params, srs=None):
         elif val == 'sub':
             queryset = queryset.filter(is_recurring_super=False)
 
+    # Filter events by the subtraction of end_time and start_time
+    # TODO: maybe support to Sec, Min, Hour in addition to Day?
+    val = params.get('max_duration', None)
+    if val is not None:
+        try:
+            days = int(val.lower().rstrip('d'))
+            queryset = queryset.extra(
+                where=["end_time - start_time < '%s day'::interval"],
+                params=[days])
+        except ValueError:
+            raise ParseError('invalid max_duration value, try 1d')
+
+    val = params.get('min_duration', None)
+    if val is not None:
+        try:
+            days = int(val.lower().rstrip('d'))
+            queryset = queryset.extra(
+                where=["end_time - start_time >= '%s day'::interval"],
+                params=[days])
+        except ValueError:
+            raise ParseError('invalid min_duration value, try 1d')
+
     return queryset
 
 
