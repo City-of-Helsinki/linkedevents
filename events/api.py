@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 from functools import wraps
 from datetime import datetime, timedelta
 from pprint import pprint
+import re
 
 from django.utils import translation
 from django.contrib.gis.geos import Point
@@ -531,8 +532,10 @@ class JSONAPIViewSet(viewsets.ReadOnlyModelViewSet):
 
         return context
 
+
 class LinkedEventsOrderingFilter(filters.OrderingFilter):
     ordering_param = 'sort'
+
 
 class EventOrderingFilter(LinkedEventsOrderingFilter):
     def filter_queryset(self, request, queryset, view):
@@ -544,6 +547,23 @@ class EventOrderingFilter(LinkedEventsOrderingFilter):
             queryset = queryset.extra(select={'days_left': 'date_part(\'day\', end_time - start_time)'})
         return queryset
 
+
+def parse_duration(duration):
+    m = re.match(r'(\d+)\s*(d|h|m|s)?$', duration.strip().lower())
+    if not m:
+        raise ParseError("Invalid duration supplied. Try '1d' or '2h'.")
+    val, unit = m.groups()
+    if not unit:
+        unit = 's'
+
+    if unit == 'm':
+        mul = 60
+    elif unit == 'h':
+        mul = 3600
+    elif unit == 'd':
+        mul = 24 * 3600
+
+    return int(val) * mul
 
 def _filter_event_queryset(queryset, params, srs=None):
     """
@@ -614,6 +634,18 @@ def _filter_event_queryset(queryset, params, srs=None):
             queryset = queryset.filter(is_recurring_super=True)
         elif val == 'sub':
             queryset = queryset.filter(is_recurring_super=False)
+
+    val = params.get('max_duration', None)
+    if val:
+        dur = parse_duration(val)
+        cond = 'end_time - start_time <= %s :: interval'
+        queryset = queryset.extra(where=[cond], params=[str(dur)])
+
+    val = params.get('min_duration', None)
+    if val:
+        dur = parse_duration(val)
+        cond = 'end_time - start_time >= %s :: interval'
+        queryset = queryset.extra(where=[cond], params=[str(dur)])
 
     return queryset
 
