@@ -43,7 +43,7 @@ YSO_KEYWORD_MAPS = {
 
 LOCATIONS = {
     # Library name in Finnish -> ((library node ids in event feed), tprek id)
-    u"Arabianrannan kirjasto": ((10784, 11271), 8234),
+    u"Arabianrannan kirjasto": ((10784, 11271), 8254),
     u"Entressen kirjasto": ((10659, 11274), 15321),
     u"Etelä-Haagan kirjasto": ((10786, 11276), 8150),
     u"Hakunilan kirjasto": ((10787, 11278), 19580),
