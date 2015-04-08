@@ -352,7 +352,11 @@ class KeywordViewSet(viewsets.ReadOnlyModelViewSet):
         """
         queryset = Keyword.objects.all()
         if self.request.QUERY_PARAMS.get('show_all_keywords'):
-            pass
+            # Limit by data_source anyway, if it is set
+            data_source = self.request.QUERY_PARAMS.get('data_source')
+            if data_source:
+                data_source = data_source.lower()
+                queryset = queryset.filter(data_source=data_source)
         else:
             events = Event.objects.all()
             params = _clean_qp(self.request.QUERY_PARAMS)
