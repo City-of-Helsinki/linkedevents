@@ -1,4 +1,4 @@
-Django
+Django<1.8
 Markdown
 PyYAML
 South
@@ -6,7 +6,7 @@ django-cors-headers
 django-filter
 django-hstore
 django-modeltranslation
-django-mptt
+django-mptt<0.7
 django-reversion
 djangorestframework<3.0
 djangorestframework-gis
