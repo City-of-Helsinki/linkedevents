@@ -364,6 +364,11 @@ class KeywordViewSet(viewsets.ReadOnlyModelViewSet):
             keyword_ids = events.values_list('keywords',
                                              flat=True).distinct().order_by()
             queryset = queryset.filter(id__in=keyword_ids)
+        # Optionally filter keywords by filter parameter,
+        # can be used e.g. with typeahead.js
+        val = self.request.QUERY_PARAMS.get('filter')
+        if val:
+            queryset = queryset.filter(name__icontains=val)
         return queryset
 
 register_view(KeywordViewSet, 'keyword')
