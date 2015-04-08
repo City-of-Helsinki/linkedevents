@@ -368,7 +368,7 @@ class KeywordViewSet(viewsets.ReadOnlyModelViewSet):
         # can be used e.g. with typeahead.js
         val = self.request.QUERY_PARAMS.get('filter')
         if val:
-            queryset = queryset.filter(name__icontains=val)
+            queryset = queryset.filter(name__startswith=val)
         return queryset
 
 register_view(KeywordViewSet, 'keyword')
