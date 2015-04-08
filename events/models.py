@@ -44,10 +44,11 @@ class SchemalessFieldMixin(models.Model):
 @python_2_unicode_compatible
 class DataSource(models.Model):
     id = models.CharField(max_length=100, primary_key=True)
-    name = models.CharField(max_length=255)
+    name = models.CharField(verbose_name=_('Name'), max_length=255)
 
     def __str__(self):
         return self.id
+
 
 class SimpleValueMixin(object):
     """
@@ -58,11 +59,14 @@ class SimpleValueMixin(object):
     """
     def value_fields(self):
         return []
+
     def simple_value(self):
         field_names = translation_utils.expand_model_fields(self, self.value_fields())
         return tuple((f, getattr(self, f)) for f in field_names)
+
     def value_equals(self, other):
         return self.simple_value() == other.simple_value()
+
 
 @python_2_unicode_compatible
 class BaseModel(models.Model):
@@ -70,10 +74,10 @@ class BaseModel(models.Model):
     data_source = models.ForeignKey(DataSource, db_index=True)
 
     # Properties from schema.org/Thing
-    name = models.CharField(max_length=255, db_index=True)
-    image = models.URLField(null=True, blank=True)
+    name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True)
+    image = models.URLField(verbose_name=_('Image URL'), null=True, blank=True)
 
-    origin_id = models.CharField(max_length=50, db_index=True, null=True,
+    origin_id = models.CharField(verbose_name=_('Origin ID'), max_length=50, db_index=True, null=True,
                                  blank=True)
 
     created_time = models.DateTimeField(null=True, blank=True)
@@ -109,7 +113,7 @@ class Organization(BaseModel):
 
 class Language(models.Model):
     id = models.CharField(max_length=6, primary_key=True)
-    name = models.CharField(max_length=20)
+    name = models.CharField(verbose_name=_('Name'), max_length=20)
 
     class Meta:
         verbose_name = _('language')
@@ -117,7 +121,7 @@ class Language(models.Model):
 
 
 class KeywordLabel(models.Model):
-    name = models.CharField(max_length=255, db_index=True)
+    name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True)
     language = models.ForeignKey(Language, blank=False, null=False)
 
     class Meta:
@@ -140,27 +144,27 @@ class Keyword(BaseModel):
 
 
 class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
-    publisher = models.ForeignKey(Organization, db_index=True)
-    info_url = models.URLField(_('Place home page'), null=True)
-    description = models.TextField(null=True, blank=True)
+    publisher = models.ForeignKey(Organization, verbose_name=_('Publisher'), db_index=True)
+    info_url = models.URLField(verbose_name=_('Place home page'), null=True)
+    description = models.TextField(verbose_name=_('Description'), null=True, blank=True)
     parent = TreeForeignKey('self', null=True, blank=True,
                             related_name='children')
 
     position = models.PointField(srid=settings.PROJECTION_SRID, null=True,
                                  blank=True)
 
-    email = models.EmailField(null=True, blank=True)
-    telephone = models.CharField(max_length=128, null=True, blank=True)
-    contact_type = models.CharField(max_length=255, null=True, blank=True)
-    street_address = models.CharField(max_length=255, null=True, blank=True)
-    address_locality = models.CharField(max_length=255, null=True, blank=True)
-    address_region = models.CharField(max_length=255, null=True, blank=True)
-    postal_code = models.CharField(max_length=128, null=True, blank=True)
-    post_office_box_num = models.CharField(max_length=128, null=True,
+    email = models.EmailField(verbose_name=_('E-mail'), null=True, blank=True)
+    telephone = models.CharField(verbose_name=_('Telephone'), max_length=128, null=True, blank=True)
+    contact_type = models.CharField(verbose_name=_('Contact type'), max_length=255, null=True, blank=True)
+    street_address = models.CharField(verbose_name=_('Street address'), max_length=255, null=True, blank=True)
+    address_locality = models.CharField(verbose_name=_('Address locality'), max_length=255, null=True, blank=True)
+    address_region = models.CharField(verbose_name=_('Address region'), max_length=255, null=True, blank=True)
+    postal_code = models.CharField(verbose_name=_('Postal code'), max_length=128, null=True, blank=True)
+    post_office_box_num = models.CharField(verbose_name=_('PO BOX'), max_length=128, null=True,
                                            blank=True)
-    address_country = models.CharField(max_length=2, null=True, blank=True)
+    address_country = models.CharField(verbose_name=_('Country'), max_length=2, null=True, blank=True)
 
-    deleted = models.BooleanField(default=False)
+    deleted = models.BooleanField(verbose_name=_('Deleted'), default=False)
 
     geo_objects = models.GeoManager()
 
@@ -218,12 +222,12 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     )
 
     # Properties from schema.org/Thing
-    info_url = models.URLField(_('Event home page'), blank=True)
-    description = models.TextField(blank=True)
-    short_description = models.TextField(blank=True)
+    info_url = models.URLField(verbose_name=_('Event home page'), blank=True)
+    description = models.TextField(verbose_name=_('Description'), blank=True)
+    short_description = models.TextField(verbose_name=_('Short description'), blank=True)
 
     # Properties from schema.org/CreativeWork
-    date_published = models.DateTimeField(null=True, blank=True)
+    date_published = models.DateTimeField(verbose_name=_('Date published'), null=True, blank=True)
     # headline and secondary_headline are for cases where
     # the original event data contains a title and a subtitle - in that
     # case the name field is combined from these.
@@ -231,19 +235,19 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     # secondary_headline is mapped to schema.org alternative_headline
     # and is used for subtitles, that is for
     # secondary, complementary headlines, not "alternative" headlines
-    headline = models.CharField(max_length=255, null=True, db_index=True)
-    secondary_headline = models.CharField(max_length=255, null=True, db_index=True)
-    provider = models.CharField(max_length=512, null=True)
-    publisher = models.ForeignKey(Organization, db_index=True, related_name='published_events')
+    headline = models.CharField(verbose_name=_('Headline'), max_length=255, null=True, db_index=True)
+    secondary_headline = models.CharField(verbose_name=_('Secondary headline'), max_length=255, null=True, db_index=True)
+    provider = models.CharField(verbose_name=_('Provider'), max_length=512, null=True)
+    publisher = models.ForeignKey(Organization, verbose_name=_('Publisher'), db_index=True, related_name='published_events')
 
     # Properties from schema.org/Event
-    event_status = models.SmallIntegerField(choices=STATUSES,
+    event_status = models.SmallIntegerField(verbose_name=_('Event status'), choices=STATUSES,
                                             default=SCHEDULED)
     location = models.ForeignKey(Place, null=True, blank=True)
-    location_extra_info = models.CharField(max_length=400, null=True, blank=True)
+    location_extra_info = models.CharField(verbose_name=_('Location extra info'), max_length=400, null=True, blank=True)
 
-    start_time = models.DateTimeField(null=True, db_index=True, blank=True)
-    end_time = models.DateTimeField(null=True, db_index=True, blank=True)
+    start_time = models.DateTimeField(verbose_name=_('Start time'), null=True, db_index=True, blank=True)
+    end_time = models.DateTimeField(verbose_name=_('End time'), null=True, db_index=True, blank=True)
     has_start_time = models.BooleanField(default=True)
     has_end_time = models.BooleanField(default=True)
 
@@ -254,7 +258,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
 
     # Custom fields not from schema.org
     keywords = models.ManyToManyField(Keyword, null=True, blank=True)
-    audience = models.CharField(max_length=255, null=True, blank=True)
+    audience = models.CharField(verbose_name=_('Audience'), max_length=255, null=True, blank=True)
 
     class Meta:
         verbose_name = _('event')
@@ -286,22 +290,24 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
 
 reversion.register(Event)
 
+
 class Offer(models.Model, SimpleValueMixin):
     event = models.ForeignKey(Event, db_index=True, related_name='offers')
-    price = models.CharField(max_length=512)
-    info_url = models.URLField(_('Web link to offer'), null=True)
-    description = models.TextField(null=True, blank=True)
+    price = models.CharField(verbose_name=_('Price'), blank=True, max_length=512)
+    info_url = models.URLField(verbose_name=_('Web link to offer'), blank=True)
+    description = models.TextField(verbose_name=_('Description'), blank=True)
     # Don't expose is_free as an API field. It is used to distinguish
     # between missing price info and confirmed free entry.
-    is_free = models.BooleanField(default=False)
+    is_free = models.BooleanField(verbose_name=_('Is free'), default=False)
 
     def value_fields(self):
         return ['price', 'info_url', 'description', 'is_free']
 
 reversion.register(Offer)
 
+
 class EventLink(models.Model, SimpleValueMixin):
-    name = models.CharField(max_length=100, blank=True)
+    name = models.CharField(verbose_name=_('Name'), max_length=100, blank=True)
     event = models.ForeignKey(Event, db_index=True, related_name='external_links')
     language = models.ForeignKey(Language)
     link = models.URLField()
