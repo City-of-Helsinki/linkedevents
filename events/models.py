@@ -125,7 +125,7 @@ class KeywordLabel(models.Model):
 
 
 class Keyword(BaseModel):
-    alt_labels = models.ManyToManyField(KeywordLabel, blank=True, related_name='keywords')
+    alt_labels = models.ManyToManyField(KeywordLabel, related_name='keywords')
     aggregate = models.BooleanField(default=False)
     objects = models.Manager()
 
@@ -253,7 +253,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     is_recurring_super = models.BooleanField(default=False)
 
     # Custom fields not from schema.org
-    keywords = models.ManyToManyField(Keyword, null=True, blank=True)
+    keywords = models.ManyToManyField(Keyword)
     audience = models.CharField(max_length=255, null=True, blank=True)
 
     class Meta:
@@ -338,4 +338,4 @@ class EventAggregate(models.Model):
 
 class EventAggregateMember(models.Model):
     event_aggregate = models.ForeignKey(EventAggregate, related_name='members')
-    event = models.ForeignKey(Event, unique=True)
+    event = models.OneToOneField(Event)

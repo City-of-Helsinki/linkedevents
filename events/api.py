@@ -1,21 +1,15 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-from functools import wraps
 from datetime import datetime, timedelta
-from pprint import pprint
 import re
 
 from django.utils import translation
-from django.contrib.gis.geos import Point
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import NoReverseMatch
-from django.utils.datastructures import MultiValueDictKeyError
-from django.contrib.gis.db.models.fields import GeometryField
-from django.db import models as django_db_models
-from django.db.models import Q, F
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from isodate import Duration, duration_isoformat, parse_duration
-from rest_framework import serializers, pagination, relations, viewsets, filters, generics, fields
+from rest_framework import serializers, relations, viewsets, filters, generics
 from rest_framework.reverse import reverse
 from rest_framework.response import Response
 from rest_framework.exceptions import ParseError
@@ -43,28 +37,11 @@ def register_view(klass, name, base_name=None):
         entry['base_name'] = base_name
     all_views.append(entry)
 
-    if klass.serializer_class and hasattr(klass.serializer_class.Meta, 'model'):
+    if klass.serializer_class and \
+            hasattr(klass.serializer_class, 'Meta') and \
+            hasattr(klass.serializer_class.Meta, 'model'):
         model = klass.serializer_class.Meta.model
         serializers_by_model[model] = klass.serializer_class
-
-
-class CustomPaginationSerializer(pagination.PaginationSerializer):
-    results_field = 'data'
-    def to_native(self, obj):
-        ret = super(CustomPaginationSerializer, self).to_native(obj)
-        meta_fields = ['count', 'next', 'previous']
-        meta = {}
-        for f in meta_fields:
-            meta[f] = ret[f]
-            del ret[f]
-        ret['meta'] = meta
-        if False: # FIXME: Check for JSON-LD
-            try:
-                ret['@context'] = obj.object_list.model.jsonld_context
-            except (NameError, AttributeError):
-                ret['@context'] = 'http://schema.org'
-                pass
-        return ret
 
 
 class JSONLDRelatedField(relations.HyperlinkedRelatedField):
@@ -84,20 +61,20 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
         self.hide_ld_context = kwargs.pop('hide_ld_context', False)
         super(JSONLDRelatedField, self).__init__(*args, **kwargs)
 
-    def to_native(self, obj):
+    def to_representation(self, obj):
         if isinstance(self.related_serializer, str):
             self.related_serializer = globals().get(self.related_serializer, None)
         if self.is_expanded():
             return self.related_serializer(obj, hide_ld_context=self.hide_ld_context,
                                            context=self.context).data
-        link = super(JSONLDRelatedField, self).to_native(obj)
+        link = super(JSONLDRelatedField, self).to_representation(obj)
         return {
             '@id': link
         }
 
-    def from_native(self, value):
+    def to_internal_value(self, value):
         if '@id' in value:
-            return super(JSONLDRelatedField, self).from_native(value['@id'])
+            return super(JSONLDRelatedField, self).to_internal_value(value['@id'])
         else:
             raise ValidationError(
                 self.invalid_json_error % type(value).__name__)
@@ -106,7 +83,7 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
         return getattr(self, 'expanded', False)
 
 
-class EnumChoiceField(serializers.WritableField):
+class EnumChoiceField(serializers.Field):
     """
     Database value of tinyint is converted to and from a string representation
     of choice field.
@@ -120,26 +97,27 @@ class EnumChoiceField(serializers.WritableField):
         self.prefix = prefix
         super(EnumChoiceField, self).__init__()
 
-    def to_native(self, obj):
-        if obj == None:
+    def to_representation(self, obj):
+        if obj is None:
             return None
         return self.prefix + utils.get_value_from_tuple_list(self.choices,
                                                              obj, 1)
 
-    def from_native(self, data):
+    def to_internal_value(self, data):
         return utils.get_value_from_tuple_list(self.choices,
-                                               self.prefix + data, 0)
+                                               self.prefix + str(data), 0)
 
 
-class ISO8601DurationField(serializers.WritableField):
-    def to_native(self, obj):
+class ISO8601DurationField(serializers.Field):
+
+    def to_representation(self, obj):
         if obj:
             d = Duration(milliseconds=obj)
             return duration_isoformat(d)
         else:
             return None
 
-    def from_native(self, data):
+    def to_internal_value(self, data):
         if data:
             value = parse_duration(data)
             return (
@@ -162,7 +140,7 @@ class MPTTModelSerializer(serializers.ModelSerializer):
 class TranslatedModelSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super(TranslatedModelSerializer, self).__init__(*args, **kwargs)
-        model = self.opts.model
+        model = self.Meta.model
         try:
             trans_opts = translator.get_options_for_model(model)
         except NotRegistered:
@@ -191,13 +169,13 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
     #         return fields.CharField(**kwargs)
     #     return super(TranslatedModelSerializer, self).get_field(model_field)
 
-    def to_native(self, obj):
-        ret = super(TranslatedModelSerializer, self).to_native(obj)
+    def to_representation(self, obj):
+        ret = super(TranslatedModelSerializer, self).to_representation(obj)
         if obj is None:
             return ret
-        return self.translated_fields_to_native(obj, ret)
+        return self.translated_fields_to_representation(obj, ret)
 
-    def translated_fields_to_native(self, obj, ret):
+    def translated_fields_to_representation(self, obj, ret):
         for field_name in self.translated_fields:
             d = {}
             default_lang = settings.LANGUAGES[0][0]
@@ -243,10 +221,8 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
     def __init__(self, instance=None, data=None, files=None,
                  context=None, partial=False, many=None,
                  allow_add_remove=False, hide_ld_context=False, **kwargs):
-        super(LinkedEventsSerializer, self).__init__(instance, data, files,
-                                                     context, partial, many,
-                                                     allow_add_remove,
-                                                     **kwargs)
+        super(LinkedEventsSerializer, self).__init__(
+            instance=instance, context=context, **kwargs)
         if 'created_by' in self.fields:
             del self.fields['created_by']
         if 'modified_by' in self.fields:
@@ -270,7 +246,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
             if 'disable_camelcase' in request.QUERY_PARAMS:
                 self.disable_camelcase = True
 
-    def to_native(self, obj):
+    def to_representation(self, obj):
         """
         Before sending to renderer there's a need to do additional work on
         to-be-JSON dictionary data:
@@ -279,7 +255,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         Renderer is the right place for this but now loop is done just once.
         Reversal conversion is done in parser.
         """
-        ret = super(LinkedEventsSerializer, self).to_native(obj)
+        ret = super(LinkedEventsSerializer, self).to_representation(obj)
         if 'id' in ret and 'request' in self.context:
             try:
                 ret['@id'] = reverse(self.view_name,
@@ -291,7 +267,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         # Context is hidden if:
         # 1) hide_ld_context is set to True
         #   2) self.object is None, e.g. we are in the list of stuff
-        if not self.hide_ld_context and self.object is not None:
+        if not self.hide_ld_context and self.instance is not None:
             if hasattr(obj, 'jsonld_context') \
                     and isinstance(obj.jsonld_context, (dict, list)):
                 ret['@context'] = obj.jsonld_context
@@ -339,7 +315,6 @@ class KeywordSerializer(LinkedEventsSerializer):
 class KeywordViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Keyword.objects.all()
     serializer_class = KeywordSerializer
-    pagination_serializer_class = CustomPaginationSerializer
 
     def get_queryset(self):
         """
@@ -375,7 +350,6 @@ class PlaceSerializer(LinkedEventsSerializer, GeoModelSerializer):
 class PlaceViewSet(GeoModelAPIView, viewsets.ReadOnlyModelViewSet):
     queryset = Place.objects.all()
     serializer_class = PlaceSerializer
-    pagination_serializer_class = CustomPaginationSerializer
 
     def get_queryset(self):
         """
@@ -422,8 +396,8 @@ register_view(LanguageViewSet, 'language')
 LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
 
 class EventLinkSerializer(serializers.ModelSerializer):
-    def to_native(self, obj):
-        ret = super(EventLinkSerializer, self).to_native(obj)
+    def to_representation(self, obj):
+        ret = super(EventLinkSerializer, self).to_representation(obj)
         if not ret['name']:
             ret['name'] = None
         return ret
@@ -439,16 +413,19 @@ class OfferSerializer(TranslatedModelSerializer):
 
 class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     location = JSONLDRelatedField(serializer=PlaceSerializer, required=False,
-                                  view_name='place-detail')
+                                  view_name='place-detail', read_only=True)
     # provider = OrganizationSerializer(hide_ld_context=True)
-    keywords = JSONLDRelatedField(serializer=KeywordSerializer, many=True, required=False,
-                                    view_name='keyword-detail')
-    super_event = JSONLDRelatedField(required=False, view_name='event-detail')
+    keywords = JSONLDRelatedField(serializer=KeywordSerializer, many=True,
+                                  required=False,
+                                  view_name='keyword-detail', read_only=True)
+    super_event = JSONLDRelatedField(required=False, view_name='event-detail',
+                                     read_only=True)
     event_status = EnumChoiceField(Event.STATUSES)
     external_links = EventLinkSerializer(many=True)
     offers = OfferSerializer(many=True)
     sub_events = JSONLDRelatedField(serializer='EventSerializer',
-                                    required=False, view_name='event-detail', many=True)
+                                    required=False, view_name='event-detail',
+                                    many=True, read_only=True)
 
     view_name = 'event-detail'
 
@@ -459,8 +436,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         self.skip_empties = skip_empties
         self.skip_fields = skip_fields
 
-    def to_native(self, obj):
-        ret = super(EventSerializer, self).to_native(obj)
+    def to_representation(self, obj):
+        ret = super(EventSerializer, self).to_representation(obj)
         if 'start_time' in ret and not obj.has_start_time:
             # Return only the date part
             ret['start_time'] = obj.start_time.astimezone(LOCAL_TZ).strftime('%Y-%m-%d')
@@ -540,7 +517,7 @@ class LinkedEventsOrderingFilter(filters.OrderingFilter):
 class EventOrderingFilter(LinkedEventsOrderingFilter):
     def filter_queryset(self, request, queryset, view):
         queryset = super(EventOrderingFilter, self).filter_queryset(request, queryset, view)
-        ordering = self.get_ordering(request)
+        ordering = self.get_ordering(request, queryset, view)
         if not ordering:
             ordering = []
         if 'days_left' in [x.lstrip('-') for x in ordering]:
@@ -715,7 +692,6 @@ class EventViewSet(JSONAPIViewSet):
     queryset = queryset.prefetch_related(
         'offers', 'keywords', 'external_links', 'sub_events')
     serializer_class = EventSerializer
-    pagination_serializer_class = CustomPaginationSerializer
     filter_backends = (EventOrderingFilter,)
     ordering_fields = ('start_time', 'end_time', 'days_left')
 
@@ -743,7 +719,7 @@ register_view(EventViewSet, 'event')
 
 
 class SearchSerializer(serializers.Serializer):
-    def to_native(self, search_result):
+    def to_representation(self, search_result):
         model = search_result.model
         assert model in serializers_by_model, "Serializer for %s not found" % model
         ser_class = serializers_by_model[model]
@@ -756,7 +732,6 @@ DATE_DECAY_SCALE = '30d'
 
 class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView):
     serializer_class = SearchSerializer
-    pagination_serializer_class = CustomPaginationSerializer
 
     def list(self, request, *args, **kwargs):
         languages = [x[0] for x in settings.LANGUAGES]
