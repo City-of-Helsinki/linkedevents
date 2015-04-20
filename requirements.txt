@@ -22,7 +22,7 @@ requests-cache
 six
 django-extensions
 rdflib
--e git+https://github.com/juyrjola/munigeo#egg=django-munigeo
+-e git+https://github.com/City-of-Helsinki/munigeo#egg=django-munigeo
 icalendar
 httmock
 bleach
