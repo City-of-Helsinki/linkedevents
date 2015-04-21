@@ -61,6 +61,12 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
         self.hide_ld_context = kwargs.pop('hide_ld_context', False)
         super(JSONLDRelatedField, self).__init__(*args, **kwargs)
 
+    def use_pk_only_optimization(self):
+        if self.is_expanded():
+            return False
+        else:
+            return True
+
     def to_representation(self, obj):
         if isinstance(self.related_serializer, str):
             self.related_serializer = globals().get(self.related_serializer, None)
@@ -234,6 +240,8 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                 if not field_name in self.fields:
                     continue
                 field = self.fields[field_name]
+                if isinstance(field, relations.ManyRelatedField):
+                    field = field.child_relation
                 if not isinstance(field, JSONLDRelatedField):
                     continue
                 field.expanded = True
