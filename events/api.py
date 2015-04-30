@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 from datetime import datetime, timedelta
 import re
+import urllib.parse
 
 from django.utils import translation
 from django.core.exceptions import ValidationError
@@ -42,6 +43,25 @@ def register_view(klass, name, base_name=None):
             hasattr(klass.serializer_class.Meta, 'model'):
         model = klass.serializer_class.Meta.model
         serializers_by_model[model] = klass.serializer_class
+
+
+def urlquote_id(link):
+    """
+    URL quote link's id part, e.g.
+    http://127.0.0.1:8000/v0.1/place/tprek:20879/
+    -->
+    http://127.0.0.1:8000/v0.1/place/tprek%3A20879/
+    This is DRF backwards compatibility function, 2.x quoted id automatically.
+
+    :param link: URL str
+    :return: quoted URL str
+    """
+    if isinstance(link, str):
+        parts = link.split('/')
+        if len(parts) > 1 and ':' in parts[-2]:
+            parts[-2] = urllib.parse.quote(parts[-2])
+            link = '/'.join(parts)
+    return link
 
 
 class JSONLDRelatedField(relations.HyperlinkedRelatedField):
