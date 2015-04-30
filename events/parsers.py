@@ -8,7 +8,7 @@ from django.conf import settings
 def rename_fields(dataz):
     if isinstance(dataz, dict):
         new_data = dict()
-        for key, value in dataz.iteritems():
+        for key, value in dataz.items():
             newkey = utils.convert_from_camelcase(key)
             if isinstance(value, (dict, list)):
                 new_data[newkey] = rename_fields(value)
