@@ -94,6 +94,7 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
             return self.related_serializer(obj, hide_ld_context=self.hide_ld_context,
                                            context=self.context).data
         link = super(JSONLDRelatedField, self).to_representation(obj)
+        link = urlquote_id(link)
         return {
             '@id': link
         }
@@ -291,6 +292,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                                         request=self.context['request'])
             except NoReverseMatch:
                 ret['@id'] = str(ret['id'])
+            ret['@id'] = urlquote_id(ret['@id'])
 
         # Context is hidden if:
         # 1) hide_ld_context is set to True
