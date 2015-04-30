@@ -2,103 +2,247 @@
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
-#
+# 
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-03-31 10:28+0300\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"POT-Creation-Date: 2015-04-29 12:20+0300\n"
+"PO-Revision-Date: 2015-04-29 12:26+0140\n"
+"Last-Translator: b'  <aapo.rista@forumvirium.fi>'\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Translated-Using: django-rosetta 0.7.6\n"
 
-#: events/models.py:104
-msgid "language"
-msgstr "kieli"
+#: api.py:57
+#, python-format
+msgid "Incorrect JSON. Expected JSON, received %s."
+msgstr ""
 
-#: events/models.py:105
-msgid "languages"
-msgstr "kielet"
-
-#: events/models.py:121
+#: attic/models.py:14
 msgid "person"
 msgstr "henkilö"
 
-#: events/models.py:122
+#: attic/models.py:15
 msgid "persons"
 msgstr "henkilöt"
 
-#: events/models.py:137
+#: attic/models.py:30
 msgid "organization"
 msgstr "organisaatio"
 
-#: events/models.py:138
+#: attic/models.py:31
 msgid "organizations"
 msgstr "organisaatiot"
 
-#: events/models.py:163
-msgid "category"
-msgstr "kategoria"
+#: models.py:47 models.py:77 models.py:116 models.py:124 models.py:310
+msgid "Name"
+msgstr "Nimi"
 
-#: events/models.py:164
-msgid "categories"
-msgstr "kategoriat"
+#: models.py:78
+msgid "Image URL"
+msgstr "Kuvalinkki"
 
-#: events/models.py:186
-msgid "address"
+#: models.py:80
+msgid "Origin ID"
+msgstr ""
+
+#: models.py:119
+msgid "language"
+msgstr "kieli"
+
+#: models.py:120
+msgid "languages"
+msgstr "kielet"
+
+#: models.py:142
+msgid "keyword"
+msgstr "Avainsana"
+
+#: models.py:143
+msgid "keywords"
+msgstr "Avainsanat"
+
+#: models.py:147 models.py:241
+msgid "Publisher"
+msgstr "Julkaisija"
+
+#: models.py:148
+#, fuzzy
+#| msgid "Event home page"
+msgid "Place home page"
+msgstr "Tapahtuman kotisivu"
+
+#: models.py:149 models.py:226
+msgid "Description"
+msgstr "Kuvaus"
+
+#: models.py:156
+msgid "E-mail"
+msgstr "Sähköposti"
+
+#: models.py:157
+msgid "Telephone"
+msgstr "Puhelinnumero"
+
+#: models.py:158
+msgid "Contact type"
+msgstr ""
+
+#: models.py:159
+#, fuzzy
+#| msgid "address"
+msgid "Street address"
 msgstr "osoite"
 
-#: events/models.py:187
-msgid "addresses"
+#: models.py:160
+msgid "Address locality"
+msgstr ""
+
+#: models.py:161
+#, fuzzy
+#| msgid "addresses"
+msgid "Address region"
 msgstr "osoitteet"
 
-#: events/models.py:221
+#: models.py:162
+msgid "Postal code"
+msgstr "Postiosoite"
+
+#: models.py:163
+msgid "PO BOX"
+msgstr ""
+
+#: models.py:165
+msgid "Country"
+msgstr "Maa"
+
+#: models.py:167
+msgid "Deleted"
+msgstr "Poistettu"
+
+#: models.py:172
 msgid "place"
 msgstr "paikka"
 
-#: events/models.py:222
+#: models.py:173
 msgid "places"
 msgstr "paikat"
 
-#: events/models.py:248
+#: models.py:202
 msgid "opening hour specification"
 msgstr "aukioloaika"
 
-#: events/models.py:249
+#: models.py:203
 msgid "opening hour specifications"
 msgstr "aukioloajat"
 
-#: events/models.py:269
-msgid "offer"
-msgstr "tarjous"
-
-#: events/models.py:270
-msgid "offers"
-msgstr "tarjoukset"
-
-#: events/models.py:293
+#: models.py:225
 msgid "Event home page"
 msgstr "Tapahtuman kotisivu"
 
-#: events/models.py:329
-msgid "Set if the event is in a given language"
-msgstr "Aseta jos tapahtuma järjestetään tietyllä kielellä"
+#: models.py:227
+msgid "Short description"
+msgstr "Lyhyt kuvaus"
 
-#: events/models.py:333
+#: models.py:230
+msgid "Date published"
+msgstr "Julkaisupäivämäärä"
+
+#: models.py:238
+msgid "Headline"
+msgstr "Otsikko"
+
+#: models.py:239
+msgid "Secondary headline"
+msgstr ""
+
+#: models.py:240
+msgid "Provider"
+msgstr ""
+
+#: models.py:244
+msgid "Event status"
+msgstr "Tapahtuman tila"
+
+#: models.py:247
+msgid "Location extra info"
+msgstr "Paikan lisätiedot"
+
+#: models.py:249
+msgid "Start time"
+msgstr "Alkuaika"
+
+#: models.py:250
+msgid "End time"
+msgstr "Loppuaika"
+
+#: models.py:261
+msgid "Audience"
+msgstr "Kohderyhmä"
+
+#: models.py:264
 msgid "event"
 msgstr "tapahtuma"
 
-#: events/models.py:334
+#: models.py:265
 msgid "events"
 msgstr "tapahtumat"
 
-#: events/serializers/serializers.py:23 events/serializers/serializers.py:49
-#, python-format
-msgid "Incorrect JSON.  Expected JSON, received %s."
+#: models.py:296
+msgid "Price"
+msgstr "Hinta"
+
+#: models.py:297
+msgid "Web link to offer"
+msgstr "Linkki lipunmyyntiin"
+
+#: models.py:298
+msgid "Offer description"
+msgstr "Hintatietojen kuvaus"
+
+#: models.py:301
+msgid "Is free"
+msgstr "Vapaa pääsy"
+
+#~ msgid "category"
+#~ msgstr "kategoria"
+
+#~ msgid "categories"
+#~ msgstr "kategoriat"
+
+#~ msgid "offer"
+#~ msgstr "tarjous"
+
+#~ msgid "offers"
+#~ msgstr "tarjoukset"
+
+#~ msgid "Set if the event is in a given language"
+#~ msgstr "Aseta jos tapahtuma järjestetään tietyllä kielellä"
+
+#: demoform/templates/inputform/bootstrap_base.html:290
+msgid "Start typing the name..."
+msgstr ""
+#: demoform/templates/inputform/bootstrap_base.html:48
+msgid "Toggle"
+msgstr ""
+
+#: demoform/templates/inputform/bootstrap_base.html:300
+msgid "Location"
+msgstr ""
+
+#: demoform/templates/inputform/bootstrap_base.html:144
+msgid "source:"
+msgstr ""
+#: demoform/templates/inputform/bootstrap_base.html:147
+msgid "Publisher:"
+msgstr ""
+
+#: demoform/templates/inputform/bootstrap_base.html:153
+msgid "The"
 msgstr ""
