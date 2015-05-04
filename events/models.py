@@ -344,4 +344,4 @@ class EventAggregate(models.Model):
 
 class EventAggregateMember(models.Model):
     event_aggregate = models.ForeignKey(EventAggregate, related_name='members')
-    event = models.ForeignKey(Event, unique=True)
+    event = models.OneToOneField(Event)
