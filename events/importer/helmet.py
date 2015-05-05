@@ -142,6 +142,8 @@ def clean_text(text, strip_newlines=False):
     # remove consecutive whitespaces
     return re.sub(r'\s\s+', ' ', text, re.U).strip()
 
+class APIBrokenError(Exception):
+    pass
 
 @register_importer
 class HelmetImporter(Importer):
@@ -385,7 +387,8 @@ class HelmetImporter(Importer):
                 continue
             break
         else:
-            raise Exception("HelMet API broken")
+            self.logger.error("HelMet API broken again, giving up")
+            raise APIBrokenError()
 
         documents = root_doc['value']
         earliest_end_time = None
@@ -415,7 +418,10 @@ class HelmetImporter(Importer):
             url = HELMET_API_URL.format(lang_code=helmet_lang_id, start_date='2014-01-01')
             print("Processing lang " + lang)
             print("from URL " + url)
-            self._recur_fetch_paginated_url(url, lang, events)
+            try:
+                self._recur_fetch_paginated_url(url, lang, events)
+            except APIBrokenError:
+                return
 
         event_list = sorted(events.values(), key=lambda x: x['start_time'])
         for event in event_list:
