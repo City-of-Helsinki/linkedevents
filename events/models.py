@@ -255,7 +255,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     is_recurring_super = models.BooleanField(default=False)
 
     # Custom fields not from schema.org
-    keywords = models.ManyToManyField(Keyword, null=True, blank=True)
+    keywords = models.ManyToManyField(Keyword)
     audience = models.CharField(verbose_name=_('Audience'), max_length=255, null=True, blank=True)
 
     class Meta:
