@@ -220,9 +220,9 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     )
 
     # Properties from schema.org/Thing
-    info_url = models.URLField(verbose_name=_('Event home page'), blank=True)
-    description = models.TextField(verbose_name=_('Description'), blank=True)
-    short_description = models.TextField(verbose_name=_('Short description'), blank=True)
+    info_url = models.URLField(verbose_name=_('Event home page'), blank=True, null=True)
+    description = models.TextField(verbose_name=_('Description'), blank=True, null=True)
+    short_description = models.TextField(verbose_name=_('Short description'), blank=True, null=True)
 
     # Properties from schema.org/CreativeWork
     date_published = models.DateTimeField(verbose_name=_('Date published'), null=True, blank=True)
@@ -292,8 +292,8 @@ reversion.register(Event)
 class Offer(models.Model, SimpleValueMixin):
     event = models.ForeignKey(Event, db_index=True, related_name='offers')
     price = models.CharField(verbose_name=_('Price'), blank=True, max_length=512)
-    info_url = models.URLField(verbose_name=_('Web link to offer'), blank=True)
-    description = models.TextField(verbose_name=_('Offer description'), blank=True)
+    info_url = models.URLField(verbose_name=_('Web link to offer'), blank=True, null=True)
+    description = models.TextField(verbose_name=_('Offer description'), blank=True, null=True)
     # Don't expose is_free as an API field. It is used to distinguish
     # between missing price info and confirmed free entry.
     is_free = models.BooleanField(verbose_name=_('Is free'), default=False)
