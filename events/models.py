@@ -24,18 +24,16 @@ from django.contrib.contenttypes.generic import GenericForeignKey
 import pytz
 from django.contrib.gis.db import models
 import reversion
-from django_hstore import hstore
 from django.utils.translation import ugettext_lazy as _
 from mptt.models import MPTTModel, TreeForeignKey
 from django.contrib.contenttypes.models import ContentType
 from events import translation_utils
 from django.utils.encoding import python_2_unicode_compatible
+from django.contrib.postgres.fields import HStoreField
 
 
 class SchemalessFieldMixin(models.Model):
-    # Custom field not from schema.org
-    custom_data = hstore.DictionaryField(null=True, blank=True)
-    hstore_objects = hstore.HStoreManager()
+    custom_data = HStoreField(null=True)
 
     class Meta:
         abstract = True

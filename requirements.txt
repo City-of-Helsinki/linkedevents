@@ -4,7 +4,6 @@ PyYAML
 South
 django-cors-headers
 django-filter
-django-hstore
 django-modeltranslation
 django-mptt
 django-reversion
