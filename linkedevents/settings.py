@@ -51,15 +51,22 @@ INSTALLED_APPS = (
     'django_extensions',
     'corsheaders',
     'rest_framework',
+    'rest_framework_jwt',
     'mptt',
     'modeltranslation',
     'reversion',
     'haystack',
-    'munigeo',
-    'events',
     'raven.contrib.django.raven_compat',
-    'simpleclient',
+
+    'munigeo',
+    'helusers',
+
+    'events',
+    'helevents',
 )
+
+AUTH_USER_MODEL = 'helevents.User'
+
 
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -139,6 +146,13 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': (
         'events.api_pagination.CustomPagination'
     ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ),
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'helevents.auth.JWTAuthentication',
+    ),
+
 }
 
 CORS_ORIGIN_ALLOW_ALL = True
@@ -215,6 +229,12 @@ HAYSTACK_CONNECTIONS = {
         'MAPPINGS': CUSTOM_MAPPINGS
     },
 }
+
+JWT_AUTH = {
+    'JWT_PAYLOAD_GET_USER_ID_HANDLER': 'helusers.jwt.get_user_id_from_payload_handler',
+    # JWT_AUDIENCE and JWT_SECRET_KEY must be set in local_settings.py
+}
+
 
 #from multilingual_haystack.settings import get_haystack_connections
 #HAYSTACK_CONNECTIONS = get_haystack_connections(HAYSTACK_CONNECTIONS, LANGUAGES)

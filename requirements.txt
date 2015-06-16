@@ -9,6 +9,7 @@ django-mptt
 django-reversion
 djangorestframework>=3.0
 djangorestframework-gis
+djangorestframework-jwt
 lxml
 isodate
 psycopg2
@@ -28,3 +29,4 @@ bleach
 django-haystack
 elasticsearch
 raven
+-e -git+https://github.com/City-of-Helsinki/django-helusers#egg=django-helusers

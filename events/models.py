@@ -19,7 +19,7 @@ attribute to change @context when need to define schemas for custom fields.
 """
 import datetime
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.generic import GenericForeignKey
 import pytz
 from django.contrib.gis.db import models
@@ -31,6 +31,8 @@ from events import translation_utils
 from django.utils.encoding import python_2_unicode_compatible
 from django.contrib.postgres.fields import HStoreField
 
+
+User = settings.AUTH_USER_MODEL
 
 class SchemalessFieldMixin(models.Model):
     custom_data = HStoreField(null=True)
