@@ -29,4 +29,4 @@ bleach
 django-haystack
 elasticsearch
 raven
--e -git+https://github.com/City-of-Helsinki/django-helusers#egg=django-helusers
+-e git+https://github.com/City-of-Helsinki/django-helusers#egg=django-helusers
