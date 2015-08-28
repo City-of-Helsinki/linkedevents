@@ -75,7 +75,7 @@ class BaseModel(models.Model):
 
     # Properties from schema.org/Thing
     name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True)
-    image = models.URLField(verbose_name=_('Image URL'), null=True, blank=True)
+    image = models.URLField(verbose_name=_('Image URL'), max_length=400, null=True, blank=True)
 
     origin_id = models.CharField(verbose_name=_('Origin ID'), max_length=50, db_index=True, null=True,
                                  blank=True)
