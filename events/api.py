@@ -15,6 +15,7 @@ from rest_framework.reverse import reverse
 from rest_framework.response import Response
 from rest_framework.exceptions import ParseError
 from events.models import Place, Event, Keyword, Language, OpeningHoursSpecification, EventLink, Offer
+from events.models import DataSource, Organization
 from django.conf import settings
 from events import utils
 from events.custom_elasticsearch_search_backend import CustomEsSearchQuerySet as SearchQuerySet
@@ -27,6 +28,9 @@ from haystack.query import AutoQuery
 from munigeo.api import GeoModelSerializer, GeoModelAPIView, build_bbox_filter, srid_to_srs
 
 import pytz
+import base64
+import struct
+import time
 
 
 serializers_by_model = {}
@@ -62,6 +66,12 @@ def urlquote_id(link):
             parts[-2] = urllib.parse.quote(parts[-2])
             link = '/'.join(parts)
     return link
+
+def generate_id(namespace):
+    t = time.time() * 1000
+    postfix = base64.b32encode(struct.pack(">Q", int(t)).lstrip(b'\x00'))
+    postfix = postfix.strip(b'=').lower().decode(encoding='UTF-8')
+    return '{}:{}'.format(namespace, postfix)
 
 
 class JSONLDRelatedField(relations.HyperlinkedRelatedField):
@@ -127,12 +137,20 @@ class EnumChoiceField(serializers.Field):
     def to_representation(self, obj):
         if obj is None:
             return None
+        print("'{}':'{}'".format(self.prefix, utils.get_value_from_tuple_list(self.choices,
+                                                             obj, 1)))
+        print(self.choices, obj, type(obj))
+        val = 1
+        return val  # FIXME
+        # FIXME: and this may be broken:
         return self.prefix + utils.get_value_from_tuple_list(self.choices,
                                                              obj, 1)
 
     def to_internal_value(self, data):
-        return utils.get_value_from_tuple_list(self.choices,
+        val = utils.get_value_from_tuple_list(self.choices,
                                                self.prefix + str(data), 0)
+        print("BUGAAGO", val)
+        return val
 
 
 class ISO8601DurationField(serializers.Field):
@@ -196,6 +214,65 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
     #         return fields.CharField(**kwargs)
     #     return super(TranslatedModelSerializer, self).get_field(model_field)
 
+    def to_internal_value(self, data):
+        """
+        Convert complex translated json objects to flat format.
+        E.g. json structure containing `name` key like this:
+        {
+            "name": {
+                "fi": "musiikkiklubit",
+                "sv": "musikklubbar",
+                "en": "music clubs"
+            },
+            ...
+        }
+        Transforms this:
+        {
+            "name": "musiikkiklubit",
+            "name_fi": "musiikkiklubit",
+            "name_sv": "musikklubbar",
+            "name_en": "music clubs"
+            ...
+        }
+
+        :param data:
+        :return:
+        """
+        print(func_name(self, str(data)))
+        lang = settings.LANGUAGES[0][0]
+        print ("STRASNNNSSSSSSSSSS", lang, data)
+        for field_name in self.translated_fields:
+            # FIXME: handle default lang like others!?
+            lang = settings.LANGUAGES[0][0]  # Handle default lang
+            if data[field_name] is None:
+                continue
+            values = data[field_name].copy()  # Save original values
+            key = "%s_%s" % (field_name, lang)
+            val = data[field_name].get(lang)
+            print("TO INTERNAL DEFAULT", key)
+            if val:
+                values[key] = val  # field_name_LANG
+                values[field_name] = val  # field_name
+                # print ("VALUU HAAA", values)
+            if lang in values:
+                del values[lang]  # Remove original key LANG
+            for lang in [x[0] for x in settings.LANGUAGES[1:]]:
+                key = "%s_%s" % (field_name, lang)
+                val = data[field_name].get(lang)
+                if val:
+                    values[key] = val  # field_name_LANG
+                    values[field_name] = val  # field_name
+                if lang in values:
+                    del values[lang]  # Remove original key LANG
+                    # print (data['name'][lang])
+
+                print("TO INTERNAL", key)
+            # print("VALUUUUU", values)
+            data.update(values)
+            del data[field_name]  # Remove original field_name from data
+        print("TRANS DATA", data)
+        return data
+
     def to_representation(self, obj):
         ret = super(TranslatedModelSerializer, self).to_representation(obj)
         if obj is None:
@@ -208,10 +285,10 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
             default_lang = settings.LANGUAGES[0][0]
             d[default_lang] = getattr(obj, field_name)
             for lang in [x[0] for x in settings.LANGUAGES[1:]]:
-                key = "%s_%s" % (field_name, lang)  
+                key = "%s_%s" % (field_name, lang)
                 val = getattr(obj, key, None)
-                if val == None:
-                    continue 
+                if val is None:
+                    continue
                 d[lang] = val
 
             # If no text provided, leave the field as null
@@ -245,15 +322,26 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         serializers
     """
 
-    def __init__(self, instance=None, data=None, files=None,
-                 context=None, partial=False, many=None,
-                 allow_add_remove=False, hide_ld_context=False, **kwargs):
-        super(LinkedEventsSerializer, self).__init__(
-            instance=instance, context=context, **kwargs)
+    # def __init__(self, instance=None, data=None, files=None,
+    #              context=None, partial=False, many=None,
+    #              allow_add_remove=False, hide_ld_context=False, **kwargs):
+    #     super(LinkedEventsSerializer, self).__init__(
+    #         instance=instance, context=context, **kwargs)
+    def __init__(self, *args, **kwargs):
+        print(func_name(self))
+        super(LinkedEventsSerializer, self).__init__(*args, **kwargs)
+        hide_ld_context = kwargs.pop('hide_ld_context', False)
+        allow_add_remove = kwargs.pop('allow_add_remove', False)
+        partial = kwargs.pop('partial', False)
+        files = kwargs.pop('files', None)
+        many = kwargs.pop('many', None)
+
         if 'created_by' in self.fields:
             del self.fields['created_by']
         if 'modified_by' in self.fields:
             del self.fields['modified_by']
+
+        context = kwargs['context']
 
         if context is not None:
             include_fields = context.get('include', [])
@@ -275,6 +363,29 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
             if 'disable_camelcase' in request.query_params:
                 self.disable_camelcase = True
 
+    # def validate(self, data):
+    #     """
+    #     Check that data passes validation
+    #     """
+    #     print("VALIDATE DATA", data)
+    #     return data
+
+    # def to_internal_value(self, data):
+    #     print("LINKED EVENTS Serializerissa! to_internal_value")
+    #     # print("VALIDII to_internal_value", self.is_valid())
+    #     # print ("INTERNAL EKAKS", data)
+    #     data_source_id = data.get('data_source')
+    #     if data_source_id:
+    #         data['data_source'] = DataSource.objects.get(id=data_source_id)
+    #     for key in ['last_modified_time', 'created_time']:
+    #         if key in data:
+    #             data.pop(key)
+    #     # data['last_modified_time'] = dateutil_parse(data['last_modified_time'])
+    #     # data['created_time'] = dateutil_parse(data['created_time'])
+    #     print ("INTERNAL du", data)
+    #     return data
+
+
     def to_representation(self, obj):
         """
         Before sending to renderer there's a need to do additional work on
@@ -284,6 +395,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         Renderer is the right place for this but now loop is done just once.
         Reversal conversion is done in parser.
         """
+        print(func_name(self))
         ret = super(LinkedEventsSerializer, self).to_representation(obj)
         if 'id' in ret and 'request' in self.context:
             try:
@@ -450,6 +562,22 @@ class OfferSerializer(TranslatedModelSerializer):
         model = Offer
         exclude = ['id', 'event']
 
+#from urllib.parse import urlparse
+import urllib
+import urllib.parse
+
+def parse_id_from_uri(uri):
+    """
+    Parse id part from @id uri like
+    'http://127.0.0.1:8000/v0.1/event/matko%3A666/' -> 'matko:666'
+    :param uri: str
+    :return: str id
+    """
+    path = urllib.parse.urlparse(uri).path
+    _id = path.rstrip('/').split('/')[-1]
+    _id = urllib.parse.unquote(_id)
+    return _id
+
 class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     location = JSONLDRelatedField(serializer=PlaceSerializer, required=False,
                                   view_name='place-detail', read_only=True)
@@ -469,13 +597,112 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     view_name = 'event-detail'
 
     def __init__(self, *args, skip_empties=False, skip_fields=set(), **kwargs):
+        print(func_name(self))
         super(EventSerializer, self).__init__(*args, **kwargs)
         # The following can be used when serializing when
         # testing and debugging.
         self.skip_empties = skip_empties
         self.skip_fields = skip_fields
 
+    def validate(self, data):
+        """
+        Check that data passes validation
+        """
+        # TODO: check mandatory keys
+        # TODO:
+        # raise serializers.ValidationError("Blog post is not about Django")
+        print(func_name(self))
+        print("VALIDATE DATA", data)
+        return data
+
+    def validate_start_time(self, value):
+        """
+        Check that data passes validation
+        """
+        # TODO: check mandatory keys
+        # TODO:
+        raise serializers.ValidationError("Blog post is not about Django")
+        print(func_name(self))
+        print("VALIDATE START TIME DATA", value)
+        return value
+
+    def create(self, validated_data):
+        if 'id' in validated_data:
+            msg = "Do not send 'id' when POSTing a new Event (got id='{}')".format(validated_data['id'])
+            raise ParseError(msg)
+        data_source = validated_data.get('data_source')
+        if data_source:
+            data_source_id = data_source.id
+        else:
+            data_source_id = 'linkedevents'
+        keywords = validated_data.pop('keywords')
+        offers = validated_data.pop('offers')
+        #validated_data['data_source_id'] = data_source_id
+        validated_data['id'] = generate_id(data_source_id)
+        print(func_name(self))
+        print("CREATE CREATE JEE")
+        # e = Event(**validated_data)
+        print (validated_data)
+        e = Event.objects.create(**validated_data)
+        print("EEEEEEEMELI", e)
+        return e
+
+    def update(self, instance, validated_data):
+        print(func_name(self, str(validated_data)))
+        print("UPDATTTTEEeee", validated_data)
+        print(instance, instance.id)
+        # instance.email = validated_data.get('email', instance.email)
+        # instance.content = validated_data.get('content', instance.content)
+        # instance.created = validated_data.get('created', instance.created)
+        return instance
+
+    def to_internal_value(self, data):
+        print(func_name(self, str(data)))
+        # print("EventSerializer Serializerissa! to_internal_value" )
+        # print ("EventSerializer ennen", data)
+        # TODO: common stuff to LinkedEventsSerializer
+        data = super(EventSerializer, self).to_internal_value(data)
+        # print ("EventSerializer SUPER", data)
+        self._parse_keywords(data)
+        self._parse_location(data)
+        self._parse_publisher(data)
+        self._delete_obsolete_keys(data)
+        # time parser raises parse error if start_time is not valid
+        start_time = data.get('start_time', '')
+        data['start_time'] = parse_time(start_time, True)
+        print ("MOIMOIMOIM", data['start_time'])
+        # TODO: check this
+        data_source_id = data.get('data_source')
+        if data_source_id:
+            # TODO: error handling and raise ParseError
+            data['data_source'] = DataSource.objects.get(id=data_source_id)
+
+        event_status = data.get('event_status')  # e.g. EventScheduled
+        if event_status:
+            data['event_status'] = 1  # FIXME: really
+
+        print("EVENT jalkeen", data)
+        keys = data.keys()
+        foobar = data.copy()
+        for k in data.keys():
+            if data[k] is None:
+                del foobar[k]
+                print(k, "= delli", data[k])
+            else:
+                print(k, "= ei delli", data[k])
+        return foobar
+
     def to_representation(self, obj):
+        print(func_name(self))
+        # print ("OBOBOBOBO", obj, dir(obj))
+        # for k in dir(obj):
+        #     print(k)
+        #     if k.startswith('_') is False:
+        #         try:
+        #             print(obj.__getattribute__(k))
+        #         except Exception as err:
+        #             print (err)
+        print("JOU OU", obj.start_time)
         ret = super(EventSerializer, self).to_representation(obj)
         if 'start_time' in ret and not obj.has_start_time:
             # Return only the date part
@@ -503,6 +730,50 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         model = Event
         exclude = ['has_start_time', 'has_end_time', 'is_recurring_super']
 
+    def _delete_obsolete_keys(self, data):
+        for k in [
+            'sub_events', 'super_event', 'external_links',
+            # 'keywords', 'offers',
+            '@context', '@type', '@id',
+            'last_modified_time', 'created_time', 'date_published'
+        ]:
+            if k in data:
+                del data[k]
+
+    def _parse_keywords(self, data):
+        """
+        Replace list of keyword dicts in data with a list of Keyword objects
+        """
+        new_kw =[]
+        for kw in data.get('keywords', []):
+            if '@id' in kw:
+                kw_id = parse_id_from_uri(kw['@id'])
+                try:
+                    keyword = Keyword.objects.get(id=kw_id)
+                except Keyword.DoesNotExist:
+                    raise ParseError('Keyword with id {} does not exist'.format(kw_id))
+                new_kw.append(keyword)
+                print("_parse_keywords:", keyword)
+        data['keywords'] = new_kw
+
+    def _parse_location(self, data):
+        """
+        Replace location id dict in data with a Place object
+        """
+        location = data.get('location')
+        if location and '@id' in location:
+            location_id = parse_id_from_uri(location['@id'])
+            print("location", location_id, location)
+            try:
+                data['location'] = Place.objects.get(id=location_id)
+            except Place.DoesNotExist:
+                raise ParseError('Place with id {} does not exist'.format(location_id))
+
+    def _parse_publisher(self, data):
+        organization_id = data.get('publisher')
+        if organization_id:
+            # TODO: error handling and raise ParseError
+            data['publisher'] = Organization.objects.get(id=organization_id)
 
 def parse_time(time_str, is_start):
     time_str = time_str.strip()
@@ -533,7 +804,8 @@ def parse_time(time_str, is_start):
     return dt
 
 
-class JSONAPIViewSet(viewsets.ReadOnlyModelViewSet):
+# class JSONAPIViewSet(viewsets.ReadOnlyModelViewSet):
+class JSONAPIViewSet(viewsets.ModelViewSet):
     def initial(self, request, *args, **kwargs):
         ret = super(JSONAPIViewSet, self).initial(request, *args, **kwargs)
         self.srs = srid_to_srs(self.request.query_params.get('srid', None))
@@ -666,6 +938,17 @@ def _filter_event_queryset(queryset, params, srs=None):
     return queryset
 
 
+def func_name(klass=None, text=None):
+    """Debugging, print function name"""
+    import traceback
+    name = ''
+    if klass:
+        name = type(klass).__name__ + '.'
+    name += traceback.extract_stack(None, 2)[0][2] + '()'
+    if text:
+        name += ': ' + text
+    return name
+
 class EventViewSet(JSONAPIViewSet):
     """
     # Filtering retrieved events
@@ -753,6 +1036,36 @@ class EventViewSet(JSONAPIViewSet):
         queryset = _filter_event_queryset(queryset, self.request.query_params,
                                           srs=self.srs)
         return queryset
+
+
+    # def create(self, request):
+    #     print(func_name(self))
+    #     print("DIIBA DUUBA DOO!", request)
+    #     serializer = self.get_serializer(instance, data=request.data, partial=partial)
+
+    #def update(self, request, pk=None):
+    # def update(self, request, *args, **kwargs):
+    #     return super(self.__class__, self).update(request, *args, **kwargs)
+
+
+    def update(self, request, *args, **kwargs):
+        print (func_name(self))
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        # print ("INSTANSSI", instance)
+        # print("ARGS", args, kwargs)
+        # print("REQUEST DATA", request.data)
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        #print("taal ollaa viel", serializer)
+        #print("SERIALIZER.VALIDADATAA", serializer.validated_data)
+        # print(dir(serializer))
+        val = serializer.is_valid(raise_exception=True)
+        # print("SERIALIZER.DATAA", val)
+        # print(serializer.data)
+        self.perform_update(serializer)
+        # print("TOSIAAN OLLAAN")
+        return Response(serializer.data)
+
 
 register_view(EventViewSet, 'event')
 
