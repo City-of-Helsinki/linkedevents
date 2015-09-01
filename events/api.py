@@ -621,7 +621,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         """
         # TODO: check mandatory keys
         # TODO:
-        raise serializers.ValidationError("Blog post is not about Django")
+        # raise serializers.ValidationError("Blog post is not about Django")
         print(func_name(self))
         print("VALIDATE START TIME DATA", value)
         return value
@@ -645,11 +645,12 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         print (validated_data)
         e = Event.objects.create(**validated_data)
         print("EEEEEEEMELI", e)
+        e.keywords.add(*keywords)
         return e
 
     def update(self, instance, validated_data):
         """
-        
+
         """
         print(func_name(self, str(validated_data)))
         print("UPDATTTTEEeee", validated_data)
