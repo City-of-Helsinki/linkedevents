@@ -648,12 +648,20 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         return e
 
     def update(self, instance, validated_data):
+        """
+        
+        """
         print(func_name(self, str(validated_data)))
         print("UPDATTTTEEeee", validated_data)
         print(instance, instance.id)
         # instance.email = validated_data.get('email', instance.email)
+        instance.start_time = validated_data.get('start_time', instance.start_time)
+        instance.name_fi = validated_data.get('name_fi', instance.name_fi)
+        instance.name_sv = validated_data.get('name_sv', instance.name_sv)
+        instance.name_en = validated_data.get('name_en', instance.name_en)
         # instance.content = validated_data.get('content', instance.content)
         # instance.created = validated_data.get('created', instance.created)
+        instance.save()
         return instance
 
     def to_internal_value(self, data):
