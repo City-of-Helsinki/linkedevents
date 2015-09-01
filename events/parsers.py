@@ -28,7 +28,7 @@ def rename_fields(dataz):
 class CamelCaseJSONParser(JSONParser):
     def parse(self, stream, media_type=None, parser_context=None):
         parser_context = parser_context or {}
-        if 'disable_camelcase' in parser_context['request'].QUERY_PARAMS:
+        if 'disable_camelcase' in parser_context['request'].query_params:
             return super(CamelCaseJSONParser, self).parse(media_type,
                                                           parser_context)
         else:
