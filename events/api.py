@@ -137,19 +137,15 @@ class EnumChoiceField(serializers.Field):
     def to_representation(self, obj):
         if obj is None:
             return None
-        print("'{}':'{}'".format(self.prefix, utils.get_value_from_tuple_list(self.choices,
-                                                             obj, 1)))
-        print(self.choices, obj, type(obj))
         val = 1
         return val  # FIXME
         # FIXME: and this may be broken:
-        return self.prefix + utils.get_value_from_tuple_list(self.choices,
-                                                             obj, 1)
+        # return self.prefix + utils.get_value_from_tuple_list(self.choices,
+        #                                                      obj, 1)
 
     def to_internal_value(self, data):
         val = utils.get_value_from_tuple_list(self.choices,
-                                               self.prefix + str(data), 0)
-        print("BUGAAGO", val)
+                                              self.prefix + str(data), 0)
         return val
 
 
@@ -238,22 +234,18 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
         :param data:
         :return:
         """
-        print(func_name(self, str(data)))
         lang = settings.LANGUAGES[0][0]
-        print ("STRASNNNSSSSSSSSSS", lang, data)
         for field_name in self.translated_fields:
             # FIXME: handle default lang like others!?
             lang = settings.LANGUAGES[0][0]  # Handle default lang
-            if data[field_name] is None:
+            if data.get(field_name, None) is None:
                 continue
             values = data[field_name].copy()  # Save original values
             key = "%s_%s" % (field_name, lang)
             val = data[field_name].get(lang)
-            print("TO INTERNAL DEFAULT", key)
             if val:
                 values[key] = val  # field_name_LANG
                 values[field_name] = val  # field_name
-                # print ("VALUU HAAA", values)
             if lang in values:
                 del values[lang]  # Remove original key LANG
             for lang in [x[0] for x in settings.LANGUAGES[1:]]:
@@ -264,13 +256,8 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
                     values[field_name] = val  # field_name
                 if lang in values:
                     del values[lang]  # Remove original key LANG
-                    # print (data['name'][lang])
-
-                print("TO INTERNAL", key)
-            # print("VALUUUUU", values)
             data.update(values)
             del data[field_name]  # Remove original field_name from data
-        print("TRANS DATA", data)
         return data
 
     def to_representation(self, obj):
@@ -328,7 +315,6 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
     #     super(LinkedEventsSerializer, self).__init__(
     #         instance=instance, context=context, **kwargs)
     def __init__(self, *args, **kwargs):
-        print(func_name(self))
         super(LinkedEventsSerializer, self).__init__(*args, **kwargs)
         hide_ld_context = kwargs.pop('hide_ld_context', False)
         allow_add_remove = kwargs.pop('allow_add_remove', False)
@@ -395,7 +381,6 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         Renderer is the right place for this but now loop is done just once.
         Reversal conversion is done in parser.
         """
-        print(func_name(self))
         ret = super(LinkedEventsSerializer, self).to_representation(obj)
         if 'id' in ret and 'request' in self.context:
             try:
@@ -578,6 +563,7 @@ def parse_id_from_uri(uri):
     _id = urllib.parse.unquote(_id)
     return _id
 
+
 class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     location = JSONLDRelatedField(serializer=PlaceSerializer, required=False,
                                   view_name='place-detail', read_only=True)
@@ -597,7 +583,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     view_name = 'event-detail'
 
     def __init__(self, *args, skip_empties=False, skip_fields=set(), **kwargs):
-        print(func_name(self))
         super(EventSerializer, self).__init__(*args, **kwargs)
         # The following can be used when serializing when
         # testing and debugging.
@@ -608,10 +593,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         """
         Check that data passes validation
         """
-        # TODO: check mandatory keys
-        # TODO:
-        # raise serializers.ValidationError("Blog post is not about Django")
-        print(func_name(self))
+        # This gets called!
         print("VALIDATE DATA", data)
         return data
 
@@ -619,11 +601,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         """
         Check that data passes validation
         """
-        # TODO: check mandatory keys
-        # TODO:
-        # raise serializers.ValidationError("Blog post is not about Django")
-        print(func_name(self))
-        print("VALIDATE START TIME DATA", value)
+        # FIXME: this gets newer called
+        raise serializers.ValidationError("Not raised?!?!")
         return value
 
     def create(self, validated_data):
@@ -636,15 +615,9 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         else:
             data_source_id = 'linkedevents'
         keywords = validated_data.pop('keywords')
-        offers = validated_data.pop('offers')
-        #validated_data['data_source_id'] = data_source_id
+        # offers = validated_data.pop('offers')
         validated_data['id'] = generate_id(data_source_id)
-        print(func_name(self))
-        print("CREATE CREATE JEE")
-        # e = Event(**validated_data)
-        print (validated_data)
         e = Event.objects.create(**validated_data)
-        print("EEEEEEEMELI", e)
         e.keywords.add(*keywords)
         return e
 
@@ -652,34 +625,45 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         """
 
         """
-        print(func_name(self, str(validated_data)))
-        print("UPDATTTTEEeee", validated_data)
-        print(instance, instance.id)
-        # instance.email = validated_data.get('email', instance.email)
-        instance.start_time = validated_data.get('start_time', instance.start_time)
-        instance.name_fi = validated_data.get('name_fi', instance.name_fi)
-        instance.name_sv = validated_data.get('name_sv', instance.name_sv)
-        instance.name_en = validated_data.get('name_en', instance.name_en)
-        # instance.content = validated_data.get('content', instance.content)
-        # instance.created = validated_data.get('created', instance.created)
+        languages = [x[0] for x in settings.LANGUAGES]
+        update_fields = [
+            'start_time', 'end_time',
+        ]
+        for field in EventTranslationOptions.fields:
+            for lang in languages:
+                update_fields.append(field + '_' + lang)
+        for field in update_fields:
+            orig_value = getattr(instance, field)
+            new_value = validated_data.get(field, orig_value)
+            # print(field, orig_value, new_value)
+            setattr(instance, field, new_value)
+        if instance.end_time:
+            instance.has_end_time = True
+        # instance.start_time = validated_data.get('start_time', instance.start_time)
+        # instance.name_fi = validated_data.get('name_fi', instance.name_fi)
+        # instance.name_sv = validated_data.get('name_sv', instance.name_sv)
+        # instance.name_en = validated_data.get('name_en', instance.name_en)
         instance.save()
         return instance
 
     def to_internal_value(self, data):
-        print(func_name(self, str(data)))
-        # print("EventSerializer Serializerissa! to_internal_value" )
-        # print ("EventSerializer ennen", data)
         # TODO: common stuff to LinkedEventsSerializer
         data = super(EventSerializer, self).to_internal_value(data)
-        # print ("EventSerializer SUPER", data)
         self._parse_keywords(data)
         self._parse_location(data)
         self._parse_publisher(data)
         self._delete_obsolete_keys(data)
         # time parser raises parse error if start_time is not valid
-        start_time = data.get('start_time', '')
-        data['start_time'] = parse_time(start_time, True)
-        print ("MOIMOIMOIM", data['start_time'])
+        start_time = data.get('start_time', None)
+        # print (start_time, type(start_time))
+        if start_time:
+            if isinstance(start_time, str):
+                data['start_time'] = parse_time(start_time, True)
+        else:
+            raise ParseError('start_time is mandatory')
+        end_time = data.get('end_time', '')
+        if end_time and isinstance(end_time, str):
+            data['end_time'] = parse_time(end_time, False)
         # TODO: check this
         data_source_id = data.get('data_source')
         if data_source_id:
@@ -690,28 +674,16 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         if event_status:
             data['event_status'] = 1  # FIXME: really
 
-        print("EVENT jalkeen", data)
-        keys = data.keys()
+        # keys = data.keys()
         foobar = data.copy()
         for k in data.keys():
             if data[k] is None:
                 del foobar[k]
-                print(k, "= delli", data[k])
             else:
-                print(k, "= ei delli", data[k])
+                pass
         return foobar
 
     def to_representation(self, obj):
-        print(func_name(self))
-        # print ("OBOBOBOBO", obj, dir(obj))
-        # for k in dir(obj):
-        #     print(k)
-        #     if k.startswith('_') is False:
-        #         try:
-        #             print(obj.__getattribute__(k))
-        #         except Exception as err:
-        #             print (err)
-        print("JOU OU", obj.start_time)
         ret = super(EventSerializer, self).to_representation(obj)
         if 'start_time' in ret and not obj.has_start_time:
             # Return only the date part
@@ -772,7 +744,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         location = data.get('location')
         if location and '@id' in location:
             location_id = parse_id_from_uri(location['@id'])
-            print("location", location_id, location)
             try:
                 data['location'] = Place.objects.get(id=location_id)
             except Place.DoesNotExist:
@@ -947,16 +918,17 @@ def _filter_event_queryset(queryset, params, srs=None):
     return queryset
 
 
-def func_name(klass=None, text=None):
-    """Debugging, print function name"""
-    import traceback
-    name = ''
-    if klass:
-        name = type(klass).__name__ + '.'
-    name += traceback.extract_stack(None, 2)[0][2] + '()'
-    if text:
-        name += ': ' + text
-    return name
+# def func_name(klass=None, text=None):
+#     """Debugging, print function name"""
+#     import traceback
+#     name = ''
+#     if klass:
+#         name = type(klass).__name__ + '.'
+#     name += traceback.extract_stack(None, 2)[0][2] + '()'
+#     if text:
+#         name += ': ' + text
+#     return name
+
 
 class EventViewSet(JSONAPIViewSet):
     """
@@ -1047,33 +1019,13 @@ class EventViewSet(JSONAPIViewSet):
         return queryset
 
 
-    # def create(self, request):
-    #     print(func_name(self))
-    #     print("DIIBA DUUBA DOO!", request)
-    #     serializer = self.get_serializer(instance, data=request.data, partial=partial)
-
-    #def update(self, request, pk=None):
-    # def update(self, request, *args, **kwargs):
-    #     return super(self.__class__, self).update(request, *args, **kwargs)
-
-
     def update(self, request, *args, **kwargs):
-        print (func_name(self))
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
-        # print ("INSTANSSI", instance)
-        # print("ARGS", args, kwargs)
-        # print("REQUEST DATA", request.data)
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        #print("taal ollaa viel", serializer)
-        #print("SERIALIZER.VALIDADATAA", serializer.validated_data)
-        # print(dir(serializer))
         val = serializer.is_valid(raise_exception=True)
-        # print("SERIALIZER.DATAA", val)
-        # print(serializer.data)
         self.perform_update(serializer)
-        # print("TOSIAAN OLLAAN")
-        return Response(serializer.data)
+        return super(self.__class__, self).update(request, *args, **kwargs)
 
 
 register_view(EventViewSet, 'event')
