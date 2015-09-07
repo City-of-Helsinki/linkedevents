@@ -659,8 +659,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         if start_time:
             if isinstance(start_time, str):
                 data['start_time'] = parse_time(start_time, True)
-        else:
-            raise ParseError('start_time is mandatory')
+        # else:
+        #     raise ParseError('start_time is mandatory')
         end_time = data.get('end_time', '')
         if end_time and isinstance(end_time, str):
             data['end_time'] = parse_time(end_time, False)
