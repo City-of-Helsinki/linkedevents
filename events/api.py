@@ -615,7 +615,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         else:
             data_source_id = 'linkedevents'
         keywords = validated_data.pop('keywords')
-        # offers = validated_data.pop('offers')
+        offers = validated_data.pop('offers', None)
         validated_data['id'] = generate_id(data_source_id)
         e = Event.objects.create(**validated_data)
         e.keywords.add(*keywords)
