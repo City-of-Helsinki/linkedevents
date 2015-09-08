@@ -21,7 +21,7 @@ class EventAPITests(TestCase):
             data_source=self.test_ds
         )
 
-    def test__create_event_with_post(self):
+    def test__create_a_minimal_event_with_post(self):
         MINIMAL_EVENT = {
             "data_source": self.test_ds.id,
             "publisher": self.test_org.id,
@@ -35,3 +35,9 @@ class EventAPITests(TestCase):
         # double-check with get
         resp2 = self.client.get(response.data['@id'])
         self.assertEquals(resp2.status_code, 200)
+
+    def test__create_a_complex_event_with_post(self):
+        pass
+
+    def test__update_an_event_with_put(self):
+        pass
