@@ -157,7 +157,7 @@ class EventAPITests(TestCase, TestDataMixin):
             # 'created_time',
             # 'date_published',
 
-            # 'start_time',  # fails becuase of javascripts "Z" vs Python's "+00:00"
+            # 'start_time',  # fails because of Javascript's "Z" vs Python's "+00:00"
             # 'end_time',    # -"-
         )
         for key in FIELDS:
