@@ -129,6 +129,41 @@ class EventAPITests(TestCase, TestDataMixin):
         resp2 = self.client.get(response.data['@id'])
         self.assertEquals(resp2.status_code, 200, msg=response.content)
 
+        # make sure the saved data is equal to the one we posted before
+        d1, d2 = event_data, resp2.data
+        FIELDS = (
+            'data_source',
+            'publisher',
+            'name keywords',
+            'event_status',
+            'sub_events',
+            'custom_data',
+            'image',
+            'origin_id',
+            'audience',
+            'location_extra_info',
+            'info_url',
+            'secondary_headline',
+            'description',
+            'headline',
+            'short_description',
+            'provider',
+
+            # 'external_links',
+            # 'offers',
+
+            # 'location',  # fails because of our id not including the full URL
+
+            # 'created_time',
+            # 'date_published',
+
+            # 'start_time',  # fails becuase of javascripts "Z" vs Python's "+00:00"
+            # 'end_time',    # -"-
+        )
+        for key in FIELDS:
+            if key in d1:
+                self.assertEquals(d1[key], d2[key])
+
     def test__create_a_minimal_event_with_post(self):
         self._create_with_post(self.MINIMAL_EVENT)
 
