@@ -129,8 +129,10 @@ class EventAPITests(TestCase, TestDataMixin):
         resp2 = self.client.get(response.data['@id'])
         self.assertEquals(resp2.status_code, 200, msg=response.content)
 
+        return resp2
+
+    def _assert_event_data_is_equal(self, d1, d2):
         # make sure the saved data is equal to the one we posted before
-        d1, d2 = event_data, resp2.data
         FIELDS = (
             'data_source',
             'publisher',
@@ -166,10 +168,14 @@ class EventAPITests(TestCase, TestDataMixin):
                 self.assertEquals(d1[key], d2[key])
 
     def test__create_a_minimal_event_with_post(self):
-        self._create_with_post(self.MINIMAL_EVENT)
+        data = self.MINIMAL_EVENT
+        response = self._create_with_post(data)
+        self._assert_event_data_is_equal(data, response.data)
 
     def test__create_a_complex_event_with_post(self):
-        self._create_with_post(self.COMPLEX_EVENT)
+        data = self.COMPLEX_EVENT
+        response = self._create_with_post(data)
+        self._assert_event_data_is_equal(data, response.data)
 
     def test__update_an_event_with_put(self):
         pass
