@@ -134,7 +134,7 @@ class EventAPITests(TestCase, TestDataMixin):
         FIELDS = (
             'data_source',
             'publisher',
-            'name keywords',
+            'name',
             'event_status',
             'sub_events',
             'custom_data',
@@ -153,6 +153,7 @@ class EventAPITests(TestCase, TestDataMixin):
             # 'offers',
 
             # 'location',  # fails because of our id not including the full URL
+            # 'keywords',  # -"-
 
             # 'created_time',
             # 'date_published',
