@@ -131,6 +131,10 @@ class EventAPITests(TestCase, TestDataMixin):
 
         return resp2
 
+    def _update_with_put(self, event_id, event_data):
+        response = self.client.put(event_id, event_data, format='json')
+        return response
+
     def _assert_event_data_is_equal(self, d1, d2):
         # make sure the saved data is equal to the one we posted before
         FIELDS = (
@@ -178,4 +182,20 @@ class EventAPITests(TestCase, TestDataMixin):
         self._assert_event_data_is_equal(data, response.data)
 
     def test__update_an_event_with_put(self):
-        pass
+        # create an event
+        data = self.COMPLEX_EVENT
+        response = self._create_with_post(data)
+
+        # set up updates
+        data2 = response.data 
+        for key in ('name', 'headline'):
+            for lang in ('fi', 'en', 'sv'): 
+                if lang in data2[key]:
+                    data2[key][lang] = '%s updated' % data2[key][lang]
+
+        # store updates
+        event_id = data2.pop('@id')
+        response2 = self._update_with_put(event_id, data2)
+
+        # assert
+        self._assert_event_data_is_equal(data2, response2.data)
