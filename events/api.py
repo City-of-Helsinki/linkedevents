@@ -350,29 +350,6 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
             if 'disable_camelcase' in request.query_params:
                 self.disable_camelcase = True
 
-    # def validate(self, data):
-    #     """
-    #     Check that data passes validation
-    #     """
-    #     print("VALIDATE DATA", data)
-    #     return data
-
-    # def to_internal_value(self, data):
-    #     print("LINKED EVENTS Serializerissa! to_internal_value")
-    #     # print("VALIDII to_internal_value", self.is_valid())
-    #     # print ("INTERNAL EKAKS", data)
-    #     data_source_id = data.get('data_source')
-    #     if data_source_id:
-    #         data['data_source'] = DataSource.objects.get(id=data_source_id)
-    #     for key in ['last_modified_time', 'created_time']:
-    #         if key in data:
-    #             data.pop(key)
-    #     # data['last_modified_time'] = dateutil_parse(data['last_modified_time'])
-    #     # data['created_time'] = dateutil_parse(data['created_time'])
-    #     print ("INTERNAL du", data)
-    #     return data
-
-
     def to_representation(self, obj):
         """
         Before sending to renderer there's a need to do additional work on
@@ -1023,15 +1000,6 @@ class EventViewSet(JSONAPIViewSet):
         queryset = _filter_event_queryset(queryset, self.request.query_params,
                                           srs=self.srs)
         return queryset
-
-
-    def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', False)
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        val = serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-        return super(self.__class__, self).update(request, *args, **kwargs)
 
 
 register_view(EventViewSet, 'event')
