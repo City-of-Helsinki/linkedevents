@@ -316,8 +316,8 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
     #     super(LinkedEventsSerializer, self).__init__(
     #         instance=instance, context=context, **kwargs)
     def __init__(self, *args, **kwargs):
-        super(LinkedEventsSerializer, self).__init__(*args, **kwargs)
         hide_ld_context = kwargs.pop('hide_ld_context', False)
+        super(LinkedEventsSerializer, self).__init__(*args, **kwargs)
         allow_add_remove = kwargs.pop('allow_add_remove', False)
         partial = kwargs.pop('partial', False)
         files = kwargs.pop('files', None)
