@@ -94,7 +94,7 @@ class TestDataMixin:
                 {
                     "is_free": False,
                     "price": {"en": TEXT, "sv": TEXT, "fi": TEXT},
-                    "description": TEXT,
+                    "description": {"en": TEXT, "sv": TEXT, "fi": TEXT},
                     "info_url": {"en": URL, "sv": URL, "fi": URL}
                 }
             ],
@@ -163,9 +163,9 @@ class EventAPITests(TestCase, TestDataMixin):
             'provider',
 
             'keywords',
+            'offers',
 
             # 'external_links',
-            # 'offers',
 
             # 'created_time',
             # 'date_published',

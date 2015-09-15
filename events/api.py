@@ -585,19 +585,26 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         return value
 
     def create(self, validated_data):
+
         if 'id' in validated_data:
-            msg = "Do not send 'id' when POSTing a new Event (got id='{}')".format(validated_data['id'])
-            raise ParseError(msg)
+            err = "Do not send 'id' when POSTing a new Event (got id='{}')"
+            raise ParseError(err.format(validated_data['id']))
+
         data_source = validated_data.get('data_source')
-        if data_source:
-            data_source_id = data_source.id
-        else:
-            data_source_id = 'linkedevents'
+        data_source_id = data_source.id if data_source else 'linkedevents'
+
         keywords = validated_data.pop('keywords')
-        offers = validated_data.pop('offers')
+        offer_data = validated_data.pop('offers', [])
+
         validated_data['id'] = generate_id(data_source_id)
+
         e = Event.objects.create(**validated_data)
         e.keywords.add(*keywords)
+
+        for offer in offer_data:
+            obj = Offer(event=e, **OfferSerializer().to_internal_value(offer))
+            obj.save()
+
         return e
 
     def update(self, instance, validated_data):
@@ -629,7 +636,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         # TODO: common stuff to LinkedEventsSerializer
         data = super(EventSerializer, self).to_internal_value(data)
         self._parse_keywords(data)
-        self._parse_offers(data)
         self._parse_location(data)
         self._parse_publisher(data)
         self._delete_obsolete_keys(data)
@@ -716,10 +722,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                 new_kw.append(keyword)
                 print("_parse_keywords:", keyword)
         data['keywords'] = new_kw
-
-    def _parse_offers(self, data):
-        # TODO:  implement
-        data['offers'] = data.get('offers', [])
 
     def _parse_location(self, data):
         """
