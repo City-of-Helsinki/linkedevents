@@ -536,6 +536,7 @@ def parse_id_from_uri(uri):
     :param uri: str
     :return: str id
     """
+    assert(uri.startswith('http'))
     path = urllib.parse.urlparse(uri).path
     _id = path.rstrip('/').split('/')[-1]
     _id = urllib.parse.unquote(_id)
