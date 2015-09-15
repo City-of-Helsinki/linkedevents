@@ -6,9 +6,11 @@ from django.test import TestCase
 from django.utils import timezone
 
 # 3rd party
+from rest_framework.reverse import reverse
 from rest_framework.test import APIClient
 
 # this app
+from events.api import KeywordSerializer, PlaceSerializer
 from events.models import (
     Event, DataSource, Organization, Keyword, Language, KeywordLabel, Place
 )
@@ -27,7 +29,15 @@ class TestDataMixin:
         obj.alt_labels.add(label_obj)
         obj.save()
 
-        return obj
+        obj_id = reverse(KeywordSerializer().view_name, kwargs={'pk': obj.id})
+        return 'http://testserver%s' % obj_id
+
+    def _set_up_location(self, id):
+        obj, _ = Place.objects.get_or_create(id=id,
+                                             data_source=self.test_ds,
+                                             publisher=self.test_org)
+        obj_id = reverse(PlaceSerializer().view_name, kwargs={'pk': obj.id})
+        return 'http://testserver%s' % obj_id
 
     def set_up_test_data(self):
 
@@ -46,11 +56,7 @@ class TestDataMixin:
         )
 
         # location / place
-        self.test_loc, _ = Place.objects.get_or_create(
-            id=TEXT,
-            data_source=self.test_ds,
-            publisher=self.test_org
-        )
+        self.test_location = self._set_up_location(TEXT)
 
         # event link
         self.test_event_link, _ = None, None
@@ -72,11 +78,11 @@ class TestDataMixin:
 
         # complex event json
         self.COMPLEX_EVENT = {
-            "location": {"@id": self.test_loc.id},
+            "location": {"@id": self.test_location},
             "keywords": [
-                {"@id": self.test_keyword1.id},
-                {"@id": self.test_keyword2.id},
-                {"@id": self.test_keyword3.id}
+                {"@id": self.test_keyword1},
+                {"@id": self.test_keyword2},
+                {"@id": self.test_keyword3}
             ],
             "event_status": Event.SCHEDULED,
             "external_links": [
@@ -140,6 +146,7 @@ class EventAPITests(TestCase, TestDataMixin):
         FIELDS = (
             'data_source',
             'publisher',
+            'location',
             'name',
             'event_status',
             'sub_events',
@@ -155,11 +162,10 @@ class EventAPITests(TestCase, TestDataMixin):
             'short_description',
             'provider',
 
+            'keywords',
+
             # 'external_links',
             # 'offers',
-
-            # 'location',  # fails because of our id not including the full URL
-            # 'keywords',  # -"-
 
             # 'created_time',
             # 'date_published',
@@ -187,9 +193,9 @@ class EventAPITests(TestCase, TestDataMixin):
         response = self._create_with_post(data)
 
         # set up updates
-        data2 = response.data 
+        data2 = response.data
         for key in ('name', 'headline'):
-            for lang in ('fi', 'en', 'sv'): 
+            for lang in ('fi', 'en', 'sv'):
                 if lang in data2[key]:
                     data2[key][lang] = '%s updated' % data2[key][lang]
 

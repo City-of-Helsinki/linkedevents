@@ -328,7 +328,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         if 'modified_by' in self.fields:
             del self.fields['modified_by']
 
-        context = kwargs['context']
+        context = kwargs.get('context', None)
 
         if context is not None:
             include_fields = context.get('include', [])
