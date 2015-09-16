@@ -587,22 +587,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         self.skip_empties = skip_empties
         self.skip_fields = skip_fields
 
-    def validate(self, data):
-        """
-        Check that data passes validation
-        """
-        # This gets called!
-        print("VALIDATE DATA", data)
-        return data
-
-    def validate_start_time(self, value):
-        """
-        Check that data passes validation
-        """
-        # FIXME: this gets newer called
-        raise serializers.ValidationError("Not raised?!?!")
-        return value
-
     def create(self, validated_data):
 
         if 'id' in validated_data:
@@ -639,7 +623,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         for field in update_fields:
             orig_value = getattr(instance, field)
             new_value = validated_data.get(field, orig_value)
-            # print(field, orig_value, new_value)
             setattr(instance, field, new_value)
 
         if instance.end_time:
@@ -666,17 +649,17 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         self._parse_location(data)
         self._parse_publisher(data)
         self._delete_obsolete_keys(data)
+
         # time parser raises parse error if start_time is not valid
         start_time = data.get('start_time', None)
-        # print (start_time, type(start_time))
         if start_time:
             if isinstance(start_time, str):
                 data['start_time'] = parse_time(start_time, True)
-        # else:
-        #     raise ParseError('start_time is mandatory')
+
         end_time = data.get('end_time', '')
         if end_time and isinstance(end_time, str):
             data['end_time'] = parse_time(end_time, False)
+
         # TODO: check this
         data_source_id = data.get('data_source')
         if data_source_id:
@@ -687,13 +670,13 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         if event_status:
             data['event_status'] = 1  # FIXME: really
 
-        # keys = data.keys()
         foobar = data.copy()
         for k in data.keys():
             if data[k] is None:
                 del foobar[k]
             else:
                 pass
+
         return foobar
 
     def to_representation(self, obj):
@@ -955,18 +938,6 @@ def _filter_event_queryset(queryset, params, srs=None):
         queryset = queryset.extra(where=[cond], params=[str(dur)])
 
     return queryset
-
-
-# def func_name(klass=None, text=None):
-#     """Debugging, print function name"""
-#     import traceback
-#     name = ''
-#     if klass:
-#         name = type(klass).__name__ + '.'
-#     name += traceback.extract_stack(None, 2)[0][2] + '()'
-#     if text:
-#         name += ': ' + text
-#     return name
 
 
 class EventViewSet(JSONAPIViewSet):
