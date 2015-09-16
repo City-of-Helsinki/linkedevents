@@ -1,41 +1,54 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-from datetime import datetime, timedelta
-import re
-import urllib.parse
 
-from django.utils import translation
+# python
+import base64
+import re
+import struct
+import time
+import urllib
+import urllib.parse
+from datetime import datetime, timedelta
+
+# django
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import NoReverseMatch
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from django.utils import translation
+from django.utils.translation import ugettext_lazy as _
+
+# 3rd party
+import pytz
+from dateutil.parser import parse as dateutil_parse
+from haystack.query import AutoQuery
 from isodate import Duration, duration_isoformat, parse_duration
+from modeltranslation.translator import translator, NotRegistered
+from munigeo.api import (
+    GeoModelSerializer, GeoModelAPIView, build_bbox_filter, srid_to_srs
+)
 from rest_framework import serializers, relations, viewsets, filters, generics
 from rest_framework.reverse import reverse
 from rest_framework.response import Response
 from rest_framework.exceptions import ParseError
-from events.models import Place, Event, Keyword, Language, OpeningHoursSpecification, EventLink, Offer
-from events.models import DataSource, Organization
-from django.conf import settings
+
+# this app
 from events import utils
-from events.custom_elasticsearch_search_backend import CustomEsSearchQuerySet as SearchQuerySet
+from events.custom_elasticsearch_search_backend import \
+    CustomEsSearchQuerySet as SearchQuerySet
+from events.models import (
+    Place, Event, Keyword, Language, OpeningHoursSpecification, EventLink,
+    Offer, DataSource, Organization
+)
 from events.translation import EventTranslationOptions
-from modeltranslation.translator import translator, NotRegistered
-from django.utils.translation import ugettext_lazy as _
-from dateutil.parser import parse as dateutil_parse
-from haystack.query import AutoQuery
-
-from munigeo.api import GeoModelSerializer, GeoModelAPIView, build_bbox_filter, srid_to_srs
-
-import pytz
-import base64
-import struct
-import time
 
 
 serializers_by_model = {}
 
 all_views = []
+
+
 def register_view(klass, name, base_name=None):
     entry = {'class': klass, 'name': name}
     if base_name is not None:
@@ -66,6 +79,7 @@ def urlquote_id(link):
             parts[-2] = urllib.parse.quote(parts[-2])
             link = '/'.join(parts)
     return link
+
 
 def generate_id(namespace):
     t = time.time() * 1000
@@ -99,10 +113,14 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
 
     def to_representation(self, obj):
         if isinstance(self.related_serializer, str):
-            self.related_serializer = globals().get(self.related_serializer, None)
+            self.related_serializer = globals().get(self.related_serializer,
+                                                    None)
         if self.is_expanded():
-            return self.related_serializer(obj, hide_ld_context=self.hide_ld_context,
-                                           context=self.context).data
+            return self.related_serializer(
+                obj,
+                hide_ld_context=self.hide_ld_context,
+                context=self.context
+            ).data
         link = super(JSONLDRelatedField, self).to_representation(obj)
         link = urlquote_id(link)
         return {
@@ -111,7 +129,9 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
 
     def to_internal_value(self, value):
         if '@id' in value:
-            return super(JSONLDRelatedField, self).to_internal_value(value['@id'])
+            return super(JSONLDRelatedField, self).to_internal_value(
+                value['@id']
+            )
         else:
             raise ValidationError(
                 self.invalid_json_error % type(value).__name__)
@@ -281,7 +301,7 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
 
             # If no text provided, leave the field as null
             for key, val in d.items():
-                if val != None:
+                if val is not None:
                     break
             else:
                 d = None
@@ -333,7 +353,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         if context is not None:
             include_fields = context.get('include', [])
             for field_name in include_fields:
-                if not field_name in self.fields:
+                if field_name not in self.fields:
                     continue
                 field = self.fields[field_name]
                 if isinstance(field, relations.ManyRelatedField):
@@ -363,8 +383,8 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         if 'id' in ret and 'request' in self.context:
             try:
                 ret['@id'] = reverse(self.view_name,
-                                        kwargs={u'pk': ret['id']},
-                                        request=self.context['request'])
+                                     kwargs={u'pk': ret['id']},
+                                     request=self.context['request'])
             except NoReverseMatch:
                 ret['@id'] = str(ret['id'])
             ret['@id'] = urlquote_id(ret['@id'])
@@ -509,6 +529,7 @@ register_view(LanguageViewSet, 'language')
 
 LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
 
+
 class EventLinkSerializer(serializers.ModelSerializer):
     def to_representation(self, obj):
         ret = super(EventLinkSerializer, self).to_representation(obj)
@@ -520,14 +541,12 @@ class EventLinkSerializer(serializers.ModelSerializer):
         model = EventLink
         exclude = ['id']
 
+
 class OfferSerializer(TranslatedModelSerializer):
     class Meta:
         model = Offer
         exclude = ['id', 'event']
 
-#from urllib.parse import urlparse
-import urllib
-import urllib.parse
 
 def parse_id_from_uri(uri):
     """
@@ -608,27 +627,24 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         return e
 
     def update(self, instance, validated_data):
-        """
-
-        """
         languages = [x[0] for x in settings.LANGUAGES]
         update_fields = [
             'start_time', 'end_time',
         ]
+
         for field in EventTranslationOptions.fields:
             for lang in languages:
                 update_fields.append(field + '_' + lang)
+
         for field in update_fields:
             orig_value = getattr(instance, field)
             new_value = validated_data.get(field, orig_value)
             # print(field, orig_value, new_value)
             setattr(instance, field, new_value)
+
         if instance.end_time:
             instance.has_end_time = True
-        # instance.start_time = validated_data.get('start_time', instance.start_time)
-        # instance.name_fi = validated_data.get('name_fi', instance.name_fi)
-        # instance.name_sv = validated_data.get('name_sv', instance.name_sv)
-        # instance.name_en = validated_data.get('name_en', instance.name_en)
+
         instance.save()
 
         # update offers
@@ -682,15 +698,21 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
     def to_representation(self, obj):
         ret = super(EventSerializer, self).to_representation(obj)
+
         if 'start_time' in ret and not obj.has_start_time:
             # Return only the date part
-            ret['start_time'] = obj.start_time.astimezone(LOCAL_TZ).strftime('%Y-%m-%d')
+            ret['start_time'] = obj.start_time.astimezone(LOCAL_TZ)\
+                .strftime('%Y-%m-%d')
+
         if 'end_time' in ret and not obj.has_end_time:
-            # If we're storing only the date part, do not pretend we have the exact time.
+            # If we're storing only the date part, do not pretend we have the
+            # exact time.
             if obj.end_time - obj.start_time <= timedelta(days=1):
                 ret['end_time'] = None
+
         if hasattr(obj, 'days_left'):
             ret['days_left'] = int(obj.days_left)
+
         if self.skip_empties:
             for k in list(ret.keys()):
                 val = ret[k]
@@ -700,8 +722,10 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                 except TypeError:
                     # not list/dict
                     pass
+
         for field in self.skip_fields:
             del ret[field]
+
         return ret
 
     class Meta:
@@ -722,16 +746,21 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         """
         Replace list of keyword dicts in data with a list of Keyword objects
         """
-        new_kw =[]
+        new_kw = []
+
         for kw in data.get('keywords', []):
+
             if '@id' in kw:
                 kw_id = parse_id_from_uri(kw['@id'])
+
                 try:
                     keyword = Keyword.objects.get(id=kw_id)
                 except Keyword.DoesNotExist:
-                    raise ParseError('Keyword with id {} does not exist'.format(kw_id))
+                    err = 'Keyword with id {} does not exist'
+                    raise ParseError(err.format(kw_id))
+
                 new_kw.append(keyword)
-                print("_parse_keywords:", keyword)
+
         data['keywords'] = new_kw
 
     def _parse_location(self, data):
@@ -744,13 +773,15 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             try:
                 data['location'] = Place.objects.get(id=location_id)
             except Place.DoesNotExist:
-                raise ParseError('Place with id {} does not exist'.format(location_id))
+                err = 'Place with id {} does not exist'
+                raise ParseError(err.format(location_id))
 
     def _parse_publisher(self, data):
         organization_id = data.get('publisher')
         if organization_id:
             # TODO: error handling and raise ParseError
             data['publisher'] = Organization.objects.get(id=organization_id)
+
 
 def parse_time(time_str, is_start):
     time_str = time_str.strip()
@@ -778,7 +809,8 @@ def parse_time(time_str, is_start):
             dt = dateutil_parse(time_str)
             dt = LOCAL_TZ.localize(dt)
         except (TypeError, ValueError):
-            raise ParseError('time in invalid format (try ISO 8601 or yyyy-mm-dd)')
+            err = 'time in invalid format (try ISO 8601 or yyyy-mm-dd)'
+            raise ParseError(err)
     return dt
 
 
@@ -805,12 +837,16 @@ class LinkedEventsOrderingFilter(filters.OrderingFilter):
 
 class EventOrderingFilter(LinkedEventsOrderingFilter):
     def filter_queryset(self, request, queryset, view):
-        queryset = super(EventOrderingFilter, self).filter_queryset(request, queryset, view)
+        queryset = super(EventOrderingFilter, self).filter_queryset(
+            request, queryset, view
+        )
         ordering = self.get_ordering(request, queryset, view)
         if not ordering:
             ordering = []
         if 'days_left' in [x.lstrip('-') for x in ordering]:
-            queryset = queryset.extra(select={'days_left': 'date_part(\'day\', end_time - start_time)'})
+            queryset = queryset.extra(select={
+                'days_left': 'date_part(\'day\', end_time - start_time)'
+            })
         return queryset
 
 
@@ -830,6 +866,7 @@ def parse_duration(duration):
         mul = 24 * 3600
 
     return int(val) * mul
+
 
 def _filter_event_queryset(queryset, params, srs=None):
     """
@@ -1023,16 +1060,20 @@ register_view(EventViewSet, 'event')
 class SearchSerializer(serializers.Serializer):
     def to_representation(self, search_result):
         model = search_result.model
-        assert model in serializers_by_model, "Serializer for %s not found" % model
+        assert model in serializers_by_model, \
+            "Serializer for %s not found" % model
         ser_class = serializers_by_model[model]
         data = ser_class(search_result.object, context=self.context).data
         data['object_type'] = model._meta.model_name
         data['score'] = search_result.score
         return data
 
+
 DATE_DECAY_SCALE = '30d'
 
-class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView):
+
+class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin,
+                    generics.ListAPIView):
     serializer_class = SearchSerializer
 
     def list(self, request, *args, **kwargs):
@@ -1041,13 +1082,17 @@ class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView
         # If the incoming language is not specified, go with the default.
         self.lang_code = request.query_params.get('language', languages[0])
         if self.lang_code not in languages:
-            raise ParseError("Invalid language supplied. Supported languages: %s" %
-                             ','.join(languages))
+            err = 'Invalid language supplied. Supported languages: %s'
+            raise ParseError(err % ','.join(languages))
 
         input_val = request.query_params.get('input', '').strip()
         q_val = request.query_params.get('q', '').strip()
         if not input_val and not q_val:
-            raise ParseError("Supply search terms with 'q=' or autocomplete entry with 'input='")
+            err = (
+                "Supply search terms with 'q=' or autocomplete entry "
+                "with 'input='"
+            )
+            raise ParseError(err)
         if input_val and q_val:
             raise ParseError("Supply either 'q' or 'input', not both")
 
@@ -1062,7 +1107,10 @@ class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView
                 'gauss': {
                     'end_time': {
                         'origin': now,
-                        'scale': DATE_DECAY_SCALE }}})
+                        'scale': DATE_DECAY_SCALE
+                    }
+                }
+            })
         else:
             queryset = queryset.filter(text=AutoQuery(q_val))
 
