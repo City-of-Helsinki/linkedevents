@@ -807,7 +807,11 @@ def parse_time(time_str, is_start):
         try:
             # Handle all other times through dateutil.
             dt = dateutil_parse(time_str)
-            dt = LOCAL_TZ.localize(dt)
+
+            # by default, if no timezone is set, use the local timezone
+            if dt.tzinfo is None:
+                dt = LOCAL_TZ.localize(dt)
+
         except (TypeError, ValueError):
             err = 'time in invalid format (try ISO 8601 or yyyy-mm-dd)'
             raise ParseError(err)
