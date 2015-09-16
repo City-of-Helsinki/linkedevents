@@ -630,6 +630,17 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         # instance.name_sv = validated_data.get('name_sv', instance.name_sv)
         # instance.name_en = validated_data.get('name_en', instance.name_en)
         instance.save()
+
+        # update offers
+        # NOTE this currently deletes all the existing and inserts new ones
+        # TODO review and decide on whether this should be done differently
+        if 'offers' in validated_data:
+            instance.offers.all().delete()
+            for offer in validated_data.pop('offers', []):
+                obj = Offer(event=instance,
+                            **OfferSerializer().to_internal_value(offer))
+                obj.save()
+
         return instance
 
     def to_internal_value(self, data):

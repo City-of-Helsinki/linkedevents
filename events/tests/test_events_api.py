@@ -167,9 +167,6 @@ class EventAPITests(TestCase, TestDataMixin):
 
             # 'external_links',
 
-            # 'created_time',
-            # 'date_published',
-
             # 'start_time',  # fails because of Javascript's "Z" vs Python's "+00:00"
             # 'end_time',    # -"-
         )
@@ -188,6 +185,11 @@ class EventAPITests(TestCase, TestDataMixin):
         self._assert_event_data_is_equal(data, response.data)
 
     def test__update_an_event_with_put(self):
+
+        # dummy inputs
+        TEXT = 'text updated'
+        URL = "http://localhost"
+
         # create an event
         data = self.COMPLEX_EVENT
         response = self._create_with_post(data)
@@ -198,6 +200,16 @@ class EventAPITests(TestCase, TestDataMixin):
             for lang in ('fi', 'en', 'sv'):
                 if lang in data2[key]:
                     data2[key][lang] = '%s updated' % data2[key][lang]
+
+        # test updates to offers
+        data2['offers'] = [
+            {
+                "is_free": False,
+                "price": {"en": TEXT, "sv": TEXT, "fi": TEXT},
+                "description": {"en": TEXT, "fi": TEXT},
+                "info_url": {"en": URL, "sv": URL, "fi": URL}
+            }
+        ]
 
         # store updates
         event_id = data2.pop('@id')
