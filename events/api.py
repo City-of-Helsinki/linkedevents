@@ -539,7 +539,7 @@ class EventLinkSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = EventLink
-        exclude = ['id']
+        exclude = ['id', 'event']
 
 
 class OfferSerializer(TranslatedModelSerializer):
@@ -597,15 +597,26 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         data_source_id = data_source.id if data_source else 'linkedevents'
 
         keywords = validated_data.pop('keywords')
-        offer_data = validated_data.pop('offers', [])
+        offers = validated_data.pop('offers', [])
+        links = validated_data.pop('external_links', [])
 
         validated_data['id'] = generate_id(data_source_id)
 
         e = Event.objects.create(**validated_data)
         e.keywords.add(*keywords)
 
-        for offer in offer_data:
-            obj = Offer(event=e, **OfferSerializer().to_internal_value(offer))
+        # create offers (should be validated already in `validate` method)
+        for offer in offers:
+            off_ser = OfferSerializer(data=offer)
+            assert(off_ser.is_valid())
+            obj = Offer(event=e, **off_ser.validated_data)
+            obj.save()
+
+        # create ext links (should be validated already in `validate` method)
+        for link in links:
+            link_ser = EventLinkSerializer(data=link)
+            assert(link_ser.is_valid())
+            obj = EventLink(event=e, **link_ser.validated_data)
             obj.save()
 
         return e
@@ -635,12 +646,39 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         # TODO review and decide on whether this should be done differently
         if 'offers' in validated_data:
             instance.offers.all().delete()
-            for offer in validated_data.pop('offers', []):
-                obj = Offer(event=instance,
-                            **OfferSerializer().to_internal_value(offer))
+            for offer in validated_data.get('offers', []):
+                off_ser = OfferSerializer(data=offer)
+                assert(off_ser.is_valid())
+                obj = Offer(event=instance, **off_ser.validated_data)
+                obj.save()
+
+        # create ext links
+        # NOTE this currently deletes all the existing and inserts new ones
+        # TODO review and decide on whether this should be done differently
+        if 'external_links' in validated_data:
+            instance.external_links.all().delete()
+            for link in validated_data.get('external_links', []):
+                link_ser = EventLinkSerializer(data=link)
+                assert(link_ser.is_valid())
+                obj = EventLink(event=instance, **link_ser.validated_data)
                 obj.save()
 
         return instance
+
+    def validate(self, attrs):
+
+        # validate offers
+        for offer in attrs.get('offers', []):
+            off_ser = OfferSerializer(data=offer)
+            if not off_ser.is_valid():
+                raise ValidationError('Invalid offer [%s].' % offer)
+
+        # validate external links
+        for link in attrs.get('external_links', []):
+            link_ser = EventLinkSerializer(data=link)
+            if not link_ser.is_valid():
+                raise ValidationError('Invalid external link [%s].' % link)
+        return attrs
 
     def to_internal_value(self, data):
         # TODO: common stuff to LinkedEventsSerializer
@@ -717,8 +755,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
     def _delete_obsolete_keys(self, data):
         for k in [
-            'sub_events', 'super_event', 'external_links',
-            # 'keywords', 'offers',
+            'sub_events', 'super_event',
             '@context', '@type', '@id',
             'last_modified_time', 'created_time', 'date_published'
         ]:

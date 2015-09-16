@@ -86,9 +86,9 @@ class TestDataMixin:
             ],
             "event_status": Event.SCHEDULED,
             "external_links": [
-                {"name": TEXT, "link": URL, "event": None, "language": "en"},
-                {"name": TEXT, "link": URL, "event": None, "language": "fi"},
-                {"name": TEXT, "link": URL, "event": None, "language": "sv"},
+                {"name": TEXT, "link": URL, "language": "fi"},
+                {"name": TEXT, "link": URL, "language": "sv"},
+                {"name": TEXT, "link": URL, "language": "en"},
             ],
             "offers": [
                 {
@@ -165,14 +165,20 @@ class EventAPITests(TestCase, TestDataMixin):
             'keywords',
             'offers',
 
-            # 'external_links',
-
-            # 'start_time',  # fails because of Javascript's "Z" vs Python's "+00:00"
+            # 'start_time',  # fails because of Javascript's "Z"
+            #                # vs Python's "+00:00"
             # 'end_time',    # -"-
         )
         for key in FIELDS:
             if key in d1:
                 self.assertEquals(d1[key], d2[key])
+
+        # test for external links (the API returns OrderedDicts because of the
+        # model's unique constraint)
+        comp = lambda d: (d['language'], d['link'])
+        links1 = set([comp(link) for link in d1.get('external_links', [])])
+        links2 = set([comp(link) for link in d2.get('external_links', [])])
+        self.assertEquals(links1, links2)
 
     def test__create_a_minimal_event_with_post(self):
         data = self.MINIMAL_EVENT
