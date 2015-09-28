@@ -941,6 +941,10 @@ def _filter_event_queryset(queryset, params, srs=None):
     if val:
         queryset = queryset.filter(data_source=val)
 
+    val = params.get('publisher', None)
+    if val:
+        queryset = queryset.filter(publisher=val)
+
     # Filter by location id, multiple ids separated by comma
     val = params.get('location', None)
     if val:
