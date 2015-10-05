@@ -267,9 +267,11 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     class MPTTMeta:
         parent_attr = 'super_event'
 
+    def __init__(self, *args, **kwargs):
+        super(Event, self).__init__(*args, **kwargs)
+        self.created_time = BaseModel.now()
+
     def save(self, *args, **kwargs):
-        if not self.id:
-            self.created_time = BaseModel.now()
         self.last_modified_time = BaseModel.now()
         super(Event, self).save(*args, **kwargs)
 
