@@ -18,6 +18,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import translation
 from django.utils.translation import ugettext_lazy as _
+from django.utils import timezone
 
 # 3rd party
 import pytz
@@ -601,6 +602,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         links = validated_data.pop('external_links', [])
 
         validated_data['id'] = generate_id(data_source_id)
+        validated_data['created_time'] = timezone.now()
 
         e = Event.objects.create(**validated_data)
         e.keywords.add(*keywords)
