@@ -146,12 +146,12 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': (
         'events.api_pagination.CustomPagination'
     ),
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
-    ),
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'helevents.auth.JWTAuthentication',
-    ),
+    # 'DEFAULT_PERMISSION_CLASSES': (
+    #     'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    # ),
+    # 'DEFAULT_AUTHENTICATION_CLASSES': (
+    #     'helevents.auth.JWTAuthentication',
+    # ),
 
 }
 
@@ -245,3 +245,9 @@ try:
     from local_settings import *
 except ImportError:
     pass
+
+try:  # if local_settings contains CUSTOM_APPS
+    INSTALLED_APPS = list(INSTALLED_APPS) + CUSTOM_APPS
+except Exception as e:
+    pass
+
