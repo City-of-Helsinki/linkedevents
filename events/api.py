@@ -619,6 +619,17 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             obj = EventLink(event=e, **link_ser.validated_data)
             obj.save()
 
+        # silly hack to keep the redundant (?) `headline` field in sync with
+        # the `name` field... if `headline` is not set, we make it match
+        # `name`.
+        #
+        # TODO: review with actual end users
+        languages = [x[0] for x in settings.LANGUAGES]
+        for lang in languages:
+            HEADLINE, NAME =  'headline_%s' % lang, 'name_%s' % lang
+            if not getattr(e, HEADLINE, None):
+                setattr(e, HEADLINE, getattr(e, NAME))
+
         return e
 
     def update(self, instance, validated_data):
@@ -631,6 +642,20 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             for lang in languages:
                 update_fields.append(field + '_' + lang)
 
+        # silly hack to keep the redundant (?) `headline` field in sync with
+        # the `name` field... if `name` is changed, we also update `headline`
+        # to match `name`.
+        #
+        # TODO: review with actual end users
+        for lang in languages:
+            HEADLINE, NAME = 'headline_%s' % lang, 'name_%s' % lang
+            a, b = (
+                getattr(instance, NAME, None),
+                validated_data.get(NAME, None)
+            )
+            if a != b:
+                validated_data[HEADLINE] = validated_data.get(NAME, None)
+
         for field in update_fields:
             orig_value = getattr(instance, field)
             new_value = validated_data.get(field, orig_value)
@@ -638,6 +663,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
         if instance.end_time:
             instance.has_end_time = True
+
 
         instance.save()
 
