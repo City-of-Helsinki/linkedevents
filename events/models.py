@@ -108,7 +108,7 @@ class BaseModel(models.Model):
 
 
 class Organization(BaseModel):
-    pass
+    admin_users = models.ManyToManyField(User, blank=True)
 
 
 class Language(models.Model):
