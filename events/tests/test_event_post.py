@@ -21,6 +21,9 @@ def create_with_post(api_client, event_data):
 # === tests ===
 
 @pytest.mark.django_db
-def test__create_a_minimal_event_with_post(api_client, minimal_event_dict):
+def test__create_a_minimal_event_with_post(api_client,
+                                           minimal_event_dict,
+                                           user):
+    api_client.force_authenticate(user=user)
     response = create_with_post(api_client, minimal_event_dict)
     assert_event_data_is_equal(minimal_event_dict, response.data)
