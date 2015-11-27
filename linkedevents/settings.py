@@ -150,7 +150,7 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ),
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'helevents.auth.JWTAuthentication',
+        'helusers.jwt.JWTAuthentication',
     ),
 
 }
