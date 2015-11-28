@@ -13,7 +13,7 @@ def create_with_post(api_client, event_data):
 
     # double-check with get
     resp2 = api_client.get(response.data['@id'])
-    assert response.status_code == 200, str(response.content)
+    assert resp2.status_code == 200, str(response.content)
 
     return resp2
 

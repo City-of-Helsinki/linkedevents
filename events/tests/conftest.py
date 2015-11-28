@@ -35,9 +35,12 @@ def organization(data_source):
 @pytest.fixture
 def minimal_event_dict(data_source, organization):
     return {
-        "data_source": data_source.id,
-        "publisher": organization.id,
-        "name": {"fi": 'minimal_event'}
+        'data_source': data_source.id,
+        'publisher': organization.id,
+        'name': {'fi': 'minimal_event'},
+        'event_status': 'EventScheduled',
+        'external_links': [],
+        'offers': [],
     }
 
 

@@ -1,32 +1,50 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-from datetime import datetime, timedelta
-import re
-import urllib.parse
 
+# python
+import base64
+import re
+import struct
+import time
+import urllib.parse
+from datetime import datetime, timedelta
+from dateutil.parser import parse as dateutil_parse
+
+# django and drf
 from django.utils import translation
 from django.core.exceptions import ValidationError
+from django.conf import settings
 from django.core.urlresolvers import NoReverseMatch
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
-from isodate import Duration, duration_isoformat, parse_duration
-from rest_framework import serializers, relations, viewsets, filters, generics
+from django.utils.translation import ugettext_lazy as _
+from rest_framework import (
+    serializers, relations, viewsets, filters, generics, status
+)
+from rest_framework.settings import api_settings
 from rest_framework.reverse import reverse
 from rest_framework.response import Response
 from rest_framework.exceptions import ParseError
-from events.models import Place, Event, Keyword, Language, OpeningHoursSpecification, EventLink, Offer
-from django.conf import settings
-from events import utils
-from events.custom_elasticsearch_search_backend import CustomEsSearchQuerySet as SearchQuerySet
-from events.translation import EventTranslationOptions
+
+# 3rd party
+from isodate import Duration, duration_isoformat, parse_duration
 from modeltranslation.translator import translator, NotRegistered
-from django.utils.translation import ugettext_lazy as _
-from dateutil.parser import parse as dateutil_parse
 from haystack.query import AutoQuery
-
-from munigeo.api import GeoModelSerializer, GeoModelAPIView, build_bbox_filter, srid_to_srs
-
+from munigeo.api import (
+    GeoModelSerializer, GeoModelAPIView, build_bbox_filter, srid_to_srs
+)
 import pytz
+
+# events
+from events import utils
+from events.custom_elasticsearch_search_backend import (
+    CustomEsSearchQuerySet as SearchQuerySet
+)
+from events.models import (
+    Place, Event, Keyword, Language, OpeningHoursSpecification, EventLink,
+    Offer, DataSource, Organization 
+)
+from events.translation import EventTranslationOptions
 
 
 serializers_by_model = {}
@@ -62,6 +80,21 @@ def urlquote_id(link):
             parts[-2] = urllib.parse.quote(parts[-2])
             link = '/'.join(parts)
     return link
+
+
+def generate_id(namespace):
+    t = time.time() * 1000
+    postfix = base64.b32encode(struct.pack(">Q", int(t)).lstrip(b'\x00'))
+    postfix = postfix.strip(b'=').lower().decode(encoding='UTF-8')
+    return '{}:{}'.format(namespace, postfix)
+
+
+def perform_id_magic_for(data):
+    if 'id' in data:
+        err = "Do not send 'id' when POSTing a new Event (got id='{}')"
+        raise ParseError(err.format(data['id']))
+    data['id'] = generate_id(data.get('data_source') or 'linkedevents')
+    return data
 
 
 class JSONLDRelatedField(relations.HyperlinkedRelatedField):
@@ -202,6 +235,56 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
             return ret
         return self.translated_fields_to_representation(obj, ret)
 
+    def to_internal_value(self, data):
+        """
+        Convert complex translated json objects to flat format.
+        E.g. json structure containing `name` key like this:
+        {
+            "name": {
+                "fi": "musiikkiklubit",
+                "sv": "musikklubbar",
+                "en": "music clubs"
+            },
+            ...
+        }
+        Transforms this:
+        {
+            "name": "musiikkiklubit",
+            "name_fi": "musiikkiklubit",
+            "name_sv": "musikklubbar",
+            "name_en": "music clubs"
+            ...
+        }
+        :param data:
+        :return:
+        """
+        lang = settings.LANGUAGES[0][0]
+        for field_name in self.translated_fields:
+            # FIXME: handle default lang like others!?
+            lang = settings.LANGUAGES[0][0]  # Handle default lang
+            if data.get(field_name, None) is None:
+                continue
+            values = data[field_name].copy()  # Save original values
+
+            key = "%s_%s" % (field_name, lang)
+            val = data[field_name].get(lang)
+            if val:
+                values[key] = val  # field_name_LANG
+                values[field_name] = val  # field_name
+            if lang in values:
+                del values[lang]  # Remove original key LANG
+            for lang in [x[0] for x in settings.LANGUAGES[1:]]:
+                key = "%s_%s" % (field_name, lang)
+                val = data[field_name].get(lang)
+                if val:
+                    values[key] = val  # field_name_LANG
+                    values[field_name] = val  # field_name
+                if lang in values:
+                    del values[lang]  # Remove original key LANG
+            data.update(values)
+            del data[field_name]  # Remove original field_name from data
+        return data
+
     def translated_fields_to_representation(self, obj, ret):
         for field_name in self.translated_fields:
             d = {}
@@ -245,7 +328,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         serializers
     """
 
-    def __init__(self, instance=None, data=None, files=None,
+    def __init__(self, instance=None, files=None,
                  context=None, partial=False, many=None,
                  allow_add_remove=False, hide_ld_context=False, **kwargs):
         super(LinkedEventsSerializer, self).__init__(
@@ -270,7 +353,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         self.hide_ld_context = hide_ld_context
 
         self.disable_camelcase = True
-        if 'request' in self.context:
+        if self.context and 'request' in self.context:
             request = self.context['request']
             if 'disable_camelcase' in request.QUERY_PARAMS:
                 self.disable_camelcase = True
@@ -475,6 +558,38 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         self.skip_empties = skip_empties
         self.skip_fields = skip_fields
 
+    def get_status(self, data):
+        status = data.get('event_status')
+        assert status == 'EventScheduled'
+        # TODO, add support for other operations
+
+        get_id = lambda name: \
+            dict((name, id) for id, name in Event.STATUSES)[name]
+
+        data['event_status'] = get_id(status)
+
+        return data
+
+    def to_internal_value(self, data):
+        super().to_internal_value(data)
+
+        data['data_source'] = DataSource.objects.get(id=data['data_source'])
+        data['publisher'] = Organization.objects.get(id=data['publisher'])
+
+        data = self.get_status(data)
+
+        return data
+
+    def create(self, validated_data):
+        d = validated_data  # alias
+
+        # tba
+        d.pop('offers')
+        d.pop('external_links')
+
+        # save
+        return super().create(d)
+
     def to_representation(self, obj):
         ret = super(EventSerializer, self).to_representation(obj)
         if 'start_time' in ret and not obj.has_start_time:
@@ -666,7 +781,7 @@ def _filter_event_queryset(queryset, params, srs=None):
     return queryset
 
 
-class EventViewSet(JSONAPIViewSet):
+class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
     """
     # Filtering retrieved events
 
@@ -753,6 +868,22 @@ class EventViewSet(JSONAPIViewSet):
         queryset = _filter_event_queryset(queryset, self.request.QUERY_PARAMS,
                                           srs=self.srs)
         return queryset
+
+
+    def create(self, request, *args, **kwargs):
+        data = perform_id_magic_for(request.data)
+
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+
+        self.perform_create(serializer)
+
+        return Response(
+            serializer.data,
+            status=status.HTTP_201_CREATED,
+            headers=self.get_success_headers(serializer.data)
+        )
+
 
 register_view(EventViewSet, 'event')
 
