@@ -88,6 +88,18 @@ def generate_id(namespace):
     postfix = postfix.strip(b'=').lower().decode(encoding='UTF-8')
     return '{}:{}'.format(namespace, postfix)
 
+def parse_id_from_uri(uri):
+    """
+    Parse id part from @id uri like
+    'http://127.0.0.1:8000/v0.1/event/matko%3A666/' -> 'matko:666'
+    :param uri: str
+    :return: str id
+    """
+    assert(uri.startswith('http'))
+    path = urllib.parse.urlparse(uri).path
+    _id = path.rstrip('/').split('/')[-1]
+    _id = urllib.parse.unquote(_id)
+    return _id
 
 def perform_id_magic_for(data):
     if 'id' in data:
@@ -526,7 +538,7 @@ class EventLinkSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = EventLink
-        exclude = ['id']
+        exclude = ['id', 'event']
 
 class OfferSerializer(TranslatedModelSerializer):
     class Meta:
@@ -558,6 +570,23 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         self.skip_empties = skip_empties
         self.skip_fields = skip_fields
 
+    def validate(self, data):
+        super().validate(data)
+
+        # validate offers
+        for offer in data.get('offers', []):
+            off_ser = OfferSerializer(data=offer)
+            if not off_ser.is_valid():
+                raise ValidationError('Invalid offer [%s].' % offer)
+
+        # validate external links
+        for link in data.get('external_links', []):
+            link_ser = EventLinkSerializer(data=link)
+            if not link_ser.is_valid():
+                raise ValidationError('Invalid external link [%s].' % link)
+
+        return data 
+
     def get_status(self, data):
         status = data.get('event_status')
         assert status == 'EventScheduled'
@@ -570,25 +599,87 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
         return data
 
+    def get_location(self, data):
+        """
+        Replace location id dict in data with a Place object
+        """
+        location = data.get('location')
+        if location and '@id' in location:
+            location_id = parse_id_from_uri(location['@id'])
+            try:
+                data['location'] = Place.objects.get(id=location_id)
+            except Place.DoesNotExist:
+                err = 'Place with id {} does not exist'
+                raise ParseError(err.format(location_id))
+        return data
+
+    def get_keywords(self, data):
+        """
+        Replace list of keyword dicts in data with a list of Keyword objects
+        """
+        new_kw = []
+
+        for kw in data.get('keywords', []):
+
+            if '@id' in kw:
+                kw_id = parse_id_from_uri(kw['@id'])
+
+                try:
+                    keyword = Keyword.objects.get(id=kw_id)
+                except Keyword.DoesNotExist:
+                    err = 'Keyword with id {} does not exist'
+                    raise ParseError(err.format(kw_id))
+
+                new_kw.append(keyword)
+
+        data['keywords'] = new_kw
+        return data
+
+    def get_datetimes(self, data):
+        for field in ['date_published', 'start_time', 'end_time']:
+            val = data.get(field, None)
+            if val:
+                if isinstance(val, str):
+                    data[field] = parse_time(val, True)
+        return data
+
     def to_internal_value(self, data):
         super().to_internal_value(data)
 
         data['data_source'] = DataSource.objects.get(id=data['data_source'])
         data['publisher'] = Organization.objects.get(id=data['publisher'])
 
+        data = self.get_location(data)
         data = self.get_status(data)
+        data = self.get_keywords(data)
+        data = self.get_datetimes(data)
 
         return data
 
     def create(self, validated_data):
-        d = validated_data  # alias
+        offers = validated_data.pop('offers', [])
+        links = validated_data.pop('external_links', [])
+        keywords = validated_data.pop('keywords')
 
-        # tba
-        d.pop('offers')
-        d.pop('external_links')
+        e = Event.objects.create(**validated_data)
 
-        # save
-        return super().create(d)
+        e.keywords.add(*keywords)
+
+        # create offers (should be validated already in `validate` method)
+        for offer in offers:
+            off_ser = OfferSerializer(data=offer)
+            assert(off_ser.is_valid())
+            obj = Offer(event=e, **off_ser.validated_data)
+            obj.save()
+
+        # create ext links (should be validated already in `validate` method)
+        for link in links:
+            link_ser = EventLinkSerializer(data=link)
+            assert(link_ser.is_valid())
+            obj = EventLink(event=e, **link_ser.validated_data)
+            obj.save()
+
+        return e
 
     def to_representation(self, obj):
         ret = super(EventSerializer, self).to_representation(obj)

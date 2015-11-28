@@ -27,3 +27,12 @@ def test__create_a_minimal_event_with_post(api_client,
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, minimal_event_dict)
     assert_event_data_is_equal(minimal_event_dict, response.data)
+
+
+@pytest.mark.django_db
+def test__create_a_complex_event_with_post(api_client,
+                                           complex_event_dict,
+                                           user):
+    api_client.force_authenticate(user=user)
+    response = create_with_post(api_client, complex_event_dict)
+    assert_event_data_is_equal(complex_event_dict, response.data)
