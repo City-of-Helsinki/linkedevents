@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from dateutil.parser import parse as dateutil_parse
 
 # django and drf
+from django.contrib.auth import get_user_model
 from django.utils import translation
 from django.core.exceptions import ValidationError
 from django.conf import settings
@@ -45,6 +46,9 @@ from events.models import (
     Offer, DataSource, Organization 
 )
 from events.translation import EventTranslationOptions
+
+
+SYSTEM_DATA_SOURCE_ID = 'system'
 
 
 serializers_by_model = {}
@@ -105,7 +109,7 @@ def perform_id_magic_for(data):
     if 'id' in data:
         err = "Do not send 'id' when POSTing a new Event (got id='{}')"
         raise ParseError(err.format(data['id']))
-    data['id'] = generate_id(data.get('data_source') or 'linkedevents')
+    data['id'] = generate_id(data['data_source'])
     return data
 
 
@@ -588,8 +592,9 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         return data 
 
     def get_status(self, data):
-        status = data.get('event_status')
-        assert status == 'EventScheduled'
+        status = data.get('event_status', 'EventScheduled')
+        assert status == 'EventScheduled', \
+            'Invalid event status "%s".' % status
         # TODO, add support for other operations
 
         get_id = lambda name: \
@@ -961,14 +966,41 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
         return queryset
 
 
-    def create(self, request, *args, **kwargs):
-        data = perform_id_magic_for(request.data)
+    def get_authorized_publisher(self, request, data):
+        user = request.user
 
+        # require user
+        assert user.is_authenticated(), 'User needs to be authenticated.'
+
+        # require permission to publish
+        objs = user.organizations.all()
+        assert objs, 'User needs to be authorized to publish events.'
+        assert objs.count() == 1, (
+            'User is connected to multiple organizations. This is currently '
+            'not supported.'
+        )
+
+        # pick publisher
+        data['publisher'] = objs.first().id
+        return data
+
+    def create(self, request, *args, **kwargs):
+        data = request.data
+
+        # all events created by api are marked coming from the system data
+        # source
+        data['data_source'] = SYSTEM_DATA_SOURCE_ID
+
+        # get publisher from the auth user
+        data = self.get_authorized_publisher(request, data)
+
+        # generate event id
+        data = perform_id_magic_for(data)
+
+        # then do the usual stuff defined in `rest_framework.CreateModelMixin`
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
-
         self.perform_create(serializer)
-
         return Response(
             serializer.data,
             status=status.HTTP_201_CREATED,
