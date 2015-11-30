@@ -27,6 +27,7 @@ from rest_framework.reverse import reverse
 from rest_framework.response import Response
 from rest_framework.exceptions import ParseError
 
+
 # 3rd party
 from isodate import Duration, duration_isoformat, parse_duration
 from modeltranslation.translator import translator, NotRegistered
@@ -299,6 +300,10 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
                     del values[lang]  # Remove original key LANG
             data.update(values)
             del data[field_name]  # Remove original field_name from data
+
+        # do remember to call the super class method as well!
+        data.update(super().to_internal_value(data))
+
         return data
 
     def translated_fields_to_representation(self, obj, ret):
@@ -549,6 +554,7 @@ class OfferSerializer(TranslatedModelSerializer):
         model = Offer
         exclude = ['id', 'event']
 
+
 class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     location = JSONLDRelatedField(serializer=PlaceSerializer, required=False,
                                   view_name='place-detail', read_only=True)
@@ -573,36 +579,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         # testing and debugging.
         self.skip_empties = skip_empties
         self.skip_fields = skip_fields
-
-    def validate(self, data):
-        super().validate(data)
-
-        # validate offers
-        for offer in data.get('offers', []):
-            off_ser = OfferSerializer(data=offer)
-            if not off_ser.is_valid():
-                raise ValidationError('Invalid offer [%s].' % offer)
-
-        # validate external links
-        for link in data.get('external_links', []):
-            link_ser = EventLinkSerializer(data=link)
-            if not link_ser.is_valid():
-                raise ValidationError('Invalid external link [%s].' % link)
-
-        return data 
-
-    def get_status(self, data):
-        status = data.get('event_status', 'EventScheduled')
-        assert status == 'EventScheduled', \
-            'Invalid event status "%s".' % status
-        # TODO, add support for other operations
-
-        get_id = lambda name: \
-            dict((name, id) for id, name in Event.STATUSES)[name]
-
-        data['event_status'] = get_id(status)
-
-        return data
 
     def get_location(self, data):
         """
@@ -649,40 +625,32 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         return data
 
     def to_internal_value(self, data):
-        super().to_internal_value(data)
+        data = super().to_internal_value(data)
 
-        data['data_source'] = DataSource.objects.get(id=data['data_source'])
-        data['publisher'] = Organization.objects.get(id=data['publisher'])
+        # TODO: figure out how to get this via JSONLDRelatedField
+        if 'location' in data:
+            location_id = parse_id_from_uri(data['location']['@id'])
+            data['location'] = Place.objects.get(id=location_id)
 
-        data = self.get_location(data)
-        data = self.get_status(data)
+        # TODO: figure out how to get these via JSONLDRelatedField
         data = self.get_keywords(data)
-        data = self.get_datetimes(data)
 
         return data
 
     def create(self, validated_data):
         offers = validated_data.pop('offers', [])
         links = validated_data.pop('external_links', [])
-        keywords = validated_data.pop('keywords')
+        keywords = validated_data.pop('keywords', [])
 
+        # create object
         e = Event.objects.create(**validated_data)
 
-        e.keywords.add(*keywords)
-
-        # create offers (should be validated already in `validate` method)
+        # create and add related objects 
         for offer in offers:
-            off_ser = OfferSerializer(data=offer)
-            assert(off_ser.is_valid())
-            obj = Offer(event=e, **off_ser.validated_data)
-            obj.save()
-
-        # create ext links (should be validated already in `validate` method)
+            Offer.objects.create(event=e, **offer)
         for link in links:
-            link_ser = EventLinkSerializer(data=link)
-            assert(link_ser.is_valid())
-            obj = EventLink(event=e, **link_ser.validated_data)
-            obj.save()
+            obj = EventLink.objects.create(event=e, **link)
+        e.keywords.add(*keywords)
 
         return e
 
@@ -1000,7 +968,9 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
         # then do the usual stuff defined in `rest_framework.CreateModelMixin`
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
+
         self.perform_create(serializer)
+
         return Response(
             serializer.data,
             status=status.HTTP_201_CREATED,
