@@ -108,7 +108,9 @@ class BaseModel(models.Model):
 
 
 class Organization(BaseModel):
-    admin_users = models.ManyToManyField(User, blank=True)
+    admin_users = models.ManyToManyField(
+        User, blank=True, related_name='organizations'
+    )
 
 
 class Language(models.Model):

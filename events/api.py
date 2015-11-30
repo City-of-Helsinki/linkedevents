@@ -1,32 +1,55 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-from datetime import datetime, timedelta
-import re
-import urllib.parse
 
+# python
+import base64
+import re
+import struct
+import time
+import urllib.parse
+from datetime import datetime, timedelta
+from dateutil.parser import parse as dateutil_parse
+
+# django and drf
+from django.contrib.auth import get_user_model
 from django.utils import translation
 from django.core.exceptions import ValidationError
+from django.conf import settings
 from django.core.urlresolvers import NoReverseMatch
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
-from isodate import Duration, duration_isoformat, parse_duration
-from rest_framework import serializers, relations, viewsets, filters, generics
+from django.utils.translation import ugettext_lazy as _
+from rest_framework import (
+    serializers, relations, viewsets, filters, generics, status
+)
+from rest_framework.settings import api_settings
 from rest_framework.reverse import reverse
 from rest_framework.response import Response
 from rest_framework.exceptions import ParseError
-from events.models import Place, Event, Keyword, Language, OpeningHoursSpecification, EventLink, Offer
-from django.conf import settings
-from events import utils
-from events.custom_elasticsearch_search_backend import CustomEsSearchQuerySet as SearchQuerySet
-from events.translation import EventTranslationOptions
+
+
+# 3rd party
+from isodate import Duration, duration_isoformat, parse_duration
 from modeltranslation.translator import translator, NotRegistered
-from django.utils.translation import ugettext_lazy as _
-from dateutil.parser import parse as dateutil_parse
 from haystack.query import AutoQuery
-
-from munigeo.api import GeoModelSerializer, GeoModelAPIView, build_bbox_filter, srid_to_srs
-
+from munigeo.api import (
+    GeoModelSerializer, GeoModelAPIView, build_bbox_filter, srid_to_srs
+)
 import pytz
+
+# events
+from events import utils
+from events.custom_elasticsearch_search_backend import (
+    CustomEsSearchQuerySet as SearchQuerySet
+)
+from events.models import (
+    Place, Event, Keyword, Language, OpeningHoursSpecification, EventLink,
+    Offer, DataSource, Organization 
+)
+from events.translation import EventTranslationOptions
+
+
+SYSTEM_DATA_SOURCE_ID = 'system'
 
 
 serializers_by_model = {}
@@ -62,6 +85,33 @@ def urlquote_id(link):
             parts[-2] = urllib.parse.quote(parts[-2])
             link = '/'.join(parts)
     return link
+
+
+def generate_id(namespace):
+    t = time.time() * 1000
+    postfix = base64.b32encode(struct.pack(">Q", int(t)).lstrip(b'\x00'))
+    postfix = postfix.strip(b'=').lower().decode(encoding='UTF-8')
+    return '{}:{}'.format(namespace, postfix)
+
+def parse_id_from_uri(uri):
+    """
+    Parse id part from @id uri like
+    'http://127.0.0.1:8000/v0.1/event/matko%3A666/' -> 'matko:666'
+    :param uri: str
+    :return: str id
+    """
+    assert(uri.startswith('http'))
+    path = urllib.parse.urlparse(uri).path
+    _id = path.rstrip('/').split('/')[-1]
+    _id = urllib.parse.unquote(_id)
+    return _id
+
+def perform_id_magic_for(data):
+    if 'id' in data:
+        err = "Do not send 'id' when POSTing a new Event (got id='{}')"
+        raise ParseError(err.format(data['id']))
+    data['id'] = generate_id(data['data_source'])
+    return data
 
 
 class JSONLDRelatedField(relations.HyperlinkedRelatedField):
@@ -202,6 +252,60 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
             return ret
         return self.translated_fields_to_representation(obj, ret)
 
+    def to_internal_value(self, data):
+        """
+        Convert complex translated json objects to flat format.
+        E.g. json structure containing `name` key like this:
+        {
+            "name": {
+                "fi": "musiikkiklubit",
+                "sv": "musikklubbar",
+                "en": "music clubs"
+            },
+            ...
+        }
+        Transforms this:
+        {
+            "name": "musiikkiklubit",
+            "name_fi": "musiikkiklubit",
+            "name_sv": "musikklubbar",
+            "name_en": "music clubs"
+            ...
+        }
+        :param data:
+        :return:
+        """
+        lang = settings.LANGUAGES[0][0]
+        for field_name in self.translated_fields:
+            # FIXME: handle default lang like others!?
+            lang = settings.LANGUAGES[0][0]  # Handle default lang
+            if data.get(field_name, None) is None:
+                continue
+            values = data[field_name].copy()  # Save original values
+
+            key = "%s_%s" % (field_name, lang)
+            val = data[field_name].get(lang)
+            if val:
+                values[key] = val  # field_name_LANG
+                values[field_name] = val  # field_name
+            if lang in values:
+                del values[lang]  # Remove original key LANG
+            for lang in [x[0] for x in settings.LANGUAGES[1:]]:
+                key = "%s_%s" % (field_name, lang)
+                val = data[field_name].get(lang)
+                if val:
+                    values[key] = val  # field_name_LANG
+                    values[field_name] = val  # field_name
+                if lang in values:
+                    del values[lang]  # Remove original key LANG
+            data.update(values)
+            del data[field_name]  # Remove original field_name from data
+
+        # do remember to call the super class method as well!
+        data.update(super().to_internal_value(data))
+
+        return data
+
     def translated_fields_to_representation(self, obj, ret):
         for field_name in self.translated_fields:
             d = {}
@@ -245,7 +349,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         serializers
     """
 
-    def __init__(self, instance=None, data=None, files=None,
+    def __init__(self, instance=None, files=None,
                  context=None, partial=False, many=None,
                  allow_add_remove=False, hide_ld_context=False, **kwargs):
         super(LinkedEventsSerializer, self).__init__(
@@ -270,7 +374,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         self.hide_ld_context = hide_ld_context
 
         self.disable_camelcase = True
-        if 'request' in self.context:
+        if self.context and 'request' in self.context:
             request = self.context['request']
             if 'disable_camelcase' in request.QUERY_PARAMS:
                 self.disable_camelcase = True
@@ -443,12 +547,13 @@ class EventLinkSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = EventLink
-        exclude = ['id']
+        exclude = ['id', 'event']
 
 class OfferSerializer(TranslatedModelSerializer):
     class Meta:
         model = Offer
         exclude = ['id', 'event']
+
 
 class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     location = JSONLDRelatedField(serializer=PlaceSerializer, required=False,
@@ -474,6 +579,80 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         # testing and debugging.
         self.skip_empties = skip_empties
         self.skip_fields = skip_fields
+
+    def get_location(self, data):
+        """
+        Replace location id dict in data with a Place object
+        """
+        location = data.get('location')
+        if location and '@id' in location:
+            location_id = parse_id_from_uri(location['@id'])
+            try:
+                data['location'] = Place.objects.get(id=location_id)
+            except Place.DoesNotExist:
+                err = 'Place with id {} does not exist'
+                raise ParseError(err.format(location_id))
+        return data
+
+    def get_keywords(self, data):
+        """
+        Replace list of keyword dicts in data with a list of Keyword objects
+        """
+        new_kw = []
+
+        for kw in data.get('keywords', []):
+
+            if '@id' in kw:
+                kw_id = parse_id_from_uri(kw['@id'])
+
+                try:
+                    keyword = Keyword.objects.get(id=kw_id)
+                except Keyword.DoesNotExist:
+                    err = 'Keyword with id {} does not exist'
+                    raise ParseError(err.format(kw_id))
+
+                new_kw.append(keyword)
+
+        data['keywords'] = new_kw
+        return data
+
+    def get_datetimes(self, data):
+        for field in ['date_published', 'start_time', 'end_time']:
+            val = data.get(field, None)
+            if val:
+                if isinstance(val, str):
+                    data[field] = parse_time(val, True)
+        return data
+
+    def to_internal_value(self, data):
+        data = super().to_internal_value(data)
+
+        # TODO: figure out how to get this via JSONLDRelatedField
+        if 'location' in data:
+            location_id = parse_id_from_uri(data['location']['@id'])
+            data['location'] = Place.objects.get(id=location_id)
+
+        # TODO: figure out how to get these via JSONLDRelatedField
+        data = self.get_keywords(data)
+
+        return data
+
+    def create(self, validated_data):
+        offers = validated_data.pop('offers', [])
+        links = validated_data.pop('external_links', [])
+        keywords = validated_data.pop('keywords', [])
+
+        # create object
+        e = Event.objects.create(**validated_data)
+
+        # create and add related objects 
+        for offer in offers:
+            Offer.objects.create(event=e, **offer)
+        for link in links:
+            obj = EventLink.objects.create(event=e, **link)
+        e.keywords.add(*keywords)
+
+        return e
 
     def to_representation(self, obj):
         ret = super(EventSerializer, self).to_representation(obj)
@@ -666,7 +845,7 @@ def _filter_event_queryset(queryset, params, srs=None):
     return queryset
 
 
-class EventViewSet(JSONAPIViewSet):
+class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
     """
     # Filtering retrieved events
 
@@ -753,6 +932,51 @@ class EventViewSet(JSONAPIViewSet):
         queryset = _filter_event_queryset(queryset, self.request.QUERY_PARAMS,
                                           srs=self.srs)
         return queryset
+
+
+    def get_authorized_publisher(self, request, data):
+        user = request.user
+
+        # require user
+        assert user.is_authenticated(), 'User needs to be authenticated.'
+
+        # require permission to publish
+        objs = user.organizations.all()
+        assert objs, 'User needs to be authorized to publish events.'
+        assert objs.count() == 1, (
+            'User is connected to multiple organizations. This is currently '
+            'not supported.'
+        )
+
+        # pick publisher
+        data['publisher'] = objs.first().id
+        return data
+
+    def create(self, request, *args, **kwargs):
+        data = request.data
+
+        # all events created by api are marked coming from the system data
+        # source
+        data['data_source'] = SYSTEM_DATA_SOURCE_ID
+
+        # get publisher from the auth user
+        data = self.get_authorized_publisher(request, data)
+
+        # generate event id
+        data = perform_id_magic_for(data)
+
+        # then do the usual stuff defined in `rest_framework.CreateModelMixin`
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+
+        self.perform_create(serializer)
+
+        return Response(
+            serializer.data,
+            status=status.HTTP_201_CREATED,
+            headers=self.get_success_headers(serializer.data)
+        )
+
 
 register_view(EventViewSet, 'event')
 
