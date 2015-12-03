@@ -751,7 +751,9 @@ def parse_duration(duration):
     if not unit:
         unit = 's'
 
-    if unit == 'm':
+    if unit == 's':
+        mul = 1
+    elif unit == 'm':
         mul = 60
     elif unit == 'h':
         mul = 3600
