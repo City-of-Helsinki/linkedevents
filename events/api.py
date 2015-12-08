@@ -100,7 +100,8 @@ def parse_id_from_uri(uri):
     :param uri: str
     :return: str id
     """
-    assert(uri.startswith('http'))
+    if not uri.startswith('http'):
+        return uri
     path = urllib.parse.urlparse(uri).path
     _id = path.rstrip('/').split('/')[-1]
     _id = urllib.parse.unquote(_id)
@@ -649,10 +650,53 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         for offer in offers:
             Offer.objects.create(event=e, **offer)
         for link in links:
-            obj = EventLink.objects.create(event=e, **link)
+            EventLink.objects.create(event=e, **link)
         e.keywords.add(*keywords)
 
         return e
+
+    def update(self, instance, validated_data):
+
+        # prepare a list of fields to be updated
+        update_fields = [
+            'start_time', 'end_time', 'location'
+        ]
+
+        languages = [x[0] for x in settings.LANGUAGES]
+        for field in EventTranslationOptions.fields:
+            for lang in languages:
+                update_fields.append(field + '_' + lang)
+
+        # update values
+        for field in update_fields:
+            orig_value = getattr(instance, field)
+            new_value = validated_data.get(field, orig_value)
+            setattr(instance, field, new_value)
+
+        # also update `has_end_time` if needed
+        if instance.end_time:
+            instance.has_end_time = True
+
+        # save changes
+        instance.save()
+
+        # update offers
+        if 'offers' in validated_data:
+            instance.offers.all().delete()
+            for offer in validated_data.get('offers', []):
+                Offer.objects.create(event=instance, **offer)
+
+        # update ext links
+        if 'external_links' in validated_data:
+            instance.external_links.all().delete()
+            for link in validated_data.get('external_links', []):
+                EventLink.objects.create(event=instance, **link)
+
+        # update keywords
+        instance.keywords.clear() 
+        instance.keywords.add(*validated_data['keywords'])
+
+        return instance
 
     def to_representation(self, obj):
         ret = super(EventSerializer, self).to_representation(obj)
