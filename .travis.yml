@@ -3,6 +3,7 @@ python:
 - '3.4'
 env:
 - DJANGO=Django>=1.9
+sudo: false
 install:
 - pip install coveralls -r requirements.txt --use-mirrors
 before_script:

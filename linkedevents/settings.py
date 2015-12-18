@@ -174,58 +174,21 @@ CITYSDK_API_SETTINGS = {
     'DEFAULT_POI_CATEGORY': '53562f3238653c0a842a3bf7'
 }
 
-CUSTOM_MAPPINGS = {
-    'autosuggest': {
-        'search_analyzer': 'standard',
-        'index_analyzer': 'edgengram_analyzer',
-        'analyzer': None
+HAYSTACK_CONNECTIONS = {
+    'default': {
+        'ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
     },
-    'text': {
-        'analyzer': 'default'
+    'default-fi': {
+        'ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
+    },
+    'default-en': {
+        'ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
+    },
+    'default-sv': {
+        'ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
     }
 }
 
-HAYSTACK_CONNECTIONS = {
-    'default': {
-        'ENGINE': 'multilingual_haystack.backends.MultilingualSearchEngine',
-    },
-    'default-fi': {
-        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
-        'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
-        'URL': 'http://localhost:9200/',
-        'INDEX_NAME': 'linkedevents-fi',
-        'MAPPINGS': CUSTOM_MAPPINGS,
-        'SETTINGS': {
-            "analysis": {
-                "analyzer": {
-                    "default": {
-                        "tokenizer": "finnish",
-                        "filter": ["lowercase", "voikko_filter"]
-                    }
-                },
-                "filter": {
-                    "voikko_filter": {
-                        "type": "voikko",
-                    }
-                }
-            }
-        }
-    },
-    'default-sv': {
-        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
-        'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
-        'URL': 'http://localhost:9200/',
-        'INDEX_NAME': 'linkedevents-sv',
-        'MAPPINGS': CUSTOM_MAPPINGS
-    },
-    'default-en': {
-        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
-        'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
-        'URL': 'http://localhost:9200/',
-        'INDEX_NAME': 'linkedevents-en',
-        'MAPPINGS': CUSTOM_MAPPINGS
-    },
-}
 
 JWT_AUTH = {
     'JWT_PAYLOAD_GET_USER_ID_HANDLER': 'helusers.jwt.get_user_id_from_payload_handler',
