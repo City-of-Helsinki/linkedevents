@@ -1,5 +1,8 @@
 # Linked events
 
+[![Build status](https://travis-ci.org/City-of-Helsinki/linkedevents.svg)](https://travis-ci.org/City-of-Helsinki/linkedevents)
+![requires.io](https://requires.io/github/City-of-Helsinki/linkedevents/requirements.svg?branch=master)
+
 REST JSON API
 
 Installation
