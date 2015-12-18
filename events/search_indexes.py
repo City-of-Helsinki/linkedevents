@@ -16,5 +16,6 @@ class EventIndex(indexes.SearchIndex, indexes.Indexable):
 
     def prepare(self, obj):
         #obj.lang_keywords = obj.keywords.filter(language=get_language())
-        obj.description = strip_tags(obj.description)
+        if obj.description:
+            obj.description = strip_tags(obj.description)
         return super(EventIndex, self).prepare(obj)

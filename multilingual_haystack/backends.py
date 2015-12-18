@@ -10,7 +10,7 @@ from haystack.utils.loading import load_backend
 
 class MultilingualSearchBackend(BaseSearchBackend):
     def update(self, index, iterable, commit=True):
-        initial_language = translation.get_language()[:2]
+        initial_language = translation.get_language()
         # retrieve unique backend name
         backends = []
         for language, _ in settings.LANGUAGES:
@@ -24,7 +24,11 @@ class MultilingualSearchBackend(BaseSearchBackend):
             backend = connections[using].get_backend()
             backend.parent_class.update(backend, index, iterable, commit)
 
-        translation.activate(initial_language)
+        if initial_language is not None:
+            translation.activate(initial_language)
+        else:
+            translation.deactivate()
+
     def clear(self, **kwargs):
         return
 

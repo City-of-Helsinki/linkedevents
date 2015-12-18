@@ -6,6 +6,8 @@ from rest_framework import pagination
 # This needs to be in its own file because of circular
 # imports.
 class CustomPagination(pagination.PageNumberPagination):
+    max_page_size = 100
+    page_size_query_param = 'page_size'
 
     def get_paginated_response(self, data):
         meta = OrderedDict([

@@ -66,3 +66,65 @@ and run 'pip uninstall <NAME-OF-DEPENDENCY>'.
 Important! After all changes, verify & test them, then run
 'pip freeze -lr plain-requirements.txt >requirements.txt'.
 Commit the changes.
+
+
+Search
+------
+
+For Elasticsearch-based searching we're using the following configuration.
+Place it in your `local_settings.py`:
+
+```python
+CUSTOM_MAPPINGS = {
+    'autosuggest': {
+        'search_analyzer': 'standard',
+        'index_analyzer': 'edgengram_analyzer',
+        'analyzer': None
+    },
+    'text': {
+        'analyzer': 'default'
+    }
+}
+
+HAYSTACK_CONNECTIONS = {
+    'default': {
+        'ENGINE': 'multilingual_haystack.backends.MultilingualSearchEngine',
+    },
+    'default-fi': {
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
+        'URL': 'http://localhost:9200/',
+        'INDEX_NAME': 'linkedevents-fi',
+        'MAPPINGS': CUSTOM_MAPPINGS,
+        'SETTINGS': {
+            "analysis": {
+                "analyzer": {
+                    "default": {
+                        "tokenizer": "finnish",
+                        "filter": ["lowercase", "voikko_filter"]
+                    }
+                },
+                "filter": {
+                    "voikko_filter": {
+                        "type": "voikko",
+                    }
+                }
+            }
+        }
+    },
+    'default-sv': {
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
+        'URL': 'http://localhost:9200/',
+        'INDEX_NAME': 'linkedevents-sv',
+        'MAPPINGS': CUSTOM_MAPPINGS
+    },
+    'default-en': {
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
+        'URL': 'http://localhost:9200/',
+        'INDEX_NAME': 'linkedevents-en',
+        'MAPPINGS': CUSTOM_MAPPINGS
+    },
+}
+```

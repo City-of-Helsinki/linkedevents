@@ -1,31 +1,24 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# django
 from django.conf import settings
 from django.test import TestCase
 from django.test.utils import override_settings
-
-# 3rd party
 import haystack
 from haystack.management.commands import rebuild_index, clear_index
 from rest_framework.test import APIClient
 
-# this app
-from events.models import Event
+from ..models import Event
 
-# this package
-from events.tests.common import TestDataMixin
+from .common import TestDataMixin
 
 
-TEST_INDEX = settings.HAYSTACK_CONNECTIONS
-TEST_INDEX['default']['INDEX_NAME'] = 'test_index'
-TEST_INDEX['default-fi']['INDEX_NAME'] = 'test_index-fi'
-TEST_INDEX['default-sv']['INDEX_NAME'] = 'test_index-sv'
-TEST_INDEX['default-en']['INDEX_NAME'] = 'test_index-en'
+# Make sure we don't overwrite our main indices
+for key, val in settings.HAYSTACK_CONNECTIONS.items():
+    if 'INDEX_NAME' in val:
+        val['INDEX_NAME'] = 'test_%s' % val['INDEX_NAME']
 
 
-@override_settings(HAYSTACK_CONNECTIONS=TEST_INDEX)
 class EventSearchTests(TestCase, TestDataMixin):
 
     def setUp(self):

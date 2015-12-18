@@ -12,7 +12,7 @@ from rest_framework.test import APIClient
 
 # events 
 from events.models import (
-    DataSource, Organization, Place, Language, Keyword, KeywordLabel
+    DataSource, Organization, Place, Language, Keyword, KeywordLabel, Event
 )
 from events.api import (
     KeywordSerializer, PlaceSerializer, SYSTEM_DATA_SOURCE_ID
@@ -75,8 +75,17 @@ def minimal_event_dict(data_source, organization):
 def place(data_source, organization):
     return Place.objects.create(
         id='test location',
-         data_source=data_source,
-         publisher=organization
+        data_source=data_source,
+        publisher=organization
+    )
+
+
+@pytest.mark.django_db
+@pytest.fixture
+def event(place):
+    return Event.objects.create(
+        id='test_event', location=place,
+        data_source=place.data_source, publisher=place.publisher
     )
 
 
