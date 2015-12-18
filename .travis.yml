@@ -1,23 +1,19 @@
 language: python
-
 python:
-  - "2.7"
-
-addons:
-  postgresql: "9.3"
-
-before_script:
-  - psql -d template1 -c 'create extension hstore;' -U postgres
-  - psql -c 'create database linkedevents;' -U postgres
-  - psql -d linkedevents -c 'create extension postgis;' -U postgres
-  - psql -d linkedevents -c 'create extension postgis_topology;' -U postgres
-
-# command to install dependencies
+- '3.4'
+env:
+- DJANGO=Django>=1.9
 install:
-  - pip install -r requirements.txt
-  - pip install pep8
-
-# command to run tests
-script:
-  - pep8 --exclude=migrations --ignore=E501,E701 events
-  - python manage.py test
+- pip install coveralls -r requirements.txt --use-mirrors
+before_script:
+- psql template1 -c 'create extension hstore;'
+- psql template1 -c 'create extension postgis;'
+script: py.test resources
+addons:
+  postgresql: '9.4'
+services:
+  - elasticsearch
+notifications:
+  slack:
+    secure: Hxh7X9ckorBlD2MRiSh/TE6nC0kyEZrEmegx3FHQgwOm5tNCZcJUoJprmEXA82SMxlbl12XcNLhFZaeQd6Gt2AF5AvTjbJLsLZBRebbKA6We1dCSpyHSGXy+GGWRD0J1OYstk2jg5fWmsscusLZ0MFbybg8qwmsv7/LOG+QoX6M=
+after_success: coveralls
