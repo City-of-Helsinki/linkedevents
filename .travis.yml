@@ -8,7 +8,7 @@ install:
 before_script:
 - psql template1 -c 'create extension hstore;'
 - psql template1 -c 'create extension postgis;'
-script: py.test resources
+script: py.test
 addons:
   postgresql: '9.4'
 services:
