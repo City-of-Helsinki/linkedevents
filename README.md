@@ -2,8 +2,12 @@
 
 [![Build status](https://travis-ci.org/City-of-Helsinki/linkedevents.svg)](https://travis-ci.org/City-of-Helsinki/linkedevents)
 ![requires.io](https://requires.io/github/City-of-Helsinki/linkedevents/requirements.svg?branch=master)
+[![Stories in Ready](https://badge.waffle.io/City-of-Helsinki/linkedevents.svg?label=ready&title=Ready)](http://waffle.io/City-of-Helsinki/linkedevents)
 
-REST JSON API
+Linked Events provides categorized data on events and places. The project was originally developed for the City of Helsinki.
+
+[The Linked Events API for the Helsinki capital region](http://api.hel.fi/linkedevents/) contains data from the Helsinki City Tourist & Convention Bureau, the City of Helsinki Cultural Office and the Helmet metropolitan area public libraries.
+
 
 Installation
 ------------
