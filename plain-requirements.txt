@@ -1,7 +1,6 @@
 Django
 Markdown
 PyYAML
-South
 django-cors-headers
 django-filter
 django-modeltranslation
