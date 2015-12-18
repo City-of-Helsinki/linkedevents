@@ -1,0 +1,33 @@
+Django
+Markdown
+PyYAML
+South
+django-cors-headers
+django-filter
+django-modeltranslation
+git+https://github.com/django-mptt/django-mptt.git@0b4006d4014266f5a1017ec0f0a93736aec5ba46#egg=django-mptt
+django-reversion
+django-hstore
+djangorestframework
+djangorestframework-gis
+djangorestframework-jwt
+lxml
+isodate
+psycopg2
+pyflakes
+pylint
+python-dateutil
+pytz
+requests
+requests-cache
+six
+django-extensions
+rdflib
+-e git+https://github.com/City-of-Helsinki/munigeo#egg=django-munigeo
+icalendar
+httmock
+bleach
+django-haystack
+elasticsearch
+raven
+-e git+https://github.com/City-of-Helsinki/django-helusers#egg=django-helusers
