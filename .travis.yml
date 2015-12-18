@@ -1,6 +1,9 @@
 language: python
 python:
 - '3.4'
+cache:
+  directories:
+    - $HOME/.cache/pip
 env:
 - DJANGO=Django>=1.9
 sudo: false
