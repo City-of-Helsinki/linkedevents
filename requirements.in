@@ -3,7 +3,7 @@ Markdown
 PyYAML
 django-cors-headers
 django-filter
-django-modeltranslation
+django-modeltranslation>=0.11rc2
 -e git+https://github.com/django-mptt/django-mptt.git@0b4006d4014266f5a1017ec0f0a93736aec5ba46#egg=django-mptt
 django-reversion
 django-hstore
@@ -31,3 +31,4 @@ elasticsearch
 raven
 -e git+https://github.com/City-of-Helsinki/django-helusers#egg=django-helusers
 pytest-django
+pip-tools
