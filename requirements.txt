@@ -1,7 +1,6 @@
 Django==1.9
 Markdown==2.6.5
 PyYAML==3.11
-South==1.0.2
 django-cors-headers==1.1.0
 django-filter==0.11.0
 django-modeltranslation==0.11rc2
@@ -31,14 +30,16 @@ django-haystack==2.4.1
 elasticsearch==2.1.0
 raven==5.9.2
 -e git+https://github.com/City-of-Helsinki/django-helusers@94b0d3db73e76ba5387c7dc0db3c6315ccbbb079#egg=django_helusers-master
+pytest-django==2.9.1
 ## The following requirements were added by pip freeze:
 astroid==1.4.1
 colorama==0.3.5
 contextlib2==0.4.0
 html5lib==0.9999999
 lazy-object-proxy==1.2.1
+py==1.4.31
 PyJWT==1.4.0
 pyparsing==2.0.6
+pytest==2.8.5
 urllib3==1.13
-wheel==0.24.0
 wrapt==1.10.6
