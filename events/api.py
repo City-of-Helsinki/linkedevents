@@ -377,7 +377,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         self.disable_camelcase = True
         if self.context and 'request' in self.context:
             request = self.context['request']
-            if 'disable_camelcase' in request.QUERY_PARAMS:
+            if 'disable_camelcase' in request.query_params:
                 self.disable_camelcase = True
 
     def to_representation(self, obj):
@@ -425,8 +425,8 @@ def _clean_qp(query_params):
     """
     Strip 'event.' prefix from all query params.
     :rtype : QueryDict
-    :param query_params: dict self.request.QUERY_PARAMS
-    :return: QueryDict QUERY_PARAMS
+    :param query_params: dict self.request.query_params
+    :return: QueryDict query_params
     """
     query_params = query_params.copy()  # do not alter original dict
     nspace = 'event.'
@@ -461,22 +461,22 @@ class KeywordViewSet(viewsets.ReadOnlyModelViewSet):
         event.end
         """
         queryset = Keyword.objects.all()
-        if self.request.QUERY_PARAMS.get('show_all_keywords'):
+        if self.request.query_params.get('show_all_keywords'):
             # Limit by data_source anyway, if it is set
-            data_source = self.request.QUERY_PARAMS.get('data_source')
+            data_source = self.request.query_params.get('data_source')
             if data_source:
                 data_source = data_source.lower()
                 queryset = queryset.filter(data_source=data_source)
         else:
             events = Event.objects.all()
-            params = _clean_qp(self.request.QUERY_PARAMS)
+            params = _clean_qp(self.request.query_params)
             events = _filter_event_queryset(events, params)
             keyword_ids = events.values_list('keywords',
                                              flat=True).distinct().order_by()
             queryset = queryset.filter(id__in=keyword_ids)
         # Optionally filter keywords by filter parameter,
         # can be used e.g. with typeahead.js
-        val = self.request.QUERY_PARAMS.get('filter')
+        val = self.request.query_params.get('filter')
         if val:
             queryset = queryset.filter(name__startswith=val)
         return queryset
@@ -505,11 +505,11 @@ class PlaceViewSet(GeoModelAPIView, viewsets.ReadOnlyModelViewSet):
         event.end
         """
         queryset = Place.objects.all()
-        if self.request.QUERY_PARAMS.get('show_all_places'):
+        if self.request.query_params.get('show_all_places'):
             pass
         else:
             events = Event.objects.all()
-            params = _clean_qp(self.request.QUERY_PARAMS)
+            params = _clean_qp(self.request.query_params)
             events = _filter_event_queryset(events, params)
             location_ids = events.values_list('location_id',
                                               flat=True).distinct().order_by()
@@ -759,13 +759,13 @@ def parse_time(time_str, is_start):
 class JSONAPIViewSet(viewsets.ReadOnlyModelViewSet):
     def initial(self, request, *args, **kwargs):
         ret = super(JSONAPIViewSet, self).initial(request, *args, **kwargs)
-        self.srs = srid_to_srs(self.request.QUERY_PARAMS.get('srid', None))
+        self.srs = srid_to_srs(self.request.query_params.get('srid', None))
         return ret
 
     def get_serializer_context(self):
         context = super(JSONAPIViewSet, self).get_serializer_context()
 
-        include = self.request.QUERY_PARAMS.get('include', '')
+        include = self.request.query_params.get('include', '')
         context['include'] = [x.strip() for x in include.split(',') if x]
         context['srs'] = self.srs
 
@@ -815,7 +815,7 @@ def parse_duration_string(duration):
 def _filter_event_queryset(queryset, params, srs=None):
     """
     Filter events queryset by params
-    (e.g. self.request.QUERY_PARAMS in EventViewSet)
+    (e.g. self.request.query_params in EventViewSet)
     """
     # Filter by string (case insensitive). This searches from all fields
     # which are marked translatable in translation.py
@@ -977,11 +977,11 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
 
         queryset = super(EventViewSet, self).filter_queryset(queryset)
 
-        if 'show_all' not in self.request.QUERY_PARAMS:
+        if 'show_all' not in self.request.query_params:
             queryset = queryset.filter(
                 Q(event_status=Event.SCHEDULED)
             )
-        queryset = _filter_event_queryset(queryset, self.request.QUERY_PARAMS,
+        queryset = _filter_event_queryset(queryset, self.request.query_params,
                                           srs=self.srs)
         return queryset
 
@@ -1052,13 +1052,13 @@ class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView
         languages = [x[0] for x in settings.LANGUAGES]
 
         # If the incoming language is not specified, go with the default.
-        self.lang_code = request.QUERY_PARAMS.get('language', languages[0])
+        self.lang_code = request.query_params.get('language', languages[0])
         if self.lang_code not in languages:
             raise ParseError("Invalid language supplied. Supported languages: %s" %
                              ','.join(languages))
 
-        input_val = request.QUERY_PARAMS.get('input', '').strip()
-        q_val = request.QUERY_PARAMS.get('q', '').strip()
+        input_val = request.query_params.get('input', '').strip()
+        q_val = request.query_params.get('q', '').strip()
         if not input_val and not q_val:
             raise ParseError("Supply search terms with 'q=' or autocomplete entry with 'input='")
         if input_val and q_val:

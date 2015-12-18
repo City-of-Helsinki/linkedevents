@@ -20,10 +20,10 @@ attribute to change @context when need to define schemas for custom fields.
 import datetime
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.contrib.contenttypes.generic import GenericForeignKey
+from django.contrib.contenttypes.fields import GenericForeignKey
 import pytz
 from django.contrib.gis.db import models
-import reversion
+from reversion import revisions as reversion
 from django.utils.translation import ugettext_lazy as _
 from mptt.models import MPTTModel, TreeForeignKey
 from django.contrib.contenttypes.models import ContentType

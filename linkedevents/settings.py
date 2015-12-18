@@ -126,7 +126,7 @@ STATICFILES_DIRS = (
 )
 
 REST_FRAMEWORK = {
-    'PAGINATE_BY': 20,
+    'PAGE_SIZE': 20,
     'PAGINATE_BY_PARAM': 'page_size',
     'ORDERING_PARAM': 'sort',
     'DEFAULT_RENDERER_CLASSES': (
@@ -143,9 +143,7 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': (
         'rest_framework.filters.DjangoFilterBackend',
     ),
-    'DEFAULT_PAGINATION_CLASS': (
-        'events.api_pagination.CustomPagination'
-    ),
+    'DEFAULT_PAGINATION_CLASS': 'events.api_pagination.CustomPagination',
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ),

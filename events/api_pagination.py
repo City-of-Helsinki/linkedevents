@@ -1,11 +1,12 @@
 from rest_framework.response import Response
-from rest_framework.compat import OrderedDict
+from collections import OrderedDict
 from rest_framework import pagination
 
 
 # This needs to be in its own file because of circular
 # imports.
 class CustomPagination(pagination.PageNumberPagination):
+
     def get_paginated_response(self, data):
         meta = OrderedDict([
             ('count', self.page.paginator.count),

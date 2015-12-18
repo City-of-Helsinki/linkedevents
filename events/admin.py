@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.gis import admin as geoadmin
 from modeltranslation.admin import TranslationAdmin
-import reversion
+from reversion.admin import VersionAdmin
 from events.models import Event, Keyword, Place, Language, \
     OpeningHoursSpecification, KeywordLabel, Organization
 
@@ -17,16 +17,16 @@ class BaseAdmin(admin.ModelAdmin):
         obj.save()
 
 
-class EventModelAdmin(BaseAdmin, TranslationAdmin, reversion.VersionAdmin):
+class EventModelAdmin(BaseAdmin, TranslationAdmin, VersionAdmin):
     pass
 
 
-class KeywordAdmin(BaseAdmin, TranslationAdmin, reversion.VersionAdmin):
+class KeywordAdmin(BaseAdmin, TranslationAdmin, VersionAdmin):
     pass
 
 
 class PlaceAdmin(geoadmin.GeoModelAdmin, BaseAdmin, TranslationAdmin,
-                 reversion.VersionAdmin):
+                 VersionAdmin):
     pass
 
 
@@ -35,9 +35,9 @@ class OrganizationAdmin(BaseAdmin):
 admin.site.register(Organization, OrganizationAdmin)
 
 
-class LanguageAdmin(BaseAdmin, reversion.VersionAdmin):
+class LanguageAdmin(BaseAdmin, VersionAdmin):
     pass
 
 
-class PersonAdmin(BaseAdmin, reversion.VersionAdmin):
+class PersonAdmin(BaseAdmin, VersionAdmin):
     pass
