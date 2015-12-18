@@ -787,15 +787,23 @@ class EventOrderingFilter(LinkedEventsOrderingFilter):
         return queryset
 
 
-def parse_duration(duration):
+def parse_duration_string(duration):
+    """
+    Parse duration string expressed in format
+    86400 or 86400s (24 hours)
+    180m or 3h (3 hours)
+    3d (3 days)
+    """
     m = re.match(r'(\d+)\s*(d|h|m|s)?$', duration.strip().lower())
     if not m:
-        raise ParseError("Invalid duration supplied. Try '1d' or '2h'.")
+        raise ParseError("Invalid duration supplied. Try '1d', '2h' or '180m'.")
     val, unit = m.groups()
     if not unit:
         unit = 's'
 
-    if unit == 'm':
+    if unit == 's':
+        mul = 1
+    elif unit == 'm':
         mul = 60
     elif unit == 'h':
         mul = 3600
@@ -876,13 +884,13 @@ def _filter_event_queryset(queryset, params, srs=None):
 
     val = params.get('max_duration', None)
     if val:
-        dur = parse_duration(val)
+        dur = parse_duration_string(val)
         cond = 'end_time - start_time <= %s :: interval'
         queryset = queryset.extra(where=[cond], params=[str(dur)])
 
     val = params.get('min_duration', None)
     if val:
-        dur = parse_duration(val)
+        dur = parse_duration_string(val)
         cond = 'end_time - start_time >= %s :: interval'
         queryset = queryset.extra(where=[cond], params=[str(dur)])
 
