@@ -136,7 +136,7 @@ def get_lang(lang_id):
 LOCAL_TZ = timezone('Europe/Helsinki')
 
 def clean_text(text, strip_newlines=False):
-    text = text.replace('\xa0', ' ')
+    text = text.replace('\xa0', ' ').replace('\x1f', '')
     if strip_newlines:
         text = text.replace('\r', '').replace('\n', ' ')
     # remove consecutive whitespaces
