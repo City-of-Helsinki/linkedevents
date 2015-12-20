@@ -1,4 +1,4 @@
-from django.conf.urls import patterns, include, url
+from django.conf.urls import include, url
 from events.routers import DocumentedRouter
 from events import api
 
@@ -10,6 +10,6 @@ for view in api.all_views:
         kwargs['base_name'] = view['base_name']
     router.register(view['name'], view['class'], **kwargs)
 
-urlpatterns = patterns('',
+urlpatterns = [
     url(r'^', include(router.urls)),
-)
+]
