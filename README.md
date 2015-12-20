@@ -37,7 +37,7 @@ Requirements
 
 Linked Events uses two files for requirements. The workflow is as follows.
 
-requirements.txt is not edited manually, but is generated
+`requirements.txt` is not edited manually, but is generated
 with `pip-compile`.
 
 `requirements.txt` always contains fully tested, pinned versions
