@@ -526,9 +526,13 @@ class OpeningHoursSpecificationSerializer(LinkedEventsSerializer):
 
 class LanguageSerializer(LinkedEventsSerializer):
     view_name = 'language-detail'
+    translation_available = serializers.SerializerMethodField()
 
     class Meta:
         model = Language
+
+    def get_translation_available(self, obj):
+        return obj.id in [language[0] for language in settings.LANGUAGES]
 
 
 class LanguageViewSet(viewsets.ReadOnlyModelViewSet):
