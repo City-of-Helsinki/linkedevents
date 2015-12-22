@@ -211,6 +211,13 @@ JWT_AUTH = {
 #from multilingual_haystack.settings import get_haystack_connections
 #HAYSTACK_CONNECTIONS = get_haystack_connections(HAYSTACK_CONNECTIONS, LANGUAGES)
 
+
+from easy_thumbnails.conf import Settings as thumbnail_settings
+THUMBNAIL_PROCESSORS = (
+    'image_cropping.thumbnail_processors.crop_corners',
+) + thumbnail_settings.THUMBNAIL_PROCESSORS
+
+
 # local_settings.py can be used to override environment-specific settings
 # like database and email that differ between development and production.
 f = os.path.join(BASE_DIR, "local_settings.py")
