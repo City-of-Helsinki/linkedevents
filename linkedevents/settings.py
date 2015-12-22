@@ -119,6 +119,9 @@ STATICFILES_DIRS = (
     os.path.join(BASE_DIR, "assets"),
 )
 
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
+
 REST_FRAMEWORK = {
     'PAGE_SIZE': 20,
     'ORDERING_PARAM': 'sort',

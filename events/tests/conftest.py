@@ -161,7 +161,6 @@ def complex_event_dict(data_source, organization, location_id):
             }
         ],
         'custom_data': {'my': 'data', 'your': 'data'},
-        'image': URL,
         'origin_id': TEXT,
         'date_published': DATETIME,
         'start_time': DATETIME,
