@@ -44,7 +44,7 @@ from events.custom_elasticsearch_search_backend import (
 )
 from events.models import (
     Place, Event, Keyword, Language, OpeningHoursSpecification, EventLink,
-    Offer, DataSource, Organization 
+    Offer, DataSource, Organization, EventImage
 )
 from events.translation import EventTranslationOptions
 
@@ -1099,3 +1099,26 @@ class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView
 
 
 register_view(SearchViewSet, 'search', base_name='search')
+
+
+class EventImageSerializer(LinkedEventsSerializer):
+    view_name = 'eventimage-detail'
+
+    class Meta:
+        model = EventImage
+
+
+class EventImageViewSet(viewsets.ModelViewSet):
+    serializer_class = EventImageSerializer
+    queryset = EventImage.objects.all()
+
+    def perform_create(self, serializer):
+        user = self.request.user if not self.request.user.is_anonymous() else None
+        serializer.save(created_by=user, last_modified_by=user)
+
+    def perform_update(self, serializer):
+        user = self.request.user if not self.request.user.is_anonymous() else None
+        serializer.save(last_modified_by=user)
+
+
+register_view(EventImageViewSet, 'eventimage', base_name='eventimage')
