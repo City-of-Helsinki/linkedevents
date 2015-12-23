@@ -46,6 +46,7 @@ INSTALLED_APPS = (
     'reversion',
     'haystack',
     'raven.contrib.django.raven_compat',
+    'django_cleanup',
 
     'munigeo',
     'helusers',

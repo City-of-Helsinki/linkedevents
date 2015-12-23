@@ -13,6 +13,7 @@ click==6.2                # via pip-tools
 colorama==0.3.5           # via pylint
 contextlib2==0.4.0        # via raven
 django-appconf==1.0.1     # via django-image-cropping
+django-cleanup==0.4.2
 django-cors-headers==1.1.0
 django-extensions==1.6.1
 django-filter==0.11.0

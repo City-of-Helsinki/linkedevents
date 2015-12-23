@@ -34,3 +34,4 @@ pytest-django
 pip-tools
 django-image-cropping
 easy_thumbnails
+django-cleanup
