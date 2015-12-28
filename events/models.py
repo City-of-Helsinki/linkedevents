@@ -258,6 +258,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
 
     is_recurring_super = models.BooleanField(default=False)
 
+    in_language = models.ManyToManyField(Language, verbose_name=_('In language'), related_name='events', blank=True)
+
     # Custom fields not from schema.org
     keywords = models.ManyToManyField(Keyword)
     audience = models.CharField(verbose_name=_('Audience'), max_length=255, null=True, blank=True)

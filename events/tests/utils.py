@@ -36,3 +36,18 @@ def assert_event_data_is_equal(d1, d2):
     links1 = set([comp(link) for link in d1.get('external_links', [])])
     links2 = set([comp(link) for link in d2.get('external_links', [])])
     assert links1 == links2
+
+
+def get(api_client, url):
+    response = api_client.get(url, format='json')
+    assert response.status_code == 200, str(response.content)
+    return response
+
+
+def assert_fields_exist(data, fields):
+    for field in fields:
+        assert field in data
+    assert len(data) == len(fields)
+
+
+
