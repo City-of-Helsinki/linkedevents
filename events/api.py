@@ -997,7 +997,7 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
         assert user.is_authenticated(), 'User needs to be authenticated.'
 
         # require permission to publish
-        objs = user.organizations.all()
+        objs = user.admin_organizations.all()
         assert objs, 'User needs to be authorized to publish events.'
         assert objs.count() == 1, (
             'User is connected to multiple organizations. This is currently '

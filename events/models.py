@@ -109,7 +109,7 @@ class BaseModel(models.Model):
 
 class Organization(BaseModel):
     admin_users = models.ManyToManyField(
-        User, blank=True, related_name='organizations'
+        User, blank=True, related_name='admin_organizations'
     )
 
 
