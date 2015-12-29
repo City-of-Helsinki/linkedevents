@@ -575,6 +575,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     sub_events = JSONLDRelatedField(serializer='EventSerializer',
                                     required=False, view_name='event-detail',
                                     many=True, read_only=True)
+    id = serializers.ReadOnlyField()
+    data_source = serializers.PrimaryKeyRelatedField(read_only=True)
 
     view_name = 'event-detail'
 
