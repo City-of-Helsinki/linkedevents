@@ -46,6 +46,7 @@ INSTALLED_APPS = (
     'reversion',
     'haystack',
     'raven.contrib.django.raven_compat',
+    'django_cleanup',
 
     'munigeo',
     'helusers',
@@ -118,6 +119,9 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = (
     os.path.join(BASE_DIR, "assets"),
 )
+
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
 
 REST_FRAMEWORK = {
     'PAGE_SIZE': 20,
@@ -210,6 +214,13 @@ JWT_AUTH = {
 
 #from multilingual_haystack.settings import get_haystack_connections
 #HAYSTACK_CONNECTIONS = get_haystack_connections(HAYSTACK_CONNECTIONS, LANGUAGES)
+
+
+from easy_thumbnails.conf import Settings as thumbnail_settings
+THUMBNAIL_PROCESSORS = (
+    'image_cropping.thumbnail_processors.crop_corners',
+) + thumbnail_settings.THUMBNAIL_PROCESSORS
+
 
 # local_settings.py can be used to override environment-specific settings
 # like database and email that differ between development and production.

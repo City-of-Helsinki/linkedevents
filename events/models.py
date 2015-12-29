@@ -30,9 +30,11 @@ from django.contrib.contenttypes.models import ContentType
 from events import translation_utils
 from django.utils.encoding import python_2_unicode_compatible
 from django.contrib.postgres.fields import HStoreField
+from image_cropping import ImageRatioField
 
 
 User = settings.AUTH_USER_MODEL
+
 
 class SchemalessFieldMixin(models.Model):
     custom_data = HStoreField(null=True)
@@ -75,7 +77,6 @@ class BaseModel(models.Model):
 
     # Properties from schema.org/Thing
     name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True)
-    image = models.URLField(verbose_name=_('Image URL'), max_length=400, null=True, blank=True)
 
     origin_id = models.CharField(verbose_name=_('Origin ID'), max_length=50, db_index=True, null=True,
                                  blank=True)
@@ -205,6 +206,19 @@ class OpeningHoursSpecification(models.Model):
         verbose_name_plural = _('opening hour specifications')
 
 
+class EventImage(models.Model):
+    jsonld_type = 'ImageObject'
+
+    created_time = models.DateTimeField(auto_now_add=True)
+    last_modified_time = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(User, null=True, blank=True, related_name='EventImage_created_by')
+    last_modified_by = models.ForeignKey(User, related_name='EventImage_last_modified_by', null=True, blank=True)
+
+    image = models.ImageField(upload_to='event_images', verbose_name=_('Image'))
+    cropping = ImageRatioField('image', '800x800', verbose_name=_('Cropping'))
+
+
+
 class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     jsonld_type = "Event/LinkedEvent"
 
@@ -263,6 +277,9 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     # Custom fields not from schema.org
     keywords = models.ManyToManyField(Keyword)
     audience = models.CharField(verbose_name=_('Audience'), max_length=255, null=True, blank=True)
+
+    external_image_url = models.URLField(verbose_name=_('External image URL'), max_length=400, null=True, blank=True)
+    event_image = models.ForeignKey(EventImage, verbose_name=_('Event image'), null=True, blank=True)
 
     class Meta:
         verbose_name = _('event')

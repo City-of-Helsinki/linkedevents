@@ -32,7 +32,6 @@ def assert_event_fields_exist(data):
         'external_links',
         'headline',
         'id',
-        'image',
         'in_language',
         'info_url',
         'keywords',
