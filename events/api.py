@@ -13,7 +13,7 @@ from dateutil.parser import parse as dateutil_parse
 # django and drf
 from django.contrib.auth import get_user_model
 from django.utils import translation
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, PermissionDenied
 from django.conf import settings
 from django.core.urlresolvers import NoReverseMatch
 from django.db.models import Q
@@ -1013,6 +1013,14 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
 
     def perform_update(self, serializer):
         user = self.request.user
+
+        # allow modifications only for the event's organization members.
+        # we cannot use permission class for this because our custom get_object()
+        # breaks Permission.has_object_permission()
+        event = self.get_object()
+        if not event.is_admin(user):
+            raise PermissionDenied()
+
         serializer.save(
             last_modified_by=user,
         )
