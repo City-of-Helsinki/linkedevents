@@ -577,6 +577,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                                     many=True, read_only=True)
     id = serializers.ReadOnlyField()
     data_source = serializers.PrimaryKeyRelatedField(read_only=True)
+    publisher = serializers.PrimaryKeyRelatedField(read_only=True)
 
     view_name = 'event-detail'
 
@@ -991,48 +992,20 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
                                           srs=self.srs)
         return queryset
 
+    def perform_create(self, serializer):
+        event_id = generate_id(SYSTEM_DATA_SOURCE_ID)
 
-    def get_authorized_publisher(self, request, data):
-        user = request.user
+        publisher = self.request.user.get_default_organization()
+        if not publisher:
+            raise ParseError(_("User doesn't belong to any organization"))
 
-        # require user
-        assert user.is_authenticated(), 'User needs to be authenticated.'
+        # all events created by api are marked coming from the system data source
+        data_source = DataSource.objects.get(id=SYSTEM_DATA_SOURCE_ID)
 
-        # require permission to publish
-        objs = user.admin_organizations.all()
-        assert objs, 'User needs to be authorized to publish events.'
-        assert objs.count() == 1, (
-            'User is connected to multiple organizations. This is currently '
-            'not supported.'
-        )
-
-        # pick publisher
-        data['publisher'] = objs.first().id
-        return data
-
-    def create(self, request, *args, **kwargs):
-        data = request.data
-
-        # all events created by api are marked coming from the system data
-        # source
-        data['data_source'] = SYSTEM_DATA_SOURCE_ID
-
-        # get publisher from the auth user
-        data = self.get_authorized_publisher(request, data)
-
-        # generate event id
-        data = perform_id_magic_for(data)
-
-        # then do the usual stuff defined in `rest_framework.CreateModelMixin`
-        serializer = self.get_serializer(data=data)
-        serializer.is_valid(raise_exception=True)
-
-        self.perform_create(serializer)
-
-        return Response(
-            serializer.data,
-            status=status.HTTP_201_CREATED,
-            headers=self.get_success_headers(serializer.data)
+        serializer.save(
+            id=event_id,
+            publisher=publisher,
+            data_source=data_source
         )
 
 
