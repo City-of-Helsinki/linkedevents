@@ -570,8 +570,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     super_event = JSONLDRelatedField(required=False, view_name='event-detail',
                                      read_only=True)
     event_status = EnumChoiceField(Event.STATUSES)
-    external_links = EventLinkSerializer(many=True)
-    offers = OfferSerializer(many=True)
+    external_links = EventLinkSerializer(many=True, required=False)
+    offers = OfferSerializer(many=True, required=False)
     sub_events = JSONLDRelatedField(serializer='EventSerializer',
                                     required=False, view_name='event-detail',
                                     many=True, read_only=True)
