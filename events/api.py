@@ -666,7 +666,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
         # prepare a list of fields to be updated
         update_fields = [
-            'start_time', 'end_time', 'location'
+            'start_time', 'end_time', 'location', 'last_modified_by'
         ]
 
         languages = [x[0] for x in settings.LANGUAGES]
@@ -995,17 +995,26 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
     def perform_create(self, serializer):
         event_id = generate_id(SYSTEM_DATA_SOURCE_ID)
 
-        publisher = self.request.user.get_default_organization()
+        user = self.request.user
+        publisher = user.get_default_organization()
         if not publisher:
             raise ParseError(_("User doesn't belong to any organization"))
 
         # all events created by api are marked coming from the system data source
         data_source = DataSource.objects.get(id=SYSTEM_DATA_SOURCE_ID)
-
         serializer.save(
             id=event_id,
             publisher=publisher,
-            data_source=data_source
+            data_source=data_source,
+            created_time=Event.now(),  # model.save() doesn't populate created_time because we set id here
+            created_by=user,
+            last_modified_by=user,
+        )
+
+    def perform_update(self, serializer):
+        user = self.request.user
+        serializer.save(
+            last_modified_by=user,
         )
 
 
