@@ -578,6 +578,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     id = serializers.ReadOnlyField()
     data_source = serializers.PrimaryKeyRelatedField(read_only=True)
     publisher = serializers.PrimaryKeyRelatedField(read_only=True)
+    event_image = JSONLDRelatedField(required=False, view_name='eventimage-detail',
+                                     read_only=True)
 
     view_name = 'event-detail'
 
@@ -640,6 +642,12 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             location_id = parse_id_from_uri(data['location']['@id'])
             data['location'] = Place.objects.get(id=location_id)
 
+        # TODO: figure out how to get this via JSONLDRelatedField
+        event_image_data = data.get('event_image', None)
+        if event_image_data:
+            event_image_id = parse_id_from_uri(event_image_data['@id'])
+            data['event_image'] = EventImage.objects.get(id=event_image_id)
+
         # TODO: figure out how to get these via JSONLDRelatedField
         data = self.get_keywords(data)
 
@@ -666,7 +674,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
         # prepare a list of fields to be updated
         update_fields = [
-            'start_time', 'end_time', 'location', 'last_modified_by'
+            'start_time', 'end_time', 'location', 'last_modified_by', 'event_image'
         ]
 
         languages = [x[0] for x in settings.LANGUAGES]
