@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import pytest
+from django.core.urlresolvers import reverse
 
 from events.tests.utils import assert_event_data_is_equal
 from events.tests.test_event_post import create_with_post
@@ -41,7 +42,8 @@ def test__update_an_event_with_put(api_client, complex_event_dict, user):
             "info_url": {"en": URL, "sv": URL, "fi": URL}
         }
     ]
-    data2['keywords'] = data2['keywords'][:2]
+    data2['keywords'] = data2['keywords'][:1]
+    data2['in_language'] = data2['in_language'][:2]
 
     # store updates
     event_id = data2.pop('@id')
@@ -49,3 +51,13 @@ def test__update_an_event_with_put(api_client, complex_event_dict, user):
 
     # assert
     assert_event_data_is_equal(data2, response2.data)
+
+
+@pytest.mark.django_db
+def test__a_non_admin_cannot_update_an_event(api_client, event, complex_event_dict, user):
+    event.publisher.admin_users.remove(user)
+    api_client.force_authenticate(user)
+
+    detail_url = reverse('event-detail', kwargs={'pk': event.pk})
+    response = update_with_put(api_client, detail_url, complex_event_dict)
+    assert response.status_code == 403

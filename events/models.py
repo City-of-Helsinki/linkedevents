@@ -309,6 +309,9 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
             val.append(str(self.start_time))
         return u" ".join(val)
 
+    def is_admin(self, user):
+        return user in self.publisher.admin_users.all()
+
 reversion.register(Event)
 
 
