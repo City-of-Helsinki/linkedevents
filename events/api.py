@@ -560,6 +560,29 @@ class OfferSerializer(TranslatedModelSerializer):
         exclude = ['id', 'event']
 
 
+class EventImageSerializer(LinkedEventsSerializer):
+    view_name = 'eventimage-detail'
+
+    class Meta:
+        model = EventImage
+
+
+class EventImageViewSet(viewsets.ModelViewSet):
+    serializer_class = EventImageSerializer
+    queryset = EventImage.objects.all()
+
+    def perform_create(self, serializer):
+        user = self.request.user if not self.request.user.is_anonymous() else None
+        serializer.save(created_by=user, last_modified_by=user)
+
+    def perform_update(self, serializer):
+        user = self.request.user if not self.request.user.is_anonymous() else None
+        serializer.save(last_modified_by=user)
+
+
+register_view(EventImageViewSet, 'eventimage', base_name='eventimage')
+
+
 class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     location = JSONLDRelatedField(serializer=PlaceSerializer, required=False,
                                   view_name='place-detail', read_only=True)
@@ -578,8 +601,9 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     id = serializers.ReadOnlyField()
     data_source = serializers.PrimaryKeyRelatedField(read_only=True)
     publisher = serializers.PrimaryKeyRelatedField(read_only=True)
-    event_image = JSONLDRelatedField(required=False, view_name='eventimage-detail',
-                                     read_only=True)
+    event_image = JSONLDRelatedField(serializer=EventImageSerializer, required=False, allow_null=True,
+                                     view_name='eventimage-detail', queryset=EventImage.objects.all())
+
     in_language = JSONLDRelatedField(serializer=LanguageSerializer, required=False,
                                      view_name='language-detail', read_only=True, many=True)
 
@@ -665,14 +689,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         if 'location' in data:
             location_id = parse_id_from_uri(data['location']['@id'])
             data['location'] = Place.objects.get(id=location_id)
-
-        # TODO: figure out how to get this via JSONLDRelatedField
-        event_image_data = data.pop('event_image', None)
-        if event_image_data:
-            uri = event_image_data['@id']
-            if uri:
-                event_image_id = parse_id_from_uri(uri)
-                data['event_image'] = EventImage.objects.get(id=event_image_id)
 
         # TODO: figure out how to get these via JSONLDRelatedField
         data = self.get_keywords(data)
