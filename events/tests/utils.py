@@ -21,6 +21,7 @@ def assert_event_data_is_equal(d1, d2):
 
         'keywords',
         'offers',
+        'in_language',
 
         # 'start_time',  # fails because of Javascript's "Z"
         #                # vs Python's "+00:00"

@@ -42,7 +42,8 @@ def test__update_an_event_with_put(api_client, complex_event_dict, user):
             "info_url": {"en": URL, "sv": URL, "fi": URL}
         }
     ]
-    data2['keywords'] = data2['keywords'][:2]
+    data2['keywords'] = data2['keywords'][:1]
+    data2['in_language'] = data2['in_language'][:2]
 
     # store updates
     event_id = data2.pop('@id')

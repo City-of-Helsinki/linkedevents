@@ -15,7 +15,7 @@ from events.models import (
     DataSource, Organization, Place, Language, Keyword, KeywordLabel, Event
 )
 from events.api import (
-    KeywordSerializer, PlaceSerializer, SYSTEM_DATA_SOURCE_ID
+    KeywordSerializer, PlaceSerializer, LanguageSerializer, SYSTEM_DATA_SOURCE_ID
 )
 
 
@@ -135,7 +135,22 @@ def keyword_id(data_source, kw_name):
 
 @pytest.mark.django_db
 @pytest.fixture
-def complex_event_dict(data_source, organization, location_id):
+def languages():
+    lang_objs = [
+        Language.objects.get_or_create(id=lang)[0]
+        for lang in ['fi', 'sv', 'en']
+    ]
+    return lang_objs
+
+
+def language_id(language):
+    obj_id = reverse(LanguageSerializer().view_name, kwargs={'pk': language.pk})
+    return 'http://testserver%s' % obj_id
+
+
+@pytest.mark.django_db
+@pytest.fixture
+def complex_event_dict(data_source, organization, location_id, languages):
     return {
         'publisher': organization.id,
         'name': {'fi': 'complex_event'},
@@ -159,6 +174,10 @@ def complex_event_dict(data_source, organization, location_id):
                 'description': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
                 'info_url': {'en': URL, 'sv': URL, 'fi': URL}
             }
+        ],
+        'in_language': [
+            {"@id": language_id(languages[0])},
+            {"@id": language_id(languages[1])},
         ],
         'custom_data': {'my': 'data', 'your': 'data'},
         'origin_id': TEXT,
