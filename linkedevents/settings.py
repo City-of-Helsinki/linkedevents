@@ -25,10 +25,12 @@ TEMPLATE_DEBUG = False
 
 ALLOWED_HOSTS = []
 
+SITE_ID = 1
 
 # Application definition
 
 INSTALLED_APPS = (
+    'django.contrib.sites',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -48,15 +50,17 @@ INSTALLED_APPS = (
     'raven.contrib.django.raven_compat',
     'django_cleanup',
 
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'helusers.providers.helsinki',
+
     'munigeo',
     'helusers',
 
     'events',
     'helevents',
 )
-
-AUTH_USER_MODEL = 'helevents.User'
-
 
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -83,8 +87,6 @@ DATABASES = {
         'NAME': 'linkedevents',
     }
 }
-
-ATOMIC_REQUESTS = True
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.6/topics/i18n/
@@ -123,6 +125,26 @@ STATICFILES_DIRS = (
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 
+#
+# Authentication
+#
+AUTH_USER_MODEL = 'helevents.User'
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+)
+SOCIALACCOUNT_PROVIDERS = {
+    'helsinki': {
+        'VERIFIED_EMAIL': True
+    }
+}
+LOGIN_REDIRECT_URL = '/'
+ACCOUNT_LOGOUT_ON_GET = True
+SOCIALACCOUNT_ADAPTER = 'helusers.providers.helsinki.provider.SocialAccountAdapter'
+
+#
+# REST Framework
+#
 REST_FRAMEWORK = {
     'PAGE_SIZE': 20,
     'ORDERING_PARAM': 'sort',
@@ -149,8 +171,15 @@ REST_FRAMEWORK = {
     ),
 
 }
+JWT_AUTH = {
+    'JWT_PAYLOAD_GET_USER_ID_HANDLER': 'helusers.jwt.get_user_id_from_payload_handler',
+    # JWT_AUDIENCE and JWT_SECRET_KEY must be set in local_settings.py
+}
+
 
 CORS_ORIGIN_ALLOW_ALL = True
+CSRF_COOKIE_NAME = 'linkedevents-csrftoken'
+SESSION_COOKIE_NAME = 'linkedevents-sessionid'
 
 TEMPLATES = [
     {
@@ -204,16 +233,6 @@ HAYSTACK_CONNECTIONS = {
         'ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
     }
 }
-
-
-JWT_AUTH = {
-    'JWT_PAYLOAD_GET_USER_ID_HANDLER': 'helusers.jwt.get_user_id_from_payload_handler',
-    # JWT_AUDIENCE and JWT_SECRET_KEY must be set in local_settings.py
-}
-
-
-#from multilingual_haystack.settings import get_haystack_connections
-#HAYSTACK_CONNECTIONS = get_haystack_connections(HAYSTACK_CONNECTIONS, LANGUAGES)
 
 
 from easy_thumbnails.conf import Settings as thumbnail_settings

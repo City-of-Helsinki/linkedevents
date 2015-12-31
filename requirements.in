@@ -35,3 +35,4 @@ pip-tools
 django-image-cropping
 easy_thumbnails
 django-cleanup
+django-allauth

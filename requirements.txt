@@ -7,11 +7,13 @@
 -e git+https://github.com/City-of-Helsinki/django-helusers#egg=django-helusers
 -e git+https://github.com/django-mptt/django-mptt.git@0b4006d4014266f5a1017ec0f0a93736aec5ba46#egg=django-mptt
 -e git+https://github.com/City-of-Helsinki/munigeo#egg=django-munigeo
-astroid==1.4.2            # via pylint
+astroid==1.4.3            # via pylint
 bleach==1.4.2
 click==6.2                # via pip-tools
 colorama==0.3.5           # via pylint
 contextlib2==0.4.0        # via raven
+defusedxml==0.4.1         # via python3-openid
+django-allauth==0.24.1
 django-appconf==1.0.1     # via django-image-cropping
 django-cleanup==0.4.2
 django-cors-headers==1.1.0
@@ -36,6 +38,7 @@ isodate==0.5.4
 lazy-object-proxy==1.2.1  # via astroid
 lxml==3.5.0
 markdown==2.6.5
+oauthlib==1.0.3           # via requests-oauthlib
 pillow==3.0.0             # via easy-thumbnails
 pip-tools==1.4.2
 psycopg2==2.6.1
@@ -43,20 +46,22 @@ py==1.4.31                # via pytest
 pyflakes==1.0.0
 pyjwt==1.4.0              # via djangorestframework-jwt
 pylint==1.5.2
-pyparsing==2.0.6          # via rdflib
+pyparsing==2.0.7          # via rdflib
 pytest-django==2.9.1
 pytest==2.8.5             # via pytest-django
 python-dateutil==2.4.2
+python3-openid==3.0.9     # via django-allauth
 pytz==2015.7
 pyyaml==3.11
 raven==5.9.2
 rdflib==4.2.1
 requests-cache==0.4.10
+requests-oauthlib==0.6.0  # via django-allauth
 requests==2.9.1
 six==1.10.0
-urllib3==1.13.1           # via elasticsearch
+urllib3==1.14             # via elasticsearch
 wrapt==1.10.6             # via astroid
 
 # The following packages are commented out because they are
 # considered to be unsafe in a requirements file:
-# setuptools==19.1.1        # via icalendar
+# setuptools==19.2          # via icalendar
