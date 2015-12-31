@@ -603,9 +603,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     publisher = serializers.PrimaryKeyRelatedField(read_only=True)
     event_image = JSONLDRelatedField(serializer=EventImageSerializer, required=False, allow_null=True,
                                      view_name='eventimage-detail', queryset=EventImage.objects.all())
-
     in_language = JSONLDRelatedField(serializer=LanguageSerializer, required=False,
-                                     view_name='language-detail', read_only=True, many=True)
+                                     view_name='language-detail', many=True, queryset=Language.objects.all())
 
     view_name = 'event-detail'
 
@@ -652,28 +651,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         data['keywords'] = new_kw
         return data
 
-    def get_in_language(self, data):
-        """
-        Replace list of language dicts in data with a list of Language objects
-        """
-        new_lang = []
-
-        for lang in data.get('in_language', []):
-
-            if '@id' in lang:
-                lang_id = parse_id_from_uri(lang['@id'])
-
-                try:
-                    language = Language.objects.get(id=lang_id)
-                except Language.DoesNotExist:
-                    err = 'Language with id {} does not exist'
-                    raise ParseError(err.format(lang_id))
-
-                new_lang.append(language)
-
-        data['in_language'] = new_lang
-        return data
-
     def get_datetimes(self, data):
         for field in ['date_published', 'start_time', 'end_time']:
             val = data.get(field, None)
@@ -692,7 +669,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
         # TODO: figure out how to get these via JSONLDRelatedField
         data = self.get_keywords(data)
-        data = self.get_in_language(data)
 
         return data
 
@@ -719,7 +695,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
         # prepare a list of fields to be updated
         update_fields = [
-            'start_time', 'end_time', 'location', 'last_modified_by', 'event_image', 'in_language'
+            'start_time', 'end_time', 'location', 'last_modified_by', 'event_image'
         ]
 
         languages = [x[0] for x in settings.LANGUAGES]
@@ -753,12 +729,13 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                 EventLink.objects.create(event=instance, **link)
 
         # update keywords
-        instance.keywords.clear() 
+        instance.keywords.clear()
         instance.keywords.add(*validated_data['keywords'])
 
         # update in_languages
         instance.in_language.clear()
-        instance.in_language.add(*validated_data['in_language'])
+        if 'in_language' in validated_data:
+            instance.in_language.add(*validated_data['in_language'])
 
         return instance
 
