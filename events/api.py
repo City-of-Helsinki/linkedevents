@@ -580,6 +580,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     publisher = serializers.PrimaryKeyRelatedField(read_only=True)
     event_image = JSONLDRelatedField(required=False, view_name='eventimage-detail',
                                      read_only=True)
+    in_language = JSONLDRelatedField(serializer=LanguageSerializer, required=False,
+                                     view_name='language-detail', read_only=True, many=True)
 
     view_name = 'event-detail'
 
@@ -626,6 +628,28 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         data['keywords'] = new_kw
         return data
 
+    def get_in_language(self, data):
+        """
+        Replace list of language dicts in data with a list of Language objects
+        """
+        new_lang = []
+
+        for lang in data.get('in_language', []):
+
+            if '@id' in lang:
+                lang_id = parse_id_from_uri(lang['@id'])
+
+                try:
+                    language = Language.objects.get(id=lang_id)
+                except Language.DoesNotExist:
+                    err = 'Language with id {} does not exist'
+                    raise ParseError(err.format(lang_id))
+
+                new_lang.append(language)
+
+        data['in_language'] = new_lang
+        return data
+
     def get_datetimes(self, data):
         for field in ['date_published', 'start_time', 'end_time']:
             val = data.get(field, None)
@@ -643,13 +667,16 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             data['location'] = Place.objects.get(id=location_id)
 
         # TODO: figure out how to get this via JSONLDRelatedField
-        event_image_data = data.get('event_image', None)
+        event_image_data = data.pop('event_image', None)
         if event_image_data:
-            event_image_id = parse_id_from_uri(event_image_data['@id'])
-            data['event_image'] = EventImage.objects.get(id=event_image_id)
+            uri = event_image_data['@id']
+            if uri:
+                event_image_id = parse_id_from_uri(uri)
+                data['event_image'] = EventImage.objects.get(id=event_image_id)
 
         # TODO: figure out how to get these via JSONLDRelatedField
         data = self.get_keywords(data)
+        data = self.get_in_language(data)
 
         return data
 
@@ -657,6 +684,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         offers = validated_data.pop('offers', [])
         links = validated_data.pop('external_links', [])
         keywords = validated_data.pop('keywords', [])
+        in_languages = validated_data.pop('in_language', [])
 
         # create object
         e = Event.objects.create(**validated_data)
@@ -667,6 +695,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         for link in links:
             EventLink.objects.create(event=e, **link)
         e.keywords.add(*keywords)
+        e.in_language.add(*in_languages)
 
         return e
 
@@ -674,7 +703,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
         # prepare a list of fields to be updated
         update_fields = [
-            'start_time', 'end_time', 'location', 'last_modified_by', 'event_image'
+            'start_time', 'end_time', 'location', 'last_modified_by', 'event_image', 'in_language'
         ]
 
         languages = [x[0] for x in settings.LANGUAGES]
@@ -711,6 +740,10 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         instance.keywords.clear() 
         instance.keywords.add(*validated_data['keywords'])
 
+        # update in_languages
+        instance.in_language.clear()
+        instance.in_language.add(*validated_data['in_language'])
+
         return instance
 
     def to_representation(self, obj):
@@ -739,7 +772,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
     class Meta:
         model = Event
-        exclude = ['has_start_time', 'has_end_time', 'is_recurring_super', 'external_image_url', 'event_image']
+        exclude = ['has_start_time', 'has_end_time', 'is_recurring_super', 'external_image_url']
 
 
 def parse_time(time_str, is_start):
