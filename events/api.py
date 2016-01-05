@@ -279,34 +279,24 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
         :param data:
         :return:
         """
-        lang = settings.LANGUAGES[0][0]
+
+        extra_fields = {}  # will contain the transformation result
         for field_name in self.translated_fields:
-            # FIXME: handle default lang like others!?
-            lang = settings.LANGUAGES[0][0]  # Handle default lang
-            if data.get(field_name, None) is None:
+            obj = data.get(field_name, None)  # { "fi": "musiikkiklubit", "sv": ... }
+            if not obj:
                 continue
-            values = data[field_name].copy()  # Save original values
+            for language in (lang[0] for lang in settings.LANGUAGES if lang[0] in obj):
+                value = obj[language]  # "musiikkiklubit"
+                if language == settings.LANGUAGES[0][0]:  # default language
+                    extra_fields[field_name] = value  # { "name": "musiikkiklubit" }
+                extra_fields['{}_{}'.format(field_name, language)] = value  # { "name_fi": "musiikkiklubit" }
+            del data[field_name]  # delete original translated fields
 
-            key = "%s_%s" % (field_name, lang)
-            val = data[field_name].get(lang)
-            if val:
-                values[key] = val  # field_name_LANG
-                values[field_name] = val  # field_name
-            if lang in values:
-                del values[lang]  # Remove original key LANG
-            for lang in [x[0] for x in settings.LANGUAGES[1:]]:
-                key = "%s_%s" % (field_name, lang)
-                val = data[field_name].get(lang)
-                if val:
-                    values[key] = val  # field_name_LANG
-                    values[field_name] = val  # field_name
-                if lang in values:
-                    del values[lang]  # Remove original key LANG
-            data.update(values)
-            del data[field_name]  # Remove original field_name from data
+        # handle other than translated fields
+        data = super().to_internal_value(data)
 
-        # do remember to call the super class method as well!
-        data.update(super().to_internal_value(data))
+        # add translated fields to the final result
+        data.update(extra_fields)
 
         return data
 
