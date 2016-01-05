@@ -662,64 +662,54 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         keywords = validated_data.pop('keywords', [])
         in_languages = validated_data.pop('in_language', [])
 
-        # create object
-        e = Event.objects.create(**validated_data)
+        event = super().create(validated_data)
 
         # create and add related objects 
         for offer in offers:
-            Offer.objects.create(event=e, **offer)
+            Offer.objects.create(event=event, **offer)
         for link in links:
-            EventLink.objects.create(event=e, **link)
-        e.keywords.add(*keywords)
-        e.in_language.add(*in_languages)
+            EventLink.objects.create(event=event, **link)
+        event.keywords.add(*keywords)
+        event.in_language.add(*in_languages)
 
-        return e
+        return event
 
     def update(self, instance, validated_data):
 
-        # prepare a list of fields to be updated
-        update_fields = [
-            'start_time', 'end_time', 'location', 'last_modified_by', 'event_image'
-        ]
+        offers = validated_data.pop('offers', None)
+        links = validated_data.pop('external_links', None)
+        keywords = validated_data.pop('keywords', None)
+        in_languages = validated_data.pop('in_language', None)
 
-        languages = [x[0] for x in settings.LANGUAGES]
-        for field in EventTranslationOptions.fields:
-            for lang in languages:
-                update_fields.append(field + '_' + lang)
-
-        # update values
-        for field in update_fields:
-            orig_value = getattr(instance, field)
-            new_value = validated_data.get(field, orig_value)
-            setattr(instance, field, new_value)
+        # update other fields
+        super().update(instance, validated_data)
 
         # also update `has_end_time` if needed
         if instance.end_time:
             instance.has_end_time = True
-
-        # save changes
-        instance.save()
+            instance.save()
 
         # update offers
-        if 'offers' in validated_data:
+        if isinstance(offers, list):
             instance.offers.all().delete()
-            for offer in validated_data.get('offers', []):
+            for offer in offers:
                 Offer.objects.create(event=instance, **offer)
 
         # update ext links
-        if 'external_links' in validated_data:
+        if isinstance(links, list):
             instance.external_links.all().delete()
-            for link in validated_data.get('external_links', []):
+            for link in links:
                 EventLink.objects.create(event=instance, **link)
 
         # update keywords
-        instance.keywords.clear()
-        instance.keywords.add(*validated_data['keywords'])
+        if isinstance(keywords, list):
+            instance.keywords.clear()
+            instance.keywords.add(*keywords)
 
         # update in_languages
-        instance.in_language.clear()
-        if 'in_language' in validated_data:
-            instance.in_language.add(*validated_data['in_language'])
+        if isinstance(in_languages, list):
+            instance.in_language.clear()
+            instance.in_language.add(*in_languages)
 
         return instance
 
