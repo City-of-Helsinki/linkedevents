@@ -152,7 +152,10 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
 
     def to_internal_value(self, value):
         if '@id' in value:
-            return super(JSONLDRelatedField, self).to_internal_value(value['@id'])
+            url = value['@id']
+            if not url:
+                return None
+            return super(JSONLDRelatedField, self).to_internal_value(urllib.parse.unquote(url))
         else:
             raise ValidationError(
                 self.invalid_json_error % type(value).__name__)
@@ -584,8 +587,8 @@ register_view(EventImageViewSet, 'eventimage', base_name='eventimage')
 
 
 class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
-    location = JSONLDRelatedField(serializer=PlaceSerializer, required=False,
-                                  view_name='place-detail', read_only=True)
+    location = JSONLDRelatedField(serializer=PlaceSerializer, required=False, allow_null=True,
+                                  view_name='place-detail', queryset=Place.objects.all())
     # provider = OrganizationSerializer(hide_ld_context=True)
     keywords = JSONLDRelatedField(serializer=KeywordSerializer, many=True,
                                   required=False,
@@ -614,20 +617,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         # testing and debugging.
         self.skip_empties = skip_empties
         self.skip_fields = skip_fields
-
-    def get_location(self, data):
-        """
-        Replace location id dict in data with a Place object
-        """
-        location = data.get('location')
-        if location and '@id' in location:
-            location_id = parse_id_from_uri(location['@id'])
-            try:
-                data['location'] = Place.objects.get(id=location_id)
-            except Place.DoesNotExist:
-                err = 'Place with id {} does not exist'
-                raise ParseError(err.format(location_id))
-        return data
 
     def get_keywords(self, data):
         """
@@ -661,11 +650,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
     def to_internal_value(self, data):
         data = super().to_internal_value(data)
-
-        # TODO: figure out how to get this via JSONLDRelatedField
-        if 'location' in data:
-            location_id = parse_id_from_uri(data['location']['@id'])
-            data['location'] = Place.objects.get(id=location_id)
 
         # TODO: figure out how to get these via JSONLDRelatedField
         data = self.get_keywords(data)
