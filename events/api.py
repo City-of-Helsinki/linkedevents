@@ -582,7 +582,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     # provider = OrganizationSerializer(hide_ld_context=True)
     keywords = JSONLDRelatedField(serializer=KeywordSerializer, many=True,
                                   required=False,
-                                  view_name='keyword-detail', read_only=True)
+                                  view_name='keyword-detail', queryset=Keyword.objects.all())
     super_event = JSONLDRelatedField(required=False, view_name='event-detail',
                                      read_only=True)
     event_status = EnumChoiceField(Event.STATUSES)
@@ -608,42 +608,12 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         self.skip_empties = skip_empties
         self.skip_fields = skip_fields
 
-    def get_keywords(self, data):
-        """
-        Replace list of keyword dicts in data with a list of Keyword objects
-        """
-        new_kw = []
-
-        for kw in data.get('keywords', []):
-
-            if '@id' in kw:
-                kw_id = parse_id_from_uri(kw['@id'])
-
-                try:
-                    keyword = Keyword.objects.get(id=kw_id)
-                except Keyword.DoesNotExist:
-                    err = 'Keyword with id {} does not exist'
-                    raise ParseError(err.format(kw_id))
-
-                new_kw.append(keyword)
-
-        data['keywords'] = new_kw
-        return data
-
     def get_datetimes(self, data):
         for field in ['date_published', 'start_time', 'end_time']:
             val = data.get(field, None)
             if val:
                 if isinstance(val, str):
                     data[field] = parse_time(val, True)
-        return data
-
-    def to_internal_value(self, data):
-        data = super().to_internal_value(data)
-
-        # TODO: figure out how to get these via JSONLDRelatedField
-        data = self.get_keywords(data)
-
         return data
 
     def create(self, validated_data):
