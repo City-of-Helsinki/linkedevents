@@ -536,6 +536,7 @@ register_view(LanguageViewSet, 'language')
 
 LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
 
+
 class EventLinkSerializer(serializers.ModelSerializer):
     def to_representation(self, obj):
         ret = super(EventLinkSerializer, self).to_representation(obj)
@@ -546,6 +547,7 @@ class EventLinkSerializer(serializers.ModelSerializer):
     class Meta:
         model = EventLink
         exclude = ['id', 'event']
+
 
 class OfferSerializer(TranslatedModelSerializer):
     class Meta:
@@ -619,8 +621,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     def create(self, validated_data):
         offers = validated_data.pop('offers', [])
         links = validated_data.pop('external_links', [])
-        keywords = validated_data.pop('keywords', [])
-        in_languages = validated_data.pop('in_language', [])
 
         event = super().create(validated_data)
 
@@ -629,17 +629,12 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             Offer.objects.create(event=event, **offer)
         for link in links:
             EventLink.objects.create(event=event, **link)
-        event.keywords.add(*keywords)
-        event.in_language.add(*in_languages)
 
         return event
 
     def update(self, instance, validated_data):
-
         offers = validated_data.pop('offers', None)
         links = validated_data.pop('external_links', None)
-        keywords = validated_data.pop('keywords', None)
-        in_languages = validated_data.pop('in_language', None)
 
         # update other fields
         super().update(instance, validated_data)
@@ -660,16 +655,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             instance.external_links.all().delete()
             for link in links:
                 EventLink.objects.create(event=instance, **link)
-
-        # update keywords
-        if isinstance(keywords, list):
-            instance.keywords.clear()
-            instance.keywords.add(*keywords)
-
-        # update in_languages
-        if isinstance(in_languages, list):
-            instance.in_language.clear()
-            instance.in_language.add(*in_languages)
 
         return instance
 
