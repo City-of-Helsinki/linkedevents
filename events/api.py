@@ -583,14 +583,14 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     keywords = JSONLDRelatedField(serializer=KeywordSerializer, many=True,
                                   required=False,
                                   view_name='keyword-detail', queryset=Keyword.objects.all())
-    super_event = JSONLDRelatedField(required=False, view_name='event-detail',
-                                     read_only=True)
+    super_event = JSONLDRelatedField(serializer='EventSerializer', required=False, view_name='event-detail',
+                                     queryset=Event.objects.all())
     event_status = EnumChoiceField(Event.STATUSES)
     external_links = EventLinkSerializer(many=True, required=False)
     offers = OfferSerializer(many=True, required=False)
     sub_events = JSONLDRelatedField(serializer='EventSerializer',
                                     required=False, view_name='event-detail',
-                                    many=True, read_only=True)
+                                    many=True, queryset=Event.objects.all())
     id = serializers.ReadOnlyField()
     data_source = serializers.PrimaryKeyRelatedField(read_only=True)
     publisher = serializers.PrimaryKeyRelatedField(read_only=True)
