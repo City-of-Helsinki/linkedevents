@@ -1,7 +1,7 @@
 # Linked events
 
 [![Build status](https://travis-ci.org/City-of-Helsinki/linkedevents.svg)](https://travis-ci.org/City-of-Helsinki/linkedevents)
-![requires.io](https://requires.io/github/City-of-Helsinki/linkedevents/requirements.svg?branch=master)
+[![Requirements](https://requires.io/github/City-of-Helsinki/linkedevents/requirements.svg?branch=master)](https://requires.io/github/City-of-Helsinki/linkedevents/requirements/?branch=master)
 [![Stories in Ready](https://badge.waffle.io/City-of-Helsinki/linkedevents.svg?label=ready&title=Ready)](http://waffle.io/City-of-Helsinki/linkedevents)
 
 Linked Events provides categorized data on events and places. The project was originally developed for the City of Helsinki.
