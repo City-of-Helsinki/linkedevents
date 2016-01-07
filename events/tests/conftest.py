@@ -92,13 +92,14 @@ def organization2(other_data_source, user2):
 
 @pytest.mark.django_db
 @pytest.fixture
-def minimal_event_dict(data_source, organization):
+def minimal_event_dict(data_source, organization, location_id):
     return {
         'publisher': organization.id,
         'name': {'fi': 'minimal_event'},
         'event_status': 'EventScheduled',
         'external_links': [],
         'offers': [],
+        'location': {'@id': location_id},
     }
 
 

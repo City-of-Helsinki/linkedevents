@@ -581,7 +581,7 @@ register_view(EventImageViewSet, 'eventimage', base_name='eventimage')
 
 
 class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
-    location = JSONLDRelatedField(serializer=PlaceSerializer, required=False, allow_null=True,
+    location = JSONLDRelatedField(serializer=PlaceSerializer, required=True,
                                   view_name='place-detail', queryset=Place.objects.all())
     # provider = OrganizationSerializer(hide_ld_context=True)
     keywords = JSONLDRelatedField(serializer=KeywordSerializer, many=True,
