@@ -584,8 +584,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     location = JSONLDRelatedField(serializer=PlaceSerializer, required=True,
                                   view_name='place-detail', queryset=Place.objects.all())
     # provider = OrganizationSerializer(hide_ld_context=True)
-    keywords = JSONLDRelatedField(serializer=KeywordSerializer, many=True,
-                                  required=False,
+    keywords = JSONLDRelatedField(serializer=KeywordSerializer, many=True, allow_empty=False,
+                                  required=True,
                                   view_name='keyword-detail', queryset=Keyword.objects.all())
     super_event = JSONLDRelatedField(serializer='EventSerializer', required=False, view_name='event-detail',
                                      queryset=Event.objects.all())

@@ -100,6 +100,9 @@ def minimal_event_dict(data_source, organization, location_id):
         'external_links': [],
         'offers': [],
         'location': {'@id': location_id},
+        'keywords': [
+            {'@id': keyword_id(data_source, 'test')},
+        ],
     }
 
 
