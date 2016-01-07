@@ -112,7 +112,7 @@ def make_kulke_id(num):
 
 def make_event_name(title, subtitle):
     if title and subtitle:
-        return "{} - {}".format(title, subtitle)
+        return "{} – {}".format(title, subtitle)
     elif title:
         return title
     elif subtitle:
