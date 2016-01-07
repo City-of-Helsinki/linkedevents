@@ -151,16 +151,16 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
         }
 
     def to_internal_value(self, value):
-        if '@id' in value:
-            url = value['@id']
-            if not url:
-                if self.required:
-                    raise ValidationError(_('This field is required.'))
-                return None
-            return super(JSONLDRelatedField, self).to_internal_value(urllib.parse.unquote(url))
-        else:
-            raise ValidationError(
-                self.invalid_json_error % type(value).__name__)
+        if not isinstance(value, dict) or '@id' not in value:
+            raise ValidationError(self.invalid_json_error % type(value).__name__)
+
+        url = value['@id']
+        if not url:
+            if self.required:
+                raise ValidationError(_('This field is required.'))
+            return None
+
+        return super().to_internal_value(urllib.parse.unquote(url))
 
     def is_expanded(self):
         return getattr(self, 'expanded', False)
