@@ -1,9 +1,16 @@
 # -*- coding: utf-8 -*-
 import pytest
+from django.core.urlresolvers import reverse
 
 from events.tests.utils import assert_event_data_is_equal
 from events.models import Event
 from events.api import SYSTEM_DATA_SOURCE_ID
+
+
+@pytest.fixture
+def list_url():
+    return reverse('event-list')
+
 
 # === util methods ===
 
@@ -62,3 +69,26 @@ def test__autopopulated_fields(
     assert event.last_modified_time is not None
     assert event.data_source.id == SYSTEM_DATA_SOURCE_ID
     assert event.publisher == organization
+
+
+# location field is used for JSONLDRelatedField tests
+@pytest.mark.django_db
+@pytest.mark.parametrize("input,expected", [
+    ({'location': {'@id': '/v0.1/place/test%20location/'}}, 201),
+    ({'location': {'@id': ''}}, 400),  # field required
+    ({'location': {'foo': 'bar'}}, 400),  # incorrect json
+    ({'location': '/v0.1/place/test%20location/'}, 400),  # incorrect json
+    ({'location': 7}, 400),  # incorrect json
+    ({'location': None}, 400),  # cannot be null
+    ({}, 400),  # field required
+])
+def test__jsonld_related_field(api_client, minimal_event_dict, list_url, place, user, input, expected):
+    api_client.force_authenticate(user)
+
+    del minimal_event_dict['location']
+    minimal_event_dict.update(input)
+
+    response = api_client.post(list_url, minimal_event_dict, format='json')
+    assert response.status_code == expected
+    if expected >= 400:
+        assert 'location' in response.data  # check that there is a error message for location field
