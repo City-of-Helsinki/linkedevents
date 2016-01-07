@@ -154,6 +154,8 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
         if '@id' in value:
             url = value['@id']
             if not url:
+                if self.required:
+                    raise ValidationError(_('This field is required.'))
                 return None
             return super(JSONLDRelatedField, self).to_internal_value(urllib.parse.unquote(url))
         else:
