@@ -196,6 +196,11 @@ def complex_event_dict(data_source, organization, location_id, languages):
             {'@id': keyword_id(data_source, 'test')},
             {'@id': keyword_id(data_source, 'keyword')},
         ],
+        'audience': [
+            {'@id': keyword_id(data_source, 'test_audience1')},
+            {'@id': keyword_id(data_source, 'test_audience2')},
+            {'@id': keyword_id(data_source, 'test_audience3')},
+        ],
         'external_links': [
             {'name': TEXT, 'link': URL, 'language': 'fi'},
             {'name': TEXT, 'link': URL, 'language': 'sv'},
@@ -218,7 +223,6 @@ def complex_event_dict(data_source, organization, location_id, languages):
         'date_published': DATETIME,
         'start_time': DATETIME,
         'end_time': DATETIME,
-        'audience': TEXT,
         'location_extra_info': {'fi': TEXT},
         'info_url': {'en': URL, 'sv': URL, 'fi': URL},
         'secondary_headline': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
