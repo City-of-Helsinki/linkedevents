@@ -151,11 +151,16 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
         }
 
     def to_internal_value(self, value):
-        if '@id' in value:
-            return super(JSONLDRelatedField, self).to_internal_value(value['@id'])
-        else:
-            raise ValidationError(
-                self.invalid_json_error % type(value).__name__)
+        if not isinstance(value, dict) or '@id' not in value:
+            raise ValidationError(self.invalid_json_error % type(value).__name__)
+
+        url = value['@id']
+        if not url:
+            if self.required:
+                raise ValidationError(_('This field is required.'))
+            return None
+
+        return super().to_internal_value(urllib.parse.unquote(url))
 
     def is_expanded(self):
         return getattr(self, 'expanded', False)
@@ -276,34 +281,24 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
         :param data:
         :return:
         """
-        lang = settings.LANGUAGES[0][0]
+
+        extra_fields = {}  # will contain the transformation result
         for field_name in self.translated_fields:
-            # FIXME: handle default lang like others!?
-            lang = settings.LANGUAGES[0][0]  # Handle default lang
-            if data.get(field_name, None) is None:
+            obj = data.get(field_name, None)  # { "fi": "musiikkiklubit", "sv": ... }
+            if not obj:
                 continue
-            values = data[field_name].copy()  # Save original values
+            for language in (lang[0] for lang in settings.LANGUAGES if lang[0] in obj):
+                value = obj[language]  # "musiikkiklubit"
+                if language == settings.LANGUAGES[0][0]:  # default language
+                    extra_fields[field_name] = value  # { "name": "musiikkiklubit" }
+                extra_fields['{}_{}'.format(field_name, language)] = value  # { "name_fi": "musiikkiklubit" }
+            del data[field_name]  # delete original translated fields
 
-            key = "%s_%s" % (field_name, lang)
-            val = data[field_name].get(lang)
-            if val:
-                values[key] = val  # field_name_LANG
-                values[field_name] = val  # field_name
-            if lang in values:
-                del values[lang]  # Remove original key LANG
-            for lang in [x[0] for x in settings.LANGUAGES[1:]]:
-                key = "%s_%s" % (field_name, lang)
-                val = data[field_name].get(lang)
-                if val:
-                    values[key] = val  # field_name_LANG
-                    values[field_name] = val  # field_name
-                if lang in values:
-                    del values[lang]  # Remove original key LANG
-            data.update(values)
-            del data[field_name]  # Remove original field_name from data
+        # handle other than translated fields
+        data = super().to_internal_value(data)
 
-        # do remember to call the super class method as well!
-        data.update(super().to_internal_value(data))
+        # add translated fields to the final result
+        data.update(extra_fields)
 
         return data
 
@@ -543,6 +538,7 @@ register_view(LanguageViewSet, 'language')
 
 LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
 
+
 class EventLinkSerializer(serializers.ModelSerializer):
     def to_representation(self, obj):
         ret = super(EventLinkSerializer, self).to_representation(obj)
@@ -554,34 +550,58 @@ class EventLinkSerializer(serializers.ModelSerializer):
         model = EventLink
         exclude = ['id', 'event']
 
+
 class OfferSerializer(TranslatedModelSerializer):
     class Meta:
         model = Offer
         exclude = ['id', 'event']
 
 
+class EventImageSerializer(LinkedEventsSerializer):
+    view_name = 'eventimage-detail'
+
+    class Meta:
+        model = EventImage
+
+
+class EventImageViewSet(viewsets.ModelViewSet):
+    serializer_class = EventImageSerializer
+    queryset = EventImage.objects.all()
+
+    def perform_create(self, serializer):
+        user = self.request.user if not self.request.user.is_anonymous() else None
+        serializer.save(created_by=user, last_modified_by=user)
+
+    def perform_update(self, serializer):
+        user = self.request.user if not self.request.user.is_anonymous() else None
+        serializer.save(last_modified_by=user)
+
+
+register_view(EventImageViewSet, 'eventimage', base_name='eventimage')
+
+
 class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
-    location = JSONLDRelatedField(serializer=PlaceSerializer, required=False,
-                                  view_name='place-detail', read_only=True)
+    location = JSONLDRelatedField(serializer=PlaceSerializer, required=True,
+                                  view_name='place-detail', queryset=Place.objects.all())
     # provider = OrganizationSerializer(hide_ld_context=True)
-    keywords = JSONLDRelatedField(serializer=KeywordSerializer, many=True,
-                                  required=False,
-                                  view_name='keyword-detail', read_only=True)
-    super_event = JSONLDRelatedField(required=False, view_name='event-detail',
-                                     read_only=True)
+    keywords = JSONLDRelatedField(serializer=KeywordSerializer, many=True, allow_empty=False,
+                                  required=True,
+                                  view_name='keyword-detail', queryset=Keyword.objects.all())
+    super_event = JSONLDRelatedField(serializer='EventSerializer', required=False, view_name='event-detail',
+                                     queryset=Event.objects.all())
     event_status = EnumChoiceField(Event.STATUSES)
     external_links = EventLinkSerializer(many=True, required=False)
     offers = OfferSerializer(many=True, required=False)
     sub_events = JSONLDRelatedField(serializer='EventSerializer',
                                     required=False, view_name='event-detail',
-                                    many=True, read_only=True)
+                                    many=True, queryset=Event.objects.all())
     id = serializers.ReadOnlyField()
     data_source = serializers.PrimaryKeyRelatedField(read_only=True)
     publisher = serializers.PrimaryKeyRelatedField(read_only=True)
-    event_image = JSONLDRelatedField(required=False, view_name='eventimage-detail',
-                                     read_only=True)
+    event_image = JSONLDRelatedField(serializer=EventImageSerializer, required=False, allow_null=True,
+                                     view_name='eventimage-detail', queryset=EventImage.objects.all())
     in_language = JSONLDRelatedField(serializer=LanguageSerializer, required=False,
-                                     view_name='language-detail', read_only=True, many=True)
+                                     view_name='language-detail', many=True, queryset=Language.objects.all())
 
     view_name = 'event-detail'
 
@@ -592,64 +612,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         self.skip_empties = skip_empties
         self.skip_fields = skip_fields
 
-    def get_location(self, data):
-        """
-        Replace location id dict in data with a Place object
-        """
-        location = data.get('location')
-        if location and '@id' in location:
-            location_id = parse_id_from_uri(location['@id'])
-            try:
-                data['location'] = Place.objects.get(id=location_id)
-            except Place.DoesNotExist:
-                err = 'Place with id {} does not exist'
-                raise ParseError(err.format(location_id))
-        return data
-
-    def get_keywords(self, data):
-        """
-        Replace list of keyword dicts in data with a list of Keyword objects
-        """
-        new_kw = []
-
-        for kw in data.get('keywords', []):
-
-            if '@id' in kw:
-                kw_id = parse_id_from_uri(kw['@id'])
-
-                try:
-                    keyword = Keyword.objects.get(id=kw_id)
-                except Keyword.DoesNotExist:
-                    err = 'Keyword with id {} does not exist'
-                    raise ParseError(err.format(kw_id))
-
-                new_kw.append(keyword)
-
-        data['keywords'] = new_kw
-        return data
-
-    def get_in_language(self, data):
-        """
-        Replace list of language dicts in data with a list of Language objects
-        """
-        new_lang = []
-
-        for lang in data.get('in_language', []):
-
-            if '@id' in lang:
-                lang_id = parse_id_from_uri(lang['@id'])
-
-                try:
-                    language = Language.objects.get(id=lang_id)
-                except Language.DoesNotExist:
-                    err = 'Language with id {} does not exist'
-                    raise ParseError(err.format(lang_id))
-
-                new_lang.append(language)
-
-        data['in_language'] = new_lang
-        return data
-
     def get_datetimes(self, data):
         for field in ['date_published', 'start_time', 'end_time']:
             val = data.get(field, None)
@@ -658,91 +620,43 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                     data[field] = parse_time(val, True)
         return data
 
-    def to_internal_value(self, data):
-        data = super().to_internal_value(data)
-
-        # TODO: figure out how to get this via JSONLDRelatedField
-        if 'location' in data:
-            location_id = parse_id_from_uri(data['location']['@id'])
-            data['location'] = Place.objects.get(id=location_id)
-
-        # TODO: figure out how to get this via JSONLDRelatedField
-        event_image_data = data.pop('event_image', None)
-        if event_image_data:
-            uri = event_image_data['@id']
-            if uri:
-                event_image_id = parse_id_from_uri(uri)
-                data['event_image'] = EventImage.objects.get(id=event_image_id)
-
-        # TODO: figure out how to get these via JSONLDRelatedField
-        data = self.get_keywords(data)
-        data = self.get_in_language(data)
-
-        return data
-
     def create(self, validated_data):
         offers = validated_data.pop('offers', [])
         links = validated_data.pop('external_links', [])
-        keywords = validated_data.pop('keywords', [])
-        in_languages = validated_data.pop('in_language', [])
 
-        # create object
-        e = Event.objects.create(**validated_data)
+        event = super().create(validated_data)
 
         # create and add related objects 
         for offer in offers:
-            Offer.objects.create(event=e, **offer)
+            Offer.objects.create(event=event, **offer)
         for link in links:
-            EventLink.objects.create(event=e, **link)
-        e.keywords.add(*keywords)
-        e.in_language.add(*in_languages)
+            EventLink.objects.create(event=event, **link)
 
-        return e
+        return event
 
     def update(self, instance, validated_data):
+        offers = validated_data.pop('offers', None)
+        links = validated_data.pop('external_links', None)
 
-        # prepare a list of fields to be updated
-        update_fields = [
-            'start_time', 'end_time', 'location', 'last_modified_by', 'event_image', 'in_language'
-        ]
-
-        languages = [x[0] for x in settings.LANGUAGES]
-        for field in EventTranslationOptions.fields:
-            for lang in languages:
-                update_fields.append(field + '_' + lang)
-
-        # update values
-        for field in update_fields:
-            orig_value = getattr(instance, field)
-            new_value = validated_data.get(field, orig_value)
-            setattr(instance, field, new_value)
+        # update other fields
+        super().update(instance, validated_data)
 
         # also update `has_end_time` if needed
         if instance.end_time:
             instance.has_end_time = True
-
-        # save changes
-        instance.save()
+            instance.save()
 
         # update offers
-        if 'offers' in validated_data:
+        if isinstance(offers, list):
             instance.offers.all().delete()
-            for offer in validated_data.get('offers', []):
+            for offer in offers:
                 Offer.objects.create(event=instance, **offer)
 
         # update ext links
-        if 'external_links' in validated_data:
+        if isinstance(links, list):
             instance.external_links.all().delete()
-            for link in validated_data.get('external_links', []):
+            for link in links:
                 EventLink.objects.create(event=instance, **link)
-
-        # update keywords
-        instance.keywords.clear() 
-        instance.keywords.add(*validated_data['keywords'])
-
-        # update in_languages
-        instance.in_language.clear()
-        instance.in_language.add(*validated_data['in_language'])
 
         return instance
 
