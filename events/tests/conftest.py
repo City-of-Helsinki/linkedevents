@@ -23,6 +23,8 @@ TEXT = 'testing'
 URL = "http://localhost"
 DATETIME = timezone.now().isoformat()
 
+OTHER_DATA_SOURCE_ID = "testotherdatasourceid"
+
 
 @pytest.fixture
 def api_client():
@@ -37,12 +39,29 @@ def data_source():
 
 @pytest.mark.django_db
 @pytest.fixture
+def other_data_source():
+    return DataSource.objects.create(id=OTHER_DATA_SOURCE_ID)
+
+
+@pytest.mark.django_db
+@pytest.fixture
 def user():
     return get_user_model().objects.create(
         username='test_user',
         first_name='Cem',
         last_name='Kaner',
         email='cem@kaner.com'
+    )
+
+
+@pytest.mark.django_db
+@pytest.fixture
+def user2():
+    return get_user_model().objects.create(
+        username='test_user2',
+        first_name='Brendan',
+        last_name='Neutra',
+        email='brendan@neutra.com'
     )
 
 
@@ -60,13 +79,30 @@ def organization(data_source, user):
 
 @pytest.mark.django_db
 @pytest.fixture
-def minimal_event_dict(data_source, organization):
+def organization2(other_data_source, user2):
+    org = Organization.objects.create(
+        id='test_organization2',
+        data_source=other_data_source
+    )
+    org.admin_users.add(user2)
+    org.save()
+    return org
+
+
+
+@pytest.mark.django_db
+@pytest.fixture
+def minimal_event_dict(data_source, organization, location_id):
     return {
         'publisher': organization.id,
         'name': {'fi': 'minimal_event'},
         'event_status': 'EventScheduled',
         'external_links': [],
         'offers': [],
+        'location': {'@id': location_id},
+        'keywords': [
+            {'@id': keyword_id(data_source, 'test')},
+        ],
     }
 
 
@@ -152,8 +188,6 @@ def language_id(language):
 @pytest.fixture
 def complex_event_dict(data_source, organization, location_id, languages):
     return {
-        'publisher': organization.id,
-        'name': {'fi': 'complex_event'},
         'name': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
         'event_status': 'EventScheduled',
         'location': {'@id': location_id},
@@ -193,5 +227,4 @@ def complex_event_dict(data_source, organization, location_id, languages):
         'short_description': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
         'provider': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
     }
-    return {
-    }
+
