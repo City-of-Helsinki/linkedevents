@@ -276,7 +276,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
 
     # Custom fields not from schema.org
     keywords = models.ManyToManyField(Keyword)
-    audience = models.CharField(verbose_name=_('Audience'), max_length=255, null=True, blank=True)
+    audience = models.ManyToManyField(Keyword, related_name='audiences', blank=True)
 
     external_image_url = models.URLField(verbose_name=_('External image URL'), max_length=400, null=True, blank=True)
     event_image = models.ForeignKey(EventImage, verbose_name=_('Event image'), null=True, blank=True)
