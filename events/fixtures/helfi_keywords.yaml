@@ -131,8 +131,8 @@
   fields:
     data_source: helfi
     name_fi: www.hel.fi-aihepiirit
-    name_sv: www.hel.fi-temor
-    name_en: www.hel.fi teman
+    name_sv: www.hel.fi-teman
+    name_en: www.hel.fi themes
     usage: 2
     keywords:
         - "helfi:8"
