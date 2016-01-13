@@ -15,6 +15,12 @@ class KeywordTranslationOptions(TranslationOptions):
 
 translator.register(Keyword, KeywordTranslationOptions)
 
+class KeywordSetTranslationOptions(TranslationOptions):
+    fields = ('name',)
+
+
+translator.register(KeywordSet, KeywordTranslationOptions)
+
 
 class PlaceTranslationOptions(TranslationOptions):
     fields = ('name', 'description', 'info_url', 'street_address', 'address_locality', 'telephone')

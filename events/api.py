@@ -43,7 +43,7 @@ from events.custom_elasticsearch_search_backend import (
     CustomEsSearchQuerySet as SearchQuerySet
 )
 from events.models import (
-    Place, Event, Keyword, Language, OpeningHoursSpecification, EventLink,
+    Place, Event, Keyword, KeywordSet, Language, OpeningHoursSpecification, EventLink,
     Offer, DataSource, Organization, EventImage
 )
 from events.translation import EventTranslationOptions
@@ -445,7 +445,6 @@ class KeywordSerializer(LinkedEventsSerializer):
     class Meta:
         model = Keyword
 
-
 class KeywordViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Keyword.objects.all()
     serializer_class = KeywordSerializer
@@ -481,6 +480,37 @@ class KeywordViewSet(viewsets.ReadOnlyModelViewSet):
         return queryset
 
 register_view(KeywordViewSet, 'keyword')
+
+class KeywordSetSerializer(LinkedEventsSerializer):
+    view_name = 'keywordset-detail'
+    keywords = JSONLDRelatedField(
+        serializer=KeywordSerializer, many=True, required=True, allow_empty=False,
+        view_name='keyword-detail', queryset=Keyword.objects.all())
+    usage = EnumChoiceField(KeywordSet.USAGES)
+
+    class Meta:
+        model = KeywordSet
+
+class JSONAPIViewSet(viewsets.ReadOnlyModelViewSet):
+    def initial(self, request, *args, **kwargs):
+        ret = super(JSONAPIViewSet, self).initial(request, *args, **kwargs)
+        self.srs = srid_to_srs(self.request.query_params.get('srid', None))
+        return ret
+
+    def get_serializer_context(self):
+        context = super(JSONAPIViewSet, self).get_serializer_context()
+
+        include = self.request.query_params.get('include', '')
+        context['include'] = [x.strip() for x in include.split(',') if x]
+        context['srs'] = self.srs
+
+        return context
+
+class KeywordSetViewSet(JSONAPIViewSet):
+    queryset = KeywordSet.objects.all()
+    serializer_class = KeywordSetSerializer
+
+register_view(KeywordSetViewSet, 'keywordset')
 
 
 class PlaceSerializer(LinkedEventsSerializer, GeoModelSerializer):
@@ -722,21 +752,6 @@ def parse_time(time_str, is_start):
             raise ParseError('time in invalid format (try ISO 8601 or yyyy-mm-dd)')
     return dt
 
-
-class JSONAPIViewSet(viewsets.ReadOnlyModelViewSet):
-    def initial(self, request, *args, **kwargs):
-        ret = super(JSONAPIViewSet, self).initial(request, *args, **kwargs)
-        self.srs = srid_to_srs(self.request.query_params.get('srid', None))
-        return ret
-
-    def get_serializer_context(self):
-        context = super(JSONAPIViewSet, self).get_serializer_context()
-
-        include = self.request.query_params.get('include', '')
-        context['include'] = [x.strip() for x in include.split(',') if x]
-        context['srs'] = self.srs
-
-        return context
 
 
 class LinkedEventsOrderingFilter(filters.OrderingFilter):

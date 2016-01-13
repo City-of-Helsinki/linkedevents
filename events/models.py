@@ -145,6 +145,24 @@ class Keyword(BaseModel):
         verbose_name = _('keyword')
         verbose_name_plural = _('keywords')
 
+class KeywordSet(BaseModel):
+    """
+    Sets of pre-chosen keywords intended or specific uses and/or organizations,
+    for example the set of possible audiences for an event in a specific client.
+    """
+
+    ANY = 1
+    KEYWORD = 2
+    AUDIENCE = 3
+
+    USAGES = (
+        (ANY, "any"),
+        (KEYWORD, "keyword"),
+        (AUDIENCE, "audience"),
+    )
+    usage = models.SmallIntegerField(verbose_name=_('Intended keyword usage'), choices=USAGES, default=ANY)
+    organization = models.ForeignKey(Organization, verbose_name=_('Organization which uses this set'), null=True)
+    keywords = models.ManyToManyField(Keyword, blank=False, related_name='sets')
 
 class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     publisher = models.ForeignKey(Organization, verbose_name=_('Publisher'), db_index=True)

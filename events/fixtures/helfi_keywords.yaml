@@ -1,0 +1,163 @@
+# Data sources
+- model: events.datasource
+  pk: helfi
+  fields:
+    name: www.hel.fi
+
+# Target groups
+- model: events.keyword
+  pk: helfi:1
+  fields:
+    data_source: helfi
+    name_fi: Lapset ja lapsiperheet
+    name_sv: Barn och barnfamiljer
+    name_en: Children and families
+    created_time: 2015-01-13T12:00Z
+    last_modified_time: 2015-01-13T12:00Z
+- model: events.keyword
+  pk: helfi:2
+  fields:
+    data_source: helfi
+    name_fi: Nuoret
+    name_sv: Unga
+    name_en: Youth
+    created_time: 2015-01-13T12:00Z
+    last_modified_time: 2015-01-13T12:00Z
+- model: events.keyword
+  pk: helfi:3
+  fields:
+    data_source: helfi
+    name_fi: Maahanmuuttajat
+    name_sv: Invandrare
+    name_en: Immigrants
+    created_time: 2015-01-13T12:00Z
+    last_modified_time: 2015-01-13T12:00Z
+- model: events.keyword
+  pk: helfi:4
+  fields:
+    data_source: helfi
+    name_fi: Vammaiset
+    name_sv: Funktionshindrade
+    name_en: Disabled
+    created_time: 2015-01-13T12:00Z
+    last_modified_time: 2015-01-13T12:00Z
+- model: events.keyword
+  pk: helfi:5
+  fields:
+    data_source: helfi
+    name_fi: Vanhukset
+    name_sv: Äldre
+    name_en: Elderly
+    created_time: 2015-01-13T12:00Z
+    last_modified_time: 2015-01-13T12:00Z
+- model: events.keyword
+  pk: helfi:6
+  fields:
+    data_source: helfi
+    name_fi: Yritykset
+    name_sv: Företagare
+    name_en: Entrepreneurs
+    created_time: 2015-01-13T12:00Z
+    last_modified_time: 2015-01-13T12:00Z
+- model: events.keyword
+  pk: helfi:7
+  fields:
+    data_source: helfi
+    name_fi: Yhdistykset
+    name_sv: Föreningar
+    name_en: Associations
+    created_time: 2015-01-13T12:00Z
+    last_modified_time: 2015-01-13T12:00Z
+
+# Subjects / topics
+- model: events.keyword
+  pk: helfi:8
+  fields:
+    data_source: helfi
+    name_fi: Kaupunki ja hallinto
+    name_sv: Staden och förvaltning
+    name_en: City administration
+    created_time: 2015-01-13T12:00Z
+    last_modified_time: 2015-01-13T12:00Z
+- model: events.keyword
+  pk: helfi:9
+  fields:
+    data_source: helfi
+    created_time: 2015-01-13T12:00Z
+    last_modified_time: 2015-01-13T12:00Z
+    name_fi: Sosiaali- ja terveyspalvelut
+    name_sv: Social- och hälsovård
+    name_en: Social services and health care
+- model: events.keyword
+  pk: helfi:10
+  fields:
+    data_source: helfi
+    name_fi: Liikenne ja kartat
+    name_sv: Kartor och trafik
+    name_en: Maps and transport
+    created_time: 2015-01-13T12:00Z
+    last_modified_time: 2015-01-13T12:00Z
+- model: events.keyword
+  pk: helfi:11
+  fields:
+    data_source: helfi
+    name_fi: Päivähoito ja koulutus
+    name_sv: Dagvård och utbildning
+    name_en: Daycare and education
+    created_time: 2015-01-13T12:00Z
+    last_modified_time: 2015-01-13T12:00Z
+- model: events.keyword
+  pk: helfi:12
+  fields:
+    data_source: helfi
+    name_fi: Kulttuuri ja vapaa-aika
+    name_sv: Kultur och fritid
+    name_en: Culture and leisure
+    created_time: 2015-01-13T12:00Z
+    last_modified_time: 2015-01-13T12:00Z
+- model: events.keyword
+  pk: helfi:13
+  fields:
+    data_source: helfi
+    name_fi: Asuminen ja ympäristö
+    name_sv: Boende och miljö
+    name_en: Housing and environment
+    created_time: 2015-01-13T12:00Z
+    last_modified_time: 2015-01-13T12:00Z
+
+# Keyword sets
+- model: events.keywordset
+  pk: helfi:topics
+  fields:
+    data_source: helfi
+    name_fi: www.hel.fi-aihepiirit
+    name_sv: www.hel.fi-temor
+    name_en: www.hel.fi teman
+    usage: 2
+    keywords:
+        - "helfi:8"
+        - "helfi:9"
+        - "helfi:10"
+        - "helfi:11"
+        - "helfi:12"
+        - "helfi:13"
+
+    created_time: 2015-01-13T12:00Z
+    last_modified_time: 2015-01-13T12:00Z
+
+- model: events.keywordset
+  pk: helfi:audiences
+  fields:
+    data_source: helfi
+    name_fi: www.hel.fi-kohderyhmät
+    name_sv: www.hel.fi-invånargrupper
+    name_en: www.hel.fi resident groups
+    usage: 3
+    keywords:
+        - "helfi:1"
+        - "helfi:2"
+        - "helfi:3"
+        - "helfi:4"
+        - "helfi:5"
+        - "helfi:6"
+        - "helfi:7"
