@@ -151,6 +151,7 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
         }
 
     def to_internal_value(self, value):
+        # TODO: JA If @id is missing, this will complain just about value not being JSON
         if not isinstance(value, dict) or '@id' not in value:
             raise ValidationError(self.invalid_json_error % type(value).__name__)
 
@@ -187,8 +188,11 @@ class EnumChoiceField(serializers.Field):
                                                              obj, 1)
 
     def to_internal_value(self, data):
-        return utils.get_value_from_tuple_list(self.choices,
+        value = utils.get_value_from_tuple_list(self.choices,
                                                self.prefix + str(data), 0)
+        if value is None:
+            raise ParseError(_("Invalid value in event_status"))
+        return value
 
 
 class ISO8601DurationField(serializers.Field):
@@ -938,6 +942,8 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
         TODO: convert to use proper filter framework
         """
 
+        # TODO: JA Check drafts in if organization matches
+
         queryset = super(EventViewSet, self).filter_queryset(queryset)
 
         if 'show_all' not in self.request.query_params:
@@ -955,6 +961,8 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
         publisher = user.get_default_organization()
         if not publisher:
             raise ParseError(_("User doesn't belong to any organization"))
+
+        # TODO: JA Add authorization checker here for editor's organization
 
         # all events created by api are marked coming from the system data source
         data_source = DataSource.objects.get(id=SYSTEM_DATA_SOURCE_ID)
