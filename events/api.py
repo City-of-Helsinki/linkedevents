@@ -459,19 +459,20 @@ class KeywordViewSet(viewsets.ReadOnlyModelViewSet):
         event.end
         """
         queryset = Keyword.objects.all()
-        if self.request.query_params.get('show_all_keywords'):
-            # Limit by data_source anyway, if it is set
-            data_source = self.request.query_params.get('data_source')
-            if data_source:
-                data_source = data_source.lower()
-                queryset = queryset.filter(data_source=data_source)
-        else:
+        data_source = self.request.query_params.get('data_source')
+        if data_source:
+            data_source = data_source.lower()
+            queryset = queryset.filter(data_source=data_source)
+        if not self.request.query_params.get('show_all_keywords'):
             events = Event.objects.all()
             params = _clean_qp(self.request.query_params)
+            if 'data_source' in params:
+                del params['data_source']
             events = _filter_event_queryset(events, params)
             keyword_ids = events.values_list('keywords',
                                              flat=True).distinct().order_by()
             queryset = queryset.filter(id__in=keyword_ids)
+
         # Optionally filter keywords by filter parameter,
         # can be used e.g. with typeahead.js
         val = self.request.query_params.get('filter')
