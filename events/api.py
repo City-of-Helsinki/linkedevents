@@ -996,7 +996,7 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
         # we cannot use permission class for this because our custom get_object()
         # breaks Permission.has_object_permission()
         event = self.get_object()
-        if not event.is_admin(user):
+        if not event.is_editable() or not event.is_admin(user):
             raise PermissionDenied()
 
         serializer.save(

@@ -240,6 +240,8 @@ THUMBNAIL_PROCESSORS = (
     'image_cropping.thumbnail_processors.crop_corners',
 ) + thumbnail_settings.THUMBNAIL_PROCESSORS
 
+# Only items from these data sources are editable
+EDITABLE_DATASOURCES = ['System']
 
 # local_settings.py can be used to override environment-specific settings
 # like database and email that differ between development and production.

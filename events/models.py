@@ -327,6 +327,9 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
             val.append(str(self.start_time))
         return u" ".join(val)
 
+    def is_editable(self):
+        return self.data_source.name in settings.EDITABLE_DATASOURCES
+
     def is_admin(self, user):
         if user.is_superuser:
             return True
