@@ -44,7 +44,7 @@ from events.custom_elasticsearch_search_backend import (
 )
 from events.models import (
     Place, Event, Keyword, KeywordSet, Language, OpeningHoursSpecification, EventLink,
-    Offer, DataSource, Organization, EventImage
+    Offer, DataSource, Organization, EventImage, PublicationStatus, PUBLICATION_STATUSES
 )
 from events.translation import EventTranslationOptions
 
@@ -625,6 +625,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     super_event = JSONLDRelatedField(serializer='EventSerializer', required=False, view_name='event-detail',
                                      queryset=Event.objects.all())
     event_status = EnumChoiceField(Event.STATUSES)
+    publication_status = EnumChoiceField(PUBLICATION_STATUSES)
     external_links = EventLinkSerializer(many=True, required=False)
     offers = OfferSerializer(many=True, required=False)
     sub_events = JSONLDRelatedField(serializer='EventSerializer',
@@ -718,6 +719,10 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                     pass
         for field in self.skip_fields:
             del ret[field]
+        request = self.context.get('request')
+        if request:
+            if not request.user.is_authenticated():
+                del ret['publication_status']
         return ret
 
     class Meta:
@@ -962,17 +967,26 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
         TODO: convert to use proper filter framework
         """
 
-        # TODO: JA Check drafts in if organization matches
+        user_organization = None
+        if self.request.user and self.request.user.is_authenticated():
+            user_organization = self.request.user.get_default_organization()
 
         queryset = super(EventViewSet, self).filter_queryset(queryset)
-
-        if 'show_all' not in self.request.query_params:
-            queryset = queryset.filter(
-                Q(event_status=Event.SCHEDULED)
+        auth_filters = Q()
+        if 'show_all' in self.request.query_params:
+            if user_organization:
+                auth_filters |= (
+                    Q(publisher=user_organization)
+                )
+        else:
+            auth_filters |= (
+                Q(event_status=Event.Status.SCHEDULED) &
+                Q(publication_status=PublicationStatus.PUBLIC)
             )
+        queryset = queryset.filter(auth_filters)
         queryset = _filter_event_queryset(queryset, self.request.query_params,
                                           srs=self.srs)
-        return queryset
+        return queryset.filter()
 
     def perform_create(self, serializer):
         event_id = generate_id(SYSTEM_DATA_SOURCE_ID)

@@ -77,9 +77,9 @@ def text(item, tag):
 
 def matko_status(num):
     if num == 2:
-        return Event.SCHEDULED
+        return Event.Status.SCHEDULED
     if num == 3:
-        return Event.CANCELLED
+        return Event.Status.CANCELLED
     return None
 
 def zipcode_and_muni(text):
