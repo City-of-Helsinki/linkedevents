@@ -328,7 +328,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         return u" ".join(val)
 
     def is_editable(self):
-        return self.data_source.name in settings.EDITABLE_DATASOURCES
+        return self.data_source.id in settings.EDITABLE_DATASOURCES
 
     def is_admin(self, user):
         if user.is_superuser:
