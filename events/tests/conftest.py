@@ -98,6 +98,7 @@ def minimal_event_dict(data_source, organization, location_id):
         'name': {'fi': 'minimal_event'},
         'event_status': 'EventScheduled',
         'external_links': [],
+        'publication_status': 'public',
         'offers': [],
         'location': {'@id': location_id},
         'keywords': [
@@ -230,5 +231,6 @@ def complex_event_dict(data_source, organization, location_id, languages):
         'headline': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
         'short_description': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
         'provider': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
+        'publication_status': 'public',
     }
 
