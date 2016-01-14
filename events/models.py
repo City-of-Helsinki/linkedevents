@@ -35,6 +35,14 @@ from image_cropping import ImageRatioField
 
 User = settings.AUTH_USER_MODEL
 
+class PublicationStatus:
+    PUBLIC = 1
+    DRAFT = 2
+
+PUBLICATION_STATUSES = (
+    (PublicationStatus.PUBLIC, "public"),
+    (PublicationStatus.DRAFT, "draft"),
+)
 
 class SchemalessFieldMixin(models.Model):
     custom_data = HStoreField(null=True)
@@ -243,16 +251,18 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     """
     eventStatus enumeration is based on http://schema.org/EventStatusType
     """
-    SCHEDULED = 1
-    CANCELLED = 2
-    POSTPONED = 3
-    RESCHEDULED = 4
 
+    class Status:
+        SCHEDULED = 1
+        CANCELLED = 2
+        POSTPONED = 3
+        RESCHEDULED = 4
+    # Properties from schema.org/Event
     STATUSES = (
-        (SCHEDULED, "EventScheduled"),
-        (CANCELLED, "EventCancelled"),
-        (POSTPONED, "EventPostponed"),
-        (RESCHEDULED, "EventRescheduled"),
+        (Status.SCHEDULED, "EventScheduled"),
+        (Status.CANCELLED, "EventCancelled"),
+        (Status.POSTPONED, "EventPostponed"),
+        (Status.RESCHEDULED, "EventRescheduled"),
     )
 
     # Properties from schema.org/Thing
@@ -274,9 +284,17 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     provider = models.CharField(verbose_name=_('Provider'), max_length=512, null=True)
     publisher = models.ForeignKey(Organization, verbose_name=_('Publisher'), db_index=True, related_name='published_events')
 
-    # Properties from schema.org/Event
+    # Status of the event itself
     event_status = models.SmallIntegerField(verbose_name=_('Event status'), choices=STATUSES,
-                                            default=SCHEDULED)
+                                            default=Status.SCHEDULED)
+
+    # Whether or not this data about the event is ready to be viewed by the general public.
+    # DRAFT means the data is considered incomplete or is otherwise undergoing refinement --
+    # or just waiting to be published for other reasons.
+    publication_status = models.SmallIntegerField(
+        verbose_name=_('Event data publication status'), choices=PUBLICATION_STATUSES,
+        default=PublicationStatus.PUBLIC)
+
     location = models.ForeignKey(Place, null=True, blank=True)
     location_extra_info = models.CharField(verbose_name=_('Location extra info'), max_length=400, null=True, blank=True)
 

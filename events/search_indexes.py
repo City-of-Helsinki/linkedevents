@@ -1,5 +1,5 @@
 from haystack import indexes
-from .models import Event
+from .models import Event, PublicationStatus
 from django.utils.translation import get_language
 from django.utils.html import strip_tags
 
@@ -19,3 +19,6 @@ class EventIndex(indexes.SearchIndex, indexes.Indexable):
         if obj.description:
             obj.description = strip_tags(obj.description)
         return super(EventIndex, self).prepare(obj)
+
+    def index_queryset(self, using=None):
+        return self.get_model().objects.filter(publication_status=PublicationStatus.PUBLIC)
