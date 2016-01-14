@@ -15,6 +15,13 @@ def register_view(klass, name, base_name=None):
 class UserSerializer(serializers.ModelSerializer):
     display_name = serializers.ReadOnlyField(source='get_display_name')
 
+    def to_representation(self, obj):
+        rep = super(UserSerializer, self).to_representation(obj)
+        default_org = obj.get_default_organization()
+        if default_org:
+            rep['organization'] = default_org.id
+        return rep
+
     class Meta:
         fields = [
             'last_login', 'username', 'email', 'date_joined',
