@@ -877,6 +877,10 @@ def _filter_event_queryset(queryset, params, srs=None):
         cond = 'end_time - start_time >= %s :: interval'
         queryset = queryset.extra(where=[cond], params=[str(dur)])
 
+    val = params.get('organization', None)
+    if val:
+        queryset = queryset.filter(publisher__id=val)
+
     return queryset
 
 
