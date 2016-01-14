@@ -978,8 +978,6 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
         if not publisher:
             raise ParseError(_("User doesn't belong to any organization"))
 
-        # TODO: JA Add authorization checker here for editor's organization
-
         # all events created by api are marked coming from the system data source
         data_source = DataSource.objects.get(id=SYSTEM_DATA_SOURCE_ID)
         serializer.save(

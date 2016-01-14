@@ -328,7 +328,10 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         return u" ".join(val)
 
     def is_admin(self, user):
-        return user in self.publisher.admin_users.all()
+        if user.is_superuser:
+            return True
+        else:
+            return user in self.publisher.admin_users.all()
 
 reversion.register(Event)
 
