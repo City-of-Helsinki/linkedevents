@@ -955,7 +955,7 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
         'offers', 'keywords', 'external_links', 'sub_events')
     serializer_class = EventSerializer
     filter_backends = (EventOrderingFilter,)
-    ordering_fields = ('start_time', 'end_time', 'days_left')
+    ordering_fields = ('start_time', 'end_time', 'days_left', 'last_modified_time')
 
     def get_object(self):
         # Overridden to prevent queryset filtering from being applied
