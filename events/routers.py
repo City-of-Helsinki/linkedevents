@@ -33,8 +33,9 @@ class DocumentedRouter(DefaultRouter):
             The API provides data in JSON-LD format.
 
             *The API is in beta phase. To help improve the API, please don’t
-            hesitate to comment, give feedback or make suggestions on
-            the [Linked Events API discussion forum](http://dev.hel.fi/forum/linkedevents)*
+            hesitate to comment, give feedback or make suggestions to
+            [API's Github issues](https://github.com/City-of-Helsinki/linkedevents/issues) or
+            through project page at [dev.hel.fi](http://dev.hel.fi/projects/linked-events/)*
 
             # Usage
 
