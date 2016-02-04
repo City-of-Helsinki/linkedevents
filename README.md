@@ -32,6 +32,12 @@ wget -O - http://api.hel.fi/linkedevents/static/linkedevents.dump.gz | gunzip -c
 sudo -u postgres psql linkedevents < linkedevents.dump
 ```
 
+Running tests
+------------
+```
+py.test events
+```
+
 Requirements
 ------------
 
