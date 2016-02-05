@@ -78,6 +78,32 @@ class SimpleValueMixin(object):
         return self.simple_value() == other.simple_value()
 
 
+class Image(models.Model):
+    jsonld_type = 'ImageObject'
+
+    publisher = models.ForeignKey('Organization', verbose_name=_('Publisher'), db_index=True, null=True, blank=True, related_name='Published_images')
+
+    created_time = models.DateTimeField(auto_now_add=True)
+    last_modified_time = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(User, null=True, blank=True, related_name='EventImage_created_by')
+    last_modified_by = models.ForeignKey(User, related_name='EventImage_last_modified_by', null=True, blank=True)
+
+    image = models.ImageField(upload_to='images', null=True, blank=True)
+    url = models.URLField(verbose_name=_('Image'), max_length=400)
+    cropping = ImageRatioField('image', '800x800', verbose_name=_('Cropping'))
+
+    def save(self, *args, **kwargs):
+        # ensures that if image is present, url points to image
+        if not self.url:
+            self.url = self.image.url
+        if not self.publisher:
+            try:
+                self.publisher = self.created_by.get_default_organization()
+            except AttributeError:
+                pass
+        super(Image, self).save(*args, **kwargs)
+
+
 @python_2_unicode_compatible
 class BaseModel(models.Model):
     id = models.CharField(max_length=50, primary_key=True)
@@ -98,6 +124,7 @@ class BaseModel(models.Model):
     last_modified_by = models.ForeignKey(
         User, null=True, blank=True,
         related_name="%(app_label)s_%(class)s_modified_by")
+    image = models.ForeignKey(Image, verbose_name=_('Image'), null=True, blank=True)
 
     @staticmethod
     def now():
@@ -232,19 +259,6 @@ class OpeningHoursSpecification(models.Model):
         verbose_name_plural = _('opening hour specifications')
 
 
-class EventImage(models.Model):
-    jsonld_type = 'ImageObject'
-
-    created_time = models.DateTimeField(auto_now_add=True)
-    last_modified_time = models.DateTimeField(auto_now=True)
-    created_by = models.ForeignKey(User, null=True, blank=True, related_name='EventImage_created_by')
-    last_modified_by = models.ForeignKey(User, related_name='EventImage_last_modified_by', null=True, blank=True)
-
-    image = models.ImageField(upload_to='event_images', verbose_name=_('Image'))
-    cropping = ImageRatioField('image', '800x800', verbose_name=_('Cropping'))
-
-
-
 class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     jsonld_type = "Event/LinkedEvent"
 
@@ -313,9 +327,6 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     # Custom fields not from schema.org
     keywords = models.ManyToManyField(Keyword)
     audience = models.ManyToManyField(Keyword, related_name='audiences', blank=True)
-
-    external_image_url = models.URLField(verbose_name=_('External image URL'), max_length=400, null=True, blank=True)
-    event_image = models.ForeignKey(EventImage, verbose_name=_('Event image'), null=True, blank=True)
 
     class Meta:
         verbose_name = _('event')

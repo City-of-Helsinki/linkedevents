@@ -44,7 +44,7 @@ from events.custom_elasticsearch_search_backend import (
 )
 from events.models import (
     Place, Event, Keyword, KeywordSet, Language, OpeningHoursSpecification, EventLink,
-    Offer, DataSource, Organization, EventImage, PublicationStatus, PUBLICATION_STATUSES
+    Offer, DataSource, Organization, Image, PublicationStatus, PUBLICATION_STATUSES
 )
 from events.translation import EventTranslationOptions
 
@@ -592,16 +592,17 @@ class OfferSerializer(TranslatedModelSerializer):
         exclude = ['id', 'event']
 
 
-class EventImageSerializer(LinkedEventsSerializer):
-    view_name = 'eventimage-detail'
+class ImageSerializer(LinkedEventsSerializer):
+    view_name = 'image-detail'
 
     class Meta:
-        model = EventImage
+        model = Image
+        exclude = ['image']
 
 
-class EventImageViewSet(viewsets.ModelViewSet):
-    serializer_class = EventImageSerializer
-    queryset = EventImage.objects.all()
+class ImageViewSet(viewsets.ModelViewSet):
+    serializer_class = ImageSerializer
+    queryset = Image.objects.all()
 
     def perform_create(self, serializer):
         user = self.request.user if not self.request.user.is_anonymous() else None
@@ -612,7 +613,7 @@ class EventImageViewSet(viewsets.ModelViewSet):
         serializer.save(last_modified_by=user)
 
 
-register_view(EventImageViewSet, 'eventimage', base_name='eventimage')
+register_view(ImageViewSet, 'image', base_name='image')
 
 
 class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
@@ -634,8 +635,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     id = serializers.ReadOnlyField()
     data_source = serializers.PrimaryKeyRelatedField(read_only=True)
     publisher = serializers.PrimaryKeyRelatedField(read_only=True)
-    event_image = JSONLDRelatedField(serializer=EventImageSerializer, required=False, allow_null=True,
-                                     view_name='eventimage-detail', queryset=EventImage.objects.all())
+    image = JSONLDRelatedField(serializer=ImageSerializer, required=False, allow_null=True,
+                                     view_name='image-detail', queryset=Image.objects.all())
     in_language = JSONLDRelatedField(serializer=LanguageSerializer, required=False,
                                      view_name='language-detail', many=True, queryset=Language.objects.all())
     audience = JSONLDRelatedField(serializer=KeywordSerializer, view_name='keyword-detail',
@@ -727,7 +728,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
     class Meta:
         model = Event
-        exclude = ['has_start_time', 'has_end_time', 'is_recurring_super', 'external_image_url']
+        exclude = ['has_start_time', 'has_end_time', 'is_recurring_super']
 
 
 def parse_time(time_str, is_start):
@@ -1087,26 +1088,3 @@ class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView
 
 
 register_view(SearchViewSet, 'search', base_name='search')
-
-
-class EventImageSerializer(LinkedEventsSerializer):
-    view_name = 'eventimage-detail'
-
-    class Meta:
-        model = EventImage
-
-
-class EventImageViewSet(viewsets.ModelViewSet):
-    serializer_class = EventImageSerializer
-    queryset = EventImage.objects.all()
-
-    def perform_create(self, serializer):
-        user = self.request.user if not self.request.user.is_anonymous() else None
-        serializer.save(created_by=user, last_modified_by=user)
-
-    def perform_update(self, serializer):
-        user = self.request.user if not self.request.user.is_anonymous() else None
-        serializer.save(last_modified_by=user)
-
-
-register_view(EventImageViewSet, 'eventimage', base_name='eventimage')

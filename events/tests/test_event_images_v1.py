@@ -8,10 +8,10 @@ import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.urlresolvers import reverse
 from django.test.utils import override_settings
-from PIL import Image
+from PIL import Image as PILImage
 
 from .utils import get, assert_fields_exist
-from events.models import EventImage
+from events.models import Image
 
 
 temp_dir = tempfile.mkdtemp()
@@ -27,7 +27,7 @@ def tear_down():
 
 
 def create_in_memory_image_file(name='test_image', image_format='png', size=(512, 256), color=(128, 128, 128)):
-    image = Image.new('RGBA', size=size, color=color)
+    image = PILImage.new('RGBA', size=size, color=color)
     file = BytesIO()
     file.name = '{}.{}'.format(name, image_format)
     image.save(file, format=image_format)
@@ -36,24 +36,25 @@ def create_in_memory_image_file(name='test_image', image_format='png', size=(512
 
 
 def get_list(api_client):
-    list_url = reverse('eventimage-list')
+    list_url = reverse('image-list')
     return get(api_client, list_url)
 
 
 def get_detail(api_client, detail_pk):
-    detail_url = reverse('eventimage-detail', kwargs={'pk': detail_pk})
+    detail_url = reverse('image-detail', kwargs={'pk': detail_pk})
     return get(api_client, detail_url)
 
 
-def assert_event_image_fields_exist(data):
+def assert_image_fields_exist(data):
     fields = (
         '@context',
         '@id',
         '@type',
+        'publisher',
         'created_time',
         'cropping',
         'id',
-        'image',
+        'url',
         'last_modified_by',
         'last_modified_time',
     )
@@ -65,11 +66,11 @@ def assert_event_image_fields_exist(data):
 
 @pytest.fixture
 def list_url():
-    return reverse('eventimage-list')
+    return reverse('image-list')
 
 
 @pytest.fixture
-def event_image_data():
+def image_data():
     image_file = create_in_memory_image_file()
     return {
         'image': image_file,
@@ -80,65 +81,65 @@ def event_image_data():
 
 
 @pytest.mark.django_db
-def test__get_event_image_list_check_fields_exist(api_client):
+def test__get_image_list_check_fields_exist(api_client):
     image_file = create_in_memory_image_file(name='existing_test_image')
     uploaded_image = SimpleUploadedFile(
         'existing_test_image.png',
         image_file.read(),
         'image/png',
     )
-    EventImage.objects.create(image=uploaded_image)
+    Image.objects.create(image=uploaded_image)
     response = get_list(api_client)
-    assert_event_image_fields_exist(response.data['data'][0])
+    assert_image_fields_exist(response.data['data'][0])
 
 
 @pytest.mark.django_db
-def test__get_event_detail_check_fields_exist(api_client):
+def test__get_detail_check_fields_exist(api_client):
     image_file = create_in_memory_image_file(name='existing_test_image')
     uploaded_image = SimpleUploadedFile(
         'existing_test_image.png',
         image_file.read(),
         'image/png',
     )
-    existing_event_image = EventImage.objects.create(image=uploaded_image)
-    response = get_detail(api_client, existing_event_image.pk)
-    assert_event_image_fields_exist(response.data)
+    existing_image = Image.objects.create(image=uploaded_image)
+    response = get_detail(api_client, existing_image.pk)
+    assert_image_fields_exist(response.data)
 
 
 @pytest.mark.django_db
-def test__unauthenticated_user_cannot_upload_an_event_image(api_client, list_url, event_image_data, user):
-    response = api_client.post(list_url, event_image_data)
+def test__unauthenticated_user_cannot_upload_an_image(api_client, list_url, image_data, user):
+    response = api_client.post(list_url, image_data)
     assert response.status_code == 401
 
 
 @override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL='')
 @pytest.mark.django_db
-def test__upload_an_event_image(api_client, settings, list_url, event_image_data, user):
+def test__upload_an_image(api_client, settings, list_url, image_data, user):
     api_client.force_authenticate(user)
 
-    response = api_client.post(list_url, event_image_data)
+    response = api_client.post(list_url, image_data)
     assert response.status_code == 201
-    assert EventImage.objects.all().count() == 1
+    assert Image.objects.all().count() == 1
 
-    event_image = EventImage.objects.get(pk=response.data['id'])
-    assert event_image.created_by == user
-    assert event_image.last_modified_by == user
+    image = Image.objects.get(pk=response.data['id'])
+    assert image.created_by == user
+    assert image.last_modified_by == user
 
     # image url should contain the image file's path relative to MEDIA_ROOT.
-    image_url = event_image.image.url
-    assert image_url.startswith('event_images/test_image')
+    image_url = image.image.url
+    assert image_url.startswith('images/test_image')
     assert image_url.endswith('.png')
 
     # check the actual image file
-    image_path = os.path.join(settings.MEDIA_ROOT, event_image.image.url)
-    image = Image.open(image_path)
+    image_path = os.path.join(settings.MEDIA_ROOT, image.image.url)
+    image = PILImage.open(image_path)
     assert image.size == (512, 256)
     assert image.format == 'PNG'
 
 
 @override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL='')
 @pytest.mark.django_db(transaction=True)  # transaction is needed for django-cleanup
-def test__delete_an_event_image(api_client, settings, user):
+def test__delete_an_image(api_client, settings, user):
     api_client.force_authenticate(user)
 
     image_file = create_in_memory_image_file(name='existing_test_image')
@@ -147,17 +148,17 @@ def test__delete_an_event_image(api_client, settings, user):
         image_file.read(),
         'image/png',
     )
-    existing_event_image = EventImage.objects.create(image=uploaded_image)
-    assert EventImage.objects.all().count() == 1
+    existing_image = Image.objects.create(image=uploaded_image)
+    assert Image.objects.all().count() == 1
 
     # verify that the image file exists at first just in case
-    image_path = os.path.join(settings.MEDIA_ROOT, existing_event_image.image.url)
+    image_path = os.path.join(settings.MEDIA_ROOT, existing_image.image.url)
     assert os.path.isfile(image_path)
 
-    detail_url = reverse('eventimage-detail', kwargs={'pk': existing_event_image.pk})
+    detail_url = reverse('image-detail', kwargs={'pk': existing_image.pk})
     response = api_client.delete(detail_url)
     assert response.status_code == 204
-    assert EventImage.objects.all().count() == 0
+    assert Image.objects.all().count() == 0
 
     # check that the image file is deleted
     assert not os.path.isfile(image_path)
