@@ -42,10 +42,6 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.RemoveField(
-            model_name='event',
-            name='image',
-        ),
-        migrations.RemoveField(
             model_name='keyword',
             name='image',
         ),
@@ -57,10 +53,10 @@ class Migration(migrations.Migration):
             model_name='place',
             name='image',
         ),
-        migrations.AddField(
+        migrations.RenameField(
             model_name='event',
-            name='external_image_url',
-            field=models.URLField(blank=True, max_length=400, null=True, verbose_name='External image URL'),
+            old_name='image',
+            new_name='external_image_url',
         ),
         migrations.AlterField(
             model_name='organization',
