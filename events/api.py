@@ -600,9 +600,20 @@ class ImageSerializer(LinkedEventsSerializer):
         exclude = ['image']
 
 
+class CreateImageSerializer(LinkedEventsSerializer):
+    view_name = 'image-create'
+    class Meta:
+        model = Image
+
+
 class ImageViewSet(viewsets.ModelViewSet):
-    serializer_class = ImageSerializer
     queryset = Image.objects.all()
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            print(self.request.method)
+            return CreateImageSerializer
+        return ImageSerializer
 
     def perform_create(self, serializer):
         user = self.request.user if not self.request.user.is_anonymous() else None

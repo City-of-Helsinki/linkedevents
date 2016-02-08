@@ -23,6 +23,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericForeignKey
 import pytz
 from django.contrib.gis.db import models
+from rest_framework.exceptions import ValidationError
 from reversion import revisions as reversion
 from django.utils.translation import ugettext_lazy as _
 from mptt.models import MPTTModel, TreeForeignKey
@@ -89,13 +90,16 @@ class Image(models.Model):
     last_modified_by = models.ForeignKey(User, related_name='EventImage_last_modified_by', null=True, blank=True)
 
     image = models.ImageField(upload_to='images', null=True, blank=True)
-    url = models.URLField(verbose_name=_('Image'), max_length=400)
+    url = models.URLField(verbose_name=_('Image'), max_length=400, null=True, blank=True)
     cropping = ImageRatioField('image', '800x800', verbose_name=_('Cropping'))
 
     def save(self, *args, **kwargs):
         # ensures that if image is present, url points to image
         if not self.url:
-            self.url = self.image.url
+            try:
+                self.url = self.image.url
+            except AttributeError:
+                raise ValidationError(_('You must provide either image or url.'))
         if not self.publisher:
             try:
                 self.publisher = self.created_by.get_default_organization()
