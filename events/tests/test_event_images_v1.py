@@ -77,6 +77,14 @@ def image_data():
     }
 
 
+@pytest.fixture
+def image_url():
+    url = 'https://commons.wikimedia.org/wiki/File:Common_Squirrel.jpg'
+    return {
+        'url': url,
+    }
+
+
 # === tests ===
 
 
@@ -107,8 +115,27 @@ def test__get_detail_check_fields_exist(api_client):
 
 
 @pytest.mark.django_db
+def test__get_detail_check_image_url(api_client):
+    image_file = create_in_memory_image_file(name='existing_test_image')
+    uploaded_image = SimpleUploadedFile(
+        'existing_test_image.png',
+        image_file.read(),
+        'image/png',
+    )
+    existing_image = Image.objects.create(image=uploaded_image)
+    response = get_detail(api_client, existing_image.pk)
+    assert '/v1/' in response.data['url']
+
+
+@pytest.mark.django_db
 def test__unauthenticated_user_cannot_upload_an_image(api_client, list_url, image_data, user):
     response = api_client.post(list_url, image_data)
+    assert response.status_code == 401
+
+
+@pytest.mark.django_db
+def test__unauthenticated_user_cannot_upload_an_url(api_client, list_url, image_url, user):
+    response = api_client.post(list_url, image_url)
     assert response.status_code == 401
 
 
@@ -126,15 +153,31 @@ def test__upload_an_image(api_client, settings, list_url, image_data, user):
     assert image.last_modified_by == user
 
     # image url should contain the image file's path relative to MEDIA_ROOT.
-    image_url = image.image.url
-    assert image_url.startswith('images/test_image')
-    assert image_url.endswith('.png')
+    print(image.url)
+    assert image.url.startswith('images/test_image')
+    assert image.url.endswith('.png')
 
     # check the actual image file
     image_path = os.path.join(settings.MEDIA_ROOT, image.image.url)
     image = PILImage.open(image_path)
     assert image.size == (512, 256)
     assert image.format == 'PNG'
+
+
+@pytest.mark.django_db
+def test__upload_an_url(api_client, settings, list_url, image_url, user):
+    api_client.force_authenticate(user)
+
+    response = api_client.post(list_url, image_url)
+    assert response.status_code == 201
+    assert Image.objects.all().count() == 1
+
+    image = Image.objects.get(pk=response.data['id'])
+    assert image.created_by == user
+    assert image.last_modified_by == user
+
+    # image url should stay the same as when input
+    assert image.url == 'https://commons.wikimedia.org/wiki/File:Common_Squirrel.jpg'
 
 
 @override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL='')

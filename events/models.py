@@ -94,17 +94,17 @@ class Image(models.Model):
     cropping = ImageRatioField('image', '800x800', verbose_name=_('Cropping'))
 
     def save(self, *args, **kwargs):
-        # ensures that if image is present, url points to image
-        if not self.url:
-            try:
-                self.url = self.image.url
-            except AttributeError:
-                raise ValidationError(_('You must provide either image or url.'))
         if not self.publisher:
             try:
                 self.publisher = self.created_by.get_default_organization()
             except AttributeError:
                 pass
+        # ensures that if image was saved, url points to image
+        if not self.url:
+            try:
+                self.url = self.image.field.upload_to + '/' + self.image.url
+            except AttributeError:
+                raise ValidationError(_('You must provide either image or url.'))
         super(Image, self).save(*args, **kwargs)
 
 
