@@ -99,12 +99,13 @@ class Image(models.Model):
                 self.publisher = self.created_by.get_default_organization()
             except AttributeError:
                 pass
-        # ensures that if image was saved, url points to image
-        if not self.url:
-            try:
-                self.url = self.image.field.upload_to + '/' + self.image.url
-            except AttributeError:
-                raise ValidationError(_('You must provide either image or url.'))
+        # ensure that either image or url is provided
+        if not self.url and not self.image:
+            print(self.url)
+            print(self.image)
+            raise ValidationError(_('You must provide either image or url.'))
+        if self.url and self.image:
+            raise ValidationError(_('You can only provide image or url, not both.'))
         super(Image, self).save(*args, **kwargs)
 
 

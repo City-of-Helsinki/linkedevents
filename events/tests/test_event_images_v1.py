@@ -102,6 +102,13 @@ def test__get_image_list_check_fields_exist(api_client):
 
 
 @pytest.mark.django_db
+def test__get_image_list_check_fields_exist_for_url(api_client):
+    Image.objects.create(url='https://commons.wikimedia.org/wiki/File:Common_Squirrel.jpg')
+    response = get_list(api_client)
+    assert_image_fields_exist(response.data['data'][0])
+
+
+@pytest.mark.django_db
 def test__get_detail_check_fields_exist(api_client):
     image_file = create_in_memory_image_file(name='existing_test_image')
     uploaded_image = SimpleUploadedFile(
@@ -110,6 +117,13 @@ def test__get_detail_check_fields_exist(api_client):
         'image/png',
     )
     existing_image = Image.objects.create(image=uploaded_image)
+    response = get_detail(api_client, existing_image.pk)
+    assert_image_fields_exist(response.data)
+
+
+@pytest.mark.django_db
+def test_get_detail_check_fields_exist_for_url(api_client):
+    existing_image = Image.objects.create(url='https://commons.wikimedia.org/wiki/File:Common_Squirrel.jpg')
     response = get_detail(api_client, existing_image.pk)
     assert_image_fields_exist(response.data)
 
@@ -124,7 +138,8 @@ def test__get_detail_check_image_url(api_client):
     )
     existing_image = Image.objects.create(image=uploaded_image)
     response = get_detail(api_client, existing_image.pk)
-    assert '/v1/' in response.data['url']
+    assert 'images/existing_test_image' in response.data['url']
+    assert response.data['url'].endswith('.png')
 
 
 @pytest.mark.django_db
@@ -153,9 +168,8 @@ def test__upload_an_image(api_client, settings, list_url, image_data, user):
     assert image.last_modified_by == user
 
     # image url should contain the image file's path relative to MEDIA_ROOT.
-    print(image.url)
-    assert image.url.startswith('images/test_image')
-    assert image.url.endswith('.png')
+    assert image.image.url.startswith('images/test_image')
+    assert image.image.url.endswith('.png')
 
     # check the actual image file
     image_path = os.path.join(settings.MEDIA_ROOT, image.image.url)
@@ -178,6 +192,18 @@ def test__upload_an_url(api_client, settings, list_url, image_url, user):
 
     # image url should stay the same as when input
     assert image.url == 'https://commons.wikimedia.org/wiki/File:Common_Squirrel.jpg'
+
+
+@pytest.mark.django_db
+def test__upload_an_image_and_url(api_client, settings, list_url, image_data, image_url, user):
+    api_client.force_authenticate(user)
+
+    image_data_and_url = image_data.copy()
+    image_data_and_url.update(image_url)
+    response = api_client.post(list_url, image_data_and_url)
+    assert response.status_code == 400
+    for line in response.data:
+        assert 'You can only provide image or url, not both' in line
 
 
 @override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL='')
@@ -217,3 +243,12 @@ def test__upload_a_non_valid_image(api_client, list_url, user):
     response = api_client.post(list_url, {'image': non_image_file})
     assert response.status_code == 400
     assert 'image' in response.data
+
+
+@pytest.mark.django_db
+def test__upload_an_invalid_dict(api_client, list_url, user):
+    api_client.force_authenticate(user)
+    response = api_client.post(list_url, {'key': 'wrong'})
+    assert response.status_code == 400
+    for line in response.data:
+        assert 'You must provide either image or url' in line

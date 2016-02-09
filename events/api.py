@@ -597,23 +597,19 @@ class ImageSerializer(LinkedEventsSerializer):
 
     class Meta:
         model = Image
-        exclude = ['image']
 
-
-class CreateImageSerializer(LinkedEventsSerializer):
-    view_name = 'image-create'
-    class Meta:
-        model = Image
+    def to_representation(self, obj):
+        # the url field is customized based on image and url
+        representation = super().to_representation(obj)
+        if representation['image']:
+            representation['url'] = representation['image']
+        representation.pop('image')
+        return representation
 
 
 class ImageViewSet(viewsets.ModelViewSet):
     queryset = Image.objects.all()
-
-    def get_serializer_class(self):
-        if self.request.method == 'POST':
-            print(self.request.method)
-            return CreateImageSerializer
-        return ImageSerializer
+    serializer_class = ImageSerializer
 
     def perform_create(self, serializer):
         user = self.request.user if not self.request.user.is_anonymous() else None
