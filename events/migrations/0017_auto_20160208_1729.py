@@ -13,11 +13,6 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.AlterField(
-            model_name='event',
-            name='external_image_url',
-            field=models.URLField(blank=True, max_length=400, null=True),
-        ),
-        migrations.AlterField(
             model_name='image',
             name='url',
             field=models.URLField(blank=True, max_length=400, null=True, verbose_name='Image'),
