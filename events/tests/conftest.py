@@ -3,7 +3,7 @@
 # django
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from rest_framework.reverse import reverse
+from .utils import versioned_reverse as reverse
 
 
 # 3rd party

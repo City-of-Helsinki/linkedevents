@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from django.core.urlresolvers import reverse
+from .utils import versioned_reverse as reverse
 from django.conf import settings
 import pytest
 from events.models import Language
