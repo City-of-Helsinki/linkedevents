@@ -741,6 +741,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         model = Event
         exclude = ['has_start_time', 'has_end_time', 'is_recurring_super']
 
+class EventSerializerV0_1(EventSerializer):
+    pass
 
 def parse_time(time_str, is_start):
     time_str = time_str.strip()
@@ -968,6 +970,11 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
     serializer_class = EventSerializer
     filter_backends = (EventOrderingFilter,)
     ordering_fields = ('start_time', 'end_time', 'days_left', 'last_modified_time')
+
+    def get_serializer_class(self):
+        if self.request.version == 'v0.1':
+            return EventSerializerV0_1
+        return EventSerializer
 
     def get_object(self):
         # Overridden to prevent queryset filtering from being applied
