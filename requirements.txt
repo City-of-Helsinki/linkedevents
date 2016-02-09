@@ -5,7 +5,6 @@
 #    pip-compile requirements.in
 #
 -e git+https://github.com/City-of-Helsinki/django-helusers#egg=django-helusers
--e git+https://github.com/django-mptt/django-mptt.git@0b4006d4014266f5a1017ec0f0a93736aec5ba46#egg=django-mptt
 -e git+https://github.com/City-of-Helsinki/munigeo#egg=django-munigeo
 astroid==1.4.3            # via pylint
 bleach==1.4.2
@@ -23,6 +22,7 @@ django-haystack==2.4.1
 django-hstore==1.4.1
 django-image-cropping==1.0.3
 django-modeltranslation==0.11rc2
+django-mptt==0.8.0
 django-reversion==1.10.0
 django==1.9
 djangorestframework-gis==0.10

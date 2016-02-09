@@ -333,8 +333,6 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     keywords = models.ManyToManyField(Keyword)
     audience = models.ManyToManyField(Keyword, related_name='audiences', blank=True)
 
-    external_image_url = models.URLField(max_length=400, null=True, blank=True)
-
     class Meta:
         verbose_name = _('event')
         verbose_name_plural = _('events')

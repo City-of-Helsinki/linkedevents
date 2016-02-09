@@ -4,7 +4,7 @@ PyYAML
 django-cors-headers
 django-filter
 django-modeltranslation>=0.11rc2
--e git+https://github.com/django-mptt/django-mptt.git@0b4006d4014266f5a1017ec0f0a93736aec5ba46#egg=django-mptt
+django-mptt
 django-reversion
 django-hstore
 djangorestframework

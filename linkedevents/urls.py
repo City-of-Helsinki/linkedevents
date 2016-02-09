@@ -9,10 +9,10 @@ admin.autodiscover()
 api_router = LinkedEventsAPIRouter()
 
 
+
 urlpatterns = [
-    url(r'^v0.1/', include(api_router.urls)),
+    url(r'^(?P<version>(v0.1|v1))/', include(api_router.urls)),
     url(r'^admin/', include(admin.site.urls)),
     url(r'^accounts/', include('allauth.urls')),
     url(r'^$', RedirectView.as_view(url='/v0.1/', permanent=False)),
-    url(r'^v1', RedirectView.as_view(url='/v0.1/', permanent=False)),
 ]
