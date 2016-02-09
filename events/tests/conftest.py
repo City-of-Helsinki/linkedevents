@@ -130,7 +130,7 @@ def event(place):
 @pytest.fixture
 def location_id(place):
     obj_id = reverse(PlaceSerializer().view_name, kwargs={'pk': place.id})
-    return 'http://testserver%s' % obj_id
+    return obj_id
 
 
 @pytest.mark.django_db
@@ -167,7 +167,7 @@ def keyword(data_source, kw_name):
 def keyword_id(data_source, kw_name):
     obj = keyword(data_source, kw_name)
     obj_id = reverse(KeywordSerializer().view_name, kwargs={'pk': obj.id})
-    return 'http://testserver%s' % obj_id
+    return obj_id
 
 
 @pytest.mark.django_db
@@ -182,7 +182,7 @@ def languages():
 
 def language_id(language):
     obj_id = reverse(LanguageSerializer().view_name, kwargs={'pk': language.pk})
-    return 'http://testserver%s' % obj_id
+    return obj_id
 
 
 @pytest.mark.django_db
