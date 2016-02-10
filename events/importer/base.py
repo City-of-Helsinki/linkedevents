@@ -56,6 +56,21 @@ class Importer(object):
     def setup(self):
         pass
 
+    def get_or_create_image(self, url):
+        if url is None or len(url) == 0:
+            return None
+        defaults = {'publisher': self.organization}
+        img, created = Image.objects.get_or_create(
+            url=url, defaults=defaults)
+        return img
+
+    def set_image(self, obj, image_object):
+        if obj is None or image_object is None:
+            return
+        if image_object.id != obj.image_id:
+            obj._changed = True
+            obj.image = image_object
+
     @staticmethod
     def clean_text(text):
         text = text.replace('\n', ' ')
@@ -194,12 +209,16 @@ class Importer(object):
             info['end_time'] = info['end_time'].replace(hour=0, minute=0, second=0)
             info['end_time'] += datetime.timedelta(days=1)
 
-        skip_fields = ['id', 'location', 'publisher', 'offers', 'keywords']
+        skip_fields = ['id', 'location', 'publisher', 'offers', 'keywords', 'image']
         self._update_fields(obj, info, skip_fields)
 
         self._set_field(obj, 'location_id', location_id)
 
         self._set_field(obj, 'publisher_id', info['publisher'].id)
+
+        image_url = info.get('image', '').strip()
+        image_object = self.get_or_create_image(image_url)
+        self.set_image(obj, image_object)
 
         if obj._created or obj._changed:
             obj.save()

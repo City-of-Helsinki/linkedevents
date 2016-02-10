@@ -106,6 +106,7 @@ class Image(models.Model):
             raise ValidationError(_('You must provide either image or url.'))
         if self.url and self.image:
             raise ValidationError(_('You can only provide image or url, not both.'))
+        self.last_modified_time = BaseModel.now()
         super(Image, self).save(*args, **kwargs)
 
 

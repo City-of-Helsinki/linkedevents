@@ -112,7 +112,6 @@ class TprekImporter(Importer):
             'address_zip': 'postal_code',
             'address_postal_full': None,
             'email': 'email',
-            'picture_url': 'image',
         }
         for src_field, obj_field in field_map.items():
             if not obj_field:
@@ -134,6 +133,10 @@ class TprekImporter(Importer):
                 position = p
             else:
                 print("Invalid coordinates (%f, %f) for %s" % (n, e, obj))
+
+        picture_url = info.get('picture_url', '').strip()
+        image_object = self.get_or_create_image(picture_url)
+        self.set_image(obj, image_object)
 
         if position and obj.position:
             # If the distance is less than 10cm, assume the location
