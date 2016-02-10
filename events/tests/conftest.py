@@ -94,12 +94,8 @@ def organization2(other_data_source, user2):
 @pytest.fixture
 def minimal_event_dict(data_source, organization, location_id):
     return {
-        'publisher': organization.id,
-        'name': {'fi': 'minimal_event'},
         'event_status': 'EventScheduled',
-        'external_links': [],
         'publication_status': 'public',
-        'offers': [],
         'location': {'@id': location_id},
         'keywords': [
             {'@id': keyword_id(data_source, 'test')},
@@ -189,6 +185,7 @@ def language_id(language):
 @pytest.fixture
 def complex_event_dict(data_source, organization, location_id, languages):
     return {
+        'publisher': organization.id,
         'name': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
         'event_status': 'EventScheduled',
         'location': {'@id': location_id},
