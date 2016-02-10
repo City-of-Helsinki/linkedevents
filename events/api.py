@@ -176,10 +176,10 @@ class EnumChoiceField(serializers.Field):
     instances in JSON-LD.
     """
 
-    def __init__(self, choices, prefix=''):
+    def __init__(self, choices, prefix='', **kwargs):
         self.choices = choices
         self.prefix = prefix
-        super(EnumChoiceField, self).__init__()
+        super(EnumChoiceField, self).__init__(**kwargs)
 
     def to_representation(self, obj):
         if obj is None:
@@ -196,7 +196,6 @@ class EnumChoiceField(serializers.Field):
 
 
 class ISO8601DurationField(serializers.Field):
-
     def to_representation(self, obj):
         if obj:
             d = Duration(milliseconds=obj)
@@ -632,7 +631,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                                   view_name='keyword-detail', queryset=Keyword.objects.all())
     super_event = JSONLDRelatedField(serializer='EventSerializer', required=False, view_name='event-detail',
                                      queryset=Event.objects.all())
-    event_status = EnumChoiceField(Event.STATUSES)
+    event_status = EnumChoiceField(Event.STATUSES, required=False)
     publication_status = EnumChoiceField(PUBLICATION_STATUSES)
     external_links = EventLinkSerializer(many=True, required=False)
     offers = OfferSerializer(many=True, required=False)
@@ -665,9 +664,23 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                     data[field] = parse_time(val, True)
         return data
 
+    def validate_event_status(self, value):
+        # the API only allows scheduling and cancelling events
+        # POSTPONED and RESCHEDULED are done in the backend
+
+        if value in (Event.Status.CANCELLED, Event.Status.SCHEDULED):
+            return value
+        if value in (Event.Status.POSTPONED, Event.Status.RESCHEDULED):
+            raise ValidationError(_('POSTPONED and RESCHEDULED statuses cannot be set directly.'
+                                    'Changing event start_time or marking start_time null'
+                                    'will reschedule or postpone an event.'))
+
     def create(self, validated_data):
         offers = validated_data.pop('offers', [])
         links = validated_data.pop('external_links', [])
+
+        # mark all newly created events as scheduled
+        validated_data['event_status'] = Event.Status.SCHEDULED
 
         event = super().create(validated_data)
 
@@ -683,7 +696,24 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         offers = validated_data.pop('offers', None)
         links = validated_data.pop('external_links', None)
 
-        # update other fields
+        # Update event_status if a PUBLIC SCHEDULED or CANCELLED event start_time is updated.
+        # DRAFT events will remain SCHEDULED up to publication.
+        # Check that the event is not explicitly CANCELLED at the same time.
+        if (instance.publication_status == PublicationStatus.PUBLIC and
+                    validated_data.get('event_status', Event.Status.SCHEDULED) != Event.Status.CANCELLED):
+            try:
+                # if the start_time changes, reschedule the event
+                if validated_data['start_time'] != instance.start_time:
+                    validated_data['event_status'] = Event.Status.RESCHEDULED
+                # if the posted start_time is null, postpone the event
+                if not validated_data['start_time']:
+                    validated_data['event_status'] = Event.Status.POSTPONED
+            except KeyError:
+                # if the start_time is not provided, do nothing
+                pass
+            instance.save()
+
+        # update validated fields
         super().update(instance, validated_data)
 
         # also update `has_end_time` if needed

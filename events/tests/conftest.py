@@ -94,7 +94,6 @@ def organization2(other_data_source, user2):
 @pytest.fixture
 def minimal_event_dict(data_source, organization, location_id):
     return {
-        'event_status': 'EventScheduled',
         'publication_status': 'public',
         'location': {'@id': location_id},
         'keywords': [
