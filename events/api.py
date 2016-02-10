@@ -738,7 +738,16 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         exclude = ['has_start_time', 'has_end_time', 'is_recurring_super']
 
 class EventSerializerV0_1(EventSerializer):
-    pass
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('context', {}).setdefault('include', []).append('image')
+        super(EventSerializerV0_1, self).__init__(*args, **kwargs)
+
+    def to_representation(self, obj):
+        ret = super(EventSerializerV0_1, self).to_representation(obj)
+        image = ret['image']
+        if image:
+            ret['image'] = image.get('url', None)
+        return ret
 
 def parse_time(time_str, is_start):
     time_str = time_str.strip()

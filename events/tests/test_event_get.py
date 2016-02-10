@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
-from django.core.urlresolvers import reverse
+from .utils import versioned_reverse as reverse
 import pytest
 from .utils import get, assert_fields_exist
 
 
 # === util methods ===
 
-def get_list(api_client):
-    list_url = reverse('event-list')
+def get_list(api_client, version='v1'):
+    list_url = reverse('event-list', version=version)
     return get(api_client, list_url)
 
 
-def get_detail(api_client, detail_pk):
-    detail_url = reverse('event-detail', kwargs={'pk': detail_pk})
+def get_detail(api_client, detail_pk, version='v1'):
+    detail_url = reverse('event-detail', version=version, kwargs={'pk': detail_pk})
     return get(api_client, detail_url)
 
 

@@ -1,3 +1,7 @@
+from rest_framework.reverse import reverse
+from rest_framework.test import APIRequestFactory
+from rest_framework.settings import api_settings
+
 def assert_event_data_is_equal(d1, d2):
     # make sure the saved data is equal to the one we posted before
     FIELDS = (
@@ -50,5 +54,9 @@ def assert_fields_exist(data, fields):
         assert field in data
     assert len(data) == len(fields)
 
-
-
+def versioned_reverse(view, version='v1', **kwargs):
+    factory = APIRequestFactory()
+    request = factory.options('/')
+    request.versioning_scheme = api_settings.DEFAULT_VERSIONING_CLASS()
+    request.version = version
+    return reverse(view, request=request, **kwargs)

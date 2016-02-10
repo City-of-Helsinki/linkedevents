@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import pytest
-from django.core.urlresolvers import reverse
+from .utils import versioned_reverse as reverse
 
 from events.tests.utils import assert_event_data_is_equal
 from events.tests.test_event_post import create_with_post

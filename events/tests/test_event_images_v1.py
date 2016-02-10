@@ -6,7 +6,7 @@ from io import BytesIO
 import random
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.core.urlresolvers import reverse
+from .utils import versioned_reverse as reverse
 from django.test.utils import override_settings
 from PIL import Image as PILImage
 

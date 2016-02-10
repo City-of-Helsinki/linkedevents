@@ -5,6 +5,7 @@ from django.conf import settings
 from django.test import TestCase
 from django.test.utils import override_settings
 import haystack
+from .utils import versioned_reverse as reverse
 from haystack.management.commands import rebuild_index, clear_index
 from rest_framework.test import APIClient
 
@@ -43,7 +44,7 @@ class EventSearchTests(TestCase, TestDataMixin):
         super(EventSearchTests, self).setUp()
 
     def _get_response(self, query):
-        return self.client.get('/v0.1/search/', {'q': query}, format='json')
+        return self.client.get('/v1/search/', {'q': query}, format='json')
 
     def test__search_should_respond(self):
         response = self._get_response('a random search query')

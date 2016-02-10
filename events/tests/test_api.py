@@ -1,7 +1,6 @@
 import pytest
-from django.core.urlresolvers import reverse
 from ..models import Event
-
+from .utils import versioned_reverse as reverse
 
 @pytest.mark.django_db
 def test_api_page_size(api_client, event):

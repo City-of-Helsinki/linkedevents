@@ -1,10 +1,8 @@
 # django
 from django.utils import timezone
 
-# 3rd party
-from rest_framework.reverse import reverse
-
 # this app
+from .utils import versioned_reverse as reverse
 from events.api import KeywordSerializer, PlaceSerializer
 from events.models import DataSource, Organization
 
