@@ -135,14 +135,8 @@ class TprekImporter(Importer):
                 print("Invalid coordinates (%f, %f) for %s" % (n, e, obj))
 
         picture_url = info.get('picture_url', '').strip()
-        if len(picture_url) > 0:
-            defaults = {'publisher': self.organization}
-            image_object, created = Image.objects.get_or_create(
-                url=picture_url, defaults=defaults)
-            if created or image_object.id != obj.image_id:
-                obj._changed = True
-                obj._changed_fields.append('image')
-                obj.image = image_object
+        image_object = self.get_or_create_image(picture_url)
+        self.set_image(obj, image_object)
 
         if position and obj.position:
             # If the distance is less than 10cm, assume the location

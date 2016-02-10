@@ -56,6 +56,22 @@ class Importer(object):
     def setup(self):
         pass
 
+    def get_or_create_image(self, url):
+        if url is None or len(url) == 0:
+            return None
+        defaults = {'publisher': self.organization}
+        img, created = Image.objects.get_or_create(
+            url=url, defaults=defaults)
+        return img
+
+    def set_image(self, obj, image_object):
+        if obj is None or image_object is None:
+            return
+        if image_object.id != obj.image_id:
+            obj._changed = True
+            obj._changed_fields.append('image')
+            obj.image = image_object
+
     @staticmethod
     def clean_text(text):
         text = text.replace('\n', ' ')
