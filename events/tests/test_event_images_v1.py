@@ -11,7 +11,7 @@ from django.test.utils import override_settings
 from PIL import Image as PILImage
 
 from .utils import get, assert_fields_exist, assert_event_data_is_equal
-from .test_event_post import create_with_post
+from .test_event_post import create_with_post, list_url as event_list_url
 from events.models import Image
 
 
