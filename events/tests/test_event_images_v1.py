@@ -10,7 +10,8 @@ from django.core.urlresolvers import reverse
 from django.test.utils import override_settings
 from PIL import Image as PILImage
 
-from .utils import get, assert_fields_exist
+from .utils import get, assert_fields_exist, assert_event_data_is_equal
+from .test_event_post import create_with_post, list_url as event_list_url
 from events.models import Image
 
 
@@ -176,6 +177,25 @@ def test__upload_an_image(api_client, settings, list_url, image_data, user):
     image = PILImage.open(image_path)
     assert image.size == (512, 256)
     assert image.format == 'PNG'
+
+
+@override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL='')
+@pytest.mark.django_db
+def test__create_an_event_with_uploaded_image(api_client, list_url, event_list_url, minimal_event_dict, image_data, user):
+    api_client.force_authenticate(user)
+
+    response = api_client.post(list_url, image_data)
+    assert response.status_code == 201
+    assert Image.objects.all().count() == 1
+
+    image = Image.objects.get(pk=response.data['id'])
+    assert image.created_by == user
+    assert image.last_modified_by == user
+
+    minimal_event_dict.update({'image': {'@id': response.data['id']}})
+    print(minimal_event_dict)
+    response = create_with_post(api_client, minimal_event_dict)
+    assert_event_data_is_equal(minimal_event_dict, response.data)
 
 
 @pytest.mark.django_db
