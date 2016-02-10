@@ -11,7 +11,7 @@ from django.test.utils import override_settings
 from PIL import Image as PILImage
 
 from .utils import get, assert_fields_exist, assert_event_data_is_equal
-from .test_event_post import create_with_post, list_url as event_list_url
+from .test_event_post import create_with_post
 from events.models import Image
 
 
@@ -192,8 +192,7 @@ def test__create_an_event_with_uploaded_image(api_client, list_url, event_list_u
     assert image.created_by == user
     assert image.last_modified_by == user
 
-    minimal_event_dict.update({'image': {'@id': response.data['id']}})
-    print(minimal_event_dict)
+    minimal_event_dict.update({'image': {'@id': str(response.data['@id'])}})
     response = create_with_post(api_client, minimal_event_dict)
     assert_event_data_is_equal(minimal_event_dict, response.data)
 
