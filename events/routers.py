@@ -115,7 +115,7 @@ class DocumentedRouter(DefaultRouter):
             """
             _ignore_model_permissions = True
 
-            def get(self, request, format=None):
+            def get(self, request, format=None, version=None):
                 ret = {}
                 for key, url_name in api_root_dict.items():
                     ret[key] = reverse(url_name, request=request, format=format)
