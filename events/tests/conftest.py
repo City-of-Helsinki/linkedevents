@@ -4,7 +4,7 @@
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from .utils import versioned_reverse as reverse
-
+from .test_event_get import get_list
 
 # 3rd party
 import pytest
@@ -230,3 +230,16 @@ def complex_event_dict(data_source, organization, location_id, languages):
         'publication_status': 'public',
     }
 
+
+@pytest.fixture(scope="module")
+def api_get_list(request):
+    """
+    Return an API get_list requestor with version set on
+    the module of the test function, or use default API version
+    """
+    version = getattr(request.module, "version", "v1")
+    api_cli = APIClient()
+
+    def f():
+        return get_list(api_cli, version)
+    return f
