@@ -311,10 +311,10 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
             default_lang = settings.LANGUAGES[0][0]
             d[default_lang] = getattr(obj, field_name)
             for lang in [x[0] for x in settings.LANGUAGES[1:]]:
-                key = "%s_%s" % (field_name, lang)  
+                key = "%s_%s" % (field_name, lang)
                 val = getattr(obj, key, None)
                 if val == None:
-                    continue 
+                    continue
                 d[lang] = val
 
             # If no text provided, leave the field as null
@@ -684,7 +684,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
         event = super().create(validated_data)
 
-        # create and add related objects 
+        # create and add related objects
         for offer in offers:
             Offer.objects.create(event=event, **offer)
         for link in links:
