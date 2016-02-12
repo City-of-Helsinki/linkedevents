@@ -25,7 +25,7 @@ def test__get_event_detail_check_fields_exist(api_client, event):
 
 
 @pytest.mark.django_db
-def test__api_get_event_list_check_fields_exist(api_get_list, event):
+def test__api_get_event_list_check_fields_exist(api_get_list):
     """
     Tests that event list endpoint returns the image as null.
 

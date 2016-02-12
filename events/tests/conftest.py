@@ -231,15 +231,14 @@ def complex_event_dict(data_source, organization, location_id, languages):
     }
 
 
-@pytest.fixture(scope="module")
-def api_get_list(request):
+@pytest.fixture
+def api_get_list(request, event, api_client):
     """
     Return an API get_list requestor with version set on
     the module of the test function, or use default API version
     """
     version = getattr(request.module, "version", "v1")
-    api_cli = APIClient()
 
     def f():
-        return get_list(api_cli, version)
+        return get_list(api_client, version)
     return f
