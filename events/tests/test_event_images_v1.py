@@ -51,6 +51,7 @@ def assert_image_fields_exist(data):
         '@context',
         '@id',
         '@type',
+        'name',
         'publisher',
         'created_time',
         'cropping',

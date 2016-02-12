@@ -82,6 +82,9 @@ class SimpleValueMixin(object):
 class Image(models.Model):
     jsonld_type = 'ImageObject'
 
+    # Properties from schema.org/Thing
+    name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True, default='')
+
     publisher = models.ForeignKey('Organization', verbose_name=_('Publisher'), db_index=True, null=True, blank=True, related_name='Published_images')
 
     created_time = models.DateTimeField(auto_now_add=True)
@@ -106,6 +109,12 @@ class Image(models.Model):
             raise ValidationError(_('You must provide either image or url.'))
         if self.url and self.image:
             raise ValidationError(_('You can only provide image or url, not both.'))
+        # name the image after the file, if name was not provided
+        if not self.name:
+            if self.url:
+                self.name = str(self.url).rsplit('/', 1)[-1]
+            if self.image:
+                self.name = str(self.image).rsplit('/', 1)[-1]
         self.last_modified_time = BaseModel.now()
         super(Image, self).save(*args, **kwargs)
 
