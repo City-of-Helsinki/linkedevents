@@ -22,9 +22,12 @@ Create the database
 
 ```
 sudo -u postgres createuser -L -R -S linkedevents
+sudo -u postgres psql -d template1 -c "create extension hstore;"
 sudo -u postgres createdb -Olinkedevents linkedevents
 sudo -u postgres psql linkedevents -c "CREATE EXTENSION postgis;"
 ```
+
+NOTE: line 2, altering PostgreSQL template1 with hstore extension is required by py.test. 
 
 Fetch and import the database dump
 ```
