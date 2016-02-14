@@ -16,7 +16,9 @@ def get_detail(api_client, detail_pk, version='v1'):
     return get(api_client, detail_url)
 
 
-def assert_event_fields_exist(data):
+def assert_event_fields_exist(data, version='v1'):
+    # TODO: incorporate version parameter into version aware
+    # parts of test code
     fields = (
         '@context',
         '@id',
@@ -30,27 +32,30 @@ def assert_event_fields_exist(data):
         'end_time',
         'event_status',
         'external_links',
-        'headline',
         'id',
         'image',
         'in_language',
         'info_url',
         'keywords',
-        'last_modified_by',
         'last_modified_time',
         'location',
         'location_extra_info',
         'name',
         'offers',
-        'origin_id',
         'provider',
         'publisher',
-        'secondary_headline',
         'short_description',
         'start_time',
         'sub_events',
         'super_event'
     )
+    if version == 'v0.1':
+        fields += (
+            'origin_id',
+            'last_modified_by',
+            'headline',
+            'secondary_headline',
+        )
     assert_fields_exist(data, fields)
 
 

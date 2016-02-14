@@ -46,7 +46,8 @@ def get_detail(api_client, detail_pk):
     return get(api_client, detail_url)
 
 
-def assert_image_fields_exist(data):
+def assert_image_fields_exist(data, version='v1'):
+    # TODO: start using version parameter
     fields = (
         '@context',
         '@id',
@@ -57,9 +58,13 @@ def assert_image_fields_exist(data):
         'cropping',
         'id',
         'url',
-        'last_modified_by',
         'last_modified_time',
     )
+    if version == 'v0.1':
+        fields += (
+            'last_modified_by'
+        )
+
     assert_fields_exist(data, fields)
 
 

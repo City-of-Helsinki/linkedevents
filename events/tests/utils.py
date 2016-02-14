@@ -2,7 +2,8 @@ from rest_framework.reverse import reverse
 from rest_framework.test import APIRequestFactory
 from rest_framework.settings import api_settings
 
-def assert_event_data_is_equal(d1, d2):
+def assert_event_data_is_equal(d1, d2, version='v1'):
+    # TODO: start using version parameter
     # make sure the saved data is equal to the one we posted before
     FIELDS = (
         'data_source',
@@ -13,16 +14,12 @@ def assert_event_data_is_equal(d1, d2):
         'sub_events',
         'custom_data',
         'image',
-        'origin_id',
         'audience',
         'location_extra_info',
         'info_url',
-        'secondary_headline',
         'description',
-        'headline',
         'short_description',
         'provider',
-
         'keywords',
         'offers',
         'in_language',
@@ -31,6 +28,12 @@ def assert_event_data_is_equal(d1, d2):
         #                # vs Python's "+00:00"
         # 'end_time',    # -"-
     )
+    if version == 'v0.1':
+        fields += (
+            'headline',
+            'secondary_headline',
+            'origin_id',
+        )
     for key in FIELDS:
         if key in d1:
             assert d1[key] == d2[key]

@@ -32,7 +32,7 @@ def test__update_an_event_with_put(api_client, complex_event_dict, user):
     # set up updates
     data2 = response.data
 
-    for key in ('name', 'headline'):
+    for key in ('name', ):
         for lang in ('fi', 'en', 'sv'):
             if lang in data2[key]:
                 data2[key][lang] = '%s updated' % data2[key][lang]
