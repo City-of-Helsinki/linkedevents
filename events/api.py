@@ -349,14 +349,15 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
     """
 
     def __init__(self, instance=None, files=None,
-                 context=None, partial=False, many=None,
+                 context=None, partial=False, many=None, skip_fields=set(),
                  allow_add_remove=False, hide_ld_context=False, **kwargs):
         super(LinkedEventsSerializer, self).__init__(
             instance=instance, context=context, **kwargs)
         if 'created_by' in self.fields:
             del self.fields['created_by']
-        if 'modified_by' in self.fields:
-            del self.fields['modified_by']
+        if 'last_modified_by' in self.fields:
+            del self.fields['last_modified_by']
+        self.skip_fields = skip_fields
 
         if context is not None:
             include_fields = context.get('include', [])
@@ -369,6 +370,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                 if not isinstance(field, JSONLDRelatedField):
                     continue
                 field.expanded = True
+            self.skip_fields |= context.get('skip_fields', set())
 
         self.hide_ld_context = hide_ld_context
 
@@ -415,7 +417,11 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
             ret['@type'] = obj.jsonld_type
         else:
             ret['@type'] = obj.__class__.__name__
-
+        if self.context['request'].version == 'v0.1':
+            return ret
+        for field in self.skip_fields:
+            if field in ret:
+                del ret[field]
         return ret
 
 
@@ -503,7 +509,7 @@ class JSONAPIViewSet(viewsets.ReadOnlyModelViewSet):
         include = self.request.query_params.get('include', '')
         context['include'] = [x.strip() for x in include.split(',') if x]
         context['srs'] = self.srs
-
+        context.setdefault('skip_fields', set()).add('origin_id')
         return context
 
 class KeywordSetViewSet(JSONAPIViewSet):
@@ -544,6 +550,10 @@ class PlaceViewSet(GeoModelAPIView, viewsets.ReadOnlyModelViewSet):
                                               flat=True).distinct().order_by()
             queryset = queryset.filter(id__in=location_ids)
         return queryset
+    def get_serializer_context(self):
+        context = super(PlaceViewSet, self).get_serializer_context()
+        context.setdefault('skip_fields', set()).add('origin_id')
+        return context
 
 register_view(PlaceViewSet, 'place')
 
@@ -649,12 +659,11 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                                   many=True, required=False, queryset=Keyword.objects.all())
     view_name = 'event-detail'
 
-    def __init__(self, *args, skip_empties=False, skip_fields=set(), **kwargs):
+    def __init__(self, *args, skip_empties=False, **kwargs):
         super(EventSerializer, self).__init__(*args, **kwargs)
         # The following can be used when serializing when
         # testing and debugging.
         self.skip_empties = skip_empties
-        self.skip_fields = skip_fields
 
     def get_datetimes(self, data):
         for field in ['date_published', 'start_time', 'end_time']:
@@ -755,8 +764,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                 except TypeError:
                     # not list/dict
                     pass
-        for field in self.skip_fields:
-            del ret[field]
         request = self.context.get('request')
         if request:
             if not request.user.is_authenticated():
@@ -1010,6 +1017,13 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
         if self.request.version == 'v0.1':
             return EventSerializerV0_1
         return EventSerializer
+
+    def get_serializer_context(self):
+        context = super(EventViewSet, self).get_serializer_context()
+        context.setdefault('skip_fields', set()).update(set([
+            'headline',
+            'secondary_headline']))
+        return context
 
     def get_object(self):
         # Overridden to prevent queryset filtering from being applied
