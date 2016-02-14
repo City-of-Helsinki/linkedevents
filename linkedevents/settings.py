@@ -77,7 +77,6 @@ ROOT_URLCONF = 'linkedevents.urls'
 
 WSGI_APPLICATION = 'linkedevents.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/1.6/ref/settings/#databases
 
@@ -233,7 +232,6 @@ HAYSTACK_CONNECTIONS = {
         'ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
     }
 }
-
 
 from easy_thumbnails.conf import Settings as thumbnail_settings
 THUMBNAIL_PROCESSORS = (
