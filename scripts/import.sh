@@ -8,11 +8,11 @@ LOG_FILE="/tmp/linkedevents-import-$(date "+%Y-%m-%d-%H-%M").log"
 if [ -f $ROOT_PATH/local_update_config ]; then
     $ROOT_PATH/local_update_config
 fi
-    
+
 echo --------------------------------- >> $LOG_FILE
 echo "$(date "$TIMESTAMP_FORMAT") Starting import" >> $LOG_FILE
 echo --------------------------------- >> $LOG_FILE
-    
+
 cd $ROOT_PATH
 
 echo Importing tprek locations >> $LOG_FILE
