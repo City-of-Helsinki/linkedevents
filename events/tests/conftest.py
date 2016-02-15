@@ -251,7 +251,6 @@ def all_api_get_list(request, event, api_client):
     the module of the test function, or use default API version
     """
     version = request.param
-    print("TESTING", version)
 
     def f():
         return get_list(api_client, version)
