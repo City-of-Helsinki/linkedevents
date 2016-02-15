@@ -77,3 +77,12 @@ def test_get_event_detail_check_fields_exist(api_client, event):
     """
     response = get_detail(api_client, event.pk)
     assert_event_fields_exist(response.data)
+
+
+@pytest.mark.django_db
+def test__api_get_event_list_check_fields_exist(all_api_get_list):
+    """
+    Tests that event list endpoint returns the correct fields.
+    """
+    response = all_api_get_list()
+    assert_event_fields_exist(response.data['data'][0])

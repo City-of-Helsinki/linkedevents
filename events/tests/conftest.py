@@ -242,3 +242,17 @@ def api_get_list(request, event, api_client):
     def f():
         return get_list(api_client, version)
     return f
+
+
+@pytest.fixture(params=['v1', 'v0.1'])
+def all_api_get_list(request, event, api_client):
+    """
+    Return an API get_list requestor with version set on
+    the module of the test function, or use default API version
+    """
+    version = request.param
+    print("TESTING", version)
+
+    def f():
+        return get_list(api_client, version)
+    return f
