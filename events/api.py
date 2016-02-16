@@ -633,11 +633,11 @@ register_view(ImageViewSet, 'image', base_name='image')
 
 
 class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
-    location = JSONLDRelatedField(serializer=PlaceSerializer, required=True,
+    location = JSONLDRelatedField(serializer=PlaceSerializer, required=False,
                                   view_name='place-detail', queryset=Place.objects.all())
     # provider = OrganizationSerializer(hide_ld_context=True)
     keywords = JSONLDRelatedField(serializer=KeywordSerializer, many=True, allow_empty=False,
-                                  required=True,
+                                  required=False,
                                   view_name='keyword-detail', queryset=Keyword.objects.all())
     super_event = JSONLDRelatedField(serializer='EventSerializer', required=False, view_name='event-detail',
                                      queryset=Event.objects.all())
@@ -671,6 +671,19 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             if val:
                 if isinstance(val, str):
                     data[field] = parse_time(val, True)
+        return data
+
+    def validate(self, data):
+        # check that published events have a location and a keyword
+
+        if data['publication_status'] != PublicationStatus.DRAFT:
+            if not ('location' in data and 'keywords' in data):
+                raise ValidationError(_('Location and keywords must be specified before an event '
+                                        'is published.'))
+            if not data['location']:
+                raise ValidationError(_('Location must be specified before an event is published.'))
+            if not data['keywords']:
+                raise ValidationError(_('Keywords must be specified before an event is published.'))
         return data
 
     def validate_event_status(self, value):

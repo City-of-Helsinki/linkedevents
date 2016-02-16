@@ -38,6 +38,42 @@ def test__create_a_minimal_event_with_post(api_client,
 
 
 @pytest.mark.django_db
+def test__create_a_draft_event_without_location_and_keyword(api_client,
+                                                            minimal_event_dict,
+                                                            user):
+    api_client.force_authenticate(user=user)
+    minimal_event_dict.pop('location')
+    minimal_event_dict.pop('keywords')
+    minimal_event_dict['publication_status'] = 'draft'
+    response = create_with_post(api_client, minimal_event_dict)
+    assert_event_data_is_equal(minimal_event_dict, response.data)
+
+
+@pytest.mark.django_db
+def test__cannot_publish_an_event_without_location(list_url,
+                                                               api_client,
+                                                               minimal_event_dict,
+                                                               user):
+    api_client.force_authenticate(user=user)
+    minimal_event_dict.pop('location')
+    response = api_client.post(list_url, minimal_event_dict, format='json')
+    assert response.status_code == 400
+    assert ('Location' in error for error in response.data['non_field_errors'])
+
+
+@pytest.mark.django_db
+def test__cannot_publish_an_event_without_keywords(list_url,
+                                                               api_client,
+                                                               minimal_event_dict,
+                                                               user):
+    api_client.force_authenticate(user=user)
+    minimal_event_dict.pop('keywords')
+    response = api_client.post(list_url, minimal_event_dict, format='json')
+    assert response.status_code == 400
+    assert ('Keywords' in error for error in response.data['non_field_errors'])
+
+
+@pytest.mark.django_db
 def test__create_a_complex_event_with_post(api_client,
                                            complex_event_dict,
                                            user):
@@ -91,4 +127,5 @@ def test__jsonld_related_field(api_client, minimal_event_dict, list_url, place, 
     response = api_client.post(list_url, minimal_event_dict, format='json')
     assert response.status_code == expected
     if expected >= 400:
-        assert 'location' in response.data  # check that there is a error message for location field
+        # check that there is a error message for location field
+        assert ('location' in response.data) or ('Location' in error for error in response.data['non_field_errors'])
