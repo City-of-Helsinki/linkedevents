@@ -1025,6 +1025,7 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
     serializer_class = EventSerializer
     filter_backends = (EventOrderingFilter,)
     ordering_fields = ('start_time', 'end_time', 'days_left', 'last_modified_time')
+    ordering = ('-last_modified_time',)
 
     def get_serializer_class(self):
         if self.request.version == 'v0.1':
