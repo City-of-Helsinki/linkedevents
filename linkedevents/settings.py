@@ -40,6 +40,7 @@ INSTALLED_APPS = (
     'django.contrib.gis',
     'django.contrib.postgres',
     'django_extensions',
+    'events',
     'corsheaders',
     'rest_framework',
     'rest_framework_jwt',
@@ -58,7 +59,6 @@ INSTALLED_APPS = (
     'munigeo',
     'helusers',
 
-    'events',
     'helevents',
 )
 
