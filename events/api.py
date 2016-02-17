@@ -39,6 +39,7 @@ import pytz
 
 # events
 from events import utils
+from events.api_pagination import LargeResultsSetPagination
 from events.custom_elasticsearch_search_backend import (
     CustomEsSearchQuerySet as SearchQuerySet
 )
@@ -635,6 +636,7 @@ class ImageSerializer(LinkedEventsSerializer):
 class ImageViewSet(viewsets.ModelViewSet):
     queryset = Image.objects.all()
     serializer_class = ImageSerializer
+    pagination_class = LargeResultsSetPagination
 
     def perform_create(self, serializer):
         user = self.request.user if not self.request.user.is_anonymous() else None
@@ -1073,6 +1075,7 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
     serializer_class = EventSerializer
     filter_backends = (EventOrderingFilter,)
     ordering_fields = ('start_time', 'end_time', 'days_left', 'last_modified_time')
+    ordering = ('-last_modified_time',)
 
     def get_serializer_class(self):
         if self.request.version == 'v0.1':
