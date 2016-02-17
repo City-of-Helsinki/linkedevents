@@ -674,16 +674,47 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         return data
 
     def validate(self, data):
-        # check that published events have a location and a keyword
+        # TODO: check that all events have at least one searchable name
 
-        if data['publication_status'] != PublicationStatus.DRAFT:
-            if not ('location' in data and 'keywords' in data):
-                raise ValidationError(_('Location and keywords must be specified before an event '
-                                        'is published.'))
-            if not data['location']:
-                raise ValidationError(_('Location must be specified before an event is published.'))
-            if not data['keywords']:
-                raise ValidationError(_('Keywords must be specified before an event is published.'))
+        # if the event is a draft, no further validation is performed
+        if data['publication_status'] == PublicationStatus.DRAFT:
+            return data
+
+        # check that published events have a location, keyword and start_time
+
+        if not ('location' in data and 'keywords' in data):
+            raise ValidationError(_('Location and keywords must be specified before an event '
+                                    'is published.'))
+        if not data['location']:
+            raise ValidationError(_('Location must be specified before an event is published.'))
+        if not data['keywords']:
+            raise ValidationError(_('Keywords must be specified before an event is published.'))
+        if not('start_time' in data):
+            raise ValidationError(_('Start_time must be specified before an event is published.'))
+
+        # adjust start_time and has_start_time
+
+        if 'has_start_time' not in data:
+            # provided time is assumed exact
+            data['has_start_time'] = True
+        if not data['has_start_time']:
+            # provided time is inexact
+            data['start_time'] = data['start_time'].replace(hour=0, minute=0, second=0)
+
+        # adjust end_time and has_end_time
+
+        # If no end timestamp supplied, we treat the event as ending at midnight.
+        if 'end_time' not in data or not data['end_time']:
+            data['end_time'] = data['start_time']
+            data['has_end_time'] = False
+        if 'has_end_time' not in data:
+            # provided time is assumed exact
+            data['has_end_time'] = True
+        # If end date is supplied but no time, the event ends at midnight of the following day.
+        if not data['has_end_time']:
+            data['end_time'] = data['end_time'].replace(hour=0, minute=0, second=0)
+            data['end_time'] += timedelta(days=1)
+
         return data
 
     def validate_event_status(self, value):
@@ -766,6 +797,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             # If we're storing only the date part, do not pretend we have the exact time.
             if obj.end_time - obj.start_time <= timedelta(days=1):
                 ret['end_time'] = None
+        del ret['has_start_time']
+        del ret['has_end_time']
         if hasattr(obj, 'days_left'):
             ret['days_left'] = int(obj.days_left)
         if self.skip_empties:
@@ -785,7 +818,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
     class Meta:
         model = Event
-        exclude = ['has_start_time', 'has_end_time', 'is_recurring_super']
+        exclude = ['is_recurring_super']
 
 class EventSerializerV0_1(EventSerializer):
     def __init__(self, *args, **kwargs):

@@ -95,6 +95,7 @@ def organization2(other_data_source, user2):
 def minimal_event_dict(data_source, organization, location_id):
     return {
         'publication_status': 'public',
+        'start_time': DATETIME,
         'location': {'@id': location_id},
         'keywords': [
             {'@id': keyword_id(data_source, 'test')},
