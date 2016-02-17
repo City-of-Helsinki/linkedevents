@@ -637,6 +637,8 @@ class ImageViewSet(viewsets.ModelViewSet):
     queryset = Image.objects.all()
     serializer_class = ImageSerializer
     pagination_class = LargeResultsSetPagination
+    ordering_fields = ('last_modified_time',)
+    ordering = ('-last_modified_time',)
 
     def perform_create(self, serializer):
         user = self.request.user if not self.request.user.is_anonymous() else None
