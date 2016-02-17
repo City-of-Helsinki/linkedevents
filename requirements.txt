@@ -24,7 +24,7 @@ django-image-cropping==1.0.3
 django-modeltranslation==0.11rc2
 django-mptt==0.8.0
 django-reversion==1.10.0
-django==1.9
+django<1.9
 djangorestframework-gis==0.10
 djangorestframework-jwt==1.7.2
 djangorestframework==3.3.2
