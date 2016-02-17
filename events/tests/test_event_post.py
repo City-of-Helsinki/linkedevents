@@ -50,6 +50,19 @@ def test__create_a_draft_event_without_location_and_keyword(api_client,
 
 
 @pytest.mark.django_db
+def test__cannot_create_a_draft_event_without_a_name(list_url,
+                                                               api_client,
+                                                               minimal_event_dict,
+                                                               user):
+    api_client.force_authenticate(user=user)
+    minimal_event_dict.pop('name')
+    minimal_event_dict['publication_status'] = 'draft'
+    response = api_client.post(list_url, minimal_event_dict, format='json')
+    assert response.status_code == 400
+    assert ('The name' in error for error in response.data['non_field_errors'])
+
+
+@pytest.mark.django_db
 def test__cannot_publish_an_event_without_location(list_url,
                                                                api_client,
                                                                minimal_event_dict,

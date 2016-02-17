@@ -109,12 +109,6 @@ class Image(models.Model):
             raise ValidationError(_('You must provide either image or url.'))
         if self.url and self.image:
             raise ValidationError(_('You can only provide image or url, not both.'))
-        # name the image after the file, if name was not provided
-        if not self.name:
-            if self.url:
-                self.name = str(self.url).rsplit('/', 1)[-1]
-            if self.image:
-                self.name = str(self.image).rsplit('/', 1)[-1]
         self.last_modified_time = BaseModel.now()
         super(Image, self).save(*args, **kwargs)
 

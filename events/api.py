@@ -424,6 +424,12 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                 del ret[field]
         return ret
 
+    def validate(self, data):
+        if 'name' not in data:
+            raise ValidationError(_('The name must be specified.'))
+        super().validate(data)
+        return data
+
 
 def _clean_qp(query_params):
     """
@@ -615,6 +621,16 @@ class ImageSerializer(LinkedEventsSerializer):
         representation.pop('image')
         return representation
 
+    def validate(self, data):
+        # name the image after the file, if name was not provided
+        if 'name' not in data:
+            if 'url' in data:
+             data['name'] = str(data['url']).rsplit('/', 1)[-1]
+            if 'image' in data:
+             data['name'] = str(data['image']).rsplit('/', 1)[-1]
+        super().validate(data)
+        return data
+
 
 class ImageViewSet(viewsets.ModelViewSet):
     queryset = Image.objects.all()
@@ -674,8 +690,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         return data
 
     def validate(self, data):
-        # TODO: check that all events have at least one searchable name
-
+        super().validate(data)
         # if the event is a draft, no further validation is performed
         if data['publication_status'] == PublicationStatus.DRAFT:
             return data

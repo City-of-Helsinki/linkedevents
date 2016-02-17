@@ -273,7 +273,7 @@ def test__upload_a_non_valid_image(api_client, list_url, user):
 @pytest.mark.django_db
 def test__upload_an_invalid_dict(api_client, list_url, user):
     api_client.force_authenticate(user)
-    response = api_client.post(list_url, {'key': 'wrong'})
+    response = api_client.post(list_url, {'name': 'right', 'key': 'wrong'})
     assert response.status_code == 400
     for line in response.data:
         assert 'You must provide either image or url' in line
