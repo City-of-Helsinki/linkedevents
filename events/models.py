@@ -399,7 +399,7 @@ class EventLink(models.Model, SimpleValueMixin):
     link = models.URLField()
 
     class Meta:
-        unique_together = (('event', 'language', 'link'),)
+        unique_together = (('name', 'event', 'language', 'link'),)
 
     def value_fields(self):
         return ['name', 'language_id', 'link']
