@@ -662,7 +662,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                                   required=False,
                                   view_name='keyword-detail', queryset=Keyword.objects.all())
     super_event = JSONLDRelatedField(serializer='EventSerializer', required=False, view_name='event-detail',
-                                     queryset=Event.objects.all())
+                                     queryset=Event.objects.all(), allow_null=True)
     event_status = EnumChoiceField(Event.STATUSES, required=False)
     publication_status = EnumChoiceField(PUBLICATION_STATUSES)
     external_links = EventLinkSerializer(many=True, required=False)
