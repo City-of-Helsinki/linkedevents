@@ -13,7 +13,6 @@ def assert_event_data_is_equal(d1, d2, version='v1'):
         'event_status',
         'sub_events',
         'custom_data',
-        'image',
         'audience',
         'location_extra_info',
         'info_url',
@@ -28,8 +27,11 @@ def assert_event_data_is_equal(d1, d2, version='v1'):
         #                # vs Python's "+00:00"
         # 'end_time',    # -"-
     )
-    if version == 'v0.1':
-        fields += (
+    if version == 'v1':
+        FIELDS += ('images',)
+    elif version == 'v0.1':
+        FIELDS += (
+            'image',
             'headline',
             'secondary_headline',
             'origin_id',

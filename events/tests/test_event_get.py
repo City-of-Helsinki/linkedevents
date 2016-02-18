@@ -33,7 +33,7 @@ def assert_event_fields_exist(data, version='v1'):
         'event_status',
         'external_links',
         'id',
-        'image',
+        'images',
         'in_language',
         'info_url',
         'keywords',
