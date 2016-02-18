@@ -1198,8 +1198,10 @@ class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView
             raise ParseError("Invalid language supplied. Supported languages: %s" %
                              ','.join(languages))
 
-        input_val = request.query_params.get('input', '').strip()
-        q_val = request.query_params.get('q', '').strip()
+        params = request.query_params
+
+        input_val = params.get('input', '').strip()
+        q_val = params.get('q', '').strip()
         if not input_val and not q_val:
             raise ParseError("Supply search terms with 'q=' or autocomplete entry with 'input='")
         if input_val and q_val:
@@ -1211,6 +1213,22 @@ class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView
         queryset = SearchQuerySet()
         if input_val:
             queryset = queryset.filter(autosuggest=input_val)
+        else:
+            queryset = queryset.filter(text=AutoQuery(q_val))
+
+        start = params.get('start', None)
+        if start:
+            dt = parse_time(start, is_start=True)
+            queryset = queryset.filter(Q(end_time__gt=dt) | Q(start_time__gte=dt))
+
+        end = params.get('end', None)
+        if end:
+            dt = parse_time(end, is_start=False)
+            queryset = queryset.filter(Q(end_time__lt=dt) | Q(start_time__lte=dt))
+
+        if not start and not end:
+            # If no time-based filters are set, make the relevancy score
+            # decay the further in the future the event is.
             now = datetime.utcnow()
             queryset = queryset.filter(end_time__gt=now).decay({
                 'gauss': {
@@ -1220,10 +1238,8 @@ class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView
                     }
                 }
             })
-        else:
-            queryset = queryset.filter(text=AutoQuery(q_val))
 
-        types = request.query_params.get('resource_type', '').split(',')
+        types = params.get('resource_type', '').split(',')
         if types:
             models = set()
             for t in types:
