@@ -147,6 +147,8 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
                                            context=self.context).data
         link = super(JSONLDRelatedField, self).to_representation(obj)
         link = urlquote_id(link)
+        if link == None:
+            return None
         return {
             '@id': link
         }
@@ -829,6 +831,12 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                 except TypeError:
                     # not list/dict
                     pass
+        if 'image' in ret:
+            if ret['image'] == None:
+                ret['images'] = []
+            else:
+                ret['images'] = [ret['image']]
+            del ret['image']
         request = self.context.get('request')
         if request:
             if not request.user.is_authenticated():
@@ -846,9 +854,12 @@ class EventSerializerV0_1(EventSerializer):
 
     def to_representation(self, obj):
         ret = super(EventSerializerV0_1, self).to_representation(obj)
-        image = ret['image']
-        if image:
-            ret['image'] = image.get('url', None)
+        images = ret['images']
+        del ret['images']
+        if len(images) == 0:
+            ret['image'] = None
+        else:
+            ret['image'] = images[0].get('url', None)
         return ret
 
 def parse_time(time_str, is_start):
