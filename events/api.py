@@ -1226,7 +1226,7 @@ class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView
             dt = parse_time(end, is_start=False)
             queryset = queryset.filter(Q(end_time__lt=dt) | Q(start_time__lte=dt))
 
-        if not start and not end:
+        if not start and not end and hasattr(queryset.query, 'add_decay_function'):
             # If no time-based filters are set, make the relevancy score
             # decay the further in the future the event is.
             now = datetime.utcnow()
