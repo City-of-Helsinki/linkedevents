@@ -53,7 +53,7 @@ from events.translation import EventTranslationOptions
 SYSTEM_DATA_SOURCE_ID = 'system'
 
 
-serializers_by_model = {}
+viewset_classes_by_model = {}
 
 all_views = []
 def register_view(klass, name, base_name=None):
@@ -61,13 +61,21 @@ def register_view(klass, name, base_name=None):
     if base_name is not None:
         entry['base_name'] = base_name
     all_views.append(entry)
-
     if klass.serializer_class and \
             hasattr(klass.serializer_class, 'Meta') and \
             hasattr(klass.serializer_class.Meta, 'model'):
         model = klass.serializer_class.Meta.model
-        serializers_by_model[model] = klass.serializer_class
+        viewset_classes_by_model[model] = klass
 
+def get_serializer_for_model(model, version='v1'):
+    Viewset = viewset_classes_by_model.get(model)
+    if Viewset is None: return None
+    serializer = None
+    if hasattr(Viewset, 'get_serializer_class_for_version'):
+        serializer = Viewset.get_serializer_class_for_version(version)
+    elif hasattr(Viewset, 'serializer_class'):
+        serializer = Viewset.serializer_class
+    return serializer
 
 def urlquote_id(link):
     """
@@ -851,6 +859,16 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         model = Event
         exclude = ['is_recurring_super']
 
+def _format_images_v0_1(data):
+    if 'images' not in data:
+        return
+    images = data.get('images')
+    del data['images']
+    if len(images) == 0:
+        data['image'] = None
+    else:
+        data['image'] = images[0].get('url', None)
+
 class EventSerializerV0_1(EventSerializer):
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('context', {}).setdefault('include', []).append('image')
@@ -858,12 +876,7 @@ class EventSerializerV0_1(EventSerializer):
 
     def to_representation(self, obj):
         ret = super(EventSerializerV0_1, self).to_representation(obj)
-        images = ret['images']
-        del ret['images']
-        if len(images) == 0:
-            ret['image'] = None
-        else:
-            ret['image'] = images[0].get('url', None)
+        _format_images_v0_1(ret)
         return ret
 
 def parse_time(time_str, is_start):
@@ -1094,10 +1107,14 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
     ordering_fields = ('start_time', 'end_time', 'days_left', 'last_modified_time')
     ordering = ('-last_modified_time',)
 
-    def get_serializer_class(self):
-        if self.request.version == 'v0.1':
+    @staticmethod
+    def get_serializer_class_for_version(version):
+        if version == 'v0.1':
             return EventSerializerV0_1
         return EventSerializer
+
+    def get_serializer_class(self):
+        return EventViewSet.get_serializer_class_for_version(self.request.version)
 
     def get_serializer_context(self):
         context = super(EventViewSet, self).get_serializer_context()
@@ -1177,17 +1194,29 @@ register_view(EventViewSet, 'event')
 class SearchSerializer(serializers.Serializer):
     def to_representation(self, search_result):
         model = search_result.model
-        assert model in serializers_by_model, "Serializer for %s not found" % model
-        ser_class = serializers_by_model[model]
+        version = self.context['request'].version
+        ser_class = get_serializer_for_model(model, version=version)
+        assert ser_class is not None, "Serializer for %s not found" % model
         data = ser_class(search_result.object, context=self.context).data
         data['resource_type'] = model._meta.model_name
         data['score'] = search_result.score
         return data
 
+class SearchSerializerV0_1(SearchSerializer):
+    def to_representation(self, search_result):
+        ret = super(SearchSerializerV0_1, self).to_representation(search_result)
+        if 'resource_type' in ret:
+            ret['object_type'] = ret['resource_type']
+            del ret['resource_type']
+        return ret
+
 DATE_DECAY_SCALE = '30d'
 
 class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView):
-    serializer_class = SearchSerializer
+    def get_serializer_class(self):
+        if self.request.version == 'v0.1':
+            return SearchSerializerV0_1
+        return SearchSerializer
 
     def list(self, request, *args, **kwargs):
         languages = [x[0] for x in settings.LANGUAGES]
