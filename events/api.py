@@ -521,11 +521,12 @@ class JSONAPIViewSet(viewsets.ReadOnlyModelViewSet):
         context.setdefault('skip_fields', set()).add('origin_id')
         return context
 
+
 class KeywordSetViewSet(JSONAPIViewSet):
     queryset = KeywordSet.objects.all()
     serializer_class = KeywordSetSerializer
 
-register_view(KeywordSetViewSet, 'keywordset')
+register_view(KeywordSetViewSet, 'keyword_set')
 
 
 class PlaceSerializer(LinkedEventsSerializer, GeoModelSerializer):
