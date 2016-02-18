@@ -32,25 +32,34 @@ class MultilingualSearchBackend(BaseSearchBackend):
     def clear(self, **kwargs):
         return
 
-#class MultilingualSearchQuery(BaseSearchQuery):
+
+# class MultilingualSearchQuery(BaseSearchQuery):
 #    def __init__(self, using=DEFAULT_ALIAS):
+
 
 class MultilingualSearchEngine(BaseEngine):
     backend = MultilingualSearchBackend
-    #query = MultilingualSearchQuery
+    # query = MultilingualSearchQuery
 
     def get_query(self):
-        language = translation.get_language()[:2]
+        language = translation.get_language()
+        if not language:
+            language = settings.LANGUAGES[0][0][:2]
+        else:
+            language = language[:2]
         using = '%s-%s' % (self.using, language)
         return connections[using].get_query()
+
 
 class LanguageSearchBackend(BaseSearchBackend):
     def update(self, *args, **kwargs):
         # Handle all updates through the main Multilingual object.
         return
 
+
 class LanguageSearchQuery(BaseSearchQuery):
     pass
+
 
 class LanguageSearchEngine(BaseEngine):
     def __init__(self, **kwargs):

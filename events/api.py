@@ -459,6 +459,7 @@ class KeywordSerializer(LinkedEventsSerializer):
     class Meta:
         model = Keyword
 
+
 class KeywordViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Keyword.objects.all()
     serializer_class = KeywordSerializer
@@ -496,6 +497,7 @@ class KeywordViewSet(viewsets.ReadOnlyModelViewSet):
 
 register_view(KeywordViewSet, 'keyword')
 
+
 class KeywordSetSerializer(LinkedEventsSerializer):
     view_name = 'keywordset-detail'
     keywords = JSONLDRelatedField(
@@ -505,6 +507,7 @@ class KeywordSetSerializer(LinkedEventsSerializer):
 
     class Meta:
         model = KeywordSet
+
 
 class JSONAPIViewSet(viewsets.ReadOnlyModelViewSet):
     def initial(self, request, *args, **kwargs):
@@ -1177,7 +1180,7 @@ class SearchSerializer(serializers.Serializer):
         assert model in serializers_by_model, "Serializer for %s not found" % model
         ser_class = serializers_by_model[model]
         data = ser_class(search_result.object, context=self.context).data
-        data['object_type'] = model._meta.model_name
+        data['resource_type'] = model._meta.model_name
         data['score'] = search_result.score
         return data
 
@@ -1213,9 +1216,22 @@ class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView
                 'gauss': {
                     'end_time': {
                         'origin': now,
-                        'scale': DATE_DECAY_SCALE }}})
+                        'scale': DATE_DECAY_SCALE
+                    }
+                }
+            })
         else:
             queryset = queryset.filter(text=AutoQuery(q_val))
+
+        types = request.query_params.get('resource_type', '').split(',')
+        if types:
+            models = set()
+            for t in types:
+                if t == 'event':
+                    models.add(Event)
+                elif t == 'place':
+                    models.add(Place)
+            queryset = queryset.models(*list(models))
 
         self.object_list = queryset.load_all()
 
