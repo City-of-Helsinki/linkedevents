@@ -1256,8 +1256,7 @@ class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView
                     models.add(Place)
 
         if self.request.version == 'v0.1':
-            if models == None:
-                models = set()
+            if len(models) == 0:
                 models.add(Event)
 
         if len(models) == 1 and Event in models:
@@ -1284,7 +1283,7 @@ class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView
                     }
                 })
 
-        if models:
+        if len(models) > 0:
             queryset = queryset.models(*list(models))
 
         self.object_list = queryset.load_all()
