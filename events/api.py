@@ -1245,30 +1245,8 @@ class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView
         else:
             queryset = queryset.filter(text=AutoQuery(q_val))
 
-        start = params.get('start', None)
-        if start:
-            dt = parse_time(start, is_start=True)
-            queryset = queryset.filter(Q(end_time__gt=dt) | Q(start_time__gte=dt))
-
-        end = params.get('end', None)
-        if end:
-            dt = parse_time(end, is_start=False)
-            queryset = queryset.filter(Q(end_time__lt=dt) | Q(start_time__lte=dt))
-
-        if not start and not end and hasattr(queryset.query, 'add_decay_function'):
-            # If no time-based filters are set, make the relevancy score
-            # decay the further in the future the event is.
-            now = datetime.utcnow()
-            queryset = queryset.filter(end_time__gt=now).decay({
-                'gauss': {
-                    'end_time': {
-                        'origin': now,
-                        'scale': DATE_DECAY_SCALE
-                    }
-                }
-            })
-
-        types = params.get('resource_type', '').split(',')
+        models = None
+        types = params.get('type', '').split(',')
         if types:
             models = set()
             for t in types:
@@ -1276,6 +1254,32 @@ class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView
                     models.add(Event)
                 elif t == 'place':
                     models.add(Place)
+
+        if len(models) == 1 and Event in models:
+            start = params.get('start', None)
+            if start:
+                dt = parse_time(start, is_start=True)
+                queryset = queryset.filter(Q(end_time__gt=dt) | Q(start_time__gte=dt))
+
+            end = params.get('end', None)
+            if end:
+                dt = parse_time(end, is_start=False)
+                queryset = queryset.filter(Q(end_time__lt=dt) | Q(start_time__lte=dt))
+
+            if not start and not end and hasattr(queryset.query, 'add_decay_function'):
+                # If no time-based filters are set, make the relevancy score
+                # decay the further in the future the event is.
+                now = datetime.utcnow()
+                queryset = queryset.filter(end_time__gt=now).decay({
+                    'gauss': {
+                        'end_time': {
+                            'origin': now,
+                            'scale': DATE_DECAY_SCALE
+                        }
+                    }
+                })
+
+        if models:
             queryset = queryset.models(*list(models))
 
         self.object_list = queryset.load_all()
