@@ -1255,6 +1255,11 @@ class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView
                 elif t == 'place':
                     models.add(Place)
 
+        if self.request.version == 'v0.1':
+            if models == None:
+                models = set()
+                models.add(Event)
+
         if len(models) == 1 and Event in models:
             start = params.get('start', None)
             if start:
