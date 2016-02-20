@@ -179,10 +179,14 @@ class TprekImporter(Importer):
             obj_list = [self.pk_get('unit', obj_id)]
             queryset = queryset.filter(id=obj_id)
         else:
+            print("Loading units...")
             obj_list = self.pk_get('unit')
+            print("%s units loaded" % len(obj_list))
 
         syncher = ModelSyncher(queryset, lambda obj: obj.origin_id, delete_func=mark_deleted)
         for idx, info in enumerate(obj_list):
+            if idx and (idx % 1000) == 0:
+                print("%s units processed" % idx)
             self._import_unit(syncher, info)
 
         syncher.finish()
