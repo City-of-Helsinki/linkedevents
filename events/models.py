@@ -133,7 +133,8 @@ class BaseModel(models.Model):
     last_modified_by = models.ForeignKey(
         User, null=True, blank=True,
         related_name="%(app_label)s_%(class)s_modified_by")
-    image = models.ForeignKey(Image, verbose_name=_('Image'), null=True, blank=True)
+    image = models.ForeignKey(Image, verbose_name=_('Image'), on_delete=models.SET_NULL,
+                              null=True, blank=True)
 
     @staticmethod
     def now():
@@ -303,9 +304,11 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     # and is used for subtitles, that is for
     # secondary, complementary headlines, not "alternative" headlines
     headline = models.CharField(verbose_name=_('Headline'), max_length=255, null=True, db_index=True)
-    secondary_headline = models.CharField(verbose_name=_('Secondary headline'), max_length=255, null=True, db_index=True)
+    secondary_headline = models.CharField(verbose_name=_('Secondary headline'), max_length=255,
+                                          null=True, db_index=True)
     provider = models.CharField(verbose_name=_('Provider'), max_length=512, null=True)
-    publisher = models.ForeignKey(Organization, verbose_name=_('Publisher'), db_index=True, related_name='published_events')
+    publisher = models.ForeignKey(Organization, verbose_name=_('Publisher'), db_index=True,
+                                  on_delete=models.PROTECT, related_name='published_events')
 
     # Status of the event itself
     event_status = models.SmallIntegerField(verbose_name=_('Event status'), choices=STATUSES,
@@ -318,8 +321,9 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         verbose_name=_('Event data publication status'), choices=PUBLICATION_STATUSES,
         default=PublicationStatus.PUBLIC)
 
-    location = models.ForeignKey(Place, null=True, blank=True)
-    location_extra_info = models.CharField(verbose_name=_('Location extra info'), max_length=400, null=True, blank=True)
+    location = models.ForeignKey(Place, null=True, blank=True, on_delete=models.PROTECT)
+    location_extra_info = models.CharField(verbose_name=_('Location extra info'),
+                                           max_length=400, null=True, blank=True)
 
     start_time = models.DateTimeField(verbose_name=_('Start time'), null=True, db_index=True, blank=True)
     end_time = models.DateTimeField(verbose_name=_('End time'), null=True, db_index=True, blank=True)
@@ -327,7 +331,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     has_end_time = models.BooleanField(default=True)
 
     super_event = TreeForeignKey('self', null=True, blank=True,
-                                 related_name='sub_events')
+                                 on_delete=models.SET_NULL, related_name='sub_events')
 
     is_recurring_super = models.BooleanField(default=False)
 
