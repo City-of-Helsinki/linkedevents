@@ -23,9 +23,11 @@ from events.models import *
 # with different languages on different passes.
 def recur_dict(): return defaultdict(recur_dict)
 
+
 class Importer(object):
     def __init__(self, options):
         super(Importer, self).__init__()
+        self._images = {obj.url: obj for obj in Image.objects.all()}
         self.options = options
         self.verbosity = options['verbosity']
         self.logger = logging.getLogger(__name__)
@@ -59,6 +61,9 @@ class Importer(object):
     def get_or_create_image(self, url):
         if url is None or len(url) == 0:
             return None
+        if url in self._images:
+            return self._images[url]
+
         defaults = {'publisher': self.organization}
         img, created = Image.objects.get_or_create(
             url=url, defaults=defaults)
