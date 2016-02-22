@@ -437,7 +437,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
 
     def validate(self, data):
         if 'name' not in data:
-            raise ValidationError(_('The name must be specified.'))
+            raise serializers.ValidationError({'name': _('The name must be specified.')})
         super().validate(data)
         return data
 
@@ -715,15 +715,22 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
         # check that published events have a location, keyword and start_time
 
-        if not ('location' in data and 'keywords' in data):
-            raise ValidationError(_('Location and keywords must be specified before an event '
-                                    'is published.'))
-        if not data['location']:
-            raise ValidationError(_('Location must be specified before an event is published.'))
-        if not data['keywords']:
-            raise ValidationError(_('Keywords must be specified before an event is published.'))
-        if not('start_time' in data):
-            raise ValidationError(_('Start_time must be specified before an event is published.'))
+        errors = {}
+        if 'location' not in data:
+            errors['location'] = _('Location must be specified before an event is published.')
+        else:
+            if not data['location']:
+                errors['location'] = _('Location must be specified before an event is published.')
+        if 'keywords' not in data:
+            errors['keywords'] = _('Keywords must be specified before an event is published.')
+        else:
+            if not data['keywords']:
+                errors['keywords'] = _('Keywords must be specified before an event is published.')
+        if 'start_time' not in data:
+            errors['start_time'] = _('Start_time must be specified before an event is published.')
+
+        if errors:
+            raise serializers.ValidationError(errors)
 
         # adjust start_time and has_start_time
 
@@ -757,7 +764,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         if value in (Event.Status.CANCELLED, Event.Status.SCHEDULED):
             return value
         if value in (Event.Status.POSTPONED, Event.Status.RESCHEDULED):
-            raise ValidationError(_('POSTPONED and RESCHEDULED statuses cannot be set directly.'
+            raise serializers.ValidationError(_('POSTPONED and RESCHEDULED statuses cannot be set directly.'
                                     'Changing event start_time or marking start_time null'
                                     'will reschedule or postpone an event.'))
 

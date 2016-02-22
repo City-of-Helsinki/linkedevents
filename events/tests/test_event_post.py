@@ -59,7 +59,7 @@ def test__cannot_create_a_draft_event_without_a_name(list_url,
     minimal_event_dict['publication_status'] = 'draft'
     response = api_client.post(list_url, minimal_event_dict, format='json')
     assert response.status_code == 400
-    assert ('The name' in error for error in response.data['non_field_errors'])
+    assert 'name' in response.data
 
 
 @pytest.mark.django_db
@@ -71,7 +71,7 @@ def test__cannot_publish_an_event_without_location(list_url,
     minimal_event_dict.pop('location')
     response = api_client.post(list_url, minimal_event_dict, format='json')
     assert response.status_code == 400
-    assert ('Location' in error for error in response.data['non_field_errors'])
+    assert 'location' in response.data
 
 
 @pytest.mark.django_db
@@ -83,7 +83,7 @@ def test__cannot_publish_an_event_without_keywords(list_url,
     minimal_event_dict.pop('keywords')
     response = api_client.post(list_url, minimal_event_dict, format='json')
     assert response.status_code == 400
-    assert ('Keywords' in error for error in response.data['non_field_errors'])
+    assert 'keywords' in response.data
 
 
 @pytest.mark.django_db
@@ -141,4 +141,4 @@ def test__jsonld_related_field(api_client, minimal_event_dict, list_url, place, 
     assert response.status_code == expected
     if expected >= 400:
         # check that there is a error message for location field
-        assert ('location' in response.data) or ('Location' in error for error in response.data['non_field_errors'])
+        assert 'location' in response.data
