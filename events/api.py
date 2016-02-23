@@ -319,9 +319,7 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
     def translated_fields_to_representation(self, obj, ret):
         for field_name in self.translated_fields:
             d = {}
-            default_lang = settings.LANGUAGES[0][0]
-            d[default_lang] = getattr(obj, field_name)
-            for lang in [x[0] for x in settings.LANGUAGES[1:]]:
+            for lang in [x[0] for x in settings.LANGUAGES]:
                 key = "%s_%s" % (field_name, lang)
                 val = getattr(obj, key, None)
                 if val == None:
