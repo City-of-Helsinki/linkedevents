@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from dateutil.parser import parse as dateutil_parse
 
 # django and drf
+from django.http import Http404
 from django.contrib.auth import get_user_model
 from django.utils import translation
 from django.core.exceptions import ValidationError, PermissionDenied
@@ -1131,29 +1132,34 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
     def get_object(self):
         # Overridden to prevent queryset filtering from being applied
         # outside list views.
-        return get_object_or_404(Event.objects.all(), pk=self.kwargs['pk'])
+        try:
+            event = Event.objects.get(pk=self.kwargs['pk'])
+        except Event.DoesNotExist:
+            raise Http404("Event does not exist")
+        if (event.publication_status == PublicationStatus.PUBLIC or
+            (self.request.user and
+             self.request.user.is_authenticated() and
+             self.request.user.get_default_organization() == event.publisher)):
+            return event
+        else:
+            raise Http404("Event does not exist")
 
     def filter_queryset(self, queryset):
         """
         TODO: convert to use proper filter framework
         """
-
         user_organization = None
         if self.request.user and self.request.user.is_authenticated():
             user_organization = self.request.user.get_default_organization()
 
         queryset = super(EventViewSet, self).filter_queryset(queryset)
-        auth_filters = Q()
-        if 'show_all' in self.request.query_params:
-            if user_organization:
-                auth_filters |= (
-                    Q(publisher=user_organization)
-                )
-        else:
-            auth_filters |= (
-                (Q(event_status=Event.Status.SCHEDULED) | Q(event_status=Event.Status.RESCHEDULED)) &
-                Q(publication_status=PublicationStatus.PUBLIC)
-            )
+        auth_filters = Q(publication_status=PublicationStatus.PUBLIC)
+        if user_organization:
+            # USER IS AUTHENTICATED
+            if 'show_all' in self.request.query_params:
+                # Show all events for this organization,
+                # along with public events for others.
+                auth_filters |= Q(publisher=user_organization)
         queryset = queryset.filter(auth_filters)
         queryset = _filter_event_queryset(queryset, self.request.query_params,
                                           srs=self.srs)
