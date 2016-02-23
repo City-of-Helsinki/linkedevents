@@ -48,6 +48,10 @@ def test__create_a_draft_event_without_location_and_keyword(api_client,
     response = create_with_post(api_client, minimal_event_dict)
     assert_event_data_is_equal(minimal_event_dict, response.data)
 
+    # the drafts should not be visible to unauthorized users
+    api_client.logout()
+    resp2 = api_client.get(response.data['@id'])
+    assert '@id' not in resp2.data
 
 @pytest.mark.django_db
 def test__cannot_create_a_draft_event_without_a_name(list_url,
