@@ -1298,7 +1298,9 @@ class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView
         page = self.paginate_queryset(self.object_list)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
+            resp = self.get_paginated_response(serializer.data)
+            translation.activate(old_language)
+            return resp
 
         serializer = self.get_serializer(self.object_list, many=True)
         resp = Response(serializer.data)
