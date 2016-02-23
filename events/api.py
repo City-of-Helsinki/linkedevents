@@ -1151,7 +1151,7 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
                 )
         else:
             auth_filters |= (
-                Q(event_status=Event.Status.SCHEDULED) &
+                (Q(event_status=Event.Status.SCHEDULED) | Q(event_status=Event.Status.RESCHEDULED)) &
                 Q(publication_status=PublicationStatus.PUBLIC)
             )
         queryset = queryset.filter(auth_filters)
