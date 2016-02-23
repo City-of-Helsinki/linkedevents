@@ -707,6 +707,10 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
     def validate(self, data):
         super().validate(data)
+
+        if 'publication_status' not in data:
+            raise serializers.ValidationError({'publication_status': 'You must specify whether you wish to submit a draft or a public event.'})
+
         # if the event is a draft, no further validation is performed
         if data['publication_status'] == PublicationStatus.DRAFT:
             return data
