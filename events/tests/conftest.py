@@ -18,6 +18,7 @@ from events.api import (
     KeywordSerializer, PlaceSerializer, LanguageSerializer, SYSTEM_DATA_SOURCE_ID
 )
 
+from ..models import PublicationStatus
 
 TEXT = 'testing'
 URL = "http://localhost"
@@ -122,6 +123,17 @@ def event(place, user):
         id='test_event', location=place,
         data_source=place.data_source, publisher=place.publisher,
         last_modified_by=user
+    )
+
+
+@pytest.mark.django_db
+@pytest.fixture
+def draft_event(place, user):
+    return Event.objects.create(
+        id='test_event', location=place,
+        data_source=place.data_source, publisher=place.publisher,
+        last_modified_by=user,
+        publication_status=PublicationStatus.DRAFT
     )
 
 
