@@ -40,6 +40,7 @@ def assert_event_data_is_equal(d1, d2, version='v1'):
         if key in d1:
             if type(d1[key]) is list:
                 # required to check inline images
+                assert len(d1[key]) == len(d2[key])
                 for image1, image2 in zip(d1[key], d2[key]):
                     for subkey in image1:
                         print(subkey)
