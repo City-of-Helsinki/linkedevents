@@ -190,16 +190,22 @@ def test__upload_an_image(api_client, settings, list_url, image_data, user):
 def test__create_an_event_with_uploaded_image(api_client, list_url, event_list_url, minimal_event_dict, image_data, user):
     api_client.force_authenticate(user)
 
-    response = api_client.post(list_url, image_data)
-    assert response.status_code == 201
+    image_response = api_client.post(list_url, image_data)
+    assert image_response.status_code == 201
     assert Image.objects.all().count() == 1
 
-    image = Image.objects.get(pk=response.data['id'])
+    image = Image.objects.get(pk=image_response.data['id'])
     assert image.created_by == user
     assert image.last_modified_by == user
 
-    minimal_event_dict.update({'image': {'@id': str(response.data['@id'])}})
+    minimal_event_dict.update({'image': {'@id': str(image_response.data['@id'])}})
     response = create_with_post(api_client, minimal_event_dict)
+
+    # the event data should contain the expanded image data
+    minimal_event_dict['images'] = [minimal_event_dict['image']]
+    minimal_event_dict['images'][0].update(image_response.data)
+    # only the image field url changes between endpoints
+    minimal_event_dict['images'][0].pop('url')
     assert_event_data_is_equal(minimal_event_dict, response.data)
 
 

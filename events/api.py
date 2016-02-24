@@ -132,7 +132,7 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
     Serializing is controlled by query string param 'expand', deserialization
     by format of JSON given.
 
-    Default serializing is expand=true.
+    Default serializing is expand=false.
     """
 
     invalid_json_error = _('Incorrect JSON. Expected JSON, received %s.')
@@ -140,6 +140,7 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
     def __init__(self, *args, **kwargs):
         self.related_serializer = kwargs.pop('serializer', None)
         self.hide_ld_context = kwargs.pop('hide_ld_context', False)
+        self.expanded = kwargs.pop('expanded', False)
         super(JSONLDRelatedField, self).__init__(*args, **kwargs)
 
     def use_pk_only_optimization(self):
@@ -685,7 +686,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     data_source = serializers.PrimaryKeyRelatedField(read_only=True)
     publisher = serializers.PrimaryKeyRelatedField(read_only=True)
     image = JSONLDRelatedField(serializer=ImageSerializer, required=False, allow_null=True,
-                                     view_name='image-detail', queryset=Image.objects.all())
+                                     view_name='image-detail', queryset=Image.objects.all(), expanded=True)
     in_language = JSONLDRelatedField(serializer=LanguageSerializer, required=False,
                                      view_name='language-detail', many=True, queryset=Language.objects.all())
     audience = JSONLDRelatedField(serializer=KeywordSerializer, view_name='keyword-detail',
