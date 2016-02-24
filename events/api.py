@@ -707,9 +707,18 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                     data[field] = parse_time(val, True)
         return data
 
-    def validate(self, data):
-        super().validate(data)
+    def to_internal_value(self, data):
+        # parse the first image to the image field
+        if 'images' in data:
+            if data['images']:
+                data['image'] = data['images'][0]
+        data = super().to_internal_value(data)
+        return data
 
+    def validate(self, data):
+        data = super().validate(data)
+
+        # require the publication status
         if 'publication_status' not in data:
             raise serializers.ValidationError({'publication_status': 'You must specify whether you wish to submit a draft or a public event.'})
 

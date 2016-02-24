@@ -198,11 +198,10 @@ def test__create_an_event_with_uploaded_image(api_client, list_url, event_list_u
     assert image.created_by == user
     assert image.last_modified_by == user
 
-    minimal_event_dict.update({'image': {'@id': str(image_response.data['@id'])}})
+    minimal_event_dict.update({'images': [{'@id': str(image_response.data['@id'])}]})
     response = create_with_post(api_client, minimal_event_dict)
 
     # the event data should contain the expanded image data
-    minimal_event_dict['images'] = [minimal_event_dict['image']]
     minimal_event_dict['images'][0].update(image_response.data)
     # only the image field url changes between endpoints
     minimal_event_dict['images'][0].pop('url')
