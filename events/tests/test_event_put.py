@@ -19,6 +19,30 @@ def update_with_put(api_client, event_id, event_data):
 # === tests ===
 
 @pytest.mark.django_db
+def test__update_a_draft_with_put(api_client, minimal_event_dict, user):
+
+    # create an event
+    api_client.force_authenticate(user=user)
+    minimal_event_dict.pop('location')
+    minimal_event_dict.pop('keywords')
+    minimal_event_dict['publication_status'] = 'draft'
+    response = create_with_post(api_client, minimal_event_dict)
+    assert_event_data_is_equal(minimal_event_dict, response.data)
+    data2 = response.data
+    print('got the post response')
+    print(data2)
+
+    # store updates
+    event_id = data2.pop('@id')
+    response2 = update_with_put(api_client, event_id, data2)
+    print('got the put response')
+    print(response2.data)
+
+    # assert
+    assert_event_data_is_equal(data2, response2.data)
+
+
+@pytest.mark.django_db
 def test__update_an_event_with_put(api_client, complex_event_dict, user):
 
     # create an event
@@ -83,6 +107,8 @@ def test__postpone_an_event_with_put(api_client, complex_event_dict, user):
     # create an event
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, complex_event_dict)
+    print('created the event')
+    print(response.data)
 
     # remove the start_time
     data2 = response.data
@@ -91,6 +117,8 @@ def test__postpone_an_event_with_put(api_client, complex_event_dict, user):
     # update the event
     event_id = data2.pop('@id')
     response2 = update_with_put(api_client, event_id, data2)
+    print('updated the event')
+    print(response2.data)
 
     # assert backend postponed the event
     data2['event_status'] = 'EventPostponed'

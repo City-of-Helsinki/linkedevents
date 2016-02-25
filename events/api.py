@@ -692,6 +692,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     audience = JSONLDRelatedField(serializer=KeywordSerializer, view_name='keyword-detail',
                                   many=True, required=False, queryset=Keyword.objects.all())
     view_name = 'event-detail'
+    fields_needed_to_publish = ('keywords', 'location', 'start_time')
 
     def __init__(self, *args, skip_empties=False, **kwargs):
         super(EventSerializer, self).__init__(*args, **kwargs)
@@ -712,6 +713,16 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         if 'images' in data:
             if data['images']:
                 data['image'] = data['images'][0]
+
+        # If the obligatory fields are null or empty, remove them to prevent to_internal_value from checking them.
+        # Only for drafts, because null start time of a PUBLIC event will indicate POSTPONED.
+
+        if data.get('publication_status') == 'draft':
+            # however, the optional fields cannot be null and must be removed
+            for field in self.fields_needed_to_publish:
+                if not data.get(field):
+                    data.pop(field, None)
+
         data = super().to_internal_value(data)
         return data
 
@@ -729,18 +740,13 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         # check that published events have a location, keyword and start_time
 
         errors = {}
-        if 'location' not in data:
-            errors['location'] = _('Location must be specified before an event is published.')
-        else:
-            if not data['location']:
-                errors['location'] = _('Location must be specified before an event is published.')
-        if 'keywords' not in data:
-            errors['keywords'] = _('Keywords must be specified before an event is published.')
-        else:
-            if not data['keywords']:
-                errors['keywords'] = _('Keywords must be specified before an event is published.')
-        if 'start_time' not in data:
-            errors['start_time'] = _('Start_time must be specified before an event is published.')
+        for field in self.fields_needed_to_publish:
+            if not data.get(field):
+                # The start time may be null if a published event is postponed!
+                if field == 'start_time' and 'start_time' in data:
+                    pass
+                else:
+                    errors[field] = _('This field must be specified before an event is published.')
 
         if errors:
             raise serializers.ValidationError(errors)
