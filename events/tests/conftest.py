@@ -18,6 +18,7 @@ from events.api import (
     KeywordSerializer, PlaceSerializer, LanguageSerializer, SYSTEM_DATA_SOURCE_ID
 )
 
+from ..models import PublicationStatus
 
 TEXT = 'testing'
 URL = "http://localhost"
@@ -68,8 +69,9 @@ def user2():
 @pytest.mark.django_db
 @pytest.fixture
 def organization(data_source, user):
-    org = Organization.objects.create(
+    org, created = Organization.objects.get_or_create(
         id='test_organization',
+        name="test_organization",
         data_source=data_source
     )
     org.admin_users.add(user)
@@ -80,14 +82,14 @@ def organization(data_source, user):
 @pytest.mark.django_db
 @pytest.fixture
 def organization2(other_data_source, user2):
-    org = Organization.objects.create(
+    org, created = Organization.objects.get_or_create(
         id='test_organization2',
+        name="test_organization2",
         data_source=other_data_source
     )
     org.admin_users.add(user2)
     org.save()
     return org
-
 
 
 @pytest.mark.django_db
@@ -116,10 +118,22 @@ def place(data_source, organization):
 
 @pytest.mark.django_db
 @pytest.fixture
-def event(place):
+def event(place, user):
     return Event.objects.create(
         id='test_event', location=place,
-        data_source=place.data_source, publisher=place.publisher
+        data_source=place.data_source, publisher=place.publisher,
+        last_modified_by=user
+    )
+
+
+@pytest.mark.django_db
+@pytest.fixture
+def draft_event(place, user):
+    return Event.objects.create(
+        id='test_event', location=place,
+        data_source=place.data_source, publisher=place.publisher,
+        last_modified_by=user,
+        publication_status=PublicationStatus.DRAFT
     )
 
 
