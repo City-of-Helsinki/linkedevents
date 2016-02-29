@@ -655,7 +655,6 @@ class ImageViewSet(viewsets.ModelViewSet):
     ordering = ('-last_modified_time',)
 
     def get_queryset(self):
-        print(self.request.query_params)
         queryset = Image.objects.all()
         val = self.request.query_params.get('publisher', None)
         if val:
