@@ -163,7 +163,8 @@ def test__unauthenticated_user_cannot_upload_an_url(api_client, list_url, image_
 
 @override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL='')
 @pytest.mark.django_db
-def test__upload_an_image(api_client, settings, list_url, image_data, user):
+def test__upload_an_image(api_client, settings, list_url, image_data, user, organization):
+    organization.admin_users.add(user)
     api_client.force_authenticate(user)
 
     response = api_client.post(list_url, image_data)
@@ -173,6 +174,7 @@ def test__upload_an_image(api_client, settings, list_url, image_data, user):
     image = Image.objects.get(pk=response.data['id'])
     assert image.created_by == user
     assert image.last_modified_by == user
+    assert image.publisher == organization
 
     # image url should contain the image file's path relative to MEDIA_ROOT.
     assert image.image.url.startswith('images/test_image')
@@ -183,6 +185,31 @@ def test__upload_an_image(api_client, settings, list_url, image_data, user):
     image = PILImage.open(image_path)
     assert image.size == (512, 256)
     assert image.format == 'PNG'
+
+
+@pytest.mark.django_db
+def test__image_cannot_be_edited_outside_organization(api_client, settings, list_url, image_data, user, organization, user2):
+    organization.admin_users.add(user)
+    api_client.force_authenticate(user)
+
+    response = api_client.post(list_url, image_data)
+    assert response.status_code == 201
+    assert Image.objects.all().count() == 1
+
+    image = Image.objects.get(pk=response.data['id'])
+    assert image.created_by == user
+    assert image.last_modified_by == user
+    assert image.publisher == organization
+
+    # other users cannot edit or delete the image
+    api_client.force_authenticate(user2)
+    detail_url = reverse('image-detail', kwargs={'pk': response.data['id']})
+    new_image_data = response.data
+    new_image_data['url'] = 'https://commons.wikimedia.org/wiki/File:Common_Squirrel.jpg'
+    response2 = api_client.put(detail_url, response.data)
+    assert response2.status_code == 403
+    response3 = api_client.delete(detail_url)
+    assert response3.status_code == 403
 
 
 @override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL='')

@@ -659,8 +659,21 @@ class ImageViewSet(viewsets.ModelViewSet):
         serializer.save(created_by=user, last_modified_by=user)
 
     def perform_update(self, serializer):
+        # ensure image can only be edited within the organization
+        user = self.request.user
+        image = self.get_object()
+        if not user.get_default_organization() == image.publisher:
+            raise PermissionDenied()
         user = self.request.user if not self.request.user.is_anonymous() else None
         serializer.save(last_modified_by=user)
+
+    def perform_destroy(self, instance):
+        # ensure image can only be deleted within the organization
+        user = self.request.user
+        image = self.get_object()
+        if not user.get_default_organization() == image.publisher:
+            raise PermissionDenied()
+        super().perform_destroy(instance)
 
 
 register_view(ImageViewSet, 'image', base_name='image')
