@@ -657,7 +657,7 @@ class ImageViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         print(self.request.query_params)
         queryset = Image.objects.all()
-        val = self.request.query_params.get('organization', None)
+        val = self.request.query_params.get('publisher', None)
         if val:
             queryset = queryset.filter(publisher__id=val)
         return queryset
@@ -1078,7 +1078,7 @@ def _filter_event_queryset(queryset, params, srs=None):
         cond = 'end_time - start_time >= %s :: interval'
         queryset = queryset.extra(where=[cond], params=[str(dur)])
 
-    val = params.get('organization', None)
+    val = params.get('publisher', None)
     if val:
         queryset = queryset.filter(publisher__id=val)
 
