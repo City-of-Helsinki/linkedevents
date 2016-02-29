@@ -9,6 +9,7 @@ static/CACHE
 media/
 .vagrant/
 .idea
+.django_secret
 *.iml
 *.kate-swp
 data/
