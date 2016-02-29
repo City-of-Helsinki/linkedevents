@@ -16,12 +16,17 @@ from .base import Importer, register_importer
 URL_BASE = 'http://www.hel.fi/palvelukarttaws/rest/v3/'
 GK25_SRID = 3879
 
+
 def mark_deleted(obj):
     if obj.deleted:
         return False
     obj.deleted = True
     obj.save(update_fields=['deleted'])
     return True
+
+
+def check_deleted(obj):
+    return obj.deleted
 
 
 @register_importer
@@ -183,7 +188,8 @@ class TprekImporter(Importer):
             obj_list = self.pk_get('unit')
             print("%s units loaded" % len(obj_list))
 
-        syncher = ModelSyncher(queryset, lambda obj: obj.origin_id, delete_func=mark_deleted)
+        syncher = ModelSyncher(queryset, lambda obj: obj.origin_id, delete_func=mark_deleted,
+                               check_deleted_func=check_deleted)
         for idx, info in enumerate(obj_list):
             if idx and (idx % 1000) == 0:
                 print("%s units processed" % idx)
