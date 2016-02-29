@@ -104,8 +104,6 @@ class Image(models.Model):
                 pass
         # ensure that either image or url is provided
         if not self.url and not self.image:
-            print(self.url)
-            print(self.image)
             raise ValidationError(_('You must provide either image or url.'))
         if self.url and self.image:
             raise ValidationError(_('You can only provide image or url, not both.'))
