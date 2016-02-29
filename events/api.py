@@ -654,6 +654,14 @@ class ImageViewSet(viewsets.ModelViewSet):
     ordering_fields = ('last_modified_time',)
     ordering = ('-last_modified_time',)
 
+    def get_queryset(self):
+        print(self.request.query_params)
+        queryset = Image.objects.all()
+        val = self.request.query_params.get('organization', None)
+        if val:
+            queryset = queryset.filter(publisher__id=val)
+        return queryset
+
     def perform_create(self, serializer):
         user = self.request.user if not self.request.user.is_anonymous() else None
         serializer.save(created_by=user, last_modified_by=user)
