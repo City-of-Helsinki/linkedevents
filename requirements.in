@@ -34,5 +34,6 @@ pytest-django
 pip-tools
 django-image-cropping
 easy_thumbnails
+Pillow
 django-cleanup
 django-allauth

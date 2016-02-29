@@ -24,7 +24,7 @@ django-image-cropping==1.0.3
 django-modeltranslation==0.11rc2
 django-mptt==0.8.0
 django-reversion==1.10.0
-django<1.9
+Django==1.8.9             # via django-allauth, django-haystack, django-mptt, django-reversion, easy-thumbnails
 djangorestframework-gis==0.10
 djangorestframework-jwt==1.7.2
 djangorestframework==3.3.2
@@ -39,7 +39,7 @@ lazy-object-proxy==1.2.1  # via astroid
 lxml==3.5.0
 markdown==2.6.5
 oauthlib==1.0.3           # via requests-oauthlib
-pillow==3.0.0             # via easy-thumbnails
+pillow==3.1.1
 pip-tools==1.4.2
 psycopg2==2.6.1
 py==1.4.31                # via pytest
@@ -64,4 +64,4 @@ wrapt==1.10.6             # via astroid
 
 # The following packages are commented out because they are
 # considered to be unsafe in a requirements file:
-# setuptools==19.2          # via icalendar
+# setuptools                # via icalendar
