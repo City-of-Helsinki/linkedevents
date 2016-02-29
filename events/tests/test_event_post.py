@@ -4,7 +4,7 @@ from .utils import versioned_reverse as reverse
 
 from events.tests.utils import assert_event_data_is_equal
 from events.models import Event
-from events.api import SYSTEM_DATA_SOURCE_ID
+from django.conf import settings
 
 
 @pytest.fixture
@@ -120,7 +120,7 @@ def test__autopopulated_fields(
     assert event.last_modified_by == user
     assert event.created_time is not None
     assert event.last_modified_time is not None
-    assert event.data_source.id == SYSTEM_DATA_SOURCE_ID
+    assert event.data_source.id == settings.SYSTEM_DATA_SOURCE_ID
     assert event.publisher == organization
 
 

@@ -96,10 +96,11 @@ LANGUAGE_CODE = 'fi'
 
 TIME_ZONE = 'Europe/Helsinki'
 
+SYSTEM_DATA_SOURCE_ID = 'system'
+
+
 USE_I18N = True
-
 USE_L10N = True
-
 USE_TZ = True
 
 LOCALE_PATHS = (
@@ -229,9 +230,6 @@ from easy_thumbnails.conf import Settings as thumbnail_settings
 THUMBNAIL_PROCESSORS = (
     'image_cropping.thumbnail_processors.crop_corners',
 ) + thumbnail_settings.THUMBNAIL_PROCESSORS
-
-# Only items from these data sources are editable
-EDITABLE_DATASOURCES = ['system']
 
 # local_settings.py can be used to override environment-specific settings
 # like database and email that differ between development and production.

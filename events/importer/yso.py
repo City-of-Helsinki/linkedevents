@@ -7,6 +7,8 @@ from rdflib import URIRef
 from rdflib import RDF
 from rdflib.namespace import FOAF, SKOS, OWL
 
+from django.conf import settings
+
 from events.models import Keyword, KeywordLabel, DataSource, BaseModel, Language, Organization
 
 from sys import stdout
@@ -34,7 +36,7 @@ class YsoImporter(Importer):
         self.data_source, _ = DataSource.objects.get_or_create(
             id=self.name, defaults=defaults)
 
-        ds_args = dict(id='system')
+        ds_args = dict(id=settings.SYSTEM_DATA_SOURCE_ID)
         defaults = dict(name='System')
         system_ds, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
 

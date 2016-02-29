@@ -51,9 +51,6 @@ from events.models import (
 from events.translation import EventTranslationOptions
 
 
-SYSTEM_DATA_SOURCE_ID = 'system'
-
-
 viewset_classes_by_model = {}
 
 all_views = []
@@ -1206,7 +1203,7 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
         return queryset.filter()
 
     def perform_create(self, serializer):
-        event_id = generate_id(SYSTEM_DATA_SOURCE_ID)
+        event_id = generate_id(settings.SYSTEM_DATA_SOURCE_ID)
 
         user = self.request.user
         publisher = user.get_default_organization()
@@ -1214,7 +1211,7 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
             raise ParseError(_("User doesn't belong to any organization"))
 
         # all events created by api are marked coming from the system data source
-        data_source = DataSource.objects.get(id=SYSTEM_DATA_SOURCE_ID)
+        data_source = DataSource.objects.get(id=settings.SYSTEM_DATA_SOURCE_ID)
         serializer.save(
             id=event_id,
             publisher=publisher,
@@ -1253,6 +1250,7 @@ class SearchSerializer(serializers.Serializer):
         data['score'] = search_result.score
         return data
 
+
 class SearchSerializerV0_1(SearchSerializer):
     def to_representation(self, search_result):
         ret = super(SearchSerializerV0_1, self).to_representation(search_result)
@@ -1262,6 +1260,7 @@ class SearchSerializerV0_1(SearchSerializer):
         return ret
 
 DATE_DECAY_SCALE = '30d'
+
 
 class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView):
     def get_serializer_class(self):

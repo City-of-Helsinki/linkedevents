@@ -15,8 +15,9 @@ from events.models import (
     DataSource, Organization, Place, Language, Keyword, KeywordLabel, Event
 )
 from events.api import (
-    KeywordSerializer, PlaceSerializer, LanguageSerializer, SYSTEM_DATA_SOURCE_ID
+    KeywordSerializer, PlaceSerializer, LanguageSerializer
 )
+from django.conf import settings
 
 from ..models import PublicationStatus
 
@@ -35,7 +36,7 @@ def api_client():
 @pytest.mark.django_db
 @pytest.fixture
 def data_source():
-    return DataSource.objects.create(id=SYSTEM_DATA_SOURCE_ID)
+    return DataSource.objects.create(id=settings.SYSTEM_DATA_SOURCE_ID)
 
 
 @pytest.mark.django_db

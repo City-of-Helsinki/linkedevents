@@ -45,6 +45,7 @@ PUBLICATION_STATUSES = (
     (PublicationStatus.DRAFT, "draft"),
 )
 
+
 class SchemalessFieldMixin(models.Model):
     custom_data = HStoreField(null=True)
 
@@ -368,7 +369,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         return u" ".join(val)
 
     def is_editable(self):
-        return self.data_source.id in settings.EDITABLE_DATASOURCES
+        return self.data_source_id == settings.SYSTEM_DATA_SOURCE_ID
 
     def is_admin(self, user):
         if user.is_superuser:
