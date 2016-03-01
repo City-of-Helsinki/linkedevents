@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import pytest
+from django.utils import timezone
 from .utils import versioned_reverse as reverse
 
 from events.tests.utils import assert_event_data_is_equal
@@ -38,7 +39,23 @@ def test__create_a_minimal_event_with_post(api_client,
 
 
 @pytest.mark.django_db
-def test__create_a_draft_event_without_location_and_keyword(api_client,
+def test__cannot_create_an_event_ending_before_start_time(list_url,
+                                                          api_client,
+                                                          minimal_event_dict,
+                                                          user):
+    api_client.force_authenticate(user=user)
+    minimal_event_dict['end_time'] = minimal_event_dict['start_time']
+    minimal_event_dict['start_time'] = timezone.now().isoformat()
+    print(minimal_event_dict['start_time'])
+    print(minimal_event_dict['end_time'])
+    response = api_client.post(list_url, minimal_event_dict, format='json')
+    assert response.status_code == 400
+    assert 'end_time' in response.data
+
+
+@pytest.mark.django_db
+def test__create_a_draft_event_without_location_and_keyword(list_url,
+                                                            api_client,
                                                             minimal_event_dict,
                                                             user):
     api_client.force_authenticate(user=user)

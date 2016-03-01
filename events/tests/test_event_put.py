@@ -91,6 +91,7 @@ def test__reschedule_an_event_with_put(api_client, complex_event_dict, user):
     DATETIME = timezone.now().isoformat()
     data2 = response.data
     data2['start_time'] = DATETIME
+    data2['end_time'] = DATETIME
 
     # update the event
     event_id = data2.pop('@id')
@@ -168,6 +169,7 @@ def test__reschedule_a_cancelled_event_with_put(api_client, complex_event_dict, 
     DATETIME = timezone.now().isoformat()
     data3 = response2.data
     data3['start_time'] = DATETIME
+    data3['end_time'] = DATETIME
     data3.pop('event_status')
 
     # update the event

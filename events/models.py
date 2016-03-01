@@ -348,6 +348,12 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         parent_attr = 'super_event'
 
     def save(self, *args, **kwargs):
+        # drafts may not have times set, so check that first
+        start = getattr(self, 'start_time', None)
+        end = getattr(self, 'end_time', None)
+        if start and end:
+            if start > end:
+                raise ValidationError({'end_time': _('The event end time cannot be earlier than the start time.')})
         if not self.id:
             self.created_time = BaseModel.now()
         self.last_modified_time = BaseModel.now()

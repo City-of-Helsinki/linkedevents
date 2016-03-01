@@ -123,7 +123,9 @@ def event(place, user):
     return Event.objects.create(
         id='test_event', location=place,
         data_source=place.data_source, publisher=place.publisher,
-        last_modified_by=user
+        last_modified_by=user,
+        start_time=timezone.now(),
+        end_time=timezone.now()
     )
 
 
@@ -134,7 +136,9 @@ def draft_event(place, user):
         id='test_event', location=place,
         data_source=place.data_source, publisher=place.publisher,
         last_modified_by=user,
-        publication_status=PublicationStatus.DRAFT
+        publication_status=PublicationStatus.DRAFT,
+        start_time=timezone.now(),
+        end_time=timezone.now()
     )
 
 

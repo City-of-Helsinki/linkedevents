@@ -37,6 +37,7 @@ class EventSearchTests(TestCase, TestDataMixin):
         self.dummy = Event(name='dummy event',
                            data_source=self.test_ds,
                            publisher=self.test_org,
+                           start_time=datetime.datetime.now(),
                            end_time=datetime.datetime.now()
         )
         self.dummy.save()
