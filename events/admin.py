@@ -1,5 +1,7 @@
 from django.contrib import admin
+from django.contrib.admin.widgets import FilteredSelectMultiple
 from django.contrib.gis import admin as geoadmin
+from django.contrib.gis.db import models
 from modeltranslation.admin import TranslationAdmin
 from reversion.admin import VersionAdmin
 from events.models import Event, Keyword, Place, Language, \
@@ -31,6 +33,10 @@ class PlaceAdmin(geoadmin.GeoModelAdmin, BaseAdmin, TranslationAdmin,
 
 
 class OrganizationAdmin(BaseAdmin):
+
+    formfield_overrides = {
+        models.ManyToManyField: {'widget': FilteredSelectMultiple("ylläpitäjät", is_stacked=False)},
+    }
     fields = ('admin_users',)
 admin.site.register(Organization, OrganizationAdmin)
 
