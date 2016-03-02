@@ -37,6 +37,7 @@ from munigeo.api import (
     GeoModelSerializer, GeoModelAPIView, build_bbox_filter, srid_to_srs
 )
 import pytz
+import bleach
 
 # events
 from events import utils
@@ -744,6 +745,9 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         return data
 
     def validate(self, data):
+        for k, v in data.items():
+            if type(v) == str:
+                data[k] = bleach.clean(v)
         data = super().validate(data)
 
         # require the publication status
