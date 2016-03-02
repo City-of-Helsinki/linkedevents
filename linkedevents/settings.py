@@ -226,6 +226,9 @@ HAYSTACK_CONNECTIONS = {
     }
 }
 
+import bleach
+BLEACH_ALLOWED_TAGS = bleach.ALLOWED_TAGS + ["p", "div"]
+
 from easy_thumbnails.conf import Settings as thumbnail_settings
 THUMBNAIL_PROCESSORS = (
     'image_cropping.thumbnail_processors.crop_corners',

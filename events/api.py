@@ -747,7 +747,10 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     def validate(self, data):
         for k, v in data.items():
             if type(v) == str:
-                data[k] = bleach.clean(v)
+                if k in ["description"]:
+                    data[k] = bleach.clean(v, )
+                else:
+                    data[k] = bleach.clean(v)
         data = super().validate(data)
 
         # require the publication status
