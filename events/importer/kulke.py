@@ -12,6 +12,7 @@ from django.utils.timezone import get_default_timezone
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
+from rest_framework import serializers
 
 from .sync import ModelSyncher
 from .base import Importer, register_importer, recur_dict
@@ -586,7 +587,10 @@ class KulkeImporter(Importer):
                     skip = True
                     break
             if not skip:
-                self.save_event(event)
+                try:
+                    self.save_event(event)
+                except serializers.ValidationError as error:
+                    print('Event ' + str(event) + ' could not be saved: ' + str(error))
 
         self._verify_recurs(recurring_groups)
         aggregates = self._save_recurring_superevents(recurring_groups)
