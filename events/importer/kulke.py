@@ -35,6 +35,7 @@ LOCATION_TPREK_MAP = {
     'caisa': '7256',
     'nuorisokahvila clubi': '8006',
     'haagan nuorisotalo': '8023',
+    'vuosaaren kirjasto': '8310',
 }
 
 ADDRESS_TPREK_MAP = {
@@ -42,6 +43,9 @@ ADDRESS_TPREK_MAP = {
     'annegatan 30': 'annantalo',
     'mosaiikkitori 2': 'vuotalo',
     'ala-malmin tori 1': 'malmitalo',
+    'ala-malmin tori': 'malmitalo',
+    'klaneettitie 5': 'kanneltalo',
+    'klarinettvägen 5': 'kanneltalo',
 }
 
 CATEGORIES_TO_IGNORE = [
