@@ -9,6 +9,7 @@ import operator
 from django.db import DataError
 from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
+from rest_framework.exceptions import ValidationError
 from django.contrib.gis.geos import Point, Polygon
 from django.contrib.gis.gdal import SpatialReference, CoordTransform
 
@@ -226,7 +227,12 @@ class Importer(object):
         self.set_image(obj, image_object)
 
         if obj._created or obj._changed:
-            obj.save()
+            try:
+                obj.save()
+            except ValidationError as error:
+                print('Event ' + str(obj) + ' could not be saved: ' + str(error))
+                return
+
 
         # many-to-many fields
 
