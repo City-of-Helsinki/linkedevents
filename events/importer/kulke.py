@@ -39,6 +39,7 @@ LOCATION_TPREK_MAP = {
 
 ADDRESS_TPREK_MAP = {
     'annankatu 30': 'annantalo',
+    'annegatan 30': 'annantalo',
     'mosaiikkitori 2': 'vuotalo',
     'ala-malmin tori 1': 'malmitalo',
 }
@@ -219,6 +220,13 @@ class KulkeImporter(Importer):
             # Okay, try address.
             if location['street_address']['fi']:
                 addr = location['street_address']['fi'].lower()
+                if addr in ADDRESS_TPREK_MAP:
+                    tprek_id = LOCATION_TPREK_MAP[ADDRESS_TPREK_MAP[addr]]
+
+        if not tprek_id and 'sv' in location['street_address']:
+            # Okay, try Swedish address.
+            if location['street_address']['sv']:
+                addr = location['street_address']['sv'].lower()
                 if addr in ADDRESS_TPREK_MAP:
                     tprek_id = LOCATION_TPREK_MAP[ADDRESS_TPREK_MAP[addr]]
 
