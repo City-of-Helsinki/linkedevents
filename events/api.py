@@ -796,6 +796,10 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             data['end_time'] = data['end_time'].replace(hour=0, minute=0, second=0)
             data['end_time'] += timedelta(days=1)
 
+        if data.get('short_description') and len(data['short_description']) > 160:
+            raise serializers.ValidationError(
+                {'short_description': 'Short description length must be 160 characters or less'})
+
         return data
 
     def validate_event_status(self, value):
