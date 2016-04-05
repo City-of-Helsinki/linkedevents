@@ -105,7 +105,15 @@ def minimal_event_dict(data_source, organization, location_id):
             {'@id': keyword_id(data_source, 'test')},
         ],
         'short_description': {'fi': 'short desc'},
-        'description': {'fi': 'desc'}
+        'description': {'fi': 'desc'},
+        'offers': [
+            {
+                'is_free': False,
+                'price': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
+                'description': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
+                'info_url': {'en': URL, 'sv': URL, 'fi': URL}
+            }
+        ]
     }
 
 

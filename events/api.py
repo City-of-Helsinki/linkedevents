@@ -711,7 +711,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                                   many=True, required=False, queryset=Keyword.objects.all())
     view_name = 'event-detail'
     fields_needed_to_publish = ('keywords', 'location', 'start_time',
-                                'short_description', 'description')
+                                'short_description', 'description',
+                                'offers')
 
     def __init__(self, *args, skip_empties=False, **kwargs):
         super(EventSerializer, self).__init__(*args, **kwargs)
