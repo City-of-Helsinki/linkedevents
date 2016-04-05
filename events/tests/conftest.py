@@ -104,6 +104,8 @@ def minimal_event_dict(data_source, organization, location_id):
         'keywords': [
             {'@id': keyword_id(data_source, 'test')},
         ],
+        'short_description': {'fi': 'short desc'},
+        'description': {'fi': 'desc'}
     }
 
 
@@ -125,7 +127,9 @@ def event(place, user):
         data_source=place.data_source, publisher=place.publisher,
         last_modified_by=user,
         start_time=timezone.now(),
-        end_time=timezone.now()
+        end_time=timezone.now(),
+        short_description='short desc',
+        description='desc'
     )
 
 
