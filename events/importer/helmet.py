@@ -52,6 +52,7 @@ LOCATIONS = {
     u"Hiekkaharjun kirjasto": ((10790, 11284), 18584),
     u"Itäkeskuksen kirjasto": ((10791, 11286), 8184),
     u"Jakomäen kirjasto": ((10792, 11288), 8324),
+    u"Jätkäsaaren kirjasto": ((11858,), 45317),
     u"Kalajärven kirjasto": ((10793, 11290), 15365),
     u"Kallion kirjasto": ((10794, 11291), 8215),
     u"Kannelmäen kirjasto": ((10795, 11294), 8141),
