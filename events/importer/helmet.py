@@ -300,6 +300,7 @@ class HelmetImporter(Importer):
             # Save original keyword in the raw too
             node_id = classification['NodeId']
             name = classification['NodeName']
+            node_type = classification['Type']
             # Tapahtumat exists tens of times, use pseudo id
             if name in ('Tapahtumat', 'Events', 'Evenemang'):
                 node_id = 1  # pseudo id
@@ -331,10 +332,9 @@ class HelmetImporter(Importer):
             event_keywords.add(keyword_orig)
             ### Saving original keyword ends ###
 
-            # Oddly enough, "Tapahtumat" node includes NodeId pointing to
-            # HelMet location, which is mapped to Linked Events keyword ID
-            if classification['NodeName'] in (
-                    'Tapahtumat', 'Events', 'Evenemang'):
+            # One of the type 7 nodes (either Tapahtumat, or just the library name)
+            # points to the location, which is mapped to Linked Events keyword ID
+            if node_type == 7:
                 if not 'location' in event:
                     location_id = to_le_id(classification['NodeId'])
                     if location_id:
