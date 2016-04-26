@@ -21,7 +21,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import (
-    serializers, relations, viewsets, filters, generics, status
+    serializers, relations, viewsets, mixins, filters, generics, status
 )
 from rest_framework.settings import api_settings
 from rest_framework.reverse import reverse
@@ -466,7 +466,12 @@ class KeywordSerializer(LinkedEventsSerializer):
         model = Keyword
 
 
-class KeywordViewSet(viewsets.ReadOnlyModelViewSet):
+class KeywordRetrieveViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+    queryset = Keyword.objects.all()
+    serializer_class = KeywordSerializer
+
+
+class KeywordListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = Keyword.objects.all()
     serializer_class = KeywordSerializer
 
@@ -501,7 +506,9 @@ class KeywordViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(name__startswith=val)
         return queryset
 
-register_view(KeywordViewSet, 'keyword')
+
+register_view(KeywordRetrieveViewSet, 'keyword')
+register_view(KeywordListViewSet, 'keyword')
 
 
 class KeywordSetSerializer(LinkedEventsSerializer):
