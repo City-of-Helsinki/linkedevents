@@ -552,7 +552,21 @@ class PlaceSerializer(LinkedEventsSerializer, GeoModelSerializer):
         model = Place
 
 
-class PlaceViewSet(GeoModelAPIView, viewsets.ReadOnlyModelViewSet):
+class PlaceRetrieveViewSet(GeoModelAPIView,
+                           viewsets.GenericViewSet,
+                           mixins.RetrieveModelMixin):
+    queryset = Place.objects.all()
+    serializer_class = PlaceSerializer
+
+    def get_serializer_context(self):
+        context = super(PlaceListViewSet, self).get_serializer_context()
+        context.setdefault('skip_fields', set()).add('origin_id')
+        return context
+
+
+class PlaceListViewSet(GeoModelAPIView,
+                       viewsets.GenericViewSet,
+                       mixins.ListModelMixin):
     queryset = Place.objects.all()
     serializer_class = PlaceSerializer
 
@@ -576,12 +590,14 @@ class PlaceViewSet(GeoModelAPIView, viewsets.ReadOnlyModelViewSet):
                                               flat=True).distinct().order_by()
             queryset = queryset.filter(id__in=location_ids)
         return queryset
+
     def get_serializer_context(self):
-        context = super(PlaceViewSet, self).get_serializer_context()
+        context = super(PlaceListViewSet, self).get_serializer_context()
         context.setdefault('skip_fields', set()).add('origin_id')
         return context
 
-register_view(PlaceViewSet, 'place')
+register_view(PlaceRetrieveViewSet, 'place')
+register_view(PlaceListViewSet, 'place')
 
 
 class OpeningHoursSpecificationSerializer(LinkedEventsSerializer):
