@@ -474,6 +474,20 @@ class KulkeImporter(Importer):
             else:
                 setattr(super_event, fieldname, value)
 
+        # The name may vary within a recurring event; hence, take the common part
+        if expand_model_fields(super_event, ['headline'])[0] not in common_fields:
+            words = getattr(events.first(), 'headline').split(' ')
+            name = ''
+            is_common = lambda: all(
+                headline.startswith(name + words[0])
+                for headline in [event.name for event in events]
+            )
+            while words and is_common():
+                name += words.pop(0) + ' '
+                print(words)
+                print(name)
+            setattr(super_event, 'name', name)
+
         for lang in self.languages.keys():
             headline = getattr(
                 super_event, 'headline_{}'.format(lang)
