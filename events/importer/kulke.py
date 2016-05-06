@@ -10,7 +10,7 @@ from pytz import timezone
 from django.conf import settings
 from django.utils.timezone import get_default_timezone
 from django.core.validators import URLValidator
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db import IntegrityError
 
 from .sync import ModelSyncher
@@ -611,8 +611,16 @@ class KulkeImporter(Importer):
         print("Importing Kulke categories as keywords")
         categories = self.parse_kulke_categories()
         for kid, value in categories.items():
-            Keyword.objects.get_or_create(
-                id=make_kulke_id(kid),
-                name=value['text'],
-                data_source=self.data_source
-            )
+            try:
+                # if the keyword exists, update the name if needed
+                word = Keyword.objects.get(id=make_kulke_id(kid))
+                if word.name != value['text']:
+                    word.name = value['text']
+                    word.save()
+            except ObjectDoesNotExist:
+                # if the keyword does not exist, save it for future use
+                Keyword.objects.create(
+                    id=make_kulke_id(kid),
+                    name=value['text'],
+                    data_source=self.data_source
+                )
