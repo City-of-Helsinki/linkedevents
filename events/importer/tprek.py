@@ -89,6 +89,27 @@ class TprekImporter(Importer):
             obj._changed_fields.append(obj_key)
             obj._changed = True
 
+    def _save_field(self, obj, obj_field_name, info,
+                    info_field_name, max_length=None):
+            if info_field_name in info:
+                val = self.clean_text(info[info_field_name])
+                print(val)
+            else:
+                val = None
+                print(val)
+
+            if max_length and val and len(val) > max_length:
+                self.logger.warning("%s: field %s too long" % (obj, info_field_name))
+                val = None
+
+            obj_val = getattr(obj, obj_field_name, None)
+            if obj_val == val:
+                return
+
+            setattr(obj, obj_field_name, val)
+            obj._changed_fields.append(obj_field_name)
+            obj._changed = True
+
     @db.transaction.atomic
     def _import_unit(self, syncher, info):
         obj = syncher.get(str(info['id']))
@@ -111,7 +132,7 @@ class TprekImporter(Importer):
         self._save_translated_field(obj, 'url', info, 'info_url', max_length=200)
         #self._save_translated_field(obj, 'picture_caption', info, 'picture_caption')
 
-        self._save_translated_field(obj, 'telephone', info, 'phone')
+        self._save_field(obj, 'telephone', info, 'phone')
 
         field_map = {
             'address_zip': 'postal_code',
