@@ -26,6 +26,7 @@ SITE_ID = 1
 # Application definition
 
 INSTALLED_APPS = (
+    'helusers',
     'django.contrib.sites',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -52,10 +53,8 @@ INSTALLED_APPS = (
     'allauth.socialaccount',
     'helusers.providers.helsinki',
 
-    'munigeo',
-    'helusers',
-
     'helevents',
+    'munigeo',
 )
 
 MIDDLEWARE_CLASSES = (
