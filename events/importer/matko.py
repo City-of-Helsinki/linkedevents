@@ -42,7 +42,7 @@ EXTRA_LOCATIONS = {
     732: {
         'name': {
             'fi': 'Helsinki',
-            'sv': 'Helgingfors',
+            'sv': 'Helsingfors',
             'en': 'Helsinki',
         },
         'address': {

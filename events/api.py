@@ -733,7 +733,9 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     audience = JSONLDRelatedField(serializer=KeywordSerializer, view_name='keyword-detail',
                                   many=True, required=False, queryset=Keyword.objects.all())
     view_name = 'event-detail'
-    fields_needed_to_publish = ('keywords', 'location', 'start_time')
+    fields_needed_to_publish = ('keywords', 'location', 'start_time',
+                                'short_description', 'description',
+                                'offers')
 
     def __init__(self, *args, skip_empties=False, **kwargs):
         super(EventSerializer, self).__init__(*args, **kwargs)
@@ -783,10 +785,19 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             return data
 
         # check that published events have a location, keyword and start_time
+        languages = [x[0] for x in settings.LANGUAGES]
 
         errors = {}
+        lang_error_msg = 'This field for language "%s" must be specified for event in this language' \
+                         ' before an event is published.'
         for field in self.fields_needed_to_publish:
-            if not data.get(field):
+            if field in self.translated_fields:
+                for lang in languages:
+                    name = "name_%s" % lang
+                    field_lang = "%s_%s" % (field, lang)
+                    if data.get(name) and not data.get(field_lang):
+                        errors.setdefault(field, {})[lang] = _(lang_error_msg % lang)
+            elif not data.get(field):
                 # The start time may be null if a published event is postponed!
                 if field == 'start_time' and 'start_time' in data:
                     pass
@@ -818,6 +829,10 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         if not data['has_end_time']:
             data['end_time'] = data['end_time'].replace(hour=0, minute=0, second=0)
             data['end_time'] += timedelta(days=1)
+
+        if data.get('short_description') and len(data['short_description']) > 160:
+            raise serializers.ValidationError(
+                {'short_description': 'Short description length must be 160 characters or less'})
 
         return data
 
