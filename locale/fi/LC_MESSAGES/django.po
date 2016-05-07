@@ -2,13 +2,13 @@
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
-# 
+#
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-04-29 12:20+0300\n"
+"POT-Creation-Date: 2016-05-07 12:16+0300\n"
 "PO-Revision-Date: 2015-04-29 12:26+0140\n"
 "Last-Translator: b'  <aapo.rista@forumvirium.fi>'\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,196 +19,248 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Translated-Using: django-rosetta 0.7.6\n"
 
-#: api.py:57
+#: events/admin.py:46
+msgid "Admins"
+msgstr "Ylläpitäjiä"
+
+#: events/api.py:136
 #, python-format
 msgid "Incorrect JSON. Expected JSON, received %s."
 msgstr ""
 
-#: attic/models.py:14
+#: events/api.py:172
+msgid "This field is required."
+msgstr ""
+
+#: events/api.py:205
+msgid "Invalid value in event_status"
+msgstr ""
+
+#: events/api.py:438
+msgid "The name must be specified."
+msgstr ""
+
+#: events/api.py:805
+msgid "This field must be specified before an event is published."
+msgstr ""
+
+#: events/api.py:846
+msgid ""
+"POSTPONED and RESCHEDULED statuses cannot be set directly.Changing event "
+"start_time or marking start_time nullwill reschedule or postpone an event."
+msgstr ""
+
+#: events/api.py:1254
+msgid "User doesn't belong to any organization"
+msgstr ""
+
+#: events/attic/models.py:14
 msgid "person"
 msgstr "henkilö"
 
-#: attic/models.py:15
+#: events/attic/models.py:15
 msgid "persons"
 msgstr "henkilöt"
 
-#: attic/models.py:30
+#: events/attic/models.py:30
 msgid "organization"
 msgstr "organisaatio"
 
-#: attic/models.py:31
+#: events/attic/models.py:31
 msgid "organizations"
 msgstr "organisaatiot"
 
-#: models.py:47 models.py:77 models.py:116 models.py:124 models.py:310
+#: events/models.py:59 events/models.py:87 events/models.py:121
+#: events/models.py:165 events/models.py:173 events/models.py:407
 msgid "Name"
 msgstr "Nimi"
 
-#: models.py:78
-msgid "Image URL"
-msgstr "Kuvalinkki"
-
-#: models.py:80
-msgid "Origin ID"
-msgstr ""
-
-#: models.py:119
-msgid "language"
-msgstr "kieli"
-
-#: models.py:120
-msgid "languages"
-msgstr "kielet"
-
-#: models.py:142
-msgid "keyword"
-msgstr "Avainsana"
-
-#: models.py:143
-msgid "keywords"
-msgstr "Avainsanat"
-
-#: models.py:147 models.py:241
+#: events/models.py:89 events/models.py:214 events/models.py:311
 msgid "Publisher"
 msgstr "Julkaisija"
 
-#: models.py:148
-#, fuzzy
-#| msgid "Event home page"
-msgid "Place home page"
-msgstr "Tapahtuman kotisivu"
+#: events/models.py:97 events/models.py:135
+msgid "Image"
+msgstr "Kuva"
 
-#: models.py:149 models.py:226
+#: events/models.py:98
+msgid "Cropping"
+msgstr "Rajaus"
+
+#: events/models.py:108
+msgid "You must provide either image or url."
+msgstr ""
+
+#: events/models.py:110
+msgid "You can only provide image or url, not both."
+msgstr ""
+
+#: events/models.py:123
+msgid "Origin ID"
+msgstr "Lähdetunniste"
+
+#: events/models.py:168
+msgid "language"
+msgstr "kieli"
+
+#: events/models.py:169
+msgid "languages"
+msgstr "kielet"
+
+#: events/models.py:191
+msgid "keyword"
+msgstr "Avainsana"
+
+#: events/models.py:192
+msgid "keywords"
+msgstr "Avainsanat"
+
+#: events/models.py:209
+msgid "Intended keyword usage"
+msgstr ""
+
+#: events/models.py:210
+msgid "Organization which uses this set"
+msgstr ""
+
+#: events/models.py:215
+msgid "Place home page"
+msgstr "Paikan kotisivu"
+
+#: events/models.py:216 events/models.py:295
 msgid "Description"
 msgstr "Kuvaus"
 
-#: models.py:156
+#: events/models.py:223
 msgid "E-mail"
 msgstr "Sähköposti"
 
-#: models.py:157
+#: events/models.py:224
 msgid "Telephone"
 msgstr "Puhelinnumero"
 
-#: models.py:158
+#: events/models.py:225
 msgid "Contact type"
 msgstr ""
 
-#: models.py:159
-#, fuzzy
-#| msgid "address"
+#: events/models.py:226
 msgid "Street address"
-msgstr "osoite"
+msgstr "Katuosoite"
 
-#: models.py:160
+#: events/models.py:227
 msgid "Address locality"
 msgstr ""
 
-#: models.py:161
-#, fuzzy
-#| msgid "addresses"
-msgid "Address region"
-msgstr "osoitteet"
-
-#: models.py:162
+#: events/models.py:229
 msgid "Postal code"
 msgstr "Postiosoite"
 
-#: models.py:163
+#: events/models.py:230
 msgid "PO BOX"
 msgstr ""
 
-#: models.py:165
+#: events/models.py:232
 msgid "Country"
 msgstr "Maa"
 
-#: models.py:167
+#: events/models.py:234
 msgid "Deleted"
 msgstr "Poistettu"
 
-#: models.py:172
+#: events/models.py:239
 msgid "place"
 msgstr "paikka"
 
-#: models.py:173
+#: events/models.py:240
 msgid "places"
 msgstr "paikat"
 
-#: models.py:202
+#: events/models.py:269
 msgid "opening hour specification"
 msgstr "aukioloaika"
 
-#: models.py:203
+#: events/models.py:270
 msgid "opening hour specifications"
 msgstr "aukioloajat"
 
-#: models.py:225
+#: events/models.py:294
 msgid "Event home page"
 msgstr "Tapahtuman kotisivu"
 
-#: models.py:227
+#: events/models.py:296
 msgid "Short description"
 msgstr "Lyhyt kuvaus"
 
-#: models.py:230
+#: events/models.py:299
 msgid "Date published"
 msgstr "Julkaisupäivämäärä"
 
-#: models.py:238
+#: events/models.py:307
 msgid "Headline"
 msgstr "Otsikko"
 
-#: models.py:239
+#: events/models.py:308
 msgid "Secondary headline"
 msgstr ""
 
-#: models.py:240
+#: events/models.py:310
 msgid "Provider"
 msgstr ""
 
-#: models.py:244
+#: events/models.py:315
 msgid "Event status"
 msgstr "Tapahtuman tila"
 
-#: models.py:247
+#: events/models.py:322
+msgid "Event data publication status"
+msgstr ""
+
+#: events/models.py:326
 msgid "Location extra info"
 msgstr "Paikan lisätiedot"
 
-#: models.py:249
+#: events/models.py:329
 msgid "Start time"
 msgstr "Alkuaika"
 
-#: models.py:250
+#: events/models.py:330
 msgid "End time"
 msgstr "Loppuaika"
 
-#: models.py:261
-msgid "Audience"
-msgstr "Kohderyhmä"
+#: events/models.py:339
+msgid "In language"
+msgstr "kielellä"
 
-#: models.py:264
+#: events/models.py:346
 msgid "event"
 msgstr "tapahtuma"
 
-#: models.py:265
+#: events/models.py:347
 msgid "events"
 msgstr "tapahtumat"
 
-#: models.py:296
+#: events/models.py:358
+msgid "The event end time cannot be earlier than the start time."
+msgstr ""
+
+#: events/models.py:393
 msgid "Price"
 msgstr "Hinta"
 
-#: models.py:297
+#: events/models.py:394
 msgid "Web link to offer"
 msgstr "Linkki lipunmyyntiin"
 
-#: models.py:298
+#: events/models.py:395
 msgid "Offer description"
 msgstr "Hintatietojen kuvaus"
 
-#: models.py:301
+#: events/models.py:398
 msgid "Is free"
 msgstr "Vapaa pääsy"
+
+#~ msgid "Audience"
+#~ msgstr "Kohderyhmä"
 
 #~ msgid "category"
 #~ msgstr "kategoria"
@@ -224,25 +276,3 @@ msgstr "Vapaa pääsy"
 
 #~ msgid "Set if the event is in a given language"
 #~ msgstr "Aseta jos tapahtuma järjestetään tietyllä kielellä"
-
-#: demoform/templates/inputform/bootstrap_base.html:290
-msgid "Start typing the name..."
-msgstr ""
-#: demoform/templates/inputform/bootstrap_base.html:48
-msgid "Toggle"
-msgstr ""
-
-#: demoform/templates/inputform/bootstrap_base.html:300
-msgid "Location"
-msgstr ""
-
-#: demoform/templates/inputform/bootstrap_base.html:144
-msgid "source:"
-msgstr ""
-#: demoform/templates/inputform/bootstrap_base.html:147
-msgid "Publisher:"
-msgstr ""
-
-#: demoform/templates/inputform/bootstrap_base.html:153
-msgid "The"
-msgstr ""
