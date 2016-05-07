@@ -157,6 +157,11 @@ class Organization(BaseModel):
         User, blank=True, related_name='admin_organizations'
     )
 
+    class Meta:
+        ordering = ('name',)
+        verbose_name =_('organization')
+        verbose_name_plural = _('organizations')
+
 
 class Language(models.Model):
     id = models.CharField(max_length=6, primary_key=True)
