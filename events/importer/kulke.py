@@ -123,6 +123,16 @@ def make_event_name(title, subtitle):
     elif subtitle:
         return subtitle
 
+def get_event_name(event):
+    if 'fi' in event['name']:
+        return event['name']['fi']
+    else:
+        names = event['name'].values()
+        if not names:
+            return None
+        else:
+            return names[0]
+
 @register_importer
 class KulkeImporter(Importer):
     name = "kulke"
@@ -199,7 +209,7 @@ class KulkeImporter(Importer):
         location = event['location']
         if location['name'] is None:
             print("Missing place for event %s (%s)" % (
-                event['name']['fi'], event['origin_id']))
+                get_event_name(event), event['origin_id']))
             return None
 
         loc_name = location['name'].lower()
@@ -222,14 +232,14 @@ class KulkeImporter(Importer):
 
         if not tprek_id and 'fi' in location['street_address']:
             # Okay, try address.
-            if location['street_address']['fi']:
+            if 'fi' in location['street_address'] and location['street_address']['fi']:
                 addr = location['street_address']['fi'].lower()
                 if addr in ADDRESS_TPREK_MAP:
                     tprek_id = LOCATION_TPREK_MAP[ADDRESS_TPREK_MAP[addr]]
 
         if not tprek_id and 'sv' in location['street_address']:
             # Okay, try Swedish address.
-            if location['street_address']['sv']:
+            if 'sv' in location['street_address'] and location['street_address']['sv']:
                 addr = location['street_address']['sv'].lower()
                 if addr in ADDRESS_TPREK_MAP:
                     tprek_id = LOCATION_TPREK_MAP[ADDRESS_TPREK_MAP[addr]]
@@ -237,7 +247,7 @@ class KulkeImporter(Importer):
         if tprek_id:
             event['location']['id'] = self.tprek_by_id[tprek_id]
         else:
-            print("No match found for place '%s' (event %s)" % (loc_name, event['name']['fi']))
+            print("No match found for place '%s' (event %s)" % (loc_name, get_event_name(event)))
 
     def _import_event(self, lang, event_el, events):
         tag = lambda t: 'event' + t
@@ -599,8 +609,9 @@ class KulkeImporter(Importer):
                 if kw.id in filter_out_keywords:
                     skip = True
                     break
-            if not skip:
-                self.save_event(event)
+            if skip:
+                continue
+            self.save_event(event)
 
         self._verify_recurs(recurring_groups)
         aggregates = self._save_recurring_superevents(recurring_groups)
