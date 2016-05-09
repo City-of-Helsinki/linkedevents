@@ -559,7 +559,7 @@ class PlaceRetrieveViewSet(GeoModelAPIView,
     serializer_class = PlaceSerializer
 
     def get_serializer_context(self):
-        context = super(PlaceListViewSet, self).get_serializer_context()
+        context = super(PlaceRetrieveViewSet, self).get_serializer_context()
         context.setdefault('skip_fields', set()).add('origin_id')
         return context
 

@@ -6,8 +6,8 @@ from django.utils.html import strip_tags
 class EventIndex(indexes.SearchIndex, indexes.Indexable):
     text = indexes.CharField(document=True, use_template=True)
     autosuggest = indexes.EdgeNgramField(model_attr='name')
-    start_time = indexes.DateField(model_attr='start_time')
-    end_time = indexes.DateField(model_attr='end_time')
+    start_time = indexes.DateTimeField(model_attr='start_time')
+    end_time = indexes.DateTimeField(model_attr='end_time')
 
     def get_updated_field(self):
         return 'last_modified_time'
