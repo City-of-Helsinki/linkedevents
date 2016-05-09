@@ -733,9 +733,10 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     audience = JSONLDRelatedField(serializer=KeywordSerializer, view_name='keyword-detail',
                                   many=True, required=False, queryset=Keyword.objects.all())
     view_name = 'event-detail'
-    fields_needed_to_publish = ('keywords', 'location', 'start_time',
-                                'short_description', 'description',
-                                'offers')
+    # JA: TODO: Temporarily disabled new validation code
+    fields_needed_to_publish = ('keywords', 'location', 'start_time') #,
+                                # 'short_description', 'description',
+                                # 'offers')
 
     def __init__(self, *args, skip_empties=False, **kwargs):
         super(EventSerializer, self).__init__(*args, **kwargs)
@@ -830,9 +831,10 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             data['end_time'] = data['end_time'].replace(hour=0, minute=0, second=0)
             data['end_time'] += timedelta(days=1)
 
-        if data.get('short_description') and len(data['short_description']) > 160:
-            raise serializers.ValidationError(
-                {'short_description': 'Short description length must be 160 characters or less'})
+        # JA: TODO: Temporarily disabled new validation code
+        # if data.get('short_description') and len(data['short_description']) > 160:
+        #     raise serializers.ValidationError(
+        #         {'short_description': 'Short description length must be 160 characters or less'})
 
         return data
 
