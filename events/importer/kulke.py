@@ -138,8 +138,8 @@ def get_event_name(event):
     if 'fi' in event['name']:
         return event['name']['fi']
     else:
-        names = event['name'].values()
-        if not names:
+        names = list(event['name'].values())
+        if len(names):
             return None
         else:
             return names[0]
