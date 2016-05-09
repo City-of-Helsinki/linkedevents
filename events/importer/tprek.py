@@ -93,10 +93,8 @@ class TprekImporter(Importer):
                     info_field_name, max_length=None):
             if info_field_name in info:
                 val = self.clean_text(info[info_field_name])
-                print(val)
             else:
                 val = None
-                print(val)
 
             if max_length and val and len(val) > max_length:
                 self.logger.warning("%s: field %s too long" % (obj, info_field_name))
