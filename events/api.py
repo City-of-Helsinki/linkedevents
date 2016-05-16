@@ -625,6 +625,21 @@ register_view(LanguageViewSet, 'language')
 LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
 
 
+class OrganizationSerializer(LinkedEventsSerializer):
+    view_name = 'organization-detail'
+
+    class Meta:
+        model = Organization
+        exclude = ['admin_users']
+
+
+class OrganizationViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Organization.objects.all()
+    serializer_class = OrganizationSerializer
+
+register_view(OrganizationViewSet, 'organization')
+
+
 class EventLinkSerializer(serializers.ModelSerializer):
     def to_representation(self, obj):
         ret = super(EventLinkSerializer, self).to_representation(obj)
