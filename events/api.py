@@ -1086,6 +1086,11 @@ def _filter_event_queryset(queryset, params, srs=None):
     if val:
         queryset = queryset.filter(data_source=val)
 
+    # Negative filter by data source
+    val = params.get('data_source!', None)
+    if val:
+        queryset = queryset.exclude(data_source=val)
+
     # Filter by location id, multiple ids separated by comma
     val = params.get('location', None)
     if val:
