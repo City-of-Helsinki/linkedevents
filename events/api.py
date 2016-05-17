@@ -625,6 +625,21 @@ register_view(LanguageViewSet, 'language')
 LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
 
 
+class OrganizationSerializer(LinkedEventsSerializer):
+    view_name = 'organization-detail'
+
+    class Meta:
+        model = Organization
+        exclude = ['admin_users']
+
+
+class OrganizationViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Organization.objects.all()
+    serializer_class = OrganizationSerializer
+
+register_view(OrganizationViewSet, 'organization')
+
+
 class EventLinkSerializer(serializers.ModelSerializer):
     def to_representation(self, obj):
         ret = super(EventLinkSerializer, self).to_representation(obj)
@@ -1085,6 +1100,11 @@ def _filter_event_queryset(queryset, params, srs=None):
     val = params.get('data_source', None)
     if val:
         queryset = queryset.filter(data_source=val)
+
+    # Negative filter by data source
+    val = params.get('data_source!', None)
+    if val:
+        queryset = queryset.exclude(data_source=val)
 
     # Filter by location id, multiple ids separated by comma
     val = params.get('location', None)

@@ -51,18 +51,19 @@ ADDRESS_TPREK_MAP = {
 CATEGORIES_TO_IGNORE = [
     286, 596, 614, 307, 632, 645, 675, 231, 616, 364, 325, 324, 319, 646, 640,
     641, 642, 643, 670, 671, 673, 674, 725, 312, 344, 365, 239, 240, 308, 623,
-    229, 230, 323, 320, 357, 358,
+    229, 230, 323, 320, 357, 358, 728, 729, 730, 735, 736,
 
     # The categories below are languages, ignore as categories
     # todo: add as event languages
     53, 54, 55
 ]
 
-SKIP_EVENTS_WITH_CATEGORY = set(
-    # These events are courses - not to be published
-    [70, 71, 72, 73, 75, 77, 79, 80,
-    81, 83, 84, 85, 87, 316, 629, 632]
-)
+# These events are courses - not to be published
+SKIP_EVENTS_WITH_CATEGORY = {
+    70, 71, 72, 73, 75, 77, 79, 80,
+    81, 83, 84, 85, 87, 316, 629, 632,
+    728, 729, 730, 735,
+}
 
 def _query_courses():
     filter_out_keywords = map(
@@ -82,6 +83,8 @@ def _delete_courses():
 
 SPORTS = ['p965']
 GYMS = ['p8504']
+CHILDREN = ['p4354']
+MOVIES = ['p1235', 'p16327']
 MANUAL_CATEGORIES = {
     # urheilu
     546: SPORTS, 547: SPORTS, 431: SPORTS, 638: SPORTS,
@@ -98,15 +101,23 @@ MANUAL_CATEGORIES = {
     # saunominen
     371: ['p11049'],
     # lastentapahtumat > lapset (!)
-    105: ['p4354'],
+    105: CHILDREN,
     # steppi
     554: ['p19614'],
     # liikuntaleiri
     710: ['p143', 'p916'],
     # teatteri ja sirkus
     351: ['p2850'],
-    # elokuva (ja media)
-    205: ['p16327']
+    # elokuva ja media
+    205: MOVIES + ['p2445'],
+    # skidikino
+    731: CHILDREN + MOVIES,
+    # luennot ja keskustelut
+    733: ['p15875', 'p14004'],
+    # nuorille
+    734: ['p11617'],
+    # elokuva
+    737: MOVIES
 }
 
 
