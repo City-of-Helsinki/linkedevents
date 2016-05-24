@@ -1107,7 +1107,7 @@ def _filter_event_queryset(queryset, params, srs=None):
     val = params.get('data_source!', None)
     if val:
         val = val.split(',')
-        queryset = queryset.exclude(data_sourc_id__in=val)
+        queryset = queryset.exclude(data_source_id__in=val)
 
     # Filter by location id, multiple ids separated by comma
     val = params.get('location', None)
