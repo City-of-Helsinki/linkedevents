@@ -1097,14 +1097,17 @@ def _filter_event_queryset(queryset, params, srs=None):
         places = Place.geo_objects.filter(**bbox_filter)
         queryset = queryset.filter(location__in=places)
 
+    # Filter by data source, multiple sources separated by comma
     val = params.get('data_source', None)
     if val:
-        queryset = queryset.filter(data_source=val)
+        val = val.split(',')
+        queryset = queryset.filter(data_source_id__in=val)
 
-    # Negative filter by data source
+    # Negative filter by data source, multiple sources separated by comma
     val = params.get('data_source!', None)
     if val:
-        queryset = queryset.exclude(data_source=val)
+        val = val.split(',')
+        queryset = queryset.exclude(data_sourc_id__in=val)
 
     # Filter by location id, multiple ids separated by comma
     val = params.get('location', None)
