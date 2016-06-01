@@ -58,8 +58,8 @@ def assert_event_data_is_equal(d1, d2, version='v1'):
     assert links1 == links2
 
 
-def get(api_client, url):
-    response = api_client.get(url, format='json')
+def get(api_client, url, data=None):
+    response = api_client.get(url, data=data, format='json')
     assert response.status_code == 200, str(response.content)
     return response
 

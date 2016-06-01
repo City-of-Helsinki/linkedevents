@@ -30,7 +30,7 @@ service units which contains e.g. information about accessibility.
 </p>
 <p>
 In the API, you can search data by date or location as
-well as city neighborhoods.
+well as bounding box.
 </p>
 <h1>Data license</h1>
 <p>Data is licensed using CC BY 4.0 license.

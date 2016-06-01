@@ -27,6 +27,9 @@ DATETIME = timezone.now().isoformat()
 
 OTHER_DATA_SOURCE_ID = "testotherdatasourceid"
 
+@pytest.fixture
+def kw_name():
+    return 'known_keyword'
 
 @pytest.fixture
 def api_client():
@@ -134,6 +137,30 @@ def event(place, user):
         id='test_event', location=place,
         data_source=place.data_source, publisher=place.publisher,
         last_modified_by=user,
+        start_time=timezone.now(),
+        end_time=timezone.now(),
+        short_description='short desc',
+        description='desc'
+    )
+
+
+@pytest.mark.django_db
+@pytest.fixture
+def place2(other_data_source, organization2):
+    return Place.objects.create(
+        id='test location 2',
+        data_source=other_data_source,
+        publisher=organization2
+    )
+
+
+@pytest.mark.django_db
+@pytest.fixture
+def event2(place2, user2):
+    return Event.objects.create(
+        id='test_event 2', location=place2,
+        data_source=place2.data_source, publisher=place2.publisher,
+        last_modified_by=user2,
         start_time=timezone.now(),
         end_time=timezone.now(),
         short_description='short desc',
