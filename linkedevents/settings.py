@@ -28,6 +28,7 @@ SITE_ID = 1
 INSTALLED_APPS = (
     'helusers',
     'django.contrib.sites',
+    'modeltranslation',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -42,7 +43,6 @@ INSTALLED_APPS = (
     'rest_framework',
     'rest_framework_jwt',
     'mptt',
-    'modeltranslation',
     'reversion',
     'haystack',
     'raven.contrib.django.raven_compat',

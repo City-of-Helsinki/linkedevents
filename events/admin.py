@@ -6,7 +6,7 @@ from django.utils.translation import ugettext as _
 from modeltranslation.admin import TranslationAdmin
 from reversion.admin import VersionAdmin
 from events.models import Event, Keyword, Place, Language, \
-    OpeningHoursSpecification, KeywordLabel, Organization
+    OpeningHoursSpecification, KeywordLabel, Organization, License
 
 
 class BaseAdmin(admin.ModelAdmin):
@@ -54,3 +54,13 @@ class LanguageAdmin(BaseAdmin, VersionAdmin):
 
 class PersonAdmin(BaseAdmin, VersionAdmin):
     pass
+
+
+class LicenseAdmin(BaseAdmin, TranslationAdmin, VersionAdmin):
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ['id']
+        else:
+            return []
+
+admin.site.register(License, LicenseAdmin)
