@@ -15,6 +15,7 @@ class KeywordTranslationOptions(TranslationOptions):
 
 translator.register(Keyword, KeywordTranslationOptions)
 
+
 class KeywordSetTranslationOptions(TranslationOptions):
     fields = ('name',)
 
@@ -36,7 +37,16 @@ class EventTranslationOptions(TranslationOptions):
 
 translator.register(Event, EventTranslationOptions)
 
+
 class OfferTranslationOptions(TranslationOptions):
     fields = ('price', 'info_url', 'description')
 
+
 translator.register(Offer, OfferTranslationOptions)
+
+
+class LicenseTranslationOptions(TranslationOptions):
+    fields = ('name',)
+
+
+translator.register(License, LicenseTranslationOptions)
