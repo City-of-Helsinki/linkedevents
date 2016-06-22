@@ -660,7 +660,7 @@ class OfferSerializer(TranslatedModelSerializer):
 
 class ImageSerializer(LinkedEventsSerializer):
     view_name = 'image-detail'
-    license = serializers.PrimaryKeyRelatedField(read_only=True)
+    license = serializers.PrimaryKeyRelatedField(queryset=License.objects.all(), required=False)
 
     class Meta:
         model = Image
