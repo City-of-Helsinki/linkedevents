@@ -333,6 +333,7 @@ class KulkeImporter(Importer):
             for attachment in eventattachments:
                 if attachment.attrib['type'] == 'teaserimage':
                     event['image'] = unicodetext(attachment).strip()
+                    event['image_license'] = 'event_only'
                     break
 
         event['provider'][lang] = text_content('organizer')
