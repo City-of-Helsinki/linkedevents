@@ -931,6 +931,9 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             ret['start_time'] = obj.start_time.astimezone(LOCAL_TZ).strftime('%Y-%m-%d')
         if 'end_time' in ret and not obj.has_end_time:
             # If we're storing only the date part, do not pretend we have the exact time.
+            # Timestamp is of the form %Y-%m-%dT00:00:00, so we report the previous date.
+            ret['end_time'] = (obj.end_time - timedelta(days=1)).astimezone(LOCAL_TZ).strftime('%Y-%m-%d')
+            # Unless the event is short, then no need for end time
             if obj.end_time - obj.start_time <= timedelta(days=1):
                 ret['end_time'] = None
         del ret['has_start_time']
