@@ -298,6 +298,7 @@ class KulkeImporter(Importer):
         description = ''
         if caption:
             description += caption
+            event['short_description'][lang] = caption
         if caption and bodytext:
             description += "\n\n"
         if bodytext:
