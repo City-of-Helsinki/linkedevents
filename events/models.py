@@ -341,6 +341,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
 
     in_language = models.ManyToManyField(Language, verbose_name=_('In language'), related_name='events', blank=True)
 
+    deleted = models.BooleanField(default=False, db_index=True)
+
     # Custom fields not from schema.org
     keywords = models.ManyToManyField(Keyword)
     audience = models.ManyToManyField(Keyword, related_name='audiences', blank=True)

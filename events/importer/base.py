@@ -226,13 +226,14 @@ class Importer(object):
         image_object = self.get_or_create_image(image_url)
         self.set_image(obj, image_object)
 
+        self._set_field(obj, 'deleted', False)
+
         if obj._created or obj._changed:
             try:
                 obj.save()
             except ValidationError as error:
                 print('Event ' + str(obj) + ' could not be saved: ' + str(error))
-                return
-
+                raise
 
         # many-to-many fields
 
@@ -289,6 +290,8 @@ class Importer(object):
             else:
                 verb = "changed"
             print("%s %s" % (obj, verb))
+
+        return obj
 
     def save_place(self, info):
         errors = set()
