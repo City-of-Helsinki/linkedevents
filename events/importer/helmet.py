@@ -15,6 +15,8 @@ import pytz
 import bleach
 from pprint import pprint
 
+from .sync import ModelSyncher
+
 YSO_BASE_URL = 'http://www.yso.fi/onto/yso/'
 YSO_KEYWORD_MAPS = {
     u'Yrittäjät': u'p1178',
@@ -143,6 +145,15 @@ def clean_text(text, strip_newlines=False):
     # remove consecutive whitespaces
     return re.sub(r'\s\s+', ' ', text, re.U).strip()
 
+
+def mark_deleted(obj):
+    if obj.deleted:
+        return False
+    obj.deleted = True
+    obj.save(update_fields=['deleted'])
+    return True
+
+
 class APIBrokenError(Exception):
     pass
 
@@ -196,6 +207,9 @@ class HelmetImporter(Importer):
 
         if self.options['cached']:
             requests_cache.install_cache('helmet')
+            self.cache = requests_cache.get_cache()
+        else:
+            self.cache = None
 
     @staticmethod
     def _get_extended_properties(event_el):
@@ -379,11 +393,15 @@ class HelmetImporter(Importer):
             if response.status_code != 200:
                 self.logger.error("HelMet API reported HTTP %d" % response.status_code)
                 time.sleep(2)
+                if self.cache:
+                    self.cache.delete_url(url)
                 continue
             try:
                 root_doc = response.json()
             except ValueError:
                 self.logger.error("HelMet API returned invalid JSON")
+                if self.cache:
+                    self.cache.delete_url(url)
                 time.sleep(5)
                 continue
             break
@@ -399,8 +417,8 @@ class HelmetImporter(Importer):
                 earliest_end_time = event['end_time']
 
         now = datetime.now().replace(tzinfo=LOCAL_TZ)
-        # We check only 90 days backwards.
-        if earliest_end_time < now - timedelta(days=90):
+        # We check 31 days backwards.
+        if earliest_end_time < now - timedelta(days=31):
             return
 
         if 'odata.nextLink' in root_doc:
@@ -411,12 +429,13 @@ class HelmetImporter(Importer):
                     "&$format=json"
                 ), lang, events)
 
+
     def import_events(self):
         print("Importing HelMet events")
         events = recur_dict()
         for lang in self.supported_languages:
             helmet_lang_id = HELMET_LANGUAGES[lang]
-            url = HELMET_API_URL.format(lang_code=helmet_lang_id, start_date='2014-01-01')
+            url = HELMET_API_URL.format(lang_code=helmet_lang_id, start_date='2016-01-01')
             print("Processing lang " + lang)
             print("from URL " + url)
             try:
@@ -424,7 +443,16 @@ class HelmetImporter(Importer):
             except APIBrokenError:
                 return
 
-        event_list = sorted(events.values(), key=lambda x: x['start_time'])
+
+        event_list = sorted(events.values(), key=lambda x: x['end_time'])
+        qs = Event.objects.filter(end_time__gte=datetime.now(),
+                                  data_source='helmet', deleted=False)
+
+        self.syncher = ModelSyncher(qs, lambda obj: obj.origin_id, delete_func=mark_deleted)
+
         for event in event_list:
-            self.save_event(event)
+            obj = self.save_event(event)
+            self.syncher.mark(obj)
+
+        self.syncher.finish()
         print("%d events processed" % len(events.values()))

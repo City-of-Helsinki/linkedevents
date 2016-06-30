@@ -22,7 +22,7 @@ class EventIndex(indexes.SearchIndex, indexes.Indexable):
         return super(EventIndex, self).prepare(obj)
 
     def index_queryset(self, using=None):
-        return self.get_model().objects.filter(publication_status=PublicationStatus.PUBLIC)
+        return self.get_model().objects.filter(publication_status=PublicationStatus.PUBLIC, deleted=False)
 
 
 class PlaceIndex(indexes.SearchIndex, indexes.Indexable):

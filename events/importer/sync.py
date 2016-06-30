@@ -16,11 +16,12 @@ class ModelSyncher(object):
         if getattr(obj, '_found', False):
             raise Exception("Object %s already marked" % obj)
 
-        obj._found = True
         obj_id = self.generate_obj_id(obj)
         if obj_id not in self.obj_dict:
             self.obj_dict[obj_id] = obj
-        assert self.obj_dict[obj_id] == obj
+        else:
+            obj = self.obj_dict[obj_id]
+        obj._found = True
 
     def get(self, obj_id):
         return self.obj_dict.get(obj_id, None)

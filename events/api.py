@@ -963,7 +963,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
     class Meta:
         model = Event
-        exclude = ['is_recurring_super']
+        exclude = ['is_recurring_super', 'deleted']
 
 def _format_images_v0_1(data):
     if 'images' not in data:
@@ -1211,7 +1211,7 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
     # Response data for the current URL
 
     """
-    queryset = Event.objects.all()
+    queryset = Event.objects.filter(deleted=False)
     # Use select_ and prefetch_related() to reduce the amount of queries
     queryset = queryset.select_related('location')
     queryset = queryset.prefetch_related(
