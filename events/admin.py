@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin.widgets import FilteredSelectMultiple
 from django.contrib.gis import admin as geoadmin
@@ -5,6 +6,7 @@ from django.contrib.gis.db import models
 from django.utils.translation import ugettext as _
 from modeltranslation.admin import TranslationAdmin
 from reversion.admin import VersionAdmin
+from events.api import generate_id
 from events.models import Event, Keyword, Place, Language, \
     OpeningHoursSpecification, KeywordLabel, Organization, License
 
@@ -30,7 +32,27 @@ class KeywordAdmin(BaseAdmin, TranslationAdmin, VersionAdmin):
 
 class PlaceAdmin(geoadmin.GeoModelAdmin, BaseAdmin, TranslationAdmin,
                  VersionAdmin):
-    pass
+    fieldsets = (
+        (None, {
+            'fields': ('publisher', 'name', 'description', 'info_url', 'position', 'parent')
+
+        }),
+        (_('Contact info'), {
+            'fields':  ('email', 'telephone', 'contact_type', 'street_address', 'address_locality', 'address_region',
+                        'postal_code', 'post_office_box_num')
+        }),
+    )
+
+    def save_model(self, request, obj, form, change):
+        system_id = settings.SYSTEM_DATA_SOURCE_ID
+        obj.data_source_id = system_id
+        if not obj.id:
+            obj.id = generate_id(system_id)
+        obj.origin_id = obj.id.split(':')[1]
+
+        super().save_model(request, obj, form, change)
+
+admin.site.register(Place, PlaceAdmin)
 
 
 class OrganizationAdmin(BaseAdmin):

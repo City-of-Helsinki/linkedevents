@@ -47,7 +47,7 @@ PUBLICATION_STATUSES = (
 
 
 class SchemalessFieldMixin(models.Model):
-    custom_data = HStoreField(null=True)
+    custom_data = HStoreField(null=True, blank=True)
 
     class Meta:
         abstract = True
@@ -124,7 +124,6 @@ class Image(models.Model):
             raise ValidationError(_('You can only provide image or url, not both.'))
         self.last_modified_time = BaseModel.now()
         super(Image, self).save(*args, **kwargs)
-
 
 @python_2_unicode_compatible
 class BaseModel(models.Model):
@@ -229,7 +228,7 @@ class KeywordSet(BaseModel):
 
 class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     publisher = models.ForeignKey(Organization, verbose_name=_('Publisher'), db_index=True)
-    info_url = models.URLField(verbose_name=_('Place home page'), null=True)
+    info_url = models.URLField(verbose_name=_('Place home page'), blank=True, default='')
     description = models.TextField(verbose_name=_('Description'), null=True, blank=True)
     parent = TreeForeignKey('self', null=True, blank=True,
                             related_name='children')
