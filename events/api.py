@@ -76,24 +76,6 @@ def get_serializer_for_model(model, version='v1'):
         serializer = Viewset.serializer_class
     return serializer
 
-def urlquote_id(link):
-    """
-    URL quote link's id part, e.g.
-    http://127.0.0.1:8000/v0.1/place/tprek:20879/
-    -->
-    http://127.0.0.1:8000/v0.1/place/tprek%3A20879/
-    This is DRF backwards compatibility function, 2.x quoted id automatically.
-
-    :param link: URL str
-    :return: quoted URL str
-    """
-    if isinstance(link, str):
-        parts = link.split('/')
-        if len(parts) > 1 and ':' in parts[-2]:
-            parts[-2] = urllib.parse.quote(parts[-2])
-            link = '/'.join(parts)
-    return link
-
 
 def generate_id(namespace):
     t = time.time() * 1000
@@ -154,7 +136,6 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
             return self.related_serializer(obj, hide_ld_context=self.hide_ld_context,
                                            context=self.context).data
         link = super(JSONLDRelatedField, self).to_representation(obj)
-        link = urlquote_id(link)
         if link == None:
             return None
         return {
@@ -406,7 +387,6 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                                         request=self.context['request'])
             except NoReverseMatch:
                 ret['@id'] = str(ret['id'])
-            ret['@id'] = urlquote_id(ret['@id'])
 
         # Context is hidden if:
         # 1) hide_ld_context is set to True
