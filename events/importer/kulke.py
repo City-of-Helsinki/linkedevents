@@ -298,6 +298,7 @@ class KulkeImporter(Importer):
         description = ''
         if caption:
             description += caption
+            event['short_description'][lang] = caption
         if caption and bodytext:
             description += "\n\n"
         if bodytext:
@@ -332,6 +333,7 @@ class KulkeImporter(Importer):
             for attachment in eventattachments:
                 if attachment.attrib['type'] == 'teaserimage':
                     event['image'] = unicodetext(attachment).strip()
+                    event['image_license'] = 'event_only'
                     break
 
         event['provider'][lang] = text_content('organizer')

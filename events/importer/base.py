@@ -215,7 +215,7 @@ class Importer(object):
             info['end_time'] = info['end_time'].replace(hour=0, minute=0, second=0)
             info['end_time'] += datetime.timedelta(days=1)
 
-        skip_fields = ['id', 'location', 'publisher', 'offers', 'keywords', 'image']
+        skip_fields = ['id', 'location', 'publisher', 'offers', 'keywords', 'image', 'image_license']
         self._update_fields(obj, info, skip_fields)
 
         self._set_field(obj, 'location_id', location_id)
@@ -224,15 +224,28 @@ class Importer(object):
 
         image_url = info.get('image', '').strip()
         image_object = self.get_or_create_image(image_url)
+
+        if 'image_license' in info:
+            license_id = info['image_license']
+            if image_object.license_id != license_id:
+                try:
+                    license_object = License.objects.get(id=license_id)
+                except License.DoesNotExist:
+                    print('Invalid license id "%s" image %s event %s' % (license_id, image_url, obj))
+                    return
+                image_object.license = license_object
+                image_object.save(update_fields=('license',))
+
         self.set_image(obj, image_object)
+
+        self._set_field(obj, 'deleted', False)
 
         if obj._created or obj._changed:
             try:
                 obj.save()
             except ValidationError as error:
                 print('Event ' + str(obj) + ' could not be saved: ' + str(error))
-                return
-
+                raise
 
         # many-to-many fields
 
@@ -289,6 +302,8 @@ class Importer(object):
             else:
                 verb = "changed"
             print("%s %s" % (obj, verb))
+
+        return obj
 
     def save_place(self, info):
         errors = set()

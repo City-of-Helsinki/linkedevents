@@ -80,6 +80,19 @@ class SimpleValueMixin(object):
         return self.simple_value() == other.simple_value()
 
 
+class License(models.Model):
+    id = models.CharField(max_length=50, primary_key=True)
+    name = models.CharField(verbose_name=_('Name'), max_length=255)
+    url = models.URLField(verbose_name=_('Url'), blank=True)
+
+    class Meta:
+        verbose_name = _('License')
+        verbose_name_plural = _('Licenses')
+
+    def __str__(self):
+        return self.name
+
+
 class Image(models.Model):
     jsonld_type = 'ImageObject'
 
@@ -96,6 +109,7 @@ class Image(models.Model):
     image = models.ImageField(upload_to='images', null=True, blank=True)
     url = models.URLField(verbose_name=_('Image'), max_length=400, null=True, blank=True)
     cropping = ImageRatioField('image', '800x800', verbose_name=_('Cropping'))
+    license = models.ForeignKey(License, verbose_name=_('License'), related_name='images', default='cc_by')
 
     def save(self, *args, **kwargs):
         if not self.publisher:
@@ -340,6 +354,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     is_recurring_super = models.BooleanField(default=False)
 
     in_language = models.ManyToManyField(Language, verbose_name=_('In language'), related_name='events', blank=True)
+
+    deleted = models.BooleanField(default=False, db_index=True)
 
     # Custom fields not from schema.org
     keywords = models.ManyToManyField(Keyword)

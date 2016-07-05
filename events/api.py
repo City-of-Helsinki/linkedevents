@@ -47,7 +47,7 @@ from events.custom_elasticsearch_search_backend import (
 )
 from events.models import (
     Place, Event, Keyword, KeywordSet, Language, OpeningHoursSpecification, EventLink,
-    Offer, DataSource, Organization, Image, PublicationStatus, PUBLICATION_STATUSES
+    Offer, DataSource, Organization, Image, PublicationStatus, PUBLICATION_STATUSES, License
 )
 from events.translation import EventTranslationOptions
 
@@ -660,6 +660,7 @@ class OfferSerializer(TranslatedModelSerializer):
 
 class ImageSerializer(LinkedEventsSerializer):
     view_name = 'image-detail'
+    license = serializers.PrimaryKeyRelatedField(queryset=License.objects.all(), required=False)
 
     class Meta:
         model = Image
@@ -963,7 +964,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
     class Meta:
         model = Event
-        exclude = ['is_recurring_super']
+        exclude = ['is_recurring_super', 'deleted']
 
 def _format_images_v0_1(data):
     if 'images' not in data:
@@ -1211,7 +1212,7 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
     # Response data for the current URL
 
     """
-    queryset = Event.objects.all()
+    queryset = Event.objects.filter(deleted=False)
     # Use select_ and prefetch_related() to reduce the amount of queries
     queryset = queryset.select_related('location')
     queryset = queryset.prefetch_related(
