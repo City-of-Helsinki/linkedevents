@@ -47,7 +47,7 @@ from events.custom_elasticsearch_search_backend import (
 )
 from events.models import (
     Place, Event, Keyword, KeywordSet, Language, OpeningHoursSpecification, EventLink,
-    Offer, DataSource, Organization, Image, PublicationStatus, PUBLICATION_STATUSES
+    Offer, DataSource, Organization, Image, PublicationStatus, PUBLICATION_STATUSES, License
 )
 from events.translation import EventTranslationOptions
 
@@ -660,6 +660,7 @@ class OfferSerializer(TranslatedModelSerializer):
 
 class ImageSerializer(LinkedEventsSerializer):
     view_name = 'image-detail'
+    license = serializers.PrimaryKeyRelatedField(queryset=License.objects.all(), required=False)
 
     class Meta:
         model = Image
