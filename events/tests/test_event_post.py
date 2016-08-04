@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
+from datetime import timedelta
+
 import pytest
-from django.utils import timezone
+from django.utils import timezone, translation
 from .utils import versioned_reverse as reverse
 
 from events.tests.utils import assert_event_data_is_equal
@@ -44,10 +46,8 @@ def test__cannot_create_an_event_ending_before_start_time(list_url,
                                                           minimal_event_dict,
                                                           user):
     api_client.force_authenticate(user=user)
-    minimal_event_dict['end_time'] = minimal_event_dict['start_time']
-    minimal_event_dict['start_time'] = timezone.now().isoformat()
-    print(minimal_event_dict['start_time'])
-    print(minimal_event_dict['end_time'])
+    minimal_event_dict['end_time'] = (timezone.now() + timedelta(days=1)).isoformat()
+    minimal_event_dict['start_time'] = (timezone.now() + timedelta(days=2)).isoformat()
     response = api_client.post(list_url, minimal_event_dict, format='json')
     assert response.status_code == 400
     assert 'end_time' in response.data
@@ -163,3 +163,17 @@ def test__jsonld_related_field(api_client, minimal_event_dict, list_url, place, 
     if expected >= 400:
         # check that there is a error message for location field
         assert 'location' in response.data
+
+
+@pytest.mark.django_db
+def test_start_time_and_end_time_validation(api_client, minimal_event_dict, user):
+    api_client.force_authenticate(user)
+
+    minimal_event_dict['start_time'] = timezone.now() - timedelta(days=2)
+    minimal_event_dict['end_time'] = timezone.now() - timedelta(days=1)
+
+    with translation.override('en'):
+        response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
+    assert response.status_code == 400
+    assert 'Start time cannot be in the past.' in response.data['start_time']
+    assert 'End time cannot be in the past.' in response.data['end_time']

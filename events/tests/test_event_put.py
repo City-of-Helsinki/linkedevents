@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from datetime import timedelta
 from django.utils import timezone
 
 import pytest
@@ -88,10 +89,10 @@ def test__reschedule_an_event_with_put(api_client, complex_event_dict, user):
     response = create_with_post(api_client, complex_event_dict)
 
     # create a new datetime
-    DATETIME = timezone.now().isoformat()
+    new_datetime = (timezone.now() + timedelta(days=3)).isoformat()
     data2 = response.data
-    data2['start_time'] = DATETIME
-    data2['end_time'] = DATETIME
+    data2['start_time'] = new_datetime
+    data2['end_time'] = new_datetime
 
     # update the event
     event_id = data2.pop('@id')
@@ -166,10 +167,10 @@ def test__reschedule_a_cancelled_event_with_put(api_client, complex_event_dict, 
     assert_event_data_is_equal(data2, response2.data)
 
     # create a new datetime and remove the cancelled status
-    DATETIME = timezone.now().isoformat()
+    new_datetime = (timezone.now() + timedelta(days=3)).isoformat()
     data3 = response2.data
-    data3['start_time'] = DATETIME
-    data3['end_time'] = DATETIME
+    data3['start_time'] = new_datetime
+    data3['end_time'] = new_datetime
     data3.pop('event_status')
 
     # update the event

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from datetime import timedelta
 
 # django
 from django.contrib.auth import get_user_model
@@ -23,7 +24,7 @@ from ..models import License, PublicationStatus
 
 TEXT = 'testing'
 URL = "http://localhost"
-DATETIME = timezone.now().isoformat()
+DATETIME = (timezone.now() + timedelta(days=1)).isoformat()
 
 OTHER_DATA_SOURCE_ID = "testotherdatasourceid"
 
