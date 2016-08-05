@@ -20,6 +20,8 @@ from django.core.urlresolvers import NoReverseMatch
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils.translation import ugettext_lazy as _
+from django.utils import timezone
+from django.utils.encoding import force_text
 from rest_framework import (
     serializers, relations, viewsets, mixins, filters, generics, status
 )
@@ -801,9 +803,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                 else:
                     errors[field] = _('This field must be specified before an event is published.')
 
-        if errors:
-            raise serializers.ValidationError(errors)
-
         # adjust start_time and has_start_time
 
         if 'has_start_time' not in data:
@@ -826,6 +825,15 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         if not data['has_end_time']:
             data['end_time'] = data['end_time'].replace(hour=0, minute=0, second=0)
             data['end_time'] += timedelta(days=1)
+
+        if data.get('start_time') and data['start_time'] < timezone.now():
+            errors['start_time'] = force_text(_('Start time cannot be in the past.'))
+
+        if data.get('end_time') and data['end_time'] < timezone.now():
+            errors['end_time'] = force_text(_('End time cannot be in the past.'))
+
+        if errors:
+            raise serializers.ValidationError(errors)
 
         # JA: TODO: Temporarily disabled new validation code
         # if data.get('short_description') and len(data['short_description']) > 160:
