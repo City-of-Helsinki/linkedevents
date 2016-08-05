@@ -3,6 +3,7 @@ from datetime import timedelta
 
 import pytest
 from django.utils import timezone, translation
+from django.utils.encoding import force_text
 from .utils import versioned_reverse as reverse
 
 from events.tests.utils import assert_event_data_is_equal
@@ -177,3 +178,37 @@ def test_start_time_and_end_time_validation(api_client, minimal_event_dict, user
     assert response.status_code == 400
     assert 'Start time cannot be in the past.' in response.data['start_time']
     assert 'End time cannot be in the past.' in response.data['end_time']
+
+
+@pytest.mark.django_db
+def test_description_and_short_description_required_in_name_languages(api_client, minimal_event_dict, user):
+    api_client.force_authenticate(user)
+
+    minimal_event_dict['name'] = {'fi': 'nimi', 'sv': 'namn'}
+    minimal_event_dict['short_description'] = {'fi': 'lyhyt kuvaus'}
+    minimal_event_dict['description'] = {'sv': 'description in swedish'}
+
+    with translation.override('en'):
+        response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
+
+    # there should be only one error
+    assert len(response.data['short_description']) == 1
+    assert len(response.data['description']) == 1
+
+    assert (force_text(response.data['short_description']['sv']) ==
+            'This field must be specified before an event is published.')
+    assert (force_text(response.data['description']['fi']) ==
+            'This field must be specified before an event is published.')
+
+
+@pytest.mark.django_db
+def test_short_description_cannot_exceed_160_chars(api_client, minimal_event_dict, user):
+    api_client.force_authenticate(user)
+
+    minimal_event_dict['short_description']['fi'] = 'x' * 161
+
+    with translation.override('en'):
+        response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
+    assert response.status_code == 400
+    assert (force_text(response.data['short_description']['fi'] ==
+            'Short description length must be 160 characters or less'))
