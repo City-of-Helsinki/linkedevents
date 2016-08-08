@@ -804,6 +804,16 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                 else:
                     errors[field] = lang_error_msg
 
+        # published events need price info = at least one offer that either has a price or is free
+        price_exists = False
+        for offer in data.get('offers', []):
+            is_free = offer.get('is_free', False)
+            if is_free or 'price' in offer:
+                price_exists = True
+                break
+        if not price_exists:
+            errors['offers'] = _('Price info must be specified before an event is published.')
+
         # adjust start_time and has_start_time
 
         if 'has_start_time' not in data:

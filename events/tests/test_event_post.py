@@ -212,3 +212,23 @@ def test_short_description_cannot_exceed_160_chars(api_client, minimal_event_dic
     assert response.status_code == 400
     assert (force_text(response.data['short_description']['fi'] ==
             'Short description length must be 160 characters or less'))
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("offers, expected", [
+    ([{'is_free': True}], 201),
+    ([{'is_free': False, 'price': {'fi': 4}}], 201),
+    ([{'description': 'foo'}, {'is_free': True}], 201),
+
+    ([{'is_free': False}], 400)
+])
+def test_price_info_required(api_client, minimal_event_dict, user, offers, expected):
+    api_client.force_authenticate(user)
+    minimal_event_dict['offers'] = offers
+
+    with translation.override('en'):
+        response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
+
+    assert response.status_code == expected
+    if expected == 400:
+        assert force_text(response.data['offers'][0]) == 'Price info must be specified before an event is published.'
