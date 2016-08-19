@@ -1263,15 +1263,32 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
         return queryset.filter()
 
     def perform_create(self, serializer):
-        event_id = generate_id(settings.SYSTEM_DATA_SOURCE_ID)
+        api_key = self.request.query_params.get('api_key')
+        if api_key:
+            try:
+                data_source = DataSource.objects.get(api_key=api_key)
+            except DataSource.DoesNotExist:
+                raise PermissionDenied(_("Provided API key does not match any organization on record. "
+                                   "Please contact the API support staff to obtain a valid API key "
+                                   "and organization identifier for POSTing your events."))
+            publisher = data_source.owner
+            # api key overrides other authentication methods
+            user = None
+            # allow event id only if it matches data_source
+            event_id = self.request.data['id']
+            if not event_id.split(':', 1)[0] == data_source.id:
+                raise ParseError(_("Provided id " + str(event_id) + " is not allowed for your organization. "
+                                    "When POSTing an event with your API key, the event id must be "
+                                    "of the form " + str(data_source) + ":desired_id"))
+        else:
+            event_id = generate_id(settings.SYSTEM_DATA_SOURCE_ID)
+            # events created by api are marked coming from the system data source unless api_key is provided
+            data_source = DataSource.objects.get(id=settings.SYSTEM_DATA_SOURCE_ID)
 
-        user = self.request.user
-        publisher = user.get_default_organization()
-        if not publisher:
-            raise ParseError(_("User doesn't belong to any organization"))
-
-        # all events created by api are marked coming from the system data source
-        data_source = DataSource.objects.get(id=settings.SYSTEM_DATA_SOURCE_ID)
+            user = self.request.user
+            publisher = user.get_default_organization()
+            if not publisher:
+                raise PermissionDenied(_("User doesn't belong to any organization"))
         serializer.save(
             id=event_id,
             publisher=publisher,

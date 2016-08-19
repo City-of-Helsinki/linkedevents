@@ -8,7 +8,7 @@ from modeltranslation.admin import TranslationAdmin
 from reversion.admin import VersionAdmin
 from events.api import generate_id
 from events.models import Event, Keyword, Place, Language, \
-    OpeningHoursSpecification, KeywordLabel, Organization, License
+    OpeningHoursSpecification, KeywordLabel, Organization, License, DataSource
 
 
 class BaseAdmin(admin.ModelAdmin):
@@ -68,6 +68,12 @@ class OrganizationAdmin(BaseAdmin):
     nr_org_admins.short_description = _('Admins')
 
 admin.site.register(Organization, OrganizationAdmin)
+
+
+class DataSourceAdmin(BaseAdmin):
+    fields = ('id', 'name', 'api_key', 'owner')
+
+admin.site.register(DataSource, DataSourceAdmin)
 
 
 class LanguageAdmin(BaseAdmin, VersionAdmin):

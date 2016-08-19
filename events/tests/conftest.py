@@ -40,13 +40,19 @@ def api_client():
 @pytest.mark.django_db
 @pytest.fixture
 def data_source():
-    return DataSource.objects.create(id=settings.SYSTEM_DATA_SOURCE_ID)
+    return DataSource.objects.create(
+        id=settings.SYSTEM_DATA_SOURCE_ID,
+        api_key="test_api_key"
+    )
 
 
 @pytest.mark.django_db
 @pytest.fixture
 def other_data_source():
-    return DataSource.objects.create(id=OTHER_DATA_SOURCE_ID)
+    return DataSource.objects.create(
+        id=OTHER_DATA_SOURCE_ID,
+        api_key="test_api_key2"
+    )
 
 
 @pytest.mark.django_db
@@ -77,7 +83,7 @@ def organization(data_source, user):
     org, created = Organization.objects.get_or_create(
         id='test_organization',
         name="test_organization",
-        data_source=data_source
+        data_source=data_source,
     )
     org.admin_users.add(user)
     org.save()
@@ -90,7 +96,7 @@ def organization2(other_data_source, user2):
     org, created = Organization.objects.get_or_create(
         id='test_organization2',
         name="test_organization2",
-        data_source=other_data_source
+        data_source=other_data_source,
     )
     org.admin_users.add(user2)
     org.save()

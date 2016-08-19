@@ -190,3 +190,27 @@ def test__a_non_admin_cannot_update_an_event(api_client, event, complex_event_di
     detail_url = reverse('event-detail', kwargs={'pk': event.pk})
     response = update_with_put(api_client, detail_url, complex_event_dict)
     assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test__correct_api_key_can_update_an_event(api_client, event, complex_event_dict, data_source):
+
+    detail_url = reverse('event-detail', kwargs={'pk': event.pk})
+    response = update_with_put(api_client, detail_url, complex_event_dict)
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test__wrong_api_key_cannot_update_an_event(api_client, event, complex_event_dict, other_data_source):
+
+    detail_url = reverse('event-detail', kwargs={'pk': event.pk})
+    response = update_with_put(api_client, detail_url, complex_event_dict)
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test__empty_api_key_cannot_update_an_event(api_client, event, complex_event_dict,):
+
+    detail_url = reverse('event-detail', kwargs={'pk': event.pk})
+    response = update_with_put(api_client, detail_url, complex_event_dict)
+    assert response.status_code == 403

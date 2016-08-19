@@ -17,9 +17,13 @@ def list_url():
 
 # === util methods ===
 
-def create_with_post(api_client, event_data):
+def create_with_post(api_client, event_data, data_source=None):
+    create_url = reverse('event-list')
+    if data_source:
+        create_url += '?api_key=' + data_source.api_key
+
     # save with post
-    response = api_client.post(reverse('event-list'), event_data, format='json')
+    response = api_client.post(create_url, event_data, format='json')
     assert response.status_code == 201, str(response.content)
 
     # double-check with get
@@ -38,6 +42,45 @@ def test__create_a_minimal_event_with_post(api_client,
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, minimal_event_dict)
     assert_event_data_is_equal(minimal_event_dict, response.data)
+
+
+@pytest.mark.django_db
+def test__a_non_user_cannot_create_an_event(api_client, minimal_event_dict):
+
+    response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
+    assert response.status_code == 401
+
+
+@pytest.mark.django_db
+def test__a_non_admin_cannot_create_an_event(api_client, minimal_event_dict, user):
+    user.get_default_organization().admin_users.remove(user)
+    api_client.force_authenticate(user)
+
+    response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test__correct_api_key_can_create_an_event(api_client, minimal_event_dict, data_source):
+
+    response = create_with_post(api_client, minimal_event_dict, data_source)
+    assert_event_data_is_equal(minimal_event_dict, response.data)
+
+
+@pytest.mark.django_db
+def test__wrong_api_key_cannot_create_an_event(api_client, minimal_event_dict, other_data_source):
+
+    response = api_client.post(reverse('event-list') + '?api_key=' + other_data_source.api_key,
+                               minimal_event_dict, format='json')
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test__empty_api_key_cannot_create_an_event(api_client, minimal_event_dict):
+
+    response = api_client.post(reverse('event-list') + '?api_key=',
+                               minimal_event_dict, format='json')
+    assert response.status_code == 403
 
 
 @pytest.mark.django_db
