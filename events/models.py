@@ -228,7 +228,7 @@ class KeywordSet(BaseModel):
 
 class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     publisher = models.ForeignKey(Organization, verbose_name=_('Publisher'), db_index=True)
-    info_url = models.URLField(verbose_name=_('Place home page'), blank=True, default='')
+    info_url = models.URLField(verbose_name=_('Place home page'), blank=True, default='', max_length=1000)
     description = models.TextField(verbose_name=_('Description'), null=True, blank=True)
     parent = TreeForeignKey('self', null=True, blank=True,
                             related_name='children')
@@ -307,7 +307,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     )
 
     # Properties from schema.org/Thing
-    info_url = models.URLField(verbose_name=_('Event home page'), blank=True, null=True)
+    info_url = models.URLField(verbose_name=_('Event home page'), blank=True, null=True, max_length=1000)
     description = models.TextField(verbose_name=_('Description'), blank=True, null=True)
     short_description = models.TextField(verbose_name=_('Short description'), blank=True, null=True)
 
@@ -409,7 +409,7 @@ reversion.register(Event)
 class Offer(models.Model, SimpleValueMixin):
     event = models.ForeignKey(Event, db_index=True, related_name='offers')
     price = models.CharField(verbose_name=_('Price'), blank=True, max_length=512)
-    info_url = models.URLField(verbose_name=_('Web link to offer'), blank=True, null=True)
+    info_url = models.URLField(verbose_name=_('Web link to offer'), blank=True, null=True, max_length=1000)
     description = models.TextField(verbose_name=_('Offer description'), blank=True, null=True)
     # Don't expose is_free as an API field. It is used to distinguish
     # between missing price info and confirmed free entry.
