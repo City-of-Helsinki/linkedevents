@@ -7,7 +7,9 @@ from .utils import versioned_reverse as reverse
 
 from events.tests.utils import assert_event_data_is_equal
 from events.tests.test_event_post import create_with_post
+from .conftest import DATETIME
 from events.models import Event
+from django.conf import settings
 
 
 # === util methods ===
@@ -180,6 +182,35 @@ def test__reschedule_a_cancelled_event_with_put(api_client, complex_event_dict, 
     # assert backend rescheduled the event
     data3['event_status'] = 'EventRescheduled'
     assert_event_data_is_equal(data3, response3.data)
+
+
+# the following values may not be posted
+@pytest.mark.django_db
+@pytest.mark.parametrize("non_permitted_input,non_permitted_response", [
+    ({'id': 'not_allowed:1'}, 403), # may not fake id
+    ({'created_by': 'test_user2'}, 403), # may not fake another user
+    ({'last_modified_by': 'test_user2'}, 403),  # may not fake another user
+    ({'created_time': DATETIME}, 403),  # may not set created time
+    ({'last_modified_time': DATETIME}, 403),  # may not set modified time
+    ({'data_source': 'theotherdatasourceid'}, 403),  # may not fake data source
+    ({'publisher': 'test_organization2'}, 403),  # may not fake organization
+])
+def test__non_editable_fields_at_put(api_client, minimal_event_dict, user,
+                                     non_permitted_input, non_permitted_response):
+    # create the event first
+    api_client.force_authenticate(user)
+    response = create_with_post(api_client, minimal_event_dict)
+    data2 = response.data
+    event_id = data2.pop('@id')
+
+    # try to put non permitted values
+    data2.update(non_permitted_input)
+
+    response2 = api_client.put(event_id, data2, format='json')
+    assert response2.status_code == non_permitted_response
+    if non_permitted_response >= 400:
+        # check that there is an error message for the corresponding field
+        assert non_permitted_input.keys()[0] in response2.data
 
 
 @pytest.mark.django_db

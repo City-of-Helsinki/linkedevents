@@ -6,6 +6,7 @@ from django.utils import timezone, translation
 from .utils import versioned_reverse as reverse
 
 from events.tests.utils import assert_event_data_is_equal
+from .conftest import DATETIME
 from events.models import Event
 from django.conf import settings
 
@@ -160,19 +161,11 @@ def test__create_a_complex_event_with_post(api_client,
 
 
 @pytest.mark.django_db
-def test__autopopulated_fields(
+def test__autopopulated_fields_at_create(
         api_client, minimal_event_dict, user, user2, other_data_source, organization, organization2):
 
     # create an event
     api_client.force_authenticate(user=user)
-
-    # try to set values for autopopulated fields
-    minimal_event_dict.update(
-        data_source=other_data_source.id,
-        created_by=user2.id,
-        last_modified_by=user2.id,
-        organization=organization2.id
-    )
     response = create_with_post(api_client, minimal_event_dict)
 
     event = Event.objects.get(id=response.data['id'])
@@ -184,9 +177,33 @@ def test__autopopulated_fields(
     assert event.publisher == organization
 
 
+# the following values may not be posted
+@pytest.mark.django_db
+@pytest.mark.parametrize("non_permitted_input,non_permitted_response", [
+    ({'id': 'not_allowed:1'}, 403), # may not fake id
+    ({'created_by': 'test_user2'}, 403), # may not fake another user
+    ({'last_modified_by': 'test_user2'}, 403),  # may not fake another user
+    ({'created_time': DATETIME}, 403),  # may not set created time
+    ({'last_modified_time': DATETIME}, 403),  # may not set modified time
+    ({'data_source': 'theotherdatasourceid'}, 403),  # may not fake data source
+    ({'publisher': 'test_organization2'}, 403),  # may not fake organization
+])
+def test__non_editable_fields_at_create(api_client, minimal_event_dict, list_url, user,
+                              non_permitted_input, non_permitted_response):
+    api_client.force_authenticate(user)
+
+    minimal_event_dict.update(non_permitted_input)
+
+    response = api_client.post(list_url, minimal_event_dict, format='json')
+    assert response.status_code == non_permitted_response
+    if non_permitted_response >= 400:
+        # check that there is an error message for the corresponding field
+        assert non_permitted_input.keys()[0] in response.data
+
+
 # location field is used for JSONLDRelatedField tests
 @pytest.mark.django_db
-@pytest.mark.parametrize("input,expected", [
+@pytest.mark.parametrize("ld_input,ld_expected", [
     ({'location': {'@id': '/v1/place/test%20location/'}}, 201),
     ({'location': {'@id': ''}}, 400),  # field required
     ({'location': {'foo': 'bar'}}, 400),  # incorrect json
@@ -195,15 +212,15 @@ def test__autopopulated_fields(
     ({'location': None}, 400),  # cannot be null
     ({}, 400),  # field required
 ])
-def test__jsonld_related_field(api_client, minimal_event_dict, list_url, place, user, input, expected):
+def test__jsonld_related_field(api_client, minimal_event_dict, list_url, place, user, ld_input, ld_expected):
     api_client.force_authenticate(user)
 
     del minimal_event_dict['location']
-    minimal_event_dict.update(input)
+    minimal_event_dict.update(ld_input)
 
     response = api_client.post(list_url, minimal_event_dict, format='json')
-    assert response.status_code == expected
-    if expected >= 400:
+    assert response.status_code == ld_expected
+    if ld_expected >= 400:
         # check that there is a error message for location field
         assert 'location' in response.data
 
