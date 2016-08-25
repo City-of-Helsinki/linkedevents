@@ -339,16 +339,17 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         Hides `@context` from JSON, can be used in nested
         serializers
     """
+    system_generated_fields = ('created_time', 'last_modified_time', 'created_by', 'last_modified_by')
+    non_visible_fields = ('created_by', 'last_modified_by')
 
     def __init__(self, instance=None, files=None,
                  context=None, partial=False, many=None, skip_fields=set(),
                  allow_add_remove=False, hide_ld_context=False, **kwargs):
         super(LinkedEventsSerializer, self).__init__(
             instance=instance, context=context, **kwargs)
-        if 'created_by' in self.fields:
-            del self.fields['created_by']
-        if 'last_modified_by' in self.fields:
-            del self.fields['last_modified_by']
+        for field in self.non_visible_fields:
+            if field in self.fields:
+                del self.fields[field]
         self.skip_fields = skip_fields
 
         if context is not None:
@@ -371,6 +372,13 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
             request = self.context['request']
             if 'disable_camelcase' in request.query_params:
                 self.disable_camelcase = True
+
+    def to_internal_value(self, data):
+        for field in self.system_generated_fields:
+            if field in data:
+                del data[field]
+        data = super().to_internal_value(data)
+        return data
 
     def to_representation(self, obj):
         """
@@ -718,29 +726,64 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     publication_status = EnumChoiceField(PUBLICATION_STATUSES)
     external_links = EventLinkSerializer(many=True, required=False)
     offers = OfferSerializer(many=True, required=False)
+    id = serializers.CharField(required=False)
+    data_source = serializers.PrimaryKeyRelatedField(queryset=DataSource.objects.all(),
+                                                     required=False)
+    publisher = serializers.PrimaryKeyRelatedField(queryset=Organization.objects.all(),
+                                                   required=False)
     sub_events = JSONLDRelatedField(serializer='EventSerializer',
                                     required=False, view_name='event-detail',
                                     many=True, queryset=Event.objects.all())
-    id = serializers.ReadOnlyField()
-    data_source = serializers.PrimaryKeyRelatedField(read_only=True)
-    publisher = serializers.PrimaryKeyRelatedField(read_only=True)
     image = JSONLDRelatedField(serializer=ImageSerializer, required=False, allow_null=True,
-                                     view_name='image-detail', queryset=Image.objects.all(), expanded=True)
+                               view_name='image-detail', queryset=Image.objects.all(), expanded=True)
     in_language = JSONLDRelatedField(serializer=LanguageSerializer, required=False,
                                      view_name='language-detail', many=True, queryset=Language.objects.all())
     audience = JSONLDRelatedField(serializer=KeywordSerializer, view_name='keyword-detail',
                                   many=True, required=False, queryset=Keyword.objects.all())
     view_name = 'event-detail'
     # JA: TODO: Temporarily disabled new validation code
-    fields_needed_to_publish = ('keywords', 'location', 'start_time') #,
-                                # 'short_description', 'description',
-                                # 'offers')
+    fields_needed_to_publish = ('keywords', 'location', 'start_time')  # ,
+    # 'short_description', 'description',
+    # 'offers')
 
     def __init__(self, *args, skip_empties=False, **kwargs):
         super(EventSerializer, self).__init__(*args, **kwargs)
         # The following can be used when serializing when
         # testing and debugging.
         self.skip_empties = skip_empties
+
+        # for post and put methods, user information is needed to restrict permissions at validate
+        self.method = self.context['request'].method
+        if self.context['request'].method in ['PUT', 'POST']:
+            self.user = self.context['request'].user
+            self.api_key = self.context['request'].query_params.get('api_key')
+
+            # api_key takes precedence over user
+            if self.api_key:
+                self.data_source = self.get_allowed_data_source(self.api_key)
+                self.publisher = self.data_source.owner
+            else:
+                # events created by api are marked coming from the system data source unless api_key is provided
+                self.data_source = DataSource.objects.get(id=settings.SYSTEM_DATA_SOURCE_ID)
+                # user organization is used unless api_key is provided
+                self.publisher = self.user.get_default_organization()
+                if not self.publisher:
+                    raise PermissionDenied(_("User doesn't belong to any organization"))
+            # prevent access to other sources and publishers when editing
+            self.fields['data_source'].queryset = DataSource.objects.filter(id=self.data_source.id)
+            self.fields['publisher'].queryset = Organization.objects.filter(id=self.publisher.id)
+
+    @staticmethod
+    def get_allowed_data_source(api_key):
+        if not api_key:
+            raise ParseError(_("The API key cannot be empty."))
+        try:
+            data_source = DataSource.objects.get(api_key=api_key)
+        except DataSource.DoesNotExist:
+            raise PermissionDenied(_("Provided API key does not match any organization on record. "
+                                     "Please contact the API support staff to obtain a valid API key "
+                                     "and organization identifier for POSTing your events."))
+        return data_source
 
     def get_datetimes(self, data):
         for field in ['date_published', 'start_time', 'end_time']:
@@ -769,6 +812,33 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         return data
 
     def validate(self, data):
+        # validate id permissions
+        if 'id' in data:
+            if not data['id'].split(':', 1)[0] == self.data_source.id:
+                raise serializers.ValidationError(
+                    {'id': "Setting id to " + str(data['id']) +
+                           " is not allowed for your organization. The id"
+                           " must be left blank or set to " + str(self.data_source) + ":desired_id"})
+        # validate data source permissions
+        if 'data_source' in data:
+            if data['data_source'] != self.data_source:
+                raise serializers.ValidationError(
+                    {'data_source': "Setting data_source to " + str(data['data_source']) +
+                           " is not allowed for your organization. The data source"
+                           " must be left blank or set to " + str(self.data_source)})
+        else:
+            data['data_source'] = self.data_source
+        # validate publisher permissions
+        if 'publisher' in data:
+            if data['publisher'] != self.publisher:
+                raise serializers.ValidationError(
+                    {'publisher': "Setting publisher to " + str(data['publisher']) +
+                           " is not allowed for your organization. The publisher"
+                           " must be left blank or set to " + str(self.publisher)})
+        else:
+            data['publisher'] = self.publisher
+
+        # clean the html
         for k, v in data.items():
             if type(v) == str:
                 if k in ["description"]:
@@ -850,16 +920,22 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             return value
         if value in (Event.Status.POSTPONED, Event.Status.RESCHEDULED):
             raise serializers.ValidationError(_('POSTPONED and RESCHEDULED statuses cannot be set directly.'
-                                    'Changing event start_time or marking start_time null'
-                                    'will reschedule or postpone an event.'))
+                                                'Changing event start_time or marking start_time null'
+                                                'will reschedule or postpone an event.'))
 
     def create(self, validated_data):
+        # if id was not provided, we generate it upon creation:
+        if 'id' not in validated_data:
+            validated_data['id'] = generate_id(self.data_source)
+
         offers = validated_data.pop('offers', [])
         links = validated_data.pop('external_links', [])
 
-        # mark all newly created events as scheduled
-        validated_data['event_status'] = Event.Status.SCHEDULED
-
+        validated_data.update({'created_by': self.user,
+                               'last_modified_by': self.user,
+                               'created_time': Event.now(),  # we must specify creation time as we are setting id
+                               'event_status': Event.Status.SCHEDULED,  # mark all newly created events as scheduled
+                               })
         event = super().create(validated_data)
 
         # create and add related objects
@@ -871,9 +947,14 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         return event
 
     def update(self, instance, validated_data):
+        # TODO: allow updating editable events if the api key data source matches event data source
+        if not instance.is_editable() or not instance.is_admin(self.user):
+            raise PermissionDenied()
+
         offers = validated_data.pop('offers', None)
         links = validated_data.pop('external_links', None)
 
+        validated_data['last_modified_by'] = self.user
         # Update event_status if a PUBLIC SCHEDULED or CANCELLED event start_time is updated.
         # DRAFT events will remain SCHEDULED up to publication.
         # Check that the event is not explicitly CANCELLED at the same time.
@@ -1261,56 +1342,6 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
         queryset = _filter_event_queryset(queryset, self.request.query_params,
                                           srs=self.srs)
         return queryset.filter()
-
-    def perform_create(self, serializer):
-        api_key = self.request.query_params.get('api_key')
-        if api_key:
-            try:
-                data_source = DataSource.objects.get(api_key=api_key)
-            except DataSource.DoesNotExist:
-                raise PermissionDenied(_("Provided API key does not match any organization on record. "
-                                   "Please contact the API support staff to obtain a valid API key "
-                                   "and organization identifier for POSTing your events."))
-            publisher = data_source.owner
-            # api key overrides other authentication methods
-            user = None
-            # allow event id only if it matches data_source
-            event_id = self.request.data['id']
-            if not event_id.split(':', 1)[0] == data_source.id:
-                raise ParseError(_("Provided id " + str(event_id) + " is not allowed for your organization. "
-                                    "When POSTing an event with your API key, the event id must be "
-                                    "of the form " + str(data_source) + ":desired_id"))
-        else:
-            event_id = generate_id(settings.SYSTEM_DATA_SOURCE_ID)
-            # events created by api are marked coming from the system data source unless api_key is provided
-            data_source = DataSource.objects.get(id=settings.SYSTEM_DATA_SOURCE_ID)
-
-            user = self.request.user
-            publisher = user.get_default_organization()
-            if not publisher:
-                raise PermissionDenied(_("User doesn't belong to any organization"))
-        serializer.save(
-            id=event_id,
-            publisher=publisher,
-            data_source=data_source,
-            created_time=Event.now(),  # model.save() doesn't populate created_time because we set id here
-            created_by=user,
-            last_modified_by=user,
-        )
-
-    def perform_update(self, serializer):
-        user = self.request.user
-
-        # allow modifications only for the event's organization members.
-        # we cannot use permission class for this because our custom get_object()
-        # breaks Permission.has_object_permission()
-        event = self.get_object()
-        if not event.is_editable() or not event.is_admin(user):
-            raise PermissionDenied()
-
-        serializer.save(
-            last_modified_by=user,
-        )
 
 
 register_view(EventViewSet, 'event')
