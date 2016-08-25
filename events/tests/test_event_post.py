@@ -62,18 +62,28 @@ def test__a_non_admin_cannot_create_an_event(api_client, minimal_event_dict, use
 
 
 @pytest.mark.django_db
-def test__correct_api_key_can_create_an_event(api_client, minimal_event_dict, data_source):
+def test__api_key_with_organization_can_create_an_event(api_client, minimal_event_dict, data_source, organization):
+
+    data_source.owner = organization
+    data_source.save()
 
     response = create_with_post(api_client, minimal_event_dict, data_source)
     assert_event_data_is_equal(minimal_event_dict, response.data)
 
 
 @pytest.mark.django_db
-def test__wrong_api_key_cannot_create_an_event(api_client, minimal_event_dict, other_data_source):
+def test__api_key_without_organization_cannot_create_an_event(api_client, minimal_event_dict, data_source):
 
-    response = api_client.post(reverse('event-list') + '?api_key=' + other_data_source.api_key,
+    response = api_client.post(reverse('event-list') + '?api_key=' + data_source.api_key,
                                minimal_event_dict, format='json')
     assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test__unknown_api_key_cannot_create_an_event(api_client, minimal_event_dict):
+
+    response = api_client.post(reverse('event-list') + '?api_key=unknown', format='json')
+    assert response.status_code == 401
 
 
 @pytest.mark.django_db
@@ -81,7 +91,7 @@ def test__empty_api_key_cannot_create_an_event(api_client, minimal_event_dict):
 
     response = api_client.post(reverse('event-list') + '?api_key=',
                                minimal_event_dict, format='json')
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 @pytest.mark.django_db

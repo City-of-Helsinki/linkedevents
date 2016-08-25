@@ -220,7 +220,10 @@ def test__a_non_admin_cannot_update_an_event(api_client, event, complex_event_di
 
 
 @pytest.mark.django_db
-def test__correct_api_key_can_update_an_event(api_client, event, complex_event_dict, data_source):
+def test__correct_api_key_can_update_an_event(api_client, event, complex_event_dict, data_source, organization):
+
+    data_source.owner = organization
+    data_source.save()
 
     detail_url = reverse('event-detail', kwargs={'pk': event.pk}) + '?api_key=' + data_source.api_key
     response = update_with_put(api_client, detail_url, complex_event_dict)
@@ -228,11 +231,35 @@ def test__correct_api_key_can_update_an_event(api_client, event, complex_event_d
 
 
 @pytest.mark.django_db
-def test__wrong_api_key_cannot_update_an_event(api_client, event, complex_event_dict, other_data_source):
+def test__wrong_api_key_cannot_update_an_event(api_client, event, complex_event_dict, data_source, other_data_source,
+                                               organization, organization2):
+
+    data_source.owner = organization
+    data_source.save()
+    other_data_source.owner = organization2
+    other_data_source.save()
+    del(complex_event_dict['publisher'])
 
     detail_url = reverse('event-detail', kwargs={'pk': event.pk}) + '?api_key=' + other_data_source.api_key
     response = update_with_put(api_client, detail_url, complex_event_dict)
+    print(response.data)
     assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test__api_key_without_organization_cannot_update_an_event(api_client, event, complex_event_dict, data_source):
+
+    detail_url = reverse('event-detail', kwargs={'pk': event.pk}) + '?api_key=' + data_source.api_key
+    response = update_with_put(api_client, detail_url, complex_event_dict)
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test__unknown_api_key_cannot_update_an_event(api_client, event, complex_event_dict):
+
+    detail_url = reverse('event-detail', kwargs={'pk': event.pk}) + '?api_key=unknown'
+    response = update_with_put(api_client, detail_url, complex_event_dict)
+    assert response.status_code == 401
 
 
 @pytest.mark.django_db
@@ -240,4 +267,4 @@ def test__empty_api_key_cannot_update_an_event(api_client, event, complex_event_
 
     detail_url = reverse('event-detail', kwargs={'pk': event.pk}) + '?api_key='
     response = update_with_put(api_client, detail_url, complex_event_dict)
-    assert response.status_code == 403
+    assert response.status_code == 401

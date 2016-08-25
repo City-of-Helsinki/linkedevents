@@ -40,10 +40,10 @@ from munigeo.api import (
 )
 import pytz
 import bleach
-
 # events
 from events import utils
 from events.api_pagination import LargeResultsSetPagination
+from events.auth import ApiKeyUser
 from events.custom_elasticsearch_search_backend import (
     CustomEsSearchQuerySet as SearchQuerySet
 )
@@ -759,9 +759,11 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             self.api_key = self.context['request'].query_params.get('api_key')
 
             # api_key takes precedence over user
-            if self.api_key:
-                self.data_source = self.get_allowed_data_source(self.api_key)
+            if isinstance(self.user, ApiKeyUser):
+                self.data_source = self.context['request'].auth['authenticated_data_source']
                 self.publisher = self.data_source.owner
+                if not self.publisher:
+                    raise PermissionDenied(_("Data source doesn't belong to any organization"))
             else:
                 # events created by api are marked coming from the system data source unless api_key is provided
                 self.data_source = DataSource.objects.get(id=settings.SYSTEM_DATA_SOURCE_ID)
@@ -769,21 +771,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                 self.publisher = self.user.get_default_organization()
                 if not self.publisher:
                     raise PermissionDenied(_("User doesn't belong to any organization"))
-            # prevent access to other sources and publishers when editing
-            self.fields['data_source'].queryset = DataSource.objects.filter(id=self.data_source.id)
-            self.fields['publisher'].queryset = Organization.objects.filter(id=self.publisher.id)
-
-    @staticmethod
-    def get_allowed_data_source(api_key):
-        if not api_key:
-            raise ParseError(_("The API key cannot be empty."))
-        try:
-            data_source = DataSource.objects.get(api_key=api_key)
-        except DataSource.DoesNotExist:
-            raise PermissionDenied(_("Provided API key does not match any organization on record. "
-                                     "Please contact the API support staff to obtain a valid API key "
-                                     "and organization identifier for POSTing your events."))
-        return data_source
 
     def get_datetimes(self, data):
         for field in ['date_published', 'start_time', 'end_time']:
@@ -927,6 +914,9 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         # if id was not provided, we generate it upon creation:
         if 'id' not in validated_data:
             validated_data['id'] = generate_id(self.data_source)
+        # no django user exists for the api key
+        if isinstance(self.user, ApiKeyUser):
+            self.user = None
 
         offers = validated_data.pop('offers', [])
         links = validated_data.pop('external_links', [])
@@ -947,9 +937,14 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         return event
 
     def update(self, instance, validated_data):
-        # TODO: allow updating editable events if the api key data source matches event data source
-        if not instance.is_editable() or not instance.is_admin(self.user):
-            raise PermissionDenied()
+        # allow updating events if the api key matches event data source
+        if isinstance(self.user, ApiKeyUser):
+            self.user = None
+            if not instance.data_source == self.data_source:
+                raise PermissionDenied()
+        else:
+            if not instance.is_editable() or not instance.is_admin(self.user):
+                raise PermissionDenied()
 
         offers = validated_data.pop('offers', None)
         links = validated_data.pop('external_links', None)
