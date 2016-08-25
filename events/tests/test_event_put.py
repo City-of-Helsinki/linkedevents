@@ -187,13 +187,9 @@ def test__reschedule_a_cancelled_event_with_put(api_client, complex_event_dict, 
 # the following values may not be posted
 @pytest.mark.django_db
 @pytest.mark.parametrize("non_permitted_input,non_permitted_response", [
-    ({'id': 'not_allowed:1'}, 403), # may not fake id
-    ({'created_by': 'test_user2'}, 403), # may not fake another user
-    ({'last_modified_by': 'test_user2'}, 403),  # may not fake another user
-    ({'created_time': DATETIME}, 403),  # may not set created time
-    ({'last_modified_time': DATETIME}, 403),  # may not set modified time
-    ({'data_source': 'theotherdatasourceid'}, 403),  # may not fake data source
-    ({'publisher': 'test_organization2'}, 403),  # may not fake organization
+    ({'id': 'not_allowed:1'}, 400), # may not fake id
+    ({'data_source': 'theotherdatasourceid'}, 400),  # may not fake data source
+    ({'publisher': 'test_organization2'}, 400),  # may not fake organization
 ])
 def test__non_editable_fields_at_put(api_client, minimal_event_dict, user,
                                      non_permitted_input, non_permitted_response):
@@ -210,7 +206,7 @@ def test__non_editable_fields_at_put(api_client, minimal_event_dict, user,
     assert response2.status_code == non_permitted_response
     if non_permitted_response >= 400:
         # check that there is an error message for the corresponding field
-        assert non_permitted_input.keys()[0] in response2.data
+        assert list(non_permitted_input)[0] in response2.data
 
 
 @pytest.mark.django_db
