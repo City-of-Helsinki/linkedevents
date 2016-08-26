@@ -46,3 +46,21 @@ if [ $? -ne 0 ]; then
     cat $LOG_FILE
     exit 1
 fi
+
+nice python manage.py update_index -a 1 >> $LOG_FILE 2>&1
+if [ $? -ne 0 ]; then
+    cat $LOG_FILE
+    exit 1
+fi
+
+curl -s -X PURGE http://10.1.2.123/linkedevents >> $LOG_FILE 2>&1
+if [ $? -ne 0 ]; then
+    cat $LOG_FILE
+    exit 1
+fi
+
+curl -s https://hchk.io/a6757e9d-2f0e-4668-be3f-a6be74bbc66b > /dev/null
+
+echo --------------------------------- >> $LOG_FILE
+echo "$(date "$TIMESTAMP_FORMAT") Import finished" >> $LOG_FILE
+echo --------------------------------- >> $LOG_FILE
