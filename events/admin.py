@@ -43,6 +43,11 @@ class PlaceAdmin(geoadmin.GeoModelAdmin, BaseAdmin, TranslationAdmin,
         }),
     )
 
+    def __init__(self, model, admin_site):
+        super().__init__(model, admin_site)
+        # use https CDN instead
+        self.openlayers_url = 'https://cdnjs.cloudflare.com/ajax/libs/openlayers/2.13.1/OpenLayers.js'
+
     def save_model(self, request, obj, form, change):
         system_id = settings.SYSTEM_DATA_SOURCE_ID
         obj.data_source_id = system_id
