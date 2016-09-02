@@ -49,6 +49,6 @@ These images are marked as <em>event_only</em> in the API. The <em>event_only</e
 
 
 </div>
+{% include "rest_framework/description.html" %}
 {% endif %}
-{{ description }}
 {% endblock %}
