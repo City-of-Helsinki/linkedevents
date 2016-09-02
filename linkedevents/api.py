@@ -1,9 +1,9 @@
+from rest_framework.routers import DefaultRouter
 from events.api import all_views as events_views
-from events.routers import DocumentedRouter
 from helevents.api import all_views as users_views
 
 
-class LinkedEventsAPIRouter(DocumentedRouter):
+class LinkedEventsAPIRouter(DefaultRouter):
 
     def __init__(self):
         super(LinkedEventsAPIRouter, self).__init__()

@@ -29,6 +29,7 @@ from rest_framework.settings import api_settings
 from rest_framework.reverse import reverse
 from rest_framework.response import Response
 from rest_framework.exceptions import ParseError
+from rest_framework.views import get_view_name as original_get_view_name
 
 
 # 3rd party
@@ -52,6 +53,12 @@ from events.models import (
     Offer, DataSource, Organization, Image, PublicationStatus, PUBLICATION_STATUSES, License
 )
 from events.translation import EventTranslationOptions
+
+
+def get_view_name(cls, suffix=None):
+    if cls.__name__ == 'APIRoot':
+        return 'Linked Events'
+    return original_get_view_name(cls, suffix)
 
 
 viewset_classes_by_model = {}

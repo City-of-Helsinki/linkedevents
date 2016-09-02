@@ -1,0 +1,6 @@
+{% extends "rest_framework/base.html" %}
+{% block description %}
+{% if breadcrumblist|length == 1 %}
+{% include "rest_framework/description.html" %}
+{% endif %}
+{% endblock %}
