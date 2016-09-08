@@ -42,7 +42,7 @@ class HelsinkiGeoAdmin(LeafletGeoAdmin):
 class PlaceAdmin(HelsinkiGeoAdmin, BaseAdmin, TranslationAdmin, VersionAdmin):
     fieldsets = (
         (None, {
-            'fields': ('publisher', 'name', 'description', 'info_url', 'position', 'parent')
+            'fields': ('publisher', 'name', 'description', 'info_url', 'position', 'divisions', 'parent')
 
         }),
         (_('Contact info'), {

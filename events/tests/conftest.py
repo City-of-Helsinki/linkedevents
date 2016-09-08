@@ -6,10 +6,13 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from .utils import versioned_reverse as reverse
 from .test_event_get import get_list
+from django.contrib.gis.geos import Point, Polygon, MultiPolygon
+from munigeo.models import AdministrativeDivision, AdministrativeDivisionType, AdministrativeDivisionGeometry
 
 # 3rd party
 import pytest
 from rest_framework.test import APIClient
+
 
 # events 
 from events.models import (
@@ -127,13 +130,30 @@ def minimal_event_dict(data_source, organization, location_id):
     }
 
 
+@pytest.fixture
+def administrative_division_type():
+    return AdministrativeDivisionType.objects.create(type='neighborhood', name='test neighborhood division type')
+
+
+@pytest.fixture
+def administrative_division(administrative_division_type):
+    division = AdministrativeDivision.objects.create(
+        name_en='test division',
+        type=administrative_division_type
+    )
+    coords = ((0, 0), (0, 200), (200, 200), (200, 0), (0, 0))
+    AdministrativeDivisionGeometry.objects.create(division=division, boundary=MultiPolygon([Polygon(coords)]))
+    return division
+
+
 @pytest.mark.django_db
 @pytest.fixture
-def place(data_source, organization):
+def place(data_source, organization, administrative_division):
     return Place.objects.create(
         id='test location',
         data_source=data_source,
-        publisher=organization
+        publisher=organization,
+        position=Point(100, 100)
     )
 
 

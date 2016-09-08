@@ -31,8 +31,9 @@ from django.contrib.contenttypes.models import ContentType
 from events import translation_utils
 from django.utils.encoding import python_2_unicode_compatible
 from django.contrib.postgres.fields import HStoreField
+from django.db import transaction
 from image_cropping import ImageRatioField
-
+from munigeo.models import AdministrativeDivision
 
 User = settings.AUTH_USER_MODEL
 
@@ -229,6 +230,7 @@ class KeywordSet(BaseModel):
     organization = models.ForeignKey(Organization, verbose_name=_('Organization which uses this set'), null=True)
     keywords = models.ManyToManyField(Keyword, blank=False, related_name='sets')
 
+
 class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     publisher = models.ForeignKey(Organization, verbose_name=_('Publisher'), db_index=True)
     info_url = models.URLField(verbose_name=_('Place home page'), blank=True, default='', max_length=1000)
@@ -251,6 +253,8 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     address_country = models.CharField(verbose_name=_('Country'), max_length=2, null=True, blank=True)
 
     deleted = models.BooleanField(verbose_name=_('Deleted'), default=False)
+    divisions = models.ManyToManyField(AdministrativeDivision, verbose_name=_('Divisions'), related_name='places',
+                                       blank=True)
 
     geo_objects = models.GeoManager()
 
@@ -264,6 +268,17 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
             self.street_address, self.postal_code, self.address_locality
         ])
         return u', '.join(values)
+
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
+        if self.position:
+            self.divisions = AdministrativeDivision.objects.filter(
+                type__type__in=('district', 'sub_district', 'neighborhood', 'muni'),
+                geometry__boundary__contains=self.position)
+        else:
+            self.divisions.clear()
 
 reversion.register(Place)
 
