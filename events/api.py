@@ -714,6 +714,7 @@ register_view(ImageViewSet, 'image', base_name='image')
 
 
 class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
+    id = serializers.CharField(required=False)
     location = JSONLDRelatedField(serializer=PlaceSerializer, required=False,
                                   view_name='place-detail', queryset=Place.objects.all())
     # provider = OrganizationSerializer(hide_ld_context=True)
@@ -726,7 +727,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     publication_status = EnumChoiceField(PUBLICATION_STATUSES)
     external_links = EventLinkSerializer(many=True, required=False)
     offers = OfferSerializer(many=True, required=False)
-    id = serializers.CharField(required=False)
     data_source = serializers.PrimaryKeyRelatedField(queryset=DataSource.objects.all(),
                                                      required=False)
     publisher = serializers.PrimaryKeyRelatedField(queryset=Organization.objects.all(),
