@@ -43,7 +43,7 @@ import bleach
 # events
 from events import utils
 from events.api_pagination import LargeResultsSetPagination
-from events.auth import ApiKeyAuth
+from events.auth import ApiKeyAuth, ApiKeyUser
 from events.custom_elasticsearch_search_backend import (
     CustomEsSearchQuerySet as SearchQuerySet
 )
