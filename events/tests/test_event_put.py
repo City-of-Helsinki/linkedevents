@@ -188,6 +188,7 @@ def test__reschedule_a_cancelled_event_with_put(api_client, complex_event_dict, 
 @pytest.mark.django_db
 @pytest.mark.parametrize("non_permitted_input,non_permitted_response", [
     ({'id': 'not_allowed:1'}, 400), # may not fake id
+    ({'id': settings.SYSTEM_DATA_SOURCE_ID + ':changed'}, 400), # may not change object id
     ({'data_source': 'theotherdatasourceid'}, 400),  # may not fake data source
     ({'publisher': 'test_organization2'}, 400),  # may not fake organization
 ])

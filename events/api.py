@@ -429,6 +429,13 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         super().validate(data)
         return data
 
+    def update(self, instance, validated_data):
+        if 'id' in validated_data:
+            if instance.id != validated_data['id']:
+                raise serializers.ValidationError({'id':_("You may not change the id of an existing object.")})
+        super().update(instance, validated_data)
+        return instance
+
 
 def _clean_qp(query_params):
     """
@@ -969,7 +976,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             except KeyError:
                 # if the start_time is not provided, do nothing
                 pass
-            instance.save()
 
         # update validated fields
         super().update(instance, validated_data)
