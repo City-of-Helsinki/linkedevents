@@ -565,6 +565,7 @@ class PlaceSerializer(LinkedEventsSerializer, GeoModelSerializer):
 
     class Meta:
         model = Place
+        exclude = ('divisions',)  # TODO excluded for now
 
 
 class PlaceRetrieveViewSet(GeoModelAPIView,
