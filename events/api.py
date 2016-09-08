@@ -802,25 +802,28 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         if 'id' in data:
             if not data['id'].split(':', 1)[0] == self.data_source.id:
                 raise serializers.ValidationError(
-                    {'id': "Setting id to " + str(data['id']) +
-                           " is not allowed for your organization. The id"
-                           " must be left blank or set to " + str(self.data_source) + ":desired_id"})
+                    {'id': _("Setting id to %(given)s " +
+                             " is not allowed for your organization. The id"
+                             " must be left blank or set to %(data_source)s:desired_id") %
+                           {'given': str(data['id']), 'data_source': self.data_source}})
         # validate data source permissions
         if 'data_source' in data:
             if data['data_source'] != self.data_source:
                 raise serializers.ValidationError(
-                    {'data_source': "Setting data_source to " + str(data['data_source']) +
-                           " is not allowed for your organization. The data source"
-                           " must be left blank or set to " + str(self.data_source)})
+                    {'data_source': _("Setting data_source to %(given)s " +
+                                      " is not allowed for your organization. The data source" +
+                                      " must be left blank or set to %(required)s") %
+                                    {'given': data['data_source'], 'required': self.data_source}})
         else:
             data['data_source'] = self.data_source
         # validate publisher permissions
         if 'publisher' in data:
             if data['publisher'] != self.publisher:
                 raise serializers.ValidationError(
-                    {'publisher': "Setting publisher to " + str(data['publisher']) +
-                           " is not allowed for your organization. The publisher"
-                           " must be left blank or set to " + str(self.publisher)})
+                    {'publisher': _("Setting publisher to %(given)s " +
+                                    " is not allowed for your organization. The publisher" +
+                                    " must be left blank or set to %(required)s ") %
+                                  {'given': data['publisher'], 'required': self.publisher}})
         else:
             data['publisher'] = self.publisher
 
@@ -833,7 +836,9 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
         # require the publication status
         if 'publication_status' not in data:
-            raise serializers.ValidationError({'publication_status': 'You must specify whether you wish to submit a draft or a public event.'})
+            raise serializers.ValidationError({'publication_status':
+                                                   _(
+                                                       "You must specify whether you wish to submit a draft or a public event.")})
 
         # if the event is a draft, no further validation is performed
         if data['publication_status'] == PublicationStatus.DRAFT:
