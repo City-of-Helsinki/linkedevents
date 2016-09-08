@@ -11,7 +11,7 @@ class ApiKeyAuthentication(authentication.BaseAuthentication):
         if not api_key:
             return None
         data_source = self.get_data_source(api_key=api_key)
-        return ApiKeyUser(), {'authenticated_data_source': data_source}
+        return ApiKeyUser(), ApiKeyAuth(data_source)
 
     def authenticate_header(self, request):
         """
@@ -36,3 +36,11 @@ class ApiKeyAuthentication(authentication.BaseAuthentication):
 class ApiKeyUser(AnonymousUser):
     def is_authenticated(self):
         return True
+
+
+class ApiKeyAuth(object):
+    def __init__(self, data_source):
+        self.data_source = data_source
+
+    def get_authenticated_data_source(self):
+        return self.data_source

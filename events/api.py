@@ -23,7 +23,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 from django.utils.encoding import force_text
 from rest_framework import (
-    serializers, relations, viewsets, mixins, filters, generics, status
+    serializers, relations, viewsets, mixins, filters, generics, status, permissions
 )
 from rest_framework.settings import api_settings
 from rest_framework.reverse import reverse
@@ -43,7 +43,7 @@ import bleach
 # events
 from events import utils
 from events.api_pagination import LargeResultsSetPagination
-from events.auth import ApiKeyUser
+from events.auth import ApiKeyAuth
 from events.custom_elasticsearch_search_backend import (
     CustomEsSearchQuerySet as SearchQuerySet
 )
@@ -754,23 +754,22 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
         # for post and put methods, user information is needed to restrict permissions at validate
         self.method = self.context['request'].method
-        if self.context['request'].method in ['PUT', 'POST']:
-            self.user = self.context['request'].user
-            self.api_key = self.context['request'].query_params.get('api_key')
-
-            # api_key takes precedence over user
-            if isinstance(self.user, ApiKeyUser):
-                self.data_source = self.context['request'].auth['authenticated_data_source']
-                self.publisher = self.data_source.owner
-                if not self.publisher:
-                    raise PermissionDenied(_("Data source doesn't belong to any organization"))
-            else:
-                # events created by api are marked coming from the system data source unless api_key is provided
-                self.data_source = DataSource.objects.get(id=settings.SYSTEM_DATA_SOURCE_ID)
-                # user organization is used unless api_key is provided
-                self.publisher = self.user.get_default_organization()
-                if not self.publisher:
-                    raise PermissionDenied(_("User doesn't belong to any organization"))
+        self.user = self.context['request'].user
+        if self.method in permissions.SAFE_METHODS:
+            return
+        # api_key takes precedence over user
+        if isinstance(self.context['request'].auth, ApiKeyAuth):
+            self.data_source = self.context['request'].auth.get_authenticated_data_source()
+            self.publisher = self.data_source.owner
+            if not self.publisher:
+                raise PermissionDenied(_("Data source doesn't belong to any organization"))
+        else:
+            # events created by api are marked coming from the system data source unless api_key is provided
+            self.data_source = DataSource.objects.get(id=settings.SYSTEM_DATA_SOURCE_ID)
+            # user organization is used unless api_key is provided
+            self.publisher = self.user.get_default_organization()
+            if not self.publisher:
+                raise PermissionDenied(_("User doesn't belong to any organization"))
 
     def get_datetimes(self, data):
         for field in ['date_published', 'start_time', 'end_time']:
