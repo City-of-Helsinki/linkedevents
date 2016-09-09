@@ -46,6 +46,17 @@ def test__create_a_minimal_event_with_post(api_client,
 
 
 @pytest.mark.django_db
+def test__cannot_create_an_event_with_existing_id(api_client,
+                                           minimal_event_dict,
+                                           user):
+    api_client.force_authenticate(user=user)
+    minimal_event_dict['id'] = settings.SYSTEM_DATA_SOURCE_ID + ':1'
+    response = create_with_post(api_client, minimal_event_dict)
+    response2 = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
+    assert response2.status_code == 400
+
+
+@pytest.mark.django_db
 def test__a_non_user_cannot_create_an_event(api_client, minimal_event_dict):
 
     response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')

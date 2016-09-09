@@ -15,6 +15,7 @@ from django.http import Http404
 from django.contrib.auth import get_user_model
 from django.utils import translation
 from django.core.exceptions import ValidationError, PermissionDenied
+from django.db.utils import IntegrityError
 from django.conf import settings
 from django.core.urlresolvers import NoReverseMatch
 from django.db.models import Q
@@ -428,6 +429,16 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
             raise serializers.ValidationError({'name': _('The name must be specified.')})
         super().validate(data)
         return data
+
+    def create(self, validated_data):
+        try:
+            instance = super().create(validated_data)
+        except IntegrityError as error:
+            if 'duplicate' and 'pkey' in str(error):
+                raise serializers.ValidationError({'id':_("An object with given id already exists.")})
+            else:
+                raise error
+        return instance
 
     def update(self, instance, validated_data):
         if 'id' in validated_data:
