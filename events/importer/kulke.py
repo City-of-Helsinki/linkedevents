@@ -23,6 +23,8 @@ from events.translation_utils import expand_model_fields
 LOCATION_TPREK_MAP = {
     'malmitalo': '8740',
     'malms kulturhus': '8740',
+    'malms bibliotek - malms kulturhus': '8192',
+    'helsingin kaupungintalo': '28473',
     'stoa': '7259',
     'kanneltalo': '7255',
     'vuotalo': '7260',
