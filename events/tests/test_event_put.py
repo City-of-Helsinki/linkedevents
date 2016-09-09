@@ -104,6 +104,13 @@ def test__reschedule_an_event_with_put(api_client, complex_event_dict, user):
     data2['event_status'] = 'EventRescheduled'
     assert_event_data_is_equal(data2, response2.data)
 
+    # try to cancel marking as rescheduled
+    data2['event_status'] = 'EventScheduled'
+    response2 = update_with_put(api_client, event_id, data2)
+
+    # assert the event does not revert back to scheduled
+    data2['event_status'] = 'EventRescheduled'
+    assert_event_data_is_equal(data2, response2.data)
 
 @pytest.mark.django_db
 def test__postpone_an_event_with_put(api_client, complex_event_dict, user):
@@ -128,6 +135,24 @@ def test__postpone_an_event_with_put(api_client, complex_event_dict, user):
     data2['event_status'] = 'EventPostponed'
     assert_event_data_is_equal(data2, response2.data)
 
+    # try to cancel marking as postponed
+    data2['event_status'] = 'EventScheduled'
+    response2 = update_with_put(api_client, event_id, data2)
+
+    # assert the event does not revert back to scheduled
+    data2['event_status'] = 'EventPostponed'
+    assert_event_data_is_equal(data2, response2.data)
+
+    # reschedule and try to cancel marking
+    new_datetime = (timezone.now() + timedelta(days=3)).isoformat()
+    data2['start_time'] = new_datetime
+    data2['end_time'] = new_datetime
+    data2['event_status'] = 'EventScheduled'
+    response2 = update_with_put(api_client, event_id, data2)
+
+    # assert the event does not revert back to scheduled
+    data2['event_status'] = 'EventRescheduled'
+    assert_event_data_is_equal(data2, response2.data)
 
 @pytest.mark.django_db
 def test__cancel_an_event_with_put(api_client, complex_event_dict, user):

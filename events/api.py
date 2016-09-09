@@ -977,6 +977,9 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         # Check that the event is not explicitly CANCELLED at the same time.
         if (instance.publication_status == PublicationStatus.PUBLIC and
                     validated_data.get('event_status', Event.Status.SCHEDULED) != Event.Status.CANCELLED):
+            # if the instance was ever RESCHEDULED or POSTPONED, it may never be SCHEDULED again
+            if instance.event_status != Event.Status.SCHEDULED:
+                validated_data['event_status'] = instance.event_status
             try:
                 # if the start_time changes, reschedule the event
                 if validated_data['start_time'] != instance.start_time:
