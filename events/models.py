@@ -57,7 +57,7 @@ class SchemalessFieldMixin(models.Model):
 class DataSource(models.Model):
     id = models.CharField(max_length=100, primary_key=True)
     name = models.CharField(verbose_name=_('Name'), max_length=255)
-    api_key = models.CharField(max_length=128, null=True, blank=True)
+    api_key = models.CharField(max_length=128, blank=True, default='')
     owner = models.ForeignKey('Organization', related_name='owned_system', null=True, blank=True)
 
     def __str__(self):
