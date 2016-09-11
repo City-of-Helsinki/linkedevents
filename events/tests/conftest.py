@@ -136,12 +136,30 @@ def administrative_division_type():
 
 
 @pytest.fixture
+def administrative_division_type2():
+    return AdministrativeDivisionType.objects.create(type='district', name='test district division type')
+
+
+@pytest.fixture
 def administrative_division(administrative_division_type):
     division = AdministrativeDivision.objects.create(
         name_en='test division',
-        type=administrative_division_type
+        type=administrative_division_type,
+        ocd_id='test_division_ocd_id'
     )
     coords = ((0, 0), (0, 200), (200, 200), (200, 0), (0, 0))
+    AdministrativeDivisionGeometry.objects.create(division=division, boundary=MultiPolygon([Polygon(coords)]))
+    return division
+
+
+@pytest.fixture
+def administrative_division2(administrative_division_type):
+    division = AdministrativeDivision.objects.create(
+        name_en='test division 2',
+        type=administrative_division_type,
+        ocd_id='test_division2_ocd_id'
+    )
+    coords = ((100, 100), (100, 300), (300, 300), (300, 100), (100, 100))
     AdministrativeDivisionGeometry.objects.create(division=division, boundary=MultiPolygon([Polygon(coords)]))
     return division
 
@@ -153,7 +171,7 @@ def place(data_source, organization, administrative_division):
         id='test location',
         data_source=data_source,
         publisher=organization,
-        position=Point(100, 100)
+        position=Point(50, 50)
     )
 
 
@@ -181,6 +199,15 @@ def place2(other_data_source, organization2):
     )
 
 
+@pytest.fixture
+def place3(data_source, organization):
+    return Place.objects.create(
+        id='test location 3',
+        data_source=data_source,
+        publisher=organization
+    )
+
+
 @pytest.mark.django_db
 @pytest.fixture
 def event2(place2, user2):
@@ -188,6 +215,18 @@ def event2(place2, user2):
         id='test_event 2', location=place2,
         data_source=place2.data_source, publisher=place2.publisher,
         last_modified_by=user2,
+        start_time=timezone.now(),
+        end_time=timezone.now(),
+        short_description='short desc',
+        description='desc'
+    )
+
+@pytest.fixture
+def event3(place3, user):
+    return Event.objects.create(
+        id='test_event 3', location=place3,
+        data_source=place3.data_source, publisher=place3.publisher,
+        last_modified_by=user,
         start_time=timezone.now(),
         end_time=timezone.now(),
         short_description='short desc',

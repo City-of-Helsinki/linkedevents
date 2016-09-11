@@ -5,7 +5,7 @@ from django.contrib.gis.geos import Point
 
 @pytest.mark.parametrize('position, is_division_expected', [
     (None, False),
-    (Point(300, 300), False),
+    (Point(1000, 1000), False),
     (Point(100, 100), True)
 ])
 @pytest.mark.django_db
