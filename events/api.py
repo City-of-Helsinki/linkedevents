@@ -42,6 +42,8 @@ from munigeo.api import (
 )
 import pytz
 import bleach
+import django_filters
+
 # events
 from events import utils
 from events.api_pagination import LargeResultsSetPagination
@@ -568,6 +570,15 @@ class PlaceSerializer(LinkedEventsSerializer, GeoModelSerializer):
         exclude = ('divisions',)  # TODO excluded for now
 
 
+class PlaceFilter(filters.FilterSet):
+    division = django_filters.Filter(name='divisions__ocd_id', lookup_type='in',
+                                     widget=django_filters.widgets.CSVWidget())
+
+    class Meta:
+        model = Place
+        fields = ('division',)
+
+
 class PlaceRetrieveViewSet(GeoModelAPIView,
                            viewsets.GenericViewSet,
                            mixins.RetrieveModelMixin):
@@ -585,6 +596,8 @@ class PlaceListViewSet(GeoModelAPIView,
                        mixins.ListModelMixin):
     queryset = Place.objects.all()
     serializer_class = PlaceSerializer
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = PlaceFilter
 
     def get_queryset(self):
         """
@@ -1258,6 +1271,15 @@ def _filter_event_queryset(queryset, params, srs=None):
     return queryset
 
 
+class EventFilter(filters.FilterSet):
+    division = django_filters.Filter(name='location__divisions__ocd_id', lookup_type='in',
+                                     widget=django_filters.widgets.CSVWidget())
+
+    class Meta:
+        model = Event
+        fields = ('division',)
+
+
 class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
     """
     # Filtering retrieved events
@@ -1323,7 +1345,8 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
     queryset = queryset.prefetch_related(
         'offers', 'keywords', 'external_links', 'sub_events')
     serializer_class = EventSerializer
-    filter_backends = (EventOrderingFilter,)
+    filter_backends = (EventOrderingFilter, filters.DjangoFilterBackend)
+    filter_class = EventFilter
     ordering_fields = ('start_time', 'end_time', 'days_left', 'last_modified_time')
     ordering = ('-last_modified_time',)
 
