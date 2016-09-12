@@ -8,30 +8,30 @@ from events.importer.base import get_importers
 
 
 class Command(BaseCommand):
-    args = '<module>'
     help = "Import event data"
-    option_list = list(BaseCommand.option_list + (
-        make_option('--all', action='store_true', dest='all', help='Import all entities'),
-        make_option('--cached', action='store_true', dest='cached', help='Cache requests (if possible)'),
-        make_option('--single', action='store', dest='single', help='Import only single entity'),
-    ))
 
     importer_types = ['places', 'events', 'keywords']
 
     def __init__(self):
-        super(Command, self).__init__()
+        super().__init__()
+        self.importers = get_importers()
+        self.imp_list = ', '.join(sorted(self.importers.keys()))
+        self.missing_args_message = "Enter the name of the event importer module. Valid importers: %s" % self.imp_list
+
+    def add_arguments(self, parser):
+        parser.add_argument('module')
+        parser.add_argument('--all', action='store_true', dest='all', help='Import all entities')
+        parser.add_argument('--cached', action='store_true', dest='cached', help='Cache requests (if possible)')
+        parser.add_argument('--single', action='store', dest='single', help='Import only single entity')
+
         for imp in self.importer_types:
-            opt = make_option('--%s' % imp, dest=imp, action='store_true', help='import %s' % imp)
-            self.option_list.append(opt)
+            parser.add_argument('--%s' % imp, dest=imp, action='store_true', help='import %s' % imp)
 
     def handle(self, *args, **options):
-        importers = get_importers()
-        imp_list = ', '.join(sorted(importers.keys()))
-        if len(args) != 1:
-            raise CommandError("Enter the name of the event importer module. Valid importers: %s" % imp_list)
-        if not args[0] in importers:
-            raise CommandError("Importer %s not found. Valid importers: %s" % (args[0], imp_list))
-        imp_class = importers[args[0]]
+        module = options['module']
+        if not module in self.importers:
+            raise CommandError("Importer %s not found. Valid importers: %s" % (module, self.imp_list))
+        imp_class = self.importers[module]
 
         if hasattr(settings, 'PROJECT_ROOT'):
             root_dir = settings.PROJECT_ROOT

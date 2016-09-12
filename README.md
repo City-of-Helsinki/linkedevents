@@ -39,9 +39,9 @@ Finally, you may install city-specific HTML page templates for the browsable API
 ```
 python manage.py install_templates helsinki
 ```
-This will install the templates/rest_framework/api.html.helsinki template,
+This will install the `helevents/templates/rest_framework/api.html` template,
 which contains Helsinki event data summary and license. Customize the template
-for your favorite city by creating api.html.your_favorite_city.
+for your favorite city by creating `your_favorite_city/templates/rest_framework/api.html`.
 [Customizing the browsable API](http://www.django-rest-framework.org/topics/browsable-api/#customizing)
 
 Running tests

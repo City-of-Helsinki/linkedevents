@@ -29,6 +29,7 @@ from rest_framework.settings import api_settings
 from rest_framework.reverse import reverse
 from rest_framework.response import Response
 from rest_framework.exceptions import ParseError
+from rest_framework.views import get_view_name as original_get_view_name
 
 
 # 3rd party
@@ -52,6 +53,12 @@ from events.models import (
     Offer, DataSource, Organization, Image, PublicationStatus, PUBLICATION_STATUSES, License
 )
 from events.translation import EventTranslationOptions
+
+
+def get_view_name(cls, suffix=None):
+    if cls.__name__ == 'APIRoot':
+        return 'Linked Events'
+    return original_get_view_name(cls, suffix)
 
 
 viewset_classes_by_model = {}
@@ -731,10 +738,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     audience = JSONLDRelatedField(serializer=KeywordSerializer, view_name='keyword-detail',
                                   many=True, required=False, queryset=Keyword.objects.all())
     view_name = 'event-detail'
-    # JA: TODO: Temporarily disabled new validation code
-    fields_needed_to_publish = ('keywords', 'location', 'start_time') #,
-                                # 'short_description', 'description',
-                                # 'offers')
+
+    fields_needed_to_publish = ('keywords', 'location', 'start_time', 'short_description', 'description')
 
     def __init__(self, *args, skip_empties=False, **kwargs):
         super(EventSerializer, self).__init__(*args, **kwargs)
@@ -787,21 +792,34 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         languages = [x[0] for x in settings.LANGUAGES]
 
         errors = {}
-        lang_error_msg = 'This field for language "%s" must be specified for event in this language' \
-                         ' before an event is published.'
+        lang_error_msg = _('This field must be specified before an event is published.')
         for field in self.fields_needed_to_publish:
             if field in self.translated_fields:
                 for lang in languages:
                     name = "name_%s" % lang
                     field_lang = "%s_%s" % (field, lang)
                     if data.get(name) and not data.get(field_lang):
-                        errors.setdefault(field, {})[lang] = _(lang_error_msg % lang)
+                        errors.setdefault(field, {})[lang] = lang_error_msg
+                    if field == 'short_description' and len(data.get(field_lang, [])) > 160:
+                        errors.setdefault(field, {})[lang] = (
+                            _('Short description length must be 160 characters or less'))
+
             elif not data.get(field):
                 # The start time may be null if a published event is postponed!
                 if field == 'start_time' and 'start_time' in data:
                     pass
                 else:
-                    errors[field] = _('This field must be specified before an event is published.')
+                    errors[field] = lang_error_msg
+
+        # published events need price info = at least one offer that either has a price or is free
+        price_exists = False
+        for offer in data.get('offers', []):
+            is_free = offer.get('is_free', False)
+            if is_free or 'price' in offer:
+                price_exists = True
+                break
+        if not price_exists:
+            errors['offers'] = _('Price info must be specified before an event is published.')
 
         # adjust start_time and has_start_time
 
@@ -834,11 +852,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
         if errors:
             raise serializers.ValidationError(errors)
-
-        # JA: TODO: Temporarily disabled new validation code
-        # if data.get('short_description') and len(data['short_description']) > 160:
-        #     raise serializers.ValidationError(
-        #         {'short_description': 'Short description length must be 160 characters or less'})
 
         return data
 

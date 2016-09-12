@@ -1,9 +1,9 @@
 from django.conf.urls import include, url
-from events.routers import DocumentedRouter
+from rest_framework.routers import DefaultRouter
 from events import api
 
 
-router = DocumentedRouter()
+router = DefaultRouter()
 for view in api.all_views:
     kwargs = {}
     if 'base_name' in view:

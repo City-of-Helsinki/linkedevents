@@ -23,6 +23,8 @@ from events.translation_utils import expand_model_fields
 LOCATION_TPREK_MAP = {
     'malmitalo': '8740',
     'malms kulturhus': '8740',
+    'malms bibliotek - malms kulturhus': '8192',
+    'helsingin kaupungintalo': '28473',
     'stoa': '7259',
     'kanneltalo': '7255',
     'vuotalo': '7260',
@@ -299,12 +301,16 @@ class KulkeImporter(Importer):
         if caption:
             description += caption
             event['short_description'][lang] = caption
+        else:
+            event['short_description'][lang] = None
         if caption and bodytext:
             description += "\n\n"
         if bodytext:
             description += bodytext
         if description:
             event['description'][lang] = description
+        else:
+            event['description'][lang] = None
 
         event['info_url'][lang] = text_content('www')
         # todo: process extra links?
