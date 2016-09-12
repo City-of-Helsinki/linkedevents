@@ -37,7 +37,7 @@ sudo -u postgres psql linkedevents < linkedevents.dump
 
 Finally, you may install city-specific HTML page templates for the browsable API by
 ```
-python manage.py install_templates helsinki
+python manage.py install_templates helevents
 ```
 This will install the `helevents/templates/rest_framework/api.html` template,
 which contains Helsinki event data summary and license. Customize the template
