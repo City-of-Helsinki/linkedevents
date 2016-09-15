@@ -855,8 +855,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         # require the publication status
         if 'publication_status' not in data:
             raise serializers.ValidationError({'publication_status':
-                                                   _(
-                                                       "You must specify whether you wish to submit a draft or a public event.")})
+                _("You must specify whether you wish to submit a draft or a public event.")})
 
         # if the event is a draft, no further validation is performed
         if data['publication_status'] == PublicationStatus.DRAFT:
