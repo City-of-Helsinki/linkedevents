@@ -37,3 +37,4 @@ easy_thumbnails
 Pillow
 django-cleanup
 django-allauth
+django-leaflet

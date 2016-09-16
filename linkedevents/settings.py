@@ -55,6 +55,7 @@ INSTALLED_APPS = (
 
     'helevents',
     'munigeo',
+    'leaflet',
 )
 
 MIDDLEWARE_CLASSES = (
