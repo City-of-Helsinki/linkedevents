@@ -920,17 +920,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
         return data
 
-    def validate_event_status(self, value):
-        # the API only allows scheduling and cancelling events
-        # POSTPONED and RESCHEDULED are done in the backend
-
-        if value in (Event.Status.CANCELLED, Event.Status.SCHEDULED):
-            return value
-        if value in (Event.Status.POSTPONED, Event.Status.RESCHEDULED):
-            raise serializers.ValidationError(_('POSTPONED and RESCHEDULED statuses cannot be set directly.'
-                                                'Changing event start_time or marking start_time null'
-                                                'will reschedule or postpone an event.'))
-
     def create(self, validated_data):
         # if id was not provided, we generate it upon creation:
         if 'id' not in validated_data:
@@ -971,6 +960,17 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         links = validated_data.pop('external_links', None)
 
         validated_data['last_modified_by'] = self.user
+
+
+        # The API only allows scheduling and cancelling events.
+        # POSTPONED and RESCHEDULED may not be set, but should be allowed in already set instances.
+        if validated_data.get('event_status') in (Event.Status.POSTPONED, Event.Status.RESCHEDULED):
+            if validated_data.get('event_status') != instance.event_status:
+                raise serializers.ValidationError({'event_status':
+                                                  _('POSTPONED and RESCHEDULED statuses cannot be set directly.'
+                                                    'Changing event start_time or marking start_time null'
+                                                    'will reschedule or postpone an event.')})
+
         # Update event_status if a PUBLIC SCHEDULED or CANCELLED event start_time is updated.
         # DRAFT events will remain SCHEDULED up to publication.
         # Check that the event is not explicitly CANCELLED at the same time.

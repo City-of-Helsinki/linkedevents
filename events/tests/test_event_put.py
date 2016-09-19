@@ -106,11 +106,24 @@ def test__reschedule_an_event_with_put(api_client, complex_event_dict, user):
 
     # try to cancel marking as rescheduled
     data2['event_status'] = 'EventScheduled'
-    response2 = api_client.put(event_id, data2, format='json')
+    response3 = api_client.put(event_id, data2, format='json')
 
     # assert the event does not revert back to scheduled
-    assert response2.status_code == 400
-    assert 'event_status' in response2.data
+    assert response3.status_code == 400
+    assert 'event_status' in response3.data
+
+    # create a new datetime again
+    new_datetime = (timezone.now() + timedelta(days=3)).isoformat()
+    data2 = response2.data
+    data2['start_time'] = new_datetime
+    data2['end_time'] = new_datetime
+
+    # update the event again
+    response2 = update_with_put(api_client, event_id, data2)
+
+    # assert the event remains rescheduled
+    data2['event_status'] = 'EventRescheduled'
+    assert_event_data_is_equal(data2, response2.data)
 
 @pytest.mark.django_db
 def test__postpone_an_event_with_put(api_client, complex_event_dict, user):
@@ -118,8 +131,6 @@ def test__postpone_an_event_with_put(api_client, complex_event_dict, user):
     # create an event
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, complex_event_dict)
-    print('created the event')
-    print(response.data)
 
     # remove the start_time
     data2 = response.data
@@ -128,19 +139,18 @@ def test__postpone_an_event_with_put(api_client, complex_event_dict, user):
     # update the event
     event_id = data2.pop('@id')
     response2 = update_with_put(api_client, event_id, data2)
-    print('updated the event')
-    print(response2.data)
 
     # assert backend postponed the event
     data2['event_status'] = 'EventPostponed'
     assert_event_data_is_equal(data2, response2.data)
 
     # try to cancel marking as postponed
+    data2 = response2.data
     data2['event_status'] = 'EventScheduled'
-    response2 = api_client.put(event_id, data2, format='json')
+    response3 = api_client.put(event_id, data2, format='json')
 
     # assert the event does not revert back to scheduled
-    assert response2.status_code == 400
+    assert response3.status_code == 400
     assert 'event_status' in response2.data
 
     # reschedule and try to cancel marking
@@ -148,11 +158,24 @@ def test__postpone_an_event_with_put(api_client, complex_event_dict, user):
     data2['start_time'] = new_datetime
     data2['end_time'] = new_datetime
     data2['event_status'] = 'EventScheduled'
-    response2 = api_client.put(event_id, data2, format='json')
+    response3 = api_client.put(event_id, data2, format='json')
 
     # assert the event does not revert back to scheduled
-    assert response2.status_code == 400
-    assert 'event_status' in response2.data
+    assert response3.status_code == 400
+    assert 'event_status' in response3.data
+
+    # reschedule, but do not try to cancel marking
+    data2 = response2.data
+    new_datetime = (timezone.now() + timedelta(days=3)).isoformat()
+    data2['start_time'] = new_datetime
+    data2['end_time'] = new_datetime
+    data2.pop('event_status')
+    event_id = data2.pop('@id')
+    response2 = update_with_put(api_client, event_id, data2)
+
+    # assert the event is marked rescheduled
+    data2['event_status'] = 'EventRescheduled'
+    assert_event_data_is_equal(data2, response2.data)
 
 @pytest.mark.django_db
 def test__cancel_an_event_with_put(api_client, complex_event_dict, user):
@@ -188,8 +211,6 @@ def test__cancel_a_postponed_event_with_put(api_client, complex_event_dict, user
     # update the event
     event_id = data2.pop('@id')
     response2 = update_with_put(api_client, event_id, data2)
-    print('updated the event')
-    print(response2.data)
 
     # assert backend postponed the event
     data2['event_status'] = 'EventPostponed'
