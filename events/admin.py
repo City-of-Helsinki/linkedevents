@@ -1,9 +1,9 @@
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin.widgets import FilteredSelectMultiple
-from django.contrib.gis import admin as geoadmin
 from django.contrib.gis.db import models
 from django.utils.translation import ugettext as _
+from leaflet.admin import LeafletGeoAdmin
 from modeltranslation.admin import TranslationAdmin
 from reversion.admin import VersionAdmin
 from events.api import generate_id
@@ -30,8 +30,16 @@ class KeywordAdmin(BaseAdmin, TranslationAdmin, VersionAdmin):
     pass
 
 
-class PlaceAdmin(geoadmin.GeoModelAdmin, BaseAdmin, TranslationAdmin,
-                 VersionAdmin):
+class HelsinkiGeoAdmin(LeafletGeoAdmin):
+    settings_overrides = {
+        'DEFAULT_CENTER': (60.171944, 24.941389),
+        'DEFAULT_ZOOM': 11,
+        'MIN_ZOOM': 3,
+        'MAX_ZOOM': 19,
+    }
+
+
+class PlaceAdmin(HelsinkiGeoAdmin, BaseAdmin, TranslationAdmin, VersionAdmin):
     fieldsets = (
         (None, {
             'fields': ('publisher', 'name', 'description', 'info_url', 'position', 'parent')
