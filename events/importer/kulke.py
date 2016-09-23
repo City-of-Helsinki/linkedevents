@@ -338,7 +338,10 @@ class KulkeImporter(Importer):
         if eventattachments is not None:
             for attachment in eventattachments:
                 if attachment.attrib['type'] == 'teaserimage':
-                    event['image'] = unicodetext(attachment).strip()
+                    # with the event_only license, the larger picture may be served
+                    event['image'] = unicodetext(attachment).strip().replace(
+                        '/MediumEventPic', '/EventPic'
+                    )
                     event['image_license'] = 'event_only'
                     break
 
