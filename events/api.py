@@ -40,6 +40,7 @@ from haystack.query import AutoQuery
 from munigeo.api import (
     GeoModelSerializer, GeoModelAPIView, build_bbox_filter, srid_to_srs
 )
+from munigeo.models import AdministrativeDivision
 import pytz
 import bleach
 import django_filters
@@ -562,12 +563,21 @@ class KeywordSetViewSet(JSONAPIViewSet):
 register_view(KeywordSetViewSet, 'keyword_set')
 
 
+class DivisionSerializer(TranslatedModelSerializer):
+    type = serializers.SlugRelatedField(slug_field='type', read_only=True)
+    municipality = serializers.SlugRelatedField(slug_field='name', read_only=True)
+
+    class Meta:
+        model = AdministrativeDivision
+        fields = ('type', 'name', 'ocd_id', 'municipality')
+
+
 class PlaceSerializer(LinkedEventsSerializer, GeoModelSerializer):
     view_name = 'place-detail'
+    divisions = DivisionSerializer(many=True, read_only=True)
 
     class Meta:
         model = Place
-        exclude = ('divisions',)  # TODO excluded for now
 
 
 class PlaceFilter(filters.FilterSet):
@@ -608,7 +618,7 @@ class PlaceListViewSet(GeoModelAPIView,
         event.start
         event.end
         """
-        queryset = Place.objects.all()
+        queryset = Place.objects.prefetch_related('divisions__type', 'divisions__municipality')
         if self.request.query_params.get('show_all_places'):
             pass
         else:

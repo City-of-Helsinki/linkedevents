@@ -7,7 +7,8 @@ from django.utils import timezone
 from .utils import versioned_reverse as reverse
 from .test_event_get import get_list
 from django.contrib.gis.geos import Point, Polygon, MultiPolygon
-from munigeo.models import AdministrativeDivision, AdministrativeDivisionType, AdministrativeDivisionGeometry
+from munigeo.models import (AdministrativeDivision, AdministrativeDivisionType, AdministrativeDivisionGeometry,
+                            Municipality)
 
 # 3rd party
 import pytest
@@ -131,6 +132,13 @@ def minimal_event_dict(data_source, organization, location_id):
 
 
 @pytest.fixture
+def municipality():
+    return Municipality.objects.create(
+        name='test municipality',
+    )
+
+
+@pytest.fixture
 def administrative_division_type():
     return AdministrativeDivisionType.objects.create(type='neighborhood', name='test neighborhood division type')
 
@@ -141,11 +149,12 @@ def administrative_division_type2():
 
 
 @pytest.fixture
-def administrative_division(administrative_division_type):
+def administrative_division(administrative_division_type, municipality):
     division = AdministrativeDivision.objects.create(
         name_en='test division',
         type=administrative_division_type,
-        ocd_id='test_division_ocd_id'
+        ocd_id='test_division_ocd_id',
+        municipality=municipality,
     )
     coords = ((0, 0), (0, 200), (200, 200), (200, 0), (0, 0))
     AdministrativeDivisionGeometry.objects.create(division=division, boundary=MultiPolygon([Polygon(coords)]))

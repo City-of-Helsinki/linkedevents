@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from .utils import versioned_reverse as reverse
 import pytest
-from .utils import get, assert_fields_exist
+from .utils import get
 
 
 def get_list(api_client, version='v1', data=None):
@@ -30,3 +30,16 @@ def test_get_place_list_verify_division_filter(api_client, place, place2, place3
     ids = [entry['id'] for entry in data]
     assert place.id in ids
     assert place2.id in ids
+
+
+@pytest.mark.django_db
+def test_get_place_list_check_division(api_client, place, administrative_division, municipality):
+    place.divisions = [administrative_division]
+
+    response = get_list(api_client, data={'show_all_places': 1})
+    division = response.data['data'][0]['divisions'][0]
+
+    assert division['type'] == 'neighborhood'
+    assert division['name'] == {'en': 'test division'}
+    assert division['ocd_id'] == 'test_division_ocd_id'
+    assert division['municipality'] == 'test municipality'
