@@ -57,6 +57,8 @@ class SchemalessFieldMixin(models.Model):
 class DataSource(models.Model):
     id = models.CharField(max_length=100, primary_key=True)
     name = models.CharField(verbose_name=_('Name'), max_length=255)
+    api_key = models.CharField(max_length=128, blank=True, default='')
+    owner = models.ForeignKey('Organization', related_name='owned_system', null=True, blank=True)
 
     def __str__(self):
         return self.id
@@ -128,7 +130,7 @@ class Image(models.Model):
 @python_2_unicode_compatible
 class BaseModel(models.Model):
     id = models.CharField(max_length=50, primary_key=True)
-    data_source = models.ForeignKey(DataSource, db_index=True)
+    data_source = models.ForeignKey(DataSource, related_name='provided_%(class)s_data', db_index=True)
 
     # Properties from schema.org/Thing
     name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True)
