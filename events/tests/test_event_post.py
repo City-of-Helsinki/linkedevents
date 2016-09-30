@@ -310,3 +310,27 @@ def test_price_info_required(api_client, minimal_event_dict, user, offers, expec
     assert response.status_code == expected
     if expected == 400:
         assert force_text(response.data['offers'][0]) == 'Price info must be specified before an event is published.'
+
+
+@pytest.mark.parametrize('name, is_valid', [
+    ({'sv': 'namn'}, True),
+    ({'foo': 'bar'}, False),
+    ({}, False),
+    (None, False),
+])
+@pytest.mark.django_db
+def test_name_required_in_some_language(api_client, minimal_event_dict, user, name, is_valid):
+    api_client.force_authenticate(user)
+
+    minimal_event_dict['name'] = name
+
+    with translation.override('en'):
+        response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
+
+    if is_valid:
+        assert response.status_code == 201
+    else:
+        assert response.status_code == 400
+
+    if not is_valid:
+        assert force_text(response.data['name'][0]) == 'The name must be specified.'
