@@ -118,8 +118,8 @@ def minimal_event_dict(data_source, organization, location_id):
         'keywords': [
             {'@id': keyword_id(data_source, 'test')},
         ],
-        'short_description': {'fi': 'short desc'},
-        'description': {'fi': 'desc'},
+        'short_description': {'fi': 'short desc', 'sv': 'short desc sv', 'en': 'short desc en'},
+        'description': {'fi': 'desc', 'sv': 'desc sv', 'en': 'desc en'},
         'offers': [
             {
                 'is_free': False,

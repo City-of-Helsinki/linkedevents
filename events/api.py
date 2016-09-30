@@ -435,7 +435,16 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         return ret
 
     def validate(self, data):
-        if 'name' not in data:
+        if 'name' in self.translated_fields:
+            name_exists = False
+            languages = [x[0] for x in settings.LANGUAGES]
+            for language in languages:
+                if 'name_%s' % language in data:
+                    name_exists = True
+                    break
+        else:
+            name_exists = 'name' in data
+        if not name_exists:
             raise serializers.ValidationError({'name': _('The name must be specified.')})
         super().validate(data)
         return data
