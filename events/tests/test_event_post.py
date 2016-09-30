@@ -7,6 +7,7 @@ from django.utils.encoding import force_text
 from .utils import versioned_reverse as reverse
 
 from events.tests.utils import assert_event_data_is_equal
+from .conftest import DATETIME
 from events.models import Event
 from django.conf import settings
 
@@ -18,9 +19,13 @@ def list_url():
 
 # === util methods ===
 
-def create_with_post(api_client, event_data):
+def create_with_post(api_client, event_data, data_source=None):
+    create_url = reverse('event-list')
+    if data_source:
+        api_client.credentials(apikey=data_source.api_key)
+
     # save with post
-    response = api_client.post(reverse('event-list'), event_data, format='json')
+    response = api_client.post(create_url, event_data, format='json')
     assert response.status_code == 201, str(response.content)
 
     # double-check with get
@@ -39,6 +44,67 @@ def test__create_a_minimal_event_with_post(api_client,
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, minimal_event_dict)
     assert_event_data_is_equal(minimal_event_dict, response.data)
+
+
+@pytest.mark.django_db
+def test__cannot_create_an_event_with_existing_id(api_client,
+                                           minimal_event_dict,
+                                           user):
+    api_client.force_authenticate(user=user)
+    minimal_event_dict['id'] = settings.SYSTEM_DATA_SOURCE_ID + ':1'
+    response = create_with_post(api_client, minimal_event_dict)
+    response2 = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
+    assert response2.status_code == 400
+
+
+@pytest.mark.django_db
+def test__a_non_user_cannot_create_an_event(api_client, minimal_event_dict):
+
+    response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
+    assert response.status_code == 401
+
+
+@pytest.mark.django_db
+def test__a_non_admin_cannot_create_an_event(api_client, minimal_event_dict, user):
+    user.get_default_organization().admin_users.remove(user)
+    api_client.force_authenticate(user)
+
+    response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test__api_key_with_organization_can_create_an_event(api_client, minimal_event_dict, data_source, organization):
+
+    data_source.owner = organization
+    data_source.save()
+
+    response = create_with_post(api_client, minimal_event_dict, data_source)
+    assert_event_data_is_equal(minimal_event_dict, response.data)
+
+
+@pytest.mark.django_db
+def test__api_key_without_organization_cannot_create_an_event(api_client, minimal_event_dict, data_source):
+
+    api_client.credentials(apikey=data_source.api_key)
+    response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test__unknown_api_key_cannot_create_an_event(api_client, minimal_event_dict):
+
+    api_client.credentials(apikey='unknown')
+    response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
+    assert response.status_code == 401
+
+
+@pytest.mark.django_db
+def test__empty_api_key_cannot_create_an_event(api_client, minimal_event_dict):
+
+    api_client.credentials(apikey='')
+    response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
+    assert response.status_code == 401
 
 
 @pytest.mark.django_db
@@ -118,19 +184,11 @@ def test__create_a_complex_event_with_post(api_client,
 
 
 @pytest.mark.django_db
-def test__autopopulated_fields(
+def test__autopopulated_fields_at_create(
         api_client, minimal_event_dict, user, user2, other_data_source, organization, organization2):
 
     # create an event
     api_client.force_authenticate(user=user)
-
-    # try to set values for autopopulated fields
-    minimal_event_dict.update(
-        data_source=other_data_source.id,
-        created_by=user2.id,
-        last_modified_by=user2.id,
-        organization=organization2.id
-    )
     response = create_with_post(api_client, minimal_event_dict)
 
     event = Event.objects.get(id=response.data['id'])
@@ -142,9 +200,29 @@ def test__autopopulated_fields(
     assert event.publisher == organization
 
 
+# the following values may not be posted
+@pytest.mark.django_db
+@pytest.mark.parametrize("non_permitted_input,non_permitted_response", [
+    ({'id': 'not_allowed:1'}, 400), # may not fake id
+    ({'data_source': 'theotherdatasourceid'}, 400),  # may not fake data source
+    ({'publisher': 'test_organization2'}, 400),  # may not fake organization
+])
+def test__non_editable_fields_at_create(api_client, minimal_event_dict, list_url, user,
+                              non_permitted_input, non_permitted_response):
+    api_client.force_authenticate(user)
+
+    minimal_event_dict.update(non_permitted_input)
+
+    response = api_client.post(list_url, minimal_event_dict, format='json')
+    assert response.status_code == non_permitted_response
+    if non_permitted_response >= 400:
+        # check that there is an error message for the corresponding field
+        assert list(non_permitted_input)[0] in response.data
+
+
 # location field is used for JSONLDRelatedField tests
 @pytest.mark.django_db
-@pytest.mark.parametrize("input,expected", [
+@pytest.mark.parametrize("ld_input,ld_expected", [
     ({'location': {'@id': '/v1/place/test%20location/'}}, 201),
     ({'location': {'@id': ''}}, 400),  # field required
     ({'location': {'foo': 'bar'}}, 400),  # incorrect json
@@ -153,15 +231,15 @@ def test__autopopulated_fields(
     ({'location': None}, 400),  # cannot be null
     ({}, 400),  # field required
 ])
-def test__jsonld_related_field(api_client, minimal_event_dict, list_url, place, user, input, expected):
+def test__jsonld_related_field(api_client, minimal_event_dict, list_url, place, user, ld_input, ld_expected):
     api_client.force_authenticate(user)
 
     del minimal_event_dict['location']
-    minimal_event_dict.update(input)
+    minimal_event_dict.update(ld_input)
 
     response = api_client.post(list_url, minimal_event_dict, format='json')
-    assert response.status_code == expected
-    if expected >= 400:
+    assert response.status_code == ld_expected
+    if ld_expected >= 400:
         # check that there is a error message for location field
         assert 'location' in response.data
 
@@ -232,3 +310,27 @@ def test_price_info_required(api_client, minimal_event_dict, user, offers, expec
     assert response.status_code == expected
     if expected == 400:
         assert force_text(response.data['offers'][0]) == 'Price info must be specified before an event is published.'
+
+
+@pytest.mark.parametrize('name, is_valid', [
+    ({'sv': 'namn'}, True),
+    ({'foo': 'bar'}, False),
+    ({}, False),
+    (None, False),
+])
+@pytest.mark.django_db
+def test_name_required_in_some_language(api_client, minimal_event_dict, user, name, is_valid):
+    api_client.force_authenticate(user)
+
+    minimal_event_dict['name'] = name
+
+    with translation.override('en'):
+        response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
+
+    if is_valid:
+        assert response.status_code == 201
+    else:
+        assert response.status_code == 400
+
+    if not is_valid:
+        assert force_text(response.data['name'][0]) == 'The name must be specified.'

@@ -108,3 +108,25 @@ def test_get_event_list_verify_keyword_filter(api_client, keyword, event):
     assert event.id in [entry['id'] for entry in response.data['data']]
     response = get_list(api_client, data={'keyword': 'unknown_keyword'})
     assert event.id not in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
+def test_get_event_list_verify_division_filter(api_client, event, event2, event3, administrative_division,
+                                               administrative_division2):
+    event.location.divisions = [administrative_division]
+    event2.location.divisions = [administrative_division2]
+
+    # filter using one value
+    response = get_list(api_client, data={'division': administrative_division.ocd_id})
+    data = response.data['data']
+    assert len(data) == 1
+    assert event.id in [entry['id'] for entry in data]
+
+    # filter using two values
+    filter_value = '%s,%s' % (administrative_division.ocd_id, administrative_division2.ocd_id)
+    response = get_list(api_client, data={'division': filter_value})
+    data = response.data['data']
+    assert len(data) == 2
+    ids = [entry['id'] for entry in data]
+    assert event.id in ids
+    assert event2.id in ids

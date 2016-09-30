@@ -60,6 +60,7 @@ def assert_image_fields_exist(data, version='v1'):
         'url',
         'last_modified_time',
         'license',
+        'photographer_name',
     )
     if version == 'v0.1':
         fields += (

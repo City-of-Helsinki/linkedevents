@@ -31,8 +31,9 @@ from django.contrib.contenttypes.models import ContentType
 from events import translation_utils
 from django.utils.encoding import python_2_unicode_compatible
 from django.contrib.postgres.fields import HStoreField
+from django.db import transaction
 from image_cropping import ImageRatioField
-
+from munigeo.models import AdministrativeDivision
 
 User = settings.AUTH_USER_MODEL
 
@@ -57,6 +58,8 @@ class SchemalessFieldMixin(models.Model):
 class DataSource(models.Model):
     id = models.CharField(max_length=100, primary_key=True)
     name = models.CharField(verbose_name=_('Name'), max_length=255)
+    api_key = models.CharField(max_length=128, blank=True, default='')
+    owner = models.ForeignKey('Organization', related_name='owned_system', null=True, blank=True)
 
     def __str__(self):
         return self.id
@@ -110,6 +113,7 @@ class Image(models.Model):
     url = models.URLField(verbose_name=_('Image'), max_length=400, null=True, blank=True)
     cropping = ImageRatioField('image', '800x800', verbose_name=_('Cropping'))
     license = models.ForeignKey(License, verbose_name=_('License'), related_name='images', default='cc_by')
+    photographer_name = models.CharField(verbose_name=_('Photographer name'), max_length=255, null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if not self.publisher:
@@ -128,7 +132,7 @@ class Image(models.Model):
 @python_2_unicode_compatible
 class BaseModel(models.Model):
     id = models.CharField(max_length=50, primary_key=True)
-    data_source = models.ForeignKey(DataSource, db_index=True)
+    data_source = models.ForeignKey(DataSource, related_name='provided_%(class)s_data', db_index=True)
 
     # Properties from schema.org/Thing
     name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True)
@@ -226,6 +230,7 @@ class KeywordSet(BaseModel):
     organization = models.ForeignKey(Organization, verbose_name=_('Organization which uses this set'), null=True)
     keywords = models.ManyToManyField(Keyword, blank=False, related_name='sets')
 
+
 class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     publisher = models.ForeignKey(Organization, verbose_name=_('Publisher'), db_index=True)
     info_url = models.URLField(verbose_name=_('Place home page'), blank=True, default='', max_length=1000)
@@ -248,6 +253,8 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     address_country = models.CharField(verbose_name=_('Country'), max_length=2, null=True, blank=True)
 
     deleted = models.BooleanField(verbose_name=_('Deleted'), default=False)
+    divisions = models.ManyToManyField(AdministrativeDivision, verbose_name=_('Divisions'), related_name='places',
+                                       blank=True)
 
     geo_objects = models.GeoManager()
 
@@ -261,6 +268,17 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
             self.street_address, self.postal_code, self.address_locality
         ])
         return u', '.join(values)
+
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
+        if self.position:
+            self.divisions = AdministrativeDivision.objects.filter(
+                type__type__in=('district', 'sub_district', 'neighborhood', 'muni'),
+                geometry__boundary__contains=self.position)
+        else:
+            self.divisions.clear()
 
 reversion.register(Place)
 
