@@ -153,7 +153,7 @@ def administrative_division(administrative_division_type, municipality):
     division = AdministrativeDivision.objects.create(
         name_en='test division',
         type=administrative_division_type,
-        ocd_id='test_division_ocd_id',
+        ocd_id='ocd-division/test:1',
         municipality=municipality,
     )
     coords = ((0, 0), (0, 200), (200, 200), (200, 0), (0, 0))
@@ -166,7 +166,7 @@ def administrative_division2(administrative_division_type):
     division = AdministrativeDivision.objects.create(
         name_en='test division 2',
         type=administrative_division_type,
-        ocd_id='test_division2_ocd_id'
+        ocd_id='ocd-division/test:2'
     )
     coords = ((100, 100), (100, 300), (300, 300), (300, 100), (100, 100))
     AdministrativeDivisionGeometry.objects.create(division=division, boundary=MultiPolygon([Polygon(coords)]))

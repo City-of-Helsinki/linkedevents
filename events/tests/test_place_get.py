@@ -41,5 +41,5 @@ def test_get_place_list_check_division(api_client, place, administrative_divisio
 
     assert division['type'] == 'neighborhood'
     assert division['name'] == {'en': 'test division'}
-    assert division['ocd_id'] == 'test_division_ocd_id'
+    assert division['ocd_id'] == 'ocd-division/test:1'
     assert division['municipality'] == 'test municipality'
