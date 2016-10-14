@@ -7,7 +7,8 @@ from django.utils.translation import ugettext_lazy as _
 
 class ApiKeyAuthentication(authentication.BaseAuthentication):
     def authenticate(self, request):
-        api_key = request.META.get('apikey')
+        # django converts 'apikey' to 'HTTP_APIKEY' outside runserver
+        api_key = request.META.get('apikey') or request.META.get('HTTP_APIKEY')
         if not api_key:
             return None
         data_source = self.get_data_source(api_key=api_key)

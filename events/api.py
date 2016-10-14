@@ -1290,8 +1290,27 @@ def _filter_event_queryset(queryset, params, srs=None):
     return queryset
 
 
+class DivisionFilter(django_filters.Filter):
+    """
+    Depending on the deployment location, offers simpler filtering by appending
+    country and municipality information from local settings.
+    """
+
+    def filter(self, qs, value):
+        if hasattr(settings, 'MUNIGEO_MUNI') and hasattr(settings, 'MUNIGEO_COUNTRY'):
+            for i, item in enumerate(value):
+                if not item.startswith('ocd-division'):
+                    if not item.startswith('country'):
+                        if not item.startswith('kunta'):
+                            item = settings.MUNIGEO_MUNI + '/' + item
+                        item = settings.MUNIGEO_COUNTRY + '/' + item
+                    item = 'ocd-division/' + item
+                value[i] = item
+        return super().filter(qs, value)
+
+
 class EventFilter(filters.FilterSet):
-    division = django_filters.Filter(name='location__divisions__ocd_id', lookup_type='in',
+    division = DivisionFilter(name='location__divisions__ocd_id', lookup_expr='in',
                                      widget=django_filters.widgets.CSVWidget())
 
     class Meta:

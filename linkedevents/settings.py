@@ -96,6 +96,9 @@ LANGUAGE_CODE = 'fi'
 
 TIME_ZONE = 'Europe/Helsinki'
 
+MUNIGEO_COUNTRY = 'country:fi'
+MUNIGEO_MUNI = 'kunta:helsinki'
+
 SYSTEM_DATA_SOURCE_ID = 'system'
 
 
