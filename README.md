@@ -12,6 +12,11 @@ Linked Events provides categorized data on events and places. The project was or
 Installation
 ------------
 
+Prepare virtualenv
+
+     virtualenv -p /usr/bin/python3 ~/.virtualenvs/
+     workon linkedevents
+
 Install required Python packages
 
 ```
