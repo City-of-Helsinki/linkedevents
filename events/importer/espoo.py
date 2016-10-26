@@ -98,8 +98,8 @@ YSO_KEYWORD_MAPS = {
     u'pelitapahtumat': u'p6062',  # -> pelit
     u'satutunnit': u'p14710',
     u'koululaiset': u'p16485',
-    u'lasten ja nuorten tapahtumat': (u'p12262', u'p11617'),  # -> lapset, nuoret
-    u'lapset ja perheet': (u'p12262', u'p4363'),  # -> lapset, perheet
+    u'lasten ja nuorten tapahtumat': (u'p4354', u'p11617'),  # -> lapset, nuoret
+    u'lapset ja perheet': (u'p4354', u'p4363'),  # -> lapset, perheet
     u'lukupiirit': u'p11406',  # -> lukeminen
 }
 
