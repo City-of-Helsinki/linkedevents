@@ -4,7 +4,7 @@
 #
 #    pip-compile --output-file requirements.txt requirements.in
 #
--e git+https://github.com/City-of-Helsinki/django-helusers#egg=django-helusers
+-e git+https://github.com/City-of-Helsinki/django-helusers@v0.1#egg=django-helusers
 -e git+https://github.com/City-of-Helsinki/munigeo#egg=django-munigeo
 astroid==1.4.8            # via pylint
 bleach==1.5.0
