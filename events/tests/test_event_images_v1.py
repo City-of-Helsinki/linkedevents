@@ -189,6 +189,33 @@ def test__upload_an_image(api_client, settings, list_url, image_data, user, orga
     assert image.format == 'PNG'
 
 
+@override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL='')
+@pytest.mark.django_db
+def test__upload_an_image_with_api_key(api_client, settings, list_url, image_data, data_source, organization):
+    data_source.owner = organization
+    data_source.save()
+    api_client.credentials(apikey=data_source.api_key)
+
+    response = api_client.post(list_url, image_data)
+    assert response.status_code == 201
+    assert Image.objects.all().count() == 1
+
+    image = Image.objects.get(pk=response.data['id'])
+    assert image.created_by is None
+    assert image.last_modified_by is None
+    assert image.publisher == organization
+
+    # image url should contain the image file's path relative to MEDIA_ROOT.
+    assert image.image.url.startswith('images/test_image')
+    assert image.image.url.endswith('.png')
+
+    # check the actual image file
+    image_path = os.path.join(settings.MEDIA_ROOT, image.image.url)
+    image = PILImage.open(image_path)
+    assert image.size == (512, 256)
+    assert image.format == 'PNG'
+
+
 @pytest.mark.django_db
 def test__image_cannot_be_edited_outside_organization(api_client, settings, list_url, image_data, user, organization, user2):
     organization.admin_users.add(user)
@@ -205,6 +232,34 @@ def test__image_cannot_be_edited_outside_organization(api_client, settings, list
 
     # other users cannot edit or delete the image
     api_client.force_authenticate(user2)
+    detail_url = reverse('image-detail', kwargs={'pk': response.data['id']})
+    new_image_data = response.data
+    new_image_data['url'] = 'https://commons.wikimedia.org/wiki/File:Common_Squirrel.jpg'
+    response2 = api_client.put(detail_url, response.data)
+    assert response2.status_code == 403
+    response3 = api_client.delete(detail_url)
+    assert response3.status_code == 403
+
+
+@pytest.mark.django_db
+def test__image_cannot_be_edited_outside_organization_with_apikey(api_client, settings, list_url, image_data, user, organization, organization2, other_data_source):
+    organization.admin_users.add(user)
+    api_client.force_authenticate(user)
+
+    response = api_client.post(list_url, image_data)
+    assert response.status_code == 201
+    assert Image.objects.all().count() == 1
+
+    image = Image.objects.get(pk=response.data['id'])
+    assert image.created_by == user
+    assert image.last_modified_by == user
+    assert image.publisher == organization
+
+    # api key user cannot edit or delete the image
+    other_data_source.owner = organization2
+    other_data_source.save()
+    api_client.credentials(apikey=other_data_source.api_key)
+
     detail_url = reverse('image-detail', kwargs={'pk': response.data['id']})
     new_image_data = response.data
     new_image_data['url'] = 'https://commons.wikimedia.org/wiki/File:Common_Squirrel.jpg'
@@ -254,6 +309,25 @@ def test__upload_an_url(api_client, settings, list_url, image_url, user):
 
 
 @pytest.mark.django_db
+def test__upload_an_url_with_api_key(api_client, settings, list_url, image_url, data_source, organization):
+    data_source.owner = organization
+    data_source.save()
+    api_client.credentials(apikey=data_source.api_key)
+
+    response = api_client.post(list_url, image_url)
+    assert response.status_code == 201
+    assert Image.objects.all().count() == 1
+
+    image = Image.objects.get(pk=response.data['id'])
+    assert image.created_by is None
+    assert image.last_modified_by is None
+    assert image.publisher == organization
+
+    # image url should stay the same as when input
+    assert image.url == 'https://commons.wikimedia.org/wiki/File:Common_Squirrel.jpg'
+
+
+@pytest.mark.django_db
 def test__upload_an_image_and_url(api_client, settings, list_url, image_data, image_url, user):
     api_client.force_authenticate(user)
 
@@ -290,6 +364,36 @@ def test__delete_an_image(api_client, settings, user):
 
     # check that the image file is deleted
     assert not os.path.isfile(image_path)
+
+
+@override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL='')
+@pytest.mark.django_db(transaction=True)  # transaction is needed for django-cleanup
+def test__delete_an_image_with_api_key(api_client, settings, organization, data_source):
+    data_source.owner = organization
+    data_source.save()
+    api_client.credentials(apikey=data_source.api_key)
+
+    image_file = create_in_memory_image_file(name='existing_test_image')
+    uploaded_image = SimpleUploadedFile(
+        'existing_test_image.png',
+        image_file.read(),
+        'image/png',
+    )
+    existing_image = Image.objects.create(image=uploaded_image)
+    assert Image.objects.all().count() == 1
+
+    # verify that the image file exists at first just in case
+    image_path = os.path.join(settings.MEDIA_ROOT, existing_image.image.url)
+    assert os.path.isfile(image_path)
+
+    detail_url = reverse('image-detail', kwargs={'pk': existing_image.pk})
+    response = api_client.delete(detail_url)
+    assert response.status_code == 204
+    assert Image.objects.all().count() == 0
+
+    # check that the image file is deleted
+    assert not os.path.isfile(image_path)
+
 
 
 @override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL='')
