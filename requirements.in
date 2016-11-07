@@ -27,7 +27,7 @@ icalendar
 httmock
 bleach
 django-haystack
-elasticsearch
+elasticsearch<5.0
 raven
 -e git+https://github.com/City-of-Helsinki/django-helusers#egg=django-helusers
 pytest-django
