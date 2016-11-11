@@ -27,9 +27,9 @@ icalendar
 httmock
 bleach
 django-haystack
-elasticsearch
+elasticsearch<5.0
 raven
--e git+https://github.com/City-of-Helsinki/django-helusers#egg=django-helusers
+-e git+https://github.com/City-of-Helsinki/django-helusers@v0.1#egg=django-helusers
 pytest-django
 pip-tools
 django-image-cropping
