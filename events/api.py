@@ -1381,6 +1381,7 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
 
     """
     queryset = Event.objects.filter(deleted=False)
+    queryset = queryset.exclude(is_recurring_super=True, sub_events=None)
     # Use select_ and prefetch_related() to reduce the amount of queries
     queryset = queryset.select_related('location')
     queryset = queryset.prefetch_related(
