@@ -1111,7 +1111,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
     class Meta:
         model = Event
-        exclude = ['deleted']
+        exclude = ['is_recurring_super', 'deleted']
         list_serializer_class = BulkListSerializer
 
 
