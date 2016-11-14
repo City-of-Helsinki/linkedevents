@@ -25,6 +25,7 @@ django-modeltranslation==0.12
 django-mptt==0.8.6
 django-reversion==2.0.7
 django==1.9.11
+djangorestframework-bulk==0.2.1
 djangorestframework-gis==0.10.1
 djangorestframework-jwt==1.8.0
 djangorestframework==3.3.3
@@ -66,4 +67,4 @@ wrapt==1.10.8             # via astroid
 
 # The following packages are commented out because they are
 # considered to be unsafe in a requirements file:
-# setuptools                # via icalendar
+# setuptools                # via djangorestframework-bulk, icalendar

@@ -41,6 +41,7 @@ from munigeo.api import (
     GeoModelSerializer, GeoModelAPIView, build_bbox_filter, srid_to_srs
 )
 from munigeo.models import AdministrativeDivision
+from rest_framework_bulk import BulkListSerializer, BulkModelViewSet
 import pytz
 import bleach
 import django_filters
@@ -1102,6 +1103,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     class Meta:
         model = Event
         exclude = ['is_recurring_super', 'deleted']
+        list_serializer_class = BulkListSerializer
+
 
 def _format_images_v0_1(data):
     if 'images' not in data:
@@ -1318,7 +1321,7 @@ class EventFilter(filters.FilterSet):
         fields = ('division',)
 
 
-class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
+class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
     """
     # Filtering retrieved events
 
@@ -1439,6 +1442,9 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
         queryset = _filter_event_queryset(queryset, self.request.query_params,
                                           srs=self.srs)
         return queryset.filter()
+
+    def allow_bulk_destroy(self, qs, filtered):
+        return False
 
 
 register_view(EventViewSet, 'event')

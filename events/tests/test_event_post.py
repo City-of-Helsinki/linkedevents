@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from copy import deepcopy
 from datetime import timedelta
 
 import pytest
@@ -334,3 +335,30 @@ def test_name_required_in_some_language(api_client, minimal_event_dict, user, na
 
     if not is_valid:
         assert force_text(response.data['name'][0]) == 'The name must be specified.'
+
+
+@pytest.mark.django_db
+def test_multiple_event_creation(api_client, minimal_event_dict, user):
+    api_client.force_authenticate(user)
+    minimal_event_dict_2 = deepcopy(minimal_event_dict)
+    minimal_event_dict_2['name']['fi'] = 'testing_2'
+
+    response = api_client.post(reverse('event-list'), [minimal_event_dict, minimal_event_dict_2], format='json')
+    assert response.status_code == 201
+
+    event_names = set(Event.objects.values_list('name_fi', flat=True))
+    assert event_names == {'testing', 'testing_2'}
+
+
+@pytest.mark.django_db
+def test_multiple_event_creation_second_fails(api_client, minimal_event_dict, user):
+    api_client.force_authenticate(user)
+    minimal_event_dict_2 = deepcopy(minimal_event_dict)
+    minimal_event_dict_2.pop('name')  # name is required, so the event update event should fail
+
+    response = api_client.post(reverse('event-list'), [minimal_event_dict, minimal_event_dict_2], format='json')
+    assert response.status_code == 400
+    assert 'name' in response.data[1]
+
+    # the first event should not be created either
+    assert Event.objects.count() == 0

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from datetime import timedelta
+from copy import deepcopy
 from django.utils import timezone
 
 import pytest
@@ -388,3 +389,51 @@ def test__empty_api_key_cannot_update_an_event(api_client, event, complex_event_
     response = update_with_put(api_client, detail_url, complex_event_dict,
                                credentials={'apikey': ''})
     assert response.status_code == 401
+
+
+@pytest.mark.django_db
+def test_multiple_event_update(api_client, minimal_event_dict, user):
+    api_client.force_authenticate(user)
+    minimal_event_dict_2 = deepcopy(minimal_event_dict)
+    minimal_event_dict_2['name']['fi'] = 'testing_2'
+
+    # create events first
+    resp = create_with_post(api_client, minimal_event_dict)
+    minimal_event_dict['id'] = resp.data['id']
+    resp = create_with_post(api_client, minimal_event_dict_2)
+    minimal_event_dict_2['id'] = resp.data['id']
+
+    minimal_event_dict['name']['fi'] = 'updated_name'
+    minimal_event_dict_2['name']['fi'] = 'updated_name_2'
+
+    response = api_client.put(reverse('event-list'), [minimal_event_dict, minimal_event_dict_2], format='json')
+    assert response.status_code == 200
+
+    event_names = set(Event.objects.values_list('name_fi', flat=True))
+
+    assert event_names == {'updated_name', 'updated_name_2'}
+
+
+@pytest.mark.django_db
+def test_multiple_event_update_second_fails(api_client, minimal_event_dict, user):
+    api_client.force_authenticate(user)
+    minimal_event_dict_2 = deepcopy(minimal_event_dict)
+    minimal_event_dict_2['name']['fi'] = 'testing_2'
+
+    # create events first
+    resp = create_with_post(api_client, minimal_event_dict)
+    minimal_event_dict['id'] = resp.data['id']
+    resp = create_with_post(api_client, minimal_event_dict_2)
+    minimal_event_dict_2['id'] = resp.data['id']
+
+    minimal_event_dict['name']['fi'] = 'updated_name'
+    minimal_event_dict_2.pop('name')  # name is required, so the event update event should fail
+
+    response = api_client.put(reverse('event-list'), [minimal_event_dict, minimal_event_dict_2], format='json')
+    assert response.status_code == 400
+    assert 'name' in response.data[1]
+
+    event_names = set(Event.objects.values_list('name_fi', flat=True))
+
+    # verify that first event isn't updated either
+    assert event_names == {'testing', 'testing_2'}
