@@ -3,6 +3,7 @@ from .utils import versioned_reverse as reverse
 import pytest
 from .utils import get, assert_fields_exist
 from django.conf import settings
+from events.models import Event
 
 
 # === util methods ===
@@ -48,7 +49,8 @@ def assert_event_fields_exist(data, version='v1'):
         'short_description',
         'start_time',
         'sub_events',
-        'super_event'
+        'super_event',
+        'super_event_type',
     )
     if version == 'v0.1':
         fields += (
@@ -134,7 +136,7 @@ def test_get_event_list_verify_division_filter(api_client, event, event2, event3
 
 @pytest.mark.django_db
 def test_get_event_list_check_super_event_with_subevents_excluded(api_client, event, event2):
-    event.is_recurring_super = True
+    event.super_event_type = Event.SuperEventType.RECURRING
     event.save()
     response = get_list(api_client)
 

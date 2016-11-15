@@ -1102,7 +1102,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
     class Meta:
         model = Event
-        exclude = ['is_recurring_super', 'deleted']
+        exclude = ['deleted']
         list_serializer_class = BulkListSerializer
 
 
@@ -1270,9 +1270,9 @@ def _filter_event_queryset(queryset, params, srs=None):
     if val:
         val = val.lower()
         if val == 'super':
-            queryset = queryset.filter(is_recurring_super=True)
+            queryset = queryset.filter(super_event_type=Event.SUPER_EVENT_TYPE.RECURRING)
         elif val == 'sub':
-            queryset = queryset.filter(is_recurring_super=False)
+            queryset = queryset.exclude(super_event_type=Event.SUPER_EVENT_TYPE.RECURRING)
 
     val = params.get('max_duration', None)
     if val:
@@ -1381,7 +1381,7 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
 
     """
     queryset = Event.objects.filter(deleted=False)
-    queryset = queryset.exclude(is_recurring_super=True, sub_events=None)
+    queryset = queryset.exclude(super_event_type=Event.SuperEventType.RECURRING, sub_events=None)
     # Use select_ and prefetch_related() to reduce the amount of queries
     queryset = queryset.select_related('location')
     queryset = queryset.prefetch_related(
