@@ -1,4 +1,4 @@
-{% extends "rest_framework/base.html" %}
+{% extends "rest_framework/api.html" %}
 
 {% block branding %}
   <a class='navbar-brand' rel="nofollow" href='#'>
@@ -51,4 +51,5 @@ These images are marked as <em>event_only</em> in the API. The <em>event_only</e
 </div>
 {% include "rest_framework/description.html" %}
 {% endif %}
+    {{ block.super }}
 {% endblock %}
