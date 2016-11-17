@@ -8,9 +8,11 @@ from events.models import Event
 
 # === util methods ===
 
-def get_list(api_client, version='v1', data=None):
-    list_url = reverse('event-list', version=version)
-    return get(api_client, list_url, data=data)
+def get_list(api_client, version='v1', data=None, query_string=None):
+    url = reverse('event-list', version=version)
+    if query_string:
+        url = '%s?%s' % (url, query_string)
+    return get(api_client, url, data=data)
 
 
 def get_detail(api_client, detail_pk, version='v1', data=None):
@@ -150,3 +152,25 @@ def test_get_event_list_check_super_event_with_subevents_excluded(api_client, ev
     # the first event has a sub event now, expect it to be included
     response = get_list(api_client)
     assert len(response.data['data']) == 2
+
+
+@pytest.mark.django_db
+def test_super_event_type_filter(api_client, event, event2):
+    event.super_event_type = Event.SuperEventType.RECURRING
+    event.save()
+    event2.super_event = event
+    event2.save()
+
+    # "none" and "null" should return only the non super event
+    for value in ('none', 'null'):
+        response = get_list(api_client, query_string='super_event_type=%s' % value)
+        ids = {e['id'] for e in response.data['data']}
+        assert ids == {event2.id}
+
+    # "recurring" should return only the recurring super event
+    response = get_list(api_client, query_string='super_event_type=recurring')
+    ids = {e['id'] for e in response.data['data']}
+    assert ids == {event.id}
+
+    response = get_list(api_client, query_string='super_event_type=fwfiuwhfiuwhiw')
+    assert len(response.data['data']) == 0

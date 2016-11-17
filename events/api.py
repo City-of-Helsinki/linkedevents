@@ -1314,11 +1314,17 @@ class DivisionFilter(django_filters.Filter):
 
 class EventFilter(filters.FilterSet):
     division = DivisionFilter(name='location__divisions__ocd_id', lookup_expr='in',
-                                     widget=django_filters.widgets.CSVWidget())
+                              widget=django_filters.widgets.CSVWidget())
+    super_event_type = django_filters.CharFilter(method='filter_super_event_type')
 
     class Meta:
         model = Event
-        fields = ('division',)
+        fields = ('division', 'super_event_type')
+
+    def filter_super_event_type(self, queryset, name, value):
+        if value in ('null', 'none'):
+            value = None
+        return queryset.filter(super_event_type=value)
 
 
 class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
