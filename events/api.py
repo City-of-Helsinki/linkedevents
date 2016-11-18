@@ -41,6 +41,7 @@ from munigeo.api import (
     GeoModelSerializer, GeoModelAPIView, build_bbox_filter, srid_to_srs
 )
 from munigeo.models import AdministrativeDivision
+from rest_framework_bulk import BulkListSerializer, BulkModelViewSet
 import pytz
 import bleach
 import django_filters
@@ -1101,7 +1102,9 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
     class Meta:
         model = Event
-        exclude = ['is_recurring_super', 'deleted']
+        exclude = ['deleted']
+        list_serializer_class = BulkListSerializer
+
 
 def _format_images_v0_1(data):
     if 'images' not in data:
@@ -1267,9 +1270,9 @@ def _filter_event_queryset(queryset, params, srs=None):
     if val:
         val = val.lower()
         if val == 'super':
-            queryset = queryset.filter(is_recurring_super=True)
+            queryset = queryset.filter(super_event_type=Event.SUPER_EVENT_TYPE.RECURRING)
         elif val == 'sub':
-            queryset = queryset.filter(is_recurring_super=False)
+            queryset = queryset.exclude(super_event_type=Event.SUPER_EVENT_TYPE.RECURRING)
 
     val = params.get('max_duration', None)
     if val:
@@ -1311,14 +1314,20 @@ class DivisionFilter(django_filters.Filter):
 
 class EventFilter(filters.FilterSet):
     division = DivisionFilter(name='location__divisions__ocd_id', lookup_expr='in',
-                                     widget=django_filters.widgets.CSVWidget())
+                              widget=django_filters.widgets.CSVWidget())
+    super_event_type = django_filters.CharFilter(method='filter_super_event_type')
 
     class Meta:
         model = Event
-        fields = ('division',)
+        fields = ('division', 'super_event_type')
+
+    def filter_super_event_type(self, queryset, name, value):
+        if value in ('null', 'none'):
+            value = None
+        return queryset.filter(super_event_type=value)
 
 
-class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
+class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
     """
     # Filtering retrieved events
 
@@ -1378,6 +1387,7 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
 
     """
     queryset = Event.objects.filter(deleted=False)
+    queryset = queryset.exclude(super_event_type=Event.SuperEventType.RECURRING, sub_events=None)
     # Use select_ and prefetch_related() to reduce the amount of queries
     queryset = queryset.select_related('location')
     queryset = queryset.prefetch_related(
@@ -1439,6 +1449,9 @@ class EventViewSet(viewsets.ModelViewSet, JSONAPIViewSet):
         queryset = _filter_event_queryset(queryset, self.request.query_params,
                                           srs=self.srs)
         return queryset.filter()
+
+    def allow_bulk_destroy(self, qs, filtered):
+        return False
 
 
 register_view(EventViewSet, 'event')

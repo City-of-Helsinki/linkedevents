@@ -324,6 +324,14 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         (Status.RESCHEDULED, "EventRescheduled"),
     )
 
+    class SuperEventType:
+        RECURRING = 'recurring'
+
+    SUPER_EVENT_TYPES = (
+        (SuperEventType.RECURRING, _('Recurring')),
+        # Other types include e.g. a festival
+    )
+
     # Properties from schema.org/Thing
     info_url = models.URLField(verbose_name=_('Event home page'), blank=True, null=True, max_length=1000)
     description = models.TextField(verbose_name=_('Description'), blank=True, null=True)
@@ -368,7 +376,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     super_event = TreeForeignKey('self', null=True, blank=True,
                                  on_delete=models.SET_NULL, related_name='sub_events')
 
-    is_recurring_super = models.BooleanField(default=False)
+    super_event_type = models.CharField(max_length=255, blank=True, null=True, default=None, choices=SUPER_EVENT_TYPES)
 
     in_language = models.ManyToManyField(Language, verbose_name=_('In language'), related_name='events', blank=True)
 

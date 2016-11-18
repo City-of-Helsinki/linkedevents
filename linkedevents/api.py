@@ -1,9 +1,16 @@
-from rest_framework.routers import DefaultRouter
+import copy
+from rest_framework.routers import DefaultRouter, SimpleRouter
 from events.api import all_views as events_views
 from helevents.api import all_views as users_views
 
 
 class LinkedEventsAPIRouter(DefaultRouter):
+    # these are from Django REST Framework bulk BulkRouter with 'delete' excluded
+    routes = copy.deepcopy(SimpleRouter.routes)
+    routes[0].mapping.update({
+        'put': 'bulk_update',
+        'patch': 'partial_bulk_update',
+    })
 
     def __init__(self):
         super(LinkedEventsAPIRouter, self).__init__()
