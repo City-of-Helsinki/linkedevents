@@ -385,6 +385,27 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
             if 'disable_camelcase' in request.query_params:
                 self.disable_camelcase = True
 
+        # for post and put methods, user information is needed to restrict permissions at validate
+        if context is not None:
+            self.method = self.context['request'].method
+            self.user = self.context['request'].user
+            if self.method in permissions.SAFE_METHODS:
+                return
+            # api_key takes precedence over user
+            if isinstance(self.context['request'].auth, ApiKeyAuth):
+                self.data_source = self.context['request'].auth.get_authenticated_data_source()
+                self.publisher = self.data_source.owner
+                if not self.publisher:
+                    raise PermissionDenied(_("Data source doesn't belong to any organization"))
+            else:
+                # objects created by api are marked coming from the system data source unless api_key is provided
+                self.data_source = DataSource.objects.get(id=settings.SYSTEM_DATA_SOURCE_ID)
+                # user organization is used unless api_key is provided
+                self.publisher = self.user.get_default_organization()
+                if not self.publisher:
+                    raise PermissionDenied(_("User doesn't belong to any organization"))
+
+
     def to_internal_value(self, data):
         for field in self.system_generated_fields:
             if field in data:
@@ -808,25 +829,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         # The following can be used when serializing when
         # testing and debugging.
         self.skip_empties = skip_empties
-
-        # for post and put methods, user information is needed to restrict permissions at validate
-        self.method = self.context['request'].method
-        self.user = self.context['request'].user
-        if self.method in permissions.SAFE_METHODS:
-            return
-        # api_key takes precedence over user
-        if isinstance(self.context['request'].auth, ApiKeyAuth):
-            self.data_source = self.context['request'].auth.get_authenticated_data_source()
-            self.publisher = self.data_source.owner
-            if not self.publisher:
-                raise PermissionDenied(_("Data source doesn't belong to any organization"))
-        else:
-            # events created by api are marked coming from the system data source unless api_key is provided
-            self.data_source = DataSource.objects.get(id=settings.SYSTEM_DATA_SOURCE_ID)
-            # user organization is used unless api_key is provided
-            self.publisher = self.user.get_default_organization()
-            if not self.publisher:
-                raise PermissionDenied(_("User doesn't belong to any organization"))
 
     def get_datetimes(self, data):
         for field in ['date_published', 'start_time', 'end_time']:

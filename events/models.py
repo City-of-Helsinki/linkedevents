@@ -102,6 +102,7 @@ class Image(models.Model):
     # Properties from schema.org/Thing
     name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True, default='')
 
+    data_source = models.ForeignKey(DataSource, related_name='provided_%(class)s_data', db_index=True, null=True)
     publisher = models.ForeignKey('Organization', verbose_name=_('Publisher'), db_index=True, null=True, blank=True, related_name='Published_images')
 
     created_time = models.DateTimeField(auto_now_add=True)
