@@ -130,6 +130,16 @@ class Image(models.Model):
         self.last_modified_time = BaseModel.now()
         super(Image, self).save(*args, **kwargs)
 
+    def is_user_editable(self):
+        return self.data_source_id == settings.SYSTEM_DATA_SOURCE_ID
+
+    def is_admin(self, user):
+        if user.is_superuser:
+            return True
+        else:
+            return user in self.publisher.admin_users.all()
+
+
 @python_2_unicode_compatible
 class BaseModel(models.Model):
     id = models.CharField(max_length=50, primary_key=True)
@@ -421,7 +431,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
             val.append(str(self.start_time))
         return u" ".join(val)
 
-    def is_editable(self):
+    def is_user_editable(self):
         return self.data_source_id == settings.SYSTEM_DATA_SOURCE_ID
 
     def is_admin(self, user):

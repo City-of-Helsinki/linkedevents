@@ -61,6 +61,7 @@ def assert_image_fields_exist(data, version='v1'):
         'last_modified_time',
         'license',
         'photographer_name',
+        'data_source',
     )
     if version == 'v0.1':
         fields += (
@@ -217,7 +218,7 @@ def test__upload_an_image_with_api_key(api_client, settings, list_url, image_dat
 
 
 @pytest.mark.django_db
-def test__image_cannot_be_edited_outside_organization(api_client, settings, list_url, image_data, user, organization, user2):
+def test__image_cannot_be_edited_outside_organization(api_client, settings, list_url, image_data, user, organization, organization2, user2):
     organization.admin_users.add(user)
     api_client.force_authenticate(user)
 
@@ -231,10 +232,12 @@ def test__image_cannot_be_edited_outside_organization(api_client, settings, list
     assert image.publisher == organization
 
     # other users cannot edit or delete the image
+    organization2.admin_users.add(user2)
     api_client.force_authenticate(user2)
     detail_url = reverse('image-detail', kwargs={'pk': response.data['id']})
     new_image_data = response.data
     new_image_data['url'] = 'https://commons.wikimedia.org/wiki/File:Common_Squirrel.jpg'
+    new_image_data['publisher'] = 'test_organization2'
     response2 = api_client.put(detail_url, response.data)
     assert response2.status_code == 403
     response3 = api_client.delete(detail_url)
@@ -258,11 +261,14 @@ def test__image_cannot_be_edited_outside_organization_with_apikey(api_client, se
     # api key user cannot edit or delete the image
     other_data_source.owner = organization2
     other_data_source.save()
+    api_client.force_authenticate(user=None)
     api_client.credentials(apikey=other_data_source.api_key)
 
     detail_url = reverse('image-detail', kwargs={'pk': response.data['id']})
     new_image_data = response.data
     new_image_data['url'] = 'https://commons.wikimedia.org/wiki/File:Common_Squirrel.jpg'
+    new_image_data['data_source'] = 'testotherdatasourceid'
+    new_image_data['publisher'] = 'test_organization2'
     response2 = api_client.put(detail_url, response.data)
     assert response2.status_code == 403
     response3 = api_client.delete(detail_url)
@@ -293,7 +299,8 @@ def test__create_an_event_with_uploaded_image(api_client, list_url, event_list_u
 
 
 @pytest.mark.django_db
-def test__upload_an_url(api_client, settings, list_url, image_url, user):
+def test__upload_an_url(api_client, settings, list_url, image_url, user, organization):
+    organization.admin_users.add(user)
     api_client.force_authenticate(user)
 
     response = api_client.post(list_url, image_url)
@@ -328,7 +335,8 @@ def test__upload_an_url_with_api_key(api_client, settings, list_url, image_url, 
 
 
 @pytest.mark.django_db
-def test__upload_an_image_and_url(api_client, settings, list_url, image_data, image_url, user):
+def test__upload_an_image_and_url(api_client, settings, list_url, image_data, image_url, user, organization):
+    organization.admin_users.add(user)
     api_client.force_authenticate(user)
 
     image_data_and_url = image_data.copy()
@@ -379,7 +387,7 @@ def test__delete_an_image_with_api_key(api_client, settings, organization, data_
         image_file.read(),
         'image/png',
     )
-    existing_image = Image.objects.create(image=uploaded_image)
+    existing_image = Image.objects.create(image=uploaded_image, data_source=data_source)
     assert Image.objects.all().count() == 1
 
     # verify that the image file exists at first just in case
@@ -398,7 +406,8 @@ def test__delete_an_image_with_api_key(api_client, settings, organization, data_
 
 @override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL='')
 @pytest.mark.django_db
-def test__upload_a_non_valid_image(api_client, list_url, user):
+def test__upload_a_non_valid_image(api_client, list_url, user, organization):
+    organization.admin_users.add(user)
     api_client.force_authenticate(user)
 
     non_image_file = BytesIO(bytes(random.getrandbits(8) for _ in range(100)))
@@ -409,7 +418,8 @@ def test__upload_a_non_valid_image(api_client, list_url, user):
 
 
 @pytest.mark.django_db
-def test__upload_an_invalid_dict(api_client, list_url, user):
+def test__upload_an_invalid_dict(api_client, list_url, user, organization):
+    organization.admin_users.add(user)
     api_client.force_authenticate(user)
     response = api_client.post(list_url, {'name': 'right', 'key': 'wrong'})
     assert response.status_code == 400
