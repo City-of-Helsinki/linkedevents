@@ -489,6 +489,7 @@ def _clean_qp(query_params):
 
 class KeywordSerializer(LinkedEventsSerializer):
     view_name = 'keyword-detail'
+    alt_labels = serializers.SlugRelatedField(slug_field='name', read_only=True, many=True)
 
     class Meta:
         model = Keyword
