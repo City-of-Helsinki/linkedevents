@@ -1264,7 +1264,7 @@ def _filter_event_queryset(queryset, params, srs=None):
     val = params.get('keyword', None)
     if val:
         val = val.split(',')
-        queryset = queryset.filter(keywords__pk__in=val)
+        queryset = queryset.filter(Q(keywords__pk__in=val) | Q(audience__pk__in=val))
 
     # Filter only super or sub events if recurring has value
     val = params.get('recurring', None)
