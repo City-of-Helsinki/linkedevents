@@ -134,5 +134,5 @@ def test_create_event(data_source, yso_keyword, datadir):
     assert event.custom_data['PrimaryPhoneNumber'] == u"+358981657052"
     assert event.location_extra_info == u"Espoon kaupunginmuseo KAMU, N\u00e4yttelykeskus WeeGee"
     assert event.location_id
-    keywords = Keyword.objects.filter(event__id=event.id)
+    keywords = Keyword.objects.filter(events__id=event.id)
     assert len(keywords) == 24
