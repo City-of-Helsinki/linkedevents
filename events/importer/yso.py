@@ -36,7 +36,7 @@ def is_deprecated(graph, subject):
 def is_aggregate_concept(graph, subject):
     return (subject, SKOS.inScheme, rdflib.term.URIRef(yso+'aggregateconceptscheme')) in graph
 def allow_deprecating_keyword(keyword):
-    if keyword.event_set.all().exists() or keyword.audiences.all().exists():
+    if keyword.events.all().exists() or keyword.audience_events.all().exists():
         if keyword.id not in YSO_DEPRECATED_MAPS:
             raise Exception("Deprecating YSO keyword %s that is referenced in events %s. "
                             "No replacement keyword was found in YSO altLabels. Please manually map the "
@@ -131,24 +131,13 @@ class YsoImporter(Importer):
             check_deprecated_keyword = lambda obj: obj.deprecated
             # manually add new keywords to deprecated ones
             for old_id, new_id in YSO_DEPRECATED_MAPS.items():
-<<<<<<< HEAD
-                for event in Keyword.objects.get(id=old_id).event_set.all():
-                    new_keyword = Keyword.objects.get(id=new_id)
-                    event.keywords.add(new_keyword)
-                    print('Mapping event ' + str(event) + ' to keyword ' + str(new_keyword))
-                for event in Keyword.objects.get(id=old_id).audiences.all():
-                    new_keyword = Keyword.objects.get(id=new_id)
-                    event.audience.add(new_keyword)
-                    print('Mapping event ' + str(event) + ' to keyword ' + str(new_keyword))
-=======
                 old_keyword = Keyword.objects.get(id=old_id)
                 new_keyword = Keyword.objects.get(id=new_id)
                 print('Mapping events with %s to %s' % (str(old_keyword), str(new_keyword)))
                 new_keyword.events.add(*old_keyword.events.all())
                 new_keyword.audience_events.add(*old_keyword.audience_events.all())
->>>>>>> f9ae795... Nicify string formatting
 
-            queryset = Keyword.objects.filter(data_source=self.data_source)
+            queryset = Keyword.objects.filter(data_source=self.data_source, deprecated=False)
             syncher = ModelSyncher(
                 queryset, lambda keyword: keyword.id,
                 delete_func=deprecate_keyword,
@@ -255,12 +244,9 @@ class YsoImporter(Importer):
             print('Keyword ' + str(old_keyword) + ' may have been deprecated')
             # add any discovered keywords for deprecation checker
             YSO_DEPRECATED_MAPS[old_keyword.id] = keyword.id
-            for event in old_keyword.event_set.all():
-                print('Mapping event ' + str(event) + ' to keyword ' + str(keyword))
-                event.keywords.add(keyword)
-            for event in old_keyword.audiences.all():
-                print('Mapping event ' + str(event) + ' to keyword ' + str(keyword))
-                event.audience.add(keyword)
+            print('Mapping events with ' + str(old_keyword) + ' to ' + str(keyword))
+            keyword.events.add(*old_keyword.events.all())
+            keyword.audience_events.add(*old_keyword.audience_events.all())
         if not getattr(keyword, '_found', False):
             syncher.mark(keyword)
         return keyword
