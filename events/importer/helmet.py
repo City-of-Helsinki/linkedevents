@@ -28,6 +28,8 @@ YSO_KEYWORD_MAPS = {
     u'venäjä': u'p7643',  # -> venäjän kieli
     u'Seniorit': u'p2434',  # -> vanhukset
     u'Näyttelyt': u'p5121',
+    u'Toivoa kirjallisuudesta': u'p8113',  # -> kirjallisuus
+    u'Suomi 100': u'p29385',  # -> Suomi 100 vuotta -juhlavuosi
     u'Kirjallisuus': u'p8113',
     u'Kielikahvilat ja keskusteluryhmät': u'p18105',  # -> keskusteluryhmät
     u'Maahanmuuttajat': u'p6165',
