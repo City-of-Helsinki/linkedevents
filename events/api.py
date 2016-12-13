@@ -570,28 +570,39 @@ class KeywordListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
 
     def get_queryset(self):
         """
-        Return Keyword queryset. If request has parameter show_all_keywords=1
-        all Keywords are returned, otherwise only which have events.
-        Additional query parameters:
-        event.data_source
-        event.start
-        event.end
+        Return Keyword queryset.
+
+        If the request has no query parameters, we only return keywords that meet the following criteria:
+        -the keyword has events
+        -the keyword is in the YSO keyword set
+        -the keyword is not deprecated
+
+        If the request has the parameter show_all_keywords=1 all non-deprecated Keywords are returned.
+
+        Supported keyword filtering parameters:
+        data_source
+        show_all_keywords
+        show_deprecated
+
+        In addition, all query parameters supported by event filtering (other than data_source) are supported.
+        This will only return keywords that are present in events filtered with the parameters.
         """
         queryset = Keyword.objects.all()
         data_source = self.request.query_params.get('data_source')
         if data_source:
             data_source = data_source.lower()
             queryset = queryset.filter(data_source=data_source)
-        if not self.request.query_params.get('show_all_keywords'):
-            events = Event.objects.all()
-            params = _clean_qp(self.request.query_params)
-            if 'data_source' in params:
-                del params['data_source']
-            events = _filter_event_queryset(events, params)
-            keyword_ids = events.values_list('keywords',
-                                             flat=True).distinct().order_by()
-            queryset = queryset.filter(id__in=keyword_ids)
+        else:
+            if not self.request.query_params.get('show_all_keywords'):
+                events = Event.objects.all()
+                params = _clean_qp(self.request.query_params)
+                events = _filter_event_queryset(events, params)
+                keyword_ids = events.values_list('keywords',
+                                                 flat=True).distinct().order_by()
+                queryset = queryset.filter(data_source='yso').filter(id__in=keyword_ids)
 
+        if not self.request.query_params.get('show_deprecated'):
+            queryset = queryset.filter(deprecated=False)
         # Optionally filter keywords by filter parameter,
         # can be used e.g. with typeahead.js
         val = self.request.query_params.get('filter')
@@ -839,7 +850,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     # provider = OrganizationSerializer(hide_ld_context=True)
     keywords = JSONLDRelatedField(serializer=KeywordSerializer, many=True, allow_empty=False,
                                   required=False,
-                                  view_name='keyword-detail', queryset=Keyword.objects.all())
+                                  view_name='keyword-detail', queryset=Keyword.objects.filter(deprecated=False))
     super_event = JSONLDRelatedField(serializer='EventSerializer', required=False, view_name='event-detail',
                                      queryset=Event.objects.all(), allow_null=True)
     event_status = EnumChoiceField(Event.STATUSES, required=False)
@@ -858,7 +869,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     in_language = JSONLDRelatedField(serializer=LanguageSerializer, required=False,
                                      view_name='language-detail', many=True, queryset=Language.objects.all())
     audience = JSONLDRelatedField(serializer=KeywordSerializer, view_name='keyword-detail',
-                                  many=True, required=False, queryset=Keyword.objects.all())
+                                  many=True, required=False, queryset=Keyword.objects.filter(deprecated=False))
 
     view_name = 'event-detail'
     fields_needed_to_publish = ('keywords', 'location', 'start_time', 'short_description', 'description')

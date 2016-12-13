@@ -195,6 +195,9 @@ class Language(models.Model):
     id = models.CharField(max_length=6, primary_key=True)
     name = models.CharField(verbose_name=_('Name'), max_length=20)
 
+    def __str__(self):
+        return self.name
+
     class Meta:
         verbose_name = _('language')
         verbose_name_plural = _('languages')
@@ -204,6 +207,9 @@ class KeywordLabel(models.Model):
     name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True)
     language = models.ForeignKey(Language, blank=False, null=False)
 
+    def __str__(self):
+        return self.name + ' (' + str(self.language) + ')'
+
     class Meta:
         unique_together = (('name', 'language'),)
 
@@ -211,12 +217,18 @@ class KeywordLabel(models.Model):
 class Keyword(BaseModel):
     alt_labels = models.ManyToManyField(KeywordLabel, blank=True, related_name='keywords')
     aggregate = models.BooleanField(default=False)
+    deprecated = models.BooleanField(default=False, db_index=True)
     objects = models.Manager()
 
     schema_org_type = "Thing/LinkedEventKeyword"
 
     def __str__(self):
         return self.name
+
+    def deprecate(self):
+        self.deprecated = True
+        self.save(update_fields=['deprecated'])
+        return True
 
     class Meta:
         verbose_name = _('keyword')

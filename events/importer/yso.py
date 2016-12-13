@@ -19,10 +19,31 @@ from .base import Importer, register_importer
 yso = rdflib.Namespace('http://www.yso.fi/onto/yso/')
 URL = 'http://finto.fi/rest/v1/yso/data'
 
+YSO_DEPRECATED_MAPS = {
+    'yso:p11125': 'yso:p3602',  # tilat (kooste) -> tilat
+    'yso:p23756': 'yso:p2625',  # teatteri (kooste) -> teatteri
+    'yso:p12262': 'yso:p4354',  # lapset (kooste) -> lapset (ikäryhmät)
+    'yso:p21160': 'yso:p8113',  # kirjallisuus (erikoisala) -> kirjallisuus
+    'yso:p19403': 'yso:p11693',  # musikaalit (kooste) -> musikaalit
+    'yso:p21510': 'yso:p1808',  # musiikki (erikoisala) -> musiikki
+    'yso:p22439': 'yso:p1808',  # musiikki (kooste) -> musiikki
+    'yso:p22047': 'yso:p1278',  # tanssi (kooste) -> tanssi
+    'yso:p20433': 'yso:p12307',  # valokuvaajat (kooste) -> valokuvaajat
+}
+
 def is_deprecated(graph, subject):
     return (subject, OWL.deprecated, None) in graph
 def is_aggregate_concept(graph, subject):
     return (subject, SKOS.inScheme, rdflib.term.URIRef(yso+'aggregateconceptscheme')) in graph
+def allow_deprecating_keyword(keyword):
+    if keyword.event_set.all().exists() or keyword.audiences.all().exists():
+        if keyword.id not in YSO_DEPRECATED_MAPS:
+            raise Exception("Deprecating YSO keyword %s that is referenced in events %s. "
+                            "No replacement keyword was found in YSO altLabels. Please manually map the "
+                            "keyword to a new keyword in YSO_DEPRECATED_MAPS." %
+                            (str(keyword), str(keyword.events.all() | keyword.audience_events.all())))
+    return True
+
 
 @register_importer
 class YsoImporter(Importer):
@@ -64,13 +85,13 @@ class YsoImporter(Importer):
     def save_keywords(self, graph):
         if self.verbosity >= 2:
             print("Saving data")
-        data_source = DataSource.objects.get(pk='yso')
 
-        assert not Keyword.objects.filter(data_source=self.data_source).exists()
-        bulk_mode = True
+        bulk_mode = False
+        if bulk_mode:
+            assert not Keyword.objects.filter(data_source=self.data_source).exists()
         if not bulk_mode:
             delete_func = lambda obj: obj.delete()
-            queryset = KeywordLabel.objects.filter(data_source=self.data_source)
+            queryset = KeywordLabel.objects.all()
             label_syncher = ModelSyncher(
                 queryset, lambda obj: (obj.name, obj.language_id), delete_func=delete_func)
 
@@ -88,7 +109,7 @@ class YsoImporter(Importer):
                         labels_to_create.add((str(label), language))
                         keyword_labels.setdefault(yid, []).append(label)
                 else:
-                    label = self.save_alt_label(label_syncher, graph, label, data_source)
+                    label = self.save_alt_label(label_syncher, graph, label)
                     if label:
                         keyword_labels.setdefault(yid, []).append(label)
 
@@ -102,17 +123,40 @@ class YsoImporter(Importer):
             label_syncher.finish()
 
         if bulk_mode:
-            # self.save_labels_in_bulk(graph, data_source)
-            self.save_keywords_in_bulk(graph, data_source)
+            self.save_keywords_in_bulk(graph)
             self.save_keyword_label_relationships_in_bulk(keyword_labels)
 
         if not bulk_mode:
+            deprecate_keyword = lambda obj: obj.deprecate()
+            check_deprecated_keyword = lambda obj: obj.deprecated
+            # manually add new keywords to deprecated ones
+            for old_id, new_id in YSO_DEPRECATED_MAPS.items():
+<<<<<<< HEAD
+                for event in Keyword.objects.get(id=old_id).event_set.all():
+                    new_keyword = Keyword.objects.get(id=new_id)
+                    event.keywords.add(new_keyword)
+                    print('Mapping event ' + str(event) + ' to keyword ' + str(new_keyword))
+                for event in Keyword.objects.get(id=old_id).audiences.all():
+                    new_keyword = Keyword.objects.get(id=new_id)
+                    event.audience.add(new_keyword)
+                    print('Mapping event ' + str(event) + ' to keyword ' + str(new_keyword))
+=======
+                old_keyword = Keyword.objects.get(id=old_id)
+                new_keyword = Keyword.objects.get(id=new_id)
+                print('Mapping events with %s to %s' % (str(old_keyword), str(new_keyword)))
+                new_keyword.events.add(*old_keyword.events.all())
+                new_keyword.audience_events.add(*old_keyword.audience_events.all())
+>>>>>>> f9ae795... Nicify string formatting
+
             queryset = Keyword.objects.filter(data_source=self.data_source)
             syncher = ModelSyncher(
-                queryset, lambda obj: obj.url, delete_func=delete_func)
+                queryset, lambda keyword: keyword.id,
+                delete_func=deprecate_keyword,
+                check_deleted_func=check_deprecated_keyword,
+                allow_deleting_func=allow_deprecating_keyword)
             save_set=set()
             for subject in graph.subjects(RDF.type, SKOS.Concept):
-                self.save_keyword(syncher, graph, subject, data_source, keyword_labels, save_set)
+                self.save_keyword(syncher, graph, subject, keyword_labels, save_set)
             syncher.finish()
 
     def save_keyword_label_relationships_in_bulk(self, keyword_labels):
@@ -140,23 +184,30 @@ class YsoImporter(Importer):
     def yso_id(self, subject):
         return ':'.join(subject.split('/')[-2:])
 
-    def save_keywords_in_bulk(self, graph, data_source):
+    def create_keyword(self, graph, subject):
+        if is_deprecated(graph, subject):
+            return
+        keyword = Keyword(data_source=self.data_source)
+        keyword._changed = True
+        keyword._created = True
+        keyword.aggregate = is_aggregate_concept(graph, subject)
+        keyword.id = self.yso_id(subject)
+        keyword.created_time = BaseModel.now()
+        keyword.last_modified_time = BaseModel.now()
+        for _, literal in graph.preferredLabel(subject):
+            with active_language(literal.language):
+                keyword.name = str(literal)
+        return keyword
+
+    def save_keywords_in_bulk(self, graph):
         keywords = []
         for subject in graph.subjects(RDF.type, SKOS.Concept):
-            if is_deprecated(graph, subject):
-                continue
-            keyword = Keyword(data_source=data_source)
-            keyword.aggregate = is_aggregate_concept(graph, subject)
-            keyword.id = self.yso_id(subject)
-            keyword.created_time = BaseModel.now()
-            keyword.last_modified_time = BaseModel.now()
-            for _, literal in graph.preferredLabel(subject):
-                with active_language(literal.language):
-                    keyword.name = str(literal)
-            keywords.append(keyword)
+            keyword = self.create_keyword(graph, subject)
+            if keyword:
+                keywords.append(keyword)
         Keyword.objects.bulk_create(keywords, batch_size=1000)
 
-    def save_alt_label(self, syncher, graph, label, data_source):
+    def save_alt_label(self, syncher, graph, label):
         label_text = str(label)
         if label.language is None:
             print('Error:', str(label), 'has no language')
@@ -165,7 +216,7 @@ class YsoImporter(Importer):
         if label_object is None:
             language = Language.objects.get(id=label.language)
             label_object = KeywordLabel(
-                name=label_text, language=language, data_source=data_source)
+                name=label_text, language=language)
             label_object._changed = True
             label_object._created = True
         else:
@@ -178,27 +229,38 @@ class YsoImporter(Importer):
             syncher.mark(label_object)
         return label_object
 
-    def save_keyword(self, syncher, graph, subject, data_source, keyword_labels, save_set):
-        keyword = syncher.get(subject)
+    def save_keyword(self, syncher, graph, subject, keyword_labels, save_set):
+        if is_deprecated(graph, subject):
+            return
+        keyword = syncher.get(self.yso_id(subject))
         if not keyword:
-            keyword = Keyword(
-                data_source=self.data_source, url=subject)
-            keyword._changed = True
-            keyword._created = True
+            keyword = self.create_keyword(graph, subject)
+            if not keyword:
+                return
         else:
             keyword._created = False
-
-        for _, literal in graph.preferredLabel(subject):
-            with active_language(literal.language):
-                if keyword.name != str(literal):
-                    keyword.name = str(literal)
-                    keyword._changed = True
-
         if keyword._changed:
             keyword.save()
 
-        keyword.alt_labels.add(keyword_labels.get(str(subject), []))
-
+        alt_labels = keyword_labels.get(self.yso_id(subject), [])
+        keyword.alt_labels.add(*alt_labels)
+        # Finnish alt labels might refer to old keywords, add any new keywords to events
+        for label in alt_labels:
+            if not label.language == Language.objects.get(id='fi'):
+                continue
+            old_keyword = Keyword.objects.filter(
+                data_source=self.data_source).filter(name_fi=label.name).first()
+            if not old_keyword:
+                continue
+            print('Keyword ' + str(old_keyword) + ' may have been deprecated')
+            # add any discovered keywords for deprecation checker
+            YSO_DEPRECATED_MAPS[old_keyword.id] = keyword.id
+            for event in old_keyword.event_set.all():
+                print('Mapping event ' + str(event) + ' to keyword ' + str(keyword))
+                event.keywords.add(keyword)
+            for event in old_keyword.audiences.all():
+                print('Mapping event ' + str(event) + ' to keyword ' + str(keyword))
+                event.audience.add(keyword)
         if not getattr(keyword, '_found', False):
             syncher.mark(keyword)
         return keyword
