@@ -385,6 +385,28 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
             if 'disable_camelcase' in request.query_params:
                 self.disable_camelcase = True
 
+        # for post and put methods, user information is needed to restrict permissions at validate
+        if context is None:
+            return
+        self.method = self.context['request'].method
+        self.user = self.context['request'].user
+        if self.method in permissions.SAFE_METHODS:
+            return
+        # api_key takes precedence over user
+        if isinstance(self.context['request'].auth, ApiKeyAuth):
+            self.data_source = self.context['request'].auth.get_authenticated_data_source()
+            self.publisher = self.data_source.owner
+            if not self.publisher:
+                raise PermissionDenied(_("Data source doesn't belong to any organization"))
+        else:
+            # objects created by api are marked coming from the system data source unless api_key is provided
+            self.data_source = DataSource.objects.get(id=settings.SYSTEM_DATA_SOURCE_ID)
+            # user organization is used unless api_key is provided
+            self.publisher = self.user.get_default_organization()
+            if not self.publisher:
+                raise PermissionDenied(_("User doesn't belong to any organization"))
+
+
     def to_internal_value(self, data):
         for field in self.system_generated_fields:
             if field in data:
@@ -436,6 +458,27 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         return ret
 
     def validate(self, data):
+        # validate data source permissions
+        if 'data_source' in data:
+            if data['data_source'] != self.data_source:
+                raise serializers.ValidationError(
+                    {'data_source': _("Setting data_source to %(given)s " +
+                                      " is not allowed for your organization. The data source" +
+                                      " must be left blank or set to %(required)s") %
+                                    {'given': data['data_source'], 'required': self.data_source}})
+        else:
+            data['data_source'] = self.data_source
+        # validate publisher permissions
+        if 'publisher' in data:
+            if data['publisher'] != self.publisher:
+                raise serializers.ValidationError(
+                    {'publisher': _("Setting publisher to %(given)s " +
+                                    " is not allowed for your organization. The publisher" +
+                                    " must be left blank or set to %(required)s ") %
+                                  {'given': data['publisher'], 'required': self.publisher}})
+        else:
+            data['publisher'] = self.publisher
+
         if 'name' in self.translated_fields:
             name_exists = False
             languages = [x[0] for x in settings.LANGUAGES]
@@ -451,6 +494,11 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         return data
 
     def create(self, validated_data):
+        # no django user exists for the api key
+        if isinstance(self.user, ApiKeyUser):
+            self.user = None
+        validated_data['created_by'] = self.user
+        validated_data['last_modified_by'] = self.user
         try:
             instance = super().create(validated_data)
         except IntegrityError as error:
@@ -461,6 +509,17 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         return instance
 
     def update(self, instance, validated_data):
+        if isinstance(self.user, ApiKeyUser):
+            # allow updating only if the api key matches instance data source
+            self.user = None
+            if not instance.data_source == self.data_source:
+                raise PermissionDenied()
+        else:
+            # without api key, the user will have to be admin
+            if not instance.is_user_editable() or not instance.is_admin(self.user):
+                raise PermissionDenied()
+        validated_data['last_modified_by'] = self.user
+
         if 'id' in validated_data:
             if instance.id != validated_data['id']:
                 raise serializers.ValidationError({'id':_("You may not change the id of an existing object.")})
@@ -748,25 +807,16 @@ class ImageViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(publisher__id=val)
         return queryset
 
-    def perform_create(self, serializer):
-        user = self.request.user if not self.request.user.is_anonymous() else None
-        serializer.save(created_by=user, last_modified_by=user)
-
-    def perform_update(self, serializer):
-        # ensure image can only be edited within the organization
-        user = self.request.user
-        image = self.get_object()
-        if not user.get_default_organization() == image.publisher:
-            raise PermissionDenied()
-        user = self.request.user if not self.request.user.is_anonymous() else None
-        serializer.save(last_modified_by=user)
-
     def perform_destroy(self, instance):
         # ensure image can only be deleted within the organization
         user = self.request.user
-        image = self.get_object()
-        if not user.get_default_organization() == image.publisher:
-            raise PermissionDenied()
+        auth = self.request.auth
+        if isinstance(auth, ApiKeyAuth):
+            if not auth.get_authenticated_data_source() == instance.data_source:
+                raise PermissionDenied()
+        else:
+            if not user.get_default_organization() == instance.publisher:
+                raise PermissionDenied()
         super().perform_destroy(instance)
 
 
@@ -810,25 +860,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         # testing and debugging.
         self.skip_empties = skip_empties
 
-        # for post and put methods, user information is needed to restrict permissions at validate
-        self.method = self.context['request'].method
-        self.user = self.context['request'].user
-        if self.method in permissions.SAFE_METHODS:
-            return
-        # api_key takes precedence over user
-        if isinstance(self.context['request'].auth, ApiKeyAuth):
-            self.data_source = self.context['request'].auth.get_authenticated_data_source()
-            self.publisher = self.data_source.owner
-            if not self.publisher:
-                raise PermissionDenied(_("Data source doesn't belong to any organization"))
-        else:
-            # events created by api are marked coming from the system data source unless api_key is provided
-            self.data_source = DataSource.objects.get(id=settings.SYSTEM_DATA_SOURCE_ID)
-            # user organization is used unless api_key is provided
-            self.publisher = self.user.get_default_organization()
-            if not self.publisher:
-                raise PermissionDenied(_("User doesn't belong to any organization"))
-
     def get_datetimes(self, data):
         for field in ['date_published', 'start_time', 'end_time']:
             val = data.get(field, None)
@@ -864,26 +895,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                              " is not allowed for your organization. The id"
                              " must be left blank or set to %(data_source)s:desired_id") %
                            {'given': str(data['id']), 'data_source': self.data_source}})
-        # validate data source permissions
-        if 'data_source' in data:
-            if data['data_source'] != self.data_source:
-                raise serializers.ValidationError(
-                    {'data_source': _("Setting data_source to %(given)s " +
-                                      " is not allowed for your organization. The data source" +
-                                      " must be left blank or set to %(required)s") %
-                                    {'given': data['data_source'], 'required': self.data_source}})
-        else:
-            data['data_source'] = self.data_source
-        # validate publisher permissions
-        if 'publisher' in data:
-            if data['publisher'] != self.publisher:
-                raise serializers.ValidationError(
-                    {'publisher': _("Setting publisher to %(given)s " +
-                                    " is not allowed for your organization. The publisher" +
-                                    " must be left blank or set to %(required)s ") %
-                                  {'given': data['publisher'], 'required': self.publisher}})
-        else:
-            data['publisher'] = self.publisher
 
         # clean the html
         for k, v in data.items():
@@ -972,9 +983,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         # if id was not provided, we generate it upon creation:
         if 'id' not in validated_data:
             validated_data['id'] = generate_id(self.data_source)
-        # no django user exists for the api key
-        if isinstance(self.user, ApiKeyUser):
-            self.user = None
 
         offers = validated_data.pop('offers', [])
         links = validated_data.pop('external_links', [])
@@ -995,20 +1003,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         return event
 
     def update(self, instance, validated_data):
-        # allow updating events if the api key matches event data source
-        if isinstance(self.user, ApiKeyUser):
-            self.user = None
-            if not instance.data_source == self.data_source:
-                raise PermissionDenied()
-        else:
-            if not instance.is_editable() or not instance.is_admin(self.user):
-                raise PermissionDenied()
-
         offers = validated_data.pop('offers', None)
         links = validated_data.pop('external_links', None)
-
-        validated_data['last_modified_by'] = self.user
-
 
         # The API only allows scheduling and cancelling events.
         # POSTPONED and RESCHEDULED may not be set, but should be allowed in already set instances.

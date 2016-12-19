@@ -102,6 +102,7 @@ class Image(models.Model):
     # Properties from schema.org/Thing
     name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True, default='')
 
+    data_source = models.ForeignKey(DataSource, related_name='provided_%(class)s_data', db_index=True, null=True)
     publisher = models.ForeignKey('Organization', verbose_name=_('Publisher'), db_index=True, null=True, blank=True, related_name='Published_images')
 
     created_time = models.DateTimeField(auto_now_add=True)
@@ -128,6 +129,16 @@ class Image(models.Model):
             raise ValidationError(_('You can only provide image or url, not both.'))
         self.last_modified_time = BaseModel.now()
         super(Image, self).save(*args, **kwargs)
+
+    def is_user_editable(self):
+        return self.data_source_id == settings.SYSTEM_DATA_SOURCE_ID
+
+    def is_admin(self, user):
+        if user.is_superuser:
+            return True
+        else:
+            return user in self.publisher.admin_users.all()
+
 
 @python_2_unicode_compatible
 class BaseModel(models.Model):
@@ -420,7 +431,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
             val.append(str(self.start_time))
         return u" ".join(val)
 
-    def is_editable(self):
+    def is_user_editable(self):
         return self.data_source_id == settings.SYSTEM_DATA_SOURCE_ID
 
     def is_admin(self, user):

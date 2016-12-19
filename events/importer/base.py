@@ -65,7 +65,7 @@ class Importer(object):
         if url in self._images:
             return self._images[url]
 
-        defaults = {'publisher': self.organization}
+        defaults = {'publisher': self.organization, 'data_source': self.data_source}
         img, created = Image.objects.get_or_create(
             url=url, defaults=defaults)
         return img
