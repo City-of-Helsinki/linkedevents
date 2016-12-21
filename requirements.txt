@@ -28,7 +28,7 @@ django==1.9.11
 djangorestframework-bulk==0.2.1
 djangorestframework-gis==0.10.1
 djangorestframework-jwt==1.8.0
-djangorestframework==3.3.3
+djangorestframework==3.5.3
 easy-thumbnails==2.3
 elasticsearch==2.4.0
 first==2.0.1              # via pip-tools
