@@ -29,7 +29,7 @@ from rest_framework import (
 from rest_framework.settings import api_settings
 from rest_framework.reverse import reverse
 from rest_framework.response import Response
-from rest_framework.exceptions import ParseError
+from rest_framework.exceptions import ParseError, PermissionDenied as DRFPermissionDenied
 from rest_framework.views import get_view_name as original_get_view_name
 
 
@@ -1005,6 +1005,9 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     def update(self, instance, validated_data):
         offers = validated_data.pop('offers', None)
         links = validated_data.pop('external_links', None)
+
+        if instance.end_time and instance.end_time < timezone.now():
+            raise DRFPermissionDenied(_('Cannot edit a past event.'))
 
         # The API only allows scheduling and cancelling events.
         # POSTPONED and RESCHEDULED may not be set, but should be allowed in already set instances.
