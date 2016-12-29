@@ -192,7 +192,7 @@ def event(place, user):
         data_source=place.data_source, publisher=place.publisher,
         last_modified_by=user,
         start_time=timezone.now(),
-        end_time=timezone.now(),
+        end_time=timezone.now() + timedelta(hours=1),
         short_description='short desc',
         description='desc'
     )
@@ -225,7 +225,7 @@ def event2(place2, user2):
         data_source=place2.data_source, publisher=place2.publisher,
         last_modified_by=user2,
         start_time=timezone.now(),
-        end_time=timezone.now(),
+        end_time=timezone.now() + timedelta(hours=1),
         short_description='short desc',
         description='desc'
     )
@@ -237,7 +237,7 @@ def event3(place3, user):
         data_source=place3.data_source, publisher=place3.publisher,
         last_modified_by=user,
         start_time=timezone.now(),
-        end_time=timezone.now(),
+        end_time=timezone.now() + timedelta(hours=1),
         short_description='short desc',
         description='desc'
     )

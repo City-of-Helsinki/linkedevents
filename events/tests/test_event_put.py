@@ -360,7 +360,6 @@ def test__wrong_api_key_cannot_update_an_event(api_client, event, complex_event_
     detail_url = reverse('event-detail', kwargs={'pk': event.pk})
     response = update_with_put(api_client, detail_url, complex_event_dict,
                                credentials={'apikey': other_data_source.api_key})
-    print(response.data)
     assert response.status_code == 403
 
 
@@ -437,3 +436,16 @@ def test_multiple_event_update_second_fails(api_client, minimal_event_dict, user
 
     # verify that first event isn't updated either
     assert event_names == {'testing', 'testing_2'}
+
+
+@pytest.mark.django_db
+def test_cannot_edit_events_in_the_past(api_client, event, minimal_event_dict, user):
+    api_client.force_authenticate(user)
+
+    event.start_time = timezone.now() - timedelta(days=2)
+    event.end_time = timezone.now() - timedelta(days=1)
+    event.save(update_fields=('start_time', 'end_time'))
+
+    response = api_client.put(reverse('event-detail', kwargs={'pk': event.id}), minimal_event_dict, format='json')
+    assert response.status_code == 403
+    assert 'Cannot edit a past event' in str(response.content)
