@@ -61,7 +61,7 @@ from events.translation import EventTranslationOptions
 
 
 def get_view_name(cls, suffix=None):
-    if cls.__name__ == 'APIRoot':
+    if cls.__name__ == 'APIRootView':
         return 'Linked Events'
     return original_get_view_name(cls, suffix)
 
@@ -552,6 +552,7 @@ class KeywordSerializer(LinkedEventsSerializer):
 
     class Meta:
         model = Keyword
+        fields = '__all__'
 
 
 class KeywordRetrieveViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
@@ -648,6 +649,7 @@ class PlaceSerializer(LinkedEventsSerializer, GeoModelSerializer):
 
     class Meta:
         model = Place
+        fields = '__all__'
 
 
 class PlaceFilter(filters.FilterSet):
@@ -720,6 +722,7 @@ class LanguageSerializer(LinkedEventsSerializer):
 
     class Meta:
         model = Language
+        fields = '__all__'
 
     def get_translation_available(self, obj):
         return obj.id in [language[0] for language in settings.LANGUAGES]
@@ -773,6 +776,7 @@ class ImageSerializer(LinkedEventsSerializer):
 
     class Meta:
         model = Image
+        fields = '__all__'
 
     def to_representation(self, obj):
         # the url field is customized based on image and url
