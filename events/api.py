@@ -609,6 +609,7 @@ class KeywordSetSerializer(LinkedEventsSerializer):
 
     class Meta:
         model = KeywordSet
+        fields = '__all__'
 
 
 class JSONAPIViewSet(viewsets.ReadOnlyModelViewSet):
