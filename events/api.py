@@ -1275,9 +1275,9 @@ def _filter_event_queryset(queryset, params, srs=None):
     if val:
         val = val.lower()
         if val == 'super':
-            queryset = queryset.filter(super_event_type=Event.SUPER_EVENT_TYPE.RECURRING)
+            queryset = queryset.filter(super_event_type=Event.SuperEventType.RECURRING)
         elif val == 'sub':
-            queryset = queryset.exclude(super_event_type=Event.SUPER_EVENT_TYPE.RECURRING)
+            queryset = queryset.exclude(super_event_type=Event.SuperEventType.RECURRING)
 
     val = params.get('max_duration', None)
     if val:
