@@ -302,6 +302,14 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
                                        blank=True)
 
     geo_objects = models.GeoManager()
+    n_events = models.IntegerField(
+        verbose_name=_('event count'),
+        help_text=_('number of events in this location'),
+        default=0,
+        editable=False,
+        db_index=True
+    )
+
 
     class Meta:
         verbose_name = _('place')
@@ -326,6 +334,18 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
             self.divisions.clear()
 
 reversion.register(Place)
+
+
+def recache_n_events_in_location(place):
+    """
+    The helper function has to exist outside the model, because it is used in migration.
+    Django apps cannot serialize unbound instance functions when saving model history during migration.
+    :type place: place
+    """
+    n_events = place.events.all().count()
+    if n_events != place.n_events:
+        place.n_events = n_events
+        place.save(update_fields=("n_events",))
 
 
 class OpeningHoursSpecification(models.Model):
@@ -409,7 +429,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         verbose_name=_('Event data publication status'), choices=PUBLICATION_STATUSES,
         default=PublicationStatus.PUBLIC)
 
-    location = models.ForeignKey(Place, null=True, blank=True, on_delete=models.PROTECT)
+    location = models.ForeignKey(Place, related_name='events', null=True, blank=True, on_delete=models.PROTECT)
     location_extra_info = models.CharField(verbose_name=_('Location extra info'),
                                            max_length=400, null=True, blank=True)
 

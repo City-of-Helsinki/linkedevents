@@ -686,8 +686,10 @@ class PlaceListViewSet(GeoModelAPIView,
                        mixins.ListModelMixin):
     queryset = Place.objects.all()
     serializer_class = PlaceSerializer
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
     filter_class = PlaceFilter
+    ordering_fields = ('n_events', 'id', 'name', 'street_address', 'postal_code')
+    ordering = ('-n_events',)
 
     def get_queryset(self):
         """
