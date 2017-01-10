@@ -651,6 +651,58 @@ class DivisionSerializer(TranslatedModelSerializer):
         fields = ('type', 'name', 'ocd_id', 'municipality')
 
 
+def filter_division(queryset, name, value):
+    """
+    Allows division filtering by both division name and more specific ocd id (identified by colon in the parameter)
+
+    Depending on the deployment location, offers simpler filtering by appending
+    country and municipality information to ocd ids.
+
+    Examples:
+        /event/?division=kamppi
+        will match any and all divisions with the name Kamppi, regardless of their type.
+
+        /event/?division=ocd-division/country:fi/kunta:helsinki/osa-alue:kamppi
+        /event/?division=ocd-division/country:fi/kunta:helsinki/suurpiiri:kamppi
+        will match different division types with the otherwise identical id kamppi.
+
+        /event/?division=osa-alue:kamppi
+        /event/?division=suurpiiri:kamppi
+        will match different division types with the id kamppi, if correct country and municipality information is
+        present in settings.
+
+        /event/?division=helsinki
+        will match any and all divisions with the name Helsinki, regardless of their type.
+
+        /event/?division=ocd-division/country:fi/kunta:helsinki
+        will match the Helsinki municipality.
+
+        /event/?division=kunta:helsinki
+        will match the Helsinki municipality, if correct country information is present in settings.
+
+    """
+
+    ocd_ids = []
+    names = []
+    for item in value:
+        if ':' in item:
+            # we have a munigeo division
+            if hasattr(settings, 'MUNIGEO_MUNI') and hasattr(settings, 'MUNIGEO_COUNTRY'):
+                # append ocd path if we have deployment information
+                if not item.startswith('ocd-division'):
+                    if not item.startswith('country'):
+                        if not item.startswith('kunta'):
+                            item = settings.MUNIGEO_MUNI + '/' + item
+                        item = settings.MUNIGEO_COUNTRY + '/' + item
+                    item = 'ocd-division/' + item
+            ocd_ids.append(item)
+        else:
+            # we assume human name
+            names.append(item.title())
+    return (queryset.filter(**{name + '__ocd_id__in': ocd_ids})|
+            queryset.filter(**{name + '__name__in': names})).distinct()
+
+
 class PlaceSerializer(LinkedEventsSerializer, GeoModelSerializer):
     view_name = 'place-detail'
     divisions = DivisionSerializer(many=True, read_only=True)
@@ -661,12 +713,16 @@ class PlaceSerializer(LinkedEventsSerializer, GeoModelSerializer):
 
 
 class PlaceFilter(filters.FilterSet):
-    division = django_filters.Filter(name='divisions__ocd_id', lookup_type='in',
-                                     widget=django_filters.widgets.CSVWidget())
+    division = django_filters.Filter(name='divisions', lookup_type='in',
+                                     widget=django_filters.widgets.CSVWidget(),
+                                     method='filter_division')
 
     class Meta:
         model = Place
         fields = ('division',)
+
+    def filter_division(self, queryset, name, value):
+        return filter_division(queryset, name, value)
 
 
 class PlaceRetrieveViewSet(GeoModelAPIView,
@@ -1307,28 +1363,10 @@ def _filter_event_queryset(queryset, params, srs=None):
     return queryset
 
 
-class DivisionFilter(django_filters.Filter):
-    """
-    Depending on the deployment location, offers simpler filtering by appending
-    country and municipality information from local settings.
-    """
-
-    def filter(self, qs, value):
-        if hasattr(settings, 'MUNIGEO_MUNI') and hasattr(settings, 'MUNIGEO_COUNTRY'):
-            for i, item in enumerate(value):
-                if not item.startswith('ocd-division'):
-                    if not item.startswith('country'):
-                        if not item.startswith('kunta'):
-                            item = settings.MUNIGEO_MUNI + '/' + item
-                        item = settings.MUNIGEO_COUNTRY + '/' + item
-                    item = 'ocd-division/' + item
-                value[i] = item
-        return super().filter(qs, value)
-
-
 class EventFilter(filters.FilterSet):
-    division = DivisionFilter(name='location__divisions__ocd_id', lookup_expr='in',
-                              widget=django_filters.widgets.CSVWidget())
+    division = django_filters.Filter(name='location__divisions', lookup_expr='in',
+                              widget=django_filters.widgets.CSVWidget(),
+                              method='filter_division')
     super_event_type = django_filters.CharFilter(method='filter_super_event_type')
 
     class Meta:
@@ -1339,6 +1377,9 @@ class EventFilter(filters.FilterSet):
         if value in ('null', 'none'):
             value = None
         return queryset.filter(super_event_type=value)
+
+    def filter_division(self, queryset, name, value):
+        return filter_division(queryset, name, value)
 
 
 class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
