@@ -568,8 +568,8 @@ class KeywordListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = Keyword.objects.all()
     serializer_class = KeywordSerializer
     filter_backends = (filters.OrderingFilter,)
-    ordering_fields = ('n_events', 'id', 'name')
-    ordering = ('-n_events',)
+    ordering_fields = ('n_events', 'id', 'name', 'data_source')
+    ordering = ('-data_source', '-n_events',)
 
     def get_queryset(self):
         """
@@ -577,49 +577,29 @@ class KeywordListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
 
         If the request has no filter parameters, we only return keywords that meet the following criteria:
         -the keyword has events
-        -the keyword data source is YSO
         -the keyword is not deprecated
 
         Supported keyword filtering parameters:
-        data_source  (only keywords with the given data source are included. The default data source is YSO.)
+        data_source  (only keywords with the given data source are included)
         filter (only keywords containing the specified string are included)
         show_all_keywords (keywords without events are included)
         show_deprecated (deprecated keywords are included)
-
-        In addition, all query parameters supported by event filtering (other than data_source) are supported.
-        This will return keywords that are present in events filtered with the parameters.
         """
         queryset = Keyword.objects.all()
         data_source = self.request.query_params.get('data_source')
         if data_source:
             data_source = data_source.lower()
-        else:
-            data_source = 'yso'
-        queryset = queryset.filter(data_source=data_source)
-
+            queryset = queryset.filter(data_source=data_source)
         if not self.request.query_params.get('show_all_keywords'):
             queryset = queryset.filter(n_events__gt=0)
-            # if extra parameters are provided, they are applied on events:
-            params = _clean_qp(self.request.query_params)
-            event_params = {}
-            for param, value in params.items():
-                if param not in ('data_source', 'show_all_keywords', 'show_deprecated', 'filter'):
-                    event_params[param] = value
-            if event_params:
-                events = Event.objects.all()
-                events = _filter_event_queryset(events, params)
-                keyword_ids = events.values_list('keywords',
-                                                 flat=True).distinct().order_by()
-                queryset = queryset.filter(id__in=keyword_ids)
-
         if not self.request.query_params.get('show_deprecated'):
             queryset = queryset.filter(deprecated=False)
 
         # Optionally filter keywords by filter parameter,
         # can be used e.g. with typeahead.js
-        val = self.request.query_params.get('filter')
+        val = self.request.query_params.get('text') or self.request.query_params.get('filter')
         if val:
-            queryset = queryset.filter(name__contains=val)
+            queryset = queryset.filter(name__icontains=val)
         return queryset
 
 
