@@ -26,19 +26,30 @@ Install required Python packages
 
 Create the database
 
-```bash
-sudo -u postgres createuser -L -R -S linkedevents
-sudo -u postgres psql -d template1 -c "create extension hstore;"
-sudo -u postgres createdb -Olinkedevents linkedevents
+```
+sudo -u postgres createuser -R -S linkedevents
+# Following is for US locale, we are not certain whether Linkedevents
+# behaves differently depending on DB collation & ctype
+#sudo -u postgres createdb -Olinkedevents linkedevents
+# This is is for Finnish locale
+sudo -u postgres createdb -Olinkedevents -Ttemplate0 -lfi_FI.UTF-8 linkedevents
 sudo -u postgres psql linkedevents -c "CREATE EXTENSION postgis;"
+sudo -u postgres psql linkedevents -c "CREATE EXTENSION hstore;"
+# This fills the database with a basic skeleton
+python manage.py migrate
 ```
 
-NOTE: line 2, altering PostgreSQL template1 with hstore extension is required by py.test. 
+You probably want to import some data for testing (these are events around Helsinki)
+```
+# Import places from Helsinki service registry (used by events from following sources)
+python manage.py event_import tprek --places
+# Import events from Visit Helsinki
+python manage.py event_import matko --events
+# Import events from Helsinki metropolitan region libraries
+python manage.py event_import helmet --events
+# Rebuild search index (for /search endpoint)
+python manage.py rebuild_index
 
-Fetch and import the database dump
-```bash
-wget -O - http://api.hel.fi/linkedevents/static/linkedevents.dump.gz | gunzip -c > linkedevents.dump
-sudo -u postgres psql linkedevents < linkedevents.dump
 ```
 
 Finally, you may install city-specific HTML page templates for the browsable API by
@@ -52,7 +63,9 @@ for your favorite city by creating `your_favorite_city/templates/rest_framework/
 
 Running tests
 ------------
-```bash
+Tests must be run using an user who can create (and drop) databases and write the directories
+your linkedevents installation resides in.
+```
 py.test events
 ```
 
