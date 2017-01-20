@@ -459,6 +459,14 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         parent_attr = 'super_event'
 
     def save(self, *args, **kwargs):
+        # needed to cache location event numbers
+        old_location = None
+        if self.id:
+            try:
+                old_location = Event.objects.get(id=self.id).location
+            except Event.DoesNotExist:
+                pass
+
         # drafts may not have times set, so check that first
         start = getattr(self, 'start_time', None)
         end = getattr(self, 'end_time', None)
@@ -468,7 +476,14 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         if not self.id:
             self.created_time = BaseModel.now()
         self.last_modified_time = BaseModel.now()
+
         super(Event, self).save(*args, **kwargs)
+
+        # needed to cache location event numbers
+        if self.location:
+            recache_n_events_in_location(self.location)
+        if old_location and old_location != self.location:
+            recache_n_events_in_location(old_location)
 
     def __str__(self):
         name = ''

@@ -9,7 +9,7 @@ from .utils import versioned_reverse as reverse
 
 from events.tests.utils import assert_event_data_is_equal
 from .conftest import keyword_id
-from events.models import Event, Keyword
+from events.models import Event, Keyword, Place
 from django.conf import settings
 
 
@@ -183,6 +183,16 @@ def test__keyword_n_events_updated(list_url,
     api_client.force_authenticate(user=user)
     response = api_client.post(list_url, minimal_event_dict, format='json')
     assert Keyword.objects.get(id='test').n_events == 1
+
+
+@pytest.mark.django_db
+def test__location_n_events_updated(list_url,
+                                                               api_client,
+                                                               minimal_event_dict,
+                                                               user):
+    api_client.force_authenticate(user=user)
+    response = api_client.post(list_url, minimal_event_dict, format='json')
+    assert Place.objects.get(id='test location').n_events == 1
 
 
 @pytest.mark.django_db
