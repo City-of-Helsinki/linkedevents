@@ -9,57 +9,62 @@ Linked Events provides categorized data on events and places. The project was or
 [The Linked Events API for the Helsinki capital region](http://api.hel.fi/linkedevents/) contains data from the Helsinki City Tourist & Convention Bureau, the City of Helsinki Cultural Office and the Helmet metropolitan area public libraries.
 
 
-Installation
-------------
-
-Prepare virtualenv
-
-```bash
-virtualenv -p /usr/bin/python3 ~/.virtualenvs/
-workon linkedevents
+Installation for development
+----------------------------
+These instructions assume an $INSTALL_BASE, like so:
 ```
-Install required Python packages
-
-```bash
-(sudo) pip install -r requirements.txt
+INSTALL_BASE=$HOME/linkedevents
 ```
-
-Create the database
-
+If you've already cloned this repository, just move repository root into $INSTALL_BASE/linkedevents. Otherwise just clone the repository, like so:
 ```
+git clone https://github.com/City-of-Helsinki/linkedevents.git $INSTALL_BASE/linkedevents
+```
+Prepare Python 3.x virtualenv using your favorite tools and activate it. Plain virtualenv is like so:
+```
+virtualenv -p python3 $INSTALL_BASE/venv
+source $INSTALL_BASE/venv/bin/activate
+```
+Install required Python packages into the virtualenv
+```
+cd $INSTALL_BASE/linkedevents
+pip install -r requirements.txt
+```
+Create the database, like so: (we have only tested on PostgreSQL)
+```
+cd $INSTALL_BASE/linkedevents
 sudo -u postgres createuser -R -S linkedevents
 # Following is for US locale, we are not certain whether Linkedevents
 # behaves differently depending on DB collation & ctype
 #sudo -u postgres createdb -Olinkedevents linkedevents
 # This is is for Finnish locale
 sudo -u postgres createdb -Olinkedevents -Ttemplate0 -lfi_FI.UTF-8 linkedevents
+# Create extensions in the database
 sudo -u postgres psql linkedevents -c "CREATE EXTENSION postgis;"
 sudo -u postgres psql linkedevents -c "CREATE EXTENSION hstore;"
 # This fills the database with a basic skeleton
 python manage.py migrate
 ```
-
-You probably want to import some data for testing (these are events around Helsinki)
+You probably want to import some data for testing (these are events around Helsinki), like so:
 ```
+cd $INSTALL_BASE/linkedevents
 # Import places from Helsinki service registry (used by events from following sources)
 python manage.py event_import tprek --places
 # Import events from Visit Helsinki
 python manage.py event_import matko --events
 # Import events from Helsinki metropolitan region libraries
 python manage.py event_import helmet --events
-# Rebuild search index (for /search endpoint)
-python manage.py rebuild_index
-
 ```
-
-Finally, you may install city-specific HTML page templates for the browsable API by
-```bash
+Furthermore, you may install city-specific HTML page templates for the browsable API by
+```
+cd $INSTALL_BASE/linkedevents
 python manage.py install_templates helevents
 ```
 This will install the `helevents/templates/rest_framework/api.html` template,
 which contains Helsinki event data summary and license. Customize the template
 for your favorite city by creating `your_favorite_city/templates/rest_framework/api.html`.
-[Customizing the browsable API](http://www.django-rest-framework.org/topics/browsable-api/#customizing)
+For further erudition, take a look at the DRF documentation on [customizing the browsable API](http://www.django-rest-framework.org/topics/browsable-api/#customizing)
+
+After this, everything but search endpoint (/search) is working. See [search](#search)
 
 Running tests
 ------------
@@ -99,9 +104,36 @@ as expected, commit the changes.
 
 Search
 ------
+Linkedevents uses Elasticsearch for generating results on the /search-endpoint. If you wish to use that functionality, proceed like so:
 
-For Elasticsearch-based searching we're using the following configuration.
-Place it in your `local_settings.py`:
+1. Install elasticsearch
+
+    We've only tested using the rather ancient 1.7 version. Version 5.x will certainly not work as the `django-haystack`-library does not support it.
+
+2. (For finnish support) Install elasticsearch-analyzer-voikko, libvoikko and needed dictionaries
+
+    `/usr/share/elasticsearch/bin/plugin -i fi.evident.elasticsearch/elasticsearch-analysis-voikko/0.3.0`
+    This specific command is for Debian derivatives. The path to `plugin` command might be different on yours.
+
+    Installing libvoikko:
+    `apt-get install libvoikko`
+
+    Installing the dictionaries:
+
+    ```
+    wget -P $INSTALL_BASE http://www.puimula.org/htp/testing/voikko-snapshot/dict-morpho.zip
+    unzip $INSTALL_BASE/dict-morpho.zip -d /etc/voikko
+    ```
+
+3. Configure the thing
+
+    Add the block below these instructions to $INSTALL_BASE/linkedevents/local_settings.py:
+    
+4. Rebuild the search indexes
+
+   `python manage.py rebuild_index`
+  
+   You should now have a working /search endpoint, give or take a few.
 
 ```python
 CUSTOM_MAPPINGS = {
