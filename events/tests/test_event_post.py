@@ -297,7 +297,7 @@ def test_short_description_cannot_exceed_160_chars(api_client, minimal_event_dic
 @pytest.mark.parametrize("offers, expected", [
     ([{'is_free': True}], 201),
     ([{'is_free': False, 'price': {'fi': 4}}], 201),
-    ([{'description': 'foo'}, {'is_free': True}], 201),
+    ([{'description': {'fi': 'foo'}}, {'is_free': True}], 201),
 
     ([{'is_free': False}], 400)
 ])

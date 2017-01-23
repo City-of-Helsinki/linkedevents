@@ -296,6 +296,10 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
             obj = data.get(field_name, None)  # { "fi": "musiikkiklubit", "sv": ... }
             if not obj:
                 continue
+            if not isinstance(obj, dict):
+                raise ValidationError({field_name: 'This field is a translated field. Instead of a string,'
+                                                   ' you must supply an object with strings corresponding'
+                                                   ' to desired language ids.'})
             for language in (lang[0] for lang in settings.LANGUAGES if lang[0] in obj):
                 value = obj[language]  # "musiikkiklubit"
                 if language == settings.LANGUAGES[0][0]:  # default language
