@@ -12,25 +12,25 @@ Linked Events provides categorized data on events and places. The project was or
 Installation for development
 ----------------------------
 These instructions assume an $INSTALL_BASE, like so:
-```
+```bash
 INSTALL_BASE=$HOME/linkedevents
 ```
 If you've already cloned this repository, just move repository root into $INSTALL_BASE/linkedevents. Otherwise just clone the repository, like so:
-```
+```bash
 git clone https://github.com/City-of-Helsinki/linkedevents.git $INSTALL_BASE/linkedevents
 ```
 Prepare Python 3.x virtualenv using your favorite tools and activate it. Plain virtualenv is like so:
-```
+```bash
 virtualenv -p python3 $INSTALL_BASE/venv
 source $INSTALL_BASE/venv/bin/activate
 ```
 Install required Python packages into the virtualenv
-```
+```bash
 cd $INSTALL_BASE/linkedevents
 pip install -r requirements.txt
 ```
 Create the database, like so: (we have only tested on PostgreSQL)
-```
+```bash
 cd $INSTALL_BASE/linkedevents
 sudo -u postgres createuser -R -S linkedevents
 # Following is for US locale, we are not certain whether Linkedevents
@@ -45,7 +45,7 @@ sudo -u postgres psql linkedevents -c "CREATE EXTENSION hstore;"
 python manage.py migrate
 ```
 You probably want to import some data for testing (these are events around Helsinki), like so:
-```
+```bash
 cd $INSTALL_BASE/linkedevents
 # Import places from Helsinki service registry (used by events from following sources)
 python manage.py event_import tprek --places
@@ -55,7 +55,7 @@ python manage.py event_import matko --events
 python manage.py event_import helmet --events
 ```
 Furthermore, you may install city-specific HTML page templates for the browsable API by
-```
+```bash
 cd $INSTALL_BASE/linkedevents
 python manage.py install_templates helevents
 ```
@@ -70,7 +70,7 @@ Running tests
 ------------
 Tests must be run using an user who can create (and drop) databases and write the directories
 your linkedevents installation resides in.
-```
+```bash
 py.test events
 ```
 
@@ -101,7 +101,6 @@ To remove a dependency, remove it from `requirements.in`,
 run `pip-compile` and then `pip-sync`. If everything works
 as expected, commit the changes.
 
-
 Search
 ------
 Linkedevents uses Elasticsearch for generating results on the /search-endpoint. If you wish to use that functionality, proceed like so:
@@ -120,7 +119,7 @@ Linkedevents uses Elasticsearch for generating results on the /search-endpoint. 
 
     Installing the dictionaries:
 
-    ```
+    ```bash
     wget -P $INSTALL_BASE http://www.puimula.org/htp/testing/voikko-snapshot/dict-morpho.zip
     unzip $INSTALL_BASE/dict-morpho.zip -d /etc/voikko
     ```
