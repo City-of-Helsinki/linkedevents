@@ -14,18 +14,19 @@ Installation
 
 Prepare virtualenv
 
-     virtualenv -p /usr/bin/python3 ~/.virtualenvs/
-     workon linkedevents
-
+```bash
+virtualenv -p /usr/bin/python3 ~/.virtualenvs/
+workon linkedevents
+```
 Install required Python packages
 
-```
+```bash
 (sudo) pip install -r requirements.txt
 ```
 
 Create the database
 
-```
+```bash
 sudo -u postgres createuser -L -R -S linkedevents
 sudo -u postgres psql -d template1 -c "create extension hstore;"
 sudo -u postgres createdb -Olinkedevents linkedevents
@@ -35,13 +36,13 @@ sudo -u postgres psql linkedevents -c "CREATE EXTENSION postgis;"
 NOTE: line 2, altering PostgreSQL template1 with hstore extension is required by py.test. 
 
 Fetch and import the database dump
-```
+```bash
 wget -O - http://api.hel.fi/linkedevents/static/linkedevents.dump.gz | gunzip -c > linkedevents.dump
 sudo -u postgres psql linkedevents < linkedevents.dump
 ```
 
 Finally, you may install city-specific HTML page templates for the browsable API by
-```
+```bash
 python manage.py install_templates helevents
 ```
 This will install the `helevents/templates/rest_framework/api.html` template,
@@ -51,7 +52,7 @@ for your favorite city by creating `your_favorite_city/templates/rest_framework/
 
 Running tests
 ------------
-```
+```bash
 py.test events
 ```
 
