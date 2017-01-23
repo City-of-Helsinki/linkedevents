@@ -1,27 +1,30 @@
 {% extends "rest_framework/api.html" %}
+{% load static %}
+
+{% block bootstrap_theme %}
+    <link rel="stylesheet" type="text/css" href="{% static "rest_framework/kanslia_bootstrap.css" %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static "rest_framework/bootstrap-tweaks.css" %}"/>
+{% endblock %}
 
 {% block branding %}
-  <a class='navbar-brand' rel="nofollow" href='#'>
+  <div class='navbar-brand'>
+      <a href="https://dev.hel.fi"><img src="{% static "rest_framework/images/hel-dev-logo.svg" %}"></a>
       HKI Linked Events API <span class="version">{{ request.version|slice:"1:" }}</span>
-  </a>
+  </div>
 {% endblock %}
 
 {% block description %}
 {% if breadcrumblist|length == 1 %}
 
-<div style="border: 1px solid #ddd;
-          background-color: #eee;
-          -webkit-border-radius: 5px;
-          -moz-border-radius: 5px;
-          border-radius: 5px;
-          padding: 5px;
-          margin: 10px 0 20px 0;">
+
+<div class="panel panel-default">
+    <div class="panel-body">
 
 <p>
 This Linked events API contains data from the
 <a href="http://www.visithelsinki.fi/" title="Visit Helsinki">Helsinki
 City Tourist &amp; Convention Bureau</a>,
-the <a href="http://www.hel.fi/www/kulke/fi" title=Kulke">City of Helsinki Cultural Office</a>
+the <a href="http://www.hel.fi/www/kulke/fi" title="Kulke">City of Helsinki Cultural Office</a>
 and the <a href="http://www.helmet.fi/">Helmet metropolitan area public libraries</a> as well as
 other City of Helsinki departments.</p>
 <p>
@@ -33,7 +36,7 @@ service units which contains e.g. information about accessibility.
 In the API, you can search data by date or location as
 well as bounding box.
 </p>
-<h1>Data license</h1>
+<h2>Data license</h2>
 <p>Unless otherwise stated, the data is licensed using CC BY 4.0 license:
     <a href="http://creativecommons.org/licenses/by/4.0/deed.fi">FI</a> |
     <a href="http://creativecommons.org/licenses/by/4.0/deed.sv">SV</a> |
@@ -47,9 +50,9 @@ These images are marked as <em>event_only</em> in the API. The <em>event_only</e
 <h4>EN</h4>
 <p>The City of Helsinki reserves all rights to the images. If the data at <em>license</em> of an image shared in the interface contains the text <em>event_only</em>, then the image can only be used for information and communications connected to the event depicted in the image. The images can be used free of charge for this purpose. To use or move the image for other purposes is forbidden. The source and photographer must absolutely be mentioned when using an image.</p>
 
-
+    </div>
 </div>
-{% include "rest_framework/description.html" %}
+
 {% endif %}
     {{ block.super }}
 {% endblock %}
