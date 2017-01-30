@@ -12,7 +12,6 @@ from dateutil.parser import parse as dateutil_parse
 
 # django and drf
 from django.http import Http404
-from django.contrib.auth import get_user_model
 from django.utils import translation
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.db.utils import IntegrityError
@@ -58,6 +57,7 @@ from events.models import (
     Offer, DataSource, Organization, Image, PublicationStatus, PUBLICATION_STATUSES, License
 )
 from events.translation import EventTranslationOptions
+from helevents.models import User
 
 
 def get_view_name(cls, suffix=None):
@@ -117,6 +117,24 @@ def perform_id_magic_for(data):
         raise ParseError(err.format(data['id']))
     data['id'] = generate_id(data['data_source'])
     return data
+
+def get_authenticated_data_source_and_publisher(request):
+    # api_key takes precedence over user
+    if isinstance(request.auth, ApiKeyAuth):
+        data_source = request.auth.get_authenticated_data_source()
+        publisher = data_source.owner
+        if not publisher:
+            raise PermissionDenied(_("Data source doesn't belong to any organization"))
+    else:
+        # objects created by api are marked coming from the system data source unless api_key is provided
+        data_source = DataSource.objects.get(id=settings.SYSTEM_DATA_SOURCE_ID)
+        # user organization is used unless api_key is provided
+        user = request.user
+        if isinstance(user, User):
+            publisher = user.get_default_organization()
+        else:
+            publisher = None
+    return data_source, publisher
 
 
 class JSONLDRelatedField(relations.HyperlinkedRelatedField):
@@ -396,19 +414,9 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         self.user = self.context['request'].user
         if self.method in permissions.SAFE_METHODS:
             return
-        # api_key takes precedence over user
-        if isinstance(self.context['request'].auth, ApiKeyAuth):
-            self.data_source = self.context['request'].auth.get_authenticated_data_source()
-            self.publisher = self.data_source.owner
-            if not self.publisher:
-                raise PermissionDenied(_("Data source doesn't belong to any organization"))
-        else:
-            # objects created by api are marked coming from the system data source unless api_key is provided
-            self.data_source = DataSource.objects.get(id=settings.SYSTEM_DATA_SOURCE_ID)
-            # user organization is used unless api_key is provided
-            self.publisher = self.user.get_default_organization()
-            if not self.publisher:
-                raise PermissionDenied(_("User doesn't belong to any organization"))
+        self.data_source, self.publisher = get_authenticated_data_source_and_publisher(request)
+        if not self.publisher:
+            raise PermissionDenied(_("User doesn't belong to any organization"))
 
 
     def to_internal_value(self, data):
@@ -879,13 +887,8 @@ class ImageViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         # ensure image can only be deleted within the organization
-        user = self.request.user
-        auth = self.request.auth
-        if isinstance(auth, ApiKeyAuth):
-            if not auth.get_authenticated_data_source() == instance.data_source:
-                raise PermissionDenied()
-        else:
-            if not user.get_default_organization() == instance.publisher:
+        data_source, organization = get_authenticated_data_source_and_publisher(self.request)
+        if not organization == instance.publisher:
                 raise PermissionDenied()
         super().perform_destroy(instance)
 
@@ -1453,6 +1456,11 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
     ordering_fields = ('start_time', 'end_time', 'days_left', 'last_modified_time')
     ordering = ('-last_modified_time',)
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.data_source = None
+        self.organization = None
+
     @staticmethod
     def get_serializer_class_for_version(version):
         if version == 'v0.1':
@@ -1470,6 +1478,7 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
         return context
 
     def get_object(self):
+        self.data_source, self.organization = get_authenticated_data_source_and_publisher(self.request)
         # Overridden to prevent queryset filtering from being applied
         # outside list views.
         try:
@@ -1477,9 +1486,7 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
         except Event.DoesNotExist:
             raise Http404("Event does not exist")
         if (event.publication_status == PublicationStatus.PUBLIC or
-            (self.request.user and
-             self.request.user.is_authenticated() and
-             self.request.user.get_default_organization() == event.publisher)):
+            self.organization == event.publisher):
             return event
         else:
             raise Http404("Event does not exist")
@@ -1488,18 +1495,15 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
         """
         TODO: convert to use proper filter framework
         """
-        user_organization = None
-        if self.request.user and self.request.user.is_authenticated():
-            user_organization = self.request.user.get_default_organization()
-
+        self.data_source, self.organization = get_authenticated_data_source_and_publisher(self.request)
         queryset = super(EventViewSet, self).filter_queryset(queryset)
         auth_filters = Q(publication_status=PublicationStatus.PUBLIC)
-        if user_organization:
+        if self.organization:
             # USER IS AUTHENTICATED
             if 'show_all' in self.request.query_params:
                 # Show all events for this organization,
                 # along with public events for others.
-                auth_filters |= Q(publisher=user_organization)
+                auth_filters |= Q(publisher=self.organization)
         queryset = queryset.filter(auth_filters)
         queryset = _filter_event_queryset(queryset, self.request.query_params,
                                           srs=self.srs)
@@ -1507,6 +1511,10 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
 
     def allow_bulk_destroy(self, qs, filtered):
         return False
+
+    def bulk_update(self, request, *args, **kwargs):
+        self.data_source, self.organization = get_authenticated_data_source_and_publisher(self.request)
+        return super().bulk_update(request, *args, **kwargs)
 
 
 register_view(EventViewSet, 'event')

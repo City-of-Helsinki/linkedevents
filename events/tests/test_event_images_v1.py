@@ -349,7 +349,7 @@ def test__upload_an_image_and_url(api_client, settings, list_url, image_data, im
 
 @override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL='')
 @pytest.mark.django_db(transaction=True)  # transaction is needed for django-cleanup
-def test__delete_an_image(api_client, settings, user):
+def test__delete_an_image(api_client, settings, user, organization):
     api_client.force_authenticate(user)
 
     image_file = create_in_memory_image_file(name='existing_test_image')
@@ -358,7 +358,8 @@ def test__delete_an_image(api_client, settings, user):
         image_file.read(),
         'image/png',
     )
-    existing_image = Image.objects.create(image=uploaded_image)
+    existing_image = Image.objects.create(image=uploaded_image,
+                                          publisher=organization)
     assert Image.objects.all().count() == 1
 
     # verify that the image file exists at first just in case
@@ -387,7 +388,8 @@ def test__delete_an_image_with_api_key(api_client, settings, organization, data_
         image_file.read(),
         'image/png',
     )
-    existing_image = Image.objects.create(image=uploaded_image, data_source=data_source)
+    existing_image = Image.objects.create(image=uploaded_image, data_source=data_source,
+                                          publisher=organization)
     assert Image.objects.all().count() == 1
 
     # verify that the image file exists at first just in case

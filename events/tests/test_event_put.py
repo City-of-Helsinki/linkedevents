@@ -460,6 +460,15 @@ def test_multiple_event_update(api_client, minimal_event_dict, user):
 
 
 @pytest.mark.django_db
+def test_multiple_event_update_with_incorrect_json(api_client, minimal_event_dict, organization, data_source):
+    data_source.owner = organization
+    data_source.save()
+    api_client.credentials(apikey=data_source.api_key)
+    response = api_client.put(reverse('event-list'), minimal_event_dict, format='json')
+    assert response.status_code == 400
+
+
+@pytest.mark.django_db
 def test_multiple_event_update_second_fails(api_client, minimal_event_dict, user):
     api_client.force_authenticate(user)
     minimal_event_dict_2 = deepcopy(minimal_event_dict)
