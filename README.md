@@ -66,6 +66,13 @@ For further erudition, take a look at the DRF documentation on [customizing the 
 
 After this, everything but search endpoint (/search) is working. See [search](#search)
 
+Production notes
+----------------
+
+Development installation above will give you quite a serviceable production installation for lightish usage. You can serve out the application using your favorite WSGI-capable application server. The WSGI-entrypoint for Linked Events is ```linkedevents.wsgi``` or in file ```linkedevents/wsgi.py```. Former is used by gunicorn, latter by uwsgi. The callable is ```application```.
+
+You will also need to serve out ```static``` and ```media``` folders at ```/static``` and ```/media``` in your URL space.
+
 Running tests
 ------------
 Tests must be run using an user who can create (and drop) databases and write the directories
