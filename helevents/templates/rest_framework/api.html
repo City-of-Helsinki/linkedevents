@@ -19,8 +19,10 @@
     {{ block.super }}
 {% elif name == "Event List" %}
     {% include "rest_framework/event_list.html" %}
-{% elif name == "Place List" %}
+{% elif name == "Place List List" %}
     {% include "rest_framework/place_list.html" %}
+{% elif name == "Keyword List List" %}
+    {% include "rest_framework/keyword_list.html" %}
 {% else %}
 {% endif %}
 {% endblock %}
