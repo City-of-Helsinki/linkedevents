@@ -1,5 +1,7 @@
-import shutil
+import os, shutil
 from django.core.management.base import BaseCommand
+
+from django.conf import settings
 
 
 class Command(BaseCommand):
@@ -9,6 +11,11 @@ class Command(BaseCommand):
         parser.add_argument('city_directory', nargs=1, type=str)
 
     def handle(self, *args, **options):
-        shutil.copyfile(options['city_directory'][0]+'/templates/rest_framework/api.html',
-                        'templates/rest_framework/api.html')
+        city_template_dir = os.path.join(settings.BASE_DIR, options['city_directory'][0], 'templates/rest_framework/')
+        project_template_dir = os.path.join(settings.BASE_DIR, 'templates/rest_framework/')
+        print(city_template_dir)
+        for file in os.listdir(city_template_dir):
+            print(file)
+            shutil.copyfile(os.path.join(city_template_dir, file),
+                            os.path.join(project_template_dir, file))
         self.stdout.write(self.style.SUCCESS('Successfully installed the template from '+options['city_directory'][0]))
