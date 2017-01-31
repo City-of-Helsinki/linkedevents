@@ -1386,64 +1386,6 @@ class EventFilter(filters.FilterSet):
 
 
 class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
-    """
-    # Filtering retrieved events
-
-    Query parameters can be used to filter the retrieved events by
-    the following criteria.
-
-    ## Event time
-
-    Use `start` and `end` to restrict the date range of returned events.
-    Any events that intersect with the given date range will be returned.
-
-    The parameters `start` and `end` can be given in the following formats:
-
-    - ISO 8601 (including the time of day)
-    - yyyy-mm-dd
-
-    In addition, `today` can be used as the value.
-
-    Example:
-
-        event/?start=2014-01-15&end=2014-01-20
-
-    [See the result](?start=2014-01-15&end=2014-01-20 "json")
-
-    ## Event location
-
-    ### Bounding box
-
-    To restrict the retrieved events to a geographical region, use
-    the query parameter `bbox` in the format
-
-        bbox=west,south,east,north
-
-    Where `west` is the longitude of the rectangle's western boundary,
-    `south` is the latitude of the rectangle's southern boundary,
-    and so on.
-
-    Example:
-
-        event/?bbox=24.9348,60.1762,24.9681,60.1889
-
-    [See the result](?bbox=24.9348,60.1762,24.9681,60.1889 "json")
-
-    # Getting detailed data
-
-    In the default case, keywords, locations, and other fields that
-    refer to separate resources are only displayed as simple references.
-
-    If you want to include the complete data from related resources in
-    the current response, use the keyword `include`. For example:
-
-        event/?include=location,keywords
-
-    [See the result](?include=location,keywords "json")
-
-    # Response data for the current URL
-
-    """
     queryset = Event.objects.filter(deleted=False)
     queryset = queryset.exclude(super_event_type=Event.SuperEventType.RECURRING, sub_events=None)
     # Use select_ and prefetch_related() to reduce the amount of queries
