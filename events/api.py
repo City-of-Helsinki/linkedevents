@@ -567,15 +567,23 @@ class KeywordRetrieveViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet)
 class KeywordListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = Keyword.objects.all()
     serializer_class = KeywordSerializer
+    filter_backends = (filters.OrderingFilter,)
+    ordering_fields = ('n_events', 'id', 'name', 'data_source')
+    ordering = ('-data_source', '-n_events',)
 
     def get_queryset(self):
         """
-        Return Keyword queryset. If request has parameter show_all_keywords=1
-        all Keywords are returned, otherwise only which have events.
-        Additional query parameters:
-        event.data_source
-        event.start
-        event.end
+        Return Keyword queryset.
+
+        If the request has no filter parameters, we only return keywords that meet the following criteria:
+        -the keyword has events
+        -the keyword is not deprecated
+
+        Supported keyword filtering parameters:
+        data_source  (only keywords with the given data source are included)
+        filter (only keywords containing the specified string are included)
+        show_all_keywords (keywords without events are included)
+        show_deprecated (deprecated keywords are included)
         """
         queryset = Keyword.objects.all()
         data_source = self.request.query_params.get('data_source')
@@ -583,20 +591,15 @@ class KeywordListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
             data_source = data_source.lower()
             queryset = queryset.filter(data_source=data_source)
         if not self.request.query_params.get('show_all_keywords'):
-            events = Event.objects.all()
-            params = _clean_qp(self.request.query_params)
-            if 'data_source' in params:
-                del params['data_source']
-            events = _filter_event_queryset(events, params)
-            keyword_ids = events.values_list('keywords',
-                                             flat=True).distinct().order_by()
-            queryset = queryset.filter(id__in=keyword_ids)
+            queryset = queryset.filter(n_events__gt=0)
+        if not self.request.query_params.get('show_deprecated'):
+            queryset = queryset.filter(deprecated=False)
 
         # Optionally filter keywords by filter parameter,
         # can be used e.g. with typeahead.js
-        val = self.request.query_params.get('filter')
+        val = self.request.query_params.get('text') or self.request.query_params.get('filter')
         if val:
-            queryset = queryset.filter(name__startswith=val)
+            queryset = queryset.filter(name__icontains=val)
         return queryset
 
 
@@ -839,7 +842,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     # provider = OrganizationSerializer(hide_ld_context=True)
     keywords = JSONLDRelatedField(serializer=KeywordSerializer, many=True, allow_empty=False,
                                   required=False,
-                                  view_name='keyword-detail', queryset=Keyword.objects.all())
+                                  view_name='keyword-detail', queryset=Keyword.objects.filter(deprecated=False))
     super_event = JSONLDRelatedField(serializer='EventSerializer', required=False, view_name='event-detail',
                                      queryset=Event.objects.all(), allow_null=True)
     event_status = EnumChoiceField(Event.STATUSES, required=False)
@@ -858,7 +861,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     in_language = JSONLDRelatedField(serializer=LanguageSerializer, required=False,
                                      view_name='language-detail', many=True, queryset=Language.objects.all())
     audience = JSONLDRelatedField(serializer=KeywordSerializer, view_name='keyword-detail',
-                                  many=True, required=False, queryset=Keyword.objects.all())
+                                  many=True, required=False, queryset=Keyword.objects.filter(deprecated=False))
 
     view_name = 'event-detail'
     fields_needed_to_publish = ('keywords', 'location', 'start_time', 'short_description', 'description')

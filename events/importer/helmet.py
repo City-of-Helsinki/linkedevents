@@ -28,6 +28,8 @@ YSO_KEYWORD_MAPS = {
     u'venäjä': u'p7643',  # -> venäjän kieli
     u'Seniorit': u'p2434',  # -> vanhukset
     u'Näyttelyt': u'p5121',
+    u'Toivoa kirjallisuudesta': u'p8113',  # -> kirjallisuus
+    u'Suomi 100': u'p29385',  # -> Suomi 100 vuotta -juhlavuosi
     u'Kirjallisuus': u'p8113',
     u'Kielikahvilat ja keskusteluryhmät': u'p18105',  # -> keskusteluryhmät
     u'Maahanmuuttajat': u'p6165',
@@ -36,8 +38,8 @@ YSO_KEYWORD_MAPS = {
     u'Pelitapahtumat': u'p6062',  # -> pelit
     u'Satutunnit': u'p14710',
     u'Koululaiset': u'p16485',
-    u'Lasten ja nuorten tapahtumat': (u'p12262', u'p11617'), # -> lapset, nuoret
-    u'Lapset ja perheet': (u'p12262', u'p4363'),  # -> lapset, perheet
+    u'Lasten ja nuorten tapahtumat': (u'p4354', u'p11617'), # -> lapset, nuoret
+    u'Lapset ja perheet': (u'p4354', u'p4363'),  # -> lapset, perheet
     u'Lukupiirit': u'p11406',  # -> lukeminen
     # u'Opastuskalenteri ': '?',
     # u'muut kielet': '?'
