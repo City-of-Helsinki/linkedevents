@@ -319,9 +319,10 @@ def test_short_description_cannot_exceed_160_chars(api_client, minimal_event_dic
     ([{'is_free': False, 'price': {'fi': 4}}], 201),
     ([{'description': {'fi': 'foo'}}, {'is_free': True}], 201),
 
-    ([{'is_free': False}], 400)
+    ([{'is_free': False}], 201),
+    ([], 400)
 ])
-def test_price_info_required(api_client, minimal_event_dict, user, offers, expected):
+def test_price_info_options(api_client, minimal_event_dict, user, offers, expected):
     api_client.force_authenticate(user)
     minimal_event_dict['offers'] = offers
 
