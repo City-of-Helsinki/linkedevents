@@ -22,6 +22,7 @@ def assert_event_data_is_equal(d1, d2, version='v1'):
         'keywords',
         'offers',
         'in_language',
+        'external_links',
 
         # 'start_time',  # fails because of Javascript's "Z"
         #                # vs Python's "+00:00"
@@ -39,23 +40,9 @@ def assert_event_data_is_equal(d1, d2, version='v1'):
     for key in FIELDS:
         if key in d1:
             if type(d1[key]) is list:
-                # required to check inline images
-                assert len(d1[key]) == len(d2[key])
-                for image1, image2 in zip(d1[key], d2[key]):
-                    for subkey in image1:
-                        print(subkey)
-                        print(image1[subkey])
-                        print(image2[subkey])
-                        assert image1[subkey] == image2[subkey]
+                assert_lists_match(d1[key], d2[key])
             else:
                 assert d1[key] == d2[key]
-
-    # test for external links (the API returns OrderedDicts because of the
-    # model's unique constraint)
-    comp = lambda d: (d['language'], d['link'])
-    links1 = set([comp(link) for link in d1.get('external_links', [])])
-    links2 = set([comp(link) for link in d2.get('external_links', [])])
-    assert links1 == links2
 
 
 def get(api_client, url, data=None):
@@ -64,10 +51,46 @@ def get(api_client, url, data=None):
     return response
 
 
+def assert_lists_match(l1, l2):
+    """
+    Checks that l1 and l2 contain objects with all common fields identical
+    :param l1: list with minimal objects
+    :param l2: list with potentially extended objects
+    :return:
+    """
+    assert len(l1) == len(l2)
+    for object1 in l1:
+        if type(object1) is dict:
+            assert_list_contains_matching_dictionary(l2, object1)
+        else:
+            assert object1 in l2
+
+
+def assert_list_contains_matching_dictionary(l1, dictionary):
+    """
+    Checks that l1 contains a dictionary with all the key-value pairs of given dictionary
+    :param l1:
+    :param dictionary:
+    :return:
+    """
+    for object1 in l1:
+        for key, value in dictionary.items():
+            if object1[key] == value:
+                continue
+            else:
+                # no match here
+                break
+        else:
+            # required fields matched!
+            return
+    raise AssertionError
+
+
 def assert_fields_exist(data, fields):
     for field in fields:
         assert field in data
     assert len(data) == len(fields)
+
 
 def versioned_reverse(view, version='v1', **kwargs):
     factory = APIRequestFactory()

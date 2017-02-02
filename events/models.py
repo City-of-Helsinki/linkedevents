@@ -32,6 +32,8 @@ from events import translation_utils
 from django.utils.encoding import python_2_unicode_compatible
 from django.contrib.postgres.fields import HStoreField
 from django.db import transaction
+from django.db.models.signals import m2m_changed
+from django.dispatch import receiver
 from image_cropping import ImageRatioField
 from munigeo.models import AdministrativeDivision
 
@@ -195,6 +197,9 @@ class Language(models.Model):
     id = models.CharField(max_length=6, primary_key=True)
     name = models.CharField(verbose_name=_('Name'), max_length=20)
 
+    def __str__(self):
+        return self.name
+
     class Meta:
         verbose_name = _('language')
         verbose_name_plural = _('languages')
@@ -204,6 +209,9 @@ class KeywordLabel(models.Model):
     name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True)
     language = models.ForeignKey(Language, blank=False, null=False)
 
+    def __str__(self):
+        return self.name + ' (' + str(self.language) + ')'
+
     class Meta:
         unique_together = (('name', 'language'),)
 
@@ -211,16 +219,42 @@ class KeywordLabel(models.Model):
 class Keyword(BaseModel):
     alt_labels = models.ManyToManyField(KeywordLabel, blank=True, related_name='keywords')
     aggregate = models.BooleanField(default=False)
+    deprecated = models.BooleanField(default=False, db_index=True)
     objects = models.Manager()
+    n_events = models.IntegerField(
+        verbose_name=_('event count'),
+        help_text=_('number of events with this keyword'),
+        default=0,
+        editable=False,
+        db_index=True
+    )
 
     schema_org_type = "Thing/LinkedEventKeyword"
 
     def __str__(self):
         return self.name
 
+    def deprecate(self):
+        self.deprecated = True
+        self.save(update_fields=['deprecated'])
+        return True
+
     class Meta:
         verbose_name = _('keyword')
         verbose_name_plural = _('keywords')
+
+
+def recache_n_events(keyword):
+    """
+    The helper function has to exist outside the model, because it is used in migration.
+    Django apps cannot serialize unbound instance functions when saving model history during migration.
+    :type keyword: Keyword
+    """
+    n_events = (keyword.events.all() | keyword.audience_events.all()).distinct().count()
+    if n_events != keyword.n_events:
+        keyword.n_events = n_events
+        keyword.save(update_fields=("n_events",))
+
 
 class KeywordSet(BaseModel):
     """
@@ -268,6 +302,14 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
                                        blank=True)
 
     geo_objects = models.GeoManager()
+    n_events = models.IntegerField(
+        verbose_name=_('event count'),
+        help_text=_('number of events in this location'),
+        default=0,
+        editable=False,
+        db_index=True
+    )
+
 
     class Meta:
         verbose_name = _('place')
@@ -292,6 +334,18 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
             self.divisions.clear()
 
 reversion.register(Place)
+
+
+def recache_n_events_in_location(place):
+    """
+    The helper function has to exist outside the model, because it is used in migration.
+    Django apps cannot serialize unbound instance functions when saving model history during migration.
+    :type place: place
+    """
+    n_events = place.events.all().count()
+    if n_events != place.n_events:
+        place.n_events = n_events
+        place.save(update_fields=("n_events",))
 
 
 class OpeningHoursSpecification(models.Model):
@@ -375,7 +429,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         verbose_name=_('Event data publication status'), choices=PUBLICATION_STATUSES,
         default=PublicationStatus.PUBLIC)
 
-    location = models.ForeignKey(Place, null=True, blank=True, on_delete=models.PROTECT)
+    location = models.ForeignKey(Place, related_name='events', null=True, blank=True, on_delete=models.PROTECT)
     location_extra_info = models.CharField(verbose_name=_('Location extra info'),
                                            max_length=400, null=True, blank=True)
 
@@ -394,8 +448,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     deleted = models.BooleanField(default=False, db_index=True)
 
     # Custom fields not from schema.org
-    keywords = models.ManyToManyField(Keyword)
-    audience = models.ManyToManyField(Keyword, related_name='audiences', blank=True)
+    keywords = models.ManyToManyField(Keyword, related_name='events')
+    audience = models.ManyToManyField(Keyword, related_name='audience_events', blank=True)
 
     class Meta:
         verbose_name = _('event')
@@ -405,6 +459,14 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         parent_attr = 'super_event'
 
     def save(self, *args, **kwargs):
+        # needed to cache location event numbers
+        old_location = None
+        if self.id:
+            try:
+                old_location = Event.objects.get(id=self.id).location
+            except Event.DoesNotExist:
+                pass
+
         # drafts may not have times set, so check that first
         start = getattr(self, 'start_time', None)
         end = getattr(self, 'end_time', None)
@@ -414,7 +476,14 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         if not self.id:
             self.created_time = BaseModel.now()
         self.last_modified_time = BaseModel.now()
+
         super(Event, self).save(*args, **kwargs)
+
+        # needed to cache location event numbers
+        if self.location:
+            recache_n_events_in_location(self.location)
+        if old_location and old_location != self.location:
+            recache_n_events_in_location(old_location)
 
     def __str__(self):
         name = ''
@@ -441,6 +510,21 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
             return user in self.publisher.admin_users.all()
 
 reversion.register(Event)
+
+
+@receiver(m2m_changed, sender=Event.keywords.through)
+@receiver(m2m_changed, sender=Event.audience.through)
+def keyword_added_or_removed(sender, model=None,
+                             instance=None, pk_set=None, action=None, **kwargs):
+    """
+    Listens to event-keyword add signals to keep event number up to date
+    """
+    if action in ('post_add', 'post_remove', 'post_clear'):
+        if model is Keyword:
+            for keyword in Keyword.objects.filter(pk__in=pk_set):
+                recache_n_events(keyword)
+        if model is Event:
+            recache_n_events(instance)
 
 
 class Offer(models.Model, SimpleValueMixin):

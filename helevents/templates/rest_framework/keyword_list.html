@@ -1,0 +1,27 @@
+<div class="panel panel-default">
+    <div class="panel-body">
+
+<h2 id="using-keyword-endpoint">Using the keyword endpoint</h2>
+<p>Here, categories for events are listed. Events in each category can be found at the
+<code>event</code> endpoint using the query parameter <code>keyword</code>. The common keywords
+used in all events originate from the <a href="https://finto.fi/yso/en/">general Finnish ontology (yso)</a>,
+hence the format <code>yso:p4354</code>. Default ordering is decreasing order by the number of events found.</p>
+<h4 id="keyword-text">Keyword text</h4>
+<p>To find keywords that contain a specific string, use the query parameter <code>text</code>.</p>
+<p>Example:</p>
+<pre><code>keyword/?text=lapset
+</code></pre>
+<p><a href="?text=lapset" title="json">See the result</a></p>
+<h4 id="keyword-source">Keyword source</h4>
+<p>Will restrict keywords to a specific data source.</p>
+<p>Example:</p>
+<pre><code>keyword/?data_source=yso
+</code></pre>
+<p><a href="?data_source=yso" title="json">See the result</a></p>
+<h4 id="showing-all-keyword">Showing all keywords</h4>
+<p>By default, only those keywords which have listed events are
+displayed. You may display keywords with zero <code>n_events</code> with the
+    query parameter <code>show_all_keywords</code>.</p>
+
+    </div>
+</div>

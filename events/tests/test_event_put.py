@@ -8,8 +8,8 @@ from .utils import versioned_reverse as reverse
 
 from events.tests.utils import assert_event_data_is_equal
 from events.tests.test_event_post import create_with_post
-from .conftest import DATETIME
-from events.models import Event
+from .conftest import keyword_id, location_id
+from events.models import Event, Keyword, Place
 from django.conf import settings
 
 
@@ -46,6 +46,52 @@ def test__update_a_draft_with_put(api_client, minimal_event_dict, user):
 
     # assert
     assert_event_data_is_equal(data2, response2.data)
+
+
+@pytest.mark.django_db
+def test__keyword_n_events_updated(api_client, minimal_event_dict, user, data_source):
+
+    # create an event
+    api_client.force_authenticate(user=user)
+    response = create_with_post(api_client, minimal_event_dict)
+    assert_event_data_is_equal(minimal_event_dict, response.data)
+    assert Keyword.objects.get(id='test').n_events == 1
+    data2 = response.data
+    print('got the post response')
+    print(data2)
+
+    # change the keyword and add an audience
+    event_id = data2.pop('@id')
+    data2['keywords'] = [{'@id': keyword_id(data_source, 'test2')}]
+    data2['audience'] = [{'@id': keyword_id(data_source, 'test3')}]
+    response2 = update_with_put(api_client, event_id, data2)
+    print('got the put response')
+    print(response2.data)
+    assert Keyword.objects.get(id='test').n_events == 0
+    assert Keyword.objects.get(id='test2').n_events == 1
+    assert Keyword.objects.get(id='test3').n_events == 1
+
+
+@pytest.mark.django_db
+def test__location_n_events_updated(api_client, minimal_event_dict, user, place2):
+
+    # create an event
+    api_client.force_authenticate(user=user)
+    response = create_with_post(api_client, minimal_event_dict)
+    assert_event_data_is_equal(minimal_event_dict, response.data)
+    assert Place.objects.get(id='test location').n_events == 1
+    data2 = response.data
+    print('got the post response')
+    print(data2)
+
+    # change the location
+    event_id = data2.pop('@id')
+    data2['location'] = {'@id': location_id(place2)}
+    response2 = update_with_put(api_client, event_id, data2)
+    print('got the put response')
+    print(response2.data)
+    assert Place.objects.get(id='test location').n_events == 0
+    assert Place.objects.get(id='test location 2').n_events == 1
 
 
 @pytest.mark.django_db
@@ -411,6 +457,15 @@ def test_multiple_event_update(api_client, minimal_event_dict, user):
     event_names = set(Event.objects.values_list('name_fi', flat=True))
 
     assert event_names == {'updated_name', 'updated_name_2'}
+
+
+@pytest.mark.django_db
+def test_multiple_event_update_with_incorrect_json(api_client, minimal_event_dict, organization, data_source):
+    data_source.owner = organization
+    data_source.save()
+    api_client.credentials(apikey=data_source.api_key)
+    response = api_client.put(reverse('event-list'), minimal_event_dict, format='json')
+    assert response.status_code == 400
 
 
 @pytest.mark.django_db
