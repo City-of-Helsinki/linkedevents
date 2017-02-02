@@ -3,13 +3,15 @@
 from __future__ import unicode_literals
 
 from django.db import migrations, models
-from events.models import recache_n_events
 
 
 def forward(apps, schema_editor):
     Keyword = apps.get_model('events', 'Keyword')
     for keyword in Keyword.objects.exclude(events=None) | Keyword.objects.exclude(audience_events=None):
-        recache_n_events(keyword)
+        n_events = (keyword.events.all() | keyword.audience_events.all()).distinct().count()
+        if n_events != keyword.n_events:
+            keyword.n_events = n_events
+            keyword.save(update_fields=("n_events",))
 
 
 class Migration(migrations.Migration):
