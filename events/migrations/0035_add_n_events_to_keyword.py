@@ -10,6 +10,7 @@ def forward(apps, schema_editor):
     for keyword in Keyword.objects.exclude(events=None) | Keyword.objects.exclude(audience_events=None):
         n_events = (keyword.events.all() | keyword.audience_events.all()).distinct().count()
         if n_events != keyword.n_events:
+            print("Updating event number for " + str(keyword.name))
             keyword.n_events = n_events
             keyword.save(update_fields=("n_events",))
 
