@@ -127,7 +127,8 @@ def get_authenticated_data_source_and_publisher(request):
             raise PermissionDenied(_("Data source doesn't belong to any organization"))
     else:
         # objects created by api are marked coming from the system data source unless api_key is provided
-        data_source = DataSource.objects.get(id=settings.SYSTEM_DATA_SOURCE_ID)
+        # we must optionally create the system data source here, as the settings may have changed at any time
+        data_source, created = DataSource.objects.get_or_create(id=settings.SYSTEM_DATA_SOURCE_ID)
         # user organization is used unless api_key is provided
         user = request.user
         if isinstance(user, User):
