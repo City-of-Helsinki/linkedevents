@@ -38,8 +38,6 @@ LOCATION_TPREK_MAP = {
     'nuorisokahvila clubi': '8006',
     'haagan nuorisotalo': '8023',
     'vuosaaren kirjasto': '8310',
-    'musiikkisali': '7259',
-    'teatterisali': '7259'
 }
 
 ADDRESS_TPREK_MAP = {
@@ -50,6 +48,7 @@ ADDRESS_TPREK_MAP = {
     'ala-malmin tori': 'malmitalo',
     'klaneettitie 5': 'kanneltalo',
     'klarinettvägen 5': 'kanneltalo',
+    'turunlinnantie 1': 'stoa'
 }
 
 CATEGORIES_TO_IGNORE = [
