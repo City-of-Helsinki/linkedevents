@@ -88,6 +88,8 @@ cd $INSTALL_BASE/linkedevents
 py.test events
 ```
 
+Note that search tests will fail unless you configure [search](#search)
+
 Requirements
 ------------
 
