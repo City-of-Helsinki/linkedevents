@@ -69,8 +69,22 @@ After this, everything but search endpoint (/search) is working. See [search](#s
 Running tests
 ------------
 Tests must be run using an user who can create (and drop) databases and write the directories
-your linkedevents installation resides in.
+your linkedevents installation resides in. Also the template database must include Postgis and
+HSTORE-extensions. If you are developing, you probably want to give those
+permissions to the database user configured in your development instance. Like so:
+
 ```bash
+# Most likely you have a postgres system user that can log into postgres as DB postgres user
+sudo -u postgres psql
+ALTER USER "linkedevents" CREATEDB;
+\c template1
+CREATE EXTENSION postgis;
+CREATE EXTENSION hstore;
+```
+
+Afterwards you can run the tests:
+```bash
+cd $INSTALL_BASE/linkedevents
 py.test events
 ```
 
