@@ -107,26 +107,26 @@ Linkedevents uses Elasticsearch for generating results on the /search-endpoint. 
 
 1. Install elasticsearch
 
-    We've only tested using the rather ancient 1.7 version. Version 5.x will certainly not work as the `django-haystack`-library does not support it.
+    We've only tested using the rather ancient 1.7 version. Version 5.x will certainly not work as the `django-haystack`-library does not support it. If you are using Ubuntu 16.04, 1.7 will be available in the official repository.
 
 2. (For finnish support) Install elasticsearch-analyzer-voikko, libvoikko and needed dictionaries
 
-    `/usr/share/elasticsearch/bin/plugin -i fi.evident.elasticsearch/elasticsearch-analysis-voikko/0.3.0`
-    This specific command is for Debian derivatives. The path to `plugin` command might be different on yours.
+    `/usr/share/elasticsearch/bin/plugin -i fi.evident.elasticsearch/elasticsearch-analysis-voikko/0.4.0`
+    This specific command is for Debian derivatives. The path to `plugin` command might be different on yours. Note that version 0.4.0 is the one compatible with Elasticsearch 1.7
 
     Installing libvoikko:
-    `apt-get install libvoikko`
+    `apt-get install libvoikko1`
 
-    Installing the dictionaries:
+    Installing the dictionaries (v5 dictionaries are needed for libvoikko version included in Ubuntu 16.04):
 
     ```bash
-    wget -P $INSTALL_BASE http://www.puimula.org/htp/testing/voikko-snapshot/dict-morpho.zip
+    wget -P $INSTALL_BASE http://www.puimula.org/htp/testing/voikko-snapshot-v5/dict-morpho.zip
     unzip $INSTALL_BASE/dict-morpho.zip -d /etc/voikko
     ```
 
 3. Configure the thing
 
-    Add the block below these instructions to $INSTALL_BASE/linkedevents/local_settings.py:
+    Add the long block below these instructions to $INSTALL_BASE/linkedevents/local_settings.py. If you are familiar with Django haystack, feel free to customize it.
     
 4. Rebuild the search indexes
 
