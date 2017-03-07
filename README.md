@@ -74,12 +74,16 @@ HSTORE-extensions. If you are developing, you probably want to give those
 permissions to the database user configured in your development instance. Like so:
 
 ```bash
+# Change this if you have different DB user
+DATABASE_USER=linkedevents
 # Most likely you have a postgres system user that can log into postgres as DB postgres user
-sudo -u postgres psql
-ALTER USER "linkedevents" CREATEDB;
+sudo -u postgres psql << EOF
+ALTER USER "$DATABASE_USER" CREATEDB;
 \c template1
-CREATE EXTENSION postgis;
-CREATE EXTENSION hstore;
+CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE EXTENSION IF NOT EXISTS hstore;
+EOF
+
 ```
 
 Afterwards you can run the tests:
