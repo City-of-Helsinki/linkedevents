@@ -519,7 +519,7 @@ def keyword_added_or_removed(sender, model=None,
     """
     Listens to event-keyword add signals to keep event number up to date
     """
-    if action in ('post_add', 'post_remove', 'post_clear'):
+    if action in ('post_add', 'post_remove'):
         if model is Keyword:
             for keyword in Keyword.objects.filter(pk__in=pk_set):
                 recache_n_events(keyword)
