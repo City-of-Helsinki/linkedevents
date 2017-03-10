@@ -250,12 +250,13 @@ class MatkoImporter(Importer):
         ]
         mapping = {
             'tanssi ja teatteri': 'tanssi', # following visithelsinki.fi
-            'messu': 'messut',
+            'messu': 'messut (tapahtumat)',
             'perinnetapahtuma': 'perinne',
             'pop/rock': 'populaarimusiikki',
             'konsertti': 'konsertit',
-            'klassinen': 'klassinen musiikki',
-            'kulttuuri': 'kulttuuritapahtumat'
+            'klassinen': 'taidemusiikki',
+            'kulttuuri': 'kulttuuritapahtumat',
+            'suomi100': 'suomi 100 vuotta -juhlavuosi'
         }
 
         event_types = set()
