@@ -31,11 +31,13 @@ from django.contrib.contenttypes.models import ContentType
 from events import translation_utils
 from django.utils.encoding import python_2_unicode_compatible
 from django.contrib.postgres.fields import HStoreField
-from django.db import transaction
+from django.db import transaction, connection
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 from image_cropping import ImageRatioField
 from munigeo.models import AdministrativeDivision
+
+from events.sql import count_events_for_keywords
 
 User = settings.AUTH_USER_MODEL
 
@@ -244,16 +246,21 @@ class Keyword(BaseModel):
         verbose_name_plural = _('keywords')
 
 
-def recache_n_events(keyword):
+def recache_n_events(keywords):
     """
-    The helper function has to exist outside the model, because it is used in migration.
-    Django apps cannot serialize unbound instance functions when saving model history during migration.
-    :type keyword: Keyword
+    Recache the number of events for the given keywords.
+
+    :type keywords: Iterable[Keyword]
     """
-    n_events = (keyword.events.all() | keyword.audience_events.all()).distinct().count()
-    if n_events != keyword.n_events:
-        keyword.n_events = n_events
-        keyword.save(update_fields=("n_events",))
+
+    # The helper function has to exist outside the model, because it is used in migration.
+    # Django apps cannot serialize unbound instance functions when saving model history during migration.
+    count_map = count_events_for_keywords((k.id for k in keywords))
+    for keyword in keywords:
+        n_events = count_map.get(keyword.id, 0)
+        if n_events != keyword.n_events:
+            keyword.n_events = n_events
+            keyword.save(update_fields=("n_events",))
 
 
 class KeywordSet(BaseModel):
@@ -521,10 +528,9 @@ def keyword_added_or_removed(sender, model=None,
     """
     if action in ('post_add', 'post_remove'):
         if model is Keyword:
-            for keyword in Keyword.objects.filter(pk__in=pk_set):
-                recache_n_events(keyword)
+            recache_n_events(keywords=Keyword.objects.filter(pk__in=pk_set))
         if model is Event:
-            recache_n_events(instance)
+            recache_n_events(keywords=[instance])
 
 
 class Offer(models.Model, SimpleValueMixin):

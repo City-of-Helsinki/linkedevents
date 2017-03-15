@@ -3,6 +3,7 @@ import requests
 import requests_cache
 
 import rdflib
+from django.core.exceptions import ObjectDoesNotExist
 from rdflib import URIRef
 from rdflib import RDF
 from rdflib.namespace import FOAF, SKOS, OWL
@@ -131,8 +132,11 @@ class YsoImporter(Importer):
             check_deprecated_keyword = lambda obj: obj.deprecated
             # manually add new keywords to deprecated ones
             for old_id, new_id in YSO_DEPRECATED_MAPS.items():
-                old_keyword = Keyword.objects.get(id=old_id)
-                new_keyword = Keyword.objects.get(id=new_id)
+                try:
+                    old_keyword = Keyword.objects.get(id=old_id)
+                    new_keyword = Keyword.objects.get(id=new_id)
+                except ObjectDoesNotExist:
+                    continue
                 print('Mapping events with %s to %s' % (str(old_keyword), str(new_keyword)))
                 new_keyword.events.add(*old_keyword.events.all())
                 new_keyword.audience_events.add(*old_keyword.audience_events.all())
