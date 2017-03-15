@@ -10,4 +10,4 @@ class Command(BaseCommand):
         with transaction.atomic():
             Keyword.objects.update(n_events=0)
             for keyword_id, n_events in count_events_for_keywords().items():
-                Keyword.objects.filter(id=keyword_id).update(n_events=n_events)
+                Keyword.objects.filter(id=keyword_id).exclude(n_events=n_events).update(n_events=n_events)
