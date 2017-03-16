@@ -972,8 +972,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
         # clean the html
         for k, v in data.items():
-            if type(v) == str:
-                if k in ["description"]:
+            if k in ["description"]:
+                if isinstance(v, str) and any(c in v for c in '<>&'):
                     data[k] = bleach.clean(v, settings.BLEACH_ALLOWED_TAGS)
         data = super().validate(data)
 
