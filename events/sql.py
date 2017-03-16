@@ -1,12 +1,14 @@
 from django.db import connection
 
 
-def count_events_for_keywords(keyword_ids=()):
+def count_events_for_keywords(keyword_ids=(), all=False):
     """
     Get the actual count of events using the given keywords.
 
-    :param keyword_ids: set of keyword ids; pass an empty set to get the data for all keywords
+    :param keyword_ids: set of keyword ids
     :type keyword_ids: Iterable[str]
+    :param all: count all keywords instead
+    :type all: bool
     :return: dict of keyword id to count
     :rtype: dict[str, int]
     """
@@ -24,7 +26,7 @@ def count_events_for_keywords(keyword_ids=()):
             ) t
             GROUP BY t.keyword_id;
             ''', [keyword_ids, keyword_ids])
-        else:
+        elif all:
             cursor.execute('''
             SELECT t.keyword_id, COUNT(DISTINCT t.event_id)
             FROM (
@@ -34,4 +36,39 @@ def count_events_for_keywords(keyword_ids=()):
             ) t
             GROUP BY t.keyword_id;
             ''')
+        else:
+            return {}
+        return dict(cursor.fetchall())
+
+
+def count_events_for_places(place_ids=(), all=False):
+    """
+    Get the actual count of events in the given places.
+
+    :param place_ids: set of place ids
+    :type place_ids: Iterable[str]
+    :param all: count all places instead
+    :type all: bool
+    :return: dict of place id to count
+    :rtype: dict[str, int]
+    """
+    # sorry for the non-DRY-ness; would be easier with an SQL generator like SQLAlchemy, but...
+
+    place_ids = tuple(set(place_ids))
+    with connection.cursor() as cursor:
+        if place_ids:
+            cursor.execute('''
+            SELECT e.location_id, COUNT(*)
+            FROM events_event e
+            WHERE location_id IN %s
+            GROUP BY e.location_id;
+            ''', [place_ids])
+        elif all:
+            cursor.execute('''
+            SELECT e.location_id, COUNT(*)
+            FROM events_event e
+            GROUP BY e.location_id;
+            ''')
+        else:
+            return {}
         return dict(cursor.fetchall())

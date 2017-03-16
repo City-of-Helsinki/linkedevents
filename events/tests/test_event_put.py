@@ -2,6 +2,7 @@
 from datetime import timedelta
 from copy import deepcopy
 from django.utils import timezone
+from django.core.management import call_command
 
 import pytest
 from .utils import versioned_reverse as reverse
@@ -55,6 +56,7 @@ def test__keyword_n_events_updated(api_client, minimal_event_dict, user, data_so
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, minimal_event_dict)
     assert_event_data_is_equal(minimal_event_dict, response.data)
+    call_command('update_n_events')
     assert Keyword.objects.get(id='test').n_events == 1
     data2 = response.data
     print('got the post response')
@@ -67,6 +69,7 @@ def test__keyword_n_events_updated(api_client, minimal_event_dict, user, data_so
     response2 = update_with_put(api_client, event_id, data2)
     print('got the put response')
     print(response2.data)
+    call_command('update_n_events')
     assert Keyword.objects.get(id='test').n_events == 0
     assert Keyword.objects.get(id='test2').n_events == 1
     assert Keyword.objects.get(id='test3').n_events == 1
@@ -79,6 +82,7 @@ def test__location_n_events_updated(api_client, minimal_event_dict, user, place2
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, minimal_event_dict)
     assert_event_data_is_equal(minimal_event_dict, response.data)
+    call_command('update_n_events')
     assert Place.objects.get(id='test location').n_events == 1
     data2 = response.data
     print('got the post response')
@@ -90,6 +94,7 @@ def test__location_n_events_updated(api_client, minimal_event_dict, user, place2
     response2 = update_with_put(api_client, event_id, data2)
     print('got the put response')
     print(response2.data)
+    call_command('update_n_events')
     assert Place.objects.get(id='test location').n_events == 0
     assert Place.objects.get(id='test location 2').n_events == 1
 

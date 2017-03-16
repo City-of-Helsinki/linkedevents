@@ -6,6 +6,8 @@ import pytest
 from django.utils import timezone, translation
 from django.utils.encoding import force_text
 from .utils import versioned_reverse as reverse
+from django.core.management import call_command
+
 
 from events.tests.utils import assert_event_data_is_equal
 from .conftest import keyword_id
@@ -182,6 +184,7 @@ def test__keyword_n_events_updated(list_url,
                                                                user):
     api_client.force_authenticate(user=user)
     response = api_client.post(list_url, minimal_event_dict, format='json')
+    call_command('update_n_events')
     assert Keyword.objects.get(id='test').n_events == 1
 
 
@@ -192,6 +195,7 @@ def test__location_n_events_updated(list_url,
                                                                user):
     api_client.force_authenticate(user=user)
     response = api_client.post(list_url, minimal_event_dict, format='json')
+    call_command('update_n_events')
     assert Place.objects.get(id='test location').n_events == 1
 
 
