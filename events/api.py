@@ -972,8 +972,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
         # clean the html
         for k, v in data.items():
-            if type(v) == str:
-                if k in ["description"]:
+            if k in ["description"]:
+                if isinstance(v, str) and any(c in v for c in '<>&'):
                     data[k] = bleach.clean(v, settings.BLEACH_ALLOWED_TAGS)
         data = super().validate(data)
 
@@ -1391,7 +1391,7 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
     # Use select_ and prefetch_related() to reduce the amount of queries
     queryset = queryset.select_related('location')
     queryset = queryset.prefetch_related(
-        'offers', 'keywords', 'external_links', 'sub_events')
+        'offers', 'keywords', 'audience', 'external_links', 'sub_events', 'in_language')
     serializer_class = EventSerializer
     filter_backends = (EventOrderingFilter, filters.DjangoFilterBackend)
     filter_class = EventFilter

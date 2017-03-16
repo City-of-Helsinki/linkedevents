@@ -349,10 +349,11 @@ def recache_n_events_in_location(place):
     Django apps cannot serialize unbound instance functions when saving model history during migration.
     :type place: place
     """
-    n_events = place.events.all().count()
+    n_events = place.events.count()
     if n_events != place.n_events:
         place.n_events = n_events
-        place.save(update_fields=("n_events",))
+        # Use the queryset update API to skip the position/divisions save
+        Place.objects.filter(id=place.id).update(n_events=n_events)
 
 
 class OpeningHoursSpecification(models.Model):
