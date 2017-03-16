@@ -1391,7 +1391,7 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
     # Use select_ and prefetch_related() to reduce the amount of queries
     queryset = queryset.select_related('location')
     queryset = queryset.prefetch_related(
-        'offers', 'keywords', 'external_links', 'sub_events')
+        'offers', 'keywords', 'audience', 'external_links', 'sub_events', 'in_language')
     serializer_class = EventSerializer
     filter_backends = (EventOrderingFilter, filters.DjangoFilterBackend)
     filter_class = EventFilter
