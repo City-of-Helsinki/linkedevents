@@ -74,6 +74,15 @@ def test__keyword_n_events_updated(api_client, minimal_event_dict, user, data_so
     assert Keyword.objects.get(id='test2').n_events == 1
     assert Keyword.objects.get(id='test3').n_events == 1
 
+    # delete all keywords
+    data3 = response2.data
+    data3['keywords'] = []
+    response3 = update_with_put(api_client, event_id, data3)
+    print('got the put response')
+    print(response2.data)
+    call_command('update_n_events')
+    assert Keyword.objects.get(id='test2').n_events == 0
+
 
 @pytest.mark.django_db
 def test__location_n_events_updated(api_client, minimal_event_dict, user, place2):
