@@ -181,16 +181,21 @@ class YsoImporter(Importer):
         if is_deprecated(graph, subject):
             return
         keyword = Keyword(data_source=self.data_source)
-        keyword._changed = True
         keyword._created = True
-        keyword.aggregate = is_aggregate_concept(graph, subject)
         keyword.id = self.yso_id(subject)
         keyword.created_time = BaseModel.now()
-        keyword.last_modified_time = BaseModel.now()
+        keyword.aggregate = is_aggregate_concept(graph, subject)
+        self.update_keyword(keyword, graph, subject)
+        return keyword
+
+    def update_keyword(self, keyword, graph, subject):
         for _, literal in graph.preferredLabel(subject):
             with active_language(literal.language):
-                keyword.name = str(literal)
-        return keyword
+                if keyword.name != str(literal):
+                    print('(re)naming keyword ' + keyword.name + ' to ' + str(literal))
+                    keyword.name = str(literal)
+                    keyword._changed = True
+                    keyword.last_modified_time = BaseModel.now()
 
     def save_keywords_in_bulk(self, graph):
         keywords = []
@@ -232,6 +237,7 @@ class YsoImporter(Importer):
                 return
         else:
             keyword._created = False
+            self.update_keyword(keyword, graph, subject)
         if keyword._changed:
             keyword.save()
 
