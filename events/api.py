@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from dateutil.parser import parse as dateutil_parse
 
 # django and drf
+from django.db.transaction import atomic
 from django.http import Http404
 from django.utils import translation
 from django.core.exceptions import ValidationError, PermissionDenied
@@ -1454,9 +1455,14 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
     def allow_bulk_destroy(self, qs, filtered):
         return False
 
+    @atomic
     def bulk_update(self, request, *args, **kwargs):
         self.data_source, self.organization = get_authenticated_data_source_and_publisher(self.request)
         return super().bulk_update(request, *args, **kwargs)
+
+    @atomic
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
 
 
 register_view(EventViewSet, 'event')
