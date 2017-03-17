@@ -565,7 +565,7 @@ class KeywordSerializer(LinkedEventsSerializer):
 
     class Meta:
         model = Keyword
-        fields = '__all__'
+        exclude = ('n_events_changed',)
 
 
 class KeywordRetrieveViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
@@ -718,7 +718,7 @@ class PlaceSerializer(LinkedEventsSerializer, GeoModelSerializer):
 
     class Meta:
         model = Place
-        fields = '__all__'
+        exclude = ('n_events_changed',)
 
 
 class PlaceFilter(filters.FilterSet):

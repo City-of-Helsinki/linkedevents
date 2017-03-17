@@ -31,13 +31,12 @@ from django.contrib.contenttypes.models import ContentType
 from events import translation_utils
 from django.utils.encoding import python_2_unicode_compatible
 from django.contrib.postgres.fields import HStoreField
-from django.db import transaction, connection
+from django.db import transaction
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 from image_cropping import ImageRatioField
 from munigeo.models import AdministrativeDivision
 
-from events.sql import count_events_for_keywords
 
 User = settings.AUTH_USER_MODEL
 
@@ -230,6 +229,7 @@ class Keyword(BaseModel):
         editable=False,
         db_index=True
     )
+    n_events_changed = models.BooleanField(default=False, db_index=True)
 
     schema_org_type = "Thing/LinkedEventKeyword"
 
@@ -244,23 +244,6 @@ class Keyword(BaseModel):
     class Meta:
         verbose_name = _('keyword')
         verbose_name_plural = _('keywords')
-
-
-def recache_n_events(keywords):
-    """
-    Recache the number of events for the given keywords.
-
-    :type keywords: Iterable[Keyword]
-    """
-
-    # The helper function has to exist outside the model, because it is used in migration.
-    # Django apps cannot serialize unbound instance functions when saving model history during migration.
-    count_map = count_events_for_keywords((k.id for k in keywords))
-    for keyword in keywords:
-        n_events = count_map.get(keyword.id, 0)
-        if n_events != keyword.n_events:
-            keyword.n_events = n_events
-            keyword.save(update_fields=("n_events",))
 
 
 class KeywordSet(BaseModel):
@@ -316,6 +299,7 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
         editable=False,
         db_index=True
     )
+    n_events_changed = models.BooleanField(default=False, db_index=True)
 
 
     class Meta:
@@ -341,19 +325,6 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
             self.divisions.clear()
 
 reversion.register(Place)
-
-
-def recache_n_events_in_location(place):
-    """
-    The helper function has to exist outside the model, because it is used in migration.
-    Django apps cannot serialize unbound instance functions when saving model history during migration.
-    :type place: place
-    """
-    n_events = place.events.count()
-    if n_events != place.n_events:
-        place.n_events = n_events
-        # Use the queryset update API to skip the position/divisions save
-        Place.objects.filter(id=place.id).update(n_events=n_events)
 
 
 class OpeningHoursSpecification(models.Model):
@@ -488,10 +459,10 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         super(Event, self).save(*args, **kwargs)
 
         # needed to cache location event numbers
-        if self.location:
-            recache_n_events_in_location(self.location)
+        if not old_location and self.location:
+            Place.objects.filter(id=self.location.id).update(n_events_changed=True)
         if old_location and old_location != self.location:
-            recache_n_events_in_location(old_location)
+            Place.objects.filter(id__in=(old_location.id, self.location.id)).update(n_events_changed=True)
 
     def __str__(self):
         name = ''
@@ -529,9 +500,10 @@ def keyword_added_or_removed(sender, model=None,
     """
     if action in ('post_add', 'post_remove'):
         if model is Keyword:
-            recache_n_events(keywords=Keyword.objects.filter(pk__in=pk_set))
+            Keyword.objects.filter(pk__in=pk_set).update(n_events_changed=True)
         if model is Event:
-            recache_n_events(keywords=[instance])
+            instance.n_events_changed = True
+            instance.save(update_fields=("n_events_changed",))
 
 
 class Offer(models.Model, SimpleValueMixin):
