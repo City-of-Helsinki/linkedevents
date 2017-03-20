@@ -155,7 +155,7 @@ class BaseModel(models.Model):
                                  blank=True)
 
     created_time = models.DateTimeField(null=True, blank=True)
-    last_modified_time = models.DateTimeField(null=True, blank=True)
+    last_modified_time = models.DateTimeField(null=True, blank=True, db_index=True)
 
     created_by = models.ForeignKey(
         User, null=True, blank=True,
