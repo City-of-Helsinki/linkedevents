@@ -137,24 +137,6 @@ def test_get_event_list_verify_division_filter(api_client, event, event2, event3
 
 
 @pytest.mark.django_db
-def test_get_event_list_check_super_event_without_subevents_excluded(api_client, event, event2):
-    event.super_event_type = Event.SuperEventType.RECURRING
-    event.save()
-    response = get_list(api_client)
-
-    # the first event is a recurring super without subevents, expect it to be excluded
-    assert len(response.data['data']) == 1
-    assert response.data['data'][0]['id'] == event2.id
-
-    event2.super_event = event
-    event2.save()
-
-    # the first event has a sub event now, expect it to be included
-    response = get_list(api_client)
-    assert len(response.data['data']) == 2
-
-
-@pytest.mark.django_db
 def test_get_event_list_recurring_filters(api_client, event, event2):
     event.super_event_type = Event.SuperEventType.RECURRING
     event.save()
