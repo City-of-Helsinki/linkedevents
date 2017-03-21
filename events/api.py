@@ -1388,7 +1388,8 @@ class EventFilter(filters.FilterSet):
 
 class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
     queryset = Event.objects.filter(deleted=False)
-    queryset = queryset.exclude(super_event_type=Event.SuperEventType.RECURRING, sub_events=None)
+    # This exclude is, atm, a bit overkill, considering it causes a massive query and no such events exist.
+    # queryset = queryset.exclude(super_event_type=Event.SuperEventType.RECURRING, sub_events=None)
     # Use select_ and prefetch_related() to reduce the amount of queries
     queryset = queryset.select_related('location')
     queryset = queryset.prefetch_related(
