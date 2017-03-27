@@ -12,6 +12,14 @@ if [ -f $ROOT_PATH/local_update_config ]; then
     . $ROOT_PATH/local_update_config
 fi
 
+function _log () {
+    echo $(date "$TIMESTAMP_FORMAT"): $RUN_ID: $@
+}
+
+# Identifier to separate runs in logs, if messages end up
+# in same file accidentally
+RUN_ID=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 4)
+
 # Ensure the logging directory exists
 # -p caused the command not to return error if the directory exists
 mkdir -p $LOG_DIRECTORY
@@ -23,63 +31,63 @@ exec 3>&1 4>&2
 trap 'exec 2>&4 1>&3' 0 1 2 3
 exec 1> $LOG_FILE 2>&1
 
-echo ---------------------------------
-echo "$(date "$TIMESTAMP_FORMAT") Starting import"
-echo ---------------------------------
+_log ---------------------------------
+_log "Starting import"
+_log ---------------------------------
 
 cd $ROOT_PATH
 
-echo "$(date "$TIMESTAMP_FORMAT") --- Starting tprek importer ---"
+_log "--- Starting tprek importer ---"
 
-python manage.py event_import tprek --places
+timeout --preserve-status -s INT 2m python manage.py event_import tprek --places
 if [ $? -ne 0 ]; then
-    echo "tprek importer signaled failure"
+    _log "tprek importer signaled failure"
     LAST_ERROR="tprek"
 fi
 
-echo "$(date "$TIMESTAMP_FORMAT") --- Starting matko importer ---"
+_log "--- Starting matko importer ---"
 
-python manage.py event_import matko --events
+timeout --preserve-status -s INT 10m python manage.py event_import matko --events
 if [ $? -ne 0 ]; then
-    echo "matko importer signaled failure"
+    _log "matko importer signaled failure"
     LAST_ERROR="matko"
 fi
 
-echo "$(date "$TIMESTAMP_FORMAT") --- Starting kulke importer ---"
+_log "--- Starting kulke importer ---"
 
-python manage.py event_import kulke --events
+timeout --preserve-status -s INT 5m python manage.py event_import kulke --events
 if [ $? -ne 0 ]; then
-    echo "kulke importer signaled failure"
+    _log "kulke importer signaled failure"
     LAST_ERROR="kulke"
 fi
 
-echo "$(date "$TIMESTAMP_FORMAT") --- Starting helmet importer ---"
+_log "--- Starting helmet importer ---"
 
-python manage.py event_import helmet --events
+timeout --preserve-status -s INT 5m python manage.py event_import helmet --events
 if [ $? -ne 0 ]; then
-    echo "helmet importer signaled failure"
+    _log "helmet importer signaled failure"
     LAST_ERROR="helmet"
 fi
 
-echo "$(date "$TIMESTAMP_FORMAT") --- Starting haystack index update ---"
+_log "--- Starting haystack index update ---"
 
 nice python manage.py update_index -a 1
 if [ $? -ne 0 ]; then
-    echo "haystack index update signaled failure"
+    _log "haystack index update signaled failure"
     LAST_ERROR="haystack"
 fi
 
-echo "$(date "$TIMESTAMP_FORMAT") --- Starting curl to purge varnish cache ---"
+_log "--- Starting curl to purge varnish cache ---"
 
 curl -s -X PURGE http://10.1.2.123/linkedevents
 if [ $? -ne 0 ]; then
-    echo "varnish purge call signaled failure"
+    _log "varnish purge call signaled failure"
     LAST_ERROR="varnish_purge"
 fi
 
-echo ---------------------------------
-echo "$(date "$TIMESTAMP_FORMAT") Import finished"
-echo ---------------------------------
+_log "---------------------------------"
+_log "Import finished"
+_log "---------------------------------"
 
 # Notify the Watchers
 
@@ -94,7 +102,7 @@ fi
 # Output logs to runner if errors happened
 
 if [ -n "$LAST_ERROR" ]; then
-    echo "$(date "$TIMESTAMP_FORMAT") At least one step failed. Last step to fail was $LAST_ERROR" >&4
+    _log "At least one step failed. Last step to fail was $LAST_ERROR" >&4
     cat $LOG_FILE >&4
     exit 1
 fi
