@@ -96,7 +96,7 @@ class KeywordMatcher(object):
                 print('no matches for', text)
                 return None
 
-            objects = Keyword.objects.filter(id__in=keyword_ids)
+            objects = Keyword.objects.filter(id__in=keyword_ids, deprecated=False)
             if len(keyword_ids) > 1:
                 try:
                     aggregate_keyword = objects.get(aggregate=True)
