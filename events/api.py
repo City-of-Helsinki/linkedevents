@@ -1364,7 +1364,7 @@ def _filter_event_queryset(queryset, params, srs=None):
     val = params.get('publisher', None)
     if val:
         val = val.split(',')
-        queryset = queryset.filter(publisher__id=val)
+        queryset = queryset.filter(publisher__id__in=val)
 
     return queryset
 
