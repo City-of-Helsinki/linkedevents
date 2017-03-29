@@ -590,16 +590,17 @@ class KeywordListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         -the keyword is not deprecated
 
         Supported keyword filtering parameters:
-        data_source  (only keywords with the given data source are included)
+        data_source (only keywords with the given data sources are included)
         filter (only keywords containing the specified string are included)
         show_all_keywords (keywords without events are included)
         show_deprecated (deprecated keywords are included)
         """
         queryset = Keyword.objects.all()
         data_source = self.request.query_params.get('data_source')
+        # Filter by data source, multiple sources separated by comma
         if data_source:
-            data_source = data_source.lower()
-            queryset = queryset.filter(data_source=data_source)
+            data_source = data_source.lower().split(',')
+            queryset = queryset.filter(data_source__in=data_source)
         if not self.request.query_params.get('show_all_keywords'):
             queryset = queryset.filter(n_events__gt=0)
         if not self.request.query_params.get('show_deprecated'):
