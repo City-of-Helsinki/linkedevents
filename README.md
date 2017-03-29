@@ -3,6 +3,7 @@
 [![Build status](https://travis-ci.org/City-of-Helsinki/linkedevents.svg)](https://travis-ci.org/City-of-Helsinki/linkedevents)
 [![Requirements](https://requires.io/github/City-of-Helsinki/linkedevents/requirements.svg?branch=master)](https://requires.io/github/City-of-Helsinki/linkedevents/requirements/?branch=master)
 [![Stories in Ready](https://badge.waffle.io/City-of-Helsinki/linkedevents.svg?label=ready&title=Ready)](http://waffle.io/City-of-Helsinki/linkedevents)
+[![Gitter](https://img.shields.io/gitter/room/City-of-Helsinki/heldev.svg?maxAge=2592000)](https://gitter.im/City-of-Helsinki/heldev)
 
 Linked Events provides categorized data on events and places. The project was originally developed for the City of Helsinki.
 
@@ -147,11 +148,11 @@ Linkedevents uses Elasticsearch for generating results on the /search-endpoint. 
 3. Configure the thing
 
     Add the long block below these instructions to $INSTALL_BASE/linkedevents/local_settings.py. If you are familiar with Django haystack, feel free to customize it.
-    
+
 4. Rebuild the search indexes
 
    `python manage.py rebuild_index`
-  
+
    You should now have a working /search endpoint, give or take a few.
 
 ```python
