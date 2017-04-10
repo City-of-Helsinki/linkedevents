@@ -174,3 +174,20 @@ def test_super_event_type_filter(api_client, event, event2):
 
     response = get_list(api_client, query_string='super_event_type=fwfiuwhfiuwhiw')
     assert len(response.data['data']) == 0
+
+
+@pytest.mark.django_db
+def test_event_list_filters(api_client, event, event2):
+    filters = (
+        ([event.publisher.id, event2.publisher.id], 'publisher'),
+        ([event.data_source.id, event2.data_source.id], 'data_source'),
+    )
+
+    for filter_values, filter_name in filters:
+        q = ','.join(filter_values)
+        response = get_list(api_client, query_string='%s=%s' % (filter_name, q))
+        data = response.data['data']
+        assert(len(data) == 2)
+        ids = [e['id'] for e in data]
+        assert event.id in ids
+        assert event2.id in ids

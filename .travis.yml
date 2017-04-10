@@ -14,13 +14,13 @@ addons:
 
 install:
 - pip install --upgrade pip
-- pip install coveralls -r requirements.txt
+- pip install codecov pytest-cov -r requirements.txt
 
 before_script:
 - psql template1 -c 'create extension hstore;'
 - psql template1 -c 'create extension postgis;'
 
-script: py.test events
+script: py.test --cov . events
 
 before_cache:
 - rm -f $HOME/.cache/pip/log/debug.log
@@ -29,4 +29,4 @@ notifications:
   slack:
     secure: Hxh7X9ckorBlD2MRiSh/TE6nC0kyEZrEmegx3FHQgwOm5tNCZcJUoJprmEXA82SMxlbl12XcNLhFZaeQd6Gt2AF5AvTjbJLsLZBRebbKA6We1dCSpyHSGXy+GGWRD0J1OYstk2jg5fWmsscusLZ0MFbybg8qwmsv7/LOG+QoX6M=
 
-after_success: coveralls
+after_success: codecov
