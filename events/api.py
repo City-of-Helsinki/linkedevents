@@ -883,9 +883,15 @@ class ImageViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = Image.objects.all()
-        val = self.request.query_params.get('publisher', None)
-        if val:
-            queryset = queryset.filter(publisher__id=val)
+        publisher = self.request.query_params.get('publisher', None)
+        if publisher:
+            publisher = publisher.lower().split(',')
+            queryset = queryset.filter(publisher__in=publisher)
+        data_source = self.request.query_params.get('data_source')
+        # Filter by data source, multiple sources separated by comma
+        if data_source:
+            data_source = data_source.lower().split(',')
+            queryset = queryset.filter(data_source__in=data_source)
         return queryset
 
     def perform_destroy(self, instance):
