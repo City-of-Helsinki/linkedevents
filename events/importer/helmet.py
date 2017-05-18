@@ -119,7 +119,7 @@ LOCATIONS = {
     u"Vuosaaren kirjasto": ((10856, 11405), 8310),
 }
 
-HELMET_BASE_URL = 'http://www.helmet.fi'
+HELMET_BASE_URL = 'https://www.helmet.fi'
 HELMET_API_URL = (
     HELMET_BASE_URL + '/api/opennc/v1/ContentLanguages({lang_code})'
     '/Contents?$filter=TemplateId eq 3&$expand=ExtendedProperties,LanguageVersions'
