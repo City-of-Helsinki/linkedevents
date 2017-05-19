@@ -39,3 +39,4 @@ django-cleanup
 django-allauth
 django-leaflet
 djangorestframework-bulk
+python-docx
