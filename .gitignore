@@ -13,3 +13,4 @@ media/
 *.iml
 *.kate-swp
 data/
+venv
