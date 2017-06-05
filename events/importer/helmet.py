@@ -31,7 +31,7 @@ YSO_KEYWORD_MAPS = {
     u'Toivoa kirjallisuudesta': u'p8113',  # -> kirjallisuus
     u'Suomi 100': u'p29385',  # -> Suomi 100 vuotta -juhlavuosi
     u'Kirjallisuus': u'p8113',
-    u'Kielikahvilat ja keskusteluryhmät': u'p18105',  # -> keskusteluryhmät
+    u'Kielikahvilat ja keskusteluryhmät': (u'p18105', u'p556'),  # -> keskusteluryhmät
     u'Maahanmuuttajat': u'p6165',
     u'Opastukset ja kurssit': (u'p2149', u'p9270'),  # -> opastus, kurssit
     u'Nuoret': u'p11617',
@@ -41,8 +41,9 @@ YSO_KEYWORD_MAPS = {
     u'Lasten ja nuorten tapahtumat': (u'p4354', u'p11617'), # -> lapset, nuoret
     u'Lapset ja perheet': (u'p4354', u'p4363'),  # -> lapset, perheet
     u'Lukupiirit': u'p11406',  # -> lukeminen
+    u'Musiikki': u'p1808',  # -> musiikki
+    u'muut kielet': u'p556',  # -> kielet
     # u'Opastuskalenteri ': '?',
-    # u'muut kielet': '?'
 }
 
 LOCATIONS = {
