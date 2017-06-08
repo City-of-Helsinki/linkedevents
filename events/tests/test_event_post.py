@@ -3,6 +3,7 @@ from copy import deepcopy
 from datetime import timedelta
 
 import pytest
+import pytz
 from django.utils import timezone, translation
 from django.utils.encoding import force_text
 from .utils import versioned_reverse as reverse
@@ -223,6 +224,11 @@ def test__autopopulated_fields_at_create(
     assert event.last_modified_time is not None
     assert event.data_source.id == settings.SYSTEM_DATA_SOURCE_ID
     assert event.publisher == organization
+    # events are automatically marked as ending at midnight, local time
+    assert event.end_time == timezone.localtime(timezone.now() + timedelta(days=2)).\
+        replace(hour=0, minute=0, second=0, microsecond=0).astimezone(pytz.utc)
+    assert event.has_end_time is False
+
 
 
 # the following values may not be posted

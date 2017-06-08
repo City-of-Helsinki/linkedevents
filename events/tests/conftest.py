@@ -28,7 +28,7 @@ from ..models import License, PublicationStatus
 
 TEXT = 'testing'
 URL = "http://localhost"
-DATETIME = (timezone.now() + timedelta(days=1)).isoformat()
+DATETIME = (timezone.now() + timedelta(days=1)).isoformat().replace('+00:00', 'Z')
 
 OTHER_DATA_SOURCE_ID = "testotherdatasourceid"
 

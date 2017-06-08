@@ -883,9 +883,15 @@ class ImageViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = Image.objects.all()
-        val = self.request.query_params.get('publisher', None)
-        if val:
-            queryset = queryset.filter(publisher__id=val)
+        publisher = self.request.query_params.get('publisher', None)
+        if publisher:
+            publisher = publisher.lower().split(',')
+            queryset = queryset.filter(publisher__in=publisher)
+        data_source = self.request.query_params.get('data_source')
+        # Filter by data source, multiple sources separated by comma
+        if data_source:
+            data_source = data_source.lower().split(',')
+            queryset = queryset.filter(data_source__in=data_source)
         return queryset
 
     def perform_destroy(self, instance):
@@ -1026,8 +1032,9 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             # provided time is assumed exact
             data['has_start_time'] = True
         if not data['has_start_time']:
-            # provided time is inexact
-            data['start_time'] = data['start_time'].replace(hour=0, minute=0, second=0)
+            # if no exact time is supplied, the event starts at midnight local time
+            data['start_time'] = timezone.localtime(data['start_time']).\
+                replace(hour=0, minute=0, second=0, microsecond=0).astimezone(pytz.utc)
 
         # adjust end_time and has_end_time
 
@@ -1038,9 +1045,10 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         if 'has_end_time' not in data:
             # provided time is assumed exact
             data['has_end_time'] = True
-        # If end date is supplied but no time, the event ends at midnight of the following day.
         if not data['has_end_time']:
-            data['end_time'] = data['end_time'].replace(hour=0, minute=0, second=0)
+            # if no exact time is supplied, the event ends at midnight local time
+            data['end_time'] = timezone.localtime(data['end_time'])\
+                .replace(hour=0, minute=0, second=0, microsecond=0).astimezone(pytz.utc)
             data['end_time'] += timedelta(days=1)
 
         if data.get('start_time') and data['start_time'] < timezone.now():

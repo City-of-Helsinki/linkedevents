@@ -23,10 +23,8 @@ def assert_event_data_is_equal(d1, d2, version='v1'):
         'offers',
         'in_language',
         'external_links',
-
-        # 'start_time',  # fails because of Javascript's "Z"
-        #                # vs Python's "+00:00"
-        # 'end_time',    # -"-
+        'start_time',
+        'end_time',
     )
     if version == 'v1':
         FIELDS += ('images',)

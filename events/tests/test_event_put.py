@@ -145,7 +145,7 @@ def test__reschedule_an_event_with_put(api_client, complex_event_dict, user):
     response = create_with_post(api_client, complex_event_dict)
 
     # create a new datetime
-    new_datetime = (timezone.now() + timedelta(days=3)).isoformat()
+    new_datetime = (timezone.now() + timedelta(days=3)).isoformat().replace('+00:00', 'Z')
     data2 = response.data
     data2['start_time'] = new_datetime
     data2['end_time'] = new_datetime
@@ -167,7 +167,7 @@ def test__reschedule_an_event_with_put(api_client, complex_event_dict, user):
     assert 'event_status' in response3.data
 
     # create a new datetime again
-    new_datetime = (timezone.now() + timedelta(days=3)).isoformat()
+    new_datetime = (timezone.now() + timedelta(days=3)).isoformat().replace('+00:00', 'Z')
     data2 = response2.data
     data2['start_time'] = new_datetime
     data2['end_time'] = new_datetime
@@ -208,7 +208,7 @@ def test__postpone_an_event_with_put(api_client, complex_event_dict, user):
     assert 'event_status' in response2.data
 
     # reschedule and try to cancel marking
-    new_datetime = (timezone.now() + timedelta(days=3)).isoformat()
+    new_datetime = (timezone.now() + timedelta(days=3)).isoformat().replace('+00:00', 'Z')
     data2['start_time'] = new_datetime
     data2['end_time'] = new_datetime
     data2['event_status'] = 'EventScheduled'
@@ -220,7 +220,7 @@ def test__postpone_an_event_with_put(api_client, complex_event_dict, user):
 
     # reschedule, but do not try to cancel marking
     data2 = response2.data
-    new_datetime = (timezone.now() + timedelta(days=3)).isoformat()
+    new_datetime = (timezone.now() + timedelta(days=3)).isoformat().replace('+00:00', 'Z')
     data2['start_time'] = new_datetime
     data2['end_time'] = new_datetime
     data2.pop('event_status')
@@ -290,7 +290,7 @@ def test__cancel_a_rescheduled_event_with_put(api_client, complex_event_dict, us
     response = create_with_post(api_client, complex_event_dict)
 
     # create a new datetime
-    new_datetime = (timezone.now() + timedelta(days=3)).isoformat()
+    new_datetime = (timezone.now() + timedelta(days=3)).isoformat().replace('+00:00', 'Z')
     data2 = response.data
     data2['start_time'] = new_datetime
     data2['end_time'] = new_datetime
@@ -335,7 +335,7 @@ def test__reschedule_a_cancelled_event_with_put(api_client, complex_event_dict, 
     assert_event_data_is_equal(data2, response2.data)
 
     # create a new datetime and remove the cancelled status
-    new_datetime = (timezone.now() + timedelta(days=3)).isoformat()
+    new_datetime = (timezone.now() + timedelta(days=3)).isoformat().replace('+00:00', 'Z')
     data3 = response2.data
     data3['start_time'] = new_datetime
     data3['end_time'] = new_datetime
