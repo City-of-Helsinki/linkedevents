@@ -1127,11 +1127,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         # update validated fields
         super().update(instance, validated_data)
 
-        # also update `has_end_time` if needed
-        if instance.end_time:
-            instance.has_end_time = True
-            instance.save()
-
         # update offers
         if isinstance(offers, list):
             instance.offers.all().delete()
