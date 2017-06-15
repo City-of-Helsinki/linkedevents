@@ -62,7 +62,8 @@ class DataSource(models.Model):
     id = models.CharField(max_length=100, primary_key=True)
     name = models.CharField(verbose_name=_('Name'), max_length=255)
     api_key = models.CharField(max_length=128, blank=True, default='')
-    owner = models.ForeignKey('Organization', related_name='owned_system', null=True, blank=True)
+    owner = models.ForeignKey('Organization', related_name='owned_systems', null=True, blank=True)
+    user_editable = models.BooleanField(default=False, verbose_name=_('Objects may be edited by users'))
 
     def __str__(self):
         return self.id
@@ -134,7 +135,7 @@ class Image(models.Model):
         super(Image, self).save(*args, **kwargs)
 
     def is_user_editable(self):
-        return self.data_source_id == settings.SYSTEM_DATA_SOURCE_ID
+        return self.data_source.user_editable
 
     def is_admin(self, user):
         if user.is_superuser:
@@ -480,8 +481,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         return u" ".join(val)
 
     def is_user_editable(self):
-        return self.data_source_id == settings.SYSTEM_DATA_SOURCE_ID
-
+        return self.data_source.user_editable
+ 
     def is_admin(self, user):
         if user.is_superuser:
             return True
