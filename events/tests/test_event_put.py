@@ -414,6 +414,28 @@ def test__a_non_admin_cannot_update_an_event(api_client, event, complex_event_di
 
 
 @pytest.mark.django_db
+def test__an_admin_can_update_an_event_from_another_data_source(api_client, event2, complex_event_dict,
+                                                                other_data_source, organization, user):
+    other_data_source.owner = organization
+    other_data_source.user_editable = True
+    other_data_source.save()
+    event2.publisher = organization
+    event2.save()
+    api_client.force_authenticate(user)
+    print(event2.is_admin(user))
+    print(other_data_source.user_editable)
+    print(event2.publisher)
+    print(user.get_default_organization())
+
+    detail_url = reverse('event-detail', kwargs={'pk': event2.pk})
+    # response = api_client.get(detail_url, format='json')
+    # assert response.status_code == 200
+    response = update_with_put(api_client, detail_url, complex_event_dict)
+    print(response.data)
+    assert response.status_code == 200
+
+
+@pytest.mark.django_db
 def test__correct_api_key_can_update_an_event(api_client, event, complex_event_dict, data_source, organization):
 
     data_source.owner = organization

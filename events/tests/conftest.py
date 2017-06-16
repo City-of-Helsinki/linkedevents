@@ -46,7 +46,8 @@ def api_client():
 def data_source():
     return DataSource.objects.create(
         id=settings.SYSTEM_DATA_SOURCE_ID,
-        api_key="test_api_key"
+        api_key="test_api_key",
+        user_editable=True
     )
 
 
@@ -186,10 +187,10 @@ def place(data_source, organization, administrative_division):
 
 @pytest.mark.django_db
 @pytest.fixture
-def event(place, user):
+def event(data_source, organization, place, user):
     return Event.objects.create(
-        id='test_event', location=place,
-        data_source=place.data_source, publisher=place.publisher,
+        id=data_source.id + ':test_event', location=place,
+        data_source=data_source, publisher=organization,
         last_modified_by=user,
         start_time=timezone.now(),
         end_time=timezone.now() + timedelta(hours=1),
@@ -219,10 +220,10 @@ def place3(data_source, organization):
 
 @pytest.mark.django_db
 @pytest.fixture
-def event2(place2, user2):
+def event2(other_data_source, organization2, place2, user2):
     return Event.objects.create(
         id='test_event 2', location=place2,
-        data_source=place2.data_source, publisher=place2.publisher,
+        data_source=other_data_source, publisher=organization2,
         last_modified_by=user2,
         start_time=timezone.now(),
         end_time=timezone.now() + timedelta(hours=1),
