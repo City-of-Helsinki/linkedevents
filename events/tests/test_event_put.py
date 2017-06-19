@@ -59,7 +59,7 @@ def test__keyword_n_events_updated(api_client, minimal_event_dict, user, data_so
     response = create_with_post(api_client, minimal_event_dict)
     assert_event_data_is_equal(minimal_event_dict, response.data)
     call_command('update_n_events')
-    assert Keyword.objects.get(id='test').n_events == 1
+    assert Keyword.objects.get(id=data_source.id + ':test').n_events == 1
     data2 = response.data
     print('got the post response')
     print(data2)
@@ -72,20 +72,21 @@ def test__keyword_n_events_updated(api_client, minimal_event_dict, user, data_so
     print('got the put response')
     print(response2.data)
     call_command('update_n_events')
-    assert Keyword.objects.get(id='test').n_events == 0
-    assert Keyword.objects.get(id='test2').n_events == 1
-    assert Keyword.objects.get(id='test3').n_events == 1
+    assert Keyword.objects.get(id=data_source.id + ':test').n_events == 0
+    assert Keyword.objects.get(id=data_source.id + ':test2').n_events == 1
+    assert Keyword.objects.get(id=data_source.id + ':test3').n_events == 1
 
 
 @pytest.mark.django_db
-def test__location_n_events_updated(api_client, minimal_event_dict, user, place2):
+def test__location_n_events_updated(api_client, minimal_event_dict, user, data_source,
+                                    other_data_source, place2):
 
     # create an event
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, minimal_event_dict)
     assert_event_data_is_equal(minimal_event_dict, response.data)
     call_command('update_n_events')
-    assert Place.objects.get(id='test location').n_events == 1
+    assert Place.objects.get(id=data_source.id + ':test_location').n_events == 1
     data2 = response.data
     print('got the post response')
     print(data2)
@@ -97,8 +98,8 @@ def test__location_n_events_updated(api_client, minimal_event_dict, user, place2
     print('got the put response')
     print(response2.data)
     call_command('update_n_events')
-    assert Place.objects.get(id='test location').n_events == 0
-    assert Place.objects.get(id='test location 2').n_events == 1
+    assert Place.objects.get(id=data_source.id + ':test_location').n_events == 0
+    assert Place.objects.get(id=other_data_source.id + ':test_location_2').n_events == 1
 
 
 @pytest.mark.django_db
@@ -414,24 +415,21 @@ def test__a_non_admin_cannot_update_an_event(api_client, event, complex_event_di
 
 
 @pytest.mark.django_db
-def test__an_admin_can_update_an_event_from_another_data_source(api_client, event2, complex_event_dict,
+def test__an_admin_can_update_an_event_from_another_data_source(api_client, event2, keyword, offer,
                                                                 other_data_source, organization, user):
     other_data_source.owner = organization
     other_data_source.user_editable = True
     other_data_source.save()
     event2.publisher = organization
+    event2.keywords.add(keyword)  # keyword is needed in testing POST and PUT with event data
+    event2.offers.add(offer)  # ditto for offer
     event2.save()
     api_client.force_authenticate(user)
-    print(event2.is_admin(user))
-    print(other_data_source.user_editable)
-    print(event2.publisher)
-    print(user.get_default_organization())
 
     detail_url = reverse('event-detail', kwargs={'pk': event2.pk})
-    # response = api_client.get(detail_url, format='json')
-    # assert response.status_code == 200
-    response = update_with_put(api_client, detail_url, complex_event_dict)
-    print(response.data)
+    response = api_client.get(detail_url, format='json')
+    assert response.status_code == 200
+    response = update_with_put(api_client, detail_url, response.data)
     assert response.status_code == 200
 
 

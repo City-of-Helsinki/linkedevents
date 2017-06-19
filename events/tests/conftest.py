@@ -17,8 +17,8 @@ from rest_framework.test import APIClient
 
 # events 
 from events.models import (
-    DataSource, Organization, Place, Language, Keyword, KeywordLabel, Event
-)
+    DataSource, Organization, Place, Language, Keyword, KeywordLabel, Event,
+    Offer)
 from events.api import (
     KeywordSerializer, PlaceSerializer, LanguageSerializer
 )
@@ -86,7 +86,7 @@ def user2():
 @pytest.fixture
 def organization(data_source, user):
     org, created = Organization.objects.get_or_create(
-        id='test_organization',
+        id=data_source.id + ':test_organization',
         name="test_organization",
         data_source=data_source,
     )
@@ -99,7 +99,7 @@ def organization(data_source, user):
 @pytest.fixture
 def organization2(other_data_source, user2):
     org, created = Organization.objects.get_or_create(
-        id='test_organization2',
+        id=other_data_source.id + ':test_organization2',
         name="test_organization2",
         data_source=other_data_source,
     )
@@ -107,6 +107,11 @@ def organization2(other_data_source, user2):
     org.save()
     return org
 
+
+@pytest.mark.django_db
+@pytest.fixture
+def offer(event2):
+    return Offer.objects.create(event=event2, is_free=True)
 
 @pytest.mark.django_db
 @pytest.fixture
@@ -178,7 +183,7 @@ def administrative_division2(administrative_division_type):
 @pytest.fixture
 def place(data_source, organization, administrative_division):
     return Place.objects.create(
-        id='test location',
+        id=data_source.id + ':test_location',
         data_source=data_source,
         publisher=organization,
         position=Point(50, 50)
@@ -192,10 +197,11 @@ def event(data_source, organization, place, user):
         id=data_source.id + ':test_event', location=place,
         data_source=data_source, publisher=organization,
         last_modified_by=user,
-        start_time=timezone.now(),
+        start_time=timezone.now() + timedelta(minutes=30),
         end_time=timezone.now() + timedelta(hours=1),
         short_description='short desc',
-        description='desc'
+        description='desc',
+        name='event'
     )
 
 
@@ -203,7 +209,7 @@ def event(data_source, organization, place, user):
 @pytest.fixture
 def place2(other_data_source, organization2):
     return Place.objects.create(
-        id='test location 2',
+        id=other_data_source.id + ':test_location_2',
         data_source=other_data_source,
         publisher=organization2
     )
@@ -212,7 +218,7 @@ def place2(other_data_source, organization2):
 @pytest.fixture
 def place3(data_source, organization):
     return Place.objects.create(
-        id='test location 3',
+        id=data_source.id + ':test_location_3',
         data_source=data_source,
         publisher=organization
     )
@@ -220,27 +226,29 @@ def place3(data_source, organization):
 
 @pytest.mark.django_db
 @pytest.fixture
-def event2(other_data_source, organization2, place2, user2):
+def event2(other_data_source, organization2, place2, user2, keyword):
     return Event.objects.create(
-        id='test_event 2', location=place2,
+        id=other_data_source.id + ':test_event_2', location=place2,
         data_source=other_data_source, publisher=organization2,
         last_modified_by=user2,
-        start_time=timezone.now(),
+        start_time=timezone.now() + timedelta(minutes=30),
         end_time=timezone.now() + timedelta(hours=1),
         short_description='short desc',
-        description='desc'
+        description='desc',
+        name='event2'
     )
 
 @pytest.fixture
 def event3(place3, user):
     return Event.objects.create(
-        id='test_event 3', location=place3,
+        id=place3.data_source.id + ':test_event_3', location=place3,
         data_source=place3.data_source, publisher=place3.publisher,
         last_modified_by=user,
-        start_time=timezone.now(),
+        start_time=timezone.now() + timedelta(minutes=30),
         end_time=timezone.now() + timedelta(hours=1),
         short_description='short desc',
-        description='desc'
+        description='desc',
+        name='event3'
     )
 
 
@@ -248,7 +256,7 @@ def event3(place3, user):
 @pytest.fixture
 def draft_event(place, user):
     return Event.objects.create(
-        id='test_event', location=place,
+        id=place.data_source.id + ':test_event', location=place,
         data_source=place.data_source, publisher=place.publisher,
         last_modified_by=user,
         publication_status=PublicationStatus.DRAFT,
@@ -281,7 +289,7 @@ def keyword(data_source, kw_name):
     ]
 
     obj = Keyword.objects.create(
-        id=kw_name,
+        id=data_source.id + ':' + kw_name,
         name=kw_name,
         data_source=data_source
     )

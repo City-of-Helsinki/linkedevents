@@ -266,7 +266,7 @@ def test__image_from_another_data_source_can_be_edited_by_admin(api_client, list
 
     # user can still edit or delete the image
     detail_url = reverse('image-detail', kwargs={'pk': response.data['id']})
-    response2 = api_client.put(detail_url, {'name': 'this is needed'})
+    response2 = api_client.put(detail_url, {'id': response.data['id'], 'name': 'this is needed'})
     assert response2.status_code == 200
     response3 = api_client.delete(detail_url)
     assert response3.status_code == 204

@@ -182,22 +182,22 @@ def test__cannot_publish_an_event_without_keywords(list_url,
 def test__keyword_n_events_updated(list_url,
                                                                api_client,
                                                                minimal_event_dict,
-                                                               user):
+                                                               user, data_source):
     api_client.force_authenticate(user=user)
     response = api_client.post(list_url, minimal_event_dict, format='json')
     call_command('update_n_events')
-    assert Keyword.objects.get(id='test').n_events == 1
+    assert Keyword.objects.get(id=data_source.id + ':test').n_events == 1
 
 
 @pytest.mark.django_db
 def test__location_n_events_updated(list_url,
                                                                api_client,
                                                                minimal_event_dict,
-                                                               user):
+                                                               user, data_source):
     api_client.force_authenticate(user=user)
     response = api_client.post(list_url, minimal_event_dict, format='json')
     call_command('update_n_events')
-    assert Place.objects.get(id='test location').n_events == 1
+    assert Place.objects.get(id=data_source.id + ':test_location').n_events == 1
 
 
 @pytest.mark.django_db
@@ -254,10 +254,10 @@ def test__non_editable_fields_at_create(api_client, minimal_event_dict, list_url
 # location field is used for JSONLDRelatedField tests
 @pytest.mark.django_db
 @pytest.mark.parametrize("ld_input,ld_expected", [
-    ({'location': {'@id': '/v1/place/test%20location/'}}, 201),
+    ({'location': {'@id': '/v1/place/' + settings.SYSTEM_DATA_SOURCE_ID + ':test_location/'}}, 201),
     ({'location': {'@id': ''}}, 400),  # field required
     ({'location': {'foo': 'bar'}}, 400),  # incorrect json
-    ({'location': '/v1/place/test%20location/'}, 400),  # incorrect json
+    ({'location': '/v1/place/' + settings.SYSTEM_DATA_SOURCE_ID + ':test_location/'}, 400),  # incorrect json
     ({'location': 7}, 400),  # incorrect json
     ({'location': None}, 400),  # cannot be null
     ({}, 400),  # field required

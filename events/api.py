@@ -471,28 +471,31 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                 del ret[field]
         return ret
 
-    def validate(self, data):
-        # validate data source permissions
-        if 'data_source' in data:
-            if data['data_source'] != self.data_source:
+    def validate_data_source(self, value):
+        if value:
+            if value != self.data_source:
+                # the event might be from another data source by the same organization, and we are only editing it
+                if self.instance:
+                    if self.publisher.owned_systems.filter(id=value).exists():
+                        return value
                 raise serializers.ValidationError(
                     {'data_source': _("Setting data_source to %(given)s " +
-                                      " is not allowed for your organization. The data source" +
-                                      " must be left blank or set to %(required)s") %
-                                    {'given': data['data_source'], 'required': self.data_source}})
-        else:
-            data['data_source'] = self.data_source
-        # validate publisher permissions
-        if 'publisher' in data:
-            if data['publisher'] != self.publisher:
+                             " is not allowed for your organization. The data_source"
+                             " must be left blank or set to %(required)s ") %
+                           {'given': str(value), 'required': self.data_source}})
+        return value
+
+    def validate_publisher(self, value):
+        if value:
+            if value != self.publisher:
                 raise serializers.ValidationError(
                     {'publisher': _("Setting publisher to %(given)s " +
                                     " is not allowed for your organization. The publisher" +
                                     " must be left blank or set to %(required)s ") %
-                                  {'given': data['publisher'], 'required': self.publisher}})
-        else:
-            data['publisher'] = self.publisher
+                                  {'given': str(value), 'required': self.publisher}})
+        return value
 
+    def validate(self, data):
         if 'name' in self.translated_fields:
             name_exists = False
             languages = [x[0] for x in settings.LANGUAGES]
@@ -508,6 +511,10 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         return data
 
     def create(self, validated_data):
+        if 'data_source' not in validated_data:
+            validated_data['data_source'] = self.data_source
+        if 'publisher' not in validated_data:
+            validated_data['publisher'] = self.publisher
         # no django user exists for the api key
         if isinstance(self.user, ApiKeyUser):
             self.user = None
@@ -968,27 +975,34 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         data = super().to_internal_value(data)
         return data
 
-    def validate(self, data):
-        # validate id permissions
-        if 'id' in data:
-            if not data['id'].split(':', 1)[0] == self.data_source.id:
+    def validate_id(self, value):
+        if value:
+            id_data_source_prefix = value.split(':', 1)[0]
+            if not id_data_source_prefix == self.data_source.id:
+                # the event might be from another data source by the same organization, and we are only editing it
+                if self.instance:
+                    if self.publisher.owned_systems.filter(id=id_data_source_prefix).exists():
+                        return value
                 raise serializers.ValidationError(
                     {'id': _("Setting id to %(given)s " +
                              " is not allowed for your organization. The id"
                              " must be left blank or set to %(data_source)s:desired_id") %
-                           {'given': str(data['id']), 'data_source': self.data_source}})
+                           {'given': str(value), 'data_source': self.data_source}})
+        return value
 
+    def validate_publication_status(self, value):
+        if not value:
+            raise serializers.ValidationError({'publication_status':
+                _("You must specify whether you wish to submit a draft or a public event.")})
+        return value
+
+    def validate(self, data):
         # clean the html
         for k, v in data.items():
             if k in ["description"]:
                 if isinstance(v, str) and any(c in v for c in '<>&'):
                     data[k] = bleach.clean(v, settings.BLEACH_ALLOWED_TAGS)
         data = super().validate(data)
-
-        # require the publication status
-        if 'publication_status' not in data:
-            raise serializers.ValidationError({'publication_status':
-                _("You must specify whether you wish to submit a draft or a public event.")})
 
         # if the event is a draft, no further validation is performed
         if data['publication_status'] == PublicationStatus.DRAFT:
