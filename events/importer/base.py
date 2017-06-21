@@ -130,7 +130,8 @@ class Importer(object):
         if not hasattr(obj, field_name):
             print(vars(obj))
         obj_val = getattr(obj, field_name)
-        if obj_val == val:
+        # this prevents overwriting manually edited values with empty values
+        if obj_val == val or (hasattr(obj, 'is_user_edited') and obj.is_user_edited() and not val):
             return
         setattr(obj, field_name, val)
         obj._changed = True
@@ -253,8 +254,14 @@ class Importer(object):
         new_keywords = set([kw.id for kw in keywords])
         old_keywords = set(obj.keywords.values_list('id', flat=True))
         if new_keywords != old_keywords:
-            obj.keywords = new_keywords
-            obj._changed = True
+            if obj.is_user_edited():
+                # this prevents overwriting manually added keywords
+                if not new_keywords <= old_keywords:
+                    obj.keywords.add(*new_keywords)
+                    obj._changed = True
+            else:
+                obj.keywords = new_keywords
+                obj._changed = True
 
         # one-to-many fields with foreign key pointing to event
 
@@ -266,9 +273,12 @@ class Importer(object):
 
         val = operator.methodcaller('simple_value')
         if set(map(val, offers)) != set(map(val, obj.offers.all())):
-            obj.offers.all().delete()
-            for o in offers: o.save()
-            obj._changed = True
+            # this prevents overwriting manually added offers. do not update offers if we have added ones
+            if not obj.is_user_edited() or len(set(map(val, offers))) >= obj.offers.count():
+                obj.offers.all().delete()
+                for o in offers:
+                    o.save()
+                obj._changed = True
 
         links = []
         if 'external_links' in info:
@@ -286,15 +296,17 @@ class Importer(object):
         new_links = set([info_make_link_id(link) for link in links])
         old_links = set([obj_make_link_id(link) for link in obj.external_links.all()])
         if old_links != new_links:
-            obj.external_links.all().delete()
-            for link in links:
-                link_obj = EventLink(event=obj, language_id=link['language'], link=link['link'])
-                if len(link['link']) > 200:
-                    continue
-                if 'name' in link:
-                    link_obj.name = link['name']
-                link_obj.save()
-            obj._changed = True
+            # this prevents overwriting manually added links. do not update links if we have added ones
+            if not obj.is_user_edited() or len(new_links) >= len(old_links):
+                obj.external_links.all().delete()
+                for link in links:
+                    link_obj = EventLink(event=obj, language_id=link['language'], link=link['link'])
+                    if len(link['link']) > 200:
+                        continue
+                    if 'name' in link:
+                        link_obj.name = link['name']
+                    link_obj.save()
+                obj._changed = True
 
         if obj._changed or obj._created:
             if obj._created:

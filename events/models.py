@@ -137,6 +137,9 @@ class Image(models.Model):
     def is_user_editable(self):
         return self.data_source.user_editable
 
+    def is_user_edited(self):
+        return bool(self.data_source.user_editable and self.last_modified_by)
+
     def is_admin(self, user):
         if user.is_superuser:
             return True
@@ -182,6 +185,12 @@ class BaseModel(models.Model):
             self.created_time = BaseModel.now()
         self.last_modified_time = BaseModel.now()
         super(BaseModel, self).save(*args, **kwargs)
+
+    def is_user_editable(self):
+        return self.data_source.user_editable
+
+    def is_user_edited(self):
+        return bool(self.data_source.user_editable and self.last_modified_by)
 
 
 class Organization(BaseModel):
@@ -480,9 +489,6 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
             val.append(str(self.start_time))
         return u" ".join(val)
 
-    def is_user_editable(self):
-        return self.data_source.user_editable
- 
     def is_admin(self, user):
         if user.is_superuser:
             return True
