@@ -1395,7 +1395,7 @@ class EventFilter(filters.FilterSet):
 
     class Meta:
         model = Event
-        fields = ('division', 'super_event_type')
+        fields = ('division', 'super_event_type', 'super_event')
 
     def filter_super_event_type(self, queryset, name, value):
         if value in ('null', 'none'):
