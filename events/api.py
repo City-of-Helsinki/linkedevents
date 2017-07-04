@@ -13,6 +13,7 @@ from dateutil.parser import parse as dateutil_parse
 # django and drf
 from django.db.transaction import atomic
 from django.http import Http404
+from django.http import HttpResponseGone
 from django.utils import translation
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.db.utils import IntegrityError
@@ -1441,6 +1442,13 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
             'secondary_headline']))
         return context
 
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.deleted:
+            return Response("Event has been deleted", status=status.HTTP_410_GONE)
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
     def get_object(self):
         self.data_source, self.organization = get_authenticated_data_source_and_publisher(self.request)
         # Overridden to prevent queryset filtering from being applied
@@ -1484,6 +1492,12 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
     @atomic
     def create(self, request, *args, **kwargs):
         return super().create(request, *args, **kwargs)
+
+    @atomic
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.soft_delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 register_view(EventViewSet, 'event')
