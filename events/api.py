@@ -7,7 +7,7 @@ import re
 import struct
 import time
 import urllib.parse
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dateutil.parser import parse as dateutil_parse
 
 # django and drf
@@ -60,6 +60,7 @@ from events.models import (
 )
 from events.translation import EventTranslationOptions
 from helevents.models import User
+from events.renderers import DOCXRenderer, JSONLDRenderer, JSONRenderer
 
 
 def get_view_name(cls, suffix=None):
@@ -1158,6 +1159,12 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
     def to_representation(self, obj):
         ret = super(EventSerializer, self).to_representation(obj)
+
+        if self.context['request'].accepted_renderer.format == 'docx':
+            ret['end_time_obj'] = obj.end_time
+            ret['start_time_obj'] = obj.start_time
+            ret['location'] = obj.location
+
         if 'start_time' in ret and not obj.has_start_time:
             # Return only the date part
             ret['start_time'] = obj.start_time.astimezone(LOCAL_TZ).strftime('%Y-%m-%d')
@@ -1289,6 +1296,7 @@ def parse_duration_string(duration):
 
     return int(val) * mul
 
+
 def _filter_event_queryset(queryset, params, srs=None):
     """
     Filter events queryset by params
@@ -1318,14 +1326,38 @@ def _filter_event_queryset(queryset, params, srs=None):
         dt = parse_time(val, is_start=False)
         queryset = queryset.filter(Q(last_modified_time__gte=dt))
 
-    val = params.get('start', None)
-    if val:
-        dt = parse_time(val, is_start=True)
+    if params.get('format') == 'docx':
+        if not params.get('location'):
+            raise ValidationError(
+                _('Must specify a location when fetching DOCX file.')
+            )
+
+    start = params.get('start')
+    end = params.get('end')
+    days = params.get('days')
+
+    if days:
+        try:
+            days = int(days)
+        except ValueError as e:
+            raise ParseError(_('Error while parsing days.'))
+        if days < 1:
+            raise ValidationError(_('Days must be 1 or more.'))
+
+        if start or end:
+            raise ValidationError(_('Start or end cannot be used with days.'))
+
+        today = datetime.now(timezone.utc).date()
+
+        start = today.isoformat()
+        end = (today + timedelta(days=days)).isoformat()
+
+    if start:
+        dt = parse_time(start, is_start=True)
         queryset = queryset.filter(Q(end_time__gt=dt) | Q(start_time__gte=dt))
 
-    val = params.get('end', None)
-    if val:
-        dt = parse_time(val, is_start=False)
+    if end:
+        dt = parse_time(end, is_start=False)
         queryset = queryset.filter(Q(end_time__lt=dt) | Q(start_time__lte=dt))
 
     val = params.get('bbox', None)
@@ -1420,6 +1452,7 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
     filter_class = EventFilter
     ordering_fields = ('start_time', 'end_time', 'days_left', 'last_modified_time')
     ordering = ('-last_modified_time',)
+    renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES + [DOCXRenderer]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -1498,6 +1531,22 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
         instance = self.get_object()
         instance.soft_delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def finalize_response(self, request, response, *args, **kwargs):
+        # Switch to normal renderer for docx errors.
+        response = super().finalize_response(request, response, *args, **kwargs)
+        # Prevent rendering errors as DOCX files
+        if response.status_code != 200 and request.accepted_renderer.format == 'docx':
+            first_renderer = self.renderer_classes[0]()
+            response.accepted_renderer = first_renderer
+            response.accepted_media_type = first_renderer.media_type
+
+        return response
+
+    def paginate_queryset(self, queryset):
+        if isinstance(self.request.accepted_renderer, DOCXRenderer):
+            return None
+        return super().paginate_queryset(queryset)
 
 
 register_view(EventViewSet, 'event')

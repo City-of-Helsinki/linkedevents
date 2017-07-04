@@ -53,6 +53,7 @@ pyparsing==2.1.10         # via rdflib
 pytest-django==3.0.0
 pytest==3.0.3             # via pytest-django
 python-dateutil==2.5.3
+python-docx==0.8.6
 python3-openid==3.0.10    # via django-allauth
 pytz==2016.7
 pyyaml==3.12
