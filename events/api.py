@@ -1478,7 +1478,7 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         if instance.deleted:
-            return Response("Event has been deleted", status=status.HTTP_410_GONE)
+            return Response({"detail": "Event has been deleted"}, status=status.HTTP_410_GONE)
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
