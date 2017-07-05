@@ -30,7 +30,7 @@ from rest_framework import (
 from rest_framework.settings import api_settings
 from rest_framework.reverse import reverse
 from rest_framework.response import Response
-from rest_framework.exceptions import ParseError, PermissionDenied as DRFPermissionDenied
+from rest_framework.exceptions import ParseError, PermissionDenied as DRFPermissionDenied, APIException
 from rest_framework.views import get_view_name as original_get_view_name
 
 
@@ -1439,6 +1439,12 @@ class EventFilter(filters.FilterSet):
         return filter_division(queryset, name, value)
 
 
+class EventDeletedException(APIException):
+    status_code = 410
+    default_detail = 'Event has been deleted.'
+    default_code = 'gone'
+
+
 class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
     queryset = Event.objects.filter(deleted=False)
     # This exclude is, atm, a bit overkill, considering it causes a massive query and no such events exist.
@@ -1475,13 +1481,6 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
             'secondary_headline']))
         return context
 
-    def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        if instance.deleted:
-            return Response({"detail": "Event has been deleted"}, status=status.HTTP_410_GONE)
-        serializer = self.get_serializer(instance)
-        return Response(serializer.data)
-
     def get_object(self):
         self.data_source, self.organization = get_authenticated_data_source_and_publisher(self.request)
         # Overridden to prevent queryset filtering from being applied
@@ -1492,6 +1491,8 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
             raise Http404("Event does not exist")
         if (event.publication_status == PublicationStatus.PUBLIC or
             self.organization == event.publisher):
+            if event.deleted:
+                raise EventDeletedException()
             return event
         else:
             raise Http404("Event does not exist")
