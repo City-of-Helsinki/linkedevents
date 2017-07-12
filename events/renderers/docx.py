@@ -2,13 +2,12 @@ import collections
 import datetime
 import io
 
-import dateutil
 from django.utils.html import strip_tags
 from django.utils.text import slugify
 from django.utils.timezone import localtime
 from docx import Document
 from rest_framework import renderers
-from rest_framework.exceptions import APIException
+from events.utils import parse_time
 
 
 def get_any_language(dictionary, default='fi', language_codes=None):
@@ -187,15 +186,10 @@ class DOCXRenderer(renderers.BaseRenderer):
 
         event_parser = EventParser()
 
-        if len(data) < 1:
-            raise APIException('No results.')
 
         first_location = data[0]['location']
         for raw_event in data:
             parsed_events.append(event_parser.parse_event(raw_event))
-
-            if raw_event['location'] != first_location:
-                raise APIException('Only one location allowed.')
 
         # This is here to allow for this to be expanded to include multiple
         # locations in the future.
@@ -212,18 +206,12 @@ class DOCXRenderer(renderers.BaseRenderer):
         if start is None:
             query_start_date = event_parser.earliest_date
         else:
-            try:
-                query_start_date = dateutil.parser.parse(start)
-            except ValueError:
-                raise APIException("Invalid start date.")
+            query_start_date = parse_time(start, True)
 
         if end is None:
             query_end_date = event_parser.latest_date
         else:
-            try:
-                query_end_date = dateutil.parser.parse('end')
-            except ValueError:
-                raise APIException("Invalid end date.")
+            query_end_date = parse_time(end, False)
 
         total_date_range = DateRange(query_start_date, query_end_date)
 

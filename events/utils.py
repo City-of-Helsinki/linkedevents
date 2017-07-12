@@ -1,7 +1,12 @@
+from datetime import datetime, timedelta
 import re
 import collections
 
+import pytz
 from django.db import transaction
+from django.conf import settings
+from dateutil.parser import parse as dateutil_parse
+from rest_framework.exceptions import ParseError
 
 from events.models import Keyword, Place
 from events.sql import count_events_for_keywords, count_events_for_places
@@ -83,3 +88,32 @@ def recache_n_events_in_locations(place_ids, all=False):
         for place_id, n_events in count_events_for_places(place_ids, all=all).items():
             Place.objects.filter(id=place_id).update(n_events=n_events, n_events_changed=False)
 
+
+def parse_time(time_str, is_start):
+    local_tz = pytz.timezone(settings.TIME_ZONE)
+    time_str = time_str.strip()
+    # Handle dates first. Assume dates are given in local timezone.
+    # FIXME: What if there's no local timezone?
+    try:
+        dt = datetime.strptime(time_str, '%Y-%m-%d')
+        dt = local_tz.localize(dt)
+    except ValueError:
+        dt = None
+    if not dt:
+        if time_str.lower() == 'today':
+            dt = datetime.utcnow().replace(tzinfo=pytz.utc)
+            dt = dt.astimezone(local_tz)
+            dt = dt.replace(hour=0, minute=0, second=0, microsecond=0)
+    if dt:
+        # With start timestamps, we treat dates as beginning
+        # at midnight the same day. End timestamps are taken to
+        # mean midnight on the following day.
+        if not is_start:
+            dt = dt + timedelta(days=1)
+    else:
+        try:
+            # Handle all other times through dateutil.
+            dt = dateutil_parse(time_str)
+        except (TypeError, ValueError):
+            raise ParseError('time in invalid format (try ISO 8601 or yyyy-mm-dd)')
+    return dt

@@ -8,7 +8,6 @@ import struct
 import time
 import urllib.parse
 from datetime import datetime, timedelta, timezone
-from dateutil.parser import parse as dateutil_parse
 
 # django and drf
 from django.db.transaction import atomic
@@ -956,7 +955,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             val = data.get(field, None)
             if val:
                 if isinstance(val, str):
-                    data[field] = parse_time(val, True)
+                    data[field] = utils.parse_time(val, True)
         return data
 
     def to_internal_value(self, data):
@@ -1226,35 +1225,6 @@ class EventSerializerV0_1(EventSerializer):
         _format_images_v0_1(ret)
         return ret
 
-def parse_time(time_str, is_start):
-    time_str = time_str.strip()
-    # Handle dates first. Assume dates are given in local timezone.
-    # FIXME: What if there's no local timezone?
-    try:
-        dt = datetime.strptime(time_str, '%Y-%m-%d')
-        dt = LOCAL_TZ.localize(dt)
-    except ValueError:
-        dt = None
-    if not dt:
-        if time_str.lower() == 'today':
-            dt = datetime.utcnow().replace(tzinfo=pytz.utc)
-            dt = dt.astimezone(LOCAL_TZ)
-            dt = dt.replace(hour=0, minute=0, second=0, microsecond=0)
-    if dt:
-        # With start timestamps, we treat dates as beginning
-        # at midnight the same day. End timestamps are taken to
-        # mean midnight on the following day.
-        if not is_start:
-            dt = dt + timedelta(days=1)
-    else:
-        try:
-            # Handle all other times through dateutil.
-            dt = dateutil_parse(time_str)
-        except (TypeError, ValueError):
-            raise ParseError('time in invalid format (try ISO 8601 or yyyy-mm-dd)')
-    return dt
-
-
 
 class LinkedEventsOrderingFilter(filters.OrderingFilter):
     ordering_param = 'sort'
@@ -1323,14 +1293,8 @@ def _filter_event_queryset(queryset, params, srs=None):
     # 2014-10-29T12:00:00Z == 2014-10-29T12:00:00+0000 (UTC time)
     # or 2014-10-29T12:00:00+0200 (local time)
     if val:
-        dt = parse_time(val, is_start=False)
+        dt = utils.parse_time(val, is_start=False)
         queryset = queryset.filter(Q(last_modified_time__gte=dt))
-
-    if params.get('format') == 'docx':
-        if not params.get('location'):
-            raise ValidationError(
-                _('Must specify a location when fetching DOCX file.')
-            )
 
     start = params.get('start')
     end = params.get('end')
@@ -1353,11 +1317,11 @@ def _filter_event_queryset(queryset, params, srs=None):
         end = (today + timedelta(days=days)).isoformat()
 
     if start:
-        dt = parse_time(start, is_start=True)
+        dt = utils.parse_time(start, is_start=True)
         queryset = queryset.filter(Q(end_time__gt=dt) | Q(start_time__gte=dt))
 
     if end:
-        dt = parse_time(end, is_start=False)
+        dt = utils.parse_time(end, is_start=False)
         queryset = queryset.filter(Q(end_time__lt=dt) | Q(start_time__lte=dt))
 
     val = params.get('bbox', None)
@@ -1533,6 +1497,22 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
         instance.soft_delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    def list(self, request, *args, **kwargs):
+        # docx renderer has additional requirements for listing events
+        if request.accepted_renderer.format == 'docx':
+            if not request.query_params.get('location'):
+                raise ParseError({'detail':
+                    _('Must specify a location when fetching DOCX file.')}
+                )
+            queryset = self.filter_queryset(self.get_queryset())
+            if queryset.count() == 0:
+                raise ParseError({'detail': _('No events.')})
+            if len(set([event.location for event in queryset])) > 1:
+                raise ParseError({'detail': _('Only one location allowed.')})
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+        return super().list(request, *args, **kwargs)
+
     def finalize_response(self, request, response, *args, **kwargs):
         # Switch to normal renderer for docx errors.
         response = super().finalize_response(request, response, *args, **kwargs)
@@ -1543,11 +1523,6 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
             response.accepted_media_type = first_renderer.media_type
 
         return response
-
-    def paginate_queryset(self, queryset):
-        if isinstance(self.request.accepted_renderer, DOCXRenderer):
-            return None
-        return super().paginate_queryset(queryset)
 
 
 register_view(EventViewSet, 'event')
@@ -1626,12 +1601,12 @@ class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView
         if len(models) == 1 and Event in models:
             start = params.get('start', None)
             if start:
-                dt = parse_time(start, is_start=True)
+                dt = utils.parse_time(start, is_start=True)
                 queryset = queryset.filter(Q(end_time__gt=dt) | Q(start_time__gte=dt))
 
             end = params.get('end', None)
             if end:
-                dt = parse_time(end, is_start=False)
+                dt = utils.parse_time(end, is_start=False)
                 queryset = queryset.filter(Q(end_time__lt=dt) | Q(start_time__lte=dt))
 
             if not start and not end and hasattr(queryset.query, 'add_decay_function'):
