@@ -4,6 +4,7 @@ import dateutil.parser
 import requests
 import requests_cache
 import pytz
+from collections import OrderedDict
 from django.db.models import Count
 
 from lxml import etree
@@ -17,16 +18,16 @@ from .base import Importer, register_importer, recur_dict
 from .util import clean_text, unicodetext
 
 MATKO_URLS = {
-    'places': {
-        'fi': 'http://www.visithelsinki.fi/misc/feeds/helsinki_matkailu_poi.xml',
-        'en': 'http://www.visithelsinki.fi/misc/feeds/helsinki_tourism_poi.xml',
-        'sv': 'http://www.visithelsinki.fi/misc/feeds/helsingfors_turism_poi.xml',
-    },
-    'events': {
-        'fi': 'http://www.visithelsinki.fi/misc/feeds/kaikkitapahtumat.xml',
-        'en': 'http://www.visithelsinki.fi/misc/feeds/kaikkitapahtumat_en.xml',
-        'sv': 'http://www.visithelsinki.fi/misc/feeds/kaikkitapahtumat_se.xml',
-    }
+    'places': OrderedDict([
+        ('fi', 'http://www.visithelsinki.fi/misc/feeds/helsinki_matkailu_poi.xml'),
+        ('en', 'http://www.visithelsinki.fi/misc/feeds/helsinki_tourism_poi.xml'),
+        ('sv', 'http://www.visithelsinki.fi/misc/feeds/helsingfors_turism_poi.xml'),
+    ]),
+    'events': OrderedDict([
+        ('fi', 'http://www.visithelsinki.fi/misc/feeds/kaikkitapahtumat.xml'),
+        ('en', 'http://www.visithelsinki.fi/misc/feeds/kaikkitapahtumat_en.xml'),
+        ('sv', 'http://www.visithelsinki.fi/misc/feeds/kaikkitapahtumat_se.xml'),
+    ])
 }
 
 LOCATION_TPREK_MAP = {
@@ -138,7 +139,10 @@ class MatkoImporter(Importer):
             result['info_url'][lang_code] = unicodetext(link)
 
     def _find_place_from_tprek(self, location):
-        place_name = location['name']['fi']
+        if 'fi' in location['name']:
+            place_name = location['name']['fi']
+        else:
+            place_name = location['name'].values()[0]
         if not place_name:
             return
         place_name = place_name.lower()
@@ -233,6 +237,9 @@ class MatkoImporter(Importer):
         self.put(event, 'start_time', start_time)
         self.put(event, 'end_time', end_time)
         self.put(event, 'event_status', matko_status(int(text(item, 'status'))))
+        if text(item, 'placeuniqueid') == None:
+            del events[eid]
+            return
         self.put(event['location'], 'origin_id', int(text(item, 'placeuniqueid')))
 
         ignore = [
@@ -302,8 +309,7 @@ class MatkoImporter(Importer):
         else:
             print('Warning: no keyword matches for', event['name'], keywords)
 
-        # FIXME: Place matching for events that are only in English (or Swedish)
-        if lang_code == 'fi':
+        if 'id' not in event['location']:
             place_id = self._find_place(event['location'])
             if place_id:
                 event['location']['id'] = place_id
