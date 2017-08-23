@@ -11,8 +11,7 @@ from datetime import datetime, timedelta, timezone
 
 # django and drf
 from django.db.transaction import atomic
-from django.http import Http404
-from django.http import HttpResponseGone
+from django.http import Http404, HttpResponsePermanentRedirect
 from django.utils import translation
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.db.utils import IntegrityError
@@ -755,6 +754,16 @@ class PlaceRetrieveViewSet(GeoModelAPIView,
         context.setdefault('skip_fields', set()).add('origin_id')
         return context
 
+    def retrieve(self, request, *args, **kwargs):
+        place = Place.objects.get(pk=kwargs['pk'])
+        if place.deleted:
+            if place.replaced_by:
+                place = place.replaced_by
+                return HttpResponsePermanentRedirect(reverse('place-detail',
+                                                             kwargs={'pk': place.pk},
+                                                             request=request))
+        return super().retrieve(request, *args, **kwargs)
+
 
 class PlaceListViewSet(GeoModelAPIView,
                        viewsets.GenericViewSet,
@@ -768,23 +777,34 @@ class PlaceListViewSet(GeoModelAPIView,
 
     def get_queryset(self):
         """
-        Return Place queryset. If request has parameter show_all_places=1
-        all Places are returned, otherwise only which have events.
-        Additional query parameters:
-        event.data_source
-        event.start
-        event.end
+        Return Place queryset.
+
+        If the request has no filter parameters, we only return places that meet the following criteria:
+        -the place has events
+        -the place is not deleted
+
+        Supported places filtering parameters:
+        data_source (only places with the given data sources are included)
+        filter (only places containing the specified string are included)
+        show_all_places (places without events are included)
+        show_deleted (deleted places are included)
         """
         queryset = Place.objects.prefetch_related('divisions__type', 'divisions__municipality')
-        if self.request.query_params.get('show_all_places'):
-            pass
-        else:
-            events = Event.objects.all()
-            params = _clean_qp(self.request.query_params)
-            events = _filter_event_queryset(events, params)
-            location_ids = events.values_list('location_id',
-                                              flat=True).distinct().order_by()
-            queryset = queryset.filter(id__in=location_ids)
+        data_source = self.request.query_params.get('data_source')
+        # Filter by data source, multiple sources separated by comma
+        if data_source:
+            data_source = data_source.lower().split(',')
+            queryset = queryset.filter(data_source__in=data_source)
+        if not self.request.query_params.get('show_all_places'):
+            queryset = queryset.filter(n_events__gt=0)
+        if not self.request.query_params.get('show_deleted'):
+            queryset = queryset.filter(deleted=False)
+
+        # Optionally filter places by filter parameter,
+        # can be used e.g. with typeahead.js
+        val = self.request.query_params.get('text') or self.request.query_params.get('filter')
+        if val:
+            queryset = queryset.filter(name__icontains=val)
         return queryset
 
     def get_serializer_context(self):
