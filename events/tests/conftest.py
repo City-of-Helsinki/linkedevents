@@ -118,7 +118,6 @@ def offer(event2):
 def minimal_event_dict(data_source, organization, location_id):
     return {
         'name': {'fi': TEXT},
-        'publication_status': 'public',
         'start_time': DATETIME,
         'location': {'@id': location_id},
         'keywords': [
@@ -371,7 +370,6 @@ def complex_event_dict(data_source, organization, location_id, languages):
         'headline': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
         'short_description': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
         'provider': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
-        'publication_status': 'public',
     }
 
 

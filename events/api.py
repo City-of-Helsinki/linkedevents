@@ -944,7 +944,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     super_event = JSONLDRelatedField(serializer='EventSerializer', required=False, view_name='event-detail',
                                      queryset=Event.objects.all(), allow_null=True)
     event_status = EnumChoiceField(Event.STATUSES, required=False)
-    publication_status = EnumChoiceField(PUBLICATION_STATUSES)
+    publication_status = EnumChoiceField(PUBLICATION_STATUSES, required=False)
     external_links = EventLinkSerializer(many=True, required=False)
     offers = OfferSerializer(many=True, required=False)
     data_source = serializers.PrimaryKeyRelatedField(queryset=DataSource.objects.all(),
@@ -1011,12 +1011,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                            {'given': str(value), 'data_source': self.data_source}})
         return value
 
-    def validate_publication_status(self, value):
-        if not value:
-            raise serializers.ValidationError({'publication_status':
-                _("You must specify whether you wish to submit a draft or a public event.")})
-        return value
-
     def validate(self, data):
         # clean the html
         for k, v in data.items():
@@ -1024,6 +1018,9 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                 if isinstance(v, str) and any(c in v for c in '<>&'):
                     data[k] = bleach.clean(v, settings.BLEACH_ALLOWED_TAGS)
         data = super().validate(data)
+
+        if 'publication_status' not in data:
+            data['publication_status'] = PublicationStatus.PUBLIC
 
         # if the event is a draft, no further validation is performed
         if data['publication_status'] == PublicationStatus.DRAFT:
