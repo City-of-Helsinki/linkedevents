@@ -306,6 +306,7 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     address_country = models.CharField(verbose_name=_('Country'), max_length=2, null=True, blank=True)
 
     deleted = models.BooleanField(verbose_name=_('Deleted'), default=False)
+    replaced_by = models.ForeignKey('Place', related_name='aliases', null=True)
     divisions = models.ManyToManyField(AdministrativeDivision, verbose_name=_('Divisions'), related_name='places',
                                        blank=True)
 
