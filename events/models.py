@@ -62,7 +62,8 @@ class DataSource(models.Model):
     id = models.CharField(max_length=100, primary_key=True)
     name = models.CharField(verbose_name=_('Name'), max_length=255)
     api_key = models.CharField(max_length=128, blank=True, default='')
-    owner = models.ForeignKey('Organization', related_name='owned_system', null=True, blank=True)
+    owner = models.ForeignKey('Organization', related_name='owned_systems', null=True, blank=True)
+    user_editable = models.BooleanField(default=False, verbose_name=_('Objects may be edited by users'))
 
     def __str__(self):
         return self.id
@@ -134,7 +135,10 @@ class Image(models.Model):
         super(Image, self).save(*args, **kwargs)
 
     def is_user_editable(self):
-        return self.data_source_id == settings.SYSTEM_DATA_SOURCE_ID
+        return self.data_source.user_editable
+
+    def is_user_edited(self):
+        return bool(self.data_source.user_editable and self.last_modified_by)
 
     def is_admin(self, user):
         if user.is_superuser:
@@ -182,16 +186,30 @@ class BaseModel(models.Model):
         self.last_modified_time = BaseModel.now()
         super(BaseModel, self).save(*args, **kwargs)
 
+    def is_user_editable(self):
+        return self.data_source.user_editable
 
-class Organization(BaseModel):
+    def is_user_edited(self):
+        return bool(self.data_source.user_editable and self.last_modified_by)
+
+
+class Organization(MPTTModel, BaseModel):
+    parent = TreeForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL,
+                            related_name='children')
     admin_users = models.ManyToManyField(
-        User, blank=True, related_name='admin_organizations'
+       User, blank=True, related_name='admin_organizations'
+    )
+    admin_orgs = models.ManyToManyField(
+        'self', blank=True, related_name='moderated_orgs'
     )
 
     class Meta:
         ordering = ('name',)
         verbose_name =_('organization')
         verbose_name_plural = _('organizations')
+
+    class MPTTMeta:
+        order_insertion_by = ('id',)
 
 
 class Language(models.Model):
@@ -288,6 +306,7 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     address_country = models.CharField(verbose_name=_('Country'), max_length=2, null=True, blank=True)
 
     deleted = models.BooleanField(verbose_name=_('Deleted'), default=False)
+    replaced_by = models.ForeignKey('Place', related_name='aliases', null=True)
     divisions = models.ManyToManyField(AdministrativeDivision, verbose_name=_('Divisions'), related_name='places',
                                        blank=True)
 
@@ -479,14 +498,19 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
             val.append(str(self.start_time))
         return u" ".join(val)
 
-    def is_user_editable(self):
-        return self.data_source_id == settings.SYSTEM_DATA_SOURCE_ID
-
     def is_admin(self, user):
         if user.is_superuser:
             return True
         else:
             return user in self.publisher.admin_users.all()
+
+    def soft_delete(self, using=None):
+        self.deleted = True
+        self.save(update_fields=("deleted",), using=using, force_update=True)
+
+    def undelete(self, using=None):
+        self.deleted = False
+        self.save(update_fields=("deleted",), using=using, force_update=True)
 
 reversion.register(Event)
 

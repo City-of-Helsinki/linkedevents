@@ -235,14 +235,41 @@ def test__image_cannot_be_edited_outside_organization(api_client, settings, list
     organization2.admin_users.add(user2)
     api_client.force_authenticate(user2)
     detail_url = reverse('image-detail', kwargs={'pk': response.data['id']})
-    new_image_data = response.data
-    new_image_data['url'] = 'https://commons.wikimedia.org/wiki/File:Common_Squirrel.jpg'
-    new_image_data['publisher'] = 'test_organization2'
-    response2 = api_client.put(detail_url, response.data)
+    response2 = api_client.put(detail_url, {'name': 'this is needed'})
     assert response2.status_code == 403
     response3 = api_client.delete(detail_url)
     assert response3.status_code == 403
 
+
+@pytest.mark.django_db
+def test__image_from_another_data_source_can_be_edited_by_admin(api_client, list_url, image_data, data_source, user,
+                                                                organization, other_data_source):
+    organization.admin_users.add(user)
+    api_client.force_authenticate(user)
+
+    response = api_client.post(list_url, image_data)
+    assert response.status_code == 201
+    assert Image.objects.all().count() == 1
+
+    image = Image.objects.get(pk=response.data['id'])
+    assert image.created_by == user
+    assert image.last_modified_by == user
+    assert image.publisher == organization
+    assert image.data_source == data_source
+    image.data_source = other_data_source
+    image.save()
+    other_data_source.user_editable = True
+    other_data_source.owner = organization
+    other_data_source.save()
+    assert image.data_source == other_data_source
+    assert other_data_source in organization.owned_systems.all()
+
+    # user can still edit or delete the image
+    detail_url = reverse('image-detail', kwargs={'pk': response.data['id']})
+    response2 = api_client.put(detail_url, {'id': response.data['id'], 'name': 'this is needed'})
+    assert response2.status_code == 200
+    response3 = api_client.delete(detail_url)
+    assert response3.status_code == 204
 
 @pytest.mark.django_db
 def test__image_cannot_be_edited_outside_organization_with_apikey(api_client, settings, list_url, image_data, user, organization, organization2, other_data_source):
@@ -265,11 +292,7 @@ def test__image_cannot_be_edited_outside_organization_with_apikey(api_client, se
     api_client.credentials(apikey=other_data_source.api_key)
 
     detail_url = reverse('image-detail', kwargs={'pk': response.data['id']})
-    new_image_data = response.data
-    new_image_data['url'] = 'https://commons.wikimedia.org/wiki/File:Common_Squirrel.jpg'
-    new_image_data['data_source'] = 'testotherdatasourceid'
-    new_image_data['publisher'] = 'test_organization2'
-    response2 = api_client.put(detail_url, response.data)
+    response2 = api_client.put(detail_url, {'name': 'this is needed'})
     assert response2.status_code == 403
     response3 = api_client.delete(detail_url)
     assert response3.status_code == 403

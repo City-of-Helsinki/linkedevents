@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from datetime import timedelta
 from copy import deepcopy
+
+import pytz
 from django.utils import timezone
 from django.core.management import call_command
 
@@ -57,7 +59,7 @@ def test__keyword_n_events_updated(api_client, minimal_event_dict, user, data_so
     response = create_with_post(api_client, minimal_event_dict)
     assert_event_data_is_equal(minimal_event_dict, response.data)
     call_command('update_n_events')
-    assert Keyword.objects.get(id='test').n_events == 1
+    assert Keyword.objects.get(id=data_source.id + ':test').n_events == 1
     data2 = response.data
     print('got the post response')
     print(data2)
@@ -70,20 +72,21 @@ def test__keyword_n_events_updated(api_client, minimal_event_dict, user, data_so
     print('got the put response')
     print(response2.data)
     call_command('update_n_events')
-    assert Keyword.objects.get(id='test').n_events == 0
-    assert Keyword.objects.get(id='test2').n_events == 1
-    assert Keyword.objects.get(id='test3').n_events == 1
+    assert Keyword.objects.get(id=data_source.id + ':test').n_events == 0
+    assert Keyword.objects.get(id=data_source.id + ':test2').n_events == 1
+    assert Keyword.objects.get(id=data_source.id + ':test3').n_events == 1
 
 
 @pytest.mark.django_db
-def test__location_n_events_updated(api_client, minimal_event_dict, user, place2):
+def test__location_n_events_updated(api_client, minimal_event_dict, user, data_source,
+                                    other_data_source, place2):
 
     # create an event
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, minimal_event_dict)
     assert_event_data_is_equal(minimal_event_dict, response.data)
     call_command('update_n_events')
-    assert Place.objects.get(id='test location').n_events == 1
+    assert Place.objects.get(id=data_source.id + ':test_location').n_events == 1
     data2 = response.data
     print('got the post response')
     print(data2)
@@ -95,9 +98,34 @@ def test__location_n_events_updated(api_client, minimal_event_dict, user, place2
     print('got the put response')
     print(response2.data)
     call_command('update_n_events')
-    assert Place.objects.get(id='test location').n_events == 0
-    assert Place.objects.get(id='test location 2').n_events == 1
+    assert Place.objects.get(id=data_source.id + ':test_location').n_events == 0
+    assert Place.objects.get(id=other_data_source.id + ':test_location_2').n_events == 1
 
+
+@pytest.mark.django_db
+def test__update_minimal_event_with_autopopulated_fields_with_put(api_client, minimal_event_dict, user, organization):
+
+    # create an event
+    api_client.force_authenticate(user=user)
+    response = create_with_post(api_client, minimal_event_dict)
+    data = response.data
+
+    assert_event_data_is_equal(minimal_event_dict, data)
+    event_id = data['@id']
+
+    response2 = update_with_put(api_client, event_id, minimal_event_dict)
+    assert_event_data_is_equal(data, response2.data)
+    event = Event.objects.get(id=data['id'])
+    assert event.created_by == user
+    assert event.last_modified_by == user
+    assert event.created_time is not None
+    assert event.last_modified_time is not None
+    assert event.data_source.id == settings.SYSTEM_DATA_SOURCE_ID
+    assert event.publisher == organization
+    # events are automatically marked as ending at midnight, local time
+    assert event.end_time == timezone.localtime(timezone.now() + timedelta(days=2)).\
+        replace(hour=0, minute=0, second=0, microsecond=0).astimezone(pytz.utc)
+    assert event.has_end_time is False
 
 @pytest.mark.django_db
 def test__update_an_event_with_put(api_client, complex_event_dict, user):
@@ -145,7 +173,7 @@ def test__reschedule_an_event_with_put(api_client, complex_event_dict, user):
     response = create_with_post(api_client, complex_event_dict)
 
     # create a new datetime
-    new_datetime = (timezone.now() + timedelta(days=3)).isoformat()
+    new_datetime = (timezone.now() + timedelta(days=3)).isoformat().replace('+00:00', 'Z')
     data2 = response.data
     data2['start_time'] = new_datetime
     data2['end_time'] = new_datetime
@@ -167,7 +195,7 @@ def test__reschedule_an_event_with_put(api_client, complex_event_dict, user):
     assert 'event_status' in response3.data
 
     # create a new datetime again
-    new_datetime = (timezone.now() + timedelta(days=3)).isoformat()
+    new_datetime = (timezone.now() + timedelta(days=3)).isoformat().replace('+00:00', 'Z')
     data2 = response2.data
     data2['start_time'] = new_datetime
     data2['end_time'] = new_datetime
@@ -208,7 +236,7 @@ def test__postpone_an_event_with_put(api_client, complex_event_dict, user):
     assert 'event_status' in response2.data
 
     # reschedule and try to cancel marking
-    new_datetime = (timezone.now() + timedelta(days=3)).isoformat()
+    new_datetime = (timezone.now() + timedelta(days=3)).isoformat().replace('+00:00', 'Z')
     data2['start_time'] = new_datetime
     data2['end_time'] = new_datetime
     data2['event_status'] = 'EventScheduled'
@@ -220,7 +248,7 @@ def test__postpone_an_event_with_put(api_client, complex_event_dict, user):
 
     # reschedule, but do not try to cancel marking
     data2 = response2.data
-    new_datetime = (timezone.now() + timedelta(days=3)).isoformat()
+    new_datetime = (timezone.now() + timedelta(days=3)).isoformat().replace('+00:00', 'Z')
     data2['start_time'] = new_datetime
     data2['end_time'] = new_datetime
     data2.pop('event_status')
@@ -290,7 +318,7 @@ def test__cancel_a_rescheduled_event_with_put(api_client, complex_event_dict, us
     response = create_with_post(api_client, complex_event_dict)
 
     # create a new datetime
-    new_datetime = (timezone.now() + timedelta(days=3)).isoformat()
+    new_datetime = (timezone.now() + timedelta(days=3)).isoformat().replace('+00:00', 'Z')
     data2 = response.data
     data2['start_time'] = new_datetime
     data2['end_time'] = new_datetime
@@ -335,7 +363,7 @@ def test__reschedule_a_cancelled_event_with_put(api_client, complex_event_dict, 
     assert_event_data_is_equal(data2, response2.data)
 
     # create a new datetime and remove the cancelled status
-    new_datetime = (timezone.now() + timedelta(days=3)).isoformat()
+    new_datetime = (timezone.now() + timedelta(days=3)).isoformat().replace('+00:00', 'Z')
     data3 = response2.data
     data3['start_time'] = new_datetime
     data3['end_time'] = new_datetime
@@ -384,6 +412,25 @@ def test__a_non_admin_cannot_update_an_event(api_client, event, complex_event_di
     detail_url = reverse('event-detail', kwargs={'pk': event.pk})
     response = update_with_put(api_client, detail_url, complex_event_dict)
     assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test__an_admin_can_update_an_event_from_another_data_source(api_client, event2, keyword, offer,
+                                                                other_data_source, organization, user):
+    other_data_source.owner = organization
+    other_data_source.user_editable = True
+    other_data_source.save()
+    event2.publisher = organization
+    event2.keywords.add(keyword)  # keyword is needed in testing POST and PUT with event data
+    event2.offers.add(offer)  # ditto for offer
+    event2.save()
+    api_client.force_authenticate(user)
+
+    detail_url = reverse('event-detail', kwargs={'pk': event2.pk})
+    response = api_client.get(detail_url, format='json')
+    assert response.status_code == 200
+    response = update_with_put(api_client, detail_url, response.data)
+    assert response.status_code == 200
 
 
 @pytest.mark.django_db

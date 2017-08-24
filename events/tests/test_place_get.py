@@ -9,6 +9,29 @@ def get_list(api_client, version='v1', data=None):
     return get(api_client, list_url, data=data)
 
 
+def get_detail(api_client, detail_pk, version='v1', data=None):
+    detail_url = reverse('place-detail', version=version, kwargs={'pk': detail_pk})
+    return get(api_client, detail_url, data=data)
+
+
+@pytest.mark.django_db
+def test_get_place_detail(api_client, place):
+    response = get_detail(api_client, place.pk)
+    assert response.data['id'] == place.id
+
+
+@pytest.mark.django_db
+def test_get_place_detail_check_redirect(api_client, place, place2):
+    place.replaced_by = place2
+    place.deleted = True
+    place.save()
+    url = reverse('place-detail', version='v1', kwargs={'pk': place.pk})
+    response = api_client.get(url, data=None, format='json')
+    assert response.status_code == 301
+    response2 = api_client.get(response.url, data=None, format='json')
+    assert response2.data['id'] == place2.id
+
+
 @pytest.mark.django_db
 def test_get_place_list_verify_division_filter(api_client, place, place2, place3, administrative_division,
                                                administrative_division2):

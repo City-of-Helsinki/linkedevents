@@ -7,12 +7,11 @@ import re
 import struct
 import time
 import urllib.parse
-from datetime import datetime, timedelta
-from dateutil.parser import parse as dateutil_parse
+from datetime import datetime, timedelta, timezone
 
 # django and drf
 from django.db.transaction import atomic
-from django.http import Http404
+from django.http import Http404, HttpResponsePermanentRedirect
 from django.utils import translation
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.db.utils import IntegrityError
@@ -29,7 +28,7 @@ from rest_framework import (
 from rest_framework.settings import api_settings
 from rest_framework.reverse import reverse
 from rest_framework.response import Response
-from rest_framework.exceptions import ParseError, PermissionDenied as DRFPermissionDenied
+from rest_framework.exceptions import ParseError, PermissionDenied as DRFPermissionDenied, APIException
 from rest_framework.views import get_view_name as original_get_view_name
 
 
@@ -59,6 +58,7 @@ from events.models import (
 )
 from events.translation import EventTranslationOptions
 from helevents.models import User
+from events.renderers import DOCXRenderer, JSONLDRenderer, JSONRenderer
 
 
 def get_view_name(cls, suffix=None):
@@ -471,28 +471,31 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                 del ret[field]
         return ret
 
-    def validate(self, data):
-        # validate data source permissions
-        if 'data_source' in data:
-            if data['data_source'] != self.data_source:
+    def validate_data_source(self, value):
+        if value:
+            if value != self.data_source:
+                # the event might be from another data source by the same organization, and we are only editing it
+                if self.instance:
+                    if self.publisher.owned_systems.filter(id=value).exists():
+                        return value
                 raise serializers.ValidationError(
                     {'data_source': _("Setting data_source to %(given)s " +
-                                      " is not allowed for your organization. The data source" +
-                                      " must be left blank or set to %(required)s") %
-                                    {'given': data['data_source'], 'required': self.data_source}})
-        else:
-            data['data_source'] = self.data_source
-        # validate publisher permissions
-        if 'publisher' in data:
-            if data['publisher'] != self.publisher:
+                             " is not allowed for your organization. The data_source"
+                             " must be left blank or set to %(required)s ") %
+                           {'given': str(value), 'required': self.data_source}})
+        return value
+
+    def validate_publisher(self, value):
+        if value:
+            if value != self.publisher:
                 raise serializers.ValidationError(
                     {'publisher': _("Setting publisher to %(given)s " +
                                     " is not allowed for your organization. The publisher" +
                                     " must be left blank or set to %(required)s ") %
-                                  {'given': data['publisher'], 'required': self.publisher}})
-        else:
-            data['publisher'] = self.publisher
+                                  {'given': str(value), 'required': self.publisher}})
+        return value
 
+    def validate(self, data):
         if 'name' in self.translated_fields:
             name_exists = False
             languages = [x[0] for x in settings.LANGUAGES]
@@ -508,6 +511,10 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         return data
 
     def create(self, validated_data):
+        if 'data_source' not in validated_data:
+            validated_data['data_source'] = self.data_source
+        if 'publisher' not in validated_data:
+            validated_data['publisher'] = self.publisher
         # no django user exists for the api key
         if isinstance(self.user, ApiKeyUser):
             self.user = None
@@ -747,6 +754,16 @@ class PlaceRetrieveViewSet(GeoModelAPIView,
         context.setdefault('skip_fields', set()).add('origin_id')
         return context
 
+    def retrieve(self, request, *args, **kwargs):
+        place = Place.objects.get(pk=kwargs['pk'])
+        if place.deleted:
+            if place.replaced_by:
+                place = place.replaced_by
+                return HttpResponsePermanentRedirect(reverse('place-detail',
+                                                             kwargs={'pk': place.pk},
+                                                             request=request))
+        return super().retrieve(request, *args, **kwargs)
+
 
 class PlaceListViewSet(GeoModelAPIView,
                        viewsets.GenericViewSet,
@@ -760,23 +777,34 @@ class PlaceListViewSet(GeoModelAPIView,
 
     def get_queryset(self):
         """
-        Return Place queryset. If request has parameter show_all_places=1
-        all Places are returned, otherwise only which have events.
-        Additional query parameters:
-        event.data_source
-        event.start
-        event.end
+        Return Place queryset.
+
+        If the request has no filter parameters, we only return places that meet the following criteria:
+        -the place has events
+        -the place is not deleted
+
+        Supported places filtering parameters:
+        data_source (only places with the given data sources are included)
+        filter (only places containing the specified string are included)
+        show_all_places (places without events are included)
+        show_deleted (deleted places are included)
         """
         queryset = Place.objects.prefetch_related('divisions__type', 'divisions__municipality')
-        if self.request.query_params.get('show_all_places'):
-            pass
-        else:
-            events = Event.objects.all()
-            params = _clean_qp(self.request.query_params)
-            events = _filter_event_queryset(events, params)
-            location_ids = events.values_list('location_id',
-                                              flat=True).distinct().order_by()
-            queryset = queryset.filter(id__in=location_ids)
+        data_source = self.request.query_params.get('data_source')
+        # Filter by data source, multiple sources separated by comma
+        if data_source:
+            data_source = data_source.lower().split(',')
+            queryset = queryset.filter(data_source__in=data_source)
+        if not self.request.query_params.get('show_all_places'):
+            queryset = queryset.filter(n_events__gt=0)
+        if not self.request.query_params.get('show_deleted'):
+            queryset = queryset.filter(deleted=False)
+
+        # Optionally filter places by filter parameter,
+        # can be used e.g. with typeahead.js
+        val = self.request.query_params.get('text') or self.request.query_params.get('filter')
+        if val:
+            queryset = queryset.filter(name__icontains=val)
         return queryset
 
     def get_serializer_context(self):
@@ -916,7 +944,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     super_event = JSONLDRelatedField(serializer='EventSerializer', required=False, view_name='event-detail',
                                      queryset=Event.objects.all(), allow_null=True)
     event_status = EnumChoiceField(Event.STATUSES, required=False)
-    publication_status = EnumChoiceField(PUBLICATION_STATUSES)
+    publication_status = EnumChoiceField(PUBLICATION_STATUSES, required=False)
     external_links = EventLinkSerializer(many=True, required=False)
     offers = OfferSerializer(many=True, required=False)
     data_source = serializers.PrimaryKeyRelatedField(queryset=DataSource.objects.all(),
@@ -947,7 +975,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             val = data.get(field, None)
             if val:
                 if isinstance(val, str):
-                    data[field] = parse_time(val, True)
+                    data[field] = utils.parse_time(val, True)
         return data
 
     def to_internal_value(self, data):
@@ -968,16 +996,22 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         data = super().to_internal_value(data)
         return data
 
-    def validate(self, data):
-        # validate id permissions
-        if 'id' in data:
-            if not data['id'].split(':', 1)[0] == self.data_source.id:
+    def validate_id(self, value):
+        if value:
+            id_data_source_prefix = value.split(':', 1)[0]
+            if not id_data_source_prefix == self.data_source.id:
+                # the event might be from another data source by the same organization, and we are only editing it
+                if self.instance:
+                    if self.publisher.owned_systems.filter(id=id_data_source_prefix).exists():
+                        return value
                 raise serializers.ValidationError(
                     {'id': _("Setting id to %(given)s " +
                              " is not allowed for your organization. The id"
                              " must be left blank or set to %(data_source)s:desired_id") %
-                           {'given': str(data['id']), 'data_source': self.data_source}})
+                           {'given': str(value), 'data_source': self.data_source}})
+        return value
 
+    def validate(self, data):
         # clean the html
         for k, v in data.items():
             if k in ["description"]:
@@ -985,10 +1019,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                     data[k] = bleach.clean(v, settings.BLEACH_ALLOWED_TAGS)
         data = super().validate(data)
 
-        # require the publication status
         if 'publication_status' not in data:
-            raise serializers.ValidationError({'publication_status':
-                _("You must specify whether you wish to submit a draft or a public event.")})
+            data['publication_status'] = PublicationStatus.PUBLIC
 
         # if the event is a draft, no further validation is performed
         if data['publication_status'] == PublicationStatus.DRAFT:
@@ -1032,8 +1064,9 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             # provided time is assumed exact
             data['has_start_time'] = True
         if not data['has_start_time']:
-            # provided time is inexact
-            data['start_time'] = data['start_time'].replace(hour=0, minute=0, second=0)
+            # if no exact time is supplied, the event starts at midnight local time
+            data['start_time'] = timezone.localtime(data['start_time']).\
+                replace(hour=0, minute=0, second=0, microsecond=0).astimezone(pytz.utc)
 
         # adjust end_time and has_end_time
 
@@ -1044,9 +1077,10 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         if 'has_end_time' not in data:
             # provided time is assumed exact
             data['has_end_time'] = True
-        # If end date is supplied but no time, the event ends at midnight of the following day.
         if not data['has_end_time']:
-            data['end_time'] = data['end_time'].replace(hour=0, minute=0, second=0)
+            # if no exact time is supplied, the event ends at midnight local time
+            data['end_time'] = timezone.localtime(data['end_time'])\
+                .replace(hour=0, minute=0, second=0, microsecond=0).astimezone(pytz.utc)
             data['end_time'] += timedelta(days=1)
 
         if data.get('start_time') and data['start_time'] < timezone.now():
@@ -1125,11 +1159,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         # update validated fields
         super().update(instance, validated_data)
 
-        # also update `has_end_time` if needed
-        if instance.end_time:
-            instance.has_end_time = True
-            instance.save()
-
         # update offers
         if isinstance(offers, list):
             instance.offers.all().delete()
@@ -1146,6 +1175,12 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
     def to_representation(self, obj):
         ret = super(EventSerializer, self).to_representation(obj)
+
+        if self.context['request'].accepted_renderer.format == 'docx':
+            ret['end_time_obj'] = obj.end_time
+            ret['start_time_obj'] = obj.start_time
+            ret['location'] = obj.location
+
         if 'start_time' in ret and not obj.has_start_time:
             # Return only the date part
             ret['start_time'] = obj.start_time.astimezone(LOCAL_TZ).strftime('%Y-%m-%d')
@@ -1207,35 +1242,6 @@ class EventSerializerV0_1(EventSerializer):
         _format_images_v0_1(ret)
         return ret
 
-def parse_time(time_str, is_start):
-    time_str = time_str.strip()
-    # Handle dates first. Assume dates are given in local timezone.
-    # FIXME: What if there's no local timezone?
-    try:
-        dt = datetime.strptime(time_str, '%Y-%m-%d')
-        dt = LOCAL_TZ.localize(dt)
-    except ValueError:
-        dt = None
-    if not dt:
-        if time_str.lower() == 'today':
-            dt = datetime.utcnow().replace(tzinfo=pytz.utc)
-            dt = dt.astimezone(LOCAL_TZ)
-            dt = dt.replace(hour=0, minute=0, second=0, microsecond=0)
-    if dt:
-        # With start timestamps, we treat dates as beginning
-        # at midnight the same day. End timestamps are taken to
-        # mean midnight on the following day.
-        if not is_start:
-            dt = dt + timedelta(days=1)
-    else:
-        try:
-            # Handle all other times through dateutil.
-            dt = dateutil_parse(time_str)
-        except (TypeError, ValueError):
-            raise ParseError('time in invalid format (try ISO 8601 or yyyy-mm-dd)')
-    return dt
-
-
 
 class LinkedEventsOrderingFilter(filters.OrderingFilter):
     ordering_param = 'sort'
@@ -1277,6 +1283,7 @@ def parse_duration_string(duration):
 
     return int(val) * mul
 
+
 def _filter_event_queryset(queryset, params, srs=None):
     """
     Filter events queryset by params
@@ -1303,17 +1310,35 @@ def _filter_event_queryset(queryset, params, srs=None):
     # 2014-10-29T12:00:00Z == 2014-10-29T12:00:00+0000 (UTC time)
     # or 2014-10-29T12:00:00+0200 (local time)
     if val:
-        dt = parse_time(val, is_start=False)
+        dt = utils.parse_time(val, is_start=False)
         queryset = queryset.filter(Q(last_modified_time__gte=dt))
 
-    val = params.get('start', None)
-    if val:
-        dt = parse_time(val, is_start=True)
+    start = params.get('start')
+    end = params.get('end')
+    days = params.get('days')
+
+    if days:
+        try:
+            days = int(days)
+        except ValueError as e:
+            raise ParseError(_('Error while parsing days.'))
+        if days < 1:
+            raise ValidationError(_('Days must be 1 or more.'))
+
+        if start or end:
+            raise ValidationError(_('Start or end cannot be used with days.'))
+
+        today = datetime.now(timezone.utc).date()
+
+        start = today.isoformat()
+        end = (today + timedelta(days=days)).isoformat()
+
+    if start:
+        dt = utils.parse_time(start, is_start=True)
         queryset = queryset.filter(Q(end_time__gt=dt) | Q(start_time__gte=dt))
 
-    val = params.get('end', None)
-    if val:
-        dt = parse_time(val, is_start=False)
+    if end:
+        dt = utils.parse_time(end, is_start=False)
         queryset = queryset.filter(Q(end_time__lt=dt) | Q(start_time__lte=dt))
 
     val = params.get('bbox', None)
@@ -1384,7 +1409,7 @@ class EventFilter(filters.FilterSet):
 
     class Meta:
         model = Event
-        fields = ('division', 'super_event_type')
+        fields = ('division', 'super_event_type', 'super_event')
 
     def filter_super_event_type(self, queryset, name, value):
         if value in ('null', 'none'):
@@ -1393,6 +1418,12 @@ class EventFilter(filters.FilterSet):
 
     def filter_division(self, queryset, name, value):
         return filter_division(queryset, name, value)
+
+
+class EventDeletedException(APIException):
+    status_code = 410
+    default_detail = 'Event has been deleted.'
+    default_code = 'gone'
 
 
 class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
@@ -1408,6 +1439,7 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
     filter_class = EventFilter
     ordering_fields = ('start_time', 'end_time', 'days_left', 'last_modified_time')
     ordering = ('-last_modified_time',)
+    renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES + [DOCXRenderer]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -1440,6 +1472,8 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
             raise Http404("Event does not exist")
         if (event.publication_status == PublicationStatus.PUBLIC or
             self.organization == event.publisher):
+            if event.deleted:
+                raise EventDeletedException()
             return event
         else:
             raise Http404("Event does not exist")
@@ -1473,6 +1507,39 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
     @atomic
     def create(self, request, *args, **kwargs):
         return super().create(request, *args, **kwargs)
+
+    @atomic
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.soft_delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def list(self, request, *args, **kwargs):
+        # docx renderer has additional requirements for listing events
+        if request.accepted_renderer.format == 'docx':
+            if not request.query_params.get('location'):
+                raise ParseError({'detail':
+                    _('Must specify a location when fetching DOCX file.')}
+                )
+            queryset = self.filter_queryset(self.get_queryset())
+            if queryset.count() == 0:
+                raise ParseError({'detail': _('No events.')})
+            if len(set([event.location for event in queryset])) > 1:
+                raise ParseError({'detail': _('Only one location allowed.')})
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+        return super().list(request, *args, **kwargs)
+
+    def finalize_response(self, request, response, *args, **kwargs):
+        # Switch to normal renderer for docx errors.
+        response = super().finalize_response(request, response, *args, **kwargs)
+        # Prevent rendering errors as DOCX files
+        if response.status_code != 200 and request.accepted_renderer.format == 'docx':
+            first_renderer = self.renderer_classes[0]()
+            response.accepted_renderer = first_renderer
+            response.accepted_media_type = first_renderer.media_type
+
+        return response
 
 
 register_view(EventViewSet, 'event')
@@ -1551,12 +1618,12 @@ class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView
         if len(models) == 1 and Event in models:
             start = params.get('start', None)
             if start:
-                dt = parse_time(start, is_start=True)
+                dt = utils.parse_time(start, is_start=True)
                 queryset = queryset.filter(Q(end_time__gt=dt) | Q(start_time__gte=dt))
 
             end = params.get('end', None)
             if end:
-                dt = parse_time(end, is_start=False)
+                dt = utils.parse_time(end, is_start=False)
                 queryset = queryset.filter(Q(end_time__lt=dt) | Q(start_time__lte=dt))
 
             if not start and not end and hasattr(queryset.query, 'add_decay_function'):
