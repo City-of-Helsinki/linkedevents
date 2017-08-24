@@ -334,7 +334,24 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
 
     @transaction.atomic
     def save(self, *args, **kwargs):
+        # needed to remap events to replaced location
+        old_replaced_by = None
+        if self.id:
+            try:
+                old_replaced_by = Place.objects.get(id=self.id).replaced_by
+            except Place.DoesNotExist:
+                pass
+
         super().save(*args, **kwargs)
+
+        # needed to remap events to replaced location
+        if not old_replaced_by == self.replaced_by:
+            Event.objects.filter(location=self).update(location=self.replaced_by)
+            # update doesn't call save so we update event numbers manually
+            if old_replaced_by:
+                Place.objects.filter(id__in=(self.id, old_replaced_by.id, self.replaced_by.id)).update(n_events_changed=True)
+            else:
+                Place.objects.filter(id__in=(self.id, self.replaced_by.id)).update(n_events_changed=True)
 
         if self.position:
             self.divisions = AdministrativeDivision.objects.filter(
