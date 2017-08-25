@@ -722,12 +722,20 @@ def filter_division(queryset, name, value):
 
 
 class PlaceSerializer(LinkedEventsSerializer, GeoModelSerializer):
+    id = serializers.CharField(required=False)
     view_name = 'place-detail'
     divisions = DivisionSerializer(many=True, read_only=True)
-
+    
     class Meta:
         model = Place
         exclude = ('n_events_changed',)
+        
+    def create(self, validated_data):
+        # if id was not provided, we generate it upon creation:
+        if 'id' not in validated_data:
+            validated_data['id'] = generate_id(self.data_source)
+
+        return super().create(validated_data)
 
 
 class PlaceFilter(filters.FilterSet):
@@ -742,10 +750,16 @@ class PlaceFilter(filters.FilterSet):
     def filter_division(self, queryset, name, value):
         return filter_division(queryset, name, value)
 
+class PlaceDeletedException(APIException):
+    status_code = 410
+    default_detail = 'Place has been deleted.'
+    default_code = 'gone'
 
 class PlaceRetrieveViewSet(GeoModelAPIView,
                            viewsets.GenericViewSet,
-                           mixins.RetrieveModelMixin):
+                           mixins.RetrieveModelMixin,
+                           mixins.UpdateModelMixin,
+                           mixins.DestroyModelMixin):
     queryset = Place.objects.all()
     serializer_class = PlaceSerializer
 
@@ -753,6 +767,17 @@ class PlaceRetrieveViewSet(GeoModelAPIView,
         context = super(PlaceRetrieveViewSet, self).get_serializer_context()
         context.setdefault('skip_fields', set()).add('origin_id')
         return context
+      
+    @atomic
+    def update(self, request, *args, **kwargs):
+        self.data_source, self.organization = get_authenticated_data_source_and_publisher(self.request)
+        return super().update(request, *args, **kwargs)
+      
+    @atomic
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.soft_delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def retrieve(self, request, *args, **kwargs):
         place = Place.objects.get(pk=kwargs['pk'])
@@ -762,12 +787,14 @@ class PlaceRetrieveViewSet(GeoModelAPIView,
                 return HttpResponsePermanentRedirect(reverse('place-detail',
                                                              kwargs={'pk': place.pk},
                                                              request=request))
+            else:
+              raise PlaceDeletedException()
         return super().retrieve(request, *args, **kwargs)
-
 
 class PlaceListViewSet(GeoModelAPIView,
                        viewsets.GenericViewSet,
-                       mixins.ListModelMixin):
+                       mixins.ListModelMixin,
+                       mixins.CreateModelMixin):
     queryset = Place.objects.all()
     serializer_class = PlaceSerializer
     filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
@@ -806,6 +833,10 @@ class PlaceListViewSet(GeoModelAPIView,
         if val:
             queryset = queryset.filter(name__icontains=val)
         return queryset
+
+    @atomic
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
 
     def get_serializer_context(self):
         context = super(PlaceListViewSet, self).get_serializer_context()
