@@ -37,7 +37,7 @@ from isodate import Duration, duration_isoformat, parse_duration
 from modeltranslation.translator import translator, NotRegistered
 from haystack.query import AutoQuery
 from munigeo.api import (
-    GeoModelSerializer, GeoModelAPIView, build_bbox_filter, srid_to_srs
+    GeoModelAPIView, build_bbox_filter, srid_to_srs
 )
 from munigeo.models import AdministrativeDivision
 from rest_framework_bulk import BulkListSerializer, BulkModelViewSet
@@ -784,7 +784,7 @@ def filter_division(queryset, name, value):
             queryset.filter(**{name + '__name__in': names})).distinct()
 
 
-class PlaceSerializer(LinkedEventsSerializer, GeoModelSerializer):
+class PlaceSerializer(LinkedEventsSerializer):
     id = serializers.CharField(required=False)
     origin_id = serializers.CharField(required=False)
     data_source = serializers.PrimaryKeyRelatedField(queryset=DataSource.objects.all(),
