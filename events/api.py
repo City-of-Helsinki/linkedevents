@@ -723,6 +723,12 @@ def filter_division(queryset, name, value):
 
 class PlaceSerializer(LinkedEventsSerializer, GeoModelSerializer):
     id = serializers.CharField(required=False)
+    origin_id = serializers.CharField(required=False)
+    data_source = serializers.PrimaryKeyRelatedField(queryset=DataSource.objects.all(),
+                                                     required=False, allow_null=True)
+    publisher = serializers.PrimaryKeyRelatedField(queryset=Organization.objects.all(),
+                                                   required=False, allow_null=True)
+
     view_name = 'place-detail'
     divisions = DivisionSerializer(many=True, read_only=True)
     
@@ -730,10 +736,27 @@ class PlaceSerializer(LinkedEventsSerializer, GeoModelSerializer):
         model = Place
         exclude = ('n_events_changed',)
         
+    def update(self, instance, validated_data):
+        if 'data_source' in validated_data and not validated_data['data_source']:
+          del validated_data['data_source']
+        if 'publisher' in validated_data and not validated_data['publisher']:
+          del validated_data['publisher']
+        if 'data_source' not in validated_data:
+            validated_data['data_source'] = self.data_source
+        if 'publisher' not in validated_data:
+            validated_data['publisher'] = self.publisher
+        return super().update(instance, validated_data)
+        
     def create(self, validated_data):
         # if id was not provided, we generate it upon creation:
         if 'id' not in validated_data:
             validated_data['id'] = generate_id(self.data_source)
+        if 'origin_id' not in validated_data:
+          raise ValidationError({'origin_id': _('Origin id is required field')})            
+        if 'data_source' not in validated_data or not validated_data['data_source']:
+          raise ValidationError({'data_source': _('Datasource is required field')})
+        if 'publisher' not in validated_data or not validated_data['publisher']:
+          raise ValidationError({'publisher': _('Publisher is required field')})
 
         return super().create(validated_data)
 
