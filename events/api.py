@@ -529,6 +529,23 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                 raise error
         return instance
 
+    def create_keyword(self, validated_data):
+        if 'data_source' not in validated_data:
+            validated_data['data_source'] = self.data_source
+        # no django user exists for the api key
+        if isinstance(self.user, ApiKeyUser):
+            self.user = None
+        validated_data['created_by'] = self.user
+        validated_data['last_modified_by'] = self.user
+        try:
+            instance = super().create(validated_data)
+        except IntegrityError as error:
+            if 'duplicate' and 'pkey' in str(error):
+                raise serializers.ValidationError({'id':_("An object with given id already exists.")})
+            else:
+                raise error
+        return instance
+
     def update(self, instance, validated_data):
         if isinstance(self.user, ApiKeyUser):
             # allow updating only if the api key matches instance data source
@@ -568,20 +585,59 @@ def _clean_qp(query_params):
 
 
 class KeywordSerializer(LinkedEventsSerializer):
+    id = serializers.CharField(required=False)
     view_name = 'keyword-detail'
     alt_labels = serializers.SlugRelatedField(slug_field='name', read_only=True, many=True)
+    data_source = serializers.PrimaryKeyRelatedField(queryset=DataSource.objects.all(),
+                                                     required=False, allow_null=True)
 
     class Meta:
         model = Keyword
         exclude = ('n_events_changed',)
+        
+    def update(self, instance, validated_data):
+        if 'data_source' in validated_data and not validated_data['data_source']:
+          del validated_data['data_source']
+        if 'data_source' not in validated_data:
+            validated_data['data_source'] = self.data_source
+        return super().update(instance, validated_data)
+        
+    def create(self, validated_data):
+        # if id was not provided, we generate it upon creation:
+        if 'id' not in validated_data:
+            validated_data['id'] = generate_id(self.data_source)          
+        if 'data_source' not in validated_data or not validated_data['data_source']:
+          raise ValidationError({'data_source': _('Datasource is required field')})
+
+        return super().create_keyword(validated_data)
 
 
-class KeywordRetrieveViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+class KeywordRetrieveViewSet(mixins.RetrieveModelMixin,
+                             mixins.UpdateModelMixin,
+                             mixins.DestroyModelMixin,
+                             viewsets.GenericViewSet):
     queryset = Keyword.objects.all()
     serializer_class = KeywordSerializer
+    
+    @atomic
+    def update(self, request, *args, **kwargs):
+        self.data_source, self.organization = get_authenticated_data_source_and_publisher(self.request)
+        return super().update(request, *args, **kwargs)
+      
+    @atomic
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.deprecate()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+      
+    def retrieve(self, request, *args, **kwargs):
+        keyword = Keyword.objects.get(pk=kwargs['pk'])
+        if keyword.deprecated:
+            raise KeywordDeprecatedException()
+        return super().retrieve(request, *args, **kwargs)
 
 
-class KeywordListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+class KeywordListViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewsets.GenericViewSet):
     queryset = Keyword.objects.all()
     serializer_class = KeywordSerializer
     filter_backends = (filters.OrderingFilter,)
@@ -620,6 +676,9 @@ class KeywordListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
             queryset = queryset.filter(name__icontains=val)
         return queryset
 
+    @atomic
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
 
 register_view(KeywordRetrieveViewSet, 'keyword')
 register_view(KeywordListViewSet, 'keyword')
@@ -636,6 +695,10 @@ class KeywordSetSerializer(LinkedEventsSerializer):
         model = KeywordSet
         fields = '__all__'
 
+class KeywordDeprecatedException(APIException):
+    status_code = 410
+    default_detail = 'Keyword has been deprecated.'
+    default_code = 'gone'
 
 class JSONAPIViewSet(viewsets.ReadOnlyModelViewSet):
     def initial(self, request, *args, **kwargs):
