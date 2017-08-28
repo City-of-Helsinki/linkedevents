@@ -779,7 +779,7 @@ class PlaceDeletedException(APIException):
     default_code = 'gone'
 
 class PlaceRetrieveViewSet(GeoModelAPIView,
-                           JSONAPIViewSet,
+                           viewsets.GenericViewSet,
                            mixins.RetrieveModelMixin,
                            mixins.UpdateModelMixin,
                            mixins.DestroyModelMixin):
