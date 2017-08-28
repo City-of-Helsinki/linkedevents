@@ -22,8 +22,6 @@ django-hstore==1.4.2
 django-image-cropping==1.0.3
 django-leaflet==0.19.0
 django-modeltranslation==0.12.1
-django-modeltranslation==0.12.1
-django-mptt==0.8.7
 django-mptt==0.8.7
 django-reversion==2.0.7
 django==1.9.13
@@ -61,7 +59,6 @@ pytz==2016.7
 pyyaml==3.12
 raven==5.31.0
 rdflib==4.2.1
-requests-cache==0.4.13
 requests-cache==0.4.13
 requests-oauthlib==0.7.0  # via django-allauth
 requests==2.11.1
