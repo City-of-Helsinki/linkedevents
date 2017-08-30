@@ -177,7 +177,8 @@ class MatkoImporter(Importer):
         # found places are kept mapped to tprek even if literal matko match exists
         try:
             matko_place = Place.objects.get(data_source=self.data_source, origin_id=location['origin_id'])
-            replace_location(replace=matko_place, by=place)
+            if not (matko_place.deleted and matko_place.replaced_by == place):
+                replace_location(replace=matko_place, by=place)
         except Place.DoesNotExist:
             pass
 
