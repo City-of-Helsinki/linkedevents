@@ -334,6 +334,11 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
 
     @transaction.atomic
     def save(self, *args, **kwargs):
+        if self.replaced_by and self.replaced_by.replaced_by == self:
+            raise Exception("Trying to replace the location replacing this location by this location."
+                            "Please refrain from creating circular replacements and remove either one of the replacements."
+                            "We don't want homeless events.")
+
         # needed to remap events to replaced location
         old_replaced_by = None
         if self.id:
@@ -347,11 +352,10 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
         # needed to remap events to replaced location
         if not old_replaced_by == self.replaced_by:
             Event.objects.filter(location=self).update(location=self.replaced_by)
-            # update doesn't call save so we update event numbers manually
-            if old_replaced_by:
-                Place.objects.filter(id__in=(self.id, old_replaced_by.id, self.replaced_by.id)).update(n_events_changed=True)
-            else:
-                Place.objects.filter(id__in=(self.id, self.replaced_by.id)).update(n_events_changed=True)
+            # Update doesn't call save so we update event numbers manually.
+            # Not all of the below are necessarily present.
+            ids_to_update = [event.id for event in (self, self.replaced_by, old_replaced_by) if event]
+            Place.objects.filter(id__in=ids_to_update).update(n_events_changed=True)
 
         if self.position:
             self.divisions = AdministrativeDivision.objects.filter(

@@ -357,6 +357,11 @@ class Importer(object):
             obj._changed = True
             obj.position = position
 
+        # we may end up reinstating deleted locations whenever they are imported back and forth
+        if obj.deleted:
+            obj.deleted = False
+            obj._changed = True
+
         self._set_field(obj, 'publisher_id', info['publisher'].id)
 
         if obj._changed or obj._created:
