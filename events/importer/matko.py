@@ -34,9 +34,13 @@ LOCATION_TPREK_MAP = {
     'helsingin kaupunginteatteri / lilla teatern': '9353',
     'helsingin kaupunginteatteri / teatteristudio pasila': '9340',
     'finlandia-talo': '9294',
-    'hietaniemen uimaranta': '7766',
     'helsingin kaupunginmuseo': '8663',
     'helsingin kaupunginmuseo/ hakasalmen huvila': '8645',
+    'tuomiokirkko': '43181',
+    'sotamuseo': '25782',
+    'mäkelänrinteen uintikeskus': '41783',
+    'uimastadion': '41047',
+    'eläintarhan yleisurheilukenttä': '40498'
 }
 
 EXTRA_LOCATIONS = {
