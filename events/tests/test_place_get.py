@@ -43,6 +43,9 @@ def test_get_place_detail_check_redirect_and_event_remap(api_client, event, plac
     assert response2.data['n_events'] == 1
     event_response2 = get_event_detail(api_client, event.pk)
     assert event_response2.data['location']['@id'] == reverse('place-detail', kwargs={'pk': place2.id})
+    with pytest.raises(Exception):
+        place2.replaced_by = place
+        place.save()
 
 
 @pytest.mark.django_db
