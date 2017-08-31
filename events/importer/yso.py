@@ -238,6 +238,10 @@ class YsoImporter(Importer):
         else:
             keyword._created = False
             self.update_keyword(keyword, graph, subject)
+
+        if keyword.publisher_id != self.organization.id:
+            keyword.publisher = self.organization
+            keyword._changed = True
         if keyword._changed:
             keyword.save()
 

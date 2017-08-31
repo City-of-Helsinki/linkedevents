@@ -346,6 +346,10 @@ class HelmetImporter(Importer):
                     setattr(keyword_orig, name_key, name)
                     keyword_orig.save()
 
+            if keyword_orig.publisher_id != self.organization.id:
+                keyword_orig.publisher = self.organization
+                keyword_orig.save()
+
             event_keywords.add(keyword_orig)
             ### Saving original keyword ends ###
 
