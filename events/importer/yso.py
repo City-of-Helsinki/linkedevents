@@ -52,7 +52,6 @@ class YsoImporter(Importer):
     supported_languages = ['fi', 'sv', 'en']
 
     def setup(self):
-        requests_cache.install_cache('yso')
         defaults = dict(
             name='Yleinen suomalainen ontologia')
         self.data_source, _ = DataSource.objects.get_or_create(
