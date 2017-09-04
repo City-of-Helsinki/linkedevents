@@ -23,6 +23,7 @@ class Command(BaseCommand):
         parser.add_argument('--all', action='store_true', dest='all', help='Import all entities')
         parser.add_argument('--cached', action='store_true', dest='cached', help='Cache requests (if possible)')
         parser.add_argument('--single', action='store', dest='single', help='Import only single entity')
+        parser.add_argument('--remap', action='store_true', dest='remap', help='Remap all deleted entities to new ones')
 
         for imp in self.importer_types:
             parser.add_argument('--%s' % imp, dest=imp, action='store_true', help='import %s' % imp)
@@ -40,7 +41,8 @@ class Command(BaseCommand):
         importer = imp_class({'data_path': os.path.join(root_dir, 'data'),
                               'verbosity': int(options['verbosity']),
                               'cached': options['cached'],
-                              'single': options['single']})
+                              'single': options['single'],
+                              'remap': options['remap']})
 
         # Activate the default language for the duration of the import
         # to make sure translated fields are populated correctly.

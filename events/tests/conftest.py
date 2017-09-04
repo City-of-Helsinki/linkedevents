@@ -185,7 +185,8 @@ def place(data_source, organization, administrative_division):
         id=data_source.id + ':test_location',
         data_source=data_source,
         publisher=organization,
-        position=Point(50, 50)
+        position=Point(50, 50),
+        name='Place 1'
     )
 
 
@@ -210,7 +211,8 @@ def place2(other_data_source, organization2):
     return Place.objects.create(
         id=other_data_source.id + ':test_location_2',
         data_source=other_data_source,
-        publisher=organization2
+        publisher=organization2,
+        name='Place 2'
     )
 
 

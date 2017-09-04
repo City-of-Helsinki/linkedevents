@@ -15,7 +15,7 @@ from events.keywords import KeywordMatcher
 
 from .sync import ModelSyncher
 from .base import Importer, register_importer, recur_dict
-from .util import clean_text, unicodetext
+from .util import clean_text, unicodetext, replace_location
 
 MATKO_URLS = {
     'places': OrderedDict([
@@ -34,9 +34,13 @@ LOCATION_TPREK_MAP = {
     'helsingin kaupunginteatteri / lilla teatern': '9353',
     'helsingin kaupunginteatteri / teatteristudio pasila': '9340',
     'finlandia-talo': '9294',
-    'hietaniemen uimaranta': '7766',
     'helsingin kaupunginmuseo': '8663',
     'helsingin kaupunginmuseo/ hakasalmen huvila': '8645',
+    'tuomiokirkko': '43181',
+    'sotamuseo': '25782',
+    'mäkelänrinteen uintikeskus': '41783',
+    'uimastadion': '41047',
+    'eläintarhan yleisurheilukenttä': '40498'
 }
 
 EXTRA_LOCATIONS = {
@@ -122,10 +126,15 @@ class MatkoImporter(Importer):
         self.organization, _ = Organization.objects.get_or_create(
             defaults=defaults, **org_args)
 
-        place_list = Place.objects.filter(data_source=self.tprek_data_source)
+        place_list = Place.objects.filter(data_source=self.tprek_data_source, deleted=False)
+        deleted_place_list = Place.objects.filter(data_source=self.tprek_data_source,
+                                                  deleted=True)
         # Get only places that have unique names
         place_list = place_list.annotate(count=Count('name_fi')).filter(count=1).values('id', 'origin_id', 'name_fi')
+        deleted_place_list = deleted_place_list.annotate(count=Count('name_fi')).\
+            filter(count=1).values('id', 'origin_id', 'name_fi', 'replaced_by_id')
         self.tprek_by_name = {p['name_fi'].lower(): (p['id'], p['origin_id']) for p in place_list}
+        self.deleted_tprek_by_name = {p['name_fi'].lower(): (p['id'], p['origin_id'], p['replaced_by_id']) for p in deleted_place_list}
 
         if self.options['cached']:
             requests_cache.install_cache('matko')
@@ -138,7 +147,7 @@ class MatkoImporter(Importer):
         if link is not None:
             result['info_url'][lang_code] = unicodetext(link)
 
-    def _find_place_from_tprek(self, location):
+    def _find_place_from_tprek(self, location, include_deleted=False):
         if 'fi' in location['name']:
             place_name = location['name']['fi']
         else:
@@ -152,10 +161,26 @@ class MatkoImporter(Importer):
         elif place_name in LOCATION_TPREK_MAP:
             tprek_id = LOCATION_TPREK_MAP[place_name]
         else:
-            return None
+            # fallback to deleted if requested
+            if include_deleted and place_name in self.deleted_tprek_by_name:
+                place_id, tprek_id, replaced_by_id = self.deleted_tprek_by_name[place_name]
+                if replaced_by_id:
+                    self.logger.info('Place ' + place_id + ' replaced by ' + replaced_by_id)
+                    place_id = replaced_by_id
+            else:
+                return None
 
         if tprek_id and not place_id:
             place_id = Place.objects.get(data_source=self.tprek_data_source, origin_id=tprek_id).id
+
+        place = Place.objects.get(data_source=self.tprek_data_source, origin_id=tprek_id)
+        # found places are kept mapped to tprek even if literal matko match exists
+        try:
+            matko_place = Place.objects.get(data_source=self.data_source, origin_id=location['origin_id'])
+            if not (matko_place.deleted and matko_place.replaced_by == place):
+                replace_location(replace=matko_place, by=place)
+        except Place.DoesNotExist:
+            pass
 
         return place_id
 
@@ -170,15 +195,26 @@ class MatkoImporter(Importer):
             place = Place.objects.get(data_source=self.data_source, origin_id=matko_id)
         except Place.DoesNotExist:
             place = None
+        if place and place.deleted:
+            # The matko location has been superseded by tprek, but the tprek location no longer exists!
+            replace_location(from_source='tprek', by=place)
 
         # No existing entry, load it from Matko.
         if not place:
             places = self._fetch_places()
             from pprint import pprint
             if matko_id not in places:
-                print("Matko location %s (%s) not found!" % (
+                # The final fallback is to use deleted tprek locations.
+                self.logger.info("Matko location %s (%s) not found in feed!" % (
                     location['name']['fi'], location['origin_id']))
+                self.logger.info("Reverting back to deleted tprek locations.")
+                place_id = self._find_place_from_tprek(location, include_deleted=True)
+                if place_id:
+                    self.logger.warning(location['name']['fi'] + " found deleted in tprek!")
+                    return place_id
+                self.logger.warning(location['name']['fi'] + " not found in tprek history!")
                 return None
+            self.logger.info("Place %s found in matko feed, importing." % location['name']['fi'])
             pprint(places[matko_id])
             place = self.save_place(places[matko_id])
 
@@ -307,7 +343,7 @@ class MatkoImporter(Importer):
         if len(keywords) > 0:
             event['keywords'] = keywords
         else:
-            print('Warning: no keyword matches for', event['name'], keywords)
+            self.logger.warning('Warning: no keyword matches for', event['name'], keywords)
 
         if 'id' not in event['location']:
             place_id = self._find_place(event['location'])
@@ -383,7 +419,7 @@ class MatkoImporter(Importer):
         return root.xpath('channel/item')
 
     def import_events(self):
-        print("Importing Matko events")
+        self.logger.info("Importing Matko events")
         events = recur_dict()
         keyword_matcher = KeywordMatcher()
         for lang, url in MATKO_URLS['events'].items():
@@ -394,7 +430,7 @@ class MatkoImporter(Importer):
 
         for event in events.values():
             self.save_event(event)
-        print("%d events processed" % len(events.values()))
+        self.logger.info("%d events processed" % len(events.values()))
 
     def _fetch_places(self):
         if hasattr(self, 'places'):
@@ -419,11 +455,22 @@ class MatkoImporter(Importer):
 
     def import_places(self):
         self._fetch_places()
+        if self.options['single']:
+            self.logger.info("Trying to find single matko location %s" % self.options['single'])
+            for matko_id, location in self.places.items():
+                if location['name']['fi'].lower() == self.options['single'].lower():
+                    self.logger.info("Location %s (%s) found in matko feed"
+                          % (self.options['single'], matko_id))
+                    self.save_place(location)
+                    return
+            self.logger.warning("Location %s not found in matko feed" % self.options['single'])
+            return
+        self.logger.info("Updating existing matko places")
         place_list = Place.objects.filter(data_source=self.data_source)
         for place in place_list:
             origin_id = int(place.origin_id)
             if origin_id not in self.places:
-                self.logger.warning("%s not found in Matko places" % place)
+                self.logger.warning("%s not found in Matko feed anymore" % place)
                 continue
             place = self.places[origin_id]
             self.save_place(place)

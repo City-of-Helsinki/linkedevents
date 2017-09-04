@@ -28,7 +28,7 @@ class ModelSyncher(object):
     def get(self, obj_id):
         return self.obj_dict.get(obj_id, None)
 
-    def finish(self):
+    def finish(self, force=False):
         delete_list = []
         for obj_id, obj in self.obj_dict.items():
             if obj._found:
@@ -36,7 +36,7 @@ class ModelSyncher(object):
             if self.check_deleted_func is not None and self.check_deleted_func(obj):
                 continue
             delete_list.append(obj)
-        if len(delete_list) > 5 and len(delete_list) > len(self.obj_dict) * 0.2:
+        if len(delete_list) > 5 and len(delete_list) > len(self.obj_dict) * 0.2 and not force:
             raise Exception("Attempting to delete more than 20% of total items")
         for obj in delete_list:
             if self.allow_deleting_func:

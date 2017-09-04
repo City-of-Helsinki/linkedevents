@@ -8,26 +8,15 @@ from django.conf import settings
 from django.contrib.gis.geos import Point, Polygon
 from django.contrib.gis.gdal import SpatialReference, CoordTransform
 from django.utils.translation import activate, get_language
+from django.core.management import call_command
 
+from events.importer.util import replace_location
 from events.models import *
 from .sync import ModelSyncher
 from .base import Importer, register_importer
 
 URL_BASE = 'http://www.hel.fi/palvelukarttaws/rest/v3/'
 GK25_SRID = 3879
-
-
-def mark_deleted(obj):
-    if obj.deleted:
-        return False
-    obj.deleted = True
-    obj.save(update_fields=['deleted'])
-    return True
-
-
-def check_deleted(obj):
-    return obj.deleted
-
 
 @register_importer
 class TprekImporter(Importer):
@@ -47,6 +36,12 @@ class TprekImporter(Importer):
         org_args = dict(id='ahjo:021600')
         defaults = dict(name='Tietotekniikka- ja viestintäosasto', data_source=ahjo_ds)
         self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
+        if self.options.get('remap', None):
+            # This will prevent deletion checking, marking all deleted places as deleted
+            # again and remapping them accordingly! Otherwise, places already deleted
+            # will not be remapped by the syncher.
+            self.check_deleted = lambda x: False
+            self.mark_deleted = self.delete_and_replace
 
     def clean_text(self, text):
         # remove consecutive whitespaces
@@ -64,6 +59,36 @@ class TprekImporter(Importer):
         resp = requests.get(url)
         assert resp.status_code == 200
         return resp.json()
+
+    def delete_and_replace(self, obj):
+        # print('mark for deletion %s' % str(obj))
+        obj.deleted = True
+        obj.save(update_fields=['deleted'])
+        # we won't stand idly by and watch tprek delete needed units willy-nilly without raising a ruckus!
+        if obj.events.count() > 0:
+            # try to replace by tprek and, failing that, matko
+            replaced = replace_location(replace=obj, by_source='tprek')
+            if not replaced:
+                # matko location may indeed be deleted by an earlier iteration
+                replaced = replace_location(replace=obj, by_source='matko', include_deleted=True)
+            if not replaced:
+                # matko location may never have been imported in the first place, do it now!
+                call_command('event_import', 'matko', places=True, single=obj.name)
+                replaced = replace_location(replace=obj, by_source='matko')
+            if not replaced:
+                self.logger.warning("Tprek deleted location %s (%s) with events. No unambiguous replacement was found. "
+                                    "Please look for a replacement location and save it in the replaced_by field. "
+                                    "Until then, events will stay mapped to the deleted location." %
+                                    (obj.id, str(obj)))
+        return True
+
+    def mark_deleted(self, obj):
+        if obj.deleted:
+            return False
+        return self.delete_and_replace(obj)
+
+    def check_deleted(self, obj):
+        return obj.deleted
 
     def _save_translated_field(self, obj, obj_field_name, info,
                                info_field_name, max_length=None):
@@ -180,6 +205,8 @@ class TprekImporter(Importer):
 
         if obj.deleted:
             obj.deleted = False
+            # location has been reinstated in tprek, hip hip hooray!
+            replace_location(from_source='matko', by=obj)
             obj._changed_fields.append('undeleted')
             obj._changed = True
 
@@ -206,12 +233,11 @@ class TprekImporter(Importer):
             print("Loading units...")
             obj_list = self.pk_get('unit')
             print("%s units loaded" % len(obj_list))
-
-        syncher = ModelSyncher(queryset, lambda obj: obj.origin_id, delete_func=mark_deleted,
-                               check_deleted_func=check_deleted)
+        syncher = ModelSyncher(queryset, lambda obj: obj.origin_id, delete_func=self.mark_deleted,
+                               check_deleted_func=self.check_deleted)
         for idx, info in enumerate(obj_list):
             if idx and (idx % 1000) == 0:
                 print("%s units processed" % idx)
             self._import_unit(syncher, info)
 
-        syncher.finish()
+        syncher.finish(self.options.get('remap', False))
