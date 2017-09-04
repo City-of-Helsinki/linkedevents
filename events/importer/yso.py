@@ -47,6 +47,9 @@ def get_replacement(graph, subject):
 
 
 def deprecate_and_replace(graph, keyword):
+    if keyword.id in YSO_DEPRECATED_MAPS:
+        # these ones need no further processing
+        return keyword.deprecate()
     replacement_subject = get_replacement(graph, get_subject(keyword.id))
     new_keyword = None
     if replacement_subject:
@@ -61,8 +64,7 @@ def deprecate_and_replace(graph, keyword):
         new_keyword.audience_events.add(*keyword.audience_events.all())
     else:
         print('Keyword %s deprecated without replacement!' % keyword)
-        if ((keyword.events.all().exists() or keyword.audience_events.all().exists()) and
-                keyword.id not in YSO_DEPRECATED_MAPS):
+        if keyword.events.all().exists() or keyword.audience_events.all().exists():
             raise Exception("Deprecating YSO keyword %s that is referenced in events %s. "
                             "No replacement keyword was found in YSO. Please manually map the "
                             "keyword to a new keyword in YSO_DEPRECATED_MAPS." %
