@@ -332,6 +332,9 @@ class MatkoImporter(Importer):
             else:
                 keyword_orig, created = Keyword.objects.get_or_create(**kwargs)
                 self.kwcache[_id] = keyword_orig
+            if keyword_orig.publisher_id != self.organization.id:
+                keyword_orig.publisher = self.organization
+                keyword_orig.save()
             keywords.append(keyword_orig)
             if t is None or t in ignore or t in use_as_target_group:
                 continue

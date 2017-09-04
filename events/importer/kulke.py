@@ -651,10 +651,14 @@ class KulkeImporter(Importer):
                 if word.name != value['text']:
                     word.name = value['text']
                     word.save()
+                if word.publisher_id != self.organization.id:
+                    word.publisher = self.organization
+                    word.save()
             except ObjectDoesNotExist:
                 # if the keyword does not exist, save it for future use
                 Keyword.objects.create(
                     id=make_kulke_id(kid),
                     name=value['text'],
-                    data_source=self.data_source
+                    data_source=self.data_source,
+                    publisher=self.organization
                 )
