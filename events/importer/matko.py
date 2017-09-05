@@ -171,11 +171,8 @@ class MatkoImporter(Importer):
             else:
                 return None
 
-        if tprek_id and not place_id:
-            place_id = Place.objects.get(data_source=self.tprek_data_source, origin_id=tprek_id).id
-
-        place = Place.objects.get(data_source=self.tprek_data_source, origin_id=tprek_id)
         # found places are kept mapped to tprek even if literal matko match exists
+        place = Place.objects.get(id=place_id)
         try:
             matko_place = Place.objects.get(data_source=self.data_source, origin_id=location['origin_id'])
             if not (matko_place.deleted and matko_place.replaced_by == place):
