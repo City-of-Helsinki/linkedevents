@@ -40,7 +40,8 @@ LOCATION_TPREK_MAP = {
     'sotamuseo': '25782',
     'mäkelänrinteen uintikeskus': '41783',
     'uimastadion': '41047',
-    'eläintarhan yleisurheilukenttä': '40498'
+    'eläintarhan yleisurheilukenttä': '40498',
+    'korkeasaaren eläintarha': '7245'
 }
 
 EXTRA_LOCATIONS = {
@@ -155,11 +156,11 @@ class MatkoImporter(Importer):
         if not place_name:
             return
         place_name = place_name.lower()
-        place_id = None
-        if place_name in self.tprek_by_name:
-            place_id, tprek_id = self.tprek_by_name[place_name]
-        elif place_name in LOCATION_TPREK_MAP:
+        if place_name in LOCATION_TPREK_MAP:
             tprek_id = LOCATION_TPREK_MAP[place_name]
+            place_id = Place.objects.get(data_source=self.tprek_data_source, origin_id=tprek_id).id
+        elif place_name in self.tprek_by_name:
+            place_id, tprek_id = self.tprek_by_name[place_name]
         else:
             # fallback to deleted if requested
             if include_deleted and place_name in self.deleted_tprek_by_name:
