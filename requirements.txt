@@ -4,8 +4,8 @@
 #
 #    pip-compile --output-file requirements.txt requirements.in
 #
-git+https://github.com/City-of-Helsinki/django-helusers@v0.1#egg=django-helusers==0.1
-git+https://github.com/City-of-Helsinki/munigeo#egg=django-munigeo
+-e git+https://github.com/City-of-Helsinki/django-helusers@v0.1#egg=django-helusers
+-e git+https://github.com/City-of-Helsinki/munigeo#egg=django-munigeo
 astroid==1.4.8            # via pylint
 bleach==1.5.0
 click==6.6                # via pip-tools
@@ -21,15 +21,15 @@ django-haystack==2.5.1
 django-hstore==1.4.2
 django-image-cropping==1.0.3
 django-leaflet==0.19.0
-django-modeltranslation==0.12
-django-mptt==0.8.6
+django-modeltranslation==0.12.1
+django-mptt==0.8.7
 django-reversion==2.0.7
 django==1.9.13
 djangorestframework-bulk==0.2.1
-djangorestframework-gis==0.10.1
+djangorestframework-gis==0.11.2
 djangorestframework-jwt==1.8.0
 djangorestframework==3.5.3
-easy-thumbnails==2.3
+easy-thumbnails==2.4.1
 elasticsearch==2.4.0
 first==2.0.1              # via pip-tools
 html5lib==0.9999999       # via bleach
@@ -59,7 +59,7 @@ pytz==2016.7
 pyyaml==3.12
 raven==5.31.0
 rdflib==4.2.1
-requests-cache==0.4.12
+requests-cache==0.4.13
 requests-oauthlib==0.7.0  # via django-allauth
 requests==2.11.1
 six==1.10.0

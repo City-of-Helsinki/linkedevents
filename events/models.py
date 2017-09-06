@@ -333,6 +333,14 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
         ])
         return u', '.join(values)
 
+    def soft_delete(self, using=None):
+        self.deleted = True
+        self.save(update_fields=("deleted",), using=using, force_update=True)
+
+    def undelete(self, using=None):
+        self.deleted = False
+        self.save(update_fields=("deleted",), using=using, force_update=True)
+
     @transaction.atomic
     def save(self, *args, **kwargs):
         if self.replaced_by and self.replaced_by.replaced_by == self:
