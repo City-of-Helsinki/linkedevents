@@ -1083,9 +1083,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                 .replace(hour=0, minute=0, second=0, microsecond=0).astimezone(pytz.utc)
             data['end_time'] += timedelta(days=1)
 
-        if data.get('start_time') and data['start_time'] < timezone.now():
-            errors['start_time'] = force_text(_('Start time cannot be in the past.'))
-
         if data.get('end_time') and data['end_time'] < timezone.now():
             errors['end_time'] = force_text(_('End time cannot be in the past.'))
 

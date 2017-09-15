@@ -285,7 +285,6 @@ def test_start_time_and_end_time_validation(api_client, minimal_event_dict, user
     with translation.override('en'):
         response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
     assert response.status_code == 400
-    assert 'Start time cannot be in the past.' in response.data['start_time']
     assert 'End time cannot be in the past.' in response.data['end_time']
 
 
