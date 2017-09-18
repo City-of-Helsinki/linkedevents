@@ -6,6 +6,7 @@ import pytest
 import pytz
 from django.utils import timezone, translation
 from django.utils.encoding import force_text
+from events.auth import ApiKeyUser
 from .utils import versioned_reverse as reverse
 from django.core.management import call_command
 
@@ -85,6 +86,7 @@ def test__api_key_with_organization_can_create_an_event(api_client, minimal_even
 
     response = create_with_post(api_client, minimal_event_dict, data_source)
     assert_event_data_is_equal(minimal_event_dict, response.data)
+    assert ApiKeyUser.objects.all().count() == 1
 
 
 @pytest.mark.django_db

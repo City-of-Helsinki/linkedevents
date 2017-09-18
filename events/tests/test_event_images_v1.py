@@ -13,6 +13,7 @@ from PIL import Image as PILImage
 from .utils import get, assert_fields_exist, assert_event_data_is_equal
 from .test_event_post import create_with_post, list_url as event_list_url
 from events.models import Image, License
+from events.auth import ApiKeyUser
 
 
 temp_dir = tempfile.mkdtemp()
@@ -200,6 +201,7 @@ def test__upload_an_image_with_api_key(api_client, settings, list_url, image_dat
     response = api_client.post(list_url, image_data)
     assert response.status_code == 201
     assert Image.objects.all().count() == 1
+    assert ApiKeyUser.objects.all().count() == 1
 
     image = Image.objects.get(pk=response.data['id'])
     assert image.created_by is None
@@ -293,6 +295,7 @@ def test__image_cannot_be_edited_outside_organization_with_apikey(api_client, se
 
     detail_url = reverse('image-detail', kwargs={'pk': response.data['id']})
     response2 = api_client.put(detail_url, {'name': 'this is needed'})
+    assert ApiKeyUser.objects.all().count() == 1
     assert response2.status_code == 403
     response3 = api_client.delete(detail_url)
     assert response3.status_code == 403
@@ -347,6 +350,7 @@ def test__upload_an_url_with_api_key(api_client, settings, list_url, image_url, 
     response = api_client.post(list_url, image_url)
     assert response.status_code == 201
     assert Image.objects.all().count() == 1
+    assert ApiKeyUser.objects.all().count() == 1
 
     image = Image.objects.get(pk=response.data['id'])
     assert image.created_by is None
@@ -423,6 +427,7 @@ def test__delete_an_image_with_api_key(api_client, settings, organization, data_
     response = api_client.delete(detail_url)
     assert response.status_code == 204
     assert Image.objects.all().count() == 0
+    assert ApiKeyUser.objects.all().count() == 1
 
     # check that the image file is deleted
     assert not os.path.isfile(image_path)

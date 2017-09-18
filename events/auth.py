@@ -1,8 +1,9 @@
-from django.contrib.auth.models import AnonymousUser
 from rest_framework import authentication
 from rest_framework import exceptions
 from events.models import DataSource
 from django.utils.translation import ugettext_lazy as _
+from django.contrib.gis.db import models
+from django.contrib.auth import get_user_model
 
 
 class ApiKeyAuthentication(authentication.BaseAuthentication):
@@ -12,7 +13,8 @@ class ApiKeyAuthentication(authentication.BaseAuthentication):
         if not api_key:
             return None
         data_source = self.get_data_source(api_key=api_key)
-        return ApiKeyUser(), ApiKeyAuth(data_source)
+        user = ApiKeyUser.objects.get_or_create(data_source=data_source)[0]
+        return user, ApiKeyAuth(data_source)
 
     def authenticate_header(self, request):
         """
@@ -34,9 +36,17 @@ class ApiKeyAuthentication(authentication.BaseAuthentication):
         return data_source
 
 
-class ApiKeyUser(AnonymousUser):
-    def is_authenticated(self):
-        return True
+class ApiKeyUser(get_user_model()):
+    data_source = models.OneToOneField(DataSource, primary_key=True)
+
+    def get_display_name(self):
+        return 'API key from data source %s' % self.data_source
+
+    def __str__(self):
+        return self.get_display_name()
+
+    def get_default_organization(self):
+        return self.data_source.owner
 
 
 class ApiKeyAuth(object):
