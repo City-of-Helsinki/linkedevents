@@ -4,68 +4,68 @@
 #
 #    pip-compile --output-file requirements.txt requirements.in
 #
-git+https://github.com/City-of-Helsinki/django-helusers@v0.1#egg=django-helusers==0.1
-git+https://github.com/City-of-Helsinki/munigeo#egg=django-munigeo
-astroid==1.4.8            # via pylint
-bleach==1.5.0
-click==6.6                # via pip-tools
-contextlib2==0.5.4        # via raven
-defusedxml==0.4.1         # via python3-openid
-django-allauth==0.28.0
+-e git+https://github.com/City-of-Helsinki/django-helusers@v0.1#egg=django-helusers
+-e git+https://github.com/City-of-Helsinki/munigeo@v0.2.1#egg=django-munigeo
+astroid==1.5.3            # via pylint
+bleach==2.0.0
+certifi==2017.7.27.1      # via requests
+chardet==3.0.4            # via requests
+click==6.7                # via pip-tools
+contextlib2==0.5.5        # via raven
+defusedxml==0.5.0         # via python3-openid
+django-allauth==0.33.0
 django-appconf==1.0.1     # via django-image-cropping
-django-cleanup==0.4.2
-django-cors-headers==1.3.0
-django-extensions==1.7.4
-django-filter==0.15.3
-django-haystack==2.5.1
-django-hstore==1.4.2
-django-image-cropping==1.0.3
-django-leaflet==0.19.0
-django-modeltranslation==0.12
-django-mptt==0.8.6
-django-reversion==2.0.7
-django==1.9.13
+django-cleanup==1.0.1
+django-cors-headers==2.1.0
+django-extensions==1.9.1
+django-filter==1.0.4
+django-haystack==2.6.1
+django-image-cropping==1.1.0
+django-leaflet==0.22.0
+django-modeltranslation==0.12.1
+django-mptt==0.8.7
+django-reversion==2.0.10
+django==1.11.5            # via django-allauth, django-haystack, django-leaflet, django-reversion, djangorestframework-bulk, easy-thumbnails
 djangorestframework-bulk==0.2.1
-djangorestframework-gis==0.10.1
-djangorestframework-jwt==1.8.0
-djangorestframework==3.5.3
-easy-thumbnails==2.3
-elasticsearch==2.4.0
+djangorestframework-gis==0.11.2
+djangorestframework-jwt==1.11.0
+djangorestframework==3.6.4
+easy-thumbnails==2.4.1
+elasticsearch==2.4.1
 first==2.0.1              # via pip-tools
-html5lib==0.9999999       # via bleach
-httmock==1.2.5
-icalendar==3.10
+html5lib==0.999999999     # via bleach
+httmock==1.2.6
+icalendar==3.11.7
+idna==2.6                 # via requests
 isodate==0.5.4
-isort==4.2.5              # via pylint
-lazy-object-proxy==1.2.2  # via astroid
-lxml==3.6.4
-markdown==2.6.7
-mccabe==0.5.2             # via pylint
-oauthlib==2.0.0           # via requests-oauthlib
-pillow==3.4.2
-pip-tools==1.7.0
-psycopg2==2.6.2
-py==1.4.31                # via pytest
-pyflakes==1.3.0
-pyjwt==1.4.2              # via djangorestframework-jwt
-pylint==1.6.4
-pyparsing==2.1.10         # via rdflib
-pytest-django==3.0.0
-pytest==3.0.3             # via pytest-django
-python-dateutil==2.5.3
+isort==4.2.15             # via pylint
+lazy-object-proxy==1.3.1  # via astroid
+lxml==3.8.0
+markdown==2.6.9
+mccabe==0.6.1             # via pylint
+oauthlib==2.0.3           # via requests-oauthlib
+olefile==0.44             # via pillow
+pillow==4.2.1             # via easy-thumbnails
+pip-tools==1.9.0
+psycopg2==2.7.3.1
+py==1.4.34                # via pytest
+pyflakes==1.6.0
+pyjwt==1.5.3              # via djangorestframework-jwt
+pylint==1.7.2
+pyparsing==2.2.0          # via rdflib
+pytest-django==3.1.2
+pytest==3.2.2             # via pytest-django
+python-dateutil==2.6.1
 python-docx==0.8.6
-python3-openid==3.0.10    # via django-allauth
-pytz==2016.7
+python3-openid==3.1.0     # via django-allauth
+pytz==2017.2
 pyyaml==3.12
-raven==5.31.0
-rdflib==4.2.1
-requests-cache==0.4.12
-requests-oauthlib==0.7.0  # via django-allauth
-requests==2.11.1
+raven==6.1.0
+rdflib==4.2.2
+requests-cache==0.4.13
+requests-oauthlib==0.8.0  # via django-allauth
+requests==2.18.4
 six==1.10.0
-urllib3==1.19             # via elasticsearch
-wrapt==1.10.8             # via astroid
-
-# The following packages are commented out because they are
-# considered to be unsafe in a requirements file:
-# setuptools                # via djangorestframework-bulk, icalendar
+urllib3==1.22             # via elasticsearch, requests
+webencodings==0.5.1       # via html5lib
+wrapt==1.10.11            # via astroid

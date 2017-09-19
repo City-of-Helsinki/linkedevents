@@ -731,7 +731,7 @@ class PlaceSerializer(LinkedEventsSerializer, GeoModelSerializer):
 
 
 class PlaceFilter(filters.FilterSet):
-    division = django_filters.Filter(name='divisions', lookup_type='in',
+    division = django_filters.Filter(name='divisions', lookup_expr='in',
                                      widget=django_filters.widgets.CSVWidget(),
                                      method='filter_division')
 

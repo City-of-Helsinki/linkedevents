@@ -1,4 +1,4 @@
-Django<1.10
+Django
 Markdown
 PyYAML
 django-cors-headers
@@ -6,7 +6,6 @@ django-filter
 django-modeltranslation>=0.11rc2
 django-mptt
 django-reversion
-django-hstore
 djangorestframework
 djangorestframework-gis
 djangorestframework-jwt
