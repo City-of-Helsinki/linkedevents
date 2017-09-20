@@ -10,6 +10,7 @@ Linked Events provides categorized data on events and places. The project was or
 
 [The Linked Events API for the Helsinki capital region](http://api.hel.fi/linkedevents/) contains data from the Helsinki City Tourist & Convention Bureau, the City of Helsinki Cultural Office and the Helmet metropolitan area public libraries.
 
+*Linked Events has been updated to Django 1.11. To upgrade to Linked Events release v2.0, please upgrade to release v1.3 first.*
 
 Installation for development
 ----------------------------
