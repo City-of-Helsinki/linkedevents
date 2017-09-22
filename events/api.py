@@ -1083,7 +1083,11 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                 .replace(hour=0, minute=0, second=0, microsecond=0).astimezone(pytz.utc)
             data['end_time'] += timedelta(days=1)
 
-        if data.get('end_time') and data['end_time'] < timezone.now():
+        past_allowed = self.data_source.create_past_events
+        if self.instance:
+            past_allowed = self.data_source.edit_past_events
+
+        if data.get('end_time') and data['end_time'] < timezone.now() and not past_allowed:
             errors['end_time'] = force_text(_('End time cannot be in the past.'))
 
         if errors:
@@ -1118,7 +1122,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         offers = validated_data.pop('offers', None)
         links = validated_data.pop('external_links', None)
 
-        if instance.end_time and instance.end_time < timezone.now():
+        if instance.end_time and instance.end_time < timezone.now() and not self.data_source.edit_past_events:
             raise DRFPermissionDenied(_('Cannot edit a past event.'))
 
         # The API only allows scheduling and cancelling events.
