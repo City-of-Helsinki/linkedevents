@@ -47,6 +47,7 @@ INSTALLED_APPS = (
     'haystack',
     'raven.contrib.django.raven_compat',
     'django_cleanup',
+    'django_filters',
 
     'allauth',
     'allauth.account',
