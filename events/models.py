@@ -255,6 +255,12 @@ class Keyword(BaseModel):
     def __str__(self):
         return self.name
 
+    def is_admin(self, user):
+        if user.is_superuser:
+            return True
+        else:
+            return user in self.publisher.admin_users.all()
+
     def deprecate(self):
         self.deprecated = True
         self.save(update_fields=['deprecated'])
@@ -364,6 +370,20 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
                 geometry__boundary__contains=self.position)
         else:
             self.divisions.clear()
+
+    def is_admin(self, user):
+        if user.is_superuser:
+            return True
+        else:
+            return user in self.publisher.admin_users.all()
+
+    def soft_delete(self, using=None):
+        self.deleted = True
+        self.save(update_fields=("deleted",), using=using, force_update=True)
+
+    def undelete(self, using=None):
+        self.deleted = False
+        self.save(update_fields=("deleted",), using=using, force_update=True)
 
 reversion.register(Place)
 

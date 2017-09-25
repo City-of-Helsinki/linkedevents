@@ -37,7 +37,7 @@ from isodate import Duration, duration_isoformat, parse_duration
 from modeltranslation.translator import translator, NotRegistered
 from haystack.query import AutoQuery
 from munigeo.api import (
-    GeoModelSerializer, GeoModelAPIView, build_bbox_filter, srid_to_srs
+    GeoModelAPIView, build_bbox_filter, srid_to_srs
 )
 from munigeo.models import AdministrativeDivision
 from rest_framework_bulk import BulkListSerializer, BulkModelViewSet
@@ -566,8 +566,31 @@ def _clean_qp(query_params):
             del query_params[key]
     return query_params
 
+class EditableLinkedEventsObjectSerializer(LinkedEventsSerializer):
+    def validate_id(self, value):
+      if value:
+          id_data_source_prefix = value.split(':', 1)[0]
+          if not id_data_source_prefix == self.data_source.id:
+              # the object might be from another data source by the same organization, and we are only editing it
+              if self.instance:
+                  if self.publisher.owned_systems.filter(id=id_data_source_prefix).exists():
+                      return value
+              raise serializers.ValidationError(
+                  {'id': _("Setting id to %(given)s " +
+                           " is not allowed for your organization. The id"
+                           " must be left blank or set to %(data_source)s:desired_id") %
+                         {'given': str(value), 'data_source': self.data_source}})
+      return value
+  
+    def create(self, validated_data):
+        # if id was not provided, we generate it upon creation:
+        if 'id' not in validated_data:
+            validated_data['id'] = generate_id(self.data_source)
+        return super().create(validated_data)
+  
 
-class KeywordSerializer(LinkedEventsSerializer):
+class KeywordSerializer(EditableLinkedEventsObjectSerializer):
+    id = serializers.CharField(required=False)
     view_name = 'keyword-detail'
     alt_labels = serializers.SlugRelatedField(slug_field='name', read_only=True, many=True)
 
@@ -576,12 +599,35 @@ class KeywordSerializer(LinkedEventsSerializer):
         exclude = ('n_events_changed',)
 
 
-class KeywordRetrieveViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+class KeywordRetrieveViewSet(mixins.RetrieveModelMixin,
+                             mixins.UpdateModelMixin,
+                             mixins.DestroyModelMixin,
+                             viewsets.GenericViewSet):
     queryset = Keyword.objects.all()
     serializer_class = KeywordSerializer
 
+    def update(self, request, *args, **kwargs):
+        self.data_source, self.organization = get_authenticated_data_source_and_publisher(self.request)
+        return super().update(request, *args, **kwargs)
+      
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.deprecate()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+      
+    def retrieve(self, request, *args, **kwargs):
+        keyword = Keyword.objects.get(pk=kwargs['pk'])
+        if keyword.deprecated:
+            raise KeywordDeprecatedException()
+        return super().retrieve(request, *args, **kwargs)
 
-class KeywordListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+
+class KeywordDeprecatedException(APIException):
+    status_code = 410
+    default_detail = 'Keyword has been deprecated.'
+    default_code = 'gone'
+
+class KeywordListViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewsets.GenericViewSet):
     queryset = Keyword.objects.all()
     serializer_class = KeywordSerializer
     filter_backends = (filters.OrderingFilter,)
@@ -620,6 +666,8 @@ class KeywordListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
             queryset = queryset.filter(name__icontains=val)
         return queryset
 
+    def create(self, request, *args, **kwargs):
+      return super().create(request, *args, **kwargs)
 
 register_view(KeywordRetrieveViewSet, 'keyword')
 register_view(KeywordListViewSet, 'keyword')
@@ -721,7 +769,13 @@ def filter_division(queryset, name, value):
             queryset.filter(**{name + '__name__in': names})).distinct()
 
 
-class PlaceSerializer(LinkedEventsSerializer, GeoModelSerializer):
+class PlaceSerializer(EditableLinkedEventsObjectSerializer):
+    id = serializers.CharField(required=False)
+    origin_id = serializers.CharField(required=False)
+    data_source = serializers.PrimaryKeyRelatedField(queryset=DataSource.objects.all(),
+                                                     required=False, allow_null=True)
+    publisher = serializers.PrimaryKeyRelatedField(queryset=Organization.objects.all(),
+                                                   required=False, allow_null=True)
     view_name = 'place-detail'
     divisions = DivisionSerializer(many=True, read_only=True)
 
@@ -745,6 +799,8 @@ class PlaceFilter(filters.FilterSet):
 
 class PlaceRetrieveViewSet(GeoModelAPIView,
                            viewsets.GenericViewSet,
+                           mixins.UpdateModelMixin,
+                           mixins.DestroyModelMixin,
                            mixins.RetrieveModelMixin):
     queryset = Place.objects.all()
     serializer_class = PlaceSerializer
@@ -754,6 +810,15 @@ class PlaceRetrieveViewSet(GeoModelAPIView,
         context.setdefault('skip_fields', set()).add('origin_id')
         return context
 
+    def update(self, request, *args, **kwargs):
+        self.data_source, self.organization = get_authenticated_data_source_and_publisher(self.request)
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.soft_delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
     def retrieve(self, request, *args, **kwargs):
         place = Place.objects.get(pk=kwargs['pk'])
         if place.deleted:
@@ -762,12 +827,19 @@ class PlaceRetrieveViewSet(GeoModelAPIView,
                 return HttpResponsePermanentRedirect(reverse('place-detail',
                                                              kwargs={'pk': place.pk},
                                                              request=request))
+            else:
+                raise PlaceDeletedException()
         return super().retrieve(request, *args, **kwargs)
 
+class PlaceDeletedException(APIException):
+    status_code = 410
+    default_detail = 'Place has been deleted.'
+    default_code = 'gone'
 
 class PlaceListViewSet(GeoModelAPIView,
                        viewsets.GenericViewSet,
-                       mixins.ListModelMixin):
+                       mixins.ListModelMixin,
+                       mixins.CreateModelMixin):
     queryset = Place.objects.all()
     serializer_class = PlaceSerializer
     filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
@@ -933,7 +1005,7 @@ class ImageViewSet(viewsets.ModelViewSet):
 register_view(ImageViewSet, 'image', base_name='image')
 
 
-class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
+class EventSerializer(EditableLinkedEventsObjectSerializer, GeoModelAPIView):
     id = serializers.CharField(required=False)
     location = JSONLDRelatedField(serializer=PlaceSerializer, required=False,
                                   view_name='place-detail', queryset=Place.objects.all())
@@ -995,21 +1067,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
         data = super().to_internal_value(data)
         return data
-
-    def validate_id(self, value):
-        if value:
-            id_data_source_prefix = value.split(':', 1)[0]
-            if not id_data_source_prefix == self.data_source.id:
-                # the event might be from another data source by the same organization, and we are only editing it
-                if self.instance:
-                    if self.publisher.owned_systems.filter(id=id_data_source_prefix).exists():
-                        return value
-                raise serializers.ValidationError(
-                    {'id': _("Setting id to %(given)s " +
-                             " is not allowed for your organization. The id"
-                             " must be left blank or set to %(data_source)s:desired_id") %
-                           {'given': str(value), 'data_source': self.data_source}})
-        return value
 
     def validate(self, data):
         # clean the html
@@ -1092,10 +1149,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         return data
 
     def create(self, validated_data):
-        # if id was not provided, we generate it upon creation:
-        if 'id' not in validated_data:
-            validated_data['id'] = generate_id(self.data_source)
-
         offers = validated_data.pop('offers', [])
         links = validated_data.pop('external_links', [])
 
