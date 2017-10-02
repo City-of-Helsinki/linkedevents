@@ -7,11 +7,10 @@
 -e git+https://github.com/City-of-Helsinki/django-helusers@v0.1#egg=django-helusers
 -e git+https://github.com/City-of-Helsinki/munigeo@v0.2.1#egg=django-munigeo
 astroid==1.5.3            # via pylint
-bleach==2.0.0
+bleach==2.1
 certifi==2017.7.27.1      # via requests
 chardet==3.0.4            # via requests
 click==6.7                # via pip-tools
-contextlib2==0.5.5        # via raven
 defusedxml==0.5.0         # via python3-openid
 django-allauth==0.33.0
 django-appconf==1.0.1     # via django-image-cropping
@@ -25,33 +24,33 @@ django-leaflet==0.22.0
 django-modeltranslation==0.12.1
 django-mptt==0.8.7
 django-reversion==2.0.10
-django==1.11.5            # via django-allauth, django-haystack, django-leaflet, django-reversion, djangorestframework-bulk, easy-thumbnails
+Django==1.11.5            # via django-allauth, django-haystack, django-leaflet, django-reversion, djangorestframework-bulk, easy-thumbnails
 djangorestframework-bulk==0.2.1
 djangorestframework-gis==0.11.2
 djangorestframework-jwt==1.11.0
 djangorestframework==3.6.4
-easy-thumbnails==2.4.1
+easy-thumbnails==2.4.2
 elasticsearch==2.4.1
 first==2.0.1              # via pip-tools
-html5lib==0.999999999     # via bleach
+html5lib==1.0b10          # via bleach
 httmock==1.2.6
 icalendar==3.11.7
 idna==2.6                 # via requests
 isodate==0.5.4
 isort==4.2.15             # via pylint
 lazy-object-proxy==1.3.1  # via astroid
-lxml==3.8.0
-markdown==2.6.9
+lxml==4.0.0
+Markdown==2.6.9
 mccabe==0.6.1             # via pylint
-oauthlib==2.0.3           # via requests-oauthlib
+oauthlib==2.0.4           # via requests-oauthlib
 olefile==0.44             # via pillow
-pillow==4.2.1             # via easy-thumbnails
-pip-tools==1.9.0
+Pillow==4.2.1             # via easy-thumbnails
+pip-tools==1.10.1
 psycopg2==2.7.3.1
 py==1.4.34                # via pytest
 pyflakes==1.6.0
-pyjwt==1.5.3              # via djangorestframework-jwt
-pylint==1.7.2
+PyJWT==1.5.3              # via djangorestframework-jwt
+pylint==1.7.4
 pyparsing==2.2.0          # via rdflib
 pytest-django==3.1.2
 pytest==3.2.2             # via pytest-django
@@ -59,13 +58,17 @@ python-dateutil==2.6.1
 python-docx==0.8.6
 python3-openid==3.1.0     # via django-allauth
 pytz==2017.2
-pyyaml==3.12
-raven==6.1.0
+PyYAML==3.12
+raven==6.2.1
 rdflib==4.2.2
 requests-cache==0.4.13
 requests-oauthlib==0.8.0  # via django-allauth
 requests==2.18.4
-six==1.10.0
+six==1.11.0
 urllib3==1.22             # via elasticsearch, requests
 webencodings==0.5.1       # via html5lib
 wrapt==1.10.11            # via astroid
+
+# The following packages are commented out because they are
+# considered to be unsafe in a requirements file:
+# setuptools                # via djangorestframework-bulk, html5lib, pip-tools, pytest
