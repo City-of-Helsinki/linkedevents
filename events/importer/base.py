@@ -187,7 +187,6 @@ class Importer(object):
         obj._changed = False
 
         location_id = None
-        location_extra_info = None
         if 'location' in info:
             location = info['location']
             if 'id' in location:
@@ -315,8 +314,6 @@ class Importer(object):
         return obj
 
     def save_place(self, info):
-        errors = set()
-
         args = dict(data_source=info['data_source'], origin_id=info['origin_id'])
         obj_id = "%s:%s" % (info['data_source'].id, info['origin_id'])
         try:

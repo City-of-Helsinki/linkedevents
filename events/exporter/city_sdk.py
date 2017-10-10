@@ -216,7 +216,6 @@ class CitySDKExporter(Exporter):
 
         # Support for bboxes later, now Point is only possible value
         if place.position:
-            coords_as_wkt = place.position.json
             matches = re.search('POINT \\((.*)\\)', place.position.wkt)
             if matches:
                 coords = matches.group(1)

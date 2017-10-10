@@ -31,10 +31,6 @@ class Command(BaseCommand):
             raise CommandError("Exporter %s not found. Valid exporters: %s" % (module, self.exp_list))
         exp_class = self.exporters[module]
 
-        if hasattr(settings, 'PROJECT_ROOT'):
-            root_dir = settings.PROJECT_ROOT
-        else:
-            root_dir = settings.BASE_DIR
         exporter = exp_class()
 
         # Activate the default language for the duration of the export

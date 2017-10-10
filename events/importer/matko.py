@@ -400,19 +400,6 @@ class MatkoImporter(Importer):
 
         return places
 
-    def _import_organizers_from_events(self, events):
-        organizers = recur_dict()
-        for k, event in events.items():
-            if not 'organizer' in event:
-                continue
-            organizer = event['organizer']
-            if not 'name' in organizer or not 'fi' in organizer['name']:
-                continue
-            oid = organizer['name']['fi']
-            organizers[oid]['name'].update(organizer['name'])
-            organizers[oid]['phone'].update(organizer['phone'])
-        return organizers
-
     def items_from_url(self, url):
         resp = requests.get(url)
         assert resp.status_code == 200
@@ -427,7 +414,6 @@ class MatkoImporter(Importer):
             items = self.items_from_url(url)
             for item in items:
                 self._import_event_from_feed(lang, item, events, keyword_matcher)
-            organizers = self._import_organizers_from_events(events)
 
         for event in events.values():
             self.save_event(event)

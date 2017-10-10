@@ -175,7 +175,6 @@ class KulkeImporter(Importer):
         for cid, c in list(categories.items()):
             if c is None:
                 continue
-            match_type = 'no match'
             ctext = c['text']
             # Ignore list (not used and/or not a category for general consumption)
             #
