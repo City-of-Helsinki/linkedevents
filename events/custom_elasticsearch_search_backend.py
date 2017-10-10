@@ -1,7 +1,7 @@
-import collections
 from haystack.backends import elasticsearch_backend as es_backend
 from haystack.query import SearchQuerySet
 from .utils import update
+
 
 class CustomEsSearchBackend(es_backend.ElasticsearchSearchBackend):
     """ A slight modification of the default Haystack elasticsearch
@@ -9,7 +9,7 @@ class CustomEsSearchBackend(es_backend.ElasticsearchSearchBackend):
     fields in the connection options.
 
     Configure with a MAPPING key in the connection settings
-    dictionary, containing a dictionary of 
+    dictionary, containing a dictionary of
     field-name to mapping configurations.
     """
     def __init__(self, connection_alias, **connection_options):
@@ -39,7 +39,8 @@ class CustomEsSearchBackend(es_backend.ElasticsearchSearchBackend):
         return (content_field_name, mappings)
 
     def build_search_kwargs(self, query_string, decay_functions=None, **kwargs):
-        kwargs = super(CustomEsSearchBackend, self).build_search_kwargs(query_string, **kwargs)
+        kwargs = super(CustomEsSearchBackend, self).build_search_kwargs(
+                query_string, **kwargs)
         if not decay_functions:
             return kwargs
 
