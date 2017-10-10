@@ -65,6 +65,7 @@ SKIP_EVENTS_WITH_CATEGORY = {
     728, 729, 730, 735,
 }
 
+
 def _query_courses():
     filter_out_keywords = map(
         make_kulke_id,
@@ -75,6 +76,7 @@ def _query_courses():
     ).filter(
         keywords__id__in=set(filter_out_keywords)
     )
+
 
 def _delete_courses():
     courses_q = _query_courses()
@@ -123,8 +125,10 @@ MANUAL_CATEGORIES = {
 
 LOCAL_TZ = timezone('Europe/Helsinki')
 
+
 def make_kulke_id(num):
     return "kulke:{}".format(num)
+
 
 def make_event_name(title, subtitle):
     if title and subtitle:
@@ -133,6 +137,7 @@ def make_event_name(title, subtitle):
         return title
     elif subtitle:
         return subtitle
+
 
 def get_event_name(event):
     if 'fi' in event['name']:
@@ -143,6 +148,7 @@ def get_event_name(event):
             return None
         else:
             return names[0]
+
 
 @register_importer
 class KulkeImporter(Importer):
@@ -213,7 +219,6 @@ class KulkeImporter(Importer):
                 'type': typeid, 'text': ctype.text}
         return categories
 
-
     def find_place(self, event):
         tprek_id = None
         location = event['location']
@@ -262,6 +267,7 @@ class KulkeImporter(Importer):
     def _import_event(self, lang, event_el, events):
         tag = lambda t: 'event' + t
         text = lambda t: unicodetext(event_el.find(tag(t)))
+
         def clean(t):
             if t is None:
                 return None

@@ -39,9 +39,11 @@ from munigeo.models import AdministrativeDivision
 
 User = settings.AUTH_USER_MODEL
 
+
 class PublicationStatus:
     PUBLIC = 1
     DRAFT = 2
+
 
 PUBLICATION_STATUSES = (
     (PublicationStatus.PUBLIC, "public"),
@@ -204,7 +206,7 @@ class Organization(MPTTModel, BaseModel):
 
     class Meta:
         ordering = ('name',)
-        verbose_name =_('organization')
+        verbose_name = _('organization')
         verbose_name_plural = _('organizations')
 
     class MPTTMeta:
@@ -320,7 +322,6 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     )
     n_events_changed = models.BooleanField(default=False, db_index=True)
 
-
     class Meta:
         verbose_name = _('place')
         verbose_name_plural = _('places')
@@ -363,6 +364,7 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
                 geometry__boundary__contains=self.position)
         else:
             self.divisions.clear()
+
 
 reversion.register(Place)
 
@@ -533,6 +535,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         self.deleted = False
         self.save(update_fields=("deleted",), using=using, force_update=True)
 
+
 reversion.register(Event)
 
 
@@ -562,6 +565,7 @@ class Offer(models.Model, SimpleValueMixin):
 
     def value_fields(self):
         return ['price', 'info_url', 'description', 'is_free']
+
 
 reversion.register(Offer)
 

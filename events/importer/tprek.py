@@ -16,6 +16,7 @@ from .base import Importer, register_importer
 URL_BASE = 'http://www.hel.fi/palvelukarttaws/rest/v3/'
 GK25_SRID = 3879
 
+
 @register_importer
 class TprekImporter(Importer):
     name = 'tprek'

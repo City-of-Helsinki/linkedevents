@@ -14,6 +14,7 @@ class Person(BaseModel):
         verbose_name = _('person')
         verbose_name_plural = _('persons')
 
+
 reversion.register(Person)
 
 

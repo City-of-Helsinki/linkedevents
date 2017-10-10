@@ -286,6 +286,7 @@ class Importer(object):
         # TODO: use simple_value logic like for offers above?
         def obj_make_link_id(obj):
             return '%s:%s:%s' % (obj.language_id, obj.name, obj.link)
+
         def info_make_link_id(info):
             return '%s:%s:%s' % (info['language'], info.get('name', ''), info['link'])
 
@@ -368,7 +369,9 @@ class Importer(object):
 
         return obj
 
+
 importers = {}
+
 
 def register_importer(klass):
     importers[klass.name] = klass

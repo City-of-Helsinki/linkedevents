@@ -131,13 +131,16 @@ HELMET_LANGUAGES = {
     'en': 2
 }
 
+
 def get_lang(lang_id):
     for code, lid in HELMET_LANGUAGES.items():
         if lid == lang_id:
             return code
     return None
 
+
 LOCAL_TZ = timezone('Europe/Helsinki')
+
 
 def clean_text(text, strip_newlines=False):
     text = text.replace('\xa0', ' ').replace('\x1f', '')
@@ -157,6 +160,7 @@ def mark_deleted(obj):
 
 class APIBrokenError(Exception):
     pass
+
 
 @register_importer
 class HelmetImporter(Importer):
@@ -393,7 +397,7 @@ class HelmetImporter(Importer):
         return event
 
     def _recur_fetch_paginated_url(self, url, lang, events):
-        for _ in range(0,5):
+        for _ in range(0, 5):
             response = requests.get(url)
             if response.status_code != 200:
                 self.logger.error("HelMet API reported HTTP %d" % response.status_code)
@@ -434,7 +438,6 @@ class HelmetImporter(Importer):
                     "&$format=json"
                 ), lang, events)
 
-
     def import_events(self):
         print("Importing HelMet events")
         events = recur_dict()
@@ -447,7 +450,6 @@ class HelmetImporter(Importer):
                 self._recur_fetch_paginated_url(url, lang, events)
             except APIBrokenError:
                 return
-
 
         event_list = sorted(events.values(), key=lambda x: x['end_time'])
         qs = Event.objects.filter(end_time__gte=datetime.now(),

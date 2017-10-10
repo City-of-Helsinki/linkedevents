@@ -142,6 +142,7 @@ def test__create_a_draft_event_without_location_and_keyword(list_url,
     resp2 = api_client.get(response.data['@id'])
     assert '@id' not in resp2.data
 
+
 @pytest.mark.django_db
 def test__cannot_create_a_draft_event_without_a_name(list_url,
                                                      api_client,
@@ -229,7 +230,6 @@ def test__autopopulated_fields_at_create(
     assert event.end_time == timezone.localtime(timezone.now() + timedelta(days=2)).\
         replace(hour=0, minute=0, second=0, microsecond=0).astimezone(pytz.utc)
     assert event.has_end_time is False
-
 
 
 # the following values may not be posted

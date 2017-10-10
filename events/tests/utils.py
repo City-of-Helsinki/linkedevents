@@ -2,6 +2,7 @@ from rest_framework.reverse import reverse
 from rest_framework.test import APIRequestFactory
 from rest_framework.settings import api_settings
 
+
 def assert_event_data_is_equal(d1, d2, version='v1'):
     # TODO: start using version parameter
     # make sure the saved data is equal to the one we posted before

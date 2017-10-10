@@ -8,6 +8,7 @@ import json
 # Use the GPS coordinate system by default
 DEFAULT_SRID = 4326
 
+
 def poly_from_bbox(bbox_val):
     points = bbox_val.split(',')
     if len(points) != 4:
@@ -18,6 +19,7 @@ def poly_from_bbox(bbox_val):
         raise ParseError("bbox values must be floating points or integers")
     poly = Polygon.from_bbox(points)
     return poly
+
 
 def srid_to_srs(srid):
     if not srid:
@@ -31,6 +33,7 @@ def srid_to_srs(srid):
     except SRSException:
         raise ParseError("SRID %d not found (try 4326 for GPS coordinate system)" % srid)
     return srs
+
 
 def build_bbox_filter(srs, bbox_val, field_name):
     poly = poly_from_bbox(bbox_val)

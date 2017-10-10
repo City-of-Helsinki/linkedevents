@@ -169,7 +169,7 @@ class YsoImporter(Importer):
                 queryset, lambda keyword: keyword.id,
                 delete_func=deprecate_keyword,
                 check_deleted_func=check_deprecated_keyword)
-            save_set=set()
+            save_set = set()
             for subject in graph.subjects(RDF.type, SKOS.Concept):
                 self.save_keyword(syncher, graph, subject, keyword_labels, save_set)
             syncher.finish()

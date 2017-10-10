@@ -186,7 +186,6 @@ class DOCXRenderer(renderers.BaseRenderer):
 
         event_parser = EventParser()
 
-
         first_location = data[0]['location']
         for raw_event in data:
             parsed_events.append(event_parser.parse_event(raw_event))

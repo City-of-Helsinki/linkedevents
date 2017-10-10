@@ -1,6 +1,7 @@
 import modeltranslation
 from modeltranslation.translator import translator
 
+
 def expand_model_fields(model, field_names):
     model_class = type(model)
     try:

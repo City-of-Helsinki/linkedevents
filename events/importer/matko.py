@@ -74,11 +74,14 @@ EXTRA_LOCATIONS = {
     }
 }
 
+
 def matko_tag(tag):
     return '{https://aspicore-asp.net/matkoschema/}' + tag
 
+
 def text(item, tag):
     return unicodetext(item.find(matko_tag(tag)))
+
 
 def matko_status(num):
     if num == 2:
@@ -86,6 +89,7 @@ def matko_status(num):
     if num == 3:
         return Event.Status.CANCELLED
     return None
+
 
 def zipcode_and_muni(text):
     if text is None:
@@ -118,7 +122,7 @@ class MatkoImporter(Importer):
         self.data_source, _ = DataSource.objects.get_or_create(id=self.name, defaults=defaults)
         self.tprek_data_source = DataSource.objects.get(id='tprek')
 
-        ytj_ds, _ = DataSource.objects.get_or_create(defaults={'name':'YTJ'}, id='ytj')
+        ytj_ds, _ = DataSource.objects.get_or_create(defaults={'name': 'YTJ'}, id='ytj')
 
         org_args = dict(id='ytj:0586977-6')
         defaults = dict(name='Helsingin Markkinointi Oy', data_source=ytj_ds)

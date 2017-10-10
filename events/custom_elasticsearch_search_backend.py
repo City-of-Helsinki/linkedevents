@@ -55,6 +55,7 @@ class CustomEsSearchBackend(es_backend.ElasticsearchSearchBackend):
         kwargs['query'] = function_score_query
         return kwargs
 
+
 class CustomEsSearchQuery(es_backend.ElasticsearchSearchQuery):
     def __init__(self, **kwargs):
         super(CustomEsSearchQuery, self).__init__(**kwargs)
@@ -74,6 +75,7 @@ class CustomEsSearchQuery(es_backend.ElasticsearchSearchQuery):
         clone.decay_functions = self.decay_functions[:]
         return clone
 
+
 class CustomEsSearchQuerySet(SearchQuerySet):
     """
     usage example:
@@ -89,4 +91,3 @@ class CustomEsSearchQuerySet(SearchQuerySet):
 class CustomEsSearchEngine(es_backend.ElasticsearchSearchEngine):
     backend = CustomEsSearchBackend
     query = CustomEsSearchQuery
-

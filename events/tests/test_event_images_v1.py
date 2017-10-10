@@ -275,6 +275,7 @@ def test__image_from_another_data_source_can_be_edited_by_admin(api_client, list
     response3 = api_client.delete(detail_url)
     assert response3.status_code == 204
 
+
 @pytest.mark.django_db
 def test__image_cannot_be_edited_outside_organization_with_apikey(api_client, settings, list_url, image_data, user, organization, organization2, other_data_source):
     organization.admin_users.add(user)
@@ -433,7 +434,6 @@ def test__delete_an_image_with_api_key(api_client, settings, organization, data_
 
     # check that the image file is deleted
     assert not os.path.isfile(image_path)
-
 
 
 @override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL='')

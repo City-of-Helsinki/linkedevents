@@ -11,16 +11,20 @@ def clean_text(text):
     # remove consecutive whitespaces
     return re.sub(r'\s\s+', ' ', text, re.U).strip()
 
+
 def unicodetext(item):
     if item is None or item.text is None:
         return None
     return clean_text(item.text)
 
+
 def reduced_text(text):
     return re.sub(r'\W', '', text, flags=re.U).lower()
 
+
 def text_match(a, b):
     return reduced_text(a) == reduced_text(b)
+
 
 def address_eq(a, b):
     if ('postal_code' in a and 'postal_code' in b and

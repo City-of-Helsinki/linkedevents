@@ -70,4 +70,3 @@ def test_get_language_check_translation_available(api_client, default_languages)
 
     response = get_detail(api_client, 'tlh')
     assert response.data['translation_available'] == False
-

@@ -129,6 +129,7 @@ def test__update_minimal_event_with_autopopulated_fields_with_put(api_client, mi
         replace(hour=0, minute=0, second=0, microsecond=0).astimezone(pytz.utc)
     assert event.has_end_time is False
 
+
 @pytest.mark.django_db
 def test__update_an_event_with_put(api_client, complex_event_dict, user):
 
@@ -209,6 +210,7 @@ def test__reschedule_an_event_with_put(api_client, complex_event_dict, user):
     data2['event_status'] = 'EventRescheduled'
     assert_event_data_is_equal(data2, response2.data)
 
+
 @pytest.mark.django_db
 def test__postpone_an_event_with_put(api_client, complex_event_dict, user):
 
@@ -260,6 +262,7 @@ def test__postpone_an_event_with_put(api_client, complex_event_dict, user):
     # assert the event is marked rescheduled
     data2['event_status'] = 'EventRescheduled'
     assert_event_data_is_equal(data2, response2.data)
+
 
 @pytest.mark.django_db
 def test__cancel_an_event_with_put(api_client, complex_event_dict, user):

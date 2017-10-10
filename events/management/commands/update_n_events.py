@@ -40,5 +40,3 @@ class Command(BaseCommand):
             self.handle_keywords(update_all=update_all)
         if not model or model == 'place':
             self.handle_places(update_all=update_all)
-
-

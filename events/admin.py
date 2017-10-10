@@ -89,6 +89,7 @@ admin.site.register(Organization, OrganizationAdmin)
 class DataSourceAdmin(BaseAdmin):
     fields = ('id', 'name', 'api_key', 'owner', 'user_editable')
 
+
 admin.site.register(DataSource, DataSourceAdmin)
 
 
