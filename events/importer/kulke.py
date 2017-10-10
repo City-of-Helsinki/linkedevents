@@ -4,19 +4,16 @@ import os
 import re
 import functools
 from lxml import etree
-from modeltranslation.translator import translator
 import dateutil
 from pytz import timezone
 from django.conf import settings
-from django.utils.timezone import get_default_timezone
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db import IntegrityError
 
-from .sync import ModelSyncher
 from .base import Importer, register_importer, recur_dict
-from .util import unicodetext, active_language
-from events.models import DataSource, Place, Event, Keyword, KeywordLabel, Organization, EventAggregate, EventAggregateMember
+from .util import unicodetext
+from events.models import DataSource, Event, EventAggregate, EventAggregateMember, Keyword, Organization, Place
 from events.keywords import KeywordMatcher
 from events.translation_utils import expand_model_fields
 

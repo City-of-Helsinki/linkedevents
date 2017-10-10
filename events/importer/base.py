@@ -6,8 +6,6 @@ import datetime
 from collections import defaultdict
 import operator
 
-from django.db import DataError
-from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
 from rest_framework.exceptions import ValidationError
 from django.contrib.gis.geos import Point, Polygon
@@ -15,7 +13,6 @@ from django.contrib.gis.gdal import SpatialReference, CoordTransform
 
 from modeltranslation.translator import translator
 
-from .util import active_language
 from events.models import *
 
 

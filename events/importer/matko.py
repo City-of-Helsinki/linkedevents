@@ -13,7 +13,6 @@ from events.models import DataSource, Place, Event, Organization
 from events.models import Keyword
 from events.keywords import KeywordMatcher
 
-from .sync import ModelSyncher
 from .base import Importer, register_importer, recur_dict
 from .util import clean_text, unicodetext, replace_location
 

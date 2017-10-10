@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import re
-from lxml import etree
 from django.utils.translation.trans_real import activate, deactivate
 
 from events.models import Place

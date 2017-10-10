@@ -5,9 +5,7 @@ import requests_cache
 
 from django import db
 from django.conf import settings
-from django.contrib.gis.geos import Point, Polygon
-from django.contrib.gis.gdal import SpatialReference, CoordTransform
-from django.utils.translation import activate, get_language
+from django.contrib.gis.geos import Point
 from django.core.management import call_command
 
 from events.importer.util import replace_location

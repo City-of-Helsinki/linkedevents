@@ -2,7 +2,6 @@
 import json
 import re
 import datetime
-from dateutil.parser import parse
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management import CommandError
 import pytz

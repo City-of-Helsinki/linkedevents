@@ -12,7 +12,6 @@ from django.core.management import call_command
 
 
 from events.tests.utils import assert_event_data_is_equal
-from .conftest import keyword_id
 from events.models import Event, Keyword, Place
 from django.conf import settings
 

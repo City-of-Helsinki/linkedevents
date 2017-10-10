@@ -1,5 +1,4 @@
 import pytest
-from ..models import Event
 from .utils import versioned_reverse as reverse
 
 @pytest.mark.django_db

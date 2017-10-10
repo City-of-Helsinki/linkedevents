@@ -2,7 +2,6 @@
 
 import requests
 import requests_cache
-import json
 import re
 import dateutil.parser
 from datetime import datetime, timedelta
@@ -13,7 +12,6 @@ from events.models import Event, Keyword, DataSource, Organization, Place
 from pytz import timezone
 import pytz
 import bleach
-from pprint import pprint
 
 from .sync import ModelSyncher
 

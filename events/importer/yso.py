@@ -3,15 +3,13 @@ import requests
 
 import rdflib
 from django.core.exceptions import ObjectDoesNotExist
-from rdflib import URIRef
 from rdflib import RDF
-from rdflib.namespace import FOAF, SKOS, OWL, DCTERMS
+from rdflib.namespace import DCTERMS, OWL, SKOS
 
 from django.conf import settings
 
 from events.models import Keyword, KeywordLabel, DataSource, BaseModel, Language, Organization
 
-from sys import stdout
 from .util import active_language
 from .sync import ModelSyncher
 from .base import Importer, register_importer

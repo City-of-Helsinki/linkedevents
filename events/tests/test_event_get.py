@@ -2,7 +2,6 @@
 from .utils import versioned_reverse as reverse
 import pytest
 from .utils import get, assert_fields_exist
-from django.conf import settings
 from events.models import Event
 
 

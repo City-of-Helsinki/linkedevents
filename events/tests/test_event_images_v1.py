@@ -11,8 +11,10 @@ from django.test.utils import override_settings
 from PIL import Image as PILImage
 
 from .utils import get, assert_fields_exist, assert_event_data_is_equal
-from .test_event_post import create_with_post, list_url as event_list_url
-from events.models import Image, License
+
+# event_list_url is used as magic fixture, which flake8 doesn't see
+from .test_event_post import create_with_post, list_url as event_list_url  # noqa
+from events.models import Image
 from events.auth import ApiKeyUser
 
 

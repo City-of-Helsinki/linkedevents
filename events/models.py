@@ -19,7 +19,6 @@ attribute to change @context when need to define schemas for custom fields.
 """
 import datetime
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericForeignKey
 import pytz
 from django.contrib.gis.db import models

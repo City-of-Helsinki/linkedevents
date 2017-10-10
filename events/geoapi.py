@@ -2,7 +2,7 @@ from django.contrib.gis.db import models
 from rest_framework import serializers
 from rest_framework.exceptions import ParseError
 from django.contrib.gis.gdal import CoordTransform, SpatialReference
-from django.contrib.gis.geos import Point, Polygon
+from django.contrib.gis.geos import Polygon
 import json
 
 # Use the GPS coordinate system by default
