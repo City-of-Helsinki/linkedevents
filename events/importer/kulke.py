@@ -482,8 +482,8 @@ class KulkeImporter(Importer):
         common_fields = set(
             f for f in fieldnames
             if 1 == len(set(map(
-                    value_mappers.get(f, lambda x: x),
-                    (getattr(event, f) for event in events.all())))))
+                value_mappers.get(f, lambda x: x),
+                (getattr(event, f) for event in events.all())))))
 
         for fieldname in common_fields:
             value = getattr(events.first(), fieldname)
@@ -526,7 +526,7 @@ class KulkeImporter(Importer):
             )
             setattr(super_event, 'name_{}'.format(lang),
                     make_event_name(headline, secondary_headline)
-            )
+                    )
 
         # Gather common keywords present in *all* subevents
         common_keywords = functools.reduce(

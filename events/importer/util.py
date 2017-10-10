@@ -24,13 +24,13 @@ def text_match(a, b):
 
 def address_eq(a, b):
     if ('postal_code' in a and 'postal_code' in b and
-       a['postal_code'] != b['postal_code']):
+            a['postal_code'] != b['postal_code']):
         return False
     for key in ['locality', 'street_address']:
         languages = a[key].viewkeys() | b[key].viewkeys()
         for l in languages:
             if (l in a[key] and l in b[key] and not
-               text_match(a[key][l], b[key][l])):
+                    text_match(a[key][l], b[key][l])):
                 return False
     return True
 

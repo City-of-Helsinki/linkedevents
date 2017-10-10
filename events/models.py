@@ -196,7 +196,7 @@ class Organization(MPTTModel, BaseModel):
     parent = TreeForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL,
                             related_name='children')
     admin_users = models.ManyToManyField(
-       User, blank=True, related_name='admin_organizations'
+        User, blank=True, related_name='admin_organizations'
     )
     admin_orgs = models.ManyToManyField(
         'self', blank=True, related_name='moderated_orgs'

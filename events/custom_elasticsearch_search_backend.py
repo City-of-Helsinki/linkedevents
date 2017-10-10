@@ -40,7 +40,7 @@ class CustomEsSearchBackend(es_backend.ElasticsearchSearchBackend):
 
     def build_search_kwargs(self, query_string, decay_functions=None, **kwargs):
         kwargs = super(CustomEsSearchBackend, self).build_search_kwargs(
-                query_string, **kwargs)
+            query_string, **kwargs)
         if not decay_functions:
             return kwargs
 

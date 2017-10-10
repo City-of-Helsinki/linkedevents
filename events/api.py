@@ -1138,9 +1138,9 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         if validated_data.get('event_status') in (Event.Status.POSTPONED, Event.Status.RESCHEDULED):
             if validated_data.get('event_status') != instance.event_status:
                 raise serializers.ValidationError({'event_status':
-                                                  _('POSTPONED and RESCHEDULED statuses cannot be set directly.'
-                                                    'Changing event start_time or marking start_time null'
-                                                    'will reschedule or postpone an event.')})
+                                                   _('POSTPONED and RESCHEDULED statuses cannot be set directly.'
+                                                     'Changing event start_time or marking start_time null'
+                                                     'will reschedule or postpone an event.')})
 
         # Update event_status if a PUBLIC SCHEDULED or CANCELLED event start_time is updated.
         # DRAFT events will remain SCHEDULED up to publication.

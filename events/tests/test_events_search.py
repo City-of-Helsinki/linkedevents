@@ -37,7 +37,7 @@ class EventSearchTests(TestCase, TestDataMixin):
                            publisher=self.test_org,
                            start_time=datetime.datetime.now(),
                            end_time=datetime.datetime.now()
-        )
+                           )
         self.dummy.save()
 
         # refresh haystack's index

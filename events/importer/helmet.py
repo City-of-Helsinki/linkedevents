@@ -201,7 +201,7 @@ class HelmetImporter(Importer):
                     cat_id_set.add('yso:' + yso_val)
 
             keyword_list = Keyword.objects.filter(data_source=yso_data_source).\
-                    filter(id__in=cat_id_set)
+                filter(id__in=cat_id_set)
             self.yso_by_id = {p.id: p for p in keyword_list}
         else:
             self.yso_by_id = {}
@@ -379,7 +379,7 @@ class HelmetImporter(Importer):
                 del ext_props['PlaceExtraInfo']
         else:
             self.logger.warning('Missing TPREK location map for event %s (%s)' %
-                (event['name'][lang], str(eid)))
+                                (event['name'][lang], str(eid)))
             del events[event['origin_id']]
             return event
 
