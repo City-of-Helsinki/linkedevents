@@ -45,7 +45,7 @@ class PlaceAdmin(HelsinkiGeoAdmin, BaseAdmin, TranslationAdmin, VersionAdmin):
 
         }),
         (_('Contact info'), {
-            'fields':  (
+            'fields': (
                 'email', 'telephone', 'contact_type', 'street_address',
                 'address_locality', 'address_region', 'postal_code', 'post_office_box_num')
         }),

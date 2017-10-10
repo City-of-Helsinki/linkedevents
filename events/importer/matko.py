@@ -285,11 +285,11 @@ class MatkoImporter(Importer):
             'kesä',
             'talvi'
         ]
-        use_as_target_group = [ # fixme
+        use_as_target_group = [  # fixme
             'koko perheelle'
         ]
         mapping = {
-            'tanssi ja teatteri': 'tanssi', # following visithelsinki.fi
+            'tanssi ja teatteri': 'tanssi',  # following visithelsinki.fi
             'messu': 'messut (tapahtumat)',
             'perinnetapahtuma': 'perinne',
             'pop/rock': 'populaarimusiikki',

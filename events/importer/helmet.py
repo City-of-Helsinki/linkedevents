@@ -21,7 +21,7 @@ YSO_KEYWORD_MAPS = {
     u'Lapset': u'p4354',
     u'Kirjastot': u'p2787',
     u'Opiskelijat': u'p16486',
-    u'Konsertit ja klubit': (u'p11185', u'p20421'), # -> konsertit, musiikkiklubit
+    u'Konsertit ja klubit': (u'p11185', u'p20421'),  # -> konsertit, musiikkiklubit
     u'Kurssit': u'p9270',
     u'venäjä': u'p7643',  # -> venäjän kieli
     u'Seniorit': u'p2434',  # -> vanhukset
@@ -36,7 +36,7 @@ YSO_KEYWORD_MAPS = {
     u'Pelitapahtumat': u'p6062',  # -> pelit
     u'Satutunnit': u'p14710',
     u'Koululaiset': u'p16485',
-    u'Lasten ja nuorten tapahtumat': (u'p4354', u'p11617'), # -> lapset, nuoret
+    u'Lasten ja nuorten tapahtumat': (u'p4354', u'p11617'),  # -> lapset, nuoret
     u'Lapset ja perheet': (u'p4354', u'p4363'),  # -> lapset, perheet
     u'Lukupiirit': u'p11406',  # -> lukeminen
     u'Musiikki': u'p1808',  # -> musiikki

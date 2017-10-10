@@ -443,7 +443,7 @@ class CitySDKExporter(Exporter):
 def citysdk_mock(url, request):
     foo = 'foo'
     if request.method == 'PUT':
-        data = '"'+foo+'"'
+        data = '"' + foo + '"'
     else:
         data = {'id': str(foo)}
     headers = {'content-type': 'application/json'}

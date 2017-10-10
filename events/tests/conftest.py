@@ -15,7 +15,7 @@ import pytest
 from rest_framework.test import APIClient
 
 
-# events 
+# events
 from events.models import (
     DataSource, Organization, Place, Language, Keyword, KeywordLabel, Event,
     Offer)

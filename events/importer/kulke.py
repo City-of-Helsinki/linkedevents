@@ -569,7 +569,7 @@ class KulkeImporter(Importer):
                 super_event = Event(
                     publisher=self.organization,
                     super_event_type=Event.SuperEventType.RECURRING,
-                    data_source=DataSource.objects.get(pk='kulke'), # TODO
+                    data_source=DataSource.objects.get(pk='kulke'),  # TODO
                     id="linkedevents:agg-{}".format(aggregate.id))
                 super_event.save()
                 aggregate.super_event = super_event

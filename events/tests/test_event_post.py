@@ -235,7 +235,7 @@ def test__autopopulated_fields_at_create(
 # the following values may not be posted
 @pytest.mark.django_db
 @pytest.mark.parametrize("non_permitted_input,non_permitted_response", [
-    ({'id': 'not_allowed:1'}, 400), # may not fake id
+    ({'id': 'not_allowed:1'}, 400),  # may not fake id
     ({'data_source': 'theotherdatasourceid'}, 400),  # may not fake data source
     ({'publisher': 'test_organization2'}, 400),  # may not fake organization
 ])

@@ -28,7 +28,7 @@ def get_yso_id(subject):
 
 
 def get_subject(yso_id):
-    return rdflib.term.URIRef(yso+yso_id.split(':')[-1])
+    return rdflib.term.URIRef(yso + yso_id.split(':')[-1])
 
 
 def is_deprecated(graph, subject):
@@ -36,7 +36,7 @@ def is_deprecated(graph, subject):
 
 
 def is_aggregate_concept(graph, subject):
-    return (subject, SKOS.inScheme, rdflib.term.URIRef(yso+'aggregateconceptscheme')) in graph
+    return (subject, SKOS.inScheme, rdflib.term.URIRef(yso + 'aggregateconceptscheme')) in graph
 
 
 def get_replacement(graph, subject):
@@ -187,8 +187,8 @@ class YsoImporter(Importer):
                 continue
             for label in url_labels:
                 params = dict(
-                    keyword_id = yid,
-                    keywordlabel_id = (
+                    keyword_id=yid,
+                    keywordlabel_id=(
                         label_id_from_name_and_language.get(
                             (str(label), label.language))))
                 if params['keyword_id'] and params['keywordlabel_id']:
