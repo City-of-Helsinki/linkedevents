@@ -431,7 +431,7 @@ class KulkeImporter(Importer):
         location['telephone'][lang] = text_content('phone')
         location['name'] = text_content('location')
 
-        if not 'place' in location:
+        if 'place' not in location:
             self.find_place(event)
         return True
 

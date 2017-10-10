@@ -29,7 +29,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         module = options['module']
-        if not module in self.importers:
+        if module not in self.importers:
             raise CommandError("Importer %s not found. Valid importers: %s" % (module, self.imp_list))
         imp_class = self.importers[module]
 

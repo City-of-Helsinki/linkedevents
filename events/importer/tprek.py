@@ -52,7 +52,7 @@ class TprekImporter(Importer):
 
     def pk_get(self, resource_name, res_id=None):
         url = "%s%s/" % (URL_BASE, resource_name)
-        if res_id != None:
+        if res_id is not None:
             url = "%s%s/" % (url, res_id)
         print("Fetching URL %s" % url)
         resp = requests.get(url)

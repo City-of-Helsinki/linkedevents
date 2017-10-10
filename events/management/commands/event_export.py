@@ -27,7 +27,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         module = options['module']
-        if not module in self.exporters:
+        if module not in self.exporters:
             raise CommandError("Exporter %s not found. Valid exporters: %s" % (module, self.exp_list))
         exp_class = self.exporters[module]
 

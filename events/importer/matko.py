@@ -274,7 +274,7 @@ class MatkoImporter(Importer):
         self.put(event, 'start_time', start_time)
         self.put(event, 'end_time', end_time)
         self.put(event, 'event_status', matko_status(int(text(item, 'status'))))
-        if text(item, 'placeuniqueid') == None:
+        if text(item, 'placeuniqueid') is None:
             del events[eid]
             return
         self.put(event['location'], 'origin_id', int(text(item, 'placeuniqueid')))

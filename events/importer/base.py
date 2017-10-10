@@ -100,7 +100,7 @@ class Importer(object):
 
         def event_name(e):
             # recur_dict ouch
-            if not 'fi' in e['common']['name']:
+            if 'fi' not in e['common']['name']:
                 return ''
             else:
                 return e['common']['name']['fi']
@@ -194,17 +194,17 @@ class Importer(object):
             info['location_extra_info'] = location.get('extra_info', None)
 
         assert info['start_time']
-        if not 'has_start_time' in info:
+        if 'has_start_time' not in info:
             info['has_start_time'] = True
         if not info['has_start_time']:
             info['start_time'] = info['start_time'].replace(hour=0, minute=0, second=0)
 
         # If no end timestamp supplied, we treat the event as ending at midnight.
-        if not 'end_time' in info or not info['end_time']:
+        if 'end_time' not in info or not info['end_time']:
             info['end_time'] = info['start_time']
             info['has_end_time'] = False
 
-        if not 'has_end_time' in info:
+        if 'has_end_time' not in info:
             info['has_end_time'] = True
 
         # If end date is supplied but no time, the event ends at midnight of the following day.

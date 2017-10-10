@@ -49,7 +49,7 @@ class GeoModelSerializer(serializers.ModelSerializer):
         self.geo_fields = []
         model_fields = [f.name for f in model._meta.fields]
         for field_name in self.fields:
-            if not field_name in model_fields:
+            if field_name not in model_fields:
                 continue
             field = model._meta.get_field(field_name)
             if not isinstance(field, models.GeometryField):
@@ -66,7 +66,7 @@ class GeoModelSerializer(serializers.ModelSerializer):
             return ret
         for field_name in self.geo_fields:
             val = getattr(obj, field_name)
-            if val == None:
+            if val is None:
                 ret[field_name] = None
                 continue
             if self.srs:

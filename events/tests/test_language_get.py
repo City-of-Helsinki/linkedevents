@@ -66,7 +66,7 @@ def test_get_language_check_translation_available(api_client, default_languages)
     Language.objects.get_or_create(id='tlh', name='Klingon')
 
     response = get_detail(api_client, 'fi')
-    assert response.data['translation_available'] == True
+    assert response.data['translation_available'] is True
 
     response = get_detail(api_client, 'tlh')
-    assert response.data['translation_available'] == False
+    assert response.data['translation_available'] is False

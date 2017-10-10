@@ -245,7 +245,7 @@ class HelmetImporter(Importer):
             fi_ver_ids = [int(x['ContentId']) for x in event_el['LanguageVersions'] if x['LanguageId'] == 1]
             fi_event = None
             for fi_id in fi_ver_ids:
-                if not fi_id in events:
+                if fi_id not in events:
                     continue
                 fi_event = events[fi_id]
                 if fi_event['start_time'] != start_time or fi_event['end_time'] != end_time:
@@ -299,7 +299,7 @@ class HelmetImporter(Importer):
                     return
             event[field_name] = val
 
-        if not 'date_published' in event:
+        if 'date_published' not in event:
             # Publication date changed based on language version, so we make sure
             # to save it only from the primary event.
             event['date_published'] = dt_parse(event_el['PublicDate'])
@@ -358,7 +358,7 @@ class HelmetImporter(Importer):
             # One of the type 7 nodes (either Tapahtumat, or just the library name)
             # points to the location, which is mapped to Linked Events keyword ID
             if node_type == 7:
-                if not 'location' in event:
+                if 'location' not in event:
                     location_id = to_le_id(classification['NodeId'])
                     if location_id:
                         event['location']['id'] = location_id
