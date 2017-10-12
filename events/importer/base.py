@@ -1,5 +1,4 @@
 import os
-import re
 import logging
 import itertools
 import datetime
@@ -73,23 +72,6 @@ class Importer(object):
         if image_object.id != obj.image_id:
             obj._changed = True
             obj.image = image_object
-
-    @staticmethod
-    def clean_text(text):
-        text = text.replace('\n', ' ')
-        # remove consecutive whitespaces
-        return re.sub(r'\s\s+', ' ', text, re.U).strip()
-
-    @staticmethod
-    def unicodetext(item):
-        s = item.text
-        if not s:
-            return None
-        return Importer.clean_text(s)
-
-    @staticmethod
-    def text(item, tag):
-        return unicodetext(item.find(matko_tag(tag)))
 
     def link_recurring_events(self, events, instance_fields=[]):
         """Finds events that are instances of a common parent
