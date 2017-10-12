@@ -9,7 +9,7 @@ from django.contrib.gis.geos import Point
 from django.core.management import call_command
 
 from events.importer.util import replace_location
-from events.models import *
+from events.models import DataSource, Organization, Place
 from .sync import ModelSyncher
 from .base import Importer, register_importer
 

@@ -13,7 +13,7 @@ from django.contrib.gis.gdal import SpatialReference, CoordTransform
 
 from modeltranslation.translator import translator
 
-from events.models import *
+from events.models import Image, Language, Event, License, Offer, EventLink, Place
 
 
 # Using a recursive default dictionary

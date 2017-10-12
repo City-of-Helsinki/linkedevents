@@ -1,5 +1,5 @@
 from modeltranslation.translator import translator, TranslationOptions
-from .models import *
+from .models import Language, Keyword, KeywordSet, Place, Event, Offer, License
 
 
 class LanguageTranslationOptions(TranslationOptions):
