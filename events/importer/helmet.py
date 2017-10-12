@@ -349,7 +349,7 @@ class HelmetImporter(Importer):
                 keyword_orig.save()
 
             event_keywords.add(keyword_orig)
-            ### Saving original keyword ends ###
+            # Saving original keyword ends
 
             # One of the type 7 nodes (either Tapahtumat, or just the library name)
             # points to the location, which is mapped to Linked Events keyword ID
