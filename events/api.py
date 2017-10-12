@@ -239,9 +239,9 @@ class ISO8601DurationField(serializers.Field):
         if data:
             value = parse_duration(data)
             return (
-                value.days * 24 * 3600 * 1000000
-                + value.seconds * 1000
-                + value.microseconds / 1000
+                value.days * 24 * 3600 * 1000000 +
+                value.seconds * 1000 +
+                value.microseconds / 1000
             )
         else:
             return 0
