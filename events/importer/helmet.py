@@ -41,7 +41,6 @@ YSO_KEYWORD_MAPS = {
     u'Lukupiirit': u'p11406',  # -> lukeminen
     u'Musiikki': u'p1808',  # -> musiikki
     u'muut kielet': u'p556',  # -> kielet
-    # u'Opastuskalenteri ': '?',
 }
 
 LOCATIONS = {
@@ -65,7 +64,6 @@ LOCATIONS = {
     u"Kirjasto 10": ((10800, 11303), 8286),
     u"Kirjasto Omena": ((10801, 11305), 15395),
     u"Kivenlahden kirjasto": ((10803, 11309), 15334),
-    # u"Kohtaamispaikka@lasipalatsi": (10804, 11311),     # -> kaupunkiverstas ?
     u"Kaupunkiverstas": ((10804, 11311), 8145),  # former Kohtaamispaikka
     u"Koivukylän kirjasto": ((10805, 11313), 19572),
     u"Kontulan kirjasto u": ((10806, 11315), 8178),
@@ -74,7 +72,6 @@ LOCATIONS = {
     u"Laajalahden kirjasto": ((10813, 11321), 15344),
     u"Laajasalon kirjasto": ((10814, 11323), 8143),
     u"Laaksolahden kirjasto": ((10815, 11325), 15309),
-    #    u"Laitoskirjastot": ((10816, 11327), ),
     u"Lauttasaaren kirjasto": ((10817, 11329), 8344),
     u"Lumon kirjasto": ((10818, 11331), 18262),
     u"Länsimäen kirjasto": ((10819, 11333), 18620),
@@ -82,7 +79,6 @@ LOCATIONS = {
     u"Malminkartanon kirjasto": ((10821, 11337), 8220),
     u"Martinlaakson kirjasto": ((10822, 11339), 19217),
     u"Maunulan kirjasto": ((10823, 11341), 8350),
-    #u"Mikkolan kirjasto": (10808, 11343),  #  Suljettu
     u"Monikielinen kirjasto": ((10824, 11345), 8223),
     u"Munkkiniemen kirjasto": ((10825, 11347), 8158),
     u"Myllypuron mediakirjasto": ((10826, 11349), 8348),

@@ -358,9 +358,6 @@ class MatkoImporter(Importer):
         return events
 
     def _parse_location(self, lang_code, item, places):
-        #if clean_text(text(item, 'isvenue')) == 'False':
-        #    return
-
         lid = int(text(item, 'id'))
         location = places[lid]
 

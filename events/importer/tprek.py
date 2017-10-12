@@ -60,7 +60,6 @@ class TprekImporter(Importer):
         return resp.json()
 
     def delete_and_replace(self, obj):
-        # print('mark for deletion %s' % str(obj))
         obj.deleted = True
         obj.save(update_fields=['deleted'])
         # we won't stand idly by and watch tprek delete needed units willy-nilly without raising a ruckus!
@@ -152,7 +151,6 @@ class TprekImporter(Importer):
         self._save_translated_field(obj, 'address_locality', info, 'address_city')
 
         self._save_translated_field(obj, 'url', info, 'info_url', max_length=200)
-        #self._save_translated_field(obj, 'picture_caption', info, 'picture_caption')
 
         self._save_field(obj, 'telephone', info, 'phone')
 

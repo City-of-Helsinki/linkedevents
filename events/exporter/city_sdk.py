@@ -29,11 +29,6 @@ bcp47_lang_map = {
     "en": "en-GB"
 }
 
-# CITYSDK_DEFAULT_AUTHOR = {
-#     "term": "primary",
-#     "href": "http://events.hel.fi",
-#     "value": "linkedevents"
-# }
 CITYSDK_DEFAULT_AUTHOR = {
     "term": "primary",
     "value": "admin"
@@ -113,7 +108,6 @@ class CitySDKExporter(Exporter):
         """
         username = settings.CITYSDK_API_SETTINGS['USERNAME']
         password = settings.CITYSDK_API_SETTINGS['PASSWORD']
-        # noinspection PyUnusedLocal
         session_response = requests.get(
             '%sauth?username=%s&password=%s' %
             (BASE_API_URL, username, password))
@@ -309,7 +303,7 @@ class CitySDKExporter(Exporter):
                            export_info.target_id))
                     delete_count += 1
 
-        #new
+        # new
         imported = {'id__in': export_infos.values("object_id")}
         if extra_filters:
             qs = klass.objects.exclude(
