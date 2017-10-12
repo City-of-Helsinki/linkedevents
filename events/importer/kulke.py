@@ -581,8 +581,8 @@ class KulkeImporter(Importer):
                 aggregate.super_event = super_event
                 aggregate.save()
                 for event in events:
-                    member = EventAggregateMember.objects.create(event=event,
-                                                                 event_aggregate=aggregate)
+                    EventAggregateMember.objects.create(event=event,
+                                                        event_aggregate=aggregate)
             elif cnt == 1:
                 aggregate = superevent_aggregates.first()
                 if len(group) == 1:
@@ -596,8 +596,8 @@ class KulkeImporter(Importer):
                 else:
                     for event in events:
                         try:
-                            member = EventAggregateMember.objects.create(event=event,
-                                                                         event_aggregate=aggregate)
+                            EventAggregateMember.objects.create(event=event,
+                                                                event_aggregate=aggregate)
                         except IntegrityError:
                             # Ignore unique violations. They
                             # ensure that no duplicate members are added.

@@ -186,7 +186,7 @@ def test__keyword_n_events_updated(list_url,
                                    minimal_event_dict,
                                    user, data_source):
     api_client.force_authenticate(user=user)
-    response = api_client.post(list_url, minimal_event_dict, format='json')
+    api_client.post(list_url, minimal_event_dict, format='json')
     call_command('update_n_events')
     assert Keyword.objects.get(id=data_source.id + ':test').n_events == 1
 
@@ -197,7 +197,7 @@ def test__location_n_events_updated(list_url,
                                     minimal_event_dict,
                                     user, data_source):
     api_client.force_authenticate(user=user)
-    response = api_client.post(list_url, minimal_event_dict, format='json')
+    api_client.post(list_url, minimal_event_dict, format='json')
     call_command('update_n_events')
     assert Place.objects.get(id=data_source.id + ':test_location').n_events == 1
 
