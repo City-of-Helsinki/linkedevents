@@ -265,8 +265,8 @@ class KulkeImporter(Importer):
             print("No match found for place '%s' (event %s)" % (loc_name, get_event_name(event)))
 
     def _import_event(self, lang, event_el, events):
-        tag = lambda t: 'event' + t
-        text = lambda t: unicodetext(event_el.find(tag(t)))
+        def text(t):
+            return unicodetext(event_el.find('event' + t))
 
         def clean(t):
             if t is None:
@@ -275,7 +275,9 @@ class KulkeImporter(Importer):
             if not t:
                 return None
             return t
-        text_content = lambda k: clean(text(k))
+
+        def text_content(k):
+            return clean(text(k))
 
         eid = int(event_el.attrib['id'])
 
@@ -317,9 +319,9 @@ class KulkeImporter(Importer):
 
         event['info_url'][lang] = text_content('www')
         # todo: process extra links?
-        links = event_el.find(tag('links'))
+        links = event_el.find('eventlinks')
         if links is not None:
-            links = links.findall(tag('link'))
+            links = links.findall('eventlink')
             assert len(links)
         else:
             links = []
@@ -337,7 +339,7 @@ class KulkeImporter(Importer):
             external_links.append({'link': link})
         event['external_links'][lang] = external_links
 
-        eventattachments = event_el.find(tag('attachments'))
+        eventattachments = event_el.find('eventattachments')
         if eventattachments is not None:
             for attachment in eventattachments:
                 if attachment.attrib['type'] == 'teaserimage':
@@ -387,7 +389,7 @@ class KulkeImporter(Importer):
 
         offer = event['offers'][0]
         price = text_content('price')
-        price_el = event_el.find(tag('price'))
+        price_el = event_el.find('eventprice')
         free = (price_el.attrib['free'] == "true")
 
         offer['is_free'] = free
@@ -403,7 +405,7 @@ class KulkeImporter(Importer):
 
         if hasattr(self, 'categories'):
             event_keywords = set()
-            for category_id in event_el.find(tag('categories')):
+            for category_id in event_el.find('eventcategories'):
                 category = self.categories.get(int(category_id.text))
                 if category:
                     # YSO keywords
@@ -513,11 +515,10 @@ class KulkeImporter(Importer):
         if expand_model_fields(super_event, ['headline'])[0] not in common_fields:
             words = getattr(events.first(), 'headline').split(' ')
             name = ''
-            is_common = lambda: all(
-                headline.startswith(name + words[0])
-                for headline in [event.name for event in events]
-            )
-            while words and is_common():
+            while words and all(
+                    headline.startswith(name + words[0])
+                    for headline in [event.name for event in events]
+                    ):
                 name += words.pop(0) + ' '
                 print(words)
                 print(name)

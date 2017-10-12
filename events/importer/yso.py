@@ -114,10 +114,9 @@ class YsoImporter(Importer):
         if bulk_mode:
             assert not Keyword.objects.filter(data_source=self.data_source).exists()
         if not bulk_mode:
-            delete_func = lambda obj: obj.delete()
             queryset = KeywordLabel.objects.all()
             label_syncher = ModelSyncher(
-                queryset, lambda obj: (obj.name, obj.language_id), delete_func=delete_func)
+                queryset, lambda obj: (obj.name, obj.language_id), delete_func=lambda obj: obj.delete())
 
         keyword_labels = {}
         labels_to_create = set()
@@ -151,8 +150,6 @@ class YsoImporter(Importer):
             self.save_keyword_label_relationships_in_bulk(keyword_labels)
 
         if not bulk_mode:
-            deprecate_keyword = lambda obj: deprecate_and_replace(graph, obj)
-            check_deprecated_keyword = lambda obj: obj.deprecated
             # manually add new keywords to deprecated ones
             for old_id, new_id in YSO_DEPRECATED_MAPS.items():
                 try:
@@ -167,8 +164,8 @@ class YsoImporter(Importer):
             queryset = Keyword.objects.filter(data_source=self.data_source, deprecated=False)
             syncher = ModelSyncher(
                 queryset, lambda keyword: keyword.id,
-                delete_func=deprecate_keyword,
-                check_deleted_func=check_deprecated_keyword)
+                delete_func=lambda obj: deprecate_and_replace(graph, obj),
+                check_deleted_func=lambda obj: obj.deprecated)
             save_set = set()
             for subject in graph.subjects(RDF.type, SKOS.Concept):
                 self.save_keyword(syncher, graph, subject, keyword_labels, save_set)

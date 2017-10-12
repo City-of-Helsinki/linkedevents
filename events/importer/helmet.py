@@ -223,10 +223,12 @@ class HelmetImporter(Importer):
         return ext_props
 
     def _import_event(self, lang, event_el, events):
-        # Times are in UTC+02:00 timezone
-        to_utc = lambda dt: LOCAL_TZ.localize(
-            dt, is_dst=None).astimezone(pytz.utc)
-        dt_parse = lambda dt_str: to_utc(dateutil.parser.parse(dt_str))
+        def dt_parse(dt_str):
+            """Convert a string to UTC datetime"""
+            # Times are in UTC+02:00 timezone
+            return LOCAL_TZ.localize(
+                    dateutil.parser.parse(dt_str),
+                    is_dst=None).astimezone(pytz.utc)
 
         start_time = dt_parse(event_el['EventStartDate'])
         end_time = dt_parse(event_el['EventEndDate'])
@@ -303,12 +305,6 @@ class HelmetImporter(Importer):
         set_attr('start_time', dt_parse(event_el['EventStartDate']))
         set_attr('end_time', dt_parse(event_el['EventEndDate']))
 
-        to_tprek_id = lambda k: self.tprek_by_id[str(k)]
-        to_le_id = lambda nid: next(
-            (to_tprek_id(v[1]) for k, v in LOCATIONS.items()
-             if nid in v[0]), None)
-        yso_to_db = lambda v: self.yso_by_id['yso:' + v]
-
         event_keywords = event.get('keywords', set())
 
         for classification in event_el['Classifications']:
@@ -355,9 +351,10 @@ class HelmetImporter(Importer):
             # points to the location, which is mapped to Linked Events keyword ID
             if node_type == 7:
                 if 'location' not in event:
-                    location_id = to_le_id(classification['NodeId'])
-                    if location_id:
-                        event['location']['id'] = location_id
+                    for k, v in LOCATIONS.items():
+                        if classification['NodeId'] in v[0]:
+                            event['location']['id'] = self.tprek_by_id[str(v[1])]
+                            break
             else:
                 if not self.yso_by_id:
                     continue
@@ -366,9 +363,10 @@ class HelmetImporter(Importer):
                     yso = YSO_KEYWORD_MAPS[str(classification['NodeName'])]
                     if isinstance(yso, tuple):
                         for t_v in yso:
-                            event_keywords.add(yso_to_db(t_v))
+                            event_keywords.add(self.yso_by_id['yso:' + t_v])
+
                     else:
-                        event_keywords.add(yso_to_db(yso))
+                        event_keywords.add(self.yso_by_id['yso:' + yso])
 
         event['keywords'] = event_keywords
 

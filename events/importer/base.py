@@ -96,10 +96,8 @@ class Importer(object):
                 parent_events.extend(subevents)
                 continue
             potential_parent = subevents[0]
-            is_subevent = lambda e: (
-                e['common'] == potential_parent['common'])
             children = []
-            for matching_event in filter(is_subevent, subevents):
+            for matching_event in (e for e in subevents if e['common'] == potential_parent['common']):
                 children.append(matching_event['instance'])
             if len(children) > 0:
                 potential_parent['children'] = children

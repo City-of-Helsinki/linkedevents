@@ -48,9 +48,8 @@ class KeywordMatcher(object):
         elif text == 'samba':
             text = 'sambat'
 
-        exact_match = lambda x: x.lower() == text
         labels = self.labels
-        matches = [l for l in labels if exact_match(l)]
+        matches = [l for l in labels if l.lower() == text]
         success = lambda: len(matches) > 0
         if success():
             match_type = 'exact'
@@ -58,8 +57,7 @@ class KeywordMatcher(object):
             words = wordsplit.split(text)
             if len(words) > 1:
                 for word in words:
-                    exact_match = lambda x: x.lower() == word
-                    matches.extend([l for l in labels if exact_match(l)])
+                    matches.extend([l for l in labels if l.lower() == word])
                     if success():
                         match_type = 'subword'
         if not success():

@@ -394,20 +394,18 @@ class CitySDKExporter(Exporter):
         Convenience method to delete everything imported from the source API,
         avoid in production use.
         """
-        get_type = lambda klass: ContentType.objects.get_for_model(klass)
-
         for event_info in ExportInfo.objects.filter(
-                content_type=get_type(Event),
+                content_type=ContentType.objects.get_for_model(Event),
                 target_system=self.name):
             self.__delete_resource(event_info, EVENTS_URL)
 
         for place_info in ExportInfo.objects.filter(
-                content_type=get_type(Place),
+                content_type=ContentType.objects.get_for_model(Place),
                 target_system=self.name):
             self.__delete_resource(place_info, POIS_URL)
 
         for category_info in ExportInfo.objects.filter(
-                content_type=get_type(Keyword),
+                content_type=ContentType.objects.get_for_model(Keyword),
                 target_system=self.name):
             try:
                 category_response = self._do_req(
