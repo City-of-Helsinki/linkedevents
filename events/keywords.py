@@ -50,68 +50,63 @@ class KeywordMatcher(object):
 
         labels = self.labels
         matches = [l for l in labels if l.lower() == text]
-        success = lambda: len(matches) > 0
-        if success():
+        if matches:
             match_type = 'exact'
-        if not success():
+        if not matches:
             words = wordsplit.split(text)
             if len(words) > 1:
                 for word in words:
                     matches.extend([l for l in labels if l.lower() == word])
-                    if success():
-                        match_type = 'subword'
-        if not success():
+                    match_type = 'subword'  # Later attempts will override, if this wasn't a match
+        if not matches:
             matches = [l for l in labels if l.lower().startswith(text)]
             match_type = 'prefix'
-        if not success():
+        if not matches:
             matches = [l for l in labels if l.lower() == text + 't']
-            if success():
-                match_type = 'simple-plural'
-        if not success():
+            match_type = 'simple-plural'
+        if not matches:
             matches = [l for l in labels if l.lower().startswith(text[0:-2])]
-            if success():
-                match_type = 'cut-two-letters'
-        if not success():
+            match_type = 'cut-two-letters'
+        if not matches:
             if len(text) > 10:
                 matches = [l for l in labels if l.lower().startswith(text[0:-5])]
-            if success():
                 match_type = 'prefix'
-        if not success():
+        if not matches:
             for i in range(1, 10):
                 matches = [l for l in labels if l.lower() == text[i:]]
-                if success():
+                if matches:
                     match_type = 'suffix'
                     break
 
-        if not success():
+        if not matches:
             print('no match', text)
             return None
-        if success():
-            keyword_ids = set()
-            if match_type not in ['exact', 'subword']:
-                cmatch = get_close_matches(
-                    text, [m.lower() for m in matches], n=1)
-                if len(cmatch) == 1:
-                    keyword_ids = self.name_to_keyword_ids.get(cmatch[0])
 
-            else:
-                for m in matches:
-                    keyword_ids.update(self.name_to_keyword_ids[m])
+        keyword_ids = set()
+        if match_type not in ['exact', 'subword']:
+            cmatch = get_close_matches(
+                text, [m.lower() for m in matches], n=1)
+            if len(cmatch) == 1:
+                keyword_ids = self.name_to_keyword_ids.get(cmatch[0])
 
-            if len(keyword_ids) < 1:
-                print('no matches for', text)
-                return None
+        else:
+            for m in matches:
+                keyword_ids.update(self.name_to_keyword_ids[m])
 
-            objects = Keyword.objects.filter(id__in=keyword_ids, deprecated=False)
-            if len(keyword_ids) > 1:
-                try:
-                    aggregate_keyword = objects.get(aggregate=True)
-                    aggregate_name = re.sub(ENDING_PARENTHESIS_PATTERN, '', aggregate_keyword.name_fi)
-                    result = [aggregate_keyword]
-                    for o in objects.exclude(name_fi__istartswith=aggregate_name):
-                        result.append(o)
-                    return result
-                except Keyword.DoesNotExist:
-                    pass
-                return objects
+        if len(keyword_ids) < 1:
+            print('no matches for', text)
+            return None
+
+        objects = Keyword.objects.filter(id__in=keyword_ids, deprecated=False)
+        if len(keyword_ids) > 1:
+            try:
+                aggregate_keyword = objects.get(aggregate=True)
+                aggregate_name = re.sub(ENDING_PARENTHESIS_PATTERN, '', aggregate_keyword.name_fi)
+                result = [aggregate_keyword]
+                for o in objects.exclude(name_fi__istartswith=aggregate_name):
+                    result.append(o)
+                return result
+            except Keyword.DoesNotExist:
+                pass
             return objects
+        return objects
