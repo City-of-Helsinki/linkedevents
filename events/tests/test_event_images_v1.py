@@ -222,7 +222,8 @@ def test__upload_an_image_with_api_key(api_client, settings, list_url, image_dat
 
 
 @pytest.mark.django_db
-def test__image_cannot_be_edited_outside_organization(api_client, settings, list_url, image_data, user, organization, organization2, user2):
+def test__image_cannot_be_edited_outside_organization(
+        api_client, settings, list_url, image_data, user, organization, organization2, user2):
     organization.admin_users.add(user)
     api_client.force_authenticate(user)
 
@@ -277,7 +278,8 @@ def test__image_from_another_data_source_can_be_edited_by_admin(api_client, list
 
 
 @pytest.mark.django_db
-def test__image_cannot_be_edited_outside_organization_with_apikey(api_client, settings, list_url, image_data, user, organization, organization2, other_data_source):
+def test__image_cannot_be_edited_outside_organization_with_apikey(
+        api_client, settings, list_url, image_data, user, organization, organization2, other_data_source):
     organization.admin_users.add(user)
     api_client.force_authenticate(user)
 
@@ -307,7 +309,8 @@ def test__image_cannot_be_edited_outside_organization_with_apikey(api_client, se
 # event_list_url is used as magic fixture, which flake8 doesn't see
 @override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL='')  # noqa
 @pytest.mark.django_db
-def test__create_an_event_with_uploaded_image(api_client, list_url, event_list_url, minimal_event_dict, image_data, user):
+def test__create_an_event_with_uploaded_image(
+        api_client, list_url, event_list_url, minimal_event_dict, image_data, user):
     api_client.force_authenticate(user)
 
     image_response = api_client.post(list_url, image_data)

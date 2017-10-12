@@ -138,7 +138,9 @@ class MatkoImporter(Importer):
         deleted_place_list = deleted_place_list.annotate(count=Count('name_fi')).\
             filter(count=1).values('id', 'origin_id', 'name_fi', 'replaced_by_id')
         self.tprek_by_name = {p['name_fi'].lower(): (p['id'], p['origin_id']) for p in place_list}
-        self.deleted_tprek_by_name = {p['name_fi'].lower(): (p['id'], p['origin_id'], p['replaced_by_id']) for p in deleted_place_list}
+        self.deleted_tprek_by_name = {
+            p['name_fi'].lower(): (p['id'], p['origin_id'], p['replaced_by_id'])
+            for p in deleted_place_list}
 
         if self.options['cached']:
             requests_cache.install_cache('matko')

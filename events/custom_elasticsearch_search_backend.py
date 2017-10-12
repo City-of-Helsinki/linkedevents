@@ -79,7 +79,8 @@ class CustomEsSearchQuery(es_backend.ElasticsearchSearchQuery):
 class CustomEsSearchQuerySet(SearchQuerySet):
     """
     usage example:
-    SearchQuerySet().filter(text='konsertti').decay({'gauss': {'end_time' : {'origin': '2014-05-07', 'scale' : '10d' }}}
+    SearchQuerySet().filter(text='konsertti').decay(
+        {'gauss': {'end_time' : {'origin': '2014-05-07', 'scale' : '10d' }}}
     """
 
     def decay(self, function_dict):

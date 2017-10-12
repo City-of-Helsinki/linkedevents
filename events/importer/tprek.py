@@ -74,7 +74,8 @@ class TprekImporter(Importer):
                 call_command('event_import', 'matko', places=True, single=obj.name)
                 replaced = replace_location(replace=obj, by_source='matko')
             if not replaced:
-                self.logger.warning("Tprek deleted location %s (%s) with events. No unambiguous replacement was found. "
+                self.logger.warning("Tprek deleted location %s (%s) with events."
+                                    "No unambiguous replacement was found. "
                                     "Please look for a replacement location and save it in the replaced_by field. "
                                     "Until then, events will stay mapped to the deleted location." %
                                     (obj.id, str(obj)))

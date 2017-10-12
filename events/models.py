@@ -108,7 +108,9 @@ class Image(models.Model):
     name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True, default='')
 
     data_source = models.ForeignKey(DataSource, related_name='provided_%(class)s_data', db_index=True, null=True)
-    publisher = models.ForeignKey('Organization', verbose_name=_('Publisher'), db_index=True, null=True, blank=True, related_name='Published_images')
+    publisher = models.ForeignKey(
+        'Organization', verbose_name=_('Publisher'), db_index=True, null=True, blank=True,
+        related_name='Published_images')
 
     created_time = models.DateTimeField(auto_now_add=True)
     last_modified_time = models.DateTimeField(auto_now=True)
@@ -237,7 +239,9 @@ class KeywordLabel(models.Model):
 
 
 class Keyword(BaseModel):
-    publisher = models.ForeignKey('Organization', verbose_name=_('Publisher'), db_index=True, null=True, blank=True, related_name='Published_keywords')
+    publisher = models.ForeignKey(
+        'Organization', verbose_name=_('Publisher'), db_index=True, null=True, blank=True,
+        related_name='Published_keywords')
     alt_labels = models.ManyToManyField(KeywordLabel, blank=True, related_name='keywords')
     aggregate = models.BooleanField(default=False)
     deprecated = models.BooleanField(default=False, db_index=True)
@@ -337,7 +341,8 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     def save(self, *args, **kwargs):
         if self.replaced_by and self.replaced_by.replaced_by == self:
             raise Exception("Trying to replace the location replacing this location by this location."
-                            "Please refrain from creating circular replacements and remove either one of the replacements."
+                            "Please refrain from creating circular replacements and"
+                            "remove either one of the replacements."
                             "We don't want homeless events.")
 
         # needed to remap events to replaced location
