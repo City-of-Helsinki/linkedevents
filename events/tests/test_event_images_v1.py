@@ -304,7 +304,8 @@ def test__image_cannot_be_edited_outside_organization_with_apikey(api_client, se
     assert response3.status_code == 403
 
 
-@override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL='')
+# event_list_url is used as magic fixture, which flake8 doesn't see
+@override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL='')  # noqa
 @pytest.mark.django_db
 def test__create_an_event_with_uploaded_image(api_client, list_url, event_list_url, minimal_event_dict, image_data, user):
     api_client.force_authenticate(user)
