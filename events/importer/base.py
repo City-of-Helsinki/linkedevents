@@ -18,7 +18,8 @@ from events.models import Image, Language, Event, License, Offer, EventLink, Pla
 # Using a recursive default dictionary
 # allows easy updating of the same data keys
 # with different languages on different passes.
-def recur_dict(): return defaultdict(recur_dict)
+def recur_dict():
+    return defaultdict(recur_dict)
 
 
 class Importer(object):
