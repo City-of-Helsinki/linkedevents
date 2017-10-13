@@ -773,7 +773,7 @@ class PlaceListViewSet(GeoModelAPIView,
     filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
     filter_class = PlaceFilter
     ordering_fields = ('n_events', 'id', 'name', 'data_source', 'street_address', 'postal_code')
-    ordering = ('-data_source', '-n_events',)
+    ordering = ('-n_events',)
 
     def get_queryset(self):
         """
