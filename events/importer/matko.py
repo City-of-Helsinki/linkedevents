@@ -297,7 +297,8 @@ class MatkoImporter(Importer):
             'konsertti': 'konsertit',
             'klassinen': 'taidemusiikki',
             'kulttuuri': 'kulttuuritapahtumat',
-            'suomi100': 'suomi 100 vuotta -juhlavuosi'
+            'suomi100': 'suomi 100 vuotta -juhlavuosi',
+            'markkinat': 'markkinat (tapahtumat)'
         }
 
         event_types = set()
