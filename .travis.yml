@@ -23,7 +23,9 @@ before_script:
 - psql template1 -c 'create extension hstore;'
 - psql template1 -c 'create extension postgis;'
 
-script: py.test --cov . events
+script:
+- flake8 events
+- py.test --cov . events
 
 before_cache:
 - rm -f $HOME/.cache/pip/log/debug.log
