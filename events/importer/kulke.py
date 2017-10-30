@@ -23,6 +23,8 @@ LOCATION_TPREK_MAP = {
     'malms bibliotek - malms kulturhus': '8192',
     'helsingin kaupungintalo': '28473',
     'stoa': '7259',
+    'parvigalleria': '7259',
+    'musiikkisali': '7259',
     'kanneltalo': '7255',
     'vuotalo': '7260',
     'vuosali': '7260',
