@@ -30,6 +30,7 @@ elasticsearch<5.0
 raven
 -e git+https://github.com/City-of-Helsinki/django-helusers@v0.1#egg=django-helusers
 pytest-django
+flake8
 pip-tools
 django-image-cropping
 easy_thumbnails
