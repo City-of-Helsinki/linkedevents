@@ -30,7 +30,7 @@ def srid_to_srs(srid):
         raise ParseError("'srid' must be an integer")
     try:
         srs = SpatialReference(srid)
-    except SRSException:
+    except SRSException:  # noqa
         raise ParseError("SRID %d not found (try 4326 for GPS coordinate system)" % srid)
     return srs
 
