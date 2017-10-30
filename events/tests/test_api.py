@@ -1,6 +1,6 @@
 import pytest
-from ..models import Event
 from .utils import versioned_reverse as reverse
+
 
 @pytest.mark.django_db
 def test_api_page_size(api_client, event):
@@ -19,4 +19,3 @@ def test_api_page_size(api_client, event):
     assert resp.status_code == 200
     meta = resp.data['meta']
     assert len(resp.data['data']) <= 100
-

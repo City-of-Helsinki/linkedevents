@@ -7,7 +7,7 @@ import re
 import struct
 import time
 import urllib.parse
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 # django and drf
 from django.db.transaction import atomic
@@ -18,7 +18,6 @@ from django.db.utils import IntegrityError
 from django.conf import settings
 from django.core.urlresolvers import NoReverseMatch
 from django.db.models import Q
-from django.shortcuts import get_object_or_404
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 from django.utils.encoding import force_text
@@ -58,7 +57,7 @@ from events.models import (
 )
 from events.translation import EventTranslationOptions
 from helevents.models import User
-from events.renderers import DOCXRenderer, JSONLDRenderer, JSONRenderer
+from events.renderers import DOCXRenderer
 
 
 def get_view_name(cls, suffix=None):
@@ -70,6 +69,8 @@ def get_view_name(cls, suffix=None):
 viewset_classes_by_model = {}
 
 all_views = []
+
+
 def register_view(klass, name, base_name=None):
     entry = {'class': klass, 'name': name}
     if base_name is not None:
@@ -81,9 +82,11 @@ def register_view(klass, name, base_name=None):
         model = klass.serializer_class.Meta.model
         viewset_classes_by_model[model] = klass
 
+
 def get_serializer_for_model(model, version='v1'):
     Viewset = viewset_classes_by_model.get(model)
-    if Viewset is None: return None
+    if Viewset is None:
+        return None
     serializer = None
     if hasattr(Viewset, 'get_serializer_class_for_version'):
         serializer = Viewset.get_serializer_class_for_version(version)
@@ -97,6 +100,7 @@ def generate_id(namespace):
     postfix = base64.b32encode(struct.pack(">Q", int(t)).lstrip(b'\x00'))
     postfix = postfix.strip(b'=').lower().decode(encoding='UTF-8')
     return '{}:{}'.format(namespace, postfix)
+
 
 def parse_id_from_uri(uri):
     """
@@ -112,12 +116,14 @@ def parse_id_from_uri(uri):
     _id = urllib.parse.unquote(_id)
     return _id
 
+
 def perform_id_magic_for(data):
     if 'id' in data:
         err = "Do not send 'id' when POSTing a new Event (got id='{}')"
         raise ParseError(err.format(data['id']))
     data['id'] = generate_id(data['data_source'])
     return data
+
 
 def get_authenticated_data_source_and_publisher(request):
     # api_key takes precedence over user
@@ -170,7 +176,7 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
             return self.related_serializer(obj, hide_ld_context=self.hide_ld_context,
                                            context=self.context).data
         link = super(JSONLDRelatedField, self).to_representation(obj)
-        if link == None:
+        if link is None:
             return None
         return {
             '@id': link
@@ -215,7 +221,7 @@ class EnumChoiceField(serializers.Field):
 
     def to_internal_value(self, data):
         value = utils.get_value_from_tuple_list(self.choices,
-                                               self.prefix + str(data), 0)
+                                                self.prefix + str(data), 0)
         if value is None:
             raise ParseError(_("Invalid value in event_status"))
         return value
@@ -233,9 +239,9 @@ class ISO8601DurationField(serializers.Field):
         if data:
             value = parse_duration(data)
             return (
-                value.days * 24 * 3600 * 1000000
-                + value.seconds * 1000
-                + value.microseconds / 1000
+                value.days * 24 * 3600 * 1000000 +
+                value.seconds * 1000 +
+                value.microseconds / 1000
             )
         else:
             return 0
@@ -341,13 +347,13 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
             for lang in [x[0] for x in settings.LANGUAGES]:
                 key = "%s_%s" % (field_name, lang)
                 val = getattr(obj, key, None)
-                if val == None:
+                if val is None:
                     continue
                 d[lang] = val
 
             # If no text provided, leave the field as null
             for key, val in d.items():
-                if val != None:
+                if val is not None:
                     break
             else:
                 d = None
@@ -391,7 +397,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         if context is not None:
             include_fields = context.get('include', [])
             for field_name in include_fields:
-                if not field_name in self.fields:
+                if field_name not in self.fields:
                     continue
                 field = self.fields[field_name]
                 if isinstance(field, relations.ManyRelatedField):
@@ -420,7 +426,6 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         if not self.publisher:
             raise PermissionDenied(_("User doesn't belong to any organization"))
 
-
     def to_internal_value(self, data):
         for field in self.system_generated_fields:
             if field in data:
@@ -441,8 +446,8 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         if 'id' in ret and 'request' in self.context:
             try:
                 ret['@id'] = reverse(self.view_name,
-                                        kwargs={u'pk': ret['id']},
-                                        request=self.context['request'])
+                                     kwargs={u'pk': ret['id']},
+                                     request=self.context['request'])
             except NoReverseMatch:
                 ret['@id'] = str(ret['id'])
 
@@ -479,20 +484,22 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                     if self.publisher.owned_systems.filter(id=value).exists():
                         return value
                 raise serializers.ValidationError(
-                    {'data_source': _("Setting data_source to %(given)s " +
-                             " is not allowed for your organization. The data_source"
-                             " must be left blank or set to %(required)s ") %
-                           {'given': str(value), 'required': self.data_source}})
+                    {'data_source': _(
+                        "Setting data_source to %(given)s " +
+                        " is not allowed for your organization. The data_source"
+                        " must be left blank or set to %(required)s ") %
+                        {'given': str(value), 'required': self.data_source}})
         return value
 
     def validate_publisher(self, value):
         if value:
             if value != self.publisher:
                 raise serializers.ValidationError(
-                    {'publisher': _("Setting publisher to %(given)s " +
-                                    " is not allowed for your organization. The publisher" +
-                                    " must be left blank or set to %(required)s ") %
-                                  {'given': str(value), 'required': self.publisher}})
+                    {'publisher': _(
+                        "Setting publisher to %(given)s " +
+                        " is not allowed for your organization. The publisher" +
+                        " must be left blank or set to %(required)s ") %
+                        {'given': str(value), 'required': self.publisher}})
         return value
 
     def validate(self, data):
@@ -524,7 +531,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
             instance = super().create(validated_data)
         except IntegrityError as error:
             if 'duplicate' and 'pkey' in str(error):
-                raise serializers.ValidationError({'id':_("An object with given id already exists.")})
+                raise serializers.ValidationError({'id': _("An object with given id already exists.")})
             else:
                 raise error
         return instance
@@ -543,7 +550,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
 
         if 'id' in validated_data:
             if instance.id != validated_data['id']:
-                raise serializers.ValidationError({'id':_("You may not change the id of an existing object.")})
+                raise serializers.ValidationError({'id': _("You may not change the id of an existing object.")})
         super().update(instance, validated_data)
         return instance
 
@@ -657,6 +664,7 @@ class KeywordSetViewSet(JSONAPIViewSet):
     queryset = KeywordSet.objects.all()
     serializer_class = KeywordSetSerializer
 
+
 register_view(KeywordSetViewSet, 'keyword_set')
 
 
@@ -717,7 +725,7 @@ def filter_division(queryset, name, value):
         else:
             # we assume human name
             names.append(item.title())
-    return (queryset.filter(**{name + '__ocd_id__in': ocd_ids})|
+    return (queryset.filter(**{name + '__ocd_id__in': ocd_ids}) |
             queryset.filter(**{name + '__name__in': names})).distinct()
 
 
@@ -812,6 +820,7 @@ class PlaceListViewSet(GeoModelAPIView,
         context.setdefault('skip_fields', set()).add('origin_id')
         return context
 
+
 register_view(PlaceRetrieveViewSet, 'place')
 register_view(PlaceListViewSet, 'place')
 
@@ -837,6 +846,7 @@ class LanguageViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Language.objects.all()
     serializer_class = LanguageSerializer
 
+
 register_view(LanguageViewSet, 'language')
 
 LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
@@ -853,6 +863,7 @@ class OrganizationSerializer(LinkedEventsSerializer):
 class OrganizationViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Organization.objects.all()
     serializer_class = OrganizationSerializer
+
 
 register_view(OrganizationViewSet, 'organization')
 
@@ -895,9 +906,9 @@ class ImageSerializer(LinkedEventsSerializer):
         # name the image after the file, if name was not provided
         if 'name' not in data:
             if 'url' in data:
-             data['name'] = str(data['url']).rsplit('/', 1)[-1]
+                data['name'] = str(data['url']).rsplit('/', 1)[-1]
             if 'image' in data:
-             data['name'] = str(data['image']).rsplit('/', 1)[-1]
+                data['name'] = str(data['image']).rsplit('/', 1)[-1]
         super().validate(data)
         return data
 
@@ -1005,10 +1016,11 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                     if self.publisher.owned_systems.filter(id=id_data_source_prefix).exists():
                         return value
                 raise serializers.ValidationError(
-                    {'id': _("Setting id to %(given)s " +
-                             " is not allowed for your organization. The id"
-                             " must be left blank or set to %(data_source)s:desired_id") %
-                           {'given': str(value), 'data_source': self.data_source}})
+                    {'id': _(
+                        "Setting id to %(given)s " +
+                        " is not allowed for your organization. The id"
+                        " must be left blank or set to %(data_source)s:desired_id") %
+                        {'given': str(value), 'data_source': self.data_source}})
         return value
 
     def validate(self, data):
@@ -1126,15 +1138,15 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         if validated_data.get('event_status') in (Event.Status.POSTPONED, Event.Status.RESCHEDULED):
             if validated_data.get('event_status') != instance.event_status:
                 raise serializers.ValidationError({'event_status':
-                                                  _('POSTPONED and RESCHEDULED statuses cannot be set directly.'
-                                                    'Changing event start_time or marking start_time null'
-                                                    'will reschedule or postpone an event.')})
+                                                   _('POSTPONED and RESCHEDULED statuses cannot be set directly.'
+                                                     'Changing event start_time or marking start_time null'
+                                                     'will reschedule or postpone an event.')})
 
         # Update event_status if a PUBLIC SCHEDULED or CANCELLED event start_time is updated.
         # DRAFT events will remain SCHEDULED up to publication.
         # Check that the event is not explicitly CANCELLED at the same time.
         if (instance.publication_status == PublicationStatus.PUBLIC and
-                    validated_data.get('event_status', Event.Status.SCHEDULED) != Event.Status.CANCELLED):
+                validated_data.get('event_status', Event.Status.SCHEDULED) != Event.Status.CANCELLED):
             # if the instance was ever CANCELLED, RESCHEDULED or POSTPONED, it may never be SCHEDULED again
             if instance.event_status != Event.Status.SCHEDULED:
                 if validated_data.get('event_status') == Event.Status.SCHEDULED:
@@ -1202,7 +1214,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                     # not list/dict
                     pass
         if 'image' in ret:
-            if ret['image'] == None:
+            if ret['image'] is None:
                 ret['images'] = []
             else:
                 ret['images'] = [ret['image']]
@@ -1228,6 +1240,7 @@ def _format_images_v0_1(data):
         data['image'] = None
     else:
         data['image'] = images[0].get('url', None)
+
 
 class EventSerializerV0_1(EventSerializer):
     def __init__(self, *args, **kwargs):
@@ -1400,8 +1413,8 @@ def _filter_event_queryset(queryset, params, srs=None):
 
 class EventFilter(filters.FilterSet):
     division = django_filters.Filter(name='location__divisions', lookup_expr='in',
-                              widget=django_filters.widgets.CSVWidget(),
-                              method='filter_division')
+                                     widget=django_filters.widgets.CSVWidget(),
+                                     method='filter_division')
     super_event_type = django_filters.CharFilter(method='filter_super_event_type')
 
     class Meta:
@@ -1468,7 +1481,7 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
         except Event.DoesNotExist:
             raise Http404("Event does not exist")
         if (event.publication_status == PublicationStatus.PUBLIC or
-            self.organization == event.publisher):
+                self.organization == event.publisher):
             if event.deleted:
                 raise EventDeletedException()
             return event
@@ -1515,9 +1528,8 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
         # docx renderer has additional requirements for listing events
         if request.accepted_renderer.format == 'docx':
             if not request.query_params.get('location'):
-                raise ParseError({'detail':
-                    _('Must specify a location when fetching DOCX file.')}
-                )
+                raise ParseError(
+                    {'detail': _('Must specify a location when fetching DOCX file.')})
             queryset = self.filter_queryset(self.get_queryset())
             if queryset.count() == 0:
                 raise ParseError({'detail': _('No events.')})
@@ -1561,6 +1573,7 @@ class SearchSerializerV0_1(SearchSerializer):
             ret['object_type'] = ret['resource_type']
             del ret['resource_type']
         return ret
+
 
 DATE_DECAY_SCALE = '30d'
 

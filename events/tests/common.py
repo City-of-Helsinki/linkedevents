@@ -1,9 +1,6 @@
 # django
-from django.utils import timezone
 
 # this app
-from .utils import versioned_reverse as reverse
-from events.api import KeywordSerializer, PlaceSerializer
 from events.models import DataSource, Organization
 
 

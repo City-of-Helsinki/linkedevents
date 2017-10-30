@@ -183,7 +183,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-           os.path.join(BASE_DIR, 'templates'),
+            os.path.join(BASE_DIR, 'templates'),
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -204,7 +204,7 @@ TEMPLATES = [
 POSTGIS_VERSION = (2, 1, 1)
 
 # Use ETRS-TM35FIN projection by default
-PROJECTION_SRID=3067
+PROJECTION_SRID = 3067
 # Bounding box of Finland and then some
 
 BOUNDING_BOX = [-548576, 6291456, 1548576, 8388608]
@@ -232,10 +232,10 @@ HAYSTACK_CONNECTIONS = {
     }
 }
 
-import bleach
+import bleach  # noqa
 BLEACH_ALLOWED_TAGS = bleach.ALLOWED_TAGS + ["p", "div"]
 
-from easy_thumbnails.conf import Settings as thumbnail_settings
+from easy_thumbnails.conf import Settings as thumbnail_settings  # noqa
 THUMBNAIL_PROCESSORS = (
     'image_cropping.thumbnail_processors.crop_corners',
 ) + thumbnail_settings.THUMBNAIL_PROCESSORS
@@ -260,7 +260,9 @@ if 'SECRET_KEY' not in locals():
         import random
         system_random = random.SystemRandom()
         try:
-            SECRET_KEY = ''.join([system_random.choice('abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)') for i in range(64)])
+            SECRET_KEY = ''.join(
+                [system_random.choice('abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)')
+                 for i in range(64)])
             secret = open(secret_file, 'w')
             import os
             os.chmod(secret_file, 0o0600)

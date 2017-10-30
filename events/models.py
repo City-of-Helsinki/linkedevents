@@ -19,7 +19,6 @@ attribute to change @context when need to define schemas for custom fields.
 """
 import datetime
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericForeignKey
 import pytz
 from django.contrib.gis.db import models
@@ -40,9 +39,11 @@ from munigeo.models import AdministrativeDivision
 
 User = settings.AUTH_USER_MODEL
 
+
 class PublicationStatus:
     PUBLIC = 1
     DRAFT = 2
+
 
 PUBLICATION_STATUSES = (
     (PublicationStatus.PUBLIC, "public"),
@@ -107,7 +108,9 @@ class Image(models.Model):
     name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True, default='')
 
     data_source = models.ForeignKey(DataSource, related_name='provided_%(class)s_data', db_index=True, null=True)
-    publisher = models.ForeignKey('Organization', verbose_name=_('Publisher'), db_index=True, null=True, blank=True, related_name='Published_images')
+    publisher = models.ForeignKey(
+        'Organization', verbose_name=_('Publisher'), db_index=True, null=True, blank=True,
+        related_name='Published_images')
 
     created_time = models.DateTimeField(auto_now_add=True)
     last_modified_time = models.DateTimeField(auto_now=True)
@@ -197,7 +200,7 @@ class Organization(MPTTModel, BaseModel):
     parent = TreeForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL,
                             related_name='children')
     admin_users = models.ManyToManyField(
-       User, blank=True, related_name='admin_organizations'
+        User, blank=True, related_name='admin_organizations'
     )
     admin_orgs = models.ManyToManyField(
         'self', blank=True, related_name='moderated_orgs'
@@ -205,7 +208,7 @@ class Organization(MPTTModel, BaseModel):
 
     class Meta:
         ordering = ('name',)
-        verbose_name =_('organization')
+        verbose_name = _('organization')
         verbose_name_plural = _('organizations')
 
     class MPTTMeta:
@@ -236,7 +239,9 @@ class KeywordLabel(models.Model):
 
 
 class Keyword(BaseModel):
-    publisher = models.ForeignKey('Organization', verbose_name=_('Publisher'), db_index=True, null=True, blank=True, related_name='Published_keywords')
+    publisher = models.ForeignKey(
+        'Organization', verbose_name=_('Publisher'), db_index=True, null=True, blank=True,
+        related_name='Published_keywords')
     alt_labels = models.ManyToManyField(KeywordLabel, blank=True, related_name='keywords')
     aggregate = models.BooleanField(default=False)
     deprecated = models.BooleanField(default=False, db_index=True)
@@ -321,7 +326,6 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     )
     n_events_changed = models.BooleanField(default=False, db_index=True)
 
-
     class Meta:
         verbose_name = _('place')
         verbose_name_plural = _('places')
@@ -337,7 +341,8 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     def save(self, *args, **kwargs):
         if self.replaced_by and self.replaced_by.replaced_by == self:
             raise Exception("Trying to replace the location replacing this location by this location."
-                            "Please refrain from creating circular replacements and remove either one of the replacements."
+                            "Please refrain from creating circular replacements and"
+                            "remove either one of the replacements."
                             "We don't want homeless events.")
 
         # needed to remap events to replaced location
@@ -364,6 +369,7 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
                 geometry__boundary__contains=self.position)
         else:
             self.divisions.clear()
+
 
 reversion.register(Place)
 
@@ -534,6 +540,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         self.deleted = False
         self.save(update_fields=("deleted",), using=using, force_update=True)
 
+
 reversion.register(Event)
 
 
@@ -563,6 +570,7 @@ class Offer(models.Model, SimpleValueMixin):
 
     def value_fields(self):
         return ['price', 'info_url', 'description', 'is_free']
+
 
 reversion.register(Offer)
 

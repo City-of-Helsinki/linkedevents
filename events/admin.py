@@ -7,8 +7,7 @@ from leaflet.admin import LeafletGeoAdmin
 from modeltranslation.admin import TranslationAdmin
 from reversion.admin import VersionAdmin
 from events.api import generate_id
-from events.models import Event, Keyword, Place, Language, \
-    OpeningHoursSpecification, KeywordLabel, Organization, License, DataSource
+from events.models import Place, Organization, License, DataSource
 
 
 class BaseAdmin(admin.ModelAdmin):
@@ -46,8 +45,9 @@ class PlaceAdmin(HelsinkiGeoAdmin, BaseAdmin, TranslationAdmin, VersionAdmin):
 
         }),
         (_('Contact info'), {
-            'fields':  ('email', 'telephone', 'contact_type', 'street_address', 'address_locality', 'address_region',
-                        'postal_code', 'post_office_box_num')
+            'fields': (
+                'email', 'telephone', 'contact_type', 'street_address',
+                'address_locality', 'address_region', 'postal_code', 'post_office_box_num')
         }),
     )
 
@@ -65,6 +65,7 @@ class PlaceAdmin(HelsinkiGeoAdmin, BaseAdmin, TranslationAdmin, VersionAdmin):
 
         super().save_model(request, obj, form, change)
 
+
 admin.site.register(Place, PlaceAdmin)
 
 
@@ -72,7 +73,8 @@ class OrganizationAdmin(BaseAdmin):
     list_display = ('name', 'nr_org_admins')
 
     formfield_overrides = {
-        models.ManyToManyField: {'widget': FilteredSelectMultiple("ylläpitäjät", is_stacked=False)},
+        models.ManyToManyField: {
+            'widget': FilteredSelectMultiple("ylläpitäjät", is_stacked=False)},
     }
     fields = ('admin_users',)
 
@@ -80,11 +82,13 @@ class OrganizationAdmin(BaseAdmin):
         return obj.admin_users.count()
     nr_org_admins.short_description = _('Admins')
 
+
 admin.site.register(Organization, OrganizationAdmin)
 
 
 class DataSourceAdmin(BaseAdmin):
     fields = ('id', 'name', 'api_key', 'owner', 'user_editable')
+
 
 admin.site.register(DataSource, DataSourceAdmin)
 
@@ -103,5 +107,6 @@ class LicenseAdmin(BaseAdmin, TranslationAdmin, VersionAdmin):
             return ['id']
         else:
             return []
+
 
 admin.site.register(License, LicenseAdmin)

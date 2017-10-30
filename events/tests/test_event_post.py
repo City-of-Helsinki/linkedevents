@@ -12,7 +12,6 @@ from django.core.management import call_command
 
 
 from events.tests.utils import assert_event_data_is_equal
-from .conftest import keyword_id
 from events.models import Event, Keyword, Place
 from django.conf import settings
 
@@ -53,13 +52,13 @@ def test__create_a_minimal_event_with_post(api_client,
 
 @pytest.mark.django_db
 def test__cannot_create_an_event_with_existing_id(api_client,
-                                           minimal_event_dict,
-                                           user):
+                                                  minimal_event_dict,
+                                                  user):
     api_client.force_authenticate(user=user)
     minimal_event_dict['id'] = settings.SYSTEM_DATA_SOURCE_ID + ':1'
-    response = create_with_post(api_client, minimal_event_dict)
-    response2 = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
-    assert response2.status_code == 400
+    create_with_post(api_client, minimal_event_dict)
+    response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
+    assert response.status_code == 400
 
 
 @pytest.mark.django_db
@@ -143,11 +142,12 @@ def test__create_a_draft_event_without_location_and_keyword(list_url,
     resp2 = api_client.get(response.data['@id'])
     assert '@id' not in resp2.data
 
+
 @pytest.mark.django_db
 def test__cannot_create_a_draft_event_without_a_name(list_url,
-                                                               api_client,
-                                                               minimal_event_dict,
-                                                               user):
+                                                     api_client,
+                                                     minimal_event_dict,
+                                                     user):
     api_client.force_authenticate(user=user)
     minimal_event_dict.pop('name')
     minimal_event_dict['publication_status'] = 'draft'
@@ -158,9 +158,9 @@ def test__cannot_create_a_draft_event_without_a_name(list_url,
 
 @pytest.mark.django_db
 def test__cannot_publish_an_event_without_location(list_url,
-                                                               api_client,
-                                                               minimal_event_dict,
-                                                               user):
+                                                   api_client,
+                                                   minimal_event_dict,
+                                                   user):
     api_client.force_authenticate(user=user)
     minimal_event_dict.pop('location')
     response = api_client.post(list_url, minimal_event_dict, format='json')
@@ -170,9 +170,9 @@ def test__cannot_publish_an_event_without_location(list_url,
 
 @pytest.mark.django_db
 def test__cannot_publish_an_event_without_keywords(list_url,
-                                                               api_client,
-                                                               minimal_event_dict,
-                                                               user):
+                                                   api_client,
+                                                   minimal_event_dict,
+                                                   user):
     api_client.force_authenticate(user=user)
     minimal_event_dict.pop('keywords')
     response = api_client.post(list_url, minimal_event_dict, format='json')
@@ -182,22 +182,22 @@ def test__cannot_publish_an_event_without_keywords(list_url,
 
 @pytest.mark.django_db
 def test__keyword_n_events_updated(list_url,
-                                                               api_client,
-                                                               minimal_event_dict,
-                                                               user, data_source):
+                                   api_client,
+                                   minimal_event_dict,
+                                   user, data_source):
     api_client.force_authenticate(user=user)
-    response = api_client.post(list_url, minimal_event_dict, format='json')
+    api_client.post(list_url, minimal_event_dict, format='json')
     call_command('update_n_events')
     assert Keyword.objects.get(id=data_source.id + ':test').n_events == 1
 
 
 @pytest.mark.django_db
 def test__location_n_events_updated(list_url,
-                                                               api_client,
-                                                               minimal_event_dict,
-                                                               user, data_source):
+                                    api_client,
+                                    minimal_event_dict,
+                                    user, data_source):
     api_client.force_authenticate(user=user)
-    response = api_client.post(list_url, minimal_event_dict, format='json')
+    api_client.post(list_url, minimal_event_dict, format='json')
     call_command('update_n_events')
     assert Place.objects.get(id=data_source.id + ':test_location').n_events == 1
 
@@ -232,16 +232,15 @@ def test__autopopulated_fields_at_create(
     assert event.has_end_time is False
 
 
-
 # the following values may not be posted
 @pytest.mark.django_db
 @pytest.mark.parametrize("non_permitted_input,non_permitted_response", [
-    ({'id': 'not_allowed:1'}, 400), # may not fake id
+    ({'id': 'not_allowed:1'}, 400),  # may not fake id
     ({'data_source': 'theotherdatasourceid'}, 400),  # may not fake data source
     ({'publisher': 'test_organization2'}, 400),  # may not fake organization
 ])
 def test__non_editable_fields_at_create(api_client, minimal_event_dict, list_url, user,
-                              non_permitted_input, non_permitted_response):
+                                        non_permitted_input, non_permitted_response):
     api_client.force_authenticate(user)
 
     minimal_event_dict.update(non_permitted_input)
@@ -321,7 +320,7 @@ def test_short_description_cannot_exceed_160_chars(api_client, minimal_event_dic
         response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
     assert response.status_code == 400
     assert (force_text(response.data['short_description']['fi'] ==
-            'Short description length must be 160 characters or less'))
+                       'Short description length must be 160 characters or less'))
 
 
 @pytest.mark.django_db

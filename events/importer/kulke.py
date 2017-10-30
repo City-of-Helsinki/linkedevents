@@ -4,19 +4,16 @@ import os
 import re
 import functools
 from lxml import etree
-from modeltranslation.translator import translator
 import dateutil
 from pytz import timezone
 from django.conf import settings
-from django.utils.timezone import get_default_timezone
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db import IntegrityError
 
-from .sync import ModelSyncher
 from .base import Importer, register_importer, recur_dict
-from .util import unicodetext, active_language
-from events.models import DataSource, Place, Event, Keyword, KeywordLabel, Organization, EventAggregate, EventAggregateMember
+from .util import unicodetext
+from events.models import DataSource, Event, EventAggregate, EventAggregateMember, Keyword, Organization, Place
 from events.keywords import KeywordMatcher
 from events.translation_utils import expand_model_fields
 
@@ -68,6 +65,7 @@ SKIP_EVENTS_WITH_CATEGORY = {
     728, 729, 730, 735,
 }
 
+
 def _query_courses():
     filter_out_keywords = map(
         make_kulke_id,
@@ -78,6 +76,7 @@ def _query_courses():
     ).filter(
         keywords__id__in=set(filter_out_keywords)
     )
+
 
 def _delete_courses():
     courses_q = _query_courses()
@@ -126,8 +125,10 @@ MANUAL_CATEGORIES = {
 
 LOCAL_TZ = timezone('Europe/Helsinki')
 
+
 def make_kulke_id(num):
     return "kulke:{}".format(num)
+
 
 def make_event_name(title, subtitle):
     if title and subtitle:
@@ -136,6 +137,7 @@ def make_event_name(title, subtitle):
         return title
     elif subtitle:
         return subtitle
+
 
 def get_event_name(event):
     if 'fi' in event['name']:
@@ -146,6 +148,7 @@ def get_event_name(event):
             return None
         else:
             return names[0]
+
 
 @register_importer
 class KulkeImporter(Importer):
@@ -178,7 +181,6 @@ class KulkeImporter(Importer):
         for cid, c in list(categories.items()):
             if c is None:
                 continue
-            match_type = 'no match'
             ctext = c['text']
             # Ignore list (not used and/or not a category for general consumption)
             #
@@ -216,7 +218,6 @@ class KulkeImporter(Importer):
             categories[cid] = {
                 'type': typeid, 'text': ctype.text}
         return categories
-
 
     def find_place(self, event):
         tprek_id = None
@@ -264,8 +265,9 @@ class KulkeImporter(Importer):
             print("No match found for place '%s' (event %s)" % (loc_name, get_event_name(event)))
 
     def _import_event(self, lang, event_el, events):
-        tag = lambda t: 'event' + t
-        text = lambda t: unicodetext(event_el.find(tag(t)))
+        def text(t):
+            return unicodetext(event_el.find('event' + t))
+
         def clean(t):
             if t is None:
                 return None
@@ -273,7 +275,9 @@ class KulkeImporter(Importer):
             if not t:
                 return None
             return t
-        text_content = lambda k: clean(text(k))
+
+        def text_content(k):
+            return clean(text(k))
 
         eid = int(event_el.attrib['id'])
 
@@ -315,9 +319,9 @@ class KulkeImporter(Importer):
 
         event['info_url'][lang] = text_content('www')
         # todo: process extra links?
-        links = event_el.find(tag('links'))
+        links = event_el.find('eventlinks')
         if links is not None:
-            links = links.findall(tag('link'))
+            links = links.findall('eventlink')
             assert len(links)
         else:
             links = []
@@ -335,7 +339,7 @@ class KulkeImporter(Importer):
             external_links.append({'link': link})
         event['external_links'][lang] = external_links
 
-        eventattachments = event_el.find(tag('attachments'))
+        eventattachments = event_el.find('eventattachments')
         if eventattachments is not None:
             for attachment in eventattachments:
                 if attachment.attrib['type'] == 'teaserimage':
@@ -385,7 +389,7 @@ class KulkeImporter(Importer):
 
         offer = event['offers'][0]
         price = text_content('price')
-        price_el = event_el.find(tag('price'))
+        price_el = event_el.find('eventprice')
         free = (price_el.attrib['free'] == "true")
 
         offer['is_free'] = free
@@ -401,7 +405,7 @@ class KulkeImporter(Importer):
 
         if hasattr(self, 'categories'):
             event_keywords = set()
-            for category_id in event_el.find(tag('categories')):
+            for category_id in event_el.find('eventcategories'):
                 category = self.categories.get(int(category_id.text))
                 if category:
                     # YSO keywords
@@ -429,7 +433,7 @@ class KulkeImporter(Importer):
         location['telephone'][lang] = text_content('phone')
         location['name'] = text_content('location')
 
-        if not 'place' in location:
+        if 'place' not in location:
             self.find_place(event)
         return True
 
@@ -486,8 +490,8 @@ class KulkeImporter(Importer):
         common_fields = set(
             f for f in fieldnames
             if 1 == len(set(map(
-                    value_mappers.get(f, lambda x: x),
-                    (getattr(event, f) for event in events.all())))))
+                value_mappers.get(f, lambda x: x),
+                (getattr(event, f) for event in events.all())))))
 
         for fieldname in common_fields:
             value = getattr(events.first(), fieldname)
@@ -511,11 +515,10 @@ class KulkeImporter(Importer):
         if expand_model_fields(super_event, ['headline'])[0] not in common_fields:
             words = getattr(events.first(), 'headline').split(' ')
             name = ''
-            is_common = lambda: all(
-                headline.startswith(name + words[0])
-                for headline in [event.name for event in events]
-            )
-            while words and is_common():
+            while words and all(
+                    headline.startswith(name + words[0])
+                    for headline in [event.name for event in events]
+                    ):
                 name += words.pop(0) + ' '
                 print(words)
                 print(name)
@@ -530,7 +533,7 @@ class KulkeImporter(Importer):
             )
             setattr(super_event, 'name_{}'.format(lang),
                     make_event_name(headline, secondary_headline)
-            )
+                    )
 
         # Gather common keywords present in *all* subevents
         common_keywords = functools.reduce(
@@ -573,14 +576,14 @@ class KulkeImporter(Importer):
                 super_event = Event(
                     publisher=self.organization,
                     super_event_type=Event.SuperEventType.RECURRING,
-                    data_source=DataSource.objects.get(pk='kulke'), # TODO
+                    data_source=DataSource.objects.get(pk='kulke'),  # TODO
                     id="linkedevents:agg-{}".format(aggregate.id))
                 super_event.save()
                 aggregate.super_event = super_event
                 aggregate.save()
                 for event in events:
-                    member = EventAggregateMember.objects.create(event=event,
-                                                                 event_aggregate=aggregate)
+                    EventAggregateMember.objects.create(event=event,
+                                                        event_aggregate=aggregate)
             elif cnt == 1:
                 aggregate = superevent_aggregates.first()
                 if len(group) == 1:
@@ -594,8 +597,8 @@ class KulkeImporter(Importer):
                 else:
                     for event in events:
                         try:
-                            member = EventAggregateMember.objects.create(event=event,
-                                                                         event_aggregate=aggregate)
+                            EventAggregateMember.objects.create(event=event,
+                                                                event_aggregate=aggregate)
                         except IntegrityError:
                             # Ignore unique violations. They
                             # ensure that no duplicate members are added.

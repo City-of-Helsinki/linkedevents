@@ -5,18 +5,17 @@ import requests_cache
 
 from django import db
 from django.conf import settings
-from django.contrib.gis.geos import Point, Polygon
-from django.contrib.gis.gdal import SpatialReference, CoordTransform
-from django.utils.translation import activate, get_language
+from django.contrib.gis.geos import Point
 from django.core.management import call_command
 
 from events.importer.util import replace_location
-from events.models import *
+from events.models import DataSource, Organization, Place
 from .sync import ModelSyncher
 from .base import Importer, register_importer
 
 URL_BASE = 'http://www.hel.fi/palvelukarttaws/rest/v3/'
 GK25_SRID = 3879
+
 
 @register_importer
 class TprekImporter(Importer):
@@ -53,7 +52,7 @@ class TprekImporter(Importer):
 
     def pk_get(self, resource_name, res_id=None):
         url = "%s%s/" % (URL_BASE, resource_name)
-        if res_id != None:
+        if res_id is not None:
             url = "%s%s/" % (url, res_id)
         print("Fetching URL %s" % url)
         resp = requests.get(url)
@@ -61,7 +60,6 @@ class TprekImporter(Importer):
         return resp.json()
 
     def delete_and_replace(self, obj):
-        # print('mark for deletion %s' % str(obj))
         obj.deleted = True
         obj.save(update_fields=['deleted'])
         # we won't stand idly by and watch tprek delete needed units willy-nilly without raising a ruckus!
@@ -76,7 +74,8 @@ class TprekImporter(Importer):
                 call_command('event_import', 'matko', places=True, single=obj.name)
                 replaced = replace_location(replace=obj, by_source='matko')
             if not replaced:
-                self.logger.warning("Tprek deleted location %s (%s) with events. No unambiguous replacement was found. "
+                self.logger.warning("Tprek deleted location %s (%s) with events."
+                                    "No unambiguous replacement was found. "
                                     "Please look for a replacement location and save it in the replaced_by field. "
                                     "Until then, events will stay mapped to the deleted location." %
                                     (obj.id, str(obj)))
@@ -153,7 +152,6 @@ class TprekImporter(Importer):
         self._save_translated_field(obj, 'address_locality', info, 'address_city')
 
         self._save_translated_field(obj, 'url', info, 'info_url', max_length=200)
-        #self._save_translated_field(obj, 'picture_caption', info, 'picture_caption')
 
         self._save_field(obj, 'telephone', info, 'phone')
 
@@ -175,7 +173,7 @@ class TprekImporter(Importer):
         e = info.get('longitude', 0)
         position = None
         if n and e:
-            p = Point(e, n, srid=4326) # GPS coordinate system
+            p = Point(e, n, srid=4326)  # GPS coordinate system
             if p.within(self.bounding_box):
                 if self.target_srid != 4326:
                     p.transform(self.gps_to_target_ct)

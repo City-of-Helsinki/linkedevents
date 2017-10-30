@@ -2,7 +2,6 @@
 
 import requests
 import requests_cache
-import json
 import re
 import dateutil.parser
 from datetime import datetime, timedelta
@@ -13,7 +12,6 @@ from events.models import Event, Keyword, DataSource, Organization, Place
 from pytz import timezone
 import pytz
 import bleach
-from pprint import pprint
 
 from .sync import ModelSyncher
 
@@ -23,7 +21,7 @@ YSO_KEYWORD_MAPS = {
     u'Lapset': u'p4354',
     u'Kirjastot': u'p2787',
     u'Opiskelijat': u'p16486',
-    u'Konsertit ja klubit': (u'p11185', u'p20421'), # -> konsertit, musiikkiklubit
+    u'Konsertit ja klubit': (u'p11185', u'p20421'),  # -> konsertit, musiikkiklubit
     u'Kurssit': u'p9270',
     u'venäjä': u'p7643',  # -> venäjän kieli
     u'Seniorit': u'p2434',  # -> vanhukset
@@ -38,12 +36,11 @@ YSO_KEYWORD_MAPS = {
     u'Pelitapahtumat': u'p6062',  # -> pelit
     u'Satutunnit': u'p14710',
     u'Koululaiset': u'p16485',
-    u'Lasten ja nuorten tapahtumat': (u'p4354', u'p11617'), # -> lapset, nuoret
+    u'Lasten ja nuorten tapahtumat': (u'p4354', u'p11617'),  # -> lapset, nuoret
     u'Lapset ja perheet': (u'p4354', u'p4363'),  # -> lapset, perheet
     u'Lukupiirit': u'p11406',  # -> lukeminen
     u'Musiikki': u'p1808',  # -> musiikki
     u'muut kielet': u'p556',  # -> kielet
-    # u'Opastuskalenteri ': '?',
 }
 
 LOCATIONS = {
@@ -67,7 +64,6 @@ LOCATIONS = {
     u"Kirjasto 10": ((10800, 11303), 8286),
     u"Kirjasto Omena": ((10801, 11305), 15395),
     u"Kivenlahden kirjasto": ((10803, 11309), 15334),
-    # u"Kohtaamispaikka@lasipalatsi": (10804, 11311),     # -> kaupunkiverstas ?
     u"Kaupunkiverstas": ((10804, 11311), 8145),  # former Kohtaamispaikka
     u"Koivukylän kirjasto": ((10805, 11313), 19572),
     u"Kontulan kirjasto u": ((10806, 11315), 8178),
@@ -76,7 +72,6 @@ LOCATIONS = {
     u"Laajalahden kirjasto": ((10813, 11321), 15344),
     u"Laajasalon kirjasto": ((10814, 11323), 8143),
     u"Laaksolahden kirjasto": ((10815, 11325), 15309),
-    #    u"Laitoskirjastot": ((10816, 11327), ),
     u"Lauttasaaren kirjasto": ((10817, 11329), 8344),
     u"Lumon kirjasto": ((10818, 11331), 18262),
     u"Länsimäen kirjasto": ((10819, 11333), 18620),
@@ -84,7 +79,6 @@ LOCATIONS = {
     u"Malminkartanon kirjasto": ((10821, 11337), 8220),
     u"Martinlaakson kirjasto": ((10822, 11339), 19217),
     u"Maunulan kirjasto": ((10823, 11341), 8350),
-    #u"Mikkolan kirjasto": (10808, 11343),  #  Suljettu
     u"Monikielinen kirjasto": ((10824, 11345), 8223),
     u"Munkkiniemen kirjasto": ((10825, 11347), 8158),
     u"Myllypuron mediakirjasto": ((10826, 11349), 8348),
@@ -133,13 +127,16 @@ HELMET_LANGUAGES = {
     'en': 2
 }
 
+
 def get_lang(lang_id):
     for code, lid in HELMET_LANGUAGES.items():
         if lid == lang_id:
             return code
     return None
 
+
 LOCAL_TZ = timezone('Europe/Helsinki')
+
 
 def clean_text(text, strip_newlines=False):
     text = text.replace('\xa0', ' ').replace('\x1f', '')
@@ -159,6 +156,7 @@ def mark_deleted(obj):
 
 class APIBrokenError(Exception):
     pass
+
 
 @register_importer
 class HelmetImporter(Importer):
@@ -203,7 +201,7 @@ class HelmetImporter(Importer):
                     cat_id_set.add('yso:' + yso_val)
 
             keyword_list = Keyword.objects.filter(data_source=yso_data_source).\
-                    filter(id__in=cat_id_set)
+                filter(id__in=cat_id_set)
             self.yso_by_id = {p.id: p for p in keyword_list}
         else:
             self.yso_by_id = {}
@@ -225,10 +223,12 @@ class HelmetImporter(Importer):
         return ext_props
 
     def _import_event(self, lang, event_el, events):
-        # Times are in UTC+02:00 timezone
-        to_utc = lambda dt: LOCAL_TZ.localize(
-            dt, is_dst=None).astimezone(pytz.utc)
-        dt_parse = lambda dt_str: to_utc(dateutil.parser.parse(dt_str))
+        def dt_parse(dt_str):
+            """Convert a string to UTC datetime"""
+            # Times are in UTC+02:00 timezone
+            return LOCAL_TZ.localize(
+                    dateutil.parser.parse(dt_str),
+                    is_dst=None).astimezone(pytz.utc)
 
         start_time = dt_parse(event_el['EventStartDate'])
         end_time = dt_parse(event_el['EventEndDate'])
@@ -243,7 +243,7 @@ class HelmetImporter(Importer):
             fi_ver_ids = [int(x['ContentId']) for x in event_el['LanguageVersions'] if x['LanguageId'] == 1]
             fi_event = None
             for fi_id in fi_ver_ids:
-                if not fi_id in events:
+                if fi_id not in events:
                     continue
                 fi_event = events[fi_id]
                 if fi_event['start_time'] != start_time or fi_event['end_time'] != end_time:
@@ -297,19 +297,13 @@ class HelmetImporter(Importer):
                     return
             event[field_name] = val
 
-        if not 'date_published' in event:
+        if 'date_published' not in event:
             # Publication date changed based on language version, so we make sure
             # to save it only from the primary event.
             event['date_published'] = dt_parse(event_el['PublicDate'])
 
         set_attr('start_time', dt_parse(event_el['EventStartDate']))
         set_attr('end_time', dt_parse(event_el['EventEndDate']))
-
-        to_tprek_id = lambda k: self.tprek_by_id[str(k)]
-        to_le_id = lambda nid: next(
-            (to_tprek_id(v[1]) for k, v in LOCATIONS.items()
-             if nid in v[0]), None)
-        yso_to_db = lambda v: self.yso_by_id['yso:' + v]
 
         event_keywords = event.get('keywords', set())
 
@@ -351,15 +345,16 @@ class HelmetImporter(Importer):
                 keyword_orig.save()
 
             event_keywords.add(keyword_orig)
-            ### Saving original keyword ends ###
+            # Saving original keyword ends
 
             # One of the type 7 nodes (either Tapahtumat, or just the library name)
             # points to the location, which is mapped to Linked Events keyword ID
             if node_type == 7:
-                if not 'location' in event:
-                    location_id = to_le_id(classification['NodeId'])
-                    if location_id:
-                        event['location']['id'] = location_id
+                if 'location' not in event:
+                    for k, v in LOCATIONS.items():
+                        if classification['NodeId'] in v[0]:
+                            event['location']['id'] = self.tprek_by_id[str(v[1])]
+                            break
             else:
                 if not self.yso_by_id:
                     continue
@@ -368,9 +363,10 @@ class HelmetImporter(Importer):
                     yso = YSO_KEYWORD_MAPS[str(classification['NodeName'])]
                     if isinstance(yso, tuple):
                         for t_v in yso:
-                            event_keywords.add(yso_to_db(t_v))
+                            event_keywords.add(self.yso_by_id['yso:' + t_v])
+
                     else:
-                        event_keywords.add(yso_to_db(yso))
+                        event_keywords.add(self.yso_by_id['yso:' + yso])
 
         event['keywords'] = event_keywords
 
@@ -381,7 +377,7 @@ class HelmetImporter(Importer):
                 del ext_props['PlaceExtraInfo']
         else:
             self.logger.warning('Missing TPREK location map for event %s (%s)' %
-                (event['name'][lang], str(eid)))
+                                (event['name'][lang], str(eid)))
             del events[event['origin_id']]
             return event
 
@@ -395,7 +391,7 @@ class HelmetImporter(Importer):
         return event
 
     def _recur_fetch_paginated_url(self, url, lang, events):
-        for _ in range(0,5):
+        for _ in range(0, 5):
             response = requests.get(url)
             if response.status_code != 200:
                 self.logger.error("HelMet API reported HTTP %d" % response.status_code)
@@ -436,7 +432,6 @@ class HelmetImporter(Importer):
                     "&$format=json"
                 ), lang, events)
 
-
     def import_events(self):
         print("Importing HelMet events")
         events = recur_dict()
@@ -449,7 +444,6 @@ class HelmetImporter(Importer):
                 self._recur_fetch_paginated_url(url, lang, events)
             except APIBrokenError:
                 return
-
 
         event_list = sorted(events.values(), key=lambda x: x['end_time'])
         qs = Event.objects.filter(end_time__gte=datetime.now(),

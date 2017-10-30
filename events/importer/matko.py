@@ -13,7 +13,6 @@ from events.models import DataSource, Place, Event, Organization
 from events.models import Keyword
 from events.keywords import KeywordMatcher
 
-from .sync import ModelSyncher
 from .base import Importer, register_importer, recur_dict
 from .util import clean_text, unicodetext, replace_location
 
@@ -75,11 +74,14 @@ EXTRA_LOCATIONS = {
     }
 }
 
+
 def matko_tag(tag):
     return '{https://aspicore-asp.net/matkoschema/}' + tag
 
+
 def text(item, tag):
     return unicodetext(item.find(matko_tag(tag)))
+
 
 def matko_status(num):
     if num == 2:
@@ -87,6 +89,7 @@ def matko_status(num):
     if num == 3:
         return Event.Status.CANCELLED
     return None
+
 
 def zipcode_and_muni(text):
     if text is None:
@@ -119,7 +122,7 @@ class MatkoImporter(Importer):
         self.data_source, _ = DataSource.objects.get_or_create(id=self.name, defaults=defaults)
         self.tprek_data_source = DataSource.objects.get(id='tprek')
 
-        ytj_ds, _ = DataSource.objects.get_or_create(defaults={'name':'YTJ'}, id='ytj')
+        ytj_ds, _ = DataSource.objects.get_or_create(defaults={'name': 'YTJ'}, id='ytj')
 
         org_args = dict(id='ytj:0586977-6')
         defaults = dict(name='Helsingin Markkinointi Oy', data_source=ytj_ds)
@@ -135,7 +138,9 @@ class MatkoImporter(Importer):
         deleted_place_list = deleted_place_list.annotate(count=Count('name_fi')).\
             filter(count=1).values('id', 'origin_id', 'name_fi', 'replaced_by_id')
         self.tprek_by_name = {p['name_fi'].lower(): (p['id'], p['origin_id']) for p in place_list}
-        self.deleted_tprek_by_name = {p['name_fi'].lower(): (p['id'], p['origin_id'], p['replaced_by_id']) for p in deleted_place_list}
+        self.deleted_tprek_by_name = {
+            p['name_fi'].lower(): (p['id'], p['origin_id'], p['replaced_by_id'])
+            for p in deleted_place_list}
 
         if self.options['cached']:
             requests_cache.install_cache('matko')
@@ -271,7 +276,7 @@ class MatkoImporter(Importer):
         self.put(event, 'start_time', start_time)
         self.put(event, 'end_time', end_time)
         self.put(event, 'event_status', matko_status(int(text(item, 'status'))))
-        if text(item, 'placeuniqueid') == None:
+        if text(item, 'placeuniqueid') is None:
             del events[eid]
             return
         self.put(event['location'], 'origin_id', int(text(item, 'placeuniqueid')))
@@ -286,11 +291,11 @@ class MatkoImporter(Importer):
             'kesä',
             'talvi'
         ]
-        use_as_target_group = [ # fixme
+        use_as_target_group = [  # fixme
             'koko perheelle'
         ]
         mapping = {
-            'tanssi ja teatteri': 'tanssi', # following visithelsinki.fi
+            'tanssi ja teatteri': 'tanssi',  # following visithelsinki.fi
             'messu': 'messut (tapahtumat)',
             'perinnetapahtuma': 'perinne',
             'pop/rock': 'populaarimusiikki',
@@ -355,9 +360,6 @@ class MatkoImporter(Importer):
         return events
 
     def _parse_location(self, lang_code, item, places):
-        #if clean_text(text(item, 'isvenue')) == 'False':
-        #    return
-
         lid = int(text(item, 'id'))
         location = places[lid]
 
@@ -401,19 +403,6 @@ class MatkoImporter(Importer):
 
         return places
 
-    def _import_organizers_from_events(self, events):
-        organizers = recur_dict()
-        for k, event in events.items():
-            if not 'organizer' in event:
-                continue
-            organizer = event['organizer']
-            if not 'name' in organizer or not 'fi' in organizer['name']:
-                continue
-            oid = organizer['name']['fi']
-            organizers[oid]['name'].update(organizer['name'])
-            organizers[oid]['phone'].update(organizer['phone'])
-        return organizers
-
     def items_from_url(self, url):
         resp = requests.get(url)
         assert resp.status_code == 200
@@ -428,7 +417,6 @@ class MatkoImporter(Importer):
             items = self.items_from_url(url)
             for item in items:
                 self._import_event_from_feed(lang, item, events, keyword_matcher)
-            organizers = self._import_organizers_from_events(events)
 
         for event in events.values():
             self.save_event(event)
@@ -462,7 +450,7 @@ class MatkoImporter(Importer):
             for matko_id, location in self.places.items():
                 if location['name']['fi'].lower() == self.options['single'].lower():
                     self.logger.info("Location %s (%s) found in matko feed"
-                          % (self.options['single'], matko_id))
+                                     % (self.options['single'], matko_id))
                     self.save_place(location)
                     return
             self.logger.warning("Location %s not found in matko feed" % self.options['single'])

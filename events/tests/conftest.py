@@ -15,7 +15,7 @@ import pytest
 from rest_framework.test import APIClient
 
 
-# events 
+# events
 from events.models import (
     DataSource, Organization, Place, Language, Keyword, KeywordLabel, Event,
     Offer)
@@ -32,9 +32,11 @@ DATETIME = (timezone.now() + timedelta(days=1)).isoformat().replace('+00:00', 'Z
 
 OTHER_DATA_SOURCE_ID = "testotherdatasourceid"
 
+
 @pytest.fixture
 def kw_name():
     return 'known_keyword'
+
 
 @pytest.fixture
 def api_client():
@@ -112,6 +114,7 @@ def organization2(other_data_source, user2):
 @pytest.fixture
 def offer(event2):
     return Offer.objects.create(event=event2, is_free=True)
+
 
 @pytest.mark.django_db
 @pytest.fixture
@@ -239,6 +242,7 @@ def event2(other_data_source, organization2, place2, user2, keyword):
         name='event2'
     )
 
+
 @pytest.fixture
 def event3(place3, user):
     return Event.objects.create(
@@ -299,7 +303,6 @@ def keyword(data_source, kw_name):
     obj.save()
 
     return obj
-
 
 
 @pytest.mark.django_db
