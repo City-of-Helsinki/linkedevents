@@ -33,7 +33,7 @@ def get_price(raw_event):
     '''Returns either None or a dict with the price in each language.'''
     try:
         return raw_event['offers'][0]['price']
-    except:
+    except (IndexError, KeyError):
         return None
 
 
