@@ -40,7 +40,8 @@ LOCATION_TPREK_MAP = {
     'mäkelänrinteen uintikeskus': '41783',
     'uimastadion': '41047',
     'eläintarhan yleisurheilukenttä': '40498',
-    'korkeasaaren eläintarha': '7245'
+    'korkeasaaren eläintarha': '7245',
+    'helsingin taidemuseo ham': '8675'
 }
 
 EXTRA_LOCATIONS = {
