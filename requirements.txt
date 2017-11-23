@@ -6,6 +6,7 @@
 #
 -e git+https://github.com/City-of-Helsinki/django-helusers@v0.1#egg=django-helusers
 -e git+https://github.com/City-of-Helsinki/munigeo@v0.2.1#egg=django-munigeo
+-e git+https://github.com/City-of-Helsinki/django-orghierarchy.git@v0.1#egg=django-orghierarchy
 astroid==1.5.3            # via pylint
 bleach==2.1
 certifi==2017.7.27.1      # via requests

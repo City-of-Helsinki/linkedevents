@@ -57,6 +57,7 @@ INSTALLED_APPS = (
     'helevents',
     'munigeo',
     'leaflet',
+    'django_orghierarchy',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -239,6 +240,10 @@ from easy_thumbnails.conf import Settings as thumbnail_settings  # noqa
 THUMBNAIL_PROCESSORS = (
     'image_cropping.thumbnail_processors.crop_corners',
 ) + thumbnail_settings.THUMBNAIL_PROCESSORS
+
+
+# django-orghierachy swappable model
+DJANGO_ORGHIERARCHY_DATASOURCE_MODEL = 'events.DataSource'
 
 # local_settings.py can be used to override environment-specific settings
 # like database and email that differ between development and production.
