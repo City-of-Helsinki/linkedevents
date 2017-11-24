@@ -63,7 +63,7 @@ class DataSource(models.Model):
     id = models.CharField(max_length=100, primary_key=True)
     name = models.CharField(verbose_name=_('Name'), max_length=255)
     api_key = models.CharField(max_length=128, blank=True, default='')
-    owner = models.ForeignKey('Organization', related_name='owned_systems', null=True, blank=True)
+    owner = models.ForeignKey('django_orghierarchy.Organization', related_name='owned_systems', null=True, blank=True)
     user_editable = models.BooleanField(default=False, verbose_name=_('Objects may be edited by users'))
 
     def __str__(self):
@@ -109,7 +109,7 @@ class Image(models.Model):
 
     data_source = models.ForeignKey(DataSource, related_name='provided_%(class)s_data', db_index=True, null=True)
     publisher = models.ForeignKey(
-        'Organization', verbose_name=_('Publisher'), db_index=True, null=True, blank=True,
+        'django_orghierarchy.Organization', verbose_name=_('Publisher'), db_index=True, null=True, blank=True,
         related_name='Published_images')
 
     created_time = models.DateTimeField(auto_now_add=True)
@@ -200,7 +200,7 @@ class Organization(MPTTModel, BaseModel):
     parent = TreeForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL,
                             related_name='children')
     admin_users = models.ManyToManyField(
-        User, blank=True, related_name='admin_organizations'
+        User, blank=True, related_name='admin_old_organizations'
     )
     admin_orgs = models.ManyToManyField(
         'self', blank=True, related_name='moderated_orgs'
@@ -240,7 +240,7 @@ class KeywordLabel(models.Model):
 
 class Keyword(BaseModel):
     publisher = models.ForeignKey(
-        'Organization', verbose_name=_('Publisher'), db_index=True, null=True, blank=True,
+        'django_orghierarchy.Organization', verbose_name=_('Publisher'), db_index=True, null=True, blank=True,
         related_name='Published_keywords')
     alt_labels = models.ManyToManyField(KeywordLabel, blank=True, related_name='keywords')
     aggregate = models.BooleanField(default=False)
@@ -286,12 +286,13 @@ class KeywordSet(BaseModel):
         (AUDIENCE, "audience"),
     )
     usage = models.SmallIntegerField(verbose_name=_('Intended keyword usage'), choices=USAGES, default=ANY)
-    organization = models.ForeignKey(Organization, verbose_name=_('Organization which uses this set'), null=True)
+    organization = models.ForeignKey('django_orghierarchy.Organization',
+                                     verbose_name=_('Organization which uses this set'), null=True)
     keywords = models.ManyToManyField(Keyword, blank=False, related_name='sets')
 
 
 class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
-    publisher = models.ForeignKey(Organization, verbose_name=_('Publisher'), db_index=True)
+    publisher = models.ForeignKey('django_orghierarchy.Organization', verbose_name=_('Publisher'), db_index=True)
     info_url = models.URLField(verbose_name=_('Place home page'), blank=True, default='', max_length=1000)
     description = models.TextField(verbose_name=_('Description'), null=True, blank=True)
     parent = TreeForeignKey('self', null=True, blank=True,
@@ -441,7 +442,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     secondary_headline = models.CharField(verbose_name=_('Secondary headline'), max_length=255,
                                           null=True, db_index=True)
     provider = models.CharField(verbose_name=_('Provider'), max_length=512, null=True)
-    publisher = models.ForeignKey(Organization, verbose_name=_('Publisher'), db_index=True,
+    publisher = models.ForeignKey('django_orghierarchy.Organization', verbose_name=_('Publisher'), db_index=True,
                                   on_delete=models.PROTECT, related_name='published_events')
 
     # Status of the event itself

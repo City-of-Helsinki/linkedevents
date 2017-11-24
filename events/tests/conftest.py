@@ -13,11 +13,12 @@ from munigeo.models import (AdministrativeDivision, AdministrativeDivisionType, 
 # 3rd party
 import pytest
 from rest_framework.test import APIClient
+from django_orghierarchy.models import Organization
 
 
 # events
 from events.models import (
-    DataSource, Organization, Place, Language, Keyword, KeywordLabel, Event,
+    DataSource, Place, Language, Keyword, KeywordLabel, Event,
     Offer)
 from events.api import (
     KeywordSerializer, PlaceSerializer, LanguageSerializer

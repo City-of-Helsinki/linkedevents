@@ -44,6 +44,8 @@ import pytz
 import bleach
 import django_filters
 
+from django_orghierarchy.models import Organization
+
 # events
 from events import utils
 from events.api_pagination import LargeResultsSetPagination
@@ -53,7 +55,7 @@ from events.custom_elasticsearch_search_backend import (
 )
 from events.models import (
     Place, Event, Keyword, KeywordSet, Language, OpeningHoursSpecification, EventLink,
-    Offer, DataSource, Organization, Image, PublicationStatus, PUBLICATION_STATUSES, License
+    Offer, DataSource, Image, PublicationStatus, PUBLICATION_STATUSES, License
 )
 from events.translation import EventTranslationOptions
 from helevents.models import User

@@ -26,7 +26,7 @@ def migrate_org_data(apps, schema_editor):
             tree_id=org.tree_id,
         )
 
-        new_org.admin_users = org.admin_users
+        new_org.admin_users = org.admin_users.all()
 
 
 def clean_org_data(apps, schema_editor):
