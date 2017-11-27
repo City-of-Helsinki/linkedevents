@@ -1,13 +1,11 @@
 from django.conf import settings
 from django.contrib import admin
-from django.contrib.admin.widgets import FilteredSelectMultiple
-from django.contrib.gis.db import models
 from django.utils.translation import ugettext as _
 from leaflet.admin import LeafletGeoAdmin
 from modeltranslation.admin import TranslationAdmin
 from reversion.admin import VersionAdmin
 from events.api import generate_id
-from events.models import Place, Organization, License, DataSource
+from events.models import Place, License, DataSource
 
 
 class BaseAdmin(admin.ModelAdmin):
@@ -67,23 +65,6 @@ class PlaceAdmin(HelsinkiGeoAdmin, BaseAdmin, TranslationAdmin, VersionAdmin):
 
 
 admin.site.register(Place, PlaceAdmin)
-
-
-class OrganizationAdmin(BaseAdmin):
-    list_display = ('name', 'nr_org_admins')
-
-    formfield_overrides = {
-        models.ManyToManyField: {
-            'widget': FilteredSelectMultiple("ylläpitäjät", is_stacked=False)},
-    }
-    fields = ('admin_users',)
-
-    def nr_org_admins(self, obj):
-        return obj.admin_users.count()
-    nr_org_admins.short_description = _('Admins')
-
-
-admin.site.register(Organization, OrganizationAdmin)
 
 
 class DataSourceAdmin(BaseAdmin):
