@@ -90,6 +90,7 @@ def user2():
 def organization(data_source, user):
     org, created = Organization.objects.get_or_create(
         id=data_source.id + ':test_organization',
+        origin_id='test_organization',
         name="test_organization",
         data_source=data_source,
     )
@@ -103,6 +104,7 @@ def organization(data_source, user):
 def organization2(other_data_source, user2):
     org, created = Organization.objects.get_or_create(
         id=other_data_source.id + ':test_organization2',
+        origin_id='test_organization2',
         name="test_organization2",
         data_source=other_data_source,
     )
