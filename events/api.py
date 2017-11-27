@@ -859,7 +859,13 @@ class OrganizationSerializer(LinkedEventsSerializer):
 
     class Meta:
         model = Organization
-        exclude = ['admin_users']
+        fields = (
+            'id', 'data_source', 'origin_id',
+            'classification', 'name', 'founding_date',
+            'dissolution_date', 'parent', 'responsible_organization',
+            'created_time', 'last_modified_time', 'created_by',
+            'last_modified_by',
+        )
 
 
 class OrganizationViewSet(viewsets.ReadOnlyModelViewSet):
