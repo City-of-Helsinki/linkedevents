@@ -1,7 +1,7 @@
-# django
+from django_orghierarchy.models import Organization
 
 # this app
-from events.models import DataSource, Organization
+from events.models import DataSource
 
 
 class TestDataMixin:
