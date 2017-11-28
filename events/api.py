@@ -857,12 +857,25 @@ LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
 class OrganizationSerializer(LinkedEventsSerializer):
     view_name = 'organization-detail'
 
+    parent_organization = serializers.HyperlinkedRelatedField(
+        queryset=Organization.objects.all(),
+        source='parent',
+        view_name='organization-detail',
+    )
+    sub_organizations = serializers.HyperlinkedRelatedField(
+        queryset=Organization.objects.all(),
+        source='children',
+        view_name='organization-detail',
+        many=True,
+    )
+
     class Meta:
         model = Organization
         fields = (
             'id', 'data_source', 'origin_id',
             'classification', 'name', 'founding_date',
-            'dissolution_date', 'parent', 'responsible_organization',
+            'dissolution_date', 'parent_organization',
+            'sub_organizations', 'responsible_organization',
             'created_time', 'last_modified_time', 'created_by',
             'last_modified_by',
         )
