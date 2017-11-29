@@ -147,6 +147,38 @@ def get_authenticated_data_source_and_publisher(request):
     return data_source, publisher
 
 
+def get_publisher_query(publisher):
+    """Get query for publisher (Organization)
+
+    Some organizations can be replaced by a new organization.
+    We need to return objects that reference on replaced
+    organization when querying the new organization, and vice
+    versa.
+
+    :param publisher: a or a list of filtering organizations
+    :type publisher: str, Organization, list
+    :return: the query that check both replaced and new organization
+    """
+    if isinstance(publisher, list):
+        q = Q(
+            publisher__in=publisher,
+        ) | Q(
+            publisher__replaced_by__in=publisher,
+        ) | Q(
+            publisher__replaced_organization__in=publisher,
+        )
+    else:
+        q = Q(
+            publisher=publisher,
+        ) | Q(
+            publisher__replaced_by=publisher,
+        ) | Q(
+            publisher__replaced_organization=publisher,
+        )
+
+    return q
+
+
 class JSONLDRelatedField(relations.HyperlinkedRelatedField):
     """
     Support of showing and saving of expanded JSON nesting or just a resource
@@ -946,7 +978,9 @@ class ImageViewSet(viewsets.ModelViewSet):
         publisher = self.request.query_params.get('publisher', None)
         if publisher:
             publisher = publisher.lower().split(',')
-            queryset = queryset.filter(publisher__in=publisher)
+            q = get_publisher_query(publisher)
+            queryset = queryset.filter(q)
+
         data_source = self.request.query_params.get('data_source')
         # Filter by data source, multiple sources separated by comma
         if data_source:
@@ -1427,7 +1461,8 @@ def _filter_event_queryset(queryset, params, srs=None):
     val = params.get('publisher', None)
     if val:
         val = val.split(',')
-        queryset = queryset.filter(publisher__id__in=val)
+        q = get_publisher_query(val)
+        queryset = queryset.filter(q)
 
     return queryset
 
@@ -1521,7 +1556,7 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
             if 'show_all' in self.request.query_params:
                 # Show all events for this organization,
                 # along with public events for others.
-                auth_filters |= Q(publisher=self.organization)
+                auth_filters |= get_publisher_query(self.organization)
         queryset = queryset.filter(auth_filters)
         queryset = _filter_event_queryset(queryset, self.request.query_params,
                                           srs=self.srs)
