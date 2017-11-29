@@ -6,6 +6,8 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from .utils import versioned_reverse as reverse
+from ..api import get_authenticated_data_source_and_publisher
+from ..auth import ApiKeyAuth
 from ..models import DataSource, Event, Image, PublicationStatus
 
 
@@ -26,6 +28,29 @@ def test_api_page_size(api_client, event):
     assert resp.status_code == 200
     meta = resp.data['meta']
     assert len(resp.data['data']) <= 100
+
+
+@pytest.mark.django_db
+def test_get_authenticated_data_source_and_publisher(data_source):
+    org_1 = Organization.objects.create(
+        data_source=data_source,
+        origin_id='org-1',
+        name='org-1',
+    )
+    org_2 = Organization.objects.create(
+        data_source=data_source,
+        origin_id='org-2',
+        name='org-2',
+        replaced_by=org_1,
+    )
+    data_source.owner = org_2
+    data_source.save()
+
+    # test return new organization for replaced one
+    request = MagicMock(auth=ApiKeyAuth(data_source))
+    ds, publisher = get_authenticated_data_source_and_publisher(request)
+    assert ds == data_source
+    assert publisher == org_1
 
 
 class TestImageAPI(APITestCase):
