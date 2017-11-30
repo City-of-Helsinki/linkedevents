@@ -1,12 +1,13 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+from django.contrib.auth import get_user_model
 from django_orghierarchy.models import Organization
-from rest_framework import status
+from rest_framework import status, serializers
 from rest_framework.test import APITestCase
 
 from .utils import versioned_reverse as reverse
-from ..api import get_authenticated_data_source_and_publisher
+from ..api import get_authenticated_data_source_and_publisher, EventSerializer
 from ..auth import ApiKeyAuth
 from ..models import DataSource, Event, Image, PublicationStatus
 
@@ -46,45 +47,74 @@ def test_get_authenticated_data_source_and_publisher(data_source):
     assert publisher == org
 
 
+@pytest.mark.django_db
+def test_serializer_validate_publisher():
+    data_source = DataSource.objects.create(
+        id='ds',
+        name='data-source',
+    )
+    org_1 = Organization.objects.create(
+        name='org-1',
+        origin_id='org-1',
+        data_source=data_source,
+    )
+    org_2 = Organization.objects.create(
+        name='org-2',
+        origin_id='org-2',
+        data_source=data_source,
+        replaced_by=org_1,
+    )
+
+    le_serializer = EventSerializer()
+    le_serializer.publisher = org_2
+    with pytest.raises(serializers.ValidationError):
+        le_serializer.validate_publisher(org_2)
+
+
 class TestImageAPI(APITestCase):
 
     def setUp(self):
-        data_source = DataSource.objects.create(
+        user_model = get_user_model()
+        self.user = user_model.objects.create(username='testuser')
+
+        self.data_source = DataSource.objects.create(
             id='ds',
             name='data-source',
+            api_key="test_api_key",
+            user_editable=True,
         )
-        org_1 = Organization.objects.create(
+        self.org_1 = Organization.objects.create(
             name='org-1',
             origin_id='org-1',
-            data_source=data_source,
+            data_source=self.data_source,
         )
-        org_2 = Organization.objects.create(
+        self.org_2 = Organization.objects.create(
             name='org-2',
             origin_id='org-2',
-            data_source=data_source,
-            replaced_by=org_1,
+            data_source=self.data_source,
+            replaced_by=self.org_1,
         )
-        org_3 = Organization.objects.create(
+        self.org_3 = Organization.objects.create(
             name='org-3',
             origin_id='org-3',
-            data_source=data_source,
+            data_source=self.data_source,
         )
         self.image_1 = Image.objects.create(
             name='image-1',
-            data_source=data_source,
-            publisher=org_1,
+            data_source=self.data_source,
+            publisher=self.org_1,
             url='http://fake.url/image-1/',
         )
         self.image_2 = Image.objects.create(
             name='image-2',
-            data_source=data_source,
-            publisher=org_2,
+            data_source=self.data_source,
+            publisher=self.org_2,
             url='http://fake.url/image-2/',
         )
         self.image_3 = Image.objects.create(
             name='image-2',
-            data_source=data_source,
-            publisher=org_3,
+            data_source=self.data_source,
+            publisher=self.org_3,
             url='http://fake.url/image-2/',
         )
 
@@ -111,9 +141,14 @@ class TestImageAPI(APITestCase):
 class TestEventAPI(APITestCase):
 
     def setUp(self):
+        user_model = get_user_model()
+        self.user = user_model.objects.create(username='testuser')
+
         self.data_source = DataSource.objects.create(
             id='ds',
             name='data-source',
+            api_key="test_api_key",
+            user_editable=True,
         )
         self.org_1 = Organization.objects.create(
             name='org-1',
