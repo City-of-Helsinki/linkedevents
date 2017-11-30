@@ -32,25 +32,18 @@ def test_api_page_size(api_client, event):
 
 @pytest.mark.django_db
 def test_get_authenticated_data_source_and_publisher(data_source):
-    org_1 = Organization.objects.create(
+    org = Organization.objects.create(
         data_source=data_source,
         origin_id='org-1',
         name='org-1',
     )
-    org_2 = Organization.objects.create(
-        data_source=data_source,
-        origin_id='org-2',
-        name='org-2',
-        replaced_by=org_1,
-    )
-    data_source.owner = org_2
+    data_source.owner = org
     data_source.save()
 
-    # test return new organization for replaced one
     request = MagicMock(auth=ApiKeyAuth(data_source))
     ds, publisher = get_authenticated_data_source_and_publisher(request)
     assert ds == data_source
-    assert publisher == org_1
+    assert publisher == org
 
 
 class TestImageAPI(APITestCase):
