@@ -134,10 +134,6 @@ def get_authenticated_data_source_and_publisher(request):
         publisher = data_source.owner
         if not publisher:
             raise PermissionDenied(_("Data source doesn't belong to any organization"))
-
-        if publisher.replaced_by:
-            # using new organization that replaces current organization
-            publisher = publisher.replaced_by
     else:
         # objects created by api are marked coming from the system data source unless api_key is provided
         # we must optionally create the system data source here, as the settings may have changed at any time
