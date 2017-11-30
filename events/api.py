@@ -534,6 +534,13 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                         " is not allowed for your organization. The publisher" +
                         " must be left blank or set to %(required)s ") %
                         {'given': str(value), 'required': self.publisher}})
+
+            if value.replaced_by:
+                msg = _(
+                    "Cannot set the publisher to a replaced organization. Organization {0} is replaced by {1}."
+                ).format(value, value.replaced_by)
+                raise serializers.ValidationError({'publisher': msg})
+
         return value
 
     def validate(self, data):
