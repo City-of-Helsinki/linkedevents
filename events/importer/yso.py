@@ -3,12 +3,13 @@ import requests
 
 import rdflib
 from django.core.exceptions import ObjectDoesNotExist
+from django_orghierarchy.models import Organization
 from rdflib import RDF
 from rdflib.namespace import DCTERMS, OWL, SKOS
 
 from django.conf import settings
 
-from events.models import Keyword, KeywordLabel, DataSource, BaseModel, Language, Organization
+from events.models import Keyword, KeywordLabel, DataSource, BaseModel, Language
 
 from .util import active_language
 from .sync import ModelSyncher

@@ -196,25 +196,6 @@ class BaseModel(models.Model):
         return bool(self.data_source.user_editable and self.last_modified_by)
 
 
-class Organization(MPTTModel, BaseModel):
-    parent = TreeForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL,
-                            related_name='children')
-    admin_users = models.ManyToManyField(
-        User, blank=True, related_name='admin_old_organizations'
-    )
-    admin_orgs = models.ManyToManyField(
-        'self', blank=True, related_name='moderated_orgs'
-    )
-
-    class Meta:
-        ordering = ('name',)
-        verbose_name = _('organization')
-        verbose_name_plural = _('organizations')
-
-    class MPTTMeta:
-        order_insertion_by = ('id',)
-
-
 class Language(models.Model):
     id = models.CharField(max_length=6, primary_key=True)
     name = models.CharField(verbose_name=_('Name'), max_length=20)
