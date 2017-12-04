@@ -10,10 +10,11 @@ from django.conf import settings
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db import IntegrityError
+from django_orghierarchy.models import Organization
 
 from .base import Importer, register_importer, recur_dict
 from .util import unicodetext
-from events.models import DataSource, Event, EventAggregate, EventAggregateMember, Keyword, Organization, Place
+from events.models import DataSource, Event, EventAggregate, EventAggregateMember, Keyword, Place
 from events.keywords import KeywordMatcher
 from events.translation_utils import expand_model_fields
 
