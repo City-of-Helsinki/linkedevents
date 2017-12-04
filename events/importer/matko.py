@@ -6,10 +6,11 @@ import requests_cache
 import pytz
 from collections import OrderedDict
 from django.db.models import Count
+from django_orghierarchy.models import Organization
 
 from lxml import etree
 
-from events.models import DataSource, Place, Event, Organization
+from events.models import DataSource, Place, Event
 from events.models import Keyword
 from events.keywords import KeywordMatcher
 
