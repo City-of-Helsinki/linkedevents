@@ -2,14 +2,16 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.contrib.gis.geos import Point
 from django_orghierarchy.models import Organization
 from rest_framework import status, serializers
 from rest_framework.test import APITestCase
 
+from .conftest import minimal_event_dict
 from .utils import versioned_reverse as reverse
 from ..api import get_authenticated_data_source_and_publisher, EventSerializer
 from ..auth import ApiKeyAuth
-from ..models import DataSource, Event, Image, PublicationStatus
+from ..models import DataSource, Event, Image, Place, PublicationStatus
 
 
 @pytest.mark.django_db
@@ -165,6 +167,7 @@ class TestEventAPI(APITestCase):
             name='org-3',
             origin_id='org-3',
             data_source=self.data_source,
+            parent=self.org_1,
         )
         self.event_1 = Event.objects.create(
             id='event-1',
@@ -229,3 +232,217 @@ class TestEventAPI(APITestCase):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             # note that org-2 is replaced by org-1
             self.assertEqual(len(response.data['data']), 2)  # event-1 and event-2
+
+    def test_random_user_create_event_denied(self):
+        place = Place.objects.create(
+            id='ds:place-1',
+            name='place-1',
+            data_source=self.data_source,
+            publisher=self.org_1,
+            position=Point(1, 1),
+        )
+
+        url = reverse('event-list')
+        location_id = reverse('place-detail', kwargs={'pk': place.id})
+        data = minimal_event_dict(self.data_source, self.org_1, location_id)
+
+        self.client.force_authenticate(self.user)
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_create_event(self):
+        self.org_1.admin_users.add(self.user)
+        place = Place.objects.create(
+            id='ds:place-1',
+            name='place-1',
+            data_source=self.data_source,
+            publisher=self.org_1,
+            position=Point(1, 1),
+        )
+
+        url = reverse('event-list')
+        location_id = reverse('place-detail', kwargs={'pk': place.id})
+        data = minimal_event_dict(self.data_source, self.org_1, location_id)
+
+        self.client.force_authenticate(self.user)
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_admin_update_event(self):
+        self.org_1.admin_users.add(self.user)
+        place = Place.objects.create(
+            id='ds:place-1',
+            name='place-1',
+            data_source=self.data_source,
+            publisher=self.org_1,
+            position=Point(1, 1),
+        )
+        location_id = reverse('place-detail', kwargs={'pk': place.id})
+
+        url = reverse('event-detail', kwargs={'pk': self.event_1.id})
+        data = minimal_event_dict(self.data_source, self.org_1, location_id)
+        data['publication_status'] = 'public'
+        self.client.force_authenticate(self.user)
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.event_1.refresh_from_db()
+        self.assertEqual(self.event_1.publication_status, PublicationStatus.PUBLIC)
+
+    def test_admin_delete_event(self):
+        self.org_1.admin_users.add(self.user)
+
+        url = reverse('event-detail', kwargs={'pk': self.event_1.id})
+        self.client.force_authenticate(self.user)
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_admin_delete_sub_organization_event(self):
+        self.org_1.admin_users.add(self.user)
+
+        url = reverse('event-detail', kwargs={'pk': self.event_3.id})
+        self.client.force_authenticate(self.user)
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_admin_update_sub_organization_event(self):
+        self.org_1.admin_users.add(self.user)
+        place = Place.objects.create(
+            id='ds:place-1',
+            name='place-1',
+            data_source=self.data_source,
+            publisher=self.org_1,
+            position=Point(1, 1),
+        )
+        location_id = reverse('place-detail', kwargs={'pk': place.id})
+
+        url = reverse('event-detail', kwargs={'pk': self.event_3.id})
+        data = minimal_event_dict(self.data_source, self.org_1, location_id)
+        data['publication_status'] = 'public'
+        self.client.force_authenticate(self.user)
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.event_3.refresh_from_db()
+        self.assertEqual(self.event_3.publication_status, PublicationStatus.PUBLIC)
+
+    def test_admin_delete_affiliated_organization_event(self):
+        self.org_1.admin_users.add(self.user)
+        org = Organization.objects.create(
+            name='affiliated-org',
+            origin_id='affiliated-org',
+            data_source=self.data_source,
+            responsible_organization=self.org_1
+        )
+        event = Event.objects.create(
+            id='event',
+            name='event',
+            data_source=self.data_source,
+            publisher=org,
+            publication_status=PublicationStatus.DRAFT
+        )
+
+        url = reverse('event-detail', kwargs={'pk': event.id})
+        self.client.force_authenticate(self.user)
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_admin_update_affiliated_organization_event(self):
+        self.org_1.admin_users.add(self.user)
+        org = Organization.objects.create(
+            name='affiliated-org',
+            origin_id='affiliated-org',
+            data_source=self.data_source,
+            responsible_organization=self.org_1
+        )
+        event = Event.objects.create(
+            id='event',
+            name='event',
+            data_source=self.data_source,
+            publisher=org,
+            publication_status=PublicationStatus.DRAFT
+        )
+        place = Place.objects.create(
+            id='ds:place-1',
+            name='place-1',
+            data_source=self.data_source,
+            publisher=self.org_1,
+            position=Point(1, 1),
+        )
+        location_id = reverse('place-detail', kwargs={'pk': place.id})
+
+        url = reverse('event-detail', kwargs={'pk': event.id})
+        data = minimal_event_dict(self.data_source, self.org_1, location_id)
+        data['publication_status'] = 'public'
+        self.client.force_authenticate(self.user)
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        event.refresh_from_db()
+        self.assertEqual(event.publication_status, PublicationStatus.PUBLIC)
+
+    def test_regular_user_create_public_event_denied(self):
+        self.org_1.regular_users.add(self.user)
+        place = Place.objects.create(
+            id='ds:place-1',
+            name='place-1',
+            data_source=self.data_source,
+            publisher=self.org_1,
+            position=Point(1, 1),
+        )
+
+        url = reverse('event-list')
+        location_id = reverse('place-detail', kwargs={'pk': place.id})
+        data = minimal_event_dict(self.data_source, self.org_1, location_id)
+
+        self.client.force_authenticate(self.user)
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_regular_user_create_draft_event(self):
+        self.org_1.regular_users.add(self.user)
+        place = Place.objects.create(
+            id='ds:place-1',
+            name='place-1',
+            data_source=self.data_source,
+            publisher=self.org_1,
+            position=Point(1, 1),
+        )
+
+        url = reverse('event-list')
+        location_id = reverse('place-detail', kwargs={'pk': place.id})
+        data = minimal_event_dict(self.data_source, self.org_1, location_id)
+        data['publication_status'] = 'draft'
+
+        self.client.force_authenticate(self.user)
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_regular_user_cannot_find_sub_organization_draft_event(self):
+        self.org_1.regular_users.add(self.user)
+
+        url = reverse('event-detail', kwargs={'pk': self.event_3.id})
+        self.client.force_authenticate(self.user)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_regular_user_cannot_find_affiliated_organization_draft_event(self):
+        self.org_1.regular_users.add(self.user)
+        org = Organization.objects.create(
+            name='affiliated-org',
+            origin_id='affiliated-org',
+            data_source=self.data_source,
+            responsible_organization=self.org_1
+        )
+        event = Event.objects.create(
+            id='event',
+            name='event',
+            data_source=self.data_source,
+            publisher=org,
+            publication_status=PublicationStatus.DRAFT
+        )
+
+        url = reverse('event-detail', kwargs={'pk': event.id})
+        self.client.force_authenticate(self.user)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

@@ -147,7 +147,7 @@ class Image(models.Model):
         if user.is_superuser:
             return True
         else:
-            return user in self.publisher.admin_users.all()
+            return user.is_admin(self.publisher)
 
 
 @python_2_unicode_compatible
@@ -512,7 +512,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         if user.is_superuser:
             return True
         else:
-            return user in self.publisher.admin_users.all()
+            return user.is_admin(self.publisher)
 
     def soft_delete(self, using=None):
         self.deleted = True
