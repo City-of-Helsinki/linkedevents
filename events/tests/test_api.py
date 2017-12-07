@@ -233,6 +233,13 @@ class TestEventAPI(APITestCase):
             # note that org-2 is replaced by org-1
             self.assertEqual(len(response.data['data']), 2)  # event-1 and event-2
 
+    def test_random_user_get_draft_event_not_found(self):
+        url = reverse('event-detail', kwargs={'pk': self.event_1.id})
+
+        self.client.force_authenticate(self.user)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
     def test_random_user_create_event_denied(self):
         place = Place.objects.create(
             id='ds:place-1',
@@ -248,6 +255,30 @@ class TestEventAPI(APITestCase):
 
         self.client.force_authenticate(self.user)
         response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_random_user_update_public_event_denied(self):
+        place = Place.objects.create(
+            id='ds:place-1',
+            name='place-1',
+            data_source=self.data_source,
+            publisher=self.org_1,
+            position=Point(1, 1),
+        )
+
+        url = reverse('event-detail', kwargs={'pk': self.event_4.id})
+        location_id = reverse('place-detail', kwargs={'pk': place.id})
+        data = minimal_event_dict(self.data_source, self.org_3, location_id)
+
+        self.client.force_authenticate(self.user)
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_random_user_delete_public_event_denied(self):
+        url = reverse('event-detail', kwargs={'pk': self.event_4.id})
+
+        self.client.force_authenticate(self.user)
+        response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_admin_create_event(self):
@@ -397,6 +428,33 @@ class TestEventAPI(APITestCase):
 
         self.client.force_authenticate(self.user)
         response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_regular_user_update_public_event_denied(self):
+        self.org_1.regular_users.add(self.user)
+        place = Place.objects.create(
+            id='ds:place-1',
+            name='place-1',
+            data_source=self.data_source,
+            publisher=self.org_1,
+            position=Point(1, 1),
+        )
+
+        url = reverse('event-detail', kwargs={'pk': self.event_4.id})
+        location_id = reverse('place-detail', kwargs={'pk': place.id})
+        data = minimal_event_dict(self.data_source, self.org_1, location_id)
+
+        self.client.force_authenticate(self.user)
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_regular_user_delete_public_event_denied(self):
+        self.org_1.regular_users.add(self.user)
+
+        url = reverse('event-detail', kwargs={'pk': self.event_4.id})
+
+        self.client.force_authenticate(self.user)
+        response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_regular_user_create_draft_event(self):
