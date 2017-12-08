@@ -586,7 +586,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                 raise PermissionDenied()
         else:
             # without api key, the user will have to be admin
-            if not instance.is_user_editable() or not instance.is_admin(self.user):
+            if not instance.is_user_editable() or not instance.can_be_edited_by(self.user):
                 raise PermissionDenied()
         validated_data['last_modified_by'] = self.user
 
@@ -1575,7 +1575,10 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
             queryset = queryset.filter(auth_filters)
         else:
             # prevent changing events user does not have write permissions (for bulk operations)
-            queryset = self.request.user.get_editable_events(self.organization, queryset)
+            if self.organization:
+                queryset = self.request.user.get_editable_events(self.organization, queryset)
+            else:
+                queryset = queryset.none()
 
         queryset = _filter_event_queryset(queryset, self.request.query_params,
                                           srs=self.srs)
