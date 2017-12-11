@@ -11,7 +11,6 @@ from django_orghierarchy.models import Organization
 from lxml import etree
 
 from events.models import DataSource, Place, Event
-from events.models import Keyword
 from events.keywords import KeywordMatcher
 
 from .base import Importer, register_importer, recur_dict
