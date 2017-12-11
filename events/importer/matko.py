@@ -6,10 +6,11 @@ import requests_cache
 import pytz
 from collections import OrderedDict
 from django.db.models import Count
+from django_orghierarchy.models import Organization
 
 from lxml import etree
 
-from events.models import DataSource, Place, Event, Organization
+from events.models import DataSource, Place, Event
 from events.models import Keyword
 from events.keywords import KeywordMatcher
 
@@ -294,12 +295,6 @@ class MatkoImporter(Importer):
             'yksittäiset',
             'ryhmät'
         ]
-        use_as_target_group = [
-            'koko perheelle',
-            'lapset',
-            'nuoret',
-            'eläkeläiset',
-        ]
         mapping = {
             'tanssi ja teatteri': 'tanssi',  # following visithelsinki.fi
             'messu': 'messut (tapahtumat)',
@@ -313,6 +308,12 @@ class MatkoImporter(Importer):
             'lapset': 'lapset (ikäryhmät)',
             'koko perheelle': 'perheet (ryhmät)'
         }
+        use_as_target_group = [
+            'perheet (ryhmät)',
+            'lapset (ikäryhmät)',
+            'nuoret',
+            'eläkeläiset',
+        ]
 
         event_types = set()
         type1, type2, target_group = text(item, 'type1'), text(item, 'type2'), text(item, 'targetgroup')

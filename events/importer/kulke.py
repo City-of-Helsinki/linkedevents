@@ -10,10 +10,11 @@ from django.conf import settings
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db import IntegrityError
+from django_orghierarchy.models import Organization
 
 from .base import Importer, register_importer, recur_dict
 from .util import unicodetext
-from events.models import DataSource, Event, EventAggregate, EventAggregateMember, Keyword, Organization, Place
+from events.models import DataSource, Event, EventAggregate, EventAggregateMember, Keyword, Place
 from events.keywords import KeywordMatcher
 from events.translation_utils import expand_model_fields
 
@@ -87,8 +88,13 @@ def _delete_courses():
 
 SPORTS = ['p965']
 GYMS = ['p8504']
-CHILDREN = ['p4354']
 MOVIES = ['p1235', 'p16327']
+CHILDREN = ['p4354']
+YOUTH = ['p11617']
+ELDERLY = ['p2434']
+FAMILIES = ['p4363']
+KEYWORDS_TO_ADD_TO_AUDIENCE = CHILDREN + YOUTH + ELDERLY + FAMILIES
+
 MANUAL_CATEGORIES = {
     # urheilu
     546: SPORTS, 547: SPORTS, 431: SPORTS, 638: SPORTS,
@@ -101,7 +107,7 @@ MANUAL_CATEGORIES = {
     # monitaiteisuus
     223: ['p25216'],
     # seniorit > ikääntyneet ja vanhukset
-    354: ['p2433', 'p2434'],
+    354: ['p2433'] + ELDERLY,
     # saunominen
     371: ['p11049'],
     # lastentapahtumat > lapset (!)
@@ -119,13 +125,17 @@ MANUAL_CATEGORIES = {
     # luennot ja keskustelut
     733: ['p15875', 'p14004'],
     # nuorille
-    734: ['p11617'],
+    734: YOUTH,
     # elokuva
     737: MOVIES,
     # perheliikunta
-    628: SPORTS + ['p4363']
+    628: SPORTS + FAMILIES,
+    # lapset ja nuoret
+    355: CHILDREN + YOUTH
 }
-KEYWORDS_TO_ADD_TO_AUDIENCE = ['p4354', 'p11617', 'p2434', 'p4363']
+
+# retain the above for simplicity, even if kulke importer internally requires full keyword ids
+KEYWORDS_TO_ADD_TO_AUDIENCE = ['yso:{}'.format(i) for i in KEYWORDS_TO_ADD_TO_AUDIENCE]
 
 LOCAL_TZ = timezone('Europe/Helsinki')
 
@@ -429,6 +439,7 @@ class KulkeImporter(Importer):
                     print('Could not find {}'.format(kulke_id))
 
             event['keywords'] = event_keywords
+            event['audience'] = event_audience
 
         location = event['location']
 
@@ -551,6 +562,14 @@ class KulkeImporter(Importer):
         super_event.keywords.clear()
         for k in common_keywords:
             super_event.keywords.add(k)
+
+        common_audience = functools.reduce(
+            lambda x, y: x & y,
+            (set(event.audience.all()) for event in events.all())
+        )
+        super_event.audience.clear()
+        for k in common_audience:
+            super_event.audience.add(k)
 
         super_event.save()
 

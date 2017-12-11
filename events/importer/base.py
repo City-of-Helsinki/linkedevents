@@ -239,6 +239,18 @@ class Importer(object):
             else:
                 obj.keywords = new_keywords
                 obj._changed = True
+        audience = info.get('audience', [])
+        new_audience = set([kw.id for kw in audience])
+        old_audience = set(obj.audience.values_list('id', flat=True))
+        if new_audience != old_audience:
+            if obj.is_user_edited():
+                # this prevents overwriting manually added audience
+                if not new_audience <= old_audience:
+                    obj.audience.add(*new_audience)
+                    obj._changed = True
+            else:
+                obj.audience = new_audience
+                obj._changed = True
 
         # one-to-many fields with foreign key pointing to event
 

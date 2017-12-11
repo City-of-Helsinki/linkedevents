@@ -7,9 +7,10 @@ from django import db
 from django.conf import settings
 from django.contrib.gis.geos import Point
 from django.core.management import call_command
+from django_orghierarchy.models import Organization
 
 from events.importer.util import replace_location
-from events.models import DataSource, Organization, Place
+from events.models import DataSource, Place
 from .sync import ModelSyncher
 from .base import Importer, register_importer
 
