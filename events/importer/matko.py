@@ -106,7 +106,6 @@ def zipcode_and_muni(text):
 class MatkoImporter(Importer):
     name = "matko"
     supported_languages = ['fi', 'sv', 'en']
-    kwcache = {}
 
     def __init__(self, *args, **kwargs):
         super(MatkoImporter, self).__init__(*args, **kwargs)
@@ -332,25 +331,6 @@ class MatkoImporter(Importer):
         keywords = []
         audience = []
         for t in event_types:
-            # Save original keyword in the raw too
-            # Note: / in keyword id breaks URL resolver so we replace it with _
-            _id = 'matko:{}'.format(t.replace('/', '_'))
-            kwargs = {
-                'id': _id,  # id like matko:konsertti
-                'data_source_id': 'matko',
-                'name': t,
-            }
-            # Try to find Keyword from cache to avoid db hit in every cycle
-            if _id in self.kwcache:
-                keyword_orig = self.kwcache[_id]
-            else:
-                keyword_orig, created = Keyword.objects.get_or_create(**kwargs)
-                self.kwcache[_id] = keyword_orig
-            if keyword_orig.publisher_id != self.organization.id:
-                keyword_orig.publisher = self.organization
-                keyword_orig.save()
-            # save the matko keyword to keywords (audience not needed, matko keywords are deprecated anyway)
-            keywords.append(keyword_orig)
             if t is None or t in ignore:
                 continue
             # match to LE keyword
