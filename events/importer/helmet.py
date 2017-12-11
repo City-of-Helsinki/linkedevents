@@ -42,6 +42,7 @@ YSO_KEYWORD_MAPS = {
     u'Musiikki': u'p1808',  # -> musiikki
     u'muut kielet': u'p556',  # -> kielet
 }
+KEYWORDS_TO_ADD_TO_AUDIENCE = ['p4354', 'p11617', 'p2434', 'p4363', 'p6165', 'p16485', 'p1178', 'p16486']
 
 LOCATIONS = {
     # Library name in Finnish -> ((library node ids in event feed), tprek id)
@@ -305,6 +306,7 @@ class HelmetImporter(Importer):
         set_attr('end_time', dt_parse(event_el['EventEndDate']))
 
         event_keywords = event.get('keywords', set())
+        event_audience = event.get('audience', set())
 
         for classification in event_el['Classifications']:
             # Save original keyword in the raw too
@@ -363,11 +365,18 @@ class HelmetImporter(Importer):
                     if isinstance(yso, tuple):
                         for t_v in yso:
                             event_keywords.add(self.yso_by_id['yso:' + t_v])
+                            if t_v in KEYWORDS_TO_ADD_TO_AUDIENCE:
+                                # retain the keyword in keywords as well, for backwards compatibility
+                                event_audience.add(self.yso_by_id['yso:' + t_v])
 
                     else:
                         event_keywords.add(self.yso_by_id['yso:' + yso])
+                        if yso in KEYWORDS_TO_ADD_TO_AUDIENCE:
+                            # retain the keyword in keywords as well, for backwards compatibility
+                            event_audience.add(self.yso_by_id['yso:' + yso])
 
         event['keywords'] = event_keywords
+        event['audience'] = event_audience
 
         if 'location' in event:
             extra_info = clean_text(ext_props.get('PlaceExtraInfo', ''))

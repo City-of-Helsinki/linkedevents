@@ -290,10 +290,15 @@ class MatkoImporter(Importer):
             'muu',
             'tapahtuma',
             'kesä',
-            'talvi'
+            'talvi',
+            'yksittäiset',
+            'ryhmät'
         ]
-        use_as_target_group = [  # fixme
-            'koko perheelle'
+        use_as_target_group = [
+            'koko perheelle',
+            'lapset',
+            'nuoret',
+            'eläkeläiset',
         ]
         mapping = {
             'tanssi ja teatteri': 'tanssi',  # following visithelsinki.fi
@@ -304,12 +309,14 @@ class MatkoImporter(Importer):
             'klassinen': 'taidemusiikki',
             'kulttuuri': 'kulttuuritapahtumat',
             'suomi100': 'suomi 100 vuotta -juhlavuosi',
-            'markkinat': 'markkinat (tapahtumat)'
+            'markkinat': 'markkinat (tapahtumat)',
+            'lapset': 'lapset (ikäryhmät)',
+            'koko perheelle': 'perheet (ryhmät)'
         }
 
         event_types = set()
-        type1, type2 = text(item, 'type1'), text(item, 'type2')
-        for t in (type1, type2):
+        type1, type2, target_group = text(item, 'type1'), text(item, 'type2'), text(item, 'targetgroup')
+        for t in (type1, type2, target_group):
             if t:
                 event_types.update(
                     map(lambda x: x.lower(), t.split(",")))
@@ -322,6 +329,7 @@ class MatkoImporter(Importer):
             offer['is_free'] = True
 
         keywords = []
+        audience = []
         for t in event_types:
             # Save original keyword in the raw too
             # Note: / in keyword id breaks URL resolver so we replace it with _
@@ -340,16 +348,22 @@ class MatkoImporter(Importer):
             if keyword_orig.publisher_id != self.organization.id:
                 keyword_orig.publisher = self.organization
                 keyword_orig.save()
+            # save the matko keyword to keywords (audience not needed, matko keywords are deprecated anyway)
             keywords.append(keyword_orig)
-            if t is None or t in ignore or t in use_as_target_group:
+            if t is None or t in ignore:
                 continue
+            # match to LE keyword
             if t in mapping:
                 t = mapping[t]
             keyword = keyword_matcher.match(t)
             if keyword:
                 keywords.append(keyword[0])
-        if len(keywords) > 0:
+                if t in use_as_target_group:
+                    # retain the keyword in keywords as well, for backwards compatibility
+                    audience.append(keyword[0])
+        if len(keywords) > 0 or len(audience) > 0:
             event['keywords'] = keywords
+            event['audience'] = audience
         else:
             self.logger.warning('Warning: no keyword matches for', event['name'], keywords)
 

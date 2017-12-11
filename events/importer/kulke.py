@@ -100,8 +100,8 @@ MANUAL_CATEGORIES = {
     634: ['p3093'],
     # monitaiteisuus
     223: ['p25216'],
-    # seniorit > ikääntyneet
-    354: ['p2433'],
+    # seniorit > ikääntyneet ja vanhukset
+    354: ['p2433', 'p2434'],
     # saunominen
     371: ['p11049'],
     # lastentapahtumat > lapset (!)
@@ -121,9 +121,11 @@ MANUAL_CATEGORIES = {
     # nuorille
     734: ['p11617'],
     # elokuva
-    737: MOVIES
+    737: MOVIES,
+    # perheliikunta
+    628: SPORTS + ['p4363']
 }
-
+KEYWORDS_TO_ADD_TO_AUDIENCE = ['p4354', 'p11617', 'p2434', 'p4363']
 
 LOCAL_TZ = timezone('Europe/Helsinki')
 
@@ -407,6 +409,7 @@ class KulkeImporter(Importer):
 
         if hasattr(self, 'categories'):
             event_keywords = set()
+            event_audience = set()
             for category_id in event_el.find('eventcategories'):
                 category = self.categories.get(int(category_id.text))
                 if category:
@@ -414,6 +417,9 @@ class KulkeImporter(Importer):
                     if category.get('yso_keywords'):
                         for c in category.get('yso_keywords', []):
                             event_keywords.add(c)
+                            if c.id in KEYWORDS_TO_ADD_TO_AUDIENCE:
+                                # retain the keyword in keywords as well, for backwards compatibility
+                                event_audience.add(c)
                 # Also save original kulke categories as keywords
                 kulke_id = make_kulke_id(category_id.text)
                 try:
