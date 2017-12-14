@@ -410,16 +410,6 @@ def test__non_editable_fields_at_put(api_client, minimal_event_dict, user,
 
 
 @pytest.mark.django_db
-def test__a_non_admin_cannot_update_an_event(api_client, event, complex_event_dict, user):
-    event.publisher.admin_users.remove(user)
-    api_client.force_authenticate(user)
-
-    detail_url = reverse('event-detail', kwargs={'pk': event.pk})
-    response = update_with_put(api_client, detail_url, complex_event_dict)
-    assert response.status_code == 403
-
-
-@pytest.mark.django_db
 def test__an_admin_can_update_an_event_from_another_data_source(api_client, event2, keyword, offer,
                                                                 other_data_source, organization, user):
     other_data_source.owner = organization
