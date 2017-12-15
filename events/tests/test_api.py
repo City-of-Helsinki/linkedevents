@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -9,7 +9,7 @@ from rest_framework.test import APITestCase
 from .utils import versioned_reverse as reverse
 from ..api import get_authenticated_data_source_and_publisher, EventSerializer
 from ..auth import ApiKeyAuth
-from ..models import DataSource, Event, Image, PublicationStatus
+from ..models import DataSource, Image
 
 
 @pytest.mark.django_db
@@ -136,96 +136,3 @@ class TestImageAPI(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['data']), 1)
-
-
-class TestEventAPI(APITestCase):
-
-    def setUp(self):
-        user_model = get_user_model()
-        self.user = user_model.objects.create(username='testuser')
-
-        self.data_source = DataSource.objects.create(
-            id='ds',
-            name='data-source',
-            api_key="test_api_key",
-            user_editable=True,
-        )
-        self.org_1 = Organization.objects.create(
-            name='org-1',
-            origin_id='org-1',
-            data_source=self.data_source,
-        )
-        self.org_2 = Organization.objects.create(
-            name='org-2',
-            origin_id='org-2',
-            data_source=self.data_source,
-            replaced_by=self.org_1,
-        )
-        self.org_3 = Organization.objects.create(
-            name='org-3',
-            origin_id='org-3',
-            data_source=self.data_source,
-        )
-        self.event_1 = Event.objects.create(
-            id='event-1',
-            name='event-1',
-            data_source=self.data_source,
-            publisher=self.org_1,
-            publication_status=PublicationStatus.DRAFT,
-        )
-        self.event_2 = Event.objects.create(
-            id='event-2',
-            name='event-2',
-            data_source=self.data_source,
-            publisher=self.org_2,
-            publication_status=PublicationStatus.DRAFT,
-        )
-        self.event_3 = Event.objects.create(
-            id='event-3',
-            name='event-3',
-            data_source=self.data_source,
-            publisher=self.org_3,
-            publication_status=PublicationStatus.DRAFT,
-        )
-        self.event_4 = Event.objects.create(
-            id='event-4',
-            name='event-4',
-            data_source=self.data_source,
-            publisher=self.org_3,
-            publication_status=PublicationStatus.PUBLIC,
-        )
-
-    def test_event_list_with_auth_filters(self):
-        # test with public request
-        url = '{0}?show_all=1'.format(reverse('event-list'))
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['data']), 1)  # event-4
-
-        # test with authenticated data source and publisher
-        with patch(
-            'events.api.get_authenticated_data_source_and_publisher',
-            MagicMock(return_value=(self.data_source, self.org_2))
-        ):
-            url = '{0}?show_all=1'.format(reverse('event-list'))
-            response = self.client.get(url)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(len(response.data['data']), 3)  # event-1, event-2 and event-4
-
-    def test_event_list_with_publisher_filters(self):
-        # test with public request
-        url = '{0}?show_all=1&publisher=ds:org-3'.format(reverse('event-list'))
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['data']), 1)  # event-4
-
-        # test with authenticated data source and publisher
-        with patch(
-            'events.api.get_authenticated_data_source_and_publisher',
-            MagicMock(return_value=(self.data_source, self.org_2))
-        ):
-            url = '{0}?show_all=1&publisher=ds:org-2'.format(reverse('event-list'))
-            response = self.client.get(url)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            # note that org-2 is replaced by org-1
-            self.assertEqual(len(response.data['data']), 2)  # event-1 and event-2

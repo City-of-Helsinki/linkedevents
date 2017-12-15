@@ -5,6 +5,8 @@ from django.utils.translation import ugettext_lazy as _
 from django.contrib.gis.db import models
 from django.contrib.auth import get_user_model
 
+from .permissions import UserModelPermissionMixin
+
 
 class ApiKeyAuthentication(authentication.BaseAuthentication):
     def authenticate(self, request):
@@ -36,7 +38,7 @@ class ApiKeyAuthentication(authentication.BaseAuthentication):
         return data_source
 
 
-class ApiKeyUser(get_user_model()):
+class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
     data_source = models.OneToOneField(DataSource, primary_key=True)
 
     def get_display_name(self):
@@ -47,6 +49,12 @@ class ApiKeyUser(get_user_model()):
 
     def get_default_organization(self):
         return self.data_source.owner
+
+    def is_admin(self, publisher):
+        return self.data_source.owner == publisher
+
+    def is_regular_user(self, publisher):
+        return False
 
 
 class ApiKeyAuth(object):

@@ -22,8 +22,9 @@ from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 from django.utils.encoding import force_text
 from rest_framework import (
-    serializers, relations, viewsets, mixins, filters, generics, status, permissions
+    serializers, relations, viewsets, mixins, filters, generics, permissions
 )
+from rest_framework.permissions import SAFE_METHODS
 from rest_framework.settings import api_settings
 from rest_framework.reverse import reverse
 from rest_framework.response import Response
@@ -585,7 +586,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                 raise PermissionDenied()
         else:
             # without api key, the user will have to be admin
-            if not instance.is_user_editable() or not instance.is_admin(self.user):
+            if not instance.is_user_editable() or not instance.can_be_edited_by(self.user):
                 raise PermissionDenied()
         validated_data['last_modified_by'] = self.user
 
@@ -1519,6 +1520,10 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
         self.data_source = None
         self.organization = None
 
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        self.data_source, self.organization = get_authenticated_data_source_and_publisher(request)
+
     @staticmethod
     def get_serializer_class_for_version(version):
         if version == 'v0.1':
@@ -1536,15 +1541,17 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
         return context
 
     def get_object(self):
-        self.data_source, self.organization = get_authenticated_data_source_and_publisher(self.request)
         # Overridden to prevent queryset filtering from being applied
         # outside list views.
         try:
             event = Event.objects.get(pk=self.kwargs['pk'])
         except Event.DoesNotExist:
             raise Http404("Event does not exist")
-        if (event.publication_status == PublicationStatus.PUBLIC or
-                self.organization == event.publisher):
+        if (
+            event.publication_status == PublicationStatus.PUBLIC or
+            self.request.user.is_authenticated and
+            self.request.user.can_edit_event(event.publisher, event.publication_status)
+        ):
             if event.deleted:
                 raise EventDeletedException()
             return event
@@ -1555,16 +1562,24 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
         """
         TODO: convert to use proper filter framework
         """
-        self.data_source, self.organization = get_authenticated_data_source_and_publisher(self.request)
         queryset = super(EventViewSet, self).filter_queryset(queryset)
-        auth_filters = Q(publication_status=PublicationStatus.PUBLIC)
-        if self.organization:
-            # USER IS AUTHENTICATED
-            if 'show_all' in self.request.query_params:
-                # Show all events for this organization,
-                # along with public events for others.
-                auth_filters |= get_publisher_query(self.organization)
-        queryset = queryset.filter(auth_filters)
+
+        if self.request.method in SAFE_METHODS:
+            auth_filters = Q(publication_status=PublicationStatus.PUBLIC)
+            if self.organization:
+                # USER IS AUTHENTICATED
+                if 'show_all' in self.request.query_params:
+                    # Show all events for this organization,
+                    # along with public events for others.
+                    auth_filters |= get_publisher_query(self.organization)
+            queryset = queryset.filter(auth_filters)
+        else:
+            # prevent changing events user does not have write permissions (for bulk operations)
+            if self.organization:
+                queryset = self.request.user.get_editable_events(self.organization, queryset)
+            else:
+                queryset = queryset.none()
+
         queryset = _filter_event_queryset(queryset, self.request.query_params,
                                           srs=self.srs)
         return queryset.filter()
@@ -1572,20 +1587,56 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
     def allow_bulk_destroy(self, qs, filtered):
         return False
 
+    def perform_update(self, serializer):
+        # Prevent changing an event that user does not have write permissions
+        # For bulk update, the editable queryset is filtered in filter_queryset
+        # method
+        if isinstance(serializer, EventSerializer) and not self.request.user.can_edit_event(
+                serializer.instance.publisher,
+                serializer.instance.publication_status,
+        ):
+            raise DRFPermissionDenied()
+
+        # Prevent changing existing events to a state that user doe snot have write permissions
+        if isinstance(serializer.validated_data, list):
+            event_data_list = serializer.validated_data
+        else:
+            event_data_list = [serializer.validated_data]
+
+        for event_data in event_data_list:
+            if not self.request.user.can_edit_event(self.organization, event_data['publication_status']):
+                raise DRFPermissionDenied()
+
+        super().perform_update(serializer)
+
     @atomic
     def bulk_update(self, request, *args, **kwargs):
-        self.data_source, self.organization = get_authenticated_data_source_and_publisher(self.request)
         return super().bulk_update(request, *args, **kwargs)
 
     @atomic
     def create(self, request, *args, **kwargs):
         return super().create(request, *args, **kwargs)
 
+    def perform_create(self, serializer):
+        if isinstance(serializer.validated_data, list):
+            event_data_list = serializer.validated_data
+        else:
+            event_data_list = [serializer.validated_data]
+
+        for event_data in event_data_list:
+            if not self.request.user.can_edit_event(self.organization, event_data['publication_status']):
+                raise DRFPermissionDenied()
+
+        super().perform_create(serializer)
+
     @atomic
     def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
+        return super().destroy(request, *args, **kwargs)
+
+    def perform_destroy(self, instance):
+        if not self.request.user.can_edit_event(instance.publisher, instance.publication_status):
+            raise DRFPermissionDenied()
         instance.soft_delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def list(self, request, *args, **kwargs):
         # docx renderer has additional requirements for listing events

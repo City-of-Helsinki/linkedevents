@@ -143,11 +143,11 @@ class Image(models.Model):
     def is_user_edited(self):
         return bool(self.data_source.user_editable and self.last_modified_by)
 
-    def is_admin(self, user):
+    def can_be_edited_by(self, user):
+        """Check if current event can be edited by the given user"""
         if user.is_superuser:
             return True
-        else:
-            return user in self.publisher.admin_users.all()
+        return user.is_admin(self.publisher)
 
 
 @python_2_unicode_compatible
@@ -512,7 +512,13 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         if user.is_superuser:
             return True
         else:
-            return user in self.publisher.admin_users.all()
+            return user.is_admin(self.publisher)
+
+    def can_be_edited_by(self, user):
+        """Check if current event can be edited by the given user"""
+        if user.is_superuser:
+            return True
+        return user.can_edit_event(self.publisher, self.publication_status)
 
     def soft_delete(self, using=None):
         self.deleted = True

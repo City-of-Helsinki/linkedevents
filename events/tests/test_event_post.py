@@ -62,22 +62,6 @@ def test__cannot_create_an_event_with_existing_id(api_client,
 
 
 @pytest.mark.django_db
-def test__a_non_user_cannot_create_an_event(api_client, minimal_event_dict):
-
-    response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
-    assert response.status_code == 401
-
-
-@pytest.mark.django_db
-def test__a_non_admin_cannot_create_an_event(api_client, minimal_event_dict, user):
-    user.get_default_organization().admin_users.remove(user)
-    api_client.force_authenticate(user)
-
-    response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
-    assert response.status_code == 403
-
-
-@pytest.mark.django_db
 def test__api_key_with_organization_can_create_an_event(api_client, minimal_event_dict, data_source, organization):
 
     data_source.owner = organization
