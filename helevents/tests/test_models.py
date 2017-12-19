@@ -35,7 +35,8 @@ class TestUser(TestCase):
             name='affiliated-org',
             origin_id='affiliated-org',
             data_source=data_source,
-            responsible_organization=self.org,
+            parent=self.org,
+            internal_type=Organization.AFFILIATED,
         )
 
     def test_get_default_organization(self):

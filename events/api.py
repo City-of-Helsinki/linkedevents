@@ -904,10 +904,15 @@ class OrganizationSerializer(LinkedEventsSerializer):
     )
     sub_organizations = serializers.HyperlinkedRelatedField(
         queryset=Organization.objects.all(),
-        source='children',
         view_name='organization-detail',
         many=True,
     )
+    affiliated_organizations = serializers.HyperlinkedRelatedField(
+        queryset=Organization.objects.all(),
+        view_name='organization-detail',
+        many=True,
+    )
+    is_affiliated = serializers.SerializerMethodField()
 
     class Meta:
         model = Organization
@@ -915,10 +920,13 @@ class OrganizationSerializer(LinkedEventsSerializer):
             'id', 'data_source', 'origin_id',
             'classification', 'name', 'founding_date',
             'dissolution_date', 'parent_organization',
-            'sub_organizations', 'responsible_organization',
+            'sub_organizations', 'affiliated_organizations',
             'created_time', 'last_modified_time', 'created_by',
-            'last_modified_by',
+            'last_modified_by', 'is_affiliated',
         )
+
+    def get_is_affiliated(self, obj):
+        return obj.internal_type == Organization.AFFILIATED
 
 
 class OrganizationViewSet(viewsets.ReadOnlyModelViewSet):
