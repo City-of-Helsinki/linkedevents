@@ -2,12 +2,13 @@ from unittest.mock import MagicMock
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.test import TestCase
 from django_orghierarchy.models import Organization
 from rest_framework import status, serializers
 from rest_framework.test import APITestCase
 
 from .utils import versioned_reverse as reverse
-from ..api import get_authenticated_data_source_and_publisher, EventSerializer
+from ..api import get_authenticated_data_source_and_publisher, EventSerializer, OrganizationSerializer
 from ..auth import ApiKeyAuth
 from ..models import DataSource, Image
 
@@ -69,6 +70,35 @@ def test_serializer_validate_publisher():
     le_serializer.publisher = org_2
     with pytest.raises(serializers.ValidationError):
         le_serializer.validate_publisher(org_2)
+
+
+class TestOrganizationSerializer(TestCase):
+
+    def setUp(self):
+        self.serializer = OrganizationSerializer()
+        data_source = DataSource.objects.create(
+            id='ds',
+            name='data-source',
+        )
+        self.normal_org = Organization.objects.create(
+            name='normal_org',
+            origin_id='normal_org',
+            data_source=data_source,
+        )
+        self.affiliated_org = Organization.objects.create(
+            name='affiliated_org',
+            origin_id='affiliated_org',
+            data_source=data_source,
+            parent=self.normal_org,
+            internal_type=Organization.AFFILIATED,
+        )
+
+    def test_get_is_affiliated(self):
+        is_affiliated = self.serializer.get_is_affiliated(self.normal_org)
+        self.assertFalse(is_affiliated)
+
+        is_affiliated = self.serializer.get_is_affiliated(self.affiliated_org)
+        self.assertTrue(is_affiliated)
 
 
 class TestImageAPI(APITestCase):

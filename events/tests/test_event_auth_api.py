@@ -46,7 +46,8 @@ class TestEventAPI(APITestCase):
             name='org-4',
             origin_id='org-4',
             data_source=self.data_source,
-            responsible_organization=self.org_1
+            parent=self.org_1,
+            internal_type=Organization.AFFILIATED
         )
         self.event_1 = Event.objects.create(
             id='ds:event-1',
