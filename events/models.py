@@ -161,8 +161,8 @@ class BaseModel(models.Model):
     origin_id = models.CharField(verbose_name=_('Origin ID'), max_length=50, db_index=True, null=True,
                                  blank=True)
 
-    created_time = models.DateTimeField(null=True, blank=True)
-    last_modified_time = models.DateTimeField(null=True, blank=True, db_index=True)
+    created_time = models.DateTimeField(null=True, blank=True, auto_now_add=True)
+    last_modified_time = models.DateTimeField(null=True, blank=True, auto_now=True, db_index=True)
 
     created_by = models.ForeignKey(
         User, null=True, blank=True,
@@ -182,12 +182,6 @@ class BaseModel(models.Model):
 
     class Meta:
         abstract = True
-
-    def save(self, *args, **kwargs):
-        if not self.id and not self.created_time:
-            self.created_time = BaseModel.now()
-        self.last_modified_time = BaseModel.now()
-        super(BaseModel, self).save(*args, **kwargs)
 
     def is_user_editable(self):
         return self.data_source.user_editable
@@ -481,9 +475,6 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         if start and end:
             if start > end:
                 raise ValidationError({'end_time': _('The event end time cannot be earlier than the start time.')})
-        if not self.id:
-            self.created_time = BaseModel.now()
-        self.last_modified_time = BaseModel.now()
 
         super(Event, self).save(*args, **kwargs)
 
