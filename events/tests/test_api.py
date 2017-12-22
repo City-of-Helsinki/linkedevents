@@ -18,7 +18,7 @@ def test_api_page_size(api_client, event):
     event_count = 200
     id_base = event.id
     for i in range(0, event_count):
-        event.pk = "%s-%d" % (id_base, i)
+        event.pk = '%s-%d' % (id_base, i)
         event.save(force_insert=True)
     resp = api_client.get(reverse('event-list') + '?page_size=10')
     assert resp.status_code == 200
@@ -101,6 +101,45 @@ class TestOrganizationSerializer(TestCase):
         self.assertTrue(is_affiliated)
 
 
+class TestOrganizationAPI(APITestCase):
+
+    def setUp(self):
+        self.serializer = OrganizationSerializer()
+        data_source = DataSource.objects.create(
+            id='ds',
+            name='data-source',
+        )
+        self.org = Organization.objects.create(
+            name='org',
+            origin_id='org',
+            data_source=data_source,
+        )
+        self.normal_org = Organization.objects.create(
+            name='normal_org',
+            origin_id='normal_org',
+            data_source=data_source,
+            parent=self.org,
+        )
+        self.affiliated_org = Organization.objects.create(
+            name='affiliated_org',
+            origin_id='affiliated_org',
+            data_source=data_source,
+            parent=self.org,
+            internal_type=Organization.AFFILIATED,
+        )
+
+    def test_sub_organizations_and_affiliated_organizations(self):
+        url = reverse('organization-detail', kwargs={'pk': self.org.id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        normal_org_url = reverse('organization-detail', kwargs={'pk': self.normal_org.id})
+        affiliated_org_url = reverse('organization-detail', kwargs={'pk': self.affiliated_org.id})
+
+        self.assertEqual(response.data['sub_organizations'], [normal_org_url])
+        self.assertEqual(response.data['affiliated_organizations'], [affiliated_org_url])
+
+
 class TestImageAPI(APITestCase):
 
     def setUp(self):
@@ -110,7 +149,7 @@ class TestImageAPI(APITestCase):
         self.data_source = DataSource.objects.create(
             id='ds',
             name='data-source',
-            api_key="test_api_key",
+            api_key='test_api_key',
             user_editable=True,
         )
         self.org_1 = Organization.objects.create(
