@@ -278,6 +278,28 @@ class KulkeImporter(Importer):
         else:
             print("No match found for place '%s' (event %s)" % (loc_name, get_event_name(event)))
 
+    @staticmethod
+    def _html_format(text):
+        """Format text into html
+
+        The method simply wrap <p> tags around texts that are
+        separated by empty line, and append <br> to lines if
+        there are multiple line breaks within the same paragraph.
+        """
+        # used to preserve line breaks on result html to make it
+        # more readable
+        line_sep = '<br>{0}'.format(os.linesep)
+        paragraph_sep = os.linesep * 2
+
+        paragraphs = text.split(paragraph_sep)
+        formatted_paragraphs = []
+        for paragraph in paragraphs:
+            lines = paragraph.strip().split(os.linesep)
+            formatted_paragraph = '<p>{0}</p>'.format(line_sep.join(lines))
+            formatted_paragraphs.append(formatted_paragraph)
+
+        return paragraph_sep.join(formatted_paragraphs)
+
     def _import_event(self, lang, event_el, events):
         def text(t):
             return unicodetext(event_el.find('event' + t))
@@ -327,7 +349,7 @@ class KulkeImporter(Importer):
         if bodytext:
             description += bodytext
         if description:
-            event['description'][lang] = description
+            event['description'][lang] = self._html_format(description)
         else:
             event['description'][lang] = None
 
