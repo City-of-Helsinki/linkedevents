@@ -481,6 +481,9 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         # needed to cache location event numbers
         if not old_location and self.location:
             Place.objects.filter(id=self.location.id).update(n_events_changed=True)
+        if old_location and not self.location:
+            # drafts (or imported events) may not always have location set
+            Place.objects.filter(id=old_location.id).update(n_events_changed=True)
         if old_location and old_location != self.location:
             Place.objects.filter(id__in=(old_location.id, self.location.id)).update(n_events_changed=True)
 
