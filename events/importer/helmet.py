@@ -175,8 +175,8 @@ class HelmetImporter(Importer):
         self.tprek_data_source = DataSource.objects.get(id='tprek')
         self.ahjo_data_source = DataSource.objects.get(id='ahjo')
 
-        org_args = dict(id='ahjo:45400')
-        defaults = dict(name='Helsingin kaupunginkirjasto', data_source=self.ahjo_data_source)
+        org_args = dict(origin_id='45400', data_source=self.ahjo_data_source)
+        defaults = dict(name='Helsingin kaupunginkirjasto')
         self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
 
         # Build a cached list of Places

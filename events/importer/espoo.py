@@ -15,9 +15,9 @@ from events.models import (
     Event,
     Keyword,
     Offer,
-    Organization,
     Place
 )
+from django_orghierarchy.models import Organization
 from pytz import timezone
 
 from .base import Importer, recur_dict, register_importer
@@ -227,8 +227,8 @@ class EspooImporter(Importer):
         ds_defaults = dict(name='City of Espoo')
         self.data_source, _ = DataSource.objects.get_or_create(defaults=ds_defaults, **ds_args)
 
-        org_args = dict(id='espoo:kaupunki')
-        org_defaults = dict(name='Espoon kaupunki', data_source=self.data_source)
+        org_args = dict(origin_id='kaupunki', data_source=self.data_source)
+        org_defaults = dict(name='Espoon kaupunki')
         self.organization, _ = Organization.objects.get_or_create(defaults=org_defaults, **org_args)
         self._build_cache_places()
         self._cache_yso_keywords()

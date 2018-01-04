@@ -82,12 +82,10 @@ class YsoImporter(Importer):
         self.data_source, _ = DataSource.objects.get_or_create(
             id=self.name, defaults=defaults)
 
-        ds_args = dict(id=settings.SYSTEM_DATA_SOURCE_ID)
-        defaults = dict(name='System')
-        system_ds, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
+        hy_ds, _ = DataSource.objects.get_or_create(defaults={'name': 'Helsingin yliopisto'}, id='hy')
 
-        org_args = dict(id='hy:kansalliskirjasto')
-        defaults = dict(name='Kansalliskirjasto', data_source=system_ds)
+        org_args = dict(origin_id='kansalliskirjasto', data_source=hy_ds)
+        defaults = dict(name='Kansalliskirjasto')
         self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
 
     def import_keywords(self):

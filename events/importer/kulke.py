@@ -179,8 +179,8 @@ class KulkeImporter(Importer):
         defaults = dict(name='Ahjo')
         ahjo_ds, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
 
-        org_args = dict(id='ahjo:46101')
-        defaults = dict(name='Kulttuurikeskus', data_source=ahjo_ds)
+        org_args = dict(origin_id='46101', data_source=ahjo_ds)
+        defaults = dict(name='Kulttuurikeskus')
         self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
 
         # Build a cached list of Places to avoid frequent hits to the db

@@ -124,8 +124,8 @@ class MatkoImporter(Importer):
 
         ytj_ds, _ = DataSource.objects.get_or_create(defaults={'name': 'YTJ'}, id='ytj')
 
-        org_args = dict(id='ytj:0586977-6')
-        defaults = dict(name='Helsingin Markkinointi Oy', data_source=ytj_ds)
+        org_args = dict(origin_id='0586977-6', data_source=ytj_ds)
+        defaults = dict(name='Helsingin Markkinointi Oy')
 
         self.organization, _ = Organization.objects.get_or_create(
             defaults=defaults, **org_args)
