@@ -9,7 +9,6 @@ from events.models import DataSource, Event, Keyword
 
 
 URL = "http://www.lippu.fi/Lippuja.html?doc=artistPages%2Ftickets&fun=artist&action=tickets&xtmc=hetki%C3%A4&xtcr=2"
-EVENT_FILE = "event_espoo.json"
 
 
 @pytest.fixture
@@ -112,27 +111,3 @@ def test_keyword_fetch_from_dict(data_source, yso_keyword):
     importer.setup()
     assert 'glimsin tapahtumat' in YSO_KEYWORD_MAPS.keys()
     assert importer._map_classification_keywords_from_dict('glimsin tapahtumat').pop().id == u'yso:p13230'
-
-
-@pytest.mark.django_db
-def test_create_event(data_source, yso_keyword, datadir):
-    importer = EspooImporter({'verbosity': True, 'cached': False})
-    importer.setup()
-    with open(str(datadir.join(EVENT_FILE))) as f:
-        reply = json.loads(str(f.read()))
-        documents = reply['value']
-        events = recur_dict()
-        for doc in documents:
-            ev = importer._import_event('fi', doc, events)
-            importer.save_event(ev)
-    assert len(events) == 1
-    assert Event.objects.all().count() == 1
-    event = Event.objects.first()
-    assert event.name == u"Yleis\u00f6opastus KAMUssa: Lasin aika - Kauklahden lasitehdas 1923-1952"
-    assert event.name_fi == u"Yleis\u00f6opastus KAMUssa: Lasin aika - Kauklahden lasitehdas 1923-1952"
-    assert event.custom_data['ExternalVideoLink'] == u"http://www.video.com"
-    assert event.custom_data['PrimaryPhoneNumber'] == u"+358981657052"
-    assert event.location_extra_info == u"Espoon kaupunginmuseo KAMU, N\u00e4yttelykeskus WeeGee"
-    assert event.location_id
-    keywords = Keyword.objects.filter(events__id=event.id)
-    assert len(keywords) == 24
