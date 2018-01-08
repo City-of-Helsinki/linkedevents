@@ -109,5 +109,5 @@ def test_clean_url__return_url_stripped():
 def test_keyword_fetch_from_dict(data_source, yso_keyword):
     importer = EspooImporter({'verbosity': True, 'cached': False})
     importer.setup()
-    assert 'glimsin tapahtumat' in YSO_KEYWORD_MAPS.keys()
-    assert importer._map_classification_keywords_from_dict('glimsin tapahtumat').pop().id == u'yso:p13230'
+    assert 'lapset' in YSO_KEYWORD_MAPS.keys()
+    assert importer._map_classification_keywords_from_dict('lapset').pop().id == u'yso:p4354'
