@@ -29,7 +29,17 @@ class Importer(object):
         self.options = options
         self.verbosity = options['verbosity']
         self.logger = logging.getLogger(__name__)
+        
+        # We want to log to stderr (ie. no parameters here)
+        stderr_handler = logging.StreamHandler()
+        # INFO is used for things we want usually want to see
+        stderr_handler.setLevel(logging.INFO)
+        # Also add timestamps, they are nice, and not added by default
+        formatter = logging.Formatter('%(asctime)s: %(message)s')
+        stderr_handler.setFormatter(formatter)
 
+        self.logger.addHandler(stderr_handler)
+        
         importer_langs = set(self.supported_languages)
         configured_langs = set(l[0] for l in settings.LANGUAGES)
         # Intersection is all the languages possible for the importer to use.
