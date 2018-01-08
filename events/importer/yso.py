@@ -7,8 +7,6 @@ from django_orghierarchy.models import Organization
 from rdflib import RDF
 from rdflib.namespace import DCTERMS, OWL, SKOS
 
-from django.conf import settings
-
 from events.models import Keyword, KeywordLabel, DataSource, BaseModel, Language
 
 from .util import active_language
@@ -39,6 +37,7 @@ KEYWORDS_TO_ADD_TO_AUDIENCE = [
     'p7179',
     'p16596',
 ]
+
 
 def get_yso_id(subject):
     return ':'.join(subject.split('/')[-2:])
