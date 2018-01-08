@@ -1334,8 +1334,8 @@ class EventOrderingFilter(LinkedEventsOrderingFilter):
         ordering = self.get_ordering(request, queryset, view)
         if not ordering:
             ordering = []
-        if 'days_left' in [x.lstrip('-') for x in ordering]:
-            queryset = queryset.extra(select={'days_left': 'date_part(\'day\', end_time - start_time)'})
+        if 'duration' in ordering:
+            queryset = queryset.extra(select={'duration': 'end_time - start_time'})
         return queryset
 
 
@@ -1519,7 +1519,7 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
     serializer_class = EventSerializer
     filter_backends = (EventOrderingFilter, filters.DjangoFilterBackend)
     filter_class = EventFilter
-    ordering_fields = ('start_time', 'end_time', 'days_left', 'last_modified_time')
+    ordering_fields = ('start_time', 'end_time', 'duration', 'last_modified_time', 'name')
     ordering = ('-last_modified_time',)
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES + [DOCXRenderer]
 

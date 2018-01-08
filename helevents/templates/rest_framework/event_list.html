@@ -87,6 +87,13 @@ the current response, use the keyword <code>include</code>. For example:</p>
 <pre><code>event/?include=location,keywords
 </code></pre>
 <p><a href="?include=location,keywords" title="json">See the result</a></p>
-
+<h4 id="ordering">Ordering</h4>
+        <p>Default ordering is decreasing order by <code>last_modified_time</code>.
+    You may also order results by <code>start_time</code>, <code>end_time</code>,
+            <code>name</code> and <code>duration</code>.
+    For example:</p>
+<pre><code>event/?sort=end_time
+</code></pre>
+<p><a href="?sort=name" title="json">See the result</a></p>
     </div>
 </div>
