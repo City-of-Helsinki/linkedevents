@@ -1,11 +1,9 @@
 from distutils import dir_util
-import json
 import os
 import pytest
 
-from events.importer.base import recur_dict
 from events.importer.espoo import EspooImporter, clean_street_address, clean_url, YSO_KEYWORD_MAPS
-from events.models import DataSource, Event, Keyword
+from events.models import DataSource, Keyword
 
 
 URL = "http://www.lippu.fi/Lippuja.html?doc=artistPages%2Ftickets&fun=artist&action=tickets&xtmc=hetki%C3%A4&xtcr=2"
@@ -103,11 +101,3 @@ def test_clean_url__return_url_if_no_tag():
 @pytest.mark.django_db
 def test_clean_url__return_url_stripped():
     assert clean_url("   %s   " % URL) == URL
-
-
-@pytest.mark.django_db
-def test_keyword_fetch_from_dict(data_source, yso_keyword):
-    importer = EspooImporter({'verbosity': True, 'cached': False})
-    importer.setup()
-    assert 'lapset' in YSO_KEYWORD_MAPS.keys()
-    assert importer._map_classification_keywords_from_dict('lapset').pop().id == u'yso:p4354'

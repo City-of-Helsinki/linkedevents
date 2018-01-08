@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import re
+import logging
 import time
 from datetime import datetime, timedelta
 
@@ -14,7 +15,6 @@ from events.models import (
     DataSource,
     Event,
     Keyword,
-    Offer,
     Place
 )
 from django_orghierarchy.models import Organization
@@ -48,7 +48,7 @@ YSO_KEYWORD_MAPS = {
     u'kaavoitus': u'p8268',
     u'laitteet ja työtilat': (u'p2442', u'p546'),  # -> Laitteet, työtilat
     u'museot': u'p4934',
-    u'museot ja kuvataide': (u'p4934', u'p2739'), # -> museot, kuvataide
+    u'museot ja kuvataide': (u'p4934', u'p2739'),  # -> museot, kuvataide
     u'näyttelyt ja galleriat': (u'p5121', u'p6044'),  # -> Näyttelyt, galleriat
     u'musiikki': u'p1808',
     u'teatteri': u'p2625',
@@ -87,7 +87,7 @@ YSO_KEYWORD_MAPS = {
     u'kurssit': u'p9270',
     u'venäjä': u'p7643',  # -> venäjän kieli
     u'seniorit': u'p2434',  # -> vanhukset
-    u'senioreille': u'p2434', # -> vanhukset
+    u'senioreille': u'p2434',  # -> vanhukset
     u'senioripalvelut': u'p2434',
     u'näyttelyt': u'p5121',
     u'kirjallisuus': u'p8113',
@@ -187,13 +187,14 @@ def mark_deleted(obj):
 
 
 def clean_street_address(address):
+    logger = logging.getLogger(__name__)
     LATIN1_CHARSET = u'a-zàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ'
 
     address = address.strip()
     pattern = re.compile(r'([%s\ -]*[0-9-\ ]*\ ?[a-z]{0,2}),?\ *(0?2[0-9]{3})?\ *(espoo|esbo)?' % LATIN1_CHARSET, re.I)
     match = pattern.match(address)
     if not match:
-        self.logger.warning('Address not matching %s' % address)
+        logger.warning('Address not matching %s' % address)
         return {}
     groups = match.groups()
     street_address = groups[0]
@@ -253,8 +254,7 @@ class EspooImporter(Importer):
                     cat_id_set.add('yso:' + t_v)
             else:
                 cat_id_set.add('yso:' + yso_val)
-        keyword_list = Keyword.objects.filter(data_source=yso_data_source).\
-                filter(id__in=cat_id_set)
+        keyword_list = Keyword.objects.filter(data_source=yso_data_source).filter(id__in=cat_id_set)
         self.keyword_by_id = {p.id: p for p in keyword_list}
 
     def setup(self):
@@ -301,7 +301,7 @@ class EspooImporter(Importer):
         """
         Return the id of the event place corresponding to the street_address.
         Create the event place if not found.
-        
+
         Espoo website does not maintain a place object with a dedicated id.
         This function tries to map the address to an existing place or create
         a new one if no place is found.
@@ -346,7 +346,10 @@ class EspooImporter(Importer):
         event_keywords = set()
         if not self.keyword_by_id:
             return
-        yso_to_db = lambda v: self.keyword_by_id['yso:%s' % v]
+
+        def yso_to_db(v):
+            return self.keyword_by_id['yso:%s' % v]
+
         node_name_lower = classification_node_name.lower()  # Use lower case to get ride of case sensitivity
         if node_name_lower in YSO_KEYWORD_MAPS.keys():
             yso = YSO_KEYWORD_MAPS[node_name_lower]
@@ -359,7 +362,7 @@ class EspooImporter(Importer):
 
     def _map_classification_keywords_from_db(self, classification_node_name, lang):
         """
-        Try to map the classification to an yso keyword using the keyword name from the YSO 
+        Try to map the classification to an yso keyword using the keyword name from the YSO
         stored keywords. If not available, tries to map it to an espoo keywords.
 
         :param classification_node_name: The node name of the classification element
@@ -370,7 +373,8 @@ class EspooImporter(Importer):
         yso_data_source = DataSource.objects.get(id='yso')
         espoo_data_source = DataSource.objects.get(id='espoo')
         node_name = classification_node_name.strip()
-        query = Keyword.objects.filter(data_source__in=[yso_data_source, espoo_data_source]).order_by('-data_source_id')
+        query = Keyword.objects.filter(data_source__in=[yso_data_source, espoo_data_source])\
+            .order_by('-data_source_id')
         if not lang:
             keyword = query.filter(name__iexact=node_name).first()
 
@@ -380,7 +384,7 @@ class EspooImporter(Importer):
             keyword = query.filter(name_sv__iexact=node_name).first()
         if lang == 'en':
             keyword = query.filter(name_en__iexact=node_name).first()
-        
+
         if not keyword:
             return set()
 
@@ -411,9 +415,11 @@ class EspooImporter(Importer):
 
     def _import_event(self, lang, event_el, events):
         # Times are in Helsinki timezone
-        to_utc = lambda dt: LOCAL_TZ.localize(
-            dt, is_dst=None).astimezone(pytz.utc)
-        dt_parse = lambda dt_str: to_utc(dateutil.parser.parse(dt_str))
+        def to_utc(dt):
+            return LOCAL_TZ.localize(dt, is_dst=None).astimezone(pytz.utc)
+
+        def dt_parse(dt_str):
+            return to_utc(dateutil.parser.parse(dt_str))
 
         start_time = dt_parse(event_el['EventStartDate'])
         end_time = dt_parse(event_el['EventEndDate'])
@@ -428,7 +434,7 @@ class EspooImporter(Importer):
             fi_ver_ids = [int(x['ContentId']) for x in event_el['LanguageVersions'] if x['LanguageId'] == 1]
             fi_event = None
             for fi_id in fi_ver_ids:
-                if not fi_id in events:
+                if fi_id not in events:
                     continue
                 fi_event = events[fi_id]
                 if fi_event['start_time'] != start_time or fi_event['end_time'] != end_time:
@@ -475,7 +481,7 @@ class EspooImporter(Importer):
             if text.startswith('Vapaa pääsy') or text.startswith('Fritt inträde'):
                 offer['is_free'] = True
 
-        if ext_props.get('TicketLinks',''):
+        if ext_props.get('TicketLinks', ''):
             offer['info_url'][lang] = clean_url(ext_props['TicketLinks'])
             del ext_props['TicketLinks']
             has_offer = True
@@ -512,7 +518,7 @@ class EspooImporter(Importer):
                 return
             event[field_name] = val
 
-        if not 'date_published' in event:
+        if 'date_published' not in event:
             # Publication date changed based on language version, so we make sure
             # to save it only from the primary event.
             event['date_published'] = dt_parse(event_el['PublicDate'])
@@ -520,10 +526,11 @@ class EspooImporter(Importer):
         set_attr('start_time', dt_parse(event_el['EventStartDate']))
         set_attr('end_time', dt_parse(event_el['EventEndDate']))
 
-        to_tprek_id = lambda k: self.tprek_by_id[str(k).lower()]
-        to_le_id = lambda nid: next(
-            (to_tprek_id(v[1]) for k, v in LOCATIONS.items()
-             if nid in v[0]), None)
+        def to_tprek_id(k):
+            return self.tprek_by_id[str(k).lower()]
+
+        def to_le_id(nid):
+            return next((to_tprek_id(v[1]) for k, v in LOCATIONS.items() if nid in v[0]), None)
 
         event_keywords = event.get('keywords', set())
         event_audience = event.get('audience', set())
@@ -606,7 +613,7 @@ class EspooImporter(Importer):
 
         if 'location' not in event:
             self.logger.warning('Missing TPREK location map for event %s (%s)' %
-                (event['name'][lang], str(eid)))
+                                (event['name'][lang], str(eid)))
             del events[event['origin_id']]
             return event
 
