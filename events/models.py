@@ -543,7 +543,7 @@ def keyword_added_or_removed(sender, model=None,
 
 class Offer(models.Model, SimpleValueMixin):
     event = models.ForeignKey(Event, db_index=True, related_name='offers')
-    price = models.CharField(verbose_name=_('Price'), blank=True, max_length=512)
+    price = models.CharField(verbose_name=_('Price'), blank=True, max_length=1000)
     info_url = models.URLField(verbose_name=_('Web link to offer'), blank=True, null=True, max_length=1000)
     description = models.TextField(verbose_name=_('Offer description'), blank=True, null=True)
     # Don't expose is_free as an API field. It is used to distinguish

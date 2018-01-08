@@ -23,6 +23,22 @@ YSO_DEPRECATED_MAPS = {
     'yso:p21160': 'yso:p8113',  # kirjallisuus (erikoisala) -> kirjallisuus (taidelajit), wrong YSO replacement
 }
 
+# yso keywords for the importers to automatically include in the audience field as well
+KEYWORDS_TO_ADD_TO_AUDIENCE = [
+    'p4354',
+    'p11617',
+    'p2434',
+    'p4363',
+    'p6165',
+    'p16485',
+    'p1178',
+    'p16486',
+    'p1393',
+    'p1178',
+    'p9607',
+    'p7179',
+    'p16596',
+]
 
 def get_yso_id(subject):
     return ':'.join(subject.split('/')[-2:])

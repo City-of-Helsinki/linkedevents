@@ -13,6 +13,7 @@ from django.db import IntegrityError
 from django_orghierarchy.models import Organization
 
 from .base import Importer, register_importer, recur_dict
+from .yso import KEYWORDS_TO_ADD_TO_AUDIENCE
 from .util import unicodetext
 from events.models import DataSource, Event, EventAggregate, EventAggregateMember, Keyword, Place
 from events.keywords import KeywordMatcher
@@ -93,7 +94,6 @@ CHILDREN = ['p4354']
 YOUTH = ['p11617']
 ELDERLY = ['p2434']
 FAMILIES = ['p4363']
-KEYWORDS_TO_ADD_TO_AUDIENCE = CHILDREN + YOUTH + ELDERLY + FAMILIES
 
 MANUAL_CATEGORIES = {
     # urheilu

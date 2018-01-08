@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 import time
 from django.utils.html import strip_tags
 from .base import Importer, register_importer, recur_dict
+from .yso import KEYWORDS_TO_ADD_TO_AUDIENCE
 from events.models import Event, Keyword, DataSource, Place
 from django_orghierarchy.models import Organization
 from pytz import timezone
@@ -43,7 +44,6 @@ YSO_KEYWORD_MAPS = {
     u'Musiikki': u'p1808',  # -> musiikki
     u'muut kielet': u'p556',  # -> kielet
 }
-KEYWORDS_TO_ADD_TO_AUDIENCE = ['p4354', 'p11617', 'p2434', 'p4363', 'p6165', 'p16485', 'p1178', 'p16486']
 
 LOCATIONS = {
     # Library name in Finnish -> ((library node ids in event feed), tprek id)
