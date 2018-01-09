@@ -4,7 +4,7 @@
 #
 #    pip-compile --output-file requirements.txt requirements.in
 #
--e git+https://github.com/City-of-Helsinki/django-helusers@v0.1#egg=django-helusers
+-e git+https://github.com/City-of-Helsinki/django-helusers@v0.4.2#egg=django-helusers
 -e git+https://github.com/City-of-Helsinki/munigeo@v0.2.1#egg=django-munigeo
 -e git+https://github.com/City-of-Helsinki/django-orghierarchy.git@v0.1.2#egg=django-orghierarchy
 astroid==1.5.3            # via pylint

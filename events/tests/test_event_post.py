@@ -73,6 +73,24 @@ def test__api_key_with_organization_can_create_an_event(api_client, minimal_even
 
 
 @pytest.mark.django_db
+def test__api_key_with_another_organization_can_create_an_event(api_client, minimal_event_dict, data_source,
+                                                                organization, other_data_source, organization2):
+
+    data_source.owner = organization
+    data_source.save()
+    other_data_source.owner = organization2
+    other_data_source.save()
+
+    response = create_with_post(api_client, minimal_event_dict, data_source)
+    assert_event_data_is_equal(minimal_event_dict, response.data)
+    assert ApiKeyUser.objects.all().count() == 1
+
+    response = create_with_post(api_client, minimal_event_dict, other_data_source)
+    assert_event_data_is_equal(minimal_event_dict, response.data)
+    assert ApiKeyUser.objects.all().count() == 2
+
+
+@pytest.mark.django_db
 def test__api_key_without_organization_cannot_create_an_event(api_client, minimal_event_dict, data_source):
 
     api_client.credentials(apikey=data_source.api_key)
