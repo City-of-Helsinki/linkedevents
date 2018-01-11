@@ -805,7 +805,10 @@ class PlaceRetrieveViewSet(GeoModelAPIView,
         return context
 
     def retrieve(self, request, *args, **kwargs):
-        place = Place.objects.get(pk=kwargs['pk'])
+        try:
+            place = Place.objects.get(pk=kwargs['pk'])
+        except Place.DoesNotExist:
+            raise Http404()
         if place.deleted:
             if place.replaced_by:
                 place = place.replaced_by

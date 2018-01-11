@@ -84,6 +84,12 @@ def test_get_event_detail_check_fields_exist(api_client, event):
 
 
 @pytest.mark.django_db
+def test_get_unknown_event_detail_check_404(api_client):
+    response = api_client.get(reverse('event-detail', kwargs={'pk': 'möö'}))
+    assert response.status_code == 404
+
+
+@pytest.mark.django_db
 def test_get_event_list_verify_data_source_filter(api_client, data_source, event, event2):
     response = get_list(api_client, data={'data_source': data_source.id})
     assert event.id in [entry['id'] for entry in response.data['data']]
