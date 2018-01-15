@@ -7,6 +7,7 @@ from django.utils.text import slugify
 from django.utils.timezone import localtime
 from docx import Document
 from rest_framework import renderers
+from rest_framework.utils.serializer_helpers import ReturnDict, ReturnList
 from events.utils import parse_time
 
 
@@ -185,6 +186,9 @@ class DOCXRenderer(renderers.BaseRenderer):
         query_params = renderer_context['request'].query_params
 
         event_parser = EventParser()
+        if type(data) is ReturnDict:
+            # Support the single event endpoint just because we can
+            data = [data]
 
         first_location = data[0]['location']
         for raw_event in data:
