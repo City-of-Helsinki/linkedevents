@@ -7,7 +7,7 @@ from django.utils.text import slugify
 from django.utils.timezone import localtime
 from docx import Document
 from rest_framework import renderers
-from rest_framework.utils.serializer_helpers import ReturnDict, ReturnList
+from rest_framework.utils.serializer_helpers import ReturnDict
 from events.utils import parse_time
 
 
