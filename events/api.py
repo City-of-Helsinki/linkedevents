@@ -915,6 +915,10 @@ class OrganizationSerializer(LinkedEventsSerializer):
         view_name='organization-detail',
         many=True,
     )
+    replaced_by = serializers.HyperlinkedRelatedField(
+        queryset=Organization.objects.all(),
+        view_name='organization-detail',
+    )
     is_affiliated = serializers.SerializerMethodField()
 
     class Meta:
@@ -925,7 +929,7 @@ class OrganizationSerializer(LinkedEventsSerializer):
             'dissolution_date', 'parent_organization',
             'sub_organizations', 'affiliated_organizations',
             'created_time', 'last_modified_time', 'created_by',
-            'last_modified_by', 'is_affiliated',
+            'last_modified_by', 'is_affiliated', 'replaced_by'
         )
 
     def get_is_affiliated(self, obj):
