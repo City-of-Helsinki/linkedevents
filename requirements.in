@@ -21,14 +21,14 @@ requests-cache
 six
 django-extensions
 rdflib
--e git+https://github.com/City-of-Helsinki/munigeo#egg=django-munigeo
+-e git+https://github.com/City-of-Helsinki/munigeo@v0.2.3#egg=django-munigeo
 icalendar
 httmock
 bleach
 django-haystack
 elasticsearch<5.0
 raven
--e git+https://github.com/City-of-Helsinki/django-helusers@v0.4.2#egg=django-helusers
+django-helusers
 pytest-django
 flake8
 pip-tools

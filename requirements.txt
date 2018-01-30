@@ -4,8 +4,7 @@
 #
 #    pip-compile --output-file requirements.txt requirements.in
 #
--e git+https://github.com/City-of-Helsinki/django-helusers@v0.4.2#egg=django-helusers
--e git+https://github.com/City-of-Helsinki/munigeo@v0.2.1#egg=django-munigeo
+-e git+https://github.com/City-of-Helsinki/munigeo@v0.2.3#egg=django-munigeo
 -e git+https://github.com/City-of-Helsinki/django-orghierarchy.git@v0.1.4#egg=django-orghierarchy
 astroid==1.5.3            # via pylint
 bleach==2.1
@@ -20,6 +19,7 @@ django-cors-headers==2.1.0
 django-extensions==1.9.1
 django-filter==1.0.4
 django-haystack==2.6.1
+django-helusers==0.4.2
 django-image-cropping==1.1.0
 django-leaflet==0.22.0
 django-modeltranslation==0.12.1
@@ -30,10 +30,12 @@ djangorestframework-bulk==0.2.1
 djangorestframework-gis==0.11.2
 djangorestframework-jwt==1.11.0
 djangorestframework==3.6.4
+drf-oidc-auth==0.9        # via django-helusers
 easy-thumbnails==2.4.2
 elasticsearch==2.4.1
 first==2.0.1              # via pip-tools
 flake8==3.5.0
+future==0.16.0            # via pyjwkest
 html5lib==1.0b10          # via bleach
 httmock==1.2.6
 icalendar==3.11.7
@@ -51,7 +53,9 @@ pip-tools==1.10.1
 psycopg2==2.7.3.1
 py==1.4.34                # via pytest
 pycodestyle==2.3.1        # via flake8
+pycryptodomex==3.4.8      # via pyjwkest
 pyflakes==1.6.0
+pyjwkest==1.4.0           # via drf-oidc-auth
 pyjwt==1.5.3              # via djangorestframework-jwt
 pylint==1.7.4
 pyparsing==2.2.0          # via rdflib
@@ -68,6 +72,7 @@ requests-cache==0.4.13
 requests-oauthlib==0.8.0  # via django-allauth
 requests==2.18.4
 six==1.11.0
+swapper==1.1.0
 urllib3==1.22             # via elasticsearch, requests
 webencodings==0.5.1       # via html5lib
 wrapt==1.10.11            # via astroid
