@@ -25,7 +25,7 @@ django-leaflet==0.22.0
 django-modeltranslation==0.12.1
 django-mptt==0.8.7
 django-reversion==2.0.10
-django==1.11.5
+django==1.11.10
 djangorestframework-bulk==0.2.1
 djangorestframework-gis==0.11.2
 djangorestframework-jwt==1.11.0
