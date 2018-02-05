@@ -14,7 +14,7 @@ from events.models import DataSource, Place
 from .sync import ModelSyncher
 from .base import Importer, register_importer
 
-URL_BASE = 'http://www.hel.fi/palvelukarttaws/rest/v3/'
+URL_BASE = 'http://www.hel.fi/palvelukarttaws/rest/v4/'
 GK25_SRID = 3879
 
 
@@ -152,7 +152,7 @@ class TprekImporter(Importer):
         self._save_translated_field(obj, 'street_address', info, 'street_address')
         self._save_translated_field(obj, 'address_locality', info, 'address_city')
 
-        self._save_translated_field(obj, 'url', info, 'info_url', max_length=200)
+        self._save_translated_field(obj, 'info_url', info, 'www', max_length=200)
 
         self._save_field(obj, 'telephone', info, 'phone')
 
