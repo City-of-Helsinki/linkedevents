@@ -41,7 +41,8 @@ LOCATION_TPREK_MAP = {
     'uimastadion': '41047',
     'eläintarhan yleisurheilukenttä': '40498',
     'korkeasaaren eläintarha': '7245',
-    'helsingin taidemuseo ham': '8675'
+    'helsingin taidemuseo ham': '8675',
+    'info- ja näyttelytila laituri': '8609'
 }
 
 EXTRA_LOCATIONS = {
