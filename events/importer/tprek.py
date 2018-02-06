@@ -152,7 +152,7 @@ class TprekImporter(Importer):
         self._save_translated_field(obj, 'street_address', info, 'street_address')
         self._save_translated_field(obj, 'address_locality', info, 'address_city')
 
-        self._save_translated_field(obj, 'info_url', info, 'www', max_length=200)
+        self._save_translated_field(obj, 'info_url', info, 'www', max_length=1000)
 
         self._save_field(obj, 'telephone', info, 'phone')
 
