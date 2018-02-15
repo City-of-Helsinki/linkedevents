@@ -129,6 +129,7 @@ def test__update_minimal_event_with_autopopulated_fields_with_put(api_client, mi
         replace(hour=0, minute=0, second=0, microsecond=0).astimezone(pytz.utc)
     assert event.has_end_time is False
 
+
 @pytest.mark.django_db
 def test__update_an_event_with_put(api_client, complex_event_dict, user):
 
@@ -209,6 +210,7 @@ def test__reschedule_an_event_with_put(api_client, complex_event_dict, user):
     data2['event_status'] = 'EventRescheduled'
     assert_event_data_is_equal(data2, response2.data)
 
+
 @pytest.mark.django_db
 def test__postpone_an_event_with_put(api_client, complex_event_dict, user):
 
@@ -260,6 +262,7 @@ def test__postpone_an_event_with_put(api_client, complex_event_dict, user):
     # assert the event is marked rescheduled
     data2['event_status'] = 'EventRescheduled'
     assert_event_data_is_equal(data2, response2.data)
+
 
 @pytest.mark.django_db
 def test__cancel_an_event_with_put(api_client, complex_event_dict, user):
@@ -383,8 +386,8 @@ def test__reschedule_a_cancelled_event_with_put(api_client, complex_event_dict, 
 # the following values may not be posted
 @pytest.mark.django_db
 @pytest.mark.parametrize("non_permitted_input,non_permitted_response", [
-    ({'id': 'not_allowed:1'}, 400), # may not fake id
-    ({'id': settings.SYSTEM_DATA_SOURCE_ID + ':changed'}, 400), # may not change object id
+    ({'id': 'not_allowed:1'}, 400),  # may not fake id
+    ({'id': settings.SYSTEM_DATA_SOURCE_ID + ':changed'}, 400),  # may not change object id
     ({'data_source': 'theotherdatasourceid'}, 400),  # may not fake data source
     ({'publisher': 'test_organization2'}, 400),  # may not fake organization
 ])
@@ -404,16 +407,6 @@ def test__non_editable_fields_at_put(api_client, minimal_event_dict, user,
     if non_permitted_response >= 400:
         # check that there is an error message for the corresponding field
         assert list(non_permitted_input)[0] in response2.data
-
-
-@pytest.mark.django_db
-def test__a_non_admin_cannot_update_an_event(api_client, event, complex_event_dict, user):
-    event.publisher.admin_users.remove(user)
-    api_client.force_authenticate(user)
-
-    detail_url = reverse('event-detail', kwargs={'pk': event.pk})
-    response = update_with_put(api_client, detail_url, complex_event_dict)
-    assert response.status_code == 403
 
 
 @pytest.mark.django_db

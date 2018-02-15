@@ -3,15 +3,12 @@ import requests
 
 import rdflib
 from django.core.exceptions import ObjectDoesNotExist
-from rdflib import URIRef
+from django_orghierarchy.models import Organization
 from rdflib import RDF
-from rdflib.namespace import FOAF, SKOS, OWL, DCTERMS
+from rdflib.namespace import DCTERMS, OWL, SKOS
 
-from django.conf import settings
+from events.models import Keyword, KeywordLabel, DataSource, BaseModel, Language
 
-from events.models import Keyword, KeywordLabel, DataSource, BaseModel, Language, Organization
-
-from sys import stdout
 from .util import active_language
 from .sync import ModelSyncher
 from .base import Importer, register_importer
@@ -24,13 +21,30 @@ YSO_DEPRECATED_MAPS = {
     'yso:p21160': 'yso:p8113',  # kirjallisuus (erikoisala) -> kirjallisuus (taidelajit), wrong YSO replacement
 }
 
+# yso keywords for the importers to automatically include in the audience field as well
+KEYWORDS_TO_ADD_TO_AUDIENCE = [
+    'p4354',
+    'p11617',
+    'p2434',
+    'p4363',
+    'p6165',
+    'p16485',
+    'p1178',
+    'p16486',
+    'p1393',
+    'p1178',
+    'p9607',
+    'p7179',
+    'p16596',
+]
+
 
 def get_yso_id(subject):
     return ':'.join(subject.split('/')[-2:])
 
 
 def get_subject(yso_id):
-    return rdflib.term.URIRef(yso+yso_id.split(':')[-1])
+    return rdflib.term.URIRef(yso + yso_id.split(':')[-1])
 
 
 def is_deprecated(graph, subject):
@@ -38,7 +52,7 @@ def is_deprecated(graph, subject):
 
 
 def is_aggregate_concept(graph, subject):
-    return (subject, SKOS.inScheme, rdflib.term.URIRef(yso+'aggregateconceptscheme')) in graph
+    return (subject, SKOS.inScheme, rdflib.term.URIRef(yso + 'aggregateconceptscheme')) in graph
 
 
 def get_replacement(graph, subject):
@@ -83,12 +97,10 @@ class YsoImporter(Importer):
         self.data_source, _ = DataSource.objects.get_or_create(
             id=self.name, defaults=defaults)
 
-        ds_args = dict(id=settings.SYSTEM_DATA_SOURCE_ID)
-        defaults = dict(name='System')
-        system_ds, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
+        hy_ds, _ = DataSource.objects.get_or_create(defaults={'name': 'Helsingin yliopisto'}, id='hy')
 
-        org_args = dict(id='hy:kansalliskirjasto')
-        defaults = dict(name='Kansalliskirjasto', data_source=system_ds)
+        org_args = dict(origin_id='kansalliskirjasto', data_source=hy_ds)
+        defaults = dict(name='Kansalliskirjasto')
         self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
 
     def import_keywords(self):
@@ -116,10 +128,9 @@ class YsoImporter(Importer):
         if bulk_mode:
             assert not Keyword.objects.filter(data_source=self.data_source).exists()
         if not bulk_mode:
-            delete_func = lambda obj: obj.delete()
             queryset = KeywordLabel.objects.all()
             label_syncher = ModelSyncher(
-                queryset, lambda obj: (obj.name, obj.language_id), delete_func=delete_func)
+                queryset, lambda obj: (obj.name, obj.language_id), delete_func=lambda obj: obj.delete())
 
         keyword_labels = {}
         labels_to_create = set()
@@ -153,8 +164,6 @@ class YsoImporter(Importer):
             self.save_keyword_label_relationships_in_bulk(keyword_labels)
 
         if not bulk_mode:
-            deprecate_keyword = lambda obj: deprecate_and_replace(graph, obj)
-            check_deprecated_keyword = lambda obj: obj.deprecated
             # manually add new keywords to deprecated ones
             for old_id, new_id in YSO_DEPRECATED_MAPS.items():
                 try:
@@ -169,9 +178,9 @@ class YsoImporter(Importer):
             queryset = Keyword.objects.filter(data_source=self.data_source, deprecated=False)
             syncher = ModelSyncher(
                 queryset, lambda keyword: keyword.id,
-                delete_func=deprecate_keyword,
-                check_deleted_func=check_deprecated_keyword)
-            save_set=set()
+                delete_func=lambda obj: deprecate_and_replace(graph, obj),
+                check_deleted_func=lambda obj: obj.deprecated)
+            save_set = set()
             for subject in graph.subjects(RDF.type, SKOS.Concept):
                 self.save_keyword(syncher, graph, subject, keyword_labels, save_set)
             syncher.finish()
@@ -189,8 +198,8 @@ class YsoImporter(Importer):
                 continue
             for label in url_labels:
                 params = dict(
-                    keyword_id = yid,
-                    keywordlabel_id = (
+                    keyword_id=yid,
+                    keywordlabel_id=(
                         label_id_from_name_and_language.get(
                             (str(label), label.language))))
                 if params['keyword_id'] and params['keywordlabel_id']:

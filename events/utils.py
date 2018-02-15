@@ -65,9 +65,10 @@ def recache_n_events(keyword_ids, all=False):
         if all:
             Keyword.objects.update(n_events=0)
         else:
-            Keyword.objects.filter(id__in=keyword_ids).update(n_events=0)
+            # set the flag to false here, so zero-event keywords will get it too
+            Keyword.objects.filter(id__in=keyword_ids).update(n_events=0, n_events_changed=False)
         for keyword_id, n_events in count_events_for_keywords(keyword_ids, all=all).items():
-            Keyword.objects.filter(id=keyword_id).update(n_events=n_events, n_events_changed=False)
+            Keyword.objects.filter(id=keyword_id).update(n_events=n_events)
 
 
 def recache_n_events_in_locations(place_ids, all=False):
@@ -84,9 +85,10 @@ def recache_n_events_in_locations(place_ids, all=False):
         if all:
             Place.objects.update(n_events=0)
         else:
-            Place.objects.filter(id__in=place_ids).update(n_events=0)
+            # set the flag to false here, so zero-event places will get it too
+            Place.objects.filter(id__in=place_ids).update(n_events=0, n_events_changed=False)
         for place_id, n_events in count_events_for_places(place_ids, all=all).items():
-            Place.objects.filter(id=place_id).update(n_events=n_events, n_events_changed=False)
+            Place.objects.filter(id=place_id).update(n_events=n_events)
 
 
 def parse_time(time_str, is_start):

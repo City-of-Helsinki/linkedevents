@@ -1,10 +1,7 @@
-# django
-from django.utils import timezone
+from django_orghierarchy.models import Organization
 
 # this app
-from .utils import versioned_reverse as reverse
-from events.api import KeywordSerializer, PlaceSerializer
-from events.models import DataSource, Organization
+from events.models import DataSource
 
 
 class TestDataMixin:
