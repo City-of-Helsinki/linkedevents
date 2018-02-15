@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0044_add_apikey_user_model'),
+        ('events', '0050_lengthen_offer_price_field'),
     ]
 
     operations = [
