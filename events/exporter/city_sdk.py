@@ -2,7 +2,6 @@
 import json
 import re
 import datetime
-from dateutil.parser import parse
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management import CommandError
 import pytz
@@ -30,11 +29,6 @@ bcp47_lang_map = {
     "en": "en-GB"
 }
 
-# CITYSDK_DEFAULT_AUTHOR = {
-#     "term": "primary",
-#     "href": "http://events.hel.fi",
-#     "value": "linkedevents"
-# }
 CITYSDK_DEFAULT_AUTHOR = {
     "term": "primary",
     "value": "admin"
@@ -114,7 +108,6 @@ class CitySDKExporter(Exporter):
         """
         username = settings.CITYSDK_API_SETTINGS['USERNAME']
         password = settings.CITYSDK_API_SETTINGS['PASSWORD']
-        # noinspection PyUnusedLocal
         session_response = requests.get(
             '%sauth?username=%s&password=%s' %
             (BASE_API_URL, username, password))
@@ -217,7 +210,6 @@ class CitySDKExporter(Exporter):
 
         # Support for bboxes later, now Point is only possible value
         if place.position:
-            coords_as_wkt = place.position.json
             matches = re.search('POINT \\((.*)\\)', place.position.wkt)
             if matches:
                 coords = matches.group(1)
@@ -311,7 +303,7 @@ class CitySDKExporter(Exporter):
                            export_info.target_id))
                     delete_count += 1
 
-        #new
+        # new
         imported = {'id__in': export_infos.values("object_id")}
         if extra_filters:
             qs = klass.objects.exclude(
@@ -402,20 +394,18 @@ class CitySDKExporter(Exporter):
         Convenience method to delete everything imported from the source API,
         avoid in production use.
         """
-        get_type = lambda klass: ContentType.objects.get_for_model(klass)
-
         for event_info in ExportInfo.objects.filter(
-                content_type=get_type(Event),
+                content_type=ContentType.objects.get_for_model(Event),
                 target_system=self.name):
             self.__delete_resource(event_info, EVENTS_URL)
 
         for place_info in ExportInfo.objects.filter(
-                content_type=get_type(Place),
+                content_type=ContentType.objects.get_for_model(Place),
                 target_system=self.name):
             self.__delete_resource(place_info, POIS_URL)
 
         for category_info in ExportInfo.objects.filter(
-                content_type=get_type(Keyword),
+                content_type=ContentType.objects.get_for_model(Keyword),
                 target_system=self.name):
             try:
                 category_response = self._do_req(
@@ -445,7 +435,7 @@ class CitySDKExporter(Exporter):
 def citysdk_mock(url, request):
     foo = 'foo'
     if request.method == 'PUT':
-        data = '"'+foo+'"'
+        data = '"' + foo + '"'
     else:
         data = {'id': str(foo)}
     headers = {'content-type': 'application/json'}

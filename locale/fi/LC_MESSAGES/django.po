@@ -54,22 +54,6 @@ msgstr ""
 msgid "User doesn't belong to any organization"
 msgstr ""
 
-#: events/attic/models.py:14
-msgid "person"
-msgstr "henkilö"
-
-#: events/attic/models.py:15
-msgid "persons"
-msgstr "henkilöt"
-
-#: events/attic/models.py:30
-msgid "organization"
-msgstr "organisaatio"
-
-#: events/attic/models.py:31
-msgid "organizations"
-msgstr "organisaatiot"
-
 #: events/models.py:59 events/models.py:87 events/models.py:121
 #: events/models.py:165 events/models.py:173 events/models.py:407
 msgid "Name"

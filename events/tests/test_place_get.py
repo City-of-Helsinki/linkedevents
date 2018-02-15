@@ -24,6 +24,12 @@ def test_get_place_detail(api_client, place):
 
 
 @pytest.mark.django_db
+def test_get_unknown_place_detail_check_404(api_client):
+    response = api_client.get(reverse('place-detail', kwargs={'pk': 'möö'}))
+    assert response.status_code == 404
+
+
+@pytest.mark.django_db
 def test_get_place_detail_check_redirect_and_event_remap(api_client, event, place, place2):
     call_command('update_n_events')
     response = get_detail(api_client, place.pk)

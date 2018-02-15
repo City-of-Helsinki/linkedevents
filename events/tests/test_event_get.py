@@ -2,7 +2,6 @@
 from .utils import versioned_reverse as reverse
 import pytest
 from .utils import get, assert_fields_exist
-from django.conf import settings
 from events.models import Event
 
 
@@ -82,6 +81,12 @@ def test_get_event_detail_check_fields_exist(api_client, event):
     """
     response = get_detail(api_client, event.pk)
     assert_event_fields_exist(response.data)
+
+
+@pytest.mark.django_db
+def test_get_unknown_event_detail_check_404(api_client):
+    response = api_client.get(reverse('event-detail', kwargs={'pk': 'möö'}))
+    assert response.status_code == 404
 
 
 @pytest.mark.django_db

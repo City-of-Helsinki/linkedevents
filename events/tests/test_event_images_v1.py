@@ -11,8 +11,10 @@ from django.test.utils import override_settings
 from PIL import Image as PILImage
 
 from .utils import get, assert_fields_exist, assert_event_data_is_equal
-from .test_event_post import create_with_post, list_url as event_list_url
-from events.models import Image, License
+
+# event_list_url is used as magic fixture, which flake8 doesn't see
+from .test_event_post import create_with_post, list_url as event_list_url  # noqa
+from events.models import Image
 from events.auth import ApiKeyUser
 
 
@@ -220,7 +222,8 @@ def test__upload_an_image_with_api_key(api_client, settings, list_url, image_dat
 
 
 @pytest.mark.django_db
-def test__image_cannot_be_edited_outside_organization(api_client, settings, list_url, image_data, user, organization, organization2, user2):
+def test__image_cannot_be_edited_outside_organization(
+        api_client, settings, list_url, image_data, user, organization, organization2, user2):
     organization.admin_users.add(user)
     api_client.force_authenticate(user)
 
@@ -273,8 +276,10 @@ def test__image_from_another_data_source_can_be_edited_by_admin(api_client, list
     response3 = api_client.delete(detail_url)
     assert response3.status_code == 204
 
+
 @pytest.mark.django_db
-def test__image_cannot_be_edited_outside_organization_with_apikey(api_client, settings, list_url, image_data, user, organization, organization2, other_data_source):
+def test__image_cannot_be_edited_outside_organization_with_apikey(
+        api_client, settings, list_url, image_data, user, organization, organization2, other_data_source):
     organization.admin_users.add(user)
     api_client.force_authenticate(user)
 
@@ -301,9 +306,11 @@ def test__image_cannot_be_edited_outside_organization_with_apikey(api_client, se
     assert response3.status_code == 403
 
 
-@override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL='')
+# event_list_url is used as magic fixture, which flake8 doesn't see
+@override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL='')  # noqa
 @pytest.mark.django_db
-def test__create_an_event_with_uploaded_image(api_client, list_url, event_list_url, minimal_event_dict, image_data, user):
+def test__create_an_event_with_uploaded_image(
+        api_client, list_url, event_list_url, minimal_event_dict, image_data, user):
     api_client.force_authenticate(user)
 
     image_response = api_client.post(list_url, image_data)
@@ -431,7 +438,6 @@ def test__delete_an_image_with_api_key(api_client, settings, organization, data_
 
     # check that the image file is deleted
     assert not os.path.isfile(image_path)
-
 
 
 @override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL='')

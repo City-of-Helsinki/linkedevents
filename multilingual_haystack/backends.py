@@ -1,10 +1,8 @@
 # based on http://anthony-tresontani.github.io/Django/2012/09/20/multilingual-search/
-import re
 from django.conf import settings
 from django.utils import translation
 from haystack import connections
 from haystack.backends import BaseEngine, BaseSearchBackend, BaseSearchQuery
-from haystack.constants import DEFAULT_ALIAS
 from haystack.utils.loading import load_backend
 
 

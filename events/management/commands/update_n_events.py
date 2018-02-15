@@ -1,5 +1,4 @@
 from django.core.management import BaseCommand, CommandError
-from django.db import transaction
 
 from events.models import Keyword, Place
 from events.utils import recache_n_events_in_locations, recache_n_events
@@ -41,5 +40,3 @@ class Command(BaseCommand):
             self.handle_keywords(update_all=update_all)
         if not model or model == 'place':
             self.handle_places(update_all=update_all)
-
-

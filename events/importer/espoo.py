@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import re
+import logging
 import time
 from datetime import datetime, timedelta
 
@@ -14,13 +15,13 @@ from events.models import (
     DataSource,
     Event,
     Keyword,
-    Offer,
-    Organization,
     Place
 )
+from django_orghierarchy.models import Organization
 from pytz import timezone
 
 from .base import Importer, recur_dict, register_importer
+from .yso import KEYWORDS_TO_ADD_TO_AUDIENCE
 from .sync import ModelSyncher
 
 # Maximum number of attempts to fetch the event from the API before giving up
@@ -30,7 +31,6 @@ YSO_BASE_URL = 'http://www.yso.fi/onto/yso/'
 YSO_KEYWORD_MAPS = {
     u'koululaiset ja opiskelijat': (u'p16485', u'p16486'),
     u'yhdistykset ja seurat': u'p1393',  # both words seems to mean associations
-    u'glimsin tapahtumat': u'p13230',  # Glim
     u'näyttelyt ja tapahtumat': (u'p5121', u'p2108'),
     u'nuoriso': u'p11617',
     u'koulutus, kurssit ja luennot': (u'p84', u'p9270', u'p15875'),
@@ -48,6 +48,7 @@ YSO_KEYWORD_MAPS = {
     u'kaavoitus': u'p8268',
     u'laitteet ja työtilat': (u'p2442', u'p546'),  # -> Laitteet, työtilat
     u'museot': u'p4934',
+    u'museot ja kuvataide': (u'p4934', u'p2739'),  # -> museot, kuvataide
     u'näyttelyt ja galleriat': (u'p5121', u'p6044'),  # -> Näyttelyt, galleriat
     u'musiikki': u'p1808',
     u'teatteri': u'p2625',
@@ -63,23 +64,20 @@ YSO_KEYWORD_MAPS = {
     u'virkistysalueet': u'p4058',
     u'bändit': u'p5072',
     u'nuorisotilat': u'p17790',
-    u'nuorisotyö': u'p1925',
     u'aikuiskoulutus': u'p300',
     u'korkeakouluopetus': u'p1246',
     u'perusopetus': u'p19327',
     u'päivähoito (lapsille)': u'p3523',  # -> Päivähoito
-    u'bodom': u'p22781',
-    u'sellosali': (u'p18070', u'p21728'),  # Sello, Salit
-    u'kulttuuri': u'p372',
     u'lapsille': u'p4354',  # lapset (ikäryhmät)
     u'elokuva': u'p16327',  # elokuva (taiteet)
     u'elokuvat': u'p16327',  # elokuva (taiteet)
     u'musiikki ja konsertit': (u'p1808', u'p11185'),  # Musiikki, konsertit
-    u'liikunta, ulkoilu ja urheilu': (u'p916', u'p2771', u'p965'), 
+    u'liikunta, ulkoilu ja urheilu': (u'p916', u'p2771', u'p965'),
+    u'liikuntalajit': u'p916',
+    u'ohjattu liikunta': u'p916',
     u'harrastus- ja kerhotoiminta': (u'p2901', u'p7642', u'p8090'),  # Harrastus, Kerho, toiminta
     u'perheet': u'p4363',  # perheet (ryhmät)
-    u'näyttelykeskus weegee': u'p23721',  # WeeGee-talo
-    u'espoon kulttuurikeskus': u'p8725',  # kulttuurikeskukset
+    u'koko perheelle': u'p4363',
     u'yrittäjät ja yritykset': (u'p1178', u'p3128'),
     u'yrittäjät': u'p1178',
     u'lapset': u'p4354',
@@ -89,6 +87,8 @@ YSO_KEYWORD_MAPS = {
     u'kurssit': u'p9270',
     u'venäjä': u'p7643',  # -> venäjän kieli
     u'seniorit': u'p2434',  # -> vanhukset
+    u'senioreille': u'p2434',  # -> vanhukset
+    u'senioripalvelut': u'p2434',
     u'näyttelyt': u'p5121',
     u'kirjallisuus': u'p8113',
     u'kielikahvilat ja keskusteluryhmät': u'p18105',  # -> keskusteluryhmät
@@ -101,13 +101,50 @@ YSO_KEYWORD_MAPS = {
     u'lasten ja nuorten tapahtumat': (u'p4354', u'p11617'),  # -> lapset, nuoret
     u'lapset ja perheet': (u'p4354', u'p4363'),  # -> lapset, perheet
     u'lukupiirit': u'p11406',  # -> lukeminen
+    u'asuminen ja ympäristö': u'p1797',  # -> asuminen
+    u'ympäristö ja luonto': u'p13084',  # -> luonto
+    u'tanssi ja voimistelu': (u'p1278', u'p963'),  # -> tanssi, voimistelu
+    u'tanssi ja sirkus': (u'p1278', u'p5007'),  # -> tanssi, sirkus,
+    u'sosiaali- ja terveyspalvelut': (u'p1307', u'p3307'),  # -> sosiaalipalvelut, terveyspalvelut
+    u'hyvinvointi ja terveys': (u'p22036', u'p2762'),  # -> hyvinvointi, terveys
+    u'asemakaava': u'p8268',
+    u'asemakaavat': u'p8268',
+    u'asemakaavoituskohteet': u'p8268',
 }
+
+# retain the above for simplicity, even if espoo importer internally requires full keyword ids
+KEYWORDS_TO_ADD_TO_AUDIENCE = ['yso:{}'.format(i) for i in KEYWORDS_TO_ADD_TO_AUDIENCE]
+
+# certain classifications are too general, or locations that do not belong to keywords
+CLASSIFICATIONS_TO_DISREGARD = [
+    'tapahtumat',
+    'kulttuuri',
+    'kulttuuri ja liikunta',
+    'kulttuuri ja liikunta  ',
+    'kaikki tapahtumat',
+    'muut tapahtumat',
+    'sellosali',
+    'espoon kulttuurikeskus',
+    'espoon kaupunginmuseo',
+    'kamu',
+    'näyttelykeskus weegee',
+    'karatalo',
+    'ohjelmisto',
+    'kulttuurikohteet ja -toimijat',
+    'espoo.fi',
+    'kulttuuriespoo.fi',
+    'kulttuurikeskukset ja -talot'
+]
 
 LOCATIONS = {
     # Place name in Finnish -> ((place node ids in event feed), tprek id)
     u'matinkylän asukaspuisto': ((15728,), 20267),
     u'soukan asukaspuisto': ((15740,), 20355),
     u'espoon kulttuurikeskus': ((15325,), 20402),
+    u'näyttelykeskus weegee': ((15349,), 20404),
+    u'KAMU': ((28944,), 20405),
+    u'Karatalo': ((15357,), 21432),
+    u'Nuuksio': ((15041,), 28401),
 }
 
 ESPOO_BASE_URL = 'http://www.espoo.fi'
@@ -150,13 +187,14 @@ def mark_deleted(obj):
 
 
 def clean_street_address(address):
+    logger = logging.getLogger(__name__)
     LATIN1_CHARSET = u'a-zàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ'
 
     address = address.strip()
     pattern = re.compile(r'([%s\ -]*[0-9-\ ]*\ ?[a-z]{0,2}),?\ *(0?2[0-9]{3})?\ *(espoo|esbo)?' % LATIN1_CHARSET, re.I)
     match = pattern.match(address)
     if not match:
-        self.logger.warning('Address not matching %s' % address)
+        logger.warning('Address not matching %s' % address)
         return {}
     groups = match.groups()
     street_address = groups[0]
@@ -216,8 +254,7 @@ class EspooImporter(Importer):
                     cat_id_set.add('yso:' + t_v)
             else:
                 cat_id_set.add('yso:' + yso_val)
-        keyword_list = Keyword.objects.filter(data_source=yso_data_source).\
-                filter(id__in=cat_id_set)
+        keyword_list = Keyword.objects.filter(data_source=yso_data_source).filter(id__in=cat_id_set)
         self.keyword_by_id = {p.id: p for p in keyword_list}
 
     def setup(self):
@@ -227,8 +264,8 @@ class EspooImporter(Importer):
         ds_defaults = dict(name='City of Espoo')
         self.data_source, _ = DataSource.objects.get_or_create(defaults=ds_defaults, **ds_args)
 
-        org_args = dict(id='espoo:kaupunki')
-        org_defaults = dict(name='Espoon kaupunki', data_source=self.data_source)
+        org_args = dict(origin_id='kaupunki', data_source=self.data_source)
+        org_defaults = dict(name='Espoon kaupunki')
         self.organization, _ = Organization.objects.get_or_create(defaults=org_defaults, **org_args)
         self._build_cache_places()
         self._cache_yso_keywords()
@@ -264,7 +301,7 @@ class EspooImporter(Importer):
         """
         Return the id of the event place corresponding to the street_address.
         Create the event place if not found.
-        
+
         Espoo website does not maintain a place object with a dedicated id.
         This function tries to map the address to an existing place or create
         a new one if no place is found.
@@ -278,7 +315,7 @@ class EspooImporter(Importer):
         if espoo_loc_id:
             return espoo_loc_id
 
-        places = Place.objects.filter(street_address__icontains='%s' % street_address).order_by('id')
+        places = Place.objects.filter(deleted=False, street_address__icontains='%s' % street_address).order_by('id')
         place = places.first()  # Choose one place arbitrarily if many.
         if len(places) > 1:
             self.logger.warning('Several tprek_id match the address "%s".' % street_address)
@@ -309,7 +346,10 @@ class EspooImporter(Importer):
         event_keywords = set()
         if not self.keyword_by_id:
             return
-        yso_to_db = lambda v: self.keyword_by_id['yso:%s' % v]
+
+        def yso_to_db(v):
+            return self.keyword_by_id['yso:%s' % v]
+
         node_name_lower = classification_node_name.lower()  # Use lower case to get ride of case sensitivity
         if node_name_lower in YSO_KEYWORD_MAPS.keys():
             yso = YSO_KEYWORD_MAPS[node_name_lower]
@@ -322,7 +362,7 @@ class EspooImporter(Importer):
 
     def _map_classification_keywords_from_db(self, classification_node_name, lang):
         """
-        Try to map the classification to an yso keyword using the keyword name from the YSO 
+        Try to map the classification to an yso keyword using the keyword name from the YSO
         stored keywords. If not available, tries to map it to an espoo keywords.
 
         :param classification_node_name: The node name of the classification element
@@ -333,7 +373,8 @@ class EspooImporter(Importer):
         yso_data_source = DataSource.objects.get(id='yso')
         espoo_data_source = DataSource.objects.get(id='espoo')
         node_name = classification_node_name.strip()
-        query = Keyword.objects.filter(data_source__in=[yso_data_source, espoo_data_source]).order_by('-data_source_id')
+        query = Keyword.objects.filter(data_source__in=[yso_data_source, espoo_data_source])\
+            .order_by('-data_source_id')
         if not lang:
             keyword = query.filter(name__iexact=node_name).first()
 
@@ -343,7 +384,7 @@ class EspooImporter(Importer):
             keyword = query.filter(name_sv__iexact=node_name).first()
         if lang == 'en':
             keyword = query.filter(name_en__iexact=node_name).first()
-        
+
         if not keyword:
             return set()
 
@@ -374,9 +415,11 @@ class EspooImporter(Importer):
 
     def _import_event(self, lang, event_el, events):
         # Times are in Helsinki timezone
-        to_utc = lambda dt: LOCAL_TZ.localize(
-            dt, is_dst=None).astimezone(pytz.utc)
-        dt_parse = lambda dt_str: to_utc(dateutil.parser.parse(dt_str))
+        def to_utc(dt):
+            return LOCAL_TZ.localize(dt, is_dst=None).astimezone(pytz.utc)
+
+        def dt_parse(dt_str):
+            return to_utc(dateutil.parser.parse(dt_str))
 
         start_time = dt_parse(event_el['EventStartDate'])
         end_time = dt_parse(event_el['EventEndDate'])
@@ -391,7 +434,7 @@ class EspooImporter(Importer):
             fi_ver_ids = [int(x['ContentId']) for x in event_el['LanguageVersions'] if x['LanguageId'] == 1]
             fi_event = None
             for fi_id in fi_ver_ids:
-                if not fi_id in events:
+                if fi_id not in events:
                     continue
                 fi_event = events[fi_id]
                 if fi_event['start_time'] != start_time or fi_event['end_time'] != end_time:
@@ -435,7 +478,10 @@ class EspooImporter(Importer):
             offer['price'][lang] = text
             del ext_props['Price']
             has_offer = True
-        if ext_props.get('TicketLinks',''):
+            if text.startswith('Vapaa pääsy') or text.startswith('Fritt inträde'):
+                offer['is_free'] = True
+
+        if ext_props.get('TicketLinks', ''):
             offer['info_url'][lang] = clean_url(ext_props['TicketLinks'])
             del ext_props['TicketLinks']
             has_offer = True
@@ -472,7 +518,7 @@ class EspooImporter(Importer):
                 return
             event[field_name] = val
 
-        if not 'date_published' in event:
+        if 'date_published' not in event:
             # Publication date changed based on language version, so we make sure
             # to save it only from the primary event.
             event['date_published'] = dt_parse(event_el['PublicDate'])
@@ -480,60 +526,73 @@ class EspooImporter(Importer):
         set_attr('start_time', dt_parse(event_el['EventStartDate']))
         set_attr('end_time', dt_parse(event_el['EventEndDate']))
 
-        to_tprek_id = lambda k: self.tprek_by_id[str(k).lower()]
-        to_le_id = lambda nid: next(
-            (to_tprek_id(v[1]) for k, v in LOCATIONS.items()
-             if nid in v[0]), None)
+        def to_tprek_id(k):
+            return self.tprek_by_id[str(k).lower()]
+
+        def to_le_id(nid):
+            return next((to_tprek_id(v[1]) for k, v in LOCATIONS.items() if nid in v[0]), None)
 
         event_keywords = event.get('keywords', set())
+        event_audience = event.get('audience', set())
 
         for classification in event_el['Classifications']:
             # Save original keyword in the raw too
-            node_id = classification['NodeId']
-            name = classification['NodeName']
+            # node_id = classification['NodeId']
+            # name = classification['NodeName']
             node_type = classification['Type']
-            # Tapahtumat exists tens of times, use pseudo id
-            if name in ('Tapahtumat', 'Events', 'Evenemang'):
-                node_id = 1  # pseudo id
-            keyword_id = 'espoo:{}'.format(node_id)
-            kwargs = {
-                'id': keyword_id,
-                'origin_id': node_id,
-                'data_source_id': 'espoo',
-            }
-            if name in self.keyword_cache:
-                keyword_orig = self.keyword_cache[name]
-                created = False
-            else:
-                keyword_orig, created = Keyword.objects.get_or_create(**kwargs)
-                self.keyword_cache[name] = keyword_orig
+            # Do not use espoo keywords at all
+            # # Tapahtumat exists tens of times, use pseudo id
+            # if name in ('Tapahtumat', 'Events', 'Evenemang'):
+            #     node_id = 1  # pseudo id
+            # keyword_id = 'espoo:{}'.format(node_id)
+            # kwargs = {
+            #     'id': keyword_id,
+            #     'origin_id': node_id,
+            #     'data_source_id': 'espoo',
+            # }
+            # if name in self.keyword_cache:
+            #     keyword_orig = self.keyword_cache[name]
+            #     created = False
+            # else:
+            #     keyword_orig, created = Keyword.objects.get_or_create(**kwargs)
+            #     self.keyword_cache[name] = keyword_orig
+            #
+            # name_key = 'name_{}'.format(lang)
+            # if created:
+            #     keyword_orig.name = name  # Assume default lang Finnish
+            #     # Set explicitly modeltranslation field
+            #     setattr(keyword_orig, name_key, name)
+            #     keyword_orig.save()
+            # else:
+            #     current_name = getattr(keyword_orig, name_key)
+            #     if not current_name:  # is None or empty
+            #         setattr(keyword_orig, name_key, name)
+            #         keyword_orig.save()
+            #
+            # event_keywords.add(keyword_orig)
 
-            name_key = 'name_{}'.format(lang)
-            if created:
-                keyword_orig.name = name  # Assume default lang Finnish
-                # Set explicitly modeltranslation field
-                setattr(keyword_orig, name_key, name)
-                keyword_orig.save()
-            else:
-                current_name = getattr(keyword_orig, name_key)
-                if not current_name:  # is None or empty
-                    setattr(keyword_orig, name_key, name)
-                    keyword_orig.save()
-
-            event_keywords.add(keyword_orig)
-
-            # One of the type 7 nodes points to the location,
-            # which is mapped to Linked Events keyword ID
-            if node_type == 7:
-                if not 'location' in event:
-                    location_id = to_le_id(classification['NodeId'])
-                    if location_id:
-                        event['location']['id'] = location_id
-            else:
-                node_name = str(classification['NodeName']).lower()
-                event_keywords.union(self._get_classification_keywords(node_name, lang))
+            # Several nodes might match to location, do not classify them further
+            location_id = to_le_id(classification['NodeId'])
+            if location_id:
+                if 'location' not in event:
+                    event['location']['id'] = location_id
+                continue
+            # Type 12 node refers to presence online
+            if node_type == 12:
+                continue
+            # disregard certain keywords that are pure spam
+            if classification['NodeName'].lower() in CLASSIFICATIONS_TO_DISREGARD:
+                continue
+            node_name = str(classification['NodeName']).lower()
+            yso_keywords = self._get_classification_keywords(node_name, lang)
+            event_keywords = event_keywords.union(yso_keywords)
+            # add audience keywords to audience too
+            for keyword in yso_keywords:
+                if keyword.id in KEYWORDS_TO_ADD_TO_AUDIENCE:
+                    event_audience.add(keyword)
 
         event['keywords'] = event_keywords
+        event['audience'] = event_audience
 
         if ext_props.get('StreetAddress', None):
             if 'location' in event:
@@ -554,14 +613,15 @@ class EspooImporter(Importer):
 
         if 'location' not in event:
             self.logger.warning('Missing TPREK location map for event %s (%s)' %
-                (event['name'][lang], str(eid)))
+                                (event['name'][lang], str(eid)))
             del events[event['origin_id']]
             return event
 
-        for p_k, p_v in ext_props.items():
-            if p_k == 'ExternalVideoLink' and p_v == 'http://':
-                continue
-            event['custom_data'][p_k] = p_v
+        # Espoo custom data not needed at the moment
+        # for p_k, p_v in ext_props.items():
+        #     if p_k == 'ExternalVideoLink' and p_v == 'http://':
+        #         continue
+        #     event['custom_data'][p_k] = p_v
         return event
 
     def _recur_fetch_paginated_url(self, url, lang, events):

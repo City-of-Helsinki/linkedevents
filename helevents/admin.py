@@ -9,4 +9,5 @@ class UserAdmin(DjangoUserAdmin):
         (None, {'fields': ('department_name', 'uuid')}),
     )
 
+
 admin.site.register(User, UserAdmin)

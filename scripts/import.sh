@@ -69,6 +69,14 @@ if [ $? -ne 0 ]; then
     LAST_ERROR="helmet"
 fi
 
+_log "--- Starting keyword and place n_events update ---"
+
+nice python manage.py update_n_events
+if [ $? -ne 0 ]; then
+    _log "keyword and place n_events update signaled failure"
+    LAST_ERROR="n_events"
+fi
+
 _log "--- Starting haystack index update ---"
 
 nice python manage.py update_index -a 1

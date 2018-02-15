@@ -20,6 +20,8 @@ class UserSerializer(serializers.ModelSerializer):
         default_org = obj.get_default_organization()
         if default_org:
             rep['organization'] = default_org.id
+        rep['admin_organizations'] = [org.id for org in obj.admin_organizations.all()]
+        rep['organization_memberships'] = [org.id for org in obj.organization_memberships.all()]
         return rep
 
     class Meta:
@@ -52,5 +54,6 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     queryset = get_user_model().objects.all()
     serializer_class = UserSerializer
+
 
 register_view(UserViewSet, 'user')

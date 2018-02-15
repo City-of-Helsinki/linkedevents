@@ -13,11 +13,12 @@ from munigeo.models import (AdministrativeDivision, AdministrativeDivisionType, 
 # 3rd party
 import pytest
 from rest_framework.test import APIClient
+from django_orghierarchy.models import Organization
 
 
-# events 
+# events
 from events.models import (
-    DataSource, Organization, Place, Language, Keyword, KeywordLabel, Event,
+    DataSource, Place, Language, Keyword, KeywordLabel, Event,
     Offer)
 from events.api import (
     KeywordSerializer, PlaceSerializer, LanguageSerializer
@@ -32,9 +33,11 @@ DATETIME = (timezone.now() + timedelta(days=1)).isoformat().replace('+00:00', 'Z
 
 OTHER_DATA_SOURCE_ID = "testotherdatasourceid"
 
+
 @pytest.fixture
 def kw_name():
     return 'known_keyword'
+
 
 @pytest.fixture
 def api_client():
@@ -87,6 +90,7 @@ def user2():
 def organization(data_source, user):
     org, created = Organization.objects.get_or_create(
         id=data_source.id + ':test_organization',
+        origin_id='test_organization',
         name="test_organization",
         data_source=data_source,
     )
@@ -100,6 +104,7 @@ def organization(data_source, user):
 def organization2(other_data_source, user2):
     org, created = Organization.objects.get_or_create(
         id=other_data_source.id + ':test_organization2',
+        origin_id='test_organization2',
         name="test_organization2",
         data_source=other_data_source,
     )
@@ -112,6 +117,7 @@ def organization2(other_data_source, user2):
 @pytest.fixture
 def offer(event2):
     return Offer.objects.create(event=event2, is_free=True)
+
 
 @pytest.mark.django_db
 @pytest.fixture
@@ -273,6 +279,7 @@ def event2(other_data_source, organization2, place2, user2, keyword):
         name='event2'
     )
 
+
 @pytest.fixture
 def event3(place3, user):
     return Event.objects.create(
@@ -375,7 +382,6 @@ def keyword2(other_data_source, organization2, kw_name):
     obj.save()
 
     return obj
-
 
 @pytest.mark.django_db
 @pytest.fixture
