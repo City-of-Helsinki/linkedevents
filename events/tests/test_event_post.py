@@ -292,7 +292,11 @@ def test_start_time_and_end_time_validation(api_client, minimal_event_dict, user
 
 
 @pytest.mark.django_db
-def test_start_time_and_end_time_validation_with_past_events_allowed(api_client, minimal_event_dict, user, data_source):
+def test_start_time_and_end_time_validation_with_past_events_allowed(
+        api_client,
+        minimal_event_dict,
+        user,
+        data_source):
     api_client.force_authenticate(user)
 
     data_source.create_past_events = True
