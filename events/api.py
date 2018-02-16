@@ -898,6 +898,7 @@ class PlaceDeletedException(APIException):
     default_detail = 'Place has been deleted.'
     default_code = 'gone'
 
+
 class PlaceListViewSet(GeoModelAPIView,
                        viewsets.GenericViewSet,
                        mixins.ListModelMixin,
