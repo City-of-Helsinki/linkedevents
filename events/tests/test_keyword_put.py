@@ -54,7 +54,7 @@ def test__a_non_admin_cannot_update_a_keyword(api_client, keyword, keyword_dict,
 
 @pytest.mark.django_db
 def test__an_admin_can_update_an_keyword_from_another_data_source(api_client, keyword2,
-                                                                other_data_source, organization, user):
+                                                                  other_data_source, organization, user):
     other_data_source.owner = organization
     other_data_source.user_editable = True
     other_data_source.save()

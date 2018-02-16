@@ -38,11 +38,11 @@ def test__create_place_with_post(api_client, place_dict, user):
 
 @pytest.mark.django_db
 def test__cannot_create_an_place_with_existing_id(api_client,
-                                           place_dict,
-                                           user):
+                                                  place_dict,
+                                                  user):
     api_client.force_authenticate(user=user)
     place_dict['id'] = settings.SYSTEM_DATA_SOURCE_ID + ':1'
-    response = create_with_post(api_client, place_dict)
+    create_with_post(api_client, place_dict)
     response2 = api_client.post(reverse('place-list'), place_dict, format='json')
     assert response2.status_code == 400
 

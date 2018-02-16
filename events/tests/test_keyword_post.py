@@ -40,7 +40,7 @@ def test__create_keyword_with_post(api_client, keyword_dict, user):
 def test__cannot_create_an_keyword_with_existing_id(api_client, keyword_dict, user):
     api_client.force_authenticate(user=user)
     keyword_dict['id'] = settings.SYSTEM_DATA_SOURCE_ID + ':1'
-    response = create_with_post(api_client, keyword_dict)
+    create_with_post(api_client, keyword_dict)
     response2 = api_client.post(reverse('keyword-list'), keyword_dict, format='json')
     assert response2.status_code == 400
 
