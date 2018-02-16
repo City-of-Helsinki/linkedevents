@@ -2,6 +2,7 @@
 import pytest
 from .utils import versioned_reverse as reverse
 
+
 @pytest.mark.django_db
 def test_keyword_delete(api_client, user, keyword):
     api_client.force_authenticate(user)

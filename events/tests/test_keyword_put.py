@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 
+
 from events.tests.utils import assert_keyword_data_is_equal
 from events.tests.test_keyword_post import create_with_post
 from .utils import versioned_reverse as reverse
 from events.auth import ApiKeyUser
 import pytest
 
+
 # === util methods ===
+
 
 def update_with_put(api_client, kw_id, keyword_data, credentials=None):
     if credentials:
@@ -14,7 +17,9 @@ def update_with_put(api_client, kw_id, keyword_data, credentials=None):
     response = api_client.put(kw_id, keyword_data, format='json')
     return response
 
+
 # === tests ===
+
 
 @pytest.mark.django_db
 def test__update_a_keyword_with_put(api_client, keyword_dict, user):
@@ -35,7 +40,8 @@ def test__update_a_keyword_with_put(api_client, keyword_dict, user):
     response2 = update_with_put(api_client, kw_id, data2)
     # assert
     assert_keyword_data_is_equal(data2, response2.data)
-    
+
+
 @pytest.mark.django_db
 def test__a_non_admin_cannot_update_a_keyword(api_client, keyword, keyword_dict, user):
     keyword.publisher.admin_users.remove(user)

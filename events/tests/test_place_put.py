@@ -6,7 +6,9 @@ from .utils import versioned_reverse as reverse
 from events.auth import ApiKeyUser
 import pytest
 
+
 # === util methods ===
+
 
 def update_with_put(api_client, place_id, place_data, credentials=None):
     if credentials:
@@ -14,7 +16,9 @@ def update_with_put(api_client, place_id, place_data, credentials=None):
     response = api_client.put(place_id, place_data, format='json')
     return response
 
+
 # === tests ===
+
 
 @pytest.mark.django_db
 def test__update_a_place_with_put(api_client, place_dict, user):
@@ -35,7 +39,8 @@ def test__update_a_place_with_put(api_client, place_dict, user):
     response2 = update_with_put(api_client, place_id, data2)
     # assert
     assert_place_data_is_equal(data2, response2.data)
-    
+
+
 @pytest.mark.django_db
 def test__a_non_admin_cannot_update_a_place(api_client, place, place_dict, user):
     place.publisher.admin_users.remove(user)

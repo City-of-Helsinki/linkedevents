@@ -6,7 +6,9 @@ from django.conf import settings
 from events.auth import ApiKeyUser
 import pytest
 
+
 # === util methods ===
+
 
 def create_with_post(api_client, keyword_data, data_source=None, version='v1'):
     create_url = reverse('keyword-list', version=version)
@@ -23,13 +25,16 @@ def create_with_post(api_client, keyword_data, data_source=None, version='v1'):
 
     return resp2
 
+
 # === tests ===
+
 
 @pytest.mark.django_db
 def test__create_keyword_with_post(api_client, keyword_dict, user):
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, keyword_dict)
     assert_keyword_data_is_equal(keyword_dict, response.data)
+
 
 @pytest.mark.django_db
 def test__cannot_create_an_keyword_with_existing_id(api_client, keyword_dict, user):

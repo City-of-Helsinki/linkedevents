@@ -218,6 +218,7 @@ def place_dict(data_source, organization):
         }
     }
 
+
 @pytest.mark.django_db
 @pytest.fixture
 def place(data_source, organization, administrative_division):
@@ -327,6 +328,7 @@ def keyword_dict(data_source, organization):
         }
     }
 
+
 @pytest.mark.django_db
 @pytest.fixture
 def keyword(data_source, organization, kw_name):
@@ -355,6 +357,7 @@ def keyword(data_source, organization, kw_name):
 
     return obj
 
+
 @pytest.mark.django_db
 @pytest.fixture
 def keyword2(other_data_source, organization2, kw_name):
@@ -382,6 +385,7 @@ def keyword2(other_data_source, organization2, kw_name):
     obj.save()
 
     return obj
+
 
 @pytest.mark.django_db
 @pytest.fixture

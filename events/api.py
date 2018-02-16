@@ -24,6 +24,7 @@ from django.utils.encoding import force_text
 from rest_framework import (
     serializers, relations, viewsets, mixins, filters, generics, permissions
 )
+from rest_framework import status
 from rest_framework.permissions import SAFE_METHODS
 from rest_framework.settings import api_settings
 from rest_framework.reverse import reverse
@@ -586,8 +587,12 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                 raise PermissionDenied()
         else:
             # without api key, the user will have to be admin
-            if not instance.is_user_editable() or not instance.can_be_edited_by(self.user):
-                raise PermissionDenied()
+            if hasattr(instance, 'can_be_edited_by'):
+                if not instance.is_user_editable() or not instance.can_be_edited_by(self.user):
+                    raise PermissionDenied()
+            else:
+                if not instance.is_user_editable():
+                    raise PermissionDenied()
         validated_data['last_modified_by'] = self.user
 
         if 'id' in validated_data:
@@ -615,28 +620,29 @@ def _clean_qp(query_params):
             del query_params[key]
     return query_params
 
+
 class EditableLinkedEventsObjectSerializer(LinkedEventsSerializer):
     def validate_id(self, value):
-      if value:
-          id_data_source_prefix = value.split(':', 1)[0]
-          if not id_data_source_prefix == self.data_source.id:
-              # the object might be from another data source by the same organization, and we are only editing it
-              if self.instance:
-                  if self.publisher.owned_systems.filter(id=id_data_source_prefix).exists():
-                      return value
-              raise serializers.ValidationError(
-                  {'id': _("Setting id to %(given)s " +
-                           " is not allowed for your organization. The id"
-                           " must be left blank or set to %(data_source)s:desired_id") %
-                         {'given': str(value), 'data_source': self.data_source}})
-      return value
-  
+        if value:
+            id_data_source_prefix = value.split(':', 1)[0]
+            if not id_data_source_prefix == self.data_source.id:
+                # the object might be from another data source by the same organization, and we are only editing it
+                if self.instance:
+                    if self.publisher.owned_systems.filter(id=id_data_source_prefix).exists():
+                        return value
+                raise serializers.ValidationError(
+                        {'id': _("Setting id to %(given)s " +
+                                 " is not allowed for your organization. The id"
+                                 " must be left blank or set to %(data_source)s:desired_id") %
+                            {'given': str(value), 'data_source': self.data_source}})
+        return value
+
     def create(self, validated_data):
         # if id was not provided, we generate it upon creation:
         if 'id' not in validated_data:
             validated_data['id'] = generate_id(self.data_source)
         return super().create(validated_data)
-  
+
 
 class KeywordSerializer(EditableLinkedEventsObjectSerializer):
     id = serializers.CharField(required=False)
@@ -658,12 +664,12 @@ class KeywordRetrieveViewSet(mixins.RetrieveModelMixin,
     def update(self, request, *args, **kwargs):
         self.data_source, self.organization = get_authenticated_data_source_and_publisher(self.request)
         return super().update(request, *args, **kwargs)
-      
+
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         instance.deprecate()
         return Response(status=status.HTTP_204_NO_CONTENT)
-      
+
     def retrieve(self, request, *args, **kwargs):
         keyword = Keyword.objects.get(pk=kwargs['pk'])
         if keyword.deprecated:
@@ -675,6 +681,7 @@ class KeywordDeprecatedException(APIException):
     status_code = 410
     default_detail = 'Keyword has been deprecated.'
     default_code = 'gone'
+
 
 class KeywordListViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewsets.GenericViewSet):
     queryset = Keyword.objects.all()
@@ -716,7 +723,8 @@ class KeywordListViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewset
         return queryset
 
     def create(self, request, *args, **kwargs):
-      return super().create(request, *args, **kwargs)
+        return super().create(request, *args, **kwargs)
+
 
 register_view(KeywordRetrieveViewSet, 'keyword')
 register_view(KeywordListViewSet, 'keyword')
@@ -883,6 +891,7 @@ class PlaceRetrieveViewSet(GeoModelAPIView,
             else:
                 raise PlaceDeletedException()
         return super().retrieve(request, *args, **kwargs)
+
 
 class PlaceDeletedException(APIException):
     status_code = 410

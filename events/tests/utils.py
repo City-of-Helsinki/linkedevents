@@ -38,6 +38,7 @@ def assert_event_data_is_equal(d1, d2, version='v1'):
         )
     assert_data_is_equal(d1, d2, FIELDS)
 
+
 def assert_place_data_is_equal(d1, d2, version='v1'):
     FIELDS = (
           'data_source',
@@ -50,7 +51,8 @@ def assert_place_data_is_equal(d1, d2, version='v1'):
           'address_locality',
     )
     assert_data_is_equal(d1, d2, FIELDS)
-    
+
+
 def assert_keyword_data_is_equal(d1, d2, version='v1'):
     FIELDS = (
           'data_source',
@@ -58,6 +60,7 @@ def assert_keyword_data_is_equal(d1, d2, version='v1'):
           'name'
     )
     assert_data_is_equal(d1, d2, FIELDS)
+
 
 def assert_data_is_equal(d1, d2, fields):
     for key in fields:

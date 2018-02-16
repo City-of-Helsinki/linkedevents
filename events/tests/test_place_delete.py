@@ -2,6 +2,7 @@
 import pytest
 from .utils import versioned_reverse as reverse
 
+
 @pytest.mark.django_db
 def test_place_delete(api_client, user, place):
     api_client.force_authenticate(user)

@@ -6,7 +6,9 @@ from django.conf import settings
 from events.auth import ApiKeyUser
 import pytest
 
+
 # === util methods ===
+
 
 def create_with_post(api_client, place_data, data_source=None, version='v1'):
     create_url = reverse('place-list', version=version)
@@ -23,7 +25,9 @@ def create_with_post(api_client, place_data, data_source=None, version='v1'):
 
     return resp2
 
+
 # === tests ===
+
 
 @pytest.mark.django_db
 def test__create_place_with_post(api_client, place_dict, user):
