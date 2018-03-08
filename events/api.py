@@ -1755,6 +1755,10 @@ class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView
                 models.add(Event)
 
         if len(models) == 1 and Event in models:
+            division = params.get('division', None)
+            if division:
+                queryset = filter_division(queryset, 'location__divisions', division)
+
             start = params.get('start', None)
             if start:
                 dt = utils.parse_time(start, is_start=True)
@@ -1777,6 +1781,11 @@ class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView
                         }
                     }
                 })
+
+        if len(models) == 1 and Place in models:
+            division = params.get('division', None)
+            if division:
+                queryset = filter_division(queryset, 'divisions', division)
 
         if len(models) > 0:
             queryset = queryset.models(*list(models))
