@@ -767,7 +767,7 @@ def filter_division(queryset, name, value):
         else:
             # we assume human name
             names.append(item.title())
-    if hasattr(queryset, distinct):
+    if hasattr(queryset, 'distinct'):
         return (queryset.filter(**{name + '__ocd_id__in': ocd_ids}) |
                 queryset.filter(**{name + '__name__in': names})).distinct()
     else:
