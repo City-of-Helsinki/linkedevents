@@ -767,8 +767,15 @@ def filter_division(queryset, name, value):
         else:
             # we assume human name
             names.append(item.title())
-    return (queryset.filter(**{name + '__ocd_id__in': ocd_ids}) |
-            queryset.filter(**{name + '__name__in': names})).distinct()
+    if hasattr(queryset, distinct):
+        return (queryset.filter(**{name + '__ocd_id__in': ocd_ids}) |
+                queryset.filter(**{name + '__name__in': names})).distinct()
+    else:
+        # Haystack SearchQuerySet does not support distinct, so we only support one type of search at a time:
+        if ocd_ids:
+            return queryset.filter(**{name + '__ocd_id__in': ocd_ids})
+        else:
+            return queryset.filter(**{name + '__name__in': names})
 
 
 class PlaceSerializer(LinkedEventsSerializer, GeoModelSerializer):
