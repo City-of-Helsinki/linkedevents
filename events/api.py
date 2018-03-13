@@ -30,6 +30,7 @@ from rest_framework.reverse import reverse
 from rest_framework.response import Response
 from rest_framework.exceptions import ParseError, PermissionDenied as DRFPermissionDenied, APIException
 from rest_framework.views import get_view_name as original_get_view_name
+from rest_framework.fields import DateTimeField
 
 
 # 3rd party
@@ -619,6 +620,8 @@ def _clean_qp(query_params):
 class KeywordSerializer(LinkedEventsSerializer):
     view_name = 'keyword-detail'
     alt_labels = serializers.SlugRelatedField(slug_field='name', read_only=True, many=True)
+    created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
+    last_modified_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
 
     class Meta:
         model = Keyword
@@ -680,6 +683,8 @@ class KeywordSetSerializer(LinkedEventsSerializer):
         serializer=KeywordSerializer, many=True, required=True, allow_empty=False,
         view_name='keyword-detail', queryset=Keyword.objects.all())
     usage = EnumChoiceField(KeywordSet.USAGES)
+    created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
+    last_modified_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
 
     class Meta:
         model = KeywordSet
@@ -781,13 +786,15 @@ def filter_division(queryset, name, value):
 class PlaceSerializer(LinkedEventsSerializer, GeoModelSerializer):
     view_name = 'place-detail'
     divisions = DivisionSerializer(many=True, read_only=True)
+    created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
+    last_modified_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
 
     class Meta:
         model = Place
         exclude = ('n_events_changed',)
 
 
-class PlaceFilter(filters.FilterSet):
+class PlaceFilter(django_filters.rest_framework.FilterSet):
     division = django_filters.Filter(name='divisions', lookup_expr='in',
                                      widget=django_filters.widgets.CSVWidget(),
                                      method='filter_division')
@@ -830,7 +837,7 @@ class PlaceListViewSet(GeoModelAPIView,
                        mixins.ListModelMixin):
     queryset = Place.objects.all()
     serializer_class = PlaceSerializer
-    filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
+    filter_backends = (django_filters.rest_framework.DjangoFilterBackend, filters.OrderingFilter)
     filter_class = PlaceFilter
     ordering_fields = ('n_events', 'id', 'name', 'data_source', 'street_address', 'postal_code')
     ordering = ('-n_events',)
@@ -927,6 +934,8 @@ class OrganizationSerializer(LinkedEventsSerializer):
         view_name='organization-detail',
     )
     is_affiliated = serializers.SerializerMethodField()
+    created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
+    last_modified_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
 
     class Meta:
         model = Organization
@@ -972,6 +981,8 @@ class OfferSerializer(TranslatedModelSerializer):
 class ImageSerializer(LinkedEventsSerializer):
     view_name = 'image-detail'
     license = serializers.PrimaryKeyRelatedField(queryset=License.objects.all(), required=False)
+    created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
+    last_modified_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
 
     class Meta:
         model = Image
@@ -1059,6 +1070,11 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
     view_name = 'event-detail'
     fields_needed_to_publish = ('keywords', 'location', 'start_time', 'short_description', 'description')
+    created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
+    last_modified_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
+    date_published = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
+    start_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
+    end_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
 
     def __init__(self, *args, skip_empties=False, **kwargs):
         super(EventSerializer, self).__init__(*args, **kwargs)
@@ -1497,7 +1513,7 @@ def _filter_event_queryset(queryset, params, srs=None):
     return queryset
 
 
-class EventFilter(filters.FilterSet):
+class EventFilter(django_filters.rest_framework.FilterSet):
     division = django_filters.Filter(name='location__divisions', lookup_expr='in',
                                      widget=django_filters.widgets.CSVWidget(),
                                      method='filter_division')
@@ -1531,7 +1547,7 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
     queryset = queryset.prefetch_related(
         'offers', 'keywords', 'audience', 'external_links', 'sub_events', 'in_language')
     serializer_class = EventSerializer
-    filter_backends = (EventOrderingFilter, filters.DjangoFilterBackend)
+    filter_backends = (EventOrderingFilter, django_filters.rest_framework.DjangoFilterBackend)
     filter_class = EventFilter
     ordering_fields = ('start_time', 'end_time', 'duration', 'last_modified_time', 'name')
     ordering = ('-last_modified_time',)
