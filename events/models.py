@@ -484,7 +484,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         if old_location and not self.location:
             # drafts (or imported events) may not always have location set
             Place.objects.filter(id=old_location.id).update(n_events_changed=True)
-        if old_location and old_location != self.location:
+        if old_location and self.location and old_location != self.location:
             Place.objects.filter(id__in=(old_location.id, self.location.id)).update(n_events_changed=True)
 
     def __str__(self):
