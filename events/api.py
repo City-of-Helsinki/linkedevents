@@ -1011,6 +1011,7 @@ class ImageViewSet(viewsets.ModelViewSet):
     queryset = Image.objects.all()
     serializer_class = ImageSerializer
     pagination_class = LargeResultsSetPagination
+    filter_backends = (filters.OrderingFilter,)
     ordering_fields = ('last_modified_time',)
     ordering = ('-last_modified_time',)
 

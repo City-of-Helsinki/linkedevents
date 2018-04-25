@@ -113,7 +113,7 @@ class Image(models.Model):
         related_name='Published_images')
 
     created_time = models.DateTimeField(auto_now_add=True)
-    last_modified_time = models.DateTimeField(auto_now=True)
+    last_modified_time = models.DateTimeField(auto_now=True, db_index=True)
     created_by = models.ForeignKey(User, null=True, blank=True, related_name='EventImage_created_by')
     last_modified_by = models.ForeignKey(User, related_name='EventImage_last_modified_by', null=True, blank=True)
 
