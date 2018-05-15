@@ -2,7 +2,9 @@
 from .utils import versioned_reverse as reverse
 import pytest
 from .utils import get, assert_fields_exist
-from events.models import Event
+from events.models import (
+    Event, PublicationStatus
+)
 
 
 # === util methods ===
@@ -196,3 +198,34 @@ def test_event_list_filters(api_client, event, event2):
         ids = [e['id'] for e in data]
         assert event.id in ids
         assert event2.id in ids
+
+
+@pytest.mark.django_db
+def test_address_publication_status_filter(api_client, event, event2, user, organization, data_source):
+    event.publication_status = PublicationStatus.PUBLIC
+    event.save()
+
+    event2.publication_status = PublicationStatus.DRAFT
+    event2.save()
+
+    api_client.force_authenticate(user=user)
+
+    response = get_list(api_client, query_string='show_all=true&publication_status=public')
+    ids = {e['id'] for e in response.data['data']}
+    assert event.id in ids
+    assert event2.id not in ids
+
+    # cannot see drafts from other organizations
+    response = get_list(api_client, query_string='show_all=true&publication_status=draft')
+    ids = {e['id'] for e in response.data['data']}
+    assert event2.id not in ids
+    assert event.id not in ids
+
+    event2.publisher = organization
+    event2.data_source = data_source
+    event2.save()
+
+    response = get_list(api_client, query_string='show_all=true&publication_status=draft')
+    ids = {e['id'] for e in response.data['data']}
+    assert event2.id in ids
+    assert event.id not in ids
