@@ -11,7 +11,7 @@ djangorestframework-gis
 djangorestframework-jwt
 lxml
 isodate
-psycopg2
+psycopg2-binary
 pyflakes
 pylint
 python-dateutil

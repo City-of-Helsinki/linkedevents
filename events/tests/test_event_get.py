@@ -201,6 +201,46 @@ def test_event_list_filters(api_client, event, event2):
 
 
 @pytest.mark.django_db
+def test_address_locality_filter(api_client, event, event2, place, place2):
+    place.address_locality_fi = "TestOneFi"
+    place.address_locality_en = "TestOneEn"
+    place.address_locality_sv = "TestOneSv"
+    place.save()
+    event.location = place
+    event.save()
+
+    place2.address_locality_fi = "TestTwoFi"
+    place2.address_locality_en = "TestTwoEn"
+    place2.address_locality_sv = "TestTwoSv"
+    place2.save()
+    event2.location = place2
+    event2.save()
+
+    response = get_list(api_client, query_string='address_locality_fi=TestOneFi')
+    ids = {e['id'] for e in response.data['data']}
+    assert event.id in ids
+    assert event2.id not in ids
+
+    response = get_list(api_client, query_string='address_locality_sv=TestTwoSv')
+    ids = {e['id'] for e in response.data['data']}
+    assert event2.id in ids
+    assert event.id not in ids
+
+    response = get_list(api_client, query_string='address_locality_en=TestOneEn')
+    ids = {e['id'] for e in response.data['data']}
+    assert event.id in ids
+    assert event2.id not in ids
+
+    response = get_list(api_client, query_string='address_locality_fi=TestOneFi,TestTwoFi')
+    ids = {e['id'] for e in response.data['data']}
+    assert event.id in ids
+    assert event2.id in ids
+
+    response = get_list(api_client, query_string='address_locality_fi=NoTRealPlace')
+    assert len(response.data['data']) == 0
+
+
+@pytest.mark.django_db
 def test_address_publication_status_filter(api_client, event, event2, user, organization, data_source):
     event.publication_status = PublicationStatus.PUBLIC
     event.save()

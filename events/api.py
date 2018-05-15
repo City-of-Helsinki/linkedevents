@@ -24,6 +24,7 @@ from django.utils.encoding import force_text
 from rest_framework import (
     serializers, relations, viewsets, mixins, filters, generics, permissions
 )
+from rest_framework import status
 from rest_framework.permissions import SAFE_METHODS
 from rest_framework.settings import api_settings
 from rest_framework.reverse import reverse
@@ -38,7 +39,7 @@ from isodate import Duration, duration_isoformat, parse_duration
 from modeltranslation.translator import translator, NotRegistered
 from haystack.query import AutoQuery
 from munigeo.api import (
-    GeoModelSerializer, GeoModelAPIView, build_bbox_filter, srid_to_srs
+    GeoModelAPIView, build_bbox_filter, srid_to_srs
 )
 from munigeo.models import AdministrativeDivision
 from rest_framework_bulk import BulkListSerializer, BulkModelViewSet
@@ -587,8 +588,12 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                 raise PermissionDenied()
         else:
             # without api key, the user will have to be admin
-            if not instance.is_user_editable() or not instance.can_be_edited_by(self.user):
-                raise PermissionDenied()
+            if hasattr(instance, 'can_be_edited_by'):
+                if not instance.is_user_editable() or not instance.can_be_edited_by(self.user):
+                    raise PermissionDenied()
+            else:
+                if not instance.is_user_editable():
+                    raise PermissionDenied()
         validated_data['last_modified_by'] = self.user
 
         if 'id' in validated_data:
@@ -617,7 +622,31 @@ def _clean_qp(query_params):
     return query_params
 
 
-class KeywordSerializer(LinkedEventsSerializer):
+class EditableLinkedEventsObjectSerializer(LinkedEventsSerializer):
+    def validate_id(self, value):
+        if value:
+            id_data_source_prefix = value.split(':', 1)[0]
+            if not id_data_source_prefix == self.data_source.id:
+                # the object might be from another data source by the same organization, and we are only editing it
+                if self.instance:
+                    if self.publisher.owned_systems.filter(id=id_data_source_prefix).exists():
+                        return value
+                raise serializers.ValidationError(
+                        {'id': _("Setting id to %(given)s " +
+                                 " is not allowed for your organization. The id"
+                                 " must be left blank or set to %(data_source)s:desired_id") %
+                            {'given': str(value), 'data_source': self.data_source}})
+        return value
+
+    def create(self, validated_data):
+        # if id was not provided, we generate it upon creation:
+        if 'id' not in validated_data:
+            validated_data['id'] = generate_id(self.data_source)
+        return super().create(validated_data)
+
+
+class KeywordSerializer(EditableLinkedEventsObjectSerializer):
+    id = serializers.CharField(required=False)
     view_name = 'keyword-detail'
     alt_labels = serializers.SlugRelatedField(slug_field='name', read_only=True, many=True)
     created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
@@ -628,12 +657,36 @@ class KeywordSerializer(LinkedEventsSerializer):
         exclude = ('n_events_changed',)
 
 
-class KeywordRetrieveViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+class KeywordRetrieveViewSet(mixins.RetrieveModelMixin,
+                             mixins.UpdateModelMixin,
+                             mixins.DestroyModelMixin,
+                             viewsets.GenericViewSet):
     queryset = Keyword.objects.all()
     serializer_class = KeywordSerializer
 
+    def update(self, request, *args, **kwargs):
+        self.data_source, self.organization = get_authenticated_data_source_and_publisher(self.request)
+        return super().update(request, *args, **kwargs)
 
-class KeywordListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.deprecate()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def retrieve(self, request, *args, **kwargs):
+        keyword = Keyword.objects.get(pk=kwargs['pk'])
+        if keyword.deprecated:
+            raise KeywordDeprecatedException()
+        return super().retrieve(request, *args, **kwargs)
+
+
+class KeywordDeprecatedException(APIException):
+    status_code = 410
+    default_detail = 'Keyword has been deprecated.'
+    default_code = 'gone'
+
+
+class KeywordListViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewsets.GenericViewSet):
     queryset = Keyword.objects.all()
     serializer_class = KeywordSerializer
     filter_backends = (filters.OrderingFilter,)
@@ -671,6 +724,9 @@ class KeywordListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         if val:
             queryset = queryset.filter(name__icontains=val)
         return queryset
+
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
 
 
 register_view(KeywordRetrieveViewSet, 'keyword')
@@ -783,7 +839,13 @@ def filter_division(queryset, name, value):
             return queryset.filter(**{name + '__name__in': names})
 
 
-class PlaceSerializer(LinkedEventsSerializer, GeoModelSerializer):
+class PlaceSerializer(EditableLinkedEventsObjectSerializer):
+    id = serializers.CharField(required=False)
+    origin_id = serializers.CharField(required=False)
+    data_source = serializers.PrimaryKeyRelatedField(queryset=DataSource.objects.all(),
+                                                     required=False, allow_null=True)
+    publisher = serializers.PrimaryKeyRelatedField(queryset=Organization.objects.all(),
+                                                   required=False, allow_null=True)
     view_name = 'place-detail'
     divisions = DivisionSerializer(many=True, read_only=True)
     created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
@@ -809,6 +871,8 @@ class PlaceFilter(django_filters.rest_framework.FilterSet):
 
 class PlaceRetrieveViewSet(GeoModelAPIView,
                            viewsets.GenericViewSet,
+                           mixins.UpdateModelMixin,
+                           mixins.DestroyModelMixin,
                            mixins.RetrieveModelMixin):
     queryset = Place.objects.all()
     serializer_class = PlaceSerializer
@@ -817,6 +881,15 @@ class PlaceRetrieveViewSet(GeoModelAPIView,
         context = super(PlaceRetrieveViewSet, self).get_serializer_context()
         context.setdefault('skip_fields', set()).add('origin_id')
         return context
+
+    def update(self, request, *args, **kwargs):
+        self.data_source, self.organization = get_authenticated_data_source_and_publisher(self.request)
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.soft_delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def retrieve(self, request, *args, **kwargs):
         try:
@@ -829,12 +902,21 @@ class PlaceRetrieveViewSet(GeoModelAPIView,
                 return HttpResponsePermanentRedirect(reverse('place-detail',
                                                              kwargs={'pk': place.pk},
                                                              request=request))
+            else:
+                raise PlaceDeletedException()
         return super().retrieve(request, *args, **kwargs)
+
+
+class PlaceDeletedException(APIException):
+    status_code = 410
+    default_detail = 'Place has been deleted.'
+    default_code = 'gone'
 
 
 class PlaceListViewSet(GeoModelAPIView,
                        viewsets.GenericViewSet,
-                       mixins.ListModelMixin):
+                       mixins.ListModelMixin,
+                       mixins.CreateModelMixin):
     queryset = Place.objects.all()
     serializer_class = PlaceSerializer
     filter_backends = (django_filters.rest_framework.DjangoFilterBackend, filters.OrderingFilter)
@@ -1041,7 +1123,7 @@ class ImageViewSet(viewsets.ModelViewSet):
 register_view(ImageViewSet, 'image', base_name='image')
 
 
-class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
+class EventSerializer(EditableLinkedEventsObjectSerializer, GeoModelAPIView):
     id = serializers.CharField(required=False)
     location = JSONLDRelatedField(serializer=PlaceSerializer, required=False,
                                   view_name='place-detail', queryset=Place.objects.all())
@@ -1197,7 +1279,11 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                 .replace(hour=0, minute=0, second=0, microsecond=0).astimezone(pytz.utc)
             data['end_time'] += timedelta(days=1)
 
-        if data.get('end_time') and data['end_time'] < timezone.now():
+        past_allowed = self.data_source.create_past_events
+        if self.instance:
+            past_allowed = self.data_source.edit_past_events
+
+        if data.get('end_time') and data['end_time'] < timezone.now() and not past_allowed:
             errors['end_time'] = force_text(_('End time cannot be in the past.'))
 
         if errors:
@@ -1206,10 +1292,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         return data
 
     def create(self, validated_data):
-        # if id was not provided, we generate it upon creation:
-        if 'id' not in validated_data:
-            validated_data['id'] = generate_id(self.data_source)
-
         offers = validated_data.pop('offers', [])
         links = validated_data.pop('external_links', [])
 
@@ -1232,7 +1314,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         offers = validated_data.pop('offers', None)
         links = validated_data.pop('external_links', None)
 
-        if instance.end_time and instance.end_time < timezone.now():
+        if instance.end_time and instance.end_time < timezone.now() and not self.data_source.edit_past_events:
             raise DRFPermissionDenied(_('Cannot edit a past event.'))
 
         # The API only allows scheduling and cancelling events.
@@ -1476,6 +1558,24 @@ def _filter_event_queryset(queryset, params, srs=None):
     if val:
         val = val.split(',')
         queryset = queryset.filter(location_id__in=val)
+
+    # Filter by finnish address locality multiple values separated by comma
+    val = params.get('address_locality_fi', None)
+    if val:
+        val = val.split(',')
+        queryset = queryset.filter(location__address_locality_fi__in=val)
+
+    # Filter by swedish address locality multiple values separated by comma
+    val = params.get('address_locality_sv', None)
+    if val:
+        val = val.split(',')
+        queryset = queryset.filter(location__address_locality_sv__in=val)
+
+    # Filter by english address locality multiple values separated by comma
+    val = params.get('address_locality_en', None)
+    if val:
+        val = val.split(',')
+        queryset = queryset.filter(location__address_locality_en__in=val)
 
     # Filter by keyword id, multiple ids separated by comma
     val = params.get('keyword', None)
