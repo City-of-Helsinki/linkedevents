@@ -1511,6 +1511,13 @@ def _filter_event_queryset(queryset, params, srs=None):
         q = get_publisher_query(val)
         queryset = queryset.filter(q)
 
+    # Filter by publication status
+    val = params.get('publication_status', None)
+    if val == 'draft':
+        queryset = queryset.filter(publication_status=PublicationStatus.DRAFT)
+    elif val == 'public':
+        queryset = queryset.filter(publication_status=PublicationStatus.PUBLIC)
+
     return queryset
 
 
