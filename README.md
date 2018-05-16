@@ -52,6 +52,8 @@ You probably want to import some data for testing (these are events around Helsi
 cd $INSTALL_BASE/linkedevents
 # Import places from Helsinki service registry (used by events from following sources)
 python manage.py event_import tprek --places
+# Import YSO keywords for describing events (ditto)
+python manage.py event_import yso --keywords
 # Import events from Visit Helsinki
 python manage.py event_import matko --events
 # Import events from Helsinki metropolitan region libraries
