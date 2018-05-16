@@ -20,12 +20,10 @@ class TestKulkeImporter(TestCase):
 
         html_text = KulkeImporter._html_format(text)
         expected_text = (
-            '<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>{0}'
-            '{0}'
-            '<p>Nam quam urna.<br>{0}'
-            'Etiam maximus ex tellus, elementum fermentum tellus bibendum id.<br>{0}'
-            'Praesent sodales purus libero.</p>{0}'
-            '{0}'
+            '<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>'
+            '<p>Nam quam urna.<br>'
+            'Etiam maximus ex tellus, elementum fermentum tellus bibendum id.<br>'
+            'Praesent sodales purus libero.</p>'
             '<p>Vestibulum lacinia interdum nisi eu vehicula.</p>'
-        ).format(os.linesep)
+        )
         self.assertEqual(html_text, expected_text)
