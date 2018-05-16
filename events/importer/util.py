@@ -6,8 +6,10 @@ from django.utils.translation.trans_real import activate, deactivate
 from events.models import Place
 
 
-def clean_text(text):
-    text = text.replace('\n', ' ')
+def clean_text(text, strip_newlines=False):
+    text = text.replace('\xa0', ' ').replace('\x1f', '')
+    if strip_newlines:
+        text = text.replace('\r', '').replace('\n', ' ')
     # remove consecutive whitespaces
     return re.sub(r'\s\s+', ' ', text, re.U).strip()
 
@@ -15,7 +17,7 @@ def clean_text(text):
 def unicodetext(item):
     if item is None or item.text is None:
         return None
-    return clean_text(item.text)
+    return clean_text(item.text, strip_newlines=True)
 
 
 def reduced_text(text):

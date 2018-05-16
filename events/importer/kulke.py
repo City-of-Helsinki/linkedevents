@@ -286,19 +286,16 @@ class KulkeImporter(Importer):
         separated by empty line, and append <br> to lines if
         there are multiple line breaks within the same paragraph.
         """
-        # used to preserve line breaks on result html to make it
-        # more readable
-        line_sep = '<br>{0}'.format(os.linesep)
-        paragraph_sep = os.linesep * 2
 
+        # do not preserve os separators, for conformity with helmet and other html data
+        paragraph_sep = os.linesep * 2
         paragraphs = text.split(paragraph_sep)
         formatted_paragraphs = []
         for paragraph in paragraphs:
             lines = paragraph.strip().split(os.linesep)
-            formatted_paragraph = '<p>{0}</p>'.format(line_sep.join(lines))
+            formatted_paragraph = '<p>{0}</p>'.format('<br>'.join(lines))
             formatted_paragraphs.append(formatted_paragraph)
-
-        return paragraph_sep.join(formatted_paragraphs)
+        return ''.join(formatted_paragraphs)
 
     def _import_event(self, lang, event_el, events):
         def text(t):
@@ -337,7 +334,10 @@ class KulkeImporter(Importer):
         event['name'][lang] = make_event_name(title, subtitle)
 
         caption = text_content('caption')
-        bodytext = text_content('bodytext')
+        # body text should not be cleaned, as we want to html format the whole shebang
+        bodytext = event_el.find('eventbodytext')
+        if bodytext is not None:
+            bodytext = bodytext.text
         description = ''
         if caption:
             description += caption
