@@ -23,6 +23,7 @@ from pytz import timezone
 from .base import Importer, recur_dict, register_importer
 from .yso import KEYWORDS_TO_ADD_TO_AUDIENCE
 from .sync import ModelSyncher
+from .util import clean_text
 
 # Maximum number of attempts to fetch the event from the API before giving up
 MAX_RETRY = 5
@@ -170,14 +171,6 @@ def get_lang(lang_id):
     return None
 
 
-def clean_text(text, strip_newlines=False):
-    text = text.replace('\xa0', ' ').replace('\x1f', '')
-    if strip_newlines:
-        text = text.replace('\r', '').replace('\n', ' ')
-    # remove consecutive whitespaces
-    return re.sub(r'\s\s+', ' ', text, re.U).strip()
-
-
 def mark_deleted(obj):
     if obj.deleted:
         return False
@@ -297,14 +290,28 @@ class EspooImporter(Importer):
             _id = int(last_place.origin_id) + 1
         return _id
 
-    def get_or_create_place_id(self, street_address):
+    def get_or_create_place_id(self, street_address, lang, name='', url=''):
         """
         Return the id of the event place corresponding to the street_address.
-        Create the event place if not found.
+        Create the event place with the address, name and url if not found.
 
         Espoo website does not maintain a place object with a dedicated id.
         This function tries to map the address to an existing place or create
         a new one if no place is found.
+
+        :param street_address: The exact street address of the location
+        :type street_address: String
+
+        :param lang: The language the strings are provided in
+        :type lang: String
+
+        :param name: Optional name for the location
+        :type name: String
+
+        :param url: Optional info URL for the location
+        :type url: String
+
+        :rtype: id for the location
         """
         address_data = clean_street_address(street_address)
         street_address = address_data.get('street_address', None)
@@ -315,7 +322,11 @@ class EspooImporter(Importer):
         if espoo_loc_id:
             return espoo_loc_id
 
-        places = Place.objects.filter(deleted=False, street_address__icontains='%s' % street_address).order_by('id')
+        filter_params = {
+            'deleted': False,
+            'street_address_'+lang+'__icontains': street_address,
+        }
+        places = Place.objects.filter(**filter_params).order_by('id')
         place = places.first()  # Choose one place arbitrarily if many.
         if len(places) > 1:
             self.logger.warning('Several tprek_id match the address "%s".' % street_address)
@@ -326,9 +337,17 @@ class EspooImporter(Importer):
                 'origin_id': origin_id,
                 'id': 'espoo:%s' % origin_id,
                 'data_source': self.data_source,
+                'name_'+lang : name,
+                'info_url_'+lang: url
             })
             place = Place(**address_data)
             place.save()
+        elif place.data_source == self.data_source:
+            # update metadata in the given language if the place belongs to espoo:
+            setattr(place, 'name_'+lang, name)
+            setattr(place, 'info_url_'+lang, url)
+            setattr(place, 'street_address_'+lang, street_address)
+            place.save(update_fields=['name_'+lang, 'info_url_'+lang, 'street_address_'+lang])
         # Cached the location to speed up
         self.location_cache.update({street_address: place.id})
         return place.id
@@ -494,7 +513,6 @@ class EspooImporter(Importer):
 
         if ext_props.get('URL', ''):
             event['info_url'][lang] = clean_url(ext_props['URL'])
-            del ext_props['URL']
 
         if ext_props.get('Organizer', ''):
             event['provider'][lang] = clean_text(ext_props['Organizer'])
@@ -600,7 +618,9 @@ class EspooImporter(Importer):
                 event['location']['extra_info'][lang] = ext_props.get('StreetAddress')
             else:
                 # Get the place using the address, or create a new place
-                place_id = self.get_or_create_place_id(ext_props['StreetAddress'])
+                place_id = self.get_or_create_place_id(ext_props.get('StreetAddress'), lang,
+                                                       name=clean_text(ext_props.get('EventLocation', '')),
+                                                       url=ext_props.get('URL', ''))
                 if place_id:
                     event['location']['id'] = place_id
                 else:
