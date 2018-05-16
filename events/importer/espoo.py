@@ -337,7 +337,7 @@ class EspooImporter(Importer):
                 'origin_id': origin_id,
                 'id': 'espoo:%s' % origin_id,
                 'data_source': self.data_source,
-                'name_'+lang : name,
+                'name_'+lang: name,
                 'info_url_'+lang: url
             })
             place = Place(**address_data)
