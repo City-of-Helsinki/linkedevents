@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import logging
 import requests
 import requests_cache
 import re
@@ -293,8 +294,8 @@ class HelmetImporter(Importer):
         def set_attr(field_name, val):
             if field_name in event:
                 if event[field_name] != val:
-                    self.logger.warning('Event %s: %s mismatch (%s vs. %s)' %
-                                        (eid, field_name, event[field_name], val))
+                    logging.warning('Event %s: %s mismatch (%s vs. %s)' %
+                                    (eid, field_name, event[field_name], val))
                     return
             event[field_name] = val
 
@@ -385,8 +386,8 @@ class HelmetImporter(Importer):
                 event['location']['extra_info'][lang] = extra_info
                 del ext_props['PlaceExtraInfo']
         else:
-            self.logger.warning('Missing TPREK location map for event %s (%s)' %
-                                (event['name'][lang], str(eid)))
+            logging.warning('Missing TPREK location map for event %s (%s)' %
+                            (event['name'][lang], str(eid)))
             del events[event['origin_id']]
             return event
 
@@ -403,7 +404,7 @@ class HelmetImporter(Importer):
         for _ in range(0, 5):
             response = requests.get(url)
             if response.status_code != 200:
-                self.logger.error("HelMet API reported HTTP %d" % response.status_code)
+                logging.error("HelMet API reported HTTP %d" % response.status_code)
                 time.sleep(2)
                 if self.cache:
                     self.cache.delete_url(url)
@@ -411,14 +412,14 @@ class HelmetImporter(Importer):
             try:
                 root_doc = response.json()
             except ValueError:
-                self.logger.error("HelMet API returned invalid JSON")
+                logging.error("HelMet API returned invalid JSON")
                 if self.cache:
                     self.cache.delete_url(url)
                 time.sleep(5)
                 continue
             break
         else:
-            self.logger.error("HelMet API broken again, giving up")
+            logging.error("HelMet API broken again, giving up")
             raise APIBrokenError()
 
         documents = root_doc['value']
@@ -442,13 +443,13 @@ class HelmetImporter(Importer):
                 ), lang, events)
 
     def import_events(self):
-        print("Importing HelMet events")
+        logging.info("Importing HelMet events")
         events = recur_dict()
         for lang in self.supported_languages:
             helmet_lang_id = HELMET_LANGUAGES[lang]
             url = HELMET_API_URL.format(lang_code=helmet_lang_id, start_date='2016-01-01')
-            print("Processing lang " + lang)
-            print("from URL " + url)
+            logging.info("Processing lang {}".format(lang))
+            logging.info("from URL {}".format(url))
             try:
                 self._recur_fetch_paginated_url(url, lang, events)
             except APIBrokenError:
@@ -465,4 +466,4 @@ class HelmetImporter(Importer):
             self.syncher.mark(obj)
 
         self.syncher.finish()
-        print("%d events processed" % len(events.values()))
+        logging.info("%d events processed" % len(events.values()))
