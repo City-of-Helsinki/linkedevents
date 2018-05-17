@@ -4,6 +4,7 @@ import os
 import re
 import functools
 from lxml import etree
+import logging
 import dateutil
 from pytz import timezone
 from django.conf import settings
@@ -202,7 +203,7 @@ class KulkeImporter(Importer):
         place_list = Place.objects.filter(data_source=self.tprek_data_source).filter(origin_id__in=id_list)
         self.tprek_by_id = {p.origin_id: p.id for p in place_list}
 
-        print('Preprocessing categories')
+        logging.info('Preprocessing categories')
         categories = self.parse_kulke_categories()
 
         keyword_matcher = KeywordMatcher()
@@ -259,7 +260,7 @@ class KulkeImporter(Importer):
         tprek_id = None
         location = event['location']
         if location['name'] is None:
-            print("Missing place for event %s (%s)" % (
+            logging.warning("Missing place for event %s (%s)" % (
                 get_event_name(event), event['origin_id']))
             return None
 
@@ -298,7 +299,7 @@ class KulkeImporter(Importer):
         if tprek_id:
             event['location']['id'] = self.tprek_by_id[tprek_id]
         else:
-            print("No match found for place '%s' (event %s)" % (loc_name, get_event_name(event)))
+            logging.warning("No match found for place '%s' (event %s)" % (loc_name, get_event_name(event)))
 
     @staticmethod
     def _html_format(text):
@@ -399,7 +400,7 @@ class KulkeImporter(Importer):
             except ValidationError:
                 continue
             except ValueError:
-                print('value error with event %s and url %s ' % (eid, link))
+                logging.error('value error with event %s and url %s ' % (eid, link))
             external_links.append({'link': link})
         event['external_links'][lang] = external_links
 
@@ -499,7 +500,7 @@ class KulkeImporter(Importer):
                     kulke_keyword = Keyword.objects.get(pk=kulke_id)
                     event_keywords.add(kulke_keyword)
                 except Keyword.DoesNotExist:
-                    print('Could not find {}'.format(kulke_id))
+                    logging.error('Could not find {}'.format(kulke_id))
 
             if is_course:
                 event_keywords.update(self.course_keywords)
@@ -540,10 +541,10 @@ class KulkeImporter(Importer):
             for inner_key in group:
                 inner_group = recurring_groups.get(inner_key)
                 if inner_group and inner_group != group:
-                    print('Differing groups:', key, inner_key)
-                    print('Differing groups:', group, inner_group)
+                    logging.warning('Differing groups:', key, inner_key)
+                    logging.warning('Differing groups:', group, inner_group)
                     if len(inner_group) == 0:
-                        print(
+                        logging.warning(
                             'Event self-identifies to no group, removing.',
                             inner_key
                         )
@@ -606,8 +607,8 @@ class KulkeImporter(Importer):
                     for headline in [event.name for event in events]
                     ):
                 name += words.pop(0) + ' '
-                print(words)
-                print(name)
+                logging.warning(words)
+                logging.warning(name)
             setattr(super_event, 'name', name)
 
         for lang in self.languages.keys():
@@ -651,8 +652,8 @@ class KulkeImporter(Importer):
             cnt = superevent_aggregates.count()
 
             if cnt > 1:
-                print('Error: the superevent has an ambiguous aggregate group.')
-                print('Aggregate ids: {}, group: {}'.format(
+                logging.error('Error: the superevent has an ambiguous aggregate group.')
+                logging.error('Aggregate ids: {}, group: {}'.format(
                     superevent_aggregates.values_list('id', flat=True), group))
                 continue
 
@@ -704,11 +705,11 @@ class KulkeImporter(Importer):
         return aggregates
 
     def import_events(self):
-        print("Importing Kulke events")
+        logging.info("Importing Kulke events")
         self._import_events()
 
     def import_courses(self):
-        print("Importing Kulke courses")
+        logging.info("Importing Kulke courses")
         self._import_events(importing_courses=True)
 
     def _import_events(self, importing_courses=False):
@@ -741,7 +742,7 @@ class KulkeImporter(Importer):
             self._update_super_event(agg.super_event)
 
     def import_keywords(self):
-        print("Importing Kulke categories as keywords")
+        logging.info("Importing Kulke categories as keywords")
         categories = self.parse_kulke_categories()
         for kid, value in categories.items():
             try:

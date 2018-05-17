@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import re
+import logging
 from langdetect import detect
 from langdetect.lang_detect_exception import LangDetectException
 from django.utils.translation.trans_real import activate, deactivate
@@ -142,8 +143,8 @@ def replace_location(replace=None,
         replace.deleted = True
         replace.replaced_by = by
         replace.save(update_fields=['deleted', 'replaced_by'])
-        print("Location %s (%s) was deleted. Discovered replacement location %s" %
-              (replace.id, str(replace), by.id))
+        logging.info("Location %s (%s) was deleted. Discovered replacement location %s" %
+                     (replace.id, str(replace), by.id))
     return True
 
 

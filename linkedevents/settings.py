@@ -29,7 +29,7 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'timestamped': {
-            'format': '%(asctime)s: %(message)s',
+            'format': '%(asctime)s %(levelname)s %(module)s: %(message)s',
         },
     },
     'handlers': {
