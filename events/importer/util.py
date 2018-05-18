@@ -27,7 +27,7 @@ def separate_scripts(text, scripts):
     :return:
     """
     # separate the text by paragraphs, matching to select html and plain text delimiters in data
-    paragraphs = re.split(r'(</p><p>|\n|</p>|<p>| – |<br><br><br>)+', text )
+    paragraphs = re.split(r'(</p><p>|\n|</p>|<p>| – |<br><br><br>)+', text)
     separated = {script: '' for script in scripts}
     # the first language given is the default one
     last_language = scripts[0]
@@ -35,7 +35,7 @@ def separate_scripts(text, scripts):
     for paragraph in paragraphs:
         if paragraph in (r'</p><p>', r'</p>' r'\n', r'<p>', r'<br><br><br>'):
             # skip paragraph breaks to prevent misdetection
-            separated[last_language]+=paragraph
+            separated[last_language] += paragraph
             last_paragraph = paragraph
             continue
         try:
@@ -50,17 +50,17 @@ def separate_scripts(text, scripts):
             # fix html paragraph breaks after language change
             print('supported language detected: ' + language)
             if last_paragraph in (r'</p><p>', r'</p>', r'<p>'):
-                separated[last_language]=re.sub(r'<p>$','',separated[last_language])
-                separated[language]+=r'<p>'
+                separated[last_language] = re.sub(r'<p>$', '', separated[last_language])
+                separated[language] += r'<p>'
             # remove useless dashes after language change
             if last_paragraph in (r' – ',):
-                separated[last_language]=re.sub(r' – $','',separated[last_language])
+                separated[last_language] = re.sub(r' – $', '', separated[last_language])
             # replace the awful triple-<br>
             if last_paragraph in (r'<br><br><br>',):
-                separated[last_language]=re.sub(r'<br><br><br>$','',separated[last_language])
-                separated[last_language]+=r'</p>'
-                separated[language]+=r'<p>'
-        separated[language]+=paragraph
+                separated[last_language] = re.sub(r'<br><br><br>$', '', separated[last_language])
+                separated[last_language] += r'</p>'
+                separated[language] += r'<p>'
+        separated[language] += paragraph
         last_language = language
         last_paragraph = paragraph
     return separated

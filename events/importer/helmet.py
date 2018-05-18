@@ -135,6 +135,7 @@ HELMET_LANGUAGES = {
 LANGUAGES_TO_DETECT = [lang[0] for lang in settings.LANGUAGES
                        if lang[0] not in HELMET_LANGUAGES]
 
+
 def get_lang(lang_id):
     for code, lid in HELMET_LANGUAGES.items():
         if lid == lang_id:
@@ -143,7 +144,6 @@ def get_lang(lang_id):
 
 
 LOCAL_TZ = timezone('Europe/Helsinki')
-
 
 
 def mark_deleted(obj):

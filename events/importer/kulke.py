@@ -172,7 +172,7 @@ class KulkeImporter(Importer):
 
     def setup(self):
         self.languages_to_detect = [lang[0] for lang in settings.LANGUAGES
-                       if lang[0] not in self.supported_languages]
+                                    if lang[0] not in self.supported_languages]
         ds_args = dict(id=self.name)
         defaults = dict(name='Kulttuurikeskus')
         self.tprek_data_source = DataSource.objects.get(id='tprek')
