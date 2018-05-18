@@ -50,12 +50,16 @@ python manage.py migrate
 You probably want to import some data for testing (these are events around Helsinki), like so:
 ```bash
 cd $INSTALL_BASE/linkedevents
-# Import places from Helsinki service registry (used by events from following sources)
+# Import general Finnish ontology (used by events from following sources)
+python manage.py event_import yso --all
+# Import places from Helsinki metropolitan region service registry (used by events from following sources)
 python manage.py event_import tprek --places
 # Import events from Visit Helsinki
 python manage.py event_import matko --events
 # Import events from Helsinki metropolitan region libraries
 python manage.py event_import helmet --events
+# Import events from Espoo
+python manage.py event_import espoo --events
 ```
 Furthermore, you may install city-specific HTML page templates for the browsable API by
 ```bash
