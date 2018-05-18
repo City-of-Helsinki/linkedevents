@@ -168,8 +168,11 @@ def get_event_name(event):
 class KulkeImporter(Importer):
     name = "kulke"
     supported_languages = ['fi', 'sv', 'en']
+    languages_to_detect = []
 
     def setup(self):
+        self.languages_to_detect = [lang[0] for lang in settings.LANGUAGES
+                       if lang[0] not in self.supported_languages]
         ds_args = dict(id=self.name)
         defaults = dict(name='Kulttuurikeskus')
         self.tprek_data_source = DataSource.objects.get(id='tprek')
@@ -331,7 +334,10 @@ class KulkeImporter(Importer):
         subtitle = text_content('subtitle')
         event['headline'][lang] = title
         event['secondary_headline'][lang] = subtitle
-        event['name'][lang] = make_event_name(title, subtitle)
+        name = make_event_name(title, subtitle)
+        # kulke strings may be in other supported languages
+        if name:
+            Importer._set_multiscript_field(name, event, [lang] + self.languages_to_detect, 'name')
 
         caption = text_content('caption')
         # body text should not be cleaned, as we want to html format the whole shebang
@@ -341,7 +347,8 @@ class KulkeImporter(Importer):
         description = ''
         if caption:
             description += caption
-            event['short_description'][lang] = caption
+            # kulke strings may be in other supported languages
+            Importer._set_multiscript_field(caption, event, [lang]+self.languages_to_detect, 'short_description')
         else:
             event['short_description'][lang] = None
         if caption and bodytext:
@@ -349,7 +356,9 @@ class KulkeImporter(Importer):
         if bodytext:
             description += bodytext
         if description:
-            event['description'][lang] = self._html_format(description)
+            description = self._html_format(description)
+            # kulke strings may be in other supported languages
+            Importer._set_multiscript_field(description, event, [lang]+self.languages_to_detect, 'description')
         else:
             event['description'][lang] = None
 
@@ -386,7 +395,9 @@ class KulkeImporter(Importer):
                     event['image_license'] = 'event_only'
                     break
 
-        event['provider'][lang] = text_content('organizer')
+        provider = text_content('organizer')
+        if provider:
+            Importer._set_multiscript_field(provider, event, [lang]+self.languages_to_detect, 'provider')
 
         start_time = dateutil.parser.parse(text('starttime'))
         # Start and end times are in GMT. Sometimes only dates are provided.

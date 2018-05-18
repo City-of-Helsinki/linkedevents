@@ -9,6 +9,7 @@ from django.conf import settings
 from rest_framework.exceptions import ValidationError
 from django.contrib.gis.geos import Point, Polygon
 from django.contrib.gis.gdal import SpatialReference, CoordTransform
+from .util import separate_scripts
 
 from modeltranslation.translator import translator
 
@@ -55,6 +56,23 @@ class Importer(object):
 
     def setup(self):
         pass
+
+    @staticmethod
+    def _set_multiscript_field(string, event, languages, field):
+        """
+        Will overwrite the event field in specified languages with any paragraphs
+        in those languages discovered in string.
+
+        :param string: The string of paragraphs to process.
+        :param event: The event to update
+        :param languages: An iterable of desired languages, preferred language first.
+        :param field: The field to update
+        :return:
+        """
+        different_scripts = separate_scripts(string, languages)
+        for script, string in different_scripts.items():
+            if string:
+                event[field][script] = string
 
     def get_or_create_image(self, url):
         if url is None or len(url) == 0:
@@ -172,7 +190,8 @@ class Importer(object):
             location = info['location']
             if 'id' in location:
                 location_id = location['id']
-            info['location_extra_info'] = location.get('extra_info', None)
+            if 'extra_info' in location:
+                info['location_extra_info'] = location['extra_info']
 
         assert info['start_time']
         if 'has_start_time' not in info:

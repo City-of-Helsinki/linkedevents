@@ -14,6 +14,8 @@ from django_orghierarchy.models import Organization
 from pytz import timezone
 import pytz
 import bleach
+from django.conf import settings
+from .util import clean_text
 
 from .sync import ModelSyncher
 
@@ -129,6 +131,9 @@ HELMET_LANGUAGES = {
     'en': 2
 }
 
+# try to detect any installed languages not officially present in the feed
+LANGUAGES_TO_DETECT = [lang[0] for lang in settings.LANGUAGES
+                       if lang[0] not in HELMET_LANGUAGES]
 
 def get_lang(lang_id):
     for code, lid in HELMET_LANGUAGES.items():
@@ -139,13 +144,6 @@ def get_lang(lang_id):
 
 LOCAL_TZ = timezone('Europe/Helsinki')
 
-
-def clean_text(text, strip_newlines=False):
-    text = text.replace('\xa0', ' ').replace('\x1f', '')
-    if strip_newlines:
-        text = text.replace('\r', '').replace('\n', ' ')
-    # remove consecutive whitespaces
-    return re.sub(r'\s\s+', ' ', text, re.U).strip()
 
 
 def mark_deleted(obj):
@@ -262,21 +260,23 @@ class HelmetImporter(Importer):
         ext_props = HelmetImporter._get_extended_properties(event_el)
 
         if 'Name' in ext_props:
-            event['name'][lang] = clean_text(ext_props['Name'], True)
+            name = clean_text(ext_props['Name'], True)
+            Importer._set_multiscript_field(name, event, [lang]+LANGUAGES_TO_DETECT, 'name')
             del ext_props['Name']
 
         if ext_props.get('Description', ''):
             desc = ext_props['Description']
             ok_tags = ('u', 'b', 'h2', 'h3', 'em', 'ul', 'li', 'strong', 'br', 'p', 'a')
             desc = bleach.clean(desc, tags=ok_tags, strip=True)
-
-            event['description'][lang] = clean_text(desc)
+            # long description is html formatted, so we don't want plain text whitespaces
+            desc = clean_text(desc, True)
+            Importer._set_multiscript_field(desc, event, [lang]+LANGUAGES_TO_DETECT, 'description')
             del ext_props['Description']
 
         if ext_props.get('LiftContent', ''):
             text = ext_props['LiftContent']
             text = clean_text(strip_tags(text))
-            event['short_description'][lang] = text
+            Importer._set_multiscript_field(text, event, [lang]+LANGUAGES_TO_DETECT, 'short_description')
             del ext_props['LiftContent']
 
         if 'Images' in ext_props:
@@ -382,7 +382,7 @@ class HelmetImporter(Importer):
         if 'location' in event:
             extra_info = clean_text(ext_props.get('PlaceExtraInfo', ''))
             if extra_info:
-                event['location']['extra_info'][lang] = extra_info
+                Importer._set_multiscript_field(extra_info, event, [lang] + LANGUAGES_TO_DETECT, 'location_extra_info')
                 del ext_props['PlaceExtraInfo']
         else:
             self.logger.warning('Missing TPREK location map for event %s (%s)' %
