@@ -46,6 +46,8 @@ sudo -u postgres psql linkedevents -c "CREATE EXTENSION postgis;"
 sudo -u postgres psql linkedevents -c "CREATE EXTENSION hstore;"
 # This fills the database with a basic skeleton
 python manage.py migrate
+# This adds language fields based on settings.LANGUAGES (which may be missing in external dependencies)
+python manage.py sync_translation_fields
 ```
 You probably want to import some data for testing (these are events around Helsinki), like so:
 ```bash

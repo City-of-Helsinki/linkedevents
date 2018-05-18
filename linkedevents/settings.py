@@ -114,6 +114,9 @@ LANGUAGES = (
     ('fi', 'Finnish'),
     ('sv', 'Swedish'),
     ('en', 'English'),
+    ('zh', 'Simplified Chinese'),
+    ('ru' ,'Russian'),
+    ('ar', 'Arabic'),
 )
 
 LANGUAGE_CODE = 'fi'
