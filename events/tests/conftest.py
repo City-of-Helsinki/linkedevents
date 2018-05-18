@@ -14,6 +14,7 @@ from munigeo.models import (AdministrativeDivision, AdministrativeDivisionType, 
 import pytest
 from rest_framework.test import APIClient
 from django_orghierarchy.models import Organization
+from django.core.management import call_command
 
 
 # events
@@ -32,6 +33,12 @@ URL = "http://localhost"
 DATETIME = (timezone.now() + timedelta(days=1)).isoformat().replace('+00:00', 'Z')
 
 OTHER_DATA_SOURCE_ID = "testotherdatasourceid"
+
+
+@pytest.fixture(scope='session')
+def django_db_setup(django_db_setup, django_db_blocker):
+    with django_db_blocker.unblock():
+        call_command('sync_translation_fields', '--noinput')
 
 
 @pytest.fixture
