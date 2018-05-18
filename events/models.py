@@ -268,7 +268,7 @@ class KeywordSet(BaseModel):
 
 class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     publisher = models.ForeignKey('django_orghierarchy.Organization', verbose_name=_('Publisher'), db_index=True)
-    info_url = models.URLField(verbose_name=_('Place home page'), blank=True, default='', max_length=1000)
+    info_url = models.URLField(verbose_name=_('Place home page'), null=True, blank=True, max_length=1000)
     description = models.TextField(verbose_name=_('Description'), null=True, blank=True)
     parent = TreeForeignKey('self', null=True, blank=True,
                             related_name='children')
