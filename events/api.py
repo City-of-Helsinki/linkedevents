@@ -1152,7 +1152,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                     field_lang = "%s_%s" % (field, lang)
                     if data.get(name) and not data.get(field_lang):
                         errors.setdefault(field, {})[lang] = lang_error_msg
-                    if field == 'short_description' and len(data.get(field_lang, [])) > 160:
+                    if data.get(field_lang) and field == 'short_description' and len(data.get(field_lang, [])) > 160:
                         errors.setdefault(field, {})[lang] = (
                             _('Short description length must be 160 characters or less'))
 
