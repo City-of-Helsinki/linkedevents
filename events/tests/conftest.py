@@ -2,6 +2,7 @@
 from datetime import timedelta
 
 # django
+from django.core.management import call_command
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from .utils import versioned_reverse as reverse
@@ -15,7 +16,6 @@ import pytest
 from rest_framework.test import APIClient
 from django_orghierarchy.models import Organization
 from django.core.management import call_command
-
 
 # events
 from events.models import (
@@ -34,6 +34,16 @@ DATETIME = (timezone.now() + timedelta(days=1)).isoformat().replace('+00:00', 'Z
 
 OTHER_DATA_SOURCE_ID = "testotherdatasourceid"
 
+@pytest.fixture(scope='session')
+def django_db_modify_db_settings(django_db_modify_db_settings_xdist_suffix):
+    db_settings = settings.DATABASES
+
+    db_settings['default']['TEST']['SERIALIZE'] = False
+
+@pytest.fixture(scope='session')
+def django_db_setup(django_db_setup, django_db_blocker):
+    with django_db_blocker.unblock():
+        call_command('sync_translation_fields','--noinput')
 
 @pytest.fixture(scope='session')
 def django_db_setup(django_db_setup, django_db_blocker):
