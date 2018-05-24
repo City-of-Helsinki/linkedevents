@@ -34,11 +34,14 @@ DATETIME = (timezone.now() + timedelta(days=1)).isoformat().replace('+00:00', 'Z
 
 OTHER_DATA_SOURCE_ID = "testotherdatasourceid"
 
+# Django test harness tries to serialize DB in order to support transactions
+# within tests. (It restores the snapshot after such tests).
+# This fails with modeltranslate, as the serialization is done before
+# sync_translation_fields has a change to run. Thus the fields are missing
+# and serialization fails horribly.
 @pytest.fixture(scope='session')
 def django_db_modify_db_settings(django_db_modify_db_settings_xdist_suffix):
-    db_settings = settings.DATABASES
-
-    db_settings['default']['TEST']['SERIALIZE'] = False
+    settings.DATABASES['default']['TEST']['SERIALIZE'] = False
 
 @pytest.fixture(scope='session')
 def django_db_setup(django_db_setup, django_db_blocker):
