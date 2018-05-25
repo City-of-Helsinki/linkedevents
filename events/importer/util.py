@@ -55,7 +55,7 @@ def separate_scripts(text, scripts):
             language = last_language
         if language != last_language:
             # fix html paragraph breaks after language change
-            print('supported language detected: ' + language)
+            logging.debug('supported language detected: ' + language)
             if last_paragraph in (r'</p><p>', r'</p>', r'<p>'):
                 separated[last_language] = re.sub(r'<p>$', '', separated[last_language])
                 separated[language] += r'<p>'
