@@ -1518,6 +1518,18 @@ def _filter_event_queryset(queryset, params, srs=None):
     elif val == 'public':
         queryset = queryset.filter(publication_status=PublicationStatus.PUBLIC)
 
+    # Filter by language, checking both string content and in_language field
+    val = params.get('language', None)
+    if val:
+        val = val.split(',')
+        q = Q()
+        for lang in val:
+            name_arg = {'name_' + lang + '__isnull': False}
+            desc_arg = {'description_' + lang + '__isnull': False}
+            short_desc_arg = {'short_description_' + lang + '__isnull': False}
+            q = q | Q(in_language__id=lang) | Q(**name_arg) | Q(**desc_arg) | Q(**short_desc_arg)
+        queryset = queryset.filter(q)
+
     return queryset
 
 

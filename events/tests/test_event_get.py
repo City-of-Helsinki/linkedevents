@@ -3,7 +3,7 @@ from .utils import versioned_reverse as reverse
 import pytest
 from .utils import get, assert_fields_exist
 from events.models import (
-    Event, PublicationStatus
+    Event, PublicationStatus, Language
 )
 
 
@@ -181,6 +181,42 @@ def test_super_event_type_filter(api_client, event, event2):
 
     response = get_list(api_client, query_string='super_event_type=fwfiuwhfiuwhiw')
     assert len(response.data['data']) == 0
+
+
+@pytest.mark.django_db
+def test_language_filter(api_client, event, event2, event3):
+    event.name_sv = 'namn'
+    event.save()
+    event2.in_language.add(Language.objects.get_or_create(id='en')[0])
+    event2.in_language.add(Language.objects.get_or_create(id='sv')[0])
+    event2.save()
+    event3.name_ru = 'название'
+    event3.save()
+
+    # Finnish should be the default language
+    response = get_list(api_client, query_string='language=fi')
+    ids = {e['id'] for e in response.data['data']}
+    assert ids == {event.id, event2.id, event3.id}
+
+    # Swedish should have two events (matches in_language and name_sv)
+    response = get_list(api_client, query_string='language=sv')
+    ids = {e['id'] for e in response.data['data']}
+    assert ids == {event.id, event2.id}
+
+    # English should have one event (matches in_language)
+    response = get_list(api_client, query_string='language=en')
+    ids = {e['id'] for e in response.data['data']}
+    assert ids == {event2.id}
+
+    # Russian should have one event (matches name_ru)
+    response = get_list(api_client, query_string='language=ru')
+    ids = {e['id'] for e in response.data['data']}
+    assert ids == {event3.id}
+
+    # Chinese should have no events
+    response = get_list(api_client, query_string='language=zh')
+    ids = {e['id'] for e in response.data['data']}
+    assert ids == set()
 
 
 @pytest.mark.django_db
