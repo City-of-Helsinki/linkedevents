@@ -2,6 +2,7 @@
 from datetime import timedelta
 
 # django
+from django.core.management import call_command
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from .utils import versioned_reverse as reverse
@@ -14,8 +15,6 @@ from munigeo.models import (AdministrativeDivision, AdministrativeDivisionType, 
 import pytest
 from rest_framework.test import APIClient
 from django_orghierarchy.models import Organization
-from django.core.management import call_command
-
 
 # events
 from events.models import (
@@ -33,6 +32,16 @@ URL = "http://localhost"
 DATETIME = (timezone.now() + timedelta(days=1)).isoformat().replace('+00:00', 'Z')
 
 OTHER_DATA_SOURCE_ID = "testotherdatasourceid"
+
+
+# Django test harness tries to serialize DB in order to support transactions
+# within tests. (It restores the snapshot after such tests).
+# This fails with modeltranslate, as the serialization is done before
+# sync_translation_fields has a chance to run. Thus the fields are missing
+# and serialization fails horribly.
+@pytest.fixture(scope='session')
+def django_db_modify_db_settings(django_db_modify_db_settings_xdist_suffix):
+    settings.DATABASES['default']['TEST']['SERIALIZE'] = False
 
 
 @pytest.fixture(scope='session')
