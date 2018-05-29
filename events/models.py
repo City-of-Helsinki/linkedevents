@@ -191,7 +191,7 @@ class BaseModel(models.Model):
 
 
 class Language(models.Model):
-    id = models.CharField(max_length=6, primary_key=True)
+    id = models.CharField(max_length=10, primary_key=True)
     name = models.CharField(verbose_name=_('Name'), max_length=20)
 
     def __str__(self):
@@ -489,8 +489,10 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
 
     def __str__(self):
         name = ''
-        for lang in settings.LANGUAGES:
-            s = getattr(self, 'name_%s' % lang[0], None)
+        languages = [lang[0] for lang in settings.LANGUAGES]
+        for lang in languages:
+            lang = lang.replace('-', '_')  # to handle complex codes like e.g. zh-hans
+            s = getattr(self, 'name_%s' % lang, None)
             if s:
                 name = s
                 break
