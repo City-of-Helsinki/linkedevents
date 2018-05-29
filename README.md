@@ -12,6 +12,44 @@ Linked Events provides categorized data on events and places. The project was or
 
 *Linked Events has been updated to Django 1.11. To upgrade to Linked Events release v2.0, please upgrade to release v1.3 first.*
 
+Set up project with Docker
+--------------------------
+
+1. Create `local_settings.py` from the template:
+    * `cp local_settings.py.template local_settings.py`
+    
+2. Run `docker-compose up`
+
+3. Run migrations:
+    * `docker exec linkedevents-backend python manage.py migrate`
+
+4. Syncronize languages for translations in DB:
+    * `docker exec linkedevents-backend python manage.py sync_translation_fields`
+    
+5. Import some data for testing:
+    ```bash
+    # Import general Finnish ontology (used by events from following sources)
+    docker exec -it linkedevents-backend python manage.py event_import yso --all
+    # Import places from Helsinki metropolitan region service registry (used by events from following sources)
+    docker exec -it linkedevents-backend python manage.py event_import tprek --places
+    # Import events from Visit Helsinki
+    docker exec -it linkedevents-backend python manage.py event_import matko --events
+    # Import events from Helsinki metropolitan region libraries
+    docker exec -it linkedevents-backend python manage.py event_import helmet --events
+    # Import events from Espoo
+    docker exec -it linkedevents-backend python manage.py event_import espoo --events
+    ```
+6. Update search indexes:
+    * `docker exec -it linkedevents-backend python manage.py rebuild_index`
+    
+7. (Optionally) install API frontend templates:
+    * `docker exec -it linkedevents-backend python manage.py install_templates helevents`
+
+8. Start your Django server:
+    * `docker exec -it linkedevents-backend python manage.py runserver 0:8000`
+
+Now your project is live at [localhost:8000](http://localhost:8000)
+
 Installation for development
 ----------------------------
 These instructions assume an $INSTALL_BASE, like so:
