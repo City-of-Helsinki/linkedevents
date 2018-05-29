@@ -209,12 +209,12 @@ class DOCXRenderer(renderers.BaseRenderer):
         if start is None:
             query_start_date = event_parser.earliest_date
         else:
-            query_start_date = parse_time(start, True)
+            query_start_date = parse_time(start, True)[0]
 
         if end is None:
             query_end_date = event_parser.latest_date
         else:
-            query_end_date = parse_time(end, False)
+            query_end_date = parse_time(end, False)[0]
 
         total_date_range = DateRange(query_start_date, query_end_date)
 

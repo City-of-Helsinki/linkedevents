@@ -159,6 +159,22 @@ def test__cannot_create_a_draft_event_without_a_name(list_url,
 
 
 @pytest.mark.django_db
+def test__cannot_publish_an_event_without_start_time(list_url,
+                                                     api_client,
+                                                     minimal_event_dict,
+                                                     user):
+    api_client.force_authenticate(user=user)
+    minimal_event_dict['start_time'] = None
+    response = api_client.post(list_url, minimal_event_dict, format='json')
+    assert response.status_code == 400
+    assert 'start_time' in response.data
+    del minimal_event_dict['start_time']
+    response2 = api_client.post(list_url, minimal_event_dict, format='json')
+    assert response2.status_code == 400
+    assert 'start_time' in response2.data
+
+
+@pytest.mark.django_db
 def test__cannot_publish_an_event_without_location(list_url,
                                                    api_client,
                                                    minimal_event_dict,
@@ -288,7 +304,7 @@ def test_start_time_and_end_time_validation(api_client, minimal_event_dict, user
     with translation.override('en'):
         response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
     assert response.status_code == 400
-    assert 'End time cannot be in the past.' in response.data['end_time']
+    assert 'End time cannot be in the past. Please set a future end time.' in response.data['end_time']
 
 
 @pytest.mark.django_db

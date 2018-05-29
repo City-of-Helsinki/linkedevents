@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 # django
 from django.core.management import call_command
@@ -140,7 +140,7 @@ def offer(event2):
 def minimal_event_dict(data_source, organization, location_id):
     return {
         'name': {'fi': TEXT},
-        'start_time': DATETIME,
+        'start_time': datetime.strftime(timezone.now() + timedelta(days=1), '%Y-%m-%d'),
         'location': {'@id': location_id},
         'keywords': [
             {'@id': keyword_id(data_source, 'test')},

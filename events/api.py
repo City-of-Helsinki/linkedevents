@@ -1083,15 +1083,18 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         # testing and debugging.
         self.skip_empties = skip_empties
 
-    def get_datetimes(self, data):
+    def parse_datetimes(self, data):
+        # here, we also set has_start_time and has_end_time accordingly
         for field in ['date_published', 'start_time', 'end_time']:
             val = data.get(field, None)
             if val:
                 if isinstance(val, str):
-                    data[field] = utils.parse_time(val, True)
+                    data[field], data['has_' + field] = utils.parse_time(val, not field == 'end_time')
         return data
 
     def to_internal_value(self, data):
+        data = self.parse_datetimes(data)
+
         # parse the first image to the image field
         if 'images' in data:
             if data['images']:
@@ -1157,8 +1160,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                             _('Short description length must be 160 characters or less'))
 
             elif not data.get(field):
-                # The start time may be null if a published event is postponed!
-                if field == 'start_time' and 'start_time' in data:
+                # The start time may be null to postpone an already published event
+                if field == 'start_time' and 'start_time' in data and self.context['request'].method == 'PUT':
                     pass
                 else:
                     errors[field] = lang_error_msg
@@ -1172,33 +1175,20 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         if not offer_exists:
             errors['offers'] = _('Price info must be specified before an event is published.')
 
-        # adjust start_time and has_start_time
-
-        if 'has_start_time' not in data:
-            # provided time is assumed exact
-            data['has_start_time'] = True
-        if not data['has_start_time']:
-            # if no exact time is supplied, the event starts at midnight local time
-            data['start_time'] = timezone.localtime(data['start_time']).\
-                replace(hour=0, minute=0, second=0, microsecond=0).astimezone(pytz.utc)
-
-        # adjust end_time and has_end_time
-
-        # If no end timestamp supplied, we treat the event as ending at midnight.
-        if 'end_time' not in data or not data['end_time']:
-            data['end_time'] = data['start_time']
-            data['has_end_time'] = False
-        if 'has_end_time' not in data:
-            # provided time is assumed exact
-            data['has_end_time'] = True
-        if not data['has_end_time']:
-            # if no exact time is supplied, the event ends at midnight local time
-            data['end_time'] = timezone.localtime(data['end_time'])\
-                .replace(hour=0, minute=0, second=0, microsecond=0).astimezone(pytz.utc)
-            data['end_time'] += timedelta(days=1)
+        # If no end timestamp supplied, we treat the event as ending at midnight
+        if not data.get('end_time'):
+            # The start time may also be null if the event is postponed
+            if not data.get('start_time'):
+                data['has_end_time'] = False
+                data['end_time'] = None
+            else:
+                data['has_end_time'] = False
+                data['end_time'] = timezone.localtime(data['start_time'])\
+                    .replace(hour=0, minute=0, second=0, microsecond=0).astimezone(pytz.utc)
+                data['end_time'] += timedelta(days=1)
 
         if data.get('end_time') and data['end_time'] < timezone.now():
-            errors['end_time'] = force_text(_('End time cannot be in the past.'))
+            errors['end_time'] = force_text(_('End time cannot be in the past. Please set a future end time.'))
 
         if errors:
             raise serializers.ValidationError(errors)
@@ -1292,15 +1282,15 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             ret['start_time_obj'] = obj.start_time
             ret['location'] = obj.location
 
-        if 'start_time' in ret and not obj.has_start_time:
+        if obj.start_time and not obj.has_start_time:
             # Return only the date part
             ret['start_time'] = obj.start_time.astimezone(LOCAL_TZ).strftime('%Y-%m-%d')
-        if 'end_time' in ret and not obj.has_end_time:
+        if obj.end_time and not obj.has_end_time:
             # If we're storing only the date part, do not pretend we have the exact time.
             # Timestamp is of the form %Y-%m-%dT00:00:00, so we report the previous date.
             ret['end_time'] = (obj.end_time - timedelta(days=1)).astimezone(LOCAL_TZ).strftime('%Y-%m-%d')
             # Unless the event is short, then no need for end time
-            if obj.end_time - obj.start_time <= timedelta(days=1):
+            if obj.start_time and obj.end_time - obj.start_time <= timedelta(days=1):
                 ret['end_time'] = None
         del ret['has_start_time']
         del ret['has_end_time']
@@ -1422,7 +1412,7 @@ def _filter_event_queryset(queryset, params, srs=None):
     # 2014-10-29T12:00:00Z == 2014-10-29T12:00:00+0000 (UTC time)
     # or 2014-10-29T12:00:00+0200 (local time)
     if val:
-        dt = utils.parse_time(val, is_start=False)
+        dt = utils.parse_time(val, is_start=False)[0]
         queryset = queryset.filter(Q(last_modified_time__gte=dt))
 
     start = params.get('start')
@@ -1446,11 +1436,11 @@ def _filter_event_queryset(queryset, params, srs=None):
         end = (today + timedelta(days=days)).isoformat()
 
     if start:
-        dt = utils.parse_time(start, is_start=True)
+        dt = utils.parse_time(start, is_start=True)[0]
         queryset = queryset.filter(Q(end_time__gt=dt) | Q(start_time__gte=dt))
 
     if end:
-        dt = utils.parse_time(end, is_start=False)
+        dt = utils.parse_time(end, is_start=False)[0]
         queryset = queryset.filter(Q(end_time__lt=dt) | Q(start_time__lte=dt))
 
     val = params.get('bbox', None)
@@ -1804,12 +1794,12 @@ class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView
 
             start = params.get('start', None)
             if start:
-                dt = utils.parse_time(start, is_start=True)
+                dt = utils.parse_time(start, is_start=True)[0]
                 queryset = queryset.filter(Q(end_time__gt=dt) | Q(start_time__gte=dt))
 
             end = params.get('end', None)
             if end:
-                dt = utils.parse_time(end, is_start=False)
+                dt = utils.parse_time(end, is_start=False)[0]
                 queryset = queryset.filter(Q(end_time__lt=dt) | Q(start_time__lte=dt))
 
             if not start and not end and hasattr(queryset.query, 'add_decay_function'):

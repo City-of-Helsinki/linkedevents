@@ -263,6 +263,18 @@ def test__postpone_an_event_with_put(api_client, complex_event_dict, user):
     data2['event_status'] = 'EventRescheduled'
     assert_event_data_is_equal(data2, response2.data)
 
+    # remove the start_time
+    data2 = response2.data
+    data2['start_time'] = None
+
+    # update the event
+    event_id = data2.pop('@id')
+    response2 = update_with_put(api_client, event_id, data2)
+
+    # assert backend postponed the event again
+    data2['event_status'] = 'EventPostponed'
+    assert_event_data_is_equal(data2, response2.data)
+
 
 @pytest.mark.django_db
 def test__cancel_an_event_with_put(api_client, complex_event_dict, user):
