@@ -43,6 +43,10 @@ def separate_scripts(text, scripts):
         except LangDetectException:
             # an exception means no language could be detected
             language = last_language
+        # langdetect maps "Simplified Chinese" to "zh-cn"
+        # However, we store it as "zh_hans"
+        if language == "zh-cn":
+            language = "zh_hans"
         if language not in scripts:
             # only detect allowed languages, no exceptions
             language = last_language

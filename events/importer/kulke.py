@@ -171,7 +171,7 @@ class KulkeImporter(Importer):
     languages_to_detect = []
 
     def setup(self):
-        self.languages_to_detect = [lang[0] for lang in settings.LANGUAGES
+        self.languages_to_detect = [lang[0].replace('-', '_') for lang in settings.LANGUAGES
                                     if lang[0] not in self.supported_languages]
         ds_args = dict(id=self.name)
         defaults = dict(name='Kulttuurikeskus')
