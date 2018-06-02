@@ -417,6 +417,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     secondary_headline = models.CharField(verbose_name=_('Secondary headline'), max_length=255,
                                           null=True, db_index=True)
     provider = models.CharField(verbose_name=_('Provider'), max_length=512, null=True)
+    provider_contact_info = models.CharField(verbose_name=_("Provider's contact info"),
+                                             max_length=255, null=True, blank=True)
     publisher = models.ForeignKey('django_orghierarchy.Organization', verbose_name=_('Publisher'), db_index=True,
                                   on_delete=models.PROTECT, related_name='published_events')
 
@@ -439,6 +441,11 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     end_time = models.DateTimeField(verbose_name=_('End time'), null=True, db_index=True, blank=True)
     has_start_time = models.BooleanField(default=True)
     has_end_time = models.BooleanField(default=True)
+
+    audience_min_age = models.SmallIntegerField(verbose_name=_('Minimum recommended age'),
+                                                blank=True, null=True, db_index=True)
+    audience_max_age = models.SmallIntegerField(verbose_name=_('Maximum recommended age'),
+                                                blank=True, null=True, db_index=True)
 
     super_event = TreeForeignKey('self', null=True, blank=True,
                                  on_delete=models.SET_NULL, related_name='sub_events')

@@ -394,6 +394,9 @@ def complex_event_dict(data_source, organization, location_id, languages):
         'headline': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
         'short_description': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
         'provider': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
+        'provider_contact_info': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
+        'audience_min_age': 5,
+        'audience_max_age': 15,
     }
 
 
