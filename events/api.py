@@ -302,7 +302,7 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
             return
 
         self.translated_fields = trans_opts.fields.keys()
-        lang_codes = [x[0] for x in settings.LANGUAGES]
+        lang_codes = utils.get_fixed_lang_codes()
         # Remove the pre-existing data in the bundle.
         for field_name in self.translated_fields:
             for lang in lang_codes:
@@ -362,7 +362,7 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
                 raise ValidationError({field_name: 'This field is a translated field. Instead of a string,'
                                                    ' you must supply an object with strings corresponding'
                                                    ' to desired language ids.'})
-            for language in (lang[0] for lang in settings.LANGUAGES if lang[0] in obj):
+            for language in (lang for lang in utils.get_fixed_lang_codes() if lang in obj):
                 value = obj[language]  # "musiikkiklubit"
                 if language == settings.LANGUAGES[0][0]:  # default language
                     extra_fields[field_name] = value  # { "name": "musiikkiklubit" }
@@ -380,7 +380,7 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
     def translated_fields_to_representation(self, obj, ret):
         for field_name in self.translated_fields:
             d = {}
-            for lang in [x[0] for x in settings.LANGUAGES]:
+            for lang in utils.get_fixed_lang_codes():
                 key = "%s_%s" % (field_name, lang)
                 val = getattr(obj, key, None)
                 if val is None:
@@ -898,7 +898,7 @@ class LanguageSerializer(LinkedEventsSerializer):
         fields = '__all__'
 
     def get_translation_available(self, obj):
-        return obj.id in [language[0] for language in settings.LANGUAGES]
+        return obj.id in utils.get_fixed_lang_codes()
 
 
 class LanguageViewSet(viewsets.ReadOnlyModelViewSet):
@@ -1144,7 +1144,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             return data
 
         # check that published events have a location, keyword and start_time
-        languages = [x[0] for x in settings.LANGUAGES]
+        languages = utils.get_fixed_lang_codes()
 
         errors = {}
         lang_error_msg = _('This field must be specified before an event is published.')
@@ -1399,7 +1399,7 @@ def _filter_event_queryset(queryset, params, srs=None):
         # Free string search from all translated fields
         fields = EventTranslationOptions.fields
         # and these languages
-        languages = [x[0] for x in settings.LANGUAGES]
+        languages = utils.get_fixed_lang_codes()
         qset = Q()
         for field in fields:
             for lang in languages:
@@ -1747,7 +1747,7 @@ class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView
         return SearchSerializer
 
     def list(self, request, *args, **kwargs):
-        languages = [x[0] for x in settings.LANGUAGES]
+        languages = utils.get_fixed_lang_codes()
 
         # If the incoming language is not specified, go with the default.
         self.lang_code = request.query_params.get('language', languages[0])

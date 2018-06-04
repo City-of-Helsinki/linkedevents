@@ -114,7 +114,7 @@ LANGUAGES = (
     ('fi', 'Finnish'),
     ('sv', 'Swedish'),
     ('en', 'English'),
-    ('zh', 'Simplified Chinese'),
+    ('zh-hans', 'Simplified Chinese'),
     ('ru' ,'Russian'),
     ('ar', 'Arabic'),
 )
