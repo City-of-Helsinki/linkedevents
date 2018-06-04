@@ -132,7 +132,7 @@ HELMET_LANGUAGES = {
 }
 
 # try to detect any installed languages not officially present in the feed
-LANGUAGES_TO_DETECT = [lang[0] for lang in settings.LANGUAGES
+LANGUAGES_TO_DETECT = [lang[0].replace('-', '_') for lang in settings.LANGUAGES
                        if lang[0] not in HELMET_LANGUAGES]
 
 

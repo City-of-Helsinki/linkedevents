@@ -214,7 +214,7 @@ def test_language_filter(api_client, event, event2, event3):
     assert ids == {event3.id}
 
     # Chinese should have no events
-    response = get_list(api_client, query_string='language=zh')
+    response = get_list(api_client, query_string='language=zh_hans')
     ids = {e['id'] for e in response.data['data']}
     assert ids == set()
 

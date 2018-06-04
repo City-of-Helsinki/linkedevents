@@ -122,3 +122,12 @@ def parse_time(time_str, is_start):
         except (TypeError, ValueError):
             raise ParseError('time in invalid format (try ISO 8601 or yyyy-mm-dd)')
     return dt, is_exact
+
+
+def get_fixed_lang_codes():
+    lang_codes = []
+    for language in settings.LANGUAGES:
+        lang_code = language[0]
+        lang_code = lang_code.replace('-', '_')  # to handle complex codes like e.g. zh-hans
+        lang_codes.append(lang_code)
+    return lang_codes

@@ -13,3 +13,10 @@ media/
 *.iml
 *.kate-swp
 data/
+.pytest_cache/
+templates/rest_framework/api.html
+templates/rest_framework/event_list.html
+templates/rest_framework/keyword_list.html
+templates/rest_framework/place_list.html
+templates/rest_framework/root.html
+templates/rest_framework/search_list.html
