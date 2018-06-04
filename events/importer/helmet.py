@@ -173,7 +173,7 @@ class HelmetImporter(Importer):
         self.tprek_data_source = DataSource.objects.get(id='tprek')
         self.ahjo_data_source = DataSource.objects.get(id='ahjo')
 
-        org_args = dict(origin_id='U4804001010', data_source=self.ahjo_data_source)
+        org_args = dict(origin_id='u4804001010', data_source=self.ahjo_data_source)
         defaults = dict(name='Helsingin kaupunginkirjasto')
         self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
 
