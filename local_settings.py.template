@@ -1,0 +1,85 @@
+DEBUG = True
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': 'linkedevents',
+        'USER': 'linkedevents',
+        'PASSWORD': 'linkedevents',
+        'HOST': 'linkedevents-db'
+    }
+}
+
+CUSTOM_MAPPINGS = {
+    'autosuggest': {
+        'search_analyzer': 'standard',
+        'index_analyzer': 'edgengram_analyzer',
+        'analyzer': None
+    },
+    'text': {
+        'analyzer': 'default'
+    }
+}
+
+HAYSTACK_CONNECTIONS = {
+    'default': {
+        'ENGINE': 'multilingual_haystack.backends.MultilingualSearchEngine',
+    },
+    'default-fi': {
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
+        'URL': 'linkedevents-elasticsearch',
+        'INDEX_NAME': 'linkedevents-fi',
+        'MAPPINGS': CUSTOM_MAPPINGS,
+        'SETTINGS': {
+            "analysis": {
+                "analyzer": {
+                    "default": {
+                        "tokenizer": "finnish",
+                        "filter": ["lowercase", "voikko_filter"]
+                    }
+                },
+                "filter": {
+                    "voikko_filter": {
+                        "type": "voikko",
+                    }
+                }
+            }
+        }
+    },
+    'default-sv': {
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
+        'URL': 'linkedevents-elasticsearch',
+        'INDEX_NAME': 'linkedevents-sv',
+        'MAPPINGS': CUSTOM_MAPPINGS
+    },
+    'default-en': {
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
+        'URL': 'linkedevents-elasticsearch',
+        'INDEX_NAME': 'linkedevents-en',
+        'MAPPINGS': CUSTOM_MAPPINGS
+    },
+    'default-ru': {
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
+        'URL': 'linkedevents-elasticsearch',
+        'INDEX_NAME': 'linkedevents-ru',
+        'MAPPINGS': CUSTOM_MAPPINGS
+    },
+    'default-zh-hans': {
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
+        'URL': 'linkedevents-elasticsearch',
+        'INDEX_NAME': 'linkedevents-zh-hans',
+        'MAPPINGS': CUSTOM_MAPPINGS
+    },
+    'default-ar': {
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
+        'URL': 'linkedevents-elasticsearch',
+        'INDEX_NAME': 'linkedevents-ar',
+        'MAPPINGS': CUSTOM_MAPPINGS
+    },
+}
