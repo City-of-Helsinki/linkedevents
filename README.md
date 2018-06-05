@@ -24,7 +24,7 @@ Set up project with Docker
     * `docker exec linkedevents-backend python manage.py migrate`
 
 4. Syncronize languages for translations in DB:
-    * `docker exec -itlinkedevents-backend python manage.py sync_translation_fields`
+    * `docker exec -it linkedevents-backend python manage.py sync_translation_fields`
     * Answer `y` (for 'yes') to all prompt questions
     
 5. Import some data for testing:
