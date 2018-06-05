@@ -79,6 +79,25 @@ fields, use the query parameter <code>text</code>.</p>
 <pre><code>event/?text=shostakovich
 </code></pre>
 <p><a href="?text=shostakovich" title="json">See the result</a></p>
+<h3 id="event-text">Event language</h3>
+<p>To find events that have a set language or event data translated into
+that language, use the query parameter <code>language</code>.</p>
+<p>Supported languages are found at the <code>language</code> endpoint, which also lists
+which languages have translations available. Currently, translations are supported
+in <code>fi</code>, <code>sv</code>, <code>en</code>, <code>ru</code>,
+<code>zh_hans</code>, and <code>ar</code>.</p>
+<p>Example:</p>
+<pre><code>event/?language=ru
+</code></pre>
+<p><a href="?language=ru" title="json">See the result</a></p>
+<h3 id="event-text">Event publisher</h3>
+<p>To find out events that are published by a specific organization, use the query
+parameter <code>publisher</code>.</p>
+<p>Existing organizations are found at the <code>organization</code> endpoint.</p>
+<p>Example:</p>
+<pre><code>event/?publisher=ytj:0586977-6
+</code></pre>
+<p><a href="?publisher=ytj:0586977-6" title="json">See the result</a></p>
 <h2 id="getting-detailed-data">Getting detailed data</h2>
 <p>In the default case, keywords, locations, and other fields that
 refer to separate resources are only displayed as simple references.</p>
