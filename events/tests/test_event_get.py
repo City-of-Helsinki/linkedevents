@@ -225,7 +225,6 @@ def test_language_filter(api_client, event, event2, event3):
     assert ids == {event3.id}
 
 
-
 @pytest.mark.django_db
 def test_event_list_filters(api_client, event, event2):
     filters = (
