@@ -1514,10 +1514,14 @@ def _filter_event_queryset(queryset, params, srs=None):
         val = val.split(',')
         q = Q()
         for lang in val:
-            name_arg = {'name_' + lang + '__isnull': False}
-            desc_arg = {'description_' + lang + '__isnull': False}
-            short_desc_arg = {'short_description_' + lang + '__isnull': False}
-            q = q | Q(in_language__id=lang) | Q(**name_arg) | Q(**desc_arg) | Q(**short_desc_arg)
+            if lang in utils.get_fixed_lang_codes():
+                # check string content if language has translations available
+                name_arg = {'name_' + lang + '__isnull': False}
+                desc_arg = {'description_' + lang + '__isnull': False}
+                short_desc_arg = {'short_description_' + lang + '__isnull': False}
+                q = q | Q(in_language__id=lang) | Q(**name_arg) | Q(**desc_arg) | Q(**short_desc_arg)
+            else:
+                q = q | Q(in_language__id=lang)
         queryset = queryset.filter(q)
 
     return queryset

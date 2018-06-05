@@ -191,6 +191,7 @@ def test_language_filter(api_client, event, event2, event3):
     event2.in_language.add(Language.objects.get_or_create(id='sv')[0])
     event2.save()
     event3.name_ru = 'название'
+    event3.in_language.add(Language.objects.get_or_create(id='et')[0])
     event3.save()
 
     # Finnish should be the default language
@@ -217,6 +218,12 @@ def test_language_filter(api_client, event, event2, event3):
     response = get_list(api_client, query_string='language=zh_hans')
     ids = {e['id'] for e in response.data['data']}
     assert ids == set()
+
+    # Estonian should have one event (matches in_language), even without translations available
+    response = get_list(api_client, query_string='language=et')
+    ids = {e['id'] for e in response.data['data']}
+    assert ids == {event3.id}
+
 
 
 @pytest.mark.django_db
