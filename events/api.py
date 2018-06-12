@@ -529,20 +529,20 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
 
     def validate_publisher(self, value):
         if value:
-            if value != self.publisher:
+            if value not in (self.publisher, self.publisher.replaced_by):
                 raise serializers.ValidationError(
                     {'publisher': _(
                         "Setting publisher to %(given)s " +
                         " is not allowed for your organization. The publisher" +
                         " must be left blank or set to %(required)s ") %
-                        {'given': str(value), 'required': self.publisher}})
-
+                        {'given': str(value),
+                         'required': str(self.publisher
+                                         if not self.publisher.replaced_by
+                                         else self.publisher_replaced_by)}})
             if value.replaced_by:
-                msg = _(
-                    "Cannot set the publisher to a replaced organization. Organization {0} is replaced by {1}."
-                ).format(value, value.replaced_by)
-                raise serializers.ValidationError({'publisher': msg})
-
+                # for replaced organizations, we automatically update to the current organization
+                # even if the POST/PUT uses the old id
+                return value.replaced_by
         return value
 
     def validate(self, data):
