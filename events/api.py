@@ -1524,6 +1524,32 @@ def _filter_event_queryset(queryset, params, srs=None):
                 q = q | Q(in_language__id=lang)
         queryset = queryset.filter(q)
 
+    # Filter by in_language field only
+    val = params.get('in_language', None)
+    if val:
+        val = val.split(',')
+        q = Q()
+        for lang in val:
+            q = q | Q(in_language__id=lang)
+        queryset = queryset.filter(q)
+
+    # Filter by translation only
+    val = params.get('translation', None)
+    if val:
+        val = val.split(',')
+        q = Q()
+        for lang in val:
+            if lang in utils.get_fixed_lang_codes():
+                # check string content if language has translations available
+                name_arg = {'name_' + lang + '__isnull': False}
+                desc_arg = {'description_' + lang + '__isnull': False}
+                short_desc_arg = {'short_description_' + lang + '__isnull': False}
+                q = q | Q(**name_arg) | Q(**desc_arg) | Q(**short_desc_arg)
+            else:
+                # language has no translations, matching condition must be false
+                q = q | Q(pk__in=[])
+        queryset = queryset.filter(q)
+
     return queryset
 
 
