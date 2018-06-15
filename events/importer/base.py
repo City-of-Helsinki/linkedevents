@@ -317,6 +317,27 @@ class Importer(object):
                     link_obj.save()
                 obj._changed = True
 
+        extension_data = info.get('extension_course')
+        if extension_data is not None:
+            from extension_course.models import Course
+
+            try:
+                course = obj.extension_course
+                course._changed = False
+                self._set_field(course, 'enrolment_start_time', extension_data['enrolment_start_time'])
+                self._set_field(course, 'enrolment_end_time', extension_data['enrolment_end_time'])
+                course_changed = course._changed
+            except Course.DoesNotExist:
+                Course.objects.create(
+                    event=obj,
+                    enrolment_start_time=extension_data['enrolment_start_time'],
+                    enrolment_end_time=extension_data['enrolment_end_time'],
+                )
+                course_changed = True
+
+            if course_changed:
+                obj._changed = True
+
         if obj._changed or obj._created:
             if obj._created:
                 verb = "created"

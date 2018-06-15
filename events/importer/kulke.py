@@ -8,7 +8,7 @@ import dateutil
 from pytz import timezone
 from django.conf import settings
 from django.core.validators import URLValidator
-from django.core.exceptions import ValidationError, ObjectDoesNotExist
+from django.core.exceptions import ValidationError, ObjectDoesNotExist, ImproperlyConfigured
 from django.db import IntegrityError
 from django_orghierarchy.models import Organization
 
@@ -62,8 +62,9 @@ CATEGORIES_TO_IGNORE = [
     53, 54, 55
 ]
 
-# These events are courses - not to be published
-SKIP_EVENTS_WITH_CATEGORY = {
+# Events having one of these categories are courses - they are excluded when importing events
+# and only they are included when importing courses.
+COURSE_CATEGORIES = {
     70, 71, 72, 73, 75, 77, 79, 80,
     81, 83, 84, 85, 87, 316, 629, 632,
     728, 729, 730, 735,
@@ -73,7 +74,7 @@ SKIP_EVENTS_WITH_CATEGORY = {
 def _query_courses():
     filter_out_keywords = map(
         make_kulke_id,
-        SKIP_EVENTS_WITH_CATEGORY
+        COURSE_CATEGORIES
     )
     return Event.objects.filter(
         data_source='kulke'
@@ -133,6 +134,9 @@ MANUAL_CATEGORIES = {
     # lapset ja nuoret
     355: CHILDREN + YOUTH
 }
+
+# these are added to all courses
+COURSE_KEYWORDS = ('p9270',)
 
 # retain the above for simplicity, even if kulke importer internally requires full keyword ids
 KEYWORDS_TO_ADD_TO_AUDIENCE = ['yso:{}'.format(i) for i in KEYWORDS_TO_ADD_TO_AUDIENCE]
@@ -224,6 +228,9 @@ class KulkeImporter(Importer):
 
         self.categories = categories
 
+        course_keyword_ids = ['yso:{}'.format(kw) for kw in COURSE_KEYWORDS]
+        self.course_keywords = set(Keyword.objects.filter(id__in=course_keyword_ids))
+
     def parse_kulke_categories(self):
         categories = {}
         categories_file = os.path.join(
@@ -300,7 +307,7 @@ class KulkeImporter(Importer):
             formatted_paragraphs.append(formatted_paragraph)
         return ''.join(formatted_paragraphs)
 
-    def _import_event(self, lang, event_el, events):
+    def _import_event(self, lang, event_el, events, is_course=False):
         def text(t):
             return unicodetext(event_el.find('event' + t))
 
@@ -317,8 +324,8 @@ class KulkeImporter(Importer):
 
         eid = int(event_el.attrib['id'])
 
-        if text_content('servicecode') != 'Pelkkä ilmoitus':
-            # Skip courses
+        if text_content('servicecode') != 'Pelkkä ilmoitus' and not is_course:
+            # Skip courses when importing events
             return False
 
         if self.options['single']:
@@ -423,13 +430,15 @@ class KulkeImporter(Importer):
 
             event['end_time'] = end_time
 
-        # todo: verify enrolment use cases, proper fields
-        event['custom']['enrolment']['start_time'] = dateutil.parser.parse(
-            text('enrolmentstarttime')
-        )
-        event['custom']['enrolment']['end_time'] = dateutil.parser.parse(
-            text('enrolmentendtime')
-        )
+        if is_course:
+            event['extension_course'] = {
+                'enrolment_start_time': dateutil.parser.parse(
+                    text('enrolmentstarttime')
+                ),
+                'enrolment_end_time': dateutil.parser.parse(
+                    text('enrolmentendtime')
+                )
+            }
 
         if 'offers' not in event:
             event['offers'] = [recur_dict()]
@@ -470,6 +479,10 @@ class KulkeImporter(Importer):
                     event_keywords.add(kulke_keyword)
                 except Keyword.DoesNotExist:
                     print('Could not find {}'.format(kulke_id))
+
+            if is_course:
+                event_keywords.update(self.course_keywords)
+                event_audience.update(self.course_keywords & set(KEYWORDS_TO_ADD_TO_AUDIENCE))
 
             event['keywords'] = event_keywords
             event['audience'] = event_audience
@@ -671,6 +684,15 @@ class KulkeImporter(Importer):
 
     def import_events(self):
         print("Importing Kulke events")
+        self._import_events()
+
+    def import_courses(self):
+        print("Importing Kulke courses")
+        if 'extension_course' not in settings.INSTALLED_APPS:
+            raise ImproperlyConfigured("Course extension must be installed when importing Kulke courses.")
+        self._import_events(importing_courses=True)
+
+    def _import_events(self, importing_courses=False):
         self.url_validator = URLValidator()
         events = recur_dict()
         recurring_groups = dict()
@@ -679,25 +701,20 @@ class KulkeImporter(Importer):
                 settings.IMPORT_FILE_PATH, 'kulke', 'events-%s.xml' % lang)
             root = etree.parse(events_file)
             for event_el in root.xpath('/eventdata/event'):
-                success = self._import_event(lang, event_el, events)
+                success = self._import_event(lang, event_el, events, importing_courses)
                 if success:
                     self._gather_recurring_events(lang, event_el, events, recurring_groups)
 
         events.default_factory = None
 
-        filter_out_keywords = set(map(
+        course_keywords = set(map(
             make_kulke_id,
-            SKIP_EVENTS_WITH_CATEGORY
+            COURSE_CATEGORIES,
         ))
-        for eid, event in events.items():
-            skip = False
-            for kw in event['keywords']:
-                if kw.id in filter_out_keywords:
-                    skip = True
-                    break
-            if skip:
-                continue
-            self.save_event(event)
+
+        for event in events.values():
+            if any(kw.id in course_keywords for kw in event['keywords']) == importing_courses:
+                self.save_event(event)
 
         self._verify_recurs(recurring_groups)
         aggregates = self._save_recurring_superevents(recurring_groups)
