@@ -9,7 +9,7 @@ import dateutil
 from pytz import timezone
 from django.conf import settings
 from django.core.validators import URLValidator
-from django.core.exceptions import ValidationError, ObjectDoesNotExist
+from django.core.exceptions import ValidationError, ObjectDoesNotExist, ImproperlyConfigured
 from django.db import IntegrityError
 from django_orghierarchy.models import Organization
 
@@ -239,11 +239,14 @@ class KulkeImporter(Importer):
         course_keyword_ids = ['yso:{}'.format(kw) for kw in COURSE_KEYWORDS]
         self.course_keywords = set(Keyword.objects.filter(id__in=course_keyword_ids))
 
+<<<<<<< HEAD
         try:
             self.event_only_license = License.objects.get(id='event_only')
         except License.DoesNotExist:
             self.event_only_license = None
 
+=======
+>>>>>>> Add Kulke course importer
     def parse_kulke_categories(self):
         categories = {}
         categories_file = os.path.join(
@@ -446,11 +449,15 @@ class KulkeImporter(Importer):
                 end_time = end_time.astimezone(LOCAL_TZ)
                 event['has_end_time'] = True
 
+<<<<<<< HEAD
             # sometimes, the data has errors. then we set end time to start time
             if end_time > start_time:
                 event['end_time'] = end_time
             else:
                 event['end_time'] = event['start_time']
+=======
+            event['end_time'] = end_time
+>>>>>>> Add Kulke course importer
 
         if is_course:
             event['extension_course'] = {
