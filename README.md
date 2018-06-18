@@ -262,3 +262,22 @@ HAYSTACK_CONNECTIONS = {
     },
 }
 ```
+
+Event extensions
+----------------
+
+It is possible to extend event data and API without touching `events` application by implementing separate extension applications. These extensions will be wired under field `extension_<extension idenfier>` in event API. If not auto enabled (see 6. below), extensions can be enabled per request using query param `extensions` with comma separated identifiers as values, or `all` for enabling all the extensions.
+
+To implement an extension:
+
+1) Create a new Django application, preferably named `extension_<unique identifier for the extension>`.
+
+2) If you need to add new data for events, implement that using model(s) in the extension application.
+
+3) Inherit `events.extensions.EventExtension` and implement needed attributes and methods. See [extensions.py](events/extensions.py) for details.
+
+4) Add `event_extension: <your EventExtension subclass>` attribute to the extension applications's `AppConfig`.
+
+5) Make the extension available by adding the extension application to `INSTALLED_APPS`.
+
+6) If you want to force the extension to be enabled on every request, add the extension's identifier to `AUTO_ENABLED_EXTENSIONS` in Django settings. 
