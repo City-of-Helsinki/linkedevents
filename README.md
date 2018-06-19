@@ -281,3 +281,5 @@ To implement an extension:
 5) Make the extension available by adding the extension application to `INSTALLED_APPS`.
 
 6) If you want to force the extension to be enabled on every request, add the extension's identifier to `AUTO_ENABLED_EXTENSIONS` in Django settings. 
+
+For an example extension implementation, see [course extension](extension_course).
