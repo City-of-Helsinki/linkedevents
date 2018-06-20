@@ -270,6 +270,8 @@ THUMBNAIL_PROCESSORS = (
 # django-orghierachy swappable model
 DJANGO_ORGHIERARCHY_DATASOURCE_MODEL = 'events.DataSource'
 
+AUTO_ENABLED_EXTENSIONS = []
+
 # local_settings.py can be used to override environment-specific settings
 # like database and email that differ between development and production.
 f = os.path.join(BASE_DIR, "local_settings.py")

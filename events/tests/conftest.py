@@ -60,6 +60,13 @@ def api_client():
     return APIClient()
 
 
+@pytest.fixture()
+def user_api_client(user):
+    api_client = APIClient()
+    api_client.force_authenticate(user)
+    return api_client
+
+
 @pytest.mark.django_db
 @pytest.fixture
 def data_source():
