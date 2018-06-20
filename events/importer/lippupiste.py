@@ -16,6 +16,54 @@ from .sync import ModelSyncher
 from .util import clean_text
 
 
+YSO_KEYWORD_MAPS = {
+    'baletti': ('yso:p1278', 'yso:p10218'),
+    'dance': ('yso:p1278',),
+    'draama': ('yso:p2625',),
+    'elokuva': ('yso:p1235',),
+    'elokuvafestivaali': ('yso:p1304', 'yso:p1235'),
+    'elämänhallinta': ('yso:p4357',),
+    'farssi, satiiri': ('yso:p2625',),
+    'hard rock': ('yso:p1808', 'yso:p1882', 'yso:p29778'),
+    'hard rock -festivaali': ('yso:p1304', 'yso:p1808', 'yso:p1882', 'yso:p29778'),
+    'iskelmä- ja tanssimusiikki': ('yso:p1808', 'yso:p1857', 'yso:p181'),
+    'jalkapallo': ('yso:p965', 'yso:p6409'),
+    'jazz & blues': ('yso:p1808', 'yso:p4484', 'yso:p4482'),
+    'jazz & blues -festivaali': ('yso:p1304', 'yso:p1808', 'yso:p4484', 'yso:p4482'),
+    'jääkiekko': ('yso:p965', 'yso:p12697'),
+    'kabaree': ('yso:p1808', 'yso:p181', 'yso:p7158'),
+    'kansanmusiikki': ('yso:p1808', 'yso:p2841'),
+    'kesäteatteri': ('yso:p2625', 'yso:p17654'),
+    'klassinen musiikki': ('yso:p1808', 'yso:p18434'),
+    'klassisen musiikin festivaali': ('yso:p1304', 'yso:p1808', 'yso:p18434'),
+    'klubit': ('yso:p1808', 'yso:p20421'),
+    'komedia': ('yso:p2625', 'yso:p13876'),
+    'koripallo': ('yso:p965', 'yso:p8781'),
+    'lastennäytelmä': ('yso:p2625', 'yso:p16164'),
+    'musikaali, musiikkiteatteri': ('yso:p1808', 'yso:p11693', 'yso:p6422'),
+    'muu urheilu': ('yso:p965',),
+    'nyrkkeily': ('yso:p965', 'yso:p9034'),
+    'näyttelyt, messut': ('yso:p5121', 'yso:p4892'),
+    'ooppera, operetti': ('yso:p1808', 'yso:p13810'),
+    'perhetapahtuma': ('yso:p4363',),
+    'ravintolaviihde': ('yso:p5', 'yso:p1634'),
+    'rock & pop': ('yso:p1808', 'yso:p3064'),
+    'rock & pop -festivaali': ('yso:p1304', 'yso:p1808', 'yso:p3064'),
+    'salibandy': ('yso:p965', 'yso:p16555'),
+    'show': ('yso:p5', 'yso:p7157'),
+    'sirkus': ('yso:p5007',),
+    'sotilasmusiikki': ('yso:p1808', 'yso:p11574'),
+    'stand up': ('yso:p5', 'yso:p9244'),
+    'tanssi': ('yso:p1278',),
+    'tanssifestivaali': ('yso:p1304', 'yso:p1278'),
+    'tapahtumapaketit - kasino': ('yso:p22939',),
+    'tapahtumapaketit - konsertit': ('yso:p1808', 'yso:p11185'),
+    'tapahtumapaketit - kulttuuri': ('yso:p360',),
+    'tapahtumapaketit - viihde': ('yso:p5',),
+    'teatterifestivaali': ('yso:p1304', 'yso:p2625'),
+    'viihdekonsertti': ('yso:p1808', 'yso:p5', 'yso:p11185'),
+}
+
 LIPPUPISTE_EVENT_API_URL = getattr(settings, 'LIPPUPISTE_EVENT_API_URL', None)
 
 LOCAL_TZ = pytz.timezone('Europe/Helsinki')
@@ -58,6 +106,19 @@ class LippupisteImporter(Importer):
     name = 'lippupiste'
     supported_languages = ['fi']
 
+    def _cache_yso_keyword_objects(self):
+        try:
+            yso_data_source = DataSource.objects.get(id='yso')
+        except DataSource.DoesNotExist:
+            self.keyword_by_id = {}
+            return
+        keyword_id_set = set()
+        for yso_keyword_ids in YSO_KEYWORD_MAPS.values():
+            for keyword_id in yso_keyword_ids:
+                keyword_id_set.add(keyword_id)
+        keyword_list = Keyword.objects.filter(data_source=yso_data_source).filter(id__in=keyword_id_set)
+        self.keyword_by_id = {keyword.id: keyword for keyword in keyword_list}
+
     def setup(self):
         data_source_args = dict(id=self.name)
         data_source_defaults = dict(name="Lippupiste")
@@ -67,6 +128,7 @@ class LippupisteImporter(Importer):
         org_args = dict(origin_id='1789232-4', data_source=ytj_data_source, internal_type=Organization.AFFILIATED)
         org_defaults = dict(name="Lippupiste Oy")
         self.organization, _ = Organization.objects.get_or_create(defaults=org_defaults, **org_args)
+        self._cache_yso_keyword_objects()
 
     def _fetch_event_source_data(self, url):
         # stream=True allows lazy iteration
@@ -77,10 +139,26 @@ class LippupisteImporter(Importer):
         reader = csv.DictReader(decoded_response_iter, delimiter=';', quotechar='"', doublequote=True)
         return reader
 
+    def _get_keywords_from_source_category(self, source_category):
+        source_category_key = source_category.lower()
+        keyword_set = set()
+        for keyword_id in YSO_KEYWORD_MAPS.get(source_category_key, []):
+            if keyword_id in self.keyword_by_id:
+                keyword_obj = self.keyword_by_id[keyword_id]
+                keyword_set.add(keyword_obj)
+        return keyword_set
+
+    def _get_keywords_from_source_categories(self, source_categories):
+        source_categories = source_categories.split('|')
+        keyword_set = set()
+        for category in source_categories:
+            keyword_set = keyword_set.union(self._get_keywords_from_source_category(category))
+        return keyword_set
+
     def _import_event(self, source_event, events):
-        # Namespaced source IDs, since they may overlap
-        event_source_id = 'event%s' % source_event['EventId']
-        superevent_source_id = 'serie%s' % source_event['EventSerieId']
+        # Event and serie IDs separated with namespace, since they may overlap
+        event_source_id = source_event['EventId']
+        superevent_source_id = 'serie-%s' % source_event['EventSerieId']
 
         event = events[event_source_id]
         event['id'] = '%s:%s' % (self.data_source.id, event_source_id)
@@ -99,12 +177,15 @@ class LippupisteImporter(Importer):
         event['short_description']['fi'] = clean_short_description(source_event['EventSerieText'])
         event['info_url']['fi'] = source_event['EventLink']
         event['image'] = source_event['EventSeriePictureBig_222x222']
+        event['image_license'] = 'event_only'
+
+        existing_keywords = event.get('keywords', set())
+        keywords_from_source = self._get_keywords_from_source_categories(source_event['EventSerieCategories'])
+        event['keywords'] = existing_keywords.union(keywords_from_source)
 
         # TODO: EventVenue, EventStreet, EventZip, EventPlace
 
         # TODO: superevents
-
-        # TODO: EventSerieCategories
 
     def import_events(self):
         if not LIPPUPISTE_EVENT_API_URL:
