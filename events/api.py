@@ -1539,6 +1539,24 @@ def _filter_event_queryset(queryset, params, srs=None):
                 q = q | Q(pk__in=[])
         queryset = queryset.filter(q)
 
+    # Filter by audience min age
+    val = params.get('audience_min_age', None)
+    if val:
+        try:
+            min_age = int(val)
+        except ValueError:
+            raise ValidationError(_('Audience minimum age must be a digit.'))
+        queryset = queryset.filter(audience_min_age__lte=min_age)
+
+    # Filter by audience max age
+    val = params.get('audience_max_age', None)
+    if val:
+        try:
+            max_age = int(val)
+        except ValueError:
+            raise ValidationError(_('Audience minimum age must be a digit.'))
+        queryset = queryset.filter(audience_max_age__gte=max_age)
+
     return queryset
 
 
