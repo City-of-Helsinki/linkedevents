@@ -150,6 +150,14 @@ class Image(models.Model):
         return user.is_admin(self.publisher)
 
 
+class ImageMixin(models.Model):
+    image = models.ForeignKey(Image, verbose_name=_('Image'), on_delete=models.SET_NULL,
+                              null=True, blank=True)
+
+    class Meta:
+        abstract = True
+
+
 @python_2_unicode_compatible
 class BaseModel(models.Model):
     id = models.CharField(max_length=50, primary_key=True)
@@ -170,8 +178,6 @@ class BaseModel(models.Model):
     last_modified_by = models.ForeignKey(
         User, null=True, blank=True,
         related_name="%(app_label)s_%(class)s_modified_by")
-    image = models.ForeignKey(Image, verbose_name=_('Image'), on_delete=models.SET_NULL,
-                              null=True, blank=True)
 
     @staticmethod
     def now():
@@ -213,7 +219,7 @@ class KeywordLabel(models.Model):
         unique_together = (('name', 'language'),)
 
 
-class Keyword(BaseModel):
+class Keyword(BaseModel, ImageMixin):
     publisher = models.ForeignKey(
         'django_orghierarchy.Organization', verbose_name=_('Publisher'), db_index=True, null=True, blank=True,
         related_name='Published_keywords')
@@ -245,7 +251,7 @@ class Keyword(BaseModel):
         verbose_name_plural = _('keywords')
 
 
-class KeywordSet(BaseModel):
+class KeywordSet(BaseModel, ImageMixin):
     """
     Sets of pre-chosen keywords intended or specific uses and/or organizations,
     for example the set of possible audiences for an event in a specific client.
@@ -266,7 +272,7 @@ class KeywordSet(BaseModel):
     keywords = models.ManyToManyField(Keyword, blank=False, related_name='sets')
 
 
-class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
+class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin):
     publisher = models.ForeignKey('django_orghierarchy.Organization', verbose_name=_('Publisher'), db_index=True)
     info_url = models.URLField(verbose_name=_('Place home page'), null=True, blank=True, max_length=1000)
     description = models.TextField(verbose_name=_('Description'), null=True, blank=True)
@@ -453,6 +459,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     super_event_type = models.CharField(max_length=255, blank=True, null=True, default=None, choices=SUPER_EVENT_TYPES)
 
     in_language = models.ManyToManyField(Language, verbose_name=_('In language'), related_name='events', blank=True)
+
+    images = models.ManyToManyField(Image, related_name='events', blank=True)
 
     deleted = models.BooleanField(default=False, db_index=True)
 
