@@ -532,20 +532,20 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
 
     def validate_publisher(self, value):
         if value:
-            if value != self.publisher:
+            if value not in (self.publisher, self.publisher.replaced_by):
                 raise serializers.ValidationError(
                     {'publisher': _(
                         "Setting publisher to %(given)s " +
                         " is not allowed for your organization. The publisher" +
                         " must be left blank or set to %(required)s ") %
-                        {'given': str(value), 'required': self.publisher}})
-
+                        {'given': str(value),
+                         'required': str(self.publisher
+                                         if not self.publisher.replaced_by
+                                         else self.publisher_replaced_by)}})
             if value.replaced_by:
-                msg = _(
-                    "Cannot set the publisher to a replaced organization. Organization {0} is replaced by {1}."
-                ).format(value, value.replaced_by)
-                raise serializers.ValidationError({'publisher': msg})
-
+                # for replaced organizations, we automatically update to the current organization
+                # even if the POST/PUT uses the old id
+                return value.replaced_by
         return value
 
     def validate(self, data):
@@ -1564,6 +1564,32 @@ def _filter_event_queryset(queryset, params, srs=None):
                 q = q | Q(in_language__id=lang) | Q(**name_arg) | Q(**desc_arg) | Q(**short_desc_arg)
             else:
                 q = q | Q(in_language__id=lang)
+        queryset = queryset.filter(q)
+
+    # Filter by in_language field only
+    val = params.get('in_language', None)
+    if val:
+        val = val.split(',')
+        q = Q()
+        for lang in val:
+            q = q | Q(in_language__id=lang)
+        queryset = queryset.filter(q)
+
+    # Filter by translation only
+    val = params.get('translation', None)
+    if val:
+        val = val.split(',')
+        q = Q()
+        for lang in val:
+            if lang in utils.get_fixed_lang_codes():
+                # check string content if language has translations available
+                name_arg = {'name_' + lang + '__isnull': False}
+                desc_arg = {'description_' + lang + '__isnull': False}
+                short_desc_arg = {'short_description_' + lang + '__isnull': False}
+                q = q | Q(**name_arg) | Q(**desc_arg) | Q(**short_desc_arg)
+            else:
+                # language has no translations, matching condition must be false
+                q = q | Q(pk__in=[])
         queryset = queryset.filter(q)
 
     return queryset

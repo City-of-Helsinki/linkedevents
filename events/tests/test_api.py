@@ -4,7 +4,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django_orghierarchy.models import Organization
-from rest_framework import status, serializers
+from rest_framework import status
 from rest_framework.test import APITestCase
 
 from .utils import versioned_reverse as reverse
@@ -68,8 +68,7 @@ def test_serializer_validate_publisher():
 
     le_serializer = EventSerializer()
     le_serializer.publisher = org_2
-    with pytest.raises(serializers.ValidationError):
-        le_serializer.validate_publisher(org_2)
+    assert le_serializer.validate_publisher(org_2) == org_1
 
 
 class TestOrganizationSerializer(TestCase):
