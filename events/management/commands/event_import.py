@@ -9,7 +9,7 @@ from events.importer.base import get_importers
 class Command(BaseCommand):
     help = "Import event data"
 
-    importer_types = ['places', 'events', 'keywords']
+    importer_types = ['places', 'events', 'keywords', 'courses']
 
     def __init__(self):
         super().__init__()
