@@ -9,7 +9,7 @@ import time
 from django.utils.html import strip_tags
 from .base import Importer, register_importer, recur_dict
 from .yso import KEYWORDS_TO_ADD_TO_AUDIENCE
-from events.models import Event, Keyword, DataSource, Place, Language
+from events.models import Event, Keyword, DataSource, Place
 from django_orghierarchy.models import Organization
 from pytz import timezone
 import pytz
