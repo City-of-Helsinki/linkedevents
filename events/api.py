@@ -1065,8 +1065,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     sub_events = JSONLDRelatedField(serializer='EventSerializer',
                                     required=False, view_name='event-detail',
                                     many=True, queryset=Event.objects.all())
-    image = JSONLDRelatedField(serializer=ImageSerializer, required=False, allow_null=True,
-                               view_name='image-detail', queryset=Image.objects.all(), expanded=True)
+    images = JSONLDRelatedField(serializer=ImageSerializer, required=False, allow_null=True, many=True,
+                                view_name='image-detail', queryset=Image.objects.all(), expanded=True)
     in_language = JSONLDRelatedField(serializer=LanguageSerializer, required=False,
                                      view_name='language-detail', many=True, queryset=Language.objects.all())
     audience = JSONLDRelatedField(serializer=KeywordSerializer, view_name='keyword-detail',
@@ -1101,11 +1101,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
     def to_internal_value(self, data):
         data = self.parse_datetimes(data)
-
-        # parse the first image to the image field
-        if 'images' in data:
-            if data['images']:
-                data['image'] = data['images'][0]
 
         # If the obligatory fields are null or empty, remove them to prevent to_internal_value from checking them.
         # Only for drafts, because null start time of a PUBLIC event will indicate POSTPONED.
@@ -1347,12 +1342,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                 except TypeError:
                     # not list/dict
                     pass
-        if 'image' in ret:
-            if ret['image'] is None:
-                ret['images'] = []
-            else:
-                ret['images'] = [ret['image']]
-            del ret['image']
         request = self.context.get('request')
         if request:
             if not request.user.is_authenticated():
@@ -1591,6 +1580,24 @@ def _filter_event_queryset(queryset, params, srs=None):
                 # language has no translations, matching condition must be false
                 q = q | Q(pk__in=[])
         queryset = queryset.filter(q)
+
+    # Filter by audience min age
+    val = params.get('audience_min_age', None)
+    if val:
+        try:
+            min_age = int(val)
+        except ValueError:
+            raise ValidationError(_('Audience minimum age must be a digit.'))
+        queryset = queryset.filter(audience_min_age__lte=min_age)
+
+    # Filter by audience max age
+    val = params.get('audience_max_age', None)
+    if val:
+        try:
+            max_age = int(val)
+        except ValueError:
+            raise ValidationError(_('Audience minimum age must be a digit.'))
+        queryset = queryset.filter(audience_max_age__gte=max_age)
 
     return queryset
 
