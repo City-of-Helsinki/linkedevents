@@ -92,6 +92,13 @@ def test_get_unknown_event_detail_check_404(api_client):
 
 
 @pytest.mark.django_db
+def test_get_event_list_verify_text_filter(api_client, event, event2):
+    response = get_list(api_client, data={'text': 'event'})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+    assert event2.id in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
 def test_get_event_list_verify_data_source_filter(api_client, data_source, event, event2):
     response = get_list(api_client, data={'data_source': data_source.id})
     assert event.id in [entry['id'] for entry in response.data['data']]

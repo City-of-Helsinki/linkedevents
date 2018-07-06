@@ -390,13 +390,13 @@ def test_name_required_in_some_language(api_client, minimal_event_dict, user, na
 def test_multiple_event_creation(api_client, minimal_event_dict, user):
     api_client.force_authenticate(user)
     minimal_event_dict_2 = deepcopy(minimal_event_dict)
-    minimal_event_dict_2['name']['fi'] = 'testing_2'
+    minimal_event_dict_2['name']['fi'] = 'testaus_2'
 
     response = api_client.post(reverse('event-list'), [minimal_event_dict, minimal_event_dict_2], format='json')
     assert response.status_code == 201
 
     event_names = set(Event.objects.values_list('name_fi', flat=True))
-    assert event_names == {'testing', 'testing_2'}
+    assert event_names == {'testaus', 'testaus_2'}
 
 
 @pytest.mark.django_db
