@@ -64,6 +64,10 @@ YSO_KEYWORD_MAPS = {
     'viihdekonsertti': ('yso:p1808', 'yso:p5', 'yso:p11185'),
 }
 
+HKT_TPREK_PLACE_MAP = {
+    'Arena-näyttämö': 'tprek:46367',  # As of writing, tprek has duplicate, so we will map manually
+}
+
 LIPPUPISTE_EVENT_API_URL = getattr(settings, 'LIPPUPISTE_EVENT_API_URL', None)
 
 LOCAL_TZ = pytz.timezone('Europe/Helsinki')
@@ -119,16 +123,42 @@ class LippupisteImporter(Importer):
         keyword_list = Keyword.objects.filter(data_source=yso_data_source).filter(id__in=keyword_id_set)
         self.keyword_by_id = {keyword.id: keyword for keyword in keyword_list}
 
+    def _cache_place_data(self):
+        self.place_data_list = Place.objects.filter(data_source=self.tprek_data_source).values(
+            'id', 'name', 'street_address_fi', 'street_address_sv', 'address_locality'
+        )
+        for place_data in self.place_data_list:
+            place_data['name__lower'] = place_data['name'].lower()
+
+            if place_data['street_address_fi']:
+                place_data['street_address_fi__lower'] = place_data['street_address_fi'].lower()
+            else:
+                place_data['street_address_fi__lower'] = None
+
+            if place_data['street_address_sv']:
+                place_data['street_address_sv__lower'] = place_data['street_address_sv'].lower()
+            else:
+                place_data['street_address_sv__lower'] = None
+
+            if place_data['address_locality']:
+                place_data['address_locality__lower'] = place_data['address_locality'].lower()
+            else:
+                place_data['address_locality__lower'] = None
+
+        self.existing_place_id_matches = {}
+
     def setup(self):
         data_source_args = dict(id=self.name)
         data_source_defaults = dict(name="Lippupiste")
         self.data_source, _ = DataSource.objects.get_or_create(defaults=data_source_defaults, **data_source_args)
+        self.tprek_data_source = DataSource.objects.get(id='tprek')
 
         ytj_data_source, _ = DataSource.objects.get_or_create(defaults={'name': "YTJ"}, id='ytj')
         org_args = dict(origin_id='1789232-4', data_source=ytj_data_source, internal_type=Organization.AFFILIATED)
         org_defaults = dict(name="Lippupiste Oy")
         self.organization, _ = Organization.objects.get_or_create(defaults=org_defaults, **org_args)
         self._cache_yso_keyword_objects()
+        self._cache_place_data()
 
     def _fetch_event_source_data(self, url):
         # stream=True allows lazy iteration
@@ -154,6 +184,84 @@ class LippupisteImporter(Importer):
         for category in source_categories:
             keyword_set = keyword_set.union(self._get_keywords_from_source_category(category))
         return keyword_set
+
+    def _get_place_id_from_source_event(self, source_event):
+        if source_event['EventVenue'] in self.existing_place_id_matches:
+            return self.existing_place_id_matches[source_event['EventVenue']]
+        if source_event['EventVenue'] in HKT_TPREK_PLACE_MAP:
+            return HKT_TPREK_PLACE_MAP[source_event['EventVenue']]
+
+        matches_by_partial_name = []
+        matches_by_address = []
+        matches_by_partial_address = []
+
+        source_place_name = source_event['EventVenue'].lower()
+        source_address = source_event['EventStreet'].lower()
+        source_locality = source_event['EventPlace'].lower()
+
+        for place_data in self.place_data_list:
+            place_id = place_data['id']
+            candidate_place_name = place_data['name__lower']
+            candidate_address_fi = place_data['street_address_fi__lower']
+            candidate_address_sv = place_data['street_address_sv__lower']
+            candidate_locality = place_data['address_locality__lower']
+
+            # If the name matches exactly, the list will not produce better matches, so we can skip the rest
+            if source_place_name == candidate_place_name:
+                self.existing_place_id_matches[source_event['EventVenue']] = place_id
+                return place_id
+
+            if source_place_name in candidate_place_name or candidate_place_name in source_place_name:
+                matches_by_partial_name.append(place_id)
+
+            # Street addresses alone are not unique, locality must match
+            elif source_locality == candidate_locality:
+                is_exact_address_match = (
+                    (
+                        candidate_address_fi is not None
+                        and source_address == candidate_address_fi
+                    )
+                    or (
+                        candidate_address_sv is not None
+                        and source_address == candidate_address_sv
+                    )
+                )
+                is_partial_address_match = (
+                    (
+                        candidate_address_fi is not None
+                        and (
+                            source_address in candidate_address_fi
+                            or
+                            candidate_address_fi in source_address
+                        )
+                    )
+                    or (
+                        candidate_address_sv is not None
+                        and (
+                            source_address in candidate_address_sv
+                            or
+                            candidate_address_sv in source_address
+                        )
+                    )
+                )
+                if is_exact_address_match:
+                    matches_by_address.append(place_id)
+                if is_partial_address_match:
+                    matches_by_partial_address.append(place_id)
+
+        if matches_by_partial_name:
+            place_id = matches_by_partial_name[0]
+            self.existing_place_id_matches[source_event['EventVenue']] = place_id
+            return place_id
+        if matches_by_address:
+            place_id = matches_by_address[0]
+            self.existing_place_id_matches[source_event['EventVenue']] = place_id
+            return place_id
+        if matches_by_partial_address:
+            place_id = matches_by_partial_address[0]
+            self.existing_place_id_matches[source_event['EventVenue']] = place_id
+            return place_id
+        return None
 
     def _import_event(self, source_event, events):
         # Event and serie IDs separated with namespace, since they may overlap
@@ -183,7 +291,11 @@ class LippupisteImporter(Importer):
         keywords_from_source = self._get_keywords_from_source_categories(source_event['EventSerieCategories'])
         event['keywords'] = existing_keywords.union(keywords_from_source)
 
-        # TODO: EventVenue, EventStreet, EventZip, EventPlace
+        place_id = self._get_place_id_from_source_event(source_event)
+        if place_id:
+            event['location']['id'] = place_id
+        else:
+            print("No match found for place '%s' (event %s)" % (source_event['EventVenue'], event['name']['fi']))
 
         # TODO: superevents
 
