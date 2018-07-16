@@ -125,7 +125,7 @@ class LippupisteImporter(Importer):
 
     def _cache_place_data(self):
         self.place_data_list = Place.objects.filter(data_source=self.tprek_data_source).values(
-            'id', 'name', 'street_address_fi', 'street_address_sv', 'address_locality'
+            'id', 'name', 'street_address_fi', 'street_address_sv', 'postal_code'
         )
         for place_data in self.place_data_list:
             place_data['name__lower'] = place_data['name'].lower()
@@ -139,11 +139,6 @@ class LippupisteImporter(Importer):
                 place_data['street_address_sv__lower'] = place_data['street_address_sv'].lower()
             else:
                 place_data['street_address_sv__lower'] = None
-
-            if place_data['address_locality']:
-                place_data['address_locality__lower'] = place_data['address_locality'].lower()
-            else:
-                place_data['address_locality__lower'] = None
 
         self.existing_place_id_matches = {}
 
@@ -197,14 +192,14 @@ class LippupisteImporter(Importer):
 
         source_place_name = source_event['EventVenue'].lower()
         source_address = source_event['EventStreet'].lower()
-        source_locality = source_event['EventPlace'].lower()
+        source_postal_code = source_event['EventZip']
 
         for place_data in self.place_data_list:
             place_id = place_data['id']
             candidate_place_name = place_data['name__lower']
             candidate_address_fi = place_data['street_address_fi__lower']
             candidate_address_sv = place_data['street_address_sv__lower']
-            candidate_locality = place_data['address_locality__lower']
+            candidate_postal_code = place_data['postal_code']
 
             # If the name matches exactly, the list will not produce better matches, so we can skip the rest
             if source_place_name == candidate_place_name:
@@ -214,8 +209,8 @@ class LippupisteImporter(Importer):
             if source_place_name in candidate_place_name or candidate_place_name in source_place_name:
                 matches_by_partial_name.append(place_id)
 
-            # Street addresses alone are not unique, locality must match
-            elif source_locality == candidate_locality:
+            # Street addresses alone are not unique, postal code must match
+            elif source_postal_code == candidate_postal_code:
                 is_exact_address_match = (
                     (
                         candidate_address_fi is not None
