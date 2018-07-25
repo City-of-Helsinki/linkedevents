@@ -88,9 +88,9 @@ class Importer(object):
     def set_image(self, obj, image_object):
         if obj is None or image_object is None:
             return
-        if image_object.id != obj.image_id:
+        if image_object not in obj.images.all():
             obj._changed = True
-            obj.image = image_object
+            obj.images.add(image_object)
 
     def link_recurring_events(self, events, instance_fields=[]):
         """Finds events that are instances of a common parent
