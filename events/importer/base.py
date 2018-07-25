@@ -233,8 +233,6 @@ class Importer(object):
                 image_object.license = license_object
                 image_object.save(update_fields=('license',))
 
-        self.set_image(obj, image_object)
-
         self._set_field(obj, 'deleted', False)
 
         if obj._created or obj._changed:
@@ -245,6 +243,8 @@ class Importer(object):
                 raise
 
         # many-to-many fields
+
+        self.set_image(obj, image_object)
 
         keywords = info.get('keywords', [])
         new_keywords = set([kw.id for kw in keywords])
