@@ -105,6 +105,10 @@ def clean_short_description(text):
     return text
 
 
+def get_namespaced_event_serie_id(event_serie_id):
+    return 'serie-%s' % event_serie_id
+
+
 @register_importer
 class LippupisteImporter(Importer):
     name = 'lippupiste'
@@ -141,6 +145,10 @@ class LippupisteImporter(Importer):
                 place_data['street_address_sv__lower'] = None
 
         self.existing_place_id_matches = {}
+
+    def _cache_super_event_ids(self):
+        qs = Event.objects.filter(data_source=self.data_source, super_event_type__isnull=False)
+        self.super_event_ids_by_origin_id = {super_event.origin_id: super_event.id for super_event in qs}
 
     def setup(self):
         data_source_args = dict(id=self.name)
@@ -258,12 +266,8 @@ class LippupisteImporter(Importer):
             return place_id
         return None
 
-    def _import_event(self, source_event, events):
-        # Event and serie IDs separated with namespace, since they may overlap
+    def _update_event_data(self, event, source_event):
         event_source_id = source_event['EventId']
-        superevent_source_id = 'serie-%s' % source_event['EventSerieId']
-
-        event = events[event_source_id]
         event['id'] = '%s:%s' % (self.data_source.id, event_source_id)
         event['origin_id'] = event_source_id
         event['data_source'] = self.data_source
@@ -291,18 +295,43 @@ class LippupisteImporter(Importer):
             event['location']['id'] = place_id
         else:
             print("No match found for place '%s' (event %s)" % (source_event['EventVenue'], event['name']['fi']))
+        return event
 
-        # TODO: superevents
+    def _import_event(self, source_event, events):
+        event_source_id = source_event['EventId']
+        event = events[event_source_id]
+        self._update_event_data(event, source_event)
 
-    def import_events(self):
-        if not LIPPUPISTE_EVENT_API_URL:
-            raise ImproperlyConfigured("LIPPUPISTE_EVENT_API_URL must be set in local_settings")
-        print("Importing Lippupiste events")
-        events = recur_dict()
+        # Event and serie IDs separated with namespace, since they may overlap
+        superevent_source_id = get_namespaced_event_serie_id(source_event['EventSerieId'])
+        superevent = events[superevent_source_id]
+        self._update_event_data(superevent, source_event)
+        superevent['origin_id'] = superevent_source_id
+        superevent['super_event_type'] = Event.SuperEventType.RECURRING
+        superevent['info_url']['fi'] = source_event['EventSerieLink']
 
-        for source_event in self._fetch_event_source_data(LIPPUPISTE_EVENT_API_URL):
-            self._import_event(source_event, events)
+    def _link_event_to_superevent(self, source_event, events):
+        superevent_source_id = get_namespaced_event_serie_id(source_event['EventSerieId'])
+        try:
+            superevent_id = self.super_event_ids_by_origin_id.get(superevent_source_id)
+        except KeyError:
+            return
+        event_source_id = source_event['EventId']
+        event = events[event_source_id]
+        event['super_event_id'] = superevent_id
 
+    def _update_superevent_details(self, super_event):
+        events = super_event.get_children()
+        if not events.exists():
+            return
+        first_event = events.order_by('start_time').first()
+        super_event.start_time = first_event.start_time
+        super_event.has_start_time = first_event.has_start_time
+        last_event = events.order_by('-end_time').first()
+        super_event.end_time = last_event.end_time
+        super_event.has_end_time = last_event.has_end_time
+
+    def _synch_events(self, events):
         event_list = sorted(events.values(), key=lambda x: x['start_time'])
 
         now = datetime.now()
@@ -311,7 +340,32 @@ class LippupisteImporter(Importer):
 
         for event in event_list:
             obj = self.save_event(event)
+            if 'super_event_id' in event:
+                obj.super_event_id = event['super_event_id']
+                obj.save()
             self.syncher.mark(obj)
 
         self.syncher.finish()
+
+    def import_events(self):
+        if not LIPPUPISTE_EVENT_API_URL:
+            raise ImproperlyConfigured("LIPPUPISTE_EVENT_API_URL must be set in local_settings")
+        print("Importing Lippupiste events")
+        events = recur_dict()
+        event_source_data = list(self._fetch_event_source_data(LIPPUPISTE_EVENT_API_URL))
+
+        for source_event in event_source_data:
+            self._import_event(source_event, events)
+        self._synch_events(events)
+
+        # Because super events must exist to be linked, do this after synch. We also need to resynch.
+        self._cache_super_event_ids()
+        for source_event in event_source_data:
+            self._link_event_to_superevent(source_event, events)
+        self._synch_events(events)
+
+        super_events = Event.objects.filter(data_source=self.data_source, super_event_type__isnull=False)
+        for super_event in super_events:
+            self._update_superevent_details(super_event)
+
         print("%d events processed" % len(events.values()))
