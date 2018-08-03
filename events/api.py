@@ -210,14 +210,9 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
             self.related_serializer = globals().get(self.related_serializer, None)
 
         if self.is_expanded():
-            context = self.context
-            include = context['include']
-            expanded_as = getattr(self, 'expanded_as', None)
-            if expanded_as == 'super_event':
-                include = [x for x in include if x != 'sub_events']
-            elif expanded_as == 'sub_events':
-                include = [x for x in include if x != 'super_event']
-            context['include'] = include
+            context = self.context.copy()
+            # To avoid infinite recursion, only include sub/super events one level at a time
+            context['include'] = [x for x in context['include'] if x != 'sub_events' and x != 'super_event']
             return self.related_serializer(obj, hide_ld_context=self.hide_ld_context,
                                            context=context).data
         link = super(JSONLDRelatedField, self).to_representation(obj)
@@ -450,7 +445,6 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                 if not isinstance(field, JSONLDRelatedField):
                     continue
                 field.expanded = True
-                field.expanded_as = field_name
             self.skip_fields |= context.get('skip_fields', set())
 
         self.hide_ld_context = hide_ld_context

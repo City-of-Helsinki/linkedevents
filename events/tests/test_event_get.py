@@ -207,6 +207,7 @@ def test_get_event_disallow_simultaneous_include_super_and_sub(api_client, event
     detail_url += '?include=super_event,sub_events'
     response = get(api_client, detail_url)
     assert_event_fields_exist(response.data)
+    assert(type(response.data['super_event'] == 'dict'))
 
 
 @pytest.mark.django_db
