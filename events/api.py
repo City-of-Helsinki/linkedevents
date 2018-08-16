@@ -212,7 +212,8 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
         if self.is_expanded():
             context = self.context.copy()
             # To avoid infinite recursion, only include sub/super events one level at a time
-            context['include'] = [x for x in context['include'] if x != 'sub_events' and x != 'super_event']
+            if 'include' in context:
+                context['include'] = [x for x in context['include'] if x != 'sub_events' and x != 'super_event']
             return self.related_serializer(obj, hide_ld_context=self.hide_ld_context,
                                            context=context).data
         link = super(JSONLDRelatedField, self).to_representation(obj)
