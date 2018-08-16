@@ -95,6 +95,13 @@ def test_get_unknown_event_detail_check_404(api_client):
 
 
 @pytest.mark.django_db
+def test_get_event_list_verify_text_filter(api_client, event, event2):
+    response = get_list(api_client, data={'text': 'event'})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+    assert event2.id in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
 def test_get_event_list_verify_data_source_filter(api_client, data_source, event, event2):
     response = get_list(api_client, data={'data_source': data_source.id})
     assert event.id in [entry['id'] for entry in response.data['data']]
@@ -184,6 +191,26 @@ def test_super_event_type_filter(api_client, event, event2):
 
     response = get_list(api_client, query_string='super_event_type=fwfiuwhfiuwhiw')
     assert len(response.data['data']) == 0
+
+
+@pytest.mark.django_db
+def test_get_event_disallow_simultaneous_include_super_and_sub(api_client, event, event2):
+    event.super_event_type = Event.SuperEventType.RECURRING
+    event.save()
+    event2.super_event = event
+    event2.save()
+
+    # fetch event with super event
+    detail_url = reverse('event-detail', version='v1', kwargs={'pk': event2.pk})
+
+    # If not specifically handled, the following combination of
+    # include parameters causes an infinite recursion, because the
+    # super events of sub events of super events ... are expanded ad
+    # infinitum. This test is here to check that execution finishes.
+    detail_url += '?include=super_event,sub_events'
+    response = get(api_client, detail_url)
+    assert_event_fields_exist(response.data)
+    assert(type(response.data['super_event'] == 'dict'))
 
 
 @pytest.mark.django_db

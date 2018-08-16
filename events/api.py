@@ -211,9 +211,14 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
     def to_representation(self, obj):
         if isinstance(self.related_serializer, str):
             self.related_serializer = globals().get(self.related_serializer, None)
+
         if self.is_expanded():
+            context = self.context.copy()
+            # To avoid infinite recursion, only include sub/super events one level at a time
+            if 'include' in context:
+                context['include'] = [x for x in context['include'] if x != 'sub_events' and x != 'super_event']
             return self.related_serializer(obj, hide_ld_context=self.hide_ld_context,
-                                           context=self.context).data
+                                           context=context).data
         link = super(JSONLDRelatedField, self).to_representation(obj)
         if link is None:
             return None
@@ -620,6 +625,16 @@ def _clean_qp(query_params):
     return query_params
 
 
+def _text_qset_by_translated_field(field, val):
+    # Free text search from all languages of the field
+    languages = utils.get_fixed_lang_codes()
+    qset = Q()
+    for lang in languages:
+        kwarg = {field + '_' + lang + '__icontains': val}
+        qset |= Q(**kwarg)
+    return qset
+
+
 class KeywordSerializer(LinkedEventsSerializer):
     view_name = 'keyword-detail'
     alt_labels = serializers.SlugRelatedField(slug_field='name', read_only=True, many=True)
@@ -672,7 +687,7 @@ class KeywordListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         # can be used e.g. with typeahead.js
         val = self.request.query_params.get('text') or self.request.query_params.get('filter')
         if val:
-            queryset = queryset.filter(name__icontains=val)
+            queryset = queryset.filter(_text_qset_by_translated_field('name', val))
         return queryset
 
 
@@ -874,7 +889,7 @@ class PlaceListViewSet(GeoModelAPIView,
         # can be used e.g. with typeahead.js
         val = self.request.query_params.get('text') or self.request.query_params.get('filter')
         if val:
-            queryset = queryset.filter(name__icontains=val)
+            queryset = queryset.filter(_text_qset_by_translated_field('name', val))
         return queryset
 
     def get_serializer_context(self):
@@ -1429,13 +1444,10 @@ def _filter_event_queryset(queryset, params, srs=None):
         val = val.lower()
         # Free string search from all translated fields
         fields = EventTranslationOptions.fields
-        # and these languages
-        languages = utils.get_fixed_lang_codes()
         qset = Q()
         for field in fields:
-            for lang in languages:
-                kwarg = {field + '_' + lang + '__icontains': val}
-                qset |= Q(**kwarg)
+            # check all languages for each field
+            qset |= _text_qset_by_translated_field(field, val)
         queryset = queryset.filter(qset)
 
     val = params.get('last_modified_since', None)

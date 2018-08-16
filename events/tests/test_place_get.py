@@ -55,6 +55,15 @@ def test_get_place_detail_check_redirect_and_event_remap(api_client, event, plac
 
 
 @pytest.mark.django_db
+def test_get_place_list_verify_text_filter(api_client, place, place2, place3):
+    response = api_client.get(reverse('place-list'), data={'text': 'Paikka',
+                                                           'show_all_places': True})
+    assert place.id in [entry['id'] for entry in response.data['data']]
+    assert place2.id not in [entry['id'] for entry in response.data['data']]
+    assert place3.id not in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
 def test_get_place_list_verify_division_filter(api_client, place, place2, place3, administrative_division,
                                                administrative_division2):
     place.divisions = [administrative_division]

@@ -270,6 +270,18 @@ class Importer(object):
             else:
                 obj.audience = new_audience
                 obj._changed = True
+        in_language = info.get('in_language', [])
+        new_languages = set([lang.id for lang in in_language])
+        old_languages = set(obj.in_language.values_list('id', flat=True))
+        if new_languages != old_languages:
+            if obj.is_user_edited():
+                # this prevents overwriting manually added languages
+                if not new_languages <= old_languages:
+                    obj.in_language.add(*new_languages)
+                    obj._changed = True
+            else:
+                obj.in_language = in_language
+                obj._changed = True
 
         # one-to-many fields with foreign key pointing to event
 

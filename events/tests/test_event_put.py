@@ -534,7 +534,7 @@ def test_multiple_event_update_with_incorrect_json(api_client, minimal_event_dic
 def test_multiple_event_update_second_fails(api_client, minimal_event_dict, user):
     api_client.force_authenticate(user)
     minimal_event_dict_2 = deepcopy(minimal_event_dict)
-    minimal_event_dict_2['name']['fi'] = 'testing_2'
+    minimal_event_dict_2['name']['fi'] = 'testaus_2'
 
     # create events first
     resp = create_with_post(api_client, minimal_event_dict)
@@ -552,7 +552,7 @@ def test_multiple_event_update_second_fails(api_client, minimal_event_dict, user
     event_names = set(Event.objects.values_list('name_fi', flat=True))
 
     # verify that first event isn't updated either
-    assert event_names == {'testing', 'testing_2'}
+    assert event_names == {'testaus', 'testaus_2'}
 
 
 @pytest.mark.django_db

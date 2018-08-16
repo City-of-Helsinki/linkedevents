@@ -128,8 +128,10 @@ HELMET_API_URL = (
 HELMET_LANGUAGES = {
     'fi': 1,
     'sv': 3,
-    'en': 2
+    'en': 2,
+    'ru': 11
 }
+LANG_BY_HELMET_ID = {id: lang for lang, id in HELMET_LANGUAGES.items()}
 
 # try to detect any installed languages not officially present in the feed
 LANGUAGES_TO_DETECT = [lang[0].replace('-', '_') for lang in settings.LANGUAGES
@@ -161,7 +163,7 @@ class APIBrokenError(Exception):
 @register_importer
 class HelmetImporter(Importer):
     name = "helmet"
-    supported_languages = ['fi', 'sv', 'en']
+    supported_languages = ['fi', 'sv', 'en', 'ru']
     current_tick_index = 0
     kwcache = {}
 
@@ -308,6 +310,7 @@ class HelmetImporter(Importer):
 
         event_keywords = event.get('keywords', set())
         event_audience = event.get('audience', set())
+        event_in_language = event.get('in_language', set())
 
         for classification in event_el['Classifications']:
             # Save original keyword in the raw too
@@ -376,8 +379,17 @@ class HelmetImporter(Importer):
                             # retain the keyword in keywords as well, for backwards compatibility
                             event_audience.add(self.yso_by_id['yso:' + yso])
 
+        # Finally, go through the languages that are properly denoted in helmet:
+        for translation in event_el['LanguageVersions']:
+            language = LANG_BY_HELMET_ID.get(translation['LanguageId'])
+            if language:
+                event_in_language.add(self.languages[language])
+        # Also, the current language is always included
+        event_in_language.add(self.languages[lang])
+
         event['keywords'] = event_keywords
         event['audience'] = event_audience
+        event['in_language'] = event_in_language
 
         if 'location' in event:
             extra_info = clean_text(ext_props.get('PlaceExtraInfo', ''))
