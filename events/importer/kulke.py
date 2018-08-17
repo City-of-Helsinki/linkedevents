@@ -549,7 +549,7 @@ class KulkeImporter(Importer):
                 'info_url', 'description', 'short_description', 'headline',
                 'secondary_headline', 'provider', 'publisher', 'location',
                 'location_extra_info', 'data_source',
-                'image', 'offers', 'external_links'])
+                'images', 'offers', 'external_links'])
 
         # The set of fields which have common values for all events.
         common_fields = set(
