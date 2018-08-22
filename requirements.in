@@ -40,5 +40,5 @@ django-allauth
 django-leaflet
 djangorestframework-bulk
 python-docx
--e git+https://github.com/City-of-Helsinki/django-orghierarchy.git@v0.1.7#egg=django-orghierarchy
+-e git+https://github.com/City-of-Helsinki/django-orghierarchy.git@v0.1.8#egg=django-orghierarchy
 langdetect
