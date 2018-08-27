@@ -40,7 +40,7 @@ YSO_KEYWORD_MAPS = {
     'komedia': ('yso:p2625', 'yso:p13876'),
     'koripallo': ('yso:p965', 'yso:p8781'),
     'lastennäytelmä': ('yso:p2625', 'yso:p16164'),
-    'musikaali, musiikkiteatteri': ('yso:p1808', 'yso:p11693', 'yso:p6422'),
+    'musikaali, musiikkiteatteri': ('yso:p1808', 'yso:p11693', 'yso:p6422', 'yso:p2625'),
     'muu urheilu': ('yso:p965',),
     'nyrkkeily': ('yso:p965', 'yso:p9034'),
     'näyttelyt, messut': ('yso:p5121', 'yso:p4892'),
@@ -151,15 +151,14 @@ class LippupisteImporter(Importer):
         self.super_event_ids_by_origin_id = {super_event.origin_id: super_event.id for super_event in qs}
 
     def setup(self):
-        data_source_args = dict(id=self.name)
-        data_source_defaults = dict(name="Lippupiste")
-        self.data_source, _ = DataSource.objects.get_or_create(defaults=data_source_defaults, **data_source_args)
-        self.tprek_data_source = DataSource.objects.get(id='tprek')
-
         ytj_data_source, _ = DataSource.objects.get_or_create(defaults={'name': "YTJ"}, id='ytj')
         org_args = dict(origin_id='1789232-4', data_source=ytj_data_source, internal_type=Organization.AFFILIATED)
         org_defaults = dict(name="Lippupiste Oy")
         self.organization, _ = Organization.objects.get_or_create(defaults=org_defaults, **org_args)
+        data_source_args = dict(id=self.name)
+        data_source_defaults = dict(name="Lippupiste", owner=self.organization)
+        self.data_source, _ = DataSource.objects.get_or_create(defaults=data_source_defaults, **data_source_args)
+        self.tprek_data_source = DataSource.objects.get(id='tprek')
         self._cache_yso_keyword_objects()
         self._cache_place_data()
 
@@ -330,6 +329,7 @@ class LippupisteImporter(Importer):
         last_event = events.order_by('-end_time').first()
         super_event.end_time = last_event.end_time
         super_event.has_end_time = last_event.has_end_time
+        super_event.save()
 
     def _synch_events(self, events):
         event_list = sorted(events.values(), key=lambda x: x['start_time'])
