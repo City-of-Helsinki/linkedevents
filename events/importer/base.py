@@ -88,6 +88,13 @@ class Importer(object):
     def set_image(self, obj, image_object):
         if obj is None or image_object is None:
             return
+        if image_object.id != obj.image_id:
+            obj._changed = True
+            obj.image = image_object
+
+    def set_images(self, obj, image_object):
+        if obj is None or image_object is None:
+            return
         if image_object not in obj.images.all():
             obj._changed = True
             obj.images.add(image_object)
@@ -235,6 +242,9 @@ class Importer(object):
 
         self._set_field(obj, 'deleted', False)
 
+        if not isinstance(obj, Event):
+            self.set_image(obj, image_object)
+
         if obj._created or obj._changed:
             try:
                 obj.save()
@@ -244,7 +254,8 @@ class Importer(object):
 
         # many-to-many fields
 
-        self.set_image(obj, image_object)
+        if isinstance(obj, Event):
+            self.set_images(obj, image_object)
 
         keywords = info.get('keywords', [])
         new_keywords = set([kw.id for kw in keywords])
