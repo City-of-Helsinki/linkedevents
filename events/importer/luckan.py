@@ -151,34 +151,43 @@ class LuckanImporter(Importer):
             
             for categoryWord in categorywords:
                 _id = 'luckan:{}'.format(categoryWord.replace('/', '_'))
-                if (not self.keywordExists(_id)):
-                    kwargs = {
-                        'id': _id,
-                        'data_source_id': 'luckan',
-                        'name': categoryWord,
-                        'origin_id': category.xpath('ID')[0].text
-                    }
+                
+                kwargs = {
+                    'id': _id,
+                    'data_source_id': 'luckan',
+                    'name': categoryWord,
+                    'origin_id': category.xpath('ID')[0].text,
+                    'publisher': self.organization
+                }
 
-                    keyword_orig, created = Keyword.objects.get_or_create(**kwargs)
-                    keyword_orig.publisher = self.organization
-                    keywords.append(keyword_orig)
+                if (not self.keywordExists(_id)):
+                    keyword_orig = Keyword.objects.get_or_create(**kwargs)
+                else:
+                    keyword_orig = self.getKeyword(_id)
+                keywords.append(keyword_orig)
         
         targetGroups = item.xpath('TargetGroups')[0]
 
         for targetGroup in targetGroups:
             targetGroupText = targetGroup.xpath('Name')[0].text
             _id = 'luckan:{}'.format(targetGroupText)
-            if (not self.keywordExists(_id)):
-                kwargs = {
-                    'id': _id,
-                    'data_source_id': 'luckan',
-                    'name': targetGroupText,
-                    'origin_id': category.xpath('ID')[0].text
-                }
+            
+            kwargs = {
+                'id': _id,
+                'data_source_id': 'luckan',
+                'name': targetGroupText,
+                'origin_id': targetGroup.xpath('ID')[0].text,
+                'publisher': self.organization
+            }
 
-                keyword_orig, created = Keyword.objects.get_or_create(**kwargs)
-                keyword_orig.publisher = self.organization
-                keywords.append(keyword_orig)
+            if (not self.keywordExists(_id)):
+                keyword_orig = Keyword.objects.get_or_create(**kwargs)
+            else:
+                keyword_orig = self.getKeyword(_id)
+
+            keyword_orig.name = targetGroupText
+            keyword_orig.save()
+            keywords.append(keyword_orig)
 
         if len(keywords) > 0:
             event['keywords'] = keywords
@@ -227,6 +236,12 @@ class LuckanImporter(Importer):
         if not keyword:
             return False  
         return True
+
+    def getKeyword(self, _id):
+        keywords = Keyword.objects.filter(id__exact='%s' % _id).order_by('id')
+        keyword = keywords.first()
+
+        return keyword
 
     def placeExists(self, origin_id):
         municipalityId = 'luckan:' + origin_id
