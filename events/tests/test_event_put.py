@@ -566,3 +566,24 @@ def test_cannot_edit_events_in_the_past(api_client, event, minimal_event_dict, u
     response = api_client.put(reverse('event-detail', kwargs={'pk': event.id}), minimal_event_dict, format='json')
     assert response.status_code == 403
     assert 'Cannot edit a past event' in str(response.content)
+
+
+@pytest.mark.django_db
+def test_can_edit_events_in_the_past_with_past_events_allowed(
+        api_client,
+        event,
+        minimal_event_dict,
+        user,
+        data_source):
+    api_client.force_authenticate(user)
+
+    data_source.edit_past_events = True
+    data_source.save()
+
+    event.start_time = timezone.now() - timedelta(days=2)
+    event.end_time = timezone.now() - timedelta(days=1)
+    event.save(update_fields=('start_time', 'end_time'))
+
+    response = api_client.put(reverse('event-detail', kwargs={'pk': event.id}), minimal_event_dict, format='json')
+    assert response.status_code == 200
+    assert_event_data_is_equal(minimal_event_dict, response.data)

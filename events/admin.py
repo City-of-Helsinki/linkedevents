@@ -68,7 +68,7 @@ admin.site.register(Place, PlaceAdmin)
 
 
 class DataSourceAdmin(BaseAdmin):
-    fields = ('id', 'name', 'api_key', 'owner', 'user_editable')
+    fields = ('id', 'name', 'api_key', 'owner', 'user_editable', 'create_past_events', 'edit_past_events')
 
 
 admin.site.register(DataSource, DataSourceAdmin)

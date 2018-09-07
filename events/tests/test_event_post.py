@@ -298,13 +298,31 @@ def test__jsonld_related_field(api_client, minimal_event_dict, list_url, place, 
 def test_start_time_and_end_time_validation(api_client, minimal_event_dict, user):
     api_client.force_authenticate(user)
 
-    minimal_event_dict['start_time'] = timezone.now() - timedelta(days=2)
-    minimal_event_dict['end_time'] = timezone.now() - timedelta(days=1)
+    minimal_event_dict['start_time'] = (timezone.now() - timedelta(days=2)).isoformat().replace('+00:00', 'Z')
+    minimal_event_dict['end_time'] = (timezone.now() - timedelta(days=1)).isoformat().replace('+00:00', 'Z')
 
     with translation.override('en'):
         response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
     assert response.status_code == 400
     assert 'End time cannot be in the past. Please set a future end time.' in response.data['end_time']
+
+
+@pytest.mark.django_db
+def test_start_time_and_end_time_validation_with_past_events_allowed(
+        api_client,
+        minimal_event_dict,
+        user,
+        data_source):
+    api_client.force_authenticate(user)
+
+    data_source.create_past_events = True
+    data_source.save()
+
+    minimal_event_dict['start_time'] = (timezone.now() - timedelta(days=2)).isoformat().replace('+00:00', 'Z')
+    minimal_event_dict['end_time'] = (timezone.now() - timedelta(days=1)).isoformat().replace('+00:00', 'Z')
+
+    response = create_with_post(api_client, minimal_event_dict, data_source)
+    assert_event_data_is_equal(minimal_event_dict, response.data)
 
 
 @pytest.mark.django_db
