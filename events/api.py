@@ -1559,6 +1559,24 @@ def _filter_event_queryset(queryset, params, srs=None):
         val = val.split(',')
         queryset = queryset.filter(location_id__in=val)
 
+    # Filter by finnish address locality multiple values separated by comma
+    val = params.get('address_locality_fi', None)
+    if val:
+        val = val.split(',')
+        queryset = queryset.filter(location__address_locality_fi__in=val)
+
+    # Filter by swedish address locality multiple values separated by comma
+    val = params.get('address_locality_sv', None)
+    if val:
+        val = val.split(',')
+        queryset = queryset.filter(location__address_locality_sv__in=val)
+
+    # Filter by english address locality multiple values separated by comma
+    val = params.get('address_locality_en', None)
+    if val:
+        val = val.split(',')
+        queryset = queryset.filter(location__address_locality_en__in=val)
+
     # Filter by keyword id, multiple ids separated by comma
     val = params.get('keyword', None)
     if val:
