@@ -9,9 +9,9 @@ from django.db.models import Count
 
 from lxml import etree
 
-from events.models import DataSource, Place, Event, Organization, Offer
-from events.models import Keyword
+from events.models import DataSource, Place, Event, Offer, Keyword
 from events.keywords import KeywordMatcher
+from django_orghierarchy.models import Organization
 
 from .sync import ModelSyncher
 from .base import Importer, register_importer, recur_dict
@@ -19,8 +19,8 @@ from .util import clean_text, unicodetext, replace_location
 
 from django.core.management.base import BaseCommand, CommandError
 
-LUCKAN_BASE_URL = 'https://events.osterbotten.fi/EventService/search'
-LUCKAN_PARAMS = {
+OSTERBOTTEN_BASE_URL = 'https://events.osterbotten.fi/EventService/search'
+OSTERBOTTEN_PARAMS = {
     'languages': OrderedDict([
         ('fi', 'fi_FI'),
         ('sv', 'sv_SE'),
@@ -29,12 +29,12 @@ LUCKAN_PARAMS = {
 }
 
 @register_importer
-class LuckanImporter(Importer):
-    name = "luckan"
+class OsterbottenImporter(Importer):
+    name = "osterbotten"
     supported_languages = ['fi', 'sv', 'en']
 
     def __init__(self, *args, **kwargs):
-        super(LuckanImporter, self).__init__(*args, **kwargs)
+        super(OsterbottenImporter, self).__init__(*args, **kwargs)
         self.timezone = pytz.timezone('Europe/Helsinki')
 
     def items_from_url(self, url):
@@ -63,25 +63,25 @@ class LuckanImporter(Importer):
         return organizers
 
     def setup(self):
-        defaults = dict(name='Luckan')
+        defaults = dict(name='Osterbotten')
         self.data_source, _ = DataSource.objects.get_or_create(id=self.name, defaults=defaults)
-        self.luckan_data_source = DataSource.objects.get(id='luckan')
-        org_args = dict(id='luckan')
-        defaults = dict(name='Luckan', data_source=self.data_source)
+        self.osterbotten_data_source = DataSource.objects.get(id='osterbotten')
+        org_args = dict(id='osterbotten')
+        defaults = dict(name='Osterbotten', data_source=self.data_source)
         self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
 
         if self.options['cached']:
-            requests_cache.install_cache('luckan')
+            requests_cache.install_cache('osterbotten')
 
     def getUrl(self, locale, start):
-        url = LUCKAN_BASE_URL + '?Locale=' + locale + '&Start=' + str(start)
+        url = OSTERBOTTEN_BASE_URL + '?Locale=' + locale + '&Start=' + str(start)
         return url
 
     def import_events(self):
-        self.logger.info("Importing Luckan events")
+        self.logger.info("Importing Osterbotten events")
         events = recur_dict()
         keyword_matcher = KeywordMatcher()
-        for lang, locale in LUCKAN_PARAMS['languages'].items():
+        for lang, locale in OSTERBOTTEN_PARAMS['languages'].items():
             start = 0
             while (len( self.items_from_url( self.getUrl(locale, start) ) ) > 0):
                 items = self.items_from_url( self.getUrl(locale, start) )
@@ -150,11 +150,11 @@ class LuckanImporter(Importer):
             categorywords = cleanedCategory.split()
             
             for categoryWord in categorywords:
-                _id = 'luckan:{}'.format(categoryWord.replace('/', '_'))
+                _id = 'osterbotten:{}'.format(categoryWord.replace('/', '_'))
                 
                 kwargs = {
                     'id': _id,
-                    'data_source_id': 'luckan',
+                    'data_source_id': 'osterbotten',
                     'name': categoryWord,
                     'origin_id': category.xpath('ID')[0].text,
                     'publisher': self.organization
@@ -170,11 +170,11 @@ class LuckanImporter(Importer):
 
         for targetGroup in targetGroups:
             targetGroupText = targetGroup.xpath('Name')[0].text
-            _id = 'luckan:{}'.format(targetGroupText)
+            _id = 'osterbotten:{}'.format(targetGroupText)
             
             kwargs = {
                 'id': _id,
-                'data_source_id': 'luckan',
+                'data_source_id': 'osterbotten',
                 'name': targetGroupText,
                 'origin_id': targetGroup.xpath('ID')[0].text,
                 'publisher': self.organization
@@ -202,7 +202,7 @@ class LuckanImporter(Importer):
         event['location']['data_source'] = self.data_source
 
         if self.placeExists(item.xpath('Municipality')[0].get("id")):
-            event['location']['id'] = 'luckan:' + item.xpath('Municipality')[0].get("id")
+            event['location']['id'] = 'osterbotten:' + item.xpath('Municipality')[0].get("id")
         else:
             self.createPlace(item.xpath('Municipality')[0].get("id"), item.xpath('Municipality')[0].text)
 
@@ -211,14 +211,14 @@ class LuckanImporter(Importer):
     def createPlace(self, origin_id, name):
         obj = {
             'origin_id' : origin_id,
-            'id' : 'luckan:' + origin_id,
+            'id' : 'osterbotten:' + origin_id,
             'publisher' : self.organization,
             'data_source' : self.data_source
         }
 
         municipalitiesObj = {}
 
-        for lang, locale in LUCKAN_PARAMS['languages'].items():
+        for lang, locale in OSTERBOTTEN_PARAMS['languages'].items():
             municipalitiesObj[lang] = self.municipalities_from_url('https://events.osterbotten.fi/EventService/municipalities?Locale=' + locale)
 
         for lang, municipalitiesByLanguage in municipalitiesObj.items():
@@ -244,7 +244,7 @@ class LuckanImporter(Importer):
         return keyword
 
     def placeExists(self, origin_id):
-        municipalityId = 'luckan:' + origin_id
+        municipalityId = 'osterbotten:' + origin_id
         places = Place.objects.filter(id__exact='%s' % municipalityId).order_by('id')
         place = places.first()
 
