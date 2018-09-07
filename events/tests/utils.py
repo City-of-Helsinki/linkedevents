@@ -36,7 +36,34 @@ def assert_event_data_is_equal(d1, d2, version='v1'):
             'secondary_headline',
             'origin_id',
         )
-    for key in FIELDS:
+    assert_data_is_equal(d1, d2, FIELDS)
+
+
+def assert_place_data_is_equal(d1, d2, version='v1'):
+    FIELDS = (
+          'data_source',
+          'publisher',
+          'email',
+          'postal_code',
+          'name',
+          'description',
+          'street_address',
+          'address_locality',
+    )
+    assert_data_is_equal(d1, d2, FIELDS)
+
+
+def assert_keyword_data_is_equal(d1, d2, version='v1'):
+    FIELDS = (
+          'data_source',
+          'publisher',
+          'name'
+    )
+    assert_data_is_equal(d1, d2, FIELDS)
+
+
+def assert_data_is_equal(d1, d2, fields):
+    for key in fields:
         if key in d1:
             if type(d1[key]) is list:
                 assert_lists_match(d1[key], d2[key])

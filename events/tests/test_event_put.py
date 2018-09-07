@@ -54,7 +54,7 @@ def test__update_a_draft_with_put(api_client, minimal_event_dict, user):
 
 
 @pytest.mark.django_db
-def test__keyword_n_events_updated(api_client, minimal_event_dict, user, data_source):
+def test__keyword_n_events_updated(api_client, minimal_event_dict, user, data_source, organization):
 
     # create an event
     api_client.force_authenticate(user=user)
@@ -68,8 +68,8 @@ def test__keyword_n_events_updated(api_client, minimal_event_dict, user, data_so
 
     # change the keyword and add an audience
     event_id = data2.pop('@id')
-    data2['keywords'] = [{'@id': keyword_id(data_source, 'test2')}]
-    data2['audience'] = [{'@id': keyword_id(data_source, 'test3')}]
+    data2['keywords'] = [{'@id': keyword_id(data_source, organization, 'test2')}]
+    data2['audience'] = [{'@id': keyword_id(data_source, organization, 'test3')}]
     response2 = update_with_put(api_client, event_id, data2)
     print('got the put response')
     print(response2.data)

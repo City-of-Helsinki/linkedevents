@@ -63,6 +63,7 @@ INSTALLED_APPS = (
     'events',
     'corsheaders',
     'rest_framework',
+    'rest_framework_gis', 
     'rest_framework_jwt',
     'mptt',
     'reversion',
