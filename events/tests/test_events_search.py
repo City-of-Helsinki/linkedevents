@@ -3,10 +3,8 @@
 
 from django.conf import settings
 from django.test import TestCase
-from django.test.utils import override_settings
 import haystack
 import datetime
-from .utils import versioned_reverse as reverse
 from haystack.management.commands import rebuild_index, clear_index
 from rest_framework.test import APIClient
 
@@ -39,7 +37,7 @@ class EventSearchTests(TestCase, TestDataMixin):
                            publisher=self.test_org,
                            start_time=datetime.datetime.now(),
                            end_time=datetime.datetime.now()
-        )
+                           )
         self.dummy.save()
 
         # refresh haystack's index

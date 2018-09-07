@@ -1,5 +1,3 @@
-import os
-from optparse import make_option
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.utils.translation import activate, get_language
@@ -29,14 +27,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         module = options['module']
-        if not module in self.exporters:
+        if module not in self.exporters:
             raise CommandError("Exporter %s not found. Valid exporters: %s" % (module, self.exp_list))
         exp_class = self.exporters[module]
 
-        if hasattr(settings, 'PROJECT_ROOT'):
-            root_dir = settings.PROJECT_ROOT
-        else:
-            root_dir = settings.BASE_DIR
         exporter = exp_class()
 
         # Activate the default language for the duration of the export

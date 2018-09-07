@@ -1,6 +1,12 @@
 language: python
 python:
-- '3.4'
+- '3.5'
+- '3.6'
+- '3.7-dev'
+
+matrix:
+  allow_failures:
+  - python: 3.7-dev
 
 cache:
   directories:
@@ -23,7 +29,9 @@ before_script:
 - psql template1 -c 'create extension hstore;'
 - psql template1 -c 'create extension postgis;'
 
-script: py.test --cov . events
+script:
+- flake8 events
+- py.test --cov . events
 
 before_cache:
 - rm -f $HOME/.cache/pip/log/debug.log

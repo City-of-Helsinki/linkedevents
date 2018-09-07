@@ -6,14 +6,13 @@ import requests_cache
 import pytz
 from collections import OrderedDict
 from django.db.models import Count
+from django_orghierarchy.models import Organization
 
 from lxml import etree
 
-from events.models import DataSource, Place, Event, Organization
-from events.models import Keyword
+from events.models import DataSource, Place, Event
 from events.keywords import KeywordMatcher
 
-from .sync import ModelSyncher
 from .base import Importer, register_importer, recur_dict
 from .util import clean_text, unicodetext, replace_location
 
@@ -41,7 +40,9 @@ LOCATION_TPREK_MAP = {
     'mäkelänrinteen uintikeskus': '41783',
     'uimastadion': '41047',
     'eläintarhan yleisurheilukenttä': '40498',
-    'korkeasaaren eläintarha': '7245'
+    'korkeasaaren eläintarha': '7245',
+    'helsingin taidemuseo ham': '8675',
+    'info- ja näyttelytila laituri': '8609'
 }
 
 EXTRA_LOCATIONS = {
@@ -75,11 +76,14 @@ EXTRA_LOCATIONS = {
     }
 }
 
+
 def matko_tag(tag):
     return '{https://aspicore-asp.net/matkoschema/}' + tag
 
+
 def text(item, tag):
     return unicodetext(item.find(matko_tag(tag)))
+
 
 def matko_status(num):
     if num == 2:
@@ -87,6 +91,7 @@ def matko_status(num):
     if num == 3:
         return Event.Status.CANCELLED
     return None
+
 
 def zipcode_and_muni(text):
     if text is None:
@@ -101,7 +106,6 @@ def zipcode_and_muni(text):
 class MatkoImporter(Importer):
     name = "matko"
     supported_languages = ['fi', 'sv', 'en']
-    kwcache = {}
 
     def __init__(self, *args, **kwargs):
         super(MatkoImporter, self).__init__(*args, **kwargs)
@@ -119,10 +123,10 @@ class MatkoImporter(Importer):
         self.data_source, _ = DataSource.objects.get_or_create(id=self.name, defaults=defaults)
         self.tprek_data_source = DataSource.objects.get(id='tprek')
 
-        ytj_ds, _ = DataSource.objects.get_or_create(defaults={'name':'YTJ'}, id='ytj')
+        ytj_ds, _ = DataSource.objects.get_or_create(defaults={'name': 'YTJ'}, id='ytj')
 
-        org_args = dict(id='ytj:0586977-6')
-        defaults = dict(name='Helsingin Markkinointi Oy', data_source=ytj_ds)
+        org_args = dict(origin_id='0586977-6', data_source=ytj_ds)
+        defaults = dict(name='Helsingin Markkinointi Oy')
 
         self.organization, _ = Organization.objects.get_or_create(
             defaults=defaults, **org_args)
@@ -135,7 +139,9 @@ class MatkoImporter(Importer):
         deleted_place_list = deleted_place_list.annotate(count=Count('name_fi')).\
             filter(count=1).values('id', 'origin_id', 'name_fi', 'replaced_by_id')
         self.tprek_by_name = {p['name_fi'].lower(): (p['id'], p['origin_id']) for p in place_list}
-        self.deleted_tprek_by_name = {p['name_fi'].lower(): (p['id'], p['origin_id'], p['replaced_by_id']) for p in deleted_place_list}
+        self.deleted_tprek_by_name = {
+            p['name_fi'].lower(): (p['id'], p['origin_id'], p['replaced_by_id'])
+            for p in deleted_place_list}
 
         if self.options['cached']:
             requests_cache.install_cache('matko')
@@ -271,7 +277,7 @@ class MatkoImporter(Importer):
         self.put(event, 'start_time', start_time)
         self.put(event, 'end_time', end_time)
         self.put(event, 'event_status', matko_status(int(text(item, 'status'))))
-        if text(item, 'placeuniqueid') == None:
+        if text(item, 'placeuniqueid') is None:
             del events[eid]
             return
         self.put(event['location'], 'origin_id', int(text(item, 'placeuniqueid')))
@@ -284,25 +290,33 @@ class MatkoImporter(Importer):
             'muu',
             'tapahtuma',
             'kesä',
-            'talvi'
-        ]
-        use_as_target_group = [ # fixme
-            'koko perheelle'
+            'talvi',
+            'yksittäiset',
+            'ryhmät'
         ]
         mapping = {
-            'tanssi ja teatteri': 'tanssi', # following visithelsinki.fi
+            'tanssi ja teatteri': 'tanssi',  # following visithelsinki.fi
             'messu': 'messut (tapahtumat)',
             'perinnetapahtuma': 'perinne',
             'pop/rock': 'populaarimusiikki',
             'konsertti': 'konsertit',
             'klassinen': 'taidemusiikki',
             'kulttuuri': 'kulttuuritapahtumat',
-            'suomi100': 'suomi 100 vuotta -juhlavuosi'
+            'suomi100': 'suomi 100 vuotta -juhlavuosi',
+            'markkinat': 'markkinat (tapahtumat)',
+            'lapset': 'lapset (ikäryhmät)',
+            'koko perheelle': 'perheet (ryhmät)'
         }
+        use_as_target_group = [
+            'perheet (ryhmät)',
+            'lapset (ikäryhmät)',
+            'nuoret',
+            'eläkeläiset',
+        ]
 
         event_types = set()
-        type1, type2 = text(item, 'type1'), text(item, 'type2')
-        for t in (type1, type2):
+        type1, type2, target_group = text(item, 'type1'), text(item, 'type2'), text(item, 'targetgroup')
+        for t in (type1, type2, target_group):
             if t:
                 event_types.update(
                     map(lambda x: x.lower(), t.split(",")))
@@ -315,34 +329,22 @@ class MatkoImporter(Importer):
             offer['is_free'] = True
 
         keywords = []
+        audience = []
         for t in event_types:
-            # Save original keyword in the raw too
-            # Note: / in keyword id breaks URL resolver so we replace it with _
-            _id = 'matko:{}'.format(t.replace('/', '_'))
-            kwargs = {
-                'id': _id,  # id like matko:konsertti
-                'data_source_id': 'matko',
-                'name': t,
-            }
-            # Try to find Keyword from cache to avoid db hit in every cycle
-            if _id in self.kwcache:
-                keyword_orig = self.kwcache[_id]
-            else:
-                keyword_orig, created = Keyword.objects.get_or_create(**kwargs)
-                self.kwcache[_id] = keyword_orig
-            if keyword_orig.publisher_id != self.organization.id:
-                keyword_orig.publisher = self.organization
-                keyword_orig.save()
-            keywords.append(keyword_orig)
-            if t is None or t in ignore or t in use_as_target_group:
+            if t is None or t in ignore:
                 continue
+            # match to LE keyword
             if t in mapping:
                 t = mapping[t]
             keyword = keyword_matcher.match(t)
             if keyword:
                 keywords.append(keyword[0])
-        if len(keywords) > 0:
+                if t in use_as_target_group:
+                    # retain the keyword in keywords as well, for backwards compatibility
+                    audience.append(keyword[0])
+        if len(keywords) > 0 or len(audience) > 0:
             event['keywords'] = keywords
+            event['audience'] = audience
         else:
             self.logger.warning('Warning: no keyword matches for', event['name'], keywords)
 
@@ -354,9 +356,6 @@ class MatkoImporter(Importer):
         return events
 
     def _parse_location(self, lang_code, item, places):
-        #if clean_text(text(item, 'isvenue')) == 'False':
-        #    return
-
         lid = int(text(item, 'id'))
         location = places[lid]
 
@@ -400,19 +399,6 @@ class MatkoImporter(Importer):
 
         return places
 
-    def _import_organizers_from_events(self, events):
-        organizers = recur_dict()
-        for k, event in events.items():
-            if not 'organizer' in event:
-                continue
-            organizer = event['organizer']
-            if not 'name' in organizer or not 'fi' in organizer['name']:
-                continue
-            oid = organizer['name']['fi']
-            organizers[oid]['name'].update(organizer['name'])
-            organizers[oid]['phone'].update(organizer['phone'])
-        return organizers
-
     def items_from_url(self, url):
         resp = requests.get(url)
         assert resp.status_code == 200
@@ -427,7 +413,6 @@ class MatkoImporter(Importer):
             items = self.items_from_url(url)
             for item in items:
                 self._import_event_from_feed(lang, item, events, keyword_matcher)
-            organizers = self._import_organizers_from_events(events)
 
         for event in events.values():
             self.save_event(event)
@@ -461,7 +446,7 @@ class MatkoImporter(Importer):
             for matko_id, location in self.places.items():
                 if location['name']['fi'].lower() == self.options['single'].lower():
                     self.logger.info("Location %s (%s) found in matko feed"
-                          % (self.options['single'], matko_id))
+                                     % (self.options['single'], matko_id))
                     self.save_place(location)
                     return
             self.logger.warning("Location %s not found in matko feed" % self.options['single'])

@@ -2,11 +2,12 @@ from django.contrib.gis.db import models
 from rest_framework import serializers
 from rest_framework.exceptions import ParseError
 from django.contrib.gis.gdal import CoordTransform, SpatialReference
-from django.contrib.gis.geos import Point, Polygon
+from django.contrib.gis.geos import Polygon
 import json
 
 # Use the GPS coordinate system by default
 DEFAULT_SRID = 4326
+
 
 def poly_from_bbox(bbox_val):
     points = bbox_val.split(',')
@@ -19,6 +20,7 @@ def poly_from_bbox(bbox_val):
     poly = Polygon.from_bbox(points)
     return poly
 
+
 def srid_to_srs(srid):
     if not srid:
         srid = DEFAULT_SRID
@@ -28,9 +30,10 @@ def srid_to_srs(srid):
         raise ParseError("'srid' must be an integer")
     try:
         srs = SpatialReference(srid)
-    except SRSException:
+    except SRSException:  # noqa
         raise ParseError("SRID %d not found (try 4326 for GPS coordinate system)" % srid)
     return srs
+
 
 def build_bbox_filter(srs, bbox_val, field_name):
     poly = poly_from_bbox(bbox_val)
@@ -46,7 +49,7 @@ class GeoModelSerializer(serializers.ModelSerializer):
         self.geo_fields = []
         model_fields = [f.name for f in model._meta.fields]
         for field_name in self.fields:
-            if not field_name in model_fields:
+            if field_name not in model_fields:
                 continue
             field = model._meta.get_field(field_name)
             if not isinstance(field, models.GeometryField):
@@ -63,7 +66,7 @@ class GeoModelSerializer(serializers.ModelSerializer):
             return ret
         for field_name in self.geo_fields:
             val = getattr(obj, field_name)
-            if val == None:
+            if val is None:
                 ret[field_name] = None
                 continue
             if self.srs:

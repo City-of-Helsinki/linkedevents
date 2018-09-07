@@ -4,68 +4,78 @@
 #
 #    pip-compile --output-file requirements.txt requirements.in
 #
--e git+https://github.com/City-of-Helsinki/django-helusers@v0.1#egg=django-helusers
--e git+https://github.com/City-of-Helsinki/munigeo@v0.2.1#egg=django-munigeo
-astroid==1.5.3            # via pylint
-bleach==2.0.0
-certifi==2017.7.27.1      # via requests
+-e git+https://github.com/City-of-Helsinki/munigeo@v0.2.6#egg=django-munigeo
+-e git+https://github.com/City-of-Helsinki/django-orghierarchy.git@v0.1.8#egg=django-orghierarchy
+astroid==1.6.1            # via pylint
+attrs==17.4.0             # via pytest
+bleach==2.1.3
+certifi==2018.1.18        # via requests
 chardet==3.0.4            # via requests
 click==6.7                # via pip-tools
-contextlib2==0.5.5        # via raven
 defusedxml==0.5.0         # via python3-openid
-django-allauth==0.33.0
+django-allauth==0.35.0
 django-appconf==1.0.1     # via django-image-cropping
-django-cleanup==1.0.1
-django-cors-headers==2.1.0
-django-extensions==1.9.1
-django-filter==1.0.4
-django-haystack==2.6.1
+django-cleanup==2.1.0
+django-cors-headers==2.2.0
+django-extensions==2.0.3
+django-filter==1.1.0
+django-haystack==2.7.0
+django-helusers==0.4.2
 django-image-cropping==1.1.0
-django-leaflet==0.22.0
-django-modeltranslation==0.12.1
+django-js-asset==1.0.0    # via django-mptt
+django-leaflet==0.23.0
+django-modeltranslation==0.12.2
 django-mptt==0.8.7
-django-reversion==2.0.10
-django==1.11.5            # via django-allauth, django-haystack, django-leaflet, django-reversion, djangorestframework-bulk, easy-thumbnails
+django-reversion==2.0.13
+django==1.11.15
 djangorestframework-bulk==0.2.1
-djangorestframework-gis==0.11.2
+djangorestframework-gis==0.12
 djangorestframework-jwt==1.11.0
-djangorestframework==3.6.4
-easy-thumbnails==2.4.1
+djangorestframework==3.7.7
+drf-oidc-auth==0.9        # via django-helusers
+easy-thumbnails==2.5
 elasticsearch==2.4.1
 first==2.0.1              # via pip-tools
-html5lib==0.999999999     # via bleach
+flake8==3.5.0
+future==0.16.0            # via pyjwkest
+html5lib==1.0.1           # via bleach
 httmock==1.2.6
-icalendar==3.11.7
+icalendar==4.0.1
 idna==2.6                 # via requests
-isodate==0.5.4
-isort==4.2.15             # via pylint
+isodate==0.6.0
+isort==4.3.4              # via pylint
+langdetect==1.0.7
 lazy-object-proxy==1.3.1  # via astroid
-lxml==3.8.0
-markdown==2.6.9
-mccabe==0.6.1             # via pylint
-oauthlib==2.0.3           # via requests-oauthlib
-olefile==0.44             # via pillow
-pillow==4.2.1             # via easy-thumbnails
-pip-tools==1.9.0
-psycopg2==2.7.3.1
-py==1.4.34                # via pytest
+lxml==4.1.1
+markdown==2.6.11
+mccabe==0.6.1             # via flake8, pylint
+oauthlib==2.0.6           # via requests-oauthlib
+pillow==5.0.0
+pip-tools==1.11.0
+pluggy==0.6.0             # via pytest
+psycopg2==2.7.4
+py==1.5.2                 # via pytest
+pycodestyle==2.3.1        # via flake8
+pycryptodomex==3.5.1      # via pyjwkest
 pyflakes==1.6.0
-pyjwt==1.5.3              # via djangorestframework-jwt
-pylint==1.7.2
+pyjwkest==1.4.0           # via drf-oidc-auth
+pyjwt==1.6.0              # via djangorestframework-jwt
+pylint==1.8.2
 pyparsing==2.2.0          # via rdflib
 pytest-django==3.1.2
-pytest==3.2.2             # via pytest-django
+pytest==3.4.2             # via pytest-django
 python-dateutil==2.6.1
 python-docx==0.8.6
 python3-openid==3.1.0     # via django-allauth
-pytz==2017.2
+pytz==2018.3
 pyyaml==3.12
-raven==6.1.0
+raven==6.6.0
 rdflib==4.2.2
 requests-cache==0.4.13
 requests-oauthlib==0.8.0  # via django-allauth
 requests==2.18.4
-six==1.10.0
+six==1.11.0
+swapper==1.1.0
 urllib3==1.22             # via elasticsearch, requests
 webencodings==0.5.1       # via html5lib
 wrapt==1.10.11            # via astroid

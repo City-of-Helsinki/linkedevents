@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 # django
+from django.core.management import call_command
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from .utils import versioned_reverse as reverse
@@ -13,11 +14,11 @@ from munigeo.models import (AdministrativeDivision, AdministrativeDivisionType, 
 # 3rd party
 import pytest
 from rest_framework.test import APIClient
+from django_orghierarchy.models import Organization
 
-
-# events 
+# events
 from events.models import (
-    DataSource, Organization, Place, Language, Keyword, KeywordLabel, Event,
+    DataSource, Place, Language, Keyword, KeywordLabel, Event,
     Offer)
 from events.api import (
     KeywordSerializer, PlaceSerializer, LanguageSerializer
@@ -26,15 +27,45 @@ from django.conf import settings
 
 from ..models import License, PublicationStatus
 
-TEXT = 'testing'
+TEXT_FI = 'testaus'
+TEXT_SV = 'testning'
+TEXT_EN = 'testing'
 URL = "http://localhost"
 DATETIME = (timezone.now() + timedelta(days=1)).isoformat().replace('+00:00', 'Z')
 
 OTHER_DATA_SOURCE_ID = "testotherdatasourceid"
 
+
+# Django test harness tries to serialize DB in order to support transactions
+# within tests. (It restores the snapshot after such tests).
+# This fails with modeltranslate, as the serialization is done before
+# sync_translation_fields has a chance to run. Thus the fields are missing
+# and serialization fails horribly.
+@pytest.fixture(scope='session')
+def django_db_modify_db_settings(django_db_modify_db_settings_xdist_suffix):
+    settings.DATABASES['default']['TEST']['SERIALIZE'] = False
+
+
+@pytest.fixture(scope='session')
+def django_db_setup(django_db_setup, django_db_blocker):
+    with django_db_blocker.unblock():
+        call_command('sync_translation_fields', '--noinput')
+
+
 @pytest.fixture
 def kw_name():
+    return 'tunnettu_avainsana'
+
+
+@pytest.fixture
+def kw_name_2():
     return 'known_keyword'
+
+
+@pytest.fixture
+def kw_name_3():
+    return 'känd_nyckelord'
+
 
 @pytest.fixture
 def api_client():
@@ -87,6 +118,7 @@ def user2():
 def organization(data_source, user):
     org, created = Organization.objects.get_or_create(
         id=data_source.id + ':test_organization',
+        origin_id='test_organization',
         name="test_organization",
         data_source=data_source,
     )
@@ -100,6 +132,7 @@ def organization(data_source, user):
 def organization2(other_data_source, user2):
     org, created = Organization.objects.get_or_create(
         id=other_data_source.id + ':test_organization2',
+        origin_id='test_organization2',
         name="test_organization2",
         data_source=other_data_source,
     )
@@ -113,12 +146,13 @@ def organization2(other_data_source, user2):
 def offer(event2):
     return Offer.objects.create(event=event2, is_free=True)
 
+
 @pytest.mark.django_db
 @pytest.fixture
 def minimal_event_dict(data_source, organization, location_id):
     return {
-        'name': {'fi': TEXT},
-        'start_time': DATETIME,
+        'name': {'fi': TEXT_FI},
+        'start_time': datetime.strftime(timezone.now() + timedelta(days=1), '%Y-%m-%d'),
         'location': {'@id': location_id},
         'keywords': [
             {'@id': keyword_id(data_source, 'test')},
@@ -128,8 +162,8 @@ def minimal_event_dict(data_source, organization, location_id):
         'offers': [
             {
                 'is_free': False,
-                'price': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
-                'description': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
+                'price': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
+                'description': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
                 'info_url': {'en': URL, 'sv': URL, 'fi': URL}
             }
         ]
@@ -186,7 +220,7 @@ def place(data_source, organization, administrative_division):
         data_source=data_source,
         publisher=organization,
         position=Point(50, 50),
-        name='Place 1'
+        name_fi='Paikka 1'
     )
 
 
@@ -201,7 +235,7 @@ def event(data_source, organization, place, user):
         end_time=timezone.now() + timedelta(hours=1),
         short_description='short desc',
         description='desc',
-        name='event'
+        name='tapahtuma'
     )
 
 
@@ -212,7 +246,7 @@ def place2(other_data_source, organization2):
         id=other_data_source.id + ':test_location_2',
         data_source=other_data_source,
         publisher=organization2,
-        name='Place 2'
+        name_en='Place 2'
     )
 
 
@@ -221,7 +255,8 @@ def place3(data_source, organization):
     return Place.objects.create(
         id=data_source.id + ':test_location_3',
         data_source=data_source,
-        publisher=organization
+        publisher=organization,
+        name_sv='Plats 3'
     )
 
 
@@ -236,8 +271,9 @@ def event2(other_data_source, organization2, place2, user2, keyword):
         end_time=timezone.now() + timedelta(hours=1),
         short_description='short desc',
         description='desc',
-        name='event2'
+        name='event'
     )
+
 
 @pytest.fixture
 def event3(place3, user):
@@ -249,7 +285,7 @@ def event3(place3, user):
         end_time=timezone.now() + timedelta(hours=1),
         short_description='short desc',
         description='desc',
-        name='event3'
+        name='evenemang'
     )
 
 
@@ -301,6 +337,17 @@ def keyword(data_source, kw_name):
     return obj
 
 
+@pytest.mark.django_db
+@pytest.fixture
+def keyword2(data_source, kw_name_2):
+    return keyword(data_source, kw_name_2)
+
+
+@pytest.mark.django_db
+@pytest.fixture
+def keyword3(data_source, kw_name_3):
+    return keyword(data_source, kw_name_3)
+
 
 @pytest.mark.django_db
 @pytest.fixture
@@ -330,7 +377,7 @@ def language_id(language):
 def complex_event_dict(data_source, organization, location_id, languages):
     return {
         'publisher': organization.id,
-        'name': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
+        'name': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
         'event_status': 'EventScheduled',
         'location': {'@id': location_id},
         'keywords': [
@@ -344,15 +391,15 @@ def complex_event_dict(data_source, organization, location_id, languages):
             {'@id': keyword_id(data_source, 'test_audience3')},
         ],
         'external_links': [
-            {'name': TEXT, 'link': URL, 'language': 'fi'},
-            {'name': TEXT, 'link': URL, 'language': 'sv'},
-            {'name': TEXT, 'link': URL, 'language': 'en'},
+            {'name': TEXT_FI, 'link': URL, 'language': 'fi'},
+            {'name': TEXT_SV, 'link': URL, 'language': 'sv'},
+            {'name': TEXT_EN, 'link': URL, 'language': 'en'},
         ],
         'offers': [
             {
                 'is_free': False,
-                'price': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
-                'description': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
+                'price': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
+                'description': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
                 'info_url': {'en': URL, 'sv': URL, 'fi': URL}
             }
         ],
@@ -361,17 +408,17 @@ def complex_event_dict(data_source, organization, location_id, languages):
             {"@id": language_id(languages[1])},
         ],
         'custom_data': {'my': 'data', 'your': 'data'},
-        'origin_id': TEXT,
+        'origin_id': TEXT_FI,
         'date_published': DATETIME,
         'start_time': DATETIME,
         'end_time': DATETIME,
-        'location_extra_info': {'fi': TEXT},
+        'location_extra_info': {'fi': TEXT_FI},
         'info_url': {'en': URL, 'sv': URL, 'fi': URL},
-        'secondary_headline': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
-        'description': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
-        'headline': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
-        'short_description': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
-        'provider': {'en': TEXT, 'sv': TEXT, 'fi': TEXT},
+        'secondary_headline': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
+        'description': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
+        'headline': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
+        'short_description': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
+        'provider': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
     }
 
 

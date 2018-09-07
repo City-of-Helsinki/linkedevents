@@ -7,6 +7,7 @@ from django.utils.text import slugify
 from django.utils.timezone import localtime
 from docx import Document
 from rest_framework import renderers
+from rest_framework.utils.serializer_helpers import ReturnDict
 from events.utils import parse_time
 
 
@@ -33,7 +34,7 @@ def get_price(raw_event):
     '''Returns either None or a dict with the price in each language.'''
     try:
         return raw_event['offers'][0]['price']
-    except:
+    except (IndexError, KeyError):
         return None
 
 
@@ -185,7 +186,9 @@ class DOCXRenderer(renderers.BaseRenderer):
         query_params = renderer_context['request'].query_params
 
         event_parser = EventParser()
-
+        if type(data) is ReturnDict:
+            # Support the single event endpoint just because we can
+            data = [data]
 
         first_location = data[0]['location']
         for raw_event in data:
@@ -206,12 +209,12 @@ class DOCXRenderer(renderers.BaseRenderer):
         if start is None:
             query_start_date = event_parser.earliest_date
         else:
-            query_start_date = parse_time(start, True)
+            query_start_date = parse_time(start, True)[0]
 
         if end is None:
             query_end_date = event_parser.latest_date
         else:
-            query_end_date = parse_time(end, False)
+            query_end_date = parse_time(end, False)[0]
 
         total_date_range = DateRange(query_start_date, query_end_date)
 

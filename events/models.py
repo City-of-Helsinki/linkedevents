@@ -19,7 +19,6 @@ attribute to change @context when need to define schemas for custom fields.
 """
 import datetime
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericForeignKey
 import pytz
 from django.contrib.gis.db import models
@@ -40,9 +39,11 @@ from munigeo.models import AdministrativeDivision
 
 User = settings.AUTH_USER_MODEL
 
+
 class PublicationStatus:
     PUBLIC = 1
     DRAFT = 2
+
 
 PUBLICATION_STATUSES = (
     (PublicationStatus.PUBLIC, "public"),
@@ -62,7 +63,7 @@ class DataSource(models.Model):
     id = models.CharField(max_length=100, primary_key=True)
     name = models.CharField(verbose_name=_('Name'), max_length=255)
     api_key = models.CharField(max_length=128, blank=True, default='')
-    owner = models.ForeignKey('Organization', related_name='owned_systems', null=True, blank=True)
+    owner = models.ForeignKey('django_orghierarchy.Organization', related_name='owned_systems', null=True, blank=True)
     user_editable = models.BooleanField(default=False, verbose_name=_('Objects may be edited by users'))
 
     def __str__(self):
@@ -107,10 +108,12 @@ class Image(models.Model):
     name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True, default='')
 
     data_source = models.ForeignKey(DataSource, related_name='provided_%(class)s_data', db_index=True, null=True)
-    publisher = models.ForeignKey('Organization', verbose_name=_('Publisher'), db_index=True, null=True, blank=True, related_name='Published_images')
+    publisher = models.ForeignKey(
+        'django_orghierarchy.Organization', verbose_name=_('Publisher'), db_index=True, null=True, blank=True,
+        related_name='Published_images')
 
     created_time = models.DateTimeField(auto_now_add=True)
-    last_modified_time = models.DateTimeField(auto_now=True)
+    last_modified_time = models.DateTimeField(auto_now=True, db_index=True)
     created_by = models.ForeignKey(User, null=True, blank=True, related_name='EventImage_created_by')
     last_modified_by = models.ForeignKey(User, related_name='EventImage_last_modified_by', null=True, blank=True)
 
@@ -140,11 +143,11 @@ class Image(models.Model):
     def is_user_edited(self):
         return bool(self.data_source.user_editable and self.last_modified_by)
 
-    def is_admin(self, user):
+    def can_be_edited_by(self, user):
+        """Check if current event can be edited by the given user"""
         if user.is_superuser:
             return True
-        else:
-            return user in self.publisher.admin_users.all()
+        return user.is_admin(self.publisher)
 
 
 @python_2_unicode_compatible
@@ -158,8 +161,8 @@ class BaseModel(models.Model):
     origin_id = models.CharField(verbose_name=_('Origin ID'), max_length=50, db_index=True, null=True,
                                  blank=True)
 
-    created_time = models.DateTimeField(null=True, blank=True)
-    last_modified_time = models.DateTimeField(null=True, blank=True, db_index=True)
+    created_time = models.DateTimeField(null=True, blank=True, auto_now_add=True)
+    last_modified_time = models.DateTimeField(null=True, blank=True, auto_now=True, db_index=True)
 
     created_by = models.ForeignKey(
         User, null=True, blank=True,
@@ -180,12 +183,6 @@ class BaseModel(models.Model):
     class Meta:
         abstract = True
 
-    def save(self, *args, **kwargs):
-        if not self.id and not self.created_time:
-            self.created_time = BaseModel.now()
-        self.last_modified_time = BaseModel.now()
-        super(BaseModel, self).save(*args, **kwargs)
-
     def is_user_editable(self):
         return self.data_source.user_editable
 
@@ -193,27 +190,8 @@ class BaseModel(models.Model):
         return bool(self.data_source.user_editable and self.last_modified_by)
 
 
-class Organization(MPTTModel, BaseModel):
-    parent = TreeForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL,
-                            related_name='children')
-    admin_users = models.ManyToManyField(
-       User, blank=True, related_name='admin_organizations'
-    )
-    admin_orgs = models.ManyToManyField(
-        'self', blank=True, related_name='moderated_orgs'
-    )
-
-    class Meta:
-        ordering = ('name',)
-        verbose_name =_('organization')
-        verbose_name_plural = _('organizations')
-
-    class MPTTMeta:
-        order_insertion_by = ('id',)
-
-
 class Language(models.Model):
-    id = models.CharField(max_length=6, primary_key=True)
+    id = models.CharField(max_length=10, primary_key=True)
     name = models.CharField(verbose_name=_('Name'), max_length=20)
 
     def __str__(self):
@@ -236,7 +214,9 @@ class KeywordLabel(models.Model):
 
 
 class Keyword(BaseModel):
-    publisher = models.ForeignKey('Organization', verbose_name=_('Publisher'), db_index=True, null=True, blank=True, related_name='Published_keywords')
+    publisher = models.ForeignKey(
+        'django_orghierarchy.Organization', verbose_name=_('Publisher'), db_index=True, null=True, blank=True,
+        related_name='Published_keywords')
     alt_labels = models.ManyToManyField(KeywordLabel, blank=True, related_name='keywords')
     aggregate = models.BooleanField(default=False)
     deprecated = models.BooleanField(default=False, db_index=True)
@@ -281,13 +261,14 @@ class KeywordSet(BaseModel):
         (AUDIENCE, "audience"),
     )
     usage = models.SmallIntegerField(verbose_name=_('Intended keyword usage'), choices=USAGES, default=ANY)
-    organization = models.ForeignKey(Organization, verbose_name=_('Organization which uses this set'), null=True)
+    organization = models.ForeignKey('django_orghierarchy.Organization',
+                                     verbose_name=_('Organization which uses this set'), null=True)
     keywords = models.ManyToManyField(Keyword, blank=False, related_name='sets')
 
 
 class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
-    publisher = models.ForeignKey(Organization, verbose_name=_('Publisher'), db_index=True)
-    info_url = models.URLField(verbose_name=_('Place home page'), blank=True, default='', max_length=1000)
+    publisher = models.ForeignKey('django_orghierarchy.Organization', verbose_name=_('Publisher'), db_index=True)
+    info_url = models.URLField(verbose_name=_('Place home page'), null=True, blank=True, max_length=1000)
     description = models.TextField(verbose_name=_('Description'), null=True, blank=True)
     parent = TreeForeignKey('self', null=True, blank=True,
                             related_name='children')
@@ -321,7 +302,6 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     )
     n_events_changed = models.BooleanField(default=False, db_index=True)
 
-
     class Meta:
         verbose_name = _('place')
         verbose_name_plural = _('places')
@@ -337,7 +317,8 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
     def save(self, *args, **kwargs):
         if self.replaced_by and self.replaced_by.replaced_by == self:
             raise Exception("Trying to replace the location replacing this location by this location."
-                            "Please refrain from creating circular replacements and remove either one of the replacements."
+                            "Please refrain from creating circular replacements and"
+                            "remove either one of the replacements."
                             "We don't want homeless events.")
 
         # needed to remap events to replaced location
@@ -364,6 +345,7 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin):
                 geometry__boundary__contains=self.position)
         else:
             self.divisions.clear()
+
 
 reversion.register(Place)
 
@@ -435,7 +417,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     secondary_headline = models.CharField(verbose_name=_('Secondary headline'), max_length=255,
                                           null=True, db_index=True)
     provider = models.CharField(verbose_name=_('Provider'), max_length=512, null=True)
-    publisher = models.ForeignKey(Organization, verbose_name=_('Publisher'), db_index=True,
+    publisher = models.ForeignKey('django_orghierarchy.Organization', verbose_name=_('Publisher'), db_index=True,
                                   on_delete=models.PROTECT, related_name='published_events')
 
     # Status of the event itself
@@ -493,22 +475,24 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         if start and end:
             if start > end:
                 raise ValidationError({'end_time': _('The event end time cannot be earlier than the start time.')})
-        if not self.id:
-            self.created_time = BaseModel.now()
-        self.last_modified_time = BaseModel.now()
 
         super(Event, self).save(*args, **kwargs)
 
         # needed to cache location event numbers
         if not old_location and self.location:
             Place.objects.filter(id=self.location.id).update(n_events_changed=True)
-        if old_location and old_location != self.location:
+        if old_location and not self.location:
+            # drafts (or imported events) may not always have location set
+            Place.objects.filter(id=old_location.id).update(n_events_changed=True)
+        if old_location and self.location and old_location != self.location:
             Place.objects.filter(id__in=(old_location.id, self.location.id)).update(n_events_changed=True)
 
     def __str__(self):
         name = ''
-        for lang in settings.LANGUAGES:
-            s = getattr(self, 'name_%s' % lang[0], None)
+        languages = [lang[0] for lang in settings.LANGUAGES]
+        for lang in languages:
+            lang = lang.replace('-', '_')  # to handle complex codes like e.g. zh-hans
+            s = getattr(self, 'name_%s' % lang, None)
             if s:
                 name = s
                 break
@@ -524,7 +508,13 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         if user.is_superuser:
             return True
         else:
-            return user in self.publisher.admin_users.all()
+            return user.is_admin(self.publisher)
+
+    def can_be_edited_by(self, user):
+        """Check if current event can be edited by the given user"""
+        if user.is_superuser:
+            return True
+        return user.can_edit_event(self.publisher, self.publication_status)
 
     def soft_delete(self, using=None):
         self.deleted = True
@@ -533,6 +523,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     def undelete(self, using=None):
         self.deleted = False
         self.save(update_fields=("deleted",), using=using, force_update=True)
+
 
 reversion.register(Event)
 
@@ -554,7 +545,7 @@ def keyword_added_or_removed(sender, model=None,
 
 class Offer(models.Model, SimpleValueMixin):
     event = models.ForeignKey(Event, db_index=True, related_name='offers')
-    price = models.CharField(verbose_name=_('Price'), blank=True, max_length=512)
+    price = models.CharField(verbose_name=_('Price'), blank=True, max_length=1000)
     info_url = models.URLField(verbose_name=_('Web link to offer'), blank=True, null=True, max_length=1000)
     description = models.TextField(verbose_name=_('Offer description'), blank=True, null=True)
     # Don't expose is_free as an API field. It is used to distinguish
@@ -563,6 +554,7 @@ class Offer(models.Model, SimpleValueMixin):
 
     def value_fields(self):
         return ['price', 'info_url', 'description', 'is_free']
+
 
 reversion.register(Offer)
 

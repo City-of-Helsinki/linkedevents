@@ -1,4 +1,6 @@
-import os, shutil
+import os
+import shutil
+
 from django.core.management.base import BaseCommand
 
 from django.conf import settings
@@ -18,4 +20,5 @@ class Command(BaseCommand):
             print(file)
             shutil.copyfile(os.path.join(city_template_dir, file),
                             os.path.join(project_template_dir, file))
-        self.stdout.write(self.style.SUCCESS('Successfully installed the template from '+options['city_directory'][0]))
+        self.stdout.write(self.style.SUCCESS(
+            'Successfully installed the template from ' + options['city_directory'][0]))

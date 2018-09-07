@@ -1,5 +1,4 @@
 import os
-from optparse import make_option
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.utils.translation import activate, get_language
@@ -20,17 +19,21 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('module')
-        parser.add_argument('--all', action='store_true', dest='all', help='Import all entities')
-        parser.add_argument('--cached', action='store_true', dest='cached', help='Cache requests (if possible)')
-        parser.add_argument('--single', action='store', dest='single', help='Import only single entity')
-        parser.add_argument('--remap', action='store_true', dest='remap', help='Remap all deleted entities to new ones')
+        parser.add_argument('--all', action='store_true', dest='all',
+                            help='Import all entities')
+        parser.add_argument('--cached', action='store_true', dest='cached',
+                            help='Cache requests (if possible)')
+        parser.add_argument('--single', action='store', dest='single',
+                            help='Import only single entity')
+        parser.add_argument('--remap', action='store_true', dest='remap',
+                            help='Remap all deleted entities to new ones')
 
         for imp in self.importer_types:
             parser.add_argument('--%s' % imp, dest=imp, action='store_true', help='import %s' % imp)
 
     def handle(self, *args, **options):
         module = options['module']
-        if not module in self.importers:
+        if module not in self.importers:
             raise CommandError("Importer %s not found. Valid importers: %s" % (module, self.imp_list))
         imp_class = self.importers[module]
 

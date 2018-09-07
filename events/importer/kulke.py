@@ -4,19 +4,18 @@ import os
 import re
 import functools
 from lxml import etree
-from modeltranslation.translator import translator
 import dateutil
 from pytz import timezone
 from django.conf import settings
-from django.utils.timezone import get_default_timezone
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db import IntegrityError
+from django_orghierarchy.models import Organization
 
-from .sync import ModelSyncher
 from .base import Importer, register_importer, recur_dict
-from .util import unicodetext, active_language
-from events.models import DataSource, Place, Event, Keyword, KeywordLabel, Organization, EventAggregate, EventAggregateMember
+from .yso import KEYWORDS_TO_ADD_TO_AUDIENCE
+from .util import unicodetext
+from events.models import DataSource, Event, EventAggregate, EventAggregateMember, Keyword, Place
 from events.keywords import KeywordMatcher
 from events.translation_utils import expand_model_fields
 
@@ -26,6 +25,8 @@ LOCATION_TPREK_MAP = {
     'malms bibliotek - malms kulturhus': '8192',
     'helsingin kaupungintalo': '28473',
     'stoa': '7259',
+    'parvigalleria': '7259',
+    'musiikkisali': '7259',
     'kanneltalo': '7255',
     'vuotalo': '7260',
     'vuosali': '7260',
@@ -68,6 +69,7 @@ SKIP_EVENTS_WITH_CATEGORY = {
     728, 729, 730, 735,
 }
 
+
 def _query_courses():
     filter_out_keywords = map(
         make_kulke_id,
@@ -79,6 +81,7 @@ def _query_courses():
         keywords__id__in=set(filter_out_keywords)
     )
 
+
 def _delete_courses():
     courses_q = _query_courses()
     courses_q.delete()
@@ -86,8 +89,12 @@ def _delete_courses():
 
 SPORTS = ['p965']
 GYMS = ['p8504']
-CHILDREN = ['p4354']
 MOVIES = ['p1235', 'p16327']
+CHILDREN = ['p4354']
+YOUTH = ['p11617']
+ELDERLY = ['p2434']
+FAMILIES = ['p4363']
+
 MANUAL_CATEGORIES = {
     # urheilu
     546: SPORTS, 547: SPORTS, 431: SPORTS, 638: SPORTS,
@@ -99,8 +106,8 @@ MANUAL_CATEGORIES = {
     634: ['p3093'],
     # monitaiteisuus
     223: ['p25216'],
-    # seniorit > ikääntyneet
-    354: ['p2433'],
+    # seniorit > ikääntyneet ja vanhukset
+    354: ['p2433'] + ELDERLY,
     # saunominen
     371: ['p11049'],
     # lastentapahtumat > lapset (!)
@@ -118,16 +125,24 @@ MANUAL_CATEGORIES = {
     # luennot ja keskustelut
     733: ['p15875', 'p14004'],
     # nuorille
-    734: ['p11617'],
+    734: YOUTH,
     # elokuva
-    737: MOVIES
+    737: MOVIES,
+    # perheliikunta
+    628: SPORTS + FAMILIES,
+    # lapset ja nuoret
+    355: CHILDREN + YOUTH
 }
 
+# retain the above for simplicity, even if kulke importer internally requires full keyword ids
+KEYWORDS_TO_ADD_TO_AUDIENCE = ['yso:{}'.format(i) for i in KEYWORDS_TO_ADD_TO_AUDIENCE]
 
 LOCAL_TZ = timezone('Europe/Helsinki')
 
+
 def make_kulke_id(num):
     return "kulke:{}".format(num)
+
 
 def make_event_name(title, subtitle):
     if title and subtitle:
@@ -136,6 +151,7 @@ def make_event_name(title, subtitle):
         return title
     elif subtitle:
         return subtitle
+
 
 def get_event_name(event):
     if 'fi' in event['name']:
@@ -147,12 +163,16 @@ def get_event_name(event):
         else:
             return names[0]
 
+
 @register_importer
 class KulkeImporter(Importer):
     name = "kulke"
     supported_languages = ['fi', 'sv', 'en']
+    languages_to_detect = []
 
     def setup(self):
+        self.languages_to_detect = [lang[0].replace('-', '_') for lang in settings.LANGUAGES
+                                    if lang[0] not in self.supported_languages]
         ds_args = dict(id=self.name)
         defaults = dict(name='Kulttuurikeskus')
         self.tprek_data_source = DataSource.objects.get(id='tprek')
@@ -162,8 +182,8 @@ class KulkeImporter(Importer):
         defaults = dict(name='Ahjo')
         ahjo_ds, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
 
-        org_args = dict(id='ahjo:46101')
-        defaults = dict(name='Kulttuurikeskus', data_source=ahjo_ds)
+        org_args = dict(origin_id='u4804001050', data_source=ahjo_ds)
+        defaults = dict(name='Yleiset kulttuuripalvelut')
         self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
 
         # Build a cached list of Places to avoid frequent hits to the db
@@ -178,7 +198,6 @@ class KulkeImporter(Importer):
         for cid, c in list(categories.items()):
             if c is None:
                 continue
-            match_type = 'no match'
             ctext = c['text']
             # Ignore list (not used and/or not a category for general consumption)
             #
@@ -216,7 +235,6 @@ class KulkeImporter(Importer):
             categories[cid] = {
                 'type': typeid, 'text': ctype.text}
         return categories
-
 
     def find_place(self, event):
         tprek_id = None
@@ -263,9 +281,29 @@ class KulkeImporter(Importer):
         else:
             print("No match found for place '%s' (event %s)" % (loc_name, get_event_name(event)))
 
+    @staticmethod
+    def _html_format(text):
+        """Format text into html
+
+        The method simply wrap <p> tags around texts that are
+        separated by empty line, and append <br> to lines if
+        there are multiple line breaks within the same paragraph.
+        """
+
+        # do not preserve os separators, for conformity with helmet and other html data
+        paragraph_sep = os.linesep * 2
+        paragraphs = text.split(paragraph_sep)
+        formatted_paragraphs = []
+        for paragraph in paragraphs:
+            lines = paragraph.strip().split(os.linesep)
+            formatted_paragraph = '<p>{0}</p>'.format('<br>'.join(lines))
+            formatted_paragraphs.append(formatted_paragraph)
+        return ''.join(formatted_paragraphs)
+
     def _import_event(self, lang, event_el, events):
-        tag = lambda t: 'event' + t
-        text = lambda t: unicodetext(event_el.find(tag(t)))
+        def text(t):
+            return unicodetext(event_el.find('event' + t))
+
         def clean(t):
             if t is None:
                 return None
@@ -273,7 +311,9 @@ class KulkeImporter(Importer):
             if not t:
                 return None
             return t
-        text_content = lambda k: clean(text(k))
+
+        def text_content(k):
+            return clean(text(k))
 
         eid = int(event_el.attrib['id'])
 
@@ -294,14 +334,21 @@ class KulkeImporter(Importer):
         subtitle = text_content('subtitle')
         event['headline'][lang] = title
         event['secondary_headline'][lang] = subtitle
-        event['name'][lang] = make_event_name(title, subtitle)
+        name = make_event_name(title, subtitle)
+        # kulke strings may be in other supported languages
+        if name:
+            Importer._set_multiscript_field(name, event, [lang] + self.languages_to_detect, 'name')
 
         caption = text_content('caption')
-        bodytext = text_content('bodytext')
+        # body text should not be cleaned, as we want to html format the whole shebang
+        bodytext = event_el.find('eventbodytext')
+        if bodytext is not None:
+            bodytext = bodytext.text
         description = ''
         if caption:
             description += caption
-            event['short_description'][lang] = caption
+            # kulke strings may be in other supported languages
+            Importer._set_multiscript_field(caption, event, [lang]+self.languages_to_detect, 'short_description')
         else:
             event['short_description'][lang] = None
         if caption and bodytext:
@@ -309,15 +356,17 @@ class KulkeImporter(Importer):
         if bodytext:
             description += bodytext
         if description:
-            event['description'][lang] = description
+            description = self._html_format(description)
+            # kulke strings may be in other supported languages
+            Importer._set_multiscript_field(description, event, [lang]+self.languages_to_detect, 'description')
         else:
             event['description'][lang] = None
 
         event['info_url'][lang] = text_content('www')
         # todo: process extra links?
-        links = event_el.find(tag('links'))
+        links = event_el.find('eventlinks')
         if links is not None:
-            links = links.findall(tag('link'))
+            links = links.findall('eventlink')
             assert len(links)
         else:
             links = []
@@ -335,7 +384,7 @@ class KulkeImporter(Importer):
             external_links.append({'link': link})
         event['external_links'][lang] = external_links
 
-        eventattachments = event_el.find(tag('attachments'))
+        eventattachments = event_el.find('eventattachments')
         if eventattachments is not None:
             for attachment in eventattachments:
                 if attachment.attrib['type'] == 'teaserimage':
@@ -346,7 +395,9 @@ class KulkeImporter(Importer):
                     event['image_license'] = 'event_only'
                     break
 
-        event['provider'][lang] = text_content('organizer')
+        provider = text_content('organizer')
+        if provider:
+            Importer._set_multiscript_field(provider, event, [lang]+self.languages_to_detect, 'provider')
 
         start_time = dateutil.parser.parse(text('starttime'))
         # Start and end times are in GMT. Sometimes only dates are provided.
@@ -385,7 +436,7 @@ class KulkeImporter(Importer):
 
         offer = event['offers'][0]
         price = text_content('price')
-        price_el = event_el.find(tag('price'))
+        price_el = event_el.find('eventprice')
         free = (price_el.attrib['free'] == "true")
 
         offer['is_free'] = free
@@ -401,13 +452,17 @@ class KulkeImporter(Importer):
 
         if hasattr(self, 'categories'):
             event_keywords = set()
-            for category_id in event_el.find(tag('categories')):
+            event_audience = set()
+            for category_id in event_el.find('eventcategories'):
                 category = self.categories.get(int(category_id.text))
                 if category:
                     # YSO keywords
                     if category.get('yso_keywords'):
                         for c in category.get('yso_keywords', []):
                             event_keywords.add(c)
+                            if c.id in KEYWORDS_TO_ADD_TO_AUDIENCE:
+                                # retain the keyword in keywords as well, for backwards compatibility
+                                event_audience.add(c)
                 # Also save original kulke categories as keywords
                 kulke_id = make_kulke_id(category_id.text)
                 try:
@@ -417,6 +472,7 @@ class KulkeImporter(Importer):
                     print('Could not find {}'.format(kulke_id))
 
             event['keywords'] = event_keywords
+            event['audience'] = event_audience
 
         location = event['location']
 
@@ -429,7 +485,7 @@ class KulkeImporter(Importer):
         location['telephone'][lang] = text_content('phone')
         location['name'] = text_content('location')
 
-        if not 'place' in location:
+        if 'place' not in location:
             self.find_place(event)
         return True
 
@@ -486,8 +542,8 @@ class KulkeImporter(Importer):
         common_fields = set(
             f for f in fieldnames
             if 1 == len(set(map(
-                    value_mappers.get(f, lambda x: x),
-                    (getattr(event, f) for event in events.all())))))
+                value_mappers.get(f, lambda x: x),
+                (getattr(event, f) for event in events.all())))))
 
         for fieldname in common_fields:
             value = getattr(events.first(), fieldname)
@@ -511,11 +567,10 @@ class KulkeImporter(Importer):
         if expand_model_fields(super_event, ['headline'])[0] not in common_fields:
             words = getattr(events.first(), 'headline').split(' ')
             name = ''
-            is_common = lambda: all(
-                headline.startswith(name + words[0])
-                for headline in [event.name for event in events]
-            )
-            while words and is_common():
+            while words and all(
+                    headline.startswith(name + words[0])
+                    for headline in [event.name for event in events]
+                    ):
                 name += words.pop(0) + ' '
                 print(words)
                 print(name)
@@ -530,7 +585,7 @@ class KulkeImporter(Importer):
             )
             setattr(super_event, 'name_{}'.format(lang),
                     make_event_name(headline, secondary_headline)
-            )
+                    )
 
         # Gather common keywords present in *all* subevents
         common_keywords = functools.reduce(
@@ -540,6 +595,14 @@ class KulkeImporter(Importer):
         super_event.keywords.clear()
         for k in common_keywords:
             super_event.keywords.add(k)
+
+        common_audience = functools.reduce(
+            lambda x, y: x & y,
+            (set(event.audience.all()) for event in events.all())
+        )
+        super_event.audience.clear()
+        for k in common_audience:
+            super_event.audience.add(k)
 
         super_event.save()
 
@@ -573,14 +636,14 @@ class KulkeImporter(Importer):
                 super_event = Event(
                     publisher=self.organization,
                     super_event_type=Event.SuperEventType.RECURRING,
-                    data_source=DataSource.objects.get(pk='kulke'), # TODO
+                    data_source=DataSource.objects.get(pk='kulke'),  # TODO
                     id="linkedevents:agg-{}".format(aggregate.id))
                 super_event.save()
                 aggregate.super_event = super_event
                 aggregate.save()
                 for event in events:
-                    member = EventAggregateMember.objects.create(event=event,
-                                                                 event_aggregate=aggregate)
+                    EventAggregateMember.objects.create(event=event,
+                                                        event_aggregate=aggregate)
             elif cnt == 1:
                 aggregate = superevent_aggregates.first()
                 if len(group) == 1:
@@ -594,8 +657,8 @@ class KulkeImporter(Importer):
                 else:
                     for event in events:
                         try:
-                            member = EventAggregateMember.objects.create(event=event,
-                                                                         event_aggregate=aggregate)
+                            EventAggregateMember.objects.create(event=event,
+                                                                event_aggregate=aggregate)
                         except IntegrityError:
                             # Ignore unique violations. They
                             # ensure that no duplicate members are added.

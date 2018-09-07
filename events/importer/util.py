@@ -1,37 +1,98 @@
 # -*- coding: utf-8 -*-
 
 import re
-from lxml import etree
+from langdetect import detect
+from langdetect.lang_detect_exception import LangDetectException
 from django.utils.translation.trans_real import activate, deactivate
 
 from events.models import Place
 
 
-def clean_text(text):
-    text = text.replace('\n', ' ')
+def clean_text(text, strip_newlines=False):
+    text = text.replace('\xa0', ' ').replace('\x1f', '')
+    if strip_newlines:
+        text = text.replace('\r', '').replace('\n', ' ')
     # remove consecutive whitespaces
     return re.sub(r'\s\s+', ' ', text, re.U).strip()
+
+
+def separate_scripts(text, scripts):
+    """
+    Takes in a string and an iterable of language tags and returns an array of string paragraphs
+    separated by language. The first language in scripts is the default. The paragraphs may be either
+    html (separated by <p> or triple <br><br><br> tags) or text (separated by \n or dash).
+
+    :param text: The plain text or html to separate paragraphs in by language.
+    :param scripts: Iterable of allowed languages.
+    :return:
+    """
+    # separate the text by paragraphs, matching to select html and plain text delimiters in data
+    paragraphs = re.split(r'(</p><p>|\n|</p>|<p>| – |<br><br><br>)+', text)
+    separated = {script: '' for script in scripts}
+    # the first language given is the default one
+    last_language = scripts[0]
+    last_paragraph = ''
+    for paragraph in paragraphs:
+        if paragraph in (r'</p><p>', r'</p>' r'\n', r'<p>', r'<br><br><br>'):
+            # skip paragraph breaks to prevent misdetection
+            separated[last_language] += paragraph
+            last_paragraph = paragraph
+            continue
+        try:
+            language = detect(paragraph)
+        except LangDetectException:
+            # an exception means no language could be detected
+            language = last_language
+        # langdetect maps "Simplified Chinese" to "zh-cn"
+        # However, we store it as "zh_hans"
+        if language == "zh-cn":
+            language = "zh_hans"
+        if language not in scripts:
+            # only detect allowed languages, no exceptions
+            language = last_language
+        if language != last_language:
+            # fix html paragraph breaks after language change
+            print('supported language detected: ' + language)
+            if last_paragraph in (r'</p><p>', r'</p>', r'<p>'):
+                separated[last_language] = re.sub(r'<p>$', '', separated[last_language])
+                separated[language] += r'<p>'
+            # remove useless dashes after language change
+            if last_paragraph in (r' – ',):
+                separated[last_language] = re.sub(r' – $', '', separated[last_language])
+            # replace the awful triple-<br>
+            if last_paragraph in (r'<br><br><br>',):
+                separated[last_language] = re.sub(r'<br><br><br>$', '', separated[last_language])
+                separated[last_language] += r'</p>'
+                separated[language] += r'<p>'
+        separated[language] += paragraph
+        last_language = language
+        last_paragraph = paragraph
+    return separated
+
 
 def unicodetext(item):
     if item is None or item.text is None:
         return None
-    return clean_text(item.text)
+    return clean_text(item.text, strip_newlines=True)
+
 
 def reduced_text(text):
     return re.sub(r'\W', '', text, flags=re.U).lower()
 
+
 def text_match(a, b):
     return reduced_text(a) == reduced_text(b)
 
+
 def address_eq(a, b):
     if ('postal_code' in a and 'postal_code' in b and
-       a['postal_code'] != b['postal_code']):
+            a['postal_code'] != b['postal_code']):
         return False
     for key in ['locality', 'street_address']:
         languages = a[key].viewkeys() | b[key].viewkeys()
         for l in languages:
             if (l in a[key] and l in b[key] and not
-               text_match(a[key][l], b[key][l])):
+                    text_match(a[key][l], b[key][l])):
                 return False
     return True
 

@@ -12,6 +12,45 @@ Linked Events provides categorized data on events and places. The project was or
 
 *Linked Events has been updated to Django 1.11. To upgrade to Linked Events release v2.0, please upgrade to release v1.3 first.*
 
+Set up project with Docker
+--------------------------
+
+1. Create `local_settings.py` from the template:
+    * `cp local_settings.py.template local_settings.py`
+    
+2. Run `docker-compose up`
+
+3. Run migrations:
+    * `docker exec linkedevents-backend python manage.py migrate`
+
+4. Syncronize languages for translations in DB:
+    * `docker exec -it linkedevents-backend python manage.py sync_translation_fields`
+    * Answer `y` (for 'yes') to all prompt questions
+    
+5. Import some data for testing:
+    ```bash
+    # Import general Finnish ontology (used by events from following sources)
+    docker exec -it linkedevents-backend python manage.py event_import yso --all
+    # Import places from Helsinki metropolitan region service registry (used by events from following sources)
+    docker exec -it linkedevents-backend python manage.py event_import tprek --places
+    # Import events from Visit Helsinki
+    docker exec -it linkedevents-backend python manage.py event_import matko --events
+    # Import events from Helsinki metropolitan region libraries
+    docker exec -it linkedevents-backend python manage.py event_import helmet --events
+    # Import events from Espoo
+    docker exec -it linkedevents-backend python manage.py event_import espoo --events
+    ```
+6. Update search indexes:
+    * `docker exec -it linkedevents-backend python manage.py rebuild_index`
+    
+7. (Optionally) install API frontend templates:
+    * `docker exec -it linkedevents-backend python manage.py install_templates helevents`
+
+8. Start your Django server:
+    * `docker exec -it linkedevents-backend python manage.py runserver 0:8000`
+
+Now your project is live at [localhost:8000](http://localhost:8000)
+
 Installation for development
 ----------------------------
 These instructions assume an $INSTALL_BASE, like so:
@@ -46,16 +85,22 @@ sudo -u postgres psql linkedevents -c "CREATE EXTENSION postgis;"
 sudo -u postgres psql linkedevents -c "CREATE EXTENSION hstore;"
 # This fills the database with a basic skeleton
 python manage.py migrate
+# This adds language fields based on settings.LANGUAGES (which may be missing in external dependencies)
+python manage.py sync_translation_fields
 ```
 You probably want to import some data for testing (these are events around Helsinki), like so:
 ```bash
 cd $INSTALL_BASE/linkedevents
-# Import places from Helsinki service registry (used by events from following sources)
+# Import general Finnish ontology (used by events from following sources)
+python manage.py event_import yso --all
+# Import places from Helsinki metropolitan region service registry (used by events from following sources)
 python manage.py event_import tprek --places
 # Import events from Visit Helsinki
 python manage.py event_import matko --events
 # Import events from Helsinki metropolitan region libraries
 python manage.py event_import helmet --events
+# Import events from Espoo
+python manage.py event_import espoo --events
 ```
 Furthermore, you may install city-specific HTML page templates for the browsable API by
 ```bash

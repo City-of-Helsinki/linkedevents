@@ -23,6 +23,28 @@ ALLOWED_HOSTS = []
 
 SITE_ID = 1
 
+# log to stderr, at level INFO and add timestamps
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'timestamped': {
+            'format': '%(asctime)s: %(message)s',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'timestamped',
+            'level': 'INFO',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+    },
+}
+
 # Application definition
 
 INSTALLED_APPS = (
@@ -47,6 +69,7 @@ INSTALLED_APPS = (
     'haystack',
     'raven.contrib.django.raven_compat',
     'django_cleanup',
+    'django_filters',
 
     'allauth',
     'allauth.account',
@@ -56,6 +79,7 @@ INSTALLED_APPS = (
     'helevents',
     'munigeo',
     'leaflet',
+    'django_orghierarchy',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -90,6 +114,9 @@ LANGUAGES = (
     ('fi', 'Finnish'),
     ('sv', 'Swedish'),
     ('en', 'English'),
+    ('zh-hans', 'Simplified Chinese'),
+    ('ru' ,'Russian'),
+    ('ar', 'Arabic'),
 )
 
 LANGUAGE_CODE = 'fi'
@@ -135,7 +162,7 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 LOGIN_REDIRECT_URL = '/'
 ACCOUNT_LOGOUT_ON_GET = True
-SOCIALACCOUNT_ADAPTER = 'helusers.providers.helsinki.provider.SocialAccountAdapter'
+SOCIALACCOUNT_ADAPTER = 'helusers.adapter.SocialAccountAdapter'
 
 #
 # REST Framework
@@ -155,7 +182,7 @@ REST_FRAMEWORK = {
         'rest_framework.parsers.MultiPartParser',
     ),
     'DEFAULT_FILTER_BACKENDS': (
-        'rest_framework.filters.DjangoFilterBackend',
+        'django_filters.rest_framework.DjangoFilterBackend',
     ),
     'DEFAULT_PAGINATION_CLASS': 'events.api_pagination.CustomPagination',
     'DEFAULT_PERMISSION_CLASSES': (
@@ -182,7 +209,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-           os.path.join(BASE_DIR, 'templates'),
+            os.path.join(BASE_DIR, 'templates'),
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -203,7 +230,7 @@ TEMPLATES = [
 POSTGIS_VERSION = (2, 1, 1)
 
 # Use ETRS-TM35FIN projection by default
-PROJECTION_SRID=3067
+PROJECTION_SRID = 3067
 # Bounding box of Finland and then some
 
 BOUNDING_BOX = [-548576, 6291456, 1548576, 8388608]
@@ -231,13 +258,17 @@ HAYSTACK_CONNECTIONS = {
     }
 }
 
-import bleach
+import bleach  # noqa
 BLEACH_ALLOWED_TAGS = bleach.ALLOWED_TAGS + ["p", "div"]
 
-from easy_thumbnails.conf import Settings as thumbnail_settings
+from easy_thumbnails.conf import Settings as thumbnail_settings  # noqa
 THUMBNAIL_PROCESSORS = (
     'image_cropping.thumbnail_processors.crop_corners',
 ) + thumbnail_settings.THUMBNAIL_PROCESSORS
+
+
+# django-orghierachy swappable model
+DJANGO_ORGHIERARCHY_DATASOURCE_MODEL = 'events.DataSource'
 
 # local_settings.py can be used to override environment-specific settings
 # like database and email that differ between development and production.
@@ -259,7 +290,9 @@ if 'SECRET_KEY' not in locals():
         import random
         system_random = random.SystemRandom()
         try:
-            SECRET_KEY = ''.join([system_random.choice('abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)') for i in range(64)])
+            SECRET_KEY = ''.join(
+                [system_random.choice('abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)')
+                 for i in range(64)])
             secret = open(secret_file, 'w')
             import os
             os.chmod(secret_file, 0o0600)

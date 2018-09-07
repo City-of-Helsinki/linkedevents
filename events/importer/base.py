@@ -1,28 +1,26 @@
 import os
-import re
 import logging
 import itertools
 import datetime
 from collections import defaultdict
 import operator
 
-from django.db import DataError
-from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
 from rest_framework.exceptions import ValidationError
 from django.contrib.gis.geos import Point, Polygon
 from django.contrib.gis.gdal import SpatialReference, CoordTransform
+from .util import separate_scripts
 
 from modeltranslation.translator import translator
 
-from .util import active_language
-from events.models import *
+from events.models import Image, Language, Event, License, Offer, EventLink, Place
 
 
 # Using a recursive default dictionary
 # allows easy updating of the same data keys
 # with different languages on different passes.
-def recur_dict(): return defaultdict(recur_dict)
+def recur_dict():
+    return defaultdict(recur_dict)
 
 
 class Importer(object):
@@ -59,6 +57,23 @@ class Importer(object):
     def setup(self):
         pass
 
+    @staticmethod
+    def _set_multiscript_field(string, event, languages, field):
+        """
+        Will overwrite the event field in specified languages with any paragraphs
+        in those languages discovered in string.
+
+        :param string: The string of paragraphs to process.
+        :param event: The event to update
+        :param languages: An iterable of desired languages, preferred language first.
+        :param field: The field to update
+        :return:
+        """
+        different_scripts = separate_scripts(string, languages)
+        for script, string in different_scripts.items():
+            if string:
+                event[field][script] = string
+
     def get_or_create_image(self, url):
         if url is None or len(url) == 0:
             return None
@@ -77,23 +92,6 @@ class Importer(object):
             obj._changed = True
             obj.image = image_object
 
-    @staticmethod
-    def clean_text(text):
-        text = text.replace('\n', ' ')
-        # remove consecutive whitespaces
-        return re.sub(r'\s\s+', ' ', text, re.U).strip()
-
-    @staticmethod
-    def unicodetext(item):
-        s = item.text
-        if not s:
-            return None
-        return Importer.clean_text(s)
-
-    @staticmethod
-    def text(item, tag):
-        return unicodetext(item.find(matko_tag(tag)))
-
     def link_recurring_events(self, events, instance_fields=[]):
         """Finds events that are instances of a common parent
         event by comparing the fields that do not differ between
@@ -103,7 +101,7 @@ class Importer(object):
 
         def event_name(e):
             # recur_dict ouch
-            if not 'fi' in e['common']['name']:
+            if 'fi' not in e['common']['name']:
                 return ''
             else:
                 return e['common']['name']['fi']
@@ -116,10 +114,8 @@ class Importer(object):
                 parent_events.extend(subevents)
                 continue
             potential_parent = subevents[0]
-            is_subevent = lambda e: (
-                e['common'] == potential_parent['common'])
             children = []
-            for matching_event in filter(is_subevent, subevents):
+            for matching_event in (e for e in subevents if e['common'] == potential_parent['common']):
                 children.append(matching_event['instance'])
             if len(children) > 0:
                 potential_parent['children'] = children
@@ -190,25 +186,25 @@ class Importer(object):
         obj._changed = False
 
         location_id = None
-        location_extra_info = None
         if 'location' in info:
             location = info['location']
             if 'id' in location:
                 location_id = location['id']
-            info['location_extra_info'] = location.get('extra_info', None)
+            if 'extra_info' in location:
+                info['location_extra_info'] = location['extra_info']
 
         assert info['start_time']
-        if not 'has_start_time' in info:
+        if 'has_start_time' not in info:
             info['has_start_time'] = True
         if not info['has_start_time']:
             info['start_time'] = info['start_time'].replace(hour=0, minute=0, second=0)
 
         # If no end timestamp supplied, we treat the event as ending at midnight.
-        if not 'end_time' in info or not info['end_time']:
+        if 'end_time' not in info or not info['end_time']:
             info['end_time'] = info['start_time']
             info['has_end_time'] = False
 
-        if not 'has_end_time' in info:
+        if 'has_end_time' not in info:
             info['has_end_time'] = True
 
         # If end date is supplied but no time, the event ends at midnight of the following day.
@@ -262,6 +258,30 @@ class Importer(object):
             else:
                 obj.keywords = new_keywords
                 obj._changed = True
+        audience = info.get('audience', [])
+        new_audience = set([kw.id for kw in audience])
+        old_audience = set(obj.audience.values_list('id', flat=True))
+        if new_audience != old_audience:
+            if obj.is_user_edited():
+                # this prevents overwriting manually added audience
+                if not new_audience <= old_audience:
+                    obj.audience.add(*new_audience)
+                    obj._changed = True
+            else:
+                obj.audience = new_audience
+                obj._changed = True
+        in_language = info.get('in_language', [])
+        new_languages = set([lang.id for lang in in_language])
+        old_languages = set(obj.in_language.values_list('id', flat=True))
+        if new_languages != old_languages:
+            if obj.is_user_edited():
+                # this prevents overwriting manually added languages
+                if not new_languages <= old_languages:
+                    obj.in_language.add(*new_languages)
+                    obj._changed = True
+            else:
+                obj.in_language = in_language
+                obj._changed = True
 
         # one-to-many fields with foreign key pointing to event
 
@@ -290,6 +310,7 @@ class Importer(object):
         # TODO: use simple_value logic like for offers above?
         def obj_make_link_id(obj):
             return '%s:%s:%s' % (obj.language_id, obj.name, obj.link)
+
         def info_make_link_id(info):
             return '%s:%s:%s' % (info['language'], info.get('name', ''), info['link'])
 
@@ -318,8 +339,6 @@ class Importer(object):
         return obj
 
     def save_place(self, info):
-        errors = set()
-
         args = dict(data_source=info['data_source'], origin_id=info['origin_id'])
         obj_id = "%s:%s" % (info['data_source'].id, info['origin_id'])
         try:
@@ -339,7 +358,7 @@ class Importer(object):
         e = info.get('longitude', 0)
         position = None
         if n and e:
-            p = Point(e, n, srid=4326) # GPS coordinate system
+            p = Point(e, n, srid=4326)  # GPS coordinate system
             if p.within(self.bounding_box):
                 if self.target_srid != 4326:
                     p.transform(self.gps_to_target_ct)
@@ -374,7 +393,9 @@ class Importer(object):
 
         return obj
 
+
 importers = {}
+
 
 def register_importer(klass):
     importers[klass.name] = klass

@@ -25,6 +25,10 @@
     {% include "rest_framework/keyword_list.html" %}
 {% elif name == "Search List" %}
     {% include "rest_framework/search_list.html" %}
+{% elif name == "Language List" %}
+    {% include "rest_framework/language_list.html" %}
+{% elif name == "Organization List" %}
+    {% include "rest_framework/organization_list.html" %}
 {% else %}
 {% endif %}
 {% endblock %}

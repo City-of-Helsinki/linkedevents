@@ -16,6 +16,7 @@ class RedirectToAPIRootView(RedirectView):
     def get_redirect_url(self, *args, **kwargs):
         return reverse('api-root', kwargs={'version': 'v1'})
 
+
 urlpatterns = [
     url(r'^(?P<version>(v0.1|v1))/', include(api_router.urls)),
     url(r'^admin/', include(admin.site.urls)),
