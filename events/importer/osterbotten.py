@@ -174,18 +174,22 @@ class OsterbottenImporter(Importer):
             
             kwargs = {
                 'id': _id,
-                'data_source_id': 'osterbotten',
-                'name': targetGroupText,
                 'origin_id': targetGroup.xpath('ID')[0].text,
+                'data_source_id': 'osterbotten',
                 'publisher': self.organization
             }
 
-            if (not self.keywordExists(_id)):
-                keyword_orig = Keyword.objects.get_or_create(**kwargs)
+            keyword_orig, created = Keyword.objects.get_or_create(**kwargs)
+            
+            name_key = 'name_{}'.format(lang)
+            if created:
+                keyword_orig.name = targetGroupText
+                setattr(keyword_orig, name_key, targetGroupText)
             else:
-                keyword_orig = self.getKeyword(_id)
+                current_name = getattr(keyword_orig, name_key)
+                if not current_name:
+                    setattr(keyword_orig, name_key, targetGroupText)
 
-            keyword_orig.name = targetGroupText
             keyword_orig.save()
             keywords.append(keyword_orig)
 
