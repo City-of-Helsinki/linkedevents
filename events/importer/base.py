@@ -15,6 +15,9 @@ from modeltranslation.translator import translator
 
 from events.models import Image, Language, Event, License, Offer, EventLink, Place
 
+EXTENSION_COURSE_FIELDS = ('enrolment_start_time', 'enrolment_end_time', 'maximum_attendee_capacity',
+                           'minimum_attendee_capacity', 'remaining_attendee_capacity')
+
 
 # Using a recursive default dictionary
 # allows easy updating of the same data keys
@@ -329,26 +332,30 @@ class Importer(object):
                     link_obj.save()
                 obj._changed = True
 
-        extension_data = info.get('extension_course')
-        if extension_data is not None:
-            from extension_course.models import Course
+        if 'extension_course' in settings.INSTALLED_APPS:
+            extension_data = info.get('extension_course')
+            if extension_data is not None:
+                from extension_course.models import Course
 
-            try:
-                course = obj.extension_course
-                course._changed = False
-                self._set_field(course, 'enrolment_start_time', extension_data['enrolment_start_time'])
-                self._set_field(course, 'enrolment_end_time', extension_data['enrolment_end_time'])
-                course_changed = course._changed
-            except Course.DoesNotExist:
-                Course.objects.create(
-                    event=obj,
-                    enrolment_start_time=extension_data['enrolment_start_time'],
-                    enrolment_end_time=extension_data['enrolment_end_time'],
-                )
-                course_changed = True
+                try:
+                    course = obj.extension_course
+                    course._changed = False
+                    for field in EXTENSION_COURSE_FIELDS:
+                        self._set_field(course, field, extension_data.get(field))
 
-            if course_changed:
-                obj._changed = True
+                    course_changed = course._changed
+                    if course_changed:
+                        course.save()
+
+                except Course.DoesNotExist:
+                    Course.objects.create(
+                        event=obj,
+                        **{field: extension_data.get(field) for field in EXTENSION_COURSE_FIELDS}
+                    )
+                    course_changed = True
+
+                if course_changed:
+                    obj._changed = True
 
         if obj._changed or obj._created:
             # save again after adding related fields to update last_modified_time!
