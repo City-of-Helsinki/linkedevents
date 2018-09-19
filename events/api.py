@@ -181,6 +181,22 @@ def get_publisher_query(publisher):
     return q
 
 
+def clean_text_fields(data, allowed_html_fields=[]):
+    for k, v in data.items():
+        if isinstance(v, str) and any(c in v for c in '<>&'):
+            # only specified fields may contain allowed tags
+            for field_name in allowed_html_fields:
+                # check all languages and the default translation field too
+                if k.startswith(field_name):
+                    data[k] = bleach.clean(v, settings.BLEACH_ALLOWED_TAGS)
+                    break
+            else:
+                data[k] = bleach.clean(v)
+                # for non-html data, ampersands should be bare
+                data[k] = data[k].replace('&amp;', '&')
+    return data
+
+
 class JSONLDRelatedField(relations.HyperlinkedRelatedField):
     """
     Support of showing and saving of expanded JSON nesting or just a resource
@@ -1144,11 +1160,9 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         return value
 
     def validate(self, data):
-        # clean the html
-        for k, v in data.items():
-            if k in ["description"]:
-                if isinstance(v, str) and any(c in v for c in '<>&'):
-                    data[k] = bleach.clean(v, settings.BLEACH_ALLOWED_TAGS)
+        # clean all text fields, only description may contain any html
+        data = clean_text_fields(data, allowed_html_fields=['description'])
+
         data = super().validate(data)
 
         if 'publication_status' not in data:
@@ -1183,12 +1197,19 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
         # published events need price info = at least one offer that is free or not
         offer_exists = False
-        for offer in data.get('offers', []):
+        for index, offer in enumerate(data.get('offers', [])):
             if 'is_free' in offer:
                 offer_exists = True
-                break
+            # clean offer text fields
+            data['offers'][index] = clean_text_fields(offer)
+
         if not offer_exists:
             errors['offers'] = _('Price info must be specified before an event is published.')
+
+        # clean link description text
+        for index, link in enumerate(data.get('external_links', [])):
+            # clean link text fields
+            data['external_links'][index] = clean_text_fields(link)
 
         # If no end timestamp supplied, we treat the event as ending at midnight
         if not data.get('end_time'):
