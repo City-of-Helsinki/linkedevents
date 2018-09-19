@@ -131,7 +131,9 @@ MANUAL_CATEGORIES = {
     # perheliikunta
     628: SPORTS + FAMILIES,
     # lapset ja nuoret
-    355: CHILDREN + YOUTH
+    355: CHILDREN + YOUTH,
+    # lapsi ja aikuinen yhdessä > perheet
+    747: FAMILIES
 }
 
 # retain the above for simplicity, even if kulke importer internally requires full keyword ids
