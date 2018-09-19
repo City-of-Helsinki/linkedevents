@@ -90,6 +90,9 @@ def replace_html_breaks_with_whitespace(text):
 def clean_description(text):
     ok_tags = ('u', 'b', 'h2', 'h3', 'em', 'ul', 'li', 'strong', 'br', 'p', 'a')
     text = bleach.clean(text, tags=ok_tags, strip=True)
+    # enclosing paragraphs seem to be missing
+    if not text.startswith('<p>'):
+        text = '<p>' + text + '</p>'
     text = clean_text(text)
     return text
 
