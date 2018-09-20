@@ -36,13 +36,15 @@ LOGGING = {
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'timestamped',
-            'level': 'INFO',
+            'level': 'DEBUG',
         },
     },
-    'root': {
-        'handlers': ['console'],
-        'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
-    },
+    'loggers': {
+        '': {
+            'handlers': ['console'],
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+        },
+    }
 }
 
 # Application definition
