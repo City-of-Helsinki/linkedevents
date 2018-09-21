@@ -263,7 +263,6 @@ class LippupisteImporter(Importer):
                 if is_partial_address_match:
                     matches_by_partial_address.append(place_id)
 
-
             # If none of the above don't match, the promoter might be the key and the venue just extra info
             if candidate_place_name and source_provider_name == candidate_place_name:
                 matches_by_provider_name.append(place_id)
