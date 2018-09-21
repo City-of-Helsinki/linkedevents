@@ -92,8 +92,10 @@ def clean_description(text):
     text = bleach.clean(text, tags=ok_tags, strip=True)
     text = text.replace('<br><br>', '</p><p>').replace('<b>', '<strong>').replace('</b>', '</strong>')
     # enclosing paragraphs seem to be missing
-    if not text.startswith('<p>'):
+    if text and not text.startswith('<p>'):
         text = '<p>' + text + '</p>'
+    if text.endswith('</p><p></p>'):
+        text = text[:-7]
     text = clean_text(text)
     return text
 
