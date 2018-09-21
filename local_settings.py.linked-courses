@@ -1,0 +1,11 @@
+INSTALLED_APPS = INSTALLED_APPS + (
+    'extension_course',
+)
+
+AUTO_ENABLED_EXTENSIONS = ['course',]
+
+LANGUAGES = (
+    ('fi', 'Finnish'),
+    ('sv', 'Swedish'),
+    ('en', 'English'),
+)
