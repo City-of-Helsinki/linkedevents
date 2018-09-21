@@ -203,10 +203,12 @@ class LippupisteImporter(Importer):
             return HKT_TPREK_PLACE_MAP[source_event['EventVenue']]
 
         matches_by_partial_name = []
+        matches_by_provider_name = []
         matches_by_address = []
         matches_by_partial_address = []
 
         source_place_name = source_event['EventVenue'].lower()
+        source_provider_name = source_event['EventPromoterName'].lower()
         source_address = source_event['EventStreet'].lower()
         source_postal_code = source_event['EventZip']
 
@@ -218,15 +220,16 @@ class LippupisteImporter(Importer):
             candidate_postal_code = place_data['postal_code']
 
             # If the name matches exactly, the list will not produce better matches, so we can skip the rest
-            if source_place_name == candidate_place_name:
+            if candidate_place_name and source_place_name == candidate_place_name:
                 self.existing_place_id_matches[source_event['EventVenue']] = place_id
                 return place_id
 
-            if source_place_name in candidate_place_name or candidate_place_name in source_place_name:
+            # We might have a partial match instead
+            if candidate_place_name and candidate_place_name in source_place_name:
                 matches_by_partial_name.append(place_id)
 
             # Street addresses alone are not unique, postal code must match
-            elif source_postal_code == candidate_postal_code:
+            elif candidate_postal_code and source_postal_code == candidate_postal_code:
                 is_exact_address_match = (
                     (
                         candidate_address_fi is not None
@@ -260,12 +263,22 @@ class LippupisteImporter(Importer):
                 if is_partial_address_match:
                     matches_by_partial_address.append(place_id)
 
-        if matches_by_partial_name:
-            place_id = matches_by_partial_name[0]
-            self.existing_place_id_matches[source_event['EventVenue']] = place_id
-            return place_id
+
+            # If none of the above don't match, the promoter might be the key and the venue just extra info
+            if candidate_place_name and source_provider_name == candidate_place_name:
+                matches_by_provider_name.append(place_id)
+
         if matches_by_address:
             place_id = matches_by_address[0]
+            self.existing_place_id_matches[source_event['EventVenue']] = place_id
+            return place_id
+        if matches_by_provider_name:
+            place_id = matches_by_provider_name[0]
+            # provider name was an exact match, so we assume all events in this venue will match
+            self.existing_place_id_matches[source_event['EventVenue']] = place_id
+            return place_id
+        if matches_by_partial_name:
+            place_id = matches_by_partial_name[0]
             self.existing_place_id_matches[source_event['EventVenue']] = place_id
             return place_id
         if matches_by_partial_address:
@@ -303,6 +316,8 @@ class LippupisteImporter(Importer):
             event['location']['id'] = place_id
         else:
             print("No match found for place '%s' (event %s)" % (source_event['EventVenue'], event['name']['fi']))
+        # regardless of match, venue might have some extra info not found in tprek
+        event['location_extra_info']['fi'] = source_event['EventVenue']
         return event
 
     def _import_event(self, source_event, events):
