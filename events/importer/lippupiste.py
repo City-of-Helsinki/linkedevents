@@ -90,6 +90,7 @@ def replace_html_breaks_with_whitespace(text):
 def clean_description(text):
     ok_tags = ('u', 'b', 'h2', 'h3', 'em', 'ul', 'li', 'strong', 'br', 'p', 'a')
     text = bleach.clean(text, tags=ok_tags, strip=True)
+    text = text.replace('<br><br>', '</p><p>').replace('<b>', '<strong>').replace('</b>', '</strong>')
     # enclosing paragraphs seem to be missing
     if not text.startswith('<p>'):
         text = '<p>' + text + '</p>'
@@ -299,7 +300,8 @@ class LippupisteImporter(Importer):
         event_datetime = event_datetime.astimezone(pytz.utc)
         event['start_time'] = event_datetime
         event['provider']['fi'] = source_event['EventPromoterName']
-        event['name']['fi'] = source_event['EventName']
+        # the uppercase names are so last century
+        event['name']['fi'] = source_event['EventName'].lower().title()
         event['description']['fi'] = clean_description(source_event['EventSerieText'])
         event['short_description']['fi'] = clean_short_description(source_event['EventSerieText'])
         event['info_url']['fi'] = source_event['EventLink']
