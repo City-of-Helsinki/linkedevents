@@ -15,7 +15,7 @@ from django_orghierarchy.models import Organization
 from .base import Importer, register_importer, recur_dict
 from .yso import KEYWORDS_TO_ADD_TO_AUDIENCE
 from .util import unicodetext
-from events.models import DataSource, Event, EventAggregate, EventAggregateMember, Keyword, Place
+from events.models import DataSource, Event, EventAggregate, EventAggregateMember, Keyword, Place, License
 from events.keywords import KeywordMatcher
 from events.translation_utils import expand_model_fields
 
@@ -233,6 +233,11 @@ class KulkeImporter(Importer):
         course_keyword_ids = ['yso:{}'.format(kw) for kw in COURSE_KEYWORDS]
         self.course_keywords = set(Keyword.objects.filter(id__in=course_keyword_ids))
 
+        try:
+            self.event_only_license = License.objects.get(id='event_only')
+        except License.DoesNotExist:
+            self.event_only_license = None
+
     def parse_kulke_categories(self):
         categories = {}
         categories_file = os.path.join(
@@ -398,10 +403,15 @@ class KulkeImporter(Importer):
             for attachment in eventattachments:
                 if attachment.attrib['type'] == 'teaserimage':
                     # with the event_only license, the larger picture may be served
-                    event['image'] = unicodetext(attachment).strip().replace(
-                        '/MediumEventPic', '/EventPic'
-                    )
-                    event['image_license'] = 'event_only'
+                    image_url = unicodetext(attachment).strip().replace('/MediumEventPic', '/EventPic')
+                    if image_url:
+                        if self.event_only_license:
+                            event['image'] = {
+                                'url': image_url,
+                                'license': self.event_only_license,
+                            }
+                        else:
+                            print('Cannot create an image, "event_only" License missing.')
                     break
 
         provider = text_content('organizer')

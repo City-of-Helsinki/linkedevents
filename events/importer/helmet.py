@@ -285,7 +285,7 @@ class HelmetImporter(Importer):
             matches = re.findall(r'src="(.*?)"', str(ext_props['Images']))
             if matches:
                 img_url = matches[0]
-                event['image'] = HELMET_BASE_URL + img_url
+                event['image'] = {'url': HELMET_BASE_URL + img_url}
             del ext_props['Images']
 
         event['url'][lang] = '%s/api/opennc/v1/Contents(%s)' % (
