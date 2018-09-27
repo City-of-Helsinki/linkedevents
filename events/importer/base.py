@@ -330,6 +330,12 @@ class Importer(object):
                 obj._changed = True
 
         if obj._changed or obj._created:
+            # save again after adding related fields to update last_modified_time!
+            try:
+                obj.save()
+            except ValidationError as error:
+                print('Event ' + str(obj) + ' could not be saved: ' + str(error))
+                raise
             if obj._created:
                 verb = "created"
             else:
