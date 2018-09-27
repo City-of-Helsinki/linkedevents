@@ -5,6 +5,7 @@ import pytz
 import re
 import bleach
 import requests
+from collections import defaultdict
 from datetime import datetime
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
@@ -142,19 +143,20 @@ class LippupisteImporter(Importer):
         self.keyword_by_id = {keyword.id: keyword for keyword in keyword_list}
 
     def _cache_place_data(self):
-        self.place_data_list = Place.objects.filter(data_source=self.tprek_data_source).values(
+        self.place_data_list = Place.objects.filter(data_source=self.tprek_data_source, deleted=False).values(
             'id', 'name', 'street_address_fi', 'street_address_sv', 'postal_code'
         )
         for place_data in self.place_data_list:
             place_data['name__lower'] = place_data['name'].lower()
 
+            # get rid of letters after street number
             if place_data['street_address_fi']:
-                place_data['street_address_fi__lower'] = place_data['street_address_fi'].lower()
+                place_data['street_address_fi__lower'] = re.sub(r'([0-9])\s?[a-z]$',r'\1',place_data['street_address_fi'].lower())
             else:
                 place_data['street_address_fi__lower'] = None
 
             if place_data['street_address_sv']:
-                place_data['street_address_sv__lower'] = place_data['street_address_sv'].lower()
+                place_data['street_address_sv__lower'] = re.sub(r'([0-9])\s?[a-z]$',r'\1',place_data['street_address_sv'].lower())
             else:
                 place_data['street_address_sv__lower'] = None
 
@@ -213,14 +215,16 @@ class LippupisteImporter(Importer):
         if source_event['EventVenue'] in HKT_TPREK_PLACE_MAP:
             return HKT_TPREK_PLACE_MAP[source_event['EventVenue']]
 
-        matches_by_partial_name = []
+        # We store name matches based on how many words match and how many don't
+        matches_by_partial_name = defaultdict(lambda: defaultdict(list))
         matches_by_provider_name = []
         matches_by_address = []
         matches_by_partial_address = []
 
         source_place_name = source_event['EventVenue'].lower()
         source_provider_name = source_event['EventPromoterName'].lower()
-        source_address = source_event['EventStreet'].lower()
+        # get rid of letters after street number
+        source_address = re.sub(r'([0-9])\s?[a-z]$',r'\1',source_event['EventStreet'].lower())
         source_postal_code = source_event['EventZip']
 
         for place_data in self.place_data_list:
@@ -235,12 +239,16 @@ class LippupisteImporter(Importer):
                 self.existing_place_id_matches[source_event['EventVenue']] = place_id
                 return place_id
 
-            # We might have a partial match instead
-            if candidate_place_name and candidate_place_name in source_place_name:
-                matches_by_partial_name.append(place_id)
+            # We might have a partial match instead, check for common and different words
+            candidate_place_name_words = set(candidate_place_name.replace(',', ' ').replace('-', ' ').replace('&', ' ').split())
+            source_place_name_words = set(source_place_name.replace(',', ' ').replace('-', ' ').replace('&', ' ').split())
+            common_words = candidate_place_name_words & source_place_name_words
+            different_words = candidate_place_name_words.symmetric_difference(source_place_name_words)
+            if candidate_place_name and source_place_name and common_words != set():
+                matches_by_partial_name[len(common_words)][len(different_words)].append(place_id)
 
             # Street addresses alone are not unique, postal code must match
-            elif candidate_postal_code and source_postal_code == candidate_postal_code:
+            if candidate_postal_code and source_postal_code == candidate_postal_code:
                 is_exact_address_match = (
                     (
                         candidate_address_fi is not None
@@ -274,26 +282,55 @@ class LippupisteImporter(Importer):
                 if is_partial_address_match:
                     matches_by_partial_address.append(place_id)
 
-            # If none of the above don't match, the promoter might be the key and the venue just extra info
+            # If none of the above match, the promoter might be the key and the venue just extra info
             if candidate_place_name and source_provider_name == candidate_place_name:
                 matches_by_provider_name.append(place_id)
 
+        self.logger.info('-----------------')
+        self.logger.info(source_event['EventVenue'])
+        self.logger.info(source_event['EventName'])
+        self.logger.info(source_event['EventStreet'])
+        self.logger.info(source_event['EventPromoterName'])
+        place_id = None
         if matches_by_address:
-            place_id = matches_by_address[0]
+            self.logger.info('address match, pick the name with most common words and least different words, if any:')
+            if len(matches_by_address) > 1:
+                for common_words, match_list in sorted(matches_by_partial_name.items(), key=(lambda x: int(x[0])), reverse=True):
+                    for different_words, sublist in sorted(match_list.items(), key=(lambda x: int(x[0]))):
+                        address_and_word_matches = set(matches_by_address) & set(sublist)
+                        if address_and_word_matches != set():
+                            place_id = address_and_word_matches.pop()
+                            break
+                    if place_id:
+                        break
+                else:
+                    place_id = matches_by_address[0]
+            else:
+                place_id = matches_by_address[0]
             self.existing_place_id_matches[source_event['EventVenue']] = place_id
+            self.logger.info(Place.objects.get(id=place_id))
             return place_id
+        if matches_by_partial_name:
+            self.logger.info('partial name match, pick the name with most common words and least different words:')
+            most_common_words = max(matches_by_partial_name.keys())
+            most_common_matches = matches_by_partial_name[most_common_words]
+            least_different_words = min(most_common_matches.keys())
+            the_perfect_match = most_common_matches[least_different_words][0]
+            self.existing_place_id_matches[source_event['EventVenue']] = the_perfect_match
+            self.logger.info(Place.objects.get(id=the_perfect_match))
+            return the_perfect_match
         if matches_by_provider_name:
+            self.logger.info('provider name match:')
             place_id = matches_by_provider_name[0]
             # provider name was an exact match, so we assume all events in this venue will match
             self.existing_place_id_matches[source_event['EventVenue']] = place_id
-            return place_id
-        if matches_by_partial_name:
-            place_id = matches_by_partial_name[0]
-            self.existing_place_id_matches[source_event['EventVenue']] = place_id
+            self.logger.info(Place.objects.get(id=place_id))
             return place_id
         if matches_by_partial_address:
+            self.logger.info('partial address match:')
             place_id = matches_by_partial_address[0]
             self.existing_place_id_matches[source_event['EventVenue']] = place_id
+            self.logger.info(Place.objects.get(id=place_id))
             return place_id
         return None
 
@@ -326,7 +363,7 @@ class LippupisteImporter(Importer):
         if place_id:
             event['location']['id'] = place_id
         else:
-            print("No match found for place '%s' (event %s)" % (source_event['EventVenue'], event['name']['fi']))
+            self.logger.warning("No match found for place '%s' (event %s)" % (source_event['EventVenue'], event['name']['fi']))
         # regardless of match, venue might have some extra info not found in tprek
         event['location_extra_info']['fi'] = source_event['EventVenue']
         return event
