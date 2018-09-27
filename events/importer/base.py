@@ -256,7 +256,7 @@ class Importer(object):
                     obj.keywords.add(*new_keywords)
                     obj._changed = True
             else:
-                obj.keywords = new_keywords
+                obj.keywords.set(new_keywords)
                 obj._changed = True
         audience = info.get('audience', [])
         new_audience = set([kw.id for kw in audience])
@@ -268,7 +268,7 @@ class Importer(object):
                     obj.audience.add(*new_audience)
                     obj._changed = True
             else:
-                obj.audience = new_audience
+                obj.audience.set(new_audience)
                 obj._changed = True
         in_language = info.get('in_language', [])
         new_languages = set([lang.id for lang in in_language])
@@ -280,7 +280,7 @@ class Importer(object):
                     obj.in_language.add(*new_languages)
                     obj._changed = True
             else:
-                obj.in_language = in_language
+                obj.in_language.set(in_language)
                 obj._changed = True
 
         # one-to-many fields with foreign key pointing to event
