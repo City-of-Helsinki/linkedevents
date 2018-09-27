@@ -68,6 +68,14 @@ HKT_TPREK_PLACE_MAP = {
     'Arena-näyttämö': 'tprek:46367',  # As of writing, tprek has duplicate, so we will map manually
 }
 
+POSTAL_CODE_RANGES = ((1, 990), (1200, 1770), (2100, 2380), (2600, 2860), (2920, 2980))  # By default, only import events in the capital region
+
+NAMES_TO_IGNORE_BY_PROVIDER = {
+    'Helsingin kaupunginteatteri': ('käsiohjelma',),  # Certain events are not actual events.
+    'SeaLife': ('kertaliput',),
+    'Suomen kansallisteatteri.': ('lahjakortti',),
+}
+
 LIPPUPISTE_EVENT_API_URL = getattr(settings, 'LIPPUPISTE_EVENT_API_URL', None)
 
 LOCAL_TZ = pytz.timezone('Europe/Helsinki')
@@ -338,13 +346,13 @@ class LippupisteImporter(Importer):
 
     def _link_event_to_superevent(self, source_event, events):
         superevent_source_id = get_namespaced_event_serie_id(source_event['EventSerieId'])
-        try:
-            superevent_id = self.super_event_ids_by_origin_id.get(superevent_source_id)
-        except KeyError:
+        superevent_id = self.super_event_ids_by_origin_id.get(superevent_source_id)
+        if not superevent_id:
             return
         event_source_id = source_event['EventId']
-        event = events[event_source_id]
-        event['super_event_id'] = superevent_id
+        event = events.get(event_source_id)
+        if event:
+            event['super_event_id'] = superevent_id
 
     def _update_superevent_details(self, super_event):
         events = super_event.get_children()
@@ -377,12 +385,37 @@ class LippupisteImporter(Importer):
     def import_events(self):
         if not LIPPUPISTE_EVENT_API_URL:
             raise ImproperlyConfigured("LIPPUPISTE_EVENT_API_URL must be set in local_settings")
-        print("Importing Lippupiste events")
+        self.logger.info("Importing Lippupiste events")
         events = recur_dict()
         event_source_data = list(self._fetch_event_source_data(LIPPUPISTE_EVENT_API_URL))
 
         for source_event in event_source_data:
-            self._import_event(source_event, events)
+            # check if the postal code matches
+            for range in POSTAL_CODE_RANGES:
+                if source_event['EventZip'].isdigit() \
+                        and range[0] <= int(source_event['EventZip'])  and range[1] >= int(source_event['EventZip']):
+                    break
+            else:
+                # no match, ignored
+                continue
+            # check if we should ignore the event by name
+            for provider in NAMES_TO_IGNORE_BY_PROVIDER:
+                if source_event['EventPromoterName'].lower() == provider.lower():
+                    for string in NAMES_TO_IGNORE_BY_PROVIDER[provider]:
+                        if string.lower() in source_event['EventName'].lower():
+                            self.logger.info('---------')
+                            self.logger.info(source_event['EventName'])
+                            self.logger.info('omitting due to string:')
+                            self.logger.info(string)
+                            break
+                    else:
+                        continue
+                    # broken, ignored
+                    break
+            else:
+                # not ignored
+                # check if the event actually contains the required fields
+                self._import_event(source_event, events)
         self._synch_events(events)
 
         # Because super events must exist to be linked, do this after synch. We also need to resynch.
@@ -395,4 +428,4 @@ class LippupisteImporter(Importer):
         for super_event in super_events:
             self._update_superevent_details(super_event)
 
-        print("%d events processed" % len(events.values()))
+        self.logger.info("%d events processed" % len(events.values()))
