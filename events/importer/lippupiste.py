@@ -69,7 +69,8 @@ HKT_TPREK_PLACE_MAP = {
     'Arena-näyttämö': 'tprek:46367',  # As of writing, tprek has duplicate, so we will map manually
 }
 
-POSTAL_CODE_RANGES = ((1, 990), (1200, 1770), (2100, 2380), (2600, 2860), (2920, 2980))  # By default, only import events in the capital region
+# By default, only import events in the capital region
+POSTAL_CODE_RANGES = ((1, 990), (1200, 1770), (2100, 2380), (2600, 2860), (2920, 2980))
 
 NAMES_TO_IGNORE_BY_PROVIDER = {
     'Helsingin kaupunginteatteri': ('käsiohjelma',),  # Certain events are not actual events.
@@ -151,12 +152,14 @@ class LippupisteImporter(Importer):
 
             # get rid of letters after street number
             if place_data['street_address_fi']:
-                place_data['street_address_fi__lower'] = re.sub(r'([0-9])\s?[a-z]$',r'\1',place_data['street_address_fi'].lower())
+                place_data['street_address_fi__lower'] = re.sub(r'([0-9])\s?[a-z]$',
+                                                                r'\1', place_data['street_address_fi'].lower())
             else:
                 place_data['street_address_fi__lower'] = None
 
             if place_data['street_address_sv']:
-                place_data['street_address_sv__lower'] = re.sub(r'([0-9])\s?[a-z]$',r'\1',place_data['street_address_sv'].lower())
+                place_data['street_address_sv__lower'] = re.sub(r'([0-9])\s?[a-z]$',
+                                                                r'\1', place_data['street_address_sv'].lower())
             else:
                 place_data['street_address_sv__lower'] = None
 
@@ -224,7 +227,7 @@ class LippupisteImporter(Importer):
         source_place_name = source_event['EventVenue'].lower()
         source_provider_name = source_event['EventPromoterName'].lower()
         # get rid of letters after street number
-        source_address = re.sub(r'([0-9])\s?[a-z]$',r'\1',source_event['EventStreet'].lower())
+        source_address = re.sub(r'([0-9])\s?[a-z]$', r'\1', source_event['EventStreet'].lower())
         source_postal_code = source_event['EventZip']
 
         for place_data in self.place_data_list:
@@ -240,8 +243,10 @@ class LippupisteImporter(Importer):
                 return place_id
 
             # We might have a partial match instead, check for common and different words
-            candidate_place_name_words = set(candidate_place_name.replace(',', ' ').replace('-', ' ').replace('&', ' ').split())
-            source_place_name_words = set(source_place_name.replace(',', ' ').replace('-', ' ').replace('&', ' ').split())
+            candidate_place_name_words = set(
+                candidate_place_name.replace(',', ' ').replace('-', ' ').replace('&', ' ').split())
+            source_place_name_words = set(
+                source_place_name.replace(',', ' ').replace('-', ' ').replace('&', ' ').split())
             common_words = candidate_place_name_words & source_place_name_words
             different_words = candidate_place_name_words.symmetric_difference(source_place_name_words)
             if candidate_place_name and source_place_name and common_words != set():
@@ -295,8 +300,10 @@ class LippupisteImporter(Importer):
         if matches_by_address:
             self.logger.info('address match, pick the name with most common words and least different words, if any:')
             if len(matches_by_address) > 1:
-                for common_words, match_list in sorted(matches_by_partial_name.items(), key=(lambda x: int(x[0])), reverse=True):
-                    for different_words, sublist in sorted(match_list.items(), key=(lambda x: int(x[0]))):
+                for common_words, match_list in sorted(matches_by_partial_name.items(),
+                                                       key=(lambda x: int(x[0])), reverse=True):
+                    for different_words, sublist in sorted(match_list.items(),
+                                                           key=(lambda x: int(x[0]))):
                         address_and_word_matches = set(matches_by_address) & set(sublist)
                         if address_and_word_matches != set():
                             place_id = address_and_word_matches.pop()
@@ -363,7 +370,8 @@ class LippupisteImporter(Importer):
         if place_id:
             event['location']['id'] = place_id
         else:
-            self.logger.warning("No match found for place '%s' (event %s)" % (source_event['EventVenue'], event['name']['fi']))
+            self.logger.warning("No match found for place '%s' (event %s)" % (source_event['EventVenue'],
+                                                                              event['name']['fi']))
         # regardless of match, venue might have some extra info not found in tprek
         event['location_extra_info']['fi'] = source_event['EventVenue']
         return event
@@ -430,7 +438,7 @@ class LippupisteImporter(Importer):
             # check if the postal code matches
             for range in POSTAL_CODE_RANGES:
                 if source_event['EventZip'].isdigit() \
-                        and range[0] <= int(source_event['EventZip'])  and range[1] >= int(source_event['EventZip']):
+                        and range[0] <= int(source_event['EventZip']) and range[1] >= int(source_event['EventZip']):
                     break
             else:
                 # no match, ignored
