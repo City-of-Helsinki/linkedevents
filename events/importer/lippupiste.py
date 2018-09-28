@@ -154,13 +154,13 @@ class LippupisteImporter(Importer):
 
             # get rid of letters after street number
             if place_data['street_address_fi']:
-                place_data['street_address_fi__lower'] = re.sub(r'([0-9])\s?[a-z]$',
+                place_data['street_address_fi__lower'] = re.sub(r'([0-9])\s?[a-z](-[a-z])?$',
                                                                 r'\1', place_data['street_address_fi'].lower())
             else:
                 place_data['street_address_fi__lower'] = None
 
             if place_data['street_address_sv']:
-                place_data['street_address_sv__lower'] = re.sub(r'([0-9])\s?[a-z]$',
+                place_data['street_address_sv__lower'] = re.sub(r'([0-9])\s?[a-z](-[a-z])?$',
                                                                 r'\1', place_data['street_address_sv'].lower())
             else:
                 place_data['street_address_sv__lower'] = None
@@ -229,7 +229,7 @@ class LippupisteImporter(Importer):
         source_place_name = source_event['EventVenue'].lower()
         source_provider_name = source_event['EventPromoterName'].lower()
         # get rid of letters after street number
-        source_address = re.sub(r'([0-9])\s?[a-z]$', r'\1', source_event['EventStreet'].lower())
+        source_address = re.sub(r'([0-9])\s?[a-z](-[a-z])?$', r'\1', source_event['EventStreet'].lower())
         source_postal_code = source_event['EventZip']
 
         for place_data in self.place_data_list:
