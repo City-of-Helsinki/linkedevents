@@ -67,6 +67,8 @@ YSO_KEYWORD_MAPS = {
 
 HKT_TPREK_PLACE_MAP = {
     'Arena-näyttämö': 'tprek:46367',  # As of writing, tprek has duplicate, so we will map manually
+    'Gloria, Pieni Roobertinkatu, Helsinki': 'tprek:8099',  # String match fails
+    'Helsingin Vanha kirkko': 'tprek:43184',  # String match fails
 }
 
 # By default, only import events in the capital region
