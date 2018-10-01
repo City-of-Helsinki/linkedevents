@@ -402,7 +402,7 @@ class LippupisteImporter(Importer):
             event['super_event_id'] = superevent_id
 
     def _update_superevent_details(self, super_event):
-        events = super_event.get_children()
+        events = super_event.sub_events.filter(deleted=False)
         if not events.exists():
             return
         first_event = events.order_by('start_time').first()
