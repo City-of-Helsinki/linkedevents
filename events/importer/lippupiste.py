@@ -360,7 +360,11 @@ class LippupisteImporter(Importer):
         event['name']['fi'] = source_event['EventName'].lower().title()
         event['description']['fi'] = clean_description(source_event['EventSerieText'])
         event['short_description']['fi'] = clean_short_description(source_event['EventSerieText'])
-        event['info_url']['fi'] = source_event['EventLink']
+        event['info_url']['fi'] = source_event['EventSerieLink']
+        event['offers'] = [{'is_free': False,
+                            'description': {'fi': 'Tarkista hinta lippupalvelusta'},
+                            'info_url': {'fi': source_event['EventLink']},
+                            'price': None},]
         event['image'] = source_event['EventSeriePictureBig_222x222']
         event['image_license'] = 'event_only'
 
