@@ -364,7 +364,7 @@ class LippupisteImporter(Importer):
         event['offers'] = [{'is_free': False,
                             'description': {'fi': 'Tarkista hinta lippupalvelusta'},
                             'info_url': {'fi': source_event['EventLink']},
-                            'price': None},]
+                            'price': None}, ]
         event['image'] = source_event['EventSeriePictureBig_222x222']
         event['image_license'] = 'event_only'
 
