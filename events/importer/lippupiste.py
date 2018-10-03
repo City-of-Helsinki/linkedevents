@@ -463,7 +463,8 @@ class LippupisteImporter(Importer):
                 obj.save()
             self.syncher.mark(obj)
 
-        self.syncher.finish()
+        # Allow lippupiste to force deleting its data if corresponding Helsinki events are found
+        self.syncher.finish(force=True)
 
     def import_events(self):
         if not LIPPUPISTE_EVENT_API_URL:
