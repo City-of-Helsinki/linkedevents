@@ -80,6 +80,8 @@ NAMES_TO_IGNORE_BY_PROVIDER = {
     'Suomen kansallisteatteri.': ('lahjakortti',),
 }
 
+DATA_SOURCES_TO_CHECK_FOR_DUPLICATES = (settings.SYSTEM_DATA_SOURCE_ID,)  # Certain events might already exist
+
 LIPPUPISTE_EVENT_API_URL = getattr(settings, 'LIPPUPISTE_EVENT_API_URL', None)
 
 LOCAL_TZ = pytz.timezone('Europe/Helsinki')
@@ -485,8 +487,25 @@ class LippupisteImporter(Importer):
                     break
             else:
                 # not ignored
-                # check if the event actually contains the required fields
-                self._import_event(source_event, events)
+                # check if the event already exists from another data source
+                for data_source in DATA_SOURCES_TO_CHECK_FOR_DUPLICATES:
+                    # the event name must *start* with an existing event name, as lippupiste uses suffixes
+                    # there is no standard django method for filtering startswith this way around
+                    event_name = source_event['EventName'].lower()
+                    if Event.objects.filter(data_source=data_source,
+                                            deleted=False,
+                                            provider_fi__iexact=source_event['EventPromoterName'].lower(),
+                                            end_time__gte=datetime.now(pytz.utc)).extra(
+                        where=["%s ILIKE name_fi||'%%'"], params=[event_name]
+                    ):
+                        self.logger.info('---------')
+                        self.logger.info(source_event['EventName'])
+                        self.logger.info('omitting due to event existing already in another data source:')
+                        self.logger.info(data_source)
+                        break
+                else:
+                    # not ignored
+                    self._import_event(source_event, events)
         self._synch_events(events)
 
         # Because super events must exist to be linked, do this after synch. We also need to resynch.
