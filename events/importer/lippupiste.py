@@ -131,6 +131,7 @@ def get_namespaced_event_serie_id(event_serie_id):
 class LippupisteImporter(Importer):
     name = 'lippupiste'
     supported_languages = ['fi']
+    languages_to_detect = []
 
     def _cache_yso_keyword_objects(self):
         try:
@@ -172,6 +173,8 @@ class LippupisteImporter(Importer):
         self.super_event_ids_by_origin_id = {super_event.origin_id: super_event.id for super_event in qs}
 
     def setup(self):
+        self.languages_to_detect = [lang[0].replace('-', '_') for lang in settings.LANGUAGES
+                                    if lang[0] not in self.supported_languages]
         ytj_data_source, _ = DataSource.objects.get_or_create(defaults={'name': "YTJ"}, id='ytj')
         parent_org_args = dict(origin_id='0586977-6', data_source=ytj_data_source)
         parent_defaults = dict(name='Helsinki Marketing Oy')
@@ -344,6 +347,7 @@ class LippupisteImporter(Importer):
         return None
 
     def _update_event_data(self, event, source_event):
+        lang = 'fi'
         event_source_id = source_event['EventId']
         event['id'] = '%s:%s' % (self.data_source.id, event_source_id)
         event['origin_id'] = event_source_id
@@ -355,15 +359,26 @@ class LippupisteImporter(Importer):
         event_datetime = LOCAL_TZ.localize(datetime.combine(event_date, event_time))
         event_datetime = event_datetime.astimezone(pytz.utc)
         event['start_time'] = event_datetime
-        event['provider']['fi'] = source_event['EventPromoterName']
+        provider = source_event['EventPromoterName']
+        if provider:
+            Importer._set_multiscript_field(provider, event, [lang]+self.languages_to_detect, 'provider')
         # the uppercase names are so last century
-        event['name']['fi'] = source_event['EventName'].lower().title()
-        event['description']['fi'] = clean_description(source_event['EventSerieText'])
-        event['short_description']['fi'] = clean_short_description(source_event['EventSerieText'])
-        event['info_url']['fi'] = source_event['EventSerieLink']
+        name = source_event['EventName'].lower().title()
+        if name:
+            Importer._set_multiscript_field(name, event, [lang] + self.languages_to_detect, 'name')
+        description = clean_description(source_event['EventSerieText'])
+        if description:
+            Importer._set_multiscript_field(description, event, [lang] + self.languages_to_detect, 'description')
+        short_description = clean_short_description(source_event['EventSerieText'])
+        if short_description:
+            Importer._set_multiscript_field(short_description,
+                                            event,
+                                            [lang]+self.languages_to_detect,
+                                            'short_description')
+        event['info_url'][lang] = source_event['EventSerieLink']
         event['offers'] = [{'is_free': False,
-                            'description': {'fi': 'Tarkista hinta lippupalvelusta'},
-                            'info_url': {'fi': source_event['EventLink']},
+                            'description': {lang: 'Tarkista hinta lippupalvelusta'},
+                            'info_url': {lang: source_event['EventLink']},
                             'price': None}, ]
         event['image'] = source_event['EventSeriePictureBig_222x222']
         event['image_license'] = 'event_only'
@@ -377,9 +392,14 @@ class LippupisteImporter(Importer):
             event['location']['id'] = place_id
         else:
             self.logger.warning("No match found for place '%s' (event %s)" % (source_event['EventVenue'],
-                                                                              event['name']['fi']))
+                                                                              event['name'][lang]))
         # regardless of match, venue might have some extra info not found in tprek
-        event['location_extra_info']['fi'] = source_event['EventVenue']
+        location_extra_info = source_event['EventVenue']
+        if location_extra_info:
+            Importer._set_multiscript_field(location_extra_info,
+                                            event,
+                                            [lang]+self.languages_to_detect,
+                                            'location_extra_info')
         return event
 
     def _import_event(self, source_event, events):
