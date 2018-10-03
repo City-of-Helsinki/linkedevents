@@ -97,6 +97,13 @@ def mark_deleted(obj):
     return True
 
 
+def check_deleted(obj):
+    # we don't want to delete past events, so as far as the importer cares, they are considered deleted
+    if obj.deleted or obj.end_time < datetime.now(pytz.utc):
+        return True
+    return False
+
+
 def replace_html_breaks_with_whitespace(text):
     return re.sub(HTML_BREAK_LINE_REGEX, ' ', text)
 
@@ -444,7 +451,10 @@ class LippupisteImporter(Importer):
 
         now = datetime.now()
         syncher_queryset = Event.objects.filter(end_time__gte=now, data_source=self.data_source, deleted=False)
-        self.syncher = ModelSyncher(syncher_queryset, lambda obj: obj.origin_id, delete_func=mark_deleted)
+        self.syncher = ModelSyncher(syncher_queryset,
+                                    lambda obj: obj.origin_id,
+                                    delete_func=mark_deleted,
+                                    check_deleted_func=check_deleted)
 
         for event in event_list:
             obj = self.save_event(event)
