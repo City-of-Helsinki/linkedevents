@@ -1092,7 +1092,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                                                    required=False)
     sub_events = JSONLDRelatedField(serializer='EventSerializer',
                                     required=False, view_name='event-detail',
-                                    many=True, queryset=Event.objects.all())
+                                    many=True, queryset=Event.objects.filter(deleted=False))
     image = JSONLDRelatedField(serializer=ImageSerializer, required=False, allow_null=True,
                                view_name='image-detail', queryset=Image.objects.all(), expanded=True)
     in_language = JSONLDRelatedField(serializer=LanguageSerializer, required=False,
