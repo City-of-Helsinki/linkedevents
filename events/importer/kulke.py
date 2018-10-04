@@ -8,7 +8,7 @@ import dateutil
 from pytz import timezone
 from django.conf import settings
 from django.core.validators import URLValidator
-from django.core.exceptions import ValidationError, ObjectDoesNotExist, ImproperlyConfigured
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db import IntegrityError
 from django_orghierarchy.models import Organization
 
@@ -700,8 +700,6 @@ class KulkeImporter(Importer):
 
     def import_courses(self):
         print("Importing Kulke courses")
-        if 'extension_course' not in settings.INSTALLED_APPS:
-            raise ImproperlyConfigured("Course extension must be installed when importing Kulke courses.")
         self._import_events(importing_courses=True)
 
     def _import_events(self, importing_courses=False):
