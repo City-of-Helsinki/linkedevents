@@ -187,11 +187,11 @@ class LippupisteImporter(Importer):
         ytj_data_source, _ = DataSource.objects.get_or_create(defaults={'name': "YTJ"}, id='ytj')
         parent_org_args = dict(origin_id='0586977-6', data_source=ytj_data_source)
         parent_defaults = dict(name='Helsinki Marketing Oy')
-        parent_organization, _ = Organization.objects.get_or_create(
+        self.parent_organization, _ = Organization.objects.get_or_create(
             defaults=parent_defaults, **parent_org_args)
 
         org_args = dict(origin_id='1789232-4', data_source=ytj_data_source, internal_type=Organization.AFFILIATED,
-                        parent=parent_organization)
+                        parent=self.parent_organization)
         org_defaults = dict(name="Lippupiste Oy")
         self.organization, _ = Organization.objects.get_or_create(defaults=org_defaults, **org_args)
         data_source_args = dict(id=self.name)
@@ -504,6 +504,7 @@ class LippupisteImporter(Importer):
                     event_name = source_event['EventName'].lower()
                     if Event.objects.filter(data_source=data_source,
                                             deleted=False,
+                                            publisher=self.parent_organization,
                                             provider_fi__iexact=source_event['EventPromoterName'].lower(),
                                             end_time__gte=datetime.now(pytz.utc)).extra(
                         where=["%s ILIKE name_fi||'%%'"], params=[event_name]
