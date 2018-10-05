@@ -78,6 +78,12 @@ NAMES_TO_IGNORE_BY_PROVIDER = {
     'Helsingin kaupunginteatteri': ('käsiohjelma',),  # Certain events are not actual events.
     'SeaLife': ('kertaliput',),
     'Suomen kansallisteatteri.': ('lahjakortti',),
+    'Savoy-teatteri': ('lahjakortti',),
+    'KOM-teatteri': ('lahjakortti',),
+    'Teatteri Hevosenkenkä': ('lahjakortti',),
+    'Sellosali': ('lahjakortti',),
+    'Lahjakortit': ('lahjakortti',),
+    'Sunborn Catering Oy': ('naulakkomaksu',),
 }
 
 DATA_SOURCES_TO_CHECK_FOR_DUPLICATES = (settings.SYSTEM_DATA_SOURCE_ID,)  # Certain events might already exist
