@@ -5,6 +5,7 @@ import pytz
 import re
 import bleach
 import requests
+from os.path import commonprefix
 from collections import defaultdict
 from datetime import datetime
 from django.conf import settings
@@ -444,6 +445,22 @@ class LippupisteImporter(Importer):
         events = super_event.sub_events.filter(deleted=False)
         if not events.exists():
             return
+        # name superevent by common part of the subevent names
+        names = []
+        # only one language existed in feed, therefore we save the common part of *all* names to *all* languages
+        # this is to prevent data from different subevents dictating different language names
+        for lang in settings.LANGUAGES:
+            lang = lang[0]
+            lang = lang.replace('-', '_')
+            if any([getattr(subevent, 'name_'+lang) for subevent in events]):
+                names.extend([getattr(subevent, 'name_'+lang, '') for
+                              subevent in events if getattr(subevent, 'name_'+lang, '')])
+        super_event_name = commonprefix(names).strip(' -:')
+        for lang in settings.LANGUAGES:
+            lang = lang[0]
+            lang = lang.replace('-', '_')
+            if any([getattr(subevent, 'name_'+lang) for subevent in events]):
+                setattr(super_event, 'name_'+lang, super_event_name)
         first_event = events.order_by('start_time').first()
         super_event.start_time = first_event.start_time
         super_event.has_start_time = first_event.has_start_time
