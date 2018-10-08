@@ -7,7 +7,7 @@ class CourseExtension(EventExtension):
 
     def get_extension_serializer(self):
         from .serializers import CourseSerializer
-        return CourseSerializer()
+        return CourseSerializer(required=False, allow_null=True)
 
     def post_create_event(self, request, event, data):
         from .models import Course
