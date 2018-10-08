@@ -259,7 +259,7 @@ HAYSTACK_CONNECTIONS = {
 }
 
 import bleach  # noqa
-BLEACH_ALLOWED_TAGS = bleach.ALLOWED_TAGS + ["p", "div"]
+BLEACH_ALLOWED_TAGS = bleach.ALLOWED_TAGS + ["p", "div", "br"]
 
 from easy_thumbnails.conf import Settings as thumbnail_settings  # noqa
 THUMBNAIL_PROCESSORS = (

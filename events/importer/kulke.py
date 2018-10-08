@@ -132,7 +132,9 @@ MANUAL_CATEGORIES = {
     # perheliikunta
     628: SPORTS + FAMILIES,
     # lapset ja nuoret
-    355: CHILDREN + YOUTH
+    355: CHILDREN + YOUTH,
+    # lapsi ja aikuinen yhdessä > perheet
+    747: FAMILIES
 }
 
 # these are added to all courses

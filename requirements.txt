@@ -5,7 +5,7 @@
 #    pip-compile --output-file requirements.txt requirements.in
 #
 -e git+https://github.com/City-of-Helsinki/munigeo@v0.2.6#egg=django-munigeo
--e git+https://github.com/City-of-Helsinki/django-orghierarchy.git@v0.1.7#egg=django-orghierarchy
+-e git+https://github.com/City-of-Helsinki/django-orghierarchy.git@v0.1.13#egg=django-orghierarchy
 astroid==1.6.1            # via pylint
 attrs==17.4.0             # via pytest
 bleach==2.1.3

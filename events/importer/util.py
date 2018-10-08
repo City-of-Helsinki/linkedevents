@@ -38,8 +38,10 @@ def separate_scripts(text, scripts):
             separated[last_language] += paragraph
             last_paragraph = paragraph
             continue
+        # replace any misleading tags left
+        paragraph_stripped = re.sub(r'(<(/)?strong>)|(<br>)+|&amp;|<a href=.*">|</a>', ' ', paragraph)
         try:
-            language = detect(paragraph)
+            language = detect(paragraph_stripped)
         except LangDetectException:
             # an exception means no language could be detected
             language = last_language

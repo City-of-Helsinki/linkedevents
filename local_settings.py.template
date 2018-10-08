@@ -28,7 +28,7 @@ HAYSTACK_CONNECTIONS = {
     'default-fi': {
         'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
         'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
-        'URL': 'linkedevents-elasticsearch',
+        'URL': 'http://localhost:9200/',
         'INDEX_NAME': 'linkedevents-fi',
         'MAPPINGS': CUSTOM_MAPPINGS,
         'SETTINGS': {
@@ -50,35 +50,35 @@ HAYSTACK_CONNECTIONS = {
     'default-sv': {
         'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
         'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
-        'URL': 'linkedevents-elasticsearch',
+        'URL': 'http://localhost:9200/',
         'INDEX_NAME': 'linkedevents-sv',
         'MAPPINGS': CUSTOM_MAPPINGS
     },
     'default-en': {
         'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
         'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
-        'URL': 'linkedevents-elasticsearch',
+        'URL': 'http://localhost:9200/',
         'INDEX_NAME': 'linkedevents-en',
         'MAPPINGS': CUSTOM_MAPPINGS
     },
     'default-ru': {
         'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
         'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
-        'URL': 'linkedevents-elasticsearch',
+        'URL': 'http://localhost:9200/',
         'INDEX_NAME': 'linkedevents-ru',
         'MAPPINGS': CUSTOM_MAPPINGS
     },
     'default-zh-hans': {
         'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
         'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
-        'URL': 'linkedevents-elasticsearch',
+        'URL': 'http://localhost:9200/',
         'INDEX_NAME': 'linkedevents-zh-hans',
         'MAPPINGS': CUSTOM_MAPPINGS
     },
     'default-ar': {
         'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
         'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
-        'URL': 'linkedevents-elasticsearch',
+        'URL': 'http://localhost:9200/',
         'INDEX_NAME': 'linkedevents-ar',
         'MAPPINGS': CUSTOM_MAPPINGS
     },

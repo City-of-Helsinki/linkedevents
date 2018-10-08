@@ -342,6 +342,48 @@ def test_short_description_cannot_exceed_160_chars(api_client, minimal_event_dic
 
 
 @pytest.mark.django_db
+def test_description_may_contain_html(api_client, minimal_event_dict, user):
+    api_client.force_authenticate(user)
+
+    for lang in minimal_event_dict['description']:
+        minimal_event_dict['description'][lang] = ' '.join(settings.BLEACH_ALLOWED_TAGS)
+
+    response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
+    assert response.status_code == 201
+    for lang in minimal_event_dict['description']:
+        assert response.data['description'][lang] == ' '.join(settings.BLEACH_ALLOWED_TAGS)
+
+
+@pytest.mark.django_db
+def test_description_may_only_contain_safe_tags(api_client, minimal_event_dict, user):
+    api_client.force_authenticate(user)
+
+    for lang in minimal_event_dict['description']:
+        minimal_event_dict['description'][lang] = '<script/>'
+
+    response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
+    assert response.status_code == 201
+    for lang in minimal_event_dict['description']:
+        assert response.data['description'][lang] != '<script/>'
+
+
+@pytest.mark.django_db
+def test_other_fields_may_not_contain_html(api_client, complex_event_dict, user):
+    text_fields = ('location_extra_info', 'short_description', 'provider', 'name')
+    api_client.force_authenticate(user)
+
+    for field in text_fields:
+        for lang in complex_event_dict[field]:
+            complex_event_dict[field][lang] = '<br/>'
+
+    response = api_client.post(reverse('event-list'), complex_event_dict, format='json')
+    assert response.status_code == 201
+    for field in text_fields:
+        for lang in complex_event_dict[field]:
+            assert response.data[field][lang] != '<br/>'
+
+
+@pytest.mark.django_db
 @pytest.mark.parametrize("offers, expected", [
     ([{'is_free': True}], 201),
     ([{'is_free': False, 'price': {'fi': 4}}], 201),
@@ -360,6 +402,17 @@ def test_price_info_options(api_client, minimal_event_dict, user, offers, expect
     assert response.status_code == expected
     if expected == 400:
         assert force_text(response.data['offers'][0]) == 'Price info must be specified before an event is published.'
+
+
+@pytest.mark.django_db
+def test_no_html_in_price_info(api_client, minimal_event_dict, user):
+    api_client.force_authenticate(user)
+    minimal_event_dict['offers'] = [{'description': {'fi': '<br/>'}, 'price': {'fi': '<br/>'}, 'is_free': False}]
+
+    response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
+    assert response.status_code == 201
+    assert response.data['offers'][0]['description']['fi'] != '<br/>'
+    assert response.data['offers'][0]['price']['fi'] != '<br/>'
 
 
 @pytest.mark.parametrize('name, is_valid', [
