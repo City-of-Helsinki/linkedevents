@@ -161,6 +161,8 @@ ESPOO_LANGUAGES = {
     'en': 2,
 }
 
+ADDRESS_LANGUAGES = ('fi', 'sv')
+
 LOCAL_TZ = timezone('Europe/Helsinki')
 
 
@@ -322,9 +324,13 @@ class EspooImporter(Importer):
         if espoo_loc_id:
             return espoo_loc_id
 
+        address_lang = lang
+        if address_lang not in ADDRESS_LANGUAGES:
+            # pick the first preferred language (e.g. Finnish) if lang (e.g. English) has no address translations
+            address_lang = ADDRESS_LANGUAGES[0]
         filter_params = {
             'deleted': False,
-            'street_address_'+lang+'__icontains': street_address,
+            'street_address_'+address_lang+'__icontains': street_address,
         }
         places = Place.objects.filter(**filter_params).order_by('id')
         place = places.first()  # Choose one place arbitrarily if many.
@@ -332,6 +338,8 @@ class EspooImporter(Importer):
             self.logger.warning('Several tprek_id match the address "%s".' % street_address)
         if not place:
             origin_id = self._get_next_place_id("espoo")
+            # address must be saved in the right language!
+            address_data['street_address_'+address_lang] = address_data.pop('street_address')
             address_data.update({
                 'publisher': self.organization,
                 'origin_id': origin_id,
@@ -346,10 +354,10 @@ class EspooImporter(Importer):
             # update metadata in the given language if the place belongs to espoo:
             setattr(place, 'name_'+lang, name)
             setattr(place, 'info_url_'+lang, url)
-            setattr(place, 'street_address_'+lang, street_address)
+            setattr(place, 'street_address_'+address_lang, street_address)
             place.save(update_fields=['name_'+lang, 'info_url_'+lang, 'street_address_'+lang])
         # Cached the location to speed up
-        self.location_cache.update({street_address: place.id})
+        self.location_cache.update({street_address: place.id})  # location cache need not care about address language
         return place.id
 
     def _map_classification_keywords_from_dict(self, classification_node_name):
