@@ -9,11 +9,16 @@ from django.conf import settings
 from rest_framework.exceptions import ValidationError
 from django.contrib.gis.geos import Point, Polygon
 from django.contrib.gis.gdal import SpatialReference, CoordTransform
+
+from events.importer.sync import ModelSyncher
 from .util import separate_scripts
 
 from modeltranslation.translator import translator
 
-from events.models import Image, Language, Event, License, Offer, EventLink, Place
+from events.models import Image, Language, Event, Offer, EventLink, Place
+
+EXTENSION_COURSE_FIELDS = ('enrolment_start_time', 'enrolment_end_time', 'maximum_attendee_capacity',
+                           'minimum_attendee_capacity', 'remaining_attendee_capacity')
 
 
 # Using a recursive default dictionary
@@ -74,23 +79,83 @@ class Importer(object):
             if string:
                 event[field][script] = string
 
-    def get_or_create_image(self, url):
-        if url is None or len(url) == 0:
-            return None
-        if url in self._images:
-            return self._images[url]
-
-        defaults = {'publisher': self.organization, 'data_source': self.data_source}
-        img, created = Image.objects.get_or_create(
-            url=url, defaults=defaults)
-        return img
-
-    def set_image(self, obj, image_object):
-        if obj is None or image_object is None:
+    def set_image(self, obj, image_data):
+        if not image_data:
+            self._set_field(obj, 'image', None)
             return
-        if image_object not in obj.images.all():
+
+        image_url = image_data.get('url', '').strip()
+        if not image_url:
+            print('Invalid image url "{}" obj {}'.format(image_data.get('url'), obj))
+            return
+
+        image = self._get_image(image_url)
+        image = self._update_image(image, image_data)
+        self._set_field(obj, 'image', image)
+
+        if image._changed:
             obj._changed = True
-            obj.images.add(image_object)
+
+    def set_images(self, obj, images_data):
+        image_syncher = ModelSyncher(obj.images.all(), lambda image: image.url, delete_func=obj.images.remove)
+
+        for image_data in images_data:
+            image_url = image_data.get('url', '').strip()
+            if not image_url:
+                print('Invalid image url "{}" obj {}'.format(image_data.get('url'), obj))
+                continue
+
+            new_image = False
+            image = image_syncher.get(image_url)
+
+            if not image:
+                new_image = True
+                image = self._get_image(image_url)
+
+            image = self._update_image(image, image_data)
+
+            if new_image:
+                obj.images.add(image)
+                obj._changed = True
+            elif image._changed:
+                obj._changed = True
+
+            image_syncher.mark(image)
+
+        image_syncher.finish(force=True)
+
+    def _get_image(self, image_url):
+        if not image_url:
+            return None
+
+        if image_url in self._images:
+            return self._images[image_url]
+
+        image = Image(
+            publisher=self.organization,
+            data_source=self.data_source,
+            url=image_url,
+        )
+        image._changed = True
+        image._created = True
+
+        return image
+
+    def _update_image(self, image, image_data):
+        if not hasattr(image, '_changed'):
+            image._changed = False
+
+        self._set_field(image, 'publisher', self.organization)
+        self._set_field(image, 'data_source', self.data_source)
+
+        for field in ('name', 'photographer_name', 'cropping', 'license'):
+            if field in image_data:
+                self._set_field(image, field, image_data.get(field))
+
+        if image._changed:
+            image.save()
+
+        return image
 
     def link_recurring_events(self, events, instance_fields=[]):
         """Finds events that are instances of a common parent
@@ -219,20 +284,6 @@ class Importer(object):
 
         self._set_field(obj, 'publisher_id', info['publisher'].id)
 
-        image_url = info.get('image', '').strip()
-        image_object = self.get_or_create_image(image_url)
-
-        if 'image_license' in info:
-            license_id = info['image_license']
-            if image_object.license_id != license_id:
-                try:
-                    license_object = License.objects.get(id=license_id)
-                except License.DoesNotExist:
-                    print('Invalid license id "%s" image %s event %s' % (license_id, image_url, obj))
-                    return
-                image_object.license = license_object
-                image_object.save(update_fields=('license',))
-
         self._set_field(obj, 'deleted', False)
 
         if obj._created or obj._changed:
@@ -244,7 +295,8 @@ class Importer(object):
 
         # many-to-many fields
 
-        self.set_image(obj, image_object)
+        if 'images' in info:
+            self.set_images(obj, info['images'])
 
         keywords = info.get('keywords', [])
         new_keywords = set([kw.id for kw in keywords])
@@ -329,26 +381,30 @@ class Importer(object):
                     link_obj.save()
                 obj._changed = True
 
-        extension_data = info.get('extension_course')
-        if extension_data is not None:
-            from extension_course.models import Course
+        if 'extension_course' in settings.INSTALLED_APPS:
+            extension_data = info.get('extension_course')
+            if extension_data is not None:
+                from extension_course.models import Course
 
-            try:
-                course = obj.extension_course
-                course._changed = False
-                self._set_field(course, 'enrolment_start_time', extension_data['enrolment_start_time'])
-                self._set_field(course, 'enrolment_end_time', extension_data['enrolment_end_time'])
-                course_changed = course._changed
-            except Course.DoesNotExist:
-                Course.objects.create(
-                    event=obj,
-                    enrolment_start_time=extension_data['enrolment_start_time'],
-                    enrolment_end_time=extension_data['enrolment_end_time'],
-                )
-                course_changed = True
+                try:
+                    course = obj.extension_course
+                    course._changed = False
+                    for field in EXTENSION_COURSE_FIELDS:
+                        self._set_field(course, field, extension_data.get(field))
 
-            if course_changed:
-                obj._changed = True
+                    course_changed = course._changed
+                    if course_changed:
+                        course.save()
+
+                except Course.DoesNotExist:
+                    Course.objects.create(
+                        event=obj,
+                        **{field: extension_data.get(field) for field in EXTENSION_COURSE_FIELDS}
+                    )
+                    course_changed = True
+
+                if course_changed:
+                    obj._changed = True
 
         if obj._changed or obj._created:
             # save again after adding related fields to update last_modified_time!

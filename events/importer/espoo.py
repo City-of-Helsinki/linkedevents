@@ -522,7 +522,7 @@ class EspooImporter(Importer):
             matches = re.findall(r'src="(.*?)"', str(ext_props['LiftPicture']))
             if matches:
                 img_url = matches[0]
-                event['image'] = img_url
+                event['image'] = {'url': img_url}
             del ext_props['LiftPicture']
 
         event['url'][lang] = '%s/api/opennc/v1/Contents(%s)' % (
