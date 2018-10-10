@@ -138,10 +138,10 @@ class Image(models.Model):
         super(Image, self).save(*args, **kwargs)
 
     def is_user_editable(self):
-        return self.data_source.user_editable
+        return bool(self.data_source and self.data_source.user_editable)
 
     def is_user_edited(self):
-        return bool(self.data_source.user_editable and self.last_modified_by)
+        return bool(self.is_user_editable() and self.last_modified_by)
 
     def can_be_edited_by(self, user):
         """Check if current event can be edited by the given user"""
