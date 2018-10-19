@@ -49,7 +49,7 @@ LOGGING = {
 
 # Application definition
 
-INSTALLED_APPS = (
+INSTALLED_APPS = [
     'helusers',
     'django.contrib.sites',
     'modeltranslation',
@@ -82,9 +82,9 @@ INSTALLED_APPS = (
     'munigeo',
     'leaflet',
     'django_orghierarchy',
-)
+]
 
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE_CLASSES = [
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -93,7 +93,7 @@ MIDDLEWARE_CLASSES = (
     'reversion.middleware.RevisionMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-)
+]
 
 ROOT_URLCONF = 'linkedevents.urls'
 
