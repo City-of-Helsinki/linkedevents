@@ -73,7 +73,7 @@ raven==6.6.0
 rdflib==4.2.2
 requests-cache==0.4.13
 requests-oauthlib==0.8.0  # via django-allauth
-requests==2.18.4
+requests==2.20.0
 six==1.11.0
 swapper==1.1.0
 urllib3==1.22             # via elasticsearch, requests
