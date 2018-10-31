@@ -16,7 +16,7 @@ pyflakes
 pylint
 python-dateutil
 pytz
-requests
+requests>=2.20.0
 requests-cache
 six
 django-extensions
