@@ -406,10 +406,10 @@ class KulkeImporter(Importer):
                     image_url = unicodetext(attachment).strip().replace('/MediumEventPic', '/EventPic')
                     if image_url:
                         if self.event_only_license:
-                            event['image'] = {
+                            event['images'] = [{
                                 'url': image_url,
                                 'license': self.event_only_license,
-                            }
+                            }]
                         else:
                             print('Cannot create an image, "event_only" License missing.')
                     break

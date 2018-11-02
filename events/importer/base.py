@@ -277,7 +277,7 @@ class Importer(object):
             info['end_time'] = info['end_time'].replace(hour=0, minute=0, second=0)
             info['end_time'] += datetime.timedelta(days=1)
 
-        skip_fields = ['id', 'location', 'publisher', 'offers', 'keywords', 'image', 'image_license']
+        skip_fields = ['id', 'location', 'publisher', 'offers', 'keywords', 'images']
         self._update_fields(obj, info, skip_fields)
 
         self._set_field(obj, 'location_id', location_id)
