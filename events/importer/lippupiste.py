@@ -396,8 +396,10 @@ class LippupisteImporter(Importer):
                             'description': {lang: 'Tarkista hinta lippupalvelusta'},
                             'info_url': {lang: source_event['EventLink']},
                             'price': None}, ]
-        event['image'] = source_event['EventSeriePictureBig_222x222']
-        event['image_license'] = 'event_only'
+        event['images'] = [{
+            'url': source_event['EventSeriePictureBig_222x222'],
+            'license': 'event_only',
+        }]
 
         existing_keywords = event.get('keywords', set())
         keywords_from_source = self._get_keywords_from_source_categories(source_event['EventSerieCategories'])
