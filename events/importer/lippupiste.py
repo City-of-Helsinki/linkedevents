@@ -9,7 +9,7 @@ from os.path import commonprefix
 from collections import defaultdict
 from datetime import datetime
 from django.conf import settings
-from django.core.exceptions import ImproperlyConfigured
+from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.utils.html import strip_tags
 from django_orghierarchy.models import Organization
 from events.models import DataSource, Event, Keyword, Place
@@ -496,6 +496,8 @@ class LippupisteImporter(Importer):
         self.logger.info("Importing Lippupiste events")
         events = recur_dict()
         event_source_data = list(self._fetch_event_source_data(LIPPUPISTE_EVENT_API_URL))
+        if not event_source_data:
+            raise ValidationError("Lippupiste API didn't return data, giving up")
 
         for source_event in event_source_data:
             # check if the postal code matches
