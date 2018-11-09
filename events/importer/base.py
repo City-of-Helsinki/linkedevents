@@ -149,6 +149,7 @@ class Importer(object):
             data_source=self.data_source,
             url=image_url,
         )
+        self._images[image_url] = image
         image._changed = True
         image._created = True
 
