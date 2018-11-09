@@ -100,7 +100,9 @@ class Importer(object):
             obj._changed = True
 
     def set_images(self, obj, images_data):
-        image_syncher = ModelSyncher(obj.images.all(), lambda image: image.url, delete_func=obj.images.remove)
+        image_syncher = ModelSyncher(obj.images.all(),
+                                     lambda image: image.url,
+                                     delete_func=self._image_remove_func(obj))
 
         for image_data in images_data:
             image_url = image_data.get('url', '').strip()
@@ -126,6 +128,14 @@ class Importer(object):
             image_syncher.mark(image)
 
         image_syncher.finish(force=True)
+
+    def _remove_image(self, obj, image):
+        # we need this to mark the object changed if an image is removed
+        obj._changed = True
+        return obj.images.remove(image)
+
+    def _image_remove_func(self, obj):
+        return lambda image: self._remove_image(obj, image)
 
     def _get_image(self, image_url):
         if not image_url:
