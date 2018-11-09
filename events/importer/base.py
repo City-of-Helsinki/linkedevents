@@ -31,7 +31,6 @@ def recur_dict():
 class Importer(object):
     def __init__(self, options):
         super(Importer, self).__init__()
-        self._images = {obj.url: obj for obj in Image.objects.all()}
         self.options = options
         self.verbosity = options['verbosity']
         self.logger = logging.getLogger(__name__)
@@ -58,6 +57,10 @@ class Importer(object):
         self.gps_to_target_ct = CoordTransform(gps_srs, target_srs)
 
         self.setup()
+
+        # this has to be run after setup, as it relies on organization and data source being set
+        self._images = {obj.url: obj for obj in Image.objects.filter(publisher=self.organization,
+                                                                     data_source=self.data_source)}
 
     def setup(self):
         pass
