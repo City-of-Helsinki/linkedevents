@@ -23,8 +23,7 @@ class TprekImporter(Importer):
     name = 'tprek'
     supported_languages = ['fi', 'sv', 'en']
 
-    def __init__(self, *args, **kwargs):
-        super(TprekImporter, self).__init__(*args, **kwargs)
+    def setup(self):
         ds_args = dict(id='tprek')
         defaults = dict(name='Toimipisterekisteri')
         self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)

@@ -3,6 +3,7 @@ import logging
 import itertools
 import datetime
 from collections import defaultdict
+from functools import partial
 import operator
 
 from django.conf import settings
@@ -31,7 +32,6 @@ def recur_dict():
 class Importer(object):
     def __init__(self, options):
         super(Importer, self).__init__()
-        self._images = {obj.url: obj for obj in Image.objects.all()}
         self.options = options
         self.verbosity = options['verbosity']
         self.logger = logging.getLogger(__name__)
@@ -58,6 +58,10 @@ class Importer(object):
         self.gps_to_target_ct = CoordTransform(gps_srs, target_srs)
 
         self.setup()
+
+        # this has to be run after setup, as it relies on organization and data source being set
+        self._images = {obj.url: obj for obj in Image.objects.filter(publisher=self.organization,
+                                                                     data_source=self.data_source)}
 
     def setup(self):
         pass
@@ -97,7 +101,9 @@ class Importer(object):
             obj._changed = True
 
     def set_images(self, obj, images_data):
-        image_syncher = ModelSyncher(obj.images.all(), lambda image: image.url, delete_func=obj.images.remove)
+        image_syncher = ModelSyncher(obj.images.all(),
+                                     lambda image: image.url,
+                                     delete_func=partial(self._remove_image, obj))
 
         for image_data in images_data:
             image_url = image_data.get('url', '').strip()
@@ -124,6 +130,12 @@ class Importer(object):
 
         image_syncher.finish(force=True)
 
+    def _remove_image(self, obj, image):
+        # we need this to mark the object changed if an image is removed
+        obj._changed = True
+        obj.images.remove(image)
+        return True
+
     def _get_image(self, image_url):
         if not image_url:
             return None
@@ -136,6 +148,7 @@ class Importer(object):
             data_source=self.data_source,
             url=image_url,
         )
+        self._images[image_url] = image
         image._changed = True
         image._created = True
 
