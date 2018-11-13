@@ -1950,9 +1950,6 @@ class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView
             if division:
                 queryset = filter_division(queryset, 'divisions', division)
 
-        # never include deleted objects in the results, no matter what the model
-        queryset = queryset.filter(deleted=False)
-
         if len(models) > 0:
             queryset = queryset.models(*list(models))
 

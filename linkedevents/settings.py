@@ -245,6 +245,8 @@ CITYSDK_API_SETTINGS = {
     'DEFAULT_POI_CATEGORY': '53562f3238653c0a842a3bf7'
 }
 
+HAYSTACK_SIGNAL_PROCESSOR = 'haystack.signals.RealtimeSignalProcessor'
+
 HAYSTACK_CONNECTIONS = {
     'default': {
         'ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
