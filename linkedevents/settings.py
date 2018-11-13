@@ -36,18 +36,20 @@ LOGGING = {
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'timestamped',
-            'level': 'INFO',
+            'level': 'DEBUG',
         },
     },
-    'root': {
-        'handlers': ['console'],
-        'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
-    },
+    'loggers': {
+        '': {
+            'handlers': ['console'],
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+        },
+    }
 }
 
 # Application definition
 
-INSTALLED_APPS = (
+INSTALLED_APPS = [
     'helusers',
     'django.contrib.sites',
     'modeltranslation',
@@ -80,9 +82,9 @@ INSTALLED_APPS = (
     'munigeo',
     'leaflet',
     'django_orghierarchy',
-)
+]
 
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE_CLASSES = [
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -91,7 +93,7 @@ MIDDLEWARE_CLASSES = (
     'reversion.middleware.RevisionMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-)
+]
 
 ROOT_URLCONF = 'linkedevents.urls'
 
@@ -243,6 +245,8 @@ CITYSDK_API_SETTINGS = {
     'DEFAULT_POI_CATEGORY': '53562f3238653c0a842a3bf7'
 }
 
+HAYSTACK_SIGNAL_PROCESSOR = 'haystack.signals.RealtimeSignalProcessor'
+
 HAYSTACK_CONNECTIONS = {
     'default': {
         'ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
@@ -269,6 +273,8 @@ THUMBNAIL_PROCESSORS = (
 
 # django-orghierachy swappable model
 DJANGO_ORGHIERARCHY_DATASOURCE_MODEL = 'events.DataSource'
+
+AUTO_ENABLED_EXTENSIONS = []
 
 # local_settings.py can be used to override environment-specific settings
 # like database and email that differ between development and production.

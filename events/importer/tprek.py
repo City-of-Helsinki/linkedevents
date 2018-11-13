@@ -23,8 +23,7 @@ class TprekImporter(Importer):
     name = 'tprek'
     supported_languages = ['fi', 'sv', 'en']
 
-    def __init__(self, *args, **kwargs):
-        super(TprekImporter, self).__init__(*args, **kwargs)
+    def setup(self):
         ds_args = dict(id='tprek')
         defaults = dict(name='Toimipisterekisteri')
         self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
@@ -183,8 +182,8 @@ class TprekImporter(Importer):
                 print("Invalid coordinates (%f, %f) for %s" % (n, e, obj))
 
         picture_url = info.get('picture_url', '').strip()
-        image_object = self.get_or_create_image(picture_url)
-        self.set_image(obj, image_object)
+        if picture_url:
+            self.set_image(obj, {'url': picture_url})
 
         if position and obj.position:
             # If the distance is less than 10cm, assume the location

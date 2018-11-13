@@ -7,6 +7,7 @@ import re
 import struct
 import time
 import urllib.parse
+from copy import deepcopy
 from datetime import datetime, timedelta
 
 # django and drf
@@ -24,6 +25,7 @@ from django.utils.encoding import force_text
 from rest_framework import (
     serializers, relations, viewsets, mixins, filters, generics, permissions
 )
+from rest_framework.filters import BaseFilterBackend
 from rest_framework.permissions import SAFE_METHODS
 from rest_framework.settings import api_settings
 from rest_framework.reverse import reverse
@@ -55,6 +57,7 @@ from events.auth import ApiKeyAuth, ApiKeyUser
 from events.custom_elasticsearch_search_backend import (
     CustomEsSearchQuerySet as SearchQuerySet
 )
+from events.extensions import apply_select_and_prefetch, get_extensions_from_request
 from events.models import (
     Place, Event, Keyword, KeywordSet, Language, OpeningHoursSpecification, EventLink,
     Offer, DataSource, Image, PublicationStatus, PUBLICATION_STATUSES, License
@@ -1093,8 +1096,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     sub_events = JSONLDRelatedField(serializer='EventSerializer',
                                     required=False, view_name='event-detail',
                                     many=True, queryset=Event.objects.filter(deleted=False))
-    image = JSONLDRelatedField(serializer=ImageSerializer, required=False, allow_null=True,
-                               view_name='image-detail', queryset=Image.objects.all(), expanded=True)
+    images = JSONLDRelatedField(serializer=ImageSerializer, required=False, allow_null=True, many=True,
+                                view_name='image-detail', queryset=Image.objects.all(), expanded=True)
     in_language = JSONLDRelatedField(serializer=LanguageSerializer, required=False,
                                      view_name='language-detail', many=True, queryset=Language.objects.all())
     audience = JSONLDRelatedField(serializer=KeywordSerializer, view_name='keyword-detail',
@@ -1114,6 +1117,10 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         # testing and debugging.
         self.skip_empties = skip_empties
 
+        if self.context:
+            for ext in self.context.get('extensions', ()):
+                self.fields['extension_{}'.format(ext.identifier)] = ext.get_extension_serializer()
+
     def parse_datetimes(self, data):
         # here, we also set has_start_time and has_end_time accordingly
         for field in ['date_published', 'start_time', 'end_time']:
@@ -1125,11 +1132,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
     def to_internal_value(self, data):
         data = self.parse_datetimes(data)
-
-        # parse the first image to the image field
-        if 'images' in data:
-            if data['images']:
-                data['image'] = data['images'][0]
 
         # If the obligatory fields are null or empty, remove them to prevent to_internal_value from checking them.
         # Only for drafts, because null start time of a PUBLIC event will indicate POSTPONED.
@@ -1170,6 +1172,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
         # if the event is a draft, no further validation is performed
         if data['publication_status'] == PublicationStatus.DRAFT:
+            data = self.run_extension_validations(data)
             return data
 
         # check that published events have a location, keyword and start_time
@@ -1229,6 +1232,15 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         if errors:
             raise serializers.ValidationError(errors)
 
+        data = self.run_extension_validations(data)
+
+        return data
+
+    def run_extension_validations(self, data):
+        for ext in self.context.get('extensions', ()):
+            new_data = ext.validate_event_data(self, data)
+            if new_data:
+                data = new_data
         return data
 
     def create(self, validated_data):
@@ -1244,6 +1256,13 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                                'created_time': Event.now(),  # we must specify creation time as we are setting id
                                'event_status': Event.Status.SCHEDULED,  # mark all newly created events as scheduled
                                })
+
+        # pop out extension related fields because create() cannot stand them
+        original_validated_data = deepcopy(validated_data)
+        for field_name, field in self.fields.items():
+            if field_name.startswith('extension_') and field.source in validated_data:
+                validated_data.pop(field.source)
+
         event = super().create(validated_data)
 
         # create and add related objects
@@ -1251,6 +1270,12 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             Offer.objects.create(event=event, **offer)
         for link in links:
             EventLink.objects.create(event=event, **link)
+
+        request = self.context['request']
+        extensions = get_extensions_from_request(request)
+
+        for ext in extensions:
+            ext.post_create_event(request=request, event=event, data=original_validated_data)
 
         return event
 
@@ -1293,6 +1318,12 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                 # if the start_time is not provided, do nothing
                 pass
 
+        # pop out extension related fields because update() cannot stand them
+        original_validated_data = deepcopy(validated_data)
+        for field_name, field in self.fields.items():
+            if field_name.startswith('extension_') and field.source in validated_data:
+                validated_data.pop(field.source)
+
         # update validated fields
         super().update(instance, validated_data)
 
@@ -1307,6 +1338,12 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             instance.external_links.all().delete()
             for link in links:
                 EventLink.objects.create(event=instance, **link)
+
+        request = self.context['request']
+        extensions = get_extensions_from_request(request)
+
+        for ext in extensions:
+            ext.post_update_event(request=request, event=instance, data=original_validated_data)
 
         return instance
 
@@ -1341,12 +1378,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                 except TypeError:
                     # not list/dict
                     pass
-        if 'image' in ret:
-            if ret['image'] is None:
-                ret['images'] = []
-            else:
-                ret['images'] = [ret['image']]
-            del ret['image']
         request = self.context.get('request')
         if request:
             if not request.user.is_authenticated():
@@ -1583,7 +1614,35 @@ def _filter_event_queryset(queryset, params, srs=None):
                 q = q | Q(pk__in=[])
         queryset = queryset.filter(q)
 
+    # Filter by audience min age
+    val = params.get('audience_min_age', None)
+    if val:
+        try:
+            min_age = int(val)
+        except ValueError:
+            raise ValidationError(_('Audience minimum age must be a digit.'))
+        queryset = queryset.filter(audience_min_age__lte=min_age)
+
+    # Filter by audience max age
+    val = params.get('audience_max_age', None)
+    if val:
+        try:
+            max_age = int(val)
+        except ValueError:
+            raise ValidationError(_('Audience minimum age must be a digit.'))
+        queryset = queryset.filter(audience_max_age__gte=max_age)
+
     return queryset
+
+
+class EventExtensionFilterBackend(BaseFilterBackend):
+    def filter_queryset(self, request, queryset, view):
+        extensions = get_extensions_from_request(request)
+
+        for ext in extensions:
+            queryset = ext.filter_event_queryset(request, queryset, view)
+
+        return queryset
 
 
 class EventFilter(django_filters.rest_framework.FilterSet):
@@ -1620,7 +1679,8 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
     queryset = queryset.prefetch_related(
         'offers', 'keywords', 'audience', 'external_links', 'sub_events', 'in_language')
     serializer_class = EventSerializer
-    filter_backends = (EventOrderingFilter, django_filters.rest_framework.DjangoFilterBackend)
+    filter_backends = (EventOrderingFilter, django_filters.rest_framework.DjangoFilterBackend,
+                       EventExtensionFilterBackend)
     filter_class = EventFilter
     ordering_fields = ('start_time', 'end_time', 'duration', 'last_modified_time', 'name')
     ordering = ('-last_modified_time',)
@@ -1649,7 +1709,14 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
         context.setdefault('skip_fields', set()).update(set([
             'headline',
             'secondary_headline']))
+        context['extensions'] = get_extensions_from_request(self.request)
         return context
+
+    def get_queryset(self):
+        return apply_select_and_prefetch(
+            queryset=super().get_queryset(),
+            extensions=get_extensions_from_request(self.request)
+        )
 
     def get_object(self):
         # Overridden to prevent queryset filtering from being applied

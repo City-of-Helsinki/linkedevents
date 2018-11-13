@@ -12,7 +12,7 @@ from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.utils.html import strip_tags
 from django_orghierarchy.models import Organization
-from events.models import DataSource, Event, Keyword, Place
+from events.models import DataSource, Event, Keyword, Place, License
 from .base import Importer, recur_dict, register_importer
 from .sync import ModelSyncher
 from .util import clean_text
@@ -207,6 +207,10 @@ class LippupisteImporter(Importer):
         self.tprek_data_source = DataSource.objects.get(id='tprek')
         self._cache_yso_keyword_objects()
         self._cache_place_data()
+        try:
+            self.event_only_license = License.objects.get(id='event_only')
+        except License.DoesNotExist:
+            self.event_only_license = None
 
     def _fetch_event_source_data(self, url):
         # stream=True allows lazy iteration
@@ -396,8 +400,10 @@ class LippupisteImporter(Importer):
                             'description': {lang: 'Tarkista hinta lippupalvelusta'},
                             'info_url': {lang: source_event['EventLink']},
                             'price': None}, ]
-        event['image'] = source_event['EventSeriePictureBig_222x222']
-        event['image_license'] = 'event_only'
+        event['images'] = [{
+            'url': source_event['EventSeriePictureBig_222x222'],
+            'license': self.event_only_license,
+        }]
 
         existing_keywords = event.get('keywords', set())
         keywords_from_source = self._get_keywords_from_source_categories(source_event['EventSerieCategories'])

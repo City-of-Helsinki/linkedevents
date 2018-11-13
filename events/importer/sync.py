@@ -9,6 +9,7 @@ class ModelSyncher(object):
         # Generate a list of all objects
         for obj in queryset:
             d[generate_obj_id(obj)] = obj
+            # this only resets the initial queryset, objects outside it may still have _found or _changed True
             obj._found = False
             obj._changed = False
 
@@ -32,6 +33,12 @@ class ModelSyncher(object):
         delete_list = []
         for obj_id, obj in self.obj_dict.items():
             if obj._found:
+                # We have to reset _found so we don't mark or match the same object across several synchers.
+                # Only relevant if consecutive synchers get different querysets;
+                # then the marked object might come from outside the initial syncher queryset.
+                # That results in spurious _found values in both found and non-found objects.
+                obj._found = False
+                obj._changed = False
                 continue
             if self.check_deleted_func is not None and self.check_deleted_func(obj):
                 continue
