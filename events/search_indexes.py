@@ -21,7 +21,14 @@ class EventIndex(indexes.SearchIndex, indexes.Indexable):
         return super(EventIndex, self).prepare(obj)
 
     def index_queryset(self, using=None):
-        return self.get_model().objects.filter(publication_status=PublicationStatus.PUBLIC, deleted=False)
+        return super().index_queryset(using).filter(publication_status=PublicationStatus.PUBLIC, deleted=False)
+
+    def update_object(self, instance, using=None, **kwargs):
+        # instantly remove deleted and non-public events
+        if instance.deleted or instance.publication_status != PublicationStatus.PUBLIC:
+            super().remove_object(instance, using, **kwargs)
+        else:
+            super().update_object(instance, using, **kwargs)
 
 
 class PlaceIndex(indexes.SearchIndex, indexes.Indexable):
@@ -35,4 +42,11 @@ class PlaceIndex(indexes.SearchIndex, indexes.Indexable):
         return Place
 
     def index_queryset(self, using=None):
-        return self.get_model().objects.filter(deleted=False)
+        return super().index_queryset(using).filter(deleted=False)
+
+    def update_object(self, instance, using=None, **kwargs):
+        # instantly remove deleted objects
+        if instance.deleted:
+            super().remove_object(instance, using, **kwargs)
+        else:
+            super().update_object(instance, using, **kwargs)
