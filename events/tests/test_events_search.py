@@ -5,7 +5,7 @@ from django.conf import settings
 from django.test import TestCase
 import haystack
 import datetime
-from haystack.management.commands import rebuild_index, clear_index
+# from haystack.management.commands import rebuild_index, clear_index
 from rest_framework.test import APIClient
 
 from ..models import Event
