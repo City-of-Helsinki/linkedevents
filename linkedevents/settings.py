@@ -249,18 +249,34 @@ HAYSTACK_SIGNAL_PROCESSOR = 'haystack.signals.RealtimeSignalProcessor'
 
 HAYSTACK_CONNECTIONS = {
     'default': {
-        'ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
+        'ENGINE': 'multilingual_haystack.backends.MultilingualSearchEngine'
     },
     'default-fi': {
-        'ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
     },
     'default-en': {
-        'ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
     },
     'default-sv': {
-        'ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
+    },
+    'default-zh-hans': {
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
+    },
+    'default-ru': {
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
+    },
+    'default-ar': {
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
     }
 }
+
 
 import bleach  # noqa
 BLEACH_ALLOWED_TAGS = bleach.ALLOWED_TAGS + ["p", "div", "br"]
