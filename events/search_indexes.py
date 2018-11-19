@@ -1,6 +1,5 @@
 from haystack import indexes
 from .models import Event, Place, PublicationStatus
-from django.utils.html import strip_tags
 
 
 class EventIndex(indexes.SearchIndex, indexes.Indexable):
