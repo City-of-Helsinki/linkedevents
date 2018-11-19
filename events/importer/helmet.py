@@ -67,6 +67,7 @@ LOCATIONS = {
     u"Kauniaisten kirjasto": ((10799, 11301), 14432),
     u"Kirjasto 10": ((10800, 11303), 8286),
     u"Kirjasto Omena": ((10801, 11305), 15395),
+    u"Kirjasto Oodi": ((11895,), 51342),
     u"Kivenlahden kirjasto": ((10803, 11309), 15334),
     u"Kaupunkiverstas": ((10804, 11311), 8145),  # former Kohtaamispaikka
     u"Koivukylän kirjasto": ((10805, 11313), 19572),
