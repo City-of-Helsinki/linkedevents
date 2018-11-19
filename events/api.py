@@ -703,6 +703,8 @@ class KeywordListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         # can be used e.g. with typeahead.js
         val = self.request.query_params.get('text') or self.request.query_params.get('filter')
         if val:
+            if u'\x00' in val:
+                raise ParseError("A string literal cannot contain NUL (0x00) characters.")
             queryset = queryset.filter(_text_qset_by_translated_field('name', val))
         return queryset
 
@@ -905,6 +907,8 @@ class PlaceListViewSet(GeoModelAPIView,
         # can be used e.g. with typeahead.js
         val = self.request.query_params.get('text') or self.request.query_params.get('filter')
         if val:
+            if u'\x00' in val:
+                raise ParseError("A string literal cannot contain NUL (0x00) characters.")
             queryset = queryset.filter(_text_qset_by_translated_field('name', val))
         return queryset
 
@@ -1463,6 +1467,8 @@ def _filter_event_queryset(queryset, params, srs=None):
     val = params.get('text', None)
     if val:
         val = val.lower()
+        if u'\x00' in val:
+            raise ParseError("A string literal cannot contain NUL (0x00) characters.")
         # Free string search from all translated fields
         fields = EventTranslationOptions.fields
         qset = Q()
@@ -1893,6 +1899,8 @@ class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView
             raise ParseError("Supply search terms with 'q=' or autocomplete entry with 'input='")
         if input_val and q_val:
             raise ParseError("Supply either 'q' or 'input', not both")
+        if u'\x00' in q_val or u'\x00' in input_val:
+            raise ParseError("A string literal cannot contain NUL (0x00) characters.")
 
         old_language = translation.get_language()[:2]
         translation.activate(self.lang_code)
