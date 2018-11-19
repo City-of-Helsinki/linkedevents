@@ -15,11 +15,6 @@ class EventIndex(indexes.SearchIndex, indexes.Indexable):
     def get_model(self):
         return Event
 
-    def prepare(self, obj):
-        if obj.description:
-            obj.description = strip_tags(obj.description)
-        return super(EventIndex, self).prepare(obj)
-
     def index_queryset(self, using=None):
         return super().index_queryset(using).filter(publication_status=PublicationStatus.PUBLIC, deleted=False)
 

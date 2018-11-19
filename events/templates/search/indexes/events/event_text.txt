@@ -1,4 +1,4 @@
 {{object.name}}
 {{object.short_description}}
-{{object.description}}
+{{object.description | striptags}}
 {{object.location.name}}
