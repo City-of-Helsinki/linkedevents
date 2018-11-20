@@ -90,7 +90,7 @@ class OsterbottenImporter(Importer):
 
                 if items is None:
                     continue
-                elif items and len(items) > 0: 
+                elif len(items) > 0: 
                     for item in items:
                         self._import_event(lang, item, events, keyword_matcher)
                     organizers = self._import_organizers_from_events(events)
