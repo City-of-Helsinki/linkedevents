@@ -4,6 +4,7 @@ import requests
 import requests_cache
 import pytz
 import time
+import itertools
 from collections import OrderedDict
 from django.db.models import Count
 
@@ -84,20 +85,17 @@ class OsterbottenImporter(Importer):
         events = recur_dict()
         keyword_matcher = KeywordMatcher()
         for lang, locale in OSTERBOTTEN_PARAMS['languages'].items():
-            start = 0
-            loop = True
-            while (loop):
-                items = self.items_from_url( self.getUrl(locale, start) )
+            for i in itertools.count(0, 10):
+                items = self.items_from_url( self.getUrl(locale, i) )
 
-                if items and len(items) > 0:  
-                    start = start + 10
+                if items is None:
+                    continue
+                elif items and len(items) > 0: 
                     for item in items:
                         self._import_event(lang, item, events, keyword_matcher)
                     organizers = self._import_organizers_from_events(events)
-                elif items == None:
-                    start = start + 10
                 else:
-                    loop = False
+                    break
             
         for event in events.values():
             if (event is not None):
