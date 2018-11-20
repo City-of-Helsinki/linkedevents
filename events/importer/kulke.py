@@ -23,8 +23,10 @@ LOCATION_TPREK_MAP = {
     'malmitalo': '8740',
     'malms kulturhus': '8740',
     'malms bibliotek - malms kulturhus': '8192',
+    'malmin kirjasto': '8192',
     'helsingin kaupungintalo': '28473',
     'stoa': '7259',
+    'östra centrums bibliotek': '8184',
     'parvigalleria': '7259',
     'musiikkisali': '7259',
     'kanneltalo': '7255',
@@ -39,6 +41,9 @@ LOCATION_TPREK_MAP = {
     'nuorisokahvila clubi': '8006',
     'haagan nuorisotalo': '8023',
     'vuosaaren kirjasto': '8310',
+    'riistavuoren palvelukeskus': '47695',
+    'kannelmäen palvelukeskus': '51869',
+    'leikkipuisto lampi': '57117',
 }
 
 ADDRESS_TPREK_MAP = {
