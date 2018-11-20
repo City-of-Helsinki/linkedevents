@@ -14,6 +14,7 @@ from .utils import get, assert_fields_exist, assert_event_data_is_equal
 
 # event_list_url is used as magic fixture, which flake8 doesn't see
 from .test_event_post import create_with_post, list_url as event_list_url  # noqa
+from events.tests.test_event_put import update_with_put
 from events.models import Image
 from events.auth import ApiKeyUser
 
@@ -329,6 +330,32 @@ def test__create_an_event_with_uploaded_image(
     # only the image field url changes between endpoints
     minimal_event_dict['images'][0].pop('url')
     assert_event_data_is_equal(minimal_event_dict, response.data)
+
+
+# event_list_url is used as magic fixture, which flake8 doesn't see
+@override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL='')  # noqa
+@pytest.mark.django_db
+def test__update_an_event_with_uploaded_image(
+        api_client, list_url, event_list_url, minimal_event_dict, image_data, user):
+    api_client.force_authenticate(user)
+    response = create_with_post(api_client, minimal_event_dict)
+
+    image_response = api_client.post(list_url, image_data)
+    assert image_response.status_code == 201
+    assert Image.objects.all().count() == 1
+
+    image = Image.objects.get(pk=image_response.data['id'])
+    assert image.created_by == user
+    assert image.last_modified_by == user
+
+    minimal_event_dict.update({'images': [{'@id': str(image_response.data['@id'])}]})
+    response2 = update_with_put(api_client, response.data['@id'], minimal_event_dict)
+
+    # the event data should contain the expanded image data
+    minimal_event_dict['images'][0].update(image_response.data)
+    # only the image field url changes between endpoints
+    minimal_event_dict['images'][0].pop('url')
+    assert_event_data_is_equal(minimal_event_dict, response2.data)
 
 
 @pytest.mark.django_db
