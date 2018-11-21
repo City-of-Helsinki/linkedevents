@@ -1626,7 +1626,7 @@ def _filter_event_queryset(queryset, params, srs=None):
         try:
             min_age = int(val)
         except ValueError:
-            raise ValidationError(_('Audience minimum age must be a digit.'))
+            raise ParseError(_('Audience minimum age must be a digit.'))
         queryset = queryset.filter(audience_min_age__lte=min_age)
 
     # Filter by audience max age
@@ -1635,7 +1635,7 @@ def _filter_event_queryset(queryset, params, srs=None):
         try:
             max_age = int(val)
         except ValueError:
-            raise ValidationError(_('Audience minimum age must be a digit.'))
+            raise ParseError(_('Audience maximum age must be a digit.'))
         queryset = queryset.filter(audience_max_age__gte=max_age)
 
     return queryset
