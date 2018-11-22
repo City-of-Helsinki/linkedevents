@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 from django.db.transaction import atomic
 from django.http import Http404, HttpResponsePermanentRedirect
 from django.utils import translation
-from django.core.exceptions import ValidationError, PermissionDenied
+from django.core.exceptions import PermissionDenied
 from django.db.utils import IntegrityError
 from django.conf import settings
 from django.core.urlresolvers import NoReverseMatch
@@ -245,12 +245,12 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
     def to_internal_value(self, value):
         # TODO: JA If @id is missing, this will complain just about value not being JSON
         if not isinstance(value, dict) or '@id' not in value:
-            raise ValidationError(self.invalid_json_error % type(value).__name__)
+            raise serializers.ValidationError(self.invalid_json_error % type(value).__name__)
 
         url = value['@id']
         if not url:
             if self.required:
-                raise ValidationError(_('This field is required.'))
+                raise serializers.ValidationError(_('This field is required.'))
             return None
 
         return super().to_internal_value(urllib.parse.unquote(url))
@@ -383,7 +383,7 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
             if not obj:
                 continue
             if not isinstance(obj, dict):
-                raise ValidationError({field_name: 'This field is a translated field. Instead of a string,'
+                raise serializers.ValidationError({field_name: 'This field is a translated field. Instead of a string,'
                                                    ' you must supply an object with strings corresponding'
                                                    ' to desired language ids.'})
             for language in (lang for lang in utils.get_fixed_lang_codes() if lang in obj):
@@ -1495,10 +1495,10 @@ def _filter_event_queryset(queryset, params, srs=None):
         except ValueError as e:
             raise ParseError(_('Error while parsing days.'))
         if days < 1:
-            raise ValidationError(_('Days must be 1 or more.'))
+            raise serializers.ValidationError(_('Days must be 1 or more.'))
 
         if start or end:
-            raise ValidationError(_('Start or end cannot be used with days.'))
+            raise serializers.ValidationError(_('Start or end cannot be used with days.'))
 
         today = datetime.now(timezone.utc).date()
 
