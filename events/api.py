@@ -9,6 +9,7 @@ import time
 import urllib.parse
 from copy import deepcopy
 from datetime import datetime, timedelta
+from functools import partial
 
 # django and drf
 from django.db.transaction import atomic
@@ -1543,13 +1544,17 @@ def _filter_event_queryset(queryset, params, srs=None):
         val = val.split(',')
         queryset = queryset.filter(Q(keywords__pk__in=val) | Q(audience__pk__in=val)).distinct()
 
-    # Filter only super or sub events if recurring has value
+    # filter only super or non-super events. to be deprecated?
     val = params.get('recurring', None)
     if val:
         val = val.lower()
         if val == 'super':
+            # same as ?super_event_type=recurring
             queryset = queryset.filter(super_event_type=Event.SuperEventType.RECURRING)
         elif val == 'sub':
+            # same as ?super_event_type=none,umbrella, weirdly yielding non-sub events too.
+            # don't know if users want this to remain tho. do we want that or is there a need
+            # to change this to actually filter only subevents of recurring events?
             queryset = queryset.exclude(super_event_type=Event.SuperEventType.RECURRING)
 
     val = params.get('max_duration', None)
@@ -1651,23 +1656,30 @@ class EventExtensionFilterBackend(BaseFilterBackend):
         return queryset
 
 
+def in_or_null_filter(field_name, queryset, name, value):
+    # supports filtering objects by several values in the same field; null or none will trigger isnull filter
+    in_query = {field_name + '__in': value}
+    null_query = {field_name + '__isnull': True}
+    q = Q(**in_query)
+    if 'null' in value or 'none' in value:
+        q = q | Q(**null_query)
+    return queryset.filter(q)
+
+
 class EventFilter(django_filters.rest_framework.FilterSet):
-    division = django_filters.Filter(name='location__divisions', lookup_expr='in',
+    division = django_filters.Filter(name='location__divisions',
                                      widget=django_filters.widgets.CSVWidget(),
-                                     method='filter_division')
-    super_event_type = django_filters.CharFilter(method='filter_super_event_type')
+                                     method=filter_division)
+    super_event_type = django_filters.Filter(name='super_event_type',
+                                                 widget=django_filters.widgets.CSVWidget(),
+                                                 method=partial(in_or_null_filter, 'super_event_type'))
+    super_event = django_filters.Filter(name='super_event',
+                                        widget=django_filters.widgets.CSVWidget(),
+                                        method=partial(in_or_null_filter, 'super_event'))
 
     class Meta:
         model = Event
         fields = ('division', 'super_event_type', 'super_event')
-
-    def filter_super_event_type(self, queryset, name, value):
-        if value in ('null', 'none'):
-            value = None
-        return queryset.filter(super_event_type=value)
-
-    def filter_division(self, queryset, name, value):
-        return filter_division(queryset, name, value)
 
 
 class EventDeletedException(APIException):

@@ -154,6 +154,24 @@ def test_get_event_list_verify_division_filter(api_client, event, event2, event3
 
 
 @pytest.mark.django_db
+def test_get_event_list_super_event_filters(api_client, event, event2):
+    event.super_event_type = Event.SuperEventType.RECURRING
+    event.save()
+    event2.super_event = event
+    event2.save()
+
+    # fetch non-subevents
+    response = get_list(api_client, query_string='super_event=none')
+    assert len(response.data['data']) == 1
+    assert response.data['data'][0]['id'] == event.id
+
+    # fetch subevents
+    response = get_list(api_client, query_string='super_event='+event.id)
+    assert len(response.data['data']) == 1
+    assert response.data['data'][0]['id'] == event2.id
+
+
+@pytest.mark.django_db
 def test_get_event_list_recurring_filters(api_client, event, event2):
     event.super_event_type = Event.SuperEventType.RECURRING
     event.save()
@@ -188,6 +206,11 @@ def test_super_event_type_filter(api_client, event, event2):
     response = get_list(api_client, query_string='super_event_type=recurring')
     ids = {e['id'] for e in response.data['data']}
     assert ids == {event.id}
+
+    # "recurring,none" should return both
+    response = get_list(api_client, query_string='super_event_type=recurring,none')
+    ids = {e['id'] for e in response.data['data']}
+    assert ids == {event.id, event2.id}
 
     response = get_list(api_client, query_string='super_event_type=fwfiuwhfiuwhiw')
     assert len(response.data['data']) == 0

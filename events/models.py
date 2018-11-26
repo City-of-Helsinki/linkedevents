@@ -399,10 +399,11 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
 
     class SuperEventType:
         RECURRING = 'recurring'
+        UMBRELLA = 'umbrella'
 
     SUPER_EVENT_TYPES = (
         (SuperEventType.RECURRING, _('Recurring')),
-        # Other types include e.g. a festival
+        (SuperEventType.UMBRELLA, _('Umbrella event')),
     )
 
     # Properties from schema.org/Thing
