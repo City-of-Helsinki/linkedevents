@@ -1671,8 +1671,8 @@ class EventFilter(django_filters.rest_framework.FilterSet):
                                      widget=django_filters.widgets.CSVWidget(),
                                      method=filter_division)
     super_event_type = django_filters.Filter(name='super_event_type',
-                                                 widget=django_filters.widgets.CSVWidget(),
-                                                 method=partial(in_or_null_filter, 'super_event_type'))
+                                             widget=django_filters.widgets.CSVWidget(),
+                                             method=partial(in_or_null_filter, 'super_event_type'))
     super_event = django_filters.Filter(name='super_event',
                                         widget=django_filters.widgets.CSVWidget(),
                                         method=partial(in_or_null_filter, 'super_event'))
