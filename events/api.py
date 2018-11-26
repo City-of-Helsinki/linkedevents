@@ -1658,11 +1658,17 @@ class EventExtensionFilterBackend(BaseFilterBackend):
 
 def in_or_null_filter(field_name, queryset, name, value):
     # supports filtering objects by several values in the same field; null or none will trigger isnull filter
-    in_query = {field_name + '__in': value}
-    null_query = {field_name + '__isnull': True}
-    q = Q(**in_query)
+    q = Q()
     if 'null' in value or 'none' in value:
+        null_query = {field_name + '__isnull': True}
         q = q | Q(**null_query)
+        if 'null' in value:
+            value.remove('null')
+        if 'none' in value:
+            value.remove('none')
+    if value:
+        in_query = {field_name + '__in': value}
+        q = q | Q(**in_query)
     return queryset.filter(q)
 
 
