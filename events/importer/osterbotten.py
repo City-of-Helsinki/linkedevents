@@ -4,6 +4,7 @@ import requests
 import requests_cache
 import pytz
 import time
+import itertools
 from collections import OrderedDict
 from django.db.models import Count
 
@@ -39,9 +40,11 @@ class OsterbottenImporter(Importer):
 
     def items_from_url(self, url):
         resp = requests.get(url)
-        assert resp.status_code == 200
-        root = etree.fromstring(resp.content)
-        return root.xpath('Events/Event')
+        if resp.status_code == 200:
+            root = etree.fromstring(resp.content)
+            return root.xpath('Events/Event')
+        
+        return None
 
     def municipalities_from_url(self, url):
         resp = requests.get(url)
@@ -69,7 +72,7 @@ class OsterbottenImporter(Importer):
         org_args = dict(id='osterbotten')
         defaults = dict(name='Osterbotten', data_source=self.data_source)
         self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
-
+    
         if self.options['cached']:
             requests_cache.install_cache('osterbotten')
 
@@ -82,13 +85,17 @@ class OsterbottenImporter(Importer):
         events = recur_dict()
         keyword_matcher = KeywordMatcher()
         for lang, locale in OSTERBOTTEN_PARAMS['languages'].items():
-            start = 0
-            while (len( self.items_from_url( self.getUrl(locale, start) ) ) > 0):
-                items = self.items_from_url( self.getUrl(locale, start) )
-                start = start + 10
-                for item in items:
-                    self._import_event(lang, item, events, keyword_matcher)
-                organizers = self._import_organizers_from_events(events)
+            for i in itertools.count(0, 10):
+                items = self.items_from_url( self.getUrl(locale, i) )
+
+                if items is None:
+                    continue
+                elif len(items) > 0: 
+                    for item in items:
+                        self._import_event(lang, item, events, keyword_matcher)
+                    organizers = self._import_organizers_from_events(events)
+                else:
+                    break
             
         for event in events.values():
             if (event is not None):
@@ -101,13 +108,13 @@ class OsterbottenImporter(Importer):
         conjuctionsWithSymbols = ["- och", "- ja"]
 
         for symbol in symbols:
-            category = symbol.replace(symbol, "")
+            category = category.replace(symbol, "")
         for conjuctionsWithSymbol in conjuctionsWithSymbols:
-            category = conjuctionsWithSymbol.replace(conjuctionsWithSymbol, "")
+            category = category.replace(conjuctionsWithSymbol, "")
         for conjunction in conjunctions:
-            category = conjunction.replace(conjunction, " ")
+            category = category.replace(conjunction, " ")
         
-        return category
+        return " ".join(category.split())
 
     def _import_event(self, lang, item, events, keyword_matcher):    
         eid = int(item.xpath('ID')[0].text)
@@ -117,6 +124,7 @@ class OsterbottenImporter(Importer):
         event['origin_id'] = eid
 
         event['headline'][lang] = item.xpath('Title')[0].text
+        event['name'][lang] = item.xpath('Title')[0].text
         event['short_description'][lang] = item.xpath('EventTextShort')[0].text
         event['description'][lang] = item.xpath('EventText')[0].text
         event['info_url'][lang] = item.xpath('Link')[0].text
@@ -147,7 +155,7 @@ class OsterbottenImporter(Importer):
         for category in categories:
             categoryText = category.xpath('Name')[0].text
             cleanedCategory = self.cleanCategory(categoryText)
-            categorywords = cleanedCategory.split()
+            categorywords = cleanedCategory.split(' ')
             
             for categoryWord in categorywords:
                 _id = 'osterbotten:{}'.format(categoryWord.replace('/', '_'))
@@ -164,6 +172,7 @@ class OsterbottenImporter(Importer):
                     keyword_orig = Keyword.objects.get_or_create(**kwargs)
                 else:
                     keyword_orig = self.getKeyword(_id)
+                
                 keywords.append(keyword_orig)
         
         targetGroups = item.xpath('TargetGroups')[0]
