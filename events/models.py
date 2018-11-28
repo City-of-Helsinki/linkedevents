@@ -457,7 +457,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     super_event = TreeForeignKey('self', null=True, blank=True,
                                  on_delete=models.SET_NULL, related_name='sub_events')
 
-    super_event_type = models.CharField(max_length=255, blank=True, null=True, default=None, choices=SUPER_EVENT_TYPES)
+    super_event_type = models.CharField(max_length=255, blank=True, null=True, db_index=True,
+                                        default=None, choices=SUPER_EVENT_TYPES)
 
     in_language = models.ManyToManyField(Language, verbose_name=_('In language'), related_name='events', blank=True)
 
