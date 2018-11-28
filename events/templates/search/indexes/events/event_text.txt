@@ -3,3 +3,4 @@
 {{object.short_description}}
 {{object.description | html_to_plaintext_linebreaks | striptags}}
 {{object.location.name}}
+{{object.provider}}
