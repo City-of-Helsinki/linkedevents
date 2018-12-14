@@ -445,7 +445,11 @@ class KulkeImporter(Importer):
                 end_time = end_time.astimezone(LOCAL_TZ)
                 event['has_end_time'] = True
 
-            event['end_time'] = end_time
+            # sometimes, the data has errors. then we set end time to start time
+            if end_time > start_time:
+                event['end_time'] = end_time
+            else:
+                event['end_time'] = event['start_time']
 
         if is_course:
             event['extension_course'] = {
