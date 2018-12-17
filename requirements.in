@@ -2,9 +2,9 @@ Django<2.0
 Markdown
 PyYAML
 django-cors-headers
-django-filter
+django-filter<2.0
 django-modeltranslation>=0.11rc2
-django-mptt
+django-mptt<0.9
 django-reversion
 djangorestframework
 djangorestframework-gis
@@ -30,6 +30,7 @@ elasticsearch<5.0
 raven
 django-helusers
 pytest-django
+pytest<4.0
 flake8
 pip-tools
 django-image-cropping
