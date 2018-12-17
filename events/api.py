@@ -1493,7 +1493,7 @@ def _filter_event_queryset(queryset, params, srs=None):
     if days:
         try:
             days = int(days)
-        except ValueError as e:
+        except ValueError:
             raise ParseError(_('Error while parsing days.'))
         if days < 1:
             raise serializers.ValidationError(_('Days must be 1 or more.'))
