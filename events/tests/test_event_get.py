@@ -71,6 +71,13 @@ def assert_event_fields_exist(data, version='v1'):
 # === tests ===
 
 @pytest.mark.django_db
+def test_get_event_list_html_renders(api_client, event):
+    url = reverse('event-list', version='v1')
+    response = api_client.get(url, data=None, HTTP_ACCEPT='text/html')
+    assert response.status_code == 200, str(response.content)
+
+
+@pytest.mark.django_db
 def test_get_event_list_check_fields_exist(api_client, event):
     """
     Tests that event list endpoint returns the correct fields.

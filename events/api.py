@@ -33,6 +33,7 @@ from rest_framework.reverse import reverse
 from rest_framework.response import Response
 from rest_framework.exceptions import ParseError, PermissionDenied as DRFPermissionDenied, APIException
 from rest_framework.views import get_view_name as original_get_view_name
+from rest_framework.routers import APIRootView
 from rest_framework.fields import DateTimeField
 
 
@@ -68,10 +69,10 @@ from helevents.models import User
 from events.renderers import DOCXRenderer
 
 
-def get_view_name(cls, suffix=None):
-    if cls.__name__ == 'APIRootView':
+def get_view_name(view):
+    if type(view) is APIRootView:
         return 'Linked Events'
-    return original_get_view_name(cls, suffix)
+    return original_get_view_name(view)
 
 
 viewset_classes_by_model = {}
