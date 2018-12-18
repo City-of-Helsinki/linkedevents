@@ -50,7 +50,7 @@ class Importer(object):
         target_srs = SpatialReference(self.target_srid)
         if getattr(settings, 'BOUNDING_BOX'):
             self.bounding_box = Polygon.from_bbox(settings.BOUNDING_BOX)
-            self.bounding_box.set_srid(self.target_srid)
+            self.bounding_box.srid = self.target_srid
             target_to_gps_ct = CoordTransform(target_srs, gps_srs)
             self.bounding_box.transform(target_to_gps_ct)
         else:

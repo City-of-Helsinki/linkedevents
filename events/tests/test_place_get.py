@@ -66,8 +66,8 @@ def test_get_place_list_verify_text_filter(api_client, place, place2, place3):
 @pytest.mark.django_db
 def test_get_place_list_verify_division_filter(api_client, place, place2, place3, administrative_division,
                                                administrative_division2):
-    place.divisions = [administrative_division]
-    place2.divisions = [administrative_division2]
+    place.divisions.set([administrative_division])
+    place2.divisions.set([administrative_division2])
     place3.divisions.clear()
 
     # filter using one value
@@ -88,7 +88,7 @@ def test_get_place_list_verify_division_filter(api_client, place, place2, place3
 
 @pytest.mark.django_db
 def test_get_place_list_check_division(api_client, place, administrative_division, municipality):
-    place.divisions = [administrative_division]
+    place.divisions.set([administrative_division])
 
     response = get_list(api_client, data={'show_all_places': 1})
     division = response.data['data'][0]['divisions'][0]

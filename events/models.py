@@ -346,9 +346,9 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin):
             Place.objects.filter(id__in=ids_to_update).update(n_events_changed=True)
 
         if self.position:
-            self.divisions = AdministrativeDivision.objects.filter(
+            self.divisions.set(AdministrativeDivision.objects.filter(
                 type__type__in=('district', 'sub_district', 'neighborhood', 'muni'),
-                geometry__boundary__contains=self.position)
+                geometry__boundary__contains=self.position))
         else:
             self.divisions.clear()
 

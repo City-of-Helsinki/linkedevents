@@ -1386,7 +1386,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                     pass
         request = self.context.get('request')
         if request:
-            if not request.user.is_authenticated():
+            if not request.user.is_authenticated:
                 del ret['publication_status']
         return ret
 
