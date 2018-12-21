@@ -5,8 +5,8 @@ from .models import Event, Place, PublicationStatus
 class EventIndex(indexes.SearchIndex, indexes.Indexable):
     text = indexes.CharField(document=True, use_template=True)
     autosuggest = indexes.EdgeNgramField(model_attr='name')
-    start_time = indexes.DateTimeField(model_attr='start_time')
-    end_time = indexes.DateTimeField(model_attr='end_time')
+    start_time = indexes.DateTimeField(model_attr='start_time', null=True)
+    end_time = indexes.DateTimeField(model_attr='end_time', null=True)
 
     def get_updated_field(self):
         return 'last_modified_time'
