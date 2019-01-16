@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, PropertyMock
+from unittest.mock import MagicMock
 
 from django.test import TestCase
 from django_orghierarchy.models import Organization

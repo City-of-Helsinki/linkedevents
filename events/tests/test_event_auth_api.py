@@ -49,6 +49,11 @@ class TestEventAPI(APITestCase):
             parent=self.org_1,
             internal_type=Organization.AFFILIATED
         )
+        self.org_5 = Organization.objects.create(
+            name='org-5',
+            origin_id='org-5',
+            data_source=self.data_source,
+        )
         self.event_1 = Event.objects.create(
             id='ds:event-1',
             name='event-1',
@@ -78,11 +83,18 @@ class TestEventAPI(APITestCase):
             publication_status=PublicationStatus.PUBLIC,
         )
         self.event_5 = Event.objects.create(
-            id='ds:event',
-            name='event',
+            id='ds:event-5',
+            name='event-5',
             data_source=self.data_source,
             publisher=self.org_4,
-            publication_status=PublicationStatus.DRAFT
+            publication_status=PublicationStatus.DRAFT,
+        )
+        self.event_6 = Event.objects.create(
+            id='ds:event-6',
+            name='event-6',
+            data_source=self.data_source,
+            publisher=self.org_5,
+            publication_status=PublicationStatus.PUBLIC,
         )
         self.place = Place.objects.create(
             id='ds:place-1',
@@ -92,12 +104,12 @@ class TestEventAPI(APITestCase):
             position=Point(1, 1),
         )
 
-    def test_event_list_with_auth_filters(self):
+    def test_event_list_with_show_all_filter(self):
         # test with public request
         url = '{0}?show_all=1'.format(reverse('event-list'))
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['data']), 1)  # event-4
+        self.assertEqual(len(response.data['data']), 2)  # event-4, event-6
 
         # test with authenticated data source and publisher
         self.org_2.admin_users.add(self.user)
@@ -108,6 +120,22 @@ class TestEventAPI(APITestCase):
         # Previously, the show_all filter only displayed drafts for one organization.
         # Descendants of organizations or replacement organizations were not considered at all.
         # Now, we display all drafts that the user has the right to view and edit.
+        self.assertEqual(len(response.data['data']), 6)  # event-1, event-2, event-3, event-4, event-5, event-6
+
+    def test_event_list_with_admin_user_filter(self):
+        # test with public request
+        url = '{0}?admin_user=true'.format(reverse('event-list'))
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['data']), 0)  # public users are not admins
+
+        # test with authenticated data source and publisher
+        self.org_2.admin_users.add(self.user)
+        self.client.force_authenticate(self.user)
+        url = '{0}?admin_user=true'.format(reverse('event-list'))
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # We should see everything else but not public events outside the admin orgs
         self.assertEqual(len(response.data['data']), 5)  # event-1, event-2, event-3, event-4 and event-5
 
     def test_event_list_with_publisher_filters(self):
@@ -116,11 +144,23 @@ class TestEventAPI(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['data']), 1)  # event-4
+        url = '{0}?admin_user=1&publisher=ds:org-3'.format(reverse('event-list'))
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['data']), 0)  # public users are not admins
 
         # test with authenticated data source and publisher
         self.org_2.admin_users.add(self.user)
         self.client.force_authenticate(self.user)
         url = '{0}?show_all=1&publisher=ds:org-2'.format(reverse('event-list'))
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # note that org-2 is replaced by org-1
+        # with publisher filter, we only display drafts for that organization.
+        # Replacements are considered, but descendants are not.
+        self.assertEqual(len(response.data['data']), 2)  # event-1 and event-2
+
+        url = '{0}?admin_user=1&publisher=ds:org-2'.format(reverse('event-list'))
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # note that org-2 is replaced by org-1

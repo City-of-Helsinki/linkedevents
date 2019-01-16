@@ -1771,21 +1771,22 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
         if self.request.method in SAFE_METHODS:
             # distinct to ensure all the merges with distinct querysets below work a-ok
             public_queryset = original_queryset.filter(publication_status=PublicationStatus.PUBLIC).distinct()
+            editable_queryset = original_queryset.none()
+            if self.request.user.is_authenticated:
+                editable_queryset = self.request.user.get_editable_events(original_queryset)
             # by default, only public events are shown in the event list
             queryset = public_queryset
             # however, certain query parameters allow customizing the listing for authenticated users
-            if self.request.user.is_authenticated:
-                editable_queryset = self.request.user.get_editable_events(original_queryset)
-                if 'show_all' in self.request.query_params:
-                    # displays all editable events, including drafts, and public non-editable events
-                    queryset = editable_queryset | public_queryset
-                if 'admin_user' in self.request.query_params:
-                    if self.request.query_params['admin_user'] in ('false', 'none'):
-                        # displays only public non-editable events
-                        queryset = public_queryset.difference(editable_queryset)
-                    else:
-                        # displays all editable events, including drafts, but no other public events
-                        queryset = editable_queryset
+            if 'show_all' in self.request.query_params:
+                # displays all editable events, including drafts, and public non-editable events
+                queryset = editable_queryset | public_queryset
+            if 'admin_user' in self.request.query_params:
+                if self.request.query_params['admin_user'] in ('false', 'none'):
+                    # displays only public non-editable events
+                    queryset = public_queryset.difference(editable_queryset)
+                else:
+                    # displays all editable events, including drafts, but no other public events
+                    queryset = editable_queryset
         else:
             # prevent changing events user does not have write permissions (for bulk operations)
             queryset = self.request.user.get_editable_events(original_queryset)
