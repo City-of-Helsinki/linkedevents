@@ -555,6 +555,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
 
     def validate_publisher(self, value):
         if value:
+            # TODO: allow optionally declaring publisher in any user admin org (regular org for drafts)
             if value not in (self.publisher, self.publisher.replaced_by):
                 raise serializers.ValidationError(
                     {'publisher': _(
@@ -1765,23 +1766,29 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
         """
         TODO: convert to use proper filter framework
         """
-        queryset = super(EventViewSet, self).filter_queryset(queryset)
+        original_queryset = super(EventViewSet, self).filter_queryset(queryset)
 
         if self.request.method in SAFE_METHODS:
-            auth_filters = Q(publication_status=PublicationStatus.PUBLIC)
-            if self.organization:
-                # USER IS AUTHENTICATED
+            # distinct to ensure all the merges with distinct querysets below work a-ok
+            public_queryset = original_queryset.filter(publication_status=PublicationStatus.PUBLIC).distinct()
+            # by default, only public events are shown in the event list
+            queryset = public_queryset
+            # however, certain query parameters allow customizing the listing for authenticated users
+            if self.request.user.is_authenticated:
+                editable_queryset = self.request.user.get_editable_events(original_queryset)
                 if 'show_all' in self.request.query_params:
-                    # Show all events for this organization,
-                    # along with public events for others.
-                    auth_filters |= get_publisher_query(self.organization)
-            queryset = queryset.filter(auth_filters)
+                    # displays all editable events, including drafts, and public non-editable events
+                    queryset = editable_queryset | public_queryset
+                if 'admin_user' in self.request.query_params:
+                    if self.request.query_params['admin_user'] in ('false', 'none'):
+                        # displays only public non-editable events
+                        queryset = public_queryset.difference(editable_queryset)
+                    else:
+                        # displays all editable events, including drafts, but no other public events
+                        queryset = editable_queryset
         else:
             # prevent changing events user does not have write permissions (for bulk operations)
-            if self.organization:
-                queryset = self.request.user.get_editable_events(self.organization, queryset)
-            else:
-                queryset = queryset.none()
+            queryset = self.request.user.get_editable_events(original_queryset)
 
         queryset = _filter_event_queryset(queryset, self.request.query_params,
                                           srs=self.srs)
@@ -1807,6 +1814,7 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
             event_data_list = [serializer.validated_data]
 
         for event_data in event_data_list:
+            # TODO: actually check publisher in event_data, not just self.organization
             if not self.request.user.can_edit_event(self.organization, event_data['publication_status']):
                 raise DRFPermissionDenied()
 
@@ -1827,6 +1835,7 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
             event_data_list = [serializer.validated_data]
 
         for event_data in event_data_list:
+            # TODO: actually check publisher in event_data, not just self.organization
             if not self.request.user.can_edit_event(self.organization, event_data['publication_status']):
                 raise DRFPermissionDenied()
 

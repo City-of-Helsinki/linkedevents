@@ -331,3 +331,13 @@ def test_publication_status_filter(api_client, event, event2, user, organization
     ids = {e['id'] for e in response.data['data']}
     assert event2.id in ids
     assert event.id not in ids
+
+
+@pytest.mark.django_db
+def test_admin_user_filter(api_client, event, event2, user):
+    api_client.force_authenticate(user=user)
+
+    response = get_list(api_client, query_string='admin_user=true')
+    ids = {e['id'] for e in response.data['data']}
+    assert event.id in ids
+    assert event2.id not in ids

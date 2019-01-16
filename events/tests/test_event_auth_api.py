@@ -100,14 +100,15 @@ class TestEventAPI(APITestCase):
         self.assertEqual(len(response.data['data']), 1)  # event-4
 
         # test with authenticated data source and publisher
-        with patch(
-            'events.api.get_authenticated_data_source_and_publisher',
-            MagicMock(return_value=(self.data_source, self.org_2))
-        ):
-            url = '{0}?show_all=1'.format(reverse('event-list'))
-            response = self.client.get(url)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(len(response.data['data']), 3)  # event-1, event-2 and event-4
+        self.org_2.admin_users.add(self.user)
+        self.client.force_authenticate(self.user)
+        url = '{0}?show_all=1'.format(reverse('event-list'))
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Previously, the show_all filter only displayed drafts for one organization.
+        # Descendants of organizations or replacement organizations were not considered at all.
+        # Now, we display all drafts that the user has the right to view and edit.
+        self.assertEqual(len(response.data['data']), 5)  # event-1, event-2, event-3, event-4 and event-5
 
     def test_event_list_with_publisher_filters(self):
         # test with public request
@@ -117,15 +118,15 @@ class TestEventAPI(APITestCase):
         self.assertEqual(len(response.data['data']), 1)  # event-4
 
         # test with authenticated data source and publisher
-        with patch(
-            'events.api.get_authenticated_data_source_and_publisher',
-            MagicMock(return_value=(self.data_source, self.org_2))
-        ):
-            url = '{0}?show_all=1&publisher=ds:org-2'.format(reverse('event-list'))
-            response = self.client.get(url)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            # note that org-2 is replaced by org-1
-            self.assertEqual(len(response.data['data']), 2)  # event-1 and event-2
+        self.org_2.admin_users.add(self.user)
+        self.client.force_authenticate(self.user)
+        url = '{0}?show_all=1&publisher=ds:org-2'.format(reverse('event-list'))
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # note that org-2 is replaced by org-1
+        # with publisher filter, we only display drafts for that organization.
+        # Replacements are considered, but descendants are not.
+        self.assertEqual(len(response.data['data']), 2)  # event-1 and event-2
 
     def test_bulk_destroy(self):
         url = reverse('event-list')
