@@ -1,5 +1,4 @@
 from copy import deepcopy
-from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.gis.geos import Point
