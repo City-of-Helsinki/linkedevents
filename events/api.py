@@ -1769,8 +1769,8 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
         original_queryset = super(EventViewSet, self).filter_queryset(queryset)
 
         if self.request.method in SAFE_METHODS:
-            # distinct to ensure all the merges with distinct querysets below work a-ok
-            public_queryset = original_queryset.filter(publication_status=PublicationStatus.PUBLIC).distinct()
+            # we cannot use distinct for performance reasons
+            public_queryset = original_queryset.filter(publication_status=PublicationStatus.PUBLIC)
             editable_queryset = original_queryset.none()
             if self.request.user.is_authenticated:
                 editable_queryset = self.request.user.get_editable_events(original_queryset)
