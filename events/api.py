@@ -1745,9 +1745,12 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
         if 'include' in context:
             for included in context['include']:
                 if included == 'location':
-                    queryset = queryset.prefetch_related('location__divisions', 'location__divisions__type', 'location__divisions__municipality')
+                    queryset = queryset.prefetch_related('location__divisions',
+                                                         'location__divisions__type',
+                                                         'location__divisions__municipality')
                 if included == 'keywords':
-                    queryset = queryset.prefetch_related('keywords__alt_labels', 'audience__alt_labels')
+                    queryset = queryset.prefetch_related('keywords__alt_labels',
+                                                         'audience__alt_labels')
         return apply_select_and_prefetch(
             queryset=queryset,
             extensions=get_extensions_from_request(self.request)
