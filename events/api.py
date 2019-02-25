@@ -1703,7 +1703,7 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
     # Use select_ and prefetch_related() to reduce the amount of queries
     queryset = queryset.select_related('location')
     queryset = queryset.prefetch_related(
-        'offers', 'keywords', 'audience', 'external_links', 'sub_events', 'in_language')
+        'offers', 'keywords', 'audience', 'images', 'external_links', 'sub_events', 'in_language')
     serializer_class = EventSerializer
     filter_backends = (EventOrderingFilter, django_filters.rest_framework.DjangoFilterBackend,
                        EventExtensionFilterBackend)
@@ -1739,8 +1739,17 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
         return context
 
     def get_queryset(self):
+        queryset = super().get_queryset()
+        context = self.get_serializer_context()
+        # prefetch extra if the user want them included
+        if 'include' in context:
+            for included in context['include']:
+                if included == 'location':
+                    queryset = queryset.prefetch_related('location__divisions', 'location__divisions__type', 'location__divisions__municipality')
+                if included == 'keywords':
+                    queryset = queryset.prefetch_related('keywords__alt_labels', 'audience__alt_labels')
         return apply_select_and_prefetch(
-            queryset=super().get_queryset(),
+            queryset=queryset,
             extensions=get_extensions_from_request(self.request)
         )
 
