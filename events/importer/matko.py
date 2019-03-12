@@ -444,7 +444,7 @@ class MatkoImporter(Importer):
         if self.options['single']:
             self.logger.info("Trying to find single matko location %s" % self.options['single'])
             for matko_id, location in self.places.items():
-                if location['name']['fi'].lower() == self.options['single'].lower():
+                if location['name']['fi'] and location['name']['fi'].lower() == self.options['single'].lower():
                     self.logger.info("Location %s (%s) found in matko feed"
                                      % (self.options['single'], matko_id))
                     self.save_place(location)
