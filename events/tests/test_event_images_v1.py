@@ -311,7 +311,7 @@ def test__image_cannot_be_edited_outside_organization_with_apikey(
 @override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL='')  # noqa
 @pytest.mark.django_db
 def test__create_an_event_with_uploaded_image(
-        api_client, list_url, event_list_url, minimal_event_dict, image_data, user):
+        api_client, list_url, event_list_url, minimal_event_dict, image_data, user):  # noqa
     api_client.force_authenticate(user)
 
     image_response = api_client.post(list_url, image_data)
@@ -336,7 +336,7 @@ def test__create_an_event_with_uploaded_image(
 @override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL='')  # noqa
 @pytest.mark.django_db
 def test__update_an_event_with_uploaded_image(
-        api_client, list_url, event_list_url, minimal_event_dict, image_data, user):
+        api_client, list_url, event_list_url, minimal_event_dict, image_data, user):  # noqa
     api_client.force_authenticate(user)
     response = create_with_post(api_client, minimal_event_dict)
 

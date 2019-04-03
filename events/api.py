@@ -1075,7 +1075,7 @@ class ImageViewSet(viewsets.ModelViewSet):
         # ensure image can only be deleted within the organization
         data_source, organization = get_authenticated_data_source_and_publisher(self.request)
         if not organization == instance.publisher:
-                raise PermissionDenied()
+            raise PermissionDenied()
         super().perform_destroy(instance)
 
 

@@ -115,22 +115,22 @@ class TprekImporter(Importer):
 
     def _save_field(self, obj, obj_field_name, info,
                     info_field_name, max_length=None):
-            if info_field_name in info:
-                val = self.clean_text(info[info_field_name])
-            else:
-                val = None
+        if info_field_name in info:
+            val = self.clean_text(info[info_field_name])
+        else:
+            val = None
 
-            if max_length and val and len(val) > max_length:
-                self.logger.warning("%s: field %s too long" % (obj, info_field_name))
-                val = None
+        if max_length and val and len(val) > max_length:
+            self.logger.warning("%s: field %s too long" % (obj, info_field_name))
+            val = None
 
-            obj_val = getattr(obj, obj_field_name, None)
-            if obj_val == val:
-                return
+        obj_val = getattr(obj, obj_field_name, None)
+        if obj_val == val:
+            return
 
-            setattr(obj, obj_field_name, val)
-            obj._changed_fields.append(obj_field_name)
-            obj._changed = True
+        setattr(obj, obj_field_name, val)
+        obj._changed_fields.append(obj_field_name)
+        obj._changed = True
 
     @db.transaction.atomic
     def _import_unit(self, syncher, info):
