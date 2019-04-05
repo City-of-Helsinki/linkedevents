@@ -21,8 +21,8 @@ from events.models import Image, Language, Event, Offer, EventLink, Place
 
 EXTENSION_COURSE_FIELDS = ('enrolment_start_time', 'enrolment_end_time', 'maximum_attendee_capacity',
                            'minimum_attendee_capacity', 'remaining_attendee_capacity')
-
 LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
+
 
 # Using a recursive default dictionary
 # allows easy updating of the same data keys
