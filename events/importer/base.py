@@ -2,6 +2,7 @@ import os
 import logging
 import itertools
 import datetime
+import pytz
 from collections import defaultdict
 from functools import partial
 import operator
@@ -21,6 +22,7 @@ from events.models import Image, Language, Event, Offer, EventLink, Place
 EXTENSION_COURSE_FIELDS = ('enrolment_start_time', 'enrolment_end_time', 'maximum_attendee_capacity',
                            'minimum_attendee_capacity', 'remaining_attendee_capacity')
 
+LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
 
 # Using a recursive default dictionary
 # allows easy updating of the same data keys
@@ -275,6 +277,10 @@ class Importer(object):
         if 'has_start_time' not in info:
             info['has_start_time'] = True
         if not info['has_start_time']:
+            # Event start time is not exactly defined.
+            # Use midnight in event timezone, or, if given in utc, local timezone
+            if info['start_time'].tzinfo == pytz.utc:
+                info['start_time'] = info['start_time'].astimezone(LOCAL_TZ)
             info['start_time'] = info['start_time'].replace(hour=0, minute=0, second=0)
 
         # If no end timestamp supplied, we treat the event as ending at midnight.
@@ -287,6 +293,10 @@ class Importer(object):
 
         # If end date is supplied but no time, the event ends at midnight of the following day.
         if not info['has_end_time']:
+            # Event end time is not exactly defined.
+            # Use midnight in event timezone, or, if given in utc, local timezone
+            if info['end_time'].tzinfo == pytz.utc:
+                info['end_time'] = info['start_time'].astimezone(LOCAL_TZ)
             info['end_time'] = info['end_time'].replace(hour=0, minute=0, second=0)
             info['end_time'] += datetime.timedelta(days=1)
 

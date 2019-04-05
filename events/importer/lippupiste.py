@@ -377,7 +377,8 @@ class LippupisteImporter(Importer):
         event_date = datetime.strptime(source_event['EventDate'], '%d.%m.%Y').date()
         event_time = datetime.strptime(source_event['EventTime'], '%H:%M').time()
         event_datetime = LOCAL_TZ.localize(datetime.combine(event_date, event_time))
-        event_datetime = event_datetime.astimezone(pytz.utc)
+        # we would prefer to retain the local timezone, so as to better communicate it to base importer
+        # event_datetime = event_datetime.astimezone(pytz.utc)
         event['start_time'] = event_datetime
         provider = source_event['EventPromoterName']
         if provider:
