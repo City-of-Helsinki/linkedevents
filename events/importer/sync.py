@@ -1,5 +1,8 @@
 import logging
 
+# Per module logger
+logger = logging.getLogger(__name__)
+
 
 class ModelSyncher(object):
     def __init__(self, queryset, generate_obj_id,
@@ -58,4 +61,4 @@ class ModelSyncher(object):
                 obj.delete()
                 deleted = True
             if deleted:
-                logging.info("Deleting object %s" % obj)
+                logger.info("Deleting object %s" % obj)

@@ -20,6 +20,9 @@ from events.models import DataSource, Event, Keyword, Place
 
 from .base import Importer, register_importer
 
+# Per module logger
+logger = logging.getLogger(__name__)
+
 HARRASTUSHAKU_API_BASE_URL = 'http://nk.hel.fi/harrastushaku/api/'
 
 TIMEZONE = pytz.timezone('Europe/Helsinki')
@@ -45,8 +48,6 @@ AUDIENCE_BY_AGE_RANGE = (
 )
 
 SubEventTimeRange = namedtuple('SubEventTimeRange', ['start', 'end'])
-
-logger = logging.getLogger(__name__)
 
 
 class HarrastushakuException(Exception):

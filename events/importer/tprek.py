@@ -15,6 +15,9 @@ from events.models import DataSource, Place
 from .sync import ModelSyncher
 from .base import Importer, register_importer
 
+# Per module logger
+logger = logging.getLogger(__name__)
+
 URL_BASE = 'http://www.hel.fi/palvelukarttaws/rest/v4/'
 GK25_SRID = 3879
 
@@ -55,7 +58,7 @@ class TprekImporter(Importer):
         url = "%s%s/" % (URL_BASE, resource_name)
         if res_id is not None:
             url = "%s%s/" % (url, res_id)
-        logging.info("Fetching URL %s" % url)
+        logger.info("Fetching URL %s" % url)
         resp = requests.get(url)
         assert resp.status_code == 200
         return resp.json()
@@ -75,11 +78,11 @@ class TprekImporter(Importer):
                 call_command('event_import', 'matko', places=True, single=obj.name)
                 replaced = replace_location(replace=obj, by_source='matko')
             if not replaced:
-                logging.warning("Tprek deleted location %s (%s) with events."
-                                "No unambiguous replacement was found. "
-                                "Please look for a replacement location and save it in the replaced_by field. "
-                                "Until then, events will stay mapped to the deleted location." %
-                                (obj.id, str(obj)))
+                logger.warning("Tprek deleted location %s (%s) with events."
+                               "No unambiguous replacement was found. "
+                               "Please look for a replacement location and save it in the replaced_by field. "
+                               "Until then, events will stay mapped to the deleted location." %
+                               (obj.id, str(obj)))
         return True
 
     def mark_deleted(self, obj):
@@ -100,7 +103,7 @@ class TprekImporter(Importer):
                 val = None
 
             if max_length and val and len(val) > max_length:
-                logging.warning("%s: field %s too long" % (obj, info_field_name))
+                logger.warning("%s: field %s too long" % (obj, info_field_name))
                 val = None
 
             obj_key = '%s_%s' % (obj_field_name, lang)
@@ -180,7 +183,7 @@ class TprekImporter(Importer):
                     p.transform(self.gps_to_target_ct)
                 position = p
             else:
-                logging.warning("Invalid coordinates (%f, %f) for %s" % (n, e, obj))
+                logger.warning("Invalid coordinates (%f, %f) for %s" % (n, e, obj))
 
         picture_url = info.get('picture_url', '').strip()
         if picture_url:
@@ -214,7 +217,7 @@ class TprekImporter(Importer):
                 verb = "created"
             else:
                 verb = "changed (fields: %s)" % ', '.join(obj._changed_fields)
-            logging.info("%s %s" % (obj, verb))
+            logger.info("%s %s" % (obj, verb))
             obj.save()
 
         syncher.mark(obj)
@@ -229,14 +232,14 @@ class TprekImporter(Importer):
             obj_list = [self.pk_get('unit', obj_id)]
             queryset = queryset.filter(id=obj_id)
         else:
-            logging.info("Loading units...")
+            logger.info("Loading units...")
             obj_list = self.pk_get('unit')
-            logging.info("%s units loaded" % len(obj_list))
+            logger.info("%s units loaded" % len(obj_list))
         syncher = ModelSyncher(queryset, lambda obj: obj.origin_id, delete_func=self.mark_deleted,
                                check_deleted_func=self.check_deleted)
         for idx, info in enumerate(obj_list):
             if idx and (idx % 1000) == 0:
-                logging.info("%s units processed" % idx)
+                logger.info("%s units processed" % idx)
             self._import_unit(syncher, info)
 
         syncher.finish(self.options.get('remap', False))

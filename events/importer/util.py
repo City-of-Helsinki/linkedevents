@@ -8,6 +8,9 @@ from django.utils.translation.trans_real import activate, deactivate
 
 from events.models import Place
 
+# Per module logger
+logger = logging.getLogger(__name__)
+
 
 def clean_text(text, strip_newlines=False):
     text = text.replace('\xa0', ' ').replace('\x1f', '')
@@ -55,7 +58,7 @@ def separate_scripts(text, scripts):
             language = last_language
         if language != last_language:
             # fix html paragraph breaks after language change
-            logging.debug('supported language detected: ' + language)
+            logger.debug('supported language detected: ' + language)
             if last_paragraph in (r'</p><p>', r'</p>', r'<p>'):
                 separated[last_language] = re.sub(r'<p>$', '', separated[last_language])
                 separated[language] += r'<p>'
@@ -143,8 +146,8 @@ def replace_location(replace=None,
         replace.deleted = True
         replace.replaced_by = by
         replace.save(update_fields=['deleted', 'replaced_by'])
-        logging.info("Location %s (%s) was deleted. Discovered replacement location %s" %
-                     (replace.id, str(replace), by.id))
+        logger.info("Location %s (%s) was deleted. Discovered replacement location %s" %
+                    (replace.id, str(replace), by.id))
     return True
 
 
