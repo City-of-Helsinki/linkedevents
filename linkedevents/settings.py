@@ -4,7 +4,6 @@ Django base settings for linkedevents project.
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
-import logging
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -30,7 +29,7 @@ LOGGING = {
             'formatter': 'timestamped_named',
         },
         # Just for reference, not used
-        'blackhole' : {
+        'blackhole': {
             'class': 'logging.NullHandler',
         },
     },
@@ -39,8 +38,8 @@ LOGGING = {
             'handlers': ['console'],
             'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
         },
-# Special configuration for elasticsearch, as INFO level prints
-# out every single call to elasticsearch
+        # Special configuration for elasticsearch, as INFO level prints
+        # out every single call to elasticsearch
         'elasticsearch': {
             'level': 'WARNING',
         },
@@ -116,7 +115,7 @@ LANGUAGES = (
     ('sv', 'Swedish'),
     ('en', 'English'),
     ('zh-hans', 'Simplified Chinese'),
-    ('ru' ,'Russian'),
+    ('ru', 'Russian'),
     ('ar', 'Arabic'),
 )
 
