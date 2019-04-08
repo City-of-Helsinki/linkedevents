@@ -417,10 +417,11 @@ class HelmetImporter(Importer):
         return event
 
     def _recur_fetch_paginated_url(self, url, lang, events):
-        for _ in range(0, 5):
+        max_tries = 5
+        for try_number in range(0, max_tries):
             response = requests.get(url)
             if response.status_code != 200:
-                logger.error("HelMet API reported HTTP %d" % response.status_code)
+                logger.warning("HelMet API reported HTTP %d" % response.status_code)
                 time.sleep(2)
                 if self.cache:
                     self.cache.delete_url(url)
@@ -428,7 +429,7 @@ class HelmetImporter(Importer):
             try:
                 root_doc = response.json()
             except ValueError:
-                logger.error("HelMet API returned invalid JSON")
+                logger.warning("HelMet API returned invalid JSON (try {} of {})".format(try_number + 1, max_tries))
                 if self.cache:
                     self.cache.delete_url(url)
                 time.sleep(5)
@@ -464,8 +465,7 @@ class HelmetImporter(Importer):
         for lang in self.supported_languages:
             helmet_lang_id = HELMET_LANGUAGES[lang]
             url = HELMET_API_URL.format(lang_code=helmet_lang_id, start_date='2016-01-01')
-            logger.info("Processing lang {}".format(lang))
-            logger.info("from URL {}".format(url))
+            logger.info("Processing lang {} from URL {}".format(lang, url))
             try:
                 self._recur_fetch_paginated_url(url, lang, events)
             except APIBrokenError:

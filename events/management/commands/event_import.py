@@ -57,7 +57,7 @@ class Command(BaseCommand):
             method = getattr(importer, name, None)
             if options[imp_type]:
                 if not method:
-                    raise CommandError("Importer %s does not support importing %s" % (name, imp_type))
+                    raise CommandError("Importer {} does not support importing {}".format(importer.name, imp_type))
                 if imp_type == 'courses' and 'extension_course' not in settings.INSTALLED_APPS:
                     raise CommandError("Course extension must be installed when importing courses.")
             else:
