@@ -65,7 +65,7 @@ class HarrastushakuImporter(Importer):
         self.tprek_data_source = DataSource.objects.get(id='tprek')
         self.ahjo_data_source, _ = DataSource.objects.get_or_create(id='ahjo', defaults={'name': 'Ahjo'})
         self.organization, _ = Organization.objects.get_or_create(origin_id='u48040030',
-                                                               data_source=self.ahjo_data_source)
+                                                                  data_source=self.ahjo_data_source)
         self.tprek_ids = {place.origin_id for place in Place.objects.filter(data_source=self.tprek_data_source)}
         self.keywords = {keyword.id: keyword for keyword in Keyword.objects.all()}
         self.keyword_matcher = KeywordMatcher()
