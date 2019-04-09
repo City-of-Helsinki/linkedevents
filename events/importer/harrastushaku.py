@@ -7,7 +7,6 @@ from functools import lru_cache, partial
 
 import pytz
 import requests
-from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from django.utils.dateparse import parse_time
 from django.utils.timezone import now
@@ -64,11 +63,9 @@ class HarrastushakuImporter(Importer):
         logger.debug('Running Harrastushaku importer setup...')
         self.data_source, _ = DataSource.objects.get_or_create(id=self.name, defaults={'name': 'Harrastushaku'})
         self.tprek_data_source = DataSource.objects.get(id='tprek')
-        self.ahjo_data_source, _ = DataSource.objects.get_or_create(id='ahjo', name='Ahjo')
-        try:
-            self.organization = Organization.objects.get(origin_id='u48040030', data_source=self.ahjo_data_source)
-        except Organization.DoesNotExist:
-            raise ImproperlyConfigured("orgid u48040030 missing from DB, harrastushaku importer cannot continue")
+        self.ahjo_data_source, _ = DataSource.objects.get_or_create(id='ahjo', defaults={'name': 'Ahjo'})
+        self.organization, _ = Organization.objects.get_or_create(origin_id='u48040030',
+                                                               data_source=self.ahjo_data_source)
         self.tprek_ids = {place.origin_id for place in Place.objects.filter(data_source=self.tprek_data_source)}
         self.keywords = {keyword.id: keyword for keyword in Keyword.objects.all()}
         self.keyword_matcher = KeywordMatcher()
