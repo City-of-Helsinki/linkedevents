@@ -123,8 +123,7 @@ class YsoImporter(Importer):
         return graph
 
     def save_keywords(self, graph):
-        if self.verbosity >= 2:
-            logger.debug("Saving data")
+        logger.debug("Saving data")
 
         bulk_mode = False
         if bulk_mode:
