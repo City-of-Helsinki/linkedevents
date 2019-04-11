@@ -21,7 +21,7 @@ requests-cache
 six
 django-extensions
 rdflib
--e git+https://github.com/City-of-Helsinki/munigeo@v0.2.6#egg=django-munigeo
+django-munigeo<0.3
 icalendar
 httmock
 bleach
@@ -41,5 +41,5 @@ django-allauth
 django-leaflet
 djangorestframework-bulk
 python-docx
--e git+https://github.com/City-of-Helsinki/django-orghierarchy.git@v0.1.20#egg=django-orghierarchy
+django-orghierarchy
 langdetect
