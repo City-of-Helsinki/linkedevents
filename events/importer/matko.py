@@ -4,6 +4,7 @@ import dateutil.parser
 import requests
 import requests_cache
 import pytz
+import logging
 from collections import OrderedDict
 from django.db.models import Count
 from django_orghierarchy.models import Organization
@@ -15,6 +16,9 @@ from events.keywords import KeywordMatcher
 
 from .base import Importer, register_importer, recur_dict
 from .util import clean_text, unicodetext, replace_location
+
+# Per module logger
+logger = logging.getLogger(__name__)
 
 MATKO_URLS = {
     'places': OrderedDict([
@@ -115,7 +119,7 @@ class MatkoImporter(Importer):
         if key not in rdict:
             rdict[key] = val
         elif val != rdict[key]:
-            self.logger.info('Values differ for %s, key %s, values %s and %s ' % (
+            logger.info('Values differ for %s, key %s, values %s and %s ' % (
                 rdict, key, val, rdict[key]))
 
     def setup(self):
@@ -172,7 +176,7 @@ class MatkoImporter(Importer):
             if include_deleted and place_name in self.deleted_tprek_by_name:
                 place_id, tprek_id, replaced_by_id = self.deleted_tprek_by_name[place_name]
                 if replaced_by_id:
-                    self.logger.info('Place ' + place_id + ' replaced by ' + replaced_by_id)
+                    logger.info('Place ' + place_id + ' replaced by ' + replaced_by_id)
                     place_id = replaced_by_id
             else:
                 return None
@@ -209,16 +213,16 @@ class MatkoImporter(Importer):
             from pprint import pprint
             if matko_id not in places:
                 # The final fallback is to use deleted tprek locations.
-                self.logger.info("Matko location %s (%s) not found in feed!" % (
+                logger.info("Matko location %s (%s) not found in feed!" % (
                     location['name']['fi'], location['origin_id']))
-                self.logger.info("Reverting back to deleted tprek locations.")
+                logger.info("Reverting back to deleted tprek locations.")
                 place_id = self._find_place_from_tprek(location, include_deleted=True)
                 if place_id:
-                    self.logger.warning(location['name']['fi'] + " found deleted in tprek!")
+                    logger.warning(location['name']['fi'] + " found deleted in tprek!")
                     return place_id
-                self.logger.warning(location['name']['fi'] + " not found in tprek history!")
+                logger.warning(location['name']['fi'] + " not found in tprek history!")
                 return None
-            self.logger.info("Place %s found in matko feed, importing." % location['name']['fi'])
+            logger.info("Place %s found in matko feed, importing." % location['name']['fi'])
             pprint(places[matko_id])
             place = self.save_place(places[matko_id])
 
@@ -232,7 +236,7 @@ class MatkoImporter(Importer):
         event = events[eid]
 
         if eid != int(text(item, 'id')):
-            self.logger.info(
+            logger.info(
                 'Unique id and id values differ for id %d uid %s' % (
                     eid, text(item, 'id')))
 
@@ -346,7 +350,7 @@ class MatkoImporter(Importer):
             event['keywords'] = keywords
             event['audience'] = audience
         else:
-            self.logger.warning('Warning: no keyword matches for', event['name'], keywords)
+            logger.warning('Warning: no keyword matches for {} keywords'.format(event['name']))
 
         if 'id' not in event['location']:
             place_id = self._find_place(event['location'])
@@ -406,7 +410,7 @@ class MatkoImporter(Importer):
         return root.xpath('channel/item')
 
     def import_events(self):
-        self.logger.info("Importing Matko events")
+        logger.info("Importing Matko events")
         events = recur_dict()
         keyword_matcher = KeywordMatcher()
         for lang, url in MATKO_URLS['events'].items():
@@ -416,7 +420,7 @@ class MatkoImporter(Importer):
 
         for event in events.values():
             self.save_event(event)
-        self.logger.info("%d events processed" % len(events.values()))
+        logger.info("%d events processed" % len(events.values()))
 
     def _fetch_places(self):
         if hasattr(self, 'places'):
@@ -442,21 +446,21 @@ class MatkoImporter(Importer):
     def import_places(self):
         self._fetch_places()
         if self.options['single']:
-            self.logger.info("Trying to find single matko location %s" % self.options['single'])
+            logger.info("Trying to find single matko location %s" % self.options['single'])
             for matko_id, location in self.places.items():
                 if location['name']['fi'] and location['name']['fi'].lower() == self.options['single'].lower():
-                    self.logger.info("Location %s (%s) found in matko feed"
-                                     % (self.options['single'], matko_id))
+                    logger.info("Location %s (%s) found in matko feed"
+                                % (self.options['single'], matko_id))
                     self.save_place(location)
                     return
-            self.logger.warning("Location %s not found in matko feed" % self.options['single'])
+            logger.warning("Location %s not found in matko feed" % self.options['single'])
             return
-        self.logger.info("Updating existing matko places")
+        logger.info("Updating existing matko places")
         place_list = Place.objects.filter(data_source=self.data_source)
         for place in place_list:
             origin_id = int(place.origin_id)
             if origin_id not in self.places:
-                self.logger.warning("%s not found in Matko feed anymore" % place)
+                logger.warning("%s not found in Matko feed anymore" % place)
                 continue
             place = self.places[origin_id]
             self.save_place(place)
