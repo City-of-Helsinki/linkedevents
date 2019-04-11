@@ -20,6 +20,9 @@ from events.models import DataSource, Event, Keyword, Place
 
 from .base import Importer, register_importer
 
+# Per module logger
+logger = logging.getLogger(__name__)
+
 HARRASTUSHAKU_API_BASE_URL = 'http://nk.hel.fi/harrastushaku/api/'
 
 TIMEZONE = pytz.timezone('Europe/Helsinki')
@@ -46,8 +49,6 @@ AUDIENCE_BY_AGE_RANGE = (
 
 SubEventTimeRange = namedtuple('SubEventTimeRange', ['start', 'end'])
 
-logger = logging.getLogger(__name__)
-
 
 class HarrastushakuException(Exception):
     pass
@@ -62,8 +63,9 @@ class HarrastushakuImporter(Importer):
         logger.debug('Running Harrastushaku importer setup...')
         self.data_source, _ = DataSource.objects.get_or_create(id=self.name, defaults={'name': 'Harrastushaku'})
         self.tprek_data_source = DataSource.objects.get(id='tprek')
-        self.ahjo_data_source, _ = DataSource.objects.get_or_create(id='ahjo', name='Ahjo')
-        self.organization = Organization.objects.get(origin_id='u48040030', data_source=self.ahjo_data_source)
+        self.ahjo_data_source, _ = DataSource.objects.get_or_create(id='ahjo', defaults={'name': 'Ahjo'})
+        self.organization, _ = Organization.objects.get_or_create(origin_id='u48040030',
+                                                                  data_source=self.ahjo_data_source)
         self.tprek_ids = {place.origin_id for place in Place.objects.filter(data_source=self.tprek_data_source)}
         self.keywords = {keyword.id: keyword for keyword in Keyword.objects.all()}
         self.keyword_matcher = KeywordMatcher()

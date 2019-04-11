@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import requests
+import logging
 
 import rdflib
 from django.core.exceptions import ObjectDoesNotExist
@@ -12,6 +13,9 @@ from events.models import Keyword, KeywordLabel, DataSource, BaseModel, Language
 from .util import active_language
 from .sync import ModelSyncher
 from .base import Importer, register_importer
+
+# Per module logger
+logger = logging.getLogger(__name__)
 
 yso = rdflib.Namespace('http://www.yso.fi/onto/yso/')
 URL = 'http://finto.fi/rest/v1/yso/data'
@@ -73,11 +77,11 @@ def deprecate_and_replace(graph, keyword):
         except Keyword.DoesNotExist:
             pass
     if new_keyword:
-        print('Keyword %s replaced by %s' % (keyword, new_keyword))
+        logger.info('Keyword %s replaced by %s' % (keyword, new_keyword))
         new_keyword.events.add(*keyword.events.all())
         new_keyword.audience_events.add(*keyword.audience_events.all())
     else:
-        print('Keyword %s deprecated without replacement!' % keyword)
+        logger.info('Keyword %s deprecated without replacement!' % keyword)
         if keyword.events.all().exists() or keyword.audience_events.all().exists():
             raise Exception("Deprecating YSO keyword %s that is referenced in events %s. "
                             "No replacement keyword was found in YSO. Please manually map the "
@@ -104,25 +108,22 @@ class YsoImporter(Importer):
         self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
 
     def import_keywords(self):
-        print("Importing YSO keywords")
+        logger.info("Importing YSO keywords")
         graph = self.load_graph_into_memory(URL)
         self.save_keywords(graph)
 
     def load_graph_into_memory(self, url):
-        if self.verbosity >= 2:
-            print("Fetching %s" % url)
+        logger.debug("Fetching %s" % url)
         resp = requests.get(url)
         assert resp.status_code == 200
         resp.encoding = 'UTF-8'
         graph = rdflib.Graph()
-        if self.verbosity >= 2:
-            print("Parsing RDF")
+        logger.debug("Parsing RDF")
         graph.parse(data=resp.text, format='turtle')
         return graph
 
     def save_keywords(self, graph):
-        if self.verbosity >= 2:
-            print("Saving data")
+        logger.debug("Saving data")
 
         bulk_mode = False
         if bulk_mode:
@@ -171,7 +172,7 @@ class YsoImporter(Importer):
                     new_keyword = Keyword.objects.get(id=new_id)
                 except ObjectDoesNotExist:
                     continue
-                print('Manually mapping events with %s to %s' % (str(old_keyword), str(new_keyword)))
+                logger.info('Manually mapping events with %s to %s' % (str(old_keyword), str(new_keyword)))
                 new_keyword.events.add(*old_keyword.events.all())
                 new_keyword.audience_events.add(*old_keyword.audience_events.all())
 
@@ -222,7 +223,7 @@ class YsoImporter(Importer):
         for _, literal in graph.preferredLabel(subject):
             with active_language(literal.language):
                 if keyword.name != str(literal):
-                    print('(re)naming keyword ' + keyword.name + ' to ' + str(literal))
+                    logger.info('(re)naming keyword ' + keyword.name + ' to ' + str(literal))
                     keyword.name = str(literal)
                     keyword._changed = True
                     keyword.last_modified_time = BaseModel.now()
@@ -238,7 +239,7 @@ class YsoImporter(Importer):
     def save_alt_label(self, syncher, graph, label):
         label_text = str(label)
         if label.language is None:
-            print('Error:', str(label), 'has no language')
+            logger.error('Error: {} has no language'.format(label))
             return None
         label_object = syncher.get((label_text, str(label.language)))
         if label_object is None:

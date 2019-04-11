@@ -5,6 +5,7 @@ import pytz
 import re
 import bleach
 import requests
+import logging
 from os.path import commonprefix
 from collections import defaultdict
 from datetime import datetime
@@ -17,6 +18,8 @@ from .base import Importer, recur_dict, register_importer
 from .sync import ModelSyncher
 from .util import clean_text
 
+# Per module logger
+logger = logging.getLogger(__name__)
 
 YSO_KEYWORD_MAPS = {
     'baletti': ('yso:p1278', 'yso:p10218'),
@@ -316,14 +319,14 @@ class LippupisteImporter(Importer):
             if candidate_place_name and source_provider_name == candidate_place_name:
                 matches_by_provider_name.append(place_id)
 
-        self.logger.info('-----------------')
-        self.logger.info(source_event['EventVenue'])
-        self.logger.info(source_event['EventName'])
-        self.logger.info(source_event['EventStreet'])
-        self.logger.info(source_event['EventPromoterName'])
+        logger.info('-----------------')
+        logger.info(source_event['EventVenue'])
+        logger.info(source_event['EventName'])
+        logger.info(source_event['EventStreet'])
+        logger.info(source_event['EventPromoterName'])
         place_id = None
         if matches_by_address:
-            self.logger.info('address match, pick the name with most common words and least different words, if any:')
+            logger.info('address match, pick the name with most common words and least different words, if any:')
             if len(matches_by_address) > 1:
                 for common_words, match_list in sorted(matches_by_partial_name.items(),
                                                        key=(lambda x: int(x[0])), reverse=True):
@@ -340,29 +343,29 @@ class LippupisteImporter(Importer):
             else:
                 place_id = matches_by_address[0]
             self.existing_place_id_matches[source_event['EventVenue']] = place_id
-            self.logger.info(Place.objects.get(id=place_id))
+            logger.info(Place.objects.get(id=place_id))
             return place_id
         if matches_by_partial_name:
-            self.logger.info('partial name match, pick the name with most common words and least different words:')
+            logger.info('partial name match, pick the name with most common words and least different words:')
             most_common_words = max(matches_by_partial_name.keys())
             most_common_matches = matches_by_partial_name[most_common_words]
             least_different_words = min(most_common_matches.keys())
             the_perfect_match = most_common_matches[least_different_words][0]
             self.existing_place_id_matches[source_event['EventVenue']] = the_perfect_match
-            self.logger.info(Place.objects.get(id=the_perfect_match))
+            logger.info(Place.objects.get(id=the_perfect_match))
             return the_perfect_match
         if matches_by_provider_name:
-            self.logger.info('provider name match:')
+            logger.info('provider name match:')
             place_id = matches_by_provider_name[0]
             # provider name was an exact match, so we assume all events in this venue will match
             self.existing_place_id_matches[source_event['EventVenue']] = place_id
-            self.logger.info(Place.objects.get(id=place_id))
+            logger.info(Place.objects.get(id=place_id))
             return place_id
         if matches_by_partial_address:
-            self.logger.info('partial address match:')
+            logger.info('partial address match:')
             place_id = matches_by_partial_address[0]
             self.existing_place_id_matches[source_event['EventVenue']] = place_id
-            self.logger.info(Place.objects.get(id=place_id))
+            logger.info(Place.objects.get(id=place_id))
             return place_id
         return None
 
@@ -414,8 +417,8 @@ class LippupisteImporter(Importer):
         if place_id:
             event['location']['id'] = place_id
         else:
-            self.logger.warning("No match found for place '%s' (event %s)" % (source_event['EventVenue'],
-                                                                              event['name'][lang]))
+            logger.warning("No match found for place '%s' (event %s)" % (source_event['EventVenue'],
+                                                                         event['name'][lang]))
         # regardless of match, venue might have some extra info not found in tprek
         location_extra_info = source_event['EventVenue']
         if location_extra_info:
@@ -498,7 +501,7 @@ class LippupisteImporter(Importer):
     def import_events(self):
         if not LIPPUPISTE_EVENT_API_URL:
             raise ImproperlyConfigured("LIPPUPISTE_EVENT_API_URL must be set in local_settings")
-        self.logger.info("Importing Lippupiste events")
+        logger.info("Importing Lippupiste events")
         events = recur_dict()
         event_source_data = list(self._fetch_event_source_data(LIPPUPISTE_EVENT_API_URL))
         if not event_source_data:
@@ -518,10 +521,10 @@ class LippupisteImporter(Importer):
                 if source_event['EventPromoterName'].lower() == provider.lower():
                     for string in NAMES_TO_IGNORE_BY_PROVIDER[provider]:
                         if string.lower() in source_event['EventName'].lower():
-                            self.logger.info('---------')
-                            self.logger.info(source_event['EventName'])
-                            self.logger.info('omitting due to string:')
-                            self.logger.info(string)
+                            logger.info('---------')
+                            logger.info(source_event['EventName'])
+                            logger.info('omitting due to string:')
+                            logger.info(string)
                             break
                     else:
                         continue
@@ -541,10 +544,10 @@ class LippupisteImporter(Importer):
                                             end_time__gte=datetime.now(pytz.utc)).extra(
                         where=["%s ILIKE name_fi||'%%'"], params=[event_name]
                     ):
-                        self.logger.info('---------')
-                        self.logger.info(source_event['EventName'])
-                        self.logger.info('omitting due to event existing already in another data source:')
-                        self.logger.info(data_source)
+                        logger.info('---------')
+                        logger.info(source_event['EventName'])
+                        logger.info('omitting due to event existing already in another data source:')
+                        logger.info(data_source)
                         break
                 else:
                     # not ignored
@@ -561,4 +564,4 @@ class LippupisteImporter(Importer):
         for super_event in super_events:
             self._update_superevent_details(super_event)
 
-        self.logger.info("%d events processed" % len(events.values()))
+        logger.info("%d events processed" % len(events.values()))
