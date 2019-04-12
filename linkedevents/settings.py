@@ -1,19 +1,11 @@
 """
 Django base settings for linkedevents project.
-
-For more information on this file, see
-https://docs.djangoproject.com/en/1.6/topics/settings/
-
-For the full list of settings and their values, see
-https://docs.djangoproject.com/en/1.6/ref/settings/
 """
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/1.6/howto/deployment/checklist/
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 DEBUG = False
 
@@ -23,20 +15,22 @@ ALLOWED_HOSTS = []
 
 SITE_ID = 1
 
-# log to stderr, at level INFO and add timestamps
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'timestamped': {
-            'format': '%(asctime)s: %(message)s',
+        'timestamped_named': {
+            'format': '%(asctime)s %(name)s %(levelname)s: %(message)s',
         },
     },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
-            'formatter': 'timestamped',
-            'level': 'DEBUG',
+            'formatter': 'timestamped_named',
+        },
+        # Just for reference, not used
+        'blackhole': {
+            'class': 'logging.NullHandler',
         },
     },
     'loggers': {
@@ -44,11 +38,15 @@ LOGGING = {
             'handlers': ['console'],
             'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
         },
+        # Special configuration for elasticsearch, as INFO level prints
+        # out every single call to elasticsearch
+        'elasticsearch': {
+            'level': 'WARNING',
+        },
     }
 }
 
 # Application definition
-
 INSTALLED_APPS = [
     'helusers',
     'django.contrib.sites',
@@ -117,7 +115,7 @@ LANGUAGES = (
     ('sv', 'Swedish'),
     ('en', 'English'),
     ('zh-hans', 'Simplified Chinese'),
-    ('ru' ,'Russian'),
+    ('ru', 'Russian'),
     ('ar', 'Arabic'),
 )
 

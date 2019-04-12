@@ -19,6 +19,9 @@ from modeltranslation.translator import translator
 
 from events.models import Image, Language, Event, Offer, EventLink, Place
 
+# Per module logger
+logger = logging.getLogger(__name__)
+
 EXTENSION_COURSE_FIELDS = ('enrolment_start_time', 'enrolment_end_time', 'maximum_attendee_capacity',
                            'minimum_attendee_capacity', 'remaining_attendee_capacity')
 LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
@@ -36,7 +39,6 @@ class Importer(object):
         super(Importer, self).__init__()
         self.options = options
         self.verbosity = options['verbosity']
-        self.logger = logging.getLogger(__name__)
 
         importer_langs = set(self.supported_languages)
         configured_langs = set(l[0] for l in settings.LANGUAGES)
@@ -204,7 +206,7 @@ class Importer(object):
 
     def _set_field(self, obj, field_name, val):
         if not hasattr(obj, field_name):
-            print(vars(obj))
+            logger.debug(vars(obj))
         obj_val = getattr(obj, field_name)
         # this prevents overwriting manually edited values with empty values
         if obj_val == val or (hasattr(obj, 'is_user_edited') and obj.is_user_edited() and not val):
@@ -313,7 +315,7 @@ class Importer(object):
             try:
                 obj.save()
             except ValidationError as error:
-                print('Event ' + str(obj) + ' could not be saved: ' + str(error))
+                logger.error('Event {} could not be saved: {}'.format(obj, error))
                 raise
 
         # many-to-many fields
@@ -440,7 +442,7 @@ class Importer(object):
                 verb = "created"
             else:
                 verb = "changed"
-            print("%s %s" % (obj, verb))
+            logger.debug("{} {}".format(obj, verb))
 
         return obj
 
@@ -470,7 +472,7 @@ class Importer(object):
                     p.transform(self.gps_to_target_ct)
                 position = p
             else:
-                print("Invalid coordinates (%f, %f) for %s" % (n, e, obj))
+                logger.warning("Invalid coordinates (%f, %f) for %s" % (n, e, obj))
 
         if position and obj.position:
             # If the distance is less than 10cm, assume the position
@@ -494,7 +496,7 @@ class Importer(object):
                 verb = "created"
             else:
                 verb = "changed"
-            print("%s %s" % (obj, verb))
+            logger.debug("%s %s" % (obj, verb))
             obj.save()
 
         return obj
