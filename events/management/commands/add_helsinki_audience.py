@@ -3,7 +3,7 @@ from functools import lru_cache
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from events.models import Event, Keyword, KeywordSet
+from events.models import Event, Keyword, KeywordSet, DataSource
 
 HELSINKI_KEYWORD_SET_DATA = {
     'id': 'helsinki:audiences',
