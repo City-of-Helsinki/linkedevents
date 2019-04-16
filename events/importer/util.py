@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 
 import re
+import logging
 from langdetect import detect
 from langdetect.lang_detect_exception import LangDetectException
 from django.utils.translation.trans_real import activate, deactivate
 
 from events.models import Place
+
+# Per module logger
+logger = logging.getLogger(__name__)
 
 
 def clean_text(text, strip_newlines=False):
@@ -38,8 +42,10 @@ def separate_scripts(text, scripts):
             separated[last_language] += paragraph
             last_paragraph = paragraph
             continue
+        # replace any misleading tags left
+        paragraph_stripped = re.sub(r'(<(/)?strong>)|(<br>)+|&amp;|<a href=.*">|</a>', ' ', paragraph)
         try:
-            language = detect(paragraph)
+            language = detect(paragraph_stripped)
         except LangDetectException:
             # an exception means no language could be detected
             language = last_language
@@ -52,7 +58,7 @@ def separate_scripts(text, scripts):
             language = last_language
         if language != last_language:
             # fix html paragraph breaks after language change
-            print('supported language detected: ' + language)
+            logger.debug('supported language detected: ' + language)
             if last_paragraph in (r'</p><p>', r'</p>', r'<p>'):
                 separated[last_language] = re.sub(r'<p>$', '', separated[last_language])
                 separated[language] += r'<p>'
@@ -140,8 +146,8 @@ def replace_location(replace=None,
         replace.deleted = True
         replace.replaced_by = by
         replace.save(update_fields=['deleted', 'replaced_by'])
-        print("Location %s (%s) was deleted. Discovered replacement location %s" %
-              (replace.id, str(replace), by.id))
+        logger.info("Location %s (%s) was deleted. Discovered replacement location %s" %
+                    (replace.id, str(replace), by.id))
     return True
 
 

@@ -4,6 +4,7 @@ import os
 import re
 import functools
 from lxml import etree
+import logging
 import dateutil
 from pytz import timezone
 from django.conf import settings
@@ -15,16 +16,21 @@ from django_orghierarchy.models import Organization
 from .base import Importer, register_importer, recur_dict
 from .yso import KEYWORDS_TO_ADD_TO_AUDIENCE
 from .util import unicodetext
-from events.models import DataSource, Event, EventAggregate, EventAggregateMember, Keyword, Place
+from events.models import DataSource, Event, EventAggregate, EventAggregateMember, Keyword, Place, License
 from events.keywords import KeywordMatcher
 from events.translation_utils import expand_model_fields
+
+# Per module logger
+logger = logging.getLogger(__name__)
 
 LOCATION_TPREK_MAP = {
     'malmitalo': '8740',
     'malms kulturhus': '8740',
     'malms bibliotek - malms kulturhus': '8192',
+    'malmin kirjasto': '8192',
     'helsingin kaupungintalo': '28473',
     'stoa': '7259',
+    'östra centrums bibliotek': '8184',
     'parvigalleria': '7259',
     'musiikkisali': '7259',
     'kanneltalo': '7255',
@@ -39,6 +45,9 @@ LOCATION_TPREK_MAP = {
     'nuorisokahvila clubi': '8006',
     'haagan nuorisotalo': '8023',
     'vuosaaren kirjasto': '8310',
+    'riistavuoren palvelukeskus': '47695',
+    'kannelmäen palvelukeskus': '51869',
+    'leikkipuisto lampi': '57117',
 }
 
 ADDRESS_TPREK_MAP = {
@@ -62,8 +71,9 @@ CATEGORIES_TO_IGNORE = [
     53, 54, 55
 ]
 
-# These events are courses - not to be published
-SKIP_EVENTS_WITH_CATEGORY = {
+# Events having one of these categories are courses - they are excluded when importing events
+# and only they are included when importing courses.
+COURSE_CATEGORIES = {
     70, 71, 72, 73, 75, 77, 79, 80,
     81, 83, 84, 85, 87, 316, 629, 632,
     728, 729, 730, 735,
@@ -73,7 +83,7 @@ SKIP_EVENTS_WITH_CATEGORY = {
 def _query_courses():
     filter_out_keywords = map(
         make_kulke_id,
-        SKIP_EVENTS_WITH_CATEGORY
+        COURSE_CATEGORIES
     )
     return Event.objects.filter(
         data_source='kulke'
@@ -131,8 +141,13 @@ MANUAL_CATEGORIES = {
     # perheliikunta
     628: SPORTS + FAMILIES,
     # lapset ja nuoret
-    355: CHILDREN + YOUTH
+    355: CHILDREN + YOUTH,
+    # lapsi ja aikuinen yhdessä > perheet
+    747: FAMILIES
 }
+
+# these are added to all courses
+COURSE_KEYWORDS = ('p9270',)
 
 # retain the above for simplicity, even if kulke importer internally requires full keyword ids
 KEYWORDS_TO_ADD_TO_AUDIENCE = ['yso:{}'.format(i) for i in KEYWORDS_TO_ADD_TO_AUDIENCE]
@@ -191,7 +206,7 @@ class KulkeImporter(Importer):
         place_list = Place.objects.filter(data_source=self.tprek_data_source).filter(origin_id__in=id_list)
         self.tprek_by_id = {p.origin_id: p.id for p in place_list}
 
-        print('Preprocessing categories')
+        logger.info('Preprocessing categories')
         categories = self.parse_kulke_categories()
 
         keyword_matcher = KeywordMatcher()
@@ -224,6 +239,14 @@ class KulkeImporter(Importer):
 
         self.categories = categories
 
+        course_keyword_ids = ['yso:{}'.format(kw) for kw in COURSE_KEYWORDS]
+        self.course_keywords = set(Keyword.objects.filter(id__in=course_keyword_ids))
+
+        try:
+            self.event_only_license = License.objects.get(id='event_only')
+        except License.DoesNotExist:
+            self.event_only_license = None
+
     def parse_kulke_categories(self):
         categories = {}
         categories_file = os.path.join(
@@ -240,7 +263,7 @@ class KulkeImporter(Importer):
         tprek_id = None
         location = event['location']
         if location['name'] is None:
-            print("Missing place for event %s (%s)" % (
+            logger.warning("Missing place for event %s (%s)" % (
                 get_event_name(event), event['origin_id']))
             return None
 
@@ -279,7 +302,7 @@ class KulkeImporter(Importer):
         if tprek_id:
             event['location']['id'] = self.tprek_by_id[tprek_id]
         else:
-            print("No match found for place '%s' (event %s)" % (loc_name, get_event_name(event)))
+            logger.warning("No match found for place '%s' (event %s)" % (loc_name, get_event_name(event)))
 
     @staticmethod
     def _html_format(text):
@@ -300,7 +323,7 @@ class KulkeImporter(Importer):
             formatted_paragraphs.append(formatted_paragraph)
         return ''.join(formatted_paragraphs)
 
-    def _import_event(self, lang, event_el, events):
+    def _import_event(self, lang, event_el, events, is_course=False):
         def text(t):
             return unicodetext(event_el.find('event' + t))
 
@@ -317,8 +340,8 @@ class KulkeImporter(Importer):
 
         eid = int(event_el.attrib['id'])
 
-        if text_content('servicecode') != 'Pelkkä ilmoitus':
-            # Skip courses
+        if text_content('servicecode') != 'Pelkkä ilmoitus' and not is_course:
+            # Skip courses when importing events
             return False
 
         if self.options['single']:
@@ -380,7 +403,7 @@ class KulkeImporter(Importer):
             except ValidationError:
                 continue
             except ValueError:
-                print('value error with event %s and url %s ' % (eid, link))
+                logger.error('value error with event %s and url %s ' % (eid, link))
             external_links.append({'link': link})
         event['external_links'][lang] = external_links
 
@@ -389,10 +412,15 @@ class KulkeImporter(Importer):
             for attachment in eventattachments:
                 if attachment.attrib['type'] == 'teaserimage':
                     # with the event_only license, the larger picture may be served
-                    event['image'] = unicodetext(attachment).strip().replace(
-                        '/MediumEventPic', '/EventPic'
-                    )
-                    event['image_license'] = 'event_only'
+                    image_url = unicodetext(attachment).strip().replace('/MediumEventPic', '/EventPic')
+                    if image_url:
+                        if self.event_only_license:
+                            event['images'] = [{
+                                'url': image_url,
+                                'license': self.event_only_license,
+                            }]
+                        else:
+                            print('Cannot create an image, "event_only" License missing.')
                     break
 
         provider = text_content('organizer')
@@ -421,15 +449,21 @@ class KulkeImporter(Importer):
                 end_time = end_time.astimezone(LOCAL_TZ)
                 event['has_end_time'] = True
 
-            event['end_time'] = end_time
+            # sometimes, the data has errors. then we set end time to start time
+            if end_time > start_time:
+                event['end_time'] = end_time
+            else:
+                event['end_time'] = event['start_time']
 
-        # todo: verify enrolment use cases, proper fields
-        event['custom']['enrolment']['start_time'] = dateutil.parser.parse(
-            text('enrolmentstarttime')
-        )
-        event['custom']['enrolment']['end_time'] = dateutil.parser.parse(
-            text('enrolmentendtime')
-        )
+        if is_course:
+            event['extension_course'] = {
+                'enrolment_start_time': dateutil.parser.parse(
+                    text('enrolmentstarttime')
+                ),
+                'enrolment_end_time': dateutil.parser.parse(
+                    text('enrolmentendtime')
+                )
+            }
 
         if 'offers' not in event:
             event['offers'] = [recur_dict()]
@@ -469,7 +503,11 @@ class KulkeImporter(Importer):
                     kulke_keyword = Keyword.objects.get(pk=kulke_id)
                     event_keywords.add(kulke_keyword)
                 except Keyword.DoesNotExist:
-                    print('Could not find {}'.format(kulke_id))
+                    logger.error('Could not find {}'.format(kulke_id))
+
+            if is_course:
+                event_keywords.update(self.course_keywords)
+                event_audience.update(self.course_keywords & set(KEYWORDS_TO_ADD_TO_AUDIENCE))
 
             event['keywords'] = event_keywords
             event['audience'] = event_audience
@@ -506,10 +544,10 @@ class KulkeImporter(Importer):
             for inner_key in group:
                 inner_group = recurring_groups.get(inner_key)
                 if inner_group and inner_group != group:
-                    print('Differing groups:', key, inner_key)
-                    print('Differing groups:', group, inner_group)
+                    logger.warning('Differing groups:', key, inner_key)
+                    logger.warning('Differing groups:', group, inner_group)
                     if len(inner_group) == 0:
-                        print(
+                        logger.warning(
                             'Event self-identifies to no group, removing.',
                             inner_key
                         )
@@ -536,7 +574,7 @@ class KulkeImporter(Importer):
                 'info_url', 'description', 'short_description', 'headline',
                 'secondary_headline', 'provider', 'publisher', 'location',
                 'location_extra_info', 'data_source',
-                'image', 'offers', 'external_links'])
+                'images', 'offers', 'external_links'])
 
         # The set of fields which have common values for all events.
         common_fields = set(
@@ -572,8 +610,8 @@ class KulkeImporter(Importer):
                     for headline in [event.name for event in events]
                     ):
                 name += words.pop(0) + ' '
-                print(words)
-                print(name)
+                logger.warning(words)
+                logger.warning(name)
             setattr(super_event, 'name', name)
 
         for lang in self.languages.keys():
@@ -617,8 +655,8 @@ class KulkeImporter(Importer):
             cnt = superevent_aggregates.count()
 
             if cnt > 1:
-                print('Error: the superevent has an ambiguous aggregate group.')
-                print('Aggregate ids: {}, group: {}'.format(
+                logger.error('Error: the superevent has an ambiguous aggregate group.')
+                logger.error('Aggregate ids: {}, group: {}'.format(
                     superevent_aggregates.values_list('id', flat=True), group))
                 continue
 
@@ -670,7 +708,14 @@ class KulkeImporter(Importer):
         return aggregates
 
     def import_events(self):
-        print("Importing Kulke events")
+        logger.info("Importing Kulke events")
+        self._import_events()
+
+    def import_courses(self):
+        logger.info("Importing Kulke courses")
+        self._import_events(importing_courses=True)
+
+    def _import_events(self, importing_courses=False):
         self.url_validator = URLValidator()
         events = recur_dict()
         recurring_groups = dict()
@@ -679,25 +724,20 @@ class KulkeImporter(Importer):
                 settings.IMPORT_FILE_PATH, 'kulke', 'events-%s.xml' % lang)
             root = etree.parse(events_file)
             for event_el in root.xpath('/eventdata/event'):
-                success = self._import_event(lang, event_el, events)
+                success = self._import_event(lang, event_el, events, importing_courses)
                 if success:
                     self._gather_recurring_events(lang, event_el, events, recurring_groups)
 
         events.default_factory = None
 
-        filter_out_keywords = set(map(
+        course_keywords = set(map(
             make_kulke_id,
-            SKIP_EVENTS_WITH_CATEGORY
+            COURSE_CATEGORIES,
         ))
-        for eid, event in events.items():
-            skip = False
-            for kw in event['keywords']:
-                if kw.id in filter_out_keywords:
-                    skip = True
-                    break
-            if skip:
-                continue
-            self.save_event(event)
+
+        for event in events.values():
+            if any(kw.id in course_keywords for kw in event['keywords']) == importing_courses:
+                self.save_event(event)
 
         self._verify_recurs(recurring_groups)
         aggregates = self._save_recurring_superevents(recurring_groups)
@@ -705,7 +745,7 @@ class KulkeImporter(Importer):
             self._update_super_event(agg.super_event)
 
     def import_keywords(self):
-        print("Importing Kulke categories as keywords")
+        logger.info("Importing Kulke categories as keywords")
         categories = self.parse_kulke_categories()
         for kid, value in categories.items():
             try:

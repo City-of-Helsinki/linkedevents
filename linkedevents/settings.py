@@ -1,19 +1,11 @@
 """
 Django base settings for linkedevents project.
-
-For more information on this file, see
-https://docs.djangoproject.com/en/1.6/topics/settings/
-
-For the full list of settings and their values, see
-https://docs.djangoproject.com/en/1.6/ref/settings/
 """
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/1.6/howto/deployment/checklist/
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 DEBUG = False
 
@@ -23,31 +15,39 @@ ALLOWED_HOSTS = []
 
 SITE_ID = 1
 
-# log to stderr, at level INFO and add timestamps
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'timestamped': {
-            'format': '%(asctime)s: %(message)s',
+        'timestamped_named': {
+            'format': '%(asctime)s %(name)s %(levelname)s: %(message)s',
         },
     },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
-            'formatter': 'timestamped',
-            'level': 'INFO',
+            'formatter': 'timestamped_named',
+        },
+        # Just for reference, not used
+        'blackhole': {
+            'class': 'logging.NullHandler',
         },
     },
-    'root': {
-        'handlers': ['console'],
-        'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
-    },
+    'loggers': {
+        '': {
+            'handlers': ['console'],
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+        },
+        # Special configuration for elasticsearch, as INFO level prints
+        # out every single call to elasticsearch
+        'elasticsearch': {
+            'level': 'WARNING',
+        },
+    }
 }
 
 # Application definition
-
-INSTALLED_APPS = (
+INSTALLED_APPS = [
     'helusers',
     'django.contrib.sites',
     'modeltranslation',
@@ -81,9 +81,9 @@ INSTALLED_APPS = (
     'munigeo',
     'leaflet',
     'django_orghierarchy',
-)
+]
 
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE_CLASSES = [
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -92,7 +92,7 @@ MIDDLEWARE_CLASSES = (
     'reversion.middleware.RevisionMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-)
+]
 
 ROOT_URLCONF = 'linkedevents.urls'
 
@@ -116,7 +116,7 @@ LANGUAGES = (
     ('sv', 'Swedish'),
     ('en', 'English'),
     ('zh-hans', 'Simplified Chinese'),
-    ('ru' ,'Russian'),
+    ('ru', 'Russian'),
     ('ar', 'Arabic'),
 )
 
@@ -244,23 +244,41 @@ CITYSDK_API_SETTINGS = {
     'DEFAULT_POI_CATEGORY': '53562f3238653c0a842a3bf7'
 }
 
+HAYSTACK_SIGNAL_PROCESSOR = 'haystack.signals.RealtimeSignalProcessor'
+
 HAYSTACK_CONNECTIONS = {
     'default': {
-        'ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
+        'ENGINE': 'multilingual_haystack.backends.MultilingualSearchEngine'
     },
     'default-fi': {
-        'ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
     },
     'default-en': {
-        'ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
     },
     'default-sv': {
-        'ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
+    },
+    'default-zh-hans': {
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
+    },
+    'default-ru': {
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
+    },
+    'default-ar': {
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
     }
 }
 
+
 import bleach  # noqa
-BLEACH_ALLOWED_TAGS = bleach.ALLOWED_TAGS + ["p", "div"]
+BLEACH_ALLOWED_TAGS = bleach.ALLOWED_TAGS + ["p", "div", "br"]
 
 from easy_thumbnails.conf import Settings as thumbnail_settings  # noqa
 THUMBNAIL_PROCESSORS = (
@@ -270,6 +288,8 @@ THUMBNAIL_PROCESSORS = (
 
 # django-orghierachy swappable model
 DJANGO_ORGHIERARCHY_DATASOURCE_MODEL = 'events.DataSource'
+
+AUTO_ENABLED_EXTENSIONS = []
 
 # local_settings.py can be used to override environment-specific settings
 # like database and email that differ between development and production.

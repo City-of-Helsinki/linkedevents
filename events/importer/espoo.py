@@ -25,6 +25,9 @@ from .yso import KEYWORDS_TO_ADD_TO_AUDIENCE
 from .sync import ModelSyncher
 from .util import clean_text
 
+# Per module logger
+logger = logging.getLogger(__name__)
+
 # Maximum number of attempts to fetch the event from the API before giving up
 MAX_RETRY = 5
 
@@ -161,6 +164,8 @@ ESPOO_LANGUAGES = {
     'en': 2,
 }
 
+ADDRESS_LANGUAGES = ('fi', 'sv')
+
 LOCAL_TZ = timezone('Europe/Helsinki')
 
 
@@ -180,14 +185,13 @@ def mark_deleted(obj):
 
 
 def clean_street_address(address):
-    logger = logging.getLogger(__name__)
     LATIN1_CHARSET = u'a-zàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ'
 
     address = address.strip()
     pattern = re.compile(r'([%s\ -]*[0-9-\ ]*\ ?[a-z]{0,2}),?\ *(0?2[0-9]{3})?\ *(espoo|esbo)?' % LATIN1_CHARSET, re.I)
     match = pattern.match(address)
     if not match:
-        logger.warning('Address not matching %s' % address)
+        logger.warning('Address not matching {}'.format(address))
         return {}
     groups = match.groups()
     street_address = groups[0]
@@ -322,16 +326,22 @@ class EspooImporter(Importer):
         if espoo_loc_id:
             return espoo_loc_id
 
+        address_lang = lang
+        if address_lang not in ADDRESS_LANGUAGES:
+            # pick the first preferred language (e.g. Finnish) if lang (e.g. English) has no address translations
+            address_lang = ADDRESS_LANGUAGES[0]
         filter_params = {
             'deleted': False,
-            'street_address_'+lang+'__icontains': street_address,
+            'street_address_'+address_lang+'__icontains': street_address,
         }
         places = Place.objects.filter(**filter_params).order_by('id')
         place = places.first()  # Choose one place arbitrarily if many.
         if len(places) > 1:
-            self.logger.warning('Several tprek_id match the address "%s".' % street_address)
+            logger.warning('Several tprek_id match the address "{}".'.format(street_address))
         if not place:
             origin_id = self._get_next_place_id("espoo")
+            # address must be saved in the right language!
+            address_data['street_address_'+address_lang] = address_data.pop('street_address')
             address_data.update({
                 'publisher': self.organization,
                 'origin_id': origin_id,
@@ -346,10 +356,10 @@ class EspooImporter(Importer):
             # update metadata in the given language if the place belongs to espoo:
             setattr(place, 'name_'+lang, name)
             setattr(place, 'info_url_'+lang, url)
-            setattr(place, 'street_address_'+lang, street_address)
+            setattr(place, 'street_address_'+address_lang, street_address)
             place.save(update_fields=['name_'+lang, 'info_url_'+lang, 'street_address_'+lang])
         # Cached the location to speed up
-        self.location_cache.update({street_address: place.id})
+        self.location_cache.update({street_address: place.id})  # location cache need not care about address language
         return place.id
 
     def _map_classification_keywords_from_dict(self, classification_node_name):
@@ -427,7 +437,7 @@ class EspooImporter(Importer):
             return event_keywords
         keywords = self._map_classification_keywords_from_db(classification_node_name, lang)
         if lang == 'fi' and not keywords:
-            self.logger.warning('Cannot find yso classification for keyword: %s' % classification_node_name)
+            logger.warning('Cannot find yso classification for keyword: {}'.format(classification_node_name))
             return set()
         self.keyword_by_id.update(dict({k.id: k for k in keywords}))
         return keywords
@@ -522,7 +532,7 @@ class EspooImporter(Importer):
             matches = re.findall(r'src="(.*?)"', str(ext_props['LiftPicture']))
             if matches:
                 img_url = matches[0]
-                event['image'] = img_url
+                event['images'] = [{'url': img_url}]
             del ext_props['LiftPicture']
 
         event['url'][lang] = '%s/api/opennc/v1/Contents(%s)' % (
@@ -531,8 +541,8 @@ class EspooImporter(Importer):
 
         def set_attr(field_name, val):
             if event.get(field_name, val) != val:
-                self.logger.warning('Event %s: %s mismatch (%s vs. %s)' %
-                                    (eid, field_name, event[field_name], val))
+                logger.warning('Event {}: {} mismatch ({} vs. {})'
+                               .format(eid, field_name, event[field_name], val))
                 return
             event[field_name] = val
 
@@ -624,7 +634,7 @@ class EspooImporter(Importer):
                 if place_id:
                     event['location']['id'] = place_id
                 else:
-                    self.logger.warning('Cannot find %s' % ext_props['StreetAddress'])
+                    logger.warning('Cannot find {}'.format(ext_props['StreetAddress']))
             del ext_props['StreetAddress']
 
         if ext_props.get('EventLocation', ''):
@@ -632,8 +642,8 @@ class EspooImporter(Importer):
             del ext_props['EventLocation']
 
         if 'location' not in event:
-            self.logger.warning('Missing TPREK location map for event %s (%s)' %
-                                (event['name'][lang], str(eid)))
+            logger.warning('Missing TPREK location map for event {} ({})'
+                           .format(event['name'][lang], str(eid)))
             del events[event['origin_id']]
             return event
 
@@ -648,7 +658,7 @@ class EspooImporter(Importer):
         for _ in range(MAX_RETRY):
             response = requests.get(url)
             if response.status_code != 200:
-                self.logger.error("Espoo API reported HTTP %d" % response.status_code)
+                logger.error("Espoo API reported HTTP %d" % response.status_code)
                 time.sleep(5)
                 if self.cache:
                     self.cache.delete_url(url)
@@ -656,14 +666,14 @@ class EspooImporter(Importer):
             try:
                 root_doc = response.json()
             except ValueError:
-                self.logger.error("Espoo API returned invalid JSON for url: %s" % url)
+                logger.error("Espoo API returned invalid JSON for url: {}".format(url))
                 if self.cache:
                     self.cache.delete_url(url)
                 time.sleep(5)
                 continue
             break
         else:
-            self.logger.error("Espoo API is broken, giving up")
+            logger.error("Espoo API is broken, giving up")
             raise APIBrokenError()
 
         documents = root_doc['value']
@@ -687,13 +697,13 @@ class EspooImporter(Importer):
                 ), lang, events)
 
     def import_events(self):
-        print("Importing Espoo events")
+        logger.info("Importing Espoo events")
         events = recur_dict()
         for lang in self.supported_languages:
             espoo_lang_id = ESPOO_LANGUAGES[lang]
             url = ESPOO_API_URL.format(lang_code=espoo_lang_id)
-            print("Processing lang " + lang)
-            print("from URL " + url)
+            logger.info("Processing lang {}".format(lang))
+            logger.info("from URL {}".format(url))
             try:
                 self._recur_fetch_paginated_url(url, lang, events)
             except APIBrokenError:
@@ -710,4 +720,4 @@ class EspooImporter(Importer):
             self.syncher.mark(obj)
 
         self.syncher.finish()
-        print("%d events processed" % len(events.values()))
+        logger.info("{} events processed".format(len(events.values())))

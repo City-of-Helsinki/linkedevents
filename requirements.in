@@ -2,9 +2,9 @@ Django<2.0
 Markdown
 PyYAML
 django-cors-headers
-django-filter
+django-filter<2.0
 django-modeltranslation>=0.11rc2
-django-mptt
+django-mptt<0.9
 django-reversion
 djangorestframework
 djangorestframework-gis
@@ -16,12 +16,12 @@ pyflakes
 pylint
 python-dateutil
 pytz
-requests
+requests>=2.20.0
 requests-cache
 six
 django-extensions
 rdflib
--e git+https://github.com/City-of-Helsinki/munigeo@v0.2.6#egg=django-munigeo
+django-munigeo<0.3
 icalendar
 httmock
 bleach
@@ -30,6 +30,7 @@ elasticsearch<5.0
 raven
 django-helusers
 pytest-django
+pytest<4.0
 flake8
 pip-tools
 django-image-cropping
@@ -40,5 +41,5 @@ django-allauth
 django-leaflet
 djangorestframework-bulk
 python-docx
--e git+https://github.com/City-of-Helsinki/django-orghierarchy.git@v0.1.8#egg=django-orghierarchy
+django-orghierarchy
 langdetect

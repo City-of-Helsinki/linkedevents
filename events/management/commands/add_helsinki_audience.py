@@ -3,7 +3,7 @@ from functools import lru_cache
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from events.models import Event, Keyword, KeywordSet
+from events.models import Event, Keyword, KeywordSet, DataSource
 
 HELSINKI_KEYWORD_SET_DATA = {
     'id': 'helsinki:audiences',
@@ -116,6 +116,8 @@ class Command(BaseCommand):
                         self.stdout.write('added %s (%s) to %s' % (yso_keyword_obj, yso_keyword_id, event))
 
     def handle(self, *args, **options):
+        # Helsinki data source must be created if missing. Note that it is not necessarily the system data source.
+        DataSource.objects.get_or_create(id=HELSINKI_KEYWORD_SET_DATA['data_source_id'])
         self.create_sote_keywords()
         self.create_helsinki_audiences_keyword_set()
         self.add_yso_audience_keywords_to_events()

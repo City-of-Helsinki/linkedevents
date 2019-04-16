@@ -100,6 +100,33 @@ parameter <code>publisher</code>.</p>
 <pre><code>event/?publisher=ytj:0586977-6
 </code></pre>
 <p><a href="?publisher=ytj:0586977-6" title="json">See the result</a></p>
+<h3 id="event-hierarchy">Event hierarchy</h3>
+<p>Events in linkedevents may be either standalone events, or they may have super or sub
+events. There are two types of super events, indicated in the field
+<code>super_event_type</code> by <code>recurring</code> (repeating events, event series)
+and <code>umbrella</code> (festivals etc.).</p>
+<p><code>recurring</code> events last for a period and have <code>sub_events</code> that all
+have similar data, but different dates.</p>
+<p><code>umbrella</code> events last for a period and may have different
+<code>sub_events</code>, including <code>recurring</code> events (i.e. an
+<code>umbrella</code> festival may have a <code>recurring</code> theater play
+<code>sub_event</code>, which may have several nights as <code>sub_events</code>.)</p>
+<h4 id="super-event-type">Super event type</h4>
+<p>You may use the query parameter <code>super_event_type</code>, comma separated, to get
+only super events of specific types. You may use <code>none</code> if you want non-super
+events included.</p>
+<p>Example:</p>
+<pre><code>event/?super_event_type=umbrella,none
+</code></pre>
+<p><a href="?super_event_type=umbrella,none" title="json">See the result</a></p>
+<h4 id="super-event-type">Super event</h4>
+<p>You may use the query parameter <code>super_event</code>, comma separated, to get all
+subevents for specific superevents. You may use <code>none</code> if you want all
+events which have no superevent included.</p>
+<p>Example:</p>
+<pre><code>event/?super_event=linkedevents:agg-103
+</code></pre>
+<p><a href="?super_event=linkedevents:agg-103" title="json">See the result</a></p>
 <h2 id="getting-detailed-data">Getting detailed data</h2>
 <p>In the default case, keywords, locations, and other fields that
 refer to separate resources are only displayed as simple references.</p>
@@ -109,12 +136,13 @@ the current response, use the keyword <code>include</code>. For example:</p>
 </code></pre>
 <p><a href="?include=location,keywords" title="json">See the result</a></p>
 <h2 id="ordering">Ordering</h2>
-        <p>Default ordering is decreasing order by <code>last_modified_time</code>.
-    You may also order results by <code>start_time</code>, <code>end_time</code>,
-            <code>name</code> and <code>duration</code>.
-    For example:</p>
-<pre><code>event/?sort=end_time
+<p>Default ordering is descending order by <code>-last_modified_time</code>.
+You may also order results by <code>start_time</code>, <code>end_time</code>,
+<code>name</code> and <code>duration</code>. Descending order is denoted by
+adding <code>-</code> in front of the parameter, default order is ascending.
+For example:</p>
+<pre><code>event/?sort=-end_time
 </code></pre>
-<p><a href="?sort=name" title="json">See the result</a></p>
+<p><a href="?sort=-end_time" title="json">See the result</a></p>
     </div>
 </div>

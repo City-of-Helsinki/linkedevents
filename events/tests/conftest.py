@@ -72,6 +72,13 @@ def api_client():
     return APIClient()
 
 
+@pytest.fixture()
+def user_api_client(user):
+    api_client = APIClient()
+    api_client.force_authenticate(user)
+    return api_client
+
+
 @pytest.mark.django_db
 @pytest.fixture
 def data_source():
@@ -489,6 +496,9 @@ def complex_event_dict(data_source, organization, location_id, languages):
         'headline': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
         'short_description': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
         'provider': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
+        'provider_contact_info': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
+        'audience_min_age': 5,
+        'audience_max_age': 15,
     }
 
 

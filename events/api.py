@@ -7,13 +7,15 @@ import re
 import struct
 import time
 import urllib.parse
+from copy import deepcopy
 from datetime import datetime, timedelta
+from functools import partial
 
 # django and drf
 from django.db.transaction import atomic
 from django.http import Http404, HttpResponsePermanentRedirect
 from django.utils import translation
-from django.core.exceptions import ValidationError, PermissionDenied
+from django.core.exceptions import PermissionDenied
 from django.db.utils import IntegrityError
 from django.conf import settings
 from django.core.urlresolvers import NoReverseMatch
@@ -24,13 +26,14 @@ from django.utils.encoding import force_text
 from rest_framework import (
     serializers, relations, viewsets, mixins, filters, generics, permissions
 )
-from rest_framework import status
+from rest_framework.filters import BaseFilterBackend
 from rest_framework.permissions import SAFE_METHODS
 from rest_framework.settings import api_settings
 from rest_framework.reverse import reverse
 from rest_framework.response import Response
 from rest_framework.exceptions import ParseError, PermissionDenied as DRFPermissionDenied, APIException
 from rest_framework.views import get_view_name as original_get_view_name
+from rest_framework.routers import APIRootView
 from rest_framework.fields import DateTimeField
 
 
@@ -56,6 +59,7 @@ from events.auth import ApiKeyAuth, ApiKeyUser
 from events.custom_elasticsearch_search_backend import (
     CustomEsSearchQuerySet as SearchQuerySet
 )
+from events.extensions import apply_select_and_prefetch, get_extensions_from_request
 from events.models import (
     Place, Event, Keyword, KeywordSet, Language, OpeningHoursSpecification, EventLink,
     Offer, DataSource, Image, PublicationStatus, PUBLICATION_STATUSES, License
@@ -65,10 +69,10 @@ from helevents.models import User
 from events.renderers import DOCXRenderer
 
 
-def get_view_name(cls, suffix=None):
-    if cls.__name__ == 'APIRootView':
+def get_view_name(view):
+    if type(view) is APIRootView:
         return 'Linked Events'
-    return original_get_view_name(cls, suffix)
+    return original_get_view_name(view)
 
 
 viewset_classes_by_model = {}
@@ -182,6 +186,22 @@ def get_publisher_query(publisher):
     return q
 
 
+def clean_text_fields(data, allowed_html_fields=[]):
+    for k, v in data.items():
+        if isinstance(v, str) and any(c in v for c in '<>&'):
+            # only specified fields may contain allowed tags
+            for field_name in allowed_html_fields:
+                # check all languages and the default translation field too
+                if k.startswith(field_name):
+                    data[k] = bleach.clean(v, settings.BLEACH_ALLOWED_TAGS)
+                    break
+            else:
+                data[k] = bleach.clean(v)
+                # for non-html data, ampersands should be bare
+                data[k] = data[k].replace('&amp;', '&')
+    return data
+
+
 class JSONLDRelatedField(relations.HyperlinkedRelatedField):
     """
     Support of showing and saving of expanded JSON nesting or just a resource
@@ -227,12 +247,12 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
     def to_internal_value(self, value):
         # TODO: JA If @id is missing, this will complain just about value not being JSON
         if not isinstance(value, dict) or '@id' not in value:
-            raise ValidationError(self.invalid_json_error % type(value).__name__)
+            raise serializers.ValidationError(self.invalid_json_error % type(value).__name__)
 
         url = value['@id']
         if not url:
             if self.required:
-                raise ValidationError(_('This field is required.'))
+                raise serializers.ValidationError(_('This field is required.'))
             return None
 
         return super().to_internal_value(urllib.parse.unquote(url))
@@ -365,7 +385,7 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
             if not obj:
                 continue
             if not isinstance(obj, dict):
-                raise ValidationError({field_name: 'This field is a translated field. Instead of a string,'
+                raise serializers.ValidationError({field_name: 'This field is a translated field. Instead of a string,'
                                                    ' you must supply an object with strings corresponding'
                                                    ' to desired language ids.'})
             for language in (lang for lang in utils.get_fixed_lang_codes() if lang in obj):
@@ -535,6 +555,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
 
     def validate_publisher(self, value):
         if value:
+            # TODO: allow optionally declaring publisher in any user admin org (regular org for drafts)
             if value not in (self.publisher, self.publisher.replaced_by):
                 raise serializers.ValidationError(
                     {'publisher': _(
@@ -735,6 +756,8 @@ class KeywordListViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewset
         # can be used e.g. with typeahead.js
         val = self.request.query_params.get('text') or self.request.query_params.get('filter')
         if val:
+            if u'\x00' in val:
+                raise ParseError("A string literal cannot contain NUL (0x00) characters.")
             queryset = queryset.filter(_text_qset_by_translated_field('name', val))
         return queryset
 
@@ -966,6 +989,8 @@ class PlaceListViewSet(GeoModelAPIView,
         # can be used e.g. with typeahead.js
         val = self.request.query_params.get('text') or self.request.query_params.get('filter')
         if val:
+            if u'\x00' in val:
+                raise ParseError("A string literal cannot contain NUL (0x00) characters.")
             queryset = queryset.filter(_text_qset_by_translated_field('name', val))
         return queryset
 
@@ -1129,7 +1154,7 @@ class ImageViewSet(viewsets.ModelViewSet):
         # ensure image can only be deleted within the organization
         data_source, organization = get_authenticated_data_source_and_publisher(self.request)
         if not organization == instance.publisher:
-                raise PermissionDenied()
+            raise PermissionDenied()
         super().perform_destroy(instance)
 
 
@@ -1156,9 +1181,9 @@ class EventSerializer(EditableLinkedEventsObjectSerializer, GeoModelAPIView):
                                                    required=False)
     sub_events = JSONLDRelatedField(serializer='EventSerializer',
                                     required=False, view_name='event-detail',
-                                    many=True, queryset=Event.objects.all())
-    image = JSONLDRelatedField(serializer=ImageSerializer, required=False, allow_null=True,
-                               view_name='image-detail', queryset=Image.objects.all(), expanded=True)
+                                    many=True, queryset=Event.objects.filter(deleted=False))
+    images = JSONLDRelatedField(serializer=ImageSerializer, required=False, allow_null=True, many=True,
+                                view_name='image-detail', queryset=Image.objects.all(), expanded=True)
     in_language = JSONLDRelatedField(serializer=LanguageSerializer, required=False,
                                      view_name='language-detail', many=True, queryset=Language.objects.all())
     audience = JSONLDRelatedField(serializer=KeywordSerializer, view_name='keyword-detail',
@@ -1178,6 +1203,10 @@ class EventSerializer(EditableLinkedEventsObjectSerializer, GeoModelAPIView):
         # testing and debugging.
         self.skip_empties = skip_empties
 
+        if self.context:
+            for ext in self.context.get('extensions', ()):
+                self.fields['extension_{}'.format(ext.identifier)] = ext.get_extension_serializer()
+
     def parse_datetimes(self, data):
         # here, we also set has_start_time and has_end_time accordingly
         for field in ['date_published', 'start_time', 'end_time']:
@@ -1189,11 +1218,6 @@ class EventSerializer(EditableLinkedEventsObjectSerializer, GeoModelAPIView):
 
     def to_internal_value(self, data):
         data = self.parse_datetimes(data)
-
-        # parse the first image to the image field
-        if 'images' in data:
-            if data['images']:
-                data['image'] = data['images'][0]
 
         # If the obligatory fields are null or empty, remove them to prevent to_internal_value from checking them.
         # Only for drafts, because null start time of a PUBLIC event will indicate POSTPONED.
@@ -1224,11 +1248,9 @@ class EventSerializer(EditableLinkedEventsObjectSerializer, GeoModelAPIView):
         return value
 
     def validate(self, data):
-        # clean the html
-        for k, v in data.items():
-            if k in ["description"]:
-                if isinstance(v, str) and any(c in v for c in '<>&'):
-                    data[k] = bleach.clean(v, settings.BLEACH_ALLOWED_TAGS)
+        # clean all text fields, only description may contain any html
+        data = clean_text_fields(data, allowed_html_fields=['description'])
+
         data = super().validate(data)
 
         if 'publication_status' not in data:
@@ -1236,6 +1258,7 @@ class EventSerializer(EditableLinkedEventsObjectSerializer, GeoModelAPIView):
 
         # if the event is a draft, no further validation is performed
         if data['publication_status'] == PublicationStatus.DRAFT:
+            data = self.run_extension_validations(data)
             return data
 
         # check that published events have a location, keyword and start_time
@@ -1263,12 +1286,19 @@ class EventSerializer(EditableLinkedEventsObjectSerializer, GeoModelAPIView):
 
         # published events need price info = at least one offer that is free or not
         offer_exists = False
-        for offer in data.get('offers', []):
+        for index, offer in enumerate(data.get('offers', [])):
             if 'is_free' in offer:
                 offer_exists = True
-                break
+            # clean offer text fields
+            data['offers'][index] = clean_text_fields(offer)
+
         if not offer_exists:
             errors['offers'] = _('Price info must be specified before an event is published.')
+
+        # clean link description text
+        for index, link in enumerate(data.get('external_links', [])):
+            # clean link text fields
+            data['external_links'][index] = clean_text_fields(link)
 
         # If no end timestamp supplied, we treat the event as ending at midnight
         if not data.get('end_time'):
@@ -1292,6 +1322,15 @@ class EventSerializer(EditableLinkedEventsObjectSerializer, GeoModelAPIView):
         if errors:
             raise serializers.ValidationError(errors)
 
+        data = self.run_extension_validations(data)
+
+        return data
+
+    def run_extension_validations(self, data):
+        for ext in self.context.get('extensions', ()):
+            new_data = ext.validate_event_data(self, data)
+            if new_data:
+                data = new_data
         return data
 
     def create(self, validated_data):
@@ -1303,6 +1342,13 @@ class EventSerializer(EditableLinkedEventsObjectSerializer, GeoModelAPIView):
                                'created_time': Event.now(),  # we must specify creation time as we are setting id
                                'event_status': Event.Status.SCHEDULED,  # mark all newly created events as scheduled
                                })
+
+        # pop out extension related fields because create() cannot stand them
+        original_validated_data = deepcopy(validated_data)
+        for field_name, field in self.fields.items():
+            if field_name.startswith('extension_') and field.source in validated_data:
+                validated_data.pop(field.source)
+
         event = super().create(validated_data)
 
         # create and add related objects
@@ -1310,6 +1356,12 @@ class EventSerializer(EditableLinkedEventsObjectSerializer, GeoModelAPIView):
             Offer.objects.create(event=event, **offer)
         for link in links:
             EventLink.objects.create(event=event, **link)
+
+        request = self.context['request']
+        extensions = get_extensions_from_request(request)
+
+        for ext in extensions:
+            ext.post_create_event(request=request, event=event, data=original_validated_data)
 
         return event
 
@@ -1352,6 +1404,12 @@ class EventSerializer(EditableLinkedEventsObjectSerializer, GeoModelAPIView):
                 # if the start_time is not provided, do nothing
                 pass
 
+        # pop out extension related fields because update() cannot stand them
+        original_validated_data = deepcopy(validated_data)
+        for field_name, field in self.fields.items():
+            if field_name.startswith('extension_') and field.source in validated_data:
+                validated_data.pop(field.source)
+
         # update validated fields
         super().update(instance, validated_data)
 
@@ -1366,6 +1424,12 @@ class EventSerializer(EditableLinkedEventsObjectSerializer, GeoModelAPIView):
             instance.external_links.all().delete()
             for link in links:
                 EventLink.objects.create(event=instance, **link)
+
+        request = self.context['request']
+        extensions = get_extensions_from_request(request)
+
+        for ext in extensions:
+            ext.post_update_event(request=request, event=instance, data=original_validated_data)
 
         return instance
 
@@ -1400,15 +1464,9 @@ class EventSerializer(EditableLinkedEventsObjectSerializer, GeoModelAPIView):
                 except TypeError:
                     # not list/dict
                     pass
-        if 'image' in ret:
-            if ret['image'] is None:
-                ret['images'] = []
-            else:
-                ret['images'] = [ret['image']]
-            del ret['image']
         request = self.context.get('request')
         if request:
-            if not request.user.is_authenticated():
+            if not request.user.is_authenticated:
                 del ret['publication_status']
         return ret
 
@@ -1491,6 +1549,8 @@ def _filter_event_queryset(queryset, params, srs=None):
     val = params.get('text', None)
     if val:
         val = val.lower()
+        if u'\x00' in val:
+            raise ParseError("A string literal cannot contain NUL (0x00) characters.")
         # Free string search from all translated fields
         fields = EventTranslationOptions.fields
         qset = Q()
@@ -1514,13 +1574,13 @@ def _filter_event_queryset(queryset, params, srs=None):
     if days:
         try:
             days = int(days)
-        except ValueError as e:
+        except ValueError:
             raise ParseError(_('Error while parsing days.'))
         if days < 1:
-            raise ValidationError(_('Days must be 1 or more.'))
+            raise serializers.ValidationError(_('Days must be 1 or more.'))
 
         if start or end:
-            raise ValidationError(_('Start or end cannot be used with days.'))
+            raise serializers.ValidationError(_('Start or end cannot be used with days.'))
 
         today = datetime.now(timezone.utc).date()
 
@@ -1591,13 +1651,17 @@ def _filter_event_queryset(queryset, params, srs=None):
         val = val.split(',')
         queryset = queryset.filter(Q(keywords__pk__in=val) | Q(audience__pk__in=val)).distinct()
 
-    # Filter only super or sub events if recurring has value
+    # filter only super or non-super events. to be deprecated?
     val = params.get('recurring', None)
     if val:
         val = val.lower()
         if val == 'super':
+            # same as ?super_event_type=recurring
             queryset = queryset.filter(super_event_type=Event.SuperEventType.RECURRING)
         elif val == 'sub':
+            # same as ?super_event_type=none,umbrella, weirdly yielding non-sub events too.
+            # don't know if users want this to remain tho. do we want that or is there a need
+            # to change this to actually filter only subevents of recurring events?
             queryset = queryset.exclude(super_event_type=Event.SuperEventType.RECURRING)
 
     val = params.get('max_duration', None)
@@ -1668,26 +1732,67 @@ def _filter_event_queryset(queryset, params, srs=None):
                 q = q | Q(pk__in=[])
         queryset = queryset.filter(q)
 
+    # Filter by audience min age
+    val = params.get('audience_min_age', None)
+    if val:
+        try:
+            min_age = int(val)
+        except ValueError:
+            raise ParseError(_('Audience minimum age must be a digit.'))
+        queryset = queryset.filter(audience_min_age__lte=min_age)
+
+    # Filter by audience max age
+    val = params.get('audience_max_age', None)
+    if val:
+        try:
+            max_age = int(val)
+        except ValueError:
+            raise ParseError(_('Audience maximum age must be a digit.'))
+        queryset = queryset.filter(audience_max_age__gte=max_age)
+
     return queryset
 
 
+class EventExtensionFilterBackend(BaseFilterBackend):
+    def filter_queryset(self, request, queryset, view):
+        extensions = get_extensions_from_request(request)
+
+        for ext in extensions:
+            queryset = ext.filter_event_queryset(request, queryset, view)
+
+        return queryset
+
+
+def in_or_null_filter(field_name, queryset, name, value):
+    # supports filtering objects by several values in the same field; null or none will trigger isnull filter
+    q = Q()
+    if 'null' in value or 'none' in value:
+        null_query = {field_name + '__isnull': True}
+        q = q | Q(**null_query)
+        if 'null' in value:
+            value.remove('null')
+        if 'none' in value:
+            value.remove('none')
+    if value:
+        in_query = {field_name + '__in': value}
+        q = q | Q(**in_query)
+    return queryset.filter(q)
+
+
 class EventFilter(django_filters.rest_framework.FilterSet):
-    division = django_filters.Filter(name='location__divisions', lookup_expr='in',
+    division = django_filters.Filter(name='location__divisions',
                                      widget=django_filters.widgets.CSVWidget(),
-                                     method='filter_division')
-    super_event_type = django_filters.CharFilter(method='filter_super_event_type')
+                                     method=filter_division)
+    super_event_type = django_filters.Filter(name='super_event_type',
+                                             widget=django_filters.widgets.CSVWidget(),
+                                             method=partial(in_or_null_filter, 'super_event_type'))
+    super_event = django_filters.Filter(name='super_event',
+                                        widget=django_filters.widgets.CSVWidget(),
+                                        method=partial(in_or_null_filter, 'super_event'))
 
     class Meta:
         model = Event
         fields = ('division', 'super_event_type', 'super_event')
-
-    def filter_super_event_type(self, queryset, name, value):
-        if value in ('null', 'none'):
-            value = None
-        return queryset.filter(super_event_type=value)
-
-    def filter_division(self, queryset, name, value):
-        return filter_division(queryset, name, value)
 
 
 class EventDeletedException(APIException):
@@ -1703,9 +1808,10 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
     # Use select_ and prefetch_related() to reduce the amount of queries
     queryset = queryset.select_related('location')
     queryset = queryset.prefetch_related(
-        'offers', 'keywords', 'audience', 'external_links', 'sub_events', 'in_language')
+        'offers', 'keywords', 'audience', 'images', 'external_links', 'sub_events', 'in_language')
     serializer_class = EventSerializer
-    filter_backends = (EventOrderingFilter, django_filters.rest_framework.DjangoFilterBackend)
+    filter_backends = (EventOrderingFilter, django_filters.rest_framework.DjangoFilterBackend,
+                       EventExtensionFilterBackend)
     filter_class = EventFilter
     ordering_fields = ('start_time', 'end_time', 'duration', 'last_modified_time', 'name')
     ordering = ('-last_modified_time',)
@@ -1734,7 +1840,26 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
         context.setdefault('skip_fields', set()).update(set([
             'headline',
             'secondary_headline']))
+        context['extensions'] = get_extensions_from_request(self.request)
         return context
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        context = self.get_serializer_context()
+        # prefetch extra if the user want them included
+        if 'include' in context:
+            for included in context['include']:
+                if included == 'location':
+                    queryset = queryset.prefetch_related('location__divisions',
+                                                         'location__divisions__type',
+                                                         'location__divisions__municipality')
+                if included == 'keywords':
+                    queryset = queryset.prefetch_related('keywords__alt_labels',
+                                                         'audience__alt_labels')
+        return apply_select_and_prefetch(
+            queryset=queryset,
+            extensions=get_extensions_from_request(self.request)
+        )
 
     def get_object(self):
         # Overridden to prevent queryset filtering from being applied
@@ -1758,23 +1883,26 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
         """
         TODO: convert to use proper filter framework
         """
-        queryset = super(EventViewSet, self).filter_queryset(queryset)
+        original_queryset = super(EventViewSet, self).filter_queryset(queryset)
 
         if self.request.method in SAFE_METHODS:
-            auth_filters = Q(publication_status=PublicationStatus.PUBLIC)
-            if self.organization:
-                # USER IS AUTHENTICATED
-                if 'show_all' in self.request.query_params:
-                    # Show all events for this organization,
-                    # along with public events for others.
-                    auth_filters |= get_publisher_query(self.organization)
-            queryset = queryset.filter(auth_filters)
+            # we cannot use distinct for performance reasons
+            public_queryset = original_queryset.filter(publication_status=PublicationStatus.PUBLIC)
+            editable_queryset = original_queryset.none()
+            if self.request.user.is_authenticated:
+                editable_queryset = self.request.user.get_editable_events(original_queryset)
+            # by default, only public events are shown in the event list
+            queryset = public_queryset
+            # however, certain query parameters allow customizing the listing for authenticated users
+            if 'show_all' in self.request.query_params:
+                # displays all editable events, including drafts, and public non-editable events
+                queryset = editable_queryset | public_queryset
+            if 'admin_user' in self.request.query_params:
+                # displays all editable events, including drafts, but no other public events
+                queryset = editable_queryset
         else:
             # prevent changing events user does not have write permissions (for bulk operations)
-            if self.organization:
-                queryset = self.request.user.get_editable_events(self.organization, queryset)
-            else:
-                queryset = queryset.none()
+            queryset = self.request.user.get_editable_events(original_queryset)
 
         queryset = _filter_event_queryset(queryset, self.request.query_params,
                                           srs=self.srs)
@@ -1800,6 +1928,7 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
             event_data_list = [serializer.validated_data]
 
         for event_data in event_data_list:
+            # TODO: actually check publisher in event_data, not just self.organization
             if not self.request.user.can_edit_event(self.organization, event_data['publication_status']):
                 raise DRFPermissionDenied()
 
@@ -1820,6 +1949,7 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
             event_data_list = [serializer.validated_data]
 
         for event_data in event_data_list:
+            # TODO: actually check publisher in event_data, not just self.organization
             if not self.request.user.can_edit_event(self.organization, event_data['publication_status']):
                 raise DRFPermissionDenied()
 
@@ -1911,6 +2041,8 @@ class SearchViewSet(GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView
             raise ParseError("Supply search terms with 'q=' or autocomplete entry with 'input='")
         if input_val and q_val:
             raise ParseError("Supply either 'q' or 'input', not both")
+        if u'\x00' in q_val or u'\x00' in input_val:
+            raise ParseError("A string literal cannot contain NUL (0x00) characters.")
 
         old_language = translation.get_language()[:2]
         translation.activate(self.lang_code)
