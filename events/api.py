@@ -1827,8 +1827,10 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
             event_data_list = [serializer.validated_data]
 
         for event_data in event_data_list:
-            # TODO: actually check publisher in event_data, not just self.organization
-            if not self.request.user.can_edit_event(self.organization, event_data['publication_status']):
+            org = self.organization
+            if event_data['publisher'] is not None:
+                org = event_data['publisher']
+            if not self.request.user.can_edit_event(org, event_data['publication_status']):
                 raise DRFPermissionDenied()
 
         super().perform_update(serializer)
@@ -1848,8 +1850,10 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
             event_data_list = [serializer.validated_data]
 
         for event_data in event_data_list:
-            # TODO: actually check publisher in event_data, not just self.organization
-            if not self.request.user.can_edit_event(self.organization, event_data['publication_status']):
+            org = self.organization
+            if event_data['publisher'] is not None:
+                org = event_data['publisher']
+            if not self.request.user.can_edit_event(org, event_data['publication_status']):
                 raise DRFPermissionDenied()
 
         super().perform_create(serializer)
