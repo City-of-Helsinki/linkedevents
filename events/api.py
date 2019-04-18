@@ -558,12 +558,14 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
     def validate_publisher(self, value):
         if value:
             # TODO: allow optionally declaring publisher in any user admin org (regular org for drafts)
-            if value not in (self.publisher, self.publisher.replaced_by):
+            # TODO: self.user.admin_organizations.all() or user.get_admin_organizations_and_descendants()?
+            if value not in self.user.admin_organizations.all() and\
+                    value not in (self.publisher, self.publisher.replaced_by):
                 raise serializers.ValidationError(
                     {'publisher': _(
                         "Setting publisher to %(given)s " +
                         " is not allowed for your organization. The publisher" +
-                        " must be left blank or set to %(required)s ") %
+                        " must be left blank or set to %(required)s or to any user's admin organization") %
                         {'given': str(value),
                          'required': str(self.publisher
                                          if not self.publisher.replaced_by
