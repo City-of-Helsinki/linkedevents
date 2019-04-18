@@ -15,7 +15,6 @@ env = environ.Env(
     DATABASE_URL=(str, 'postgis:///linkedevents'),
     TOKEN_AUTH_ACCEPTED_AUDIENCE=(str, ''),
     TOKEN_AUTH_SHARED_SECRET=(str, ''),
-    ENABLE_INDEXING=(bool, True),
     ELASTICSEARCH_URL=(str, None),
     SECRET_KEY=(str, ''),
     ALLOWED_HOSTS=(list, []),
