@@ -157,7 +157,8 @@ DATABASES = {
 # Internationalization
 
 # Map language codes to the (code, name) tuples used by Django
-# We want to keep the ordering in LANGUAGES, thus some gyrations
+# We want to keep the ordering in LANGUAGES configuration variable,
+# thus some gyrations
 language_map = {x: y for x, y in GLOBAL_LANGUAGES}
 try:
     LANGUAGES = tuple((l, language_map[l]) for l in env('LANGUAGES'))
@@ -380,7 +381,7 @@ if os.path.exists(f):
     exec(open(f, "rb").read())
 
 # We generate a persistent SECRET_KEY if it is not defined. Note that
-# a that setting SECRET_KEY will override the persisted key
+# setting SECRET_KEY will override the persisted key
 if 'SECRET_KEY' not in locals():
     secret_file = os.path.join(BASE_DIR, '.django_secret')
     try:
