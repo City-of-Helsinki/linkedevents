@@ -1828,7 +1828,7 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
 
         for event_data in event_data_list:
             org = self.organization
-            if event_data['publisher'] is not None:
+            if hasattr(event_data, 'publisher'):
                 org = event_data['publisher']
             if not self.request.user.can_edit_event(org, event_data['publication_status']):
                 raise DRFPermissionDenied()
@@ -1851,7 +1851,7 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
 
         for event_data in event_data_list:
             org = self.organization
-            if event_data['publisher'] is not None:
+            if hasattr(event_data, 'publisher'):
                 org = event_data['publisher']
             if not self.request.user.can_edit_event(org, event_data['publication_status']):
                 raise DRFPermissionDenied()
