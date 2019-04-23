@@ -144,7 +144,9 @@ def get_authenticated_data_source_and_publisher(request):
     else:
         # objects created by api are marked coming from the system data source unless api_key is provided
         # we must optionally create the system data source here, as the settings may have changed at any time
-        data_source, created = DataSource.objects.get_or_create(id=settings.SYSTEM_DATA_SOURCE_ID)
+        system_data_source_defaults = {'user_editable': True}
+        data_source, created = DataSource.objects.get_or_create(id=settings.SYSTEM_DATA_SOURCE_ID,
+                                                                defaults=system_data_source_defaults)
         # user organization is used unless api_key is provided
         user = request.user
         if isinstance(user, User):
