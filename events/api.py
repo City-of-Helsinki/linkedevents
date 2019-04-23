@@ -1018,7 +1018,7 @@ class OrganizationViewSet(viewsets.ReadOnlyModelViewSet):
                 id_set = self.get_org_children(queryset, child.id)
                 id_set.add(child.id)
         return id_set
-    
+
     def get_queryset(self):
         queryset = Organization.objects.all()
 
@@ -1033,6 +1033,7 @@ class OrganizationViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(id__in=child_ids)
 
         return queryset
+
 
 register_view(OrganizationViewSet, 'organization')
 
