@@ -999,38 +999,16 @@ class OrganizationViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Organization.objects.all()
     serializer_class = OrganizationSerializer
 
-    def get_org_parents(self, queryset, id):
-        id_set = set()
-        org = queryset.get(id=id)
-        if org:
-            parent = org.parent
-            if parent:
-                id_set = self.get_org_parents(queryset, parent.id)
-                id_set.add(parent.id)
-        return id_set
-
-    def get_org_children(self, queryset, id):
-        id_set = set()
-        org = queryset.get(id=id)
-        if org:
-            children = org.get_children()
-            for child in children:
-                id_set = self.get_org_children(queryset, child.id)
-                id_set.add(child.id)
-        return id_set
-
     def get_queryset(self):
         queryset = Organization.objects.all()
 
         id = self.request.query_params.get('child', None)
         if id:
-            parent_ids = self.get_org_parents(queryset, id)
-            queryset = queryset.filter(id__in=parent_ids)
+            queryset = queryset.get(id=id).get_ancestors()
 
         id = self.request.query_params.get('parent', None)
         if id:
-            child_ids = self.get_org_children(queryset, id)
-            queryset = queryset.filter(id__in=child_ids)
+            queryset = queryset.get(id=id).get_descendants()
 
         return queryset
 
