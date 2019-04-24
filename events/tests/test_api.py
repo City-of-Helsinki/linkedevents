@@ -149,6 +149,7 @@ class TestOrganizationAPI(APITestCase):
         parent = response.data['data'][0]
         self.assertEqual(parent.pop('id'), self.org.id)
 
+
 class TestImageAPI(APITestCase):
 
     def setUp(self):
