@@ -559,8 +559,8 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         if value:
             # TODO: allow optionally declaring publisher in any user admin org (regular org for drafts)
             # TODO: self.user.admin_organizations.all() or user.get_admin_organizations_and_descendants()?
-            if value not in self.user.admin_organizations.all() and\
-                    value not in (self.publisher, self.publisher.replaced_by):
+            if value not in (self.publisher, self.publisher.replaced_by) and\
+                    value not in self.user.admin_organizations.all():
                 raise serializers.ValidationError(
                     {'publisher': _(
                         "Setting publisher to %(given)s " +
