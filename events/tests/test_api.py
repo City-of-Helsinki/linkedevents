@@ -138,6 +138,17 @@ class TestOrganizationAPI(APITestCase):
         self.assertEqual(response.data['sub_organizations'], [normal_org_url])
         self.assertEqual(response.data['affiliated_organizations'], [affiliated_org_url])
 
+    def test_child_and_parent_filters(self):
+        url = reverse('organization-list') + '?parent=' + self.org.id
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['data']), 2)
+
+        url = reverse('organization-list') + '?child=' + self.normal_org.id
+        response = self.client.get(url)
+        parent = response.data['data'][0]
+        self.assertEqual(parent.pop('id'), self.org.id)
+
 
 class TestImageAPI(APITestCase):
 

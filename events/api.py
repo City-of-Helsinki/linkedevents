@@ -1007,6 +1007,19 @@ class OrganizationViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Organization.objects.all()
     serializer_class = OrganizationSerializer
 
+    def get_queryset(self):
+        queryset = Organization.objects.all()
+
+        id = self.request.query_params.get('child', None)
+        if id:
+            queryset = queryset.get(id=id).get_ancestors()
+
+        id = self.request.query_params.get('parent', None)
+        if id:
+            queryset = queryset.get(id=id).get_descendants()
+
+        return queryset
+
 
 register_view(OrganizationViewSet, 'organization')
 
