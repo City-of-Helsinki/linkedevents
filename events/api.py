@@ -153,6 +153,9 @@ def get_authenticated_data_source_and_publisher(request):
             publisher = user.get_default_organization()
         else:
             publisher = None
+        # no sense in doing the replacement check later, the authenticated publisher must be current to begin with
+        if publisher and publisher.replaced_by:
+            publisher = publisher.replaced_by
     return data_source, publisher
 
 
