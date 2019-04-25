@@ -153,6 +153,9 @@ def get_authenticated_data_source_and_publisher(request):
             publisher = user.get_default_organization()
         else:
             publisher = None
+        # no sense in doing the replacement check later, the authenticated publisher must be current to begin with
+        if publisher and publisher.replaced_by:
+            publisher = publisher.replaced_by
     return data_source, publisher
 
 
@@ -623,6 +626,11 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         if 'id' in validated_data:
             if instance.id != validated_data['id']:
                 raise serializers.ValidationError({'id': _("You may not change the id of an existing object.")})
+        if 'publisher' in validated_data:
+            if validated_data['publisher'] not in (instance.publisher, instance.publisher.replaced_by):
+                raise serializers.ValidationError(
+                    {'publisher': _("You may not change the publisher of an existing object.")}
+                    )
         super().update(instance, validated_data)
         return instance
 
