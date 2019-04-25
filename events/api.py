@@ -626,6 +626,9 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         if 'id' in validated_data:
             if instance.id != validated_data['id']:
                 raise serializers.ValidationError({'id': _("You may not change the id of an existing object.")})
+        if 'publisher' in validated_data:
+            if validated_data['publisher'] not in (instance.publisher, instance.publisher.replaced_by):
+                raise serializers.ValidationError({'publisher': _("You may not change the publisher of an existing object.")})
         super().update(instance, validated_data)
         return instance
 
