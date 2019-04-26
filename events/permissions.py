@@ -1,5 +1,6 @@
 from functools import reduce
 from .models import PublicationStatus
+from django_orghierarchy.models import Organization
 
 
 class UserModelPermissionMixin:
@@ -45,7 +46,7 @@ class UserModelPermissionMixin:
     def get_admin_organizations_and_descendants(self):
         # returns admin organizations and their descendants
         if not self.admin_organizations.all():
-            return []
+            return Organization.objects.none()
         # regular admins have rights to all organizations below their level
         admin_orgs = []
         for admin_org in self.admin_organizations.all():
