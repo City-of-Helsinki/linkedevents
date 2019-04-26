@@ -560,17 +560,18 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
 
     def validate_publisher(self, value):
         if value:
-            # TODO: allow optionally declaring publisher in any user admin org (regular org for drafts)
-            if value not in (self.publisher, self.publisher.replaced_by):
+            if value not in (set(self.user.get_admin_organizations_and_descendants())
+                             | set(map(lambda x: getattr(x, 'replaced_by'),
+                                   self.user.get_admin_organizations_and_descendants()))):
                 raise serializers.ValidationError(
                     {'publisher': _(
                         "Setting publisher to %(given)s " +
                         " is not allowed for your organization. The publisher" +
-                        " must be left blank or set to %(required)s ") %
+                        " must be left blank or set to %(required)s or to any user's admin organization") %
                         {'given': str(value),
                          'required': str(self.publisher
                                          if not self.publisher.replaced_by
-                                         else self.publisher_replaced_by)}})
+                                         else self.publisher.replaced_by)}})
             if value.replaced_by:
                 # for replaced organizations, we automatically update to the current organization
                 # even if the POST/PUT uses the old id
@@ -1846,8 +1847,10 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
             event_data_list = [serializer.validated_data]
 
         for event_data in event_data_list:
-            # TODO: actually check publisher in event_data, not just self.organization
-            if not self.request.user.can_edit_event(self.organization, event_data['publication_status']):
+            org = self.organization
+            if hasattr(event_data, 'publisher'):
+                org = event_data['publisher']
+            if not self.request.user.can_edit_event(org, event_data['publication_status']):
                 raise DRFPermissionDenied()
 
         super().perform_update(serializer)
@@ -1867,8 +1870,10 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
             event_data_list = [serializer.validated_data]
 
         for event_data in event_data_list:
-            # TODO: actually check publisher in event_data, not just self.organization
-            if not self.request.user.can_edit_event(self.organization, event_data['publication_status']):
+            org = self.organization
+            if hasattr(event_data, 'publisher'):
+                org = event_data['publisher']
+            if not self.request.user.can_edit_event(org, event_data['publication_status']):
                 raise DRFPermissionDenied()
 
         super().perform_create(serializer)

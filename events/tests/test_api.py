@@ -65,9 +65,14 @@ def test_serializer_validate_publisher():
         data_source=data_source,
         replaced_by=org_1,
     )
+    user_model = get_user_model()
+    user = user_model.objects.create(username='testuser')
+    user.admin_organizations.add(org_2)
 
     le_serializer = EventSerializer()
     le_serializer.publisher = org_2
+    le_serializer.user = user
+
     assert le_serializer.validate_publisher(org_2) == org_1
 
 
