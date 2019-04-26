@@ -38,7 +38,6 @@ class Importer(object):
     def __init__(self, options):
         super(Importer, self).__init__()
         self.options = options
-        self.verbosity = options['verbosity']
 
         importer_langs = set(self.supported_languages)
         configured_langs = set(l[0] for l in settings.LANGUAGES)

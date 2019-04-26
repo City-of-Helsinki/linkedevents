@@ -16,6 +16,7 @@ django-allauth==0.39.1
 django-appconf==1.0.3     # via django-image-cropping
 django-cleanup==3.2.0
 django-cors-headers==2.5.2
+django-environ==0.4.5
 django-extensions==2.1.6
 django-filter==1.1.0
 django-haystack==2.8.1

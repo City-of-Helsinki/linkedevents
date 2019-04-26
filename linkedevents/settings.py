@@ -1,17 +1,57 @@
 """
-Django base settings for linkedevents project.
+Django settings module for linkedevents project.
 """
+import os
+import environ
+import raven
+from django.conf.global_settings import LANGUAGES as GLOBAL_LANGUAGES
+from django.core.exceptions import ImproperlyConfigured
+
+root = environ.Path(__file__) - 2  # two levels back in hierarchy
+env = environ.Env(
+    DEBUG=(bool, False),
+    SYSTEM_DATA_SOURCE_ID=(str, 'system'),
+    LANGUAGES=(list, ['fi', 'sv', 'en', 'zh-hans', 'ru', 'ar']),
+    DATABASE_URL=(str, 'postgis:///linkedevents'),
+    TOKEN_AUTH_ACCEPTED_AUDIENCE=(str, ''),
+    TOKEN_AUTH_SHARED_SECRET=(str, ''),
+    ELASTICSEARCH_URL=(str, None),
+    SECRET_KEY=(str, ''),
+    ALLOWED_HOSTS=(list, []),
+    ADMINS=(list, []),
+    SECURE_PROXY_SSL_HEADER=(tuple, None),
+    MEDIA_ROOT=(environ.Path(), root('media')),
+    STATIC_ROOT=(environ.Path(), root('static')),
+    MEDIA_URL=(str, '/media/'),
+    STATIC_URL=(str, '/static/'),
+    SENTRY_DSN=(str, ''),
+    SENTRY_ENVIRONMENT=(str, 'development'),
+    COOKIE_PREFIX=(str, 'linkedevents'),
+    INTERNAL_IPS=(list, []),
+)
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-import os
+BASE_DIR = root()
 
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+# Django environ has a nasty habit of complanining at level
+# WARN env file not being preset. Here we pre-empt it.
+env_file_path = os.path.join(BASE_DIR, 'config_dev.toml')
+if os.path.exists(env_file_path):
+    print('Reading config file')
+    environ.Env.read_env(env_file_path)
 
-DEBUG = False
-
+DEBUG = env('DEBUG')
 TEMPLATE_DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env('ALLOWED_HOSTS')
+ADMINS = env('ADMINS')
+INTERNAL_IPS = env.list('INTERNAL_IPS',
+                        default=(['127.0.0.1'] if DEBUG else []))
+DATABASES = {
+    'default': env.db()
+}
+
+SYSTEM_DATA_SOURCE_ID = env('SYSTEM_DATA_SOURCE_ID')
 
 SITE_ID = 1
 
@@ -82,6 +122,13 @@ INSTALLED_APPS = [
     'django_orghierarchy',
 ]
 
+if env('SENTRY_DSN'):
+    RAVEN_CONFIG = {
+        'dsn': env('SENTRY_DSN'),
+        'environment': env('SENTRY_ENVIRONMENT'),
+        'release': raven.fetch_git_sha(BASE_DIR),
+    }
+
 MIDDLEWARE_CLASSES = [
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -108,26 +155,21 @@ DATABASES = {
 }
 
 # Internationalization
-# https://docs.djangoproject.com/en/1.6/topics/i18n/
 
-LANGUAGES = (
-    ('fi', 'Finnish'),
-    ('sv', 'Swedish'),
-    ('en', 'English'),
-    ('zh-hans', 'Simplified Chinese'),
-    ('ru', 'Russian'),
-    ('ar', 'Arabic'),
-)
-
-LANGUAGE_CODE = 'fi'
+# Map language codes to the (code, name) tuples used by Django
+# We want to keep the ordering in LANGUAGES configuration variable,
+# thus some gyrations
+language_map = {x: y for x, y in GLOBAL_LANGUAGES}
+try:
+    LANGUAGES = tuple((l, language_map[l]) for l in env('LANGUAGES'))
+except KeyError as e:
+    raise ImproperlyConfigured(f"unknown language code \"{e.args[0]}\"")
+LANGUAGE_CODE = env('LANGUAGES')[0]
 
 TIME_ZONE = 'Europe/Helsinki'
 
 MUNIGEO_COUNTRY = 'country:fi'
 MUNIGEO_MUNI = 'kunta:helsinki'
-
-SYSTEM_DATA_SOURCE_ID = 'system'
-
 
 USE_I18N = True
 USE_L10N = True
@@ -137,15 +179,15 @@ LOCALE_PATHS = (
     os.path.join(BASE_DIR, 'locale'),
 )
 
+# Kulke importer looks here for its input files
 IMPORT_FILE_PATH = os.path.join(BASE_DIR, 'data')
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/1.6/howto/static-files/
 
-STATIC_URL = '/static/'
-
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-MEDIA_URL = '/media/'
+STATIC_URL = env('STATIC_URL')
+MEDIA_URL = env('MEDIA_URL')
+STATIC_ROOT = env('STATIC_ROOT')
+MEDIA_ROOT = env('MEDIA_ROOT')
 
 #
 # Authentication
@@ -200,10 +242,9 @@ JWT_AUTH = {
     # JWT_AUDIENCE and JWT_SECRET_KEY must be set in local_settings.py
 }
 
-
 CORS_ORIGIN_ALLOW_ALL = True
-CSRF_COOKIE_NAME = 'linkedevents-csrftoken'
-SESSION_COOKIE_NAME = 'linkedevents-sessionid'
+CSRF_COOKIE_NAME = '%s-csrftoken' % env.str('COOKIE_PREFIX')
+SESSION_COOKIE_NAME = '%s-sessionid' % env.str('COOKIE_PREFIX')
 
 TEMPLATES = [
     {
@@ -226,7 +267,6 @@ TEMPLATES = [
     },
 ]
 
-
 POSTGIS_VERSION = (2, 1, 1)
 
 # Use ETRS-TM35FIN projection by default
@@ -243,37 +283,76 @@ CITYSDK_API_SETTINGS = {
     'DEFAULT_POI_CATEGORY': '53562f3238653c0a842a3bf7'
 }
 
+
+def haystack_connection_for_lang(language_code):
+    if language_code == "fi":
+        return {'default-fi': {
+                    'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+                    'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
+                    'URL': env('ELASTICSEARCH_URL'),
+                    'INDEX_NAME': 'linkedevents-fi',
+                    'MAPPINGS': CUSTOM_MAPPINGS,
+                    'SETTINGS': {
+                        "analysis": {
+                            "analyzer": {
+                                "default": {
+                                    "tokenizer": "finnish",
+                                    "filter": ["lowercase", "voikko_filter"]
+                                }
+                            },
+                            "filter": {
+                                "voikko_filter": {
+                                    "type": "voikko",
+                                }
+                            }
+                        }
+                    }
+                },
+                }
+    else:
+        return {f'default-{language_code}': {
+                    'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+                    'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
+                    'URL': env('ELASTICSEARCH_URL'),
+                    'INDEX_NAME': f'linkedevents-{language_code}',
+                    'MAPPINGS': CUSTOM_MAPPINGS,
+                    }
+                }
+
+
+def dummy_haystack_connection_for_lang(language_code):
+    return {f'default-{language_code}': {
+                'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+                'BASE_ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
+                }
+            }
+
+
 HAYSTACK_SIGNAL_PROCESSOR = 'haystack.signals.RealtimeSignalProcessor'
+
+CUSTOM_MAPPINGS = {
+    'autosuggest': {
+        'search_analyzer': 'standard',
+        'index_analyzer': 'edgengram_analyzer',
+        'analyzer': None
+    },
+    'text': {
+        'analyzer': 'default'
+    }
+}
 
 HAYSTACK_CONNECTIONS = {
     'default': {
-        'ENGINE': 'multilingual_haystack.backends.MultilingualSearchEngine'
-    },
-    'default-fi': {
-        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
-        'BASE_ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
-    },
-    'default-en': {
-        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
-        'BASE_ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
-    },
-    'default-sv': {
-        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
-        'BASE_ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
-    },
-    'default-zh-hans': {
-        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
-        'BASE_ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
-    },
-    'default-ru': {
-        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
-        'BASE_ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
-    },
-    'default-ar': {
-        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
-        'BASE_ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
+        'ENGINE': 'multilingual_haystack.backends.MultilingualSearchEngine',
     }
 }
+
+for language in [l[0] for l in LANGUAGES]:
+    if env('ELASTICSEARCH_URL'):
+        connection = haystack_connection_for_lang(language)
+    else:
+        connection = dummy_haystack_connection_for_lang(language)
+    HAYSTACK_CONNECTIONS.update(connection)
 
 
 import bleach  # noqa
@@ -283,7 +362,6 @@ from easy_thumbnails.conf import Settings as thumbnail_settings  # noqa
 THUMBNAIL_PROCESSORS = (
     'image_cropping.thumbnail_processors.crop_corners',
 ) + thumbnail_settings.THUMBNAIL_PROCESSORS
-
 
 # django-orghierachy swappable model
 DJANGO_ORGHIERARCHY_DATASOURCE_MODEL = 'events.DataSource'
@@ -302,6 +380,8 @@ if os.path.exists(f):
     sys.modules[module_name] = module
     exec(open(f, "rb").read())
 
+# We generate a persistent SECRET_KEY if it is not defined. Note that
+# setting SECRET_KEY will override the persisted key
 if 'SECRET_KEY' not in locals():
     secret_file = os.path.join(BASE_DIR, '.django_secret')
     try:
