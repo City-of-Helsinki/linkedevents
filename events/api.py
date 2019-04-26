@@ -560,10 +560,9 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
 
     def validate_publisher(self, value):
         if value:
-            # TODO: allow optionally declaring publisher in any user admin org (regular org for drafts)
-            # TODO: self.user.admin_organizations.all() or user.get_admin_organizations_and_descendants()?
-            if value not in (self.publisher, self.publisher.replaced_by) and\
-                    value not in self.user.admin_organizations.all():
+            if value not in (set(self.user.get_admin_organizations_and_descendants())
+                             | set(map(lambda x: getattr(x, 'replaced_by'),
+                                   self.user.get_admin_organizations_and_descendants()))):
                 raise serializers.ValidationError(
                     {'publisher': _(
                         "Setting publisher to %(given)s " +
@@ -572,7 +571,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                         {'given': str(value),
                          'required': str(self.publisher
                                          if not self.publisher.replaced_by
-                                         else self.publisher_replaced_by)}})
+                                         else self.publisher.replaced_by)}})
             if value.replaced_by:
                 # for replaced organizations, we automatically update to the current organization
                 # even if the POST/PUT uses the old id
