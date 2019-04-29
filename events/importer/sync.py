@@ -50,7 +50,7 @@ class ModelSyncher(object):
                 continue
             delete_list.append(obj)
         if len(delete_list) > 5 and len(delete_list) > len(self.obj_dict) * 0.2 and not force:
-            raise Exception("Attempting to delete more than 20% of total items")
+            raise Exception(f"Attempting to delete {len(delete_list)} out of a total of {len(self.obj_dict)} items")
         for obj in delete_list:
             if self.allow_deleting_func:
                 if not self.allow_deleting_func(obj):
