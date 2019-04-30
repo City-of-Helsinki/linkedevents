@@ -158,7 +158,7 @@ class YsoImporter(Importer):
                     language_id=language
                 ) for name, language in labels_to_create])
         else:
-            label_syncher.finish()
+            label_syncher.finish(force=self.options['force'])
 
         if bulk_mode:
             self.save_keywords_in_bulk(graph)
@@ -184,7 +184,7 @@ class YsoImporter(Importer):
             save_set = set()
             for subject in graph.subjects(RDF.type, SKOS.Concept):
                 self.save_keyword(syncher, graph, subject, keyword_labels, save_set)
-            syncher.finish()
+            syncher.finish(force=self.options['force'])
 
     def save_keyword_label_relationships_in_bulk(self, keyword_labels):
         yids = Keyword.objects.all().values_list('id', flat=True)

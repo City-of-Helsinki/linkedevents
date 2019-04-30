@@ -719,5 +719,5 @@ class EspooImporter(Importer):
             obj = self.save_event(event)
             self.syncher.mark(obj)
 
-        self.syncher.finish()
+        self.syncher.finish(force=self.options['force'])
         logger.info("{} events processed".format(len(events.values())))

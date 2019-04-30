@@ -496,7 +496,7 @@ class LippupisteImporter(Importer):
                 obj.save()
             self.syncher.mark(obj)
 
-        self.syncher.finish()
+        self.syncher.finish(force=self.options['force'])
 
     def import_events(self):
         if not LIPPUPISTE_EVENT_API_URL:

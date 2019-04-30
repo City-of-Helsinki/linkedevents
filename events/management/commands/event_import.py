@@ -27,6 +27,8 @@ class Command(BaseCommand):
                             help='Import only single entity')
         parser.add_argument('--remap', action='store_true', dest='remap',
                             help='Remap all deleted entities to new ones')
+        parser.add_argument('--force', action='store_true', dest='force',
+                            help='Allow deleting any number of entities if necessary')
 
         for imp in self.importer_types:
             parser.add_argument('--%s' % imp, dest=imp, action='store_true', help='import %s' % imp)
@@ -45,7 +47,8 @@ class Command(BaseCommand):
                               'verbosity': int(options['verbosity']),
                               'cached': options['cached'],
                               'single': options['single'],
-                              'remap': options['remap']})
+                              'remap': options['remap'],
+                              'force': options['force']})
 
         # Activate the default language for the duration of the import
         # to make sure translated fields are populated correctly.

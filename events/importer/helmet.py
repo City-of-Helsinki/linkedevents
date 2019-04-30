@@ -481,5 +481,5 @@ class HelmetImporter(Importer):
             obj = self.save_event(event)
             self.syncher.mark(obj)
 
-        self.syncher.finish()
+        self.syncher.finish(force=self.options['force'])
         logger.info("%d events processed" % len(events.values()))
