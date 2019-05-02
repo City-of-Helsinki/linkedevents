@@ -47,7 +47,7 @@ TEMPLATE_DEBUG = False
 
 ALLOWED_HOSTS = env('ALLOWED_HOSTS')
 ADMINS = env('ADMINS')
-INTERNAL_IPS = env.list('INTERNAL_IPS',
+INTERNAL_IPS = env('INTERNAL_IPS',
                         default=(['127.0.0.1'] if DEBUG else []))
 DATABASES = {
     'default': env.db()
@@ -231,12 +231,13 @@ REST_FRAMEWORK = {
 }
 JWT_AUTH = {
     'JWT_PAYLOAD_GET_USER_ID_HANDLER': 'helusers.jwt.get_user_id_from_payload_handler',
-    # JWT_AUDIENCE and JWT_SECRET_KEY must be set in local_settings.py
+    'JWT_AUDIENCE': env('TOKEN_AUTH_ACCEPTED_AUDIENCE'),
+    'JWT_SECRET_KEY': env('TOKEN_AUTH_SHARED_SECRET'),
 }
 
 CORS_ORIGIN_ALLOW_ALL = True
-CSRF_COOKIE_NAME = '%s-csrftoken' % env.str('COOKIE_PREFIX')
-SESSION_COOKIE_NAME = '%s-sessionid' % env.str('COOKIE_PREFIX')
+CSRF_COOKIE_NAME = '%s-csrftoken' % env('COOKIE_PREFIX')
+SESSION_COOKIE_NAME = '%s-sessionid' % env('COOKIE_PREFIX')
 
 TEMPLATES = [
     {
