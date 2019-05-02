@@ -7,6 +7,8 @@ import raven
 from django.conf.global_settings import LANGUAGES as GLOBAL_LANGUAGES
 from django.core.exceptions import ImproperlyConfigured
 
+CONFIG_FILE_NAME="config_dev.toml"
+
 root = environ.Path(__file__) - 2  # two levels back in hierarchy
 env = environ.Env(
     DEBUG=(bool, False),
@@ -35,9 +37,9 @@ BASE_DIR = root()
 
 # Django environ has a nasty habit of complanining at level
 # WARN env file not being preset. Here we pre-empt it.
-env_file_path = os.path.join(BASE_DIR, 'config_dev.toml')
+env_file_path = os.path.join(BASE_DIR, CONFIG_FILE_NAME)
 if os.path.exists(env_file_path):
-    print('Reading config file')
+    print(f'Reading config from {env_file_path}')
     environ.Env.read_env(env_file_path)
 
 DEBUG = env('DEBUG')
@@ -143,16 +145,6 @@ MIDDLEWARE_CLASSES = [
 ROOT_URLCONF = 'linkedevents.urls'
 
 WSGI_APPLICATION = 'linkedevents.wsgi.application'
-
-# Database
-# https://docs.djangoproject.com/en/1.6/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': 'linkedevents',
-    }
-}
 
 # Internationalization
 
