@@ -7,6 +7,8 @@ import raven
 from django.conf.global_settings import LANGUAGES as GLOBAL_LANGUAGES
 from django.core.exceptions import ImproperlyConfigured
 
+CONFIG_FILE_NAME="config_dev.toml"
+
 root = environ.Path(__file__) - 2  # two levels back in hierarchy
 env = environ.Env(
     DEBUG=(bool, False),
@@ -35,9 +37,9 @@ BASE_DIR = root()
 
 # Django environ has a nasty habit of complanining at level
 # WARN env file not being preset. Here we pre-empt it.
-env_file_path = os.path.join(BASE_DIR, 'config_dev.toml')
+env_file_path = os.path.join(BASE_DIR, CONFIG_FILE_NAME)
 if os.path.exists(env_file_path):
-    print('Reading config file')
+    print(f'Reading config from {env_file_path}')
     environ.Env.read_env(env_file_path)
 
 DEBUG = env('DEBUG')
@@ -45,7 +47,7 @@ TEMPLATE_DEBUG = False
 
 ALLOWED_HOSTS = env('ALLOWED_HOSTS')
 ADMINS = env('ADMINS')
-INTERNAL_IPS = env.list('INTERNAL_IPS',
+INTERNAL_IPS = env('INTERNAL_IPS',
                         default=(['127.0.0.1'] if DEBUG else []))
 DATABASES = {
     'default': env.db()
@@ -144,16 +146,6 @@ ROOT_URLCONF = 'linkedevents.urls'
 
 WSGI_APPLICATION = 'linkedevents.wsgi.application'
 
-# Database
-# https://docs.djangoproject.com/en/1.6/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': 'linkedevents',
-    }
-}
-
 # Internationalization
 
 # Map language codes to the (code, name) tuples used by Django
@@ -239,12 +231,13 @@ REST_FRAMEWORK = {
 }
 JWT_AUTH = {
     'JWT_PAYLOAD_GET_USER_ID_HANDLER': 'helusers.jwt.get_user_id_from_payload_handler',
-    # JWT_AUDIENCE and JWT_SECRET_KEY must be set in local_settings.py
+    'JWT_AUDIENCE': env('TOKEN_AUTH_ACCEPTED_AUDIENCE'),
+    'JWT_SECRET_KEY': env('TOKEN_AUTH_SHARED_SECRET'),
 }
 
 CORS_ORIGIN_ALLOW_ALL = True
-CSRF_COOKIE_NAME = '%s-csrftoken' % env.str('COOKIE_PREFIX')
-SESSION_COOKIE_NAME = '%s-sessionid' % env.str('COOKIE_PREFIX')
+CSRF_COOKIE_NAME = '%s-csrftoken' % env('COOKIE_PREFIX')
+SESSION_COOKIE_NAME = '%s-sessionid' % env('COOKIE_PREFIX')
 
 TEMPLATES = [
     {
