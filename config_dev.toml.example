@@ -13,8 +13,8 @@
 # read by a parser only capable of reading key=value pairs + comments.
 # We use the .toml extension to indicate that it is readable by TOML
 # parser.
-# Following are the settings and their explanations, with useful values
-# for development:
+# Following are the settings and their explanations, with example values
+# that might be useful for development:
 
 # Whether to run Django in debug mode
 # Django setting: DEBUG https://docs.djangoproject.com/en/2.2/ref/settings/#debug
@@ -23,7 +23,7 @@ DEBUG=True
 # Namespace ID used for events added through the API. All events added
 # through api will have their "data_source" field set to this value and
 # their identifier will be prefixed by this value.
-SYSTEM_DATA_SOURCE_ID=ledev
+#SYSTEM_DATA_SOURCE_ID=ledev
 
 # Languages that this Linkedevents instance will support. This affects
 # several things and cannot be changed nilly-willy. Most importantly,
@@ -32,7 +32,7 @@ SYSTEM_DATA_SOURCE_ID=ledev
 # indexes: `manage.py rebuild_indexes`, but only if you are actually
 # running elasticsearch, ie. specifying ELASTICSEARCH_URL
 # Django setting: LANGUAGES https://docs.djangoproject.com/en/2.2/ref/settings/#languages
-LANGUAGES=fi,en
+#LANGUAGES=fi,sv,en,zh-hans,ru,ar
 
 # Configures database for Linkedevents using URL style. Format is:
 # postgis://USER:PASSWORD@HOST:PORT/NAME
@@ -40,7 +40,7 @@ LANGUAGES=fi,en
 # The example below configures Linkedevents to use local PostgreSQL database
 # called "linkedevents", connecting same as username as Django is running as.
 # Django setting: DATABASES (but not directly) https://docs.djangoproject.com/en/2.2/ref/settings/#databases
-DATABASE_URL=postgis:///linkedevents
+#DATABASE_URL=postgis:///linkedevents
 
 # Linkedevents uses JWT tokens for authentication. This settings Specifies
 # the value that must be present in the "aud"-key of the token presented
