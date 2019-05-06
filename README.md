@@ -39,17 +39,27 @@ Set up project with Docker
     docker exec -it linkedevents-backend python manage.py event_import helmet --events
     # Import events from Espoo
     docker exec -it linkedevents-backend python manage.py event_import espoo --events
+    # Import organizations
+    docker exec -it linkedevents-backend python manage.py import_organizations https://api.hel.fi/paatos/v1/organization/ -s helsinki:ahjo
     ```
-6. Update search indexes:
+6. Add datasources helsinki and helfi:
+    * Use django shell and add 'helsinki' and 'helfi' to DataSource
+    * Add audience `docker exec -it linkedevents-backend python manage.py add_helsinki_audience`
+    * In django shell `KeywordSet.objects.create(id='helfi:topics', data_source_id='helfi’)` and add some keywords to helfi:topics
+    * Use Django-admin and allow system datasource to modify data
+
+7. Update search indexes:
     * `docker exec -it linkedevents-backend python manage.py rebuild_index`
     
-7. (Optionally) install API frontend templates:
+8. (Optionally) install API frontend templates:
     * `docker exec -it linkedevents-backend python manage.py install_templates helevents`
 
-8. Start your Django server:
+9. Start your Django server:
     * `docker exec -it linkedevents-backend python manage.py runserver 0:8000`
 
 Now your project is live at [localhost:8000](http://localhost:8000)
+
+For UI, set authentication keys to local_settings.
 
 Installation for development
 ----------------------------
@@ -223,44 +233,32 @@ CUSTOM_MAPPINGS = {
 
 HAYSTACK_CONNECTIONS = {
     'default': {
-        'ENGINE': 'multilingual_haystack.backends.MultilingualSearchEngine',
+        'ENGINE': 'multilingual_haystack.backends.MultilingualSearchEngine'
     },
     'default-fi': {
         'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
-        'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
-        'URL': 'http://localhost:9200/',
-        'INDEX_NAME': 'linkedevents-fi',
-        'MAPPINGS': CUSTOM_MAPPINGS,
-        'SETTINGS': {
-            "analysis": {
-                "analyzer": {
-                    "default": {
-                        "tokenizer": "finnish",
-                        "filter": ["lowercase", "voikko_filter"]
-                    }
-                },
-                "filter": {
-                    "voikko_filter": {
-                        "type": "voikko",
-                    }
-                }
-            }
-        }
-    },
-    'default-sv': {
-        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
-        'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
-        'URL': 'http://localhost:9200/',
-        'INDEX_NAME': 'linkedevents-sv',
-        'MAPPINGS': CUSTOM_MAPPINGS
+        'BASE_ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
     },
     'default-en': {
         'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
-        'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
-        'URL': 'http://localhost:9200/',
-        'INDEX_NAME': 'linkedevents-en',
-        'MAPPINGS': CUSTOM_MAPPINGS
+        'BASE_ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
     },
+    'default-sv': {
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
+    },
+    'default-zh-hans': {
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
+    },
+    'default-ru': {
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
+    },
+    'default-ar': {
+        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
+        'BASE_ENGINE': 'haystack.backends.simple_backend.SimpleEngine'
+    }
 }
 ```
 
