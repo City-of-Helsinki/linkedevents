@@ -12,12 +12,14 @@ from django.core.exceptions import ImproperlyConfigured
 CONFIG_FILE_NAME = "config_dev.toml"
 
 
-def get_git_revision_hash():
-"""
-We need a way to retrieve git revision hash for sentry reports
-I assume that if we have a git repository available we will
-have git-the-comamand as well
-"""
+def get_git_revision_hash() -> str:
+    """
+    Retrieve the git hash for the underlying git repository or die trying
+
+    We need a way to retrieve git revision hash for sentry reports
+    I assume that if we have a git repository available we will
+    have git-the-comamand as well
+    """
     try:
         # We are not interested in gits complaints
         git_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD'], stderr=subprocess.DEVNULL, encoding='utf8')
@@ -27,7 +29,7 @@ have git-the-comamand as well
     except FileNotFoundError:
         git_hash = "git_not_available"
     except subprocess.CalledProcessError:
-    # Ditto
+        # Ditto
         git_hash = "no_repository"
     return git_hash.rstrip()
 
