@@ -28,7 +28,7 @@ httmock
 bleach
 django-haystack
 elasticsearch<5.0
-raven
+sentry-sdk
 django-helusers
 pytest-django
 pytest<4.0
