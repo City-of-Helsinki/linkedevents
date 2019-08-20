@@ -78,6 +78,9 @@ HKT_TPREK_PLACE_MAP = {
 # By default, only import events in the capital region
 POSTAL_CODE_RANGES = ((1, 990), (1200, 1770), (2100, 2380), (2600, 2860), (2920, 2980))
 
+# By default, only import agreed providers (lowercase required!)
+PROVIDERS_TO_IMPORT = ('helsingin kaupunginteatteri',)
+
 NAMES_TO_IGNORE_BY_PROVIDER = {
     'Helsingin kaupunginteatteri': ('käsiohjelma',),  # Certain events are not actual events.
     'SeaLife': ('kertaliput',),
@@ -515,6 +518,9 @@ class LippupisteImporter(Importer):
                     break
             else:
                 # no match, ignored
+                continue
+            # check if provider matches
+            if source_event['EventPromoterName'].lower() not in PROVIDERS_TO_IMPORT:
                 continue
             # check if we should ignore the event by name
             for provider in NAMES_TO_IGNORE_BY_PROVIDER:
