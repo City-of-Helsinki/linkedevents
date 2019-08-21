@@ -3,11 +3,36 @@ Django settings module for linkedevents project.
 """
 import os
 import environ
-import raven
+import sentry_sdk
+import subprocess
+from sentry_sdk.integrations.django import DjangoIntegration
 from django.conf.global_settings import LANGUAGES as GLOBAL_LANGUAGES
 from django.core.exceptions import ImproperlyConfigured
 
-CONFIG_FILE_NAME="config_dev.toml"
+CONFIG_FILE_NAME = "config_dev.toml"
+
+
+def get_git_revision_hash() -> str:
+    """
+    Retrieve the git hash for the underlying git repository or die trying
+
+    We need a way to retrieve git revision hash for sentry reports
+    I assume that if we have a git repository available we will
+    have git-the-comamand as well
+    """
+    try:
+        # We are not interested in gits complaints
+        git_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD'], stderr=subprocess.DEVNULL, encoding='utf8')
+    # ie. "git" was not found
+    # should we return a more generic meta hash here?
+    # like "undefined"?
+    except FileNotFoundError:
+        git_hash = "git_not_available"
+    except subprocess.CalledProcessError:
+        # Ditto
+        git_hash = "no_repository"
+    return git_hash.rstrip()
+
 
 root = environ.Path(__file__) - 2  # two levels back in hierarchy
 env = environ.Env(
@@ -36,9 +61,10 @@ env = environ.Env(
 BASE_DIR = root()
 
 # Django environ has a nasty habit of complanining at level
-# WARN env file not being preset. Here we pre-empt it.
+# WARN about env file not being preset. Here we pre-empt it.
 env_file_path = os.path.join(BASE_DIR, CONFIG_FILE_NAME)
 if os.path.exists(env_file_path):
+    # Logging configuration is not available at this point
     print(f'Reading config from {env_file_path}')
     environ.Env.read_env(env_file_path)
 
@@ -48,7 +74,7 @@ TEMPLATE_DEBUG = False
 ALLOWED_HOSTS = env('ALLOWED_HOSTS')
 ADMINS = env('ADMINS')
 INTERNAL_IPS = env('INTERNAL_IPS',
-                        default=(['127.0.0.1'] if DEBUG else []))
+                   default=(['127.0.0.1'] if DEBUG else []))
 DATABASES = {
     'default': env.db()
 }
@@ -109,7 +135,6 @@ INSTALLED_APPS = [
     'mptt',
     'reversion',
     'haystack',
-    'raven.contrib.django.raven_compat',
     'django_cleanup',
     'django_filters',
 
@@ -125,11 +150,12 @@ INSTALLED_APPS = [
 ]
 
 if env('SENTRY_DSN'):
-    RAVEN_CONFIG = {
-        'dsn': env('SENTRY_DSN'),
-        'environment': env('SENTRY_ENVIRONMENT'),
-        'release': raven.fetch_git_sha(BASE_DIR),
-    }
+    sentry_sdk.init(
+        dsn=env('SENTRY_DSN'),
+        environment=env('SENTRY_ENVIRONMENT'),
+        release=get_git_revision_hash(),
+        integrations=[DjangoIntegration()]
+    )
 
 MIDDLEWARE_CLASSES = [
     'corsheaders.middleware.CorsMiddleware',
