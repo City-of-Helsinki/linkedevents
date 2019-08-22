@@ -583,11 +583,13 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
             name_exists = False
             languages = [x[0] for x in settings.LANGUAGES]
             for language in languages:
-                if 'name_%s' % language in data:
+                # null or empty strings are not allowed, they are the same as missing name!
+                if 'name_%s' % language in data and data['name_%s' % language]:
                     name_exists = True
                     break
         else:
-            name_exists = 'name' in data
+            # null or empty strings are not allowed, they are the same as missing name!
+            name_exists = 'name' in data and data['name']
         if not name_exists:
             raise serializers.ValidationError({'name': _('The name must be specified.')})
         super().validate(data)
@@ -1165,10 +1167,11 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         data = self.parse_datetimes(data)
 
         # If the obligatory fields are null or empty, remove them to prevent to_internal_value from checking them.
-        # Only for drafts, because null start time of a PUBLIC event will indicate POSTPONED.
+        # Only for drafts, because null start time of a PUBLIC event will indicate POSTPONED, and other fields must
+        # be present for public events.
 
         if data.get('publication_status') == 'draft':
-            # however, the optional fields cannot be null and must be removed
+            # the obligatory (optional for draft) fields cannot be null and must be removed
             for field in self.fields_needed_to_publish:
                 if not data.get(field):
                     data.pop(field, None)
