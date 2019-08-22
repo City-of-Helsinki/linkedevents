@@ -180,9 +180,9 @@ def test__cannot_publish_an_event_without_start_time(list_url,
 
 @pytest.mark.django_db
 def test__cannot_publish_an_event_without_description(list_url,
-                                                     api_client,
-                                                     minimal_event_dict,
-                                                     user):
+                                                      api_client,
+                                                      minimal_event_dict,
+                                                      user):
     api_client.force_authenticate(user=user)
     minimal_event_dict['description'] = {'fi': None}
     response = api_client.post(list_url, minimal_event_dict, format='json')
