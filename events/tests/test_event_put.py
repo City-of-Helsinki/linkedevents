@@ -76,6 +76,7 @@ def test__cannot_update_a_draft_without_a_name(api_client, minimal_event_dict, u
     assert response2.status_code == 400
     assert 'name' in response2.data
 
+
 @pytest.mark.django_db
 def test__cannot_update_an_event_without_a_short_description(api_client, minimal_event_dict, user):
 
