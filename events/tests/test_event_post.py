@@ -151,8 +151,12 @@ def test__cannot_create_a_draft_event_without_a_name(list_url,
                                                      minimal_event_dict,
                                                      user):
     api_client.force_authenticate(user=user)
-    minimal_event_dict.pop('name')
     minimal_event_dict['publication_status'] = 'draft'
+    minimal_event_dict['name'] = {'fi': None}
+    response = api_client.post(list_url, minimal_event_dict, format='json')
+    assert response.status_code == 400
+    assert 'name' in response.data
+    minimal_event_dict.pop('name')
     response = api_client.post(list_url, minimal_event_dict, format='json')
     assert response.status_code == 400
     assert 'name' in response.data
@@ -172,6 +176,22 @@ def test__cannot_publish_an_event_without_start_time(list_url,
     response2 = api_client.post(list_url, minimal_event_dict, format='json')
     assert response2.status_code == 400
     assert 'start_time' in response2.data
+
+
+@pytest.mark.django_db
+def test__cannot_publish_an_event_without_description(list_url,
+                                                     api_client,
+                                                     minimal_event_dict,
+                                                     user):
+    api_client.force_authenticate(user=user)
+    minimal_event_dict['description'] = {'fi': None}
+    response = api_client.post(list_url, minimal_event_dict, format='json')
+    assert response.status_code == 400
+    assert 'description' in response.data
+    del minimal_event_dict['description']
+    response2 = api_client.post(list_url, minimal_event_dict, format='json')
+    assert response2.status_code == 400
+    assert 'description' in response2.data
 
 
 @pytest.mark.django_db

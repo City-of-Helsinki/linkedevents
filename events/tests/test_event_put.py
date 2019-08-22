@@ -54,6 +54,71 @@ def test__update_a_draft_with_put(api_client, minimal_event_dict, user):
 
 
 @pytest.mark.django_db
+def test__cannot_update_a_draft_without_a_name(api_client, minimal_event_dict, user):
+
+    # create an event
+    api_client.force_authenticate(user=user)
+    minimal_event_dict.pop('location')
+    minimal_event_dict.pop('keywords')
+    minimal_event_dict['publication_status'] = 'draft'
+    response = create_with_post(api_client, minimal_event_dict)
+    assert_event_data_is_equal(minimal_event_dict, response.data)
+    data2 = response.data
+
+    # delete name
+    data2['name'] = {'fi': None}
+    event_id = data2.pop('@id')
+    response2 = update_with_put(api_client, event_id, data2)
+    assert response2.status_code == 400
+    assert 'name' in response2.data
+    data2.pop('name')
+    response2 = update_with_put(api_client, event_id, data2)
+    assert response2.status_code == 400
+    assert 'name' in response2.data
+
+@pytest.mark.django_db
+def test__cannot_update_an_event_without_a_short_description(api_client, minimal_event_dict, user):
+
+    # create an event
+    api_client.force_authenticate(user=user)
+    response = create_with_post(api_client, minimal_event_dict)
+    assert_event_data_is_equal(minimal_event_dict, response.data)
+    data2 = response.data
+
+    # delete name
+    data2['short_description'] = {'fi': None}
+    event_id = data2.pop('@id')
+    response2 = update_with_put(api_client, event_id, data2)
+    assert response2.status_code == 400
+    assert 'short_description' in response2.data
+    data2.pop('short_description')
+    response2 = update_with_put(api_client, event_id, data2)
+    assert response2.status_code == 400
+    assert 'short_description' in response2.data
+
+
+@pytest.mark.django_db
+def test__cannot_update_an_event_without_a_description(api_client, minimal_event_dict, user):
+
+    # create an event
+    api_client.force_authenticate(user=user)
+    response = create_with_post(api_client, minimal_event_dict)
+    assert_event_data_is_equal(minimal_event_dict, response.data)
+    data2 = response.data
+
+    # delete name
+    data2['description'] = {'fi': None}
+    event_id = data2.pop('@id')
+    response2 = update_with_put(api_client, event_id, data2)
+    assert response2.status_code == 400
+    assert 'description' in response2.data
+    data2.pop('description')
+    response2 = update_with_put(api_client, event_id, data2)
+    assert response2.status_code == 400
+    assert 'description' in response2.data
+
+
+@pytest.mark.django_db
 def test__keyword_n_events_updated(api_client, minimal_event_dict, user, data_source):
 
     # create an event
