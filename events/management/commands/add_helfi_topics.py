@@ -3,7 +3,7 @@ from functools import lru_cache
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from events.models import Event, Keyword, KeywordSet, DataSource
+from events.models import Keyword, KeywordSet, DataSource
 
 HELFI_KEYWORD_SET_DATA = {
     'id': 'helfi:topics',
@@ -84,7 +84,7 @@ class Command(BaseCommand):
                 self.stdout.write('created keyword %s (%s)' % (new_keyword_data['name_fi'], new_keyword_data['id']))
             else:
                 self.stdout.write('keyword %s (%s) already exists' % (new_keyword_data['name_fi'],
-                                                                     new_keyword_data['id']))
+                                                                      new_keyword_data['id']))
 
     @transaction.atomic()
     def create_helfi_topics_keyword_set(self):
@@ -111,7 +111,6 @@ class Command(BaseCommand):
                 keyword_set.keywords.add(keyword)
                 existing_keywords.add(keyword)
                 self.stdout.write('added %s (%s) to the keyword set' % (keyword.name, keyword_id))
-
 
     def handle(self, *args, **options):
         # Helfi data source must be created if missing.
