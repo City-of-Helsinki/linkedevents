@@ -27,29 +27,42 @@ Set up project with Docker
     * `docker exec -it linkedevents-backend python manage.py sync_translation_fields`
     * Answer `y` (for 'yes') to all prompt questions
     
-5. Import some data for testing:
+If you wish to install Linkedevents without any Helsinki specific data (an empty database), and instead customize everything for your own city, you may jump to step 10.
+
+Steps 5-9 are needed if you wish to use location or event data from the Helsinki metropolitan region, or if you wish to run the Helsinki UI (https://linkedevents.hel.fi) from https://github.com/City-of-Helsinki/linkedevents-ui. Currently, the UI is specific to Helsinki and requires the general Finnish ontology as well as additional Helsinki specific audiences and keywords to be present, though its code should be easily adaptable to your own city if you have an OAuth2 authentication server present.
+
+5. (Optionally) import general Finnish ontology (used by Helsinki UI and Helsinki events):
+    * `docker exec -it linkedevents-backend python manage.py event_import yso --all`
+6. (Optionally) add helsinki specific audiences and keywords:
     ```bash
-    # Import general Finnish ontology (used by events from following sources)
-    docker exec -it linkedevents-backend python manage.py event_import yso --all
+    # Add keyword set to display in the UI event audience selection
+    docker exec -it linkedevents-backend python manage.py add_helsinki_audience
+    # Add keyword set to display in the UI main category selection
+    docker exec -it linkedevents-backend python manage.py add_helfi_topics
+    ```
+7. (Optionally) import places and events for testing:
+    ```bash
     # Import places from Helsinki metropolitan region service registry (used by events from following sources)
     docker exec -it linkedevents-backend python manage.py event_import tprek --places
-    # Import events from Visit Helsinki
-    docker exec -it linkedevents-backend python manage.py event_import matko --events
     # Import events from Helsinki metropolitan region libraries
     docker exec -it linkedevents-backend python manage.py event_import helmet --events
     # Import events from Espoo
     docker exec -it linkedevents-backend python manage.py event_import espoo --events
-    ```
-6. Update search indexes:
-    * `docker exec -it linkedevents-backend python manage.py rebuild_index`
-    
-7. (Optionally) install API frontend templates:
+8. (Optionally) import City of Helsinki internal organization for UI user rights management:
+    * `docker exec -it linkedevents-backend python manage.py import_organizations https://api.hel.fi/paatos/v1/organization/ -s helsinki:ahjo`
+9. (Optionally) install API frontend templates:
     * `docker exec -it linkedevents-backend python manage.py install_templates helevents`
 
-8. Start your Django server:
+Finish the install:
+
+10. (Optionally) install Elasticsearch reading the [instructions below](#search). This is an optional feature. If you do not wish to install Elasticsearch, all the endpoints apart from `/v1/search` will function normally, and the `/v1/search` endpoint does a dumb exact text match for development purposes.
+
+11. Start your Django server:
     * `docker exec -it linkedevents-backend python manage.py runserver 0:8000`
 
 Now your project is live at [localhost:8000](http://localhost:8000)
+
+For UI, set authentication keys to local_settings.
 
 Installation for development
 ----------------------------
@@ -88,27 +101,33 @@ python manage.py migrate
 # This adds language fields based on settings.LANGUAGES (which may be missing in external dependencies)
 python manage.py sync_translation_fields
 ```
-You probably want to import some data for testing (these are events around Helsinki), like so:
+
+If you wish to install Linkedevents without any Helsinki specific data (an empty database), and instead customize everything for your own city, you have a working install right now.
+
+The last steps are needed if you wish to use location or event data from the Helsinki metropolitan region, or if you wish to run the Helsinki UI (https://linkedevents.hel.fi) from https://github.com/City-of-Helsinki/linkedevents-ui. Currently, the UI is specific to Helsinki and requires the general Finnish ontology as well as additional Helsinki specific audiences and keywords to be present, though its code should be easily adaptable to your own city if you have an OAuth2 authentication server present.
+
 ```bash
 cd $INSTALL_BASE/linkedevents
-# Import general Finnish ontology (used by events from following sources)
+# Import general Finnish ontology (used by Helsinki UI and Helsinki events)
 python manage.py event_import yso --all
+# Add keyword set to display in the UI event audience selection
+python manage.py add_helsinki_audience
+# Add keyword set to display in the UI main category selection
+python manage.py add_helfi_topics
 # Import places from Helsinki metropolitan region service registry (used by events from following sources)
 python manage.py event_import tprek --places
-# Import events from Visit Helsinki
-python manage.py event_import matko --events
 # Import events from Helsinki metropolitan region libraries
 python manage.py event_import helmet --events
 # Import events from Espoo
 python manage.py event_import espoo --events
-```
-Furthermore, you may install city-specific HTML page templates for the browsable API by
-```bash
-cd $INSTALL_BASE/linkedevents
+# Import City of Helsinki hierarchical organization for UI user rights management
+python manage.py import_organizations https://api.hel.fi/paatos/v1/organization/ -s helsinki:ahjo
+# install API frontend templates:
 python manage.py install_templates helevents
 ```
-This will install the `helevents/templates/rest_framework/api.html` template,
-which contains Helsinki event data summary and license. Customize the template
+
+The last command installs the `helevents/templates/rest_framework/api.html` template,
+which contains Helsinki event data summary and license. You may customize the template
 for your favorite city by creating `your_favorite_city/templates/rest_framework/api.html`.
 For further erudition, take a look at the DRF documentation on [customizing the browsable API](http://www.django-rest-framework.org/topics/browsable-api/#customizing)
 
@@ -184,7 +203,7 @@ Linkedevents uses Elasticsearch for generating results on the /search-endpoint. 
 
     We've only tested using the rather ancient 1.7 version. Version 5.x will certainly not work as the `django-haystack`-library does not support it. If you are using Ubuntu 16.04, 1.7 will be available in the official repository.
 
-2. (For finnish support) Install elasticsearch-analyzer-voikko, libvoikko and needed dictionaries
+2. (For Finnish support) Install elasticsearch-analyzer-voikko, libvoikko and needed dictionaries
 
     `/usr/share/elasticsearch/bin/plugin -i fi.evident.elasticsearch/elasticsearch-analysis-voikko/0.4.0`
     This specific command is for Debian derivatives. The path to `plugin` command might be different on yours. Note that version 0.4.0 is the one compatible with Elasticsearch 1.7
@@ -194,75 +213,22 @@ Linkedevents uses Elasticsearch for generating results on the /search-endpoint. 
 
     Installing the dictionaries (v5 dictionaries are needed for libvoikko version included in Ubuntu 16.04):
 
-    ```bash
+    ```
     wget -P $INSTALL_BASE http://www.puimula.org/htp/testing/voikko-snapshot-v5/dict-morpho.zip
     unzip $INSTALL_BASE/dict-morpho.zip -d /etc/voikko
     ```
 
 3. Configure the thing
 
-    Add the long block below these instructions to $INSTALL_BASE/linkedevents/local_settings.py. If you are familiar with Django haystack, feel free to customize it.
+    Set the `ELASTICSEARCH_URL` environment variable (or variable in `config_dev.toml`, if you are running in development mode) to your elasticsearch instance. The default value is `http://localhost:9200/`.
+
+    Haystack configuration for all Linkedevents languages happens automatically if `ELASTICSEARCH_URL` is set, but you may customize it manually using `local_settings.py` if you know Haystack and wish to do so.
 
 4. Rebuild the search indexes
 
    `python manage.py rebuild_index`
 
    You should now have a working /search endpoint, give or take a few.
-
-```python
-CUSTOM_MAPPINGS = {
-    'autosuggest': {
-        'search_analyzer': 'standard',
-        'index_analyzer': 'edgengram_analyzer',
-        'analyzer': None
-    },
-    'text': {
-        'analyzer': 'default'
-    }
-}
-
-HAYSTACK_CONNECTIONS = {
-    'default': {
-        'ENGINE': 'multilingual_haystack.backends.MultilingualSearchEngine',
-    },
-    'default-fi': {
-        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
-        'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
-        'URL': 'http://localhost:9200/',
-        'INDEX_NAME': 'linkedevents-fi',
-        'MAPPINGS': CUSTOM_MAPPINGS,
-        'SETTINGS': {
-            "analysis": {
-                "analyzer": {
-                    "default": {
-                        "tokenizer": "finnish",
-                        "filter": ["lowercase", "voikko_filter"]
-                    }
-                },
-                "filter": {
-                    "voikko_filter": {
-                        "type": "voikko",
-                    }
-                }
-            }
-        }
-    },
-    'default-sv': {
-        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
-        'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
-        'URL': 'http://localhost:9200/',
-        'INDEX_NAME': 'linkedevents-sv',
-        'MAPPINGS': CUSTOM_MAPPINGS
-    },
-    'default-en': {
-        'ENGINE': 'multilingual_haystack.backends.LanguageSearchEngine',
-        'BASE_ENGINE': 'events.custom_elasticsearch_search_backend.CustomEsSearchEngine',
-        'URL': 'http://localhost:9200/',
-        'INDEX_NAME': 'linkedevents-en',
-        'MAPPINGS': CUSTOM_MAPPINGS
-    },
-}
-```
 
 Event extensions
 ----------------

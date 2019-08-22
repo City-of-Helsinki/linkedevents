@@ -117,7 +117,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         # Helsinki data source must be created if missing. Note that it is not necessarily the system data source.
-        DataSource.objects.get_or_create(id=HELSINKI_KEYWORD_SET_DATA['data_source_id'])
+        # If we are creating it, it *may* still be the system data source, so it must be user editable!
+        helsinki_data_source_defaults = {'user_editable': True}
+        DataSource.objects.get_or_create(id=HELSINKI_KEYWORD_SET_DATA['data_source_id'],
+                                         defaults=helsinki_data_source_defaults)
         self.create_sote_keywords()
         self.create_helsinki_audiences_keyword_set()
         self.add_yso_audience_keywords_to_events()
