@@ -55,6 +55,7 @@ env = environ.Env(
     SENTRY_ENVIRONMENT=(str, 'development'),
     COOKIE_PREFIX=(str, 'linkedevents'),
     INTERNAL_IPS=(list, []),
+    INSTANCE_NAME=(str, 'Linked Events'),
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -386,6 +387,9 @@ THUMBNAIL_PROCESSORS = (
 DJANGO_ORGHIERARCHY_DATASOURCE_MODEL = 'events.DataSource'
 
 AUTO_ENABLED_EXTENSIONS = []
+
+# shown in the browsable API
+INSTANCE_NAME = env('INSTANCE_NAME')
 
 # local_settings.py can be used to override environment-specific settings
 # like database and email that differ between development and production.
