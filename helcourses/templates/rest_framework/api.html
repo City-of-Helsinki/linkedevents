@@ -1,0 +1,34 @@
+{% extends "rest_framework/api.html" %}
+{% load static %}
+
+{% block bootstrap_theme %}
+    <link rel="stylesheet" type="text/css" href="{% static "rest_framework/kanslia_bootstrap.css" %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static "rest_framework/bootstrap-tweaks.css" %}"/>
+{% endblock %}
+
+{% block branding %}
+  <div class='navbar-brand'>
+      <a href="https://dev.hel.fi"><img src="{% static "rest_framework/images/hel-dev-logo.svg" %}"></a>
+      Helsinki Linked Courses API <span class="version">{{ request.version|slice:"1:" }}</span>
+  </div>
+{% endblock %}
+
+{% block description %}
+{% if breadcrumblist|length == 1 %}
+    {% include "rest_framework/root.html" %}
+    {{ block.super }}
+{% elif name == "Event List" %}
+    {% include "rest_framework/event_list.html" %}
+{% elif name == "Place List List" %}
+    {% include "rest_framework/place_list.html" %}
+{% elif name == "Keyword List List" %}
+    {% include "rest_framework/keyword_list.html" %}
+{% elif name == "Search List" %}
+    {% include "rest_framework/search_list.html" %}
+{% elif name == "Language List" %}
+    {% include "rest_framework/language_list.html" %}
+{% elif name == "Organization List" %}
+    {% include "rest_framework/organization_list.html" %}
+{% else %}
+{% endif %}
+{% endblock %}
