@@ -3,7 +3,7 @@ import requests
 import logging
 
 import rdflib
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django_orghierarchy.models import Organization
 from rdflib import RDF
 from rdflib.namespace import DCTERMS, OWL, SKOS
@@ -44,7 +44,14 @@ KEYWORDS_TO_ADD_TO_AUDIENCE = [
 
 
 def get_yso_id(subject):
-    return ':'.join(subject.split('/')[-2:])
+    # we must validate the id, yso API might contain invalid data
+    try:
+        data_source, origin_id = subject.split('/')[-2:]
+    except ValueError:
+        raise ValidationError('Subject ' + subject + ' has invalid YSO id')
+    if data_source != 'yso':
+        raise ValidationError('Subject ' + subject + ' has invalid YSO id')
+    return ':'.join((data_source, origin_id))
 
 
 def get_subject(yso_id):
@@ -137,19 +144,22 @@ class YsoImporter(Importer):
         labels_to_create = set()
         for subject, label in graph.subject_objects(SKOS.altLabel):
             if (subject, RDF.type, SKOS.Concept) in graph:
-                yid = get_yso_id(subject)
-                if bulk_mode:
-                    if label.language is not None:
-                        language = label.language
-                        if label.language == 'se':
-                            # YSO doesn't contain se, assume an error.
-                            language = 'sv'
-                        labels_to_create.add((str(label), language))
-                        keyword_labels.setdefault(yid, []).append(label)
-                else:
-                    label = self.save_alt_label(label_syncher, graph, label)
-                    if label:
-                        keyword_labels.setdefault(yid, []).append(label)
+                try:
+                    yid = get_yso_id(subject)
+                    if bulk_mode:
+                        if label.language is not None:
+                            language = label.language
+                            if label.language == 'se':
+                                # YSO doesn't contain se, assume an error.
+                                language = 'sv'
+                            labels_to_create.add((str(label), language))
+                            keyword_labels.setdefault(yid, []).append(label)
+                    else:
+                        label = self.save_alt_label(label_syncher, graph, label)
+                        if label:
+                            keyword_labels.setdefault(yid, []).append(label)
+                except ValidationError as e:
+                    logger.error(e)
 
         if bulk_mode:
             KeywordLabel.objects.bulk_create([
@@ -183,7 +193,10 @@ class YsoImporter(Importer):
                 check_deleted_func=lambda obj: obj.deprecated)
             save_set = set()
             for subject in graph.subjects(RDF.type, SKOS.Concept):
-                self.save_keyword(syncher, graph, subject, keyword_labels, save_set)
+                try:
+                    self.save_keyword(syncher, graph, subject, keyword_labels, save_set)
+                except ValidationError as e:
+                    logger.error(e)
             syncher.finish(force=self.options['force'])
 
     def save_keyword_label_relationships_in_bulk(self, keyword_labels):
