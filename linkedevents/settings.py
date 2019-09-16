@@ -56,6 +56,8 @@ env = environ.Env(
     COOKIE_PREFIX=(str, 'linkedevents'),
     INTERNAL_IPS=(list, []),
     INSTANCE_NAME=(str, 'Linked Events'),
+    EXTRA_INSTALLED_APPS=(list, []),
+    AUTO_ENABLED_EXTENSIONS=(list, []),
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -149,7 +151,7 @@ INSTALLED_APPS = [
     'munigeo',
     'leaflet',
     'django_orghierarchy',
-]
+] + env('EXTRA_INSTALLED_APPS')
 
 if env('SENTRY_DSN'):
     sentry_sdk.init(
@@ -387,7 +389,7 @@ THUMBNAIL_PROCESSORS = (
 # django-orghierachy swappable model
 DJANGO_ORGHIERARCHY_DATASOURCE_MODEL = 'events.DataSource'
 
-AUTO_ENABLED_EXTENSIONS = []
+AUTO_ENABLED_EXTENSIONS = env('AUTO_ENABLED_EXTENSIONS')
 
 # shown in the browsable API
 INSTANCE_NAME = env('INSTANCE_NAME')
