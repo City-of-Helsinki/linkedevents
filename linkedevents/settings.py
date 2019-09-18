@@ -147,7 +147,6 @@ INSTALLED_APPS = [
     'helusers.providers.helsinki',
 
     'helevents',
-    'helcourses',
     'munigeo',
     'leaflet',
     'django_orghierarchy',
