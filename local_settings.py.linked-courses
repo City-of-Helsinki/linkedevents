@@ -9,3 +9,5 @@ LANGUAGES = (
     ('sv', 'Swedish'),
     ('en', 'English'),
 )
+
+INSTANCE_NAME = 'Linked Courses'
