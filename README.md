@@ -44,6 +44,8 @@ Steps 5-9 are needed if you wish to use location or event data from the Helsinki
     ```bash
     # Import places from Helsinki metropolitan region service registry (used by events from following sources)
     docker exec -it linkedevents-backend python manage.py event_import tprek --places
+    # Import places from Helsinki metropolitan region address registry (used as fallback locations)
+    docker exec -it linkedevents-backend python manage.py event_import osoite --places
     # Import events from Helsinki metropolitan region libraries
     docker exec -it linkedevents-backend python manage.py event_import helmet --events
     # Import events from Espoo
@@ -116,6 +118,8 @@ python manage.py add_helsinki_audience
 python manage.py add_helfi_topics
 # Import places from Helsinki metropolitan region service registry (used by events from following sources)
 python manage.py event_import tprek --places
+# Import places from Helsinki metropolitan region address registry (used as fallback locations)
+python manage.py event_import osoite --places
 # Import events from Helsinki metropolitan region libraries
 python manage.py event_import helmet --events
 # Import events from Espoo
