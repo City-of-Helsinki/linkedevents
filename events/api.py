@@ -71,7 +71,7 @@ from events.renderers import DOCXRenderer
 
 def get_view_name(view):
     if type(view) is APIRootView:
-        return 'Linked Events'
+        return getattr(settings, 'INSTANCE_NAME', 'Linked Events')
     return original_get_view_name(view)
 
 
