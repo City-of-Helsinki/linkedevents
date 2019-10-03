@@ -43,7 +43,7 @@ class OsoiteImporter(Importer):
             self.mark_deleted = self.delete_and_replace
 
     def get_street_address(self, address, language):
-        # returns the address sans municipality, or Finnish as fallback
+        # returns the address sans municipality in the desired language, or Finnish as fallback
         street = getattr(address.street, 'name_' + language) or getattr(address.street, 'name_fi')
         s = '%s %s' % (street, address.number)
         if address.number_end:
@@ -53,7 +53,7 @@ class OsoiteImporter(Importer):
         return s
 
     def get_whole_address(self, address, language):
-        # returns the address plus municipality, or Finnish as fallback
+        # returns the address plus municipality in the desired language, or Finnish as fallback
         municipality = getattr(address.street.municipality, 'name_' + language) \
             or getattr(address.street.municipality, 'name_fi')
         return self.get_street_address(address, language) + ', ' + municipality
