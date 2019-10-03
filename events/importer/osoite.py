@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import logging
-import re
 
 from django import db
 from django.conf import settings
@@ -43,14 +42,6 @@ class OsoiteImporter(Importer):
             self.check_deleted = lambda x: False
             self.mark_deleted = self.delete_and_replace
 
-    def clean_text(self, text):
-        # remove consecutive whitespaces
-        text = re.sub(r'\s\s+', ' ', text, re.U)
-        # remove nil bytes
-        text = text.replace(u'\u0000', ' ')
-        text = text.strip()
-        return text
-
     def get_street_address(self, address, language):
         # returns the address sans municipality, or Finnish as fallback
         street = getattr(address.street, 'name_' + language) or getattr(address.street, 'name_fi')
@@ -79,14 +70,15 @@ class OsoiteImporter(Importer):
         obj.save(update_fields=['deleted'])
         # we won't stand idly by and watch kymp delete used addresses willy-nilly without raising a ruckus!
         if obj.events.count() > 0:
-            # try to replace by another address with the same name
-            replaced = replace_location(replace=obj, by_source='osoite')
-            if not replaced:
-                logger.warning("Osoiteluettelo deleted address %s (%s) with events."
-                               "No unambiguous replacement was found. "
-                               "Please look for a replacement location and save it in the replaced_by field. "
-                               "Until then, events will stay mapped to the deleted location." %
-                               (obj.id, str(obj)))
+            # sadly, addresses are identified by, well, address alone. Therefore we have no other data that
+            # could be used to find out if there is a replacement location.
+            logger.warning("Osoiteluettelo deleted address %s (%s) with events. This means that the street in "
+                           "question has probably changed address numbers, as they do. Please check all "
+                           "addresses on the street for events and save any new address numbers in the "
+                           "replaced_by field. If several addresses have changed on the street, you may have to "
+                           "manually move the events instead. Until then, events will stay mapped to the old "
+                           "addresses." %
+                           (obj.id, str(obj)))
         return True
 
     def mark_deleted(self, obj):
@@ -96,49 +88,6 @@ class OsoiteImporter(Importer):
 
     def check_deleted(self, obj):
         return obj.deleted
-
-    def _save_translated_field(self, obj, obj_field_name, info,
-                               info_field_name, max_length=None):
-        for lang in self.supported_languages:
-            key = '%s_%s' % (info_field_name, lang)
-            if key in info:
-                val = self.clean_text(info[key])
-            else:
-                val = None
-
-            if max_length and val and len(val) > max_length:
-                logger.warning("%s: field %s too long" % (obj, info_field_name))
-                val = None
-
-            obj_key = '%s_%s' % (obj_field_name, lang)
-            obj_val = getattr(obj, obj_key, None)
-            if obj_val == val:
-                continue
-
-            setattr(obj, obj_key, val)
-            if lang == 'fi':
-                setattr(obj, obj_field_name, val)
-            obj._changed_fields.append(obj_key)
-            obj._changed = True
-
-    def _save_field(self, obj, obj_field_name, info,
-                    info_field_name, max_length=None):
-        if info_field_name in info:
-            val = self.clean_text(info[info_field_name])
-        else:
-            val = None
-
-        if max_length and val and len(val) > max_length:
-            self.logger.warning("%s: field %s too long" % (obj, info_field_name))
-            val = None
-
-        obj_val = getattr(obj, obj_field_name, None)
-        if obj_val == val:
-            return
-
-        setattr(obj, obj_field_name, val)
-        obj._changed_fields.append(obj_field_name)
-        obj._changed = True
 
     @db.transaction.atomic
     def _import_address(self, syncher, address_obj):
@@ -188,9 +137,10 @@ class OsoiteImporter(Importer):
 
         if obj.deleted:
             obj.deleted = False
-            # location has been reinstated, hip hip hooray!
-            replace_location(from_source='osoite', by=obj)
-            obj._changed_fields.append('undeleted')
+            # address has been reinstated, hip hip hooray!
+            # there's no way we can find any events from other addresses that should now be in this address
+            # so we cannot do address replace here (the way we do with tprek units)
+            obj._changed_fields.append('deleted')
             obj._changed = True
 
         if obj._changed:

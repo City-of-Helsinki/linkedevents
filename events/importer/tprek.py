@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import logging
-import re
 import requests
 import requests_cache
 
@@ -44,15 +43,6 @@ class TprekImporter(Importer):
             # again and remapping them accordingly! Otherwise, places already deleted
             # will not be remapped by the syncher.
             self.check_deleted = lambda x: False
-            self.mark_deleted = self.delete_and_replace
-
-    def clean_text(self, text):
-        # remove consecutive whitespaces
-        text = re.sub(r'\s\s+', ' ', text, re.U)
-        # remove nil bytes
-        text = text.replace(u'\u0000', ' ')
-        text = text.strip()
-        return text
 
     def pk_get(self, resource_name, res_id=None):
         url = "%s%s/" % (URL_BASE, resource_name)
@@ -92,49 +82,6 @@ class TprekImporter(Importer):
 
     def check_deleted(self, obj):
         return obj.deleted
-
-    def _save_translated_field(self, obj, obj_field_name, info,
-                               info_field_name, max_length=None):
-        for lang in ('fi', 'sv', 'en'):
-            key = '%s_%s' % (info_field_name, lang)
-            if key in info:
-                val = self.clean_text(info[key])
-            else:
-                val = None
-
-            if max_length and val and len(val) > max_length:
-                logger.warning("%s: field %s too long" % (obj, info_field_name))
-                val = None
-
-            obj_key = '%s_%s' % (obj_field_name, lang)
-            obj_val = getattr(obj, obj_key, None)
-            if obj_val == val:
-                continue
-
-            setattr(obj, obj_key, val)
-            if lang == 'fi':
-                setattr(obj, obj_field_name, val)
-            obj._changed_fields.append(obj_key)
-            obj._changed = True
-
-    def _save_field(self, obj, obj_field_name, info,
-                    info_field_name, max_length=None):
-        if info_field_name in info:
-            val = self.clean_text(info[info_field_name])
-        else:
-            val = None
-
-        if max_length and val and len(val) > max_length:
-            self.logger.warning("%s: field %s too long" % (obj, info_field_name))
-            val = None
-
-        obj_val = getattr(obj, obj_field_name, None)
-        if obj_val == val:
-            return
-
-        setattr(obj, obj_field_name, val)
-        obj._changed_fields.append(obj_field_name)
-        obj._changed = True
 
     @db.transaction.atomic
     def _import_unit(self, syncher, info):
@@ -209,7 +156,7 @@ class TprekImporter(Importer):
             obj.deleted = False
             # location has been reinstated in tprek, hip hip hooray!
             replace_location(from_source='matko', by=obj)
-            obj._changed_fields.append('undeleted')
+            obj._changed_fields.append('deleted')
             obj._changed = True
 
         if obj._changed:

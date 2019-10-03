@@ -13,7 +13,10 @@ logger = logging.getLogger(__name__)
 
 
 def clean_text(text, strip_newlines=False):
+    # remove non-breaking spaces and separators
     text = text.replace('\xa0', ' ').replace('\x1f', '')
+    # remove nil bytes
+    text = text.replace(u'\u0000', ' ')
     if strip_newlines:
         text = text.replace('\r', '').replace('\n', ' ')
     # remove consecutive whitespaces

@@ -13,7 +13,7 @@ from django.contrib.gis.geos import Point, Polygon
 from django.contrib.gis.gdal import SpatialReference, CoordTransform
 
 from events.importer.sync import ModelSyncher
-from .util import separate_scripts
+from .util import separate_scripts, clean_text
 
 from modeltranslation.translator import translator
 
@@ -102,6 +102,7 @@ class Importer(object):
 
         if image._changed:
             obj._changed = True
+            obj._changed_fields.append('image')
 
     def set_images(self, obj, images_data):
         image_syncher = ModelSyncher(obj.images.all(),
@@ -126,8 +127,10 @@ class Importer(object):
             if new_image:
                 obj.images.add(image)
                 obj._changed = True
+                obj._changed_fields.append('images')
             elif image._changed:
                 obj._changed = True
+                obj._changed_fields.append('images')
 
             image_syncher.mark(image)
 
@@ -136,6 +139,7 @@ class Importer(object):
     def _remove_image(self, obj, image):
         # we need this to mark the object changed if an image is removed
         obj._changed = True
+        obj._changed_fields.append('images')
         obj.images.remove(image)
         return True
 
@@ -206,14 +210,41 @@ class Importer(object):
     def _set_field(self, obj, field_name, val):
         if not hasattr(obj, field_name):
             logger.debug(vars(obj))
-        obj_val = getattr(obj, field_name)
+        obj_val = getattr(obj, field_name, None)
         # this prevents overwriting manually edited values with empty values
         if obj_val == val or (hasattr(obj, 'is_user_edited') and obj.is_user_edited() and not val):
             return
         setattr(obj, field_name, val)
         obj._changed = True
+        if not hasattr(obj, '_changed_fields'):
+            obj._changed_fields = []
+        obj._changed_fields.append(field_name)
+
+    def _save_field(self, obj, obj_field_name, info,
+                    info_field_name, max_length=None):
+        # atm only used by place importers, do some extra cleaning and validation before setting value
+        if info_field_name in info:
+            val = clean_text(info[info_field_name])
+        else:
+            val = None
+        if max_length and val and len(val) > max_length:
+            self.logger.warning("%s: field %s too long" % (obj, info_field_name))
+            val = None
+        self._set_field(obj, obj_field_name, val)
+
+    def _save_translated_field(self, obj, obj_field_name, info,
+                               info_field_name, max_length=None):
+        # atm only used by place importers, do some extra cleaning and validation before setting value
+        for lang in self.supported_languages:
+            key = '%s_%s' % (info_field_name, lang)
+            obj_key = '%s_%s' % (obj_field_name, lang)
+
+            self._save_field(obj, obj_key, info, key, max_length)
+            if lang == 'fi':
+                self._save_field(obj, obj_field_name, info, key, max_length)
 
     def _update_fields(self, obj, info, skip_fields):
+        # all non-place importers use this method, automatically takes care of translated fields
         obj_fields = list(obj._meta.fields)
         trans_fields = translator.get_options_for_model(type(obj)).fields
         for field_name, lang_fields in trans_fields.items():
@@ -265,6 +296,7 @@ class Importer(object):
             obj._created = True
             obj.id = obj_id
         obj._changed = False
+        obj._changed_fields = []
 
         location_id = None
         if 'location' in info:
@@ -440,7 +472,7 @@ class Importer(object):
             if obj._created:
                 verb = "created"
             else:
-                verb = "changed"
+                verb = "changed (fields: %s)" % ', '.join(obj._changed_fields)
             logger.debug("{} {}".format(obj, verb))
 
         return obj
