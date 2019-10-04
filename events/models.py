@@ -160,13 +160,13 @@ class ImageMixin(models.Model):
 
 @python_2_unicode_compatible
 class BaseModel(models.Model):
-    id = models.CharField(max_length=50, primary_key=True)
+    id = models.CharField(max_length=100, primary_key=True)
     data_source = models.ForeignKey(DataSource, related_name='provided_%(class)s_data', db_index=True)
 
     # Properties from schema.org/Thing
     name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True)
 
-    origin_id = models.CharField(verbose_name=_('Origin ID'), max_length=50, db_index=True, null=True,
+    origin_id = models.CharField(verbose_name=_('Origin ID'), max_length=100, db_index=True, null=True,
                                  blank=True)
 
     created_time = models.DateTimeField(null=True, blank=True, auto_now_add=True)

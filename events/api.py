@@ -921,11 +921,13 @@ class PlaceListViewSet(GeoModelAPIView,
 
         # Optionally filter places by filter parameter,
         # can be used e.g. with typeahead.js
+        # match to street as well as name, to make it easier to find units by address
         val = self.request.query_params.get('text') or self.request.query_params.get('filter')
         if val:
             if u'\x00' in val:
                 raise ParseError("A string literal cannot contain NUL (0x00) characters.")
-            queryset = queryset.filter(_text_qset_by_translated_field('name', val))
+            qset = _text_qset_by_translated_field('name', val) | _text_qset_by_translated_field('street_address', val)
+            queryset = queryset.filter(qset)
         return queryset
 
     def get_serializer_context(self):
