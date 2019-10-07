@@ -688,7 +688,7 @@ class KeywordListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     serializer_class = KeywordSerializer
     filter_backends = (filters.OrderingFilter,)
     ordering_fields = ('n_events', 'id', 'name', 'data_source')
-    ordering = ('-data_source', '-n_events',)
+    ordering = ('-data_source', '-n_events', 'name')
 
     def get_queryset(self):
         """
