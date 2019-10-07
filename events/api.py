@@ -892,7 +892,7 @@ class PlaceListViewSet(GeoModelAPIView,
     filter_backends = (django_filters.rest_framework.DjangoFilterBackend, filters.OrderingFilter)
     filter_class = PlaceFilter
     ordering_fields = ('n_events', 'id', 'name', 'data_source', 'street_address', 'postal_code')
-    ordering = ('-n_events', 'name')
+    ordering = ('-n_events', '-data_source', 'name')  # we want to display tprek before osoite etc.
 
     def get_queryset(self):
         """
