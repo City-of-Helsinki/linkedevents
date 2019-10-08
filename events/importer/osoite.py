@@ -156,7 +156,8 @@ class OsoiteImporter(Importer):
         # munigeo saves addresses in local db, we just create Places from them.
         # note that the addresses only change daily and the import is time-consuming, so we should not run this hourly
 
-        call_command('geo_import', 'finland', municipalities=True) # addresses require the municipalities to be present in the db
+        # addresses require the municipalities to be present in the db
+        call_command('geo_import', 'finland', municipalities=True)
         call_command('geo_import', 'helsinki', addresses=True)
 
         queryset = Place.objects.filter(data_source=self.data_source)
