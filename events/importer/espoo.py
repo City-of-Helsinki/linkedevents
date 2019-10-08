@@ -330,14 +330,16 @@ class EspooImporter(Importer):
         if address_lang not in ADDRESS_LANGUAGES:
             # pick the first preferred language (e.g. Finnish) if lang (e.g. English) has no address translations
             address_lang = ADDRESS_LANGUAGES[0]
+        # do not use street addresses, we want metadata for espoo event locations too!
         filter_params = {
+            'data_source__in': (self.tprek_data_source, self.data_source),
             'deleted': False,
             'street_address_'+address_lang+'__icontains': street_address,
         }
         places = Place.objects.filter(**filter_params).order_by('id')
         place = places.first()  # Choose one place arbitrarily if many.
         if len(places) > 1:
-            logger.warning('Several tprek_id match the address "{}".'.format(street_address))
+            logger.warning('Several tprek and/or espoo id match the address "{}".'.format(street_address))
         if not place:
             origin_id = self._get_next_place_id("espoo")
             # address must be saved in the right language!
