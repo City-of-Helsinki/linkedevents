@@ -27,9 +27,9 @@ Set up project with Docker
     * `docker exec -it linkedevents-backend python manage.py sync_translation_fields`
     * Answer `y` (for 'yes') to all prompt questions
     
-If you wish to install Linkedevents without any Helsinki specific data (an empty database), and instead customize everything for your own city, you may jump to step 10.
+If you wish to install Linkedevents without any Helsinki specific data (an empty database), and instead customize everything for your own city, you may jump to step 11.
 
-Steps 5-9 are needed if you wish to use location, address or event data from the Helsinki metropolitan region, or if you wish to run the Helsinki UI (https://linkedevents.hel.fi) from https://github.com/City-of-Helsinki/linkedevents-ui. Currently, the UI is specific to Helsinki and requires the general Finnish ontology as well as additional Helsinki specific audiences and keywords to be present, though its code should be easily adaptable to your own city if you have an OAuth2 authentication server present.
+Steps 5-10 are needed if you wish to use location, address or event data from the Helsinki metropolitan region, or if you wish to run the Helsinki UI (https://linkedevents.hel.fi) from https://github.com/City-of-Helsinki/linkedevents-ui. Currently, the UI is specific to Helsinki and requires the general Finnish ontology as well as additional Helsinki specific audiences and keywords to be present, though its code should be easily adaptable to your own city if you have an OAuth2 authentication server present.
 
 5. (Optionally) import general Finnish ontology (used by Helsinki UI and Helsinki events):
     * `docker exec -it linkedevents-backend python manage.py event_import yso --all`
@@ -54,12 +54,19 @@ Steps 5-9 are needed if you wish to use location, address or event data from the
     * `docker exec -it linkedevents-backend python manage.py import_organizations https://api.hel.fi/paatos/v1/organization/ -s helsinki:ahjo`
 9. (Optionally) install API frontend templates:
     * `docker exec -it linkedevents-backend python manage.py install_templates helevents`
+10. (Optionally) import Finland municipalities and Helsinki administrative divisions, if you want to use district based API filtering of events:
+    ```bash
+    # Import municipalities in Finland
+    docker exec --it linkedevents-backend python manage.py geo_import finland --municipalities
+    # Import districts in Helsinki
+    docker exec --it linkedevents-backend python manage.py geo_import helsinki --divisions
+    ```
 
 Finish the install:
 
-10. (Optionally) install Elasticsearch reading the [instructions below](#search). This is an optional feature. If you do not wish to install Elasticsearch, all the endpoints apart from `/v1/search` will function normally, and the `/v1/search` endpoint does a dumb exact text match for development purposes.
+11. (Optionally) install Elasticsearch reading the [instructions below](#search). This is an optional feature. If you do not wish to install Elasticsearch, all the endpoints apart from `/v1/search` will function normally, and the `/v1/search` endpoint does a dumb exact text match for development purposes.
 
-11. Start your Django server:
+12. Start your Django server:
     * `docker exec -it linkedevents-backend python manage.py runserver 0:8000`
 
 Now your project is live at [localhost:8000](http://localhost:8000)
@@ -126,6 +133,10 @@ python manage.py event_import helmet --events
 python manage.py event_import espoo --events
 # Import City of Helsinki hierarchical organization for UI user rights management
 python manage.py import_organizations https://api.hel.fi/paatos/v1/organization/ -s helsinki:ahjo
+# Import municipalities in Finland
+python manage.py geo_import finland --municipalities
+# Import districts in Helsinki
+python manage.py geo_import helsinki --divisions
 # install API frontend templates:
 python manage.py install_templates helevents
 ```
