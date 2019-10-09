@@ -41,7 +41,7 @@ YSO_KEYWORD_MAPS = {
     u'stand up ja esittävä taide': (u'p9244', u'p2850'),
     u'nuorisotyö': u'p1925',
     u'ohjaus, neuvonta ja tuki': (u'p178', u'p23'),
-    u'terveys ja hyvinvointi': u'p22036',
+    u'hyvinvointi ja terveys': (u'p38424', u'p2762'),  # -> hyvinvointi, terveys
     u'ilmastonmuutos': u'p5729',
     u'leirit, matkat ja retket': (u'p143', u'p366', u'p25261'),
     u'kerhot ja kurssit': (u'p7642', u'p9270'),
@@ -105,15 +105,17 @@ YSO_KEYWORD_MAPS = {
     u'lasten ja nuorten tapahtumat': (u'p4354', u'p11617'),  # -> lapset, nuoret
     u'lapset ja perheet': (u'p4354', u'p4363'),  # -> lapset, perheet
     u'lukupiirit': u'p11406',  # -> lukeminen
-    u'asuminen ja ympäristö': u'p1797',  # -> asuminen
+    u'asuminen ja ympäristö  ': (u'p1797', u'p6033'),  # -> asuminen, ympäristö # note the double space typo in original data!
     u'ympäristö ja luonto': u'p13084',  # -> luonto
     u'tanssi ja voimistelu': (u'p1278', u'p963'),  # -> tanssi, voimistelu
     u'tanssi ja sirkus': (u'p1278', u'p5007'),  # -> tanssi, sirkus,
     u'sosiaali- ja terveyspalvelut': (u'p1307', u'p3307'),  # -> sosiaalipalvelut, terveyspalvelut
-    u'hyvinvointi ja terveys': (u'p22036', u'p2762'),  # -> hyvinvointi, terveys
+    u'terveys ja hyvinvointi': (u'p38424', u'p2762'),  # -> hyvinvointi, terveys
     u'asemakaava': u'p8268',
     u'asemakaavat': u'p8268',
     u'asemakaavoituskohteet': u'p8268',
+    u'kasvatus ja opetus': (u'p476', u'p2630'), # -> kasvatus, opetus
+    u'avoin varhaiskasvatus ja kerhot': (u'p1650', u'p7642'), # -> varhaiskasvatus, kerhot
 }
 
 # retain the above for simplicity, even if espoo importer internally requires full keyword ids
