@@ -338,7 +338,7 @@ class EspooImporter(Importer):
             'deleted': False,
             'street_address_'+address_lang+'__icontains': street_address,
         }
-        places = Place.objects.filter(**filter_params).order_by('id')
+        places = Place.objects.filter(**filter_params).order_by('-data_source', '-n_events') # prefer tprek, prefer existing event locations
         place = places.first()  # Choose one place arbitrarily if many.
         if len(places) > 1:
             logger.warning('Several tprek and/or espoo id match the address "{}".'.format(street_address))
