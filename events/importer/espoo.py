@@ -146,11 +146,16 @@ LOCATIONS = {
     # Place name in Finnish -> ((place node ids in event feed), tprek id)
     u'matinkylän asukaspuisto': ((15728,), 20267),
     u'soukan asukaspuisto': ((15740,), 20355),
-    u'espoon kulttuurikeskus': ((15325,), 20402),
+    u'espoon kulttuurikeskus': ((15325,), 58548),
     u'näyttelykeskus weegee': ((15349,), 20404),
     u'KAMU': ((28944,), 20405),
     u'Karatalo': ((15357,), 21432),
     u'Nuuksio': ((15041,), 28401),
+    u'Olarin asukaspuisto': ((15730,), 20268),
+    u'Lasten kulttuurikeskus Aurora': ((15350,), 21431),
+    u'Suviniityn avoin päiväkoti': ((15781,), 20376),
+    u'Sellosali': ((15281,), 59212),
+    u'Talomuseo Glims': ((28954,), 59312),
 }
 
 ESPOO_BASE_URL = 'http://www.espoo.fi'
