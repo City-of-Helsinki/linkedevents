@@ -105,7 +105,7 @@ YSO_KEYWORD_MAPS = {
     u'lasten ja nuorten tapahtumat': (u'p4354', u'p11617'),  # -> lapset, nuoret
     u'lapset ja perheet': (u'p4354', u'p4363'),  # -> lapset, perheet
     u'lukupiirit': u'p11406',  # -> lukeminen
-    u'asuminen ja ympäristö  ': (u'p1797', u'p6033'),  # -> asuminen, ympäristö # note the double space typo in original data!
+    u'asuminen ja ympäristö  ': (u'p1797', u'p6033'),  # -> asuminen, ympäristö # note the typo!
     u'ympäristö ja luonto': u'p13084',  # -> luonto
     u'tanssi ja voimistelu': (u'p1278', u'p963'),  # -> tanssi, voimistelu
     u'tanssi ja sirkus': (u'p1278', u'p5007'),  # -> tanssi, sirkus,
@@ -114,8 +114,8 @@ YSO_KEYWORD_MAPS = {
     u'asemakaava': u'p8268',
     u'asemakaavat': u'p8268',
     u'asemakaavoituskohteet': u'p8268',
-    u'kasvatus ja opetus': (u'p476', u'p2630'), # -> kasvatus, opetus
-    u'avoin varhaiskasvatus ja kerhot': (u'p1650', u'p7642'), # -> varhaiskasvatus, kerhot
+    u'kasvatus ja opetus': (u'p476', u'p2630'),  # -> kasvatus, opetus
+    u'avoin varhaiskasvatus ja kerhot': (u'p1650', u'p7642'),  # -> varhaiskasvatus, kerhot
 }
 
 # retain the above for simplicity, even if espoo importer internally requires full keyword ids
@@ -338,7 +338,8 @@ class EspooImporter(Importer):
             'deleted': False,
             'street_address_'+address_lang+'__icontains': street_address,
         }
-        places = Place.objects.filter(**filter_params).order_by('-data_source', '-n_events') # prefer tprek, prefer existing event locations
+        # prefer tprek, prefer existing event locations
+        places = Place.objects.filter(**filter_params).order_by('-data_source', '-n_events')
         place = places.first()  # Choose one place arbitrarily if many.
         if len(places) > 1:
             logger.warning('Several tprek and/or espoo id match the address "{}".'.format(street_address))
