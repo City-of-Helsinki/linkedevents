@@ -236,7 +236,7 @@ class YsoImporter(Importer):
         for _, literal in graph.preferredLabel(subject):
             with active_language(literal.language):
                 if keyword.name != str(literal):
-                    logger.info('(re)naming keyword ' + keyword.name + ' to ' + str(literal))
+                    logger.debug('(re)naming keyword ' + keyword.name + ' to ' + str(literal))
                     keyword.name = str(literal)
                     keyword._changed = True
                     keyword.last_modified_time = BaseModel.now()
