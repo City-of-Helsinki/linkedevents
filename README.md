@@ -57,9 +57,9 @@ Steps 5-10 are needed if you wish to use location, address or event data from th
 10. (Optionally) import Finland municipalities and Helsinki administrative divisions, if you want to use district based API filtering of events:
     ```bash
     # Import municipalities in Finland
-    docker exec --it linkedevents-backend python manage.py geo_import finland --municipalities
+    docker exec -it linkedevents-backend python manage.py geo_import finland --municipalities
     # Import districts in Helsinki
-    docker exec --it linkedevents-backend python manage.py geo_import helsinki --divisions
+    docker exec -it linkedevents-backend python manage.py geo_import helsinki --divisions
     ```
 
 Finish the install:
