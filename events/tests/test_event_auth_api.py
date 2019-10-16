@@ -109,8 +109,12 @@ class TestEventAPI(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['data']), 2)  # event-4, event-6
+        for event in response.data['data']:
+            self.assertNotIn('publication_status', event)
+            self.assertNotIn('created_by', event)
+            self.assertNotIn('last_modified_by', event)
 
-        # test with authenticated data source and publisher
+        # test with authenticated data source and *replaced* publisher organization
         self.org_2.admin_users.add(self.user)
         self.client.force_authenticate(self.user)
         url = '{0}?show_all=1'.format(reverse('event-list'))
@@ -120,6 +124,15 @@ class TestEventAPI(APITestCase):
         # Descendants of organizations or replacement organizations were not considered at all.
         # Now, we display all drafts that the user has the right to view and edit.
         self.assertEqual(len(response.data['data']), 6)  # event-1, event-2, event-3, event-4, event-5, event-6
+        for event in response.data['data']:
+            self.assertIn('publication_status', event)
+            # user name fields should be shown in all except event-6
+            if event['id'] != 'ds:event-6':
+                self.assertIn('created_by', event)
+                self.assertIn('last_modified_by', event)
+            else:
+                self.assertNotIn('created_by', event)
+                self.assertNotIn('last_modified_by', event)
 
     def test_event_list_with_admin_user_filter(self):
         # test with public request
@@ -128,7 +141,7 @@ class TestEventAPI(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['data']), 0)  # public users are not admins
 
-        # test with authenticated data source and publisher
+        # test with authenticated data source and *replaced* publisher organization
         self.org_2.admin_users.add(self.user)
         self.client.force_authenticate(self.user)
         url = '{0}?admin_user=true'.format(reverse('event-list'))
@@ -136,6 +149,11 @@ class TestEventAPI(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # We should see everything else but not public events outside the admin orgs
         self.assertEqual(len(response.data['data']), 5)  # event-1, event-2, event-3, event-4 and event-5
+        for event in response.data['data']:
+            self.assertIn('publication_status', event)
+            # now we should only have events with admin rights
+            self.assertIn('created_by', event)
+            self.assertIn('last_modified_by', event)
 
     def test_event_list_with_publisher_filters(self):
         # test with public request
@@ -155,9 +173,14 @@ class TestEventAPI(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # note that org-2 is replaced by org-1
-        # with publisher filter, we only display drafts for that organization.
+        # with publisher filter, we only display drafts and public events for that organization.
         # Replacements are considered, but descendants are not.
         self.assertEqual(len(response.data['data']), 2)  # event-1 and event-2
+        for event in response.data['data']:
+            self.assertIn('publication_status', event)
+            # now we should only have events with admin rights
+            self.assertIn('created_by', event)
+            self.assertIn('last_modified_by', event)
 
         url = '{0}?admin_user=1&publisher=ds:org-2'.format(reverse('event-list'))
         response = self.client.get(url)
@@ -166,6 +189,22 @@ class TestEventAPI(APITestCase):
         # with publisher filter, we only display drafts for that organization.
         # Replacements are considered, but descendants are not.
         self.assertEqual(len(response.data['data']), 2)  # event-1 and event-2
+        for event in response.data['data']:
+            self.assertIn('publication_status', event)
+            # now we should have only events with admin rights
+            self.assertIn('created_by', event)
+            self.assertIn('last_modified_by', event)
+        url = '{0}?admin_user=1&publisher=ds:org-1'.format(reverse('event-list'))
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # with publisher filter, we only display drafts for that organization.
+        # Replacements are considered, but descendants are not.
+        self.assertEqual(len(response.data['data']), 2)  # event-1 and event-2
+        for event in response.data['data']:
+            self.assertIn('publication_status', event)
+            # now we should only have events with admin rights
+            self.assertIn('created_by', event)
+            self.assertIn('last_modified_by', event)
 
     def test_bulk_destroy(self):
         url = reverse('event-list')
@@ -179,6 +218,8 @@ class TestEventAPI(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertNotIn('publication_status', response.data)
+        self.assertNotIn('created_by', response.data)
+        self.assertNotIn('last_modified_by', response.data)
 
     def test_unauthenticated_user_get_draft_event_not_found(self):
         url = reverse('event-detail', kwargs={'pk': self.event_1.id})
@@ -215,6 +256,8 @@ class TestEventAPI(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('publication_status', response.data)
+        self.assertNotIn('created_by', response.data)
+        self.assertNotIn('last_modified_by', response.data)
 
     def test_random_user_get_draft_event_not_found(self):
         url = reverse('event-detail', kwargs={'pk': self.event_1.id})
@@ -269,6 +312,40 @@ class TestEventAPI(APITestCase):
         response = self.client.put(url, [data], format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_admin_get_own_public_event(self):
+        self.org_1.admin_users.add(self.user)
+        url = reverse('event-detail', kwargs={'pk': self.event_4.id})
+
+        self.client.force_authenticate(self.user)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('publication_status', response.data)
+        self.assertIn('created_by', response.data)
+        self.assertIn('last_modified_by', response.data)
+
+    def test_admin_get_other_public_event(self):
+        self.org_1.admin_users.add(self.user)
+        url = reverse('event-detail', kwargs={'pk': self.event_6.id})
+
+        self.client.force_authenticate(self.user)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('publication_status', response.data)
+        self.assertNotIn('created_by', response.data)
+        self.assertNotIn('last_modified_by', response.data)
+
+    def test_affiliated_organization_admin_get_own_public_event(self):
+        # only proper (not affiliated) admins should see user names!
+        self.org_4.admin_users.add(self.user)
+        url = reverse('event-detail', kwargs={'pk': self.event_4.id})
+
+        self.client.force_authenticate(self.user)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('publication_status', response.data)
+        self.assertNotIn('created_by', response.data)
+        self.assertNotIn('last_modified_by', response.data)
+
     def test_admin_create_event(self):
         self.org_1.admin_users.add(self.user)
         url = reverse('event-list')
@@ -278,6 +355,9 @@ class TestEventAPI(APITestCase):
         self.client.force_authenticate(self.user)
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn('publication_status', response.data)
+        self.assertIn('created_by', response.data)
+        self.assertIn('last_modified_by', response.data)
 
     def test_admin_update_event(self):
         self.org_1.admin_users.add(self.user)
@@ -289,6 +369,9 @@ class TestEventAPI(APITestCase):
         self.client.force_authenticate(self.user)
         response = self.client.put(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('publication_status', response.data)
+        self.assertIn('created_by', response.data)
+        self.assertIn('last_modified_by', response.data)
 
         self.event_1.refresh_from_db()
         self.assertEqual(self.event_1.publication_status, PublicationStatus.PUBLIC)
@@ -325,6 +408,9 @@ class TestEventAPI(APITestCase):
         self.client.force_authenticate(self.user)
         response = self.client.put(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('publication_status', response.data)
+        self.assertIn('created_by', response.data)
+        self.assertIn('last_modified_by', response.data)
 
         self.event_3.refresh_from_db()
         self.assertEqual(self.event_3.publication_status, PublicationStatus.PUBLIC)
@@ -350,6 +436,9 @@ class TestEventAPI(APITestCase):
         self.client.force_authenticate(self.user)
         response = self.client.put(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('publication_status', response.data)
+        self.assertIn('created_by', response.data)
+        self.assertIn('last_modified_by', response.data)
 
         self.event_5.refresh_from_db()
         self.assertEqual(self.event_5.publication_status, PublicationStatus.PUBLIC)
@@ -441,6 +530,10 @@ class TestEventAPI(APITestCase):
         self.client.force_authenticate(self.user)
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        # regular users should not see usernames
+        self.assertIn('publication_status', response.data)
+        self.assertNotIn('created_by', response.data)
+        self.assertNotIn('last_modified_by', response.data)
 
     def test_regular_user_update_draft_event_other_fields(self):
         self.org_3.regular_users.add(self.user)
@@ -452,6 +545,10 @@ class TestEventAPI(APITestCase):
         self.client.force_authenticate(self.user)
         response = self.client.put(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('publication_status', response.data)
+        # regular users should not see usernames
+        self.assertNotIn('created_by', response.data)
+        self.assertNotIn('last_modified_by', response.data)
 
     def test_regular_user_update_draft_event_to_public_denied(self):
         self.org_3.regular_users.add(self.user)

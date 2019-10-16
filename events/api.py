@@ -240,8 +240,9 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
             # To avoid infinite recursion, only include sub/super events one level at a time
             if 'include' in context:
                 context['include'] = [x for x in context['include'] if x != 'sub_events' and x != 'super_event']
+            # For performance reasons, *only* display admin fields in non-nested objects
             return self.related_serializer(obj, hide_ld_context=self.hide_ld_context,
-                                           context=context).data
+                                           context=context, hide_admin_fields=True).data
         link = super(JSONLDRelatedField, self).to_representation(obj)
         if link is None:
             return None
@@ -447,21 +448,34 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
       hide_ld_context (bool):
         Hides `@context` from JSON, can be used in nested
         serializers
+      hide_admin_fields (bool):
+        Hides `only_admin_visible_fields` for performance reasons
     """
     system_generated_fields = ('created_time', 'last_modified_time', 'created_by', 'last_modified_by')
-    non_visible_fields = ('created_by', 'last_modified_by')
+    only_admin_visible_fields = ('created_by', 'last_modified_by')
 
     def __init__(self, instance=None, files=None,
                  context=None, partial=False, many=None, skip_fields=set(),
-                 allow_add_remove=False, hide_ld_context=False, **kwargs):
+                 allow_add_remove=False, hide_ld_context=False, hide_admin_fields=False, **kwargs):
         super(LinkedEventsSerializer, self).__init__(
             instance=instance, context=context, **kwargs)
-        for field in self.non_visible_fields:
-            if field in self.fields:
-                del self.fields[field]
-        self.skip_fields = skip_fields
+        if context is None:
+            return
+        if 'request' in context:
+            self.request = context['request']
+
+        # for post and put methods as well as field visibility, user information is needed
+        self.method = self.request.method
+        self.user = self.request.user
+        self.admin_tree_ids = set()
+        if self.user.is_authenticated:
+            self.admin_tree_ids = self.user.get_admin_tree_ids()
+
+        # by default, admin fields are skipped
+        self.skip_fields = skip_fields | set(self.only_admin_visible_fields)
 
         if context is not None:
+            # query allows non-skipped fields to be expanded
             include_fields = context.get('include', [])
             for field_name in include_fields:
                 if field_name not in self.fields:
@@ -472,24 +486,15 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                 if not isinstance(field, JSONLDRelatedField):
                     continue
                 field.expanded = True
+            # query allows additional fields to be skipped
             self.skip_fields |= context.get('skip_fields', set())
 
         self.hide_ld_context = hide_ld_context
 
-        self.disable_camelcase = True
-        if self.context and 'request' in self.context:
-            request = self.context['request']
-            if 'disable_camelcase' in request.query_params:
-                self.disable_camelcase = True
-
-        # for post and put methods, user information is needed to restrict permissions at validate
-        if context is None:
-            return
-        self.method = self.context['request'].method
-        self.user = self.context['request'].user
         if self.method in permissions.SAFE_METHODS:
             return
-        self.data_source, self.publisher = get_authenticated_data_source_and_publisher(request)
+        # post and put methods need further authentication
+        self.data_source, self.publisher = get_authenticated_data_source_and_publisher(self.request)
         if not self.publisher:
             raise PermissionDenied(_("User doesn't belong to any organization"))
 
@@ -505,7 +510,6 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         Before sending to renderer there's a need to do additional work on
         to-be-JSON dictionary data:
             1. Add @context, @type and @id fields
-            2. Convert field names to camelCase
         Renderer is the right place for this but now loop is done just once.
         Reversal conversion is done in parser.
         """
@@ -536,9 +540,13 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
             ret['@type'] = obj.jsonld_type
         else:
             ret['@type'] = obj.__class__.__name__
-        if self.context['request'].version == 'v0.1':
-            return ret
-        for field in self.skip_fields:
+        # display non-public fields if 1) obj has publisher org and 2) user belongs to the same org tree
+        # never modify self.skip_fields, as it survives multiple calls in the serializer across objects
+        obj_skip_fields = set(self.skip_fields)
+        if hasattr(obj, 'publisher') and obj.publisher and obj.publisher.tree_id in self.admin_tree_ids:
+            for field in self.only_admin_visible_fields:
+                obj_skip_fields.remove(field)
+        for field in obj_skip_fields:
             if field in ret:
                 del ret[field]
         return ret
@@ -680,11 +688,13 @@ class KeywordSerializer(LinkedEventsSerializer):
 
 class KeywordRetrieveViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     queryset = Keyword.objects.all()
+    queryset = queryset.select_related('publisher')
     serializer_class = KeywordSerializer
 
 
 class KeywordListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = Keyword.objects.all()
+    queryset = queryset.select_related('publisher')
     serializer_class = KeywordSerializer
     filter_backends = (filters.OrderingFilter,)
     ordering_fields = ('n_events', 'id', 'name', 'data_source')
@@ -863,6 +873,7 @@ class PlaceRetrieveViewSet(GeoModelAPIView,
                            viewsets.GenericViewSet,
                            mixins.RetrieveModelMixin):
     queryset = Place.objects.all()
+    queryset = queryset.select_related('publisher')
     serializer_class = PlaceSerializer
 
     def get_serializer_context(self):
@@ -888,6 +899,7 @@ class PlaceListViewSet(GeoModelAPIView,
                        viewsets.GenericViewSet,
                        mixins.ListModelMixin):
     queryset = Place.objects.all()
+    queryset = queryset.select_related('publisher')
     serializer_class = PlaceSerializer
     filter_backends = (django_filters.rest_framework.DjangoFilterBackend, filters.OrderingFilter)
     filter_class = PlaceFilter
@@ -1078,6 +1090,7 @@ class ImageSerializer(LinkedEventsSerializer):
 
 class ImageViewSet(viewsets.ModelViewSet):
     queryset = Image.objects.all()
+    queryset = queryset.select_related('publisher')
     serializer_class = ImageSerializer
     pagination_class = LargeResultsSetPagination
     filter_backends = (filters.OrderingFilter,)
@@ -1730,7 +1743,7 @@ class EventViewSet(BulkModelViewSet, JSONAPIViewSet):
     # This exclude is, atm, a bit overkill, considering it causes a massive query and no such events exist.
     # queryset = queryset.exclude(super_event_type=Event.SuperEventType.RECURRING, sub_events=None)
     # Use select_ and prefetch_related() to reduce the amount of queries
-    queryset = queryset.select_related('location')
+    queryset = queryset.select_related('location', 'publisher')
     queryset = queryset.prefetch_related(
         'offers', 'keywords', 'audience', 'images', 'external_links', 'sub_events', 'in_language')
     serializer_class = EventSerializer
