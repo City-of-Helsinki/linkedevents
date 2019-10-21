@@ -1,6 +1,7 @@
 FROM python:3.6
 
-ENV PYTHONUNBUFFERED 0
+# Force flush all messages immediately, not really Docker specific
+ENV PYTHONUNBUFFERED 1
 
 RUN apt-get update \
     && apt-get install --no-install-recommends -y gdal-bin python-gdal python3-gdal

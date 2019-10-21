@@ -6,10 +6,8 @@ services:
             POSTGRES_USER: linkedevents
             POSTGRES_PASSWORD: linkedevents
             POSTGRES_DB: linkedevents
-        ports:
-            - "5432:5432"
         volumes:
-            - postgres-data-volume:/var/lib/postgres/data
+            - linkedevents-postgres:/var/lib/postgres/data
         container_name: linkedevents-db
 
     django:
@@ -18,10 +16,10 @@ services:
             dockerfile: ./docker/django/Dockerfile
         command: python manage.py runserver 0.0.0.0:8000
         environment:
-            DATABASE_URL: postgres://linkedevents:linkedevents@linkedevents-db/linkedevents
+            DATABASE_URL: postgis://linkedevents:linkedevents@linkedevents-db/linkedevents
         volumes:
-            - .:/code
-            - django-media-volume:/var/media/
+            - .:/app
+            - linkedevents-media:/var/media/
         ports:
             - "8000:8000"
         depends_on:
@@ -29,5 +27,5 @@ services:
         container_name: linkedevents-backend
 
 volumes:
-        postgres-data-volume:
-        django-media-volume:
+        linkedevents-postgres:
+        linkedevents-media:
