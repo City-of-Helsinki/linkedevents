@@ -1,11 +1,5 @@
 version: '3'
 services:
-    elastic:
-        build: ./docker/elasticsearch/
-        ports:
-            - "9200:9200"
-        container_name: linkedevents-elasticsearch
-
     postgres:
         build: ./docker/postgres/
         environment:
@@ -32,7 +26,6 @@ services:
             - "8000:8000"
         depends_on:
             - postgres
-            - elastic
         container_name: linkedevents-backend
 
 volumes:
