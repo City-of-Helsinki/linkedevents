@@ -9,19 +9,18 @@ services:
         ports:
             - "127.0.0.1:5555:5432"
         volumes:
-            - linkedevents-postgres:/var/lib/postgres/data
+            - postgres:/var/lib/postgres/data
         container_name: linkedevents-db
 
     django:
         build:
             context: ./
             dockerfile: ./docker/django/Dockerfile
-        command: python manage.py runserver 0.0.0.0:8000
         environment:
             DATABASE_URL: postgis://linkedevents:linkedevents@linkedevents-db/linkedevents
         volumes:
             - .:/app
-            - linkedevents-media:/var/media/
+            - media:/var/media/
         ports:
             - "8000:8000"
         depends_on:
@@ -29,5 +28,5 @@ services:
         container_name: linkedevents-backend
 
 volumes:
-        linkedevents-postgres:
-        linkedevents-media:
+        postgres:
+        media:
