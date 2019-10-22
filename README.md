@@ -17,7 +17,7 @@ Set up project with Docker
 
 1. Create `local_settings.py` from the template:
     * `cp local_settings.py.template local_settings.py`
-    
+
 2. Run `docker-compose up`
 
 3. Run migrations:
@@ -26,7 +26,7 @@ Set up project with Docker
 4. Syncronize languages for translations in DB:
     * `docker exec -it linkedevents-backend python manage.py sync_translation_fields`
     * Answer `y` (for 'yes') to all prompt questions
-    
+
 If you wish to install Linkedevents without any Helsinki specific data (an empty database), and instead customize everything for your own city, you may jump to step 11.
 
 Steps 5-10 are needed if you wish to use location, address or event data from the Helsinki metropolitan region, or if you wish to run the Helsinki UI (https://linkedevents.hel.fi) from https://github.com/City-of-Helsinki/linkedevents-ui. Currently, the UI is specific to Helsinki and requires the general Finnish ontology as well as additional Helsinki specific audiences and keywords to be present, though its code should be easily adaptable to your own city if you have an OAuth2 authentication server present.
@@ -262,6 +262,6 @@ To implement an extension:
 
 5) Make the extension available by adding the extension application to `INSTALLED_APPS`.
 
-6) If you want to force the extension to be enabled on every request, add the extension's identifier to `AUTO_ENABLED_EXTENSIONS` in Django settings. 
+6) If you want to force the extension to be enabled on every request, add the extension's identifier to `AUTO_ENABLED_EXTENSIONS` in Django settings.
 
 For an example extension implementation, see [course extension](extension_course).
