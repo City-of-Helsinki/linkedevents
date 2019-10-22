@@ -11,8 +11,13 @@ Linked Events provides categorized data on events and places. The project was or
 
 *Linked Events has been updated to Django 1.11. To upgrade to Linked Events release v2.0, please upgrade to release v1.3 first.*
 
-Set up project with Docker
+Setup your local development environment with Docker
 --------------------------
+
+Please note that Docker setup is only for quickly setting up the local development environment.
+
+Docker deployments are not done at the moment even though that's the direction, which means that your local
+environment is not going to be identical to production environment.
 
 1. Create `local_settings.py` from the template:
     * `cp local_settings.py.template local_settings.py`
