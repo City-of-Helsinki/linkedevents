@@ -19,6 +19,6 @@ WORKDIR /app
 # Usually overwritten by bind mount from docker-compose.yml
 COPY . /app
 
-COPY docker/django/docker-entrypoint.sh /docker-entrypoint.sh
+COPY ./docker/django/docker-entrypoint.sh /docker-entrypoint.sh
 
 ENTRYPOINT [ "/docker-entrypoint.sh" ]
