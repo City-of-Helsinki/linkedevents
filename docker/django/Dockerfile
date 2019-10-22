@@ -6,14 +6,19 @@ ENV PYTHONUNBUFFERED 1
 RUN apt-get update \
     && apt-get install --no-install-recommends -y gdal-bin python-gdal python3-gdal
 
-COPY requirements.txt /usr/src/
+COPY requirements.txt /tmp
 
 RUN pip install --upgrade pip \
     && pip install pip-tools \
-    && pip install --src /usr/src -r /usr/src/requirements.txt
+    && pip install --src /usr/src -r /tmp/requirements.txt
 
-RUN mkdir /code
+RUN mkdir /app
 
-WORKDIR /code
+WORKDIR /app
 
-COPY . /code
+# Usually overwritten by bind mount from docker-compose.yml
+COPY . /app
+
+COPY docker/django/docker-entrypoint.sh /docker-entrypoint.sh
+
+ENTRYPOINT [ "/docker-entrypoint.sh" ]
