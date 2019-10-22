@@ -3,7 +3,6 @@
 [![Build status](https://travis-ci.org/City-of-Helsinki/linkedevents.svg)](https://travis-ci.org/City-of-Helsinki/linkedevents)
 [![codecov](https://codecov.io/gh/City-of-Helsinki/linkedevents/branch/master/graph/badge.svg)](https://codecov.io/gh/City-of-Helsinki/linkedevents)
 [![Requirements](https://requires.io/github/City-of-Helsinki/linkedevents/requirements.svg?branch=master)](https://requires.io/github/City-of-Helsinki/linkedevents/requirements/?branch=master)
-[![Stories in Ready](https://badge.waffle.io/City-of-Helsinki/linkedevents.svg?label=ready&title=Ready)](http://waffle.io/City-of-Helsinki/linkedevents)
 [![Gitter](https://img.shields.io/gitter/room/City-of-Helsinki/heldev.svg?maxAge=2592000)](https://gitter.im/City-of-Helsinki/heldev)
 
 Linked Events provides categorized data on events and places. The project was originally developed for the City of Helsinki.
@@ -12,12 +11,17 @@ Linked Events provides categorized data on events and places. The project was or
 
 *Linked Events has been updated to Django 1.11. To upgrade to Linked Events release v2.0, please upgrade to release v1.3 first.*
 
-Set up project with Docker
+Setup your local development environment with Docker
 --------------------------
+
+Please note that Docker setup is only for quickly setting up the local development environment.
+
+Docker deployments are not done at the moment even though that's the direction, which means that your local
+environment is not going to be identical to production environment.
 
 1. Create `local_settings.py` from the template:
     * `cp local_settings.py.template local_settings.py`
-    
+
 2. Run `docker-compose up`
 
 3. Run migrations:
@@ -26,7 +30,7 @@ Set up project with Docker
 4. Syncronize languages for translations in DB:
     * `docker exec -it linkedevents-backend python manage.py sync_translation_fields`
     * Answer `y` (for 'yes') to all prompt questions
-    
+
 If you wish to install Linkedevents without any Helsinki specific data (an empty database), and instead customize everything for your own city, you may jump to step 11.
 
 Steps 5-10 are needed if you wish to use location, address or event data from the Helsinki metropolitan region, or if you wish to run the Helsinki UI (https://linkedevents.hel.fi) from https://github.com/City-of-Helsinki/linkedevents-ui. Currently, the UI is specific to Helsinki and requires the general Finnish ontology as well as additional Helsinki specific audiences and keywords to be present, though its code should be easily adaptable to your own city if you have an OAuth2 authentication server present.
@@ -64,9 +68,7 @@ Steps 5-10 are needed if you wish to use location, address or event data from th
 
 Finish the install:
 
-11. (Optionally) install Elasticsearch reading the [instructions below](#search). This is an optional feature. If you do not wish to install Elasticsearch, all the endpoints apart from `/v1/search` will function normally, and the `/v1/search` endpoint does a dumb exact text match for development purposes.
-
-12. Start your Django server:
+11. Start your Django server:
     * `docker exec -it linkedevents-backend python manage.py runserver 0:8000`
 
 Now your project is live at [localhost:8000](http://localhost:8000)
@@ -262,6 +264,6 @@ To implement an extension:
 
 5) Make the extension available by adding the extension application to `INSTALLED_APPS`.
 
-6) If you want to force the extension to be enabled on every request, add the extension's identifier to `AUTO_ENABLED_EXTENSIONS` in Django settings. 
+6) If you want to force the extension to be enabled on every request, add the extension's identifier to `AUTO_ENABLED_EXTENSIONS` in Django settings.
 
 For an example extension implementation, see [course extension](extension_course).
