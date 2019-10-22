@@ -68,9 +68,7 @@ Steps 5-10 are needed if you wish to use location, address or event data from th
 
 Finish the install:
 
-11. (Optionally) install Elasticsearch reading the [instructions below](#search). This is an optional feature. If you do not wish to install Elasticsearch, all the endpoints apart from `/v1/search` will function normally, and the `/v1/search` endpoint does a dumb exact text match for development purposes.
-
-12. Start your Django server:
+11. Start your Django server:
     * `docker exec -it linkedevents-backend python manage.py runserver 0:8000`
 
 Now your project is live at [localhost:8000](http://localhost:8000)
