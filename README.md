@@ -1,15 +1,26 @@
-# Linked events
+# Linked Events
 
 [![Build status](https://travis-ci.org/City-of-Helsinki/linkedevents.svg)](https://travis-ci.org/City-of-Helsinki/linkedevents)
 [![codecov](https://codecov.io/gh/City-of-Helsinki/linkedevents/branch/master/graph/badge.svg)](https://codecov.io/gh/City-of-Helsinki/linkedevents)
 [![Requirements](https://requires.io/github/City-of-Helsinki/linkedevents/requirements.svg?branch=master)](https://requires.io/github/City-of-Helsinki/linkedevents/requirements/?branch=master)
 [![Gitter](https://img.shields.io/gitter/room/City-of-Helsinki/heldev.svg?maxAge=2592000)](https://gitter.im/City-of-Helsinki/heldev)
 
-Linked Events provides categorized data on events and places. The project was originally developed for the City of Helsinki.
+![High-level diagram of Linked Events](./assets/Linked_Events.jpg?raw=true)
 
-[The Linked Events API for the Helsinki capital region](http://api.hel.fi/linkedevents/) contains data from the Helsinki City Tourist & Convention Bureau, the City of Helsinki Cultural Office and the Helmet metropolitan area public libraries.
 
-*Linked Events has been updated to Django 1.11. To upgrade to Linked Events release v2.0, please upgrade to release v1.3 first.*
+#### TL;DR => Linked Events is a REST API which allows you to set up an _**event**_* publication hub.
+
+\*_**event**_  here means a happening where people get together and do something.
+
+
+Linked Events is event information aggregator and publisher. Aggragation happens using Python importers which have the logic to
+import events information from different data sources. Publication happens with API from which interested parties can retrieve information
+about events and, if properly authorized, publish new events.
+
+Linked Events was originally developed for City of Helsinki organization and
+you can see the Linked Events API in action for [Helsinki capital region here](https://api.hel.fi/linkedevents/v1/).
+It contains data from Helsinki City Tourist & Convention Bureau, City of Helsinki Cultural Office and the Helmet metropolitan area public libraries.
+Viewing the API should give a reasonable view for the kind of information Linked Events is targeted for.
 
 Setup your local development environment with Docker
 --------------------------
