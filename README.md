@@ -22,6 +22,10 @@ you can see the Linked Events API in action for [Helsinki capital region here](h
 It contains data from Helsinki City Tourist & Convention Bureau, City of Helsinki Cultural Office and the Helmet metropolitan area public libraries.
 Viewing the API should give a reasonable view for the kind of information Linked Events is targeted for.
 
+Target audience of this README.md are developers who may or maynot have a lot of Python
+experience and would like to get things running as quickly as possible.
+Therefore, instructions written in this README.md should be written accordingly.
+
 Setup your local development environment with Docker
 --------------------------
 
