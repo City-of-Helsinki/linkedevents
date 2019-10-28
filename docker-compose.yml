@@ -16,7 +16,7 @@ services:
         build:
             context: ./
             dockerfile: ./docker/django/Dockerfile
-        command: bash -c 'tail -f /dev/null'
+        command: python manage.py runserver 0.0.0.0:8000
         environment:
             DATABASE_URL: postgres://linkedevents:linkedevents@linkedevents-db/linkedevents
         volumes:
