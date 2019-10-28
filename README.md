@@ -28,13 +28,7 @@ Target audience of this README.md are developers who may or maynot have a lot of
 experience and would like to get things running as quickly as possible.
 Therefore, instructions written in this README.md should be written accordingly.
 
-Setup your local development environment with Docker
---------------------------
-
-Please note that Docker setup is only for quickly setting up the local development environment.
-
-Docker deployments are not done at the moment even though that's the direction, which means that your local
-environment is not going to be identical to production environment.
+## How to setup your local development environment
 
 1. Create `local_settings.py` from the template:
     * `cp local_settings.py.template local_settings.py`
