@@ -29,18 +29,33 @@ experience and would like to get things running as quickly as possible.
 Therefore, instructions written in this README.md should be written accordingly.
 
 ## How to setup your local development environment
+If all you want is a barebone application to work with for your own city:
 
-1. Create `local_settings.py` from the template:
-    * `cp local_settings.py.template local_settings.py`
+* Create `local_settings.py` from the template:
+  ```
+  cp local_settings.py.template local_settings.py
+  ```
 
-2. Run `docker-compose up`
+* Start django application and database server:
+  ```
+  docker-compose up
+  ```
 
-3. Run migrations:
-    * `docker exec linkedevents-backend python manage.py migrate`
+* Apply database migrations:
+  ```
+  docker-compose exec django python manage.py migrate
+  ```
 
-4. Syncronize languages for translations in DB:
-    * `docker exec -it linkedevents-backend python manage.py sync_translation_fields`
-    * Answer `y` (for 'yes') to all prompt questions
+* Syncronize languages for translations in database:
+  ```
+  docker-compose exec django python manage.py sync_translation_fields --noinput
+  ```
+
+* Access application on [localhost:8000](http://localhost:8000)
+
+* You are done 🔥
+
+
 
 If you wish to install Linkedevents without any Helsinki specific data (an empty database), and instead customize everything for your own city, you may jump to step 11.
 
