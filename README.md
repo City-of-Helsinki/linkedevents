@@ -13,9 +13,11 @@
 \*_**event**_  here means a happening where people get together and do something.
 
 
-Linked Events is event information aggregator and publisher. Aggragation happens using Python importers which have the logic to
-import events information from different data sources. Publication happens with API from which interested parties can retrieve information
-about events and, if properly authorized, publish new events.
+Linked Events is event information:
+
+  * *Aggregator* => using Python importers which have the logic to import events information from different data sources
+  * *Creator* => by offering PUT/POST `/event` API endpoint with granular user permissions and a hierarchical organization structure supporting different publishing rights for different organizations
+  * *Publisher* => by offering API endpoints from which interested parties can retrieve information about events
 
 Linked Events was originally developed for City of Helsinki organization and
 you can see the Linked Events API in action for [Helsinki capital region here](https://api.hel.fi/linkedevents/v1/).
