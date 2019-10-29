@@ -62,7 +62,7 @@ If you wish to use locations, addresses and events data from the Helsinki capita
 * UI app is specific to Helsinki at the moment and requires general Finnish ontology as well as additional Helsinki specific audiences
 and keywords to be present. However, UI code should be easily adaptable to your own city if you have an OAuth2 authentication server present
 
-* Boostrap a Helsinki specific installation:
+* Boostrap a Helsinki specific installation (check [setup_helsinki](./events/management/commands/setup_helsinki.py) for all commands included):
   ```
   docker-compose exec django python manage.py setup_helsinki
   ```
