@@ -94,7 +94,7 @@ and keywords to be present. However, UI code should be easily adaptable to your 
     docker exec -it linkedevents-backend python manage.py geo_import helsinki --divisions
     ```
 
-Installation for development
+Development installation on physical or virtual machine
 ----------------------------
 These instructions assume an $INSTALL_BASE, like so:
 ```bash
