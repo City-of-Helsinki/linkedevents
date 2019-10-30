@@ -35,7 +35,7 @@ djangorestframework-jwt==1.11.0
 djangorestframework==3.9.4
 drf-oidc-auth==0.9        # via django-helusers
 easy-thumbnails==2.6
-ecdsa==0.13.2             # via python-jose
+ecdsa==0.13.3             # via python-jose
 elasticsearch==2.4.1
 entrypoints==0.3          # via flake8
 flake8==3.7.7
@@ -89,4 +89,4 @@ wrapt==1.11.2             # via astroid
 zipp==0.5.2               # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
-# setuptools==41.0.1        # via djangorestframework-bulk, markdown, pytest
+# setuptools==41.6.0        # via djangorestframework-bulk, markdown, pytest
