@@ -10,6 +10,10 @@
   * [What is it?](#what-is-it-1)
   * [What depends on it?](#what-depends-on-it-1)
   * [How to use it?](#how-to-use-it-1)
+* [osoite - Location registry](#osoite---location-registry)
+  * [What is it?](#what-is-it-2)
+  * [What depends on it?](#what-depends-on-it-2)
+  * [How to use it?](#how-to-use-it-2)
 
 <!-- vim-markdown-toc -->
 
@@ -69,3 +73,23 @@ Therefore, all events depend on *tprek* addresses to be present.
   ```
 
 Imports all addresses in *tprek* location registery into the database.
+
+## osoite - Location registry
+
+### What is it?
+
+*osoite*, short for *Pääkaupunkiseudun osoiteluettelo*, is a Metropolitan address list importer.
+
+Basic example would be the address of a concert in a very new building whose address is not available in *tprek*.
+
+### What depends on it?
+If you want to give the users of your application the ability to add events with addresses which are not present in *tprek*, you need *osoite*.
+
+In other words, *osoite* is fallback for *tprek*.
+
+### How to use it?
+  ```bash
+  python manage.py event_import osoite --places
+  ```
+
+Imports all addresses in *osoite* location registery into the database.
