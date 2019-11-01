@@ -14,6 +14,10 @@
   * [What is it?](#what-is-it-2)
   * [What depends on it?](#what-depends-on-it-2)
   * [How to use it?](#how-to-use-it-2)
+* [helmet - Helsinki Metropolitan Area Libraries](#helmet---helsinki-metropolitan-area-libraries)
+  * [What is it?](#what-is-it-3)
+  * [What depends on it?](#what-depends-on-it-3)
+  * [How to use it?](#how-to-use-it-3)
 
 <!-- vim-markdown-toc -->
 
@@ -93,3 +97,21 @@ In other words, *osoite* is fallback for *tprek*.
   ```
 
 Imports all addresses in *osoite* location registery into the database.
+
+## helmet - Helsinki Metropolitan Area Libraries
+
+### What is it?
+
+*helmet* is an importer for Helsinki Metropolitan Area Libraries.
+
+Basic example would be an event oranized by Helsinki city center library for children, which you can import with this importer.
+
+### What depends on it?
+If you want to populate the database with events organized by Helmet, you need *helmet* importer.
+
+### How to use it?
+  ```bash
+  python manage.py event_import helmet --events
+  ```
+
+Imports all events organized by Helmet into the database.
