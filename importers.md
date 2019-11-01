@@ -5,7 +5,7 @@
 * [YSO - General Finnish ontology **(Required)**](#yso---general-finnish-ontology-required)
   * [What is it?](#what-is-it)
   * [What depends on it?](#what-depends-on-it)
-  * [What does the importer do?](#what-does-the-importer-do)
+  * [How to use it?](#how-to-use-it)
 
 <!-- vim-markdown-toc -->
 
@@ -37,7 +37,7 @@ These *concepts* come from YSO.
 Linked Events application has *events*. Events must be described by *concepts*.
 Therefore, all events depend on YSO.
 
-### What does the importer do?
+### How to use it?
   ```bash
   python manage.py event_import yso --keywords --all
   ```
