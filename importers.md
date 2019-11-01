@@ -30,6 +30,10 @@
   * [What is it?](#what-is-it-6)
   * [What depends on it?](#what-depends-on-it-6)
   * [How to use it?](#how-to-use-it-6)
+* [import_organizations](#import_organizations)
+  * [What is it?](#what-is-it-7)
+  * [What depends on it?](#what-depends-on-it-7)
+  * [How to use it?](#how-to-use-it-7)
 
 <!-- vim-markdown-toc -->
 
@@ -195,3 +199,26 @@ Some, not all, of these keywords are from YSO. Therefore this importer depends o
   ```
 
 Imports all event *topics* keywords into the database.
+
+## import_organizations
+
+### What is it?
+
+*import_organizations* is an importer for importing all City of Helsinki organization **divisions** while maintaining their **hierarchy** into the database.
+
+Basic example would be, say City of Helsinki has A, B, and C divisions, and A and B have two sub-divisions themselves.
+
+This importer would import all 5 divisions while maintaining the hirerarchy within the divisions.
+
+
+### What depends on it?
+If you're having an application whose target users are City of Helsinki organization employees, you need this importer.
+
+Then, you can assign required permissions to users in django-admin based on which division they belong to.
+
+### How to use it?
+  ```bash
+  python manage.py import_organizations https://api.hel.fi/paatos/v1/organization/ -s helsinki:ahjo
+  ```
+
+Imports all City of Helsinki organization divisions into the database while maintaining their hirerarechy.
