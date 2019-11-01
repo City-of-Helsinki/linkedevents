@@ -39,7 +39,7 @@ Therefore, all events depend on YSO.
 
 ### What does the importer do?
   ```bash
-  python manage.py event_import yso --all
+  python manage.py event_import yso --keywords --all
   ```
 
 Imports all keywords in YSO into the database, without maintaining the existing hierarechy between the concepts.
