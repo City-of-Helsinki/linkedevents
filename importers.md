@@ -14,10 +14,11 @@
 ### What is it?
 First, some terminology is in order. Starting with *ontology*:
 
-> Ontology is the philosophical study of being. More broadly, it studies concepts that directly relate to being, in particular
-> becoming, existence, reality, as well as the basic categories of being and their relations.
+> In computer science and information science, an ontology encompasses a representation,
+> formal naming and definition of the categories, properties and relations between the
+> concepts, data and entities that substantiate one, many or all domains of discourse.
 >
-> From https://en.wikipedia.org/wiki/Ontology
+> From [Wikipedia of Ontology (information science)](https://en.wikipedia.org/wiki/Ontology_(information_science))
 
 YSO, short for *Yleinen suomalainen ontologia*, is basically a +30,000 collection of **concepts** in Finnish culture, translated in 3 languages.
 
