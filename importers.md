@@ -22,6 +22,10 @@
   * [What is it?](#what-is-it-4)
   * [What depends on it?](#what-depends-on-it-4)
   * [How to use it?](#how-to-use-it-4)
+* [add_helsinki_audience](#add_helsinki_audience)
+  * [What is it?](#what-is-it-5)
+  * [What depends on it?](#what-depends-on-it-5)
+  * [How to use it?](#how-to-use-it-5)
 
 <!-- vim-markdown-toc -->
 
@@ -53,6 +57,7 @@ These *concepts* come from YSO.
 Linked Events application has *events*. Events must be described by *concepts*.
 Therefore, all events depend on YSO.
 
+[add_helsinki_audience](#what-depends-on-it-5) also depends on this importer.
 ### How to use it?
   ```bash
   python manage.py event_import yso --keywords --all
@@ -137,3 +142,26 @@ If you want to populate the database with events organized by Espoo city, you ne
   ```
 
 Imports all events organized by Espoo city into the database.
+
+## add_helsinki_audience
+
+### What is it?
+
+*add_helsinki_audience* is an importer for adding different *audience* keywords in the database.
+
+Basic example would be an event whose target audience are elderly immigrants.
+
+"Elderly" and "Immigrant" are keywords you can import with this importer.
+
+### What depends on it?
+If you're running the [Linked Events UI](https://github.com/City-of-Helsinki/linkedevents-ui),
+you need this importer as the UI needs to show a list of *audience* categories for the user to choose for the event they would like to create.
+
+Some, not all, of these keywords are from YSO. Therefore this importer depends on YSO importer data being present.
+
+### How to use it?
+  ```bash
+  python manage.py add_helsinki_audience
+  ```
+
+Imports all target audience keywords into the database.
