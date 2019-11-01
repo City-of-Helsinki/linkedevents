@@ -26,6 +26,10 @@
   * [What is it?](#what-is-it-5)
   * [What depends on it?](#what-depends-on-it-5)
   * [How to use it?](#how-to-use-it-5)
+* [add_helfi_topics](#add_helfi_topics)
+  * [What is it?](#what-is-it-6)
+  * [What depends on it?](#what-depends-on-it-6)
+  * [How to use it?](#how-to-use-it-6)
 
 <!-- vim-markdown-toc -->
 
@@ -58,6 +62,9 @@ Linked Events application has *events*. Events must be described by *concepts*.
 Therefore, all events depend on YSO.
 
 [add_helsinki_audience](#what-depends-on-it-5) also depends on this importer.
+
+[add_helfi_topics](#what-depends-on-it-6) also depends on this importer.
+
 ### How to use it?
   ```bash
   python manage.py event_import yso --keywords --all
@@ -165,3 +172,26 @@ Some, not all, of these keywords are from YSO. Therefore this importer depends o
   ```
 
 Imports all target audience keywords into the database.
+
+## add_helfi_topics
+
+### What is it?
+
+*add_helfi_topics* is an importer for adding different event *topics* keywords in the database.
+
+Basic example would be an event in which they would talk about daycare for families and housing.
+
+"Daycare and education" and "Housing and environment" are keywords you can import with this importer.
+
+### What depends on it?
+If you're running the [Linked Events UI](https://github.com/City-of-Helsinki/linkedevents-ui),
+you need this importer as the UI needs to show a list of event *topics* categories for the user to choose for the event they would like to create.
+
+Some, not all, of these keywords are from YSO. Therefore this importer depends on YSO importer data being present.
+
+### How to use it?
+  ```bash
+  python manage.py add_helfi_topics
+  ```
+
+Imports all event *topics* keywords into the database.
