@@ -18,6 +18,10 @@
   * [What is it?](#what-is-it-3)
   * [What depends on it?](#what-depends-on-it-3)
   * [How to use it?](#how-to-use-it-3)
+* [espoo - Espoo city](#espoo---espoo-city)
+  * [What is it?](#what-is-it-4)
+  * [What depends on it?](#what-depends-on-it-4)
+  * [How to use it?](#how-to-use-it-4)
 
 <!-- vim-markdown-toc -->
 
@@ -115,3 +119,21 @@ If you want to populate the database with events organized by Helmet, you need *
   ```
 
 Imports all events organized by Helmet into the database.
+
+## espoo - Espoo city
+
+### What is it?
+
+*espoo* is an importer for Espoo city.
+
+Basic example would be an event oranized by Espoo city for its residents, which you can import with this importer.
+
+### What depends on it?
+If you want to populate the database with events organized by Espoo city, you need *espoo* importer.
+
+### How to use it?
+  ```bash
+  python manage.py event_import espoo --events
+  ```
+
+Imports all events organized by Espoo city into the database.
