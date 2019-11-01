@@ -6,6 +6,10 @@
   * [What is it?](#what-is-it)
   * [What depends on it?](#what-depends-on-it)
   * [How to use it?](#how-to-use-it)
+* [tprek - Location registry **(Required)**](#tprek---location-registry-required)
+  * [What is it?](#what-is-it-1)
+  * [What depends on it?](#what-depends-on-it-1)
+  * [How to use it?](#how-to-use-it-1)
 
 <!-- vim-markdown-toc -->
 
@@ -43,3 +47,25 @@ Therefore, all events depend on YSO.
   ```
 
 Imports all keywords in YSO into the database, without maintaining the existing hierarechy between the concepts.
+
+## tprek - Location registry **(Required)**
+
+### What is it?
+
+*tprek*, short for *Toimipisterekisteri*, is a location registry service giving access to addresses in Helsinki through a REST API.
+
+Basic example would be the address of a concert in a certain theather hall.
+
+### What depends on it?
+Linked Events application has *events*. Events must have addresses.
+
+By default, all event addresses are from *tprek* location registery.
+
+Therefore, all events depend on *tprek* addresses to be present.
+
+### How to use it?
+  ```bash
+  python manage.py event_import tprek --places
+  ```
+
+Imports all addresses in *tprek* location registery into the database.
