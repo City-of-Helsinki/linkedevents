@@ -27,7 +27,7 @@ YSO, short for *Yleinen suomalainen ontologia*, is basically a +30,000 collectio
 >
 > From https://finto.fi/yso/en/. You can browse the concepts there if you wish
 
-Basic example would be, let's say a guitar player coming to Helsinki to perform in a concert and use suana afterwards.
+Basic example would be, let's say a guitar player coming to Helsinki to perform in a concert and use sauna afterwards.
 
 We might categorize it with "concert", "popular music", and "sauna" *concepts*.
 
