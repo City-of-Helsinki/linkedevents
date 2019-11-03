@@ -34,6 +34,10 @@
   * [What is it?](#what-is-it-7)
   * [What depends on it?](#what-depends-on-it-7)
   * [How to use it?](#how-to-use-it-7)
+* [install_templates](#install_templates)
+  * [What is it?](#what-is-it-8)
+  * [What depends on it?](#what-depends-on-it-8)
+  * [How to use it?](#how-to-use-it-8)
 
 <!-- vim-markdown-toc -->
 
@@ -222,3 +226,25 @@ Then, you can assign required permissions to users in django-admin based on whic
   ```
 
 Imports all City of Helsinki organization divisions into the database while maintaining their hirerarechy.
+
+
+## install_templates
+
+### What is it?
+
+*install_templates* is a django management command for giving the browsable API which comes from django-rest-framework
+a Helsinki brand look and feel and also instructions for the API user.
+
+Basic example would be the live version of [Linked Events API for Helsinki city](https://api.hel.fi/linkedevents/v1/event/)
+which is blue and also includes instructions on how to query the API when you'd like to apply certain filters to the `/event` endpoint.
+
+### What depends on it?
+If you're having an application for Helsinki city and you'd like the browsable API to have Helsinki brand
+look and feel and also instructions for API user, you need this django management command.
+
+### How to use it?
+  ```bash
+  python manage.py install_templates helevents
+  ```
+
+Installs Helsinki city templates for the browsable API.
