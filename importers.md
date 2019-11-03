@@ -82,7 +82,7 @@ Therefore, all events depend on YSO.
   python manage.py event_import yso --keywords --all
   ```
 
-Imports all keywords in YSO into the database, without maintaining the existing hierarechy between the concepts.
+Imports all keywords in YSO into the database, without maintaining the existing hierarchy between the concepts.
 
 ## tprek - Location registry **(Required)**
 
@@ -90,12 +90,12 @@ Imports all keywords in YSO into the database, without maintaining the existing 
 
 *tprek*, short for *Toimipisterekisteri*, is a location registry service giving access to addresses in Helsinki through a REST API.
 
-Basic example would be the address of a concert in a certain theather hall.
+Basic example would be the address of a concert in a certain theater hall.
 
 ### What depends on it?
 Linked Events application has *events*. Events must have addresses.
 
-By default, all event addresses are from *tprek* location registery.
+By default, all event addresses are from *tprek* location registry.
 
 Therefore, all events depend on *tprek* addresses to be present.
 
@@ -104,7 +104,7 @@ Therefore, all events depend on *tprek* addresses to be present.
   python manage.py event_import tprek --places
   ```
 
-Imports all addresses in *tprek* location registery into the database.
+Imports all addresses in *tprek* location registry into the database.
 
 ## osoite - Location registry
 
@@ -117,14 +117,14 @@ Basic example would be the address of a concert in a very new building whose add
 ### What depends on it?
 If you want to give the users of your application the ability to add events with addresses which are not present in *tprek*, you need *osoite*.
 
-In other words, *osoite* is fallback for *tprek*.
+In other words, *osoite* is fall-back for *tprek*.
 
 ### How to use it?
   ```bash
   python manage.py event_import osoite --places
   ```
 
-Imports all addresses in *osoite* location registery into the database.
+Imports all addresses in *osoite* location registry into the database.
 
 ## helmet - Helsinki Metropolitan Area Libraries
 
@@ -132,7 +132,7 @@ Imports all addresses in *osoite* location registery into the database.
 
 *helmet* is an importer for Helsinki Metropolitan Area Libraries.
 
-Basic example would be an event oranized by Helsinki city center library for children, which you can import with this importer.
+Basic example would be an event organized by Helsinki city center library for children, which you can import with this importer.
 
 ### What depends on it?
 If you want to populate the database with events organized by Helmet, you need *helmet* importer.
@@ -150,7 +150,7 @@ Imports all events organized by Helmet into the database.
 
 *espoo* is an importer for Espoo city.
 
-Basic example would be an event oranized by Espoo city for its residents, which you can import with this importer.
+Basic example would be an event organized by Espoo city for its residents, which you can import with this importer.
 
 ### What depends on it?
 If you want to populate the database with events organized by Espoo city, you need *espoo* importer.
@@ -216,7 +216,7 @@ Imports all event *topics* keywords into the database.
 
 Basic example would be, say City of Helsinki has A, B, and C divisions, and A and B have two sub-divisions themselves.
 
-This importer would import all 5 divisions while maintaining the hirerarchy within the divisions.
+This importer would import all 5 divisions while maintaining the hierarchy within the divisions.
 
 
 ### What depends on it?
@@ -229,7 +229,7 @@ Then, you can assign required permissions to users in django-admin based on whic
   python manage.py import_organizations https://api.hel.fi/paatos/v1/organization/ -s helsinki:ahjo
   ```
 
-Imports all City of Helsinki organization divisions into the database while maintaining their hirerarechy.
+Imports all City of Helsinki organization divisions into the database while maintaining their hierarchy.
 
 
 ## install_templates
