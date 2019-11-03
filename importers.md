@@ -38,6 +38,10 @@
   * [What is it?](#what-is-it-8)
   * [What depends on it?](#what-depends-on-it-8)
   * [How to use it?](#how-to-use-it-8)
+* [geo_import](#geo_import)
+  * [What is it?](#what-is-it-9)
+  * [What depends on it?](#what-depends-on-it-9)
+  * [How to use it?](#how-to-use-it-9)
 
 <!-- vim-markdown-toc -->
 
@@ -248,3 +252,91 @@ look and feel and also instructions for API user, you need this django managemen
   ```
 
 Installs Helsinki city templates for the browsable API.
+
+## geo_import
+
+### What is it?
+
+*geo_import* is an importer which creates *divisions* data structure for each *place* object in database.
+
+For example, a simplified *place* object from Sello library can be like so:
+```json
+{
+  ...
+  "id": "tprek:15417",
+  "position": {
+      "type": "Point",
+      "coordinates": [
+          24.80992,
+          60.21748
+      ]
+  },
+  "name": {
+      "fi": "Sellon kirjasto",
+      "sv": "Sellobiblioteket",
+      "en": "Sellon kirjasto"
+  },
+  ...
+},
+```
+
+And by running this importer, you'd add `divisions` to the object above:
+```json
+{
+  ...
+  "id": "tprek:15417",
+  "divisions": [
+      {
+          "type": "muni",
+          "ocd_id": "ocd-division/country:fi/kunta:espoo",
+          "municipality": null,
+          "name": {
+              "fi": "Espoo",
+              "sv": "Esbo"
+          }
+      }
+  ],
+  "position": {
+      "type": "Point",
+      "coordinates": [
+          24.80992,
+          60.21748
+      ]
+  },
+  "name": {
+      "fi": "Sellon kirjasto",
+      "sv": "Sellobiblioteket",
+      "en": "Sellon kirjasto"
+  },
+  ...
+},
+```
+
+This allows the API user to query the `/place` endpoint by adding division of Espoo as an example:
+
+  ```
+  /place/?division=Espoo
+  ```
+
+Or directly querying the `/event` endpoint by filtering division of Espoo as an example:
+
+  ```
+  /event/?division=Espoo
+  ```
+
+### What depends on it?
+If you'd like to add support for division based filtering of events or places in your application, then you need this importer.
+
+### How to use it?
+  ```bash
+  python manage.py geo_import finland --municipalities
+  ```
+
+Imports all municipalities in Finland.
+
+  ```bash
+  python manage.py geo_import helsinki --divisions
+  ```
+
+Imports all divisions in Helsinki. This allows more specific filtering for Helsinki city based on
+`district` names, `sub_district` names, and `neighborhood` names.
