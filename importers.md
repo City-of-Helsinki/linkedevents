@@ -1,4 +1,4 @@
-# Importers
+# Linked Events importers and commands
 
 <!-- vim-markdown-toc GFM -->
 
@@ -167,24 +167,27 @@ Imports all events organized by Espoo city into the database.
 
 ### What is it?
 
-*add_helsinki_audience* is an importer for adding different *audience* keywords in the database.
+*add_helsinki_audience* is a django management command for creating a set of *audience* keywords in the database which is then exposed through `/keyword_set` endpoint.
 
 Basic example would be an event whose target audience are elderly immigrants.
 
-"Elderly" and "Immigrant" are keywords you can import with this importer.
+"Elderly" and "Immigrant" are keywords that the event creator would pick from the choices in the *audience* keywords set created by this command.
 
 ### What depends on it?
-If you're running the [Linked Events UI](https://github.com/City-of-Helsinki/linkedevents-ui),
-you need this importer as the UI needs to show a list of *audience* categories for the user to choose for the event they would like to create.
+Any YSO keyword can be used as *audience* in the backend. However, if you're running the [Linked Events UI](https://github.com/City-of-Helsinki/linkedevents-ui),
+you need this command as the UI only allows the keywords set with this command to be used.
 
-Some, not all, of these keywords are from YSO. Therefore this importer depends on YSO importer data being present.
+You are free to make your own UI that uses any YSO concept for the target *audience* and you can skip this command.
+
+Keywords in this set are all from YSO except the ones defined in `NEW_SOTE_KEYWORDS_DATA` in [add_helsinki_audience.py](./events/management/commands/add_helsinki_audience.py).
+Concepts defined in `NEW_SOTE_KEYWORDS_DATA` were not found in YSO, and therefore were hard-coded manually.
 
 ### How to use it?
   ```bash
   python manage.py add_helsinki_audience
   ```
 
-Imports all target audience keywords into the database.
+Creates a Helsinki audience keywords set into the database.
 
 ## add_helfi_topics
 
