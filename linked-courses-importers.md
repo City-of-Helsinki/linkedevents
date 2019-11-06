@@ -90,7 +90,7 @@ Imports all locations, which usually have addresses, coordinates and other metad
 
 ### What is it?
 
-*helmet* is an importer for Helsinki Metropolitan Area Libraries.
+*helmet* is an importer for Helsinki Metropolitan Area Libraries *Courses*.
 
 Basic example would be a book reading course organized by Helsinki city center library for young adults, which you can import with this importer.
 
