@@ -88,34 +88,34 @@ Imports all keywords in YSO into the database, without maintaining the existing 
 
 ### What is it?
 
-*tprek*, short for *Toimipisterekisteri*, is a location registry service giving access to addresses in Helsinki through a REST API.
+*tprek*, short for *Toimipisterekisteri*, is a location registry service giving access to locations in Helsinki through a REST API.
 
-Basic example would be the address of a concert in a certain theater hall.
+Basic example would be the location of a concert in a certain theater hall.
 
 ### What depends on it?
-Linked Events application has *events*. Events must have addresses.
+Linked Events application has *events*. Events must have locations.
 
-By default, all event addresses are from *tprek* location registry.
+By default, all event locations are from *tprek* location registry.
 
-Therefore, all events depend on *tprek* addresses to be present.
+Therefore, all events depend on *tprek* locations to be present.
 
 ### How to use it?
   ```bash
   python manage.py event_import tprek --places
   ```
 
-Imports all addresses in *tprek* location registry into the database.
+Imports all locations, which usually have addresses, coordinates and other metadata, from *tprek* location registry into the database.
 
 ## osoite - Location registry
 
 ### What is it?
 
-*osoite*, short for *Pääkaupunkiseudun osoiteluettelo*, is a Metropolitan address list importer.
+*osoite*, short for *Pääkaupunkiseudun osoiteluettelo*, is a Metropolitan location list importer.
 
-Basic example would be the address of a concert in a very new building whose address is not available in *tprek*.
+Basic example would be the location of a concert in a very new building whose location is not available in *tprek*.
 
 ### What depends on it?
-If you want to give the users of your application the ability to add events with addresses which are not present in *tprek*, you need *osoite*.
+If you want to give the users of your application the ability to add events with locations which are not present in *tprek*, you need *osoite*.
 
 In other words, *osoite* is fall-back for *tprek*.
 
@@ -124,7 +124,7 @@ In other words, *osoite* is fall-back for *tprek*.
   python manage.py event_import osoite --places
   ```
 
-Imports all addresses in *osoite* location registry into the database.
+Imports all locations from *osoite* location registry into the database.
 
 ## helmet - Helsinki Metropolitan Area Libraries
 
