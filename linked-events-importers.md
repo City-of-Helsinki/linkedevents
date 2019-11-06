@@ -26,7 +26,7 @@
   * [What is it?](#what-is-it-5)
   * [What depends on it?](#what-depends-on-it-5)
   * [How to use it?](#how-to-use-it-5)
-* [add_helfi_topics (Deprecated)](#add_helfi_topics-deprecated)
+* [add_helfi_topics (To be deprecated)](#add_helfi_topics-to-be-deprecated)
   * [What is it?](#what-is-it-6)
   * [What depends on it?](#what-depends-on-it-6)
   * [How to use it?](#how-to-use-it-6)
@@ -192,7 +192,7 @@ Concepts defined in `NEW_SOTE_KEYWORDS_DATA` were not found in YSO, and therefor
 
 Creates a Helsinki audience keywords set into the database.
 
-## add_helfi_topics (Deprecated)
+## add_helfi_topics (To be deprecated)
 
 ### What is it?
 
