@@ -26,7 +26,7 @@
   * [What is it?](#what-is-it-5)
   * [What depends on it?](#what-depends-on-it-5)
   * [How to use it?](#how-to-use-it-5)
-* [add_helfi_topics](#add_helfi_topics)
+* [add_helfi_topics (Deprecated)](#add_helfi_topics-deprecated)
   * [What is it?](#what-is-it-6)
   * [What depends on it?](#what-depends-on-it-6)
   * [How to use it?](#how-to-use-it-6)
@@ -74,8 +74,6 @@ Linked Events application has *events*. Events must be described by *concepts*.
 Therefore, all events depend on YSO.
 
 [add_helsinki_audience](#what-depends-on-it-5) also depends on this importer.
-
-[add_helfi_topics](#what-depends-on-it-6) also depends on this importer.
 
 ### How to use it?
   ```bash
@@ -189,28 +187,30 @@ Concepts defined in `NEW_SOTE_KEYWORDS_DATA` were not found in YSO, and therefor
 
 Creates a Helsinki audience keywords set into the database.
 
-## add_helfi_topics
+## add_helfi_topics (Deprecated)
 
 ### What is it?
 
-*add_helfi_topics* is an importer for adding different event *topics* keywords in the database.
+*add_helfi_topics* is a django management command for creating a set of *topics* keywords in the database which is then exposed through `/keyword_set` endpoint.
 
 Basic example would be an event in which they would talk about daycare for families and housing.
 
-"Daycare and education" and "Housing and environment" are keywords you can import with this importer.
+"Daycare and education" and "Housing and environment" are keywords that the event creator would pick from the choices in the *topics* keywords set created by this command.
 
 ### What depends on it?
-If you're running the [Linked Events UI](https://github.com/City-of-Helsinki/linkedevents-ui),
-you need this importer as the UI needs to show a list of event *topics* categories for the user to choose for the event they would like to create.
+All the topics created by this command are hardcoded manually in [add_helfi_topics.py](./events/management/commands/add_helfi_topics.py).
+However, all of the keywords are also available in YSO as concepts, and therefore the plan is to use
+YSO concepts and deprecate this command in favor of `add_yso_topics` command which would add hand-picked YSO concepts to the keyword set.
 
-Some, not all, of these keywords are from YSO. Therefore this importer depends on YSO importer data being present.
+If you're running the [Linked Events UI](https://github.com/City-of-Helsinki/linkedevents-ui),
+you need this command as the UI needs to show a list of event *topics* keywords for the event creator to choose for the event they would like to create.
 
 ### How to use it?
   ```bash
   python manage.py add_helfi_topics
   ```
 
-Imports all event *topics* keywords into the database.
+Creates a Helsinki topic keywords set into the database.
 
 ## import_organizations
 
