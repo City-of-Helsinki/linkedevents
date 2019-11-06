@@ -131,7 +131,7 @@ Imports all locations from *osoite* location registry into the database.
 
 ### What is it?
 
-*helmet* is an importer for Helsinki Metropolitan Area Libraries.
+*helmet* is an importer for Helsinki Metropolitan Area Libraries *Events*.
 
 Basic example would be an event organized by Helsinki city center library for children, which you can import with this importer.
 
@@ -149,7 +149,7 @@ Imports all events organized by Helmet into the database.
 
 ### What is it?
 
-*espoo* is an importer for Espoo city.
+*espoo* is an importer for Espoo city *Events*.
 
 Basic example would be an event organized by Espoo city for its residents, which you can import with this importer.
 
