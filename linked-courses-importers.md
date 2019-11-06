@@ -1,5 +1,7 @@
 # Linked Courses importers and commands
 
+Please keep this file up to date and document the new importers or update current ones if necessary.
+
 This documentation is written to help you decide what to use if you'd like to setup your own application instance of Linked Courses.
 
 #
@@ -68,6 +70,8 @@ Therefore, all events depend on YSO.
 
 Imports all keywords in YSO into the database, without maintaining the existing hierarchy between the concepts.
 
+This is scheduled to run `daily` on the instance as data doesn't change that often.
+
 ## tprek - Location registry **(Required)**
 
 ### What is it?
@@ -90,6 +94,8 @@ Therefore, all events depend on *tprek* locations to be present.
 
 Imports all locations, which usually have addresses, coordinates and other metadata, from *tprek* location registry into the database.
 
+This is scheduled to run `hourly` on the instance as data changes often.
+
 ## helmet - Helsinki Metropolitan Area Libraries
 
 ### What is it?
@@ -109,6 +115,8 @@ If you want to populate the database with courses organized by Helmet, you need 
 **NOTE**: `--courses` flag functionality is not present at the moment but will be implemented.
 
 Imports all courses organized by Helmet into the database.
+
+This is scheduled to run `hourly` on the instance as data changes often.
 
 ## install_templates
 
@@ -237,3 +245,5 @@ If you'd like to have courses organized by City of Helsinki cultural center in y
   ```
 
 Imports all courses organized by City of Helsinki cultural center into the database.
+
+This is scheduled to run `hourly` on the instance as data changes often.

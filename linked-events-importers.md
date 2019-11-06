@@ -1,5 +1,9 @@
 # Linked Events importers and commands
 
+Please keep this file up to date and document the new importers or update current ones if necessary.
+
+#
+
 <!-- vim-markdown-toc GFM -->
 
 * [YSO - General Finnish ontology **(Required)**](#yso---general-finnish-ontology-required)
@@ -86,6 +90,8 @@ Therefore, all events depend on YSO.
 
 Imports all keywords in YSO into the database, without maintaining the existing hierarchy between the concepts.
 
+This is scheduled to run `daily` on the instance as data doesn't change that often.
+
 ## tprek - Location registry **(Required)**
 
 ### What is it?
@@ -107,6 +113,8 @@ Therefore, all events depend on *tprek* locations to be present.
   ```
 
 Imports all locations, which usually have addresses, coordinates and other metadata, from *tprek* location registry into the database.
+
+This is scheduled to run `hourly` on the instance as data changes often.
 
 ## osoite - Address registry
 
@@ -134,6 +142,8 @@ In other words, *osoite* is fall-back for *tprek*.
 
 Creates locations from *osoite* address registry into the database.
 
+This is scheduled to run `daily` on the instance as origin database updates daily too.
+
 ## helmet - Helsinki Metropolitan Area Libraries
 
 ### What is it?
@@ -152,6 +162,8 @@ If you want to populate the database with events organized by Helmet, you need *
 
 Imports all events organized by Helmet into the database.
 
+This is scheduled to run `hourly` on the instance as data changes often.
+
 ## espoo - Espoo city
 
 ### What is it?
@@ -169,6 +181,8 @@ If you want to populate the database with events organized by Espoo city, you ne
   ```
 
 Imports all events organized by Espoo city into the database.
+
+This is scheduled to run `hourly` on the instance as data changes often.
 
 ## add_helsinki_audience
 
@@ -372,3 +386,5 @@ If you'd like to have events organized by City of Helsinki cultural center in yo
   ```
 
 Imports all events organized by City of Helsinki cultural center into the database.
+
+This is scheduled to run `hourly` on the instance as data changes often.
