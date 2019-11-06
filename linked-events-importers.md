@@ -96,7 +96,7 @@ This is scheduled to run `daily` on the instance as data doesn't change that oft
 
 ### What is it?
 
-*tprek*, short for *Toimipisterekisteri*, is a location registry service giving access to locations in Helsinki through a REST API.
+*tprek*, short for [*Toimipisterekisteri*](https://hri.fi/data/fi/dataset/paakaupunkiseudun-palvelukartan-rest-rajapinta), is a location registry service giving access to locations in Helsinki through a REST API.
 
 Basic example would be the location of a concert in a certain theater hall.
 
@@ -124,7 +124,7 @@ Let's get terminology in order.
 
 `address` is a field in a `location` object. `location` can have other metadata.
 
-*Pääkaupunkiseudun osoiteluettelo* is an address registry which only contains *addresses*.
+[*Pääkaupunkiseudun osoiteluettelo*](https://hri.fi/data/dataset/seudullinen-osoiteluettelo) is an address registry which only contains *addresses*.
 *osoite* is a Metropolitan *location* list importer, which creates a *location* object with only one field of *address* from the addresses imported from *Pääkaupunkiseudun osoiteluettelo*.
 
 Basic example would be the location of a one-off random event in a private location.
@@ -148,7 +148,7 @@ This is scheduled to run `daily` on the instance as origin database updates dail
 
 ### What is it?
 
-*helmet* is an importer for Helsinki Metropolitan Area Libraries *Events*.
+*helmet* is an importer for Helsinki Metropolitan Area Libraries *Events* from https://helmet.fi.
 
 Basic example would be an event organized by Helsinki city center library for children, which you can import with this importer.
 
@@ -168,7 +168,7 @@ This is scheduled to run `hourly` on the instance as data changes often.
 
 ### What is it?
 
-*espoo* is an importer for Espoo city *Events*.
+*espoo* is an importer for Espoo city *Events* from https://espoo.fi.
 
 Basic example would be an event organized by Espoo city for its residents, which you can import with this importer.
 
@@ -359,32 +359,32 @@ If you'd like to add support for division based filtering of events or places in
   python manage.py geo_import finland --municipalities
   ```
 
-Imports all municipalities in Finland.
+Imports all municipalities in Finland from https://kartat.kapsi.fi/.
 
   ```bash
   python manage.py geo_import helsinki --divisions
   ```
 
-Imports all divisions in Helsinki. This allows more specific filtering for Helsinki city based on
+Imports all divisions in Helsinki from the [Helsinki district division datasets](https://hri.fi/data/dataset/helsingin-piirijako). This allows more specific filtering for Helsinki city based on
 `district` names, `sub_district` names, and `neighborhood` names.
 
 ## kulke
 
 ### What is it?
 
-*kulke*, short for *Kulttuurikeskukset*, is an importer which imports *events* from City of Helsinki cultural center.
+*kulke*, short for *Kulttuurikeskukset*, is an importer which imports *events* from City of Helsinki cultural centers (https://annantalo.fi, https://vuotalo.fi, https://malmitalo.fi etc.).
 
-**NOTE**: To get access to data from City of Helsinki cultural center, you need to have access to City of Helsinki internal network.
+**NOTE**: To get access to data from City of Helsinki cultural centers, you need to have access to City of Helsinki internal network.
 Specifics of how to get this access for City of Helsinki developers will be documented here later.
 
 ### What depends on it?
-If you'd like to have events organized by City of Helsinki cultural center in your Linked Events application instance, you need this importer.
+If you'd like to have events organized by City of Helsinki cultural centers in your Linked Events application instance, you need this importer.
 
 ### How to use it?
   ```bash
   python manage.py event_import kulke --events
   ```
 
-Imports all events organized by City of Helsinki cultural center into the database.
+Imports all events organized by City of Helsinki cultural centers into the database.
 
 This is scheduled to run `hourly` on the instance as data changes often.
