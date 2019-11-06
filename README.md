@@ -28,6 +28,10 @@ Target audience of this README.md are developers who may or maynot have a lot of
 experience and would like to get things running as quickly as possible.
 Therefore, instructions written in this README.md should be written accordingly.
 
+## Contributing
+
+The best way to contribute is to open a new PR for discussion. We strive to be able to support various cities with various use cases, so suggestions and new features (as long as they fit in with existing functionality) are welcome.
+
 ## How to setup your local development environment
 If all you want is a barebone application to work with for your own city:
 
