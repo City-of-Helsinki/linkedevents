@@ -114,6 +114,8 @@ Therefore, all events depend on *tprek* locations to be present.
 
 Imports all locations, which usually have addresses, coordinates and other metadata, from *tprek* location registry into the database.
 
+This is scheduled to run `hourly` on the instance as data changes often.
+
 ## osoite - Address registry
 
 ### What is it?
