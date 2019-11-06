@@ -160,6 +160,8 @@ If you want to populate the database with events organized by Helmet, you need *
 
 Imports all events organized by Helmet into the database.
 
+This is scheduled to run `hourly` on the instance as data changes often.
+
 ## espoo - Espoo city
 
 ### What is it?

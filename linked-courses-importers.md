@@ -116,6 +116,8 @@ If you want to populate the database with courses organized by Helmet, you need 
 
 Imports all courses organized by Helmet into the database.
 
+This is scheduled to run `hourly` on the instance as data changes often.
+
 ## install_templates
 
 ### What is it?
