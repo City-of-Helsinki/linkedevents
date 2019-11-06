@@ -180,6 +180,8 @@ If you want to populate the database with events organized by Espoo city, you ne
 
 Imports all events organized by Espoo city into the database.
 
+This is scheduled to run `hourly` on the instance as data changes often.
+
 ## add_helsinki_audience
 
 ### What is it?
