@@ -364,7 +364,7 @@ Imports all divisions in Helsinki. This allows more specific filtering for Helsi
 Specifics of how to get this access for City of Helsinki developers will be documented here later.
 
 ### What depends on it?
-If you'd like to have courses organized by City of Helsinki cultural center in your Linked Events application instance, you need this importer.
+If you'd like to have events organized by City of Helsinki cultural center in your Linked Events application instance, you need this importer.
 
 ### How to use it?
   ```bash
