@@ -1,6 +1,6 @@
-# Importers for Linked Courses
+# Linked Courses importers and commands
 
-This documentation is written to help you decide which importers to use if you'd like to setup your own application instance of Linked Courses.
+This documentation is written to help you decide what to use if you'd like to setup your own application instance of Linked Courses.
 
 #
 
