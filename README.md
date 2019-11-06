@@ -57,42 +57,13 @@ If all you want is a barebone application to work with for your own city:
 
 If you wish to use locations, addresses and events data from the Helsinki capital region:
 
+* Read [linked-events-importers.md](./linked-events-importers.md#linked-events-importers-and-commands) and decide the importers or commands you would like to use.
+
 * You can then serve the [UI for Linked Events API](https://github.com/City-of-Helsinki/linkedevents-ui) for example by setting authentication keys to `local_settings.py`
 
 * UI app is specific to Helsinki at the moment and requires general Finnish ontology as well as additional Helsinki specific audiences
 and keywords to be present. However, UI code should be easily adaptable to your own city if you have an OAuth2 authentication server present
 
-
-1. import general Finnish ontology (used by Helsinki UI and Helsinki events):
-    * `docker exec -it linkedevents-backend python manage.py event_import yso --all`
-2. add helsinki specific audiences and keywords:
-    ```bash
-    # Add keyword set to display in the UI event audience selection
-    docker exec -it linkedevents-backend python manage.py add_helsinki_audience
-    # Add keyword set to display in the UI main category selection
-    docker exec -it linkedevents-backend python manage.py add_helfi_topics
-    ```
-3. import places and events for testing:
-    ```bash
-    # Import places from Helsinki metropolitan region service registry (used by events from following sources)
-    docker exec -it linkedevents-backend python manage.py event_import tprek --places
-    # Import places from Helsinki metropolitan region address registry (used as fallback locations)
-    docker exec -it linkedevents-backend python manage.py event_import osoite --places
-    # Import events from Helsinki metropolitan region libraries
-    docker exec -it linkedevents-backend python manage.py event_import helmet --events
-    # Import events from Espoo
-    docker exec -it linkedevents-backend python manage.py event_import espoo --events
-4. import City of Helsinki internal organization for UI user rights management:
-    * `docker exec -it linkedevents-backend python manage.py import_organizations https://api.hel.fi/paatos/v1/organization/ -s helsinki:ahjo`
-5. install API frontend templates:
-    * `docker exec -it linkedevents-backend python manage.py install_templates helevents`
-6. import Finland municipalities and Helsinki administrative divisions, if you want to use district based API filtering of events:
-    ```bash
-    # Import municipalities in Finland
-    docker exec -it linkedevents-backend python manage.py geo_import finland --municipalities
-    # Import districts in Helsinki
-    docker exec -it linkedevents-backend python manage.py geo_import helsinki --divisions
-    ```
 
 Development installation on physical or virtual machine
 ----------------------------
