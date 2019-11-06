@@ -70,6 +70,8 @@ Therefore, all events depend on YSO.
 
 Imports all keywords in YSO into the database, without maintaining the existing hierarchy between the concepts.
 
+This is scheduled to run `daily` on the instance as data doesn't change that often.
+
 ## tprek - Location registry **(Required)**
 
 ### What is it?
