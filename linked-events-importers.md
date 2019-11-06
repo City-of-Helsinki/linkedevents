@@ -142,6 +142,8 @@ In other words, *osoite* is fall-back for *tprek*.
 
 Creates locations from *osoite* address registry into the database.
 
+This is scheduled to run `daily` on the instance as origin database updates daily too.
+
 ## helmet - Helsinki Metropolitan Area Libraries
 
 ### What is it?
