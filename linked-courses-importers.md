@@ -102,6 +102,8 @@ If you want to populate the database with courses organized by Helmet, you need 
   python manage.py event_import helmet --courses
   ```
 
+**NOTE**: `--courses` flag functionality is not present at the moment but will be implemented.
+
 Imports all courses organized by Helmet into the database.
 
 ## install_templates
