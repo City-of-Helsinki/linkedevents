@@ -372,7 +372,7 @@ Imports all divisions in Helsinki from the [Helsinki district division datasets]
 
 ### What is it?
 
-*kulke*, short for *Kulttuurikeskukset*, is an importer which imports *events* from City of Helsinki cultural centers (https://annantalo.fi, https://vuotalo.fi, https://malmitalo.fi etc.).
+*kulke*, short for *Kulttuurikeskukset*, is an importer which imports *events* from City of Helsinki cultural centers (http://annantalo.fi, http://vuotalo.fi, http://malmitalo.fi etc.).
 
 **NOTE**: To get access to data from City of Helsinki cultural centers, you need to have access to City of Helsinki internal network.
 Specifics of how to get this access for City of Helsinki developers will be documented here later.
