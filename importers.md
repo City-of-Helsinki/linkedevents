@@ -112,7 +112,8 @@ Imports all locations, which usually have addresses, coordinates and other metad
 
 *osoite*, short for *Pääkaupunkiseudun osoiteluettelo*, is a Metropolitan location list importer.
 
-Basic example would be the location of a concert in a very new building whose location is not available in *tprek*.
+Basic example would be the location of a one-off random event in a private location.
+Locations not meant to be used regularly are not usually added to *tprek*.
 
 ### What depends on it?
 If you want to give the users of your application the ability to add events with locations which are not present in *tprek*, you need *osoite*.
