@@ -42,6 +42,10 @@
   * [What is it?](#what-is-it-9)
   * [What depends on it?](#what-depends-on-it-9)
   * [How to use it?](#how-to-use-it-9)
+* [kulke](#kulke)
+  * [What is it?](#what-is-it-10)
+  * [What depends on it?](#what-depends-on-it-10)
+  * [How to use it?](#how-to-use-it-10)
 
 <!-- vim-markdown-toc -->
 
@@ -349,3 +353,22 @@ Imports all municipalities in Finland.
 
 Imports all divisions in Helsinki. This allows more specific filtering for Helsinki city based on
 `district` names, `sub_district` names, and `neighborhood` names.
+
+## kulke
+
+### What is it?
+
+*kulke*, short for *Kulttuurikeskukset*, is an importer which imports *events* from City of Helsinki cultural center.
+
+**NOTE**: To get access to data from City of Helsinki cultural center, you need to have access to City of Helsinki internal network.
+Specifics of how to get this access for City of Helsinki developers will be documented here later.
+
+### What depends on it?
+If you'd like to have courses organized by City of Helsinki cultural center in your Linked Events application instance, you need this importer.
+
+### How to use it?
+  ```bash
+  python manage.py event_import kulke --events
+  ```
+
+Imports all events organized by City of Helsinki cultural center into the database.
