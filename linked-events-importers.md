@@ -1,5 +1,9 @@
 # Linked Events importers and commands
 
+Please keep this file up to date and document the new importers or update current ones if necessary.
+
+#
+
 <!-- vim-markdown-toc GFM -->
 
 * [YSO - General Finnish ontology **(Required)**](#yso---general-finnish-ontology-required)

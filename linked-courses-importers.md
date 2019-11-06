@@ -1,5 +1,7 @@
 # Linked Courses importers and commands
 
+Please keep this file up to date and document the new importers or update current ones if necessary.
+
 This documentation is written to help you decide what to use if you'd like to setup your own application instance of Linked Courses.
 
 #
