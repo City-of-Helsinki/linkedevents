@@ -10,7 +10,7 @@
   * [What is it?](#what-is-it-1)
   * [What depends on it?](#what-depends-on-it-1)
   * [How to use it?](#how-to-use-it-1)
-* [osoite - Location registry](#osoite---location-registry)
+* [osoite - Address registry](#osoite---address-registry)
   * [What is it?](#what-is-it-2)
   * [What depends on it?](#what-depends-on-it-2)
   * [How to use it?](#how-to-use-it-2)
@@ -104,11 +104,16 @@ Therefore, all events depend on *tprek* locations to be present.
 
 Imports all locations, which usually have addresses, coordinates and other metadata, from *tprek* location registry into the database.
 
-## osoite - Location registry
+## osoite - Address registry
 
 ### What is it?
 
-*osoite*, short for *Pääkaupunkiseudun osoiteluettelo*, is a Metropolitan location list importer.
+Let's get terminology in order.
+
+`address` is a field in a `location` object. `location` can have other metadata.
+
+*Pääkaupunkiseudun osoiteluettelo* is an address registry which only contains *addresses*.
+*osoite* is a Metropolitan *location* list importer, which creates a *location* object with only one field of *address* from the addresses imported from *Pääkaupunkiseudun osoiteluettelo*.
 
 Basic example would be the location of a one-off random event in a private location.
 Locations not meant to be used regularly are not usually added to *tprek*.
@@ -123,7 +128,7 @@ In other words, *osoite* is fall-back for *tprek*.
   python manage.py event_import osoite --places
   ```
 
-Imports all locations from *osoite* location registry into the database.
+Creates locations from *osoite* address registry into the database.
 
 ## helmet - Helsinki Metropolitan Area Libraries
 
