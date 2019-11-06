@@ -68,23 +68,23 @@ Imports all keywords in YSO into the database, without maintaining the existing 
 
 ### What is it?
 
-*tprek*, short for *Toimipisterekisteri*, is a location registry service giving access to addresses in Helsinki through a REST API.
+*tprek*, short for *Toimipisterekisteri*, is a location registry service giving access to locations in Helsinki through a REST API.
 
-Basic example would be the address of a Kung Fu course in a certain sport facility.
+Basic example would be the location of a Kung Fu course in a certain sport facility.
 
 ### What depends on it?
-Linked Courses application has *events*. Events must have addresses.
+Linked Courses application has *events*. Events must have locations.
 
-By default, all event addresses are from *tprek* location registry.
+By default, all event locations are from *tprek* location registry.
 
-Therefore, all events depend on *tprek* addresses to be present.
+Therefore, all events depend on *tprek* locations to be present.
 
 ### How to use it?
   ```bash
   python manage.py event_import tprek --places
   ```
 
-Imports all addresses in *tprek* location registry into the database.
+Imports all locations, which usually have addresses, coordinates and other metadata, from *tprek* location registry into the database.
 
 ## helmet - Helsinki Metropolitan Area Libraries
 
