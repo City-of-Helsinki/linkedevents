@@ -225,8 +225,7 @@ Imports all divisions in Helsinki. This allows more specific filtering for Helsi
 
 *kulke*, short for *Kulttuurikeskukset*, is an importer which imports *courses* from City of Helsinki cultural center.
 
-**NOTE**: This importer is not implemented at the moment for `--courses` flag. On top of that,
-to get access to data from City of Helsinki cultural center, you need to have access to City of Helsinki internal network.
+**NOTE**: To get access to data from City of Helsinki cultural center, you need to have access to City of Helsinki internal network.
 Specifics of how to get this access for City of Helsinki developers will be documented here later.
 
 ### What depends on it?
