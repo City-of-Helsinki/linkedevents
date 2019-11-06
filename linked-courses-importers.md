@@ -245,3 +245,5 @@ If you'd like to have courses organized by City of Helsinki cultural center in y
   ```
 
 Imports all courses organized by City of Helsinki cultural center into the database.
+
+This is scheduled to run `hourly` on the instance as data changes often.

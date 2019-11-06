@@ -382,3 +382,5 @@ If you'd like to have events organized by City of Helsinki cultural center in yo
   ```
 
 Imports all events organized by City of Helsinki cultural center into the database.
+
+This is scheduled to run `hourly` on the instance as data changes often.
