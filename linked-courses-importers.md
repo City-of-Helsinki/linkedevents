@@ -53,7 +53,7 @@ YSO, short for *Yleinen suomalainen ontologia*, is basically a +30,000 collectio
 
 Basic example would be, let's say a Portuguese language teacher coming to Helsinki to teach Portuguese to children.
 
-We might categorize it with "education", "Portuguese", and "fun" *concepts*.
+We might categorize it with "chldren", "education", "Portuguese", and "fun" *concepts*.
 
 These *concepts* come from YSO.
 
