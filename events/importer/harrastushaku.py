@@ -73,11 +73,11 @@ class HarrastushakuImporter(Importer):
     def import_places(self):
         """Import Harrastushaku locations as Places
 
-        - If a place in Harrastushaku has "tprek_id" set, assume it is a place that
-          comes from Toimipisterekisteri and don't import it from Harrastushaku.
+        - If we can find a close-enough match for the location object coming from Harrastushaku in Toimipisterekisteri,
+          we do not import that location object, as this this will cause duplicate location issue due to
+          Harrastushaku data being of low quality.
 
-        - If a place in Harrastushaku does not have "tprek_id", it will be
-          imported having data source "harrastushaku".
+        - If, however, we cannot find a match, location object will be imported with data source "harrastushaku".
         """
         logger.info('Importing places...')
 
