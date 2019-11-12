@@ -195,12 +195,7 @@ class HarrastushakuImporter(Importer):
             logger.warning('No location data fetched, aborting course import.')
             return
 
-        self.location_id_to_place_id = {
-            l['id']: '{}:{}'.format(self.tprek_data_source.id, l['tpr_id'])
-            if l.get('tpr_id')
-            else '{}:{}'.format(self.data_source.id, l['id'])
-            for l in locations
-        }
+        self.location_id_to_place_id = self.map_harrastushaku_location_ids_to_tprek_ids(locations)
 
         activities = self.fetch_courses()
         if not activities:
