@@ -83,6 +83,7 @@ class HarrastushakuImporter(Importer):
 
         locations = self.fetch_locations()
         logger.debug('Handling {} locations...'.format(len(locations)))
+        self.mapped_harrastushaku_locations = self.map_harrastushaku_location_ids_to_tprek_ids(locations)
 
         for location in locations:
             try:
@@ -259,15 +260,13 @@ class HarrastushakuImporter(Importer):
 
     @transaction.atomic
     def handle_location(self, location_data):
-        tprek_id = location_data.get('tpr_id')
-        if tprek_id:
-            if tprek_id in self.tprek_ids:
-                return
-            logger.warning(
-                f"Location object {location_data['id']} from Harrastushaku claims to "
-                f"have {tprek_id} tprek_id but we cannot find it in our imported ids from Toimipisterekisteri.")
+        harrastushaku_location_id = location_data.get('id')
+        harrastushaku_location_mapped_id = self.mapped_harrastushaku_locations.get(harrastushaku_location_id)
 
-        self.handle_non_tprek_location(location_data)
+        if harrastushaku_location_mapped_id.startswith(self.tprek_data_source.id):
+            return
+        else:
+            self.handle_non_tprek_location(location_data)
 
     def handle_non_tprek_location(self, location_data):
         get_string = bind_data_getters(location_data)[0]
