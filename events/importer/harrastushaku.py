@@ -213,7 +213,9 @@ class HarrastushakuImporter(Importer):
         if tprek_id:
             if tprek_id in self.tprek_ids:
                 return
-            logger.warning("Place with Toimipisterekisteri ID {} doesn't exist.".format(tprek_id))
+            logger.warning(
+                f"Location object {location_data['id']} from Harrastushaku claims to "
+                f"have {tprek_id} tprek_id but we cannot find it in our imported ids from Toimipisterekisteri.")
 
         self.handle_non_tprek_location(location_data)
 
