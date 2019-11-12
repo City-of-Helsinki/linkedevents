@@ -203,8 +203,6 @@ def test__upload_an_image_with_api_key(api_client, settings, list_url, image_dat
     assert ApiKeyUser.objects.all().count() == 1
 
     image = Image.objects.get(pk=response.data['id'])
-    assert image.created_by is None
-    assert image.last_modified_by is None
     assert image.publisher == organization
 
     # image url should contain the image file's path relative to MEDIA_ROOT.
@@ -389,8 +387,6 @@ def test__upload_an_url_with_api_key(api_client, settings, list_url, image_url, 
     assert ApiKeyUser.objects.all().count() == 1
 
     image = Image.objects.get(pk=response.data['id'])
-    assert image.created_by is None
-    assert image.last_modified_by is None
     assert image.publisher == organization
 
     # image url should stay the same as when input
