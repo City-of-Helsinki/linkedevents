@@ -91,6 +91,56 @@ class HarrastushakuImporter(Importer):
                 message = e if isinstance(e, HarrastushakuException) else traceback.format_exc()
                 logger.error('Error handling location {}: {}'.format(location.get('id'), message))
 
+    def map_harrastushaku_location_ids_to_tprek_ids(self, harrastushaku_locations):
+        '''
+        Example mapped dictionary result:
+        {
+            '95': 'harrastushaku:95',
+            '953': 'harrastushaku:953',
+            '968': 'tprek:20479',
+            '97': 'tprek:8062',
+            '972': 'tprek:9079',
+            '987': 'harrastushaku:987',
+            '99': 'tprek:8064',
+        }
+        '''
+        result = dict()
+
+        for harrastushaku_location in harrastushaku_locations:
+            harrastushaku_location_id = harrastushaku_location['id']
+
+            strict_filters = {
+                'id__startswith': self.tprek_data_source,
+                'name': harrastushaku_location['name'],
+                'address_locality': harrastushaku_location['city'],
+                'postal_code': harrastushaku_location['zip'],
+                'street_address': harrastushaku_location['address'],
+            }
+            flexible_filters = {
+                'id__startswith': self.tprek_data_source,
+                'address_locality': harrastushaku_location['city'],
+                'postal_code': harrastushaku_location['zip'],
+                'street_address': harrastushaku_location['address'],
+            }
+
+            strict_matched_places = Place.objects.filter(**strict_filters)
+
+            if len(strict_matched_places) >= 1:
+                harrastushaku_location_mapped_id = strict_matched_places.first().id
+
+            elif len(strict_matched_places) == 0:
+                flexible_matched_places = Place.objects.filter(**flexible_filters)
+
+                if len(flexible_matched_places) >= 1:
+                    harrastushaku_location_mapped_id = flexible_matched_places.first().id
+
+                elif len(flexible_matched_places) == 0:
+                    harrastushaku_location_mapped_id = f'{self.data_source.id}:{harrastushaku_location["id"]}'
+
+            result[harrastushaku_location_id] = harrastushaku_location_mapped_id
+
+        return result
+
     def import_courses(self):
         """Import Harrastushaku activities as Courses
 
