@@ -26,6 +26,7 @@ from rest_framework.exceptions import ValidationError
 from reversion import revisions as reversion
 from django.utils.translation import ugettext_lazy as _
 from mptt.models import MPTTModel, TreeForeignKey
+from mptt.querysets import TreeQuerySet
 from django.contrib.contenttypes.models import ContentType
 from events import translation_utils
 from django.utils.encoding import python_2_unicode_compatible
@@ -88,6 +89,25 @@ class SimpleValueMixin(object):
         return self.simple_value() == other.simple_value()
 
 
+class BaseQuerySet(models.QuerySet):
+    def is_user_editable(self):
+        return not bool(self.filter(data_source__isnull=True) and
+                        self.filter(data_source__user_editable=False))
+
+    def can_be_edited_by(self, user):
+        """Check if the whole queryset can be edited by the given user"""
+        if user.is_superuser:
+            return True
+        for event in self:
+            if not user.can_edit_event(event.publisher, event.publication_status):
+                return False
+        return True
+
+
+class BaseTreeQuerySet(TreeQuerySet, BaseQuerySet):
+    pass
+
+
 class License(models.Model):
     id = models.CharField(max_length=50, primary_key=True)
     name = models.CharField(verbose_name=_('Name'), max_length=255)
@@ -103,6 +123,7 @@ class License(models.Model):
 
 class Image(models.Model):
     jsonld_type = 'ImageObject'
+    objects = BaseQuerySet.as_manager()
 
     # Properties from schema.org/Thing
     name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True, default='')
@@ -144,7 +165,7 @@ class Image(models.Model):
         return bool(self.is_user_editable() and self.last_modified_by)
 
     def can_be_edited_by(self, user):
-        """Check if current event can be edited by the given user"""
+        """Check if current image can be edited by the given user"""
         if user.is_superuser:
             return True
         return user.is_admin(self.publisher)
@@ -160,6 +181,8 @@ class ImageMixin(models.Model):
 
 @python_2_unicode_compatible
 class BaseModel(models.Model):
+    objects = BaseQuerySet.as_manager()
+
     id = models.CharField(max_length=100, primary_key=True)
     data_source = models.ForeignKey(DataSource, related_name='provided_%(class)s_data', db_index=True)
 
@@ -226,7 +249,6 @@ class Keyword(BaseModel, ImageMixin):
     alt_labels = models.ManyToManyField(KeywordLabel, blank=True, related_name='keywords')
     aggregate = models.BooleanField(default=False)
     deprecated = models.BooleanField(default=False, db_index=True)
-    objects = models.Manager()
     n_events = models.IntegerField(
         verbose_name=_('event count'),
         help_text=_('number of events with this keyword'),
@@ -273,6 +295,9 @@ class KeywordSet(BaseModel, ImageMixin):
 
 
 class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin):
+    objects = BaseTreeQuerySet.as_manager()
+    geo_objects = objects
+
     publisher = models.ForeignKey('django_orghierarchy.Organization', verbose_name=_('Publisher'), db_index=True)
     info_url = models.URLField(verbose_name=_('Place home page'), null=True, blank=True, max_length=1000)
     description = models.TextField(verbose_name=_('Description'), null=True, blank=True)
@@ -297,8 +322,6 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin):
     replaced_by = models.ForeignKey('Place', related_name='aliases', null=True)
     divisions = models.ManyToManyField(AdministrativeDivision, verbose_name=_('Divisions'), related_name='places',
                                        blank=True)
-
-    geo_objects = models.GeoManager()
     n_events = models.IntegerField(
         verbose_name=_('event count'),
         help_text=_('number of events in this location'),
@@ -379,6 +402,7 @@ class OpeningHoursSpecification(models.Model):
 
 class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     jsonld_type = "Event/LinkedEvent"
+    objects = BaseTreeQuerySet.as_manager()
 
     """
     eventStatus enumeration is based on http://schema.org/EventStatusType
