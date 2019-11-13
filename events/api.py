@@ -453,7 +453,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
 
     def __init__(self, instance=None, files=None,
                  context=None, partial=False, many=None, skip_fields=set(),
-                 allow_add_remove=False, hide_ld_context=False, nested=False, **kwargs):
+                 allow_add_remove=False, hide_ld_context=False, **kwargs):
         super(LinkedEventsSerializer, self).__init__(
             instance=instance, context=context, **kwargs)
         if context is None:
