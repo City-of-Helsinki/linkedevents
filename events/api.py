@@ -962,6 +962,7 @@ class LanguageSerializer(LinkedEventsSerializer):
     def get_translation_available(self, obj):
         return obj.id in utils.get_fixed_lang_codes()
 
+
 class LanguageViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
     queryset = Language.objects.all()
     serializer_class = LanguageSerializer
@@ -1011,6 +1012,7 @@ class OrganizationSerializer(LinkedEventsSerializer):
 
     def get_is_affiliated(self, obj):
         return obj.internal_type == Organization.AFFILIATED
+
 
 class OrganizationViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
     queryset = Organization.objects.all()
