@@ -67,10 +67,6 @@ def assert_image_fields_exist(data, version='v1'):
         'photographer_name',
         'data_source',
     )
-    if version == 'v0.1':
-        fields += (
-            'last_modified_by'
-        )
 
     assert_fields_exist(data, fields)
 
@@ -207,8 +203,6 @@ def test__upload_an_image_with_api_key(api_client, settings, list_url, image_dat
     assert ApiKeyUser.objects.all().count() == 1
 
     image = Image.objects.get(pk=response.data['id'])
-    assert image.created_by is None
-    assert image.last_modified_by is None
     assert image.publisher == organization
 
     # image url should contain the image file's path relative to MEDIA_ROOT.
@@ -327,8 +321,11 @@ def test__create_an_event_with_uploaded_image(
 
     # the event data should contain the expanded image data
     minimal_event_dict['images'][0].update(image_response.data)
-    # only the image field url changes between endpoints
+    # the image field url changes between endpoints
+    # also, admin only fields are not displayed in inlined resources
     minimal_event_dict['images'][0].pop('url')
+    minimal_event_dict['images'][0].pop('created_by')
+    minimal_event_dict['images'][0].pop('last_modified_by')
     assert_event_data_is_equal(minimal_event_dict, response.data)
 
 
@@ -353,8 +350,11 @@ def test__update_an_event_with_uploaded_image(
 
     # the event data should contain the expanded image data
     minimal_event_dict['images'][0].update(image_response.data)
-    # only the image field url changes between endpoints
+    # the image field url changes between endpoints
+    # also, admin only fields are not displayed in inlined resources
     minimal_event_dict['images'][0].pop('url')
+    minimal_event_dict['images'][0].pop('created_by')
+    minimal_event_dict['images'][0].pop('last_modified_by')
     assert_event_data_is_equal(minimal_event_dict, response2.data)
 
 
@@ -387,8 +387,6 @@ def test__upload_an_url_with_api_key(api_client, settings, list_url, image_url, 
     assert ApiKeyUser.objects.all().count() == 1
 
     image = Image.objects.get(pk=response.data['id'])
-    assert image.created_by is None
-    assert image.last_modified_by is None
     assert image.publisher == organization
 
     # image url should stay the same as when input
