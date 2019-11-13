@@ -61,7 +61,6 @@ def assert_event_fields_exist(data, version='v1'):
     if version == 'v0.1':
         fields += (
             'origin_id',
-            'last_modified_by',
             'headline',
             'secondary_headline',
         )
