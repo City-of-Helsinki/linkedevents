@@ -130,7 +130,7 @@ class HarrastushakuImporter(Importer):
             if tprek_place:
                 result[harrastushaku_location_id] = tprek_place.id
             else:
-                result[harrastushaku_location_id] = f'{self.data_source.id}:{harrastushaku_location["id"]}'
+                result[harrastushaku_location_id] = '{}:{}'.format(self.data_source.id, harrastushaku_location_id)
 
         return result
 
