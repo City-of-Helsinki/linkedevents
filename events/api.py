@@ -1737,7 +1737,7 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
     # Use select_ and prefetch_related() to reduce the amount of queries
     queryset = queryset.select_related('location', 'publisher')
     queryset = queryset.prefetch_related(
-        'offers', 'keywords', 'audience', 'images', 'external_links', 'sub_events', 'in_language')
+        'offers', 'keywords', 'audience', 'images', 'images__publisher', 'external_links', 'sub_events', 'in_language')
     serializer_class = EventSerializer
     filter_backends = (EventOrderingFilter, django_filters.rest_framework.DjangoFilterBackend,
                        EventExtensionFilterBackend)
