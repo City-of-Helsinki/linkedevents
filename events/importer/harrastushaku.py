@@ -83,7 +83,7 @@ class HarrastushakuImporter(Importer):
 
         locations = self.fetch_locations()
         logger.debug('Handling {} locations...'.format(len(locations)))
-        self.mapped_harrastushaku_locations = self.map_harrastushaku_location_ids_to_tprek_ids(locations)
+        self.location_id_to_place_id = self.map_harrastushaku_location_ids_to_tprek_ids(locations)
 
         for location in locations:
             try:
