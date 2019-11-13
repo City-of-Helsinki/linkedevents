@@ -1052,6 +1052,8 @@ class ImageSerializer(LinkedEventsSerializer):
     license = serializers.PrimaryKeyRelatedField(queryset=License.objects.all(), required=False)
     created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
     last_modified_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
+    created_by = serializers.StringRelatedField(required=False, allow_null=True)
+    last_modified_by = serializers.StringRelatedField(required=False, allow_null=True)
 
     class Meta:
         model = Image
@@ -1145,6 +1147,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     date_published = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
     start_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
     end_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
+    created_by = serializers.StringRelatedField(required=False, allow_null=True)
+    last_modified_by = serializers.StringRelatedField(required=False, allow_null=True)
 
     def __init__(self, *args, skip_empties=False, **kwargs):
         super(EventSerializer, self).__init__(*args, **kwargs)
