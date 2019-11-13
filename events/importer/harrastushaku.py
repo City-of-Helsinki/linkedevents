@@ -124,21 +124,13 @@ class HarrastushakuImporter(Importer):
                 'street_address': harrastushaku_location['address'],
             }
 
-            strict_matched_places = Place.objects.filter(**strict_filters)
+            tprek_place = (Place.objects.filter(**strict_filters).first() or
+                           Place.objects.filter(**flexible_filters).first())
 
-            if len(strict_matched_places) >= 1:
-                harrastushaku_location_mapped_id = strict_matched_places.first().id
-
-            elif len(strict_matched_places) == 0:
-                flexible_matched_places = Place.objects.filter(**flexible_filters)
-
-                if len(flexible_matched_places) >= 1:
-                    harrastushaku_location_mapped_id = flexible_matched_places.first().id
-
-                elif len(flexible_matched_places) == 0:
-                    harrastushaku_location_mapped_id = f'{self.data_source.id}:{harrastushaku_location["id"]}'
-
-            result[harrastushaku_location_id] = harrastushaku_location_mapped_id
+            if tprek_place:
+                result[harrastushaku_location_id] = tprek_place.id
+            else:
+                result[harrastushaku_location_id] = f'{self.data_source.id}:{harrastushaku_location["id"]}'
 
         return result
 
