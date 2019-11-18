@@ -248,7 +248,7 @@ class HarrastushakuImporter(Importer):
     @transaction.atomic
     def handle_location(self, location_data):
         harrastushaku_location_id = location_data.get('id')
-        harrastushaku_location_mapped_id = self.mapped_harrastushaku_locations.get(harrastushaku_location_id)
+        harrastushaku_location_mapped_id = self.location_id_to_place_id.get(harrastushaku_location_id)
 
         if harrastushaku_location_mapped_id.startswith(self.tprek_data_source.id):
             return
