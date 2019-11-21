@@ -179,6 +179,14 @@ def get_event_name(event):
             return names[0]
 
 
+def parse_age_range(secondary_headline):
+    return secondary_headline
+
+
+def parse_course_time(secondary_headline):
+    return secondary_headline
+
+
 @register_importer
 class KulkeImporter(Importer):
     name = "kulke"
