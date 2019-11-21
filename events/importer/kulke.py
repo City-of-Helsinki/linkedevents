@@ -180,7 +180,15 @@ def get_event_name(event):
 
 
 def parse_age_range(secondary_headline):
-    return secondary_headline
+    pattern = r'^(\d{1,2}).(\d{1,2}).v.+$'
+    match = re.match(pattern, secondary_headline)
+
+    if match:
+        age_range_in_string = match.groups()
+        age_range = (int(age_range_in_string[0]), int(age_range_in_string[1]))
+        return age_range
+    else:
+        return (None, None)
 
 
 def parse_course_time(secondary_headline):
