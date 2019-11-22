@@ -180,7 +180,7 @@ def get_event_name(event):
 
 
 def parse_age_range(secondary_headline):
-    pattern = r'^(\d{1,2}).(\d{1,2}).v.+$'
+    pattern = r'^\D*(\d{1,2}).(\d{1,2}).[v.|år].+$'
     match = re.match(pattern, secondary_headline)
 
     if match:
