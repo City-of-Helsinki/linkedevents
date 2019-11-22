@@ -185,9 +185,9 @@ def parse_age_range(secondary_headline):
     match = re.match(pattern, secondary_headline)
 
     if match:
-        age_range_in_string = match.groups()
-        age_range = (int(age_range_in_string[0]), int(age_range_in_string[1]))
-        return age_range
+        beginning_age = int(match.groups()[0])
+        end_age = int(match.groups()[1])
+        return (beginning_age, end_age)
     else:
         return (None, None)
 
