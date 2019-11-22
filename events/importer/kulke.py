@@ -193,14 +193,14 @@ def parse_age_range(secondary_headline):
 
 
 def parse_course_time(secondary_headline):
-    pattern = r'^.*klo?\s(\d{1,2})\.(\d{1,2}).(\d{1,2})\.(\d{1,2})*$'
+    pattern = r'^.*klo?\s(\d{1,2})\.?(\d{1,2})?.(\d{1,2})\.?(\d{1,2})?.*$'
     match = re.match(pattern, secondary_headline)
 
     if match:
         course_time_beginning_hour = int(match.groups()[0])
-        course_time_beginning_minute = int(match.groups()[1])
+        course_time_beginning_minute = int(match.groups()[1]) if match.groups()[1] else 0
         course_time_end_hour = int(match.groups()[2])
-        course_time_end_minute = int(match.groups()[3])
+        course_time_end_minute = int(match.groups()[3]) if match.groups()[3] else 0
         course_time_beginning = time(hour=course_time_beginning_hour, minute=course_time_beginning_minute)
         course_time_end = time(hour=course_time_end_hour, minute=course_time_end_minute)
         return (course_time_beginning, course_time_end)
