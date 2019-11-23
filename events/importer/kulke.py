@@ -477,8 +477,7 @@ class KulkeImporter(Importer):
         if not start_time.tzinfo:
             assert start_time.hour == 0 and start_time.minute == 0 and start_time.second == 0
             if course_time[0]:
-                start_time = start_time.replace(hour=course_time[0].hour)
-                start_time = start_time.replace(minute=course_time[0].minute)
+                start_time = start_time.replace(hour=course_time[0].hour, minute=course_time[0].minute)
                 start_time = start_time.astimezone(LOCAL_TZ)
                 event['has_start_time'] = True
             else:
@@ -494,8 +493,7 @@ class KulkeImporter(Importer):
             if not end_time.tzinfo:
                 assert end_time.hour == 0 and end_time.minute == 0 and end_time.second == 0
                 if course_time[1]:
-                    end_time = end_time.replace(hour=course_time[1].hour)
-                    end_time = end_time.replace(minute=course_time[1].minute)
+                    end_time = end_time.replace(hour=course_time[1].hour, minute=course_time[1].minute)
                     end_time = end_time.astimezone(LOCAL_TZ)
                     event['has_end_time'] = True
 
