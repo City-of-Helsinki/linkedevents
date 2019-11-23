@@ -393,6 +393,12 @@ class KulkeImporter(Importer):
         event['headline'][lang] = title
         event['secondary_headline'][lang] = subtitle
         name = make_event_name(title, subtitle)
+
+        age_range = parse_age_range(subtitle)
+
+        event['audience_min_age'] = age_range[0]
+        event['audience_max_age'] = age_range[1]
+
         # kulke strings may be in other supported languages
         if name:
             Importer._set_multiscript_field(name, event, [lang] + self.languages_to_detect, 'name')
