@@ -19,7 +19,7 @@ services:
             context: ./
             dockerfile: ./docker/django/Dockerfile
         command: ["./docker/wait-for-it.sh", "--host=postgres", "--port=5432", "--strict", "--timeout=10", "--",
-                  "python", "manage.py", "runserver", "0.0.0.0:8000"]
+                  "python", "manage.py", "local_development_environment"]
         environment:
             - DATABASE_URL=postgres://linkedevents:linkedevents@linkedevents-db/linkedevents
             - PYTHONUNBUFFERED=true
