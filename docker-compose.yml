@@ -1,0 +1,4 @@
+# base configuration
+# https://docs.docker.com/compose/extends/#multiple-compose-files
+
+version: '3.7'
