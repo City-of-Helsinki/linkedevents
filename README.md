@@ -45,16 +45,6 @@ If all you want is a barebone application to work with for your own city:
   docker-compose up
   ```
 
-* Apply database migrations:
-  ```
-  docker-compose exec django python manage.py migrate
-  ```
-
-* Syncronize languages for translations in database:
-  ```
-  docker-compose exec django python manage.py sync_translation_fields --noinput
-  ```
-
 * Access application on [localhost:8000](http://localhost:8000)
 
 * You are done 🔥
