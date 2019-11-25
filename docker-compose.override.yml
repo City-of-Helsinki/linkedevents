@@ -21,7 +21,9 @@ services:
         command: ["./docker/wait-for-it.sh", "--host=postgres", "--port=5432", "--strict", "--timeout=10", "--",
                   "python", "manage.py", "runserver", "0.0.0.0:8000"]
         environment:
-            DATABASE_URL: postgres://linkedevents:linkedevents@linkedevents-db/linkedevents
+            - DATABASE_URL=postgres://linkedevents:linkedevents@linkedevents-db/linkedevents
+            - PYTHONUNBUFFERED=true
+            - PYTHONDONTWRITEBYTECODE=true
         volumes:
             - .:/code
             - django-media-volume:/var/media/
