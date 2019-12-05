@@ -184,7 +184,7 @@ def parse_age_range(secondary_headline):
     if not isinstance(secondary_headline, str):
         return (None, None)
 
-    pattern = r'^\D*(\d{1,2}).(\d{1,2}).[v.|år].+$'
+    pattern = r'^\D*(\d{1,2}).(\d{1,2}).(v|år).+$'
     match = re.match(pattern, secondary_headline)
 
     if match:
