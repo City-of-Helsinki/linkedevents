@@ -30,7 +30,7 @@ Please keep this file up to date and document the new importers or update curren
   * [What is it?](#what-is-it-5)
   * [What depends on it?](#what-depends-on-it-5)
   * [How to use it?](#how-to-use-it-5)
-* [add_helfi_topics (To be deprecated)](#add_helfi_topics-to-be-deprecated)
+* [add_helsinki_topics](#add_helsinki_topics)
   * [What is it?](#what-is-it-6)
   * [What depends on it?](#what-depends-on-it-6)
   * [How to use it?](#how-to-use-it-6)
@@ -210,27 +210,25 @@ Concepts defined in `NEW_SOTE_KEYWORDS_DATA` were not found in YSO, and therefor
 
 Creates a Helsinki audience keywords set into the database.
 
-## add_helfi_topics (To be deprecated)
+## add_helsinki_topics
 
 ### What is it?
 
-*add_helfi_topics* is a django management command for creating a set of *topics* keywords in the database which is then exposed through `/keyword_set` endpoint.
+*add_helsinki_topics* is a django management command for creating a set of *topics* keywords in the database which is then exposed through `/keyword_set` endpoint.
 
-Basic example would be an event in which they would talk about daycare for families and housing.
+Basic example would be an event in which they would talk about welfare.
 
-"Daycare and education" and "Housing and environment" are keywords that the event creator would pick from the choices in the *topics* keywords set created by this command.
+"Discussion" and "Welfare" are keywords that the event creator would pick from the choices in the *topics* keywords set created by this command.
 
 ### What depends on it?
-All the topics created by this command are hardcoded manually in [add_helfi_topics.py](./events/management/commands/add_helfi_topics.py).
-However, all of the keywords are also available in YSO as concepts, and therefore the plan is to use
-YSO concepts and deprecate this command in favor of `add_yso_topics` command which would add hand-picked YSO concepts to the keyword set.
+All the topics used by this command are existing YSO concepts, hand-picked in [add_helsinki_topics.py](./events/management/commands/add_helsinki_topics.py).
 
 If you're running the [Linked Events UI](https://github.com/City-of-Helsinki/linkedevents-ui),
 you need this command as the UI needs to show a list of event *topics* keywords for the event creator to choose for the event they would like to create.
 
 ### How to use it?
   ```bash
-  python manage.py add_helfi_topics
+  python manage.py add_helsinki_topics
   ```
 
 Creates a Helsinki topic keywords set into the database.
