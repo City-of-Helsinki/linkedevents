@@ -3,7 +3,7 @@ from functools import lru_cache
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from events.models import Event, Keyword, KeywordSet, DataSource
+from events.models import Keyword, KeywordSet, DataSource
 
 HELSINKI_KEYWORD_SET_DATA = {
     'id': 'helsinki:topics',
@@ -15,27 +15,28 @@ HELSINKI_KEYWORD_SET_DATA = {
 }
 
 HELSINKI_KEYWORD_IDS = [
-    'yso:p1235', #elokuvat
-    'yso:p1947', #hyvinvointi
-    'yso:p14004', #keskustelu
-    'yso:p11185', #konsertit
-    'yso:p360', #kulttuuritapahtumat
-    'yso:p2739', #kuvataide
-    'yso:p316', #leikkiminen
-    'yso:p916', #liikunta
-    'yso:p15875', #luennot
-    'yso:p1808', #musiikki
-    'yso:p5121', #näyttelyt
-    'yso:p2149', #opastus
-    'yso:p10727', #osallistuminen
-    'yso:p6062', #pelit
-    'yso:p3670', #ruoka
-    'yso:p1278', #tanssi
-    'yso:p2625', #teatteritaide
-    'yso:p19245', #työpajat
-    'yso:p2771', #ulkoilu
-    'yso:p965' #urheilu
+    'yso:p1235',  # elokuvat
+    'yso:p1947',  # hyvinvointi
+    'yso:p14004',  # keskustelu
+    'yso:p11185',  # konsertit
+    'yso:p360',  # kulttuuritapahtumat
+    'yso:p2739',  # kuvataide
+    'yso:p316',  # leikkiminen
+    'yso:p916',  # liikunta
+    'yso:p15875',  # luennot
+    'yso:p1808',  # musiikki
+    'yso:p5121',  # näyttelyt
+    'yso:p2149',  # opastus
+    'yso:p10727',  # osallistuminen
+    'yso:p6062',  # pelit
+    'yso:p3670',  # ruoka
+    'yso:p1278',  # tanssi
+    'yso:p2625',  # teatteritaide
+    'yso:p19245',  # työpajat
+    'yso:p2771',  # ulkoilu
+    'yso:p965'  # urheilu
 ]
+
 
 class Command(BaseCommand):
     help = "Creates Helsinki topics keyword set."
