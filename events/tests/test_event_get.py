@@ -140,8 +140,8 @@ def test_get_event_list_verify_keyword_filter(api_client, keyword, event):
 @pytest.mark.django_db
 def test_get_event_list_verify_division_filter(api_client, event, event2, event3, administrative_division,
                                                administrative_division2):
-    event.location.divisions = [administrative_division]
-    event2.location.divisions = [administrative_division2]
+    event.location.divisions.set([administrative_division])
+    event2.location.divisions.set([administrative_division2])
 
     # filter using one value
     response = get_list(api_client, data={'division': administrative_division.ocd_id})
