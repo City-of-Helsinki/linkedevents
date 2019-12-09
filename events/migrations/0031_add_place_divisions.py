@@ -10,10 +10,10 @@ def forwards_func(apps, schema_editor):
     AdministrativeDivision = apps.get_model('munigeo', 'AdministrativeDivision')
 
     for place in Place.geo_objects.filter(position__isnull=False):
-        place.divisions = AdministrativeDivision.objects.filter(
+        place.divisions.set(AdministrativeDivision.objects.filter(
             type__type__in=('district', 'sub_district', 'neighborhood', 'muni'),
             geometry__boundary__contains=place.position
-        )
+        ))
 
 
 class Migration(migrations.Migration):
