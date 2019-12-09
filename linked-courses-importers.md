@@ -32,6 +32,10 @@ This documentation is written to help you decide what to use if you'd like to se
   * [What is it?](#what-is-it-5)
   * [What depends on it?](#what-depends-on-it-5)
   * [How to use it?](#how-to-use-it-5)
+* [harrastushaku](#harrastushaku)
+  * [What is it?](#what-is-it-6)
+  * [What depends on it?](#what-depends-on-it-6)
+  * [How to use it?](#how-to-use-it-6)
 
 <!-- vim-markdown-toc -->
 
@@ -247,3 +251,24 @@ If you'd like to have courses organized by City of Helsinki cultural centers in 
 Imports all courses organized by City of Helsinki cultural centers into the database.
 
 This is scheduled to run `hourly` on the instance as data changes often.
+
+## harrastushaku
+
+### What is it?
+
+*Harrastushaku* is an importer which imports *courses* from [Harrastushaku](https://nk.hel.fi/harrastushaku/) website.
+
+### What depends on it?
+If you'd like to have courses from Harrastushaku website, you need this importer.
+
+### How to use it?
+First, you need to import Harrastushaku locations:
+  ```bash
+  python manage.py event_import harrastushaku --places
+  ```
+Then, you can import Harrastushaku courses:
+  ```bash
+  python manage.py event_import harrastushaku --courses
+  ```
+
+Imports all courses from Harrastushaku website into the database.

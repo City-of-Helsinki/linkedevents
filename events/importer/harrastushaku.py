@@ -73,16 +73,17 @@ class HarrastushakuImporter(Importer):
     def import_places(self):
         """Import Harrastushaku locations as Places
 
-        - If a place in Harrastushaku has "tprek_id" set, assume it is a place that
-          comes from Toimipisterekisteri and don't import it from Harrastushaku.
+        - If we can find a close-enough match for the location object coming from Harrastushaku in Toimipisterekisteri,
+          we do not import that location object, as this this will cause duplicate location issue due to
+          Harrastushaku data being of low quality.
 
-        - If a place in Harrastushaku does not have "tprek_id", it will be
-          imported having data source "harrastushaku".
+        - If, however, we cannot find a match, location object will be imported with data source "harrastushaku".
         """
         logger.info('Importing places...')
 
         locations = self.fetch_locations()
         logger.debug('Handling {} locations...'.format(len(locations)))
+        self.location_id_to_place_id = self.map_harrastushaku_location_ids_to_tprek_ids(locations)
 
         for location in locations:
             try:
@@ -90,6 +91,48 @@ class HarrastushakuImporter(Importer):
             except Exception as e:  # noqa
                 message = e if isinstance(e, HarrastushakuException) else traceback.format_exc()
                 logger.error('Error handling location {}: {}'.format(location.get('id'), message))
+
+    def map_harrastushaku_location_ids_to_tprek_ids(self, harrastushaku_locations):
+        '''
+        Example mapped dictionary result:
+        {
+            '95': 'harrastushaku:95',
+            '953': 'harrastushaku:953',
+            '968': 'tprek:20479',
+            '97': 'tprek:8062',
+            '972': 'tprek:9079',
+            '987': 'harrastushaku:987',
+            '99': 'tprek:8064',
+        }
+        '''
+        result = dict()
+
+        for harrastushaku_location in harrastushaku_locations:
+            harrastushaku_location_id = harrastushaku_location['id']
+
+            strict_filters = {
+                'id__startswith': self.tprek_data_source,
+                'name': harrastushaku_location['name'],
+                'address_locality': harrastushaku_location['city'],
+                'postal_code': harrastushaku_location['zip'],
+                'street_address': harrastushaku_location['address'],
+            }
+            flexible_filters = {
+                'id__startswith': self.tprek_data_source,
+                'address_locality': harrastushaku_location['city'],
+                'postal_code': harrastushaku_location['zip'],
+                'street_address': harrastushaku_location['address'],
+            }
+
+            tprek_place = (Place.objects.filter(**strict_filters).first() or
+                           Place.objects.filter(**flexible_filters).first())
+
+            if tprek_place:
+                result[harrastushaku_location_id] = tprek_place.id
+            else:
+                result[harrastushaku_location_id] = '{}:{}'.format(self.data_source.id, harrastushaku_location_id)
+
+        return result
 
     def import_courses(self):
         """Import Harrastushaku activities as Courses
@@ -144,12 +187,7 @@ class HarrastushakuImporter(Importer):
             logger.warning('No location data fetched, aborting course import.')
             return
 
-        self.location_id_to_place_id = {
-            l['id']: '{}:{}'.format(self.tprek_data_source.id, l['tpr_id'])
-            if l.get('tpr_id')
-            else '{}:{}'.format(self.data_source.id, l['id'])
-            for l in locations
-        }
+        self.location_id_to_place_id = self.map_harrastushaku_location_ids_to_tprek_ids(locations)
 
         activities = self.fetch_courses()
         if not activities:
@@ -209,13 +247,13 @@ class HarrastushakuImporter(Importer):
 
     @transaction.atomic
     def handle_location(self, location_data):
-        tprek_id = location_data.get('tpr_id')
-        if tprek_id:
-            if tprek_id in self.tprek_ids:
-                return
-            logger.warning("Place with Toimipisterekisteri ID {} doesn't exist.".format(tprek_id))
+        harrastushaku_location_id = location_data.get('id')
+        harrastushaku_location_mapped_id = self.location_id_to_place_id.get(harrastushaku_location_id)
 
-        self.handle_non_tprek_location(location_data)
+        if harrastushaku_location_mapped_id.startswith(self.tprek_data_source.id):
+            return
+        else:
+            self.handle_non_tprek_location(location_data)
 
     def handle_non_tprek_location(self, location_data):
         get_string = bind_data_getters(location_data)[0]
