@@ -629,14 +629,6 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         return instance
 
     def update(self, instance, validated_data):
-        if isinstance(self.user, ApiKeyUser):
-            # allow updating only if the api key matches instance data source
-            if not instance.data_source == self.data_source:
-                raise PermissionDenied()
-        else:
-            # without api key, the user will have to be admin
-            if not instance.is_user_editable() or not instance.can_be_edited_by(self.user):
-                raise PermissionDenied()
         validated_data['last_modified_by'] = self.user
 
         if 'id' in validated_data:
