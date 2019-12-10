@@ -1,1 +1,27 @@
+#################################################
+# Exclude all by default
+#################################################
 *
+
+#################################################
+# Whitelisted folders
+#################################################
+!events*
+!extension_course*
+!helcourses*
+!helevents*
+!linkedevents*
+!locale*
+!multilingual_haystack*
+!templates*
+
+#################################################
+# Whitelisted files
+#################################################
+!.django_secret
+!config_dev.toml
+!local_settings.py
+!manage.py
+!pytest.ini
+!requirements*
+!setup.cfg
