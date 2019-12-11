@@ -12,3 +12,5 @@ RUN pip install --no-cache-dir \
     -r /app/requirements-prod.txt
 
 COPY --chown=appuser:appuser . /app/
+
+ENTRYPOINT ["/app/docker/django/docker-entrypoint.sh"]
