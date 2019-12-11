@@ -64,7 +64,9 @@ class DataSource(models.Model):
     id = models.CharField(max_length=100, primary_key=True)
     name = models.CharField(verbose_name=_('Name'), max_length=255)
     api_key = models.CharField(max_length=128, blank=True, default='')
-    owner = models.ForeignKey('django_orghierarchy.Organization', related_name='owned_systems', null=True, blank=True)
+    owner = models.ForeignKey(
+        'django_orghierarchy.Organization', on_delete=models.CASCADE,
+        related_name='owned_systems', null=True, blank=True)
     user_editable = models.BooleanField(default=False, verbose_name=_('Objects may be edited by users'))
 
     def __str__(self):
@@ -128,20 +130,24 @@ class Image(models.Model):
     # Properties from schema.org/Thing
     name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True, default='')
 
-    data_source = models.ForeignKey(DataSource, related_name='provided_%(class)s_data', db_index=True, null=True)
+    data_source = models.ForeignKey(
+        DataSource, on_delete=models.CASCADE, related_name='provided_%(class)s_data', db_index=True, null=True)
     publisher = models.ForeignKey(
-        'django_orghierarchy.Organization', verbose_name=_('Publisher'), db_index=True, null=True, blank=True,
-        related_name='Published_images')
+        'django_orghierarchy.Organization', on_delete=models.CASCADE, verbose_name=_('Publisher'),
+        db_index=True, null=True, blank=True, related_name='Published_images')
 
     created_time = models.DateTimeField(auto_now_add=True)
     last_modified_time = models.DateTimeField(auto_now=True, db_index=True)
-    created_by = models.ForeignKey(User, null=True, blank=True, related_name='EventImage_created_by')
-    last_modified_by = models.ForeignKey(User, related_name='EventImage_last_modified_by', null=True, blank=True)
+    created_by = models.ForeignKey(
+        User, on_delete=models.CASCADE, null=True, blank=True, related_name='EventImage_created_by')
+    last_modified_by = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='EventImage_last_modified_by', null=True, blank=True)
 
     image = models.ImageField(upload_to='images', null=True, blank=True)
     url = models.URLField(verbose_name=_('Image'), max_length=400, null=True, blank=True)
     cropping = ImageRatioField('image', '800x800', verbose_name=_('Cropping'))
-    license = models.ForeignKey(License, verbose_name=_('License'), related_name='images', default='cc_by')
+    license = models.ForeignKey(
+        License, on_delete=models.CASCADE, verbose_name=_('License'), related_name='images', default='cc_by')
     photographer_name = models.CharField(verbose_name=_('Photographer name'), max_length=255, null=True, blank=True)
 
     def save(self, *args, **kwargs):
@@ -184,7 +190,8 @@ class BaseModel(models.Model):
     objects = BaseQuerySet.as_manager()
 
     id = models.CharField(max_length=100, primary_key=True)
-    data_source = models.ForeignKey(DataSource, related_name='provided_%(class)s_data', db_index=True)
+    data_source = models.ForeignKey(
+        DataSource, on_delete=models.CASCADE, related_name='provided_%(class)s_data', db_index=True)
 
     # Properties from schema.org/Thing
     name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True)
@@ -196,10 +203,10 @@ class BaseModel(models.Model):
     last_modified_time = models.DateTimeField(null=True, blank=True, auto_now=True, db_index=True)
 
     created_by = models.ForeignKey(
-        User, null=True, blank=True,
+        User, on_delete=models.CASCADE, null=True, blank=True,
         related_name="%(app_label)s_%(class)s_created_by")
     last_modified_by = models.ForeignKey(
-        User, null=True, blank=True,
+        User, on_delete=models.CASCADE, null=True, blank=True,
         related_name="%(app_label)s_%(class)s_modified_by")
 
     @staticmethod
@@ -233,7 +240,7 @@ class Language(models.Model):
 
 class KeywordLabel(models.Model):
     name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True)
-    language = models.ForeignKey(Language, blank=False, null=False)
+    language = models.ForeignKey(Language, on_delete=models.CASCADE, blank=False, null=False)
 
     def __str__(self):
         return self.name + ' (' + str(self.language) + ')'
@@ -244,7 +251,8 @@ class KeywordLabel(models.Model):
 
 class Keyword(BaseModel, ImageMixin):
     publisher = models.ForeignKey(
-        'django_orghierarchy.Organization', verbose_name=_('Publisher'), db_index=True, null=True, blank=True,
+        'django_orghierarchy.Organization', on_delete=models.CASCADE, verbose_name=_('Publisher'),
+        db_index=True, null=True, blank=True,
         related_name='Published_keywords')
     alt_labels = models.ManyToManyField(KeywordLabel, blank=True, related_name='keywords')
     aggregate = models.BooleanField(default=False)
@@ -289,7 +297,7 @@ class KeywordSet(BaseModel, ImageMixin):
         (AUDIENCE, "audience"),
     )
     usage = models.SmallIntegerField(verbose_name=_('Intended keyword usage'), choices=USAGES, default=ANY)
-    organization = models.ForeignKey('django_orghierarchy.Organization',
+    organization = models.ForeignKey('django_orghierarchy.Organization', on_delete=models.CASCADE,
                                      verbose_name=_('Organization which uses this set'), null=True)
     keywords = models.ManyToManyField(Keyword, blank=False, related_name='sets')
 
@@ -298,10 +306,11 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin):
     objects = BaseTreeQuerySet.as_manager()
     geo_objects = objects
 
-    publisher = models.ForeignKey('django_orghierarchy.Organization', verbose_name=_('Publisher'), db_index=True)
+    publisher = models.ForeignKey(
+        'django_orghierarchy.Organization', on_delete=models.CASCADE, verbose_name=_('Publisher'), db_index=True)
     info_url = models.URLField(verbose_name=_('Place home page'), null=True, blank=True, max_length=1000)
     description = models.TextField(verbose_name=_('Description'), null=True, blank=True)
-    parent = TreeForeignKey('self', null=True, blank=True,
+    parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, blank=True,
                             related_name='children')
 
     position = models.PointField(srid=settings.PROJECTION_SRID, null=True,
@@ -319,7 +328,7 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin):
     address_country = models.CharField(verbose_name=_('Country'), max_length=2, null=True, blank=True)
 
     deleted = models.BooleanField(verbose_name=_('Deleted'), default=False)
-    replaced_by = models.ForeignKey('Place', related_name='aliases', null=True)
+    replaced_by = models.ForeignKey('Place', on_delete=models.CASCADE, related_name='aliases', null=True)
     divisions = models.ManyToManyField(AdministrativeDivision, verbose_name=_('Divisions'), related_name='places',
                                        blank=True)
     n_events = models.IntegerField(
@@ -386,7 +395,7 @@ class OpeningHoursSpecification(models.Model):
         (5, "Friday"), (6, "Saturday"), (7, "Sunday"), (8, "PublicHolidays")
     )
 
-    place = models.ForeignKey(Place, db_index=True,
+    place = models.ForeignKey(Place, on_delete=models.CASCADE, db_index=True,
                               related_name='opening_hours')
     opens = models.TimeField(null=True, blank=True)
     closes = models.TimeField(null=True, blank=True)
@@ -585,7 +594,7 @@ def keyword_added_or_removed(sender, model=None,
 
 
 class Offer(models.Model, SimpleValueMixin):
-    event = models.ForeignKey(Event, db_index=True, related_name='offers')
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, db_index=True, related_name='offers')
     price = models.CharField(verbose_name=_('Price'), blank=True, max_length=1000)
     info_url = models.URLField(verbose_name=_('Web link to offer'), blank=True, null=True, max_length=1000)
     description = models.TextField(verbose_name=_('Offer description'), blank=True, null=True)
@@ -602,8 +611,8 @@ reversion.register(Offer)
 
 class EventLink(models.Model, SimpleValueMixin):
     name = models.CharField(verbose_name=_('Name'), max_length=100, blank=True)
-    event = models.ForeignKey(Event, db_index=True, related_name='external_links')
-    language = models.ForeignKey(Language)
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, db_index=True, related_name='external_links')
+    language = models.ForeignKey(Language, on_delete=models.CASCADE)
     link = models.URLField()
 
     class Meta:
@@ -620,7 +629,7 @@ class ExportInfo(models.Model):
                                      blank=True)
     last_exported_time = models.DateTimeField(null=True, blank=True)
 
-    content_type = models.ForeignKey(ContentType)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.CharField(max_length=50)
     content_object = GenericForeignKey('content_type', 'object_id')
 
@@ -633,9 +642,9 @@ class ExportInfo(models.Model):
 
 
 class EventAggregate(models.Model):
-    super_event = models.OneToOneField(Event, related_name='aggregate', null=True)
+    super_event = models.OneToOneField(Event, on_delete=models.CASCADE, related_name='aggregate', null=True)
 
 
 class EventAggregateMember(models.Model):
-    event_aggregate = models.ForeignKey(EventAggregate, related_name='members')
-    event = models.OneToOneField(Event)
+    event_aggregate = models.ForeignKey(EventAggregate, on_delete=models.CASCADE, related_name='members')
+    event = models.OneToOneField(Event, on_delete=models.CASCADE)
