@@ -16,11 +16,13 @@ services:
         build:
             context: ./
             dockerfile: ./docker/django/Dockerfile
-        command: python manage.py runserver 0.0.0.0:8000
         environment:
-            DATABASE_URL: postgres://linkedevents:linkedevents@linkedevents-db/linkedevents
+            - DATABASE_URL=postgres://linkedevents:linkedevents@linkedevents-db/linkedevents
+            - APPLY_MIGRATIONS=1
+            - DEV_SERVER=1
+
         volumes:
-            - .:/code
+            - .:/app
             - django-media-volume:/var/media/
         ports:
             - "8000:8000"
