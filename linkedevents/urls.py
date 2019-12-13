@@ -1,4 +1,4 @@
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.conf.urls import url, include
 from django.views.generic import RedirectView
 

@@ -18,7 +18,7 @@ from django.utils import translation
 from django.core.exceptions import PermissionDenied
 from django.db.utils import IntegrityError
 from django.conf import settings
-from django.core.urlresolvers import NoReverseMatch
+from django.urls import NoReverseMatch
 from django.db.models import Q
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
