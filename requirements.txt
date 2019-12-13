@@ -89,4 +89,4 @@ wrapt==1.11.2             # via astroid
 zipp==0.5.2               # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
-# setuptools==41.6.0        # via djangorestframework-bulk, markdown, pytest
+# setuptools
