@@ -3,7 +3,6 @@ django-allauth
 django-cleanup
 django-cors-headers
 django-environ
-django-extensions
 django-filter<2.0
 django-haystack
 django-helusers
@@ -21,7 +20,6 @@ djangorestframework-gis
 djangorestframework-jwt
 easy_thumbnails
 elasticsearch<5.0
-flake8
 httmock
 icalendar
 isodate
@@ -29,13 +27,8 @@ langdetect
 lxml
 markdown
 pillow
-pip-tools
 psycopg2-binary<2.8
 pyYAML
-pyflakes
-pylint
-pytest-django
-pytest<4.0
 python-dateutil
 python-docx
 pytz
