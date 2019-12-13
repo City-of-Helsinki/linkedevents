@@ -19,7 +19,7 @@ addons:
 
 install:
 - pip install --upgrade pip
-- pip install codecov pytest-cov -r requirements.txt
+- pip install codecov pytest-cov -r requirements.txt -r requirements-dev.txt
 
 before_script:
 - psql template1 -c 'create extension hstore;'
