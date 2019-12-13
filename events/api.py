@@ -19,7 +19,7 @@ from django.core.exceptions import PermissionDenied
 from django.db.utils import IntegrityError
 from django.conf import settings
 from django.core.urlresolvers import NoReverseMatch
-from django.db.models import Q
+from django.db.models import Q, QuerySet
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 from django.utils.encoding import force_text
@@ -494,11 +494,18 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         self.data_source, self.publisher = get_authenticated_data_source_and_publisher(self.request)
         if not self.publisher:
             raise PermissionDenied(_("User doesn't belong to any organization"))
-        if instance:
-            # in case of bulk operations, the instance may be a queryset
-            # in that case, permission is denied if *any* object in the queryset may not be edited
-            if not instance.is_user_editable() or not instance.can_be_edited_by(self.user):
-                raise PermissionDenied()
+        # in case of bulk operations, the instance may be a huge queryset, already filtered by permission
+        # therefore, we only do permission checks at the single instance level
+        if not isinstance(instance, QuerySet) and instance:
+            # check permissions *before* validation
+            if isinstance(self.user, ApiKeyUser):
+                # allow updating only if the api key matches instance data source
+                if not instance.data_source == self.data_source:
+                    raise PermissionDenied()
+            else:
+                # without api key, the user will have to be admin
+                if not instance.is_user_editable() or not instance.can_be_edited_by(self.user):
+                    raise PermissionDenied()
 
     def to_internal_value(self, data):
         for field in self.system_generated_fields:
@@ -622,14 +629,6 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         return instance
 
     def update(self, instance, validated_data):
-        if isinstance(self.user, ApiKeyUser):
-            # allow updating only if the api key matches instance data source
-            if not instance.data_source == self.data_source:
-                raise PermissionDenied()
-        else:
-            # without api key, the user will have to be admin
-            if not instance.is_user_editable() or not instance.can_be_edited_by(self.user):
-                raise PermissionDenied()
         validated_data['last_modified_by'] = self.user
 
         if 'id' in validated_data:
