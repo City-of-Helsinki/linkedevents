@@ -11,6 +11,8 @@ fi
 if [[ "$APPLY_MIGRATIONS" = "true" ]]; then
     echo "Applying database migrations..."
     ./manage.py migrate --noinput
+    echo "Applying sync_translation_fields migrations..."
+    ./manage.py sync_translation_fields --noinput
 fi
 
 
