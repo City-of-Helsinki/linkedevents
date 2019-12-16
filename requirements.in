@@ -3,7 +3,7 @@ django-allauth
 django-cleanup
 django-cors-headers
 django-environ
-django-filter<2.0
+django-filter>=2.1.0
 django-haystack
 django-helusers
 django-image-cropping

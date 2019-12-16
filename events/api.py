@@ -869,7 +869,7 @@ class PlaceSerializer(LinkedEventsSerializer, GeoModelSerializer):
 
 
 class PlaceFilter(django_filters.rest_framework.FilterSet):
-    division = django_filters.Filter(name='divisions', lookup_expr='in',
+    division = django_filters.Filter(field_name='divisions', lookup_expr='in',
                                      widget=django_filters.widgets.CSVWidget(),
                                      method='filter_division')
 
@@ -909,7 +909,7 @@ class PlaceListViewSet(JSONAPIViewMixin, GeoModelAPIView,
     queryset = queryset.select_related('publisher')
     serializer_class = PlaceSerializer
     filter_backends = (django_filters.rest_framework.DjangoFilterBackend, filters.OrderingFilter)
-    filter_class = PlaceFilter
+    filterset_class = PlaceFilter
     ordering_fields = ('n_events', 'id', 'name', 'data_source', 'street_address', 'postal_code')
     ordering = ('-n_events', '-data_source', 'name')  # we want to display tprek before osoite etc.
 
@@ -1723,13 +1723,13 @@ def in_or_null_filter(field_name, queryset, name, value):
 
 
 class EventFilter(django_filters.rest_framework.FilterSet):
-    division = django_filters.Filter(name='location__divisions',
+    division = django_filters.Filter(field_name='location__divisions',
                                      widget=django_filters.widgets.CSVWidget(),
                                      method=filter_division)
-    super_event_type = django_filters.Filter(name='super_event_type',
+    super_event_type = django_filters.Filter(field_name='super_event_type',
                                              widget=django_filters.widgets.CSVWidget(),
                                              method=partial(in_or_null_filter, 'super_event_type'))
-    super_event = django_filters.Filter(name='super_event',
+    super_event = django_filters.Filter(field_name='super_event',
                                         widget=django_filters.widgets.CSVWidget(),
                                         method=partial(in_or_null_filter, 'super_event'))
 
@@ -1755,7 +1755,7 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
     serializer_class = EventSerializer
     filter_backends = (EventOrderingFilter, django_filters.rest_framework.DjangoFilterBackend,
                        EventExtensionFilterBackend)
-    filter_class = EventFilter
+    filterset_class = EventFilter
     ordering_fields = ('start_time', 'end_time', 'duration', 'last_modified_time', 'name')
     ordering = ('-last_modified_time',)
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES + [DOCXRenderer]
