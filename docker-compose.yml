@@ -3,7 +3,9 @@ version: '3.7'
 services:
 
     postgres:
-        build: ./docker/postgres/
+        build:
+            context: ./
+            dockerfile: ./docker/postgres/Dockerfile
         environment:
             POSTGRES_USER: linkedevents
             POSTGRES_PASSWORD: linkedevents
