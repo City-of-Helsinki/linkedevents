@@ -10,7 +10,7 @@ django-image-cropping
 django-leaflet
 django-modeltranslation
 django-mptt<0.9
-django-munigeo<0.3
+django-munigeo>=0.2.23,<0.3
 django-orghierarchy
 django-reversion
 django<2.0
