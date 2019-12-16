@@ -3,7 +3,7 @@ django-environ
 Markdown
 PyYAML
 django-cors-headers
-django-filter<2.0
+django-filter>=2.1.0
 django-modeltranslation
 django-mptt<0.9
 django-reversion
