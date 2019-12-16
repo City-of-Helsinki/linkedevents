@@ -42,5 +42,5 @@ django-allauth
 django-leaflet
 djangorestframework-bulk
 python-docx
-django-orghierarchy
+django-orghierarchy>=0.1.21
 langdetect
