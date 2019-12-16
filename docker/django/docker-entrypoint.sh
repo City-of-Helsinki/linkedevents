@@ -4,7 +4,7 @@ set -e
 
 
 if [[ "$WAIT_FOR_IT_ADDRESS" ]]; then
-    wait-for-it.sh $WAIT_FOR_IT_ADDRESS --timeout=10
+    wait-for-it.sh $WAIT_FOR_IT_ADDRESS --timeout=30
 fi
 
 
