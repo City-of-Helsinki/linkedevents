@@ -35,7 +35,7 @@ djangorestframework-jwt==1.11.0
 djangorestframework==3.9.4
 drf-oidc-auth==0.9        # via django-helusers
 easy-thumbnails==2.6
-ecdsa==0.13.3             # via python-jose
+ecdsa==0.14.1             # via python-jose
 elasticsearch==2.4.1
 entrypoints==0.3          # via flake8
 flake8==3.7.7
@@ -70,7 +70,7 @@ pytest-django==3.5.1
 pytest==3.10.1
 python-dateutil==2.8.0
 python-docx==0.8.10
-python-jose==3.0.1        # via django-helusers
+python-jose==3.1.0        # via django-helusers
 python3-openid==3.1.0     # via django-allauth
 pytz==2019.1
 pyyaml==5.1.1
