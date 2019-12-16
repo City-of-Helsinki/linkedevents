@@ -22,7 +22,7 @@ requests-cache
 six
 django-extensions
 rdflib
-django-munigeo<0.3
+django-munigeo>=0.2.23,<0.3
 icalendar
 httmock
 bleach

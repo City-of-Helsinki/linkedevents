@@ -25,7 +25,7 @@ django-image-cropping==1.2.0
 django-leaflet==0.25.0
 django-modeltranslation==0.13.3
 django-mptt==0.8.7
-django-munigeo==0.2.21
+django-munigeo==0.2.23
 django-orghierarchy==0.1.20
 django-reversion==3.0.4
 django==1.11.23
@@ -89,4 +89,4 @@ wrapt==1.11.2             # via astroid
 zipp==0.5.2               # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
-# setuptools==41.6.0        # via djangorestframework-bulk, markdown, pytest
+# setuptools
