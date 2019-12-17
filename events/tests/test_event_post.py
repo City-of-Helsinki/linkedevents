@@ -85,6 +85,7 @@ def test__api_key_with_another_organization_can_create_an_event(api_client, mini
     assert_event_data_is_equal(minimal_event_dict, response.data)
     assert ApiKeyUser.objects.all().count() == 1
 
+    minimal_event_dict['publisher'] = organization2.id
     response = create_with_post(api_client, minimal_event_dict, other_data_source)
     assert_event_data_is_equal(minimal_event_dict, response.data)
     assert ApiKeyUser.objects.all().count() == 2

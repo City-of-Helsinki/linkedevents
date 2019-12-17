@@ -403,7 +403,7 @@ class TestEventAPI(APITestCase):
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
 
         url = reverse('event-detail', kwargs={'pk': self.event_3.id})
-        data = minimal_event_dict(self.data_source, self.org_1, location_id)
+        data = minimal_event_dict(self.data_source, self.org_3, location_id)
         data['publication_status'] = 'public'
         self.client.force_authenticate(self.user)
         response = self.client.put(url, data, format='json')
@@ -431,7 +431,7 @@ class TestEventAPI(APITestCase):
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
 
         url = reverse('event-detail', kwargs={'pk': self.event_5.id})
-        data = minimal_event_dict(self.data_source, self.org_1, location_id)
+        data = minimal_event_dict(self.data_source, self.org_4, location_id)
         data['publication_status'] = 'public'
         self.client.force_authenticate(self.user)
         response = self.client.put(url, data, format='json')
@@ -471,9 +471,11 @@ class TestEventAPI(APITestCase):
         data_2 = deepcopy(data_1)
         data_2['id'] = self.event_3.id  # sub-organization event
         data_2['name']['fi'] = 'event-3-changed'
+        data_2['publisher'] = self.org_3.id
         data_3 = deepcopy(data_1)
         data_3['id'] = self.event_5.id  # affiliated organization event
         data_3['name']['fi'] = 'event-5-changed'
+        data_3['publisher'] = self.org_4.id
 
         self.client.force_authenticate(self.user)
         response = self.client.put(url, [data_1, data_2, data_3], format='json')

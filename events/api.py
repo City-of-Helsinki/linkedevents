@@ -570,21 +570,26 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                 raise serializers.ValidationError(
                     {'data_source': _(
                         "Setting data_source to %(given)s " +
-                        " is not allowed for your organization. The data_source"
+                        " is not allowed for this user. The data_source"
                         " must be left blank or set to %(required)s ") %
                         {'given': str(value), 'required': self.data_source}})
         return value
 
     def validate_publisher(self, value):
         if value:
+            # user might be admin *or* regular user
             if value not in (set(self.user.get_admin_organizations_and_descendants())
                              | set(map(lambda x: getattr(x, 'replaced_by'),
-                                   self.user.get_admin_organizations_and_descendants()))):
+                                   self.user.get_admin_organizations_and_descendants()))
+                             | set(self.user.organization_memberships.all())
+                             | set(map(lambda x: getattr(x, 'replaced_by'),
+                                   self.user.organization_memberships.all()))):
                 raise serializers.ValidationError(
                     {'publisher': _(
                         "Setting publisher to %(given)s " +
-                        " is not allowed for your organization. The publisher" +
-                        " must be left blank or set to %(required)s or to any user's admin organization") %
+                        " is not allowed for this user. The publisher" +
+                        " must be left blank or set to %(required)s or any other organization"
+                        " the user belongs to.") %
                         {'given': str(value),
                          'required': str(self.publisher
                                          if not self.publisher.replaced_by
