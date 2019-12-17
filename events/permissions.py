@@ -43,6 +43,14 @@ class UserModelPermissionMixin:
             publication_status=PublicationStatus.DRAFT, publisher__in=self.organization_memberships.all()
         )
 
+    def get_admin_tree_ids(self):
+        # returns tree ids for all normal admin organizations and their replacements
+        admin_queryset = self.admin_organizations.filter(internal_type='normal').select_related('replaced_by')
+        admin_tree_ids = admin_queryset.values('tree_id')
+        admin_replaced_tree_ids = admin_queryset.filter(replaced_by__isnull=False).values('replaced_by__tree_id')
+        return (set(value['tree_id'] for value in admin_tree_ids) |
+                set(value['replaced_by__tree_id'] for value in admin_replaced_tree_ids))
+
     def get_admin_organizations_and_descendants(self):
         # returns admin organizations and their descendants
         if not self.admin_organizations.all():

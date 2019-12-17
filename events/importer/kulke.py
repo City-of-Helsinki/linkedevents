@@ -6,6 +6,7 @@ import functools
 from lxml import etree
 import logging
 import dateutil
+from datetime import time
 from pytz import timezone
 from django.conf import settings
 from django.core.validators import URLValidator
@@ -177,6 +178,40 @@ def get_event_name(event):
             return None
         else:
             return names[0]
+
+
+def parse_age_range(secondary_headline):
+    if not isinstance(secondary_headline, str):
+        return (None, None)
+
+    pattern = r'^\D*(\d{1,2}).(\d{1,2}).(v|år).*$'
+    match = re.match(pattern, secondary_headline)
+
+    if match:
+        beginning_age = int(match.groups()[0])
+        end_age = int(match.groups()[1])
+        return (beginning_age, end_age)
+    else:
+        return (None, None)
+
+
+def parse_course_time(secondary_headline):
+    if not isinstance(secondary_headline, str):
+        return (None, None)
+
+    pattern = r'^.*klo?\s(\d{1,2})([.:](\d{1,2}))?.(\d{1,2})([.:](\d{1,2}))?.*$'
+    match = re.match(pattern, secondary_headline)
+
+    if match:
+        course_time_beginning_hour = int(match.groups()[0])
+        course_time_beginning_minute = int(match.groups()[2]) if match.groups()[2] else 0
+        course_time_end_hour = int(match.groups()[3])
+        course_time_end_minute = int(match.groups()[5]) if match.groups()[5] else 0
+        course_time_beginning = time(hour=course_time_beginning_hour, minute=course_time_beginning_minute)
+        course_time_end = time(hour=course_time_end_hour, minute=course_time_end_minute)
+        return (course_time_beginning, course_time_end)
+    else:
+        return (None, None)
 
 
 @register_importer
@@ -358,6 +393,12 @@ class KulkeImporter(Importer):
         event['headline'][lang] = title
         event['secondary_headline'][lang] = subtitle
         name = make_event_name(title, subtitle)
+
+        age_range = parse_age_range(subtitle)
+
+        event['audience_min_age'] = age_range[0]
+        event['audience_max_age'] = age_range[1]
+
         # kulke strings may be in other supported languages
         if name:
             Importer._set_multiscript_field(name, event, [lang] + self.languages_to_detect, 'name')
@@ -427,24 +468,38 @@ class KulkeImporter(Importer):
         if provider:
             Importer._set_multiscript_field(provider, event, [lang]+self.languages_to_detect, 'provider')
 
+        course_time = parse_course_time(subtitle)
+
         start_time = dateutil.parser.parse(text('starttime'))
         # Start and end times are in GMT. Sometimes only dates are provided.
         # If it's just a date, tzinfo is None.
         # FIXME: Mark that time is missing somehow?
         if not start_time.tzinfo:
             assert start_time.hour == 0 and start_time.minute == 0 and start_time.second == 0
-            start_time = LOCAL_TZ.localize(start_time)
-            event['has_start_time'] = False
+            if course_time[0]:
+                start_time = start_time.replace(hour=course_time[0].hour, minute=course_time[0].minute)
+                start_time = start_time.astimezone(LOCAL_TZ)
+                event['has_start_time'] = True
+            else:
+                start_time = LOCAL_TZ.localize(start_time)
+                event['has_start_time'] = False
         else:
             start_time = start_time.astimezone(LOCAL_TZ)
             event['has_start_time'] = True
         event['start_time'] = start_time
+
         if text('endtime'):
             end_time = dateutil.parser.parse(text('endtime'))
             if not end_time.tzinfo:
                 assert end_time.hour == 0 and end_time.minute == 0 and end_time.second == 0
-                end_time = LOCAL_TZ.localize(end_time)
-                event['has_end_time'] = False
+                if course_time[1]:
+                    end_time = end_time.replace(hour=course_time[1].hour, minute=course_time[1].minute)
+                    end_time = end_time.astimezone(LOCAL_TZ)
+                    event['has_end_time'] = True
+
+                else:
+                    end_time = LOCAL_TZ.localize(end_time)
+                    event['has_end_time'] = False
             else:
                 end_time = end_time.astimezone(LOCAL_TZ)
                 event['has_end_time'] = True

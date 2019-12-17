@@ -173,7 +173,8 @@ def minimal_event_dict(data_source, organization, location_id):
                 'description': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
                 'info_url': {'en': URL, 'sv': URL, 'fi': URL}
             }
-        ]
+        ],
+        'publisher': organization.id
     }
 
 
@@ -384,6 +385,7 @@ def language_id(language):
 def complex_event_dict(data_source, organization, location_id, languages):
     return {
         'publisher': organization.id,
+        'data_source': data_source.id,
         'name': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
         'event_status': 'EventScheduled',
         'location': {'@id': location_id},

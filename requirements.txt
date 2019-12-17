@@ -22,8 +22,8 @@ django-filter==1.1.0
 django-haystack==2.8.1
 django-helusers==0.4.5
 django-image-cropping==1.2.0
-django-leaflet==0.24.0
-django-modeltranslation==0.13.2
+django-leaflet==0.25.0
+django-modeltranslation==0.13.3
 django-mptt==0.8.7
 django-munigeo==0.2.21
 django-orghierarchy==0.1.20
@@ -35,7 +35,7 @@ djangorestframework-jwt==1.11.0
 djangorestframework==3.9.4
 drf-oidc-auth==0.9        # via django-helusers
 easy-thumbnails==2.6
-ecdsa==0.13.2             # via python-jose
+ecdsa==0.14.1             # via python-jose
 elasticsearch==2.4.1
 entrypoints==0.3          # via flake8
 flake8==3.7.7
@@ -53,10 +53,10 @@ markdown==3.1.1
 mccabe==0.6.1             # via flake8, pylint
 more-itertools==7.1.0     # via pytest
 oauthlib==3.0.2           # via requests-oauthlib
-pillow==6.1.0
+pillow==6.2.0
 pip-tools==3.8.0
 pluggy==0.12.0            # via pytest
-psycopg2==2.7.7
+psycopg2-binary==2.7.7
 py==1.8.0                 # via pytest
 pyasn1==0.4.5             # via rsa
 pycodestyle==2.5.0        # via flake8
@@ -70,7 +70,7 @@ pytest-django==3.5.1
 pytest==3.10.1
 python-dateutil==2.8.0
 python-docx==0.8.10
-python-jose==3.0.1        # via django-helusers
+python-jose==3.1.0        # via django-helusers
 python3-openid==3.1.0     # via django-allauth
 pytz==2019.1
 pyyaml==5.1.1
@@ -89,4 +89,4 @@ wrapt==1.11.2             # via astroid
 zipp==0.5.2               # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
-# setuptools==41.0.1        # via djangorestframework-bulk, markdown, pytest
+# setuptools==41.6.0        # via djangorestframework-bulk, markdown, pytest
