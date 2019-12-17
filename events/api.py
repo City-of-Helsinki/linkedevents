@@ -142,7 +142,7 @@ def get_authenticated_data_source_and_publisher(request):
         if not publisher:
             raise PermissionDenied(_("Data source doesn't belong to any organization"))
     else:
-        # objects created by api are marked coming from the system data source unless api_key is provided
+        # objects *created* by api are marked coming from the system data source unless api_key is provided
         # we must optionally create the system data source here, as the settings may have changed at any time
         system_data_source_defaults = {'user_editable': True}
         data_source, created = DataSource.objects.get_or_create(id=settings.SYSTEM_DATA_SOURCE_ID,
@@ -563,28 +563,34 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
     def validate_data_source(self, value):
         if value:
             if value != self.data_source:
-                # the event might be from another data source by the same organization, and we are only editing it
-                if self.instance:
-                    if self.publisher.owned_systems.filter(id=value).exists():
-                        return value
-                raise serializers.ValidationError(
+                # the event might be from another data source, and we are only editing it
+                # instance edit permission has already been checked, data source may not be changed
+                if self.instance and value == self.instance.data_source:
+                    return value
+                # if we are creating, there's no excuse to have any other data source than the request gave
+                raise DRFPermissionDenied(
                     {'data_source': _(
                         "Setting data_source to %(given)s " +
-                        " is not allowed for your organization. The data_source"
+                        " is not allowed for this user. The data_source"
                         " must be left blank or set to %(required)s ") %
                         {'given': str(value), 'required': self.data_source}})
         return value
 
     def validate_publisher(self, value):
         if value:
+            # user might be admin *or* regular user
             if value not in (set(self.user.get_admin_organizations_and_descendants())
                              | set(map(lambda x: getattr(x, 'replaced_by'),
-                                   self.user.get_admin_organizations_and_descendants()))):
+                                   self.user.get_admin_organizations_and_descendants()))
+                             | set(self.user.organization_memberships.all())
+                             | set(map(lambda x: getattr(x, 'replaced_by'),
+                                   self.user.organization_memberships.all()))):
                 raise serializers.ValidationError(
                     {'publisher': _(
                         "Setting publisher to %(given)s " +
-                        " is not allowed for your organization. The publisher" +
-                        " must be left blank or set to %(required)s or to any user's admin organization") %
+                        " is not allowed for this user. The publisher" +
+                        " must be left blank or set to %(required)s or any other organization"
+                        " the user belongs to.") %
                         {'given': str(value),
                          'required': str(self.publisher
                                          if not self.publisher.replaced_by
@@ -615,6 +621,9 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
     def create(self, validated_data):
         if 'data_source' not in validated_data:
             validated_data['data_source'] = self.data_source
+        # events may never be *created* with a spoofed data source
+        if not validated_data['data_source'] == self.data_source:
+            raise PermissionDenied()
         if 'publisher' not in validated_data:
             validated_data['publisher'] = self.publisher
         validated_data['created_by'] = self.user
