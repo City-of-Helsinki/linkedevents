@@ -32,6 +32,8 @@ RUN pip --no-cache-dir install -r /app/requirements-dev.txt
 
 COPY --chown=appuser:appuser . /app/
 
+USER appuser:appuser
+
 # ==============================
 FROM base_stage AS production
 # ==============================
@@ -43,3 +45,5 @@ RUN apt-install.sh build-essential gdal-bin \
     && apt-cleanup.sh build-essential gdal-bin
 
 COPY --chown=appuser:appuser . /app/
+
+USER appuser:appuser
