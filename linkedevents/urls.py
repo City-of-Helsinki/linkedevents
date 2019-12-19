@@ -19,7 +19,7 @@ class RedirectToAPIRootView(RedirectView):
 
 urlpatterns = [
     url(r'^(?P<version>(v0.1|v1))/', include(api_router.urls)),
-    url(r'^admin/', include(admin.site.urls)),
+    url(r'^admin/', admin.site.urls),
     url(r'^accounts/', include('allauth.urls')),
     url(r'^$', RedirectToAPIRootView.as_view()),
 ]
