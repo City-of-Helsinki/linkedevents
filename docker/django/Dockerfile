@@ -22,7 +22,7 @@ COPY --chown=appuser:appuser requirements.txt /app/
 
 RUN apt-install.sh build-essential gdal-bin \
     && pip install --no-cache-dir -r /app/requirements.txt \
-    && apt-cleanup.sh build-essential gdal-bin
+    && apt-cleanup.sh build-essential
 
 # ==============================
 FROM base_stage AS development
