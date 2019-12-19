@@ -65,7 +65,7 @@ class DataSource(models.Model):
     name = models.CharField(verbose_name=_('Name'), max_length=255)
     api_key = models.CharField(max_length=128, blank=True, default='')
     owner = models.ForeignKey(
-        'django_orghierarchy.Organization', on_delete=models.CASCADE,
+        'django_orghierarchy.Organization', on_delete=models.SET_NULL,
         related_name='owned_systems', null=True, blank=True)
     user_editable = models.BooleanField(default=False, verbose_name=_('Objects may be edited by users'))
 
