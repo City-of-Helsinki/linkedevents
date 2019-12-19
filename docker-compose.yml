@@ -37,3 +37,7 @@ services:
 volumes:
         postgres-data-volume:
         django-media-volume:
+
+networks:
+    default:
+        name: helsinki
