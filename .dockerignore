@@ -1,0 +1,27 @@
+#################################################
+# Exclude all by default
+#################################################
+*
+
+#################################################
+# Whitelisted folders
+#################################################
+!docker*
+!events*
+!extension_course*
+!helcourses*
+!helevents*
+!linkedevents*
+!locale*
+!multilingual_haystack*
+!templates*
+
+#################################################
+# Whitelisted files
+#################################################
+!config_dev.toml
+!local_settings.py
+!manage.py
+!pytest.ini
+!requirements*
+!setup.cfg
