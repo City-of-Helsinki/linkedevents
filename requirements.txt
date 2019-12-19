@@ -29,7 +29,7 @@ django-mptt==0.10.0
 django-munigeo==0.2.23
 django-orghierarchy==0.1.21
 django-reversion==3.0.4
-django==1.11.23
+django==2.2.9
 djangorestframework-bulk==0.2.1
 djangorestframework-gis==0.14
 djangorestframework-jwt==1.11.0
@@ -82,6 +82,7 @@ requests==2.22.0
 rsa==4.0                  # via python-jose
 sentry-sdk==0.10.0
 six==1.12.0
+sqlparse==0.3.0           # via django
 swapper==1.1.0            # via django-orghierarchy
 typed-ast==1.4.0          # via astroid
 urllib3==1.25.3           # via elasticsearch, requests, sentry-sdk
