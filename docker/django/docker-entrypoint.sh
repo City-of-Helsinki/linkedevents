@@ -24,5 +24,5 @@ fi
 if [[ "$DEV_SERVER" = "true" ]]; then
     ./manage.py runserver $RUNSERVER_ADDRESS
 else
-    echo 'Production application server here soon...'
+    gunicorn --config gunicorn_configurations.py linkedevents.wsgi
 fi
