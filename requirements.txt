@@ -32,7 +32,8 @@ drf-oidc-auth==0.9        # via django-helusers
 easy-thumbnails==2.6
 ecdsa==0.14.1             # via python-jose
 elasticsearch==2.4.1
-future==0.17.1            # via pyjwkest, python-jose
+future==0.17.1            # via pyjwkest
+gunicorn==20.0.4
 httmock==1.3.0
 icalendar==4.0.3
 idna==2.8                 # via requests
@@ -43,7 +44,7 @@ markdown==3.1.1
 oauthlib==3.0.2           # via requests-oauthlib
 pillow==6.2.0
 psycopg2-binary==2.7.7
-pyasn1==0.4.5             # via rsa
+pyasn1==0.4.5             # via python-jose, rsa
 pycryptodomex==3.8.2      # via pyjwkest
 pyjwkest==1.4.2           # via drf-oidc-auth
 pyjwt==1.7.1              # via djangorestframework-jwt
@@ -64,6 +65,7 @@ six==1.12.0
 swapper==1.1.0            # via django-orghierarchy
 urllib3==1.25.3           # via elasticsearch, requests, sentry-sdk
 webencodings==0.5.1       # via bleach
+whitenoise==5.0.1
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
