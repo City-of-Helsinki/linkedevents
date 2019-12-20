@@ -20,6 +20,7 @@
 # Whitelisted files
 #################################################
 !config_dev.toml
+!gunicorn_configurations.py
 !local_settings.py
 !manage.py
 !pytest.ini
