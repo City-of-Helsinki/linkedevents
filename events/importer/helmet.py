@@ -93,6 +93,7 @@ LOCATIONS = {
     u"Myllypuron mediakirjasto": ((10826, 11349), 8348),
     u"Myyrmäen kirjasto": ((10827, 11351), 18241),
     u"Nöykkiön kirjasto": ((10828, 11353), 15396),
+    u"Otaniemen kirjasto": ((11980,), 60321),
     u"Oulunkylän kirjasto": ((10829, 11355), 8177),
     u"Paloheinän kirjasto": ((10830, 11357), 8362),
     u"Pasilan kirjasto": ((10831, 11359), 8269),
