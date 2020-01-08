@@ -147,7 +147,7 @@ class Image(models.Model):
     url = models.URLField(verbose_name=_('Image'), max_length=400, null=True, blank=True)
     cropping = ImageRatioField('image', '800x800', verbose_name=_('Cropping'))
     license = models.ForeignKey(
-        License, on_delete=models.SET_NULL, verbose_name=_('License'),related_name='images', default='cc_by',
+        License, on_delete=models.SET_NULL, verbose_name=_('License'), related_name='images', default='cc_by',
         null=True)
     photographer_name = models.CharField(verbose_name=_('Photographer name'), max_length=255, null=True, blank=True)
 
