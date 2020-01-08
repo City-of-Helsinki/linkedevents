@@ -295,7 +295,6 @@ def test__image_cannot_be_edited_outside_organization_with_apikey(
 
     detail_url = reverse('image-detail', kwargs={'pk': response.data['id']})
     response2 = api_client.put(detail_url, {'name': 'this is needed'})
-    assert ApiKeyUser.objects.all().count() == 1
     assert response2.status_code == 403
     response3 = api_client.delete(detail_url)
     assert response3.status_code == 403

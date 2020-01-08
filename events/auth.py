@@ -40,7 +40,7 @@ class ApiKeyAuthentication(authentication.BaseAuthentication):
 
 
 class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
-    data_source = models.OneToOneField(DataSource, primary_key=True)
+    data_source = models.OneToOneField(DataSource, on_delete=models.CASCADE, primary_key=True)
 
     def get_display_name(self):
         return 'API key from data source %s' % self.data_source
