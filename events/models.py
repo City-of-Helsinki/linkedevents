@@ -139,15 +139,16 @@ class Image(models.Model):
     created_time = models.DateTimeField(auto_now_add=True)
     last_modified_time = models.DateTimeField(auto_now=True, db_index=True)
     created_by = models.ForeignKey(
-        User, on_delete=models.CASCADE, null=True, blank=True, related_name='EventImage_created_by')
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name='EventImage_created_by')
     last_modified_by = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='EventImage_last_modified_by', null=True, blank=True)
+        User, on_delete=models.SET_NULL, related_name='EventImage_last_modified_by', null=True, blank=True)
 
     image = models.ImageField(upload_to='images', null=True, blank=True)
     url = models.URLField(verbose_name=_('Image'), max_length=400, null=True, blank=True)
     cropping = ImageRatioField('image', '800x800', verbose_name=_('Cropping'))
     license = models.ForeignKey(
-        License, on_delete=models.CASCADE, verbose_name=_('License'), related_name='images', default='cc_by')
+        License, on_delete=models.SET_NULL, verbose_name=_('License'),related_name='images', default='cc_by',
+        null=True)
     photographer_name = models.CharField(verbose_name=_('Photographer name'), max_length=255, null=True, blank=True)
 
     def save(self, *args, **kwargs):
@@ -203,10 +204,10 @@ class BaseModel(models.Model):
     last_modified_time = models.DateTimeField(null=True, blank=True, auto_now=True, db_index=True)
 
     created_by = models.ForeignKey(
-        User, on_delete=models.CASCADE, null=True, blank=True,
+        User, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="%(app_label)s_%(class)s_created_by")
     last_modified_by = models.ForeignKey(
-        User, on_delete=models.CASCADE, null=True, blank=True,
+        User, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="%(app_label)s_%(class)s_modified_by")
 
     @staticmethod
@@ -328,7 +329,7 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin):
     address_country = models.CharField(verbose_name=_('Country'), max_length=2, null=True, blank=True)
 
     deleted = models.BooleanField(verbose_name=_('Deleted'), default=False)
-    replaced_by = models.ForeignKey('Place', on_delete=models.CASCADE, related_name='aliases', null=True)
+    replaced_by = models.ForeignKey('Place', on_delete=models.SET_NULL, related_name='aliases', null=True)
     divisions = models.ManyToManyField(AdministrativeDivision, verbose_name=_('Divisions'), related_name='places',
                                        blank=True)
     n_events = models.IntegerField(
