@@ -150,6 +150,7 @@ class Image(models.Model):
         License, on_delete=models.SET_NULL, verbose_name=_('License'), related_name='images', default='cc_by',
         null=True)
     photographer_name = models.CharField(verbose_name=_('Photographer name'), max_length=255, null=True, blank=True)
+    alt_text = models.CharField(verbose_name=_('Alt text'), max_length=320, null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if not self.publisher:
