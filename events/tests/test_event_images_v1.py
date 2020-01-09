@@ -66,6 +66,7 @@ def assert_image_fields_exist(data, version='v1'):
         'license',
         'photographer_name',
         'data_source',
+        'alt_text',
     )
 
     assert_fields_exist(data, fields)
