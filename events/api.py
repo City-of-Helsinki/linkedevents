@@ -1004,6 +1004,7 @@ class OrganizationSerializer(LinkedEventsSerializer):
         view_name='organization-detail',
     )
     is_affiliated = serializers.SerializerMethodField()
+    has_regular_users = serializers.SerializerMethodField()
     created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
     last_modified_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
 
@@ -1015,11 +1016,15 @@ class OrganizationSerializer(LinkedEventsSerializer):
             'dissolution_date', 'parent_organization',
             'sub_organizations', 'affiliated_organizations',
             'created_time', 'last_modified_time', 'created_by',
-            'last_modified_by', 'is_affiliated', 'replaced_by'
+            'last_modified_by', 'is_affiliated', 'replaced_by',
+            'has_regular_users'
         )
 
     def get_is_affiliated(self, obj):
         return obj.internal_type == Organization.AFFILIATED
+
+    def get_has_regular_users(self, obj):
+        return obj.regular_users.count() > 0
 
 
 class OrganizationViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
