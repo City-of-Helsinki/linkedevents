@@ -30,7 +30,7 @@ djangorestframework-gis==0.14
 djangorestframework-jwt==1.11.0
 djangorestframework==3.9.4
 drf-oidc-auth==0.9        # via django-helusers
-easy-thumbnails==2.6
+easy-thumbnails==2.7.0
 ecdsa==0.14.1             # via python-jose
 elasticsearch==2.4.1
 future==0.17.1            # via pyjwkest, python-jose
@@ -42,7 +42,7 @@ langdetect==1.0.7
 lxml==4.3.4
 markdown==3.1.1
 oauthlib==3.0.2           # via requests-oauthlib
-pillow==6.2.0
+pillow==7.0.0
 psycopg2-binary==2.7.7
 pyasn1==0.4.5             # via rsa
 pycryptodomex==3.8.2      # via pyjwkest
