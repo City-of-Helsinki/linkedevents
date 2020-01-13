@@ -62,7 +62,7 @@ from events.custom_elasticsearch_search_backend import (
 from events.extensions import apply_select_and_prefetch, get_extensions_from_request
 from events.models import (
     Place, Event, Keyword, KeywordSet, Language, OpeningHoursSpecification, EventLink,
-    Offer, DataSource, Image, PublicationStatus, PUBLICATION_STATUSES, License
+    Offer, DataSource, Image, PublicationStatus, PUBLICATION_STATUSES, License, Video
 )
 from events.translation import EventTranslationOptions
 from helevents.models import User
@@ -1004,6 +1004,7 @@ class OrganizationSerializer(LinkedEventsSerializer):
         view_name='organization-detail',
     )
     is_affiliated = serializers.SerializerMethodField()
+    has_regular_users = serializers.SerializerMethodField()
     created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
     last_modified_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
 
@@ -1015,11 +1016,15 @@ class OrganizationSerializer(LinkedEventsSerializer):
             'dissolution_date', 'parent_organization',
             'sub_organizations', 'affiliated_organizations',
             'created_time', 'last_modified_time', 'created_by',
-            'last_modified_by', 'is_affiliated', 'replaced_by'
+            'last_modified_by', 'is_affiliated', 'replaced_by',
+            'has_regular_users'
         )
 
     def get_is_affiliated(self, obj):
         return obj.internal_type == Organization.AFFILIATED
+
+    def get_has_regular_users(self, obj):
+        return obj.regular_users.count() > 0
 
 
 class OrganizationViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
@@ -1127,6 +1132,18 @@ class ImageViewSet(JSONAPIViewMixin, viewsets.ModelViewSet):
 register_view(ImageViewSet, 'image', base_name='image')
 
 
+class VideoSerializer(serializers.ModelSerializer):
+    def to_representation(self, obj):
+        ret = super().to_representation(obj)
+        if not ret['name']:
+            ret['name'] = None
+        return ret
+
+    class Meta:
+        model = Video
+        exclude = ['id', 'event']
+
+
 class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     id = serializers.CharField(required=False)
     location = JSONLDRelatedField(serializer=PlaceSerializer, required=False,
@@ -1150,6 +1167,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                                     many=True, queryset=Event.objects.filter(deleted=False))
     images = JSONLDRelatedField(serializer=ImageSerializer, required=False, allow_null=True, many=True,
                                 view_name='image-detail', queryset=Image.objects.all(), expanded=True)
+    videos = VideoSerializer(many=True, required=False)
     in_language = JSONLDRelatedField(serializer=LanguageSerializer, required=False,
                                      view_name='language-detail', many=True, queryset=Language.objects.all())
     audience = JSONLDRelatedField(serializer=KeywordSerializer, view_name='keyword-detail',
@@ -1269,6 +1287,11 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             # clean link text fields
             data['external_links'][index] = clean_text_fields(link)
 
+        # clean video text fields
+        for index, video in enumerate(data.get('video', [])):
+            # clean link text fields
+            data['video'][index] = clean_text_fields(video)
+
         # If no end timestamp supplied, we treat the event as ending at midnight
         if not data.get('end_time'):
             # The start time may also be null if the event is postponed
@@ -1305,6 +1328,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
         offers = validated_data.pop('offers', [])
         links = validated_data.pop('external_links', [])
+        videos = validated_data.pop('videos', [])
 
         validated_data.update({'created_by': self.user,
                                'last_modified_by': self.user,
@@ -1325,6 +1349,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             Offer.objects.create(event=event, **offer)
         for link in links:
             EventLink.objects.create(event=event, **link)
+        for video in videos:
+            Video.objects.create(event=event, **video)
 
         request = self.context['request']
         extensions = get_extensions_from_request(request)
@@ -1337,6 +1363,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     def update(self, instance, validated_data):
         offers = validated_data.pop('offers', None)
         links = validated_data.pop('external_links', None)
+        videos = validated_data.pop('videos', None)
 
         if instance.end_time and instance.end_time < timezone.now():
             raise DRFPermissionDenied(_('Cannot edit a past event.'))
@@ -1393,6 +1420,12 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
             instance.external_links.all().delete()
             for link in links:
                 EventLink.objects.create(event=instance, **link)
+
+        # update videos
+        if isinstance(videos, list):
+            instance.videos.all().delete()
+            for video in videos:
+                Video.objects.create(event=instance, **video)
 
         request = self.context['request']
         extensions = get_extensions_from_request(request)
@@ -1751,7 +1784,8 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
     # Use select_ and prefetch_related() to reduce the amount of queries
     queryset = queryset.select_related('location', 'publisher')
     queryset = queryset.prefetch_related(
-        'offers', 'keywords', 'audience', 'images', 'images__publisher', 'external_links', 'sub_events', 'in_language')
+        'offers', 'keywords', 'audience', 'images', 'images__publisher', 'external_links', 'sub_events', 'in_language',
+        'videos')
     serializer_class = EventSerializer
     filter_backends = (EventOrderingFilter, django_filters.rest_framework.DjangoFilterBackend,
                        EventExtensionFilterBackend)

@@ -150,6 +150,7 @@ class Image(models.Model):
         License, on_delete=models.SET_NULL, verbose_name=_('License'), related_name='images', default='cc_by',
         null=True)
     photographer_name = models.CharField(verbose_name=_('Photographer name'), max_length=255, null=True, blank=True)
+    alt_text = models.CharField(verbose_name=_('Alt text'), max_length=320, null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if not self.publisher:
@@ -621,6 +622,19 @@ class EventLink(models.Model, SimpleValueMixin):
 
     def value_fields(self):
         return ['name', 'language_id', 'link']
+
+
+class Video(models.Model, SimpleValueMixin):
+    name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True, default='')
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, db_index=True, related_name='videos')
+    url = models.URLField()
+    alt_text = models.CharField(verbose_name=_('Alt text'), max_length=320, null=True, blank=True)
+
+    class Meta:
+        unique_together = (('name', 'event', 'url'),)
+
+    def value_fields(self):
+        return ['name', 'url']
 
 
 class ExportInfo(models.Model):

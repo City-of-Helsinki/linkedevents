@@ -96,6 +96,15 @@ class TestOrganizationSerializer(TestCase):
             parent=self.normal_org,
             internal_type=Organization.AFFILIATED,
         )
+        self.org_with_regular_users = Organization.objects.create(
+            name='org_with_regular_users',
+            origin_id='org_with_regular_users',
+            data_source=data_source,
+        )
+        user_model = get_user_model()
+        user = user_model.objects.create(username='regular_user')
+        user2 = user_model.objects.create(username='regular_user2')
+        self.org_with_regular_users.regular_users.add(user, user2)
 
     def test_get_is_affiliated(self):
         is_affiliated = self.serializer.get_is_affiliated(self.normal_org)
@@ -103,6 +112,13 @@ class TestOrganizationSerializer(TestCase):
 
         is_affiliated = self.serializer.get_is_affiliated(self.affiliated_org)
         self.assertTrue(is_affiliated)
+
+    def test_has_regular_users(self):
+        has_regular_users = self.serializer.get_has_regular_users(self.normal_org)
+        self.assertFalse(has_regular_users)
+
+        has_regular_users = self.serializer.get_has_regular_users(self.org_with_regular_users)
+        self.assertTrue(has_regular_users)
 
 
 class TestOrganizationAPI(APITestCase):
