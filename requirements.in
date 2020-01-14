@@ -7,6 +7,7 @@ django-filter>=2.1.0
 django-haystack
 django-helusers
 django-image-cropping
+django-jinja
 django-leaflet
 django-modeltranslation
 django-mptt>=0.10.0
@@ -23,6 +24,7 @@ elasticsearch<5.0
 httmock
 icalendar
 isodate
+jinja2
 langdetect
 lxml
 markdown

@@ -17,6 +17,7 @@ django-filter==2.2.0
 django-haystack==2.8.1
 django-helusers==0.4.5
 django-image-cropping==1.2.0
+django-jinja==2.4.1
 django-js-asset==1.2.2    # via django-mptt
 django-leaflet==0.25.0
 django-modeltranslation==0.13.3
@@ -38,9 +39,11 @@ httmock==1.3.0
 icalendar==4.0.3
 idna==2.8                 # via requests
 isodate==0.6.0
+jinja2==2.10.3
 langdetect==1.0.7
 lxml==4.3.4
 markdown==3.1.1
+markupsafe==1.1.1         # via jinja2
 oauthlib==3.0.2           # via requests-oauthlib
 pillow==7.0.0
 psycopg2-binary==2.7.7

@@ -140,6 +140,8 @@ INSTALLED_APPS = [
     'haystack',
     'django_cleanup',
     'django_filters',
+    'django_jinja',
+    'notifications',
 
     'allauth',
     'allauth.account',
@@ -268,7 +270,21 @@ CORS_ORIGIN_ALLOW_ALL = True
 CSRF_COOKIE_NAME = '%s-csrftoken' % env('COOKIE_PREFIX')
 SESSION_COOKIE_NAME = '%s-sessionid' % env('COOKIE_PREFIX')
 
+from django_jinja.builtins import DEFAULT_EXTENSIONS # noqa
+
 TEMPLATES = [
+    {
+        'BACKEND': 'django_jinja.backend.Jinja2',
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'extensions': DEFAULT_EXTENSIONS + ["jinja2.ext.i18n"],
+            'translation_engine': 'django.utils.translation',
+            "match_extension": ".jinja",
+            "filters": {
+                "django_wordwrap": "django.template.defaultfilters.wordwrap"
+            },
+        },
+    },
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
