@@ -1,5 +1,6 @@
 bleach
 django-allauth
+django-anymail
 django-cleanup
 django-cors-headers
 django-environ
