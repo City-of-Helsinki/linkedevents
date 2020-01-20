@@ -27,6 +27,6 @@ echo "Setting scripts to be executable."
 find .githooks -type f -print0 | xargs chmod +x
 
 echo "Copying files to Git Hooks directory."
-cp -R .githooks/ .git/hooks/
+cp -R .githooks/. .git/hooks/
 
 echo "Done!"
