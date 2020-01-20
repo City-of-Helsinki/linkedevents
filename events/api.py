@@ -719,6 +719,18 @@ class KeywordRetrieveViewSet(JSONAPIViewMixin, mixins.RetrieveModelMixin, viewse
     queryset = queryset.select_related('publisher')
     serializer_class = KeywordSerializer
 
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            keyword = Keyword.objects.get(pk=kwargs['pk'])
+        except Keyword.DoesNotExist:
+            raise Http404()
+        if keyword.replaced_by:
+            keyword = keyword.replaced_by
+            return HttpResponsePermanentRedirect(reverse('keyword-detail',
+                                                         kwargs={'pk': keyword.pk},
+                                                         request=request))
+        return super().retrieve(request, *args, **kwargs)
+
 
 class KeywordListViewSet(JSONAPIViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = Keyword.objects.all()

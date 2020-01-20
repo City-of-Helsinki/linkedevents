@@ -267,6 +267,7 @@ class Keyword(BaseModel, ImageMixin):
         db_index=True
     )
     n_events_changed = models.BooleanField(default=False, db_index=True)
+    replaced_by = models.ForeignKey('Keyword', on_delete=models.SET_NULL, related_name='aliases', null=True)
 
     schema_org_type = "Thing/LinkedEventKeyword"
 
@@ -277,6 +278,44 @@ class Keyword(BaseModel, ImageMixin):
         self.deprecated = True
         self.save(update_fields=['deprecated'])
         return True
+
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        if self.replaced_by and self.replaced_by.replaced_by == self:
+            raise Exception("Trying to replace the keyword replacing this keyword by this keyword."
+                            "Please refrain from creating circular replacements and"
+                            "remove either one of the replacements."
+                            "We don't want homeless keywords.")
+        if self.replaced_by and not self.deprecated:
+            raise Exception("A non-deprecated keyword can't be replaced.")
+
+        old_replaced_by = None
+        if self.id:
+            try:
+                old_replaced_by = Keyword.objects.get(id=self.id).replaced_by
+            except Keyword.DoesNotExist:
+                pass
+
+        super().save(*args, **kwargs)
+
+        if not old_replaced_by == self.replaced_by:
+            # Remap keyword sets
+            qs = KeywordSet.objects.filter(keywords__id__exact=self.id)
+            for kw_set in qs:
+                kw_set.keywords.remove(self)
+                kw_set.keywords.add(self.replaced_by)
+                kw_set.save()
+
+            # Remap events
+            qs = Event.objects.filter(keywords__id__exact=self.id) \
+                | Event.objects.filter(audience__id__exact=self.id)
+            for event in qs:
+                if self in event.keywords.all():
+                    event.keywords.remove(self)
+                    event.keywords.add(self.replaced_by)
+                if self in event.audience.all():
+                    event.audience.remove(self)
+                    event.audience.add(self.replaced_by)
 
     class Meta:
         verbose_name = _('keyword')
