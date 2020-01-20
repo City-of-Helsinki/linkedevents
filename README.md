@@ -35,6 +35,11 @@ The best way to contribute is to open a new PR for discussion. We strive to be a
 ## How to setup your local development environment
 If all you want is a barebone application to work with for your own city:
 
+* Copy `config_dev.toml.example` to `config_dev.toml`
+    * Change settings where needed
+
+* Run `git-hooks.sh` which will set the required Git Hooks that will handle commit message linting and git-secrets
+
 * Start django application and database server:
   ```
   docker-compose up
@@ -43,6 +48,9 @@ If all you want is a barebone application to work with for your own city:
 * Access application on [localhost:8000](http://localhost:8000)
 
 * You are done 🔥
+
+* Optional: Helsinki TPREK importer should not need elasticsearch, but at the time of writing it doesn't work without
+    * One solution for dev would be to make a local `docker-compose.override.yml` and spin one from there
 
 If you wish to use locations, addresses and events data from the Helsinki capital region:
 

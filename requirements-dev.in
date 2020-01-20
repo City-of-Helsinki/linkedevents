@@ -2,6 +2,7 @@
 
 django-extensions
 flake8
+gitlint==0.12.0
 pip-tools
 pyflakes
 pylint
