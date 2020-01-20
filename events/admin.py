@@ -32,7 +32,7 @@ class AutoIdBaseAdmin(BaseAdmin):
 
 
 class EventAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
-    # TODO: location, publisher, keyword, audience, super_event fields with autocomplete
+    # TODO: publisher field with autocomplete (requires django-orghierarchy update)
     # TODO: only allow user_editable editable fields
     fields = ('name', 'short_description', 'description', 'location', 'location_extra_info', 'start_time', 'end_time',
               'keywords', 'audience', 'publisher', 'provider', 'provider_contact_info', 'event_status', 'super_event',
@@ -41,13 +41,14 @@ class EventAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
     list_display = ('id', 'name', 'start_time', 'end_time', 'publisher', 'location')
     list_filter = ('data_source',)
     ordering = ('-last_modified_time',)
+    autocomplete_fields = ('location', 'keywords', 'audience', 'super_event')
 
 
 admin.site.register(Event, EventAdmin)
 
 
 class KeywordAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
-    # TODO: publisher field with autocomplete
+    # TODO: publisher field with autocomplete (requires django-orghierarchy update)
     # TODO: only allow user_editable editable fields
     fields = ('publisher', 'deprecated', 'name')
     search_fields = ('name',)
@@ -60,8 +61,8 @@ admin.site.register(Keyword, KeywordAdmin)
 
 
 class KeywordSetAdmin(BaseAdmin):
-    # TODO: keywords field with autocomplete
     fields = ('data_source', 'origin_id', 'name', 'keywords', 'usage')
+    autocomplete_fields = ('keywords', )
 
 
 admin.site.register(KeywordSet, KeywordSetAdmin)
@@ -77,7 +78,6 @@ class HelsinkiGeoAdmin(LeafletGeoAdmin):
 
 
 class PlaceAdmin(HelsinkiGeoAdmin, AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
-    # TODO: replaced_by field must be done with autocomplete, 140 000 objects a bit too much to load _:D
     # TODO: only allow user_editable editable fields
     fieldsets = (
         (None, {
@@ -94,6 +94,7 @@ class PlaceAdmin(HelsinkiGeoAdmin, AutoIdBaseAdmin, TranslationAdmin, VersionAdm
     list_display = ('id', 'name', 'n_events', 'street_address')
     list_filter = ('data_source',)
     ordering = ('-n_events',)
+    autocomplete_fields = ('replaced_by', )
 
     def __init__(self, model, admin_site):
         super().__init__(model, admin_site)
