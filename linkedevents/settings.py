@@ -152,6 +152,10 @@ INSTALLED_APPS = [
     'django_orghierarchy',
 ] + env('EXTRA_INSTALLED_APPS')
 
+if not DEBUG:
+    # Remove this application from production, so that we don't need to install dev deps there
+    INSTALLED_APPS.remove("django_extensions")
+
 if env('SENTRY_DSN'):
     sentry_sdk.init(
         dsn=env('SENTRY_DSN'),
