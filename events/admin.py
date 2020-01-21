@@ -33,9 +33,9 @@ class AutoIdBaseAdmin(BaseAdmin):
 
 class EventAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
     # TODO: only allow user_editable editable fields
-    fields = ('id', 'name', 'short_description', 'description', 'location', 'location_extra_info', 'start_time', 'end_time',
-              'keywords', 'audience', 'publisher', 'provider', 'provider_contact_info', 'event_status', 'super_event',
-              'info_url', 'in_language')
+    fields = ('id', 'name', 'short_description', 'description', 'location', 'location_extra_info', 'start_time',
+              'end_time', 'keywords', 'audience', 'publisher', 'provider', 'provider_contact_info', 'event_status',
+              'super_event', 'info_url', 'in_language')
     search_fields = ('name', 'location__name')
     list_display = ('id', 'name', 'start_time', 'end_time', 'publisher', 'location')
     list_filter = ('data_source',)
