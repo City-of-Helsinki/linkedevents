@@ -32,7 +32,6 @@ class AutoIdBaseAdmin(BaseAdmin):
 
 
 class EventAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
-    # TODO: publisher field with autocomplete (requires django-orghierarchy update)
     # TODO: only allow user_editable editable fields
     fields = ('name', 'short_description', 'description', 'location', 'location_extra_info', 'start_time', 'end_time',
               'keywords', 'audience', 'publisher', 'provider', 'provider_contact_info', 'event_status', 'super_event',
@@ -41,20 +40,20 @@ class EventAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
     list_display = ('id', 'name', 'start_time', 'end_time', 'publisher', 'location')
     list_filter = ('data_source',)
     ordering = ('-last_modified_time',)
-    autocomplete_fields = ('location', 'keywords', 'audience', 'super_event')
+    autocomplete_fields = ('location', 'keywords', 'audience', 'super_event', 'publisher')
 
 
 admin.site.register(Event, EventAdmin)
 
 
 class KeywordAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
-    # TODO: publisher field with autocomplete (requires django-orghierarchy update)
     # TODO: only allow user_editable editable fields
     fields = ('publisher', 'deprecated', 'name')
     search_fields = ('name',)
     list_display = ('id', 'name', 'n_events')
     list_filter = ('data_source',)
     ordering = ('-n_events',)
+    autocomplete_fields = ('publisher', )
 
 
 admin.site.register(Keyword, KeywordAdmin)

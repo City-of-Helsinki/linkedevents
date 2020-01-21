@@ -22,7 +22,7 @@ django-leaflet==0.25.0
 django-modeltranslation==0.13.3
 django-mptt==0.10.0
 django-munigeo==0.2.23
-django-orghierarchy==0.1.22
+django-orghierarchy==0.1.23
 django-reversion==3.0.4
 django==2.2.9
 djangorestframework-bulk==0.2.1
