@@ -415,6 +415,15 @@ class HelmetImporter(Importer):
         event['custom_fields']['ExpiryDate'] = dt_parse(
             event_el['ExpiryDate']).strftime("%Y-%m-%dT%H:%M:%SZ")
 
+        # Add a default offer
+        free_offer = {
+            'is_free': True,
+            'price': None,
+            'description': None,
+            'info_url': None,
+        }
+        event['offers'] = [free_offer]
+
         return event
 
     def _recur_fetch_paginated_url(self, url, lang, events):
