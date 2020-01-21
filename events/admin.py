@@ -61,9 +61,10 @@ class KeywordAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
 admin.site.register(Keyword, KeywordAdmin)
 
 
-class KeywordSetAdmin(BaseAdmin):
-    fields = ('data_source', 'origin_id', 'name', 'keywords', 'usage')
+class KeywordSetAdmin(AutoIdBaseAdmin):
+    fields = ('id', 'data_source', 'origin_id', 'name', 'keywords', 'usage')
     autocomplete_fields = ('keywords', )
+    readonly_fields = ('id',)
 
 
 admin.site.register(KeywordSet, KeywordSetAdmin)
