@@ -96,7 +96,7 @@ class PlaceAdmin(HelsinkiGeoAdmin, AutoIdBaseAdmin, TranslationAdmin, VersionAdm
     list_display = ('id', 'name', 'n_events', 'street_address')
     list_filter = ('data_source',)
     ordering = ('-n_events',)
-    autocomplete_fields = ('replaced_by', )
+    autocomplete_fields = ('replaced_by', 'publisher')
     readonly_fields = ('id',)
 
     def __init__(self, model, admin_site):
@@ -110,6 +110,7 @@ admin.site.register(Place, PlaceAdmin)
 
 class DataSourceAdmin(BaseAdmin, VersionAdmin):
     fields = ('id', 'name', 'api_key', 'owner', 'user_editable')
+    autocomplete_fields = ('owner',)
 
     def get_readonly_fields(self, request, obj=None):
         if obj:
