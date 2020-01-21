@@ -342,6 +342,11 @@ class KeywordSet(BaseModel, ImageMixin):
                                      verbose_name=_('Organization which uses this set'), null=True)
     keywords = models.ManyToManyField(Keyword, blank=False, related_name='sets')
 
+    def save(self, *args, **kwargs):
+        if any([keyword.deprecated for keyword in self.keywords.all()]):
+            raise ValidationError(_("KeywordSet can't have deprecated keywords"))
+        super().save(*args, **kwargs)
+
 
 class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin):
     objects = BaseTreeQuerySet.as_manager()
@@ -566,6 +571,9 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         if start and end:
             if start > end:
                 raise ValidationError({'end_time': _('The event end time cannot be earlier than the start time.')})
+
+        if any([keyword.deprecated for keyword in self.keywords.all() | self.audience.all()]):
+            raise ValidationError({'keywords': _("Event can't have deprecated keywords")})
 
         super(Event, self).save(*args, **kwargs)
 
