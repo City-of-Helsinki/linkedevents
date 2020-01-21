@@ -33,7 +33,7 @@ class AutoIdBaseAdmin(BaseAdmin):
 
 class EventAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
     # TODO: only allow user_editable editable fields
-    fields = ('name', 'short_description', 'description', 'location', 'location_extra_info', 'start_time', 'end_time',
+    fields = ('id', 'name', 'short_description', 'description', 'location', 'location_extra_info', 'start_time', 'end_time',
               'keywords', 'audience', 'publisher', 'provider', 'provider_contact_info', 'event_status', 'super_event',
               'info_url', 'in_language')
     search_fields = ('name', 'location__name')
@@ -41,6 +41,7 @@ class EventAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
     list_filter = ('data_source',)
     ordering = ('-last_modified_time',)
     autocomplete_fields = ('location', 'keywords', 'audience', 'super_event', 'publisher')
+    readonly_fields = ('id',)
 
 
 admin.site.register(Event, EventAdmin)
@@ -48,12 +49,13 @@ admin.site.register(Event, EventAdmin)
 
 class KeywordAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
     # TODO: only allow user_editable editable fields
-    fields = ('publisher', 'deprecated', 'name')
+    fields = ('id', 'publisher', 'deprecated', 'name')
     search_fields = ('name',)
     list_display = ('id', 'name', 'n_events')
     list_filter = ('data_source',)
     ordering = ('-n_events',)
     autocomplete_fields = ('publisher', )
+    readonly_fields = ('id',)
 
 
 admin.site.register(Keyword, KeywordAdmin)
@@ -80,7 +82,7 @@ class PlaceAdmin(HelsinkiGeoAdmin, AutoIdBaseAdmin, TranslationAdmin, VersionAdm
     # TODO: only allow user_editable editable fields
     fieldsets = (
         (None, {
-            'fields': ('publisher',  'deleted', 'replaced_by', 'name', 'description', 'info_url', 'position')
+            'fields': ('id', 'publisher',  'deleted', 'replaced_by', 'name', 'description', 'info_url', 'position')
 
         }),
         (_('Contact info'), {
@@ -94,6 +96,7 @@ class PlaceAdmin(HelsinkiGeoAdmin, AutoIdBaseAdmin, TranslationAdmin, VersionAdm
     list_filter = ('data_source',)
     ordering = ('-n_events',)
     autocomplete_fields = ('replaced_by', )
+    readonly_fields = ('id',)
 
     def __init__(self, model, admin_site):
         super().__init__(model, admin_site)
@@ -107,12 +110,24 @@ admin.site.register(Place, PlaceAdmin)
 class DataSourceAdmin(BaseAdmin, VersionAdmin):
     fields = ('id', 'name', 'api_key', 'owner', 'user_editable')
 
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ['id']
+        else:
+            return []
+
 
 admin.site.register(DataSource, DataSourceAdmin)
 
 
 class LanguageAdmin(BaseAdmin, VersionAdmin):
     fields = ('id', 'name')
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ['id']
+        else:
+            return []
 
 
 admin.site.register(Language, LanguageAdmin)
