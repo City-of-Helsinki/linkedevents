@@ -24,6 +24,8 @@ class AutoIdBaseAdmin(BaseAdmin):
     def save_model(self, request, obj, form, change):
         system_id = settings.SYSTEM_DATA_SOURCE_ID
         obj.data_source_id = system_id
+        if obj.origin_id:
+            obj.id = ':'.join([system_id, obj.origin_id])
         if not obj.id:
             obj.id = generate_id(system_id)
         obj.origin_id = obj.id.split(':')[1]
