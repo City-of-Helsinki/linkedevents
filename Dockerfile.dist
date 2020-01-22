@@ -5,6 +5,17 @@ ARG BASE_IMAGE_VERSION=latest
 # Pull the base image
 FROM ${BASE_IMAGE}:${BASE_IMAGE_VERSION}
 
+# Define the build and commit args and set default values for them.
+# These are used for tracing the image to the commit and build from which the image has been built.
+ARG build=none
+ARG commit=none
+ENV APP_BUILD $build
+ENV APP_COMMIT $commit
+
+# Create labels for build and commit and populate them from the args
+LABEL fi.espoo.build=${build} \
+    fi.espoo.commit=${commit}
+
 # Python stdout without buffering
 ENV PYTHONUNBUFFERED true
 
