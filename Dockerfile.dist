@@ -1,6 +1,6 @@
-# Voltti's Ubuntu base Dockerfile
-ARG BASE_IMAGE=ubuntu
-ARG BASE_IMAGE_VERSION=18.04
+# Voltti's Ubuntu base Dockerfile. This sets up timezone and app user
+ARG BASE_IMAGE=307238562370.dkr.ecr.eu-west-1.amazonaws.com/voltti/ubuntu
+ARG BASE_IMAGE_VERSION=latest
 
 # Pull the base image
 FROM ${BASE_IMAGE}:${BASE_IMAGE_VERSION}
@@ -8,18 +8,7 @@ FROM ${BASE_IMAGE}:${BASE_IMAGE_VERSION}
 # Python stdout without buffering
 ENV PYTHONUNBUFFERED true
 
-# Use bash instead of dash
-RUN rm /bin/sh && ln -s /bin/bash /bin/sh
-
-# Update time zone information
-ENV LC_ALL C.UTF-8
-ENV LANG C.UTF-8
-ENV LANGUAGE C.UTF-8
-RUN set -eux \
-    && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install tzdata \
-    && ln -fs /usr/share/zoneinfo/Europe/Helsinki /etc/localtime \
-    && dpkg-reconfigure --frontend noninteractive tzdata \
-    && rm -rf /var/lib/apt/lists/*
+USER root
 
 COPY requirements*.txt /app/
 
@@ -41,14 +30,6 @@ COPY . /app/
 WORKDIR /app
 
 EXPOSE 8000
-
-# Set Voltti username
-ENV USERNAME voltti
-ENV HOME_DIR /home/${USERNAME}
-ENV USER_ID 1000
-
-# Create a new user named voltti which should be used to run any software.
-RUN adduser ${USERNAME} --gecos "" -q --home ${HOME_DIR} --uid ${USER_ID} --disabled-password
 
 # User can make changes in /app directory
 RUN chown -R ${USERNAME}:${USERNAME} /app
