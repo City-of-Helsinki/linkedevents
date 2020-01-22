@@ -1,0 +1,50 @@
+# Voltti's Ubuntu base Dockerfile. This sets up timezone and app user
+ARG BASE_IMAGE=307238562370.dkr.ecr.eu-west-1.amazonaws.com/voltti/ubuntu
+ARG BASE_IMAGE_VERSION=latest
+
+# Pull the base image
+FROM ${BASE_IMAGE}:${BASE_IMAGE_VERSION}
+
+# Define the build and commit args and set default values for them.
+# These are used for tracing the image to the commit and build from which the image has been built.
+ARG build=none
+ARG commit=none
+ENV APP_BUILD $build
+ENV APP_COMMIT $commit
+
+# Create labels for build and commit and populate them from the args
+LABEL fi.espoo.build=${build} \
+    fi.espoo.commit=${commit}
+
+# Python stdout without buffering
+ENV PYTHONUNBUFFERED true
+
+USER root
+
+COPY requirements*.txt /app/
+
+RUN apt-get update && apt-get -y upgrade && apt-get -y install \
+    python3-pip \
+    libgdal-dev \
+    # Python Pillow image dependencies
+    zlib1g-dev libjpeg-dev\
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Symlink python and pip executables for compatibility
+RUN ln -s /usr/bin/python3 /usr/bin/python && ln -s /usr/bin/pip3 /usr/bin/pip
+
+RUN pip install --no-cache-dir -r /app/requirements.txt
+
+COPY . /app/
+
+WORKDIR /app
+
+EXPOSE 8000
+
+# User can make changes in /app directory
+RUN chown -R ${USERNAME}:${USERNAME} /app
+
+USER ${USERNAME}
+
+CMD ["gunicorn", "linkedevents.wsgi", "--timeout 600", "--workers=4",  "-b 0.0.0.0:8000"]
