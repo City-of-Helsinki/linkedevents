@@ -12,39 +12,40 @@ DEFAULT_LANGUAGE = 'fi'
 
 FOOTER_FI = 'Tämä on automaattinen viesti Helsingin kaupungin tapahtumarajapinnasta. Viestiin ei voi vastata.\n'
 
+HTML_SEPARATOR = '\n<br/><br/>\n'
 
-UNPUBLISHED_EVENT_DELETED_SUBJECT_FI = 'Tapahtumailmoituksesi "{{ event.name }}" on poistettu – Helsingin kaupunki\n\n'
+UNPUBLISHED_EVENT_DELETED_SUBJECT_FI = 'Tapahtumailmoituksesi "{{ event.name }}" on poistettu – Helsingin kaupunki'
 UNPUBLISHED_EVENT_DELETED_HTML_BODY_FI = \
-"""Helsingin kaupungille {{ event.created_at|date:"j.n.Y \\k\\l\\o H:i" }} ilmoittamasi tapahtuma "{{ event.name }}" on poistettu.
-
+"""Helsingin kaupungille {{ event.created_time|format_datetime('fi') }} ilmoittamasi tapahtuma "{{ event.name }}" on poistettu.
+<br/><br/>
 Ilmoituksesi poistettiin, joko 1) koska se ei noudattanut Helsingin kaupungin <a href="https://linkedevents.hel.fi/terms">tapahtumarajapinnan käyttöehtoja</a> tai 2) koska tapahtuman ei muusta syystä katsottu sopivan kaupungin tapahtumarajapintaan.
-
-Jos haluat lisätietoja, voit jättää asiasta kysymyksen osoitteessa <a href="https://hel.fi/palaute">hel.fi/palaute.</a> Mainitse palautteessasi tapahtuman nimi ja julkaisuaika: "{{ event.name }}", {{ event.created_at|date:"j.n.Y \\k\\l\\o H:i" }}"""
+<br/><br/>
+Jos haluat lisätietoja, voit jättää asiasta kysymyksen osoitteessa <a href="https://hel.fi/palaute">hel.fi/palaute.</a> Mainitse palautteessasi tapahtuman nimi ja julkaisuaika: "{{ event.name }}", {{ event.created_time|format_datetime('fi') }}"""
 
 EVENT_PUBLISHED_SUBJECT_FI = 'Tapahtumailmoituksesi "{{ event.name }}" on julkaistu – Helsingin kaupunki'
 EVENT_PUBLISHED_HTML_BODY_FI = \
-"""Helsingin kaupungille {{ event.created_at|date:"j.n.Y \\k\\l\\o H:i" }} ilmoittamasi tapahtuma "{{ event.name }}" on julkaistu.
-
+"""Helsingin kaupungille {{ event.created_time|format_datetime('fi') }} ilmoittamasi tapahtuma "{{ event.name }}" on julkaistu.
+<br/><br/>
 Tapahtuma tulee näkyville <a href="https://hel.fi/tapahtumat">Helsingin tapahtumakalenteriin</a> enintään tunnin viiveellä. Tapahtuma voidaan näyttää myös muissa kalentereissa, jotka hakevat tietoja Helsingin kaupungin tapahtumarajapinnasta.
+<br/><br/>
+Et voi enää muokata tapahtumaa julkaisun jälkeen. Jos haluat muuttaa tapahtuman tietoja, jätä muutospyyntö osoitteessa <a href="https://hel.fi/palaute">hel.fi/palaute</a>. Mainitse palautteessasi tapahtuman nimi ja julkaisuaika:"{{ event.name }}", {{ event.created_time|format_datetime('fi') }}"""
 
-Et voi enää muokata tapahtumaa julkaisun jälkeen. Jos haluat muuttaa tapahtuman tietoja, jätä muutospyyntö osoitteessa <a href="https://hel.fi/palaute">hel.fi/palaute</a>. Mainitse palautteessasi tapahtuman nimi ja julkaisuaika:"{{ event.name }}", {{ event.created_at|date:"j.n.Y \\k\\l\\o H:i" }}"""
-
-DRAFT_POSTED_SUBJECT_FI = 'Uusi tapahtumaluonnos "{{ event.name }}", {{ event.created_at|date:"j.n.Y \\k\\l\\o H:i" }} – Helsingin kaupungin tapahtumarajapinta'
+DRAFT_POSTED_SUBJECT_FI = 'Uusi tapahtumaluonnos "{{ event.name }}", {{ event.created_time|format_datetime(\'fi\') }} – Helsingin kaupungin tapahtumarajapinta'
 DRAFT_POSTED_HTML_BODY_FI = \
 """Helsingin kaupungin tapahtumarajapintaan on luotu uusi tapahtumaluonnos:
-
-"{{ event.name }}", {{ event.created_at|date:"j.n.Y \\k\\l\\o H:i" }}
-
+<br/><br/>
+"{{ event.name }}", {{ event.created_time|format_datetime('fi') }}
+<br/><br/>
 <a href="https://linkedevents.hel.fi/event/{{ event.id }}">Siirry moderoimaan tapahtumia »</a>
-
+<br/><br/>
 Sait tämän viestin, koska olet moderaattori organisaatiossa {{ event.publisher.name }}."""
 
 
-def _append_footer(text, language):
+def _append_footer(text, language, separator):
     var_name = 'FOOTER_{}'.format(language).upper()
     footer = globals().get(var_name)
     assert footer, '{} undefined'.format(var_name)
-    return '{}\n\n{}'.format(text, footer)
+    return separator.join([text, footer])
 
 
 def _get_text(notification_type, language, field):
@@ -58,7 +59,7 @@ def create_existing_notifications(NotificationTemplate):
     for notification_type in NOTIFICATION_TYPES:
         subject = _get_text(notification_type, DEFAULT_LANGUAGE, 'subject')
         html_body = _get_text(notification_type, DEFAULT_LANGUAGE, 'html_body')
-        html_body = _append_footer(html_body, DEFAULT_LANGUAGE)
+        html_body = _append_footer(html_body, DEFAULT_LANGUAGE, HTML_SEPARATOR)
         try:
             notification = NotificationTemplate.objects.get(type=notification_type)
             continue
@@ -72,7 +73,7 @@ def create_existing_notifications(NotificationTemplate):
             for language in LANGUAGES:
                 subject = _get_text(notification_type, language, 'subject')
                 html_body = _get_text(notification_type, language, 'html_body')
-                html_body = _append_footer(html_body, language)
+                html_body = _append_footer(html_body, language, HTML_SEPARATOR)
                 setattr(notification, 'subject_{}'.format(language), subject)
                 setattr(notification, 'html_body_{}'.format(language), html_body)
             notification.save()
