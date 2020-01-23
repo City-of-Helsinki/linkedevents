@@ -29,13 +29,13 @@ Tapahtuma tulee näkyville <a href="https://hel.fi/tapahtumat">Helsingin tapahtu
 
 Et voi enää muokata tapahtumaa julkaisun jälkeen. Jos haluat muuttaa tapahtuman tietoja, jätä muutospyyntö osoitteessa <a href="https://hel.fi/palaute">hel.fi/palaute</a>. Mainitse palautteessasi tapahtuman nimi ja julkaisuaika:"{{ event.name }}", {{ event.created_at|date:"j.n.Y \\k\\l\\o H:i" }}"""
 
-DRAFT_POSTED_SUBJECT_FI = 'Uusi tapahtumaluonnos "{{ event.name}}", {{ event.created_at|date:"j.n.Y \\k\\l\\o H:i" }} – Helsingin kaupungin tapahtumarajapinta'
+DRAFT_POSTED_SUBJECT_FI = 'Uusi tapahtumaluonnos "{{ event.name }}", {{ event.created_at|date:"j.n.Y \\k\\l\\o H:i" }} – Helsingin kaupungin tapahtumarajapinta'
 DRAFT_POSTED_HTML_BODY_FI = \
 """Helsingin kaupungin tapahtumarajapintaan on luotu uusi tapahtumaluonnos:
 
 "{{ event.name }}", {{ event.created_at|date:"j.n.Y \\k\\l\\o H:i" }}
 
-<a href="{{ event_url }}">Siirry moderoimaan tapahtumia »</a>
+<a href="https://linkedevents.hel.fi/event/{{ event.id }}">Siirry moderoimaan tapahtumia »</a>
 
 Sait tämän viestin, koska olet moderaattori organisaatiossa {{ event.publisher.name }}."""
 
