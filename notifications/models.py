@@ -86,14 +86,18 @@ class NotificationTemplate(models.Model):
             raise NotificationTemplateException(e) from e
 
 
-def format_datetime(dt):
-    current_language = translation.get_language()
-    if current_language == 'fi':
-        # ma 1.1.2017 klo 12.00
-        dt_format = r'D j.n.Y \k\l\o G.i'
+def format_datetime(dt, lang='fi'):
+    if lang == 'fi':
+        # 1.1.2017 klo 12:00
+        dt_format = r'j.n.Y \k\l\o G:i'
+    elif lang == 'sv':
+        # 1.1.2017 kl. 12:00
+        dt_format = r'j.n.Y \k\l\. G:i'
+    elif lang == 'en':
+        # 1 Jan 2017 at 12:00
+        dt_format = r'j M Y \a\t G:i'
     else:
-        # default to English
-        dt_format = r'D j/n/Y G:i'
+        raise NotificationTemplateException(f"format_datetime received unknown language '{lang}'")
 
     return date_format(dt, dt_format)
 
