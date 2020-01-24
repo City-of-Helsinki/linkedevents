@@ -36,23 +36,27 @@ class AutoIdBaseAdmin(BaseAdmin):
 
 class EventAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
     # TODO: only allow user_editable editable fields
-    fields = ('id', 'name', 'short_description', 'description', 'location', 'location_extra_info', 'start_time',
-              'end_time', 'keywords', 'audience', 'publisher', 'provider', 'provider_contact_info', 'event_status',
-              'super_event', 'info_url', 'in_language')
+    fields = ('id', 'data_source', 'origin_id', 'name', 'short_description', 'description', 'location',
+              'location_extra_info', 'start_time', 'end_time', 'keywords', 'audience', 'publisher', 'provider',
+              'provider_contact_info', 'event_status', 'super_event', 'info_url', 'in_language')
     search_fields = ('name', 'location__name')
     list_display = ('id', 'name', 'start_time', 'end_time', 'publisher', 'location')
     list_filter = ('data_source',)
     ordering = ('-last_modified_time',)
     autocomplete_fields = ('location', 'keywords', 'audience', 'super_event', 'publisher')
-    readonly_fields = ('id',)
 
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ['id', 'data_source', 'origin_id']
+        else:
+            return ['id', 'data_source']
 
 admin.site.register(Event, EventAdmin)
 
 
 class KeywordAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
     # TODO: only allow user_editable editable fields
-    fields = ('id', 'publisher', 'deprecated', 'name')
+    fields = ('id', 'data_source', 'origin_id',  'publisher', 'deprecated', 'name')
     search_fields = ('name',)
     list_display = ('id', 'name', 'n_events')
     list_filter = ('data_source',)
@@ -60,6 +64,11 @@ class KeywordAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
     autocomplete_fields = ('publisher', )
     readonly_fields = ('id',)
 
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ['id', 'data_source', 'origin_id']
+        else:
+            return ['id', 'data_source']
 
 admin.site.register(Keyword, KeywordAdmin)
 
@@ -72,7 +81,7 @@ class KeywordSetAdmin(AutoIdBaseAdmin):
         if obj:
             return ['id', 'origin_id', 'data_source']
         else:
-            return ['id']
+            return ['id', 'data_source']
 
 
 admin.site.register(KeywordSet, KeywordSetAdmin)
@@ -91,7 +100,7 @@ class PlaceAdmin(HelsinkiGeoAdmin, AutoIdBaseAdmin, TranslationAdmin, VersionAdm
     # TODO: only allow user_editable editable fields
     fieldsets = (
         (None, {
-            'fields': ('id', 'publisher',  'deleted', 'replaced_by', 'name', 'description', 'info_url', 'position')
+            'fields': ('id', 'data_source', 'origin_id', 'publisher',  'deleted', 'replaced_by', 'name', 'description', 'info_url', 'position')
 
         }),
         (_('Contact info'), {
@@ -105,12 +114,17 @@ class PlaceAdmin(HelsinkiGeoAdmin, AutoIdBaseAdmin, TranslationAdmin, VersionAdm
     list_filter = ('data_source',)
     ordering = ('-n_events',)
     autocomplete_fields = ('replaced_by', 'publisher')
-    readonly_fields = ('id',)
 
     def __init__(self, model, admin_site):
         super().__init__(model, admin_site)
         # use https CDN instead
         self.openlayers_url = 'https://cdnjs.cloudflare.com/ajax/libs/openlayers/2.13.1/OpenLayers.js'
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ['id', 'data_source', 'origin_id']
+        else:
+            return ['id', 'data_source']
 
 
 admin.site.register(Place, PlaceAdmin)
