@@ -18,6 +18,7 @@ schema_org_type can be used to define custom types. Override jsonld_context
 attribute to change @context when need to define schemas for custom fields.
 """
 import datetime
+import logging
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 import pytz
@@ -31,12 +32,17 @@ from django.contrib.contenttypes.models import ContentType
 from events import translation_utils
 from django.utils.encoding import python_2_unicode_compatible
 from django.contrib.postgres.fields import HStoreField
+from django.contrib.sites.models import Site
+from django.core.mail import send_mail
 from django.db import transaction
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 from image_cropping import ImageRatioField
 from munigeo.models import AdministrativeDivision
+from notifications.models import render_notification_template, NotificationType, NotificationTemplateException
+from smtplib import SMTPException
 
+logger = logging.getLogger(__name__)
 
 User = settings.AUTH_USER_MODEL
 
@@ -515,9 +521,19 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     def save(self, *args, **kwargs):
         # needed to cache location event numbers
         old_location = None
+
+        # needed for notifications
+        old_publication_status = None
+        old_deleted = None
+        created = True
+
         if self.id:
             try:
-                old_location = Event.objects.get(id=self.id).location
+                event = Event.objects.get(id=self.id)
+                created = False
+                old_location = event.location
+                old_publication_status = event.publication_status
+                old_deleted = event.deleted
             except Event.DoesNotExist:
                 pass
 
@@ -538,6 +554,14 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
             Place.objects.filter(id=old_location.id).update(n_events_changed=True)
         if old_location and self.location and old_location != self.location:
             Place.objects.filter(id__in=(old_location.id, self.location.id)).update(n_events_changed=True)
+
+        # send notifications
+        if old_publication_status == PublicationStatus.DRAFT and self.publication_status == PublicationStatus.PUBLIC:
+            self.send_published_notification()
+        if old_deleted is False and self.deleted is True:
+            self.send_deleted_notification()
+        if created and self.publication_status == PublicationStatus.DRAFT:
+            self.send_draft_posted_notification()
 
     def __str__(self):
         name = ''
@@ -575,6 +599,49 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     def undelete(self, using=None):
         self.deleted = False
         self.save(update_fields=("deleted",), using=using, force_update=True)
+
+    def _send_notification(self, notification_type, recipient_list, request=None):
+        if len(recipient_list) == 0:
+            logger.warning("No recipients for notification type '%s'" % notification_type, extra={'event': self})
+            return
+        context = {'event': self}
+        try:
+            rendered_notification = render_notification_template(notification_type, context)
+        except NotificationTemplateException as e:
+            logger.error(e, exc_info=True, extra={'request': request})
+            return
+        try:
+            send_mail(
+                rendered_notification['subject'],
+                rendered_notification['body'],
+                'noreply@%s' % Site.objects.get_current().domain,
+                recipient_list,
+                html_message=rendered_notification['html_body']
+            )
+        except SMTPException as e:
+            logger.error(e, exc_info=True, extra={'request': request, 'event': self})
+
+    def _get_author_emails(self):
+        author_emails = []
+        for user in (self.created_by, self.last_modified_by):
+            if user and user.email:
+                author_emails.append(user.email)
+        return author_emails
+
+    def send_deleted_notification(self, request=None):
+        recipient_list = self._get_author_emails()
+        self._send_notification(NotificationType.UNPUBLISHED_EVENT_DELETED, recipient_list, request)
+
+    def send_published_notification(self, request=None):
+        recipient_list = self._get_author_emails()
+        self._send_notification(NotificationType.EVENT_PUBLISHED, recipient_list, request)
+
+    def send_draft_posted_notification(self, request=None):
+        recipient_list = []
+        for admin in self.publisher.admin_users.all():
+            if admin.email:
+                recipient_list.append(admin.email)
+        self._send_notification(NotificationType.DRAFT_POSTED, recipient_list, request)
 
 
 reversion.register(Event)
