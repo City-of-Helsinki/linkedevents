@@ -58,6 +58,9 @@ env = environ.Env(
     INSTANCE_NAME=(str, 'Linked Events'),
     EXTRA_INSTALLED_APPS=(list, []),
     AUTO_ENABLED_EXTENSIONS=(list, []),
+    MAIL_MAILGUN_KEY=(str, ''),
+    MAIL_MAILGUN_DOMAIN=(str, ''),
+    MAIL_MAILGUN_API=(str, ''),
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -140,6 +143,9 @@ INSTALLED_APPS = [
     'haystack',
     'django_cleanup',
     'django_filters',
+    'django_jinja',
+    'notifications',
+    'anymail',
 
     'allauth',
     'allauth.account',
@@ -268,7 +274,21 @@ CORS_ORIGIN_ALLOW_ALL = True
 CSRF_COOKIE_NAME = '%s-csrftoken' % env('COOKIE_PREFIX')
 SESSION_COOKIE_NAME = '%s-sessionid' % env('COOKIE_PREFIX')
 
+from django_jinja.builtins import DEFAULT_EXTENSIONS # noqa
+
 TEMPLATES = [
+    {
+        'BACKEND': 'django_jinja.backend.Jinja2',
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'extensions': DEFAULT_EXTENSIONS + ["jinja2.ext.i18n"],
+            'translation_engine': 'django.utils.translation',
+            "match_extension": ".jinja",
+            "filters": {
+                "django_wordwrap": "django.template.defaultfilters.wordwrap"
+            },
+        },
+    },
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
@@ -425,3 +445,15 @@ if 'SECRET_KEY' not in locals():
             secret.close()
         except IOError:
             Exception('Please create a %s file with random characters to generate your secret key!' % secret_file)
+
+#
+# Anymail
+#
+
+if env('MAIL_MAILGUN_KEY'):
+    ANYMAIL = {
+        'MAILGUN_API_KEY': env('MAIL_MAILGUN_KEY'),
+        'MAILGUN_SENDER_DOMAIN': env('MAIL_MAILGUN_DOMAIN'),
+        'MAILGUN_API_URL': env('MAIL_MAILGUN_API'),
+    }
+    EMAIL_BACKEND = 'anymail.backends.mailgun.EmailBackend'

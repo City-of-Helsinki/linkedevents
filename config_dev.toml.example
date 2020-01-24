@@ -137,3 +137,8 @@ STATIC_URL=/static/
 # Sentry environment is an optional tag that can be included in sentry
 # reports. It is used to separate deployments within Sentry UI
 SENTRY_ENVIRONMENT=local-development-unconfigured
+
+# Mailgun API credentials
+#MAIL_MAILGUN_KEY=key
+#MAIL_MAILGUN_DOMAIN=do.main.com
+#MAIL_MAILGUN_API=https://mail.gun.api/
