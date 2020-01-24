@@ -279,6 +279,11 @@ class Keyword(BaseModel, ImageMixin):
         self.save(update_fields=['deprecated'])
         return True
 
+    def replace(self, replaced_by):
+        self.replaced_by = replaced_by
+        self.save(update_fields=['replaced_by'])
+        return True
+
     @transaction.atomic
     def save(self, *args, **kwargs):
         if self.replaced_by and self.replaced_by.replaced_by == self:

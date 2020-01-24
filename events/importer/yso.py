@@ -94,7 +94,7 @@ def deprecate_and_replace(graph, keyword):
                             "No replacement keyword was found in YSO. Please manually map the "
                             "keyword to a new keyword in YSO_DEPRECATED_MAPS." %
                             (str(keyword), str(keyword.events.all() | keyword.audience_events.all())))
-    return keyword.deprecate()
+    return keyword.deprecate() and keyword.replace(new_keyword)
 
 
 @register_importer
