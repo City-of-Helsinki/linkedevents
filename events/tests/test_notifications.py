@@ -9,6 +9,10 @@ from notifications.tests.utils import check_received_mail_exists
 
 @pytest.fixture
 def event_deleted_notification_template():
+    try:
+        NotificationTemplate.objects.get(type=NotificationType.UNPUBLISHED_EVENT_DELETED).delete()
+    except NotificationTemplate.DoesNotExist:
+        pass
     template = NotificationTemplate.objects.create(
         type=NotificationType.UNPUBLISHED_EVENT_DELETED,
         subject="event deleted subject, event name: {{ event.name }}!",
@@ -20,6 +24,10 @@ def event_deleted_notification_template():
 
 @pytest.fixture
 def event_published_notification_template():
+    try:
+        NotificationTemplate.objects.get(type=NotificationType.EVENT_PUBLISHED).delete()
+    except NotificationTemplate.DoesNotExist:
+        pass
     template = NotificationTemplate.objects.create(
         type=NotificationType.EVENT_PUBLISHED,
         subject="event published subject, event name: {{ event.name }}!",
@@ -31,6 +39,10 @@ def event_published_notification_template():
 
 @pytest.fixture
 def draft_posted_notification_template():
+    try:
+        NotificationTemplate.objects.get(type=NotificationType.DRAFT_POSTED).delete()
+    except NotificationTemplate.DoesNotExist:
+        pass
     template = NotificationTemplate.objects.create(
         type=NotificationType.DRAFT_POSTED,
         subject="draft posted subject, event name: {{ event.name }}!",
