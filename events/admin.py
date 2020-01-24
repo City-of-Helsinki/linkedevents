@@ -51,6 +51,7 @@ class EventAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
         else:
             return ['id', 'data_source']
 
+
 admin.site.register(Event, EventAdmin)
 
 
@@ -69,6 +70,7 @@ class KeywordAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
             return ['id', 'data_source', 'origin_id']
         else:
             return ['id', 'data_source']
+
 
 admin.site.register(Keyword, KeywordAdmin)
 
