@@ -13,7 +13,7 @@ django-leaflet
 django-modeltranslation
 django-mptt>=0.10.0
 django-munigeo>=0.2.23,<0.3
-django-orghierarchy>=0.1.22
+django-orghierarchy>=0.1.23
 django-reversion
 django>=2.2,<3.0
 djangorestframework
