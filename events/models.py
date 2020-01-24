@@ -40,6 +40,7 @@ from django.dispatch import receiver
 from image_cropping import ImageRatioField
 from munigeo.models import AdministrativeDivision
 from notifications.models import render_notification_template, NotificationType, NotificationTemplateException
+from smtplib import SMTPException
 
 logger = logging.getLogger(__name__)
 
@@ -609,13 +610,16 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         except NotificationTemplateException as e:
             logger.error(e, exc_info=True, extra={'request': request})
             return
-        send_mail(
-            rendered_notification['subject'],
-            rendered_notification['body'],
-            'noreply@%s' % Site.objects.get_current().domain,
-            recipient_list,
-            html_message=rendered_notification['html_body']
-        )
+        try:
+            send_mail(
+                rendered_notification['subject'],
+                rendered_notification['body'],
+                'noreply@%s' % Site.objects.get_current().domain,
+                recipient_list,
+                html_message=rendered_notification['html_body']
+            )
+        except SMTPException as e:
+            logger.error(e, exc_info=True, extra={'request': request, 'event': self})
 
     def _get_author_emails(self):
         author_emails = []
