@@ -67,7 +67,12 @@ admin.site.register(Keyword, KeywordAdmin)
 class KeywordSetAdmin(AutoIdBaseAdmin):
     fields = ('id', 'data_source', 'origin_id', 'name', 'keywords', 'usage')
     autocomplete_fields = ('keywords', )
-    readonly_fields = ('id',)
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ['id', 'origin_id', 'data_source']
+        else:
+            return ['id']
 
 
 admin.site.register(KeywordSet, KeywordSetAdmin)
