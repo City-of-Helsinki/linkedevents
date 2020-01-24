@@ -102,7 +102,8 @@ class PlaceAdmin(HelsinkiGeoAdmin, AutoIdBaseAdmin, TranslationAdmin, VersionAdm
     # TODO: only allow user_editable editable fields
     fieldsets = (
         (None, {
-            'fields': ('id', 'data_source', 'origin_id', 'publisher',  'deleted', 'replaced_by', 'name', 'description', 'info_url', 'position')
+            'fields': ('id', 'data_source', 'origin_id', 'publisher',  'deleted', 'replaced_by', 'name', 'description',
+                       'info_url', 'position')
 
         }),
         (_('Contact info'), {
