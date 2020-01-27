@@ -6,7 +6,8 @@ aliases:
   # Remember to update the site_packages_path if you update the python version
   # lxml doesn't yet have a Python 3.8 wheel package so use Python 3.7 instead
   - &python_image_version 3.7.6
-  - &site_packages_path ~/.local/lib/python3.7/site-packages
+  # The tilde (home path) has been removed since it doesn't work in docker commands in test_ci.sh
+  - &site_packages_path .local/lib/python3.7/site-packages
 
   - &builder_image_version 6c86b7f0df29fc8db89978f8d83483f2372b203f
   - &ubuntu_base_image_version 6c86b7f0df29fc8db89978f8d83483f2372b203f
@@ -92,7 +93,7 @@ jobs:
           key: *deps_cache_key
           paths:
             - ~/.local/bin
-            - << parameters.site_packages_path >>
+            - ~/<< parameters.site_packages_path >>
 
   lint:
     executor: python
@@ -100,6 +101,25 @@ jobs:
       - *restore_repo
       - *restore_deps
       - run: flake8 .
+
+  test:
+    executor: builder
+    environment:
+      PYTHON_IMAGE_VERSION: *python_image_version
+      SITE_PACKAGES_PATH: *site_packages_path
+      POSTGRES_USER: linkedevents
+      POSTGRES_PASSWORD: linkedevents
+      POSTGRES_DB: linkedevents
+    steps:
+      - *restore_repo
+      - *restore_deps
+      - setup_remote_docker
+      - run:
+          name: Docker login to ECR
+          command: ecr-login
+      - run:
+          name: Run test script
+          command: ./test_ci.sh
 
   dockerize:
     executor: builder
@@ -135,7 +155,12 @@ workflows:
       - lint:
           requires:
             - install_deps
+      - test:
+          context: org-global
+          requires:
+            - install_deps
       - dockerize:
           context: org-global
           requires:
             - lint
+            - test
