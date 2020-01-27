@@ -3,6 +3,7 @@
 version: 2.1
 
 orbs:
+  jira: circleci/jira@1.1.2
   slack: circleci/slack@3.4.2
 
 aliases:
@@ -86,6 +87,7 @@ jobs:
           key: *repo_cache_key
           paths:
             - .
+      - jira/notify
       - notify_slack
 
   install_deps:
@@ -107,6 +109,7 @@ jobs:
           paths:
             - ~/.local/bin
             - ~/<< parameters.site_packages_path >>
+      - jira/notify
       - notify_slack
 
   lint:
@@ -115,6 +118,7 @@ jobs:
       - *restore_repo
       - *restore_deps
       - run: flake8 .
+      - jira/notify
       - notify_slack
 
   test:
@@ -135,6 +139,7 @@ jobs:
       - run:
           name: Run test script
           command: ./test_ci.sh
+      - jira/notify
       - notify_slack
 
   dockerize:
@@ -159,6 +164,7 @@ jobs:
       - run:
           name: Tag and push docker image
           command: ecr-push "${DOCKER_IMAGE_NAME}"
+      - jira/notify
       - notify_slack
 
 workflows:
