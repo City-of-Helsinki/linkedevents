@@ -1,7 +1,7 @@
 import logging
 
 # Load main setting
-from .settings import *
+from .settings import *  # noqa: F401, F403
 
 logger = logging.getLogger(__name__)
 
