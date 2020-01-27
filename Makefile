@@ -1,7 +1,7 @@
 # This is file used for developing and as a cheatsheet for the developer
 
 
-.PHONY: build start stop up
+.PHONY: build start stop up lint
 
 BASE_DIR = $(shell pwd)
 CONTAINER_PORT := $(shell grep CONTAINER_PORT .env | cut -d '=' -f2)
@@ -29,3 +29,13 @@ up:
 	-it \
 	--rm \
 	espooevents-service
+
+lint:
+	@docker run \
+	--rm \
+	-v `pwd`:/usr/src/app \
+	-w /usr/src/app \
+	-u circleci \
+	--name espooevents-service-lint \
+	circleci/python:3.7.6 \
+	/bin/bash -c "pip install pip-tools && pip-sync --user requirements-dev.txt"
