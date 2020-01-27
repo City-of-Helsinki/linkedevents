@@ -1,3 +1,5 @@
+---
+
 # Data sources
 - model: events.datasource
   pk: helfi
@@ -135,12 +137,12 @@
     name_en: www.hel.fi themes
     usage: 2
     keywords:
-        - "helfi:8"
-        - "helfi:9"
-        - "helfi:10"
-        - "helfi:11"
-        - "helfi:12"
-        - "helfi:13"
+      - "helfi:8"
+      - "helfi:9"
+      - "helfi:10"
+      - "helfi:11"
+      - "helfi:12"
+      - "helfi:13"
 
     created_time: 2015-01-13T12:00Z
     last_modified_time: 2015-01-13T12:00Z
@@ -154,10 +156,10 @@
     name_en: www.hel.fi resident groups
     usage: 3
     keywords:
-        - "helfi:1"
-        - "helfi:2"
-        - "helfi:3"
-        - "helfi:4"
-        - "helfi:5"
-        - "helfi:6"
-        - "helfi:7"
+      - "helfi:1"
+      - "helfi:2"
+      - "helfi:3"
+      - "helfi:4"
+      - "helfi:5"
+      - "helfi:6"
+      - "helfi:7"
