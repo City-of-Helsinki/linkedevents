@@ -2,6 +2,9 @@
 
 version: 2.1
 
+orbs:
+  slack: circleci/slack@3.4.2
+
 aliases:
   # Remember to update the site_packages_path if you update the python version
   # lxml doesn't yet have a Python 3.8 wheel package so use Python 3.7 instead
@@ -64,6 +67,15 @@ executors:
       # Ubuntu image version
       BASE_IMAGE_VERSION: << parameters.ubuntu_base_image_version >>
 
+commands:
+  # Must be the last step in a job
+  notify_slack:
+    description: "Notify via Slack"
+    steps:
+      - slack/status:
+          fail_only: true
+          only_for_branches: master
+
 jobs:
   checkout_code:
     executor: python
@@ -74,6 +86,7 @@ jobs:
           key: *repo_cache_key
           paths:
             - .
+      - notify_slack
 
   install_deps:
     parameters:
@@ -94,6 +107,7 @@ jobs:
           paths:
             - ~/.local/bin
             - ~/<< parameters.site_packages_path >>
+      - notify_slack
 
   lint:
     executor: python
@@ -101,6 +115,7 @@ jobs:
       - *restore_repo
       - *restore_deps
       - run: flake8 .
+      - notify_slack
 
   test:
     executor: builder
@@ -120,6 +135,7 @@ jobs:
       - run:
           name: Run test script
           command: ./test_ci.sh
+      - notify_slack
 
   dockerize:
     executor: builder
@@ -143,6 +159,7 @@ jobs:
       - run:
           name: Tag and push docker image
           command: ecr-push "${DOCKER_IMAGE_NAME}"
+      - notify_slack
 
 workflows:
   version: 2
