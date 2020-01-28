@@ -51,6 +51,7 @@ env = environ.Env(
     STATIC_ROOT=(environ.Path(), root('static')),
     MEDIA_URL=(str, '/media/'),
     STATIC_URL=(str, '/static/'),
+    TRUST_X_FORWARDED_HOST=(bool, False),
     SENTRY_DSN=(str, ''),
     SENTRY_ENVIRONMENT=(str, 'development'),
     COOKIE_PREFIX=(str, 'linkedevents'),
@@ -215,6 +216,12 @@ STATIC_URL = env('STATIC_URL')
 MEDIA_URL = env('MEDIA_URL')
 STATIC_ROOT = env('STATIC_ROOT')
 MEDIA_ROOT = env('MEDIA_ROOT')
+
+# Whether to trust X-Forwarded-Host headers for all purposes
+# where Django would need to make use of its own hostname
+# fe. generating absolute URLs pointing to itself
+# Most often used in reverse proxy setups
+USE_X_FORWARDED_HOST = env('TRUST_X_FORWARDED_HOST')
 
 #
 # Authentication
