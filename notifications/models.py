@@ -2,7 +2,7 @@ import logging
 
 from django.conf import settings
 from django.db import models
-from django.utils import translation
+from django.utils import translation, timezone
 from django.utils.html import strip_tags
 from django.utils.translation import activate
 from django.utils.translation import ugettext_lazy as _
@@ -86,6 +86,7 @@ class NotificationTemplate(models.Model):
 
 
 def format_datetime(dt, lang='fi'):
+    dt = timezone.template_localtime(dt)
     if lang == 'fi':
         # 1.1.2017 klo 12:00
         dt_format = r'j.n.Y \k\l\o G:i'
