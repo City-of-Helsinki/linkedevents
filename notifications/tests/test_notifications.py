@@ -1,5 +1,8 @@
 import pytest
+from datetime import datetime
+import pytz
 
+from django.utils import timezone
 from django.utils.translation import activate
 from notifications.models import NotificationType, NotificationTemplate, render_notification_template
 
@@ -85,3 +88,22 @@ def test_notification_template_rendering_empty_html_body(notification_template):
     assert rendered['subject'] == "testiotsikko, muuttujan arvo: bar!"
     assert rendered['body'] == "testiruumis, muuttujan arvo: baz!"
     assert rendered['html_body'] == ""
+
+
+@pytest.mark.django_db
+def test_notification_template_format_datetime(notification_template):
+    notification_template.body_en = "{{ datetime|format_datetime('en') }}"
+    notification_template.save()
+
+    dt = datetime(2020, 2, 22, 12, 0, 0, 0, pytz.utc)
+
+    context = {
+        'subject_var': 'bar',
+        'datetime': dt,
+        'html_body_var': 'foo <b>bar</b> baz',
+    }
+
+    timezone.activate(pytz.timezone('Europe/Helsinki'))
+
+    rendered = render_notification_template(NotificationType.TEST, context, 'en')
+    assert rendered['body'] == '22 Feb 2020 at 14:00'
