@@ -1889,6 +1889,12 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
             if 'admin_user' in self.request.query_params:
                 # displays all editable events, including drafts, but no other public events
                 queryset = editable_queryset
+            if 'created_by' in self.request.query_params:
+                if self.request.user.is_authenticated:
+                    # only displays events by the particular user
+                    queryset = queryset.filter(created_by=self.request.user)
+                else:
+                    queryset = queryset.none()
         else:
             # prevent changing events user does not have write permissions (for bulk operations)
             queryset = self.request.user.get_editable_events(original_queryset)
