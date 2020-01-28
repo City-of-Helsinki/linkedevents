@@ -65,7 +65,6 @@ class NotificationTemplate(models.Model):
 
         env = SandboxedEnvironment(trim_blocks=True, lstrip_blocks=True, undefined=StrictUndefined)
         env.filters['format_datetime'] = format_datetime
-        env.filters['format_datetime_tz'] = format_datetime_tz
 
         logger.debug('Rendering template for notification %s' % self.type)
 
@@ -100,11 +99,6 @@ def format_datetime(dt, lang='fi'):
         raise NotificationTemplateException(f"format_datetime received unknown language '{lang}'")
 
     return date_format(dt, dt_format)
-
-
-def format_datetime_tz(dt, tz):
-    dt = dt.astimezone(tz)
-    return format_datetime(dt)
 
 
 def render_notification_template(notification_type, context, language_code=DEFAULT_LANG):
