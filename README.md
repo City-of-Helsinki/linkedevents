@@ -38,7 +38,13 @@ If all you want is a barebone application to work with for your own city:
 * Copy `config_dev.toml.example` to `config_dev.toml`
     * Change settings where needed
 
-* Run `git-hooks.sh` which will set the required Git Hooks that will handle commit message linting and git-secrets
+* Run `git-hooks.sh` which will set the required Git Hooks that will handle commit message linting and git-secrets.
+  Install the following tools for the git hooks to work correctly:
+    * To prevent commiting AWS credentials, install [git-secrets](https://github.com/awslabs/git-secrets)
+    * To prevent other secrets from slipping to GitHub, install [truffleHog](https://github.com/dxa4481/truffleHog).
+      truffleHog supports checking secrets only in commits so that's why truffleHog is only run in the pre-push hook.
+    * To validate the CircleCI config, install [circleci-cli](https://github.com/CircleCI-Public/circleci-cli)
+    * To lint yaml files, install [yamllint](https://github.com/adrienverge/yamllint)
 
 * Start django application and database server:
   ```

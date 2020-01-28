@@ -8,7 +8,6 @@ local_settings.py
 static/CACHE
 media/
 .vagrant/
-.idea
 .django_secret
 *.iml
 *.kate-swp
@@ -153,5 +152,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Editors
+.idea
+.vscode
 
 # End of https://www.gitignore.io/api/python,macos

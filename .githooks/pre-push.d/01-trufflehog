@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+trufflehog --since_commit "$(git rev-parse master)" --regex --exclude_paths trufflehog-exclude-patterns.txt .
