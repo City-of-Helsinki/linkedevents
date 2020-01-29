@@ -336,6 +336,7 @@ CITYSDK_API_SETTINGS = {
 # Used in Lippupiste importer
 LIPPUPISTE_EVENT_API_URL = env('LIPPUPISTE_EVENT_API_URL')
 
+
 def haystack_connection_for_lang(language_code):
     if language_code == "fi":
         return {'default-fi': {
