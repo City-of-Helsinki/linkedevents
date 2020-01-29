@@ -67,6 +67,65 @@ If you wish to use locations, addresses and events data from the Helsinki capita
 * UI app is specific to Helsinki at the moment and requires general Finnish ontology as well as additional Helsinki specific audiences
 and keywords to be present. However, UI code should be easily adaptable to your own city if you have an OAuth2 authentication server present
 
+A few words about authentication
+----------------------------
+User creation and userinfo fetching is done on the same endpoint: [http://localhost:8000/v1/user/<username>](http://localhost:8000/v1/user/<username>)
+
+Sending a GET request there, with a header `Authorizarion: JWT <encrypted_jwt_token>` will return a JSON payload with userinfo, creating the user if needed.
+
+A way to test JWT tokens is to generate a token using [pyjwt](https://pyjwt.readthedocs.io/en/latest/) or similar:
+
+```
+$ pyjwt --alg=HS256 --key=secret encode \
+  username=tauno \
+  email=tauno.tammi@espoo.fi \
+  first_name=Tauno \
+  last_name=Tammi \
+  department_name=null \
+  display_name="Tauno Tammi" \
+  iss=dummy \
+  sub=458032f5-8d73-4370-b155-5330639a14d5 \
+  aud=local-dev \
+  iat=$(date +%s) \
+  exp=$(date +%s -d "+10 days")
+```
+For MacOS, change the last line to `exp=$(date -v +10d +%s)`
+
+Decrypted example JWT payload:
+```
+{
+  "username": "tauno",
+  "email": "tauno.tammi@espoo.fi",
+  "first_name": "Tauno",
+  "last_name": "Tammi",
+  "department_name": null,
+  "display_name": "Tauno Tammi",
+  "iss": "dummy",
+  "sub": "458032f5-8d73-4370-b155-5330639a14d5",
+  "aud": "local-dev",
+  "iat": 1579858924,
+  "exp": 1580722924
+}
+```
+
+Example JSON response
+```
+{
+    "last_login": null,
+    "username": "tauno",
+    "email": "tauno.tammi@espoo.fi",
+    "date_joined": "2020-01-28T15:44:44.876236+02:00",
+    "first_name": "Tauno",
+    "last_name": "Tammi",
+    "uuid": "458032f5-8d73-4370-b155-5330639a14d5",
+    "department_name": null,
+    "is_staff": false,
+    "display_name": "Tauno Tammi",
+    "admin_organizations": [],
+    "organization_memberships": []
+}
+```
+In this EspooEvents fork, any created user will have CRUD rights to events via Django permissions.
 
 Development installation on physical or virtual machine
 ----------------------------
