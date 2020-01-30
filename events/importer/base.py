@@ -219,6 +219,7 @@ class Importer(object):
         if not hasattr(obj, '_changed_fields'):
             obj._changed_fields = []
         obj._changed_fields.append(field_name)
+        return f'{field_name} {val}'
 
     def _save_field(self, obj, obj_field_name, info,
                     info_field_name, max_length=None):
@@ -233,7 +234,7 @@ class Importer(object):
         self._set_field(obj, obj_field_name, val)
 
     def _save_translated_field(self, obj, obj_field_name, info,
-                               info_field_name, max_length=None):
+                               info_make_link_id_field_name, max_length=None):
         # atm only used by place importers, do some extra cleaning and validation before setting value
         for lang in self.supported_languages:
             key = '%s_%s' % (info_field_name, lang)
@@ -244,43 +245,50 @@ class Importer(object):
                 self._save_field(obj, obj_field_name, info, key, max_length)
 
     def _update_fields(self, obj, info, skip_fields):
-        # all non-place importers use this method, automatically takes care of translated fields
-        obj_fields = list(obj._meta.fields)
+        """ all non-place importers use this method
+        Treatment of translated fields: Every field that according to the model
+        can be translated is represented in trans_fields as a dictionary, where
+        fieldname is a key, and value is a set of fields representing
+        translations into different languages.
+        Info is default
+        """
+        obj_fields = set(obj._meta.fields)
         trans_fields = translator.get_options_for_model(type(obj)).fields
-        for field_name, lang_fields in trans_fields.items():
-            lang_fields = list(lang_fields)
-            for lf in lang_fields:
-                lang = lf.language
-                # Do not process this field later
-                skip_fields.append(lf.name)
 
-                if field_name not in info:
-                    continue
+        # list the fields that can be translated according to the model as a set
+        # of tuples {(field_name, language)} ex. {('name', 'en'), ('name', 'fi')
+        # ...}
+        translatable_fields = {(p, a.language) for p in trans_fields.keys()
+                                               for a in trans_fields[p]}
 
-                data = info[field_name]
-                if data is not None and lang in data:
-                    val = data[lang]
-                else:
-                    val = None
-                self._set_field(obj, lf.name, val)
+        # received data contains translations in the dictionaries of dictionaries as in
+        # info['name'] = defaultdict({'en': 'Christmas at Sello Library', 'sv': '....'})
+        # select all elements of info, which are dictionaries and pair the key
+        # of the upper level dictionary with the non-empty keys of the inner dictionary
+        # output: {('name', 'en'):'Party', ('description', 'en'):'Hell of a party', ...}
+        info_fields = {(k, b): v[b] for k, v in info.items() if isinstance(v, dict)
+                                   for b in v.keys() if v[b]}
 
-            # Remove original translated field
-            skip_fields.append(field_name)
+        # set of translatable model fields for which translations are available
+        translated = translatable_fields & set(info_fields.keys())
 
-        for d in skip_fields:
-            for f in obj_fields:
-                if f.name == d:
-                    obj_fields.remove(f)
-                    break
+        _ = [self._set_field(obj=obj,
+                             field_name=f'{v[0]}_{v[1]}',
+                             val=info_fields[v]) for v in translated]
+        processed_fields = [f'{v[0]}_{v[1]}' for v in translated]
+
+        fields_to_omit = {f for f in obj_fields if f.name in skip_fields + processed_fields}
+        remaining_obj_fields = obj_fields - fields_to_omit
+
+        # let's see which of the remaining fields are actually present in info
+        still_to_process = {f.name for f in remaining_obj_fields if f.name in info}
 
         if 'origin_id' in info:
             info['origin_id'] = str(info['origin_id'])
 
-        for field in obj_fields:
-            field_name = field.name
-            if field_name not in info:
-                continue
-            self._set_field(obj, field_name, info[field_name])
+        _ = [self._set_field(obj=obj,
+                             field_name=f,
+                             val=info[f]) for f in still_to_process]
 
     def save_event(self, info):
         info = info.copy()
@@ -298,15 +306,17 @@ class Importer(object):
         obj._changed = False
         obj._changed_fields = []
 
-        location_id = None
         if 'location' in info:
             location = info['location']
-            if 'id' in location:
-                location_id = location['id']
-            if 'extra_info' in location:
-                info['location_extra_info'] = location['extra_info']
+            location_id = location.get('id')
+            info['location_extra_info'] = location.get('extra_info')
+        else:
+            location_id = None
 
-        assert info['start_time']
+        if not info.get('start_time'):
+            logger.error(f"{info['origin_id']} event from {info['data_source']}"
+                         f"could not be saved, missing start_time")
+            assert info['start_time']  # in case KeyError is needed for some log analysis
         if 'has_start_time' not in info:
             info['has_start_time'] = True
         if not info['has_start_time']:
@@ -323,7 +333,6 @@ class Importer(object):
 
         if 'has_end_time' not in info:
             info['has_end_time'] = True
-
         # If end date is supplied but no time, the event ends at midnight of the following day.
         if not info['has_end_time']:
             # Event end time is not exactly defined.
