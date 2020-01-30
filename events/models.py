@@ -578,8 +578,6 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         old_deleted = None
         created = True
 
-        old_replaced_by = None
-
         if self.id:
             try:
                 event = Event.objects.get(id=self.id)
@@ -587,7 +585,6 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
                 old_location = event.location
                 old_publication_status = event.publication_status
                 old_deleted = event.deleted
-                old_replaced_by = event.replaced_by
             except Event.DoesNotExist:
                 pass
 
@@ -619,10 +616,6 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
             self.send_deleted_notification()
         if created and self.publication_status == PublicationStatus.DRAFT:
             self.send_draft_posted_notification()
-
-        # remap relations if event was replaced
-        if old_replaced_by != self.replaced_by:
-            self._remap_relations(self.replaced_by)
 
     def __str__(self):
         name = ''
@@ -703,20 +696,6 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
             if admin.email:
                 recipient_list.append(admin.email)
         self._send_notification(NotificationType.DRAFT_POSTED, recipient_list, request)
-
-    def _remap_relations(self, replacing_event):
-        for offer in self.offers.all():
-            offer.event = replacing_event
-            offer.save()
-        for link in self.external_links.all():
-            link.event = replacing_event
-            link.save()
-        for video in self.videos.all():
-            video.event = replacing_event
-            video.save()
-        for sub_event in self.sub_events.all():
-            sub_event.super_event = replacing_event
-            sub_event.save()
 
 
 reversion.register(Event)
