@@ -51,6 +51,7 @@ env = environ.Env(
     STATIC_ROOT=(environ.Path(), root('static')),
     MEDIA_URL=(str, '/media/'),
     STATIC_URL=(str, '/static/'),
+    TRUST_X_FORWARDED_HOST=(bool, False),
     SENTRY_DSN=(str, ''),
     SENTRY_ENVIRONMENT=(str, 'development'),
     COOKIE_PREFIX=(str, 'linkedevents'),
@@ -58,6 +59,10 @@ env = environ.Env(
     INSTANCE_NAME=(str, 'Linked Events'),
     EXTRA_INSTALLED_APPS=(list, []),
     AUTO_ENABLED_EXTENSIONS=(list, []),
+    MAIL_MAILGUN_KEY=(str, ''),
+    MAIL_MAILGUN_DOMAIN=(str, ''),
+    MAIL_MAILGUN_API=(str, ''),
+    LIPPUPISTE_EVENT_API_URL=(str, None)
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -140,6 +145,9 @@ INSTALLED_APPS = [
     'haystack',
     'django_cleanup',
     'django_filters',
+    'django_jinja',
+    'notifications',
+    'anymail',
 
     'allauth',
     'allauth.account',
@@ -160,7 +168,7 @@ if env('SENTRY_DSN'):
         integrations=[DjangoIntegration()]
     )
 
-MIDDLEWARE_CLASSES = [
+MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -209,6 +217,12 @@ STATIC_URL = env('STATIC_URL')
 MEDIA_URL = env('MEDIA_URL')
 STATIC_ROOT = env('STATIC_ROOT')
 MEDIA_ROOT = env('MEDIA_ROOT')
+
+# Whether to trust X-Forwarded-Host headers for all purposes
+# where Django would need to make use of its own hostname
+# fe. generating absolute URLs pointing to itself
+# Most often used in reverse proxy setups
+USE_X_FORWARDED_HOST = env('TRUST_X_FORWARDED_HOST')
 
 #
 # Authentication
@@ -268,7 +282,21 @@ CORS_ORIGIN_ALLOW_ALL = True
 CSRF_COOKIE_NAME = '%s-csrftoken' % env('COOKIE_PREFIX')
 SESSION_COOKIE_NAME = '%s-sessionid' % env('COOKIE_PREFIX')
 
+from django_jinja.builtins import DEFAULT_EXTENSIONS # noqa
+
 TEMPLATES = [
+    {
+        'BACKEND': 'django_jinja.backend.Jinja2',
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'extensions': DEFAULT_EXTENSIONS + ["jinja2.ext.i18n"],
+            'translation_engine': 'django.utils.translation',
+            "match_extension": ".jinja",
+            "filters": {
+                "django_wordwrap": "django.template.defaultfilters.wordwrap"
+            },
+        },
+    },
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
@@ -304,6 +332,9 @@ CITYSDK_API_SETTINGS = {
     'SRS_URL': 'http://www.opengis.net/def/crs/EPSG/0/%d' % PROJECTION_SRID,
     'DEFAULT_POI_CATEGORY': '53562f3238653c0a842a3bf7'
 }
+
+# Used in Lippupiste importer
+LIPPUPISTE_EVENT_API_URL = env('LIPPUPISTE_EVENT_API_URL')
 
 
 def haystack_connection_for_lang(language_code):
@@ -425,3 +456,15 @@ if 'SECRET_KEY' not in locals():
             secret.close()
         except IOError:
             Exception('Please create a %s file with random characters to generate your secret key!' % secret_file)
+
+#
+# Anymail
+#
+
+if env('MAIL_MAILGUN_KEY'):
+    ANYMAIL = {
+        'MAILGUN_API_KEY': env('MAIL_MAILGUN_KEY'),
+        'MAILGUN_SENDER_DOMAIN': env('MAIL_MAILGUN_DOMAIN'),
+        'MAILGUN_API_URL': env('MAIL_MAILGUN_API'),
+    }
+    EMAIL_BACKEND = 'anymail.backends.mailgun.EmailBackend'

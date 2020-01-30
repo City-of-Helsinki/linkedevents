@@ -168,7 +168,7 @@ class Importer(object):
         self._set_field(image, 'publisher', self.organization)
         self._set_field(image, 'data_source', self.data_source)
 
-        for field in ('name', 'photographer_name', 'cropping', 'license'):
+        for field in ('name', 'photographer_name', 'cropping', 'license', 'alt_text'):
             if field in image_data:
                 self._set_field(image, field, image_data.get(field))
 

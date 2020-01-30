@@ -24,6 +24,7 @@ def assert_event_data_is_equal(d1, d2, version='v1'):
         'offers',
         'in_language',
         'external_links',
+        'videos',
         'start_time',
         'end_time',
     )

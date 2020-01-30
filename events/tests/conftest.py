@@ -404,6 +404,9 @@ def complex_event_dict(data_source, organization, location_id, languages):
             {'name': TEXT_SV, 'link': URL, 'language': 'sv'},
             {'name': TEXT_EN, 'link': URL, 'language': 'en'},
         ],
+        'videos': [
+            {'name': TEXT_FI, 'url': URL, 'alt_text': TEXT_FI},
+        ],
         'offers': [
             {
                 'is_free': False,

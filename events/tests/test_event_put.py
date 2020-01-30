@@ -533,7 +533,6 @@ def test__wrong_api_key_cannot_update_an_event(api_client, event, complex_event_
     response = update_with_put(api_client, detail_url, complex_event_dict,
                                credentials={'apikey': other_data_source.api_key})
     assert response.status_code == 403
-    assert ApiKeyUser.objects.all().count() == 1
 
 
 @pytest.mark.django_db
@@ -593,7 +592,6 @@ def test_multiple_event_update_with_incorrect_json(api_client, minimal_event_dic
     api_client.credentials(apikey=data_source.api_key)
     response = api_client.put(reverse('event-list'), minimal_event_dict, format='json')
     assert response.status_code == 400
-    assert ApiKeyUser.objects.all().count() == 1
 
 
 @pytest.mark.django_db

@@ -35,24 +35,9 @@ The best way to contribute is to open a new PR for discussion. We strive to be a
 ## How to setup your local development environment
 If all you want is a barebone application to work with for your own city:
 
-* Create `local_settings.py` from the template:
-  ```
-  cp local_settings.py.template local_settings.py
-  ```
-
 * Start django application and database server:
   ```
   docker-compose up
-  ```
-
-* Apply database migrations:
-  ```
-  docker-compose exec django python manage.py migrate
-  ```
-
-* Syncronize languages for translations in database:
-  ```
-  docker-compose exec django python manage.py sync_translation_fields --noinput
   ```
 
 * Access application on [localhost:8000](http://localhost:8000)
