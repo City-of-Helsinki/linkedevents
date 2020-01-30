@@ -62,6 +62,7 @@ env = environ.Env(
     MAIL_MAILGUN_KEY=(str, ''),
     MAIL_MAILGUN_DOMAIN=(str, ''),
     MAIL_MAILGUN_API=(str, ''),
+    LIPPUPISTE_EVENT_API_URL=(str, None)
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -331,6 +332,9 @@ CITYSDK_API_SETTINGS = {
     'SRS_URL': 'http://www.opengis.net/def/crs/EPSG/0/%d' % PROJECTION_SRID,
     'DEFAULT_POI_CATEGORY': '53562f3238653c0a842a3bf7'
 }
+
+# Used in Lippupiste importer
+LIPPUPISTE_EVENT_API_URL = env('LIPPUPISTE_EVENT_API_URL')
 
 
 def haystack_connection_for_lang(language_code):

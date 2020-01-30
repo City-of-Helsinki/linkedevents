@@ -146,6 +146,11 @@ STATIC_URL=/static/
 # reports. It is used to separate deployments within Sentry UI
 SENTRY_ENVIRONMENT=local-development-unconfigured
 
+# Lippupiste has a private API for accessing event data. If you have
+# access to this API, enter your access URL here. Note that you will
+# very likely need to customize the importer as well.
+# LIPPUPISTE_EVENT_API_URL=https://your.lippupiste.url.here
+
 # Mailgun API credentials
 #MAIL_MAILGUN_KEY=key
 #MAIL_MAILGUN_DOMAIN=do.main.com
