@@ -387,14 +387,15 @@ class EspooImporter(Importer):
             return
 
         def yso_to_db(v):
-            return self.keyword_by_id['yso:%s' % v]
+            return self.keyword_by_id.get(f'yso:{v}')
 
         node_name_lower = classification_node_name.lower()  # Use lower case to get ride of case sensitivity
         if node_name_lower in YSO_KEYWORD_MAPS.keys():
             yso = YSO_KEYWORD_MAPS[node_name_lower]
             if isinstance(yso, tuple):
                 for t_v in yso:
-                    event_keywords.add(yso_to_db(t_v))
+                    if yso_to_db(t_v):
+                        event_keywords.add(yso_to_db(t_v))
             else:
                 event_keywords.add(yso_to_db(yso))
         return event_keywords
