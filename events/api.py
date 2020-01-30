@@ -1906,6 +1906,15 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
     def allow_bulk_destroy(self, qs, filtered):
         return False
 
+    def update(self, *args, **kwargs):
+        response = super().update(*args, **kwargs)
+        replaced_by_id = response.data['replaced_by']
+        if replaced_by_id is not None:
+            replacing_event = Event.objects.get(id=replaced_by_id)
+            context = self.get_serializer_context()
+            response.data = EventSerializer(replacing_event, context=context).data
+        return response
+
     def perform_update(self, serializer):
         # Prevent changing an event that user does not have write permissions
         # For bulk update, the editable queryset is filtered in filter_queryset
