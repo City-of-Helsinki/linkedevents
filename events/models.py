@@ -556,6 +556,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
 
     deleted = models.BooleanField(default=False, db_index=True)
 
+    replaced_by = models.ForeignKey('Event', on_delete=models.SET_NULL, related_name='aliases', null=True)
+
     # Custom fields not from schema.org
     keywords = models.ManyToManyField(Keyword, related_name='events')
     audience = models.ManyToManyField(Keyword, related_name='audience_events', blank=True)
