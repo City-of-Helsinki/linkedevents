@@ -633,7 +633,7 @@ def test_cannot_edit_events_in_the_past(api_client, event, minimal_event_dict, u
 
 
 @pytest.mark.django_db
-def test_replaced_by(api_client, event, minimal_event_dict, user):
+def test_response_contains_replacing_event(api_client, event, minimal_event_dict, user):
     api_client.force_authenticate(user)
 
     response = create_with_post(api_client, minimal_event_dict)
