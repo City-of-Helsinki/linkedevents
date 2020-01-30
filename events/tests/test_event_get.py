@@ -342,3 +342,19 @@ def test_admin_user_filter(api_client, event, event2, user):
     ids = {e['id'] for e in response.data['data']}
     assert event.id in ids
     assert event2.id not in ids
+
+
+@pytest.mark.django_db
+def test_redirect_if_replaced(api_client, event, event2, user):
+    api_client.force_authenticate(user=user)
+
+    event.replaced_by = event2
+    event.save()
+
+    url = reverse('event-detail', version='v1', kwargs={'pk': event.pk})
+    response = api_client.get(url, format='json')
+    assert response.status_code == 301
+
+    response2 = api_client.get(response.url, format='json')
+    assert response2.status_code == 200
+    assert response2.data['id'] == event2.pk

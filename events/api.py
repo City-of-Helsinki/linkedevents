@@ -1972,6 +1972,18 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
             raise DRFPermissionDenied()
         instance.soft_delete()
 
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            event = Event.objects.get(pk=kwargs['pk'])
+        except Event.DoesNotExist:
+            raise Http404()
+        if event.replaced_by:
+            event = event.replaced_by
+            return HttpResponsePermanentRedirect(reverse('event-detail',
+                                                         kwargs={'pk': event.pk},
+                                                         request=request))
+        return super().retrieve(request, *args, **kwargs)
+
     def list(self, request, *args, **kwargs):
         # docx renderer has additional requirements for listing events
         if request.accepted_renderer.format == 'docx':
