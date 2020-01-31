@@ -11,10 +11,10 @@ def test_keyword_cannot_replace_itself(keyword):
 
 
 @pytest.mark.django_db
-def test_keyword_cant_replace_if_not_deprecated(keyword, keyword2):
+def test_keyword_is_automatically_deprecated_on_replace(keyword, keyword2):
     keyword.replaced_by = keyword2
-    with pytest.raises(Exception):
-        keyword.save()
+    keyword.save()
+    assert keyword.deprecated
 
 
 @pytest.mark.django_db
