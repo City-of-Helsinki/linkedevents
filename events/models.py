@@ -297,8 +297,10 @@ class Keyword(BaseModel, ImageMixin):
                             "Please refrain from creating circular replacements and"
                             "remove either one of the replacements."
                             "We don't want homeless keywords.")
+
         if self.replaced_by and not self.deprecated:
-            raise Exception("A non-deprecated keyword can't be replaced.")
+            self.deprecated = True
+            logger.warning("Keyword replaced without deprecating. Deprecating automatically", extra={'keyword': self})
 
         old_replaced_by = None
         if self.id:
@@ -415,6 +417,10 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin):
                             "Please refrain from creating circular replacements and"
                             "remove either one of the replacements."
                             "We don't want homeless events.")
+
+        if self.replaced_by and not self.deleted:
+            self.deleted = True
+            logger.warning("Place replaced without soft deleting. Soft deleting automatically", extra={'place': self})
 
         # needed to remap events to replaced location
         old_replaced_by = None
@@ -570,6 +576,10 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         parent_attr = 'super_event'
 
     def save(self, *args, **kwargs):
+        if self.replaced_by and not self.deleted:
+            self.deleted = True
+            logger.warning("Event replaced without soft deleting. Soft deleting automatically", extra={'event': self})
+
         # needed to cache location event numbers
         old_location = None
 
