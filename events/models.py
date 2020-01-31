@@ -273,7 +273,8 @@ class Keyword(BaseModel, ImageMixin):
         db_index=True
     )
     n_events_changed = models.BooleanField(default=False, db_index=True)
-    replaced_by = models.ForeignKey('Keyword', on_delete=models.SET_NULL, related_name='aliases', null=True, blank=True)
+    replaced_by = models.ForeignKey(
+        'Keyword', on_delete=models.SET_NULL, related_name='aliases', null=True, blank=True)
 
     schema_org_type = "Thing/LinkedEventKeyword"
 
