@@ -273,7 +273,7 @@ class Keyword(BaseModel, ImageMixin):
         db_index=True
     )
     n_events_changed = models.BooleanField(default=False, db_index=True)
-    replaced_by = models.ForeignKey('Keyword', on_delete=models.SET_NULL, related_name='aliases', null=True)
+    replaced_by = models.ForeignKey('Keyword', on_delete=models.SET_NULL, related_name='aliases', null=True, blank=True)
 
     schema_org_type = "Thing/LinkedEventKeyword"
 
@@ -385,7 +385,7 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin):
     address_country = models.CharField(verbose_name=_('Country'), max_length=2, null=True, blank=True)
 
     deleted = models.BooleanField(verbose_name=_('Deleted'), default=False)
-    replaced_by = models.ForeignKey('Place', on_delete=models.SET_NULL, related_name='aliases', null=True)
+    replaced_by = models.ForeignKey('Place', on_delete=models.SET_NULL, related_name='aliases', null=True, blank=True)
     divisions = models.ManyToManyField(AdministrativeDivision, verbose_name=_('Divisions'), related_name='places',
                                        blank=True)
     n_events = models.IntegerField(
@@ -556,7 +556,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
 
     deleted = models.BooleanField(default=False, db_index=True)
 
-    replaced_by = models.ForeignKey('Event', on_delete=models.SET_NULL, related_name='aliases', null=True)
+    replaced_by = models.ForeignKey('Event', on_delete=models.SET_NULL, related_name='aliases', null=True, blank=True)
 
     # Custom fields not from schema.org
     keywords = models.ManyToManyField(Keyword, related_name='events')
