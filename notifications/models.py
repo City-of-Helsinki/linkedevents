@@ -2,7 +2,7 @@ import logging
 
 from django.conf import settings
 from django.db import models
-from django.utils import translation
+from django.utils import translation, timezone
 from django.utils.html import strip_tags
 from django.utils.translation import activate
 from django.utils.translation import ugettext_lazy as _
@@ -65,7 +65,6 @@ class NotificationTemplate(models.Model):
 
         env = SandboxedEnvironment(trim_blocks=True, lstrip_blocks=True, undefined=StrictUndefined)
         env.filters['format_datetime'] = format_datetime
-        env.filters['format_datetime_tz'] = format_datetime_tz
 
         logger.debug('Rendering template for notification %s' % self.type)
 
@@ -87,6 +86,7 @@ class NotificationTemplate(models.Model):
 
 
 def format_datetime(dt, lang='fi'):
+    dt = timezone.template_localtime(dt)
     if lang == 'fi':
         # 1.1.2017 klo 12:00
         dt_format = r'j.n.Y \k\l\o G:i'
@@ -100,11 +100,6 @@ def format_datetime(dt, lang='fi'):
         raise NotificationTemplateException(f"format_datetime received unknown language '{lang}'")
 
     return date_format(dt, dt_format)
-
-
-def format_datetime_tz(dt, tz):
-    dt = dt.astimezone(tz)
-    return format_datetime(dt)
 
 
 def render_notification_template(notification_type, context, language_code=DEFAULT_LANG):

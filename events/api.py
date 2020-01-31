@@ -1100,7 +1100,7 @@ class ImageSerializer(LinkedEventsSerializer):
 
     def validate(self, data):
         # name the image after the file, if name was not provided
-        if 'name' not in data:
+        if 'name' not in data or not data['name']:
             if 'url' in data:
                 data['name'] = str(data['url']).rsplit('/', 1)[-1]
             if 'image' in data:
@@ -1131,6 +1131,14 @@ class ImageViewSet(JSONAPIViewMixin, viewsets.ModelViewSet):
         if data_source:
             data_source = data_source.lower().split(',')
             queryset = queryset.filter(data_source__in=data_source)
+
+        created_by = self.request.query_params.get('created_by')
+        if created_by:
+            if self.request.user.is_authenticated:
+                # only displays events by the particular user
+                queryset = queryset.filter(created_by=self.request.user)
+            else:
+                queryset = queryset.none()
         return queryset
 
     def perform_destroy(self, instance):
@@ -1883,15 +1891,18 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
             # by default, only public events are shown in the event list
             queryset = public_queryset
             # however, certain query parameters allow customizing the listing for authenticated users
-            if 'show_all' in self.request.query_params:
+            show_all = self.request.query_params.get('show_all')
+            if show_all:
                 # displays all editable events, including drafts, and public non-editable events
                 queryset = editable_queryset | public_queryset
-            if 'admin_user' in self.request.query_params:
+            admin_user = self.request.query_params.get('admin_user')
+            if admin_user:
                 # displays all editable events, including drafts, but no other public events
                 queryset = editable_queryset
-            if 'created_by' in self.request.query_params:
+            created_by = self.request.query_params.get('created_by')
+            if created_by:
+                # only displays events by the particular user
                 if self.request.user.is_authenticated:
-                    # only displays events by the particular user
                     queryset = queryset.filter(created_by=self.request.user)
                 else:
                     queryset = queryset.none()
