@@ -38,12 +38,13 @@ class EventAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
     # TODO: only allow user_editable editable fields
     fields = ('id', 'data_source', 'origin_id', 'name', 'short_description', 'description', 'location',
               'location_extra_info', 'start_time', 'end_time', 'keywords', 'audience', 'publisher', 'provider',
-              'provider_contact_info', 'event_status', 'super_event', 'info_url', 'in_language')
+              'provider_contact_info', 'event_status', 'super_event', 'info_url', 'in_language', 'replaced_by',
+              'deleted')
     search_fields = ('name', 'location__name')
     list_display = ('id', 'name', 'start_time', 'end_time', 'publisher', 'location')
     list_filter = ('data_source',)
     ordering = ('-last_modified_time',)
-    autocomplete_fields = ('location', 'keywords', 'audience', 'super_event', 'publisher')
+    autocomplete_fields = ('location', 'keywords', 'audience', 'super_event', 'publisher', 'replaced_by')
 
     def get_readonly_fields(self, request, obj=None):
         if obj:
@@ -57,12 +58,12 @@ admin.site.register(Event, EventAdmin)
 
 class KeywordAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
     # TODO: only allow user_editable editable fields
-    fields = ('id', 'data_source', 'origin_id',  'publisher', 'deprecated', 'name')
+    fields = ('id', 'data_source', 'origin_id',  'publisher', 'name', 'replaced_by', 'deprecated')
     search_fields = ('name',)
     list_display = ('id', 'name', 'n_events')
     list_filter = ('data_source',)
     ordering = ('-n_events',)
-    autocomplete_fields = ('publisher', )
+    autocomplete_fields = ('publisher', 'replaced_by')
     readonly_fields = ('id',)
 
     def get_readonly_fields(self, request, obj=None):
