@@ -725,7 +725,7 @@ class KeywordRetrieveViewSet(JSONAPIViewMixin, mixins.RetrieveModelMixin, viewse
         except Keyword.DoesNotExist:
             raise Http404()
         if keyword.replaced_by:
-            keyword = keyword.replaced_by
+            keyword = keyword.get_replacement()
             return HttpResponsePermanentRedirect(reverse('keyword-detail',
                                                          kwargs={'pk': keyword.pk},
                                                          request=request))
@@ -907,7 +907,7 @@ class PlaceRetrieveViewSet(JSONAPIViewMixin, GeoModelAPIView,
             raise Http404()
         if place.deleted:
             if place.replaced_by:
-                place = place.replaced_by
+                place = place.get_replacement()
                 return HttpResponsePermanentRedirect(reverse('place-detail',
                                                              kwargs={'pk': place.pk},
                                                              request=request))
@@ -1989,7 +1989,7 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
         except Event.DoesNotExist:
             raise Http404()
         if event.replaced_by:
-            event = event.replaced_by
+            event = event.get_replacement()
             return HttpResponsePermanentRedirect(reverse('event-detail',
                                                          kwargs={'pk': event.pk},
                                                          request=request))

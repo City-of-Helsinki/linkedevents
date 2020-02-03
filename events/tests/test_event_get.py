@@ -358,3 +358,21 @@ def test_redirect_if_replaced(api_client, event, event2, user):
     response2 = api_client.get(response.url, format='json')
     assert response2.status_code == 200
     assert response2.data['id'] == event2.pk
+
+
+@pytest.mark.django_db
+def test_redirect_to_end_of_replace_chain(api_client, event, event2, event3, user):
+    api_client.force_authenticate(user=user)
+
+    event.replaced_by = event2
+    event.save()
+    event2.replaced_by = event3
+    event2.save()
+
+    url = reverse('event-detail', version='v1', kwargs={'pk': event.pk})
+    response = api_client.get(url, format='json')
+    assert response.status_code == 301
+
+    response2 = api_client.get(response.url, format='json')
+    assert response2.status_code == 200
+    assert response2.data['id'] == event3.pk

@@ -34,6 +34,21 @@ def test_get_keyword_detail_check_redirect(api_client, keyword, keyword2):
 
 
 @pytest.mark.django_db
+def test_get_keyword_detail_check_redirect_to_end_of_replace_chain(api_client, keyword, keyword2, keyword3):
+    keyword.replaced_by = keyword2
+    keyword.deprecated = True
+    keyword.save()
+    keyword2.replaced_by = keyword3
+    keyword2.deprecated = True
+    keyword2.save()
+    url = reverse('keyword-detail', version='v1', kwargs={'pk': keyword.pk})
+    response = api_client.get(url, data=None, format='json')
+    assert response.status_code == 301
+    response2 = api_client.get(response.url, data=None, format='json')
+    assert response2.data['id'] == keyword3.id
+
+
+@pytest.mark.django_db
 def test_get_unknown_keyword_detail_check_404(api_client):
     response = api_client.get(reverse('keyword-detail', kwargs={'pk': 'möö'}))
     assert response.status_code == 404

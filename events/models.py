@@ -125,6 +125,12 @@ class ReplacedByMixin():
                 return True
         return False
 
+    def get_replacement(self):
+        replacement = self.replaced_by
+        while replacement.replaced_by is not None:
+            replacement = replacement.replaced_by
+        return replacement
+
 
 class License(models.Model):
     id = models.CharField(max_length=50, primary_key=True)
