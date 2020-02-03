@@ -630,3 +630,16 @@ def test_cannot_edit_events_in_the_past(api_client, event, minimal_event_dict, u
     response = api_client.put(reverse('event-detail', kwargs={'pk': event.id}), minimal_event_dict, format='json')
     assert response.status_code == 403
     assert 'Cannot edit a past event' in str(response.content)
+
+
+@pytest.mark.django_db
+def test_response_contains_replacing_event(api_client, event, minimal_event_dict, user):
+    api_client.force_authenticate(user)
+
+    response = create_with_post(api_client, minimal_event_dict)
+
+    pk = response.data['id']
+    minimal_event_dict['replaced_by'] = event.pk
+    response2 = api_client.put(reverse('event-detail', kwargs={'pk': pk}), minimal_event_dict, format='json')
+    assert response2.status_code == 200
+    assert response2.data['id'] == event.pk

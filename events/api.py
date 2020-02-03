@@ -719,6 +719,18 @@ class KeywordRetrieveViewSet(JSONAPIViewMixin, mixins.RetrieveModelMixin, viewse
     queryset = queryset.select_related('publisher')
     serializer_class = KeywordSerializer
 
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            keyword = Keyword.objects.get(pk=kwargs['pk'])
+        except Keyword.DoesNotExist:
+            raise Http404()
+        if keyword.replaced_by:
+            keyword = keyword.get_replacement()
+            return HttpResponsePermanentRedirect(reverse('keyword-detail',
+                                                         kwargs={'pk': keyword.pk},
+                                                         request=request))
+        return super().retrieve(request, *args, **kwargs)
+
 
 class KeywordListViewSet(JSONAPIViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = Keyword.objects.all()
@@ -895,7 +907,7 @@ class PlaceRetrieveViewSet(JSONAPIViewMixin, GeoModelAPIView,
             raise Http404()
         if place.deleted:
             if place.replaced_by:
-                place = place.replaced_by
+                place = place.get_replacement()
                 return HttpResponsePermanentRedirect(reverse('place-detail',
                                                              kwargs={'pk': place.pk},
                                                              request=request))
@@ -1905,6 +1917,15 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
     def allow_bulk_destroy(self, qs, filtered):
         return False
 
+    def update(self, *args, **kwargs):
+        response = super().update(*args, **kwargs)
+        replaced_by_id = response.data['replaced_by']
+        if replaced_by_id is not None:
+            replacing_event = Event.objects.get(id=replaced_by_id)
+            context = self.get_serializer_context()
+            response.data = EventSerializer(replacing_event, context=context).data
+        return response
+
     def perform_update(self, serializer):
         # Prevent changing an event that user does not have write permissions
         # For bulk update, the editable queryset is filtered in filter_queryset
@@ -1961,6 +1982,18 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
         if not self.request.user.can_edit_event(instance.publisher, instance.publication_status):
             raise DRFPermissionDenied()
         instance.soft_delete()
+
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            event = Event.objects.get(pk=kwargs['pk'])
+        except Event.DoesNotExist:
+            raise Http404()
+        if event.replaced_by:
+            event = event.get_replacement()
+            return HttpResponsePermanentRedirect(reverse('event-detail',
+                                                         kwargs={'pk': event.pk},
+                                                         request=request))
+        return super().retrieve(request, *args, **kwargs)
 
     def list(self, request, *args, **kwargs):
         # docx renderer has additional requirements for listing events

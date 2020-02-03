@@ -19,7 +19,7 @@ from django_orghierarchy.models import Organization
 # events
 from events.models import (
     DataSource, Place, Language, Keyword, KeywordLabel, Event,
-    Offer)
+    Offer, KeywordSet)
 from events.api import (
     KeywordSerializer, PlaceSerializer, LanguageSerializer
 )
@@ -363,6 +363,14 @@ def keyword_id(data_source, kw_name):
     obj = keyword(data_source, kw_name)
     obj_id = reverse(KeywordSerializer().view_name, kwargs={'pk': obj.id})
     return obj_id
+
+
+@pytest.mark.django_db
+@pytest.fixture
+def keyword_set(data_source, keyword, keyword2):
+    kw_set = KeywordSet.objects.create(data_source=data_source)
+    kw_set.keywords.set([keyword, keyword2])
+    return kw_set
 
 
 @pytest.mark.django_db
