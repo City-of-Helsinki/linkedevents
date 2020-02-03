@@ -11,6 +11,17 @@ def test_keyword_cannot_replace_itself(keyword):
 
 
 @pytest.mark.django_db
+def test_prevent_circular_keyword_replacement(keyword, keyword2, keyword3):
+    keyword.replaced_by = keyword2
+    keyword.save()
+    keyword2.replaced_by = keyword3
+    keyword2.save()
+    keyword3.replaced_by = keyword
+    with pytest.raises(Exception):
+        keyword.save()
+
+
+@pytest.mark.django_db
 def test_keyword_is_automatically_deprecated_on_replace(keyword, keyword2):
     keyword.replaced_by = keyword2
     keyword.save()

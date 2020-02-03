@@ -38,3 +38,22 @@ def test_place_divisions_by_division_type(place, division_type, is_division_expe
         assert place.divisions.first() == administrative_division
     else:
         assert place.divisions.count() == 0
+
+
+@pytest.mark.django_db
+def test_place_cannot_replace_itself(place):
+    place.replaced_by = place
+    place.deprecated = True
+    with pytest.raises(Exception):
+        place.save()
+
+
+@pytest.mark.django_db
+def test_prevent_circular_place_replacement(place, place2, place3):
+    place.replaced_by = place2
+    place.save()
+    place2.replaced_by = place3
+    place2.save()
+    place3.replaced_by = place
+    with pytest.raises(Exception):
+        place.save()

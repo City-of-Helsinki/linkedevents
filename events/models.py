@@ -116,6 +116,16 @@ class BaseTreeQuerySet(TreeQuerySet, BaseQuerySet):
     pass
 
 
+class ReplacedByMixin():
+    def _has_circular_replacement(self):
+        replaced_by = self.replaced_by
+        while replaced_by is not None:
+            replaced_by = replaced_by.replaced_by
+            if replaced_by == self:
+                return True
+        return False
+
+
 class License(models.Model):
     id = models.CharField(max_length=50, primary_key=True)
     name = models.CharField(verbose_name=_('Name'), max_length=255)
@@ -257,7 +267,7 @@ class KeywordLabel(models.Model):
         unique_together = (('name', 'language'),)
 
 
-class Keyword(BaseModel, ImageMixin):
+class Keyword(BaseModel, ImageMixin, ReplacedByMixin):
     publisher = models.ForeignKey(
         'django_orghierarchy.Organization', on_delete=models.CASCADE, verbose_name=_('Publisher'),
         db_index=True, null=True, blank=True,
@@ -293,11 +303,10 @@ class Keyword(BaseModel, ImageMixin):
 
     @transaction.atomic
     def save(self, *args, **kwargs):
-        if self.replaced_by and self.replaced_by.replaced_by == self:
-            raise Exception("Trying to replace the keyword replacing this keyword by this keyword."
+        if self._has_circular_replacement():
+            raise Exception("Trying to replace this keyword with a keyword that is replaced by this keyword"
                             "Please refrain from creating circular replacements and"
-                            "remove either one of the replacements."
-                            "We don't want homeless keywords.")
+                            "remove one of the replacements.")
 
         if self.replaced_by and not self.deprecated:
             self.deprecated = True
@@ -362,7 +371,7 @@ class KeywordSet(BaseModel, ImageMixin):
         super().save(*args, **kwargs)
 
 
-class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin):
+class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin, ReplacedByMixin):
     objects = BaseTreeQuerySet.as_manager()
     geo_objects = objects
 
@@ -413,10 +422,10 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin):
 
     @transaction.atomic
     def save(self, *args, **kwargs):
-        if self.replaced_by and self.replaced_by.replaced_by == self:
-            raise Exception("Trying to replace the location replacing this location by this location."
+        if self._has_circular_replacement():
+            raise Exception("Trying to replace this place with a place that is replaced by this place"
                             "Please refrain from creating circular replacements and"
-                            "remove either one of the replacements."
+                            "remove one of the replacements."
                             "We don't want homeless events.")
 
         if self.replaced_by and not self.deleted:
@@ -473,7 +482,7 @@ class OpeningHoursSpecification(models.Model):
         verbose_name_plural = _('opening hour specifications')
 
 
-class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
+class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
     jsonld_type = "Event/LinkedEvent"
     objects = BaseTreeQuerySet.as_manager()
 
@@ -577,6 +586,11 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         parent_attr = 'super_event'
 
     def save(self, *args, **kwargs):
+        if self._has_circular_replacement():
+            raise Exception("Trying to replace this event with an event that is replaced by this event"
+                            "Please refrain from creating circular replacements and"
+                            "remove one of the replacements.")
+
         if self.replaced_by and not self.deleted:
             self.deleted = True
             logger.warning("Event replaced without soft deleting. Soft deleting automatically", extra={'event': self})
