@@ -304,6 +304,21 @@ def test_event_list_filters(api_client, event, event2):
 
 
 @pytest.mark.django_db
+def test_event_list_publisher_ancestor_filter(api_client, event, event2, organization, organization2, organization3):
+    organization2.parent = organization
+    organization2.save()
+    event.publisher = organization2
+    event.save()
+    event2.publisher = organization3
+    event2.save()
+    response = get_list(api_client, query_string=f'publisher_ancestor={organization.id}')
+    data = response.data['data']
+    assert(len(data) == 1)
+    ids = [e['id'] for e in data]
+    assert event.id in ids
+
+
+@pytest.mark.django_db
 def test_publication_status_filter(api_client, event, event2, user, organization, data_source):
     event.publication_status = PublicationStatus.PUBLIC
     event.save()

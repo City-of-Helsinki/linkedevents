@@ -1679,6 +1679,21 @@ def _filter_event_queryset(queryset, params, srs=None):
         q = get_publisher_query(val)
         queryset = queryset.filter(q)
 
+    # Filter by publisher ancestors, multiple ids separated by comma
+    val = params.get('publisher_ancestor', None)
+    if val:
+        val = val.split(',')
+        ancestors = Organization.objects.filter(id__in=val)
+
+        # Get ids of ancestors and all their descendants
+        publishers = Organization.objects.none()
+        for org in ancestors.all():
+            publishers |= org.get_descendants(include_self=True)
+        publisher_ids = [org['id'] for org in publishers.all().values('id')]
+
+        q = get_publisher_query(publisher_ids)
+        queryset = queryset.filter(q)
+
     # Filter by publication status
     val = params.get('publication_status', None)
     if val == 'draft':

@@ -150,6 +150,20 @@ def organization2(other_data_source, user2):
 
 @pytest.mark.django_db
 @pytest.fixture
+def organization3(other_data_source, user2):
+    org, created = Organization.objects.get_or_create(
+        id=other_data_source.id + ':test_organization3',
+        origin_id='test_organization3',
+        name="test_organization3",
+        data_source=other_data_source,
+    )
+    org.admin_users.add(user2)
+    org.save()
+    return org
+
+
+@pytest.mark.django_db
+@pytest.fixture
 def offer(event2):
     return Offer.objects.create(event=event2, is_free=True)
 
