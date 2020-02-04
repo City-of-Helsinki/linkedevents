@@ -189,6 +189,34 @@ class TestEventAPI(APITestCase):
             self.assertIn('created_by', event)
             self.assertIn('last_modified_by', event)
 
+    def test_event_list_with_created_by_filter(self):
+        # test with public request
+        url = '{0}?created_by=me'.format(reverse('event-list'))
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['data']), 0)  # public users haven't created events
+
+        # create event with admin user
+        self.org_1.admin_users.add(self.user)
+        self.client.force_authenticate(self.user)
+        url = reverse('event-list')
+        location_id = reverse('place-detail', kwargs={'pk': self.place.id})
+        data = minimal_event_dict(self.system_data_source, self.org_1, location_id)
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # test with admin user
+        url = '{0}?created_by=me'.format(reverse('event-list'))
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # We should only see the event created by us
+        self.assertEqual(len(response.data['data']), 1)
+        for event in response.data['data']:
+            self.assertIn('publication_status', event)
+            # now we should only have events with admin rights
+            self.assertIn('created_by', event)
+            self.assertIn('last_modified_by', event)
+
     def test_event_list_with_publisher_filters(self):
         # test with public request
         url = '{0}?show_all=1&publisher=neds:org-3'.format(reverse('event-list'))

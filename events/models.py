@@ -18,6 +18,7 @@ schema_org_type can be used to define custom types. Override jsonld_context
 attribute to change @context when need to define schemas for custom fields.
 """
 import datetime
+import logging
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 import pytz
@@ -31,12 +32,17 @@ from django.contrib.contenttypes.models import ContentType
 from events import translation_utils
 from django.utils.encoding import python_2_unicode_compatible
 from django.contrib.postgres.fields import HStoreField
+from django.contrib.sites.models import Site
+from django.core.mail import send_mail
 from django.db import transaction
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 from image_cropping import ImageRatioField
 from munigeo.models import AdministrativeDivision
+from notifications.models import render_notification_template, NotificationType, NotificationTemplateException
+from smtplib import SMTPException
 
+logger = logging.getLogger(__name__)
 
 User = settings.AUTH_USER_MODEL
 
@@ -108,6 +114,22 @@ class BaseQuerySet(models.QuerySet):
 
 class BaseTreeQuerySet(TreeQuerySet, BaseQuerySet):
     pass
+
+
+class ReplacedByMixin():
+    def _has_circular_replacement(self):
+        replaced_by = self.replaced_by
+        while replaced_by is not None:
+            replaced_by = replaced_by.replaced_by
+            if replaced_by == self:
+                return True
+        return False
+
+    def get_replacement(self):
+        replacement = self.replaced_by
+        while replacement.replaced_by is not None:
+            replacement = replacement.replaced_by
+        return replacement
 
 
 class License(models.Model):
@@ -251,7 +273,7 @@ class KeywordLabel(models.Model):
         unique_together = (('name', 'language'),)
 
 
-class Keyword(BaseModel, ImageMixin):
+class Keyword(BaseModel, ImageMixin, ReplacedByMixin):
     publisher = models.ForeignKey(
         'django_orghierarchy.Organization', on_delete=models.CASCADE, verbose_name=_('Publisher'),
         db_index=True, null=True, blank=True,
@@ -267,6 +289,8 @@ class Keyword(BaseModel, ImageMixin):
         db_index=True
     )
     n_events_changed = models.BooleanField(default=False, db_index=True)
+    replaced_by = models.ForeignKey(
+        'Keyword', on_delete=models.SET_NULL, related_name='aliases', null=True, blank=True)
 
     schema_org_type = "Thing/LinkedEventKeyword"
 
@@ -277,6 +301,50 @@ class Keyword(BaseModel, ImageMixin):
         self.deprecated = True
         self.save(update_fields=['deprecated'])
         return True
+
+    def replace(self, replaced_by):
+        self.replaced_by = replaced_by
+        self.save(update_fields=['replaced_by'])
+        return True
+
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        if self._has_circular_replacement():
+            raise Exception("Trying to replace this keyword with a keyword that is replaced by this keyword"
+                            "Please refrain from creating circular replacements and"
+                            "remove one of the replacements.")
+
+        if self.replaced_by and not self.deprecated:
+            self.deprecated = True
+            logger.warning("Keyword replaced without deprecating. Deprecating automatically", extra={'keyword': self})
+
+        old_replaced_by = None
+        if self.id:
+            try:
+                old_replaced_by = Keyword.objects.get(id=self.id).replaced_by
+            except Keyword.DoesNotExist:
+                pass
+
+        super().save(*args, **kwargs)
+
+        if not old_replaced_by == self.replaced_by:
+            # Remap keyword sets
+            qs = KeywordSet.objects.filter(keywords__id__exact=self.id)
+            for kw_set in qs:
+                kw_set.keywords.remove(self)
+                kw_set.keywords.add(self.replaced_by)
+                kw_set.save()
+
+            # Remap events
+            qs = Event.objects.filter(keywords__id__exact=self.id) \
+                | Event.objects.filter(audience__id__exact=self.id)
+            for event in qs:
+                if self in event.keywords.all():
+                    event.keywords.remove(self)
+                    event.keywords.add(self.replaced_by)
+                if self in event.audience.all():
+                    event.audience.remove(self)
+                    event.audience.add(self.replaced_by)
 
     class Meta:
         verbose_name = _('keyword')
@@ -303,8 +371,13 @@ class KeywordSet(BaseModel, ImageMixin):
                                      verbose_name=_('Organization which uses this set'), null=True)
     keywords = models.ManyToManyField(Keyword, blank=False, related_name='sets')
 
+    def save(self, *args, **kwargs):
+        if any([keyword.deprecated for keyword in self.keywords.all()]):
+            raise ValidationError(_("KeywordSet can't have deprecated keywords"))
+        super().save(*args, **kwargs)
 
-class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin):
+
+class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin, ReplacedByMixin):
     objects = BaseTreeQuerySet.as_manager()
     geo_objects = objects
 
@@ -330,7 +403,7 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin):
     address_country = models.CharField(verbose_name=_('Country'), max_length=2, null=True, blank=True)
 
     deleted = models.BooleanField(verbose_name=_('Deleted'), default=False)
-    replaced_by = models.ForeignKey('Place', on_delete=models.SET_NULL, related_name='aliases', null=True)
+    replaced_by = models.ForeignKey('Place', on_delete=models.SET_NULL, related_name='aliases', null=True, blank=True)
     divisions = models.ManyToManyField(AdministrativeDivision, verbose_name=_('Divisions'), related_name='places',
                                        blank=True)
     n_events = models.IntegerField(
@@ -355,11 +428,15 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin):
 
     @transaction.atomic
     def save(self, *args, **kwargs):
-        if self.replaced_by and self.replaced_by.replaced_by == self:
-            raise Exception("Trying to replace the location replacing this location by this location."
+        if self._has_circular_replacement():
+            raise Exception("Trying to replace this place with a place that is replaced by this place"
                             "Please refrain from creating circular replacements and"
-                            "remove either one of the replacements."
+                            "remove one of the replacements."
                             "We don't want homeless events.")
+
+        if self.replaced_by and not self.deleted:
+            self.deleted = True
+            logger.warning("Place replaced without soft deleting. Soft deleting automatically", extra={'place': self})
 
         # needed to remap events to replaced location
         old_replaced_by = None
@@ -411,7 +488,7 @@ class OpeningHoursSpecification(models.Model):
         verbose_name_plural = _('opening hour specifications')
 
 
-class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
+class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
     jsonld_type = "Event/LinkedEvent"
     objects = BaseTreeQuerySet.as_manager()
 
@@ -501,6 +578,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
 
     deleted = models.BooleanField(default=False, db_index=True)
 
+    replaced_by = models.ForeignKey('Event', on_delete=models.SET_NULL, related_name='aliases', null=True, blank=True)
+
     # Custom fields not from schema.org
     keywords = models.ManyToManyField(Keyword, related_name='events')
     audience = models.ManyToManyField(Keyword, related_name='audience_events', blank=True)
@@ -513,11 +592,30 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         parent_attr = 'super_event'
 
     def save(self, *args, **kwargs):
+        if self._has_circular_replacement():
+            raise Exception("Trying to replace this event with an event that is replaced by this event"
+                            "Please refrain from creating circular replacements and"
+                            "remove one of the replacements.")
+
+        if self.replaced_by and not self.deleted:
+            self.deleted = True
+            logger.warning("Event replaced without soft deleting. Soft deleting automatically", extra={'event': self})
+
         # needed to cache location event numbers
         old_location = None
+
+        # needed for notifications
+        old_publication_status = None
+        old_deleted = None
+        created = True
+
         if self.id:
             try:
-                old_location = Event.objects.get(id=self.id).location
+                event = Event.objects.get(id=self.id)
+                created = False
+                old_location = event.location
+                old_publication_status = event.publication_status
+                old_deleted = event.deleted
             except Event.DoesNotExist:
                 pass
 
@@ -527,6 +625,9 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
         if start and end:
             if start > end:
                 raise ValidationError({'end_time': _('The event end time cannot be earlier than the start time.')})
+
+        if any([keyword.deprecated for keyword in self.keywords.all() | self.audience.all()]):
+            raise ValidationError({'keywords': _("Event can't have deprecated keywords")})
 
         super(Event, self).save(*args, **kwargs)
 
@@ -538,6 +639,14 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
             Place.objects.filter(id=old_location.id).update(n_events_changed=True)
         if old_location and self.location and old_location != self.location:
             Place.objects.filter(id__in=(old_location.id, self.location.id)).update(n_events_changed=True)
+
+        # send notifications
+        if old_publication_status == PublicationStatus.DRAFT and self.publication_status == PublicationStatus.PUBLIC:
+            self.send_published_notification()
+        if old_deleted is False and self.deleted is True:
+            self.send_deleted_notification()
+        if created and self.publication_status == PublicationStatus.DRAFT:
+            self.send_draft_posted_notification()
 
     def __str__(self):
         name = ''
@@ -575,6 +684,49 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin):
     def undelete(self, using=None):
         self.deleted = False
         self.save(update_fields=("deleted",), using=using, force_update=True)
+
+    def _send_notification(self, notification_type, recipient_list, request=None):
+        if len(recipient_list) == 0:
+            logger.warning("No recipients for notification type '%s'" % notification_type, extra={'event': self})
+            return
+        context = {'event': self}
+        try:
+            rendered_notification = render_notification_template(notification_type, context)
+        except NotificationTemplateException as e:
+            logger.error(e, exc_info=True, extra={'request': request})
+            return
+        try:
+            send_mail(
+                rendered_notification['subject'],
+                rendered_notification['body'],
+                'noreply@%s' % Site.objects.get_current().domain,
+                recipient_list,
+                html_message=rendered_notification['html_body']
+            )
+        except SMTPException as e:
+            logger.error(e, exc_info=True, extra={'request': request, 'event': self})
+
+    def _get_author_emails(self):
+        author_emails = []
+        for user in (self.created_by, self.last_modified_by):
+            if user and user.email:
+                author_emails.append(user.email)
+        return author_emails
+
+    def send_deleted_notification(self, request=None):
+        recipient_list = self._get_author_emails()
+        self._send_notification(NotificationType.UNPUBLISHED_EVENT_DELETED, recipient_list, request)
+
+    def send_published_notification(self, request=None):
+        recipient_list = self._get_author_emails()
+        self._send_notification(NotificationType.EVENT_PUBLISHED, recipient_list, request)
+
+    def send_draft_posted_notification(self, request=None):
+        recipient_list = []
+        for admin in self.publisher.admin_users.all():
+            if admin.email:
+                recipient_list.append(admin.email)
+        self._send_notification(NotificationType.DRAFT_POSTED, recipient_list, request)
 
 
 reversion.register(Event)
