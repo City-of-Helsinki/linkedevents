@@ -234,7 +234,7 @@ class Importer(object):
         self._set_field(obj, obj_field_name, val)
 
     def _save_translated_field(self, obj, obj_field_name, info,
-                               info_make_link_id_field_name, max_length=None):
+                               info_field_name, max_length=None):
         # atm only used by place importers, do some extra cleaning and validation before setting value
         for lang in self.supported_languages:
             key = '%s_%s' % (info_field_name, lang)
@@ -254,13 +254,13 @@ class Importer(object):
         # of tuples {(field_name, language)} ex. {('name', 'en'), ('name', 'fi')
         # ...}
         translatable_fields = {(p, a.language) for p in trans_fields.keys()
-                                               for a in trans_fields[p]}
+                               for a in trans_fields[p]}
 
         # received data contains translations in the dictionaries of dictionaries as in
         # info['name'] = defaultdict({'en': 'Christmas at Sello Library', 'sv': '....'})
         # output: {('name', 'en'):'Party', ('description', 'en'):'Hell of a party', ...}
         info_fields = {(k, b): v[b] for k, v in info.items() if isinstance(v, dict)
-                                    for b in v.keys() if (b in self.supported_languages) & bool(v[b])}
+                       for b in v.keys() if (b in self.supported_languages) & bool(v[b])}
         # set of translatable model fields for which translations are available
         translated = translatable_fields & set(info_fields.keys())
 
