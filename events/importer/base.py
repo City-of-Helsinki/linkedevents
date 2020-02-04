@@ -219,7 +219,7 @@ class Importer(object):
         if not hasattr(obj, '_changed_fields'):
             obj._changed_fields = []
         obj._changed_fields.append(field_name)
-        return f'{field_name} {val}'
+        return f'{field_name}'
 
     def _save_field(self, obj, obj_field_name, info,
                     info_field_name, max_length=None):
@@ -246,11 +246,6 @@ class Importer(object):
 
     def _update_fields(self, obj, info, skip_fields):
         """ all non-place importers use this method
-        Treatment of translated fields: Every field that according to the model
-        can be translated is represented in trans_fields as a dictionary, where
-        fieldname is a key, and value is a set of fields representing
-        translations into different languages.
-        Info is default
         """
         obj_fields = set(obj._meta.fields)
         trans_fields = translator.get_options_for_model(type(obj)).fields
@@ -263,19 +258,18 @@ class Importer(object):
 
         # received data contains translations in the dictionaries of dictionaries as in
         # info['name'] = defaultdict({'en': 'Christmas at Sello Library', 'sv': '....'})
-        # select all elements of info, which are dictionaries and pair the key
-        # of the upper level dictionary with the non-empty keys of the inner dictionary
         # output: {('name', 'en'):'Party', ('description', 'en'):'Hell of a party', ...}
         info_fields = {(k, b): v[b] for k, v in info.items() if isinstance(v, dict)
-                                   for b in v.keys() if v[b]}
-
+                                    for b in v.keys() if (b in self.supported_languages) & bool(v[b])}
         # set of translatable model fields for which translations are available
         translated = translatable_fields & set(info_fields.keys())
 
         _ = [self._set_field(obj=obj,
                              field_name=f'{v[0]}_{v[1]}',
                              val=info_fields[v]) for v in translated]
-        processed_fields = [f'{v[0]}_{v[1]}' for v in translated]
+
+        processed_fields = [f'{v[0]}_{v[1]}' for v in translated] + [
+                               v[0] for v in translated]
 
         fields_to_omit = {f for f in obj_fields if f.name in skip_fields + processed_fields}
         remaining_obj_fields = obj_fields - fields_to_omit
