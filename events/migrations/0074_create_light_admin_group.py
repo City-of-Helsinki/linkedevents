@@ -15,8 +15,12 @@ def create_light_admin_group():
     except IntegrityError:
         print('\nGroup with name "Light Admins" already exists. Skipping creation.')
         return
-    regular_users_perm = Permission.objects.get(codename='change_organization_regular_users')
-    view_user = Permission.objects.get(codename='view_user')
+    try:
+        regular_users_perm = Permission.objects.get(codename='change_organization_regular_users')
+        view_user = Permission.objects.get(codename='view_user')
+    except Permission.DoesNotExist:
+        print('\nMissing permissions. Skipping creation.')
+        return
     light_admin_group.permissions.set([regular_users_perm, view_user])
 
 
@@ -28,6 +32,8 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('events', '0073_soft_delete_replaced_objects'),
+        ('django_orghierarchy', '0009_add_change_organization_regular_users_permission'),
+        ('helevents', '0001_initial')
     ]
 
     operations = [
