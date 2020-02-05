@@ -349,6 +349,16 @@ def location_id(place):
 
 
 @pytest.mark.django_db
+@pytest.fixture
+def make_location_id():
+    def _make_location_id(place):
+        obj_id = reverse(PlaceSerializer().view_name, kwargs={'pk': place.id})
+        return obj_id
+
+    return _make_location_id
+
+
+@pytest.mark.django_db
 @pytest.fixture(scope="class")
 def make_keyword():
     def _make_keyword(data_source, kw_name):

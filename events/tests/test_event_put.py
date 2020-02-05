@@ -13,7 +13,6 @@ from .utils import versioned_reverse as reverse
 
 from events.tests.utils import assert_event_data_is_equal
 from events.tests.test_event_post import create_with_post
-from .conftest import location_id
 from events.models import Event, Keyword, Place
 from django.conf import settings
 
@@ -147,7 +146,7 @@ def test__keyword_n_events_updated(api_client, minimal_event_dict, user, data_so
 
 @pytest.mark.django_db
 def test__location_n_events_updated(api_client, minimal_event_dict, user, data_source,
-                                    other_data_source, place2):
+                                    other_data_source, place2, make_location_id):
 
     # create an event
     api_client.force_authenticate(user=user)
@@ -161,7 +160,7 @@ def test__location_n_events_updated(api_client, minimal_event_dict, user, data_s
 
     # change the location
     event_id = data2.pop('@id')
-    data2['location'] = {'@id': location_id(place2)}
+    data2['location'] = {'@id': make_location_id(place2)}
     response2 = update_with_put(api_client, event_id, data2)
     print('got the put response')
     print(response2.data)
