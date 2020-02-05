@@ -13,7 +13,7 @@ from .utils import versioned_reverse as reverse
 
 from events.tests.utils import assert_event_data_is_equal
 from events.tests.test_event_post import create_with_post
-from .conftest import keyword_id, location_id
+from .conftest import location_id
 from events.models import Event, Keyword, Place
 from django.conf import settings
 
@@ -120,7 +120,7 @@ def test__cannot_update_an_event_without_a_description(api_client, minimal_event
 
 
 @pytest.mark.django_db
-def test__keyword_n_events_updated(api_client, minimal_event_dict, user, data_source):
+def test__keyword_n_events_updated(api_client, minimal_event_dict, user, data_source, make_keyword_id):
 
     # create an event
     api_client.force_authenticate(user=user)
@@ -134,8 +134,8 @@ def test__keyword_n_events_updated(api_client, minimal_event_dict, user, data_so
 
     # change the keyword and add an audience
     event_id = data2.pop('@id')
-    data2['keywords'] = [{'@id': keyword_id(data_source, 'test2')}]
-    data2['audience'] = [{'@id': keyword_id(data_source, 'test3')}]
+    data2['keywords'] = [{'@id': make_keyword_id(data_source, 'test2')}]
+    data2['audience'] = [{'@id': make_keyword_id(data_source, 'test3')}]
     response2 = update_with_put(api_client, event_id, data2)
     print('got the put response')
     print(response2.data)
