@@ -127,7 +127,7 @@ INSTALLED_APPS = [
     'helusers',
     'django.contrib.sites',
     'modeltranslation',
-    'django.contrib.admin',
+    'helusers.apps.HelusersAdminConfig',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',

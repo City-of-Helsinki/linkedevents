@@ -30,7 +30,7 @@ langdetect
 lxml
 markdown
 pillow
-psycopg2-binary<2.8
+psycopg2-binary
 pyYAML
 python-dateutil
 python-docx
