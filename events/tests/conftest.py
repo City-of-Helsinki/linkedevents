@@ -268,6 +268,7 @@ def place2(other_data_source, organization2):
         id=other_data_source.id + ':test_location_2',
         data_source=other_data_source,
         publisher=organization2,
+        position=Point(0, 0),
         name_en='Place 2'
     )
 

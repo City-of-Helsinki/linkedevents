@@ -5,7 +5,9 @@ from .utils import get, assert_fields_exist
 from events.models import (
     Event, PublicationStatus, Language
 )
-
+from django.contrib.gis.gdal import SpatialReference, CoordTransform
+from django.contrib.gis.geos import Point
+from django.conf import settings
 
 # === util methods ===
 
@@ -126,6 +128,21 @@ def test_get_event_list_verify_data_source_negative_filter(api_client, data_sour
 @pytest.mark.django_db
 def test_get_event_list_verify_location_filter(api_client, place, event, event2):
     response = get_list(api_client, data={'location': place.id})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    assert event2.id not in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
+def test_get_event_list_verify_bbox_filter(api_client, event, event2):
+    # API parameters must be provided in EPSG:4326 instead of the database SRS
+    left_bottom = Point(25, 25)
+    right_top = Point(75, 75)
+    ct = CoordTransform(SpatialReference(settings.PROJECTION_SRID), SpatialReference(4326))
+    left_bottom.transform(ct)
+    right_top.transform(ct)
+    bbox_string = f"{left_bottom.x},{left_bottom.y},{right_top.x},{right_top.y}"
+    response = get_list(api_client, data={'bbox': bbox_string})
+    # this way we will catch any errors if the default SRS changes, breaking the API
     assert event.id in [entry['id'] for entry in response.data['data']]
     assert event2.id not in [entry['id'] for entry in response.data['data']]
 
