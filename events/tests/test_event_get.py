@@ -11,6 +11,7 @@ from django.conf import settings
 
 # === util methods ===
 
+
 def get_list(api_client, version='v1', data=None, query_string=None):
     url = reverse('event-list', version=version)
     if query_string:
