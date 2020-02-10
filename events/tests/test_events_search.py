@@ -51,18 +51,18 @@ class EventSearchTests(TestCase, TestDataMixin):
 
     def test__search_should_respond(self):
         response = self._get_response('a random search query')
-        self.assertEquals(response.status_code, 200, msg=response.content)
+        self.assertEqual(response.status_code, 200, msg=response.content)
 
     def test__search_should_return_at_least_one_match(self):
         query = self.dummy.name.split()[0]  # let's use just the first word
         response = self._get_response(query)
 
-        self.assertEquals(response.status_code, 200, msg=response.content)
+        self.assertEqual(response.status_code, 200, msg=response.content)
         self.assertTrue(response.data['meta']['count'] >= 1)
 
     def test__search_shouldnt_return_matches(self):
         response = self._get_response('ASearchQueryThatShouldntReturnMatches')
-        self.assertEquals(response.status_code, 200, msg=response.content)
+        self.assertEqual(response.status_code, 200, msg=response.content)
         self.assertTrue(response.data['meta']['count'] == 0)
 
     # simple backend doesn't have an index, so we cannot test index updates
@@ -74,7 +74,7 @@ class EventSearchTests(TestCase, TestDataMixin):
     #     query = self.dummy.name.split()[0]  # let's use just the first word
     #     response = self._get_response(query)
     #
-    #     self.assertEquals(response.status_code, 200, msg=response.content)
+    #     self.assertEqual(response.status_code, 200, msg=response.content)
     #     self.assertTrue(response.data['meta']['count'] == 0)
 
     def tearDown(self):
