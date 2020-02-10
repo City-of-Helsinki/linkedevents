@@ -28,6 +28,8 @@ def get_description(event):
         return event['short_description']
     elif event['description']:
         return event['description']
+    else:
+        return {}
 
 
 def get_price(raw_event):
