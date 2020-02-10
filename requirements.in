@@ -21,7 +21,7 @@ djangorestframework-bulk
 djangorestframework-gis
 djangorestframework-jwt
 easy_thumbnails
-elasticsearch<5.0
+elasticsearch<6
 httmock
 icalendar
 isodate
@@ -30,7 +30,7 @@ langdetect
 lxml
 markdown
 pillow
-psycopg2-binary<2.8
+psycopg2-binary
 pyYAML
 python-dateutil
 python-docx
