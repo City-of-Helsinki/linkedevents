@@ -122,6 +122,18 @@ def user2():
 
 @pytest.mark.django_db
 @pytest.fixture
+def super_user():
+    return get_user_model().objects.create(
+        username='super_user',
+        first_name='Super',
+        last_name='Man',
+        email='super@user.com',
+        is_superuser=True,
+    )
+
+
+@pytest.mark.django_db
+@pytest.fixture
 def organization(data_source, user):
     org, created = Organization.objects.get_or_create(
         id=data_source.id + ':test_organization',
