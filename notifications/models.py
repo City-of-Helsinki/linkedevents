@@ -20,6 +20,7 @@ class NotificationType:
     UNPUBLISHED_EVENT_DELETED = 'unpublished_event_deleted'
     EVENT_PUBLISHED = 'event_published'
     DRAFT_POSTED = 'draft_posted'
+    USER_CREATED = 'user_created'
 
 
 class NotificationTemplateException(Exception):
@@ -31,6 +32,7 @@ class NotificationTemplate(models.Model):
         (NotificationType.UNPUBLISHED_EVENT_DELETED, _('Unpublished event deleted')),
         (NotificationType.EVENT_PUBLISHED, _('Event published')),
         (NotificationType.DRAFT_POSTED, _('Draft posted')),
+        (NotificationType.USER_CREATED, _('User created')),
     )
 
     type = models.CharField(
