@@ -10,7 +10,7 @@ aliases:
   # Remember to update the site_packages_path if you update the python version
   # lxml doesn't yet have a Python 3.8 wheel package so use Python 3.7 instead
   - &python_image_version 3.7.6
-  # The tilde (home path) has been removed since it doesn't work in docker commands in test_ci.sh
+  # The tilde (home path) has been removed since it doesn't work in docker commands in bin/test_ci.sh
   - &site_packages_path .local/lib/python3.7/site-packages
 
   - &builder_image_version 6c86b7f0df29fc8db89978f8d83483f2372b203f
@@ -142,7 +142,7 @@ jobs:
           command: ecr-login
       - run:
           name: Run test script
-          command: ./test_ci.sh
+          command: ./bin/test_ci.sh
       - jira/notify
       - notify_slack
 

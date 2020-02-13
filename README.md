@@ -38,7 +38,7 @@ If all you want is a barebone application to work with for your own city:
 * Copy `config_dev.toml.example` to `config_dev.toml`
     * Change settings where needed
 
-* Run `git-hooks.sh` which will set the required Git Hooks that will handle commit message linting and git-secrets.
+* Run `bin/git-hooks.sh` which will set the required Git Hooks that will handle commit message linting and git-secrets.
   Install the following tools for the git hooks to work correctly:
     * To prevent commiting AWS credentials, install [git-secrets](https://github.com/awslabs/git-secrets)
     * To prevent other secrets from slipping to GitHub, install [truffleHog](https://github.com/dxa4481/truffleHog).
