@@ -1644,14 +1644,15 @@ def _filter_event_queryset(queryset, params, srs=None):
 
     # Filter by keyword id, multiple ids separated by comma
     val = params.get('keyword', None)
-    val_2 = params.get('keyword_OR', None)
-    if val or val_2:
-        keyword_ids = []
-        if val:
-            keyword_ids += val.split(',')
-        if val_2:
-            keyword_ids += val_2.split(',')
-        queryset = queryset.filter(Q(keywords__pk__in=keyword_ids) | Q(audience__pk__in=keyword_ids)).distinct()
+    if val:
+        val = val.split(',')
+        queryset = queryset.filter(Q(keywords__pk__in=val) | Q(audience__pk__in=val)).distinct()
+
+    # 'keyword_OR' behaves the same way as 'keyword'
+    val = params.get('keyword_OR', None)
+    if val:
+        val = val.split(',')
+        queryset = queryset.filter(Q(keywords__pk__in=val) | Q(audience__pk__in=val)).distinct()
 
     # Filter by keyword ids requiring all keywords to be present in event
     val = params.get('keyword_AND', None)

@@ -169,12 +169,12 @@ def test_get_event_list_verify_keyword_or_filter(api_client, keyword, event):
 
 @pytest.mark.django_db
 def test_get_event_list_verify_combine_keyword_and_keyword_or(api_client, keyword, keyword2, event, event2):
-    # If "keyword" and "keyword_OR" are both present, combine the two lists
-    event.keywords.add(keyword)
+    # If "keyword" and "keyword_OR" are both present "AND" them together
+    event.keywords.add(keyword, keyword2)
     event2.keywords.add(keyword2)
     response = get_list(api_client, data={'keyword': keyword.id, 'keyword_OR': keyword2.id})
     assert event.id in [entry['id'] for entry in response.data['data']]
-    assert event2.id in [entry['id'] for entry in response.data['data']]
+    assert event2.id not in [entry['id'] for entry in response.data['data']]
 
 
 @pytest.mark.django_db
