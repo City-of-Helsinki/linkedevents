@@ -126,9 +126,13 @@ jobs:
     environment:
       PYTHON_IMAGE_VERSION: *python_image_version
       SITE_PACKAGES_PATH: *site_packages_path
-      POSTGRES_USER: linkedevents
-      POSTGRES_PASSWORD: linkedevents
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
       POSTGRES_DB: linkedevents
+      MIGRATION_USER: linkedevents_migration
+      MIGRATION_PASSWORD: secret
+      APP_USER: linkedevents_application
+      APP_PASSWORD: secret
     steps:
       - *restore_repo
       - *restore_deps

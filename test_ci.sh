@@ -42,6 +42,10 @@ docker run \
   -e POSTGRES_USER \
   -e POSTGRES_PASSWORD \
   -e POSTGRES_DB \
+  -e MIGRATION_USER \
+  -e MIGRATION_PASSWORD \
+  -e APP_USER \
+  -e APP_PASSWORD \
   --name espooevents-service-db \
   espooevents-service-db
 

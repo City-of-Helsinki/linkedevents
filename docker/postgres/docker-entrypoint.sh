@@ -1,30 +1,16 @@
-#!/bin/sh
+#!/bin/bash
 
-#################################################
-# This file is taken directly from:
-# https://github.com/City-of-Helsinki/docker-images/blob/master/templates/postgis/9.6-2.5/initdb-postgis.sh
-# Only "hstore" extension has been added
-#################################################
+set -eo pipefail
 
-set -e
+source /docker-entrypoint-initdb.d/init-db.sh
 
-# Perform all actions as $POSTGRES_USER
-export PGUSER="$POSTGRES_USER"
-
-# Create the 'template_postgis' template db
-"${psql[@]}" <<- 'EOSQL'
-CREATE DATABASE template_postgis;
-UPDATE pg_database SET datistemplate = TRUE WHERE datname = 'template_postgis';
-EOSQL
-
-# Load PostGIS into both template_database and $POSTGRES_DB
-for DB in template_postgis "$POSTGRES_DB"; do
-	echo "Loading PostGIS extensions into $DB"
-	"${psql[@]}" --dbname="$DB" <<-'EOSQL'
-		CREATE EXTENSION IF NOT EXISTS postgis;
-		CREATE EXTENSION IF NOT EXISTS hstore;
-		CREATE EXTENSION IF NOT EXISTS postgis_topology;
-		CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
-		CREATE EXTENSION IF NOT EXISTS postgis_tiger_geocoder;
-EOSQL
-done
+init-db \
+  "" \
+  "$POSTGRES_USER" \
+  "$POSTGRES_PASSWORD" \
+  "$MIGRATION_USER" \
+  "$MIGRATION_PASSWORD" \
+  "$APP_USER" \
+  "$APP_PASSWORD" \
+  "$POSTGRES_DB" \
+  "false"
