@@ -55,6 +55,21 @@ def test_get_place_detail_check_redirect_and_event_remap(api_client, event, plac
 
 
 @pytest.mark.django_db
+def test_get_place_detail_redirect_to_end_of_replace_chain(api_client, place, place2, place3):
+    place.replaced_by = place2
+    place.deleted = True
+    place.save()
+    place2.replaced_by = place3
+    place2.deleted = True
+    place2.save()
+    url = reverse('place-detail', version='v1', kwargs={'pk': place.pk})
+    response = api_client.get(url, data=None, format='json')
+    assert response.status_code == 301
+    response2 = api_client.get(response.url, data=None, format='json')
+    assert response2.data['id'] == place3.id
+
+
+@pytest.mark.django_db
 def test_get_place_list_verify_text_filter(api_client, place, place2, place3):
     response = api_client.get(reverse('place-list'), data={'text': 'Paikka',
                                                            'show_all_places': True})

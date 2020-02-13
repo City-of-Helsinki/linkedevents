@@ -5,9 +5,12 @@ from .utils import get, assert_fields_exist
 from events.models import (
     Event, PublicationStatus, Language
 )
-
+from django.contrib.gis.gdal import SpatialReference, CoordTransform
+from django.contrib.gis.geos import Point
+from django.conf import settings
 
 # === util methods ===
+
 
 def get_list(api_client, version='v1', data=None, query_string=None):
     url = reverse('event-list', version=version)
@@ -58,6 +61,7 @@ def assert_event_fields_exist(data, version='v1'):
         'super_event',
         'super_event_type',
         'videos',
+        'replaced_by',
     )
     if version == 'v0.1':
         fields += (
@@ -125,6 +129,21 @@ def test_get_event_list_verify_data_source_negative_filter(api_client, data_sour
 @pytest.mark.django_db
 def test_get_event_list_verify_location_filter(api_client, place, event, event2):
     response = get_list(api_client, data={'location': place.id})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    assert event2.id not in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
+def test_get_event_list_verify_bbox_filter(api_client, event, event2):
+    # API parameters must be provided in EPSG:4326 instead of the database SRS
+    left_bottom = Point(25, 25)
+    right_top = Point(75, 75)
+    ct = CoordTransform(SpatialReference(settings.PROJECTION_SRID), SpatialReference(4326))
+    left_bottom.transform(ct)
+    right_top.transform(ct)
+    bbox_string = f"{left_bottom.x},{left_bottom.y},{right_top.x},{right_top.y}"
+    response = get_list(api_client, data={'bbox': bbox_string})
+    # this way we will catch any errors if the default SRS changes, breaking the API
     assert event.id in [entry['id'] for entry in response.data['data']]
     assert event2.id not in [entry['id'] for entry in response.data['data']]
 
@@ -303,6 +322,21 @@ def test_event_list_filters(api_client, event, event2):
 
 
 @pytest.mark.django_db
+def test_event_list_publisher_ancestor_filter(api_client, event, event2, organization, organization2, organization3):
+    organization2.parent = organization
+    organization2.save()
+    event.publisher = organization2
+    event.save()
+    event2.publisher = organization3
+    event2.save()
+    response = get_list(api_client, query_string=f'publisher_ancestor={organization.id}')
+    data = response.data['data']
+    assert(len(data) == 1)
+    ids = [e['id'] for e in data]
+    assert event.id in ids
+
+
+@pytest.mark.django_db
 def test_publication_status_filter(api_client, event, event2, user, organization, data_source):
     event.publication_status = PublicationStatus.PUBLIC
     event.save()
@@ -341,3 +375,37 @@ def test_admin_user_filter(api_client, event, event2, user):
     ids = {e['id'] for e in response.data['data']}
     assert event.id in ids
     assert event2.id not in ids
+
+
+@pytest.mark.django_db
+def test_redirect_if_replaced(api_client, event, event2, user):
+    api_client.force_authenticate(user=user)
+
+    event.replaced_by = event2
+    event.save()
+
+    url = reverse('event-detail', version='v1', kwargs={'pk': event.pk})
+    response = api_client.get(url, format='json')
+    assert response.status_code == 301
+
+    response2 = api_client.get(response.url, format='json')
+    assert response2.status_code == 200
+    assert response2.data['id'] == event2.pk
+
+
+@pytest.mark.django_db
+def test_redirect_to_end_of_replace_chain(api_client, event, event2, event3, user):
+    api_client.force_authenticate(user=user)
+
+    event.replaced_by = event2
+    event.save()
+    event2.replaced_by = event3
+    event2.save()
+
+    url = reverse('event-detail', version='v1', kwargs={'pk': event.pk})
+    response = api_client.get(url, format='json')
+    assert response.status_code == 301
+
+    response2 = api_client.get(response.url, format='json')
+    assert response2.status_code == 200
+    assert response2.data['id'] == event3.pk

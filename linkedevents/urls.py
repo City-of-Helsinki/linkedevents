@@ -3,9 +3,7 @@ from django.conf.urls import url, include
 from django.views.generic import RedirectView
 
 from .api import LinkedEventsAPIRouter
-from helusers import admin
-
-admin.autodiscover()
+from django.contrib import admin
 
 api_router = LinkedEventsAPIRouter()
 

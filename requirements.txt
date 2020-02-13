@@ -5,70 +5,70 @@
 #    pip-compile
 #
 bleach==3.1.0
-certifi==2019.6.16        # via requests, sentry-sdk
+certifi==2019.11.28       # via requests, sentry-sdk
 chardet==3.0.4            # via requests
 defusedxml==0.6.0         # via python3-openid
-django-allauth==0.39.1
+django-allauth==0.41.0
 django-anymail==7.0.0
 django-appconf==1.0.3     # via django-image-cropping
-django-cleanup==3.2.0
-django-cors-headers==3.0.2
+django-cleanup==4.0.0
+django-cors-headers==3.2.1
 django-environ==0.4.5
 django-filter==2.2.0
 django-haystack==2.8.1
-django-helusers==0.4.5
-django-image-cropping==1.2.0
-django-jinja==2.4.1
+django-helusers==0.5.6
+django-image-cropping==1.3.0
+django-jinja==2.6.0
 django-js-asset==1.2.2    # via django-mptt
-django-leaflet==0.25.0
-django-modeltranslation==0.13.3
-django-mptt==0.10.0
-django-munigeo==0.2.23
-django-orghierarchy==0.1.23
-django-reversion==3.0.4
-django==2.2.9
+django-leaflet==0.26.0
+django-modeltranslation==0.14.2
+django-mptt==0.11.0
+django-munigeo==0.2.26
+django-orghierarchy==0.1.24
+django-reversion==3.0.5
+django==2.2.10
 djangorestframework-bulk==0.2.1
-djangorestframework-gis==0.14
+djangorestframework-gis==0.15
 djangorestframework-jwt==1.11.0
-djangorestframework==3.9.4
+djangorestframework==3.11.0
 drf-oidc-auth==0.9        # via django-helusers
-easy-thumbnails==2.7.0
-ecdsa==0.14.1             # via python-jose
-elasticsearch==2.4.1
-future==0.17.1            # via pyjwkest
+easy-thumbnails==2.7
+ecdsa==0.15               # via python-jose
+elasticsearch==5.5.3
+future==0.18.2            # via pyjwkest
 httmock==1.3.0
-icalendar==4.0.3
+icalendar==4.0.4
 idna==2.8                 # via requests
 isodate==0.6.0
-jinja2==2.10.3
+jinja2==2.11.1
 langdetect==1.0.7
-lxml==4.3.4
+lxml==4.5.0
 markdown==3.1.1
 markupsafe==1.1.1         # via jinja2
-oauthlib==3.0.2           # via requests-oauthlib
+oauthlib==3.1.0           # via requests-oauthlib
 pillow==7.0.0
-psycopg2-binary==2.7.7
-pyasn1==0.4.5             # via python-jose, rsa
-pycryptodomex==3.8.2      # via pyjwkest
+psycopg2-binary==2.8.4
+pyasn1==0.4.8             # via python-jose, rsa
+pycryptodomex==3.9.6      # via pyjwkest
 pyjwkest==1.4.2           # via drf-oidc-auth
 pyjwt==1.7.1              # via djangorestframework-jwt
-pyparsing==2.4.0          # via rdflib
-python-dateutil==2.8.0
+pyparsing==2.4.6          # via rdflib
+python-dateutil==2.8.1
 python-docx==0.8.10
 python-jose==3.1.0        # via django-helusers
 python3-openid==3.1.0     # via django-allauth
-pytz==2019.1
-pyyaml==5.1.1
+pytz==2019.3
+pyyaml==5.3
 rdflib==4.2.2
-requests-cache==0.5.0
-requests-oauthlib==1.2.0  # via django-allauth
+requests-cache==0.5.2
+requests-oauthlib==1.3.0  # via django-allauth
 requests==2.22.0
 rsa==4.0                  # via python-jose
-sentry-sdk==0.10.0
-six==1.12.0
+sentry-sdk==0.14.1
+six==1.14.0
 sqlparse==0.3.0           # via django
-swapper==1.1.0            # via django-orghierarchy
-urllib3==1.25.3           # via elasticsearch, requests, sentry-sdk
+swapper==1.1.2.post1      # via django-orghierarchy
+urllib3==1.25.8           # via elasticsearch, requests, sentry-sdk
 webencodings==0.5.1       # via bleach
 
 # The following packages are considered to be unsafe in a requirements file:

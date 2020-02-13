@@ -1,8 +1,9 @@
 import json
 from events import renderers
-from rest_framework.parsers import JSONParser, ParseError, six
+from rest_framework.parsers import JSONParser, ParseError
 from events import utils
 from django.conf import settings
+from django.utils import six
 
 
 def rename_fields(dataz):
