@@ -14,7 +14,6 @@ aliases:
   - &site_packages_path .local/lib/python3.7/site-packages
 
   - &builder_image_version 6c86b7f0df29fc8db89978f8d83483f2372b203f
-  - &ubuntu_base_image_version 6c86b7f0df29fc8db89978f8d83483f2372b203f
 
   - &workspace_root ~/repo
 
@@ -57,16 +56,16 @@ executors:
       builder_image_version:
         type: string
         default: *builder_image_version
-      ubuntu_base_image_version:
+      python_base_image_version:
         type: string
-        default: *ubuntu_base_image_version
+        default: *python_image_version
     docker:
       - image: 307238562370.dkr.ecr.eu-west-1.amazonaws.com/voltti/builder-aws:<< parameters.builder_image_version >>
     working_directory: *workspace_root
     environment:
       DOCKER_IMAGE_NAME: espooevents/service
-      # Ubuntu image version
-      BASE_IMAGE_VERSION: << parameters.ubuntu_base_image_version >>
+      # Python image version
+      BASE_IMAGE_VERSION: << parameters.python_base_image_version >>-slim
 
 commands:
   # Must be the last step in a job

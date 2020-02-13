@@ -1,5 +1,6 @@
-# Voltti's Ubuntu base Dockerfile. This sets up timezone and app user
-ARG BASE_IMAGE=307238562370.dkr.ecr.eu-west-1.amazonaws.com/voltti/ubuntu
+# Linked Events Dockerfile for distributing the app and running it in dev, test, staging, and production
+
+ARG BASE_IMAGE=python
 ARG BASE_IMAGE_VERSION=latest
 
 # Pull the base image
@@ -16,35 +17,48 @@ ENV APP_COMMIT $commit
 LABEL fi.espoo.build=${build} \
     fi.espoo.commit=${commit}
 
-# Python stdout without buffering
-ENV PYTHONUNBUFFERED true
-
-USER root
-
-COPY requirements*.txt /app/
-
-RUN apt-get update && apt-get -y upgrade && apt-get -y install \
-    python3-pip \
-    libgdal-dev \
-    # Python Pillow image dependencies
-    zlib1g-dev libjpeg-dev\
-    && apt-get clean \
+# Configure timezone and locale
+ENV LC_ALL C.UTF-8
+ENV LANG C.UTF-8
+ENV LANGUAGE C.UTF-8
+RUN set -eux \
+    && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install \
+      locales \
+      tzdata \
+    && ln -fs /usr/share/zoneinfo/Europe/Helsinki /etc/localtime \
+    && dpkg-reconfigure --frontend noninteractive tzdata \
+    && dpkg-reconfigure --frontend noninteractive locales \
     && rm -rf /var/lib/apt/lists/*
 
-# Symlink python and pip executables for compatibility
-RUN ln -s /usr/bin/python3 /usr/bin/python && ln -s /usr/bin/pip3 /usr/bin/pip
+# Set username
+ENV USERNAME linkedevents
+ENV HOME_DIR /home/${USERNAME}
+ENV USER_ID 1000
 
-RUN pip install --no-cache-dir -r /app/requirements.txt
+# Create a new user named linkedevents which should be used to run any software.
+RUN adduser ${USERNAME} --gecos "" -q --home ${HOME_DIR} --uid ${USER_ID} --disabled-password
 
-COPY . /app/
+# Turn Python's output buffering off, otherwise nothing will show up in Docker's output
+ENV PYTHONUNBUFFERED 1
 
-WORKDIR /app
+ENV DEBUG false
+ENV PRODUCTION true
+
+RUN set -eux \
+    && apt-get update && apt-get install -y --no-install-recommends --no-install-suggests \
+      gdal-bin \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
+
+USER ${USERNAME}
+WORKDIR ${HOME_DIR}
+
+COPY --chown=1000 . ./
+
+ENV PATH "${PATH}:${HOME_DIR}/.local/bin"
+
+RUN pip install --user --no-cache-dir -r ./requirements.txt
 
 EXPOSE 8000
 
-# User can make changes in /app directory
-RUN chown -R ${USERNAME}:${USERNAME} /app
-
-USER ${USERNAME}
-
-CMD ["gunicorn", "linkedevents.wsgi", "--timeout 600", "--workers=4",  "-b 0.0.0.0:8000"]
+ENTRYPOINT ["./entrypoint.dist.sh"]
