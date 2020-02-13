@@ -193,6 +193,24 @@ def test_get_event_list_verify_keyword_and(api_client, keyword, keyword2, event,
 
 
 @pytest.mark.django_db
+def test_get_event_list_verify_keyword_negative_filter(api_client, keyword, keyword2, event, event2):
+    event.keywords.set([keyword])
+    event2.keywords.set([keyword2])
+    response = get_list(api_client, data={'keyword!': keyword.id})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+    assert event2.id in [entry['id'] for entry in response.data['data']]
+
+    response = get_list(api_client, data={'keyword!': ','.join([keyword.id, keyword2.id])})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+    assert event2.id not in [entry['id'] for entry in response.data['data']]
+
+    event.keywords.set([])
+    event.audience.set([keyword])
+    response = get_list(api_client, data={'keyword!': keyword.id})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
 def test_get_event_list_verify_division_filter(api_client, event, event2, event3, administrative_division,
                                                administrative_division2):
     event.location.divisions.set([administrative_division])
