@@ -2,9 +2,16 @@
 
 set -euo pipefail
 
-# Require database url env vars to be set
-: "${MIGRATION_DATABASE_URL:?}"
-: "${APP_DATABASE_URL:?}"
+# Require these env vars to be set
+: "${APP_PASSWORD:?}"
+: "${APP_USER:?}"
+: "${DB_HOST:?}"
+: "${DB_NAME:?}"
+: "${MIGRATION_PASSWORD:?}"
+: "${MIGRATION_USER:?}"
+
+APP_DATABASE_URL="postgis://${APP_USER}:${APP_PASSWORD}@${DB_HOST}/${DB_NAME}"
+MIGRATION_DATABASE_URL="postgis://${MIGRATION_USER}:${MIGRATION_PASSWORD}@${DB_HOST}/${DB_NAME}"
 
 if [[ "$WAIT_FOR_IT_ADDRESS" ]]; then
     wait-for-it.sh "$WAIT_FOR_IT_ADDRESS" --timeout=30

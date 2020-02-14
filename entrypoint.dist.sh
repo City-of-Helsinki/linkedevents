@@ -4,11 +4,23 @@
 set -euo pipefail
 
 # Require these env vars to be set
-: "${APP_DATABASE_URL:?}"
-: "${MIGRATION_DATABASE_URL:?}"
+: "${ALLOWED_HOSTS:?}"
+: "${APP_PASSWORD:?}"
+: "${APP_USER:?}"
+: "${DB_HOST:?}"
+: "${DB_NAME:?}"
+: "${MIGRATION_PASSWORD:?}"
+: "${MIGRATION_USER:?}"
 : "${SECRET_KEY:?}"
 : "${TOKEN_AUTH_ACCEPTED_AUDIENCE:?}"
 : "${TOKEN_AUTH_SHARED_SECRET:?}"
+
+APP_DATABASE_URL="postgis://${APP_USER}:${APP_PASSWORD}@${DB_HOST}/${DB_NAME}"
+MIGRATION_DATABASE_URL="postgis://${MIGRATION_USER}:${MIGRATION_PASSWORD}@${DB_HOST}/${DB_NAME}"
+unset APP_PASSWORD
+unset APP_USER
+unset MIGRATION_PASSWORD
+unset MIGRATION_USER
 
 # if the first argument to `docker run` starts with `--`, the user is passing gunicorn arguments
 if [[ $# -lt 1 ]] || [[ "$1" == "--"* ]]; then

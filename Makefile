@@ -29,8 +29,12 @@ up:
 	-p 8000:8000 \
 	--network=host \
 	-e ALLOWED_HOSTS=localhost \
-	-e APP_DATABASE_URL=postgres://linkedevents_application:secret@localhost/linkedevents \
-	-e MIGRATION_DATABASE_URL=postgres://linkedevents_migration:secret@localhost/linkedevents \
+	-e APP_PASSWORD=secret \
+	-e APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	-e MIGRATION_PASSWORD=secret \
+	-e MIGRATION_USER=linkedevents_migration \
 	-e SECRET_KEY=secret \
 	-e TOKEN_AUTH_ACCEPTED_AUDIENCE=linkedevents-local \
 	-e TOKEN_AUTH_SHARED_SECRET=secret \
