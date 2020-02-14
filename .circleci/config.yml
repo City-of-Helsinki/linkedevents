@@ -21,6 +21,9 @@ aliases:
     attach_workspace:
       at: *workspace_root
 
+  - &voltti_global_context
+    context: org-global
+
   - &repo_cache_key v1-repo-{{ .Branch }}-{{ .Revision }}
 
   - &restore_repo
@@ -182,11 +185,11 @@ workflows:
           requires:
             - install_deps
       - test:
-          context: org-global
+          <<: *voltti_global_context
           requires:
             - install_deps
       - dockerize:
-          context: org-global
+          <<: *voltti_global_context
           requires:
             - lint
             - test
