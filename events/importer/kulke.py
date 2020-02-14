@@ -100,11 +100,11 @@ def _delete_courses():
 
 SPORTS = ['p965']
 GYMS = ['p8504']
-MOVIES = ['p1235', 'p16327']
+MOVIES = ['p1235']
 CHILDREN = ['p4354']
 YOUTH = ['p11617']
 ELDERLY = ['p2434']
-FAMILIES = ['p4363']
+FAMILIES = ['p13050']
 
 MANUAL_CATEGORIES = {
     # urheilu
@@ -114,11 +114,11 @@ MANUAL_CATEGORIES = {
     # harrastukset
     626: ['p2901'],
     # erityisliikunta
-    634: ['p3093'],
+    634: ['p3093', 'p916'],
     # monitaiteisuus
-    223: ['p25216'],
+    223: ['p25216', 'p360'],
     # seniorit > ikääntyneet ja vanhukset
-    354: ['p2433'] + ELDERLY,
+    354: ELDERLY,
     # saunominen
     371: ['p11049'],
     # lastentapahtumat > lapset (!)
@@ -128,9 +128,9 @@ MANUAL_CATEGORIES = {
     # liikuntaleiri
     710: ['p143', 'p916'],
     # teatteri ja sirkus
-    351: ['p2850'],
+    351: ['p2625'],
     # elokuva ja media
-    205: MOVIES + ['p2445'],
+    205: MOVIES,
     # skidikino
     731: CHILDREN + MOVIES,
     # luennot ja keskustelut
