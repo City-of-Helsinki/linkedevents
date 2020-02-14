@@ -29,6 +29,9 @@ if [[ $# -lt 1 ]] || [[ "$1" == "--"* ]]; then
 
     # Run migrations
     DATABASE_URL=$MIGRATION_DATABASE_URL ./manage.py migrate --noinput
+
+    # Sync translation fields based on settings.LANGUAGES
+    DATABASE_URL=$MIGRATION_DATABASE_URL ./manage.py sync_translation_fields --noinput
     unset MIGRATION_DATABASE_URL
 
     export DATABASE_URL=$APP_DATABASE_URL
