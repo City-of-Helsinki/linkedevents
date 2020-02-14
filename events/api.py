@@ -1762,6 +1762,11 @@ def _filter_event_queryset(queryset, params, srs=None):
             raise ParseError(_('Audience maximum age must be a digit.'))
         queryset = queryset.filter(audience_max_age__gte=max_age)
 
+    # Filter deleted events
+    val = params.get('show_deleted', None)
+    if not val:
+        queryset = queryset.filter(deleted=False)
+
     return queryset
 
 
@@ -1814,7 +1819,7 @@ class EventDeletedException(APIException):
 
 
 class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelViewSet):
-    queryset = Event.objects.filter(deleted=False)
+    queryset = Event.objects.all()
     # This exclude is, atm, a bit overkill, considering it causes a massive query and no such events exist.
     # queryset = queryset.exclude(super_event_type=Event.SuperEventType.RECURRING, sub_events=None)
     # Use select_ and prefetch_related() to reduce the amount of queries
