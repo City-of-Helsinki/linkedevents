@@ -421,6 +421,12 @@ def test_redirect_to_end_of_replace_chain(api_client, event, user):
     assert response.status_code == 200
     assert event.id in {e['id'] for e in response.data['data']}
 
+    expected_keys = ['id', 'name', 'last_modified_time', 'deleted']
+    event_data = next((e for e in response.data['data'] if e['id'] == event.id))
+    for key in event_data:
+        assert key in expected_keys
+    assert event_data['name']['fi'] == 'DELETED'
+
     response = get_list(api_client)
     assert response.status_code == 200
     assert event.id not in {e['id'] for e in response.data['data']}

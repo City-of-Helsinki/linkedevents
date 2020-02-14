@@ -1459,6 +1459,14 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     def to_representation(self, obj):
         ret = super(EventSerializer, self).to_representation(obj)
 
+        if obj.deleted:
+            keys_to_preserve = ['id', 'name', 'last_modified_time', 'deleted']
+            for key in ret.keys() - keys_to_preserve:
+                del ret[key]
+            for key in ret['name']:
+                ret['name'][key] = 'DELETED'
+            return ret
+
         if self.context['request'].accepted_renderer.format == 'docx':
             ret['end_time_obj'] = obj.end_time
             ret['start_time_obj'] = obj.start_time
