@@ -503,7 +503,7 @@ class LippupisteImporter(Importer):
 
     def import_events(self):
         if not LIPPUPISTE_EVENT_API_URL:
-            raise ImproperlyConfigured("LIPPUPISTE_EVENT_API_URL must be set in local_settings")
+            raise ImproperlyConfigured("LIPPUPISTE_EVENT_API_URL must be set in environment or config file")
         logger.info("Importing Lippupiste events")
         events = recur_dict()
         event_source_data = list(self._fetch_event_source_data(LIPPUPISTE_EVENT_API_URL))
