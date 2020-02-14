@@ -24,6 +24,8 @@ aliases:
   - &voltti_global_context
     context: org-global
 
+  - &ci_espooevents_ssh_key_fingerprint 51:cc:59:96:f7:aa:1f:12:86:dc:0f:ba:a7:0c:12:db
+
   - &repo_cache_key v1-repo-{{ .Branch }}-{{ .Revision }}
 
   - &restore_repo
@@ -71,6 +73,24 @@ executors:
       BASE_IMAGE_VERSION: << parameters.python_base_image_version >>-slim
 
 commands:
+  deploy_aws:
+    description: "Deploy to AWS"
+    parameters:
+      target_env:
+        type: string
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - *ci_espooevents_ssh_key_fingerprint
+      - run:
+          name: Deploy to << parameters.target_env >>
+          environment:
+            SERVICE_NAME: espooevents-service
+            TARGET_ENV: << parameters.target_env >>
+          command: |
+            git clone git@github.com:espoon-voltti/espooevents-infra.git
+            cd espooevents-infra/terraform/espooevents-ecs
+            ecs-deploy
   # Must be the last step in a job
   notify_slack:
     description: "Notify via Slack"
@@ -173,6 +193,23 @@ jobs:
       - jira/notify
       - notify_slack
 
+  deploy:
+    parameters:
+      target_env:
+        type: enum
+        enum: ["dev", "test", "staging", "prod"]
+      jira_env_type:
+        type: enum
+        enum: ["development", "testing", "staging", "production"]
+    executor: builder
+    steps:
+      - deploy_aws:
+          target_env: << parameters.target_env >>
+      - jira/notify:
+          environment_type: << parameters.jira_env_type >>
+          job_type: deployment
+      - notify_slack
+
 workflows:
   version: 2
   build_test_and_deploy:
@@ -193,3 +230,65 @@ workflows:
           requires:
             - lint
             - test
+
+      # Deploy to dev
+      - deploy:
+          <<: *voltti_global_context
+          name: deploy_dev
+          target_env: dev
+          jira_env_type: development
+          requires:
+            - dockerize
+          filters:
+            branches:
+              only: master
+
+      # Deploy to test
+      - deploy:
+          <<: *voltti_global_context
+          name: deploy_test
+          target_env: test
+          jira_env_type: testing
+          requires:
+            - dockerize
+          filters:
+            branches:
+              only: master
+
+      # Deploy to staging
+      - approve_staging_deploy:
+          type: approval
+          requires:
+            - deploy_test
+          filters:
+            branches:
+              only: master
+      - deploy:
+          <<: *voltti_global_context
+          name: deploy_staging
+          target_env: staging
+          jira_env_type: staging
+          requires:
+            - approve_staging_deploy
+          filters:
+            branches:
+              only: master
+
+      # Deploy to prod
+      - approve_prod_deploy:
+          type: approval
+          requires:
+            - deploy_staging
+          filters:
+            branches:
+              only: master
+      - deploy:
+          <<: *voltti_global_context
+          name: deploy_prod
+          target_env: prod
+          jira_env_type: production
+          requires:
+            - approve_prod_deploy
+          filters:
+            branches:
+              only: master
