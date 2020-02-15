@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 logger.info("LOADING TEST MODULE SETTINGS")
 
 env = environ.Env(
-    DATABASE_URL=(str, 'postgis://linkedevents:linkedevents@localhost/linkedevents'),
+    DATABASE_URL=(str, 'postgis://postgres:secret@localhost/linkedevents'),
 )
 
 DATABASES = {

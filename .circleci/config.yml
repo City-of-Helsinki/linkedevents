@@ -10,17 +10,21 @@ aliases:
   # Remember to update the site_packages_path if you update the python version
   # lxml doesn't yet have a Python 3.8 wheel package so use Python 3.7 instead
   - &python_image_version 3.7.6
-  # The tilde (home path) has been removed since it doesn't work in docker commands in test_ci.sh
+  # The tilde (home path) has been removed since it doesn't work in docker commands in bin/test_ci.sh
   - &site_packages_path .local/lib/python3.7/site-packages
 
   - &builder_image_version 6c86b7f0df29fc8db89978f8d83483f2372b203f
-  - &ubuntu_base_image_version 6c86b7f0df29fc8db89978f8d83483f2372b203f
 
   - &workspace_root ~/repo
 
   - &attach_workspace
     attach_workspace:
       at: *workspace_root
+
+  - &voltti_global_context
+    context: org-global
+
+  - &ci_espooevents_ssh_key_fingerprint 51:cc:59:96:f7:aa:1f:12:86:dc:0f:ba:a7:0c:12:db
 
   - &repo_cache_key v1-repo-{{ .Branch }}-{{ .Revision }}
 
@@ -57,18 +61,36 @@ executors:
       builder_image_version:
         type: string
         default: *builder_image_version
-      ubuntu_base_image_version:
+      python_base_image_version:
         type: string
-        default: *ubuntu_base_image_version
+        default: *python_image_version
     docker:
       - image: 307238562370.dkr.ecr.eu-west-1.amazonaws.com/voltti/builder-aws:<< parameters.builder_image_version >>
     working_directory: *workspace_root
     environment:
       DOCKER_IMAGE_NAME: espooevents/service
-      # Ubuntu image version
-      BASE_IMAGE_VERSION: << parameters.ubuntu_base_image_version >>
+      # Python image version
+      BASE_IMAGE_VERSION: << parameters.python_base_image_version >>-slim
 
 commands:
+  deploy_aws:
+    description: "Deploy to AWS"
+    parameters:
+      target_env:
+        type: string
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - *ci_espooevents_ssh_key_fingerprint
+      - run:
+          name: Deploy to << parameters.target_env >>
+          environment:
+            SERVICE_NAME: espooevents-service
+            TARGET_ENV: << parameters.target_env >>
+          command: |
+            git clone git@github.com:espoon-voltti/espooevents-infra.git
+            cd espooevents-infra/terraform/espooevents-ecs
+            ecs-deploy
   # Must be the last step in a job
   notify_slack:
     description: "Notify via Slack"
@@ -126,9 +148,13 @@ jobs:
     environment:
       PYTHON_IMAGE_VERSION: *python_image_version
       SITE_PACKAGES_PATH: *site_packages_path
-      POSTGRES_USER: linkedevents
-      POSTGRES_PASSWORD: linkedevents
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
       POSTGRES_DB: linkedevents
+      MIGRATION_USER: linkedevents_migration
+      MIGRATION_PASSWORD: secret
+      APP_USER: linkedevents_application
+      APP_PASSWORD: secret
     steps:
       - *restore_repo
       - *restore_deps
@@ -138,7 +164,7 @@ jobs:
           command: ecr-login
       - run:
           name: Run test script
-          command: ./test_ci.sh
+          command: ./bin/test_ci.sh
       - jira/notify
       - notify_slack
 
@@ -167,6 +193,23 @@ jobs:
       - jira/notify
       - notify_slack
 
+  deploy:
+    parameters:
+      target_env:
+        type: enum
+        enum: ["dev", "test", "staging", "prod"]
+      jira_env_type:
+        type: enum
+        enum: ["development", "testing", "staging", "production"]
+    executor: builder
+    steps:
+      - deploy_aws:
+          target_env: << parameters.target_env >>
+      - jira/notify:
+          environment_type: << parameters.jira_env_type >>
+          job_type: deployment
+      - notify_slack
+
 workflows:
   version: 2
   build_test_and_deploy:
@@ -179,11 +222,73 @@ workflows:
           requires:
             - install_deps
       - test:
-          context: org-global
+          <<: *voltti_global_context
           requires:
             - install_deps
       - dockerize:
-          context: org-global
+          <<: *voltti_global_context
           requires:
             - lint
             - test
+
+      # Deploy to dev
+      - deploy:
+          <<: *voltti_global_context
+          name: deploy_dev
+          target_env: dev
+          jira_env_type: development
+          requires:
+            - dockerize
+          filters:
+            branches:
+              only: master
+
+      # Deploy to test
+      - deploy:
+          <<: *voltti_global_context
+          name: deploy_test
+          target_env: test
+          jira_env_type: testing
+          requires:
+            - dockerize
+          filters:
+            branches:
+              only: master
+
+      # Deploy to staging
+      - approve_staging_deploy:
+          type: approval
+          requires:
+            - deploy_test
+          filters:
+            branches:
+              only: master
+      - deploy:
+          <<: *voltti_global_context
+          name: deploy_staging
+          target_env: staging
+          jira_env_type: staging
+          requires:
+            - approve_staging_deploy
+          filters:
+            branches:
+              only: master
+
+      # Deploy to prod
+      - approve_prod_deploy:
+          type: approval
+          requires:
+            - deploy_staging
+          filters:
+            branches:
+              only: master
+      - deploy:
+          <<: *voltti_global_context
+          name: deploy_prod
+          target_env: prod
+          jira_env_type: production
+          requires:
+            - approve_prod_deploy
+          filters:
+            branches:
+              only: master

@@ -10,25 +10,36 @@ build:
 	# @docker-compose build
 	# @docker-compose run addit python ./manage.py collectstatic --no-input
 	# @docker build -f docker/django/Dockerfile \
-	# -t espooevents-service .
-	@docker build -f Dockerfile.dist -t espooevents-service .
+	# -t linkedevents .
+	@docker build \
+	--build-arg BASE_IMAGE_VERSION=3.7-slim \
+	-f Dockerfile.dist \
+	-t linkedevents \
+	.
 
 start:
-	@docker start espooevents-service
+	@docker start linkedevents
 
 stop:
-	@docker stop espooevents-service
+	@docker stop linkedevents
 
 up:
 	@docker run \
-	--env PRODUCTION=true \
-	--env DEBUG=false \
-	--env DATABASE_URL=postgres://linkedevents:linkedevents@localhost:5555/linkedevents \
-	-p 127.0.0.1:8000:8000 \
-	--name espooevents-service \
-	-it \
 	--rm \
-	espooevents-service
+	-p 8000:8000 \
+	--network=host \
+	-e ALLOWED_HOSTS=localhost \
+	-e APP_PASSWORD=secret \
+	-e APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	-e MIGRATION_PASSWORD=secret \
+	-e MIGRATION_USER=linkedevents_migration \
+	-e SECRET_KEY=secret \
+	-e TOKEN_AUTH_ACCEPTED_AUDIENCE=linkedevents-local \
+	-e TOKEN_AUTH_SHARED_SECRET=secret \
+	--name linkedevents \
+	linkedevents
 
 lint:
 	@docker run \
@@ -36,6 +47,6 @@ lint:
 	-v `pwd`:/usr/src/app \
 	-w /usr/src/app \
 	-u circleci \
-	--name espooevents-service-lint \
+	--name linkedevents-lint \
 	circleci/python:3.7.6 \
 	/bin/bash -c "pip install pip-tools && pip-sync --user requirements-dev.txt"

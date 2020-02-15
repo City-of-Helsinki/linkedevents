@@ -30,7 +30,7 @@ docker cp \
 
 # Build db container
 docker build \
-  -t espooevents-service-db \
+  -t linkedevents-db \
   -f ./docker/postgres/Dockerfile \
   .
 
@@ -42,17 +42,21 @@ docker run \
   -e POSTGRES_USER \
   -e POSTGRES_PASSWORD \
   -e POSTGRES_DB \
-  --name espooevents-service-db \
-  espooevents-service-db
+  -e MIGRATION_USER \
+  -e MIGRATION_PASSWORD \
+  -e APP_USER \
+  -e APP_PASSWORD \
+  --name linkedevents-db \
+  linkedevents-db
 
-# Run tests in another container in the same network as `espooevents-service-db`, this way we have
-# all exposed ports from `espooevents-service-db` available on `localhost` in this new container
+# Run tests in another container in the same network as `linkedevents-db`, this way we have
+# all exposed ports from `linkedevents-db` available on `localhost` in this new container
 docker run \
   --rm \
-  --network container:espooevents-service-db \
+  --network container:linkedevents-db \
   --volumes-from code \
   -w /usr/src/app \
-  --name espooevents-service \
+  --name linkedevents \
   circleci/python:"${PYTHON_IMAGE_VERSION}" \
   /bin/bash -c " \
     sudo apt-get update && \
@@ -60,8 +64,8 @@ docker run \
     sudo chown -R circleci:circleci /usr/src/app && \
     py.test events"
 # Store the exit code of the last command
-espooevents_service_check=$?
-docker stop espooevents-service-db
+linkedevents_check=$?
+docker stop linkedevents-db
 docker rm code
 # Return the exit code of the jest command
-(exit $espooevents_service_check)
+(exit $linkedevents_check)
