@@ -49,4 +49,4 @@ lint:
 	-u circleci \
 	--name linkedevents-lint \
 	circleci/python:3.7.6 \
-	/bin/bash -c "pip install pip-tools && pip-sync --user requirements-dev.txt"
+	/bin/bash -c "pip install pip-tools && pip-sync --user requirements-dev.txt && flake8 ."
