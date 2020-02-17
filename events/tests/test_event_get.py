@@ -412,7 +412,7 @@ def test_redirect_to_end_of_replace_chain(api_client, event, event2, event3, use
 
 
 @pytest.mark.django_db
-def test_redirect_to_end_of_replace_chain(api_client, event, user):
+def test_event_list_show_deleted_param(api_client, event, user):
     api_client.force_authenticate(user=user)
 
     event.soft_delete()
