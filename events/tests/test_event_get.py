@@ -425,7 +425,9 @@ def test_event_list_show_deleted_param(api_client, event, user):
     event_data = next((e for e in response.data['data'] if e['id'] == event.id))
     for key in event_data:
         assert key in expected_keys
-    assert event_data['name']['fi'] == 'DELETED'
+    assert event_data['name']['fi'] == 'POISTETTU'
+    assert event_data['name']['sv'] == 'RADERAD'
+    assert event_data['name']['en'] == 'DELETED'
 
     response = get_list(api_client)
     assert response.status_code == 200
