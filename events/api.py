@@ -684,6 +684,7 @@ def _text_qset_by_translated_field(field, val):
 class JSONAPIViewMixin(object):
     def initial(self, request, *args, **kwargs):
         ret = super().initial(request, *args, **kwargs)
+        # if srid is not specified, this will yield munigeo default 4326
         self.srs = srid_to_srs(self.request.query_params.get('srid', None))
         return ret
 
@@ -718,6 +719,18 @@ class KeywordRetrieveViewSet(JSONAPIViewMixin, mixins.RetrieveModelMixin, viewse
     queryset = Keyword.objects.all()
     queryset = queryset.select_related('publisher')
     serializer_class = KeywordSerializer
+
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            keyword = Keyword.objects.get(pk=kwargs['pk'])
+        except Keyword.DoesNotExist:
+            raise Http404()
+        if keyword.replaced_by:
+            keyword = keyword.get_replacement()
+            return HttpResponsePermanentRedirect(reverse('keyword-detail',
+                                                         kwargs={'pk': keyword.pk},
+                                                         request=request))
+        return super().retrieve(request, *args, **kwargs)
 
 
 class KeywordListViewSet(JSONAPIViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
@@ -895,7 +908,7 @@ class PlaceRetrieveViewSet(JSONAPIViewMixin, GeoModelAPIView,
             raise Http404()
         if place.deleted:
             if place.replaced_by:
-                place = place.replaced_by
+                place = place.get_replacement()
                 return HttpResponsePermanentRedirect(reverse('place-detail',
                                                              kwargs={'pk': place.pk},
                                                              request=request))
@@ -1667,6 +1680,21 @@ def _filter_event_queryset(queryset, params, srs=None):
         q = get_publisher_query(val)
         queryset = queryset.filter(q)
 
+    # Filter by publisher ancestors, multiple ids separated by comma
+    val = params.get('publisher_ancestor', None)
+    if val:
+        val = val.split(',')
+        ancestors = Organization.objects.filter(id__in=val)
+
+        # Get ids of ancestors and all their descendants
+        publishers = Organization.objects.none()
+        for org in ancestors.all():
+            publishers |= org.get_descendants(include_self=True)
+        publisher_ids = [org['id'] for org in publishers.all().values('id')]
+
+        q = get_publisher_query(publisher_ids)
+        queryset = queryset.filter(q)
+
     # Filter by publication status
     val = params.get('publication_status', None)
     if val == 'draft':
@@ -1905,6 +1933,15 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
     def allow_bulk_destroy(self, qs, filtered):
         return False
 
+    def update(self, *args, **kwargs):
+        response = super().update(*args, **kwargs)
+        replaced_by_id = response.data['replaced_by']
+        if replaced_by_id is not None:
+            replacing_event = Event.objects.get(id=replaced_by_id)
+            context = self.get_serializer_context()
+            response.data = EventSerializer(replacing_event, context=context).data
+        return response
+
     def perform_update(self, serializer):
         # Prevent changing an event that user does not have write permissions
         # For bulk update, the editable queryset is filtered in filter_queryset
@@ -1961,6 +1998,18 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
         if not self.request.user.can_edit_event(instance.publisher, instance.publication_status):
             raise DRFPermissionDenied()
         instance.soft_delete()
+
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            event = Event.objects.get(pk=kwargs['pk'])
+        except Event.DoesNotExist:
+            raise Http404()
+        if event.replaced_by:
+            event = event.get_replacement()
+            return HttpResponsePermanentRedirect(reverse('event-detail',
+                                                         kwargs={'pk': event.pk},
+                                                         request=request))
+        return super().retrieve(request, *args, **kwargs)
 
     def list(self, request, *args, **kwargs):
         # docx renderer has additional requirements for listing events
