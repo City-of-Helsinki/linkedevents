@@ -626,7 +626,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
             if start > end:
                 raise ValidationError({'end_time': _('The event end time cannot be earlier than the start time.')})
 
-        if (self.keywords.all() | self.audience.all()).filter(deprecated=True):
+        if (self.keywords.filter(deprecated=True) or self.audience.filter(deprecated=True)):
             raise ValidationError({'keywords': _("Event can't have deprecated keywords")})
 
         super(Event, self).save(*args, **kwargs)
