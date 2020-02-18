@@ -76,4 +76,7 @@ ENTRYPOINT ["./entrypoint.dist.sh"]
 FROM base AS importer
 # ==================================================== #
 
+# Install awscli so that we can get the db password from SSM parameter store
+RUN pip install --user --no-cache-dir awscli
+
 ENTRYPOINT ["./entrypoint.importer.sh"]
