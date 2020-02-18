@@ -409,3 +409,26 @@ def test_redirect_to_end_of_replace_chain(api_client, event, event2, event3, use
     response2 = api_client.get(response.url, format='json')
     assert response2.status_code == 200
     assert response2.data['id'] == event3.pk
+
+
+@pytest.mark.django_db
+def test_event_list_show_deleted_param(api_client, event, user):
+    api_client.force_authenticate(user=user)
+
+    event.soft_delete()
+
+    response = get_list(api_client, query_string='show_deleted=true')
+    assert response.status_code == 200
+    assert event.id in {e['id'] for e in response.data['data']}
+
+    expected_keys = ['id', 'name', 'last_modified_time', 'deleted', 'replaced_by']
+    event_data = next((e for e in response.data['data'] if e['id'] == event.id))
+    for key in event_data:
+        assert key in expected_keys
+    assert event_data['name']['fi'] == 'POISTETTU'
+    assert event_data['name']['sv'] == 'RADERAD'
+    assert event_data['name']['en'] == 'DELETED'
+
+    response = get_list(api_client)
+    assert response.status_code == 200
+    assert event.id not in {e['id'] for e in response.data['data']}

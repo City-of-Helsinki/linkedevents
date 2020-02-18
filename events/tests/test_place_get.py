@@ -102,6 +102,31 @@ def test_get_place_list_verify_division_filter(api_client, place, place2, place3
 
 
 @pytest.mark.django_db
+def test_get_place_list_verify_show_deleted_filter(api_client, place, place2, administrative_division):
+    place.divisions.set([administrative_division])
+    place2.divisions.set([administrative_division])
+    place.deleted = True
+    place.save()
+
+    # Show both places
+    response = get_list(api_client, data={
+        'show_deleted': 1, 'division': administrative_division.ocd_id, 'show_all_places': 1})
+    data = response.data['data']
+    assert len(data) == 2
+    ids = [entry['id'] for entry in data]
+    assert place.id in ids
+    assert place2.id in ids
+
+    # Don't include deleted place
+    response = get_list(api_client, data={'division': administrative_division.ocd_id, 'show_all_places': 1})
+    data = response.data['data']
+    assert len(data) == 1
+    ids = [entry['id'] for entry in data]
+    assert place.id not in ids
+    assert place2.id in ids
+
+
+@pytest.mark.django_db
 def test_get_place_list_check_division(api_client, place, administrative_division, municipality):
     place.divisions.set([administrative_division])
 
