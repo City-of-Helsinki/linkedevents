@@ -61,3 +61,19 @@ def test_get_keyword_list_verify_text_filter(api_client, keyword, keyword2, keyw
     assert keyword.id in [entry['id'] for entry in response.data['data']]
     assert keyword2.id not in [entry['id'] for entry in response.data['data']]
     assert keyword3.id not in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
+def test_get_keyword_list_verify_show_deprecated_param(api_client, keyword, keyword2):
+    keyword.deprecated = True
+    keyword.save()
+
+    response = get_list(api_client, data={'show_all_keywords': True})
+    ids = [entry['id'] for entry in response.data['data']]
+    assert keyword.id not in ids
+    assert keyword2.id in ids
+
+    response = get_list(api_client, data={'show_all_keywords': True, 'show_deprecated': True})
+    ids = [entry['id'] for entry in response.data['data']]
+    assert keyword.id in ids
+    assert keyword2.id in ids

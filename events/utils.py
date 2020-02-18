@@ -131,3 +131,11 @@ def get_fixed_lang_codes():
         lang_code = lang_code.replace('-', '_')  # to handle complex codes like e.g. zh-hans
         lang_codes.append(lang_code)
     return lang_codes
+
+
+def get_deleted_object_name():
+    return {
+        'fi': 'POISTETTU',
+        'sv': 'RADERAD',
+        'en': 'DELETED',
+    }

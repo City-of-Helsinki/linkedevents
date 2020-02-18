@@ -1459,6 +1459,13 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     def to_representation(self, obj):
         ret = super(EventSerializer, self).to_representation(obj)
 
+        if obj.deleted:
+            keys_to_preserve = ['id', 'name', 'last_modified_time', 'deleted', 'replaced_by']
+            for key in ret.keys() - keys_to_preserve:
+                del ret[key]
+            ret['name'] = utils.get_deleted_object_name()
+            return ret
+
         if self.context['request'].accepted_renderer.format == 'docx':
             ret['end_time_obj'] = obj.end_time
             ret['start_time_obj'] = obj.start_time
@@ -1762,6 +1769,11 @@ def _filter_event_queryset(queryset, params, srs=None):
             raise ParseError(_('Audience maximum age must be a digit.'))
         queryset = queryset.filter(audience_max_age__gte=max_age)
 
+    # Filter deleted events
+    val = params.get('show_deleted', None)
+    if not val:
+        queryset = queryset.filter(deleted=False)
+
     return queryset
 
 
@@ -1814,7 +1826,7 @@ class EventDeletedException(APIException):
 
 
 class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelViewSet):
-    queryset = Event.objects.filter(deleted=False)
+    queryset = Event.objects.all()
     # This exclude is, atm, a bit overkill, considering it causes a massive query and no such events exist.
     # queryset = queryset.exclude(super_event_type=Event.SuperEventType.RECURRING, sub_events=None)
     # Use select_ and prefetch_related() to reduce the amount of queries
@@ -1935,9 +1947,9 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
 
     def update(self, *args, **kwargs):
         response = super().update(*args, **kwargs)
-        replaced_by_id = response.data['replaced_by']
-        if replaced_by_id is not None:
-            replacing_event = Event.objects.get(id=replaced_by_id)
+        original_event = Event.objects.get(id=response.data['id'])
+        if original_event.replaced_by is not None:
+            replacing_event = original_event.replaced_by
             context = self.get_serializer_context()
             response.data = EventSerializer(replacing_event, context=context).data
         return response
