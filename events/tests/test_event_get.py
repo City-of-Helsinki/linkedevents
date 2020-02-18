@@ -421,7 +421,7 @@ def test_event_list_show_deleted_param(api_client, event, user):
     assert response.status_code == 200
     assert event.id in {e['id'] for e in response.data['data']}
 
-    expected_keys = ['id', 'name', 'last_modified_time', 'deleted']
+    expected_keys = ['id', 'name', 'last_modified_time', 'deleted', 'replaced_by']
     event_data = next((e for e in response.data['data'] if e['id'] == event.id))
     for key in event_data:
         assert key in expected_keys

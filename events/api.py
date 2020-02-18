@@ -1460,7 +1460,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         ret = super(EventSerializer, self).to_representation(obj)
 
         if obj.deleted:
-            keys_to_preserve = ['id', 'name', 'last_modified_time', 'deleted']
+            keys_to_preserve = ['id', 'name', 'last_modified_time', 'deleted', 'replaced_by']
             for key in ret.keys() - keys_to_preserve:
                 del ret[key]
             ret['name'] = utils.get_deleted_object_name()
