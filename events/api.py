@@ -1947,9 +1947,9 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
 
     def update(self, *args, **kwargs):
         response = super().update(*args, **kwargs)
-        replaced_by_id = response.data['replaced_by']
-        if replaced_by_id is not None:
-            replacing_event = Event.objects.get(id=replaced_by_id)
+        original_event = Event.objects.get(id=response.data['id'])
+        if original_event.replaced_by is not None:
+            replacing_event = original_event.replaced_by
             context = self.get_serializer_context()
             response.data = EventSerializer(replacing_event, context=context).data
         return response
