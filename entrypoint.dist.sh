@@ -46,6 +46,6 @@ if [[ $# -lt 1 ]] || [[ "$1" == "--"* ]]; then
     exec gunicorn linkedevents.wsgi --timeout 600 --workers=4 --bind 0.0.0.0:8000 "$@"
 fi
 
-# As argument is not --env, assume user want to run his own process, for sample a `bash`
+# As argument doesn't start with --, assume user want to run his own process, for example a `bash`
 # shell to explore this image
 exec "$@"

@@ -68,7 +68,8 @@ executors:
       - image: 307238562370.dkr.ecr.eu-west-1.amazonaws.com/voltti/builder-aws:<< parameters.builder_image_version >>
     working_directory: *workspace_root
     environment:
-      DOCKER_IMAGE_NAME: espooevents/service
+      DOCKER_IMAGE_NAME_DIST: espooevents/service
+      DOCKER_IMAGE_NAME_IMPORTER: espooevents/service-importer
       # Python image version
       BASE_IMAGE_VERSION: << parameters.python_base_image_version >>-slim
 
@@ -178,18 +179,33 @@ jobs:
           name: Docker login to ECR
           command: ecr-login
       - run:
-          name: Build docker image
+          name: Build dist docker image
           command: |
             docker build \
               -f Dockerfile.dist \
-              -t $DOCKER_IMAGE_NAME \
+              -t $DOCKER_IMAGE_NAME_DIST \
+              --target dist \
               --build-arg build=$CIRCLE_BUILD_NUM \
               --build-arg commit=$CIRCLE_SHA1 \
               --build-arg BASE_IMAGE_VERSION=$BASE_IMAGE_VERSION \
               .
       - run:
-          name: Tag and push docker image
-          command: ecr-push "${DOCKER_IMAGE_NAME}"
+          name: Tag and push dist docker image
+          command: ecr-push "${DOCKER_IMAGE_NAME_DIST}"
+      - run:
+          name: Build importer docker image
+          command: |
+            docker build \
+              -f Dockerfile.dist \
+              -t $DOCKER_IMAGE_NAME_IMPORTER \
+              --target importer \
+              --build-arg build=$CIRCLE_BUILD_NUM \
+              --build-arg commit=$CIRCLE_SHA1 \
+              --build-arg BASE_IMAGE_VERSION=$BASE_IMAGE_VERSION \
+              .
+      - run:
+          name: Tag and push importer docker image
+          command: ecr-push "${DOCKER_IMAGE_NAME_IMPORTER}"
       - jira/notify
       - notify_slack
 

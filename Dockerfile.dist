@@ -3,8 +3,10 @@
 ARG BASE_IMAGE=python
 ARG BASE_IMAGE_VERSION=latest
 
+# ==================================================== #
 # Pull the base image
-FROM ${BASE_IMAGE}:${BASE_IMAGE_VERSION}
+FROM ${BASE_IMAGE}:${BASE_IMAGE_VERSION} AS base
+# ==================================================== #
 
 # Define the build and commit args and set default values for them.
 # These are used for tracing the image to the commit and build from which the image has been built.
@@ -62,4 +64,16 @@ RUN pip install --user --no-cache-dir -r ./requirements.txt
 
 EXPOSE 8000
 
+# ==================================================== #
+FROM base AS dist
+# ==================================================== #
+
 ENTRYPOINT ["./entrypoint.dist.sh"]
+
+# ==================================================== #
+# AWS Batch job definitions do not allow overriding the entrypoint so we need to create a separate image with the
+# importer entrypoint
+FROM base AS importer
+# ==================================================== #
+
+ENTRYPOINT ["./entrypoint.importer.sh"]

@@ -21,6 +21,7 @@
 #################################################
 !config_dev.toml
 !entrypoint.dist.sh
+!entrypoint.importer.sh
 !local_settings.py
 !manage.py
 !pytest.ini
