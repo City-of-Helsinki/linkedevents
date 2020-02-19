@@ -64,7 +64,7 @@ YSO_KEYWORD_MAPS = {
     u'luonto- ja ulkoilureitit': (u'p13084', u'p5350'),  # -> Luonto, ulkoilureitit
     u'uimahallit': u'p9415',
     u'ulkoilualueet': u'p4858',
-    u'urheilu- ja liikuntajärjestöt': (u'p965', u'p25543'),  # -> Urheilu, liikuntajärjestöt
+    u'urheilu- ja liikuntajärjestöt': (u'p965', u'p2042'),  # -> Urheilu, liikuntajärjestöt
     u'virkistysalueet': u'p4058',
     u'bändit': u'p5072',
     u'nuorisotilat': u'p17790',
@@ -258,7 +258,7 @@ class EspooImporter(Importer):
                     cat_id_set.add('yso:' + t_v)
             else:
                 cat_id_set.add('yso:' + yso_val)
-        keyword_list = Keyword.objects.filter(data_source=yso_data_source).filter(id__in=cat_id_set)
+        keyword_list = Keyword.objects.filter(data_source=yso_data_source, deprecated=False).filter(id__in=cat_id_set)
         self.keyword_by_id = {p.id: p for p in keyword_list}
 
     def setup(self):
@@ -412,7 +412,7 @@ class EspooImporter(Importer):
         yso_data_source = DataSource.objects.get(id='yso')
         espoo_data_source = DataSource.objects.get(id='espoo')
         node_name = classification_node_name.strip()
-        query = Keyword.objects.filter(data_source__in=[yso_data_source, espoo_data_source])\
+        query = Keyword.objects.filter(deprecated=False, data_source__in=[yso_data_source, espoo_data_source])\
             .order_by('-data_source_id')
         if not lang:
             keyword = query.filter(name__iexact=node_name).first()
