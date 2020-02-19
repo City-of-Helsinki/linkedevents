@@ -146,6 +146,13 @@ STATIC_URL=/static/
 # reports. It is used to separate deployments within Sentry UI
 SENTRY_ENVIRONMENT=local-development-unconfigured
 
+# Whitenoise enables WSGI apps (and thus Django) to serve any static
+# files directly from Python code. This makes it easier to run Linkedevents
+# from container, as there is no need to setup static files serving
+# or uploading them to CDN. Instead you should have a HTTP cache
+# in front of Linkedevents, if it becomes heavily loaded
+# ENABLE_WHITENOISE=False
+
 # Lippupiste has a private API for accessing event data. If you have
 # access to this API, enter your access URL here. Note that you will
 # very likely need to customize the importer as well.

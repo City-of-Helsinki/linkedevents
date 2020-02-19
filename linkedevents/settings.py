@@ -54,10 +54,12 @@ env = environ.Env(
     TRUST_X_FORWARDED_HOST=(bool, False),
     SENTRY_DSN=(str, ''),
     SENTRY_ENVIRONMENT=(str, 'development'),
+    ENABLE_WHITENOISE=(bool, False),
     COOKIE_PREFIX=(str, 'linkedevents'),
     INTERNAL_IPS=(list, []),
     INSTANCE_NAME=(str, 'Linked Events'),
     EXTRA_INSTALLED_APPS=(list, []),
+    ENABLE_DJANGO_EXTENSIONS=(bool, False),
     AUTO_ENABLED_EXTENSIONS=(list, []),
     MAIL_MAILGUN_KEY=(str, ''),
     MAIL_MAILGUN_DOMAIN=(str, ''),
@@ -165,8 +167,8 @@ INSTALLED_APPS = [
 ] + env('EXTRA_INSTALLED_APPS')
 
 # django-extensions is a set of developer friendly tools
-if DEBUG:
-    INSTALLED_APPS.append('django_extensions')
+if env('ENABLE_DJANGO_EXTENSIONS'):
+    MIDDLEWARE.append('django_extensions')
 
 if env('SENTRY_DSN'):
     sentry_sdk.init(
@@ -190,6 +192,18 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# Whitenoise serves the static files directly out from Django, adding
+# expires headers and such for cacheability. Very nice for working out
+# of a single process container (the usual kind)
+if env('ENABLE_WHITENOISE'):
+    # Whitenoisemiddleware needs to be installed after securitymiddleware
+    try:
+        place = MIDDLEWARE.index('django.middleware.security.SecurityMiddleware')
+    except ValueError:
+        place = 0
+
+    MIDDLEWARE.insert(place, 'whitenoise.middleware.WhiteNoiseMiddleware')
 
 ROOT_URLCONF = 'linkedevents.urls'
 
