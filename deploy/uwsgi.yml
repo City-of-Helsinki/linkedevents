@@ -1,0 +1,16 @@
+uwsgi:
+  # Needed plugins if running against Debian uwsgi-package
+  # python docker image cannot use that due to linker mishaps
+  # plugins: python3,http
+  wsgi-file: linkedevents/wsgi.py
+  processes: 12
+  threads: 1
+  master: true
+  #uid: linkedevents
+  umask: 022
+  reload-on-rss: 300
+  # Allow large image uploads
+  chunked-input-limit: 10485760
+  buffer-size: 32768
+  http: :8000
+  static-map: /static=/srv/static
