@@ -29,7 +29,7 @@ YSO_KEYWORD_MAPS = {
     u'Lapset': u'p4354',
     u'Kirjastot': u'p2787',
     u'Opiskelijat': u'p16486',
-    u'Konsertit ja klubit': (u'p11185', u'p20421'),  # -> konsertit, musiikkiklubit
+    u'Konsertit ja klubit': (u'p11185', u'p20421', u'p360'),  # -> konsertit, musiikkiklubit, kulttuuritapahtumat
     u'Kurssit': u'p9270',
     u'venäjä': u'p7643',  # -> venäjän kieli
     u'Seniorit': u'p2434',  # -> vanhukset
@@ -37,7 +37,7 @@ YSO_KEYWORD_MAPS = {
     u'Toivoa kirjallisuudesta': u'p8113',  # -> kirjallisuus
     u'Suomi 100': u'p29385',  # -> Suomi 100 vuotta -juhlavuosi
     u'Kirjallisuus': u'p8113',
-    u'Kielikahvilat ja keskusteluryhmät': (u'p18105', u'p556'),  # -> keskusteluryhmät
+    u'Kielikahvilat ja keskusteluryhmät': (u'p14004', u'p556'),  # -> keskustelu, kieli ja kielet
     u'Maahanmuuttajat': u'p6165',
     u'Opastukset ja kurssit': (u'p2149', u'p9270'),  # -> opastus, kurssit
     u'Nuoret': u'p11617',
@@ -45,8 +45,8 @@ YSO_KEYWORD_MAPS = {
     u'Satutunnit': u'p14710',
     u'Koululaiset': u'p16485',
     u'Lasten ja nuorten tapahtumat': (u'p4354', u'p11617'),  # -> lapset, nuoret
-    u'Lapset ja perheet': (u'p4354', u'p4363'),  # -> lapset, perheet
-    u'Lukupiirit': u'p11406',  # -> lukeminen
+    u'Lapset ja perheet': (u'p4354', u'p13050'),  # -> lapset, lapsiperheet
+    u'Lukupiirit': (u'p11406', u'p14004'),  # -> lukeminen, keskustelu
     u'Musiikki': u'p1808',  # -> musiikki
     u'muut kielet': u'p556',  # -> kielet
 }
