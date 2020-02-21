@@ -10,6 +10,7 @@ django-helusers
 django-image-cropping
 django-jinja
 django-leaflet
+django-mass-edit
 django-modeltranslation
 django-mptt>=0.10.0
 django-munigeo>=0.2.23,<0.3

@@ -148,6 +148,7 @@ INSTALLED_APPS = [
     'django_jinja',
     'notifications',
     'anymail',
+    'massadmin',
 
     'allauth',
     'allauth.account',
