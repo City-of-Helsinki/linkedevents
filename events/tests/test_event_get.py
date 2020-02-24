@@ -211,6 +211,19 @@ def test_get_event_list_verify_keyword_negative_filter(api_client, keyword, keyw
 
 
 @pytest.mark.django_db
+def test_get_event_list_verify_replaced_keyword_filter(api_client, keyword, keyword2, event):
+    event.keywords.add(keyword2)
+    keyword.replaced_by = keyword2
+    keyword.deleted = True
+    keyword.save()
+    response = get_list(api_client, data={'keyword': keyword.id})
+    # if we asked for a replaced keyword, return events with the current keyword instead
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'keyword': 'unknown_keyword'})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
 def test_get_event_list_verify_division_filter(api_client, event, event2, event3, administrative_division,
                                                administrative_division2):
     event.location.divisions.set([administrative_division])
