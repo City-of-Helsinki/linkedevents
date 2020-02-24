@@ -158,6 +158,59 @@ def test_get_event_list_verify_keyword_filter(api_client, keyword, event):
 
 
 @pytest.mark.django_db
+def test_get_event_list_verify_keyword_or_filter(api_client, keyword, event):
+    # "keyword_OR" filter should be the same as "keyword" filter
+    event.keywords.add(keyword)
+    response = get_list(api_client, data={'keyword_OR': keyword.id})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'keyword_OR': 'unknown_keyword'})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
+def test_get_event_list_verify_combine_keyword_and_keyword_or(api_client, keyword, keyword2, event, event2):
+    # If "keyword" and "keyword_OR" are both present "AND" them together
+    event.keywords.add(keyword, keyword2)
+    event2.keywords.add(keyword2)
+    response = get_list(api_client, data={'keyword': keyword.id, 'keyword_OR': keyword2.id})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    assert event2.id not in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
+def test_get_event_list_verify_keyword_and(api_client, keyword, keyword2, event, event2):
+    event.keywords.add(keyword)
+    event2.keywords.add(keyword, keyword2)
+    response = get_list(api_client, data={'keyword_AND': ','.join([keyword.id, keyword2.id])})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+    assert event2.id in [entry['id'] for entry in response.data['data']]
+
+    event2.keywords.remove(keyword2)
+    event2.audience.add(keyword2)
+    response = get_list(api_client, data={'keyword_AND': ','.join([keyword.id, keyword2.id])})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+    assert event2.id in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
+def test_get_event_list_verify_keyword_negative_filter(api_client, keyword, keyword2, event, event2):
+    event.keywords.set([keyword])
+    event2.keywords.set([keyword2])
+    response = get_list(api_client, data={'keyword!': keyword.id})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+    assert event2.id in [entry['id'] for entry in response.data['data']]
+
+    response = get_list(api_client, data={'keyword!': ','.join([keyword.id, keyword2.id])})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+    assert event2.id not in [entry['id'] for entry in response.data['data']]
+
+    event.keywords.set([])
+    event.audience.set([keyword])
+    response = get_list(api_client, data={'keyword!': keyword.id})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
 def test_get_event_list_verify_division_filter(api_client, event, event2, event3, administrative_division,
                                                administrative_division2):
     event.location.divisions.set([administrative_division])

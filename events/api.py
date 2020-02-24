@@ -1656,6 +1656,26 @@ def _filter_event_queryset(queryset, params, srs=None):
         val = val.split(',')
         queryset = queryset.filter(Q(keywords__pk__in=val) | Q(audience__pk__in=val)).distinct()
 
+    # 'keyword_OR' behaves the same way as 'keyword'
+    val = params.get('keyword_OR', None)
+    if val:
+        val = val.split(',')
+        queryset = queryset.filter(Q(keywords__pk__in=val) | Q(audience__pk__in=val)).distinct()
+
+    # Filter by keyword ids requiring all keywords to be present in event
+    val = params.get('keyword_AND', None)
+    if val:
+        val = val.split(',')
+        for keyword_id in val:
+            queryset = queryset.filter(Q(keywords__pk=keyword_id) | Q(audience__pk=keyword_id))
+        queryset = queryset.distinct()
+
+    # Negative filter for keyword ids
+    val = params.get('keyword!', None)
+    if val:
+        val = val.split(',')
+        queryset = queryset.exclude(Q(keywords__pk__in=val) | Q(audience__pk__in=val)).distinct()
+
     # filter only super or non-super events. to be deprecated?
     val = params.get('recurring', None)
     if val:
