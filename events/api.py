@@ -860,8 +860,9 @@ def filter_division(queryset, name, value):
             # we assume human name
             names.append(item.title())
     if hasattr(queryset, 'distinct'):
-        return (queryset.filter(**{name + '__ocd_id__in': ocd_ids}) |
-                queryset.filter(**{name + '__name__in': names})).distinct()
+        # do the join with Q objects (not querysets) in case the queryset has extra fields that would crash qs join
+        query = Q(**{name + '__ocd_id__in': ocd_ids}) | Q(**{name + '__name__in': names})
+        return (queryset.filter(query)).distinct()
     else:
         # Haystack SearchQuerySet does not support distinct, so we only support one type of search at a time:
         if ocd_ids:
