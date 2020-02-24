@@ -32,7 +32,7 @@ YSO_KEYWORD_MAPS = {
     u'Konsertit ja klubit': (u'p11185', u'p20421', u'p360'),  # -> konsertit, musiikkiklubit, kulttuuritapahtumat
     u'Kurssit': u'p9270',
     u'venäjä': u'p7643',  # -> venäjän kieli
-    u'Seniorit': u'p2434',  # -> vanhukset
+    u'Seniorit': u'p2433',  # -> vanhukset
     u'Näyttelyt': u'p5121',
     u'Toivoa kirjallisuudesta': u'p8113',  # -> kirjallisuus
     u'Suomi 100': u'p29385',  # -> Suomi 100 vuotta -juhlavuosi

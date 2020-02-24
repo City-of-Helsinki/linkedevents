@@ -90,9 +90,9 @@ YSO_KEYWORD_MAPS = {
     u'konsertit ja klubit': (u'p11185', u'p20421'),  # -> konsertit, musiikkiklubit
     u'kurssit': u'p9270',
     u'venäjä': u'p7643',  # -> venäjän kieli
-    u'seniorit': u'p2434',  # -> vanhukset
-    u'senioreille': u'p2434',  # -> vanhukset
-    u'senioripalvelut': u'p2434',
+    u'seniorit': u'p2433',  # -> vanhukset
+    u'senioreille': u'p2433',  # -> vanhukset
+    u'senioripalvelut': u'p2433',
     u'näyttelyt': u'p5121',
     u'kirjallisuus': u'p8113',
     u'kielikahvilat ja keskusteluryhmät': u'p18105',  # -> keskusteluryhmät
