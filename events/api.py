@@ -735,7 +735,7 @@ class KeywordRetrieveViewSet(JSONAPIViewMixin, mixins.RetrieveModelMixin, viewse
 
 class KeywordListViewSet(JSONAPIViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = Keyword.objects.all()
-    queryset = queryset.select_related('publisher')
+    queryset = queryset.select_related('publisher').prefetch_related('alt_labels__name')
     serializer_class = KeywordSerializer
     filter_backends = (filters.OrderingFilter,)
     ordering_fields = ('n_events', 'id', 'name', 'data_source')
@@ -772,7 +772,9 @@ class KeywordListViewSet(JSONAPIViewMixin, mixins.ListModelMixin, viewsets.Gener
         if val:
             if u'\x00' in val:
                 raise ParseError("A string literal cannot contain NUL (0x00) characters.")
-            queryset = queryset.filter(_text_qset_by_translated_field('name', val))
+            # Also consider alternative labels to broaden the search!
+            qset = _text_qset_by_translated_field('name', val) | Q(alt_labels__name__icontains=val)
+            queryset = queryset.filter(qset).distinct()
         return queryset
 
 
