@@ -64,6 +64,16 @@ def test_get_keyword_list_verify_text_filter(api_client, keyword, keyword2, keyw
 
 
 @pytest.mark.django_db
+def test_get_keyword_list_verify_alt_labels_filter(api_client, keyword, keyword2, keyword3, keywordlabel):
+    keyword2.alt_labels.add(keywordlabel)
+    response = api_client.get(reverse('keyword-list'), data={'text': 'avainsana',
+                                                             'show_all_keywords': True})
+    assert keyword.id in [entry['id'] for entry in response.data['data']]
+    assert keyword2.id in [entry['id'] for entry in response.data['data']]
+    assert keyword3.id not in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
 def test_get_keyword_list_verify_show_deprecated_param(api_client, keyword, keyword2):
     keyword.deprecated = True
     keyword.save()

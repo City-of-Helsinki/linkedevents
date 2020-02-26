@@ -310,9 +310,9 @@ class Keyword(BaseModel, ImageMixin, ReplacedByMixin):
     @transaction.atomic
     def save(self, *args, **kwargs):
         if self._has_circular_replacement():
-            raise Exception("Trying to replace this keyword with a keyword that is replaced by this keyword"
-                            "Please refrain from creating circular replacements and"
-                            "remove one of the replacements.")
+            raise ValidationError(_("Trying to replace this keyword with a keyword that is replaced by this keyword. "
+                                    "Please refrain from creating circular replacements and"
+                                    "remove one of the replacements."))
 
         if self.replaced_by and not self.deprecated:
             self.deprecated = True
@@ -429,10 +429,9 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin, ReplacedByMi
     @transaction.atomic
     def save(self, *args, **kwargs):
         if self._has_circular_replacement():
-            raise Exception("Trying to replace this place with a place that is replaced by this place"
-                            "Please refrain from creating circular replacements and"
-                            "remove one of the replacements."
-                            "We don't want homeless events.")
+            raise ValidationError(_("Trying to replace this place with a place that is replaced by this place. "
+                                    "Please refrain from creating circular replacements and remove one of the "
+                                    "replacements. We don't want homeless events."))
 
         if self.replaced_by and not self.deleted:
             self.deleted = True
@@ -593,9 +592,9 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
 
     def save(self, *args, **kwargs):
         if self._has_circular_replacement():
-            raise Exception("Trying to replace this event with an event that is replaced by this event"
-                            "Please refrain from creating circular replacements and"
-                            "remove one of the replacements.")
+            raise ValidationError(_("Trying to replace this event with an event that is replaced by this event. "
+                                    "Please refrain from creating circular replacements and "
+                                    "remove one of the replacements."))
 
         if self.replaced_by and not self.deleted:
             self.deleted = True
