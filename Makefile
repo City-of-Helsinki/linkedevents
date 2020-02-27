@@ -1,28 +1,41 @@
 # This is file used for developing and as a cheatsheet for the developer
 
 
-.PHONY: build start stop up lint
 
 BASE_DIR = $(shell pwd)
 CONTAINER_PORT := $(shell grep CONTAINER_PORT .env | cut -d '=' -f2)
 
-build:
+.PHONY: build_dist
+build_dist:
 	# @docker-compose build
 	# @docker-compose run addit python ./manage.py collectstatic --no-input
 	# @docker build -f docker/django/Dockerfile \
 	# -t linkedevents .
 	@docker build \
 	--build-arg BASE_IMAGE_VERSION=3.7-slim \
+	--target dist \
 	-f Dockerfile.dist \
 	-t linkedevents \
 	.
 
+.PHONY: build_importer
+build_importer:
+	@docker build \
+	--build-arg BASE_IMAGE_VERSION=3.7-slim \
+	--target importer \
+	-f Dockerfile.dist \
+	-t linkedevents-importer \
+	.
+
+.PHONY: start
 start:
 	@docker start linkedevents
 
+.PHONY: stop
 stop:
 	@docker stop linkedevents
 
+.PHONY: up
 up:
 	@docker run \
 	--rm \
@@ -41,6 +54,7 @@ up:
 	--name linkedevents \
 	linkedevents
 
+.PHONY: lint
 lint:
 	@docker run \
 	--rm \
@@ -49,4 +63,108 @@ lint:
 	-u circleci \
 	--name linkedevents-lint \
 	circleci/python:3.7.6 \
-	/bin/bash -c "pip install pip-tools && pip-sync --user requirements-dev.txt"
+	/bin/bash -c "pip install pip-tools && pip-sync --user requirements-dev.txt && flake8 ."
+
+.PHONY: import_yso
+import_yso:
+	@docker run \
+	--rm \
+	--network=host \
+	-e APP_PASSWORD=secret \
+	-e APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	--name linkedevents-importer \
+	linkedevents-importer \
+	event_import yso --keywords --all
+
+.PHONY: import_tprek
+import_tprek:
+	@docker run \
+	--rm \
+	--network=host \
+	-e APP_PASSWORD=secret \
+	-e APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	--name linkedevents-importer \
+	linkedevents-importer \
+	event_import tprek --places
+
+.PHONY: import_osoite
+import_osoite:
+	@docker run \
+	--rm \
+	--network=host \
+	-e APP_PASSWORD=secret \
+	-e APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	--name linkedevents-importer \
+	linkedevents-importer \
+	event_import osoite --places
+
+.PHONY: import_helmet
+import_helmet:
+	@docker run \
+	--rm \
+	--network=host \
+	-e APP_PASSWORD=secret \
+	-e APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	--name linkedevents-importer \
+	linkedevents-importer \
+	event_import helmet --events
+
+.PHONY: import_espoo
+import_espoo:
+	@docker run \
+	--rm \
+	--network=host \
+	-e APP_PASSWORD=secret \
+	-e APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	--name linkedevents-importer \
+	linkedevents-importer \
+	event_import espoo --events
+
+.PHONY: install_templates
+install_templates:
+	@docker run \
+	--rm \
+	--network=host \
+	-e APP_PASSWORD=secret \
+	-e APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	--name linkedevents-importer \
+	linkedevents-importer \
+	install_templates helevents
+
+.PHONY: import_finland_municipalities
+import_finland_municipalities:
+	@docker run \
+	--rm \
+	--network=host \
+	-e APP_PASSWORD=secret \
+	-e APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	--name linkedevents-importer \
+	linkedevents-importer \
+	geo_import finland --municipalities
+
+.PHONY: import_helsinki_divisions
+import_helsinki_divisions:
+	@docker run \
+	--rm \
+	--network=host \
+	-e APP_PASSWORD=secret \
+	-e APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	--name linkedevents-importer \
+	linkedevents-importer \
+	geo_import helsinki --divisions
