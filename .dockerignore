@@ -20,8 +20,8 @@
 # Whitelisted files
 #################################################
 !config_dev.toml
+!entrypoint.admin.sh
 !entrypoint.dist.sh
-!entrypoint.importer.sh
 !local_settings.py
 !manage.py
 !pytest.ini

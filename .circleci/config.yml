@@ -199,7 +199,7 @@ jobs:
             docker build \
               -f Dockerfile.dist \
               -t $DOCKER_IMAGE_NAME_IMPORTER \
-              --target importer \
+              --target admin \
               --build-arg build=$CIRCLE_BUILD_NUM \
               --build-arg commit=$CIRCLE_SHA1 \
               --build-arg BASE_IMAGE_VERSION=$BASE_IMAGE_VERSION \
