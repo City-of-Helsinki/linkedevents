@@ -47,17 +47,9 @@ executors:
       builder_image_version:
         type: string
         default: *builder_image_version
-      python_base_image_version:
-        type: string
-        default: *python_image_version
     docker:
       - image: 307238562370.dkr.ecr.eu-west-1.amazonaws.com/voltti/builder-aws:<< parameters.builder_image_version >>
     working_directory: *workspace_root
-    environment:
-      DOCKER_IMAGE_NAME_DIST: espooevents/service
-      DOCKER_IMAGE_NAME_IMPORTER: espooevents/service-importer
-      # Python image version
-      BASE_IMAGE_VERSION: << parameters.python_base_image_version >>-slim
 
 commands:
   attach_root_workspace:
@@ -170,7 +162,16 @@ jobs:
       - notify_slack
 
   dockerize:
+    parameters:
+      python_base_image_version:
+        type: string
+        default: *python_image_version
     executor: builder
+    environment:
+      DOCKER_IMAGE_NAME_DIST: espooevents/service
+      DOCKER_IMAGE_NAME_IMPORTER: espooevents/service-importer
+      # Python image version
+      BASE_IMAGE_VERSION: << parameters.python_base_image_version >>-slim
     steps:
       - attach_root_workspace
       - restore_repo_cache
