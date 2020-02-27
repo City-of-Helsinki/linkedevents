@@ -17,21 +17,12 @@ aliases:
 
   - &workspace_root ~/repo
 
-  - &attach_workspace
-    attach_workspace:
-      at: *workspace_root
-
   - &voltti_global_context
     context: org-global
 
   - &ci_espooevents_ssh_key_fingerprint 51:cc:59:96:f7:aa:1f:12:86:dc:0f:ba:a7:0c:12:db
 
   - &repo_cache_key v1-repo-{{ .Branch }}-{{ .Revision }}
-
-  - &restore_repo
-    restore_cache:
-      keys:
-        - *repo_cache_key
 
   - &deps_cache_key "
     v1-python-deps-\
@@ -40,11 +31,6 @@ aliases:
     {{ checksum \"requirements-dev.txt\" }}-\
     {{ checksum \"requirements.in\" }}-\
     {{ checksum \"requirements.txt\" }}"
-
-  - &restore_deps
-    restore_cache:
-      keys:
-        - *deps_cache_key
 
 executors:
   python:
@@ -74,6 +60,10 @@ executors:
       BASE_IMAGE_VERSION: << parameters.python_base_image_version >>-slim
 
 commands:
+  attach_root_workspace:
+    steps:
+      - attach_workspace:
+          at: *workspace_root
   deploy_aws:
     description: "Deploy to AWS"
     parameters:
@@ -99,12 +89,22 @@ commands:
       - slack/status:
           fail_only: true
           only_for_branches: master
+  restore_deps_cache:
+    steps:
+      - restore_cache:
+          keys:
+            - *deps_cache_key
+  restore_repo_cache:
+    steps:
+      - restore_cache:
+          keys:
+            - *repo_cache_key
 
 jobs:
   checkout_code:
     executor: python
     steps:
-      - *restore_repo
+      - restore_repo_cache
       - checkout
       - save_cache:
           key: *repo_cache_key
@@ -120,8 +120,8 @@ jobs:
         default: *site_packages_path
     executor: python
     steps:
-      - *restore_repo
-      - *restore_deps
+      - restore_repo_cache
+      - restore_deps_cache
       - run:
           name: Install dependencies
           command: |
@@ -138,8 +138,8 @@ jobs:
   lint:
     executor: python
     steps:
-      - *restore_repo
-      - *restore_deps
+      - restore_repo_cache
+      - restore_deps_cache
       - run: flake8 .
       - jira/notify
       - notify_slack
@@ -157,8 +157,8 @@ jobs:
       APP_USER: linkedevents_application
       APP_PASSWORD: secret
     steps:
-      - *restore_repo
-      - *restore_deps
+      - restore_repo_cache
+      - restore_deps_cache
       - setup_remote_docker
       - run:
           name: Docker login to ECR
@@ -172,8 +172,8 @@ jobs:
   dockerize:
     executor: builder
     steps:
-      - *attach_workspace
-      - *restore_repo
+      - attach_root_workspace
+      - restore_repo_cache
       - setup_remote_docker
       - run:
           name: Docker login to ECR
