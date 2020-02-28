@@ -188,6 +188,28 @@ jobs:
       - jira/notify
       - notify_slack
 
+  build:
+    executor: python
+    steps:
+      - restore_repo_cache
+      - restore_deps_cache
+      - run:
+          name: Install dependencies required for running the management commands
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends --no-install-suggests \
+              gdal-bin
+      # This could also be done inside a container built from Dockerfile.dist (see, e.g., Makefile for more details)
+      - run:
+          name: Override the default Linked Events templates with city specific templates
+          command: python manage.py install_templates helevents
+      - persist_to_workspace:
+          root: *workspace_root
+          paths:
+            - ./templates
+      - jira/notify
+      - notify_slack
+
   dockerize:
     parameters:
       docker_image_name:
@@ -241,22 +263,24 @@ workflows:
           <<: *voltti_global_context
           requires:
             - install_deps
+      - build:
+          requires:
+            - lint
+            - test
       - dockerize:
           <<: *voltti_global_context
           name: dockerize_dist
           docker_image_name: espooevents/service
           docker_image_target: dist
           requires:
-            - lint
-            - test
+            - build
       - dockerize:
           <<: *voltti_global_context
           name: dockerize_importer
           docker_image_name: espooevents/service-importer
           docker_image_target: admin
           requires:
-            - lint
-            - test
+            - build
 
       # Deploy to dev
       - deploy:
