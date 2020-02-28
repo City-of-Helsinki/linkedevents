@@ -74,6 +74,33 @@ commands:
             git clone git@github.com:espoon-voltti/espooevents-infra.git
             cd espooevents-infra/terraform/espooevents-ecs
             ecs-deploy
+  build_and_push_docker_image:
+    parameters:
+      base_image_version:
+        type: string
+      docker_image_name:
+        type: string
+      docker_image_target:
+        type: string
+    steps:
+      - setup_remote_docker
+      - run:
+          name: Docker login to ECR
+          command: ecr-login
+      - run:
+          name: Build docker image
+          command: |
+            docker build \
+              -f Dockerfile.dist \
+              -t << parameters.docker_image_name >> \
+              --target << parameters.docker_image_target >> \
+              --build-arg build=$CIRCLE_BUILD_NUM \
+              --build-arg commit=$CIRCLE_SHA1 \
+              --build-arg BASE_IMAGE_VERSION=<< parameters.base_image_version >> \
+              .
+      - run:
+          name: Tag and push dist docker image
+          command: ecr-push "<< parameters.docker_image_name >>"
   # Must be the last step in a job
   notify_slack:
     description: "Notify via Slack"
@@ -163,50 +190,22 @@ jobs:
 
   dockerize:
     parameters:
+      docker_image_name:
+        type: string
+      docker_image_target:
+        type: string
       python_base_image_version:
         type: string
         default: *python_image_version
     executor: builder
-    environment:
-      DOCKER_IMAGE_NAME_DIST: espooevents/service
-      DOCKER_IMAGE_NAME_IMPORTER: espooevents/service-importer
-      # Python image version
-      BASE_IMAGE_VERSION: << parameters.python_base_image_version >>-slim
     steps:
       - attach_root_workspace
       - restore_repo_cache
-      - setup_remote_docker
-      - run:
-          name: Docker login to ECR
-          command: ecr-login
-      - run:
-          name: Build dist docker image
-          command: |
-            docker build \
-              -f Dockerfile.dist \
-              -t $DOCKER_IMAGE_NAME_DIST \
-              --target dist \
-              --build-arg build=$CIRCLE_BUILD_NUM \
-              --build-arg commit=$CIRCLE_SHA1 \
-              --build-arg BASE_IMAGE_VERSION=$BASE_IMAGE_VERSION \
-              .
-      - run:
-          name: Tag and push dist docker image
-          command: ecr-push "${DOCKER_IMAGE_NAME_DIST}"
-      - run:
-          name: Build importer docker image
-          command: |
-            docker build \
-              -f Dockerfile.dist \
-              -t $DOCKER_IMAGE_NAME_IMPORTER \
-              --target admin \
-              --build-arg build=$CIRCLE_BUILD_NUM \
-              --build-arg commit=$CIRCLE_SHA1 \
-              --build-arg BASE_IMAGE_VERSION=$BASE_IMAGE_VERSION \
-              .
-      - run:
-          name: Tag and push importer docker image
-          command: ecr-push "${DOCKER_IMAGE_NAME_IMPORTER}"
+      - build_and_push_docker_image:
+          # Python image version
+          base_image_version: << parameters.python_base_image_version >>-slim
+          docker_image_name: << parameters.docker_image_name >>
+          docker_image_target: << parameters.docker_image_target >>
       - jira/notify
       - notify_slack
 
@@ -244,6 +243,17 @@ workflows:
             - install_deps
       - dockerize:
           <<: *voltti_global_context
+          name: dockerize_dist
+          docker_image_name: espooevents/service
+          docker_image_target: dist
+          requires:
+            - lint
+            - test
+      - dockerize:
+          <<: *voltti_global_context
+          name: dockerize_importer
+          docker_image_name: espooevents/service-importer
+          docker_image_target: admin
           requires:
             - lint
             - test
@@ -255,7 +265,7 @@ workflows:
           target_env: dev
           jira_env_type: development
           requires:
-            - dockerize
+            - dockerize_dist
           filters:
             branches:
               only: master
@@ -267,7 +277,7 @@ workflows:
           target_env: test
           jira_env_type: testing
           requires:
-            - dockerize
+            - dockerize_dist
           filters:
             branches:
               only: master
