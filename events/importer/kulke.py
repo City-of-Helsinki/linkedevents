@@ -141,8 +141,8 @@ MANUAL_CATEGORIES = {
     737: MOVIES,
     # perheliikunta
     628: SPORTS + FAMILIES,
-    # lapset ja nuoret
-    355: CHILDREN + YOUTH,
+    # lapset
+    355: CHILDREN,
     # lapsi ja aikuinen yhdessä > perheet
     747: FAMILIES
 }
