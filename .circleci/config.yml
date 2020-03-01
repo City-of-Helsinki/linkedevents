@@ -56,9 +56,15 @@ commands:
     steps:
       - attach_workspace:
           at: *workspace_root
-  deploy_aws:
-    description: "Deploy to AWS"
+  deploy_ecs:
+    description: "Deploy to AWS ECS"
     parameters:
+      ecs_module_directory:
+        type: string
+        default: espooevents-infra/terraform/espooevents-ecs
+      service_name:
+        type: string
+        default: espooevents-service
       target_env:
         type: string
     steps:
@@ -66,14 +72,78 @@ commands:
           fingerprints:
             - *ci_espooevents_ssh_key_fingerprint
       - run:
+          name: Clone the infra repository
+          command: |
+            git clone git@github.com:espoon-voltti/espooevents-infra.git
+            cd << parameters.ecs_module_directory >>
+      - run:
+          name: Get the currently deployed version
+          command: |
+            . replace-credentials
+
+            cd << parameters.ecs_module_directory >>
+            terraform init
+            terraform workspace select << parameters.target_env >>
+            OLD_VERSION=$(terraform output << parameters.service_name >>_version)
+            echo "Current version: $OLD_VERSION"
+            echo "export OLD_VERSION=$OLD_VERSION" >> $BASH_ENV
+      - run:
           name: Deploy to << parameters.target_env >>
           environment:
             SERVICE_NAME: espooevents-service
             TARGET_ENV: << parameters.target_env >>
           command: |
-            git clone git@github.com:espoon-voltti/espooevents-infra.git
-            cd espooevents-infra/terraform/espooevents-ecs
+            cd << parameters.ecs_module_directory >>
             ecs-deploy
+      # TODO add check to builder-aws Docker image
+      - run:
+          name: Check if the new deployment becomes stable
+          # We need to increase the timeout limit since the services-stable command will run for 10 minutes without any
+          # output if the service is unstable
+          # TODO we could use a custom polling mechanism similar to services-stable with a shorter timeout
+          no_output_timeout: 15m
+          command: |
+            # Disable exit on error since aws services-stable exits with 255 if the service is unstable and that would
+            # fail the step prematurely
+            set +e
+            . replace-credentials
+
+            aws ecs \
+              wait services-stable \
+              --region eu-west-1 \
+              --profile voltti-<< parameters.target_env >> \
+              --cluster voltti-ecs-cluster-<< parameters.target_env >> \
+              --services << parameters.service_name >>
+            IS_STABLE=$?
+            echo "IS_STABLE value: $IS_STABLE"
+            echo "export IS_STABLE=$IS_STABLE" >> $BASH_ENV
+            if [[ "$IS_STABLE" -eq 0 ]]; then
+              echo "The service has been successfully deployed to AWS ECS"
+              exit 0
+            else
+              echo "The deployment to AWS ECS failed!"
+              exit 1
+            fi
+      # TODO add revert to builder-aws Docker image
+      - run:
+          name: Revert to previously deployed version if new deployment fails
+          when: on_fail
+          command: |
+            if [[ -z "$OLD_VERSION" || -z "$IS_STABLE" ]]; then
+              echo "Required environment variables aren't set"
+              exit 1
+            fi
+
+            . replace-credentials
+
+            cd << parameters.ecs_module_directory >>
+            terraform init
+            terraform workspace select << parameters.target_env >>
+            terraform apply \
+              -input=false \
+              -auto-approve \
+              -lock-timeout=300s \
+              -var << parameters.service_name >>_version="$OLD_VERSION"
   build_and_push_docker_image:
     parameters:
       base_image_version:
@@ -241,7 +311,7 @@ jobs:
         enum: ["development", "testing", "staging", "production"]
     executor: builder
     steps:
-      - deploy_aws:
+      - deploy_ecs:
           target_env: << parameters.target_env >>
       - jira/notify:
           environment_type: << parameters.jira_env_type >>
