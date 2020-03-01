@@ -168,3 +168,43 @@ import_helsinki_divisions:
 	--name linkedevents-admin \
 	linkedevents-admin \
 	python manage.py geo_import helsinki --divisions
+
+.PHONY: add_helsinki_audience
+add_helsinki_audience:
+	@docker run \
+	--rm \
+	--network=host \
+	-e APP_PASSWORD=secret \
+	-e APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py add_helsinki_audience
+
+.PHONY: add_helsinki_topics
+add_helsinki_topics:
+	@docker run \
+	--rm \
+	--network=host \
+	-e APP_PASSWORD=secret \
+	-e APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py add_helsinki_topics
+
+.PHONY: createsuperuser
+createsuperuser:
+	@docker run \
+	--rm \
+	-it \
+	--network=host \
+	-e APP_PASSWORD=secret \
+	-e APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py createsuperuser
