@@ -62,6 +62,10 @@ commands:
       ecs_module_directory:
         type: string
         default: espooevents-infra/terraform/espooevents-ecs
+      ecs_module_name:
+        description: The Terraform ECS module name that should be deployed
+        type: string
+        default: espooevents_service
       service_name:
         type: string
         default: espooevents-service
@@ -89,12 +93,18 @@ commands:
             echo "export OLD_VERSION=$OLD_VERSION" >> $BASH_ENV
       - run:
           name: Deploy to << parameters.target_env >>
-          environment:
-            SERVICE_NAME: espooevents-service
-            TARGET_ENV: << parameters.target_env >>
           command: |
+            . replace-credentials
+
             cd << parameters.ecs_module_directory >>
-            ecs-deploy
+            terraform init
+            terraform workspace select << parameters.target_env >>
+            terraform apply \
+              -input=false \
+              -auto-approve \
+              -lock-timeout=300s \
+              -var << parameters.service_name >>_version="${CIRCLE_SHA1}" \
+              -target=module.<< parameters.ecs_module_name >>
       # TODO add check to builder-aws Docker image
       - run:
           name: Check if the new deployment becomes stable
@@ -143,7 +153,8 @@ commands:
               -input=false \
               -auto-approve \
               -lock-timeout=300s \
-              -var << parameters.service_name >>_version="$OLD_VERSION"
+              -var << parameters.service_name >>_version="$OLD_VERSION" \
+              -target=module.<< parameters.ecs_module_name >>
   build_and_push_docker_image:
     parameters:
       base_image_version:
