@@ -164,7 +164,8 @@ commands:
       docker_image_target:
         type: string
     steps:
-      - setup_remote_docker
+      - setup_remote_docker:
+          docker_layer_caching: true
       - run:
           name: Docker login to ECR
           command: ecr-login
@@ -259,7 +260,8 @@ jobs:
     steps:
       - restore_repo_cache
       - restore_deps_cache
-      - setup_remote_docker
+      - setup_remote_docker:
+          docker_layer_caching: true
       - run:
           name: Docker login to ECR
           command: ecr-login
