@@ -59,9 +59,13 @@ env = environ.Env(
     EXTRA_INSTALLED_APPS=(list, []),
     AUTO_ENABLED_EXTENSIONS=(list, []),
     STATICFILES_STORAGE=(str, 'django.contrib.staticfiles.storage.StaticFilesStorage'),
-    AWS_STORAGE_BUCKET_NAME=(str, ''),
-    AWS_DEFAULT_ACL=(str, None),
-    AWS_S3_CUSTOM_DOMAIN=(str, ''),
+    AWS_STATIC_STORAGE_BUCKET_NAME=(str, ''),
+    AWS_STATIC_DEFAULT_ACL=(str, None),
+    AWS_STATIC_S3_CUSTOM_DOMAIN=(str, ''),
+    DEFAULT_FILE_STORAGE=(str, 'django.core.files.storage.FileSystemStorage'),
+    AWS_MEDIA_STORAGE_BUCKET_NAME=(str, ''),
+    AWS_MEDIA_DEFAULT_ACL=(str, None),
+    AWS_MEDIA_S3_CUSTOM_DOMAIN=(str, ''),
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -220,14 +224,26 @@ MEDIA_URL = env('MEDIA_URL')
 STATIC_ROOT = env('STATIC_ROOT')
 MEDIA_ROOT = env('MEDIA_ROOT')
 
+
+# Configure django-storages for static files
 STATICFILES_STORAGE = env('STATICFILES_STORAGE')
-AWS_STORAGE_BUCKET_NAME = env('AWS_STORAGE_BUCKET_NAME')
-# Let the files inherit the bucket's ACL
-AWS_DEFAULT_ACL = env('AWS_DEFAULT_ACL')
+AWS_STORAGE_BUCKET_NAME = env('AWS_STATIC_STORAGE_BUCKET_NAME')
+AWS_DEFAULT_ACL = env('AWS_STATIC_DEFAULT_ACL')
+# The S3 files are served through nginx so we need to set the correct domain and path
+AWS_S3_CUSTOM_DOMAIN = env('AWS_STATIC_S3_CUSTOM_DOMAIN')
+
+# Configure django-storages for media files
+# The other configuration options are defined in media_storage.py. See:
+# https://django-storages.readthedocs.io/en/latest/backends/amazon-S3.html#overriding-the-default-storage-class
+DEFAULT_FILE_STORAGE = env('DEFAULT_FILE_STORAGE')
+AWS_MEDIA_STORAGE_BUCKET_NAME = env('AWS_MEDIA_STORAGE_BUCKET_NAME')
+AWS_MEDIA_DEFAULT_ACL = env('AWS_MEDIA_DEFAULT_ACL')
+# The S3 files are served through nginx so we need to set the correct domain and path
+AWS_MEDIA_S3_CUSTOM_DOMAIN = env('AWS_MEDIA_S3_CUSTOM_DOMAIN')
+
+# Settings common to both static files and media files
 # Do not append AWS query parameters to the generated URL
 AWS_QUERYSTRING_AUTH = False
-# The S3 files are served through nginx so we need to set the correct domain and path
-AWS_S3_CUSTOM_DOMAIN = env('AWS_S3_CUSTOM_DOMAIN')
 
 #
 # Authentication
