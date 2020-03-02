@@ -18,13 +18,13 @@ build_dist:
 	-t linkedevents \
 	.
 
-.PHONY: build_importer
-build_importer:
+.PHONY: build_admin
+build_admin:
 	@docker build \
 	--build-arg BASE_IMAGE_VERSION=3.7-slim \
-	--target importer \
+	--target admin \
 	-f Dockerfile.dist \
-	-t linkedevents-importer \
+	-t linkedevents-admin \
 	.
 
 .PHONY: start
@@ -74,9 +74,9 @@ import_yso:
 	-e APP_USER=linkedevents_application \
 	-e DB_HOST=localhost \
 	-e DB_NAME=linkedevents \
-	--name linkedevents-importer \
-	linkedevents-importer \
-	event_import yso --keywords --all
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py event_import yso --keywords --all
 
 .PHONY: import_tprek
 import_tprek:
@@ -87,9 +87,9 @@ import_tprek:
 	-e APP_USER=linkedevents_application \
 	-e DB_HOST=localhost \
 	-e DB_NAME=linkedevents \
-	--name linkedevents-importer \
-	linkedevents-importer \
-	event_import tprek --places
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py event_import tprek --places
 
 .PHONY: import_osoite
 import_osoite:
@@ -100,9 +100,9 @@ import_osoite:
 	-e APP_USER=linkedevents_application \
 	-e DB_HOST=localhost \
 	-e DB_NAME=linkedevents \
-	--name linkedevents-importer \
-	linkedevents-importer \
-	event_import osoite --places
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py event_import osoite --places
 
 .PHONY: import_helmet
 import_helmet:
@@ -113,9 +113,9 @@ import_helmet:
 	-e APP_USER=linkedevents_application \
 	-e DB_HOST=localhost \
 	-e DB_NAME=linkedevents \
-	--name linkedevents-importer \
-	linkedevents-importer \
-	event_import helmet --events
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py event_import helmet --events
 
 .PHONY: import_espoo
 import_espoo:
@@ -126,9 +126,9 @@ import_espoo:
 	-e APP_USER=linkedevents_application \
 	-e DB_HOST=localhost \
 	-e DB_NAME=linkedevents \
-	--name linkedevents-importer \
-	linkedevents-importer \
-	event_import espoo --events
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py event_import espoo --events
 
 .PHONY: install_templates
 install_templates:
@@ -139,9 +139,9 @@ install_templates:
 	-e APP_USER=linkedevents_application \
 	-e DB_HOST=localhost \
 	-e DB_NAME=linkedevents \
-	--name linkedevents-importer \
-	linkedevents-importer \
-	install_templates helevents
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py install_templates helevents
 
 .PHONY: import_finland_municipalities
 import_finland_municipalities:
@@ -152,9 +152,9 @@ import_finland_municipalities:
 	-e APP_USER=linkedevents_application \
 	-e DB_HOST=localhost \
 	-e DB_NAME=linkedevents \
-	--name linkedevents-importer \
-	linkedevents-importer \
-	geo_import finland --municipalities
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py geo_import finland --municipalities
 
 .PHONY: import_helsinki_divisions
 import_helsinki_divisions:
@@ -165,6 +165,46 @@ import_helsinki_divisions:
 	-e APP_USER=linkedevents_application \
 	-e DB_HOST=localhost \
 	-e DB_NAME=linkedevents \
-	--name linkedevents-importer \
-	linkedevents-importer \
-	geo_import helsinki --divisions
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py geo_import helsinki --divisions
+
+.PHONY: add_helsinki_audience
+add_helsinki_audience:
+	@docker run \
+	--rm \
+	--network=host \
+	-e APP_PASSWORD=secret \
+	-e APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py add_helsinki_audience
+
+.PHONY: add_helsinki_topics
+add_helsinki_topics:
+	@docker run \
+	--rm \
+	--network=host \
+	-e APP_PASSWORD=secret \
+	-e APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py add_helsinki_topics
+
+.PHONY: createsuperuser
+createsuperuser:
+	@docker run \
+	--rm \
+	-it \
+	--network=host \
+	-e APP_PASSWORD=secret \
+	-e APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py createsuperuser

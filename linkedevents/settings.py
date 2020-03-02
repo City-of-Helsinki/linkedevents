@@ -58,6 +58,10 @@ env = environ.Env(
     INSTANCE_NAME=(str, 'Linked Events'),
     EXTRA_INSTALLED_APPS=(list, []),
     AUTO_ENABLED_EXTENSIONS=(list, []),
+    STATICFILES_STORAGE=(str, 'django.contrib.staticfiles.storage.StaticFilesStorage'),
+    AWS_STORAGE_BUCKET_NAME=(str, ''),
+    AWS_DEFAULT_ACL=(str, None),
+    AWS_S3_CUSTOM_DOMAIN=(str, ''),
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -150,6 +154,8 @@ INSTALLED_APPS = [
     'munigeo',
     'leaflet',
     'django_orghierarchy',
+
+    'storages',
 ] + env('EXTRA_INSTALLED_APPS')
 
 if not DEBUG:
@@ -213,6 +219,15 @@ STATIC_URL = env('STATIC_URL')
 MEDIA_URL = env('MEDIA_URL')
 STATIC_ROOT = env('STATIC_ROOT')
 MEDIA_ROOT = env('MEDIA_ROOT')
+
+STATICFILES_STORAGE = env('STATICFILES_STORAGE')
+AWS_STORAGE_BUCKET_NAME = env('AWS_STORAGE_BUCKET_NAME')
+# Let the files inherit the bucket's ACL
+AWS_DEFAULT_ACL = env('AWS_DEFAULT_ACL')
+# Do not append AWS query parameters to the generated URL
+AWS_QUERYSTRING_AUTH = False
+# The S3 files are served through nginx so we need to set the correct domain and path
+AWS_S3_CUSTOM_DOMAIN = env('AWS_S3_CUSTOM_DOMAIN')
 
 #
 # Authentication

@@ -71,12 +71,12 @@ FROM base AS dist
 ENTRYPOINT ["./entrypoint.dist.sh"]
 
 # ==================================================== #
-# AWS Batch job definitions do not allow overriding the entrypoint so we need to create a separate image with the
-# importer entrypoint
-FROM base AS importer
+# AWS Batch job definitions do not allow overriding the entrypoint. Thus, we need to create a separate image with
+# another entrypoint suitable for the importers and other administrative tasks.
+FROM base AS admin
 # ==================================================== #
 
 # Install awscli so that we can get the db password from SSM parameter store
 RUN pip install --user --no-cache-dir awscli
 
-ENTRYPOINT ["./entrypoint.importer.sh"]
+ENTRYPOINT ["./entrypoint.admin.sh"]

@@ -29,7 +29,10 @@ export ALLOWED_HOSTS="${ALLOWED_HOSTS},${HOST_IP}"
 # if the first argument to `docker run` starts with `--`, the user is passing gunicorn arguments
 if [[ $# -lt 1 ]] || [[ "$1" == "--"* ]]; then
   # Check Django configuration for issues
-  python manage.py check --deploy
+  ./manage.py check --deploy
+
+  # Copy static files into settings.STATIC_ROOT
+  ./manage.py collectstatic --noinput
 
   # Run migrations
   DATABASE_URL=$MIGRATION_DATABASE_URL ./manage.py migrate --noinput

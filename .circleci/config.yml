@@ -56,9 +56,19 @@ commands:
     steps:
       - attach_workspace:
           at: *workspace_root
-  deploy_aws:
-    description: "Deploy to AWS"
+  deploy_ecs:
+    description: "Deploy to AWS ECS"
     parameters:
+      ecs_module_directory:
+        type: string
+        default: espooevents-infra/terraform/espooevents-ecs
+      ecs_module_name:
+        description: The Terraform ECS module name that should be deployed
+        type: string
+        default: espooevents_service
+      service_name:
+        type: string
+        default: espooevents-service
       target_env:
         type: string
     steps:
@@ -66,14 +76,113 @@ commands:
           fingerprints:
             - *ci_espooevents_ssh_key_fingerprint
       - run:
-          name: Deploy to << parameters.target_env >>
-          environment:
-            SERVICE_NAME: espooevents-service
-            TARGET_ENV: << parameters.target_env >>
+          name: Clone the infra repository
           command: |
             git clone git@github.com:espoon-voltti/espooevents-infra.git
-            cd espooevents-infra/terraform/espooevents-ecs
-            ecs-deploy
+            cd << parameters.ecs_module_directory >>
+      - run:
+          name: Get the currently deployed version
+          command: |
+            . replace-credentials
+
+            cd << parameters.ecs_module_directory >>
+            terraform init
+            terraform workspace select << parameters.target_env >>
+            OLD_VERSION=$(terraform output << parameters.service_name >>_version)
+            echo "Current version: $OLD_VERSION"
+            echo "export OLD_VERSION=$OLD_VERSION" >> $BASH_ENV
+      - run:
+          name: Deploy to << parameters.target_env >>
+          command: |
+            . replace-credentials
+
+            cd << parameters.ecs_module_directory >>
+            terraform init
+            terraform workspace select << parameters.target_env >>
+            terraform apply \
+              -input=false \
+              -auto-approve \
+              -lock-timeout=300s \
+              -var << parameters.service_name >>_version="${CIRCLE_SHA1}" \
+              -target=module.<< parameters.ecs_module_name >>
+      # TODO add check to builder-aws Docker image
+      - run:
+          name: Check if the new deployment becomes stable
+          # We need to increase the timeout limit since the services-stable command will run for 10 minutes without any
+          # output if the service is unstable
+          # TODO we could use a custom polling mechanism similar to services-stable with a shorter timeout
+          no_output_timeout: 15m
+          command: |
+            # Disable exit on error since aws services-stable exits with 255 if the service is unstable and that would
+            # fail the step prematurely
+            set +e
+            . replace-credentials
+
+            aws ecs \
+              wait services-stable \
+              --region eu-west-1 \
+              --profile voltti-<< parameters.target_env >> \
+              --cluster voltti-ecs-cluster-<< parameters.target_env >> \
+              --services << parameters.service_name >>
+            IS_STABLE=$?
+            echo "IS_STABLE value: $IS_STABLE"
+            echo "export IS_STABLE=$IS_STABLE" >> $BASH_ENV
+            if [[ "$IS_STABLE" -eq 0 ]]; then
+              echo "The service has been successfully deployed to AWS ECS"
+              exit 0
+            else
+              echo "The deployment to AWS ECS failed!"
+              exit 1
+            fi
+      # TODO add revert to builder-aws Docker image
+      - run:
+          name: Revert to previously deployed version if new deployment fails
+          when: on_fail
+          command: |
+            if [[ -z "$OLD_VERSION" || -z "$IS_STABLE" ]]; then
+              echo "Required environment variables aren't set"
+              exit 1
+            fi
+
+            . replace-credentials
+
+            cd << parameters.ecs_module_directory >>
+            terraform init
+            terraform workspace select << parameters.target_env >>
+            terraform apply \
+              -input=false \
+              -auto-approve \
+              -lock-timeout=300s \
+              -var << parameters.service_name >>_version="$OLD_VERSION" \
+              -target=module.<< parameters.ecs_module_name >>
+  build_and_push_docker_image:
+    parameters:
+      base_image_version:
+        type: string
+      docker_image_name:
+        type: string
+      docker_image_target:
+        type: string
+    steps:
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Docker login to ECR
+          command: ecr-login
+      - run:
+          name: Build docker image
+          command: |
+            docker build \
+              -f Dockerfile.dist \
+              -t << parameters.docker_image_name >> \
+              --target << parameters.docker_image_target >> \
+              --build-arg build=$CIRCLE_BUILD_NUM \
+              --build-arg commit=$CIRCLE_SHA1 \
+              --build-arg BASE_IMAGE_VERSION=<< parameters.base_image_version >> \
+              .
+      - run:
+          name: Tag and push dist docker image
+          command: ecr-push "<< parameters.docker_image_name >>"
   # Must be the last step in a job
   notify_slack:
     description: "Notify via Slack"
@@ -151,7 +260,8 @@ jobs:
     steps:
       - restore_repo_cache
       - restore_deps_cache
-      - setup_remote_docker
+      - setup_remote_docker:
+          docker_layer_caching: true
       - run:
           name: Docker login to ECR
           command: ecr-login
@@ -161,52 +271,46 @@ jobs:
       - jira/notify
       - notify_slack
 
+  build:
+    executor: python
+    steps:
+      - restore_repo_cache
+      - restore_deps_cache
+      - run:
+          name: Install dependencies required for running the management commands
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends --no-install-suggests \
+              gdal-bin
+      # This could also be done inside a container built from Dockerfile.dist (see, e.g., Makefile for more details)
+      - run:
+          name: Override the default Linked Events templates with city specific templates
+          command: python manage.py install_templates helevents
+      - persist_to_workspace:
+          root: *workspace_root
+          paths:
+            - ./templates
+      - jira/notify
+      - notify_slack
+
   dockerize:
     parameters:
+      docker_image_name:
+        type: string
+      docker_image_target:
+        type: string
       python_base_image_version:
         type: string
         default: *python_image_version
     executor: builder
-    environment:
-      DOCKER_IMAGE_NAME_DIST: espooevents/service
-      DOCKER_IMAGE_NAME_IMPORTER: espooevents/service-importer
-      # Python image version
-      BASE_IMAGE_VERSION: << parameters.python_base_image_version >>-slim
     steps:
       - attach_root_workspace
       - restore_repo_cache
-      - setup_remote_docker
-      - run:
-          name: Docker login to ECR
-          command: ecr-login
-      - run:
-          name: Build dist docker image
-          command: |
-            docker build \
-              -f Dockerfile.dist \
-              -t $DOCKER_IMAGE_NAME_DIST \
-              --target dist \
-              --build-arg build=$CIRCLE_BUILD_NUM \
-              --build-arg commit=$CIRCLE_SHA1 \
-              --build-arg BASE_IMAGE_VERSION=$BASE_IMAGE_VERSION \
-              .
-      - run:
-          name: Tag and push dist docker image
-          command: ecr-push "${DOCKER_IMAGE_NAME_DIST}"
-      - run:
-          name: Build importer docker image
-          command: |
-            docker build \
-              -f Dockerfile.dist \
-              -t $DOCKER_IMAGE_NAME_IMPORTER \
-              --target importer \
-              --build-arg build=$CIRCLE_BUILD_NUM \
-              --build-arg commit=$CIRCLE_SHA1 \
-              --build-arg BASE_IMAGE_VERSION=$BASE_IMAGE_VERSION \
-              .
-      - run:
-          name: Tag and push importer docker image
-          command: ecr-push "${DOCKER_IMAGE_NAME_IMPORTER}"
+      - build_and_push_docker_image:
+          # Python image version
+          base_image_version: << parameters.python_base_image_version >>-slim
+          docker_image_name: << parameters.docker_image_name >>
+          docker_image_target: << parameters.docker_image_target >>
       - jira/notify
       - notify_slack
 
@@ -220,7 +324,7 @@ jobs:
         enum: ["development", "testing", "staging", "production"]
     executor: builder
     steps:
-      - deploy_aws:
+      - deploy_ecs:
           target_env: << parameters.target_env >>
       - jira/notify:
           environment_type: << parameters.jira_env_type >>
@@ -242,11 +346,24 @@ workflows:
           <<: *voltti_global_context
           requires:
             - install_deps
-      - dockerize:
-          <<: *voltti_global_context
+      - build:
           requires:
             - lint
             - test
+      - dockerize:
+          <<: *voltti_global_context
+          name: dockerize_dist
+          docker_image_name: espooevents/service
+          docker_image_target: dist
+          requires:
+            - build
+      - dockerize:
+          <<: *voltti_global_context
+          name: dockerize_importer
+          docker_image_name: espooevents/service-importer
+          docker_image_target: admin
+          requires:
+            - build
 
       # Deploy to dev
       - deploy:
@@ -255,7 +372,7 @@ workflows:
           target_env: dev
           jira_env_type: development
           requires:
-            - dockerize
+            - dockerize_dist
           filters:
             branches:
               only: master
@@ -267,7 +384,7 @@ workflows:
           target_env: test
           jira_env_type: testing
           requires:
-            - dockerize
+            - dockerize_dist
           filters:
             branches:
               only: master
