@@ -646,7 +646,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
         # send notifications
         if old_publication_status == PublicationStatus.DRAFT and self.publication_status == PublicationStatus.PUBLIC:
             self.send_published_notification()
-        if old_deleted is False and self.deleted is True:
+        if self.publication_status == PublicationStatus.DRAFT and (old_deleted is False and self.deleted is True):
             self.send_deleted_notification()
         if created and self.publication_status == PublicationStatus.DRAFT:
             self.send_draft_posted_notification()
