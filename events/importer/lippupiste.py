@@ -16,7 +16,7 @@ from django_orghierarchy.models import Organization
 from events.models import DataSource, Event, Keyword, Place, License
 from .base import Importer, recur_dict, register_importer
 from .sync import ModelSyncher
-from .util import clean_text
+from .util import clean_text, clean_url
 
 # Per module logger
 logger = logging.getLogger(__name__)
@@ -402,10 +402,10 @@ class LippupisteImporter(Importer):
                                             event,
                                             [lang]+self.languages_to_detect,
                                             'short_description')
-        event['info_url'][lang] = source_event['EventSerieLink']
+        event['info_url'][lang] = clean_url(source_event['EventSerieLink'])
         event['offers'] = [{'is_free': False,
                             'description': {lang: 'Tarkista hinta lippupalvelusta'},
-                            'info_url': {lang: source_event['EventLink']},
+                            'info_url': {lang: clean_url(source_event['EventLink'])},
                             'price': None}, ]
         event['images'] = [{
             'url': source_event['EventSeriePictureBig_222x222'],
