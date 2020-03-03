@@ -198,7 +198,7 @@ def parse_course_time(secondary_headline):
     if not isinstance(secondary_headline, str):
         return (None, None)
 
-    pattern = r'^.*klo?\s(\d{1,2})([.:](\d{1,2}))?.(\d{1,2})([.:](\d{1,2}))?.*$'
+    pattern = r'^.*klo?\s(\d{1,2})([.:](\d{1,2}))?[^.:](\d{1,2})([.:](\d{1,2}))?.*$'
     match = re.match(pattern, secondary_headline)
 
     if match:
