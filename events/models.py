@@ -646,7 +646,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
         # send notifications
         if old_publication_status == PublicationStatus.DRAFT and self.publication_status == PublicationStatus.PUBLIC:
             self.send_published_notification()
-        if old_deleted is False and self.deleted is True:
+        if self.publication_status == PublicationStatus.DRAFT and (old_deleted is False and self.deleted is True):
             self.send_deleted_notification()
         if created and self.publication_status == PublicationStatus.DRAFT:
             self.send_draft_posted_notification()
@@ -711,9 +711,9 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
 
     def _get_author_emails(self):
         author_emails = []
-        for user in (self.created_by, self.last_modified_by):
-            if user and user.email:
-                author_emails.append(user.email)
+        author = self.created_by
+        if author and author.email:
+            author_emails.append(author.email)
         return author_emails
 
     def send_deleted_notification(self, request=None):
