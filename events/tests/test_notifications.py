@@ -6,6 +6,7 @@ from ..models import PublicationStatus
 from notifications.models import NotificationTemplate, NotificationType
 from notifications.tests.utils import check_received_mail_exists
 from django.contrib.auth import get_user_model
+from django.core import mail
 
 
 @pytest.fixture
@@ -69,16 +70,26 @@ def user_created_notification_template():
 
 
 @pytest.mark.django_db
-def test_unpublished_event_deleted(event_deleted_notification_template, user, event):
+def test_draft_event_deleted(event_deleted_notification_template, user, event):
     event.created_by = user
+    event.publication_status = PublicationStatus.DRAFT
     event.save()
     event.soft_delete()
     strings = [
         "event deleted body, event name: %s!" % event.name,
     ]
     html_body = "event deleted <b>HTML</b> body, event name: %s!" % event.name
+    assert len(mail.outbox) == 1
     check_received_mail_exists(
         "event deleted subject, event name: %s!" % event.name, user.email, strings, html_body=html_body)
+
+
+@pytest.mark.django_db
+def test_public_event_deleted_doesnt_trigger_notification(event_deleted_notification_template, user, event):
+    event.created_by = user
+    event.save()
+    event.soft_delete()
+    assert len(mail.outbox) == 0
 
 
 @pytest.mark.django_db
