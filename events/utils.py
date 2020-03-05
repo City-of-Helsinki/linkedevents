@@ -109,7 +109,10 @@ def parse_time(time_str, is_start):
             dt = dt.astimezone(local_tz)
             dt = dt.replace(hour=0, minute=0, second=0, microsecond=0)
             is_exact = False
-    if dt:
+        if time_str.lower() == 'now':
+            dt = datetime.utcnow()
+            is_exact = True
+    if dt and not is_exact:
         # With start timestamps, we treat dates as beginning
         # at midnight the same day. End timestamps are taken to
         # mean midnight on the following day.
