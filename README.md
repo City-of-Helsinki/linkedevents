@@ -103,7 +103,7 @@ python manage.py event_import yso --all
 # Add keyword set to display in the UI event audience selection
 python manage.py add_helsinki_audience
 # Add keyword set to display in the UI main category selection
-python manage.py add_helfi_topics
+python manage.py add_helsinki_topics
 # Import places from Helsinki metropolitan region service registry (used by events from following sources)
 python manage.py event_import tprek --places
 # Import places from Helsinki metropolitan region address registry (used as fallback locations)
