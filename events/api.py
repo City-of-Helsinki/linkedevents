@@ -1621,7 +1621,8 @@ def _filter_event_queryset(queryset, params, srs=None):
 
     if start:
         dt = utils.parse_time(start, is_start=True)[0]
-        queryset = queryset.filter(Q(end_time__gt=dt) | Q(start_time__gte=dt))
+        # only return events with specified end times during the whole of the event, otherwise only future events
+        queryset = queryset.filter(Q(end_time__gt=dt, has_end_time=True) | Q(start_time__gte=dt))
 
     if end:
         dt = utils.parse_time(end, is_start=False)[0]
