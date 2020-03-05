@@ -395,7 +395,7 @@ This is scheduled to run `hourly` on the instance as data changes often.
 
 ### What is it?
 
-*lippupiste* is an importer which imports *events* from Lippupiste Oy (https://lippu.fi); currently used only for importing Helsinki City Theater events.
+*lippupiste* is an importer which imports *events* from Lippupiste Oy (https://lippu.fi); currently used only for importing [Helsinki City Theater](https://hkt.fi/) events.
 
 **NOTE**: To get access to data from Lippupiste, you need to have an agreement with Lippupiste Oy. The data is not publicly available at the moment.
 
