@@ -686,6 +686,11 @@ class JSONAPIViewMixin(object):
         ret = super().initial(request, *args, **kwargs)
         # if srid is not specified, this will yield munigeo default 4326
         self.srs = srid_to_srs(self.request.query_params.get('srid', None))
+        # check for NUL strings that crash psycopg2
+        for key, param in self.request.query_params.items():
+            if u'\x00' in param:
+                raise ParseError("A string literal cannot contain NUL (0x00) characters. "
+                                 "Please fix query parameter " + param)
         return ret
 
     def get_serializer_context(self):
@@ -770,8 +775,6 @@ class KeywordListViewSet(JSONAPIViewMixin, mixins.ListModelMixin, viewsets.Gener
         # can be used e.g. with typeahead.js
         val = self.request.query_params.get('text') or self.request.query_params.get('filter')
         if val:
-            if u'\x00' in val:
-                raise ParseError("A string literal cannot contain NUL (0x00) characters.")
             # Also consider alternative labels to broaden the search!
             qset = _text_qset_by_translated_field('name', val) | Q(alt_labels__name__icontains=val)
             queryset = queryset.filter(qset).distinct()
@@ -959,8 +962,6 @@ class PlaceListViewSet(JSONAPIViewMixin, GeoModelAPIView,
         # match to street as well as name, to make it easier to find units by address
         val = self.request.query_params.get('text') or self.request.query_params.get('filter')
         if val:
-            if u'\x00' in val:
-                raise ParseError("A string literal cannot contain NUL (0x00) characters.")
             qset = _text_qset_by_translated_field('name', val) | _text_qset_by_translated_field('street_address', val)
             queryset = queryset.filter(qset)
         return queryset
@@ -1582,8 +1583,6 @@ def _filter_event_queryset(queryset, params, srs=None):
     val = params.get('text', None)
     if val:
         val = val.lower()
-        if u'\x00' in val:
-            raise ParseError("A string literal cannot contain NUL (0x00) characters.")
         # Free string search from all translated fields
         fields = EventTranslationOptions.fields
         qset = Q()
@@ -2147,8 +2146,6 @@ class SearchViewSet(JSONAPIViewMixin, GeoModelAPIView, viewsets.ViewSetMixin, ge
             raise ParseError("Supply search terms with 'q=' or autocomplete entry with 'input='")
         if input_val and q_val:
             raise ParseError("Supply either 'q' or 'input', not both")
-        if u'\x00' in q_val or u'\x00' in input_val:
-            raise ParseError("A string literal cannot contain NUL (0x00) characters.")
 
         old_language = translation.get_language()[:2]
         translation.activate(self.lang_code)
