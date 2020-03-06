@@ -44,6 +44,10 @@ six
 # https://github.com/boto/boto3
 boto3
 
+# Redis support for Django
+# https://github.com/jazzband/django-redis/
+django-redis
+
 # A collection of custom storage backends for Django, e.g., AWS S3
 # https://django-storages.readthedocs.io/en/latest/
 # https://github.com/jschneier/django-storages/

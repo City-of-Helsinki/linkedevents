@@ -253,10 +253,10 @@ jobs:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: secret
       POSTGRES_DB: linkedevents
-      MIGRATION_USER: linkedevents_migration
-      MIGRATION_PASSWORD: secret
-      APP_USER: linkedevents_application
-      APP_PASSWORD: secret
+      DB_MIGRATION_USER: linkedevents_migration
+      DB_MIGRATION_PASSWORD: secret
+      DB_APP_USER: linkedevents_application
+      DB_APP_PASSWORD: secret
     steps:
       - restore_repo_cache
       - restore_deps_cache

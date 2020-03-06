@@ -21,22 +21,30 @@ services:
     volumes:
       - postgres-data-volume:/var/lib/postgres/data
 
+  redis:
+    image: redis:5-alpine
+    ports:
+      - 6379:6379
+    command: redis-server --appendonly yes --requirepass secret
+
   django:
     build:
       context: ./
       dockerfile: ./docker/django/Dockerfile
       target: development
     environment:
-      APP_PASSWORD: secret
-      APP_USER: linkedevents_application
       APPLY_MIGRATIONS: 'true'
+      CACHE_HOST: redis
+      CACHE_PASSWORD: secret
       CREATE_SUPERUSER: 'true'
+      DB_APP_PASSWORD: secret
+      DB_APP_USER: linkedevents_application
       DB_HOST: postgres
+      DB_MIGRATION_PASSWORD: secret
+      DB_MIGRATION_USER: linkedevents_migration
       DB_NAME: linkedevents
       DEBUG: 'true'
       DEV_SERVER: 'true'
-      MIGRATION_PASSWORD: secret
-      MIGRATION_USER: linkedevents_migration
       RUNSERVER_ADDRESS: 0.0.0.0:8000
       WAIT_FOR_IT_ADDRESS: postgres:5432
     volumes:

@@ -25,6 +25,7 @@ django-modeltranslation==0.13.3
 django-mptt==0.10.0
 django-munigeo==0.2.23
 django-orghierarchy==0.1.22
+django-redis==4.11.0
 django-reversion==3.0.4
 django-storages==1.9.1
 django==2.2.9
@@ -62,6 +63,7 @@ python3-openid==3.1.0     # via django-allauth
 pytz==2019.1
 pyyaml==5.1.1
 rdflib==4.2.2
+redis==3.4.1              # via django-redis
 requests-cache==0.5.0
 requests-oauthlib==1.2.0  # via django-allauth
 requests==2.22.0
