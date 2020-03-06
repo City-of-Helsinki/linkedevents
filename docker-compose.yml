@@ -21,6 +21,12 @@ services:
     volumes:
       - postgres-data-volume:/var/lib/postgres/data
 
+  redis:
+    image: redis:5-alpine
+    ports:
+      - 6379:6379
+    command: redis-server --appendonly yes --requirepass secret
+
   django:
     build:
       context: ./
@@ -28,6 +34,8 @@ services:
       target: development
     environment:
       APPLY_MIGRATIONS: 'true'
+      CACHE_HOST: redis
+      CACHE_PASSWORD: secret
       CREATE_SUPERUSER: 'true'
       DB_APP_PASSWORD: secret
       DB_APP_USER: linkedevents_application

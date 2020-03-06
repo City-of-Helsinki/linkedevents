@@ -5,6 +5,8 @@ set -euo pipefail
 
 # Require these env vars to be set
 : "${ALLOWED_HOSTS:?}"
+: "${CACHE_HOST:?}"
+: "${CACHE_PASSWORD:?}"
 : "${DB_APP_PASSWORD:?}"
 : "${DB_APP_USER:?}"
 : "${DB_HOST:?}"
@@ -15,8 +17,11 @@ set -euo pipefail
 : "${TOKEN_AUTH_ACCEPTED_AUDIENCE:?}"
 : "${TOKEN_AUTH_SHARED_SECRET:?}"
 
+# NOTE! We're using rediss (double s) as a scheme since that creates a TLS connection
+CACHE_URL="rediss://:${CACHE_PASSWORD}@${CACHE_HOST}/1"
 APP_DATABASE_URL="postgis://${DB_APP_USER}:${DB_APP_PASSWORD}@${DB_HOST}/${DB_NAME}"
 MIGRATION_DATABASE_URL="postgis://${DB_MIGRATION_USER}:${DB_MIGRATION_PASSWORD}@${DB_HOST}/${DB_NAME}"
+unset CACHE_PASSWORD
 unset DB_APP_PASSWORD
 unset DB_APP_USER
 unset DB_MIGRATION_PASSWORD
@@ -41,6 +46,7 @@ if [[ $# -lt 1 ]] || [[ "$1" == "--"* ]]; then
   DATABASE_URL=$MIGRATION_DATABASE_URL ./manage.py sync_translation_fields --noinput
   unset MIGRATION_DATABASE_URL
 
+  export CACHE_URL
   export DATABASE_URL=$APP_DATABASE_URL
   unset APP_DATABASE_URL
 

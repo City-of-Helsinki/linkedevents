@@ -12,6 +12,12 @@ env = environ.Env(
     DATABASE_URL=(str, 'postgis://postgres:secret@localhost/linkedevents'),
 )
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    }
+}
+
 DATABASES = {
     'default': env.db()
 }

@@ -39,6 +39,7 @@ env = environ.Env(
     DEBUG=(bool, False),
     SYSTEM_DATA_SOURCE_ID=(str, 'system'),
     LANGUAGES=(list, ['fi', 'sv', 'en', 'zh-hans', 'ru', 'ar']),
+    CACHE_URL=(str, 'redis://redis/0'),
     DATABASE_URL=(str, 'postgis:///linkedevents'),
     TOKEN_AUTH_ACCEPTED_AUDIENCE=(str, ''),
     TOKEN_AUTH_SHARED_SECRET=(str, ''),
@@ -89,6 +90,38 @@ INTERNAL_IPS = env('INTERNAL_IPS',
 DATABASES = {
     'default': env.db()
 }
+
+# The default number of seconds to cache a page for the cache middleware.
+# See: https://docs.djangoproject.com/en/dev/ref/settings/#cache-middleware-seconds
+CACHE_MIDDLEWARE_SECONDS = 60
+
+# A dictionary containing the settings for all caches to be used with Django.
+# See: https://docs.djangoproject.com/en/dev/ref/settings/#caches
+CACHES = {
+    # django-environ doesn't support the rediss:// cache URL scheme needed for TLS connections. That's why we don't use
+    # env.cache()
+    # See https://github.com/joke2k/django-environ/issues/210
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': env('CACHE_URL'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }
+}
+
+# Controls where Django stores session data. The django.contrib.sessions.backends.cache setting stores session data
+# directly in the cache.
+# See: https://docs.djangoproject.com/en/dev/ref/settings/#session-engine
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+
+# Whether a user's session cookie expires when the Web browser is closed.
+# See: https://docs.djangoproject.com/en/dev/ref/settings/#session-expire-at-browser-close
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+# The age of session cookies, in seconds. Currently, set to 2 hours.
+# See: https://docs.djangoproject.com/en/dev/ref/settings/#session-cookie-age
+SESSION_COOKIE_AGE = 7200
 
 SYSTEM_DATA_SOURCE_ID = env('SYSTEM_DATA_SOURCE_ID')
 
