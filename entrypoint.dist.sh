@@ -5,22 +5,22 @@ set -euo pipefail
 
 # Require these env vars to be set
 : "${ALLOWED_HOSTS:?}"
-: "${APP_PASSWORD:?}"
-: "${APP_USER:?}"
+: "${DB_APP_PASSWORD:?}"
+: "${DB_APP_USER:?}"
 : "${DB_HOST:?}"
+: "${DB_MIGRATION_PASSWORD:?}"
+: "${DB_MIGRATION_USER:?}"
 : "${DB_NAME:?}"
-: "${MIGRATION_PASSWORD:?}"
-: "${MIGRATION_USER:?}"
 : "${SECRET_KEY:?}"
 : "${TOKEN_AUTH_ACCEPTED_AUDIENCE:?}"
 : "${TOKEN_AUTH_SHARED_SECRET:?}"
 
-APP_DATABASE_URL="postgis://${APP_USER}:${APP_PASSWORD}@${DB_HOST}/${DB_NAME}"
-MIGRATION_DATABASE_URL="postgis://${MIGRATION_USER}:${MIGRATION_PASSWORD}@${DB_HOST}/${DB_NAME}"
-unset APP_PASSWORD
-unset APP_USER
-unset MIGRATION_PASSWORD
-unset MIGRATION_USER
+APP_DATABASE_URL="postgis://${DB_APP_USER}:${DB_APP_PASSWORD}@${DB_HOST}/${DB_NAME}"
+MIGRATION_DATABASE_URL="postgis://${DB_MIGRATION_USER}:${DB_MIGRATION_PASSWORD}@${DB_HOST}/${DB_NAME}"
+unset DB_APP_PASSWORD
+unset DB_APP_USER
+unset DB_MIGRATION_PASSWORD
+unset DB_MIGRATION_USER
 
 # Append host ip to ALLOWED_HOSTS so that ALB health checks can access the health endpoint
 export HOST_IP=$(wget -qO- http://169.254.169.254/latest/meta-data/local-ipv4)

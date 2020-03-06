@@ -42,10 +42,10 @@ docker run \
   -e POSTGRES_USER \
   -e POSTGRES_PASSWORD \
   -e POSTGRES_DB \
-  -e MIGRATION_USER \
-  -e MIGRATION_PASSWORD \
-  -e APP_USER \
-  -e APP_PASSWORD \
+  -e DB_MIGRATION_USER \
+  -e DB_MIGRATION_PASSWORD \
+  -e DB_APP_USER \
+  -e DB_APP_PASSWORD \
   --name linkedevents-db \
   linkedevents-db
 

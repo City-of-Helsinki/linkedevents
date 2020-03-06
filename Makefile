@@ -42,12 +42,12 @@ up:
 	-p 8000:8000 \
 	--network=host \
 	-e ALLOWED_HOSTS=localhost \
-	-e APP_PASSWORD=secret \
-	-e APP_USER=linkedevents_application \
+	-e DB_APP_PASSWORD=secret \
+	-e DB_APP_USER=linkedevents_application \
 	-e DB_HOST=localhost \
+	-e DB_MIGRATION_PASSWORD=secret \
+	-e DB_MIGRATION_USER=linkedevents_migration \
 	-e DB_NAME=linkedevents \
-	-e MIGRATION_PASSWORD=secret \
-	-e MIGRATION_USER=linkedevents_migration \
 	-e SECRET_KEY=secret \
 	-e TOKEN_AUTH_ACCEPTED_AUDIENCE=linkedevents-local \
 	-e TOKEN_AUTH_SHARED_SECRET=secret \
@@ -70,8 +70,8 @@ import_yso:
 	@docker run \
 	--rm \
 	--network=host \
-	-e APP_PASSWORD=secret \
-	-e APP_USER=linkedevents_application \
+	-e DB_APP_PASSWORD=secret \
+	-e DB_APP_USER=linkedevents_application \
 	-e DB_HOST=localhost \
 	-e DB_NAME=linkedevents \
 	--name linkedevents-admin \
@@ -83,8 +83,8 @@ import_tprek:
 	@docker run \
 	--rm \
 	--network=host \
-	-e APP_PASSWORD=secret \
-	-e APP_USER=linkedevents_application \
+	-e DB_APP_PASSWORD=secret \
+	-e DB_APP_USER=linkedevents_application \
 	-e DB_HOST=localhost \
 	-e DB_NAME=linkedevents \
 	--name linkedevents-admin \
@@ -96,8 +96,8 @@ import_osoite:
 	@docker run \
 	--rm \
 	--network=host \
-	-e APP_PASSWORD=secret \
-	-e APP_USER=linkedevents_application \
+	-e DB_APP_PASSWORD=secret \
+	-e DB_APP_USER=linkedevents_application \
 	-e DB_HOST=localhost \
 	-e DB_NAME=linkedevents \
 	--name linkedevents-admin \
@@ -109,8 +109,8 @@ import_helmet:
 	@docker run \
 	--rm \
 	--network=host \
-	-e APP_PASSWORD=secret \
-	-e APP_USER=linkedevents_application \
+	-e DB_APP_PASSWORD=secret \
+	-e DB_APP_USER=linkedevents_application \
 	-e DB_HOST=localhost \
 	-e DB_NAME=linkedevents \
 	--name linkedevents-admin \
@@ -122,8 +122,8 @@ import_espoo:
 	@docker run \
 	--rm \
 	--network=host \
-	-e APP_PASSWORD=secret \
-	-e APP_USER=linkedevents_application \
+	-e DB_APP_PASSWORD=secret \
+	-e DB_APP_USER=linkedevents_application \
 	-e DB_HOST=localhost \
 	-e DB_NAME=linkedevents \
 	--name linkedevents-admin \
@@ -135,8 +135,8 @@ install_templates:
 	@docker run \
 	--rm \
 	--network=host \
-	-e APP_PASSWORD=secret \
-	-e APP_USER=linkedevents_application \
+	-e DB_APP_PASSWORD=secret \
+	-e DB_APP_USER=linkedevents_application \
 	-e DB_HOST=localhost \
 	-e DB_NAME=linkedevents \
 	--name linkedevents-admin \
@@ -148,8 +148,8 @@ import_finland_municipalities:
 	@docker run \
 	--rm \
 	--network=host \
-	-e APP_PASSWORD=secret \
-	-e APP_USER=linkedevents_application \
+	-e DB_APP_PASSWORD=secret \
+	-e DB_APP_USER=linkedevents_application \
 	-e DB_HOST=localhost \
 	-e DB_NAME=linkedevents \
 	--name linkedevents-admin \
@@ -161,8 +161,8 @@ import_helsinki_divisions:
 	@docker run \
 	--rm \
 	--network=host \
-	-e APP_PASSWORD=secret \
-	-e APP_USER=linkedevents_application \
+	-e DB_APP_PASSWORD=secret \
+	-e DB_APP_USER=linkedevents_application \
 	-e DB_HOST=localhost \
 	-e DB_NAME=linkedevents \
 	--name linkedevents-admin \
@@ -174,8 +174,8 @@ add_helsinki_audience:
 	@docker run \
 	--rm \
 	--network=host \
-	-e APP_PASSWORD=secret \
-	-e APP_USER=linkedevents_application \
+	-e DB_APP_PASSWORD=secret \
+	-e DB_APP_USER=linkedevents_application \
 	-e DB_HOST=localhost \
 	-e DB_NAME=linkedevents \
 	--name linkedevents-admin \
@@ -187,8 +187,8 @@ add_helsinki_topics:
 	@docker run \
 	--rm \
 	--network=host \
-	-e APP_PASSWORD=secret \
-	-e APP_USER=linkedevents_application \
+	-e DB_APP_PASSWORD=secret \
+	-e DB_APP_USER=linkedevents_application \
 	-e DB_HOST=localhost \
 	-e DB_NAME=linkedevents \
 	--name linkedevents-admin \
@@ -201,8 +201,8 @@ createsuperuser:
 	--rm \
 	-it \
 	--network=host \
-	-e APP_PASSWORD=secret \
-	-e APP_USER=linkedevents_application \
+	-e DB_APP_PASSWORD=secret \
+	-e DB_APP_USER=linkedevents_application \
 	-e DB_HOST=localhost \
 	-e DB_NAME=linkedevents \
 	--name linkedevents-admin \
