@@ -117,7 +117,7 @@ SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 
 # Whether a user's session cookie expires when the Web browser is closed.
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#session-expire-at-browser-close
-SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
 # The age of session cookies, in seconds. Currently, set to 2 hours.
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#session-cookie-age
