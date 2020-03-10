@@ -122,6 +122,9 @@ def parse_time(time_str, is_start):
         try:
             # Handle all other times through dateutil.
             dt = dateutil_parse(time_str)
+            # Dateutil may allow dates with too large negative tzoffset, crashing psycopg later
+            if abs(dt.tzinfo.utcoffset(dt)) > timedelta(hours=15):
+                raise ParseError(f'Time zone given in timestamp {dt} out of bounds.')
         except (TypeError, ValueError):
             raise ParseError('time in invalid format (try ISO 8601 or yyyy-mm-dd)')
     return dt, is_exact
