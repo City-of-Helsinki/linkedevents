@@ -48,6 +48,7 @@ env = environ.Env(
     ALLOWED_HOSTS=(list, []),
     ADMINS=(list, []),
     SECURE_PROXY_SSL_HEADER=(tuple, None),
+    USE_X_FORWARDED_HOST=(bool, False),
     MEDIA_ROOT=(environ.Path(), root('media')),
     STATIC_ROOT=(environ.Path(), root('static')),
     MEDIA_URL=(str, '/media/'),
@@ -277,6 +278,20 @@ AWS_MEDIA_S3_CUSTOM_DOMAIN = env('AWS_MEDIA_S3_CUSTOM_DOMAIN')
 # Settings common to both static files and media files
 # Do not append AWS query parameters to the generated URL
 AWS_QUERYSTRING_AUTH = False
+
+# A boolean that specifies whether to use the X-Forwarded-Host header in preference to the Host header. This should
+# only be enabled if a proxy which sets this header is in use. If a proxy is in use and this is disabled, the links in
+# the Browsable API will be wrong.
+# See: https://docs.djangoproject.com/en/dev/ref/settings/#use-x-forwarded-host
+USE_X_FORWARDED_HOST = env('USE_X_FORWARDED_HOST')
+
+# A tuple representing a HTTP header/value combination that signifies a request is secure. This controls the behavior
+# of the request object’s is_secure() method. Set this to ('HTTP_X_FORWARDED_PROTO', 'https') to tell Django to use the
+# X-Forwarded-Proto header to tell whether the service is served over TLS or not. This can be used, e.g., when a proxy
+# terminates the TLS connection and forwards the request over an unsecure HTTP connection. If a proxy is in use and
+# this is disabled, the links in the Browsable API may show http as the scheme instead of https.
+# See: https://docs.djangoproject.com/en/dev/ref/settings/#secure-proxy-ssl-header
+SECURE_PROXY_SSL_HEADER = env('SECURE_PROXY_SSL_HEADER')
 
 #
 # Authentication
