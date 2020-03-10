@@ -49,6 +49,8 @@ env = environ.Env(
     ADMINS=(list, []),
     SECURE_PROXY_SSL_HEADER=(tuple, None),
     USE_X_FORWARDED_HOST=(bool, False),
+    CUSTOM_X_FORWARDED_PORT_HEADER=(str, 'LINKEDEVENTS-X-FORWARDED-PORT'),
+    CUSTOM_X_FORWARDED_PROTO_HEADER=(str, 'LINKEDEVENTS-X-FORWARDED-PROTO'),
     MEDIA_ROOT=(environ.Path(), root('media')),
     STATIC_ROOT=(environ.Path(), root('static')),
     MEDIA_URL=(str, '/media/'),
@@ -209,6 +211,7 @@ if env('SENTRY_DSN'):
     )
 
 MIDDLEWARE = [
+    'linkedevents.middleware.AwsAlbHeaderMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -292,6 +295,11 @@ USE_X_FORWARDED_HOST = env('USE_X_FORWARDED_HOST')
 # this is disabled, the links in the Browsable API may show http as the scheme instead of https.
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#secure-proxy-ssl-header
 SECURE_PROXY_SSL_HEADER = env('SECURE_PROXY_SSL_HEADER')
+
+# Define the custom headers from which the X-Forwarded-{Port|Proto} header values will be copied. See middlewares.py
+# for more details.
+CUSTOM_X_FORWARDED_PORT_HEADER = env('CUSTOM_X_FORWARDED_PORT_HEADER')
+CUSTOM_X_FORWARDED_PROTO_HEADER = env('CUSTOM_X_FORWARDED_PROTO_HEADER')
 
 #
 # Authentication
