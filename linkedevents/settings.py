@@ -496,9 +496,11 @@ if os.path.exists(f):
     sys.modules[module_name] = module
     exec(open(f, "rb").read())
 
-# We generate a persistent SECRET_KEY if it is not defined. Note that
+SECRET_KEY = env('SECRET_KEY')
+
+# We generate a persistent SECRET_KEY if it is not defined or it's empty. Note that
 # setting SECRET_KEY will override the persisted key
-if 'SECRET_KEY' not in locals():
+if 'SECRET_KEY' not in locals() or not SECRET_KEY:
     secret_file = os.path.join(BASE_DIR, '.django_secret')
     try:
         SECRET_KEY = open(secret_file).read().strip()
