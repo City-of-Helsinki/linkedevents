@@ -50,6 +50,10 @@ Please keep this file up to date and document the new importers or update curren
   * [What is it?](#what-is-it-10)
   * [What depends on it?](#what-depends-on-it-10)
   * [How to use it?](#how-to-use-it-10)
+* [lippupiste](#lippupiste)
+  * [What is it?](#what-is-it-11)
+  * [What depends on it?](#what-depends-on-it-11)
+  * [How to use it?](#how-to-use-it-11)
 
 <!-- vim-markdown-toc -->
 
@@ -384,5 +388,25 @@ If you'd like to have events organized by City of Helsinki cultural centers in y
   ```
 
 Imports all events organized by City of Helsinki cultural centers into the database.
+
+This is scheduled to run `hourly` on the instance as data changes often.
+
+## lippupiste
+
+### What is it?
+
+*lippupiste* is an importer which imports *events* from Lippupiste Oy (https://lippu.fi); currently used only for importing [Helsinki City Theater](https://hkt.fi/) events.
+
+**NOTE**: To get access to data from Lippupiste, you need to have an agreement with Lippupiste Oy. The data is not publicly available at the moment.
+
+### What depends on it?
+If you'd like to have events marketed by Lippupiste anywhere in Finland in your Linked Events application instance, you need this importer.
+
+### How to use it?
+  ```bash
+  python manage.py event_import lippupiste --events
+  ```
+
+Imports events marketed by Lippupiste Oy into the database. Currently, the importer only imports plays by the Helsinki City Theater; the imported locations and events can be filtered in the importer code.
 
 This is scheduled to run `hourly` on the instance as data changes often.

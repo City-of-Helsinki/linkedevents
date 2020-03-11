@@ -7,4 +7,4 @@ pip-tools
 pyflakes
 pylint
 pytest-django
-pytest<4.0
+pytest

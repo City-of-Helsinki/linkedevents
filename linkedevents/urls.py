@@ -4,9 +4,7 @@ from django.views.generic import RedirectView
 from events.views import HealthResponse
 
 from .api import LinkedEventsAPIRouter
-from helusers import admin
-
-admin.autodiscover()
+from django.contrib import admin
 
 api_router = LinkedEventsAPIRouter()
 

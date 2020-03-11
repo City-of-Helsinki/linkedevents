@@ -25,43 +25,66 @@ class AutoIdBaseAdmin(BaseAdmin):
         system_id = settings.SYSTEM_DATA_SOURCE_ID
         obj.data_source_id = system_id
         if not obj.id:
-            obj.id = generate_id(system_id)
+            if obj.origin_id:
+                obj.id = ':'.join([system_id, obj.origin_id])
+            else:
+                obj.id = generate_id(system_id)
         obj.origin_id = obj.id.split(':')[1]
 
         super().save_model(request, obj, form, change)
 
 
 class EventAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
-    # TODO: location, publisher, keyword, audience, super_event fields with autocomplete
     # TODO: only allow user_editable editable fields
-    fields = ('name', 'short_description', 'description', 'location', 'location_extra_info', 'start_time', 'end_time',
-              'keywords', 'audience', 'publisher', 'provider', 'provider_contact_info', 'event_status', 'super_event',
-              'info_url', 'in_language')
+    fields = ('id', 'data_source', 'origin_id', 'name', 'short_description', 'description', 'location',
+              'location_extra_info', 'start_time', 'end_time', 'keywords', 'audience', 'publisher', 'provider',
+              'provider_contact_info', 'event_status', 'super_event', 'info_url', 'in_language',
+              'publication_status', 'replaced_by', 'deleted')
     search_fields = ('name', 'location__name')
     list_display = ('id', 'name', 'start_time', 'end_time', 'publisher', 'location')
     list_filter = ('data_source',)
     ordering = ('-last_modified_time',)
+    autocomplete_fields = ('location', 'keywords', 'audience', 'super_event', 'publisher', 'replaced_by')
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ['id', 'data_source', 'origin_id']
+        else:
+            return ['id', 'data_source']
 
 
 admin.site.register(Event, EventAdmin)
 
 
 class KeywordAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
-    # TODO: publisher field with autocomplete
     # TODO: only allow user_editable editable fields
-    fields = ('publisher', 'deprecated', 'name')
+    fields = ('id', 'data_source', 'origin_id',  'publisher', 'name', 'replaced_by', 'deprecated')
     search_fields = ('name',)
     list_display = ('id', 'name', 'n_events')
     list_filter = ('data_source',)
     ordering = ('-n_events',)
+    autocomplete_fields = ('publisher', 'replaced_by')
+    readonly_fields = ('id',)
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ['id', 'data_source', 'origin_id']
+        else:
+            return ['id', 'data_source']
 
 
 admin.site.register(Keyword, KeywordAdmin)
 
 
-class KeywordSetAdmin(BaseAdmin):
-    # TODO: keywords field with autocomplete
-    fields = ('data_source', 'origin_id', 'name', 'keywords', 'usage')
+class KeywordSetAdmin(AutoIdBaseAdmin):
+    fields = ('id', 'data_source', 'origin_id', 'name', 'keywords', 'usage')
+    autocomplete_fields = ('keywords', )
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ['id', 'origin_id', 'data_source']
+        else:
+            return ['id', 'data_source']
 
 
 admin.site.register(KeywordSet, KeywordSetAdmin)
@@ -77,11 +100,11 @@ class HelsinkiGeoAdmin(LeafletGeoAdmin):
 
 
 class PlaceAdmin(HelsinkiGeoAdmin, AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
-    # TODO: replaced_by field must be done with autocomplete, 140 000 objects a bit too much to load _:D
     # TODO: only allow user_editable editable fields
     fieldsets = (
         (None, {
-            'fields': ('publisher',  'deleted', 'replaced_by', 'name', 'description', 'info_url', 'position')
+            'fields': ('id', 'data_source', 'origin_id', 'publisher',  'deleted', 'replaced_by', 'name', 'description',
+                       'info_url', 'position')
 
         }),
         (_('Contact info'), {
@@ -94,11 +117,18 @@ class PlaceAdmin(HelsinkiGeoAdmin, AutoIdBaseAdmin, TranslationAdmin, VersionAdm
     list_display = ('id', 'name', 'n_events', 'street_address')
     list_filter = ('data_source',)
     ordering = ('-n_events',)
+    autocomplete_fields = ('replaced_by', 'publisher')
 
     def __init__(self, model, admin_site):
         super().__init__(model, admin_site)
         # use https CDN instead
         self.openlayers_url = 'https://cdnjs.cloudflare.com/ajax/libs/openlayers/2.13.1/OpenLayers.js'
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ['id', 'data_source', 'origin_id']
+        else:
+            return ['id', 'data_source']
 
 
 admin.site.register(Place, PlaceAdmin)
@@ -106,6 +136,13 @@ admin.site.register(Place, PlaceAdmin)
 
 class DataSourceAdmin(BaseAdmin, VersionAdmin):
     fields = ('id', 'name', 'api_key', 'owner', 'user_editable')
+    autocomplete_fields = ('owner',)
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ['id']
+        else:
+            return []
 
 
 admin.site.register(DataSource, DataSourceAdmin)
@@ -113,6 +150,12 @@ admin.site.register(DataSource, DataSourceAdmin)
 
 class LanguageAdmin(BaseAdmin, VersionAdmin):
     fields = ('id', 'name')
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ['id']
+        else:
+            return []
 
 
 admin.site.register(Language, LanguageAdmin)

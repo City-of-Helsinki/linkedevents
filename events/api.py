@@ -684,7 +684,13 @@ def _text_qset_by_translated_field(field, val):
 class JSONAPIViewMixin(object):
     def initial(self, request, *args, **kwargs):
         ret = super().initial(request, *args, **kwargs)
+        # if srid is not specified, this will yield munigeo default 4326
         self.srs = srid_to_srs(self.request.query_params.get('srid', None))
+        # check for NUL strings that crash psycopg2
+        for key, param in self.request.query_params.items():
+            if u'\x00' in param:
+                raise ParseError("A string literal cannot contain NUL (0x00) characters. "
+                                 "Please fix query parameter " + param)
         return ret
 
     def get_serializer_context(self):
@@ -719,10 +725,22 @@ class KeywordRetrieveViewSet(JSONAPIViewMixin, mixins.RetrieveModelMixin, viewse
     queryset = queryset.select_related('publisher')
     serializer_class = KeywordSerializer
 
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            keyword = Keyword.objects.get(pk=kwargs['pk'])
+        except Keyword.DoesNotExist:
+            raise Http404()
+        if keyword.replaced_by:
+            keyword = keyword.get_replacement()
+            return HttpResponsePermanentRedirect(reverse('keyword-detail',
+                                                         kwargs={'pk': keyword.pk},
+                                                         request=request))
+        return super().retrieve(request, *args, **kwargs)
+
 
 class KeywordListViewSet(JSONAPIViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = Keyword.objects.all()
-    queryset = queryset.select_related('publisher')
+    queryset = queryset.select_related('publisher').prefetch_related('alt_labels__name')
     serializer_class = KeywordSerializer
     filter_backends = (filters.OrderingFilter,)
     ordering_fields = ('n_events', 'id', 'name', 'data_source')
@@ -757,9 +775,9 @@ class KeywordListViewSet(JSONAPIViewMixin, mixins.ListModelMixin, viewsets.Gener
         # can be used e.g. with typeahead.js
         val = self.request.query_params.get('text') or self.request.query_params.get('filter')
         if val:
-            if u'\x00' in val:
-                raise ParseError("A string literal cannot contain NUL (0x00) characters.")
-            queryset = queryset.filter(_text_qset_by_translated_field('name', val))
+            # Also consider alternative labels to broaden the search!
+            qset = _text_qset_by_translated_field('name', val) | Q(alt_labels__name__icontains=val)
+            queryset = queryset.filter(qset).distinct()
         return queryset
 
 
@@ -847,8 +865,9 @@ def filter_division(queryset, name, value):
             # we assume human name
             names.append(item.title())
     if hasattr(queryset, 'distinct'):
-        return (queryset.filter(**{name + '__ocd_id__in': ocd_ids}) |
-                queryset.filter(**{name + '__name__in': names})).distinct()
+        # do the join with Q objects (not querysets) in case the queryset has extra fields that would crash qs join
+        query = Q(**{name + '__ocd_id__in': ocd_ids}) | Q(**{name + '__name__in': names})
+        return (queryset.filter(query)).distinct()
     else:
         # Haystack SearchQuerySet does not support distinct, so we only support one type of search at a time:
         if ocd_ids:
@@ -895,7 +914,7 @@ class PlaceRetrieveViewSet(JSONAPIViewMixin, GeoModelAPIView,
             raise Http404()
         if place.deleted:
             if place.replaced_by:
-                place = place.replaced_by
+                place = place.get_replacement()
                 return HttpResponsePermanentRedirect(reverse('place-detail',
                                                              kwargs={'pk': place.pk},
                                                              request=request))
@@ -943,8 +962,6 @@ class PlaceListViewSet(JSONAPIViewMixin, GeoModelAPIView,
         # match to street as well as name, to make it easier to find units by address
         val = self.request.query_params.get('text') or self.request.query_params.get('filter')
         if val:
-            if u'\x00' in val:
-                raise ParseError("A string literal cannot contain NUL (0x00) characters.")
             qset = _text_qset_by_translated_field('name', val) | _text_qset_by_translated_field('street_address', val)
             queryset = queryset.filter(qset)
         return queryset
@@ -1088,7 +1105,7 @@ class ImageSerializer(LinkedEventsSerializer):
 
     def validate(self, data):
         # name the image after the file, if name was not provided
-        if 'name' not in data:
+        if 'name' not in data or not data['name']:
             if 'url' in data:
                 data['name'] = str(data['url']).rsplit('/', 1)[-1]
             if 'image' in data:
@@ -1119,6 +1136,14 @@ class ImageViewSet(JSONAPIViewMixin, viewsets.ModelViewSet):
         if data_source:
             data_source = data_source.lower().split(',')
             queryset = queryset.filter(data_source__in=data_source)
+
+        created_by = self.request.query_params.get('created_by')
+        if created_by:
+            if self.request.user.is_authenticated:
+                # only displays events by the particular user
+                queryset = queryset.filter(created_by=self.request.user)
+            else:
+                queryset = queryset.none()
         return queryset
 
     def perform_destroy(self, instance):
@@ -1438,6 +1463,13 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     def to_representation(self, obj):
         ret = super(EventSerializer, self).to_representation(obj)
 
+        if obj.deleted:
+            keys_to_preserve = ['id', 'name', 'last_modified_time', 'deleted', 'replaced_by']
+            for key in ret.keys() - keys_to_preserve:
+                del ret[key]
+            ret['name'] = utils.get_deleted_object_name()
+            return ret
+
         if self.context['request'].accepted_renderer.format == 'docx':
             ret['end_time_obj'] = obj.end_time
             ret['start_time_obj'] = obj.start_time
@@ -1551,8 +1583,6 @@ def _filter_event_queryset(queryset, params, srs=None):
     val = params.get('text', None)
     if val:
         val = val.lower()
-        if u'\x00' in val:
-            raise ParseError("A string literal cannot contain NUL (0x00) characters.")
         # Free string search from all translated fields
         fields = EventTranslationOptions.fields
         qset = Q()
@@ -1591,7 +1621,8 @@ def _filter_event_queryset(queryset, params, srs=None):
 
     if start:
         dt = utils.parse_time(start, is_start=True)[0]
-        queryset = queryset.filter(Q(end_time__gt=dt) | Q(start_time__gte=dt))
+        # only return events with specified end times during the whole of the event, otherwise only future events
+        queryset = queryset.filter(Q(end_time__gt=dt, has_end_time=True) | Q(start_time__gte=dt))
 
     if end:
         dt = utils.parse_time(end, is_start=False)[0]
@@ -1625,7 +1656,51 @@ def _filter_event_queryset(queryset, params, srs=None):
     val = params.get('keyword', None)
     if val:
         val = val.split(',')
+        try:
+            # replaced keywords are looked up for backwards compatibility
+            val = [getattr(Keyword.objects.get(id=kid).replaced_by, 'id', None) or kid for kid in val]
+        except Keyword.DoesNotExist:
+            # the user asked for an unknown keyword
+            queryset = queryset.none()
         queryset = queryset.filter(Q(keywords__pk__in=val) | Q(audience__pk__in=val)).distinct()
+
+    # 'keyword_OR' behaves the same way as 'keyword'
+    val = params.get('keyword_OR', None)
+    if val:
+        val = val.split(',')
+        try:
+            # replaced keywords are looked up for backwards compatibility
+            val = [getattr(Keyword.objects.get(id=kid).replaced_by, 'id', None) or kid for kid in val]
+        except Keyword.DoesNotExist:
+            # the user asked for an unknown keyword
+            queryset = queryset.none()
+        queryset = queryset.filter(Q(keywords__pk__in=val) | Q(audience__pk__in=val)).distinct()
+
+    # Filter by keyword ids requiring all keywords to be present in event
+    val = params.get('keyword_AND', None)
+    if val:
+        val = val.split(',')
+        for keyword_id in val:
+            try:
+                # replaced keywords are looked up for backwards compatibility
+                val = getattr(Keyword.objects.get(id=keyword_id).replaced_by, 'id', None) or keyword_id
+            except Keyword.DoesNotExist:
+                # the user asked for an unknown keyword
+                queryset = queryset.none()
+            queryset = queryset.filter(Q(keywords__pk=keyword_id) | Q(audience__pk=keyword_id))
+        queryset = queryset.distinct()
+
+    # Negative filter for keyword ids
+    val = params.get('keyword!', None)
+    if val:
+        val = val.split(',')
+        try:
+            # replaced keywords are looked up for backwards compatibility
+            val = [getattr(Keyword.objects.get(id=kid).replaced_by, 'id', None) or kid for kid in val]
+        except Keyword.DoesNotExist:
+            # the user asked for an unknown keyword
+            pass
+        queryset = queryset.exclude(Q(keywords__pk__in=val) | Q(audience__pk__in=val)).distinct()
 
     # filter only super or non-super events. to be deprecated?
     val = params.get('recurring', None)
@@ -1657,6 +1732,21 @@ def _filter_event_queryset(queryset, params, srs=None):
     if val:
         val = val.split(',')
         q = get_publisher_query(val)
+        queryset = queryset.filter(q)
+
+    # Filter by publisher ancestors, multiple ids separated by comma
+    val = params.get('publisher_ancestor', None)
+    if val:
+        val = val.split(',')
+        ancestors = Organization.objects.filter(id__in=val)
+
+        # Get ids of ancestors and all their descendants
+        publishers = Organization.objects.none()
+        for org in ancestors.all():
+            publishers |= org.get_descendants(include_self=True)
+        publisher_ids = [org['id'] for org in publishers.all().values('id')]
+
+        q = get_publisher_query(publisher_ids)
         queryset = queryset.filter(q)
 
     # Filter by publication status
@@ -1726,6 +1816,11 @@ def _filter_event_queryset(queryset, params, srs=None):
             raise ParseError(_('Audience maximum age must be a digit.'))
         queryset = queryset.filter(audience_max_age__gte=max_age)
 
+    # Filter deleted events
+    val = params.get('show_deleted', None)
+    if not val:
+        queryset = queryset.filter(deleted=False)
+
     return queryset
 
 
@@ -1778,7 +1873,7 @@ class EventDeletedException(APIException):
 
 
 class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelViewSet):
-    queryset = Event.objects.filter(deleted=False)
+    queryset = Event.objects.all()
     # This exclude is, atm, a bit overkill, considering it causes a massive query and no such events exist.
     # queryset = queryset.exclude(super_event_type=Event.SuperEventType.RECURRING, sub_events=None)
     # Use select_ and prefetch_related() to reduce the amount of queries
@@ -1871,12 +1966,21 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
             # by default, only public events are shown in the event list
             queryset = public_queryset
             # however, certain query parameters allow customizing the listing for authenticated users
-            if 'show_all' in self.request.query_params:
+            show_all = self.request.query_params.get('show_all')
+            if show_all:
                 # displays all editable events, including drafts, and public non-editable events
                 queryset = editable_queryset | public_queryset
-            if 'admin_user' in self.request.query_params:
+            admin_user = self.request.query_params.get('admin_user')
+            if admin_user:
                 # displays all editable events, including drafts, but no other public events
                 queryset = editable_queryset
+            created_by = self.request.query_params.get('created_by')
+            if created_by:
+                # only displays events by the particular user
+                if self.request.user.is_authenticated:
+                    queryset = queryset.filter(created_by=self.request.user)
+                else:
+                    queryset = queryset.none()
         else:
             # prevent changing events user does not have write permissions (for bulk operations)
             queryset = self.request.user.get_editable_events(original_queryset)
@@ -1887,6 +1991,15 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
 
     def allow_bulk_destroy(self, qs, filtered):
         return False
+
+    def update(self, *args, **kwargs):
+        response = super().update(*args, **kwargs)
+        original_event = Event.objects.get(id=response.data['id'])
+        if original_event.replaced_by is not None:
+            replacing_event = original_event.replaced_by
+            context = self.get_serializer_context()
+            response.data = EventSerializer(replacing_event, context=context).data
+        return response
 
     def perform_update(self, serializer):
         # Prevent changing an event that user does not have write permissions
@@ -1944,6 +2057,18 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
         if not self.request.user.can_edit_event(instance.publisher, instance.publication_status):
             raise DRFPermissionDenied()
         instance.soft_delete()
+
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            event = Event.objects.get(pk=kwargs['pk'])
+        except Event.DoesNotExist:
+            raise Http404()
+        if event.replaced_by:
+            event = event.get_replacement()
+            return HttpResponsePermanentRedirect(reverse('event-detail',
+                                                         kwargs={'pk': event.pk},
+                                                         request=request))
+        return super().retrieve(request, *args, **kwargs)
 
     def list(self, request, *args, **kwargs):
         # docx renderer has additional requirements for listing events
@@ -2022,8 +2147,6 @@ class SearchViewSet(JSONAPIViewMixin, GeoModelAPIView, viewsets.ViewSetMixin, ge
             raise ParseError("Supply search terms with 'q=' or autocomplete entry with 'input='")
         if input_val and q_val:
             raise ParseError("Supply either 'q' or 'input', not both")
-        if u'\x00' in q_val or u'\x00' in input_val:
-            raise ParseError("A string literal cannot contain NUL (0x00) characters.")
 
         old_language = translation.get_language()[:2]
         translation.activate(self.lang_code)

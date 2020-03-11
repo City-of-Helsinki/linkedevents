@@ -9,14 +9,13 @@ import dateutil
 from datetime import time
 from pytz import timezone
 from django.conf import settings
-from django.core.validators import URLValidator
-from django.core.exceptions import ValidationError, ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
 from django_orghierarchy.models import Organization
 
 from .base import Importer, register_importer, recur_dict
 from .yso import KEYWORDS_TO_ADD_TO_AUDIENCE
-from .util import unicodetext
+from .util import unicodetext, clean_url
 from events.models import DataSource, Event, EventAggregate, EventAggregateMember, Keyword, Place, License
 from events.keywords import KeywordMatcher
 from events.translation_utils import expand_model_fields
@@ -100,11 +99,11 @@ def _delete_courses():
 
 SPORTS = ['p965']
 GYMS = ['p8504']
-MOVIES = ['p1235', 'p16327']
+MOVIES = ['p1235']
 CHILDREN = ['p4354']
 YOUTH = ['p11617']
-ELDERLY = ['p2434']
-FAMILIES = ['p4363']
+ELDERLY = ['p2433']
+FAMILIES = ['p13050']
 
 MANUAL_CATEGORIES = {
     # urheilu
@@ -114,11 +113,11 @@ MANUAL_CATEGORIES = {
     # harrastukset
     626: ['p2901'],
     # erityisliikunta
-    634: ['p3093'],
+    634: ['p3093', 'p916'],
     # monitaiteisuus
-    223: ['p25216'],
+    223: ['p25216', 'p360'],
     # seniorit > ikääntyneet ja vanhukset
-    354: ['p2433'] + ELDERLY,
+    354: ELDERLY,
     # saunominen
     371: ['p11049'],
     # lastentapahtumat > lapset (!)
@@ -128,9 +127,9 @@ MANUAL_CATEGORIES = {
     # liikuntaleiri
     710: ['p143', 'p916'],
     # teatteri ja sirkus
-    351: ['p2850'],
+    351: ['p2625'],
     # elokuva ja media
-    205: MOVIES + ['p2445'],
+    205: MOVIES,
     # skidikino
     731: CHILDREN + MOVIES,
     # luennot ja keskustelut
@@ -141,8 +140,8 @@ MANUAL_CATEGORIES = {
     737: MOVIES,
     # perheliikunta
     628: SPORTS + FAMILIES,
-    # lapset ja nuoret
-    355: CHILDREN + YOUTH,
+    # lapset
+    355: CHILDREN,
     # lapsi ja aikuinen yhdessä > perheet
     747: FAMILIES
 }
@@ -199,7 +198,7 @@ def parse_course_time(secondary_headline):
     if not isinstance(secondary_headline, str):
         return (None, None)
 
-    pattern = r'^.*klo?\s(\d{1,2})([.:](\d{1,2}))?.(\d{1,2})([.:](\d{1,2}))?.*$'
+    pattern = r'^.*klo?\s(\d{1,2})([.:](\d{1,2}))?[^.:](\d{1,2})([.:](\d{1,2}))?.*$'
     match = re.match(pattern, secondary_headline)
 
     if match:
@@ -436,16 +435,11 @@ class KulkeImporter(Importer):
             links = []
         external_links = []
         for link_el in links:
-            link = unicodetext(link_el)
-            if not re.match(r'^\w+?://', link):
-                link = 'http://' + link
-            try:
-                self.url_validator(link)
-            except ValidationError:
+            if link_el is None or link_el.text is None:
                 continue
-            except ValueError:
-                logger.error('value error with event %s and url %s ' % (eid, link))
-            external_links.append({'link': link})
+            link = clean_url(link_el.text)
+            if link:
+                external_links.append({'link': link})
         event['external_links'][lang] = external_links
 
         eventattachments = event_el.find('eventattachments')
@@ -537,7 +531,9 @@ class KulkeImporter(Importer):
         offer['description'][lang] = description
         if not free:
             offer['price'][lang] = price
-        offer['info_url'][lang] = price_el.get('ticketlink')
+        link = price_el.get('ticketlink')
+        if link:
+            offer['info_url'][lang] = clean_url(link)
 
         if hasattr(self, 'categories'):
             event_keywords = set()
@@ -771,7 +767,6 @@ class KulkeImporter(Importer):
         self._import_events(importing_courses=True)
 
     def _import_events(self, importing_courses=False):
-        self.url_validator = URLValidator()
         events = recur_dict()
         recurring_groups = dict()
         for lang in ['fi', 'sv', 'en']:

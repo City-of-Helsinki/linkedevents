@@ -13,7 +13,6 @@ from .utils import versioned_reverse as reverse
 
 from events.tests.utils import assert_event_data_is_equal
 from events.tests.test_event_post import create_with_post
-from .conftest import keyword_id, location_id
 from events.models import Event, Keyword, Place
 from django.conf import settings
 
@@ -120,7 +119,7 @@ def test__cannot_update_an_event_without_a_description(api_client, minimal_event
 
 
 @pytest.mark.django_db
-def test__keyword_n_events_updated(api_client, minimal_event_dict, user, data_source):
+def test__keyword_n_events_updated(api_client, minimal_event_dict, user, data_source, make_keyword_id):
 
     # create an event
     api_client.force_authenticate(user=user)
@@ -134,8 +133,8 @@ def test__keyword_n_events_updated(api_client, minimal_event_dict, user, data_so
 
     # change the keyword and add an audience
     event_id = data2.pop('@id')
-    data2['keywords'] = [{'@id': keyword_id(data_source, 'test2')}]
-    data2['audience'] = [{'@id': keyword_id(data_source, 'test3')}]
+    data2['keywords'] = [{'@id': make_keyword_id(data_source, 'test2')}]
+    data2['audience'] = [{'@id': make_keyword_id(data_source, 'test3')}]
     response2 = update_with_put(api_client, event_id, data2)
     print('got the put response')
     print(response2.data)
@@ -147,7 +146,7 @@ def test__keyword_n_events_updated(api_client, minimal_event_dict, user, data_so
 
 @pytest.mark.django_db
 def test__location_n_events_updated(api_client, minimal_event_dict, user, data_source,
-                                    other_data_source, place2):
+                                    other_data_source, place2, make_location_id):
 
     # create an event
     api_client.force_authenticate(user=user)
@@ -161,7 +160,7 @@ def test__location_n_events_updated(api_client, minimal_event_dict, user, data_s
 
     # change the location
     event_id = data2.pop('@id')
-    data2['location'] = {'@id': location_id(place2)}
+    data2['location'] = {'@id': make_location_id(place2)}
     response2 = update_with_put(api_client, event_id, data2)
     print('got the put response')
     print(response2.data)
@@ -630,3 +629,16 @@ def test_cannot_edit_events_in_the_past(api_client, event, minimal_event_dict, u
     response = api_client.put(reverse('event-detail', kwargs={'pk': event.id}), minimal_event_dict, format='json')
     assert response.status_code == 403
     assert 'Cannot edit a past event' in str(response.content)
+
+
+@pytest.mark.django_db
+def test_response_contains_replacing_event(api_client, event, minimal_event_dict, user):
+    api_client.force_authenticate(user)
+
+    response = create_with_post(api_client, minimal_event_dict)
+
+    pk = response.data['id']
+    minimal_event_dict['replaced_by'] = event.pk
+    response2 = api_client.put(reverse('event-detail', kwargs={'pk': pk}), minimal_event_dict, format='json')
+    assert response2.status_code == 200
+    assert response2.data['id'] == event.pk

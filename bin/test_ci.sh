@@ -62,7 +62,7 @@ docker run \
     sudo apt-get update && \
     sudo apt-get install -y libgdal-dev && \
     sudo chown -R circleci:circleci /usr/src/app && \
-    py.test events"
+    py.test events helevents"
 # Store the exit code of the last command
 linkedevents_check=$?
 docker stop linkedevents-db

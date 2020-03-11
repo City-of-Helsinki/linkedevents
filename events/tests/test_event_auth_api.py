@@ -6,13 +6,14 @@ from django.test import override_settings
 from django_orghierarchy.models import Organization
 from rest_framework import status
 from rest_framework.test import APITestCase
+import pytest
 
 from django.conf import settings
-from .conftest import minimal_event_dict, complex_event_dict, languages
 from .utils import versioned_reverse as reverse
 from ..models import DataSource, Event, Place, PublicationStatus
 
 
+@pytest.mark.usefixtures("make_complex_event_dict_class", "make_minimal_event_dict_class", "languages_class")
 class TestEventAPI(APITestCase):
 
     def setUp(self):
@@ -189,6 +190,34 @@ class TestEventAPI(APITestCase):
             self.assertIn('created_by', event)
             self.assertIn('last_modified_by', event)
 
+    def test_event_list_with_created_by_filter(self):
+        # test with public request
+        url = '{0}?created_by=me'.format(reverse('event-list'))
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['data']), 0)  # public users haven't created events
+
+        # create event with admin user
+        self.org_1.admin_users.add(self.user)
+        self.client.force_authenticate(self.user)
+        url = reverse('event-list')
+        location_id = reverse('place-detail', kwargs={'pk': self.place.id})
+        data = self.make_minimal_event_dict(self.system_data_source, self.org_1, location_id)
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # test with admin user
+        url = '{0}?created_by=me'.format(reverse('event-list'))
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # We should only see the event created by us
+        self.assertEqual(len(response.data['data']), 1)
+        for event in response.data['data']:
+            self.assertIn('publication_status', event)
+            # now we should only have events with admin rights
+            self.assertIn('created_by', event)
+            self.assertIn('last_modified_by', event)
+
     def test_event_list_with_publisher_filters(self):
         # test with public request
         url = '{0}?show_all=1&publisher=neds:org-3'.format(reverse('event-list'))
@@ -264,7 +293,7 @@ class TestEventAPI(APITestCase):
     def test_unauthenticated_user_create_event_denied(self):
         url = reverse('event-list')
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
-        data = minimal_event_dict(self.system_data_source, self.org_1, location_id)
+        data = self.make_minimal_event_dict(self.system_data_source, self.org_1, location_id)
 
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -272,7 +301,7 @@ class TestEventAPI(APITestCase):
     def test_unauthenticated_user_update_public_event_denied(self):
         url = reverse('event-detail', kwargs={'pk': self.event_4.id})
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
-        data = minimal_event_dict(self.system_data_source, self.org_3, location_id)
+        data = self.make_minimal_event_dict(self.system_data_source, self.org_3, location_id)
 
         response = self.client.put(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -303,7 +332,7 @@ class TestEventAPI(APITestCase):
     def test_random_user_create_event_denied(self):
         url = reverse('event-list')
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
-        data = minimal_event_dict(self.system_data_source, self.org_1, location_id)
+        data = self.make_minimal_event_dict(self.system_data_source, self.org_1, location_id)
 
         self.client.force_authenticate(self.user)
         response = self.client.post(url, data, format='json')
@@ -312,7 +341,7 @@ class TestEventAPI(APITestCase):
     def test_random_user_update_public_event_denied(self):
         url = reverse('event-detail', kwargs={'pk': self.event_4.id})
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
-        data = minimal_event_dict(self.system_data_source, self.org_3, location_id)
+        data = self.make_minimal_event_dict(self.system_data_source, self.org_3, location_id)
 
         self.client.force_authenticate(self.user)
         response = self.client.put(url, data, format='json')
@@ -328,7 +357,7 @@ class TestEventAPI(APITestCase):
     def test_random_user_bulk_create(self):
         url = reverse('event-list')
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
-        data_1 = minimal_event_dict(self.system_data_source, self.org_1, location_id)
+        data_1 = self.make_minimal_event_dict(self.system_data_source, self.org_1, location_id)
         data_1['name']['fi'] = 'event-data-1'
         data_2 = deepcopy(data_1)
         data_2['name']['fi'] = 'event-data-2'
@@ -340,7 +369,7 @@ class TestEventAPI(APITestCase):
     def test_random_user_bulk_update(self):
         url = reverse('event-list')
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
-        data = minimal_event_dict(self.system_data_source, self.org_1, location_id)
+        data = self.make_minimal_event_dict(self.system_data_source, self.org_1, location_id)
 
         self.client.force_authenticate(self.user)
         response = self.client.put(url, [data], format='json')
@@ -384,7 +413,7 @@ class TestEventAPI(APITestCase):
         self.org_1.admin_users.add(self.user)
         url = reverse('event-list')
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
-        data = minimal_event_dict(self.system_data_source, self.org_1, location_id)
+        data = self.make_minimal_event_dict(self.system_data_source, self.org_1, location_id)
 
         self.client.force_authenticate(self.user)
         response = self.client.post(url, data, format='json')
@@ -398,7 +427,7 @@ class TestEventAPI(APITestCase):
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
 
         url = reverse('event-detail', kwargs={'pk': self.event_1.id})
-        data = minimal_event_dict(self.system_data_source, self.org_1, location_id)
+        data = self.make_minimal_event_dict(self.system_data_source, self.org_1, location_id)
         data['publication_status'] = 'public'
         self.client.force_authenticate(self.user)
         response = self.client.put(url, data, format='json')
@@ -437,7 +466,7 @@ class TestEventAPI(APITestCase):
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
 
         url = reverse('event-detail', kwargs={'pk': self.event_3.id})
-        data = minimal_event_dict(self.system_data_source, self.org_3, location_id)
+        data = self.make_minimal_event_dict(self.system_data_source, self.org_3, location_id)
         data['publication_status'] = 'public'
         self.client.force_authenticate(self.user)
         response = self.client.put(url, data, format='json')
@@ -465,7 +494,7 @@ class TestEventAPI(APITestCase):
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
 
         url = reverse('event-detail', kwargs={'pk': self.event_5.id})
-        data = minimal_event_dict(self.system_data_source, self.org_4, location_id)
+        data = self.make_minimal_event_dict(self.system_data_source, self.org_4, location_id)
         data['publication_status'] = 'public'
         self.client.force_authenticate(self.user)
         response = self.client.put(url, data, format='json')
@@ -481,7 +510,7 @@ class TestEventAPI(APITestCase):
         self.org_1.admin_users.add(self.user)
         url = reverse('event-list')
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
-        data_1 = minimal_event_dict(self.system_data_source, self.org_1, location_id)
+        data_1 = self.make_minimal_event_dict(self.system_data_source, self.org_1, location_id)
         data_1['name']['fi'] = 'event-data-1'
         data_1['publication_status'] = 'public'
         data_2 = deepcopy(data_1)
@@ -499,7 +528,7 @@ class TestEventAPI(APITestCase):
         self.org_1.admin_users.add(self.user)
         url = reverse('event-list')
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
-        data_1 = minimal_event_dict(self.system_data_source, self.org_1, location_id)
+        data_1 = self.make_minimal_event_dict(self.system_data_source, self.org_1, location_id)
         data_1['id'] = self.event_1.id  # own event
         data_1['name']['fi'] = 'event-1-changed'
         data_2 = deepcopy(data_1)
@@ -529,7 +558,7 @@ class TestEventAPI(APITestCase):
         url = reverse('event-list')
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
         # here, we are trying to use a non-system data source NOT owned by org
-        data = complex_event_dict(self.editable_data_source, self.org_5, location_id, languages())
+        data = self.make_complex_event_dict(self.editable_data_source, self.org_5, location_id, self.languages)
 
         self.client.force_authenticate(self.user)
         response = self.client.post(url, data, format='json')
@@ -540,7 +569,7 @@ class TestEventAPI(APITestCase):
         url = reverse('event-list')
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
         # here, we are trying to use a non-system data source owned by org to POST as user
-        data = complex_event_dict(self.editable_data_source, self.org_1, location_id, languages())
+        data = self.make_complex_event_dict(self.editable_data_source, self.org_1, location_id, self.languages)
 
         self.client.force_authenticate(self.user)
         response = self.client.post(url, data, format='json')
@@ -550,7 +579,7 @@ class TestEventAPI(APITestCase):
         url = reverse('event-list')
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
         # here, we are trying to use a non-system data source owned by org to POST with api key
-        data = complex_event_dict(self.editable_data_source, self.org_1, location_id, languages())
+        data = self.make_complex_event_dict(self.editable_data_source, self.org_1, location_id, self.languages)
 
         self.client.credentials(apikey=self.editable_data_source.api_key)
         response = self.client.post(url, data, format='json')
@@ -561,7 +590,7 @@ class TestEventAPI(APITestCase):
         url = reverse('event-list')
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
         # here, the data source does not allow user edits
-        data = complex_event_dict(self.non_editable_data_source, self.org_1, location_id, languages())
+        data = self.make_complex_event_dict(self.non_editable_data_source, self.org_1, location_id, self.languages)
 
         self.client.force_authenticate(self.user)
         response = self.client.post(url, data, format='json')
@@ -571,7 +600,7 @@ class TestEventAPI(APITestCase):
         url = reverse('event-list')
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
         # here, the data source does not allow user edits, but it has api key
-        data = complex_event_dict(self.non_editable_data_source, self.org_1, location_id, languages())
+        data = self.make_complex_event_dict(self.non_editable_data_source, self.org_1, location_id, self.languages)
 
         self.client.credentials(apikey=self.non_editable_data_source.api_key)
         response = self.client.post(url, data, format='json')
@@ -583,7 +612,7 @@ class TestEventAPI(APITestCase):
 
         url = reverse('event-detail', kwargs={'pk': self.event_6.id})
         # here, we are trying to use a non-system data source NOT owned by org
-        data = complex_event_dict(self.editable_data_source, self.org_5, location_id, languages())
+        data = self.make_complex_event_dict(self.editable_data_source, self.org_5, location_id, self.languages)
         self.client.force_authenticate(self.user)
         response = self.client.put(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -597,7 +626,7 @@ class TestEventAPI(APITestCase):
 
         url = reverse('event-detail', kwargs={'pk': self.event_1.id})
         # here, we are trying to use a non-system data source that IS owned by org
-        data = complex_event_dict(self.editable_data_source, self.org_1, location_id, languages())
+        data = self.make_complex_event_dict(self.editable_data_source, self.org_1, location_id, self.languages)
         self.client.force_authenticate(self.user)
         response = self.client.put(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -611,7 +640,7 @@ class TestEventAPI(APITestCase):
 
         url = reverse('event-detail', kwargs={'pk': self.event_1.id})
         # here, we are just editing the event without changing the data source
-        data = complex_event_dict(self.system_data_source, self.org_1, location_id, languages())
+        data = self.make_complex_event_dict(self.system_data_source, self.org_1, location_id, self.languages)
         self.client.force_authenticate(self.user)
         response = self.client.put(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -625,7 +654,7 @@ class TestEventAPI(APITestCase):
 
         url = reverse('event-detail', kwargs={'pk': self.event_7.id})
         # here, we are just editing the event without changing the data source
-        data = complex_event_dict(self.editable_data_source, self.org_1, location_id, languages())
+        data = self.make_complex_event_dict(self.editable_data_source, self.org_1, location_id, self.languages)
         self.client.force_authenticate(self.user)
         response = self.client.put(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -639,7 +668,7 @@ class TestEventAPI(APITestCase):
 
         url = reverse('event-detail', kwargs={'pk': self.event_8.id})
         # here, we are just editing the event, but the data source does not allow user edits
-        data = complex_event_dict(self.non_editable_data_source, self.org_1, location_id, languages())
+        data = self.make_complex_event_dict(self.non_editable_data_source, self.org_1, location_id, self.languages)
         self.client.force_authenticate(self.user)
         response = self.client.put(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -652,7 +681,7 @@ class TestEventAPI(APITestCase):
 
         url = reverse('event-detail', kwargs={'pk': self.event_8.id})
         # here, the data source does not allow user edits, but it has api key
-        data = complex_event_dict(self.non_editable_data_source, self.org_1, location_id, languages())
+        data = self.make_complex_event_dict(self.non_editable_data_source, self.org_1, location_id, self.languages)
         self.client.credentials(apikey=self.non_editable_data_source.api_key)
         response = self.client.put(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -665,7 +694,7 @@ class TestEventAPI(APITestCase):
 
         url = reverse('event-list')
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
-        data = minimal_event_dict(self.system_data_source, self.org_1, location_id)
+        data = self.make_minimal_event_dict(self.system_data_source, self.org_1, location_id)
 
         self.client.force_authenticate(self.user)
         response = self.client.post(url, data, format='json')
@@ -676,7 +705,7 @@ class TestEventAPI(APITestCase):
 
         url = reverse('event-detail', kwargs={'pk': self.event_4.id})
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
-        data = minimal_event_dict(self.system_data_source, self.org_1, location_id)
+        data = self.make_minimal_event_dict(self.system_data_source, self.org_1, location_id)
 
         self.client.force_authenticate(self.user)
         response = self.client.put(url, data, format='json')
@@ -696,7 +725,7 @@ class TestEventAPI(APITestCase):
 
         url = reverse('event-list')
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
-        data = minimal_event_dict(self.system_data_source, self.org_1, location_id)
+        data = self.make_minimal_event_dict(self.system_data_source, self.org_1, location_id)
         data['publication_status'] = 'draft'
 
         self.client.force_authenticate(self.user)
@@ -712,7 +741,7 @@ class TestEventAPI(APITestCase):
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
 
         url = reverse('event-detail', kwargs={'pk': self.event_3.id})
-        data = minimal_event_dict(self.system_data_source, self.org_3, location_id)
+        data = self.make_minimal_event_dict(self.system_data_source, self.org_3, location_id)
         data['publication_status'] = 'draft'
         self.client.force_authenticate(self.user)
         response = self.client.put(url, data, format='json')
@@ -727,7 +756,7 @@ class TestEventAPI(APITestCase):
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
 
         url = reverse('event-detail', kwargs={'pk': self.event_3.id})
-        data = minimal_event_dict(self.system_data_source, self.org_3, location_id)
+        data = self.make_minimal_event_dict(self.system_data_source, self.org_3, location_id)
         data['publication_status'] = 'public'
         self.client.force_authenticate(self.user)
         response = self.client.put(url, data, format='json')
@@ -764,7 +793,7 @@ class TestEventAPI(APITestCase):
         self.org_1.regular_users.add(self.user)
         url = reverse('event-list')
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
-        data_1 = minimal_event_dict(self.system_data_source, self.org_1, location_id)
+        data_1 = self.make_minimal_event_dict(self.system_data_source, self.org_1, location_id)
         data_1['name']['fi'] = 'event-data-1'
         data_1['publication_status'] = 'public'
         data_2 = deepcopy(data_1)
@@ -788,7 +817,7 @@ class TestEventAPI(APITestCase):
         self.org_3.regular_users.add(self.user)
         url = reverse('event-list')
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
-        data_1 = minimal_event_dict(self.system_data_source, self.org_3, location_id)
+        data_1 = self.make_minimal_event_dict(self.system_data_source, self.org_3, location_id)
         data_1['id'] = self.event_3.id  # own event
         data_1['name']['fi'] = 'event-3-changed'
         data_1['publication_status'] = 'draft'

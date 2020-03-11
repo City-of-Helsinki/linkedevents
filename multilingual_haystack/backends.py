@@ -3,6 +3,7 @@ from django.conf import settings
 from django.utils import translation
 from haystack import connections
 from haystack.backends import BaseEngine, BaseSearchBackend, BaseSearchQuery
+from haystack.backends.simple_backend import SimpleEngine, SimpleSearchBackend
 from haystack.utils.loading import load_backend
 
 
@@ -80,3 +81,18 @@ class LanguageSearchEngine(BaseEngine):
         self.query = base_engine.query
 
         super(LanguageSearchEngine, self).__init__(**kwargs)
+
+
+class SimpleSearchBackendWithoutWarnings(SimpleSearchBackend):
+    def update(self, indexer, iterable, commit=True):
+        pass
+
+    def remove(self, obj, commit=True):
+        pass
+
+    def clear(self, models=None, commit=True):
+        pass
+
+
+class SimpleEngineWithoutWarnings(SimpleEngine):
+    backend = SimpleSearchBackendWithoutWarnings

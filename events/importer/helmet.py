@@ -29,15 +29,15 @@ YSO_KEYWORD_MAPS = {
     u'Lapset': u'p4354',
     u'Kirjastot': u'p2787',
     u'Opiskelijat': u'p16486',
-    u'Konsertit ja klubit': (u'p11185', u'p20421'),  # -> konsertit, musiikkiklubit
+    u'Konsertit ja klubit': (u'p11185', u'p20421', u'p360'),  # -> konsertit, musiikkiklubit, kulttuuritapahtumat
     u'Kurssit': u'p9270',
     u'venäjä': u'p7643',  # -> venäjän kieli
-    u'Seniorit': u'p2434',  # -> vanhukset
+    u'Seniorit': u'p2433',  # -> vanhukset
     u'Näyttelyt': u'p5121',
     u'Toivoa kirjallisuudesta': u'p8113',  # -> kirjallisuus
     u'Suomi 100': u'p29385',  # -> Suomi 100 vuotta -juhlavuosi
     u'Kirjallisuus': u'p8113',
-    u'Kielikahvilat ja keskusteluryhmät': (u'p18105', u'p556'),  # -> keskusteluryhmät
+    u'Kielikahvilat ja keskusteluryhmät': (u'p14004', u'p556'),  # -> keskustelu, kieli ja kielet
     u'Maahanmuuttajat': u'p6165',
     u'Opastukset ja kurssit': (u'p2149', u'p9270'),  # -> opastus, kurssit
     u'Nuoret': u'p11617',
@@ -45,8 +45,8 @@ YSO_KEYWORD_MAPS = {
     u'Satutunnit': u'p14710',
     u'Koululaiset': u'p16485',
     u'Lasten ja nuorten tapahtumat': (u'p4354', u'p11617'),  # -> lapset, nuoret
-    u'Lapset ja perheet': (u'p4354', u'p4363'),  # -> lapset, perheet
-    u'Lukupiirit': u'p11406',  # -> lukeminen
+    u'Lapset ja perheet': (u'p4354', u'p13050'),  # -> lapset, lapsiperheet
+    u'Lukupiirit': (u'p11406', u'p14004'),  # -> lukeminen, keskustelu
     u'Musiikki': u'p1808',  # -> musiikki
     u'muut kielet': u'p556',  # -> kielet
 }
@@ -71,7 +71,7 @@ LOCATIONS = {
     u"Kauniaisten kirjasto": ((10799, 11301), 14432),
     u"Kirjasto 10": ((10800, 11303), 8286),
     u"Kirjasto Omena": ((10801, 11305), 15395),
-    u"Kirjasto Oodi": ((11895,), 51342),
+    u"Kirjasto Oodi": ((11893, 11895), 51342),
     u"Kivenlahden kirjasto": ((10803, 11309), 15334),
     u"Kaupunkiverstas": ((10804, 11311), 8145),  # former Kohtaamispaikka
     u"Koivukylän kirjasto": ((10805, 11313), 19572),
@@ -414,6 +414,15 @@ class HelmetImporter(Importer):
         # custom_fields only accepts strings
         event['custom_fields']['ExpiryDate'] = dt_parse(
             event_el['ExpiryDate']).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        # Add a default offer
+        free_offer = {
+            'is_free': True,
+            'price': None,
+            'description': None,
+            'info_url': None,
+        }
+        event['offers'] = [free_offer]
 
         return event
 

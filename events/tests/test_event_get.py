@@ -5,9 +5,12 @@ from .utils import get, assert_fields_exist
 from events.models import (
     Event, PublicationStatus, Language
 )
-
+from django.contrib.gis.gdal import SpatialReference, CoordTransform
+from django.contrib.gis.geos import Point
+from django.conf import settings
 
 # === util methods ===
+
 
 def get_list(api_client, version='v1', data=None, query_string=None):
     url = reverse('event-list', version=version)
@@ -58,6 +61,7 @@ def assert_event_fields_exist(data, version='v1'):
         'super_event',
         'super_event_type',
         'videos',
+        'replaced_by',
     )
     if version == 'v0.1':
         fields += (
@@ -130,9 +134,90 @@ def test_get_event_list_verify_location_filter(api_client, place, event, event2)
 
 
 @pytest.mark.django_db
+def test_get_event_list_verify_bbox_filter(api_client, event, event2):
+    # API parameters must be provided in EPSG:4326 instead of the database SRS
+    left_bottom = Point(25, 25)
+    right_top = Point(75, 75)
+    ct = CoordTransform(SpatialReference(settings.PROJECTION_SRID), SpatialReference(4326))
+    left_bottom.transform(ct)
+    right_top.transform(ct)
+    bbox_string = f"{left_bottom.x},{left_bottom.y},{right_top.x},{right_top.y}"
+    response = get_list(api_client, data={'bbox': bbox_string})
+    # this way we will catch any errors if the default SRS changes, breaking the API
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    assert event2.id not in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
 def test_get_event_list_verify_keyword_filter(api_client, keyword, event):
     event.keywords.add(keyword)
     response = get_list(api_client, data={'keyword': keyword.id})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'keyword': 'unknown_keyword'})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
+def test_get_event_list_verify_keyword_or_filter(api_client, keyword, event):
+    # "keyword_OR" filter should be the same as "keyword" filter
+    event.keywords.add(keyword)
+    response = get_list(api_client, data={'keyword_OR': keyword.id})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'keyword_OR': 'unknown_keyword'})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
+def test_get_event_list_verify_combine_keyword_and_keyword_or(api_client, keyword, keyword2, event, event2):
+    # If "keyword" and "keyword_OR" are both present "AND" them together
+    event.keywords.add(keyword, keyword2)
+    event2.keywords.add(keyword2)
+    response = get_list(api_client, data={'keyword': keyword.id, 'keyword_OR': keyword2.id})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    assert event2.id not in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
+def test_get_event_list_verify_keyword_and(api_client, keyword, keyword2, event, event2):
+    event.keywords.add(keyword)
+    event2.keywords.add(keyword, keyword2)
+    response = get_list(api_client, data={'keyword_AND': ','.join([keyword.id, keyword2.id])})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+    assert event2.id in [entry['id'] for entry in response.data['data']]
+
+    event2.keywords.remove(keyword2)
+    event2.audience.add(keyword2)
+    response = get_list(api_client, data={'keyword_AND': ','.join([keyword.id, keyword2.id])})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+    assert event2.id in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
+def test_get_event_list_verify_keyword_negative_filter(api_client, keyword, keyword2, event, event2):
+    event.keywords.set([keyword])
+    event2.keywords.set([keyword2])
+    response = get_list(api_client, data={'keyword!': keyword.id})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+    assert event2.id in [entry['id'] for entry in response.data['data']]
+
+    response = get_list(api_client, data={'keyword!': ','.join([keyword.id, keyword2.id])})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+    assert event2.id not in [entry['id'] for entry in response.data['data']]
+
+    event.keywords.set([])
+    event.audience.set([keyword])
+    response = get_list(api_client, data={'keyword!': keyword.id})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
+def test_get_event_list_verify_replaced_keyword_filter(api_client, keyword, keyword2, event):
+    event.keywords.add(keyword2)
+    keyword.replaced_by = keyword2
+    keyword.deleted = True
+    keyword.save()
+    response = get_list(api_client, data={'keyword': keyword.id})
+    # if we asked for a replaced keyword, return events with the current keyword instead
     assert event.id in [entry['id'] for entry in response.data['data']]
     response = get_list(api_client, data={'keyword': 'unknown_keyword'})
     assert event.id not in [entry['id'] for entry in response.data['data']]
@@ -303,6 +388,21 @@ def test_event_list_filters(api_client, event, event2):
 
 
 @pytest.mark.django_db
+def test_event_list_publisher_ancestor_filter(api_client, event, event2, organization, organization2, organization3):
+    organization2.parent = organization
+    organization2.save()
+    event.publisher = organization2
+    event.save()
+    event2.publisher = organization3
+    event2.save()
+    response = get_list(api_client, query_string=f'publisher_ancestor={organization.id}')
+    data = response.data['data']
+    assert(len(data) == 1)
+    ids = [e['id'] for e in data]
+    assert event.id in ids
+
+
+@pytest.mark.django_db
 def test_publication_status_filter(api_client, event, event2, user, organization, data_source):
     event.publication_status = PublicationStatus.PUBLIC
     event.save()
@@ -341,3 +441,60 @@ def test_admin_user_filter(api_client, event, event2, user):
     ids = {e['id'] for e in response.data['data']}
     assert event.id in ids
     assert event2.id not in ids
+
+
+@pytest.mark.django_db
+def test_redirect_if_replaced(api_client, event, event2, user):
+    api_client.force_authenticate(user=user)
+
+    event.replaced_by = event2
+    event.save()
+
+    url = reverse('event-detail', version='v1', kwargs={'pk': event.pk})
+    response = api_client.get(url, format='json')
+    assert response.status_code == 301
+
+    response2 = api_client.get(response.url, format='json')
+    assert response2.status_code == 200
+    assert response2.data['id'] == event2.pk
+
+
+@pytest.mark.django_db
+def test_redirect_to_end_of_replace_chain(api_client, event, event2, event3, user):
+    api_client.force_authenticate(user=user)
+
+    event.replaced_by = event2
+    event.save()
+    event2.replaced_by = event3
+    event2.save()
+
+    url = reverse('event-detail', version='v1', kwargs={'pk': event.pk})
+    response = api_client.get(url, format='json')
+    assert response.status_code == 301
+
+    response2 = api_client.get(response.url, format='json')
+    assert response2.status_code == 200
+    assert response2.data['id'] == event3.pk
+
+
+@pytest.mark.django_db
+def test_event_list_show_deleted_param(api_client, event, user):
+    api_client.force_authenticate(user=user)
+
+    event.soft_delete()
+
+    response = get_list(api_client, query_string='show_deleted=true')
+    assert response.status_code == 200
+    assert event.id in {e['id'] for e in response.data['data']}
+
+    expected_keys = ['id', 'name', 'last_modified_time', 'deleted', 'replaced_by']
+    event_data = next((e for e in response.data['data'] if e['id'] == event.id))
+    for key in event_data:
+        assert key in expected_keys
+    assert event_data['name']['fi'] == 'POISTETTU'
+    assert event_data['name']['sv'] == 'RADERAD'
+    assert event_data['name']['en'] == 'DELETED'
+
+    response = get_list(api_client)
+    assert response.status_code == 200
+    assert event.id not in {e['id'] for e in response.data['data']}

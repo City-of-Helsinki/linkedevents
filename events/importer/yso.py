@@ -29,7 +29,7 @@ YSO_DEPRECATED_MAPS = {
 KEYWORDS_TO_ADD_TO_AUDIENCE = [
     'p4354',
     'p11617',
-    'p2434',
+    'p2433',
     'p4363',
     'p6165',
     'p16485',
@@ -94,7 +94,7 @@ def deprecate_and_replace(graph, keyword):
                             "No replacement keyword was found in YSO. Please manually map the "
                             "keyword to a new keyword in YSO_DEPRECATED_MAPS." %
                             (str(keyword), str(keyword.events.all() | keyword.audience_events.all())))
-    return keyword.deprecate()
+    return keyword.deprecate() and keyword.replace(new_keyword)
 
 
 @register_importer

@@ -109,7 +109,10 @@ def parse_time(time_str, is_start):
             dt = dt.astimezone(local_tz)
             dt = dt.replace(hour=0, minute=0, second=0, microsecond=0)
             is_exact = False
-    if dt:
+        if time_str.lower() == 'now':
+            dt = datetime.utcnow()
+            is_exact = True
+    if dt and not is_exact:
         # With start timestamps, we treat dates as beginning
         # at midnight the same day. End timestamps are taken to
         # mean midnight on the following day.
@@ -119,6 +122,9 @@ def parse_time(time_str, is_start):
         try:
             # Handle all other times through dateutil.
             dt = dateutil_parse(time_str)
+            # Dateutil may allow dates with too large negative tzoffset, crashing psycopg later
+            if abs(dt.tzinfo.utcoffset(dt)) > timedelta(hours=15):
+                raise ParseError(f'Time zone given in timestamp {dt} out of bounds.')
         except (TypeError, ValueError):
             raise ParseError('time in invalid format (try ISO 8601 or yyyy-mm-dd)')
     return dt, is_exact
@@ -131,3 +137,11 @@ def get_fixed_lang_codes():
         lang_code = lang_code.replace('-', '_')  # to handle complex codes like e.g. zh-hans
         lang_codes.append(lang_code)
     return lang_codes
+
+
+def get_deleted_object_name():
+    return {
+        'fi': 'POISTETTU',
+        'sv': 'RADERAD',
+        'en': 'DELETED',
+    }

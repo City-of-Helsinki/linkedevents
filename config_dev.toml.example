@@ -90,7 +90,7 @@ ADMINS=admin@this.linkedevents.instance,another-admin@this.linkedevents
 # Cookie prefix is added to the every cookie set by linkedevents. These are
 # mostly used when accessing the internal Django admin site. This applies
 # to django session cookie and csrf cookie
-# Django setting: prepended to CSRF_COOKIE_NAME and SESSION_COOKIE_NAME 
+# Django setting: prepended to CSRF_COOKIE_NAME and SESSION_COOKIE_NAME
 COOKIE_PREFIX=ledev
 
 # Django INTERNAL_IPS setting allows some debugging aids for the addresses
@@ -128,6 +128,14 @@ MEDIA_URL=/media/
 # Django setting: STATIC_URL https://docs.djangoproject.com/en/2.2/ref/settings/#static-url
 STATIC_URL=/static/
 
+# Specifies that Django is to use `X-Forwarded-Host` as it would normally
+# use the `Host`-header. This is necessary when `Host`-header is used for
+# routing the requests in a network of reverse proxies. `X-Forwarded-Host`
+# is then used to carry the Host-header value supplied by the origin client.
+# This affects how ALLOWED_HOSTS behaves, as well.
+# Django setting: https://docs.djangoproject.com/en/2.2/ref/settings/#use-x-forwarded-host
+# USE_X_FORWARDED_HOST=False
+
 # Sentry is an error tracking sentry (sentry.io) that can be self hosted
 # or purchased as PaaS. SENTRY_DSN setting specifies the URL where reports
 # for this Linkedevents instance should be sent. You can find this in
@@ -137,3 +145,13 @@ STATIC_URL=/static/
 # Sentry environment is an optional tag that can be included in sentry
 # reports. It is used to separate deployments within Sentry UI
 SENTRY_ENVIRONMENT=local-development-unconfigured
+
+# Lippupiste has a private API for accessing event data. If you have
+# access to this API, enter your access URL here. Note that you will
+# very likely need to customize the importer as well.
+# LIPPUPISTE_EVENT_API_URL=https://your.lippupiste.url.here
+
+# Mailgun API credentials
+#MAIL_MAILGUN_KEY=key
+#MAIL_MAILGUN_DOMAIN=do.main.com
+#MAIL_MAILGUN_API=https://mail.gun.api/
