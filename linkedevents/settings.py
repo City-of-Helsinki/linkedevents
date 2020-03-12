@@ -74,6 +74,8 @@ env = environ.Env(
     AWS_MEDIA_STORAGE_BUCKET_NAME=(str, ''),
     AWS_MEDIA_DEFAULT_ACL=(str, None),
     AWS_MEDIA_S3_CUSTOM_DOMAIN=(str, ''),
+    # Enabling notifications requires that email has been configured
+    ENABLE_NOTIFICATIONS=(bool, False),
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -542,6 +544,8 @@ if 'SECRET_KEY' not in locals() or not SECRET_KEY:
             secret.close()
         except IOError:
             Exception('Please create a %s file with random characters to generate your secret key!' % secret_file)
+
+ENABLE_NOTIFICATIONS = env('ENABLE_NOTIFICATIONS')
 
 #
 # Anymail
