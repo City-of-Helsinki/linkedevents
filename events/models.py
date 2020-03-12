@@ -643,7 +643,10 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
         if old_location and self.location and old_location != self.location:
             Place.objects.filter(id__in=(old_location.id, self.location.id)).update(n_events_changed=True)
 
-        # send notifications
+        # Send notifications only if notifications are enabled
+        if not settings.ENABLE_NOTIFICATIONS:
+            return
+
         if old_publication_status == PublicationStatus.DRAFT and self.publication_status == PublicationStatus.PUBLIC:
             self.send_published_notification()
         if self.publication_status == PublicationStatus.DRAFT and (old_deleted is False and self.deleted is True):

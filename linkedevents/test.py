@@ -22,6 +22,8 @@ DATABASES = {
     'default': env.db()
 }
 
+ENABLE_NOTIFICATIONS = True
+
 
 def dummy_haystack_connection_without_warnings_for_lang(language_code):
     return {f'default-{language_code}': {
