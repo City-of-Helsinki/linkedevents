@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from copy import deepcopy
-from datetime import timedelta
+from datetime import datetime, timedelta
+from dateutil.parser import parse as dateutil_parse
 
 import pytest
 import pytz
@@ -47,6 +48,21 @@ def test__create_a_minimal_event_with_post(api_client,
                                            user):
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, minimal_event_dict)
+    assert_event_data_is_equal(minimal_event_dict, response.data)
+
+
+@pytest.mark.django_db
+def test__create_a_minimal_event_with_naive_datetime(api_client,
+                                                     minimal_event_dict,
+                                                     user):
+
+    api_client.force_authenticate(user=user)
+    minimal_event_dict['start_time'] = (datetime.now() + timedelta(days=1)).isoformat()
+    response = create_with_post(api_client, minimal_event_dict)
+
+    # API should have assumed UTC datetime
+    minimal_event_dict['start_time'] = pytz.utc.localize(dateutil_parse(minimal_event_dict['start_time'])).\
+        isoformat().replace('+00:00', 'Z')
     assert_event_data_is_equal(minimal_event_dict, response.data)
 
 

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-from datetime import timedelta
+from datetime import datetime, timedelta
 from copy import deepcopy
+from dateutil.parser import parse as dateutil_parse
 
 import pytz
 from django.utils import timezone
@@ -27,6 +28,7 @@ def update_with_put(api_client, event_id, event_data, credentials=None):
 
 
 # === tests ===
+
 
 @pytest.mark.django_db
 def test__update_a_draft_with_put(api_client, minimal_event_dict, user):
@@ -228,6 +230,28 @@ def test__update_an_event_with_put(api_client, complex_event_dict, user):
     # store updates
     event_id = data2.pop('@id')
     response2 = update_with_put(api_client, event_id, data2)
+
+    # assert
+    assert_event_data_is_equal(data2, response2.data)
+
+
+@pytest.mark.django_db
+def test__update_an_event_with_naive_datetime(api_client, minimal_event_dict, user):
+
+    # create an event
+    api_client.force_authenticate(user=user)
+    response = create_with_post(api_client, minimal_event_dict)
+    assert_event_data_is_equal(minimal_event_dict, response.data)
+    data2 = response.data
+
+    # store updates
+    event_id = data2.pop('@id')
+    data2['start_time'] = (datetime.now() + timedelta(days=1)).isoformat()
+    response2 = update_with_put(api_client, event_id, data2)
+
+    # API should have assumed UTC datetime
+    data2['start_time'] = pytz.utc.localize(dateutil_parse(data2['start_time'])).isoformat().replace('+00:00', 'Z')
+    data2['event_status'] = 'EventRescheduled'
 
     # assert
     assert_event_data_is_equal(data2, response2.data)
