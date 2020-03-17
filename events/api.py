@@ -565,15 +565,17 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
             if value != self.data_source:
                 # the event might be from another data source, and we are only editing it
                 # instance edit permission has already been checked, data source may not be changed
-                if self.instance and value == self.instance.data_source:
+                # in bulk operations, instance may be queryset. Only check single instances
+                if self.instance and hasattr(self.instance, 'data_source') and value == self.instance.data_source:
                     return value
                 # if we are creating, there's no excuse to have any other data source than the request gave
-                raise DRFPermissionDenied(
-                    {'data_source': _(
-                        "Setting data_source to %(given)s " +
-                        " is not allowed for this user. The data_source"
-                        " must be left blank or set to %(required)s ") %
-                        {'given': str(value), 'required': self.data_source}})
+                if hasattr(self.instance, 'data_source'):
+                    raise DRFPermissionDenied(
+                        {'data_source': _(
+                            "Setting data_source to %(given)s " +
+                            " is not allowed for this user. The data_source"
+                            " must be left blank or set to %(required)s ") %
+                            {'given': str(value), 'required': self.data_source}})
         return value
 
     def validate_publisher(self, value):

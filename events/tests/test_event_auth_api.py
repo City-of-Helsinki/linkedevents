@@ -202,7 +202,7 @@ class TestEventAPI(APITestCase):
         self.client.force_authenticate(self.user)
         url = reverse('event-list')
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
-        data = self.make_minimal_event_dict(self.system_data_source, self.org_1, location_id)
+        data = self.make_complex_event_dict(self.system_data_source, self.org_1, location_id, self.languages)
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
@@ -357,7 +357,7 @@ class TestEventAPI(APITestCase):
     def test_random_user_bulk_create(self):
         url = reverse('event-list')
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
-        data_1 = self.make_minimal_event_dict(self.system_data_source, self.org_1, location_id)
+        data_1 = self.make_complex_event_dict(self.system_data_source, self.org_1, location_id, self.languages)
         data_1['name']['fi'] = 'event-data-1'
         data_2 = deepcopy(data_1)
         data_2['name']['fi'] = 'event-data-2'
@@ -369,7 +369,7 @@ class TestEventAPI(APITestCase):
     def test_random_user_bulk_update(self):
         url = reverse('event-list')
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
-        data = self.make_minimal_event_dict(self.system_data_source, self.org_1, location_id)
+        data = self.make_complex_event_dict(self.system_data_source, self.org_1, location_id, self.languages)
 
         self.client.force_authenticate(self.user)
         response = self.client.put(url, [data], format='json')
@@ -413,7 +413,7 @@ class TestEventAPI(APITestCase):
         self.org_1.admin_users.add(self.user)
         url = reverse('event-list')
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
-        data = self.make_minimal_event_dict(self.system_data_source, self.org_1, location_id)
+        data = self.make_complex_event_dict(self.system_data_source, self.org_1, location_id, self.languages)
 
         self.client.force_authenticate(self.user)
         response = self.client.post(url, data, format='json')
@@ -427,7 +427,7 @@ class TestEventAPI(APITestCase):
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
 
         url = reverse('event-detail', kwargs={'pk': self.event_1.id})
-        data = self.make_minimal_event_dict(self.system_data_source, self.org_1, location_id)
+        data = self.make_complex_event_dict(self.system_data_source, self.org_1, location_id, self.languages)
         data['publication_status'] = 'public'
         self.client.force_authenticate(self.user)
         response = self.client.put(url, data, format='json')
@@ -466,7 +466,7 @@ class TestEventAPI(APITestCase):
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
 
         url = reverse('event-detail', kwargs={'pk': self.event_3.id})
-        data = self.make_minimal_event_dict(self.system_data_source, self.org_3, location_id)
+        data = self.make_complex_event_dict(self.system_data_source, self.org_3, location_id, self.languages)
         data['publication_status'] = 'public'
         self.client.force_authenticate(self.user)
         response = self.client.put(url, data, format='json')
@@ -494,7 +494,7 @@ class TestEventAPI(APITestCase):
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
 
         url = reverse('event-detail', kwargs={'pk': self.event_5.id})
-        data = self.make_minimal_event_dict(self.system_data_source, self.org_4, location_id)
+        data = self.make_complex_event_dict(self.system_data_source, self.org_4, location_id, self.languages)
         data['publication_status'] = 'public'
         self.client.force_authenticate(self.user)
         response = self.client.put(url, data, format='json')
@@ -510,7 +510,7 @@ class TestEventAPI(APITestCase):
         self.org_1.admin_users.add(self.user)
         url = reverse('event-list')
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
-        data_1 = self.make_minimal_event_dict(self.system_data_source, self.org_1, location_id)
+        data_1 = self.make_complex_event_dict(self.system_data_source, self.org_1, location_id, self.languages)
         data_1['name']['fi'] = 'event-data-1'
         data_1['publication_status'] = 'public'
         data_2 = deepcopy(data_1)
@@ -528,7 +528,7 @@ class TestEventAPI(APITestCase):
         self.org_1.admin_users.add(self.user)
         url = reverse('event-list')
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
-        data_1 = self.make_minimal_event_dict(self.system_data_source, self.org_1, location_id)
+        data_1 = self.make_complex_event_dict(self.system_data_source, self.org_1, location_id, self.languages)
         data_1['id'] = self.event_1.id  # own event
         data_1['name']['fi'] = 'event-1-changed'
         data_2 = deepcopy(data_1)
@@ -725,7 +725,7 @@ class TestEventAPI(APITestCase):
 
         url = reverse('event-list')
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
-        data = self.make_minimal_event_dict(self.system_data_source, self.org_1, location_id)
+        data = self.make_complex_event_dict(self.system_data_source, self.org_1, location_id, self.languages)
         data['publication_status'] = 'draft'
 
         self.client.force_authenticate(self.user)
@@ -741,7 +741,7 @@ class TestEventAPI(APITestCase):
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
 
         url = reverse('event-detail', kwargs={'pk': self.event_3.id})
-        data = self.make_minimal_event_dict(self.system_data_source, self.org_3, location_id)
+        data = self.make_complex_event_dict(self.system_data_source, self.org_3, location_id, self.languages)
         data['publication_status'] = 'draft'
         self.client.force_authenticate(self.user)
         response = self.client.put(url, data, format='json')
@@ -793,7 +793,7 @@ class TestEventAPI(APITestCase):
         self.org_1.regular_users.add(self.user)
         url = reverse('event-list')
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
-        data_1 = self.make_minimal_event_dict(self.system_data_source, self.org_1, location_id)
+        data_1 = self.make_complex_event_dict(self.system_data_source, self.org_1, location_id, self.languages)
         data_1['name']['fi'] = 'event-data-1'
         data_1['publication_status'] = 'public'
         data_2 = deepcopy(data_1)
@@ -817,7 +817,7 @@ class TestEventAPI(APITestCase):
         self.org_3.regular_users.add(self.user)
         url = reverse('event-list')
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
-        data_1 = self.make_minimal_event_dict(self.system_data_source, self.org_3, location_id)
+        data_1 = self.make_complex_event_dict(self.system_data_source, self.org_3, location_id, self.languages)
         data_1['id'] = self.event_3.id  # own event
         data_1['name']['fi'] = 'event-3-changed'
         data_1['publication_status'] = 'draft'
