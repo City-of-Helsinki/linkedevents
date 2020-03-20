@@ -490,7 +490,7 @@ def test_multiple_event_creation(api_client, minimal_event_dict, user):
 
 
 @pytest.mark.django_db
-def test_multiple_event_creation_second_fails(api_client, minimal_event_dict, user):
+def test_multiple_event_creation_missing_data_fails(api_client, minimal_event_dict, user):
     api_client.force_authenticate(user)
     minimal_event_dict_2 = deepcopy(minimal_event_dict)
     minimal_event_dict_2.pop('name')  # name is required, so the event update event should fail
@@ -498,6 +498,20 @@ def test_multiple_event_creation_second_fails(api_client, minimal_event_dict, us
     response = api_client.post(reverse('event-list'), [minimal_event_dict, minimal_event_dict_2], format='json')
     assert response.status_code == 400
     assert 'name' in response.data[1]
+
+    # the first event should not be created either
+    assert Event.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_multiple_event_creation_non_allowed_data_fails(api_client, minimal_event_dict, other_data_source, user):
+    api_client.force_authenticate(user)
+    minimal_event_dict_2 = deepcopy(minimal_event_dict)
+    minimal_event_dict_2['data_source'] = other_data_source.id  # non-allowed data source
+
+    response = api_client.post(reverse('event-list'), [minimal_event_dict, minimal_event_dict_2], format='json')
+    assert response.status_code == 403
+    assert 'data_source' in response.data
 
     # the first event should not be created either
     assert Event.objects.count() == 0

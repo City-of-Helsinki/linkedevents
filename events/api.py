@@ -45,7 +45,7 @@ from munigeo.api import (
     GeoModelSerializer, GeoModelAPIView, build_bbox_filter, srid_to_srs
 )
 from munigeo.models import AdministrativeDivision
-from rest_framework_bulk import BulkListSerializer, BulkModelViewSet
+from rest_framework_bulk import BulkListSerializer, BulkModelViewSet, BulkSerializerMixin
 import pytz
 import bleach
 import django_filters
@@ -495,7 +495,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         if not self.publisher:
             raise PermissionDenied(_("User doesn't belong to any organization"))
         # in case of bulk operations, the instance may be a huge queryset, already filtered by permission
-        # therefore, we only do permission checks at the single instance level
+        # therefore, we only do permission checks for single instances
         if not isinstance(instance, QuerySet) and instance:
             # check permissions *before* validation
             if isinstance(self.user, ApiKeyUser):
@@ -561,26 +561,34 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         return ret
 
     def validate_data_source(self, value):
-        if value:
+        # a single POST always comes from a single source
+        if value and self.method == 'POST':
             if value != self.data_source:
-                # the event might be from another data source, and we are only editing it
-                # instance edit permission has already been checked, data source may not be changed
-                # in bulk operations, instance may be queryset. Only check single instances
-                if self.instance and hasattr(self.instance, 'data_source') and value == self.instance.data_source:
-                    return value
+                raise DRFPermissionDenied(
+                    {'data_source': _(
+                        "Setting data_source to %(given)s " +
+                        " is not allowed for this user. The data_source"
+                        " must be left blank or set to %(required)s ") %
+                        {'given': str(value), 'required': self.data_source}})
+        return value
+
+    def validate_id(self, value):
+        # a single POST always comes from a single source
+        if value and self.method == 'POST':
+            id_data_source_prefix = value.split(':', 1)[0]
+            if not id_data_source_prefix == self.data_source.id:
                 # if we are creating, there's no excuse to have any other data source than the request gave
-                if hasattr(self.instance, 'data_source'):
-                    raise DRFPermissionDenied(
-                        {'data_source': _(
-                            "Setting data_source to %(given)s " +
-                            " is not allowed for this user. The data_source"
-                            " must be left blank or set to %(required)s ") %
-                            {'given': str(value), 'required': self.data_source}})
+                raise serializers.ValidationError(
+                    {'id': _(
+                        "Setting id to %(given)s " +
+                        " is not allowed for your organization. The id"
+                        " must be left blank or set to %(data_source)s:desired_id") %
+                        {'given': str(value), 'data_source': self.data_source}})
         return value
 
     def validate_publisher(self, value):
-        if value:
-            # user might be admin *or* regular user
+        # a single POST always comes from a single source
+        if value and self.method == 'POST':
             if value not in (set(self.user.get_admin_organizations_and_descendants())
                              | set(map(lambda x: getattr(x, 'replaced_by'),
                                    self.user.get_admin_organizations_and_descendants()))
@@ -599,7 +607,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                                          else self.publisher.replaced_by)}})
             if value.replaced_by:
                 # for replaced organizations, we automatically update to the current organization
-                # even if the POST/PUT uses the old id
+                # even if the POST uses the old id
                 return value.replaced_by
         return value
 
@@ -623,11 +631,10 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
     def create(self, validated_data):
         if 'data_source' not in validated_data:
             validated_data['data_source'] = self.data_source
-        # events may never be *created* with a spoofed data source
-        if not validated_data['data_source'] == self.data_source:
-            raise PermissionDenied()
+        # data source has already been validated
         if 'publisher' not in validated_data:
             validated_data['publisher'] = self.publisher
+        # publisher has already been validated
         validated_data['created_by'] = self.user
         validated_data['last_modified_by'] = self.user
         try:
@@ -649,6 +656,11 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
             if validated_data['publisher'] not in (instance.publisher, instance.publisher.replaced_by):
                 raise serializers.ValidationError(
                     {'publisher': _("You may not change the publisher of an existing object.")}
+                    )
+        if 'data_source' in validated_data:
+            if instance.data_source != validated_data['data_source']:
+                raise serializers.ValidationError(
+                    {'data_source': _("You may not change the data source of an existing object.")}
                     )
         super().update(instance, validated_data)
         return instance
@@ -1171,7 +1183,7 @@ class VideoSerializer(serializers.ModelSerializer):
         exclude = ['id', 'event']
 
 
-class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
+class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIView):
     id = serializers.CharField(required=False)
     location = JSONLDRelatedField(serializer=PlaceSerializer, required=False,
                                   view_name='place-detail', queryset=Place.objects.all())
@@ -1244,22 +1256,6 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
         data = super().to_internal_value(data)
         return data
-
-    def validate_id(self, value):
-        if value:
-            id_data_source_prefix = value.split(':', 1)[0]
-            if not id_data_source_prefix == self.data_source.id:
-                # the event might be from another data source by the same organization, and we are only editing it
-                if self.instance:
-                    if self.publisher.owned_systems.filter(id=id_data_source_prefix).exists():
-                        return value
-                raise serializers.ValidationError(
-                    {'id': _(
-                        "Setting id to %(given)s " +
-                        " is not allowed for your organization. The id"
-                        " must be left blank or set to %(data_source)s:desired_id") %
-                        {'given': str(value), 'data_source': self.data_source}})
-        return value
 
     def validate(self, data):
         # clean all text fields, only description may contain any html

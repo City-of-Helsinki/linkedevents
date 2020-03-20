@@ -618,7 +618,7 @@ def test_multiple_event_update_with_incorrect_json(api_client, minimal_event_dic
 
 
 @pytest.mark.django_db
-def test_multiple_event_update_second_fails(api_client, minimal_event_dict, user):
+def test_multiple_event_update_missing_data_fails(api_client, minimal_event_dict, user):
     api_client.force_authenticate(user)
     minimal_event_dict_2 = deepcopy(minimal_event_dict)
     minimal_event_dict_2['name']['fi'] = 'testaus_2'
@@ -635,6 +635,32 @@ def test_multiple_event_update_second_fails(api_client, minimal_event_dict, user
     response = api_client.put(reverse('event-list'), [minimal_event_dict, minimal_event_dict_2], format='json')
     assert response.status_code == 400
     assert 'name' in response.data[1]
+
+    event_names = set(Event.objects.values_list('name_fi', flat=True))
+
+    # verify that first event isn't updated either
+    assert event_names == {'testaus', 'testaus_2'}
+
+
+@pytest.mark.django_db
+def test_multiple_event_update_non_allowed_data_fails(api_client, minimal_event_dict, other_data_source, user):
+    api_client.force_authenticate(user)
+    minimal_event_dict_2 = deepcopy(minimal_event_dict)
+    minimal_event_dict_2['name']['fi'] = 'testaus_2'
+
+    # create events first
+    resp = create_with_post(api_client, minimal_event_dict)
+    minimal_event_dict['id'] = resp.data['id']
+    resp = create_with_post(api_client, minimal_event_dict_2)
+    minimal_event_dict_2['id'] = resp.data['id']
+
+    minimal_event_dict['name']['fi'] = 'updated_name'
+    minimal_event_dict_2['data_source'] = other_data_source.id  # data source not allowed
+
+    response = api_client.put(reverse('event-list'), [minimal_event_dict, minimal_event_dict_2], format='json')
+    print(response.data)
+    assert response.status_code == 400
+    assert 'data_source' in response.data
 
     event_names = set(Event.objects.values_list('name_fi', flat=True))
 
