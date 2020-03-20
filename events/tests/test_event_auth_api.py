@@ -8,7 +8,6 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 import pytest
 
-from django.conf import settings
 from .utils import versioned_reverse as reverse
 from ..models import DataSource, Event, Place, PublicationStatus
 
