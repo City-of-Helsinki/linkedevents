@@ -45,7 +45,7 @@ from munigeo.api import (
     GeoModelSerializer, GeoModelAPIView, build_bbox_filter, srid_to_srs
 )
 from munigeo.models import AdministrativeDivision
-from rest_framework_bulk import BulkListSerializer, BulkModelViewSet
+from rest_framework_bulk import BulkListSerializer, BulkModelViewSet, BulkSerializerMixin
 import pytz
 import bleach
 import django_filters
@@ -495,7 +495,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         if not self.publisher:
             raise PermissionDenied(_("User doesn't belong to any organization"))
         # in case of bulk operations, the instance may be a huge queryset, already filtered by permission
-        # therefore, we only do permission checks at the single instance level
+        # therefore, we only do permission checks for single instances
         if not isinstance(instance, QuerySet) and instance:
             # check permissions *before* validation
             if isinstance(self.user, ApiKeyUser):
@@ -561,13 +561,9 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         return ret
 
     def validate_data_source(self, value):
-        if value:
+        # a single POST always comes from a single source
+        if value and self.method == 'POST':
             if value != self.data_source:
-                # the event might be from another data source, and we are only editing it
-                # instance edit permission has already been checked, data source may not be changed
-                if self.instance and value == self.instance.data_source:
-                    return value
-                # if we are creating, there's no excuse to have any other data source than the request gave
                 raise DRFPermissionDenied(
                     {'data_source': _(
                         "Setting data_source to %(given)s " +
@@ -576,9 +572,23 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                         {'given': str(value), 'required': self.data_source}})
         return value
 
+    def validate_id(self, value):
+        # a single POST always comes from a single source
+        if value and self.method == 'POST':
+            id_data_source_prefix = value.split(':', 1)[0]
+            if not id_data_source_prefix == self.data_source.id:
+                # if we are creating, there's no excuse to have any other data source than the request gave
+                raise serializers.ValidationError(
+                    {'id': _(
+                        "Setting id to %(given)s " +
+                        " is not allowed for your organization. The id"
+                        " must be left blank or set to %(data_source)s:desired_id") %
+                        {'given': str(value), 'data_source': self.data_source}})
+        return value
+
     def validate_publisher(self, value):
-        if value:
-            # user might be admin *or* regular user
+        # a single POST always comes from a single source
+        if value and self.method == 'POST':
             if value not in (set(self.user.get_admin_organizations_and_descendants())
                              | set(map(lambda x: getattr(x, 'replaced_by'),
                                    self.user.get_admin_organizations_and_descendants()))
@@ -597,7 +607,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                                          else self.publisher.replaced_by)}})
             if value.replaced_by:
                 # for replaced organizations, we automatically update to the current organization
-                # even if the POST/PUT uses the old id
+                # even if the POST uses the old id
                 return value.replaced_by
         return value
 
@@ -621,11 +631,10 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
     def create(self, validated_data):
         if 'data_source' not in validated_data:
             validated_data['data_source'] = self.data_source
-        # events may never be *created* with a spoofed data source
-        if not validated_data['data_source'] == self.data_source:
-            raise PermissionDenied()
+        # data source has already been validated
         if 'publisher' not in validated_data:
             validated_data['publisher'] = self.publisher
+        # publisher has already been validated
         validated_data['created_by'] = self.user
         validated_data['last_modified_by'] = self.user
         try:
@@ -647,6 +656,11 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
             if validated_data['publisher'] not in (instance.publisher, instance.publisher.replaced_by):
                 raise serializers.ValidationError(
                     {'publisher': _("You may not change the publisher of an existing object.")}
+                    )
+        if 'data_source' in validated_data:
+            if instance.data_source != validated_data['data_source']:
+                raise serializers.ValidationError(
+                    {'data_source': _("You may not change the data source of an existing object.")}
                     )
         super().update(instance, validated_data)
         return instance
@@ -686,6 +700,11 @@ class JSONAPIViewMixin(object):
         ret = super().initial(request, *args, **kwargs)
         # if srid is not specified, this will yield munigeo default 4326
         self.srs = srid_to_srs(self.request.query_params.get('srid', None))
+        # check for NUL strings that crash psycopg2
+        for key, param in self.request.query_params.items():
+            if u'\x00' in param:
+                raise ParseError("A string literal cannot contain NUL (0x00) characters. "
+                                 "Please fix query parameter " + param)
         return ret
 
     def get_serializer_context(self):
@@ -735,7 +754,7 @@ class KeywordRetrieveViewSet(JSONAPIViewMixin, mixins.RetrieveModelMixin, viewse
 
 class KeywordListViewSet(JSONAPIViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = Keyword.objects.all()
-    queryset = queryset.select_related('publisher')
+    queryset = queryset.select_related('publisher').prefetch_related('alt_labels__name')
     serializer_class = KeywordSerializer
     filter_backends = (filters.OrderingFilter,)
     ordering_fields = ('n_events', 'id', 'name', 'data_source')
@@ -770,9 +789,9 @@ class KeywordListViewSet(JSONAPIViewMixin, mixins.ListModelMixin, viewsets.Gener
         # can be used e.g. with typeahead.js
         val = self.request.query_params.get('text') or self.request.query_params.get('filter')
         if val:
-            if u'\x00' in val:
-                raise ParseError("A string literal cannot contain NUL (0x00) characters.")
-            queryset = queryset.filter(_text_qset_by_translated_field('name', val))
+            # Also consider alternative labels to broaden the search!
+            qset = _text_qset_by_translated_field('name', val) | Q(alt_labels__name__icontains=val)
+            queryset = queryset.filter(qset).distinct()
         return queryset
 
 
@@ -957,8 +976,6 @@ class PlaceListViewSet(JSONAPIViewMixin, GeoModelAPIView,
         # match to street as well as name, to make it easier to find units by address
         val = self.request.query_params.get('text') or self.request.query_params.get('filter')
         if val:
-            if u'\x00' in val:
-                raise ParseError("A string literal cannot contain NUL (0x00) characters.")
             qset = _text_qset_by_translated_field('name', val) | _text_qset_by_translated_field('street_address', val)
             queryset = queryset.filter(qset)
         return queryset
@@ -1166,12 +1183,12 @@ class VideoSerializer(serializers.ModelSerializer):
         exclude = ['id', 'event']
 
 
-class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
+class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIView):
     id = serializers.CharField(required=False)
-    location = JSONLDRelatedField(serializer=PlaceSerializer, required=False,
+    location = JSONLDRelatedField(serializer=PlaceSerializer, required=False, allow_null=True,
                                   view_name='place-detail', queryset=Place.objects.all())
     # provider = OrganizationSerializer(hide_ld_context=True)
-    keywords = JSONLDRelatedField(serializer=KeywordSerializer, many=True, allow_empty=False,
+    keywords = JSONLDRelatedField(serializer=KeywordSerializer, many=True, allow_empty=True,
                                   required=False,
                                   view_name='keyword-detail', queryset=Keyword.objects.filter(deprecated=False))
     super_event = JSONLDRelatedField(serializer='EventSerializer', required=False, view_name='event-detail',
@@ -1226,35 +1243,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
     def to_internal_value(self, data):
         data = self.parse_datetimes(data)
-
-        # If the obligatory fields are null or empty, remove them to prevent to_internal_value from checking them.
-        # Only for drafts, because null start time of a PUBLIC event will indicate POSTPONED, and other fields must
-        # be present for public events.
-
-        if data.get('publication_status') == 'draft':
-            # the obligatory (optional for draft) fields cannot be null and must be removed
-            for field in self.fields_needed_to_publish:
-                if not data.get(field):
-                    data.pop(field, None)
-
         data = super().to_internal_value(data)
         return data
-
-    def validate_id(self, value):
-        if value:
-            id_data_source_prefix = value.split(':', 1)[0]
-            if not id_data_source_prefix == self.data_source.id:
-                # the event might be from another data source by the same organization, and we are only editing it
-                if self.instance:
-                    if self.publisher.owned_systems.filter(id=id_data_source_prefix).exists():
-                        return value
-                raise serializers.ValidationError(
-                    {'id': _(
-                        "Setting id to %(given)s " +
-                        " is not allowed for your organization. The id"
-                        " must be left blank or set to %(data_source)s:desired_id") %
-                        {'given': str(value), 'data_source': self.data_source}})
-        return value
 
     def validate(self, data):
         # clean all text fields, only description may contain any html
@@ -1265,8 +1255,9 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         if 'publication_status' not in data:
             data['publication_status'] = PublicationStatus.PUBLIC
 
-        # if the event is a draft, no further validation is performed
-        if data['publication_status'] == PublicationStatus.DRAFT:
+        # if the event is a draft or cancelled, no further validation is performed
+        if (data['publication_status'] == PublicationStatus.DRAFT or
+                data.get('event_status', None) == Event.Status.CANCELLED):
             data = self.run_extension_validations(data)
             return data
 
@@ -1580,8 +1571,6 @@ def _filter_event_queryset(queryset, params, srs=None):
     val = params.get('text', None)
     if val:
         val = val.lower()
-        if u'\x00' in val:
-            raise ParseError("A string literal cannot contain NUL (0x00) characters.")
         # Free string search from all translated fields
         fields = EventTranslationOptions.fields
         qset = Q()
@@ -1620,7 +1609,8 @@ def _filter_event_queryset(queryset, params, srs=None):
 
     if start:
         dt = utils.parse_time(start, is_start=True)[0]
-        queryset = queryset.filter(Q(end_time__gt=dt) | Q(start_time__gte=dt))
+        # only return events with specified end times during the whole of the event, otherwise only future events
+        queryset = queryset.filter(Q(end_time__gt=dt, has_end_time=True) | Q(start_time__gte=dt))
 
     if end:
         dt = utils.parse_time(end, is_start=False)[0]
@@ -2145,8 +2135,6 @@ class SearchViewSet(JSONAPIViewMixin, GeoModelAPIView, viewsets.ViewSetMixin, ge
             raise ParseError("Supply search terms with 'q=' or autocomplete entry with 'input='")
         if input_val and q_val:
             raise ParseError("Supply either 'q' or 'input', not both")
-        if u'\x00' in q_val or u'\x00' in input_val:
-            raise ParseError("A string literal cannot contain NUL (0x00) characters.")
 
         old_language = translation.get_language()[:2]
         translation.activate(self.lang_code)

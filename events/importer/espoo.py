@@ -23,7 +23,7 @@ from pytz import timezone
 from .base import Importer, recur_dict, register_importer
 from .yso import KEYWORDS_TO_ADD_TO_AUDIENCE
 from .sync import ModelSyncher
-from .util import clean_text
+from .util import clean_text, clean_url
 
 # Per module logger
 logger = logging.getLogger(__name__)
@@ -216,14 +216,14 @@ def clean_street_address(address):
     }
 
 
-def clean_url(url):
+def find_url(url):
     """
-    Extract the url from the html tag if any or return the cleaned text.
+    Extract the url from the html tag if any, and return it cleaned if valid
     """
     matches = re.findall(r'href=["\'](.*?)["\']', url)
     if matches:
-        return matches[0]
-    return clean_text(url)
+        url = matches[0]
+    return clean_url(url)
 
 
 class APIBrokenError(Exception):
@@ -521,7 +521,7 @@ class EspooImporter(Importer):
                 offer['is_free'] = True
 
         if ext_props.get('TicketLinks', ''):
-            offer['info_url'][lang] = clean_url(ext_props['TicketLinks'])
+            offer['info_url'][lang] = find_url(ext_props['TicketLinks'])
             del ext_props['TicketLinks']
             has_offer = True
         if ext_props.get('Tickets', ''):
@@ -532,7 +532,7 @@ class EspooImporter(Importer):
             del event['offers']
 
         if ext_props.get('URL', ''):
-            event['info_url'][lang] = clean_url(ext_props['URL'])
+            event['info_url'][lang] = find_url(ext_props['URL'])
 
         if ext_props.get('Organizer', ''):
             event['provider'][lang] = clean_text(ext_props['Organizer'])

@@ -310,9 +310,9 @@ class Keyword(BaseModel, ImageMixin, ReplacedByMixin):
     @transaction.atomic
     def save(self, *args, **kwargs):
         if self._has_circular_replacement():
-            raise Exception("Trying to replace this keyword with a keyword that is replaced by this keyword"
-                            "Please refrain from creating circular replacements and"
-                            "remove one of the replacements.")
+            raise ValidationError(_("Trying to replace this keyword with a keyword that is replaced by this keyword. "
+                                    "Please refrain from creating circular replacements and"
+                                    "remove one of the replacements."))
 
         if self.replaced_by and not self.deprecated:
             self.deprecated = True
@@ -429,10 +429,9 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin, ReplacedByMi
     @transaction.atomic
     def save(self, *args, **kwargs):
         if self._has_circular_replacement():
-            raise Exception("Trying to replace this place with a place that is replaced by this place"
-                            "Please refrain from creating circular replacements and"
-                            "remove one of the replacements."
-                            "We don't want homeless events.")
+            raise ValidationError(_("Trying to replace this place with a place that is replaced by this place. "
+                                    "Please refrain from creating circular replacements and remove one of the "
+                                    "replacements. We don't want homeless events."))
 
         if self.replaced_by and not self.deleted:
             self.deleted = True
@@ -593,9 +592,9 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
 
     def save(self, *args, **kwargs):
         if self._has_circular_replacement():
-            raise Exception("Trying to replace this event with an event that is replaced by this event"
-                            "Please refrain from creating circular replacements and"
-                            "remove one of the replacements.")
+            raise ValidationError(_("Trying to replace this event with an event that is replaced by this event. "
+                                    "Please refrain from creating circular replacements and "
+                                    "remove one of the replacements."))
 
         if self.replaced_by and not self.deleted:
             self.deleted = True
@@ -647,7 +646,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
         # send notifications
         if old_publication_status == PublicationStatus.DRAFT and self.publication_status == PublicationStatus.PUBLIC:
             self.send_published_notification()
-        if old_deleted is False and self.deleted is True:
+        if self.publication_status == PublicationStatus.DRAFT and (old_deleted is False and self.deleted is True):
             self.send_deleted_notification()
         if created and self.publication_status == PublicationStatus.DRAFT:
             self.send_draft_posted_notification()
@@ -712,9 +711,9 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
 
     def _get_author_emails(self):
         author_emails = []
-        for user in (self.created_by, self.last_modified_by):
-            if user and user.email:
-                author_emails.append(user.email)
+        author = self.created_by
+        if author and author.email:
+            author_emails.append(author.email)
         return author_emails
 
     def send_deleted_notification(self, request=None):
