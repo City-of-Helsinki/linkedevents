@@ -1185,10 +1185,10 @@ class VideoSerializer(serializers.ModelSerializer):
 
 class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIView):
     id = serializers.CharField(required=False)
-    location = JSONLDRelatedField(serializer=PlaceSerializer, required=False,
+    location = JSONLDRelatedField(serializer=PlaceSerializer, required=False, allow_null=True,
                                   view_name='place-detail', queryset=Place.objects.all())
     # provider = OrganizationSerializer(hide_ld_context=True)
-    keywords = JSONLDRelatedField(serializer=KeywordSerializer, many=True, allow_empty=False,
+    keywords = JSONLDRelatedField(serializer=KeywordSerializer, many=True, allow_empty=True,
                                   required=False,
                                   view_name='keyword-detail', queryset=Keyword.objects.filter(deprecated=False))
     super_event = JSONLDRelatedField(serializer='EventSerializer', required=False, view_name='event-detail',
@@ -1243,17 +1243,6 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
 
     def to_internal_value(self, data):
         data = self.parse_datetimes(data)
-
-        # If the obligatory fields are null or empty, remove them to prevent to_internal_value from checking them.
-        # Only for drafts, because null start time of a PUBLIC event will indicate POSTPONED, and other fields must
-        # be present for public events.
-
-        if data.get('publication_status') == 'draft':
-            # the obligatory (optional for draft) fields cannot be null and must be removed
-            for field in self.fields_needed_to_publish:
-                if not data.get(field):
-                    data.pop(field, None)
-
         data = super().to_internal_value(data)
         return data
 
@@ -1266,8 +1255,9 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
         if 'publication_status' not in data:
             data['publication_status'] = PublicationStatus.PUBLIC
 
-        # if the event is a draft, no further validation is performed
-        if data['publication_status'] == PublicationStatus.DRAFT:
+        # if the event is a draft or cancelled, no further validation is performed
+        if (data['publication_status'] == PublicationStatus.DRAFT or
+                data.get('event_status', None) == Event.Status.CANCELLED):
             data = self.run_extension_validations(data)
             return data
 

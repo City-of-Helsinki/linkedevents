@@ -376,6 +376,10 @@ def test__cancel_an_event_with_put(api_client, complex_event_dict, user):
     data2 = response.data
     data2['event_status'] = 'EventCancelled'
 
+    # cancelling (like deleting) should be allowed even if event is incomplete (external events etc.)
+    data2['keywords'] = []
+    data2['location'] = None
+
     # update the event
     event_id = data2.pop('@id')
     response2 = update_with_put(api_client, event_id, data2)
