@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-bleach==3.1.0
+bleach==3.1.1
 certifi==2019.11.28       # via requests, sentry-sdk
 chardet==3.0.4            # via requests
 defusedxml==0.6.0         # via python3-openid
