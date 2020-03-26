@@ -4,6 +4,7 @@ version: 2.1
 
 orbs:
   jira: circleci/jira@1.1.2
+  jq: circleci/jq@2.0.0
   slack: circleci/slack@3.4.2
 
 aliases:
@@ -31,6 +32,10 @@ aliases:
     {{ checksum \"requirements-dev.txt\" }}-\
     {{ checksum \"requirements.in\" }}-\
     {{ checksum \"requirements.txt\" }}"
+
+  - &jq_cache_key "
+    v1-jq-\
+    {{ checksum \".circleci/config.yml\" }}"
 
 executors:
   python:
@@ -183,6 +188,10 @@ commands:
       - run:
           name: Tag and push dist docker image
           command: ecr-push "<< parameters.docker_image_name >>"
+  notify_jira:
+    steps:
+      - restore_jq_cache
+      - jira/notify
   # Must be the last step in a job
   notify_slack:
     description: "Notify via Slack"
@@ -195,6 +204,12 @@ commands:
       - restore_cache:
           keys:
             - *deps_cache_key
+  restore_jq_cache:
+    steps:
+      - restore_cache:
+          keys:
+            - *jq_cache_key
+      - run: echo 'export PATH=~/bin:$PATH' >> $BASH_ENV
   restore_repo_cache:
     steps:
       - restore_cache:
@@ -211,7 +226,7 @@ jobs:
           key: *repo_cache_key
           paths:
             - .
-      - jira/notify
+      - notify_jira
       - notify_slack
 
   install_deps:
@@ -233,6 +248,16 @@ jobs:
           paths:
             - ~/.local/bin
             - ~/<< parameters.site_packages_path >>
+      # Install and cache jq so that it doesn't need to be installed again in every job that uses jira/notify.
+      # Otherwise, we will hit jq's rate limits and the job will fail.
+      - restore_jq_cache
+      - run: mkdir -p ~/bin
+      - jq/install:
+          install-dir: ~/bin
+      - save_cache:
+          key: *jq_cache_key
+          paths:
+            - ~/bin/jq
       - jira/notify
       - notify_slack
 
@@ -242,7 +267,7 @@ jobs:
       - restore_repo_cache
       - restore_deps_cache
       - run: flake8 .
-      - jira/notify
+      - notify_jira
       - notify_slack
 
   test:
@@ -268,7 +293,7 @@ jobs:
       - run:
           name: Run test script
           command: ./bin/test_ci.sh
-      - jira/notify
+      - notify_jira
       - notify_slack
 
   build:
@@ -290,7 +315,7 @@ jobs:
           root: *workspace_root
           paths:
             - ./templates
-      - jira/notify
+      - notify_jira
       - notify_slack
 
   dockerize:
@@ -311,7 +336,7 @@ jobs:
           base_image_version: << parameters.python_base_image_version >>-slim
           docker_image_name: << parameters.docker_image_name >>
           docker_image_target: << parameters.docker_image_target >>
-      - jira/notify
+      - notify_jira
       - notify_slack
 
   deploy:
@@ -326,6 +351,7 @@ jobs:
     steps:
       - deploy_ecs:
           target_env: << parameters.target_env >>
+      - restore_jq_cache
       - jira/notify:
           environment_type: << parameters.jira_env_type >>
           job_type: deployment
