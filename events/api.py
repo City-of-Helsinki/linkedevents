@@ -1494,7 +1494,7 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
 
     class Meta:
         model = Event
-        exclude = ['deleted']
+        exclude = ()
         list_serializer_class = BulkListSerializer
 
 
