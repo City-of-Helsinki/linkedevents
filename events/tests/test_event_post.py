@@ -282,8 +282,11 @@ def test__autopopulated_fields_at_create(
     assert event.data_source.id == settings.SYSTEM_DATA_SOURCE_ID
     assert event.publisher == organization
     # events are automatically marked as ending at midnight, local time
-    assert event.end_time == timezone.localtime(timezone.now() + timedelta(days=2)).\
-        replace(hour=0, minute=0, second=0, microsecond=0).astimezone(pytz.utc)
+    expected_end_time = (
+        timezone.localtime(event.start_time).replace(hour=0, minute=0, second=0, microsecond=0)
+        .astimezone(pytz.utc) + timedelta(days=1)
+    )
+    assert event.end_time == expected_end_time
     assert event.has_end_time is False
 
 
