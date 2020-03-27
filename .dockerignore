@@ -19,8 +19,11 @@
 #################################################
 # Whitelisted files
 #################################################
+!docker/postgres/docker-entrypoint.sh
+!docker/postgres/init-db.sh
 !entrypoint.admin.sh
 !entrypoint.dist.sh
 !manage.py
 !requirements.txt
+!requirements-dev.txt
 !setup.cfg
