@@ -8,36 +8,12 @@ ARG BASE_IMAGE_VERSION=latest
 FROM ${BASE_IMAGE}:${BASE_IMAGE_VERSION} AS base
 # ==================================================== #
 
-# Define the build and commit args and set default values for them.
-# These are used for tracing the image to the commit and build from which the image has been built.
-ARG build=none
-ARG commit=none
-ENV APP_BUILD $build
-ENV APP_COMMIT $commit
-
-# Create labels for build and commit and populate them from the args
-LABEL fi.espoo.build=${build} \
-    fi.espoo.commit=${commit}
-
-# Configure timezone and locale
-ENV LC_ALL C.UTF-8
-ENV LANG C.UTF-8
-ENV LANGUAGE C.UTF-8
-RUN set -eux \
-    && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install \
-      locales \
-      tzdata \
-    && ln -fs /usr/share/zoneinfo/Europe/Helsinki /etc/localtime \
-    && dpkg-reconfigure --frontend noninteractive tzdata \
-    && dpkg-reconfigure --frontend noninteractive locales \
-    && rm -rf /var/lib/apt/lists/*
-
 # Set username
 ENV USERNAME linkedevents
 ENV HOME_DIR /home/${USERNAME}
 ENV USER_ID 1000
 
-# Create a new user named linkedevents which should be used to run any software.
+# Create a new user named linkedevents which should be used to run any software
 RUN adduser ${USERNAME} --gecos "" -q --home ${HOME_DIR} --uid ${USER_ID} --disabled-password
 
 # Turn Python's output buffering off, otherwise nothing will show up in Docker's output
@@ -45,11 +21,21 @@ ENV PYTHONUNBUFFERED 1
 
 ENV DEBUG false
 ENV PRODUCTION true
+ENV PATH "${PATH}:${HOME_DIR}/.local/bin"
 
+# Configure timezone and locale
+ENV LC_ALL C.UTF-8
+ENV LANG C.UTF-8
+ENV LANGUAGE C.UTF-8
 RUN set -eux \
     && apt-get update && apt-get install -y --no-install-recommends --no-install-suggests \
       gdal-bin \
+      locales \
+      tzdata \
       wget \
+    && ln -fs /usr/share/zoneinfo/Europe/Helsinki /etc/localtime \
+    && dpkg-reconfigure --frontend noninteractive tzdata \
+    && dpkg-reconfigure --frontend noninteractive locales \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
@@ -58,8 +44,6 @@ WORKDIR ${HOME_DIR}
 
 COPY --chown=1000 . ./
 
-ENV PATH "${PATH}:${HOME_DIR}/.local/bin"
-
 RUN pip install --user --no-cache-dir -r ./requirements.txt
 
 EXPOSE 8000
@@ -67,6 +51,20 @@ EXPOSE 8000
 # ==================================================== #
 FROM base AS dist
 # ==================================================== #
+
+# Define the build and commit args and set default values for them.
+# These are used for tracing the image to the commit and build from which the image has been built.
+# These should be defined at the bottom since the values change frequently and invalidate the cache causing all later
+# layers to be built again. We've duplicated these for both the dist stage and admin stage since otherwise the pip
+# command in the admin stage would always be run.
+ARG build=none
+ARG commit=none
+ENV APP_BUILD $build
+ENV APP_COMMIT $commit
+
+# Create labels for build and commit and populate them from the args
+LABEL fi.espoo.build=${build}
+LABEL fi.espoo.commit=${commit}
 
 ENTRYPOINT ["./entrypoint.dist.sh"]
 
@@ -78,5 +76,19 @@ FROM base AS admin
 
 # Install awscli so that we can get the db password from SSM parameter store
 RUN pip install --user --no-cache-dir awscli
+
+# Define the build and commit args and set default values for them.
+# These are used for tracing the image to the commit and build from which the image has been built.
+# These should be defined at the bottom since the values change frequently and invalidate the cache causing all later
+# layers to be built again. We've duplicated these for both the dist stage and admin stage since otherwise the above
+# pip command would always be run.
+ARG build=none
+ARG commit=none
+ENV APP_BUILD $build
+ENV APP_COMMIT $commit
+
+# Create labels for build and commit and populate them from the args
+LABEL fi.espoo.build=${build}
+LABEL fi.espoo.commit=${commit}
 
 ENTRYPOINT ["./entrypoint.admin.sh"]
