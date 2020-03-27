@@ -1,16 +1,15 @@
 # This is file used for developing and as a cheatsheet for the developer
 
-
-
-BASE_DIR = $(shell pwd)
-CONTAINER_PORT := $(shell grep CONTAINER_PORT .env | cut -d '=' -f2)
+.PHONY: build
+build:
+	@docker build \
+	--target development \
+	-f docker/django/Dockerfile \
+	-t linkedevents-build \
+	.
 
 .PHONY: build_dist
 build_dist:
-	# @docker-compose build
-	# @docker-compose run addit python ./manage.py collectstatic --no-input
-	# @docker build -f docker/django/Dockerfile \
-	# -t linkedevents .
 	@docker build \
 	--build-arg BASE_IMAGE_VERSION=3.7-slim \
 	--target dist \
@@ -58,12 +57,23 @@ up:
 lint:
 	@docker run \
 	--rm \
-	-v `pwd`:/usr/src/app \
-	-w /usr/src/app \
-	-u circleci \
+	-v `pwd`:/app \
+	-w /app \
 	--name linkedevents-lint \
-	circleci/python:3.7.6 \
-	/bin/bash -c "pip install pip-tools && pip-sync --user requirements-dev.txt && flake8 ."
+	linkedevents-build \
+	flake8 .
+
+.PHONY: test
+test:
+	@docker run \
+	--rm \
+	--network=host \
+	-e WAIT_FOR_IT_ADDRESS=localhost:5432 \
+	-v `pwd`:/app \
+	-w /app \
+	--name linkedevents-test \
+	linkedevents-build \
+	py.test events helevents
 
 .PHONY: import_yso
 import_yso:

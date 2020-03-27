@@ -7,32 +7,30 @@
 
 set -uxo pipefail
 
-# Create a dummy container which will hold a volume with the source code
-docker create \
-  -v /usr/src/app \
-  -v /home/circleci/.local/bin \
-  -v /home/circleci/"${SITE_PACKAGES_PATH}" \
-  --name code \
-  circleci/python:"${PYTHON_IMAGE_VERSION}" \
-  /bin/true
-
-# Copy source code into this volume
-docker cp \
-  . \
-  code:/usr/src/app
-# Copy Python dependencies into this volume
-docker cp \
-  /home/circleci/.local/bin/. \
-  code:/home/circleci/.local/bin
-docker cp \
-  /home/circleci/"${SITE_PACKAGES_PATH}"/. \
-  code:/home/circleci/"${SITE_PACKAGES_PATH}"
-
 # Build db container
 docker build \
   -t linkedevents-db \
   -f ./docker/postgres/Dockerfile \
   .
+
+# Build test container
+docker build \
+  --target development \
+  -t linkedevents-test \
+  -f ./docker/django/Dockerfile \
+  .
+
+# Create a dummy container which will hold a volume with the source code
+docker create \
+  -v /app \
+  --name code \
+  linkedevents-test \
+  /bin/true
+
+# Copy source code into this volume
+docker cp \
+  . \
+  code:/app
 
 # Run db container (use existing exported env vars)
 docker run \
@@ -55,14 +53,11 @@ docker run \
   --rm \
   --network container:linkedevents-db \
   --volumes-from code \
-  -w /usr/src/app \
+  -w /app \
+  -e WAIT_FOR_IT_ADDRESS=localhost:5432 \
   --name linkedevents \
-  circleci/python:"${PYTHON_IMAGE_VERSION}" \
-  /bin/bash -c " \
-    sudo apt-get update && \
-    sudo apt-get install -y libgdal-dev && \
-    sudo chown -R circleci:circleci /usr/src/app && \
-    py.test events helevents"
+  linkedevents-test \
+  py.test events helevents
 # Store the exit code of the last command
 linkedevents_check=$?
 docker stop linkedevents-db
