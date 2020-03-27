@@ -6,7 +6,6 @@
 #################################################
 # Whitelisted folders
 #################################################
-!docker*
 !events*
 !extension_course*
 !helcourses*
@@ -20,11 +19,8 @@
 #################################################
 # Whitelisted files
 #################################################
-!config_dev.toml
 !entrypoint.admin.sh
 !entrypoint.dist.sh
-!local_settings.py
 !manage.py
-!pytest.ini
-!requirements*
+!requirements.txt
 !setup.cfg
