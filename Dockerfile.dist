@@ -45,19 +45,16 @@ WORKDIR ${HOME_DIR}
 # .dockerignore is used to only copy the necessary files to the image
 COPY --chown=1000 . ./
 
-RUN pip install --user --no-cache-dir -r ./requirements.txt
+# Install also awscli so that we can get the db password from SSM parameter store in the admin image
+RUN pip install --user --no-cache-dir -r ./requirements.txt \
+    && pip install --user --no-cache-dir awscli
 
 EXPOSE 8000
-
-# ==================================================== #
-FROM base AS dist
-# ==================================================== #
 
 # Define the build and commit args and set default values for them.
 # These are used for tracing the image to the commit and build from which the image has been built.
 # These should be defined at the bottom since the values change frequently and invalidate the cache causing all later
-# layers to be built again. We've duplicated these for both the dist stage and admin stage since otherwise the pip
-# command in the admin stage would always be run.
+# layers to be built again.
 ARG build=none
 ARG commit=none
 ENV APP_BUILD $build
@@ -66,6 +63,10 @@ ENV APP_COMMIT $commit
 # Create labels for build and commit and populate them from the args
 LABEL fi.espoo.build=${build}
 LABEL fi.espoo.commit=${commit}
+
+# ==================================================== #
+FROM base AS dist
+# ==================================================== #
 
 ENTRYPOINT ["./entrypoint.dist.sh"]
 
@@ -74,22 +75,5 @@ ENTRYPOINT ["./entrypoint.dist.sh"]
 # another entrypoint suitable for the importers and other administrative tasks.
 FROM base AS admin
 # ==================================================== #
-
-# Install awscli so that we can get the db password from SSM parameter store
-RUN pip install --user --no-cache-dir awscli
-
-# Define the build and commit args and set default values for them.
-# These are used for tracing the image to the commit and build from which the image has been built.
-# These should be defined at the bottom since the values change frequently and invalidate the cache causing all later
-# layers to be built again. We've duplicated these for both the dist stage and admin stage since otherwise the above
-# pip command would always be run.
-ARG build=none
-ARG commit=none
-ENV APP_BUILD $build
-ENV APP_COMMIT $commit
-
-# Create labels for build and commit and populate them from the args
-LABEL fi.espoo.build=${build}
-LABEL fi.espoo.commit=${commit}
 
 ENTRYPOINT ["./entrypoint.admin.sh"]
