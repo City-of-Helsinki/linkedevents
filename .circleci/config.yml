@@ -273,8 +273,6 @@ jobs:
   test:
     executor: builder
     environment:
-      PYTHON_IMAGE_VERSION: *python_image_version
-      SITE_PACKAGES_PATH: *site_packages_path
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: secret
       POSTGRES_DB: linkedevents
@@ -284,12 +282,8 @@ jobs:
       DB_APP_PASSWORD: secret
     steps:
       - restore_repo_cache
-      - restore_deps_cache
       - setup_remote_docker:
           docker_layer_caching: true
-      - run:
-          name: Docker login to ECR
-          command: ecr-login
       - run:
           name: Run test script
           command: ./bin/test_ci.sh
