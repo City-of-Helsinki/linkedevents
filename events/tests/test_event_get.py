@@ -74,6 +74,12 @@ def assert_event_fields_exist(data, version='v1'):
     assert_fields_exist(data, fields)
 
 
+def assert_events_in_response(events, response):
+    response_event_ids = {event['id'] for event in response.data['data']}
+    expected_event_ids = {event.id for event in events}
+    assert response_event_ids == expected_event_ids
+
+
 # === tests ===
 
 @pytest.mark.django_db
@@ -515,56 +521,32 @@ def test_start_end_iso_date(api_client, make_event):
     # Start parameter
 
     response = get_list(api_client, query_string='start=2020-02-19')
-
-    event_ids = {event['id'] for event in response.data['data']}
-    assert len(event_ids) == 6
     expected_events = [event1, event2, event3, event4, event5, event6]
-    for event in expected_events:
-        assert event.id in event_ids
+    assert_events_in_response(expected_events, response)
 
     response = get_list(api_client, query_string='start=2020-02-20')
-
-    event_ids = {event['id'] for event in response.data['data']}
-    assert len(event_ids) == 4
     expected_events = [event3, event4, event5, event6]
-    for event in expected_events:
-        assert event.id in event_ids
+    assert_events_in_response(expected_events, response)
 
     # End parameter
 
     response = get_list(api_client, query_string='end=2020-02-19')
-
-    event_ids = {event['id'] for event in response.data['data']}
-    assert len(event_ids) == 4
     expected_events = [event1, event2, event3, event4]
-    for event in expected_events:
-        assert event.id in event_ids
+    assert_events_in_response(expected_events, response)
 
     response = get_list(api_client, query_string='end=2020-02-20')
-
-    event_ids = {event['id'] for event in response.data['data']}
-    assert len(event_ids) == 5
     expected_events = [event1, event2, event3, event4, event5]
-    for event in expected_events:
-        assert event.id in event_ids
+    assert_events_in_response(expected_events, response)
 
     # Start and end parameters
 
     response = get_list(api_client, query_string='start=2020-02-20&end=2020-02-20')
-
-    event_ids = {event['id'] for event in response.data['data']}
-    assert len(event_ids) == 3
     expected_events = [event3, event4, event5]
-    for event in expected_events:
-        assert event.id in event_ids
+    assert_events_in_response(expected_events, response)
 
     response = get_list(api_client, query_string='start=2020-02-19&end=2020-02-21')
-
-    event_ids = {event['id'] for event in response.data['data']}
-    assert len(event_ids) == 6
     expected_events = [event1, event2, event3, event4, event5, event6]
-    for event in expected_events:
-        assert event.id in event_ids
+    assert_events_in_response(expected_events, response)
 
 
 @pytest.mark.django_db
@@ -577,45 +559,25 @@ def test_start_end_iso_date_time(api_client, make_event):
     # Start parameter
 
     response = get_list(api_client, query_string='start=2020-02-19T11:22:32')
-
-    event_ids = {event['id'] for event in response.data['data']}
-    assert len(event_ids) == 3
     expected_events = [event1, event2, event3]
-    for event in expected_events:
-        assert event.id in event_ids
+    assert_events_in_response(expected_events, response)
 
     response = get_list(api_client, query_string='start=2020-02-19T11:22:33')
-
-    event_ids = {event['id'] for event in response.data['data']}
-    assert len(event_ids) == 2
     expected_events = [event2, event3]
-    for event in expected_events:
-        assert event.id in event_ids
+    assert_events_in_response(expected_events, response)
 
     # End parameter
 
     response = get_list(api_client, query_string='end=2020-02-19T11:22:32')
-
-    event_ids = {event['id'] for event in response.data['data']}
-    assert len(event_ids) == 1
     expected_events = [event1]
-    for event in expected_events:
-        assert event.id in event_ids
+    assert_events_in_response(expected_events, response)
 
     response = get_list(api_client, query_string='end=2020-02-19T11:22:33')
-
-    event_ids = {event['id'] for event in response.data['data']}
-    assert len(event_ids) == 2
     expected_events = [event1, event2]
-    for event in expected_events:
-        assert event.id in event_ids
+    assert_events_in_response(expected_events, response)
 
     # Start and end parameters
 
     response = get_list(api_client, query_string='start=2020-02-19T11:22:33&end=2020-02-19T11:22:33')
-
-    event_ids = {event['id'] for event in response.data['data']}
-    assert len(event_ids) == 1
     expected_events = [event2]
-    for event in expected_events:
-        assert event.id in event_ids
+    assert_events_in_response(expected_events, response)
