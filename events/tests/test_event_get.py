@@ -565,3 +565,57 @@ def test_start_end_iso_date(api_client, make_event):
     expected_events = [event1, event2, event3, event4, event5, event6]
     for event in expected_events:
         assert event.id in event_ids
+
+
+@pytest.mark.django_db
+def test_start_end_iso_date_time(api_client, make_event):
+    parse_date = dateutil.parser.parse
+    event1 = make_event('1', parse_date('2020-02-19 10:00:00+02'), parse_date('2020-02-19 11:22:33+02'))
+    event2 = make_event('2', parse_date('2020-02-19 11:22:33+02'), parse_date('2020-02-19 22:33:44+02'))
+    event3 = make_event('3', parse_date('2020-02-20 11:22:33+02'), parse_date('2020-02-20 22:33:44+02'))
+
+    # Start parameter
+
+    response = get_list(api_client, query_string='start=2020-02-19T11:22:32')
+
+    event_ids = {event['id'] for event in response.data['data']}
+    assert len(event_ids) == 3
+    expected_events = [event1, event2, event3]
+    for event in expected_events:
+        assert event.id in event_ids
+
+    response = get_list(api_client, query_string='start=2020-02-19T11:22:33')
+
+    event_ids = {event['id'] for event in response.data['data']}
+    assert len(event_ids) == 2
+    expected_events = [event2, event3]
+    for event in expected_events:
+        assert event.id in event_ids
+
+    # End parameter
+
+    response = get_list(api_client, query_string='end=2020-02-19T11:22:32')
+
+    event_ids = {event['id'] for event in response.data['data']}
+    assert len(event_ids) == 1
+    expected_events = [event1]
+    for event in expected_events:
+        assert event.id in event_ids
+
+    response = get_list(api_client, query_string='end=2020-02-19T11:22:33')
+
+    event_ids = {event['id'] for event in response.data['data']}
+    assert len(event_ids) == 2
+    expected_events = [event1, event2]
+    for event in expected_events:
+        assert event.id in event_ids
+
+    # Start and end parameters
+
+    response = get_list(api_client, query_string='start=2020-02-19T11:22:33&end=2020-02-19T11:22:33')
+
+    event_ids = {event['id'] for event in response.data['data']}
+    assert len(event_ids) == 1
+    expected_events = [event2]
+    for event in expected_events:
+        assert event.id in event_ids
