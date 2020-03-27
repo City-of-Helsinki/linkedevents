@@ -62,6 +62,7 @@ def assert_event_fields_exist(data, version='v1'):
         'super_event_type',
         'videos',
         'replaced_by',
+        'deleted',
     )
     if version == 'v0.1':
         fields += (
@@ -489,6 +490,7 @@ def test_event_list_show_deleted_param(api_client, event, user):
 
     expected_keys = ['id', 'name', 'last_modified_time', 'deleted', 'replaced_by']
     event_data = next((e for e in response.data['data'] if e['id'] == event.id))
+    assert len(event_data) == len(expected_keys)
     for key in event_data:
         assert key in expected_keys
     assert event_data['name']['fi'] == 'POISTETTU'

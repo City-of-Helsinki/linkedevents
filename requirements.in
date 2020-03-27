@@ -1,4 +1,5 @@
 bleach
+django-admin-autocomplete-filter
 django-allauth
 django-anymail
 django-cleanup

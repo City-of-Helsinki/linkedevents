@@ -203,6 +203,7 @@ INSTALLED_APPS = [
     'munigeo',
     'leaflet',
     'django_orghierarchy',
+    'admin_auto_filters',
 
     'storages',
 ] + env('EXTRA_INSTALLED_APPS')
