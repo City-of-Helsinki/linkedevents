@@ -8,6 +8,8 @@ from events.models import (
 from django.contrib.gis.gdal import SpatialReference, CoordTransform
 from django.contrib.gis.geos import Point
 from django.conf import settings
+from datetime import datetime
+import dateutil.parser
 
 # === util methods ===
 
@@ -498,3 +500,68 @@ def test_event_list_show_deleted_param(api_client, event, user):
     response = get_list(api_client)
     assert response.status_code == 200
     assert event.id not in {e['id'] for e in response.data['data']}
+
+
+@pytest.mark.django_db
+def test_start_end_iso_date(api_client, make_event):
+    parse_date = dateutil.parser.parse
+    event1 = make_event('1', parse_date('2020-02-19 23:00:00+02'), parse_date('2020-02-19 23:30:00+02'))
+    event2 = make_event('2', parse_date('2020-02-19 23:30:00+02'), parse_date('2020-02-20 00:00:00+02'))
+    event3 = make_event('3', parse_date('2020-02-19 23:30:00+02'), parse_date('2020-02-20 00:30:00+02'))
+    event4 = make_event('4', parse_date('2020-02-20 00:00:00+02'), parse_date('2020-02-20 00:30:00+02'))
+    event5 = make_event('5', parse_date('2020-02-20 12:00:00+02'), parse_date('2020-02-20 13:00:00+02'))
+    event6 = make_event('6', parse_date('2020-02-21 12:00:00+02'), parse_date('2020-02-21 13:00:00+02'))
+
+    # Start parameter
+
+    response = get_list(api_client, query_string='start=2020-02-19')
+
+    event_ids = {event['id'] for event in response.data['data']}
+    assert len(event_ids) == 6
+    expected_events = [event1, event2, event3, event4, event5, event6]
+    for event in expected_events:
+        assert event.id in event_ids
+
+    response = get_list(api_client, query_string='start=2020-02-20')
+
+    event_ids = {event['id'] for event in response.data['data']}
+    assert len(event_ids) == 4
+    expected_events = [event3, event4, event5, event6]
+    for event in expected_events:
+        assert event.id in event_ids
+
+    # End parameter
+
+    response = get_list(api_client, query_string='end=2020-02-19')
+
+    event_ids = {event['id'] for event in response.data['data']}
+    assert len(event_ids) == 4
+    expected_events = [event1, event2, event3, event4]
+    for event in expected_events:
+        assert event.id in event_ids
+
+    response = get_list(api_client, query_string='end=2020-02-20')
+
+    event_ids = {event['id'] for event in response.data['data']}
+    assert len(event_ids) == 5
+    expected_events = [event1, event2, event3, event4, event5]
+    for event in expected_events:
+        assert event.id in event_ids
+
+    # Start and end parameters
+
+    response = get_list(api_client, query_string='start=2020-02-20&end=2020-02-20')
+
+    event_ids = {event['id'] for event in response.data['data']}
+    assert len(event_ids) == 3
+    expected_events = [event3, event4, event5]
+    for event in expected_events:
+        assert event.id in event_ids
+
+    response = get_list(api_client, query_string='start=2020-02-19&end=2020-02-21')
+
+    event_ids = {event['id'] for event in response.data['data']}
+    assert len(event_ids) == 6
+    expected_events = [event1, event2, event3, event4, event5, event6]
+    for event in expected_events:
+        assert event.id in event_ids
