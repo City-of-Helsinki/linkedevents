@@ -205,6 +205,32 @@ add_helsinki_topics:
 	linkedevents-admin \
 	python manage.py add_helsinki_topics
 
+.PHONY: update_keywords
+update_keywords:
+	@docker run \
+	--rm \
+	--network=host \
+	-e DB_APP_PASSWORD=secret \
+	-e DB_APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py update_n_events keyword
+
+.PHONY: update_places
+update_places:
+	@docker run \
+	--rm \
+	--network=host \
+	-e DB_APP_PASSWORD=secret \
+	-e DB_APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py update_n_events place
+
 .PHONY: createsuperuser
 createsuperuser:
 	@docker run \
