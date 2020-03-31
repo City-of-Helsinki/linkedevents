@@ -118,7 +118,7 @@ def parse_time(time_str, is_start):
         # mean midnight on the following day.
         if not is_start:
             dt = dt + timedelta(days=1)
-    else:
+    elif not dt:
         try:
             # Handle all other times through dateutil.
             dt = dateutil_parse(time_str)
