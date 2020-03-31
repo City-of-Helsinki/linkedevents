@@ -8,7 +8,6 @@ from events.models import (
 from django.contrib.gis.gdal import SpatialReference, CoordTransform
 from django.contrib.gis.geos import Point
 from django.conf import settings
-from datetime import datetime
 import dateutil.parser
 from freezegun import freeze_time
 
