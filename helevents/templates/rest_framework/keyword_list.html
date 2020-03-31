@@ -1,8 +1,7 @@
 <div class="panel panel-default">
     <div class="panel-body">
 
-<h2 id="using-keyword-endpoint">Using the keyword endpoint</h2>
-<p>N.B. We recommend using the 20 piece keyword set 'helsinki:topics' for general event grouping and 'helsinki:audiences' for sorting by target group. These sets are used by the City of Helsinki in categorizing the majority of events in the API.</p>        
+<h2 id="using-keyword-endpoint">Using the keyword endpoint</h2>      
 <p>Here, categories for events are listed. Events in each category can be found at the <code>event</code> endpoint using the query parameter <code>keyword</code>. The common keywords
 used in all events originate from the <a href="https://finto.fi/yso/en/">general Finnish ontology (yso)</a>,
 hence the format <code>yso:p4354</code>. Default ordering is decreasing order by the number of events found.</p>
@@ -29,6 +28,10 @@ hence the format <code>yso:p4354</code>. Default ordering is decreasing order by
 <p>By default, only those keywords which have listed events are
 displayed. You may display keywords with zero <code>n_events</code> with the
     query parameter <code>show_all_keywords</code>.</p>
+ <h4 id="recommended-keywords">Recommended keywords</h4>
+<p>We recommend using the  keyword set 'helsinki:topics' for general event grouping and 'helsinki:audiences' for sorting by target group. These sets are used in categorizing the majority of events in the API. <p>
+<p><a href="https://api.hel.fi/linkedevents/v1/keyword_set/" target="_self">Keyword sets</a></p>       
+        
 
     </div>
 </div>
