@@ -110,7 +110,7 @@ def parse_time(time_str, is_start):
             dt = dt.replace(hour=0, minute=0, second=0, microsecond=0)
             is_exact = False
         if time_str.lower() == 'now':
-            dt = datetime.utcnow()
+            dt = datetime.utcnow().replace(tzinfo=pytz.utc)
             is_exact = True
     if dt and not is_exact:
         # With start timestamps, we treat dates as beginning
