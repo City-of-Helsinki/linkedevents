@@ -278,13 +278,14 @@ def place(data_source, organization, administrative_division):
 @pytest.mark.django_db
 @pytest.fixture
 def make_event(data_source, organization, place, user):
-    def _make_event(origin_id, start_time, end_time):
+    def _make_event(origin_id, start_time, end_time=None):
         return Event.objects.create(
             id=data_source.id + ':' + origin_id, location=place,
             data_source=data_source, publisher=organization,
             last_modified_by=user,
             start_time=start_time,
             end_time=end_time,
+            has_end_time=end_time is not None,
             short_description='short desc',
             description='desc',
             name='tapahtuma'
