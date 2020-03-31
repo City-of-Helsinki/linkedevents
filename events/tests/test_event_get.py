@@ -620,3 +620,36 @@ def test_start_end_today(api_client, make_event):
         response = get_list(api_client, query_string='start=today&end=today')
         expected_events = [event3, event4, event5, event6]
         assert_events_in_response(expected_events, response)
+
+
+@pytest.mark.django_db
+def test_start_end_now(api_client, make_event):
+    parse_date = dateutil.parser.parse
+    event1 = make_event('1', parse_date('2020-02-19 23:00:00+02'), parse_date('2020-02-19 23:30:00+02'))
+    event2 = make_event('2', parse_date('2020-02-19 23:30:00+02'), parse_date('2020-02-20 00:00:00+02'))
+    event3 = make_event('3', parse_date('2020-02-19 23:30:00+02'), parse_date('2020-02-20 00:30:00+02'))
+    event4 = make_event('4', parse_date('2020-02-20 00:00:00+02'), parse_date('2020-02-20 00:30:00+02'))
+    event5 = make_event('5', parse_date('2020-02-20 12:00:00+02'), parse_date('2020-02-20 13:00:00+02'))
+    event6 = make_event('6', parse_date('2020-02-21 00:00:00+02'), parse_date('2020-02-21 01:00:00+02'))
+    event7 = make_event('7', parse_date('2020-02-21 12:00:00+02'), parse_date('2020-02-21 13:00:00+02'))
+
+    # Start parameter
+
+    with freeze_time('2020-02-20 00:30:00+02'):
+        response = get_list(api_client, query_string='start=now')
+        expected_events = [event5, event6, event7]
+        assert_events_in_response(expected_events, response)
+
+    # End parameter
+
+    with freeze_time('2020-02-20 12:00:00+02'):
+        response = get_list(api_client, query_string='end=now')
+        expected_events = [event1, event2, event3, event4, event5]
+        assert_events_in_response(expected_events, response)
+
+    # Start and end parameters
+
+    with freeze_time('2020-02-20 12:00:00+02'):
+        response = get_list(api_client, query_string='start=now&end=now')
+        expected_events = [event5]
+        assert_events_in_response(expected_events, response)
