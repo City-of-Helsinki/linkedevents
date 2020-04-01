@@ -5,6 +5,7 @@ import logging
 from langdetect import detect
 from langdetect.lang_detect_exception import LangDetectException
 from django.utils.translation.trans_real import activate, deactivate
+from django.core.validators import URLValidator, ValidationError
 
 from events.models import Place
 
@@ -21,6 +22,22 @@ def clean_text(text, strip_newlines=False):
         text = text.replace('\r', '').replace('\n', ' ')
     # remove consecutive whitespaces
     return re.sub(r'\s\s+', ' ', text, re.U).strip()
+
+
+def clean_url(url):
+    """
+    Takes in a string and returns it as a cleaned url, or empty if the string is not a valid URL.
+    """
+    url = clean_text(url, True)
+    url = url.replace(' ', '%20')
+    if not re.match(r'^\w+?://', url):
+        url = 'http://' + url
+    try:
+        URLValidator()(url)
+        return url
+    except ValidationError:
+        logger.warning('URL not valid: ' + url)
+        return None
 
 
 def separate_scripts(text, scripts):

@@ -4,69 +4,70 @@
 #
 #    pip-compile
 #
-bleach==3.1.0
+bleach==3.1.2             # via -r requirements.in
 certifi==2019.11.28       # via requests, sentry-sdk
 chardet==3.0.4            # via requests
 defusedxml==0.6.0         # via python3-openid
-django-allauth==0.41.0
-django-anymail==7.0.0
+django-admin-autocomplete-filter==0.4  # via -r requirements.in
+django-allauth==0.41.0    # via -r requirements.in
+django-anymail==7.0.0     # via -r requirements.in
 django-appconf==1.0.3     # via django-image-cropping
-django-cleanup==4.0.0
-django-cors-headers==3.2.1
-django-environ==0.4.5
-django-filter==2.2.0
-django-haystack==2.8.1
-django-helusers==0.5.6
-django-image-cropping==1.3.0
-django-jinja==2.6.0
+django-cleanup==4.0.0     # via -r requirements.in
+django-cors-headers==3.2.1  # via -r requirements.in
+django-environ==0.4.5     # via -r requirements.in
+django-filter==2.2.0      # via -r requirements.in
+django-haystack==2.8.1    # via -r requirements.in
+django-helusers==0.5.6    # via -r requirements.in
+django-image-cropping==1.3.0  # via -r requirements.in
+django-jinja==2.6.0       # via -r requirements.in
 django-js-asset==1.2.2    # via django-mptt
-django-leaflet==0.26.0
+django-leaflet==0.26.0    # via -r requirements.in
 -e git://github.com/City-of-Helsinki/django-mass-edit.git@e141566864416c64ee92fda7579fbf5a7741b600#egg=django-mass-edit
-django-modeltranslation==0.14.2
-django-mptt==0.11.0
-django-munigeo==0.2.26
-django-orghierarchy==0.1.24
-django-reversion==3.0.5
-django==2.2.10
-djangorestframework-bulk==0.2.1
-djangorestframework-gis==0.15
-djangorestframework-jwt==1.11.0
-djangorestframework==3.11.0
+django-modeltranslation==0.14.2  # via -r requirements.in, django-munigeo
+django-mptt==0.11.0       # via -r requirements.in, django-munigeo, django-orghierarchy
+django-munigeo==0.2.26    # via -r requirements.in
+django-orghierarchy==0.1.24  # via -r requirements.in
+django-reversion==3.0.5   # via -r requirements.in
+django==2.2.11            # via -r requirements.in, django-admin-autocomplete-filter, django-allauth, django-anymail, django-appconf, django-cors-headers, django-filter, django-haystack, django-helusers, django-jinja, django-leaflet, django-modeltranslation, django-mptt, django-munigeo, django-reversion, djangorestframework, djangorestframework-bulk, drf-oidc-auth, easy-thumbnails
+djangorestframework-bulk==0.2.1  # via -r requirements.in
+djangorestframework-gis==0.15  # via -r requirements.in
+djangorestframework-jwt==1.11.0  # via -r requirements.in
+djangorestframework==3.11.0  # via -r requirements.in, django-orghierarchy, djangorestframework-bulk, djangorestframework-gis, drf-oidc-auth
 drf-oidc-auth==0.9        # via django-helusers
-easy-thumbnails==2.7
+easy-thumbnails==2.7      # via -r requirements.in
 ecdsa==0.15               # via python-jose
-elasticsearch==5.5.3
+elasticsearch==5.5.3      # via -r requirements.in
 future==0.18.2            # via pyjwkest
-httmock==1.3.0
-icalendar==4.0.4
+httmock==1.3.0            # via -r requirements.in
+icalendar==4.0.4          # via -r requirements.in
 idna==2.8                 # via requests
-isodate==0.6.0
-jinja2==2.11.1
-langdetect==1.0.7
-lxml==4.5.0
-markdown==3.1.1
+isodate==0.6.0            # via -r requirements.in, rdflib
+jinja2==2.11.1            # via -r requirements.in, django-jinja
+langdetect==1.0.7         # via -r requirements.in
+lxml==4.5.0               # via -r requirements.in, python-docx
+markdown==3.1.1           # via -r requirements.in
 markupsafe==1.1.1         # via jinja2
 oauthlib==3.1.0           # via requests-oauthlib
-pillow==7.0.0
-psycopg2-binary==2.8.4
+pillow==7.0.0             # via -r requirements.in, easy-thumbnails
+psycopg2-binary==2.8.4    # via -r requirements.in
 pyasn1==0.4.8             # via python-jose, rsa
 pycryptodomex==3.9.6      # via pyjwkest
 pyjwkest==1.4.2           # via drf-oidc-auth
 pyjwt==1.7.1              # via djangorestframework-jwt
 pyparsing==2.4.6          # via rdflib
-python-dateutil==2.8.1
-python-docx==0.8.10
+python-dateutil==2.8.1    # via -r requirements.in, icalendar
+python-docx==0.8.10       # via -r requirements.in
 python-jose==3.1.0        # via django-helusers
 python3-openid==3.1.0     # via django-allauth
-pytz==2019.3
-pyyaml==5.3
-rdflib==4.2.2
-requests-cache==0.5.2
+pytz==2019.3              # via -r requirements.in, django, icalendar
+pyyaml==5.3               # via -r requirements.in, django-munigeo
+rdflib==4.2.2             # via -r requirements.in
+requests-cache==0.5.2     # via -r requirements.in, django-munigeo
 requests-oauthlib==1.3.0  # via django-allauth
-requests==2.22.0
+requests==2.22.0          # via -r requirements.in, django-allauth, django-anymail, django-helusers, django-munigeo, django-orghierarchy, httmock, pyjwkest, requests-cache, requests-oauthlib
 rsa==4.0                  # via python-jose
-sentry-sdk==0.14.1
-six==1.14.0
+sentry-sdk==0.14.1        # via -r requirements.in
+six==1.14.0               # via -r requirements.in, bleach, django-anymail, django-appconf, django-modeltranslation, django-munigeo, ecdsa, isodate, langdetect, pyjwkest, python-dateutil, python-jose
 sqlparse==0.3.0           # via django
 swapper==1.1.2.post1      # via django-orghierarchy
 urllib3==1.25.8           # via elasticsearch, requests, sentry-sdk
