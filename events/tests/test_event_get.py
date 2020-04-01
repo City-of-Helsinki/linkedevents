@@ -500,3 +500,12 @@ def test_event_list_show_deleted_param(api_client, event, user):
     response = get_list(api_client)
     assert response.status_code == 200
     assert event.id not in {e['id'] for e in response.data['data']}
+
+
+@pytest.mark.django_db
+def test_event_list_is_free_filter(api_client, event, event2, event3, offer):
+    response = get_list(api_client, query_string='is_free=true')
+    assert {event2.id} == {e['id'] for e in response.data['data']}
+
+    response = get_list(api_client, query_string='is_free=false')
+    assert {event.id, event3.id} == {e['id'] for e in response.data['data']}

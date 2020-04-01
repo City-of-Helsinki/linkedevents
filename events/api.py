@@ -1809,6 +1809,14 @@ def _filter_event_queryset(queryset, params, srs=None):
     if not val:
         queryset = queryset.filter(deleted=False)
 
+    # Filter by free offer
+    val = params.get('is_free', None)
+    if val in ['true', 'false']:
+        if val == 'true':
+            queryset = queryset.filter(offers__is_free=True)
+        elif val == 'false':
+            queryset = queryset.exclude(offers__is_free=True)
+
     return queryset
 
 
