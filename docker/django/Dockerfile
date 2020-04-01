@@ -21,8 +21,7 @@ ENTRYPOINT ["/tini", "--", "/app/docker/django/docker-entrypoint.sh"]
 COPY --chown=appuser:appuser requirements.txt /app/
 
 RUN apt-install.sh build-essential gdal-bin gettext \
-    && pip install --no-cache-dir -r /app/requirements.txt \
-    && rm /app/src/pip-delete-this-directory.txt \
+    && pip install --src /src/ --no-cache-dir -r /app/requirements.txt \
     && apt-cleanup.sh build-essential
 
 # ==============================
