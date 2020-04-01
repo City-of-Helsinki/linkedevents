@@ -4,6 +4,7 @@ from django.views.generic import RedirectView
 
 from .api import LinkedEventsAPIRouter
 from django.contrib import admin
+from massadmin.massadmin import mass_change_view
 
 api_router = LinkedEventsAPIRouter()
 
@@ -17,7 +18,9 @@ class RedirectToAPIRootView(RedirectView):
 
 urlpatterns = [
     url(r'^(?P<version>(v0.1|v1))/', include(api_router.urls)),
-    url(r'^admin/', include('massadmin.urls')),
+    url(r'^admin/(?P<app_name>[^/]+)/(?P<model_name>[^/]+)-masschange/(?P<object_ids>[\w,\.\-:]+)/$',
+        mass_change_view,
+        name='massadmin_change_view'),
     url(r'^admin/', admin.site.urls),
     url(r'^accounts/', include('allauth.urls')),
     url(r'^$', RedirectToAPIRootView.as_view()),
