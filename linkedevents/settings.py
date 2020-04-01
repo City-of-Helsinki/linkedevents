@@ -469,3 +469,11 @@ if env('MAIL_MAILGUN_KEY'):
         'MAILGUN_API_URL': env('MAIL_MAILGUN_API'),
     }
     EMAIL_BACKEND = 'anymail.backends.mailgun.EmailBackend'
+
+#
+# massadmin
+#
+
+MASSEDIT = {
+    'ADD_ACTION_GLOBALLY': False,
+}

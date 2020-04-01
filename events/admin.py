@@ -6,6 +6,7 @@ from modeltranslation.admin import TranslationAdmin
 from reversion.admin import VersionAdmin
 from events.api import generate_id
 from events.models import Place, License, DataSource, Event, Keyword, KeywordSet, Language
+from massadmin.massadmin import MassEditMixin
 
 
 class BaseAdmin(admin.ModelAdmin):
@@ -34,7 +35,7 @@ class AutoIdBaseAdmin(BaseAdmin):
         super().save_model(request, obj, form, change)
 
 
-class EventAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
+class EventAdmin(MassEditMixin, AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
     # TODO: only allow user_editable editable fields
     fields = ('id', 'data_source', 'origin_id', 'name', 'short_description', 'description', 'location',
               'location_extra_info', 'start_time', 'end_time', 'keywords', 'audience', 'publisher', 'provider',
@@ -44,7 +45,11 @@ class EventAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
     list_display = ('id', 'name', 'start_time', 'end_time', 'publisher', 'location')
     list_filter = ('data_source',)
     ordering = ('-last_modified_time',)
-    autocomplete_fields = ('location', 'keywords', 'audience', 'super_event', 'publisher', 'replaced_by')
+    autocomplete_fields = ('location', 'super_event', 'publisher', 'replaced_by')
+    massadmin_exclude = ['id', 'data_source', 'origin_id', 'name', 'short_description', 'description',
+                         'location_extra_info', 'start_time', 'end_time',
+                         'provider_contact_info', 'info_url', 'in_language',
+                         'replaced_by']
 
     def get_readonly_fields(self, request, obj=None):
         if obj:
