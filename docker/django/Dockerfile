@@ -22,6 +22,7 @@ COPY --chown=appuser:appuser requirements.txt /app/
 
 RUN apt-install.sh build-essential gdal-bin gettext \
     && pip install --no-cache-dir -r /app/requirements.txt \
+    && rm /app/src/pip-delete-this-directory.txt \
     && apt-cleanup.sh build-essential
 
 # ==============================
