@@ -49,6 +49,7 @@ YSO_KEYWORD_MAPS = {
     u'Lukupiirit': (u'p11406', u'p14004'),  # -> lukeminen, keskustelu
     u'Musiikki': u'p1808',  # -> musiikki
     u'muut kielet': u'p556',  # -> kielet
+    u'Etätapahtumat': u'p26626',  # -> etäosallistuminen
 }
 
 LOCATIONS = {
@@ -374,6 +375,7 @@ class HelmetImporter(Importer):
 
             # One of the type 7 nodes (either Tapahtumat, or just the library name)
             # points to the location, which is mapped to Linked Events keyword ID
+            # Online events lurk in node 7 as well
             if node_type == 7:
                 if 'location' not in event:
                     if classification['NodeId'] == 11996:
@@ -384,24 +386,23 @@ class HelmetImporter(Importer):
                             if classification['NodeId'] in v[0]:
                                 event['location']['id'] = self.tprek_by_id[str(v[1])]
                                 break
-            else:
-                if not self.yso_by_id:
-                    continue
-                # Map some classifications to YSO based keywords
-                if str(classification['NodeName']) in YSO_KEYWORD_MAPS.keys():
-                    yso = YSO_KEYWORD_MAPS[str(classification['NodeName'])]
-                    if isinstance(yso, tuple):
-                        for t_v in yso:
-                            event_keywords.add(self.yso_by_id['yso:' + t_v])
-                            if t_v in KEYWORDS_TO_ADD_TO_AUDIENCE:
-                                # retain the keyword in keywords as well, for backwards compatibility
-                                event_audience.add(self.yso_by_id['yso:' + t_v])
-
-                    else:
-                        event_keywords.add(self.yso_by_id['yso:' + yso])
-                        if yso in KEYWORDS_TO_ADD_TO_AUDIENCE:
+            if not self.yso_by_id:
+                continue
+            # Map some classifications to YSO based keywords, including online events
+            if str(classification['NodeName']) in YSO_KEYWORD_MAPS.keys():
+                yso = YSO_KEYWORD_MAPS[str(classification['NodeName'])]
+                if isinstance(yso, tuple):
+                    for t_v in yso:
+                        event_keywords.add(self.yso_by_id['yso:' + t_v])
+                        if t_v in KEYWORDS_TO_ADD_TO_AUDIENCE:
                             # retain the keyword in keywords as well, for backwards compatibility
-                            event_audience.add(self.yso_by_id['yso:' + yso])
+                            event_audience.add(self.yso_by_id['yso:' + t_v])
+
+                else:
+                    event_keywords.add(self.yso_by_id['yso:' + yso])
+                    if yso in KEYWORDS_TO_ADD_TO_AUDIENCE:
+                        # retain the keyword in keywords as well, for backwards compatibility
+                        event_audience.add(self.yso_by_id['yso:' + yso])
 
         # Finally, go through the languages that are properly denoted in helmet:
         for translation in event_el['LanguageVersions']:
