@@ -500,3 +500,32 @@ def test_event_list_show_deleted_param(api_client, event, user):
     response = get_list(api_client)
     assert response.status_code == 200
     assert event.id not in {e['id'] for e in response.data['data']}
+
+
+@pytest.mark.django_db
+def test_get_event_list_sub_events(api_client, event, event2):
+    event.super_event_type = Event.SuperEventType.RECURRING
+    event.save()
+    event2.super_event = event
+    event2.save()
+
+    # fetch event with sub event
+    detail_url = reverse('event-detail', version='v1', kwargs={'pk': event.pk})
+    response = get(api_client, detail_url)
+    assert_event_fields_exist(response.data)
+    assert response.data['sub_events']
+
+
+@pytest.mark.django_db
+def test_get_event_list_deleted_sub_events(api_client, event, event2):
+    event.super_event_type = Event.SuperEventType.RECURRING
+    event.save()
+    event2.super_event = event
+    event2.deleted = True
+    event2.save()
+
+    # fetch event with sub event deleted
+    detail_url = reverse('event-detail', version='v1', kwargs={'pk': event.pk})
+    response = get(api_client, detail_url)
+    assert_event_fields_exist(response.data)
+    assert not response.data['sub_events']
