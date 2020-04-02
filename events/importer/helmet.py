@@ -124,6 +124,9 @@ LOCATIONS = {
     u"Vuosaaren kirjasto": ((10856, 11405), 8310),
 }
 
+# "Etätapahtumat" are mapped to our new fancy "Tapahtuma vain internetissä." location
+INTERNET_LOCATION_ID = settings.SYSTEM_DATA_SOURCE_ID + ':internet'
+
 HELMET_BASE_URL = 'https://www.helmet.fi'
 HELMET_API_URL = (
     HELMET_BASE_URL + '/api/opennc/v1/ContentLanguages({lang_code})'
@@ -180,10 +183,14 @@ class HelmetImporter(Importer):
             defaults=defaults, **ds_args)
         self.tprek_data_source = DataSource.objects.get(id='tprek')
         self.ahjo_data_source = DataSource.objects.get(id='ahjo')
+        self.system_data_source = DataSource.objects.get(id=settings.SYSTEM_DATA_SOURCE_ID)
 
         org_args = dict(origin_id='u4804001010', data_source=self.ahjo_data_source)
         defaults = dict(name='Helsingin kaupunginkirjasto')
         self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
+        org_args = dict(origin_id='00001', data_source=self.ahjo_data_source)
+        defaults = dict(name='Helsingin kaupunki')
+        self.city, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
 
         # Build a cached list of Places
         loc_id_list = [l[1] for l in LOCATIONS.values()]
@@ -191,6 +198,13 @@ class HelmetImporter(Importer):
             data_source=self.tprek_data_source
         ).filter(origin_id__in=loc_id_list)
         self.tprek_by_id = {p.origin_id: p.id for p in place_list}
+
+        # Create "Tapahtuma vain internetissä" location if not present
+        defaults = dict(data_source=self.system_data_source,
+                        publisher=self.city,
+                        name='Internet',
+                        description='Tapahtuma vain internetissä.',)
+        self.internet_location, _ = Place.objects.get_or_create(id=INTERNET_LOCATION_ID, defaults=defaults)
 
         try:
             yso_data_source = DataSource.objects.get(id='yso')
@@ -362,10 +376,14 @@ class HelmetImporter(Importer):
             # points to the location, which is mapped to Linked Events keyword ID
             if node_type == 7:
                 if 'location' not in event:
-                    for k, v in LOCATIONS.items():
-                        if classification['NodeId'] in v[0]:
-                            event['location']['id'] = self.tprek_by_id[str(v[1])]
-                            break
+                    if classification['NodeId'] == 11996:
+                        # The event is only online, do not consider other locations
+                        event['location']['id'] = INTERNET_LOCATION_ID
+                    else:
+                        for k, v in LOCATIONS.items():
+                            if classification['NodeId'] in v[0]:
+                                event['location']['id'] = self.tprek_by_id[str(v[1])]
+                                break
             else:
                 if not self.yso_by_id:
                     continue
