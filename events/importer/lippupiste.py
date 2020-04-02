@@ -496,8 +496,9 @@ class LippupisteImporter(Importer):
 
     def _trim_super_events(self, events):
         # Remove super-events with only one sub-event if it doesn't already exist in DB
-        existing_event_ids = Event.objects.filter(
-            end_time__gte=datetime.now(), data_source=self.data_source, deleted=False).values_list('origin_id', flat=True)
+        existing_event_ids = Event.objects\
+            .filter(end_time__gte=datetime.now(), data_source=self.data_source, deleted=False)\
+            .values_list('origin_id', flat=True)
         for super_event_source_id, sub_event_count in self.sub_event_count_by_super_event_source_id.items():
             if sub_event_count < 2 and super_event_source_id not in existing_event_ids:
                 logger.info("Skipping super event creation (id: %s)" % super_event_source_id)
@@ -528,6 +529,7 @@ class LippupisteImporter(Importer):
         logger.info("Importing Lippupiste events")
         events = recur_dict()
         event_source_data = list(self._fetch_event_source_data(LIPPUPISTE_EVENT_API_URL))
+        event_source_data = event_source_data[:50]
         if not event_source_data:
             raise ValidationError("Lippupiste API didn't return data, giving up")
 
