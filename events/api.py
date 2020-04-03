@@ -1255,9 +1255,10 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
         if 'publication_status' not in data:
             data['publication_status'] = PublicationStatus.PUBLIC
 
-        # if the event is a draft or cancelled, no further validation is performed
+        # if the event is a draft, postponed or cancelled, no further validation is performed
         if (data['publication_status'] == PublicationStatus.DRAFT or
-                data.get('event_status', None) == Event.Status.CANCELLED):
+                data.get('event_status', None) == Event.Status.CANCELLED or
+                (self.context['request'].method == 'PUT' and 'start_time' in data and not data['start_time'])):
             data = self.run_extension_validations(data)
             return data
 
@@ -1278,11 +1279,7 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
                             _('Short description length must be 160 characters or less'))
 
             elif not data.get(field):
-                # The start time may be null to postpone an already published event
-                if field == 'start_time' and 'start_time' in data and self.context['request'].method == 'PUT':
-                    pass
-                else:
-                    errors[field] = lang_error_msg
+                errors[field] = lang_error_msg
 
         # published events need price info = at least one offer that is free or not
         offer_exists = False

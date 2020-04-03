@@ -311,6 +311,10 @@ def test__postpone_an_event_with_put(api_client, complex_event_dict, user):
     data2 = response.data
     data2['start_time'] = None
 
+    # postponing (like deleting) should be allowed even if event is incomplete (external events etc.)
+    data2['keywords'] = []
+    data2['location'] = None
+
     # update the event
     event_id = data2.pop('@id')
     response2 = update_with_put(api_client, event_id, data2)
@@ -319,8 +323,10 @@ def test__postpone_an_event_with_put(api_client, complex_event_dict, user):
     data2['event_status'] = 'EventPostponed'
     assert_event_data_is_equal(data2, response2.data)
 
-    # try to cancel marking as postponed
+    # try to cancel marking as postponed, fill in missing data
     data2 = response2.data
+    data2['keywords'] = complex_event_dict['keywords']
+    data2['location'] = complex_event_dict['location']
     data2['event_status'] = 'EventScheduled'
     response3 = api_client.put(event_id, data2, format='json')
 
