@@ -2,6 +2,7 @@
 
 django-extensions
 flake8
+freezegun
 pip-tools
 pyflakes
 pylint

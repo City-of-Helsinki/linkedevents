@@ -8,6 +8,8 @@ from events.models import (
 from django.contrib.gis.gdal import SpatialReference, CoordTransform
 from django.contrib.gis.geos import Point
 from django.conf import settings
+import dateutil.parser
+from freezegun import freeze_time
 
 # === util methods ===
 
@@ -71,6 +73,12 @@ def assert_event_fields_exist(data, version='v1'):
             'secondary_headline',
         )
     assert_fields_exist(data, fields)
+
+
+def assert_events_in_response(events, response):
+    response_event_ids = {event['id'] for event in response.data['data']}
+    expected_event_ids = {event.id for event in events}
+    assert response_event_ids == expected_event_ids
 
 
 # === tests ===
@@ -500,3 +508,187 @@ def test_event_list_show_deleted_param(api_client, event, user):
     response = get_list(api_client)
     assert response.status_code == 200
     assert event.id not in {e['id'] for e in response.data['data']}
+
+
+@pytest.mark.django_db
+def test_start_end_iso_date(api_client, make_event):
+    parse_date = dateutil.parser.parse
+    event1 = make_event('1', parse_date('2020-02-19 23:00:00+02'), parse_date('2020-02-19 23:30:00+02'))
+    event2 = make_event('2', parse_date('2020-02-19 23:30:00+02'), parse_date('2020-02-20 00:00:00+02'))
+    event3 = make_event('3', parse_date('2020-02-19 23:30:00+02'), parse_date('2020-02-20 00:30:00+02'))
+    event4 = make_event('4', parse_date('2020-02-20 00:00:00+02'), parse_date('2020-02-20 00:30:00+02'))
+    event5 = make_event('5', parse_date('2020-02-20 12:00:00+02'), parse_date('2020-02-20 13:00:00+02'))
+    event6 = make_event('6', parse_date('2020-02-21 12:00:00+02'), parse_date('2020-02-21 13:00:00+02'))
+
+    # Start parameter
+
+    response = get_list(api_client, query_string='start=2020-02-19')
+    expected_events = [event1, event2, event3, event4, event5, event6]
+    assert_events_in_response(expected_events, response)
+
+    response = get_list(api_client, query_string='start=2020-02-20')
+    expected_events = [event3, event4, event5, event6]
+    assert_events_in_response(expected_events, response)
+
+    # End parameter
+
+    response = get_list(api_client, query_string='end=2020-02-19')
+    expected_events = [event1, event2, event3, event4]
+    assert_events_in_response(expected_events, response)
+
+    response = get_list(api_client, query_string='end=2020-02-20')
+    expected_events = [event1, event2, event3, event4, event5]
+    assert_events_in_response(expected_events, response)
+
+    # Start and end parameters
+
+    response = get_list(api_client, query_string='start=2020-02-20&end=2020-02-20')
+    expected_events = [event3, event4, event5]
+    assert_events_in_response(expected_events, response)
+
+    response = get_list(api_client, query_string='start=2020-02-19&end=2020-02-21')
+    expected_events = [event1, event2, event3, event4, event5, event6]
+    assert_events_in_response(expected_events, response)
+
+
+@pytest.mark.django_db
+def test_start_end_iso_date_time(api_client, make_event):
+    parse_date = dateutil.parser.parse
+    event1 = make_event('1', parse_date('2020-02-19 10:00:00+02'), parse_date('2020-02-19 11:22:33+02'))
+    event2 = make_event('2', parse_date('2020-02-19 11:22:33+02'), parse_date('2020-02-19 22:33:44+02'))
+    event3 = make_event('3', parse_date('2020-02-20 11:22:33+02'), parse_date('2020-02-20 22:33:44+02'))
+
+    # Start parameter
+
+    response = get_list(api_client, query_string='start=2020-02-19T11:22:32')
+    expected_events = [event1, event2, event3]
+    assert_events_in_response(expected_events, response)
+
+    response = get_list(api_client, query_string='start=2020-02-19T11:22:33')
+    expected_events = [event2, event3]
+    assert_events_in_response(expected_events, response)
+
+    # End parameter
+
+    response = get_list(api_client, query_string='end=2020-02-19T11:22:32')
+    expected_events = [event1]
+    assert_events_in_response(expected_events, response)
+
+    response = get_list(api_client, query_string='end=2020-02-19T11:22:33')
+    expected_events = [event1, event2]
+    assert_events_in_response(expected_events, response)
+
+    # Start and end parameters
+
+    response = get_list(api_client, query_string='start=2020-02-19T11:22:33&end=2020-02-19T11:22:33')
+    expected_events = [event2]
+    assert_events_in_response(expected_events, response)
+
+
+@pytest.mark.django_db
+def test_start_end_today(api_client, make_event):
+    parse_date = dateutil.parser.parse
+    event1 = make_event('1', parse_date('2020-02-19 23:00:00+02'), parse_date('2020-02-19 23:30:00+02'))
+    event2 = make_event('2', parse_date('2020-02-19 23:30:00+02'), parse_date('2020-02-20 00:00:00+02'))
+    event3 = make_event('3', parse_date('2020-02-19 23:30:00+02'), parse_date('2020-02-20 00:30:00+02'))
+    event4 = make_event('4', parse_date('2020-02-20 00:00:00+02'), parse_date('2020-02-20 00:30:00+02'))
+    event5 = make_event('5', parse_date('2020-02-20 12:00:00+02'), parse_date('2020-02-20 13:00:00+02'))
+    event6 = make_event('6', parse_date('2020-02-21 00:00:00+02'), parse_date('2020-02-21 01:00:00+02'))
+    event7 = make_event('7', parse_date('2020-02-21 12:00:00+02'), parse_date('2020-02-21 13:00:00+02'))
+
+    def times():
+        yield '2020-02-20 00:00:00+02'
+        yield '2020-02-20 12:00:00+02'
+        yield '2020-02-20 23:59:59+02'
+
+    # Start parameter
+
+    with freeze_time(times):
+        response = get_list(api_client, query_string='start=today')
+        expected_events = [event3, event4, event5, event6, event7]
+        assert_events_in_response(expected_events, response)
+
+    # End parameter
+
+    with freeze_time(times):
+        response = get_list(api_client, query_string='end=today')
+        expected_events = [event1, event2, event3, event4, event5, event6]
+        assert_events_in_response(expected_events, response)
+
+    # Start and end parameters
+
+    with freeze_time(times):
+        response = get_list(api_client, query_string='start=today&end=today')
+        expected_events = [event3, event4, event5, event6]
+        assert_events_in_response(expected_events, response)
+
+
+@pytest.mark.django_db
+def test_start_end_now(api_client, make_event):
+    parse_date = dateutil.parser.parse
+    event1 = make_event('1', parse_date('2020-02-19 23:00:00+02'), parse_date('2020-02-19 23:30:00+02'))
+    event2 = make_event('2', parse_date('2020-02-19 23:30:00+02'), parse_date('2020-02-20 00:00:00+02'))
+    event3 = make_event('3', parse_date('2020-02-19 23:30:00+02'), parse_date('2020-02-20 00:30:00+02'))
+    event4 = make_event('4', parse_date('2020-02-20 00:00:00+02'), parse_date('2020-02-20 00:30:00+02'))
+    event5 = make_event('5', parse_date('2020-02-20 12:00:00+02'), parse_date('2020-02-20 13:00:00+02'))
+    event6 = make_event('6', parse_date('2020-02-21 00:00:00+02'), parse_date('2020-02-21 01:00:00+02'))
+    event7 = make_event('7', parse_date('2020-02-21 12:00:00+02'), parse_date('2020-02-21 13:00:00+02'))
+
+    # Start parameter
+
+    with freeze_time('2020-02-20 00:30:00+02'):
+        response = get_list(api_client, query_string='start=now')
+        expected_events = [event5, event6, event7]
+        assert_events_in_response(expected_events, response)
+
+    # End parameter
+
+    with freeze_time('2020-02-20 12:00:00+02'):
+        response = get_list(api_client, query_string='end=now')
+        expected_events = [event1, event2, event3, event4, event5]
+        assert_events_in_response(expected_events, response)
+
+    # Start and end parameters
+
+    with freeze_time('2020-02-20 12:00:00+02'):
+        response = get_list(api_client, query_string='start=now&end=now')
+        expected_events = [event5]
+        assert_events_in_response(expected_events, response)
+
+
+@pytest.mark.django_db
+def test_start_end_events_without_endtime(api_client, make_event):
+    parse_date = dateutil.parser.parse
+    event1 = make_event('1', parse_date('2020-02-19 23:00:00+02'))
+    event2 = make_event('2', parse_date('2020-02-20 12:00:00+02'))
+    event3 = make_event('3', parse_date('2020-02-21 12:34:56+02'))
+
+    # Start parameter
+
+    response = get_list(api_client, query_string='start=2020-02-19T23:00:00')
+    expected_events = [event1, event2, event3]
+    assert_events_in_response(expected_events, response)
+
+    response = get_list(api_client, query_string='start=2020-02-20T01:00:00')
+    expected_events = [event2, event3]
+    assert_events_in_response(expected_events, response)
+
+    # End parameter
+
+    response = get_list(api_client, query_string='end=2020-02-20T12:00:00')
+    expected_events = [event1, event2]
+    assert_events_in_response(expected_events, response)
+
+    response = get_list(api_client, query_string='end=2020-02-21T23:00:00')
+    expected_events = [event1, event2, event3]
+    assert_events_in_response(expected_events, response)
+
+    # Start and end parameters
+
+    response = get_list(api_client, query_string='start=2020-02-19T23:00:00&end=2020-02-21T12:34:56')
+    expected_events = [event1, event2, event3]
+    assert_events_in_response(expected_events, response)
+
+    response = get_list(api_client, query_string='start=2020-02-19T23:00:01&end=2020-02-21T12:34:55')
+    expected_events = [event2]
+    assert_events_in_response(expected_events, response)
