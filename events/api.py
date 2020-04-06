@@ -1604,10 +1604,16 @@ def _filter_event_queryset(queryset, params, srs=None):
         start = today.isoformat()
         end = (today + timedelta(days=days)).isoformat()
 
+    if not end:
+        # postponed events are considered to be "far" in the future and should be included if end is *not* given
+        postponed_Q = Q(event_status=Event.Status.POSTPONED)
+    else:
+        postponed_Q = Q()
+
     if start:
         dt = utils.parse_time(start, is_start=True)[0]
         # only return events with specified end times during the whole of the event, otherwise only future events
-        queryset = queryset.filter(Q(end_time__gt=dt, has_end_time=True) | Q(start_time__gte=dt))
+        queryset = queryset.filter(Q(end_time__gt=dt, has_end_time=True) | Q(start_time__gte=dt) | postponed_Q)
 
     if end:
         dt = utils.parse_time(end, is_start=False)[0]
@@ -1803,8 +1809,12 @@ def _filter_event_queryset(queryset, params, srs=None):
 
     # Filter deleted events
     val = params.get('show_deleted', None)
-    if not val:
+    # ONLY deleted events (for cache updates etc., returns deleted object ids)
+    val_deleted = params.get('deleted', None)
+    if not val and not val_deleted:
         queryset = queryset.filter(deleted=False)
+    if val_deleted:
+        queryset = queryset.filter(deleted=True)
 
     return queryset
 
