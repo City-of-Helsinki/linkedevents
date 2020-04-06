@@ -1255,9 +1255,10 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
         if 'publication_status' not in data:
             data['publication_status'] = PublicationStatus.PUBLIC
 
-        # if the event is a draft or cancelled, no further validation is performed
+        # if the event is a draft, postponed or cancelled, no further validation is performed
         if (data['publication_status'] == PublicationStatus.DRAFT or
-                data.get('event_status', None) == Event.Status.CANCELLED):
+                data.get('event_status', None) == Event.Status.CANCELLED or
+                (self.context['request'].method == 'PUT' and 'start_time' in data and not data['start_time'])):
             data = self.run_extension_validations(data)
             return data
 
@@ -1278,11 +1279,7 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
                             _('Short description length must be 160 characters or less'))
 
             elif not data.get(field):
-                # The start time may be null to postpone an already published event
-                if field == 'start_time' and 'start_time' in data and self.context['request'].method == 'PUT':
-                    pass
-                else:
-                    errors[field] = lang_error_msg
+                errors[field] = lang_error_msg
 
         # published events need price info = at least one offer that is free or not
         offer_exists = False
@@ -1607,10 +1604,16 @@ def _filter_event_queryset(queryset, params, srs=None):
         start = today.isoformat()
         end = (today + timedelta(days=days)).isoformat()
 
+    if not end:
+        # postponed events are considered to be "far" in the future and should be included if end is *not* given
+        postponed_Q = Q(event_status=Event.Status.POSTPONED)
+    else:
+        postponed_Q = Q()
+
     if start:
         dt = utils.parse_time(start, is_start=True)[0]
         # only return events with specified end times during the whole of the event, otherwise only future events
-        queryset = queryset.filter(Q(end_time__gt=dt, has_end_time=True) | Q(start_time__gte=dt))
+        queryset = queryset.filter(Q(end_time__gt=dt, has_end_time=True) | Q(start_time__gte=dt) | postponed_Q)
 
     if end:
         dt = utils.parse_time(end, is_start=False)[0]
@@ -1806,8 +1809,12 @@ def _filter_event_queryset(queryset, params, srs=None):
 
     # Filter deleted events
     val = params.get('show_deleted', None)
-    if not val:
+    # ONLY deleted events (for cache updates etc., returns deleted object ids)
+    val_deleted = params.get('deleted', None)
+    if not val and not val_deleted:
         queryset = queryset.filter(deleted=False)
+    if val_deleted:
+        queryset = queryset.filter(deleted=True)
 
     return queryset
 
