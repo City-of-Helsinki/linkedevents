@@ -1809,8 +1809,12 @@ def _filter_event_queryset(queryset, params, srs=None):
 
     # Filter deleted events
     val = params.get('show_deleted', None)
-    if not val:
+    # ONLY deleted events (for cache updates etc., returns deleted object ids)
+    val_deleted = params.get('deleted', None)
+    if not val and not val_deleted:
         queryset = queryset.filter(deleted=False)
+    if val_deleted:
+        queryset = queryset.filter(deleted=True)
 
     return queryset
 

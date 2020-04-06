@@ -487,7 +487,7 @@ def test_redirect_to_end_of_replace_chain(api_client, event, event2, event3, use
 
 
 @pytest.mark.django_db
-def test_event_list_show_deleted_param(api_client, event, user):
+def test_event_list_show_deleted_param(api_client, event, event2, user):
     api_client.force_authenticate(user=user)
 
     event.soft_delete()
@@ -495,6 +495,7 @@ def test_event_list_show_deleted_param(api_client, event, user):
     response = get_list(api_client, query_string='show_deleted=true')
     assert response.status_code == 200
     assert event.id in {e['id'] for e in response.data['data']}
+    assert event2.id in {e['id'] for e in response.data['data']}
 
     expected_keys = ['id', 'name', 'last_modified_time', 'deleted', 'replaced_by']
     event_data = next((e for e in response.data['data'] if e['id'] == event.id))
@@ -508,6 +509,33 @@ def test_event_list_show_deleted_param(api_client, event, user):
     response = get_list(api_client)
     assert response.status_code == 200
     assert event.id not in {e['id'] for e in response.data['data']}
+    assert event2.id in {e['id'] for e in response.data['data']}
+
+
+@pytest.mark.django_db
+def test_event_list_deleted_param(api_client, event, event2, user):
+    api_client.force_authenticate(user=user)
+
+    event.soft_delete()
+
+    response = get_list(api_client, query_string='deleted=true')
+    assert response.status_code == 200
+    assert event.id in {e['id'] for e in response.data['data']}
+    assert event2.id not in {e['id'] for e in response.data['data']}
+
+    expected_keys = ['id', 'name', 'last_modified_time', 'deleted', 'replaced_by']
+    event_data = next((e for e in response.data['data'] if e['id'] == event.id))
+    assert len(event_data) == len(expected_keys)
+    for key in event_data:
+        assert key in expected_keys
+    assert event_data['name']['fi'] == 'POISTETTU'
+    assert event_data['name']['sv'] == 'RADERAD'
+    assert event_data['name']['en'] == 'DELETED'
+
+    response = get_list(api_client)
+    assert response.status_code == 200
+    assert event.id not in {e['id'] for e in response.data['data']}
+    assert event2.id in {e['id'] for e in response.data['data']}
 
 
 @pytest.mark.django_db
