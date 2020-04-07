@@ -218,6 +218,8 @@ class LippupisteImporter(Importer):
         except License.DoesNotExist:
             self.event_only_license = None
 
+        self.sub_event_count_by_super_event_source_id = defaultdict(lambda: 0)
+
     def _fetch_event_source_data(self, url):
         # stream=True allows lazy iteration
         response = requests.get(url, stream=True)
@@ -444,6 +446,8 @@ class LippupisteImporter(Importer):
         superevent['super_event_type'] = Event.SuperEventType.RECURRING
         superevent['info_url']['fi'] = source_event['EventSerieLink']
 
+        self.sub_event_count_by_super_event_source_id[superevent_source_id] += 1
+
     def _link_event_to_superevent(self, source_event, events):
         superevent_source_id = get_namespaced_event_serie_id(source_event['EventSerieId'])
         superevent_id = self.super_event_ids_by_origin_id.get(superevent_source_id)
@@ -451,7 +455,7 @@ class LippupisteImporter(Importer):
             return
         event_source_id = source_event['EventId']
         event = events.get(event_source_id)
-        if event:
+        if event and superevent_source_id in events:
             event['super_event_id'] = superevent_id
 
     def _update_superevent_details(self, super_event):
@@ -490,6 +494,16 @@ class LippupisteImporter(Importer):
                 setattr(super_event, key, value)
             super_event.save()
 
+    def _trim_super_events(self, events):
+        # Remove super-events with only one sub-event if it doesn't already exist in DB
+        existing_event_ids = Event.objects\
+            .filter(end_time__gte=datetime.now(), data_source=self.data_source, deleted=False)\
+            .values_list('origin_id', flat=True)
+        for super_event_source_id, sub_event_count in self.sub_event_count_by_super_event_source_id.items():
+            if sub_event_count < 2 and super_event_source_id not in existing_event_ids:
+                logger.info("Skipping super event creation (id: %s)" % super_event_source_id)
+                del events[super_event_source_id]
+
     def _synch_events(self, events):
         event_list = sorted(events.values(), key=lambda x: x['start_time'])
 
@@ -515,6 +529,7 @@ class LippupisteImporter(Importer):
         logger.info("Importing Lippupiste events")
         events = recur_dict()
         event_source_data = list(self._fetch_event_source_data(LIPPUPISTE_EVENT_API_URL))
+        event_source_data = event_source_data[:50]
         if not event_source_data:
             raise ValidationError("Lippupiste API didn't return data, giving up")
 
@@ -566,6 +581,9 @@ class LippupisteImporter(Importer):
                 else:
                     # not ignored
                     self._import_event(source_event, events)
+
+        self._trim_super_events(events)
+
         self._synch_events(events)
 
         # Because super events must exist to be linked, do this after synch. We also need to resynch.
