@@ -539,6 +539,15 @@ def test_event_list_deleted_param(api_client, event, event2, user):
 
 
 @pytest.mark.django_db
+def test_event_list_is_free_filter(api_client, event, event2, event3, offer):
+    response = get_list(api_client, query_string='is_free=true')
+    assert {event2.id} == {e['id'] for e in response.data['data']}
+
+    response = get_list(api_client, query_string='is_free=false')
+    assert {event.id, event3.id} == {e['id'] for e in response.data['data']}
+
+
+@pytest.mark.django_db
 def test_start_end_iso_date(api_client, make_event):
     parse_date = dateutil.parser.parse
     event1 = make_event('1', parse_date('2020-02-19 23:00:00+02'), parse_date('2020-02-19 23:30:00+02'))
