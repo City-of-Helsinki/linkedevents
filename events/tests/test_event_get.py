@@ -484,6 +484,7 @@ def test_event_status_filter(api_client, event, event2, event3, event4, user, or
     assert event3.id not in ids
     assert event4.id in ids
 
+
 @pytest.mark.django_db
 def test_admin_user_filter(api_client, event, event2, user):
     api_client.force_authenticate(user=user)
