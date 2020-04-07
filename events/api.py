@@ -1755,6 +1755,17 @@ def _filter_event_queryset(queryset, params, srs=None):
     elif val == 'public':
         queryset = queryset.filter(publication_status=PublicationStatus.PUBLIC)
 
+    # Filter by event status
+    val = params.get('event_status', None)
+    if val and val.lower() == 'eventscheduled':
+        queryset = queryset.filter(event_status=Event.Status.SCHEDULED)
+    elif val and val.lower() == 'eventrescheduled':
+        queryset = queryset.filter(event_status=Event.Status.RESCHEDULED)
+    elif val and val.lower() == 'eventcancelled':
+        queryset = queryset.filter(event_status=Event.Status.CANCELLED)
+    elif val and val.lower() == 'eventpostponed':
+        queryset = queryset.filter(event_status=Event.Status.POSTPONED)
+
     # Filter by language, checking both string content and in_language field
     val = params.get('language', None)
     if val:

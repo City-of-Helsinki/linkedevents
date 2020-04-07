@@ -365,6 +365,20 @@ def event3(place3, user):
     )
 
 
+@pytest.fixture
+def event4(place3, user):
+    return Event.objects.create(
+        id=place3.data_source.id + ':test_event_4', location=place3,
+        data_source=place3.data_source, publisher=place3.publisher,
+        last_modified_by=user,
+        start_time=timezone.now() + timedelta(minutes=30),
+        end_time=timezone.now() + timedelta(hours=1),
+        short_description='short desc',
+        description='desc',
+        name='evenemang'
+    )
+
+
 @pytest.mark.django_db
 @pytest.fixture
 def draft_event(place, user):
