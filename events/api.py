@@ -1487,6 +1487,14 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
         if request:
             if not request.user.is_authenticated:
                 del ret['publication_status']
+
+        if ret['sub_events']:
+            sub_events_relation = self.fields['sub_events'].child_relation
+            undeleted_sub_events = []
+            for sub_event in obj.sub_events.filter(deleted=False):
+                undeleted_sub_events.append(sub_events_relation.to_representation(sub_event))
+            ret['sub_events'] = undeleted_sub_events
+
         return ret
 
     class Meta:
