@@ -277,6 +277,30 @@ def place(data_source, organization, administrative_division):
 
 @pytest.mark.django_db
 @pytest.fixture
+def make_event(data_source, organization, place, user):
+    def _make_event(origin_id, start_time=None, end_time=None):
+        if not start_time:
+            event_status = Event.Status.POSTPONED
+        else:
+            event_status = Event.Status.SCHEDULED
+        return Event.objects.create(
+            id=data_source.id + ':' + origin_id, location=place,
+            data_source=data_source, publisher=organization,
+            event_status=event_status,
+            last_modified_by=user,
+            start_time=start_time,
+            end_time=end_time,
+            has_start_time=start_time is not None,
+            has_end_time=end_time is not None,
+            short_description='short desc',
+            description='desc',
+            name='tapahtuma'
+        )
+    return _make_event
+
+
+@pytest.mark.django_db
+@pytest.fixture
 def event(data_source, organization, place, user):
     return Event.objects.create(
         id=data_source.id + ':test_event', location=place,

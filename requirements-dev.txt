@@ -10,6 +10,7 @@ click==7.0                # via pip-tools
 django-extensions==2.2.6
 entrypoints==0.3          # via flake8
 flake8==3.7.9
+freezegun==0.3.15
 importlib-metadata==1.5.0  # via pluggy, pytest
 isort==4.3.21             # via pylint
 lazy-object-proxy==1.4.3  # via astroid
@@ -25,7 +26,8 @@ pylint==2.4.4
 pyparsing==2.4.6          # via packaging
 pytest-django==3.8.0
 pytest==5.3.5
-six==1.14.0               # via astroid, django-extensions, packaging, pip-tools
+python-dateutil==2.8.1    # via freezegun
+six==1.14.0               # via astroid, django-extensions, freezegun, packaging, pip-tools, python-dateutil
 typed-ast==1.4.1          # via astroid
 wcwidth==0.1.8            # via pytest
 wrapt==1.11.2             # via astroid

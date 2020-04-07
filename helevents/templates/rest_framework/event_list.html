@@ -63,11 +63,16 @@ regardless of division type.</p>
 <h3 id="event-category">Event category</h3>
 <p>To restrict the retrieved events by category, use the query
 parameter <code>keyword</code>, separating values by commas if you wish to
-query for several locations.</p>
+query for any of several keywords, or the parameter <code>keyword_AND</code>, if you require all
+provided values (separated by commas) to be present.</p>
 <p>Keyword ids are found at the <code>keyword</code> endpoint, which lists the
 keywords in decreasing number of events found. The common keywords
-used in all events originate from the general Finnish ontology (yso),
+used in all events originate from the general Finnish ontology (YSO),
 hence the format <code>yso:p4354</code>.</p>
+<p>The most common event categories are listed in the two keyword sets
+    <a href="https://api.hel.fi/linkedevents/v1/keyword_set/helsinki:topics/">helsinki:topics</a> and
+    <a href="https://api.hel.fi/linkedevents/v1/keyword_set/helsinki:audiences/">helsinki:audiences</a>,
+which list the YSO keywords that are present in most events to specify event main topic and audience.</p>
 <p>Example:</p>
 <pre><code>event/?keyword=yso:p4354
 </code></pre>
