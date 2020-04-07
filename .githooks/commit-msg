@@ -6,7 +6,8 @@
 # It looks for scripts in the .git/hooks/pre-receive.d directory and executes them in order,
 # passing along stdin. If any script exits with a non-zero status, this script exits.
 
-script_dir=$(dirname "$0")
+# Since this file is symlinked, we need to get the actual directory where the symlinked file is
+script_dir="$(dirname "$(readlink -f "$0")")"
 hook_name=$(basename "$0")
 
 hook_dir="$script_dir/$hook_name.d"

@@ -26,7 +26,10 @@ git secrets --register-aws
 echo "Setting scripts to be executable."
 find .githooks -type f -print0 | xargs chmod +x
 
-echo "Copying files to Git Hooks directory."
-cp -R .githooks/. .git/hooks/
+echo "Creating symlinks to git hook files"
+ln -s ../../.githooks/commit-msg .git/hooks/commit-msg
+ln -s ../../.githooks/pre-commit .git/hooks/pre-commit
+ln -s ../../.githooks/pre-push .git/hooks/pre-push
+ln -s ../../.githooks/prepare-commit-msg .git/hooks/prepare-commit-msg
 
 echo "Done!"
