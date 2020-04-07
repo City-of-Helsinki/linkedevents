@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-trufflehog --since_commit "$(git rev-parse master)" --regex --exclude_paths trufflehog-exclude-patterns.txt .
+trufflehog --branch "$(git rev-parse --abbrev-ref HEAD)" --max_depth "$(git rev-list --count master..HEAD)" --regex --exclude_paths trufflehog-exclude-patterns.txt .
