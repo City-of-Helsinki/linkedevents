@@ -21,8 +21,7 @@ Linked Events is event information:
 
 Linked Events was originally developed for City of Helsinki organization and
 you can see the Linked Events API in action for [Helsinki capital region here](https://api.hel.fi/linkedevents/v1/).
-It contains data from Helsinki City Tourist & Convention Bureau, City of Helsinki Cultural Office and the Helmet metropolitan area public libraries.
-Viewing the API should give a reasonable view for the kind of information Linked Events is targeted for.
+It contains data from all Helsinki City Departments as well as data from Helsinki Marketing and the Helmet metropolitan area public libraries. Viewing the API should give a reasonable view for the kind of information Linked Events is targeted for.
 
 Target audience of this README.md are developers who may or maynot have a lot of Python
 experience and would like to get things running as quickly as possible.
