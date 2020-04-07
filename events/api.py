@@ -1826,7 +1826,7 @@ def _filter_event_queryset(queryset, params, srs=None):
 
     # Filter by free offer
     val = params.get('is_free', None)
-    if val.lower() in ['true', 'false']:
+    if val and val.lower() in ['true', 'false']:
         if val.lower() == 'true':
             queryset = queryset.filter(offers__is_free=True)
         elif val.lower() == 'false':
