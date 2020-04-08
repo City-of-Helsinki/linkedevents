@@ -470,6 +470,10 @@ class Importer(object):
                     obj._changed = True
                     obj._changed_fields.append('extension_course')
 
+        # If event start time changed, it was rescheduled.
+        if 'start_time' in obj._changed_fields:
+            self._set_field(obj, 'event_status', Event.Status.RESCHEDULED)
+
         if obj._changed or obj._created:
             # Finally, we must save the whole object, even when only related fields changed.
             # Also, we want to log all that happened.

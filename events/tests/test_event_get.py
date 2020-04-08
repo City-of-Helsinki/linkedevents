@@ -443,6 +443,49 @@ def test_publication_status_filter(api_client, event, event2, user, organization
 
 
 @pytest.mark.django_db
+def test_event_status_filter(api_client, event, event2, event3, event4, user, organization, data_source):
+    event.event_status = Event.Status.SCHEDULED
+    event.save()
+
+    event2.event_status = Event.Status.RESCHEDULED
+    event2.save()
+
+    event3.event_status = Event.Status.CANCELLED
+    event3.save()
+
+    event4.event_status = Event.Status.POSTPONED
+    event4.save()
+
+    response = get_list(api_client, query_string='event_status=eventscheduled')
+    ids = {e['id'] for e in response.data['data']}
+    assert event.id in ids
+    assert event2.id not in ids
+    assert event3.id not in ids
+    assert event4.id not in ids
+
+    response = get_list(api_client, query_string='event_status=eventrescheduled')
+    ids = {e['id'] for e in response.data['data']}
+    assert event.id not in ids
+    assert event2.id in ids
+    assert event3.id not in ids
+    assert event4.id not in ids
+
+    response = get_list(api_client, query_string='event_status=eventcancelled')
+    ids = {e['id'] for e in response.data['data']}
+    assert event.id not in ids
+    assert event2.id not in ids
+    assert event3.id in ids
+    assert event4.id not in ids
+
+    response = get_list(api_client, query_string='event_status=eventpostponed')
+    ids = {e['id'] for e in response.data['data']}
+    assert event.id not in ids
+    assert event2.id not in ids
+    assert event3.id not in ids
+    assert event4.id in ids
+
+
+@pytest.mark.django_db
 def test_admin_user_filter(api_client, event, event2, user):
     api_client.force_authenticate(user=user)
 
