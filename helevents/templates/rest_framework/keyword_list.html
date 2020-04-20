@@ -1,11 +1,14 @@
 <div class="panel panel-default">
     <div class="panel-body">
 
-<h2 id="using-keyword-endpoint">Using the keyword endpoint</h2>
-<p>Here, categories for events are listed. Events in each category can be found at the
-<code>event</code> endpoint using the query parameter <code>keyword</code>. The common keywords
+<h2 id="using-keyword-endpoint">Using the keyword endpoint</h2>      
+<p>Here, categories for events are listed. Events in each category can be found at the <code>event</code> endpoint using the query parameter <code>keyword</code>. The common keywords
 used in all events originate from the <a href="https://finto.fi/yso/en/">general Finnish ontology (yso)</a>,
 hence the format <code>yso:p4354</code>. Default ordering is decreasing order by the number of events found.</p>
+<p>The most common event categories are listed in the two keyword sets
+        <a href="https://api.hel.fi/linkedevents/v1/keyword_set/helsinki:topics/">helsinki:topics</a> and
+        <a href="https://api.hel.fi/linkedevents/v1/keyword_set/helsinki:audiences/">helsinki:audiences</a>,
+    which list the YSO keywords that are present in most events to specify event main topic and audience.</p>
 <h4 id="keyword-text">Keyword text</h4>
 <p>To find keywords that contain a specific string, use the query parameter <code>text</code>.</p>
 <p>Example:</p>
@@ -29,6 +32,10 @@ hence the format <code>yso:p4354</code>. Default ordering is decreasing order by
 <p>By default, only those keywords which have listed events are
 displayed. You may display keywords with zero <code>n_events</code> with the
     query parameter <code>show_all_keywords</code>.</p>
+ <h4 id="recommended-keywords">Recommended keywords</h4>
+<p>We recommend using the  keyword set 'helsinki:topics' for general event grouping and 'helsinki:audiences' for sorting by target group. These sets are used in categorizing the majority of events in the API. <p>
+<p><a href="https://api.hel.fi/linkedevents/v1/keyword_set/" target="_self">Keyword sets</a></p>       
+        
 
     </div>
 </div>
