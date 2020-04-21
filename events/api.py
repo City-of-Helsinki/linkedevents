@@ -1620,8 +1620,12 @@ def _filter_event_queryset(queryset, params, srs=None):
 
     if start:
         dt = utils.parse_time(start, is_start=True)[0]
-        # only return events with specified end times during the whole of the event, otherwise only future events
-        queryset = queryset.filter(Q(end_time__gt=dt, has_end_time=True) | Q(start_time__gte=dt) | postponed_Q)
+        # only return events with specified end times, or unspecified start times, during the whole of the event
+        # this gets of rid pesky one-day events with no known end time (but known start) after they started
+        queryset = queryset.filter(Q(end_time__gt=dt, has_end_time=True) |
+                                   Q(end_time__gt=dt, has_start_time=False) |
+                                   Q(start_time__gte=dt) |
+                                   postponed_Q)
 
     if end:
         dt = utils.parse_time(end, is_start=False)[0]

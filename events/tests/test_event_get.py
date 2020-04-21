@@ -806,3 +806,28 @@ def test_start_end_events_without_endtime(api_client, make_event):
     response = get_list(api_client, query_string='start=2020-02-19T23:00:01&end=2020-02-21T12:34:55')
     expected_events = [event2]
     assert_events_in_response(expected_events, response)
+
+    # Kulke special case: multiple day event but no specific start or end times, only dates
+    event1.start_time = parse_date('2020-02-19 00:00:00+02')
+    event1.end_time = parse_date('2020-02-21 00:00:00+02')
+    event1.has_start_time = False
+    event1.has_end_time = False
+    event1.save()
+    # Kulke special case: single day event, specific start but no end time
+    event2.start_time = parse_date('2020-02-20 18:00:00+02')
+    event2.end_time = parse_date('2020-02-21 00:00:00+02')
+    event2.has_start_time = True
+    event2.has_end_time = False
+    event2.save()
+
+    # Start parameter for Kulke special case
+
+    response = get_list(api_client, query_string='start=2020-02-20T12:00:00')
+    # long event (no exact start) that already started should be included
+    expected_events = [event1, event2, event3, event4]
+    assert_events_in_response(expected_events, response)
+
+    response = get_list(api_client, query_string='start=2020-02-20T21:00:00')
+    # short event (exact start) that already started should not be included
+    expected_events = [event1, event3, event4]
+    assert_events_in_response(expected_events, response)
