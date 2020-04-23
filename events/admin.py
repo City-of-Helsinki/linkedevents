@@ -4,6 +4,7 @@ from django.utils.translation import ugettext as _
 from leaflet.admin import LeafletGeoAdmin
 from modeltranslation.admin import TranslationAdmin
 from reversion.admin import VersionAdmin
+from admin_auto_filters.filters import AutocompleteFilter
 from events.api import generate_id
 from events.models import Place, License, DataSource, Event, Keyword, KeywordSet, Language
 
@@ -34,6 +35,21 @@ class AutoIdBaseAdmin(BaseAdmin):
         super().save_model(request, obj, form, change)
 
 
+class PublisherFilter(AutocompleteFilter):
+    title = 'Publisher'  # display title
+    field_name = 'publisher'  # name of the foreign key field
+
+
+class CreatedByFilter(AutocompleteFilter):
+    title = 'Created by'  # display title
+    field_name = 'created_by'  # name of the foreign key field
+
+
+class LocationFilter(AutocompleteFilter):
+    title = 'Location'  # display title
+    field_name = 'location'  # name of the foreign key field
+
+
 class EventAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
     # TODO: only allow user_editable editable fields
     fields = ('id', 'data_source', 'origin_id', 'name', 'short_description', 'description', 'location',
@@ -42,8 +58,9 @@ class EventAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
               'publication_status', 'replaced_by', 'deleted')
     search_fields = ('name', 'location__name')
     list_display = ('id', 'name', 'start_time', 'end_time', 'publisher', 'location')
-    list_filter = ('data_source',)
+    list_filter = ('data_source', PublisherFilter, CreatedByFilter, LocationFilter)
     ordering = ('-last_modified_time',)
+    date_hierarchy = 'end_time'
     autocomplete_fields = ('location', 'keywords', 'audience', 'super_event', 'publisher', 'replaced_by')
 
     def get_readonly_fields(self, request, obj=None):
@@ -51,6 +68,9 @@ class EventAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
             return ['id', 'data_source', 'origin_id']
         else:
             return ['id', 'data_source']
+
+    class Media:
+        pass
 
 
 admin.site.register(Event, EventAdmin)

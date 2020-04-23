@@ -122,6 +122,18 @@ def user2():
 
 @pytest.mark.django_db
 @pytest.fixture
+def super_user():
+    return get_user_model().objects.create(
+        username='super_user',
+        first_name='Super',
+        last_name='Man',
+        email='super@user.com',
+        is_superuser=True,
+    )
+
+
+@pytest.mark.django_db
+@pytest.fixture
 def organization(data_source, user):
     org, created = Organization.objects.get_or_create(
         id=data_source.id + ':test_organization',
@@ -169,27 +181,44 @@ def offer(event2):
 
 
 @pytest.mark.django_db
+@pytest.fixture(scope="class")
+def make_minimal_event_dict(make_keyword_id):
+    def _make_minimal_event_dict(data_source, organization, location_id):
+        return {
+            'name': {'fi': TEXT_FI},
+            'start_time': datetime.strftime(timezone.now() + timedelta(days=1), '%Y-%m-%d'),
+            'location': {'@id': location_id},
+            'keywords': [
+                {'@id': make_keyword_id(data_source, 'test')},
+            ],
+            'short_description': {'fi': 'short desc', 'sv': 'short desc sv', 'en': 'short desc en'},
+            'description': {'fi': 'desc', 'sv': 'desc sv', 'en': 'desc en'},
+            'offers': [
+                {
+                    'is_free': False,
+                    'price': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
+                    'description': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
+                    'info_url': {'en': URL, 'sv': URL, 'fi': URL}
+                }
+            ],
+            'publisher': organization.id
+        }
+
+    return _make_minimal_event_dict
+
+
+@pytest.mark.django_db
 @pytest.fixture
-def minimal_event_dict(data_source, organization, location_id):
-    return {
-        'name': {'fi': TEXT_FI},
-        'start_time': datetime.strftime(timezone.now() + timedelta(days=1), '%Y-%m-%d'),
-        'location': {'@id': location_id},
-        'keywords': [
-            {'@id': keyword_id(data_source, 'test')},
-        ],
-        'short_description': {'fi': 'short desc', 'sv': 'short desc sv', 'en': 'short desc en'},
-        'description': {'fi': 'desc', 'sv': 'desc sv', 'en': 'desc en'},
-        'offers': [
-            {
-                'is_free': False,
-                'price': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
-                'description': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
-                'info_url': {'en': URL, 'sv': URL, 'fi': URL}
-            }
-        ],
-        'publisher': organization.id
-    }
+def minimal_event_dict(data_source, organization, location_id, make_minimal_event_dict):
+    return make_minimal_event_dict(data_source, organization, location_id)
+
+
+@pytest.mark.django_db
+@pytest.fixture(scope="class")
+def make_minimal_event_dict_class(request, make_minimal_event_dict):
+    def _make_minimal_event_dict(self, *args):
+        return make_minimal_event_dict(*args)
+    request.cls.make_minimal_event_dict = _make_minimal_event_dict
 
 
 @pytest.fixture
@@ -248,6 +277,30 @@ def place(data_source, organization, administrative_division):
 
 @pytest.mark.django_db
 @pytest.fixture
+def make_event(data_source, organization, place, user):
+    def _make_event(origin_id, start_time=None, end_time=None):
+        if not start_time:
+            event_status = Event.Status.POSTPONED
+        else:
+            event_status = Event.Status.SCHEDULED
+        return Event.objects.create(
+            id=data_source.id + ':' + origin_id, location=place,
+            data_source=data_source, publisher=organization,
+            event_status=event_status,
+            last_modified_by=user,
+            start_time=start_time,
+            end_time=end_time,
+            has_start_time=start_time is not None,
+            has_end_time=end_time is not None,
+            short_description='short desc',
+            description='desc',
+            name='tapahtuma'
+        )
+    return _make_event
+
+
+@pytest.mark.django_db
+@pytest.fixture
 def event(data_source, organization, place, user):
     return Event.objects.create(
         id=data_source.id + ':test_event', location=place,
@@ -268,6 +321,7 @@ def place2(other_data_source, organization2):
         id=other_data_source.id + ':test_location_2',
         data_source=other_data_source,
         publisher=organization2,
+        position=Point(0, 0),
         name_en='Place 2'
     )
 
@@ -311,6 +365,20 @@ def event3(place3, user):
     )
 
 
+@pytest.fixture
+def event4(place3, user):
+    return Event.objects.create(
+        id=place3.data_source.id + ':test_event_4', location=place3,
+        data_source=place3.data_source, publisher=place3.publisher,
+        last_modified_by=user,
+        start_time=timezone.now() + timedelta(minutes=30),
+        end_time=timezone.now() + timedelta(hours=1),
+        short_description='short desc',
+        description='desc',
+        name='evenemang'
+    )
+
+
 @pytest.mark.django_db
 @pytest.fixture
 def draft_event(place, user):
@@ -333,50 +401,78 @@ def location_id(place):
 
 @pytest.mark.django_db
 @pytest.fixture
-def keyword(data_source, kw_name):
-    lang_objs = [
-        Language.objects.get_or_create(id=lang)[0]
-        for lang in ['fi', 'sv', 'en']
-    ]
+def make_location_id():
+    def _make_location_id(place):
+        obj_id = reverse(PlaceSerializer().view_name, kwargs={'pk': place.id})
+        return obj_id
 
-    labels = [
-        KeywordLabel.objects.create(
-            name='%s%s' % (kw_name, lang.id),
-            language=lang
+    return _make_location_id
+
+
+@pytest.mark.django_db
+@pytest.fixture(scope="class")
+def make_keyword():
+    def _make_keyword(data_source, kw_name):
+        lang_objs = [
+            Language.objects.get_or_create(id=lang)[0]
+            for lang in ['fi', 'sv', 'en']
+        ]
+
+        labels = [
+            KeywordLabel.objects.create(
+                name='%s%s' % (kw_name, lang.id),
+                language=lang
+            )
+            for lang in lang_objs
+        ]
+
+        obj = Keyword.objects.create(
+            id=data_source.id + ':' + kw_name,
+            name=kw_name,
+            data_source=data_source
         )
-        for lang in lang_objs
-    ]
+        for label in labels:
+            obj.alt_labels.add(label)
+        obj.save()
 
-    obj = Keyword.objects.create(
-        id=data_source.id + ':' + kw_name,
-        name=kw_name,
-        data_source=data_source
-    )
-    for label in labels:
-        obj.alt_labels.add(label)
-    obj.save()
+        return obj
 
-    return obj
+    return _make_keyword
 
 
 @pytest.mark.django_db
 @pytest.fixture
-def keyword2(data_source, kw_name_2):
-    return keyword(data_source, kw_name_2)
+def keyword(data_source, kw_name, make_keyword):
+    return make_keyword(data_source, kw_name)
 
 
 @pytest.mark.django_db
 @pytest.fixture
-def keyword3(data_source, kw_name_3):
-    return keyword(data_source, kw_name_3)
+def keyword2(data_source, kw_name_2, make_keyword):
+    return make_keyword(data_source, kw_name_2)
 
 
 @pytest.mark.django_db
 @pytest.fixture
-def keyword_id(data_source, kw_name):
-    obj = keyword(data_source, kw_name)
-    obj_id = reverse(KeywordSerializer().view_name, kwargs={'pk': obj.id})
-    return obj_id
+def keyword3(data_source, kw_name_3, make_keyword):
+    return make_keyword(data_source, kw_name_3)
+
+
+@pytest.mark.django_db
+@pytest.fixture(scope="class")
+def make_keyword_id(make_keyword):
+    def _make_keyword_id(data_source, kw_name):
+        obj = make_keyword(data_source, kw_name)
+        obj_id = reverse(KeywordSerializer().view_name, kwargs={'pk': obj.id})
+        return obj_id
+
+    return _make_keyword_id
+
+
+@pytest.mark.django_db
+@pytest.fixture
+def keyword_id(data_source, kw_name, make_keyword_id):
+    return make_keyword_id(data_source, kw_name)
 
 
 @pytest.mark.django_db
@@ -397,66 +493,99 @@ def languages():
     return lang_objs
 
 
+@pytest.mark.django_db
+@pytest.fixture
+def keywordlabel(kw_name, languages):
+    return KeywordLabel.objects.create(name=kw_name, language=languages[0])
+
+
+@pytest.mark.django_db
+@pytest.fixture(scope="class")
+def languages_class(request):
+    lang_objs = [
+        Language.objects.get_or_create(id=lang)[0]
+        for lang in ['fi', 'sv', 'en']
+    ]
+    request.cls.languages = lang_objs
+
+
 def language_id(language):
     obj_id = reverse(LanguageSerializer().view_name, kwargs={'pk': language.pk})
     return obj_id
 
 
 @pytest.mark.django_db
+@pytest.fixture(scope="class")
+def make_complex_event_dict(make_keyword_id):
+    def _make_complex_event_dict(data_source, organization, location_id, languages):
+        return {
+            'publisher': organization.id,
+            'data_source': data_source.id,
+            'name': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
+            'event_status': 'EventScheduled',
+            'location': {'@id': location_id},
+            'keywords': [
+                {'@id': make_keyword_id(data_source, 'simple')},
+                {'@id': make_keyword_id(data_source, 'test')},
+                {'@id': make_keyword_id(data_source, 'keyword')},
+            ],
+            'audience': [
+                {'@id': make_keyword_id(data_source, 'test_audience1')},
+                {'@id': make_keyword_id(data_source, 'test_audience2')},
+                {'@id': make_keyword_id(data_source, 'test_audience3')},
+            ],
+            'external_links': [
+                {'name': TEXT_FI, 'link': URL, 'language': 'fi'},
+                {'name': TEXT_SV, 'link': URL, 'language': 'sv'},
+                {'name': TEXT_EN, 'link': URL, 'language': 'en'},
+            ],
+            'videos': [
+                {'name': TEXT_FI, 'url': URL, 'alt_text': TEXT_FI},
+            ],
+            'offers': [
+                {
+                    'is_free': False,
+                    'price': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
+                    'description': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
+                    'info_url': {'en': URL, 'sv': URL, 'fi': URL}
+                }
+            ],
+            'in_language': [
+                {"@id": language_id(languages[0])},
+                {"@id": language_id(languages[1])},
+            ],
+            'custom_data': {'my': 'data', 'your': 'data'},
+            'origin_id': TEXT_FI,
+            'date_published': DATETIME,
+            'start_time': DATETIME,
+            'end_time': DATETIME,
+            'location_extra_info': {'fi': TEXT_FI},
+            'info_url': {'en': URL, 'sv': URL, 'fi': URL},
+            'secondary_headline': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
+            'description': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
+            'headline': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
+            'short_description': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
+            'provider': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
+            'provider_contact_info': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
+            'audience_min_age': 5,
+            'audience_max_age': 15,
+        }
+
+    return _make_complex_event_dict
+
+
+@pytest.mark.django_db
 @pytest.fixture
-def complex_event_dict(data_source, organization, location_id, languages):
-    return {
-        'publisher': organization.id,
-        'data_source': data_source.id,
-        'name': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
-        'event_status': 'EventScheduled',
-        'location': {'@id': location_id},
-        'keywords': [
-            {'@id': keyword_id(data_source, 'simple')},
-            {'@id': keyword_id(data_source, 'test')},
-            {'@id': keyword_id(data_source, 'keyword')},
-        ],
-        'audience': [
-            {'@id': keyword_id(data_source, 'test_audience1')},
-            {'@id': keyword_id(data_source, 'test_audience2')},
-            {'@id': keyword_id(data_source, 'test_audience3')},
-        ],
-        'external_links': [
-            {'name': TEXT_FI, 'link': URL, 'language': 'fi'},
-            {'name': TEXT_SV, 'link': URL, 'language': 'sv'},
-            {'name': TEXT_EN, 'link': URL, 'language': 'en'},
-        ],
-        'videos': [
-            {'name': TEXT_FI, 'url': URL, 'alt_text': TEXT_FI},
-        ],
-        'offers': [
-            {
-                'is_free': False,
-                'price': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
-                'description': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
-                'info_url': {'en': URL, 'sv': URL, 'fi': URL}
-            }
-        ],
-        'in_language': [
-            {"@id": language_id(languages[0])},
-            {"@id": language_id(languages[1])},
-        ],
-        'custom_data': {'my': 'data', 'your': 'data'},
-        'origin_id': TEXT_FI,
-        'date_published': DATETIME,
-        'start_time': DATETIME,
-        'end_time': DATETIME,
-        'location_extra_info': {'fi': TEXT_FI},
-        'info_url': {'en': URL, 'sv': URL, 'fi': URL},
-        'secondary_headline': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
-        'description': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
-        'headline': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
-        'short_description': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
-        'provider': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
-        'provider_contact_info': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
-        'audience_min_age': 5,
-        'audience_max_age': 15,
-    }
+def complex_event_dict(data_source, organization, location_id, languages, make_complex_event_dict):
+    return make_complex_event_dict(data_source, organization, location_id, languages)
+
+
+@pytest.mark.django_db
+@pytest.fixture(scope="class")
+def make_complex_event_dict_class(request, make_complex_event_dict):
+    def _make_complex_event_dict(self, *args):
+        return make_complex_event_dict(*args)
+    request.cls.make_complex_event_dict = _make_complex_event_dict
 
 
 @pytest.fixture

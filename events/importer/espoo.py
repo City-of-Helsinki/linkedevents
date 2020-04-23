@@ -23,7 +23,7 @@ from pytz import timezone
 from .base import Importer, recur_dict, register_importer
 from .yso import KEYWORDS_TO_ADD_TO_AUDIENCE
 from .sync import ModelSyncher
-from .util import clean_text
+from .util import clean_text, clean_url
 
 # Per module logger
 logger = logging.getLogger(__name__)
@@ -64,7 +64,7 @@ YSO_KEYWORD_MAPS = {
     u'luonto- ja ulkoilureitit': (u'p13084', u'p5350'),  # -> Luonto, ulkoilureitit
     u'uimahallit': u'p9415',
     u'ulkoilualueet': u'p4858',
-    u'urheilu- ja liikuntajärjestöt': (u'p965', u'p25543'),  # -> Urheilu, liikuntajärjestöt
+    u'urheilu- ja liikuntajärjestöt': (u'p965', u'p2042'),  # -> Urheilu, liikuntajärjestöt
     u'virkistysalueet': u'p4058',
     u'bändit': u'p5072',
     u'nuorisotilat': u'p17790',
@@ -90,9 +90,9 @@ YSO_KEYWORD_MAPS = {
     u'konsertit ja klubit': (u'p11185', u'p20421'),  # -> konsertit, musiikkiklubit
     u'kurssit': u'p9270',
     u'venäjä': u'p7643',  # -> venäjän kieli
-    u'seniorit': u'p2434',  # -> vanhukset
-    u'senioreille': u'p2434',  # -> vanhukset
-    u'senioripalvelut': u'p2434',
+    u'seniorit': u'p2433',  # -> vanhukset
+    u'senioreille': u'p2433',  # -> vanhukset
+    u'senioripalvelut': u'p2433',
     u'näyttelyt': u'p5121',
     u'kirjallisuus': u'p8113',
     u'kielikahvilat ja keskusteluryhmät': u'p18105',  # -> keskusteluryhmät
@@ -216,14 +216,14 @@ def clean_street_address(address):
     }
 
 
-def clean_url(url):
+def find_url(url):
     """
-    Extract the url from the html tag if any or return the cleaned text.
+    Extract the url from the html tag if any, and return it cleaned if valid
     """
     matches = re.findall(r'href=["\'](.*?)["\']', url)
     if matches:
-        return matches[0]
-    return clean_text(url)
+        url = matches[0]
+    return clean_url(url)
 
 
 class APIBrokenError(Exception):
@@ -258,7 +258,7 @@ class EspooImporter(Importer):
                     cat_id_set.add('yso:' + t_v)
             else:
                 cat_id_set.add('yso:' + yso_val)
-        keyword_list = Keyword.objects.filter(data_source=yso_data_source).filter(id__in=cat_id_set)
+        keyword_list = Keyword.objects.filter(data_source=yso_data_source, deprecated=False).filter(id__in=cat_id_set)
         self.keyword_by_id = {p.id: p for p in keyword_list}
 
     def setup(self):
@@ -412,7 +412,7 @@ class EspooImporter(Importer):
         yso_data_source = DataSource.objects.get(id='yso')
         espoo_data_source = DataSource.objects.get(id='espoo')
         node_name = classification_node_name.strip()
-        query = Keyword.objects.filter(data_source__in=[yso_data_source, espoo_data_source])\
+        query = Keyword.objects.filter(deprecated=False, data_source__in=[yso_data_source, espoo_data_source])\
             .order_by('-data_source_id')
         if not lang:
             keyword = query.filter(name__iexact=node_name).first()
@@ -521,7 +521,7 @@ class EspooImporter(Importer):
                 offer['is_free'] = True
 
         if ext_props.get('TicketLinks', ''):
-            offer['info_url'][lang] = clean_url(ext_props['TicketLinks'])
+            offer['info_url'][lang] = find_url(ext_props['TicketLinks'])
             del ext_props['TicketLinks']
             has_offer = True
         if ext_props.get('Tickets', ''):
@@ -532,7 +532,7 @@ class EspooImporter(Importer):
             del event['offers']
 
         if ext_props.get('URL', ''):
-            event['info_url'][lang] = clean_url(ext_props['URL'])
+            event['info_url'][lang] = find_url(ext_props['URL'])
 
         if ext_props.get('Organizer', ''):
             event['provider'][lang] = clean_text(ext_props['Organizer'])

@@ -9,14 +9,18 @@ the following criteria.</p>
 Any events that intersect with the given date range will be returned.</p>
 <p>The parameters <code>start</code> and <code>end</code> can be given in the following formats:</p>
 <ul>
-<li>ISO 8601 (including the time of day)</li>
+<li>ISO 8601 (including the time of day), i.e. YYYY-MM-DDTHH:MM:SSZ</li>
 <li>yyyy-mm-dd</li>
 </ul>
-<p>In addition, <code>today</code> can be used as the value.</p>
+<p>In addition, <code>today</code> (for start or end of today) and <code>now</code>
+(for the exact current timestamp) can be used in either parameter to get current events.</p>
 <p>Example:</p>
-<pre><code>event/?start=2014-01-15&amp;end=2014-01-20
+<pre><code>event/?start=today&amp;end=2020-12-31
 </code></pre>
-<p><a href="?start=2014-01-15&amp;end=2014-01-20" title="json">See the result</a></p>
+<p><a href="?start=today&amp;end=2020-12-31" title="json">See the result</a></p>
+<pre><code>event/?start=now&amp;end=today
+</code></pre>
+<p><a href="?start=now&amp;end=today" title="json">See the result</a></p>
 <h3 id="event-location">Event location</h3>
 <h4 id="bounding-box">Bounding box</h4>
 <p>To restrict the retrieved events to a geographical region, use
@@ -25,7 +29,7 @@ the query parameter <code>bbox</code> in the format</p>
 </code></pre>
 <p>Where <code>west</code> is the longitude of the rectangle's western boundary,
 <code>south</code> is the latitude of the rectangle's southern boundary,
-and so on.</p>
+and so on. The coordinate system is the trusty old EPSG:4326 known from all online maps.</p>
 <p>Example:</p>
 <pre><code>event/?bbox=24.9348,60.1762,24.9681,60.1889
 </code></pre>
@@ -50,7 +54,7 @@ query parameter <code>division</code>, separating values by commas
 if you wish to query for several divisions.</p>
 <p>City of Helsinki neighborhoods (kaupunginosa), districts (peruspiiri)
 and subdistricts (osa-alue) are supported.
-    <a href="http://kartta.hel.fi/?setlanguage=en&e=25498873&n=6674660&r=16&w=***&l=Karttasarja%2Ckaupunginosat%2Cosaalueet_WFS%2Cperuspiiri_WFS&o=100%2C100%2C100%2C100&swtab=kaikki">
+    <a href="https://kartta.hel.fi/link/8BqeiY">
         Check the divisions on the Helsinki map service.</a>
 </p>
 <p> You may query either by specific OCD division type <code>peruspiiri:malmi</code>, or by division name
@@ -63,15 +67,44 @@ regardless of division type.</p>
 <h3 id="event-category">Event category</h3>
 <p>To restrict the retrieved events by category, use the query
 parameter <code>keyword</code>, separating values by commas if you wish to
-query for several locations.</p>
+query for any of several keywords, or the parameter <code>keyword_AND</code>, if you require all
+provided values (separated by commas) to be present.</p>
 <p>Keyword ids are found at the <code>keyword</code> endpoint, which lists the
 keywords in decreasing number of events found. The common keywords
-used in all events originate from the general Finnish ontology (yso),
+used in all events originate from the general Finnish ontology (YSO),
 hence the format <code>yso:p4354</code>.</p>
+<p>The most common event categories are listed in the two keyword sets
+    <a href="https://api.hel.fi/linkedevents/v1/keyword_set/helsinki:topics/">helsinki:topics</a> and
+    <a href="https://api.hel.fi/linkedevents/v1/keyword_set/helsinki:audiences/">helsinki:audiences</a>,
+which list the YSO keywords that are present in most events to specify event main topic and audience.</p>
 <p>Example:</p>
 <pre><code>event/?keyword=yso:p4354
 </code></pre>
 <p><a href="?keyword=yso:p4354" title="json">See the result</a></p>
+<h3 id="event-last-modified">Event last modification time</h3>
+<p>To find events that have changed since you last polled Linkedevents API (to e.g. update your event cache),
+it is best to use the query parameter <code>last_modified_since</code>. This allows you to only return data
+that has changed after your last update. You may also include events that have been deleted in the API in
+the results by using the <code>show_deleted</code> filter. This allows you to update your cache with all added,
+modified and deleted events without having to fetch *all* future events every time.</p>
+</p>
+</p>
+<p>Example:</p>
+<pre><code>event/?last_modified_since=2020-04-07&show_deleted=True
+</code></pre>
+<p><a href="?last_modified_since=2020-04-07&show_deleted=True" title="json">See the result</a></p>
+<h3 id="event-status">Event status</h3>
+<p>Events in Linkedevents (indicated by the <code>event_status</code> field) may be either scheduled as planned
+(<code>EventScheduled</code>), rescheduled if their start time has changed after they were first published
+(<code>EventRescheduled</code>), cancelled if they were cancelled altogether after publication
+(<code>EventCancelled</code>), or postponed to the indefinite future if they could not be organized at the
+original time (<code>EventPostponed</code>). These statuses stem from <a href='https://schema.org/eventStatus'>
+schema.org</a>.</p>
+<p>You may filter events with only the desired status with the <code>event_status</code> filter.</p>
+<p>Example:</p>
+<pre><code>event/?event_status=EventCancelled
+</code></pre>
+<p><a href="?event_status=EventCancelled" title="json">See the result</a></p>
 <h3 id="event-text">Event text</h3>
 <p>To find out events that contain a specific string in any of the text
 fields, use the query parameter <code>text</code>.</p>
@@ -79,7 +112,16 @@ fields, use the query parameter <code>text</code>.</p>
 <pre><code>event/?text=shostakovich
 </code></pre>
 <p><a href="?text=shostakovich" title="json">See the result</a></p>
-<h3 id="event-text">Event language</h3>
+<h3 id="event-price">Event price</h3>
+<p>Events may or may not contain the <code>offers</code> field that lists event pricing. To return only
+free or non-free events, use the query parameter<code>is_free</code>. However, note that from some
+data sources, no event pricing info is available, so this filter will only return those events which
+have pricing data available.</p>
+<p>Example:</p>
+<pre><code>event/?is_free=true
+</code></pre>
+<p><a href="?is_free=true" title="json">See the result</a></p>
+<h3 id="event-language">Event language</h3>
 <p>To find events that have a set language or event data translated into
 that language, use the query parameter <code>language</code>. If you only wish to see
 events that have a set language, use the <code>in_language</code> parameter, and if
@@ -92,14 +134,33 @@ in <code>fi</code>, <code>sv</code>, <code>en</code>, <code>ru</code>,
 <pre><code>event/?language=ru
 </code></pre>
 <p><a href="?language=ru" title="json">See the result</a></p>
-<h3 id="event-text">Event publisher</h3>
+<h3 id="event-publisher">Event publisher</h3>
 <p>To find out events that are published by a specific organization, use the query
-parameter <code>publisher</code>.</p>
-<p>Existing organizations are found at the <code>organization</code> endpoint.</p>
+parameter <code>publisher</code>, separating values by commas if you wish to query for several publishers.</p>
+<p>Existing publisher organizations are found at the <code>organization</code> endpoint. City of Helsinki
+internal publishers have ids of the form <code>ahjo:origin_id</code> as they originate from
+the Helsinki Ahjo decisionmaking system, and have a rather complex hierarchy. External publishers may have
+their own namespaces, ids and hierarchies.</p>
+<p>Also, it is possible to fetch events under a specific publisher organization hierarchy (say
+<a href='https://api.hel.fi/linkedevents/v1/organization/ahjo:00001/'>City of Helsinki</a>) by using the 
+parameter <code>publisher_ancestor</code>, which returns all events published by any suborganizations
+(at any level) of the given organization.</p>
 <p>Example:</p>
 <pre><code>event/?publisher=ytj:0586977-6
 </code></pre>
 <p><a href="?publisher=ytj:0586977-6" title="json">See the result</a></p>
+<pre><code>event/?publisher_ancestor=ahjo:00001
+</code></pre>
+<p><a href="?publisher_ancestor=ahjo:00001" title="json">See the result</a></p>
+<h3 id="event-data-source">Event data source</h3>
+<p>To find out events that originate from a specific source system, use the query parameter
+<code>data_source</code>. All event ids are of the form <code>data_source:origin_id</code>, so this allows
+you to return only events coming to Linkedevents from a specific data system. <code>helsinki</code> is the
+name of our own data source, i.e. events where Linkedevents API itself is the master data.</p>
+<p>Example:</p>
+<pre><code>event/?data_source=helmet
+</code></pre>
+<p><a href="?data_source=helmet" title="json">See the result</a></p>
 <h3 id="event-hierarchy">Event hierarchy</h3>
 <p>Events in linkedevents may be either standalone events, or they may have super or sub
 events. There are two types of super events, indicated in the field
@@ -131,7 +192,16 @@ events which have no superevent included.</p>
 <p>In the default case, keywords, locations, and other fields that
 refer to separate resources are only displayed as simple references.</p>
 <p>If you want to include the complete data from related resources in
-the current response, use the keyword <code>include</code>. For example:</p>
+the current response, use the keyword <code>include</code>. <strong> Please note, however,
+that including all the resources inlined in *every* event will result in a huge number
+of duplicate data in the json, making the json very slow to generate and process and causing
+considerable API load and long response times when too many such requests are made. Therefore,
+if you are listing the maximum number of events (100) or updating your cache with all events,
+please consider caching the keyword and location data separately to prevent unnecessary API
+slowdown and continuous repeated work. Keyword and location data seldom change and are easily
+fetched from their own endpoints separately.
+</strong></p>
+<p>Example:</p>
 <pre><code>event/?include=location,keywords
 </code></pre>
 <p><a href="?include=location,keywords" title="json">See the result</a></p>

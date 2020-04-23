@@ -342,7 +342,9 @@ class Importer(object):
 
         self._set_field(obj, 'deleted', False)
 
-        if obj._created or obj._changed:
+        if obj._created:
+            # We have to save new objects here to be able to add related fields.
+            # Changed objects will be saved only *after* related fields have been changed.
             try:
                 obj.save()
             except ValidationError as error:
@@ -366,6 +368,7 @@ class Importer(object):
             else:
                 obj.keywords.set(new_keywords)
                 obj._changed = True
+            obj._changed_fields.append('keywords')
         audience = info.get('audience', [])
         new_audience = set([kw.id for kw in audience])
         old_audience = set(obj.audience.values_list('id', flat=True))
@@ -378,6 +381,7 @@ class Importer(object):
             else:
                 obj.audience.set(new_audience)
                 obj._changed = True
+            obj._changed_fields.append('audience')
         in_language = info.get('in_language', [])
         new_languages = set([lang.id for lang in in_language])
         old_languages = set(obj.in_language.values_list('id', flat=True))
@@ -390,6 +394,7 @@ class Importer(object):
             else:
                 obj.in_language.set(in_language)
                 obj._changed = True
+            obj._changed_fields.append('in_language')
 
         # one-to-many fields with foreign key pointing to event
 
@@ -407,6 +412,7 @@ class Importer(object):
                 for o in offers:
                     o.save()
                 obj._changed = True
+                obj._changed_fields.append('offers')
 
         links = []
         if 'external_links' in info:
@@ -436,6 +442,7 @@ class Importer(object):
                         link_obj.name = link['name']
                     link_obj.save()
                 obj._changed = True
+                obj._changed_fields.append('links')
 
         if 'extension_course' in settings.INSTALLED_APPS:
             extension_data = info.get('extension_course')
@@ -461,9 +468,15 @@ class Importer(object):
 
                 if course_changed:
                     obj._changed = True
+                    obj._changed_fields.append('extension_course')
+
+        # If event start time changed, it was rescheduled.
+        if 'start_time' in obj._changed_fields:
+            self._set_field(obj, 'event_status', Event.Status.RESCHEDULED)
 
         if obj._changed or obj._created:
-            # save again after adding related fields to update last_modified_time!
+            # Finally, we must save the whole object, even when only related fields changed.
+            # Also, we want to log all that happened.
             try:
                 obj.save()
             except ValidationError as error:

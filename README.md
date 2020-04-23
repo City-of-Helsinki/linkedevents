@@ -21,8 +21,7 @@ Linked Events is event information:
 
 Linked Events was originally developed for City of Helsinki organization and
 you can see the Linked Events API in action for [Helsinki capital region here](https://api.hel.fi/linkedevents/v1/).
-It contains data from Helsinki City Tourist & Convention Bureau, City of Helsinki Cultural Office and the Helmet metropolitan area public libraries.
-Viewing the API should give a reasonable view for the kind of information Linked Events is targeted for.
+It contains data from all Helsinki City Departments as well as data from Helsinki Marketing and the Helmet metropolitan area public libraries. Viewing the API should give a reasonable view for the kind of information Linked Events is targeted for.
 
 Target audience of this README.md are developers who may or maynot have a lot of Python
 experience and would like to get things running as quickly as possible.
@@ -96,6 +95,8 @@ If you wish to install Linkedevents without any Helsinki specific data (an empty
 
 The last steps are needed if you wish to use location, address or event data from the Helsinki metropolitan region, or if you wish to run the Helsinki UI (https://linkedevents.hel.fi) from https://github.com/City-of-Helsinki/linkedevents-ui. Currently, the UI is specific to Helsinki and requires the general Finnish ontology as well as additional Helsinki specific audiences and keywords to be present, though its code should be easily adaptable to your own city if you have an OAuth2 authentication server present.
 
+The commands below are documented in more detail in [linked-events-importers.md](./linked-events-importers.md#linked-events-importers-and-commands).
+
 ```bash
 cd $INSTALL_BASE/linkedevents
 # Import general Finnish ontology (used by Helsinki UI and Helsinki events)
@@ -103,7 +104,7 @@ python manage.py event_import yso --all
 # Add keyword set to display in the UI event audience selection
 python manage.py add_helsinki_audience
 # Add keyword set to display in the UI main category selection
-python manage.py add_helfi_topics
+python manage.py add_helsinki_topics
 # Import places from Helsinki metropolitan region service registry (used by events from following sources)
 python manage.py event_import tprek --places
 # Import places from Helsinki metropolitan region address registry (used as fallback locations)

@@ -127,7 +127,7 @@ INSTALLED_APPS = [
     'helusers',
     'django.contrib.sites',
     'modeltranslation',
-    'django.contrib.admin',
+    'helusers.apps.HelusersAdminConfig',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -158,6 +158,7 @@ INSTALLED_APPS = [
     'munigeo',
     'leaflet',
     'django_orghierarchy',
+    'admin_auto_filters',
 ] + env('EXTRA_INSTALLED_APPS')
 
 if env('SENTRY_DSN'):

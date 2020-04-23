@@ -29,15 +29,15 @@ YSO_KEYWORD_MAPS = {
     u'Lapset': u'p4354',
     u'Kirjastot': u'p2787',
     u'Opiskelijat': u'p16486',
-    u'Konsertit ja klubit': (u'p11185', u'p20421'),  # -> konsertit, musiikkiklubit
+    u'Konsertit ja klubit': (u'p11185', u'p20421', u'p360'),  # -> konsertit, musiikkiklubit, kulttuuritapahtumat
     u'Kurssit': u'p9270',
     u'venäjä': u'p7643',  # -> venäjän kieli
-    u'Seniorit': u'p2434',  # -> vanhukset
+    u'Seniorit': u'p2433',  # -> vanhukset
     u'Näyttelyt': u'p5121',
     u'Toivoa kirjallisuudesta': u'p8113',  # -> kirjallisuus
     u'Suomi 100': u'p29385',  # -> Suomi 100 vuotta -juhlavuosi
     u'Kirjallisuus': u'p8113',
-    u'Kielikahvilat ja keskusteluryhmät': (u'p18105', u'p556'),  # -> keskusteluryhmät
+    u'Kielikahvilat ja keskusteluryhmät': (u'p14004', u'p556'),  # -> keskustelu, kieli ja kielet
     u'Maahanmuuttajat': u'p6165',
     u'Opastukset ja kurssit': (u'p2149', u'p9270'),  # -> opastus, kurssit
     u'Nuoret': u'p11617',
@@ -45,10 +45,11 @@ YSO_KEYWORD_MAPS = {
     u'Satutunnit': u'p14710',
     u'Koululaiset': u'p16485',
     u'Lasten ja nuorten tapahtumat': (u'p4354', u'p11617'),  # -> lapset, nuoret
-    u'Lapset ja perheet': (u'p4354', u'p4363'),  # -> lapset, perheet
-    u'Lukupiirit': u'p11406',  # -> lukeminen
+    u'Lapset ja perheet': (u'p4354', u'p13050'),  # -> lapset, lapsiperheet
+    u'Lukupiirit': (u'p11406', u'p14004'),  # -> lukeminen, keskustelu
     u'Musiikki': u'p1808',  # -> musiikki
     u'muut kielet': u'p556',  # -> kielet
+    u'Etätapahtumat': u'p26626',  # -> etäosallistuminen
 }
 
 LOCATIONS = {
@@ -124,6 +125,9 @@ LOCATIONS = {
     u"Vuosaaren kirjasto": ((10856, 11405), 8310),
 }
 
+# "Etätapahtumat" are mapped to our new fancy "Tapahtuma vain internetissä." location
+INTERNET_LOCATION_ID = settings.SYSTEM_DATA_SOURCE_ID + ':internet'
+
 HELMET_BASE_URL = 'https://www.helmet.fi'
 HELMET_API_URL = (
     HELMET_BASE_URL + '/api/opennc/v1/ContentLanguages({lang_code})'
@@ -180,10 +184,14 @@ class HelmetImporter(Importer):
             defaults=defaults, **ds_args)
         self.tprek_data_source = DataSource.objects.get(id='tprek')
         self.ahjo_data_source = DataSource.objects.get(id='ahjo')
+        self.system_data_source = DataSource.objects.get(id=settings.SYSTEM_DATA_SOURCE_ID)
 
         org_args = dict(origin_id='u4804001010', data_source=self.ahjo_data_source)
         defaults = dict(name='Helsingin kaupunginkirjasto')
         self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
+        org_args = dict(origin_id='00001', data_source=self.ahjo_data_source)
+        defaults = dict(name='Helsingin kaupunki')
+        self.city, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
 
         # Build a cached list of Places
         loc_id_list = [l[1] for l in LOCATIONS.values()]
@@ -191,6 +199,13 @@ class HelmetImporter(Importer):
             data_source=self.tprek_data_source
         ).filter(origin_id__in=loc_id_list)
         self.tprek_by_id = {p.origin_id: p.id for p in place_list}
+
+        # Create "Tapahtuma vain internetissä" location if not present
+        defaults = dict(data_source=self.system_data_source,
+                        publisher=self.city,
+                        name='Internet',
+                        description='Tapahtuma vain internetissä.',)
+        self.internet_location, _ = Place.objects.get_or_create(id=INTERNET_LOCATION_ID, defaults=defaults)
 
         try:
             yso_data_source = DataSource.objects.get(id='yso')
@@ -360,30 +375,34 @@ class HelmetImporter(Importer):
 
             # One of the type 7 nodes (either Tapahtumat, or just the library name)
             # points to the location, which is mapped to Linked Events keyword ID
+            # Online events lurk in node 7 as well
             if node_type == 7:
                 if 'location' not in event:
-                    for k, v in LOCATIONS.items():
-                        if classification['NodeId'] in v[0]:
-                            event['location']['id'] = self.tprek_by_id[str(v[1])]
-                            break
-            else:
-                if not self.yso_by_id:
-                    continue
-                # Map some classifications to YSO based keywords
-                if str(classification['NodeName']) in YSO_KEYWORD_MAPS.keys():
-                    yso = YSO_KEYWORD_MAPS[str(classification['NodeName'])]
-                    if isinstance(yso, tuple):
-                        for t_v in yso:
-                            event_keywords.add(self.yso_by_id['yso:' + t_v])
-                            if t_v in KEYWORDS_TO_ADD_TO_AUDIENCE:
-                                # retain the keyword in keywords as well, for backwards compatibility
-                                event_audience.add(self.yso_by_id['yso:' + t_v])
-
+                    if classification['NodeId'] == 11996:
+                        # The event is only online, do not consider other locations
+                        event['location']['id'] = INTERNET_LOCATION_ID
                     else:
-                        event_keywords.add(self.yso_by_id['yso:' + yso])
-                        if yso in KEYWORDS_TO_ADD_TO_AUDIENCE:
+                        for k, v in LOCATIONS.items():
+                            if classification['NodeId'] in v[0]:
+                                event['location']['id'] = self.tprek_by_id[str(v[1])]
+                                break
+            if not self.yso_by_id:
+                continue
+            # Map some classifications to YSO based keywords, including online events
+            if str(classification['NodeName']) in YSO_KEYWORD_MAPS.keys():
+                yso = YSO_KEYWORD_MAPS[str(classification['NodeName'])]
+                if isinstance(yso, tuple):
+                    for t_v in yso:
+                        event_keywords.add(self.yso_by_id['yso:' + t_v])
+                        if t_v in KEYWORDS_TO_ADD_TO_AUDIENCE:
                             # retain the keyword in keywords as well, for backwards compatibility
-                            event_audience.add(self.yso_by_id['yso:' + yso])
+                            event_audience.add(self.yso_by_id['yso:' + t_v])
+
+                else:
+                    event_keywords.add(self.yso_by_id['yso:' + yso])
+                    if yso in KEYWORDS_TO_ADD_TO_AUDIENCE:
+                        # retain the keyword in keywords as well, for backwards compatibility
+                        event_audience.add(self.yso_by_id['yso:' + yso])
 
         # Finally, go through the languages that are properly denoted in helmet:
         for translation in event_el['LanguageVersions']:

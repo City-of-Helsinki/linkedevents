@@ -20,7 +20,7 @@ KEYWORD_MAPPING = {
     'helfi:2': ['yso:p11617'],  # nuoret -> nuoret (ikään liittyvä rooli)
     'helfi:3': ['yso:p6165'],  # maahanmuuttajat -> maahanmuuttajat
     'helfi:4': ['yso:p7179'],  # vammaiset -> vammaiset
-    'helfi:5': ['yso:p2434'],  # vanhukset -> vanhukset
+    'helfi:5': ['yso:p2433'],  # vanhukset -> ikääntyneet
     'helfi:6': ['yso:p3128'],  # yritykset -> yritykset
     'helfi:7': ['yso:p1393'],  # yhdistykset -> järjestöt
 }

@@ -2,7 +2,7 @@ from distutils import dir_util
 import os
 import pytest
 
-from events.importer.espoo import EspooImporter, clean_street_address, clean_url, YSO_KEYWORD_MAPS
+from events.importer.espoo import EspooImporter, clean_street_address, find_url, YSO_KEYWORD_MAPS
 from events.models import DataSource, Keyword
 
 
@@ -79,25 +79,25 @@ def test_keyword_fetch_from_dict(data_source, yso_keyword):
 
 
 @pytest.mark.django_db
-def test_clean_url__extract_url_from_tag():
+def test_find_url__extract_url_from_tag():
     tag = "<a href=\"%s\" target=\"_blank\">Lippupiste</a>" % URL
-    assert clean_url(tag) == URL
+    assert find_url(tag) == URL
 
 
 @pytest.mark.django_db
-def test_clean_url__extract_url_from_tag_single_quote():
+def test_find_url__extract_url_from_tag_single_quote():
     """
     Test that url is correctly from an invalid HTML tag which appears in ESPOO API URL
     """
     tag = "<a href='%s' target='_blank'>Lippupiste</a>" % URL
-    assert clean_url(tag) == URL
+    assert find_url(tag) == URL
 
 
 @pytest.mark.django_db
-def test_clean_url__return_url_if_no_tag():
-    assert clean_url(URL) == URL
+def test_find_url__return_url_if_no_tag():
+    assert find_url(URL) == URL
 
 
 @pytest.mark.django_db
-def test_clean_url__return_url_stripped():
-    assert clean_url("   %s   " % URL) == URL
+def test_find_url__return_url_stripped():
+    assert find_url("   %s   " % URL) == URL

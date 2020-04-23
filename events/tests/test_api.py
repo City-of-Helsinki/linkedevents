@@ -72,6 +72,7 @@ def test_serializer_validate_publisher():
     le_serializer = EventSerializer()
     le_serializer.publisher = org_2
     le_serializer.user = user
+    le_serializer.method = 'POST'
 
     assert le_serializer.validate_publisher(org_2) == org_1
 
