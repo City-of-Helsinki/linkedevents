@@ -15,7 +15,7 @@ media/
 data/
 .pytest_cache/
 templates/rest_framework/*
-
+env/
 
 
 # Created by https://www.gitignore.io/api/python,macos
