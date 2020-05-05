@@ -34,7 +34,8 @@ HELSINKI_KEYWORD_IDS = [
     'yso:p2625',  # teatteritaide
     'yso:p19245',  # työpajat
     'yso:p2771',  # ulkoilu
-    'yso:p965'  # urheilu
+    'yso:p965',  # urheilu
+    'yso:p26626'  # etäosallistuminen
 ]
 
 
