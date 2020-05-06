@@ -26,6 +26,8 @@ YSO_DEPRECATED_MAPS = {
 }
 
 # yso keywords for the importers to automatically include in the audience field as well
+
+#This is not used anywhere in the Turku specific project for now.
 KEYWORDS_TO_ADD_TO_AUDIENCE = [
     'p4354',
     'p11617',
@@ -41,7 +43,6 @@ KEYWORDS_TO_ADD_TO_AUDIENCE = [
     'p7179',
     'p16596',
 ]
-
 
 def get_yso_id(subject):
     # we must validate the id, yso API might contain invalid data
@@ -108,10 +109,10 @@ class YsoImporter(Importer):
         self.data_source, _ = DataSource.objects.get_or_create(
             id=self.name, defaults=defaults)
 
-        hy_ds, _ = DataSource.objects.get_or_create(defaults={'name': 'Helsingin yliopisto'}, id='hy')
+        #hy_ds, _ = DataSource.objects.get_or_create(defaults={'name': 'Helsingin yliopisto'}, id='hy')
 
-        org_args = dict(origin_id='kansalliskirjasto', data_source=hy_ds)
-        defaults = dict(name='Kansalliskirjasto')
+        org_args = dict(origin_id='1200', data_source=self.data_source)
+        defaults = dict(name='YSO')
         self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
 
     def import_keywords(self):
