@@ -109,13 +109,13 @@ class Command(BaseCommand):
 
         # create the set itself
         keyword_set, created = KeywordSet.objects.update_or_create(
-            id=HELSINKI_KEYWORD_SET_DATA['id'],
-            defaults=HELSINKI_KEYWORD_SET_DATA
+            id=TURKU_KEYWORD_SET_DATA['id'],
+            defaults=TURKU_KEYWORD_SET_DATA
         )
         if created:
-            self.stdout.write('created keyword set "%s"' % HELSINKI_KEYWORD_SET_DATA['id'])
+            self.stdout.write('created keyword set "%s"' % TURKU_KEYWORD_SET_DATA['id'])
         else:
-            self.stdout.write('keyword set "%s" already exist' % HELSINKI_KEYWORD_SET_DATA['id'])
+            self.stdout.write('keyword set "%s" already exist' % TURKU_KEYWORD_SET_DATA['id'])
 
         # flatten YSO keyword IDs
         yso_keyword_ids = [val for sublist in KEYWORD_MAPPING.values() for val in sublist]

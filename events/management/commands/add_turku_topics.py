@@ -15,7 +15,7 @@ TURKU_KEYWORD_SET_DATA = {
 }
 
 
-TURKU_KEYWORDS_IDS = [
+TURKU_KEYWORD_IDS = [
     'yso:p1304',  # festivaalit 
     'yso:p38203',  # konferenssit (ja kokoukset)
     'yso:p4892', # messut
@@ -44,7 +44,7 @@ TURKU_KEYWORDS_IDS = [
 
 
 '''
-TURKU_KEYWORD_IDS = [
+HELSINKI_KEYWORD_IDS = [
     'yso:p1235',  # elokuvat
     'yso:p1947',  # hyvinvointi
     'yso:p14004',  # keskustelu
