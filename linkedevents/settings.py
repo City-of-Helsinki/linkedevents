@@ -64,6 +64,7 @@ env = environ.Env(
     MAIL_MAILGUN_KEY=(str, ''),
     MAIL_MAILGUN_DOMAIN=(str, ''),
     MAIL_MAILGUN_API=(str, ''),
+    KULKE_INPUT_PATH=(str, os.path.join(root, 'data','kulke')),
     LIPPUPISTE_EVENT_API_URL=(str, None)
 )
 
@@ -235,7 +236,7 @@ LOCALE_PATHS = (
 )
 
 # Kulke importer looks here for its input files
-IMPORT_FILE_PATH = os.path.join(BASE_DIR, 'data')
+KULKE_INPUT_PATH = env('KULKE_INPUT_PATH')
 
 # Static files (CSS, JavaScript, Images)
 

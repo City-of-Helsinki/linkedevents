@@ -301,7 +301,7 @@ class KulkeImporter(Importer):
     def parse_kulke_categories(self):
         categories = {}
         categories_file = os.path.join(
-            settings.IMPORT_FILE_PATH, 'kulke', 'category.xml')
+            settings.KULKE_INPUT_PATH, 'category.xml')
         root = etree.parse(categories_file)
         for ctype in root.xpath('/data/categories/category'):
             cid = int(ctype.attrib['id'])
@@ -791,7 +791,7 @@ class KulkeImporter(Importer):
         recurring_groups = dict()
         for lang in ['fi', 'sv', 'en']:
             events_file = os.path.join(
-                settings.IMPORT_FILE_PATH, 'kulke', 'events-%s.xml' % lang)
+                settings.KULKE_INPUT_PATH, 'events-%s.xml' % lang)
             root = etree.parse(events_file)
             for event_el in root.xpath('/eventdata/event'):
                 success = self._import_event(lang, event_el, events, importing_courses)
