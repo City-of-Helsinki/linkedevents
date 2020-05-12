@@ -1067,11 +1067,17 @@ class OrganizationViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
 
         id = self.request.query_params.get('child', None)
         if id:
-            queryset = queryset.get(id=id).get_ancestors()
+            try:
+                queryset = queryset.get(id=id).get_ancestors()
+            except Organization.DoesNotExist:
+                queryset = queryset.none()
 
         id = self.request.query_params.get('parent', None)
         if id:
-            queryset = queryset.get(id=id).get_descendants()
+            try:
+                queryset = queryset.get(id=id).get_descendants()
+            except Organization.DoesNotExist:
+                queryset = queryset.none()
 
         return queryset
 
