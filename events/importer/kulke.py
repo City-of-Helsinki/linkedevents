@@ -50,6 +50,9 @@ LOCATION_TPREK_MAP = {
     'leikkipuisto lampi': '57117',
 }
 
+# "Etäosallistuminen" is also mapped to our new fancy "Tapahtuma vain internetissä." location
+INTERNET_LOCATION_ID = settings.SYSTEM_DATA_SOURCE_ID + ':internet'
+
 ADDRESS_TPREK_MAP = {
     'annankatu 30': 'annantalo',
     'annegatan 30': 'annantalo',
@@ -335,6 +338,9 @@ class KulkeImporter(Importer):
 
         if tprek_id:
             event['location']['id'] = self.tprek_by_id[tprek_id]
+        elif Keyword.objects.get(id='yso:p26626') in event['keywords']:
+            # "Etäosallistuminen" is also mapped to our new fancy "Tapahtuma vain internetissä." location
+            event['location']['id'] = INTERNET_LOCATION_ID
         else:
             logger.warning("No match found for place '%s' (event %s)" % (loc_name, get_event_name(event)))
 

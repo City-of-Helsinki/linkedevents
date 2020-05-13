@@ -171,6 +171,11 @@ class TestOrganizationAPI(APITestCase):
         parent = response.data['data'][0]
         self.assertEqual(parent.pop('id'), self.org.id)
 
+        url = reverse('organization-list') + '?child=' + 'invalid_id'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['data']), 0)
+
 
 class TestImageAPI(APITestCase):
 
