@@ -64,7 +64,7 @@ from events.models import (
     Place, Event, Keyword, KeywordSet, Language, OpeningHoursSpecification, EventLink,
     Offer, DataSource, Image, PublicationStatus, PUBLICATION_STATUSES, License, Video
 )
-from events.translation import EventTranslationOptions
+from events.translation import EventTranslationOptions, PlaceTranslationOptions
 from helevents.models import User
 from events.renderers import DOCXRenderer
 
@@ -1582,12 +1582,21 @@ def _filter_event_queryset(queryset, params, srs=None):
     val = params.get('text', None)
     if val:
         val = val.lower()
-        # Free string search from all translated fields
-        fields = EventTranslationOptions.fields
         qset = Q()
-        for field in fields:
+
+        # Free string search from all translated event fields
+        event_fields = EventTranslationOptions.fields
+        for field in event_fields:
             # check all languages for each field
             qset |= _text_qset_by_translated_field(field, val)
+
+        # Free string search from all translated place fields
+        place_fields = PlaceTranslationOptions.fields
+        for field in place_fields:
+            location_field = 'location__' + field
+            # check all languages for each field
+            qset |= _text_qset_by_translated_field(location_field, val)
+
         queryset = queryset.filter(qset)
 
     val = params.get('last_modified_since', None)
