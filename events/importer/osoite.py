@@ -24,15 +24,18 @@ class OsoiteImporter(Importer):
 
     def setup(self):
         ds_args = dict(id='osoite')
-        defaults = dict(name='Pääkaupunkiseudun osoiteluettelo')
+        defaults = dict(name='Ulkoa tuodut osoite tiedot (sis. paikan)')
         self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
-
+     
+    
+        '''
         ds_args = dict(id='ahjo')
         defaults = dict(name='Ahjo')
         ahjo_ds, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
+        '''
 
-        org_args = dict(origin_id='u541000', data_source=ahjo_ds)
-        defaults = dict(name='Kaupunkiympäristön toimiala')
+        org_args = dict(origin_id='1000', data_source=self.data_source)
+        defaults = dict(name='Osoiterekisteri')
         self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
         if self.options.get('remap', None):
             # This will prevent deletion checking, marking all deleted places as deleted
@@ -158,7 +161,8 @@ class OsoiteImporter(Importer):
 
         # addresses require the municipalities to be present in the db
         call_command('geo_import', 'finland', municipalities=True)
-        call_command('geo_import', 'helsinki', addresses=True)
+        #call_command('geo_import', 'helsinki', addresses=True)
+        call_command('geo_import', 'turku', addresses=True)
 
         queryset = Place.objects.filter(data_source=self.data_source)
         if self.options.get('single', None):
