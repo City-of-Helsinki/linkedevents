@@ -16,7 +16,7 @@ data/
 .pytest_cache/
 templates/rest_framework/*
 env/
-.csv
+*.csv
 
 # Created by https://www.gitignore.io/api/python,macos
 # Edit at https://www.gitignore.io/?templates=python,macos
