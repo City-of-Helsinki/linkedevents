@@ -80,7 +80,7 @@ class Command(BaseCommand):
         return keyword
 
     @transaction.atomic()
-    def create_helsinki_topics_keyword_set(self):
+    def create_turku_topics_keyword_set(self):
         self.stdout.write('creating Turku topics keyword set...')
 
         # create the set itself
@@ -104,10 +104,10 @@ class Command(BaseCommand):
                 self.stdout.write('added %s (%s) to the keyword set' % (keyword.name, keyword_id))
 
     def handle(self, *args, **options):
-        # Helsinki data source must be created if missing. Note that it is not necessarily the system data source.
+        # turku data source must be created if missing. Note that it is not necessarily the system data source.
         # If we are creating it, it *may* still be the system data source, so it must be user editable!
-        turku_data_source_defaults = {'user_editable': True}
+        turku_data_source_defaults = {'name':'Kuntakohtainen data Turun Kaupunki', 'user_editable': True}
         DataSource.objects.get_or_create(id=TURKU_KEYWORD_SET_DATA['data_source_id'],
                                          defaults=turku_data_source_defaults)
-        self.create_helsinki_topics_keyword_set()
+        self.create_turku_topics_keyword_set()
         self.stdout.write('all done')

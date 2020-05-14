@@ -104,8 +104,8 @@ class Command(BaseCommand):
                                                                      new_keyword_data['id']))
 
     @transaction.atomic()
-    def create_helsinki_audiences_keyword_set(self):
-        self.stdout.write('creating Helsinki audiences keyword set...')
+    def create_turku_audiences_keyword_set(self):
+        self.stdout.write('creating Turku audiences keyword set...')
 
         # create the set itself
         keyword_set, created = KeywordSet.objects.update_or_create(
@@ -149,14 +149,15 @@ class Command(BaseCommand):
                         self.stdout.write('added %s (%s) to %s' % (yso_keyword_obj, yso_keyword_id, event))
 
     def handle(self, *args, **options):
-        # Helsinki data source must be created if missing. Note that it is not necessarily the system data source.
+        # Turku data source must be created if missing. Note that it is not necessarily the system data source.
         # If we are creating it, it *may* still be the system data source, so it must be user editable!
-        turku_data_source_defaults = {'user_editable': True}
+        turku_data_source_defaults = {'name':'Kuntakohtainen data Turun Kaupunki','user_editable': True}
         #Turku specific datasource.
-        
+
+
         DataSource.objects.get_or_create(id=TURKU_KEYWORD_SET_DATA['data_source_id'],
                                          defaults=turku_data_source_defaults)
         self.create_sote_keywords()
-        self.create_helsinki_audiences_keyword_set()
+        self.create_turku_audiences_keyword_set()
         self.add_yso_audience_keywords_to_events()
         self.stdout.write('all done')
