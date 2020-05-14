@@ -24,7 +24,7 @@ class OsoiteImporter(Importer):
 
     def setup(self):
         ds_args = dict(id='osoite')
-        defaults = dict(name='Ulkoa tuodut osoite tiedot (sis. paikan)')
+        defaults = dict(name='Ulkoa tuodut osoitetiedot (sis. paikan)')
         self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
      
     
