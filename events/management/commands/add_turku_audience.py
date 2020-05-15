@@ -40,7 +40,7 @@ KEYWORD_MAPPING = {
 city = TURKU_KEYWORD_SET_DATA['data_source_id']
 
 KEYWORD_MAPPING = {
-    city+':1': ['yso:p27976'], #-> Aikuiset
+    city+':1': ['yso:p5590'], #-> Aikuiset
     city+':2': ['yso:p13050'], #-> Lapsiperheet
     city+':3': ['yso:p6165'], #-> Maahanmuuttujat
     city+':4': ['yso:p16596'], #-> Matkailijat
