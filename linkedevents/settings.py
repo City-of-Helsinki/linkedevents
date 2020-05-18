@@ -469,3 +469,5 @@ if env('MAIL_MAILGUN_KEY'):
         'MAILGUN_API_URL': env('MAIL_MAILGUN_API'),
     }
     EMAIL_BACKEND = 'anymail.backends.mailgun.EmailBackend'
+elif not env('MAIL_MAILGUN_KEY') and DEBUG is True:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
