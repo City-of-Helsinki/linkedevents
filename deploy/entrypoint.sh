@@ -11,7 +11,7 @@ function _log_boxed () {
     _log ---------------------------------
 }
 
-_log_boxed "Linkedevents"
+_log_boxed "Linkedevents container"
 
 if [ "$1" = "help" ]; then
     _log "This is a container image for running Linkedevents event publication hub"
@@ -20,7 +20,7 @@ if [ "$1" = "help" ]; then
     _log "You will need to provide configuration using environment variables, see"
     _log "config_dev.toml for the available variables. Especially important is the"
     _log "database configuration using DATABASE_URL"
-
+    _log ""
     _log "You will need to mount a volume at /srv/media for storing user uploaded"
     _log "media. Otherwise they will be lost at container shutdown."
     _log ""
@@ -42,14 +42,17 @@ _log "Start with \`help\` for instructions"
 
 if [ "$1" = "start_django_development_server" ]; then
     _log_boxed "Running development server"
-    ./manage.py runserver 0:8000
-elif [ "$1" = "maintenance_tasks" ]; then
-    _log_boxed "Running migrations"
-    ./manage.py migrate
+    exec deploy/dev_start.sh
 elif [ "$1" = 'maintenance_tasks' ]; then
     shift
-    deploy/run_imports.sh "$@"
+    exec deploy/run_maintenance.sh "$@"
+elif [ "$1" = "migrate" ]; then
+    _log_boxed "Running migrations"
+    ./manage.py migrate
+    _log_boxed "Updating language fields & installing templates"
+    deploy/init_application.sh
 elif [ "$1" = "e" ]; then
+    shift
     _log_boxed "exec'n $@"
     exec "$@"
 else
