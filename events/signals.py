@@ -1,5 +1,6 @@
 import logging
 
+from django.conf import settings
 from django.core.mail import send_mail
 from django.contrib.auth import get_user_model
 from django.contrib.sites.models import Site
@@ -22,7 +23,7 @@ def organization_post_save(sender, instance, created, **kwargs):
 
 
 def user_post_save(sender, instance, created, **kwargs):
-    if created:
+    if created and settings.DEBUG is False:
         User = get_user_model()
         recipient_list = [item[0] for item in User.objects.filter(is_superuser=True).values_list('email')]
         notification_type = NotificationType.USER_CREATED
