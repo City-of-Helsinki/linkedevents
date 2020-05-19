@@ -529,7 +529,6 @@ class LippupisteImporter(Importer):
         logger.info("Importing Lippupiste events")
         events = recur_dict()
         event_source_data = list(self._fetch_event_source_data(LIPPUPISTE_EVENT_API_URL))
-        event_source_data = event_source_data[:50]
         if not event_source_data:
             raise ValidationError("Lippupiste API didn't return data, giving up")
 
