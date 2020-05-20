@@ -41,4 +41,3 @@ requests-cache
 requests>=2.20.0
 sentry-sdk
 six
-uwsgi
