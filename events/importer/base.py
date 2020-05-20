@@ -211,13 +211,12 @@ class Importer(object):
         if not hasattr(obj, field_name):
             logger.debug(vars(obj))
         obj_val = getattr(obj, field_name, None)
-        # this prevents overwriting manually edited values with empty values
-        # always update booleans tho, this will e.g. reinstate deleted events (deleted=False)
-        if obj_val == val or (hasattr(obj, 'is_user_edited') and
-                              obj.is_user_edited() and
-                              not type(val) == bool and
-                              not val):
-            logger.debug('%s edited by user, will not empty field %s' % (obj, field_name))
+        if obj_val == val:
+            return
+        # This prevents overwriting manually edited events with lower quality data
+        # Always update booleans tho, this will e.g. reinstate deleted events (deleted=False)
+        if hasattr(obj, 'is_user_edited') and obj.is_user_edited() and not type(val) == bool:
+            logger.debug('%s edited by user, will not change field %s' % (obj, field_name))
             return
         setattr(obj, field_name, val)
         obj._changed = True
