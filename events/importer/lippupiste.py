@@ -465,21 +465,25 @@ class LippupisteImporter(Importer):
         # values that should be updated in super-event
         update_dict = {}
         # name superevent by common part of the subevent names
-        names = []
-        # only one language existed in feed, therefore we save the common part of *all* names to *all* languages
-        # this is to prevent data from different subevents dictating different language names
-        for lang in settings.LANGUAGES:
-            lang = lang[0]
-            lang = lang.replace('-', '_')
-            if any([getattr(subevent, 'name_'+lang) for subevent in events]):
-                names.extend([getattr(subevent, 'name_'+lang, '') for
-                              subevent in events if getattr(subevent, 'name_'+lang, '')])
-        super_event_name = commonprefix(names).strip(' -:')
-        for lang in settings.LANGUAGES:
-            lang = lang[0]
-            lang = lang.replace('-', '_')
-            if any([getattr(subevent, 'name_'+lang) for subevent in events]):
-                update_dict['name_'+lang] = super_event_name
+        names = {}
+        if not super_event.is_user_edited():
+            # only save common name if super event has not been named by user
+            # some sub events may still have user edited names, use them if present
+            for lang in settings.LANGUAGES:
+                lang = lang[0]
+                names[lang] = []
+                lang = lang.replace('-', '_')
+                if any([getattr(subevent, 'name_'+lang) for subevent in events]):
+                    names[lang].extend([getattr(subevent, 'name_'+lang) for
+                                        subevent in events if getattr(subevent, 'name_'+lang, None)])
+            super_event_name = {}
+            for lang in settings.LANGUAGES:
+                lang = lang[0]
+                super_event_name[lang] = commonprefix(names[lang]).strip(' -:')
+                lang = lang.replace('-', '_')
+                if any([getattr(subevent, 'name_'+lang) for subevent in events]):
+                    update_dict['name_'+lang] = super_event_name[lang]
+        # always update super_event timeframe depending on sub events
         first_event = events.order_by('start_time').first()
         update_dict['start_time'] = first_event.start_time
         update_dict['has_start_time'] = first_event.has_start_time
