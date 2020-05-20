@@ -135,7 +135,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.gis',
     'django.contrib.postgres',
-    'django_extensions',
     'events',
     'corsheaders',
     'rest_framework',
@@ -160,6 +159,10 @@ INSTALLED_APPS = [
     'django_orghierarchy',
     'admin_auto_filters',
 ] + env('EXTRA_INSTALLED_APPS')
+
+# django-extensions is a set of developer friendly tools
+if DEBUG:
+    INSTALLED_APPS.append('django_extensions')
 
 if env('SENTRY_DSN'):
     sentry_sdk.init(
