@@ -132,7 +132,11 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+
+    # disable Django’s development server static file handling
+    'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
+
     'django.contrib.gis',
     'django.contrib.postgres',
     'events',
