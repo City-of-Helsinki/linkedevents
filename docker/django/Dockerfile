@@ -42,4 +42,7 @@ FROM base_stage AS production
 
 COPY --chown=appuser:appuser . /app/
 
+RUN DJANGO_SECRET_KEY="only-used-for-collectstatic" DATABASE_URL="sqlite:///" \
+    python manage.py collectstatic --noinput
+
 USER appuser:appuser
