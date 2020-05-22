@@ -177,7 +177,11 @@ if env('SENTRY_DSN'):
     )
 
 MIDDLEWARE = [
+    # CorsMiddleware should be placed as high as possible and above WhiteNoiseMiddleware in particular
     'corsheaders.middleware.CorsMiddleware',
+    # WhiteNoiseMiddleware should be placed as high as possible
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
