@@ -827,7 +827,7 @@ class ImporterTimeLogger(models.Model):
     importer_name = models.CharField(max_length=100)
 
     def save(self, *args, **kwargs):
-        '''on the first run set last_run to a date in the past to enable 
+        '''on the first run set last_run to a date in the past to enable
         importing all of the events. Otherwise set to current time'''
         if self.pk:
             self.last_run = timezone.now()
