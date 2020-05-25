@@ -1,3 +1,4 @@
+attrs
 bleach
 django-admin-autocomplete-filter
 django-allauth
@@ -26,6 +27,7 @@ elasticsearch<6
 httmock
 icalendar
 isodate
+jmespath
 jinja2
 langdetect
 lxml
@@ -35,6 +37,7 @@ psycopg2-binary
 pyYAML
 python-dateutil
 python-docx
+python-Levenshtein
 pytz
 rdflib
 requests-cache

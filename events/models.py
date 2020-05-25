@@ -17,12 +17,14 @@ documentation is suggesting: http://schema.org/docs/extension.html. Override
 schema_org_type can be used to define custom types. Override jsonld_context
 attribute to change @context when need to define schemas for custom fields.
 """
+
 import datetime
 import logging
+import pytz
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
-import pytz
 from django.contrib.gis.db import models
+from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from reversion import revisions as reversion
 from django.utils.translation import ugettext_lazy as _
@@ -818,3 +820,20 @@ class EventAggregate(models.Model):
 class EventAggregateMember(models.Model):
     event_aggregate = models.ForeignKey(EventAggregate, on_delete=models.CASCADE, related_name='members')
     event = models.OneToOneField(Event, on_delete=models.CASCADE)
+
+
+class ImporterTimeLogger(models.Model):
+    last_run = models.DateTimeField()
+    importer_name = models.CharField(max_length=100)
+
+    def save(self, *args, **kwargs):
+        '''on the first run set last_run to a date in the past to enable 
+        importing all of the events. Otherwise set to current time'''
+        if self.pk:
+            self.last_run = timezone.now()
+        else:
+            self.last_run = pytz.utc.localize(datetime.datetime(2000, 1, 1))
+        super(ImporterTimeLogger, self).save(*args, **kwargs)
+
+    class Meta:
+        unique_together = ('last_run', 'importer_name')
