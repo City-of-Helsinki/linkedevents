@@ -27,7 +27,6 @@ elasticsearch<6
 httmock
 icalendar
 isodate
-jmespath
 jinja2
 langdetect
 lxml

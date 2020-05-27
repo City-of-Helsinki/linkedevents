@@ -10,8 +10,11 @@ Inspired in parts by Harrastushaku importer.
 
 import logging
 import re
-from datetime import datetime
+import pdb
+from copy import deepcopy
+from datetime import datetime, timedelta
 from functools import partial
+from events.keywords import KeywordMatcher
 
 import attr
 import pytz
@@ -23,8 +26,8 @@ from django_orghierarchy.models import Organization
 from Levenshtein import distance
 
 from events.importer.base import Importer, register_importer
-from events.keywords import KeywordMatcher
-from events.models import DataSource, ImporterTimeLogger, Keyword, Place
+from events.importer.util import clean_text
+from events.models import DataSource, Event, ImporterTimeLogger, Keyword, Place
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +54,11 @@ DAY_MAP = {
     22: SU,
 }
 
+#  Regex to match all non-alphabetic characters
+clean_nonalpha = re.compile('[^0-9a-zA-Z]+')
+#  Third positional argument lists the characters that will be mapped to None
+nodigits_trantab = str.maketrans("", "", "0123456789")
+
 
 @attr.s(frozen=True, slots=True)
 class HashedLocation(object):
@@ -64,6 +72,12 @@ class Location(object):
     tprekId = attr.ib(default="")
     tprek_address = attr.ib(default="")
     tprek_name = attr.ib(default="")
+
+
+@attr.s(slots=True)
+class RecurrentTimes(object):
+    start_datetime = attr.ib()
+    end_datetime = attr.ib()
 
 
 class APIBrokenError(Exception):
@@ -99,40 +113,80 @@ class FunActionImporter(Importer):
             data_source=self.data_source,
             name="funactionnuorille",
         )
-        self.keyword_matcher = KeywordMatcher()
-
-        #  Third positional argument lists the characters that will be mapped to None
-        self.nodigits_trantab = str.maketrans("", "", "0123456789")
 
     def import_courses(self):
         src_data = self._fetch_paginated_data(FUNACTION_URL)
         itl, _ = ImporterTimeLogger.objects.get_or_create(importer_name=self.name)
         last_run = itl.last_run
-        data = [
-            i
-            for i in src_data
-            if not i["modified_gmt"] or isoparse(f"{i['modified_gmt']}Z") > last_run
-        ]
+        data = [i for i in src_data if not i["modified_gmt"] or isoparse(f"{i['modified_gmt']}Z") > last_run]
 
         self.location_map = self._map_locations(data)
 
         events_info = [self._parse_event_data(i) for i in data]
-
+        pdb.set_trace()
         for event in events_info:
             if event["slug"]:
                 event["keywords"] = self._find_keyword_or_split(event["slug"])
                 logger.info(f"{event['slug']} mapped to: {event['keywords']}")
 
-    def _create_recurring_event_dates(
-        self, start_date: datetime, end_date: datetime, weekdays: list
-    ):
+            #  The API so far is tuned to represent events that occur on weekly basis or once.
+            if not all([event['start_time'], event['end_time']]):
+                logger.info(f"{event['name']} no start or end time")
+                continue
+            recurring = event['start_time'] + timedelta(days=7) <= event['end_time']
+            if recurring:
+                super_event = self._save_super_event(event)
+                self._save_recurring_events(event, super_event)
+            else:
+                one_timer = self.save_event(event)
+                logger.info(f'One time event {one_timer.name} saved')
+
+    def _save_super_event(self, event_data: dict):
+        super_event_data = deepcopy(event_data)
+        super_event_data['super_event_type'] = Event.SuperEventType.RECURRING
+        event = self.save_event(super_event_data)
+        return event
+
+    def _save_recurring_events(self, event: dict, super_event: Event):
+        if not event['days']:
+            raise FunException(f"{event['origin_id']} is missing the weekdays it repeats on.")
+
+        recurring_dates = self._create_recurring_event_dates(event["start_time"], event["end_time"], event["days"])
+        time_from = self._split_time(event.pop('time_from'), event['origin_id'])
+        time_to = self._split_time(event.pop('time_to'), event['origin_id'])
+        recurring_datetimes = [(i.replace(hour=time_from[0], minute=time_from[1]),
+                                i.replace(hour=time_to[0], minute=time_to[1])) for i in recurring_dates]
+        for i in recurring_datetimes:
+            single_event = deepcopy(event)
+            single_event['origin_id'] = f"{single_event['origin_id']}_{i[0].strftime('%d%m%Y')}"
+            single_event['start_time'] = i[0]
+            single_event['end_time'] = i[1]
+            single_event['super_event'] = super_event
+            self.save_event(single_event)
+
+        super_event.save()
+        logger.info(f'{super_event.name} saved with {super_event.sub_events.count()} recurring sub events')
+
+    def _split_time(self, time: str, origin_id: str) -> list:
+        '''Takes time of the '17:00' format and splits it into a list of ints.
+        '''
+
+        if not time:
+            logger.warning(f'{origin_id} has no starting or ending hours')
+            return [0, 0]
+        if ':' not in time:
+            logger.warning(f'{origin_id} has malformed starting or ending hours')
+            return [0, 0]
+        return [int(i) for i in time.split(':')]
+
+    def _create_recurring_event_dates(self, start_date: datetime, end_date: datetime, weekdays: list):
 
         converted_days = [DAY_MAP[i] for i in weekdays]
         return list(
             rrule(WEEKLY, byweekday=converted_days, dtstart=start_date, until=end_date)
         )
 
-    def _parse_event_data(self, d: dict):
+    def _parse_event_data(self, src_event: dict):
         """Parsing individual activity data. d holds a dictionary that contains
         info on one course
         Following edits are made to the original data:
@@ -140,33 +194,32 @@ class FunActionImporter(Importer):
         - location is set to tprek id
         - dates for the individual events of the recurring events are created
         - datetime objects are set to Helsinki/Europe timezone
+        - setting age range to 13-17 for all the events
         """
-        get_nested, get_datetime, get_slug = self._bind_data_getters(d)
+        get_nested, get_datetime, get_slug = self._bind_data_getters(src_event)
 
         event_data = {
-            "origin_id": f"funactionnuorille:d['id']",
+            "origin_id": f"funactionnuorille:{src_event['id']}",
             "name": {"fi": f"{get_nested(fields=['title', 'rendered'])}"},
             "description": {"fi": f"{get_nested(fields=['sports', 'description'])}"},
             "start_time": get_datetime("date_from"),
             "end_time": get_datetime("date_to"),
-            "time_from": d.get("time_from"),
-            "time_to": d.get("time_to"),
-            "days": d.get("funaction_weekdays"),
+            "time_from": src_event.get("time_from"),
+            "time_to": src_event.get("time_to"),
+            "days": src_event.get("funaction_weekdays"),
             "date_published": get_datetime("date"),
             "slug": get_slug(),
             "data_source": self.data_source,
             "publisher": self.organization,
         }
-
-        location_description = d.get("locations")
+        location_description = src_event.get("locations")
         if isinstance(location_description, list) and len(location_description) > 0:
             location_name = location_description[0]["name"]
-            event_data["location"] = self.location_map[location_name].tprekId
+            event_data["location"] = {'id': self.location_map[location_name].tprekId}
 
-        if event_data["days"] and event_data["start_time"] and event_data["end_time"]:
-            event_data["recurring_dates"] = self._create_recurring_event_dates(
-                event_data["start_time"], event_data["end_time"], event_data["days"]
-            )
+        event_data['audience_max_age'] = 17
+        event_data['audience_min_age'] = 13
+
         return event_data
 
     def _parse_slug(self, data: dict):
@@ -186,7 +239,7 @@ class FunActionImporter(Importer):
             return None
         if slug:
             clean_slug = (
-                slug.replace("-", " ").translate(self.nodigits_trantab).strip(" ")
+                slug.replace("-", " ").translate(nodigits_trantab).strip(" ")
             )
             return clean_slug
 
@@ -196,12 +249,13 @@ class FunActionImporter(Importer):
         the length of the string, hence edit (Levenshtein) distance filter was
         introduced so that 'amerikkalainen jalkapallo' is matched to one keyword
         and 'nuorisotalo jalkapallo' is matched to two.
-        The function allows 2 typo per every 5 symbols, which helps both with
+        The function allows 2 edits per every 5 symbols, which helps both with
         simple plurals and true typos.
 
         TODO: when a two-word keyword is preceded by something as in
-        'nuorisotalo amerikkalainen jalkapallo' which is mapped to 'nuorisotalo'
-        'jalkapallo', and 'amerikkalaiset'.
+        'nuorisotalo amerikkalainen jalkapallo' it is mapped to 'nuorisotalo'
+        'jalkapallo', and 'amerikkalaiset', should be 'nuorisotalo' and
+        'amerikkalainen jalkapallo'.
 
         TODO: correct language treatment, so that 'body condition' is searched
         for in the English, not the Finnish keywords.
@@ -210,12 +264,11 @@ class FunActionImporter(Importer):
         text = text.strip(" ")
         match = (
             Keyword.objects.annotate(similarity=TrigramSimilarity("name_fi", text))
-            .order_by("-similarity")
-            .first()
+            .order_by("similarity")
+            .last()
         )
 
-        # 0.4: allow 2 edits per 5 symbols
-        if match and distance(match.name_fi, text) / len(text) < 0.4:
+        if match and distance(match.name_fi, text) / len(text) < 0.2:
             return set([match])
 
         if " " not in text:
@@ -240,9 +293,13 @@ class FunActionImporter(Importer):
     def _get_nested_values(self, data: dict, fields: list):
         value = data.get(fields.pop(0))
         if isinstance(value, dict):
-            self._get_nested_values(data=value, fields=fields)
+            return self._get_nested_values(data=value, fields=fields)
+        elif isinstance(value, list) and value:
+            return self._get_nested_values(data=value[0], fields=fields)
+        elif not value:
+            return ''
         else:
-            return value
+            return clean_text(value)
 
     def _bind_data_getters(self, data: dict):
         """From harrastushaku"""
