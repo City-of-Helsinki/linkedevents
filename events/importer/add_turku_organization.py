@@ -15,7 +15,7 @@ from .base import Importer, register_importer
 # Per module logger
 logger = logging.getLogger(__name__)
 
-#GK23_SRID = 3879#SRID is not use on this importer (this not use geo spatial library)
+#GK23_SRID = 3877#SRID is not use on this importer (this not use geo spatial library)
 
 
 @register_importer
