@@ -14,7 +14,7 @@ from .base import Importer, register_importer
 # Per module logger
 logger = logging.getLogger(__name__)
 
-GK25_SRID = 3879
+GK23_SRID = 3877
 
 
 @register_importer
