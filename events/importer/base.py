@@ -222,15 +222,19 @@ class Importer(object):
 
     def _save_field(self, obj, obj_field_name, info,
                     info_field_name, max_length=None):
-        # atm only used by place importers, do some extra cleaning and validation before setting value
-        if info_field_name in info:
-            val = clean_text(info[info_field_name])
-        else:
-            val = None
-        if max_length and val and len(val) > max_length:
-            self.logger.warning("%s: field %s too long" % (obj, info_field_name))
-            val = None
-        self._set_field(obj, obj_field_name, val)
+        
+        if type(info[info_field_name]) == None:
+            print('Type none: ', info_field_name, ': ', info[info_field_name])
+        else:            
+            # atm only used by place importers, do some extra cleaning and validation before setting value
+            if info_field_name in info:
+                val = clean_text(info[info_field_name])
+            else:
+                val = None
+            if max_length and val and len(val) > max_length:
+                self.logger.warning("%s: field %s too long" % (obj, info_field_name))
+                val = None
+            self._set_field(obj, obj_field_name, val)
 
     def _save_translated_field(self, obj, obj_field_name, info,
                                info_field_name, max_length=None):
@@ -242,6 +246,68 @@ class Importer(object):
             self._save_field(obj, obj_key, info, key, max_length)
             if lang == 'fi':
                 self._save_field(obj, obj_field_name, info, key, max_length)
+
+    # multilevel (3 step max) json version for turku 
+    def _save_field_multilevel(self, obj, obj_field_name, info,
+                     info_field_name, max_length=None, nodeNames=[], lang=''):
+        # atm only used by place importers, do some extra cleaning and validation before setting value
+        # multilevel (6 step max) json version for turku 
+        #print ('WWWWWWW lang: ', lang) 
+        if info_field_name in info:
+            if len(nodeNames) == 0 and lang == '':
+                #print ('LEVEL1 no lang: ', info[info_field_name])
+                val = clean_text(info[info_field_name])
+            elif len(nodeNames) == 0:
+                #print ('LEVEL1: ', info[info_field_name][lang], ' lang: ', lang)
+                val = clean_text(info[info_field_name][lang])
+            if len(nodeNames) == 1 and lang == '':                
+                #print ('LEVEL2 CCC no lang: ', info[info_field_name][nodeNames])
+                val = clean_text(info[info_field_name][nodeNames[0]])
+            elif len(nodeNames) == 1:
+                #print ('LEVEL2: ', info[info_field_name][nodeNames[0]][lang] , ' lang: ', lang) 
+                val = clean_text(info[info_field_name][nodeNames[0]][lang])
+            if len(nodeNames) == 2 and lang == '':
+                val = clean_text(info[info_field_name][nodeNames[0]][nodeNames[1]])
+            elif len(nodeNames) == 2:
+                val = clean_text(info[info_field_name][nodeNames[0]][nodeNames[1]][lang])
+            if len(nodeNames) == 3 and lang == '':
+                val = clean_text(info[info_field_name][nodeNames[0]][nodeNames[1]][nodeNames[2]])
+            elif len(nodeNames) == 3:
+                val = clean_text(info[info_field_name][nodeNames[0]][nodeNames[1]][nodeNames[2]][lang])
+            if len(nodeNames) == 4 and lang == '': 
+                val = clean_text(info[info_field_name][nodeNames[0]][nodeNames[1]][nodeNames[2]][nodeNames[3]])    
+            elif len(nodeNames) == 4: 
+                val = clean_text(info[info_field_name][nodeNames[0]][nodeNames[1]][nodeNames[2]][nodeNames[3]][lang])
+            if len(nodeNames) == 5 and lang == '': 
+                val = clean_text(info[info_field_name][nodeNames[0]][nodeNames[1]][nodeNames[2]][nodeNames[3]][nodeNames[4]])
+            elif len(nodeNames) == 5: 
+                val = clean_text(info[info_field_name][nodeNames[0]][nodeNames[1]][nodeNames[2]][nodeNames[3]][nodeNames[4]][lang])
+            if len(nodeNames) > 5:
+                self.logger.warning("%s: field %s Check level of nodes! Max main level + 5 + lang" % (obj, info_field_name))     
+        else:
+            val = None
+        if max_length and val and len(val) > max_length:
+            self.logger.warning("%s: field %s too long" % (obj, info_field_name))
+            val = None
+        self._set_field(obj, obj_field_name, val)
+
+    # multilevel (3 step max) json version for turku 
+    def _save_translated_field_multilevel(self, obj, obj_field_name, info,
+                               info_field_name, max_length=None, nodeNames=[]):
+        # atm only used by place importers, do some extra cleaning and validation before setting value
+        # multilevel (6 step max) json version for turku 
+        for lang in self.supported_languages:
+            #key = '%s_%s' % (info_field_name, lang)
+
+            obj_key = '%s_%s' % (obj_field_name, lang)
+            #print ('AAAA obj_key saving on field: ', obj_key)
+            #print ('BBBB and this language: ', lang)
+
+            self._save_field_multilevel(obj, obj_key, info, info_field_name, max_length, nodeNames, lang)
+            if lang == 'fi':
+                self._save_field_multilevel(obj, obj_field_name, info, info_field_name, max_length, nodeNames, lang)
+            
+            #self.logger.warning("%s: field %s Check level of nodes!" % (obj, info_field_name)) 
 
     def _update_fields(self, obj, info, skip_fields):
         # all non-place importers use this method, automatically takes care of translated fields
