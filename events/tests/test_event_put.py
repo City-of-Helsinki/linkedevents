@@ -520,6 +520,34 @@ def test__non_editable_fields_at_put(api_client, minimal_event_dict, user,
         assert list(non_permitted_input)[0] in response2.data
 
 
+# the following values may not be posted
+@pytest.mark.django_db
+@pytest.mark.parametrize("non_permitted_input,non_permitted_response", [
+    ({'id': 'not_allowed:1'}, 400),  # may not fake id
+    ({'id': settings.SYSTEM_DATA_SOURCE_ID + ':changed'}, 400),  # may not change object id
+    ({'data_source': 'theotherdatasourceid'}, 400),  # may not fake data source
+    ({'publisher': 'test_organization2'}, 400),  # may not fake organization
+])
+def test__apikey_non_editable_fields_at_put(api_client, minimal_event_dict, organization, data_source,
+                                            non_permitted_input, non_permitted_response):
+    # create the event first
+    data_source.owner = organization
+    data_source.save()
+    response = create_with_post(api_client, minimal_event_dict, data_source)
+    data2 = response.data
+    event_id = data2.pop('@id')
+
+    # try to put non permitted values
+    data2.update(non_permitted_input)
+
+    response2 = api_client.put(event_id, data2, format='json',
+                               credentials={'apikey': data_source.api_key})
+    assert response2.status_code == non_permitted_response
+    if non_permitted_response >= 400:
+        # check that there is an error message for the corresponding field
+        assert list(non_permitted_input)[0] in response2.data
+
+
 @pytest.mark.django_db
 def test__an_admin_can_update_an_event_from_another_data_source(api_client, event2, keyword, offer,
                                                                 other_data_source, organization, user):
@@ -540,6 +568,24 @@ def test__an_admin_can_update_an_event_from_another_data_source(api_client, even
 
 
 @pytest.mark.django_db
+def test__apikey_cannot_update_an_event_from_another_data_source(api_client, event2, keyword, offer,
+                                                                 data_source, other_data_source, organization):
+    other_data_source.owner = organization
+    other_data_source.save()
+    event2.publisher = organization
+    event2.keywords.add(keyword)  # keyword is needed in testing POST and PUT with event data
+    event2.offers.add(offer)  # ditto for offer
+    event2.save()
+
+    detail_url = reverse('event-detail', kwargs={'pk': event2.pk})
+    response = api_client.get(detail_url, format='json')
+    assert response.status_code == 200
+    response = update_with_put(api_client, detail_url, response.data,
+                               credentials={'apikey': data_source.api_key})
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
 def test__correct_api_key_can_update_an_event(api_client, event, complex_event_dict, data_source, organization):
 
     data_source.owner = organization
@@ -550,6 +596,43 @@ def test__correct_api_key_can_update_an_event(api_client, event, complex_event_d
                                credentials={'apikey': data_source.api_key})
     assert response.status_code == 200
     assert ApiKeyUser.objects.all().count() == 1
+
+
+@pytest.mark.django_db
+def test__correct_api_key_can_update_an_event_in_suborganization(api_client, event2, complex_event_dict,
+                                                                 other_data_source, organization, organization2):
+
+    other_data_source.owner = organization
+    other_data_source.save()
+
+    organization2.parent = organization
+    organization2.save()
+    del(complex_event_dict['publisher'])
+    del(complex_event_dict['data_source'])
+
+    detail_url = reverse('event-detail', kwargs={'pk': event2.pk})
+    response = update_with_put(api_client, detail_url, complex_event_dict,
+                               credentials={'apikey': other_data_source.api_key})
+    assert response.status_code == 200
+    assert ApiKeyUser.objects.all().count() == 1
+
+
+@pytest.mark.django_db
+def test__correct_api_key_cannot_update_an_event_in_superorganization(api_client, event, complex_event_dict,
+                                                                      other_data_source, organization, organization2):
+
+    other_data_source.owner = organization2
+    other_data_source.save()
+
+    organization2.parent = organization
+    organization2.save()
+    del(complex_event_dict['publisher'])
+    del(complex_event_dict['data_source'])
+
+    detail_url = reverse('event-detail', kwargs={'pk': event.pk})
+    response = update_with_put(api_client, detail_url, complex_event_dict,
+                               credentials={'apikey': other_data_source.api_key})
+    assert response.status_code == 403
 
 
 @pytest.mark.django_db

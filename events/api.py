@@ -498,13 +498,15 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         # therefore, we only do permission checks for single instances
         if not isinstance(instance, QuerySet) and instance:
             # check permissions *before* validation
+            if not instance.can_be_edited_by(self.user):
+                raise PermissionDenied()
             if isinstance(self.user, ApiKeyUser):
                 # allow updating only if the api key matches instance data source
                 if not instance.data_source == self.data_source:
                     raise PermissionDenied()
             else:
                 # without api key, the user will have to be admin
-                if not instance.is_user_editable() or not instance.can_be_edited_by(self.user):
+                if not instance.is_user_editable():
                     raise PermissionDenied()
 
     def to_internal_value(self, data):

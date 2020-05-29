@@ -52,7 +52,7 @@ class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
         return self.data_source.owner
 
     def is_admin(self, publisher):
-        return self.data_source.owner == publisher
+        return publisher in self.data_source.owner.get_descendants(include_self=True)
 
     def is_regular_user(self, publisher):
         return False
