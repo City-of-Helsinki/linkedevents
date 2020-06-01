@@ -105,13 +105,16 @@ class YsoImporter(Importer):
 
     def setup(self):
         defaults = dict(
-            name='Yleinen suomalainen ontologia')
+        name='Yleinen suomalainen ontologia')
         self.data_source, _ = DataSource.objects.get_or_create(
-            id=self.name, defaults=defaults)
+            id=self.name, defaults=defaults)       
 
-        #hy_ds, _ = DataSource.objects.get_or_create(defaults={'name': 'Helsingin yliopisto'}, id='hy')
-
-        org_args = dict(origin_id='1200', data_source=self.data_source)
+        #public organizations class for all instans (this includes also city of Turku specifig organization class)
+        ds_args = dict(origin_id='13', data_source=self.data_source)
+        defaults = dict(name='Sanasto')
+        self.organizationclass13, _ =  OrganizationClass.objects.get_or_create(defaults=defaults, **ds_args)
+        
+        org_args = dict(origin_id='1200', data_source=self.data_source, classification_id="org:13")
         defaults = dict(name='YSO')
         self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
 

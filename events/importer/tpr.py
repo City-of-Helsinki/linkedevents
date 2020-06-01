@@ -38,8 +38,8 @@ class TprekImporter(Importer):
         defaults = dict(name='Ulkoa tuodut organisaatiotiedot')
         self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)         
         
-        #public organisation class for all municipalities
-        ds_args = dict(origin_id='Paikkatieto', data_source=self.data_source)
+        #public organisation class for all places
+        ds_args = dict(origin_id='12', data_source=self.data_source)
         defaults = dict(name='Paikkatieto')
         self.organizationclass, _ =  OrganizationClass.objects.get_or_create(defaults=defaults, **ds_args)
 

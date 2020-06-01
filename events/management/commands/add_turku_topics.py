@@ -40,7 +40,7 @@ TURKU_KEYWORD_IDS = [
     'yso:p1278',  # tanssi
     'yso:p19245',  # työpajat
     'yso:p2771',  # ulkoilu
-]
+    'yso:p26626', #etäosallistuminen
 
 
 '''
