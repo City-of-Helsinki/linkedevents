@@ -41,7 +41,7 @@ TURKU_KEYWORD_IDS = [
     'yso:p19245',  # työpajat
     'yso:p2771',  # ulkoilu
     'yso:p26626', #etäosallistuminen
-
+]
 
 '''
 HELSINKI_KEYWORD_IDS = [
