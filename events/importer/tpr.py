@@ -105,9 +105,13 @@ class TprekImporter(Importer):
         e = 0
 
         isPositionOk = True
-        try:                  
-            n = info['location']['coordinates'][0]#latitude
-            e = info['location']['coordinates'][1]#longitude
+        try:
+            if os.name == 'nt':                  
+                n = info['location']['coordinates'][0]#latitude
+                e = info['location']['coordinates'][1]#longitude
+            else:
+                n = info['location']['coordinates'][1]#latitude
+                e = info['location']['coordinates'][0]#longitude
            
         except:
             isPositionOk == False
@@ -175,11 +179,8 @@ class TprekImporter(Importer):
             #e = info['location']['coordinates'][1]#longitude
             position = None
             if n and e:
-                if os.name == 'nt':
-                    p = Point(e, n, srid=4326)  # GPS coordinate system (WGS 84)
-                else:
-                    p = Point(n, e, srid=4326)  # GPS coordinate system (WGS 84)
-
+                p = Point(e, n, srid=4326)  # GPS coordinate system (WGS 84)
+         
                 if p.within(self.bounding_box):
                     if self.target_srid != 4326:
                         p.transform(self.gps_to_target_ct)
