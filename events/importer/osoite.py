@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 GK23_SRID = 3877
 
+#NOTE! this import uses munigeo library component and there must be turku specific file turku.py
 
 @register_importer
 class OsoiteImporter(Importer):
@@ -26,20 +27,22 @@ class OsoiteImporter(Importer):
     def setup(self):
     
     
-      #public data sourse for organisations model
+        #public data source for organizations model
         ds_args = dict(id='org', user_editable=True)
         defaults = dict(name='Ulkoa tuodut organisaatiotiedot')
         self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)         
         
-        #public organisation class for all places
+        #public organization class for all places
         ds_args = dict(origin_id='12', data_source=self.data_source)
         defaults = dict(name='Paikkatieto')
         self.organizationclass, _ =  OrganizationClass.objects.get_or_create(defaults=defaults, **ds_args)
     
-        ds_args = dict(id='osoite')
+        #address data source  
+        ds_args = dict(id='osoite', user_editable=True)
         defaults = dict(name='Ulkoa tuodut osoitetiedot (sis. paikan)')
         self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
         
+        #Organization for addresses
         org_args = dict(origin_id='1000', data_source=self.data_source, classification_id="org:12")
         defaults = dict(name='Osoiterekisteri')
         self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
@@ -164,7 +167,9 @@ class OsoiteImporter(Importer):
     def import_places(self):
         # munigeo saves addresses in local db, we just create Places from them.
         # note that the addresses only change daily and the import is time-consuming, so we should not run this hourly
-
+        
+        #NOTE! this use munigeo library component and there is turku specific file turku.py
+        #Check at munigeo import in requirements files django-munigeo==0.2.26 includes this turku.py file 
         # addresses require the municipalities to be present in the db
         call_command('geo_import', 'finland', municipalities=True)
         #call_command('geo_import', 'helsinki', addresses=True)

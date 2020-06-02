@@ -15,8 +15,9 @@ from .base import Importer, register_importer
 # Per module logger
 logger = logging.getLogger(__name__)
 
-#GK23_SRID = 3877#SRID is not use on this importer (this not use geo spatial library)
-
+#this importer add public data sources and organizations and organizations classes
+#this includes Virtual organizations and organizations classes and one virtual lacation (virtual:public)
+#this also includes the city of Turku specifig organizations and data sources
 
 @register_importer
 class OrganizationImporter(Importer):
@@ -30,51 +31,9 @@ class OrganizationImporter(Importer):
         defaults0 = dict(name='Järjestelmän sisältä luodut lähteet')
         self.data_source_system, _ = DataSource.objects.get_or_create(defaults=defaults0, **ds_args0)
         
-        #public organisations model for municipalities
         '''
-        #public data sourse for organisations model
-        ds_args = dict(id='org', user_editable=True)
-        defaults = dict(name='Ulkoa tuodut organisaatiotiedot')
-        self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)         
-        
-        #public organisation class for all municipalities
-        ds_args = dict(origin_id='3', data_source=self.data_source)
-        defaults = dict(name='Kunta')
-        self.organizationclass, _ =  OrganizationClass.objects.get_or_create(defaults=defaults, **ds_args)
-        '''
-
-        #city of Turku 
-        '''    
-        #data sourse for city of Turku 
-        ds_args2 = dict(id='turku', user_editable=True)
-        defaults2 = dict(name='Kuntakohtainen data Turun Kaupunki')
-        self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args2)
-        
-        #organisation for city of Turku (check the city/munisipality number)
-        org_args2 = dict(origin_id='853', data_source=self.data_source)
-        defaults2 = dict(name='Turku')        
-        self.organization, _ = Organization.objects.get_or_create(defaults=defaults2, **org_args2)
-        '''
-        
-        #private users (this is a Turku specific requirements for not institutional users)
-        '''
-        #private users public organisations class
-        ds_args = dict(origin_id='11', data_source=self.data_source)
-        defaults = dict(name='Yksityishenkilö')
-        self.organizationclass, _ =  OrganizationClass.objects.get_or_create(defaults=defaults, **ds_args)
-
-        #private users data source
-        ds_args2 = dict(id='yksilo', user_editable=True)
-        defaults2 = dict(name='Yksityishenkilöihin liittyvä yleisdata')
-        self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args2)
-        
-        #private users public organisations
-        org_args2 = dict(origin_id='2000', data_source=self.data_source)
-        defaults2 = dict(name='Yksityishenkilöt')        
-        self.organization, _ = Organization.objects.get_or_create(defaults=defaults2, **org_args2)
-        '''
-        '''
-        1 Valtiollinen toimija 		 (events_datasource:org)
+        organizations classes id numbers and mames and data source (events_datasource id = org)
+        1 Valtiollinen toimija 		
         2 Maakunnallinen toimija
         3 Kunta
         4 Kunnan liikelaitos
@@ -91,7 +50,7 @@ class OrganizationImporter(Importer):
         '''
         #public data sources
 
-        #public data sourse for organisations model
+        #public data source for organisations model
         ds_args1 = dict(id='org', user_editable=True)
         defaults1 = dict(name='Ulkoa tuodut organisaatiotiedot')
         self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults1, **ds_args1)  
@@ -153,12 +112,12 @@ class OrganizationImporter(Importer):
         defaults = dict(name='Yksityishenkilö')
         self.organizationclass11, _ =  OrganizationClass.objects.get_or_create(defaults=defaults, **ds_args)
 
-           #public organizations class for all instans (this includes also city of Turku specifig organization class)
+        #public organizations class for all instans (this includes also city of Turku specifig organization class)
         ds_args = dict(origin_id='12', data_source=self.data_source)
         defaults = dict(name='Paikkatieto')
         self.organizationclass12, _ =  OrganizationClass.objects.get_or_create(defaults=defaults, **ds_args)
 
-           #public organizations class for all instans (this includes also city of Turku specifig organization class)
+        #public organizations class for all instans (this includes also city of Turku specifig organization class)
         ds_args = dict(origin_id='13', data_source=self.data_source)
         defaults = dict(name='Sanasto')
         self.organizationclass13, _ =  OrganizationClass.objects.get_or_create(defaults=defaults, **ds_args)
@@ -171,13 +130,13 @@ class OrganizationImporter(Importer):
 
         #city of Turku 
             
-        #data sourse for city of Turku 
+        #data source for city of Turku 
         ds_args2 = dict(id='turku', user_editable=True)
         defaults2 = dict(name='Kuntakohtainen data Turun Kaupunki')
         self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults2, **ds_args2)
         
         #organisation for city of Turku (check the city/munisipality number)
-        org_args2 = dict(origin_id='853', data_source=self.data_source)
+        org_args2 = dict(origin_id='853', data_source=self.data_source, classification_id="org:3")
         defaults2 = dict(name='Turku')        
         self.organization, _ = Organization.objects.get_or_create(defaults=defaults2, **org_args2)
         
@@ -208,15 +167,16 @@ class OrganizationImporter(Importer):
         defaults4 = dict(name='Virtuaalitapahtumat')        
         self.organization_virtual, _ = Organization.objects.get_or_create(defaults=defaults4, **org_args4)
 
-        # "Etätapahtumat" are mapped to our new fancy "Tapahtuma vain internetissä." location
-        print(self.data_source_virtual)
+        #Virtual events location
+        #print('location id -> ', self.data_source_virtual, ':public')
+        #location id virtual:public
         VIRTUAL_LOCATION_ID = str(self.data_source_virtual) + ':public'
 
-        # Create "Tapahtuma vain internetissä" location if not present
+        #Create virtual events location if not already made
         defaults5 = dict(data_source=self.data_source_virtual,
                         publisher=self.organization_virtual,
                         name='Virtuaalitapahtuman paikka',
-                        #description='Tapahtuma vain internetissä.',)
+                        #in helsinki id = helsinki:internet and description= Tapahtuma vain internetissä.
                         description='Toistaiseksi kaikki virtuaalitapahtumat merkitään tähän paikkatietoon.',)
         self.internet_location, _ = Place.objects.get_or_create(id=VIRTUAL_LOCATION_ID, defaults=defaults5)
 
