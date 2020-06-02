@@ -5,6 +5,7 @@ import logging
 import rdflib
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django_orghierarchy.models import Organization
+from django_orghierarchy.models import OrganizationClass
 from rdflib import RDF
 from rdflib.namespace import DCTERMS, OWL, SKOS
 
