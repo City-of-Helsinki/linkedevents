@@ -113,7 +113,7 @@ class YsoImporter(Importer):
         #public data sourse for organisations model
         ds_args1 = dict(id='org', user_editable=True)
         defaults1 = dict(name='Ulkoa tuodut organisaatiotiedot')
-        self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults1, **ds_args1)  
+        self.data_source1, _ = DataSource.objects.get_or_create(defaults=defaults1, **ds_args1)  
 
         #public organizations class for all instans (this includes also city of Turku specifig organization class)
         ds_args = dict(origin_id='13', data_source=self.data_source1)
