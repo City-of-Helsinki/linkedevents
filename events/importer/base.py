@@ -252,7 +252,7 @@ class Importer(object):
                      info_field_name, max_length=None, nodeNames=[], lang=''):
         # atm only used by place importers, do some extra cleaning and validation before setting value
         # multilevel (6 step max) json version for turku 
-        #print ('WWWWWWW lang: ', lang) 
+        #print ('lang: ', lang) 
         if info_field_name in info:
             if len(nodeNames) == 0 and lang == '':
                 #print ('LEVEL1 no lang: ', info[info_field_name])

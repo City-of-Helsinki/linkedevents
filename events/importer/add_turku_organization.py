@@ -192,7 +192,7 @@ class OrganizationImporter(Importer):
         self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults3, **ds_args3)
         
         #private users public organisations (this includes also city of Turku specifig organization)
-        org_args3 = dict(origin_id='2000', data_source=self.data_source, classification_id.)
+        org_args3 = dict(origin_id='2000', data_source=self.data_source, classification_id="org:11")
         defaults3 = dict(name='Yksityishenkilöt')        
         self.organization, _ = Organization.objects.get_or_create(defaults=defaults3, **org_args3)
         
@@ -204,7 +204,7 @@ class OrganizationImporter(Importer):
         self.data_source_virtual, _ = DataSource.objects.get_or_create(defaults=defaults4, **ds_args4)
         
         #Virtual events public organisations
-        org_args4 = dict(origin_id='3000', data_source=self.data_source_virtual)
+        org_args4 = dict(origin_id='3000', data_source=self.data_source_virtual, classification_id="org:14")
         defaults4 = dict(name='Virtuaalitapahtumat')        
         self.organization_virtual, _ = Organization.objects.get_or_create(defaults=defaults4, **org_args4)
 
