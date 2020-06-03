@@ -110,13 +110,10 @@ class TprekImporter(Importer):
 
         #Linux / Unix use a different way to gdal library and it get coordinates in reversed order
         try:
-            if os.name == 'nt':                  
+                          
                 n = info['location']['coordinates'][0]#latitude
                 e = info['location']['coordinates'][1]#longitude
-            else:
-                n = info['location']['coordinates'][1]#latitude
-                e = info['location']['coordinates'][0]#longitude
-           
+       
         except:
             isPositionOk == False
             POSITIONERROR.append(info['id'])
@@ -178,13 +175,14 @@ class TprekImporter(Importer):
                     setattr(obj, obj_field, val)
                     obj._changed_fields.append(obj_field)
                     obj._changed = True
-
-            #n = info['location']['coordinates'][0]#latitude
-            #e = info['location']['coordinates'][1]#longitude
+           
             position = None
             if n and e:
-                p = Point(e, n, srid=4326)  # GPS coordinate system (WGS 84)
-         
+                if os.name == 'nt':    
+                    p = Point(e, n, srid=4326)  # GPS coordinate system (WGS 84)
+                else:
+                    p = Point(n, e, srid=4326)  # GPS coordinate system (WGS 84)
+                
                 if p.within(self.bounding_box):
                     if self.target_srid != 4326:
                         p.transform(self.gps_to_target_ct)
