@@ -13,7 +13,7 @@ services:
         ports:
             - "127.0.0.1:5555:5432"
         volumes:
-            - postgres-data-volume:/var/lib/postgres/data
+            - postgres-data-volume:/var/lib/postgresql/data
 
     django:
         build:
