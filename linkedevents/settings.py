@@ -25,7 +25,6 @@ if os.name == 'nt':
 def get_git_revision_hash() -> str:
     """
     Retrieve the git hash for the underlying git repository or die trying
-
     We need a way to retrieve git revision hash for sentry reports
     I assume that if we have a git repository available we will
     have git-the-comamand as well
@@ -69,10 +68,24 @@ env = environ.Env(
     INSTANCE_NAME=(str, 'Linked Events'),
     EXTRA_INSTALLED_APPS=(list, []),
     AUTO_ENABLED_EXTENSIONS=(list, []),
-    MAIL_MAILGUN_KEY=(str, ''),
-    MAIL_MAILGUN_DOMAIN=(str, ''),
-    MAIL_MAILGUN_API=(str, ''),
-    LIPPUPISTE_EVENT_API_URL=(str, None)
+    LIPPUPISTE_EVENT_API_URL=(str, None),
+    MAIL_MAILGUN_KEY=(str,''),
+    MAIL_MAILGUN_DOMAIN=(str,''),
+    MAIL_MAILGUN_API=(str,''),
+    
+
+
+    OIDC_AUDIENCE=(str, ''),
+    OIDc_SECRET=(str, ''),
+    OIDC_API_SCOPE_PREFIX=(str, ''),
+    OIDC_API_AUTHORIZATION_FIELD=(str,  ''),
+    OIDC_REQUIRE_API_SCOPE_FOR_AUTHENTICATION=(bool, False),
+    OIDC_ISSUER=(str, ''),
+    OIDC_LEEWAY=(int, 0),
+    HELUSERS_PROVIDER=(str, 'helusers.providers.helsinki'),
+    HELUSERS_SOCIALACCOUNT_APADTER=(str, 'helusers.adapter.SocialAccountAdapter'),
+    HELUSERS_AUTHENTICATION_BACKEND=(str, 'helusers.tunnistamo_oicd.TunnistamoOICDAuth'),
+
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -218,7 +231,7 @@ LANGUAGE_CODE = env('LANGUAGES')[0]
 TIME_ZONE = 'Europe/Helsinki'
 
 MUNIGEO_COUNTRY = 'country:fi'
-MUNIGEO_MUNI = 'kunta:helsinki'
+MUNIGEO_MUNI = 'kunta:turku'
 
 USE_I18N = True
 USE_L10N = True
@@ -487,4 +500,4 @@ if env('MAIL_MAILGUN_KEY'):
         'MAILGUN_SENDER_DOMAIN': env('MAIL_MAILGUN_DOMAIN'),
         'MAILGUN_API_URL': env('MAIL_MAILGUN_API'),
     }
-    EMAIL_BACKEND = 'anymail.backends.mailgun.EmailBackend'
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
