@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
-from .utils import versioned_reverse as reverse
-import pytest
-from .utils import get, assert_fields_exist
-from events.models import (
-    Event, PublicationStatus, Language
-)
-from django.contrib.gis.gdal import SpatialReference, CoordTransform
-from django.contrib.gis.geos import Point
-from django.conf import settings
 import dateutil.parser
+import pytest
+from django.conf import settings
+from django.contrib.gis.gdal import CoordTransform, SpatialReference
+from django.contrib.gis.geos import Point
 from freezegun import freeze_time
+
+from events.models import Event, Language, PublicationStatus
+
+from .utils import assert_fields_exist, get
+from .utils import versioned_reverse as reverse
 
 # === util methods ===
 
@@ -160,6 +160,70 @@ def test_get_event_list_verify_bbox_filter(api_client, event, event2):
     # this way we will catch any errors if the default SRS changes, breaking the API
     assert event.id in [entry['id'] for entry in response.data['data']]
     assert event2.id not in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
+def test_get_event_list_verify_audience_max_age_lt_filter(api_client, keyword, event):
+    event.audience_max_age = 16
+    event.save()
+    response = get_list(api_client, data={'audience_max_age_lt': event.audience_max_age})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'audience_max_age_lt': event.audience_max_age - 1})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'audience_max_age_lt': event.audience_max_age + 1})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
+def test_get_event_list_verify_audience_max_age_gt_filter(api_client, keyword, event):
+    #  'audience_max_age' parameter is identical to audience_max_age_gt and is kept for compatibility's sake
+    event.audience_max_age = 16
+    event.save()
+    response = get_list(api_client, data={'audience_max_age_gt': event.audience_max_age})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'audience_max_age_gt': event.audience_max_age - 1})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'audience_max_age_gt': event.audience_max_age + 1})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'audience_max_age': event.audience_max_age})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'audience_max_age': event.audience_max_age - 1})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'audience_max_age': event.audience_max_age + 1})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
+def test_get_event_list_verify_audience_min_age_lt_filter(api_client, keyword, event):
+    #  'audience_max_age' parameter is identical to audience_max_age_gt and is kept for compatibility's sake
+    event.audience_min_age = 14
+    event.save()
+    response = get_list(api_client, data={'audience_min_age_lt': event.audience_min_age})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'audience_min_age_lt': event.audience_min_age - 1})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'audience_min_age_lt': event.audience_min_age + 1})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    #  'audience_max_age' parameter is identical to audience_max_age_gt and is kept for compatibility's sake
+    response = get_list(api_client, data={'audience_min_age': event.audience_min_age})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'audience_min_age': event.audience_min_age - 1})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'audience_min_age': event.audience_min_age + 1})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
+def test_get_event_list_verify_audience_min_age_gt_filter(api_client, keyword, event):
+    #  'audience_max_age' parameter is identical to audience_max_age_gt and is kept for compatibility's sake
+    event.audience_min_age = 14
+    event.save()
+    response = get_list(api_client, data={'audience_min_age_gt': event.audience_min_age})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'audience_min_age_gt': event.audience_min_age - 1})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'audience_min_age_gt': event.audience_min_age + 1})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
 
 
 @pytest.mark.django_db
