@@ -617,7 +617,7 @@ def all_api_get_list(request, event, api_client):
 # These initial licenses are created by a migration, but because of a feature
 # related to Django testing, objects created in datamigrations aren't available
 # in all testcases, so we need to create those here too to be sure they exist.
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def create_initial_licenses():
     License.objects.get_or_create(
         id='event_only',
