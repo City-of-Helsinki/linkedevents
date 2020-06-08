@@ -13,6 +13,11 @@ from ..auth import ApiKeyAuth
 from ..models import DataSource, Image
 
 
+@pytest.fixture(scope='function', autouse=True)
+def run_for_every_test_function(create_initial_licenses):
+    pass
+
+
 @pytest.mark.django_db
 def test_api_page_size(api_client, event):
     event_count = 200

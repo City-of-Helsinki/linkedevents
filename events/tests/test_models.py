@@ -1,8 +1,14 @@
+import pytest
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django_orghierarchy.models import Organization
 
 from ..models import DataSource, Event, Image, PublicationStatus
+
+
+@pytest.fixture(scope='function', autouse=True)
+def run_for_every_test_function(create_initial_licenses):
+    pass
 
 
 class TestImage(TestCase):

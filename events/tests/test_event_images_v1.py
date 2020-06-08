@@ -22,6 +22,11 @@ from events.auth import ApiKeyUser
 temp_dir = tempfile.mkdtemp()
 
 
+@pytest.fixture(scope='function', autouse=True)
+def run_for_every_test_function(create_initial_licenses):
+    pass
+
+
 @pytest.yield_fixture(autouse=True)
 def tear_down():
     yield
