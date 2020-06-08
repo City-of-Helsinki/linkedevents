@@ -7,7 +7,6 @@ from django.test import TestCase
 from events.importer.kulke import KulkeImporter, parse_age_range, parse_course_time
 
 
-@pytest.mark.django_db
 @pytest.mark.parametrize("test_input,expected", [
     ('Pölyt pois taidehistoriasta! Rooman ylväät pylväät', (None, None)),
     ('(3 kk–4 v) klo 9.30–10.15 kevään mittainen lyhytkurssi', (None, None)),
@@ -23,7 +22,6 @@ def test_parse_age_range_returns_correct_result(test_input, expected):
     assert parse_age_range(test_input) == expected
 
 
-@pytest.mark.django_db
 @pytest.mark.parametrize("test_input,expected", [
     ('Pölyt pois taidehistoriasta! Rooman ylväät pylväät', (None, None)),
     ('Työpaja ja esitys 9-12-vuotiaille', (None, None)),
