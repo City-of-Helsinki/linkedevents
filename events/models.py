@@ -20,29 +20,32 @@ attribute to change @context when need to define schemas for custom fields.
 
 import datetime
 import logging
+from smtplib import SMTPException
+
 import pytz
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
-from django.contrib.gis.db import models
-from django.utils import timezone
-from rest_framework.exceptions import ValidationError
-from reversion import revisions as reversion
-from django.utils.translation import ugettext_lazy as _
-from mptt.models import MPTTModel, TreeForeignKey
-from mptt.querysets import TreeQuerySet
 from django.contrib.contenttypes.models import ContentType
-from events import translation_utils
-from django.utils.encoding import python_2_unicode_compatible
+from django.contrib.gis.db import models
 from django.contrib.postgres.fields import HStoreField
 from django.contrib.sites.models import Site
 from django.core.mail import send_mail
 from django.db import transaction
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
+from django.utils.encoding import python_2_unicode_compatible
+from django.utils.translation import ugettext_lazy as _
 from image_cropping import ImageRatioField
+from mptt.models import MPTTModel, TreeForeignKey
+from mptt.querysets import TreeQuerySet
 from munigeo.models import AdministrativeDivision
-from notifications.models import render_notification_template, NotificationType, NotificationTemplateException
-from smtplib import SMTPException
+from rest_framework.exceptions import ValidationError
+from reversion import revisions as reversion
+
+from events import translation_utils
+from notifications.models import (NotificationTemplateException,
+                                  NotificationType,
+                                  render_notification_template)
 
 logger = logging.getLogger(__name__)
 
@@ -820,20 +823,3 @@ class EventAggregate(models.Model):
 class EventAggregateMember(models.Model):
     event_aggregate = models.ForeignKey(EventAggregate, on_delete=models.CASCADE, related_name='members')
     event = models.OneToOneField(Event, on_delete=models.CASCADE)
-
-
-class ImporterTimeLogger(models.Model):
-    last_run = models.DateTimeField()
-    importer_name = models.CharField(max_length=100)
-
-    def save(self, *args, **kwargs):
-        '''on the first run set last_run to a date in the past to enable
-        importing all of the events. Otherwise set to current time'''
-        if self.pk:
-            self.last_run = timezone.now()
-        else:
-            self.last_run = pytz.utc.localize(datetime.datetime(2000, 1, 1))
-        super(ImporterTimeLogger, self).save(*args, **kwargs)
-
-    class Meta:
-        unique_together = ('last_run', 'importer_name')

@@ -10,16 +10,14 @@ Inspired in parts by Harrastushaku importer.
 
 import logging
 import re
-import pdb
 from copy import deepcopy
 from datetime import datetime, timedelta
 from functools import partial
-from events.keywords import KeywordMatcher
 
 import attr
 import pytz
 import requests
-from dateutil.parser import isoparse, parse
+from dateutil.parser import parse
 from dateutil.rrule import FR, MO, SA, SU, TH, TU, WE, WEEKLY, rrule
 from django.contrib.postgres.search import TrigramSimilarity
 from django_orghierarchy.models import Organization
@@ -27,7 +25,7 @@ from Levenshtein import distance
 
 from events.importer.base import Importer, register_importer
 from events.importer.util import clean_text
-from events.models import DataSource, Event, ImporterTimeLogger, Keyword, Place
+from events.models import DataSource, Event, Keyword, Place
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +105,6 @@ class FunActionImporter(Importer):
             id=self.name, name="FunAction", api_key=""
         )[0]
 
-        # TODO: Figure out what the organization should be called actually
         self.organization, _ = Organization.objects.get_or_create(
             origin_id="funactionnuorille",
             data_source=self.data_source,
@@ -116,14 +113,10 @@ class FunActionImporter(Importer):
 
     def import_courses(self):
         src_data = self._fetch_paginated_data(FUNACTION_URL)
-        itl, _ = ImporterTimeLogger.objects.get_or_create(importer_name=self.name)
-        last_run = itl.last_run
-        data = [i for i in src_data if not i["modified_gmt"] or isoparse(f"{i['modified_gmt']}Z") > last_run]
+        self.location_map = self._map_locations(src_data)
 
-        self.location_map = self._map_locations(data)
+        events_info = [self._parse_event_data(i) for i in src_data]
 
-        events_info = [self._parse_event_data(i) for i in data]
-        pdb.set_trace()
         for event in events_info:
             if event["slug"]:
                 event["keywords"] = self._find_keyword_or_split(event["slug"])
