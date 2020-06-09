@@ -15,8 +15,9 @@ media/
 data/
 .pytest_cache/
 templates/rest_framework/*
-
-
+env/
+*.csv
+organization.json
 
 # Created by https://www.gitignore.io/api/python,macos
 # Edit at https://www.gitignore.io/?templates=python,macos
@@ -155,3 +156,7 @@ dmypy.json
 .pyre/
 
 # End of https://www.gitignore.io/api/python,macos
+
+config_dev.toml
+venv/
+.vscode/

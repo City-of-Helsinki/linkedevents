@@ -80,10 +80,10 @@ viewset_classes_by_model = {}
 all_views = []
 
 
-def register_view(klass, name, base_name=None):
+def register_view(klass, name, basename=None):
     entry = {'class': klass, 'name': name}
-    if base_name is not None:
-        entry['base_name'] = base_name
+    if basename is not None:
+        entry['basename'] = basename
     all_views.append(entry)
     if klass.serializer_class and \
             hasattr(klass.serializer_class, 'Meta') and \
@@ -1168,7 +1168,7 @@ class ImageViewSet(JSONAPIViewMixin, viewsets.ModelViewSet):
         super().perform_destroy(instance)
 
 
-register_view(ImageViewSet, 'image', base_name='image')
+register_view(ImageViewSet, 'image', basename='image')
 
 
 class VideoSerializer(serializers.ModelSerializer):
@@ -2250,4 +2250,4 @@ class SearchViewSet(JSONAPIViewMixin, GeoModelAPIView, viewsets.ViewSetMixin, ge
         return resp
 
 
-register_view(SearchViewSet, 'search', base_name='search')
+register_view(SearchViewSet, 'search', basename='search')

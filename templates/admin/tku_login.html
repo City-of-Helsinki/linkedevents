@@ -1,0 +1,53 @@
+{% extends "admin/login.html" %}
+{% load static %}
+
+{% block extrastyle %}
+{{ block.super }}
+{% if password_login_disabled %}
+<style>
+    #content-main form {
+        display: none;
+    }
+</style>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+{% if turku_provider_installed %}
+<div id="helsinki-login"{% if grappelli_installed %} style="display: none;"{% endif %}>
+    <p>Kirjaudu sisään Turun kaupungin työntekijän tunnuksella:</p>
+    <div style="margin-bottom: 2em; margin-top: 1em;">
+        <a href="{{ turku_login_url }}{% if redirect_path %}?next={{ redirect_path }}{% endif %}">
+            <button style="margin-left: 9em; width: auto;" class="button grp-button grp-default" type="button">Turku Login</button>
+        </a>
+    </div>
+{% if not password_login_disabled %}
+    <p>
+        Jos sinulla on erilliset ylläpitotunnukset, kirjaudu sisään käyttäjätunnuksella
+        ja salasanalla.
+    </p>
+{% endif %}
+</div>
+{% endif %}
+
+{{ block.super }}
+
+{% if request.user and request.user.is_authenticated and turku_logout_url %}
+<a href="{{ turku_logout_url }}">
+    <button style="margin-left: 9em; width: auto;" class="button grp-button grp-default" type="button">Kirjaudu ulos</button>
+</a>
+{% endif %}
+
+{% if grappelli_installed %}
+<script type="text/javascript">
+(function() {
+    var $ = grp.jQuery;
+
+    $el = $("#helsinki-login");
+    $el.addClass('form-row grp-row');
+    $el.prependTo($('div.module')).show();
+})();
+</script>
+{% endif %}
+
+{% endblock %}

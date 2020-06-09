@@ -1,6 +1,5 @@
 -c requirements.txt # Constrained by requirements.txt
 
-django-extensions
 flake8
 freezegun
 pip-tools

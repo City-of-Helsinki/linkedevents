@@ -5,10 +5,10 @@ from rest_framework import permissions, serializers, generics, viewsets
 all_views = []
 
 
-def register_view(klass, name, base_name=None):
+def register_view(klass, name, basename=None):
     entry = {'class': klass, 'name': name}
-    if base_name is not None:
-        entry['base_name'] = base_name
+    if basename is not None:
+        entry['basename'] = basename
     all_views.append(entry)
 
 

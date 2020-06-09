@@ -6,8 +6,8 @@ from events import api
 router = DefaultRouter()
 for view in api.all_views:
     kwargs = {}
-    if 'base_name' in view:
-        kwargs['base_name'] = view['base_name']
+    if 'basename' in view:
+        kwargs['basename'] = view['basename']
     router.register(view['name'], view['class'], **kwargs)
 
 urlpatterns = [

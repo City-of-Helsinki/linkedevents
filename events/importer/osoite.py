@@ -6,6 +6,7 @@ from django.conf import settings
 from django.core.management import call_command
 from django.utils.module_loading import import_string
 from django_orghierarchy.models import Organization
+from django_orghierarchy.models import OrganizationClass
 
 from events.models import DataSource, Place
 from .sync import ModelSyncher
@@ -14,8 +15,9 @@ from .base import Importer, register_importer
 # Per module logger
 logger = logging.getLogger(__name__)
 
-GK25_SRID = 3879
+GK23_SRID = 3877
 
+#NOTE! this import uses munigeo library component and there must be turku specific file turku.py
 
 @register_importer
 class OsoiteImporter(Importer):
@@ -23,16 +25,26 @@ class OsoiteImporter(Importer):
     supported_languages = ['fi', 'sv']
 
     def setup(self):
-        ds_args = dict(id='osoite')
-        defaults = dict(name='Pääkaupunkiseudun osoiteluettelo')
+    
+    
+        #public data source for organizations model
+        ds_args = dict(id='org', user_editable=True)
+        defaults = dict(name='Ulkoa tuodut organisaatiotiedot')
+        self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)         
+        
+        #public organization class for all places
+        ds_args = dict(origin_id='12', data_source=self.data_source)
+        defaults = dict(name='Paikkatieto')
+        self.organizationclass, _ =  OrganizationClass.objects.get_or_create(defaults=defaults, **ds_args)
+    
+        #address data source  
+        ds_args = dict(id='osoite', user_editable=True)
+        defaults = dict(name='Ulkoa tuodut osoitetiedot (sis. paikan)')
         self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
-
-        ds_args = dict(id='ahjo')
-        defaults = dict(name='Ahjo')
-        ahjo_ds, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
-
-        org_args = dict(origin_id='u541000', data_source=ahjo_ds)
-        defaults = dict(name='Kaupunkiympäristön toimiala')
+        
+        #Organization for addresses
+        org_args = dict(origin_id='1000', data_source=self.data_source, classification_id="org:12")
+        defaults = dict(name='Osoiterekisteri')
         self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
         if self.options.get('remap', None):
             # This will prevent deletion checking, marking all deleted places as deleted
@@ -155,10 +167,13 @@ class OsoiteImporter(Importer):
     def import_places(self):
         # munigeo saves addresses in local db, we just create Places from them.
         # note that the addresses only change daily and the import is time-consuming, so we should not run this hourly
-
+        
+        #NOTE! this use munigeo library component and there is turku specific file turku.py
+        #Check at munigeo import in requirements files django-munigeo==0.2.26 includes this turku.py file 
         # addresses require the municipalities to be present in the db
         call_command('geo_import', 'finland', municipalities=True)
-        call_command('geo_import', 'helsinki', addresses=True)
+        #call_command('geo_import', 'helsinki', addresses=True)
+        call_command('geo_import', 'turku', addresses=True)
 
         queryset = Place.objects.filter(data_source=self.data_source)
         if self.options.get('single', None):
