@@ -1,3 +1,4 @@
+attrs
 bleach
 django-admin-autocomplete-filter
 django-allauth
@@ -35,6 +36,7 @@ psycopg2-binary
 pyYAML
 python-dateutil
 python-docx
+python-Levenshtein
 pytz
 rdflib
 requests-cache
