@@ -4,6 +4,7 @@
 #
 #    pip-compile requirements.in
 #
+attrs==19.3.0             # via -r requirements.in
 bleach==3.1.4             # via -r requirements.in
 certifi==2019.11.28       # via requests, sentry-sdk
 chardet==3.0.4            # via requests
@@ -57,6 +58,7 @@ pyparsing==2.4.6          # via rdflib
 python-dateutil==2.8.1    # via -r requirements.in, icalendar
 python-docx==0.8.10       # via -r requirements.in
 python-jose==3.1.0        # via django-helusers
+python-levenshtein==0.12.0  # via -r requirements.in
 python3-openid==3.1.0     # via django-allauth
 pytz==2019.3              # via -r requirements.in, django, icalendar
 pyyaml==5.3               # via -r requirements.in, django-munigeo
