@@ -89,6 +89,39 @@ def test__api_key_with_organization_can_create_an_event(api_client, minimal_even
 
 
 @pytest.mark.django_db
+def test__api_key_with_organization_can_create_a_suborganization_event(api_client, minimal_event_dict, data_source,
+                                                                       organization, organization2):
+
+    data_source.owner = organization
+    data_source.save()
+
+    organization2.parent = organization
+    organization2.save()
+    minimal_event_dict['publisher'] = organization2.id
+
+    response = create_with_post(api_client, minimal_event_dict, data_source)
+    assert_event_data_is_equal(minimal_event_dict, response.data)
+    assert ApiKeyUser.objects.all().count() == 1
+
+
+@pytest.mark.django_db
+def test__api_key_with_organization_cannot_create_a_superorganization_event(api_client, minimal_event_dict,
+                                                                            other_data_source, organization,
+                                                                            organization2):
+
+    other_data_source.owner = organization2
+    other_data_source.save()
+
+    organization2.parent = organization
+    organization2.save()
+
+    api_client.credentials(apikey=other_data_source.api_key)
+    response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
+
+    assert response.status_code == 400
+
+
+@pytest.mark.django_db
 def test__api_key_with_another_organization_can_create_an_event(api_client, minimal_event_dict, data_source,
                                                                 organization, other_data_source, organization2):
 
@@ -297,6 +330,28 @@ def test__autopopulated_fields_at_create(
 def test__non_editable_fields_at_create(api_client, minimal_event_dict, list_url, user,
                                         non_permitted_input, non_permitted_response):
     api_client.force_authenticate(user)
+
+    minimal_event_dict.update(non_permitted_input)
+
+    response = api_client.post(list_url, minimal_event_dict, format='json')
+    assert response.status_code == non_permitted_response
+    if non_permitted_response >= 400:
+        # check that there is an error message for the corresponding field
+        assert list(non_permitted_input)[0] in response.data
+
+
+# the following values may not be posted
+@pytest.mark.django_db
+@pytest.mark.parametrize("non_permitted_input,non_permitted_response", [
+    ({'id': 'not_allowed:1'}, 400),  # may not fake id
+    ({'data_source': 'theotherdatasourceid'}, 400),  # may not fake data source
+    ({'publisher': 'test_organization2'}, 400),  # may not fake organization
+])
+def test__apikey_non_editable_fields_at_create(api_client, minimal_event_dict, list_url, organization, data_source,
+                                               non_permitted_input, non_permitted_response):
+    data_source.owner = organization
+    data_source.save()
+    api_client.credentials(apikey=data_source.api_key)
 
     minimal_event_dict.update(non_permitted_input)
 

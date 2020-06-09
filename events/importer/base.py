@@ -357,7 +357,8 @@ class Importer(object):
 
         # many-to-many fields
 
-        if 'images' in info:
+        # if images change and event has been user edited, do not reinstate old image!!!
+        if not obj.is_user_edited() and 'images' in info:
             self.set_images(obj, info['images'])
 
         keywords = info.get('keywords', [])
