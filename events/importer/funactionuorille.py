@@ -173,7 +173,6 @@ class FunActionImporter(Importer):
         return [int(i) for i in time.split(':')]
 
     def _create_recurring_event_dates(self, start_date: datetime, end_date: datetime, weekdays: list):
-
         converted_days = [DAY_MAP[i] for i in weekdays]
         return list(
             rrule(WEEKLY, byweekday=converted_days, dtstart=start_date, until=end_date)
@@ -205,6 +204,7 @@ class FunActionImporter(Importer):
             "data_source": self.data_source,
             "publisher": self.organization,
         }
+
         location_description = src_event.get("locations")
         if isinstance(location_description, list) and len(location_description) > 0:
             location_name = location_description[0]["name"]
