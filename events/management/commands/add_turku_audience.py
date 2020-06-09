@@ -48,11 +48,12 @@ KEYWORD_MAPPING = {
     city+':6': ['yso:p2433'], #-> Seniorit
     city+':7': ['yso:p9607'], #-> Työnhakijat
     city+':8': ['yso:p7179'], #-> Vammaiset
-    city+':9': ['yso:p15937', 'yso:p27455'], #-> Vauvat ja Taaperot
+    city+':9': ['yso:p15937'], #-> Vauvat
     city+':10': ['yso:p6946'], #-> Viranomaiset
-    city+':11': ['yso:p1393', 'yso:p3835'], #-> Yhdistykset ja Yhteisöt
+    city+':11': ['yso:p1393'], #-> järjestöt  
     city+':12': ['yso:p1178'], #-> Yrittäjät
 }
+
 
 '''
 YSO_SOTE_KEYWORD_IDS = [
