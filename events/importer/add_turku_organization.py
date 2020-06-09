@@ -177,7 +177,7 @@ class OrganizationImporter(Importer):
                         publisher=self.organization_virtual,
                         name='Virtuaalitapahtuma',
                         name_fi='Virtuaalitapahtuma',
-                        name_sv='Virtuellevenemang',
+                        name_sv='Virtuella evenemang',
                         name_en='Virtual event',
                         #in helsinki id = helsinki:internet and description= Tapahtuma vain internetissä.
                         description='Toistaiseksi kaikki virtuaalitapahtumat merkitään tähän paikkatietoon.',)
