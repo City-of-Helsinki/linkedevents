@@ -1543,7 +1543,7 @@ class EventOrderingFilter(LinkedEventsOrderingFilter):
         ordering = self.get_ordering(request, queryset, view)
         if not ordering:
             ordering = []
-        if 'duration' in ordering:
+        if 'duration' in ordering or '-duration' in ordering:
             queryset = queryset.extra(select={'duration': 'end_time - start_time'})
         return queryset
 
