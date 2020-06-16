@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-# python
 import base64
 import re
 import struct
@@ -11,62 +10,55 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 from functools import partial
 
-# django and drf
-from django.db.transaction import atomic
-from django.http import Http404, HttpResponsePermanentRedirect
-from django.utils import translation
-from django.core.exceptions import PermissionDenied
-from django.db.utils import IntegrityError
+import django_filters
+import pytz
 from django.conf import settings
-from django.urls import NoReverseMatch
+from django.core.exceptions import PermissionDenied
 from django.db.models import Q, QuerySet
-from django.utils.translation import ugettext_lazy as _
-from django.utils import timezone
+from django.db.transaction import atomic
+from django.db.utils import IntegrityError
+from django.http import Http404, HttpResponsePermanentRedirect
+from django.urls import NoReverseMatch
+from django.utils import timezone, translation
 from django.utils.encoding import force_text
-from rest_framework import (
-    serializers, relations, viewsets, mixins, filters, generics, permissions
-)
+from django.utils.translation import ugettext_lazy as _
+from rest_framework import (filters, generics, mixins, permissions, relations,
+                            serializers, viewsets)
+from rest_framework.exceptions import APIException, ParseError
+from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
+from rest_framework.fields import DateTimeField
 from rest_framework.filters import BaseFilterBackend
 from rest_framework.permissions import SAFE_METHODS
-from rest_framework.settings import api_settings
-from rest_framework.reverse import reverse
 from rest_framework.response import Response
-from rest_framework.exceptions import ParseError, PermissionDenied as DRFPermissionDenied, APIException
-from rest_framework.views import get_view_name as original_get_view_name
+from rest_framework.reverse import reverse
 from rest_framework.routers import APIRootView
-from rest_framework.fields import DateTimeField
+from rest_framework.settings import api_settings
+from rest_framework.views import get_view_name as original_get_view_name
 
-
-# 3rd party
-from isodate import Duration, duration_isoformat, parse_duration
-from modeltranslation.translator import translator, NotRegistered
-from haystack.query import AutoQuery
-from munigeo.api import (
-    GeoModelSerializer, GeoModelAPIView, build_bbox_filter, srid_to_srs
-)
-from munigeo.models import AdministrativeDivision
-from rest_framework_bulk import BulkListSerializer, BulkModelViewSet, BulkSerializerMixin
-import pytz
 import bleach
-import django_filters
-
 from django_orghierarchy.models import Organization
-
-# events
 from events import utils
 from events.api_pagination import LargeResultsSetPagination
 from events.auth import ApiKeyAuth, ApiKeyUser
-from events.custom_elasticsearch_search_backend import (
+from events.custom_elasticsearch_search_backend import \
     CustomEsSearchQuerySet as SearchQuerySet
-)
-from events.extensions import apply_select_and_prefetch, get_extensions_from_request
-from events.models import (
-    Place, Event, Keyword, KeywordSet, Language, OpeningHoursSpecification, EventLink,
-    Offer, DataSource, Image, PublicationStatus, PUBLICATION_STATUSES, License, Video
-)
-from events.translation import EventTranslationOptions, PlaceTranslationOptions
-from helevents.models import User
+from events.extensions import (apply_select_and_prefetch,
+                               get_extensions_from_request)
+from events.models import (PUBLICATION_STATUSES, DataSource, Event, EventLink,
+                           Image, Keyword, KeywordSet, Language, License,
+                           Offer, OpeningHoursSpecification, Place,
+                           PublicationStatus, Video)
 from events.renderers import DOCXRenderer
+from events.translation import EventTranslationOptions, PlaceTranslationOptions
+from haystack.query import AutoQuery
+from helevents.models import User
+from isodate import Duration, duration_isoformat, parse_duration
+from modeltranslation.translator import NotRegistered, translator
+from munigeo.api import (GeoModelAPIView, GeoModelSerializer,
+                         build_bbox_filter, srid_to_srs)
+from munigeo.models import AdministrativeDivision
+from rest_framework_bulk import (BulkListSerializer, BulkModelViewSet,
+                                 BulkSerializerMixin)
 
 
 def get_view_name(view):
@@ -1830,7 +1822,7 @@ def _filter_event_queryset(queryset, params, srs=None):
         queryset = queryset.filter(q)
 
     # Filter by audience min age
-    val = params.get('audience_min_age', None)
+    val = params.get('audience_min_age', None) or params.get('audience_min_age_lt', None)
     if val:
         try:
             min_age = int(val)
@@ -1838,14 +1830,30 @@ def _filter_event_queryset(queryset, params, srs=None):
             raise ParseError(_('Audience minimum age must be a digit.'))
         queryset = queryset.filter(audience_min_age__lte=min_age)
 
+    val = params.get('audience_min_age_gt', None)
+    if val:
+        try:
+            min_age = int(val)
+        except ValueError:
+            raise ParseError(_('Audience minimum age must be a digit.'))
+        queryset = queryset.filter(audience_min_age__gte=min_age)
+
     # Filter by audience max age
-    val = params.get('audience_max_age', None)
+    val = params.get('audience_max_age', None) or params.get('audience_max_age_gt', None)
     if val:
         try:
             max_age = int(val)
         except ValueError:
             raise ParseError(_('Audience maximum age must be a digit.'))
         queryset = queryset.filter(audience_max_age__gte=max_age)
+
+    val = params.get('audience_max_age_lt', None)
+    if val:
+        try:
+            max_age = int(val)
+        except ValueError:
+            raise ParseError(_('Audience maximum age must be a digit.'))
+        queryset = queryset.filter(audience_max_age__lte=max_age)
 
     # Filter deleted events
     val = params.get('show_deleted', None)

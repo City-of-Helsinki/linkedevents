@@ -17,7 +17,7 @@ lazy-object-proxy==1.4.3  # via astroid
 mccabe==0.6.1             # via flake8, pylint
 more-itertools==8.2.0     # via pytest
 packaging==20.1           # via pytest
-pip-tools==4.4.1
+pip-tools==5.1.2
 pluggy==0.13.1            # via pytest
 py==1.8.1                 # via pytest
 pycodestyle==2.5.0        # via flake8

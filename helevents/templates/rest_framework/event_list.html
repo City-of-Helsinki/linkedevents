@@ -134,6 +134,19 @@ in <code>fi</code>, <code>sv</code>, <code>en</code>, <code>ru</code>,
 <pre><code>event/?language=ru
 </code></pre>
 <p><a href="?language=ru" title="json">See the result</a></p>
+<h3 id="audience-age">Event audience age boundaries.</h3>
+<p>To find events that are designed for specific age audiences use the query paramteres <code>audience_min_age_lt</code>,
+<code>audience_min_age_gt</code>, <code>audience_max_age_lt</code>, <code>audience_max_age_gt</code>.</p>
+
+<p> <code>audience_min_age_lt</code> returns the events whose minimal age is lower than or equals the specified value, <code>audience_min_age_gt</code> returns the events whose minimal age is greater than or equals the specified value. <code>max_age</code> parameteres, naturally, work the same way only for the maximum age of the event audience. Note, that the events that are not designed for the specific audiences will be omitted.</p>
+
+<code>audience_max_age</code> and <code>audience_min_age</code> parameters without <code>lt</code> and <code>gt</code> modifiers are left for backward compatibility only and should not be employed.
+
+<p>Example:</p>
+<pre><code>event/?audience_min_age_gt=10
+</code></pre>
+<p><a href="?audience_min_age_gt=10" title="json">See the result</a></p>
+
 <h3 id="event-publisher">Event publisher</h3>
 <p>To find out events that are published by a specific organization, use the query
 parameter <code>publisher</code>, separating values by commas if you wish to query for several publishers.</p>
