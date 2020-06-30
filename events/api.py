@@ -7,9 +7,12 @@ import struct
 import time
 import urllib.parse
 from copy import deepcopy
-from datetime import datetime, timedelta
+from datetime import datetime
+from datetime import time as datetime_time
+from datetime import timedelta
 from functools import partial
 
+import bleach
 import django_filters
 import pytz
 from django.conf import settings
@@ -22,6 +25,13 @@ from django.urls import NoReverseMatch
 from django.utils import timezone, translation
 from django.utils.encoding import force_text
 from django.utils.translation import ugettext_lazy as _
+from django_orghierarchy.models import Organization
+from haystack.query import AutoQuery
+from isodate import Duration, duration_isoformat, parse_duration
+from modeltranslation.translator import NotRegistered, translator
+from munigeo.api import (GeoModelAPIView, GeoModelSerializer,
+                         build_bbox_filter, srid_to_srs)
+from munigeo.models import AdministrativeDivision
 from rest_framework import (filters, generics, mixins, permissions, relations,
                             serializers, viewsets)
 from rest_framework.exceptions import APIException, ParseError
@@ -34,9 +44,9 @@ from rest_framework.reverse import reverse
 from rest_framework.routers import APIRootView
 from rest_framework.settings import api_settings
 from rest_framework.views import get_view_name as original_get_view_name
+from rest_framework_bulk import (BulkListSerializer, BulkModelViewSet,
+                                 BulkSerializerMixin)
 
-import bleach
-from django_orghierarchy.models import Organization
 from events import utils
 from events.api_pagination import LargeResultsSetPagination
 from events.auth import ApiKeyAuth, ApiKeyUser
@@ -50,15 +60,7 @@ from events.models import (PUBLICATION_STATUSES, DataSource, Event, EventLink,
                            PublicationStatus, Video)
 from events.renderers import DOCXRenderer
 from events.translation import EventTranslationOptions, PlaceTranslationOptions
-from haystack.query import AutoQuery
 from helevents.models import User
-from isodate import Duration, duration_isoformat, parse_duration
-from modeltranslation.translator import NotRegistered, translator
-from munigeo.api import (GeoModelAPIView, GeoModelSerializer,
-                         build_bbox_filter, srid_to_srs)
-from munigeo.models import AdministrativeDivision
-from rest_framework_bulk import (BulkListSerializer, BulkModelViewSet,
-                                 BulkSerializerMixin)
 
 
 def get_view_name(view):
@@ -197,6 +199,27 @@ def clean_text_fields(data, allowed_html_fields=[]):
                 # for non-html data, ampersands should be bare
                 data[k] = data[k].replace('&amp;', '&')
     return data
+
+
+def validate_hours(val, param):
+
+    if len(val) > 2:
+        raise ParseError(f'Only hours and minutes can be given in {param}. For example: 16:00.')
+    try:
+        hour = int(val[0])
+    except ValueError:
+        raise ParseError(f'Hours should be passed as numbers in {param}. For example: 16:00.')
+    if not (0 <= hour <= 23):
+        raise ParseError(f'Hours should be between 0 and 23 in {param}, for example: 16:00. You have passed {hour}.')
+    if len(val) == 2 and val[1]:
+        try:
+            minute = int(val[1])
+        except ValueError:
+            raise ParseError(f'Minutes should be passed as numbers in {param}. For example: 16:20.')
+        if not (0 <= minute <= 59):
+            raise ParseError(f'Minutes should be between 0 and 59 in {param} as in 16:20. You passed {minute}.')
+        return hour, minute
+    return hour, 0
 
 
 class JSONLDRelatedField(relations.HyperlinkedRelatedField):
@@ -1803,6 +1826,34 @@ def _filter_event_queryset(queryset, params, srs=None):
         for lang in val:
             q = q | Q(in_language__id=lang)
         queryset = queryset.filter(q)
+
+    val = params.get('starts_after', None)
+    param = 'starts_after'
+    if val:
+        split_time = val.split(':')
+        hour, minute = validate_hours(split_time, param)
+        queryset = queryset.filter(start_time__time__gte=datetime_time(hour, minute))
+
+    val = params.get('starts_before', None)
+    param = 'starts_before'
+    if val:
+        split_time = val.split(':')
+        hour, minute = validate_hours(split_time, param)
+        queryset = queryset.filter(start_time__time__lte=datetime_time(hour, minute))
+
+    val = params.get('ends_after', None)
+    param = 'ends_after'
+    if val:
+        split_time = val.split(':')
+        hour, minute = validate_hours(split_time, param)
+        queryset = queryset.filter(end_time__time__gte=datetime_time(hour, minute))
+
+    val = params.get('ends_before', None)
+    param = 'ends_before'
+    if val:
+        split_time = val.split(':')
+        hour, minute = validate_hours(split_time, param)
+        queryset = queryset.filter(end_time__time__lte=datetime_time(hour, minute))
 
     # Filter by translation only
     val = params.get('translation', None)
