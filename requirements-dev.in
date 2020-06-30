@@ -8,3 +8,4 @@ pyflakes
 pylint
 pytest-django
 pytest
+Werkzeug

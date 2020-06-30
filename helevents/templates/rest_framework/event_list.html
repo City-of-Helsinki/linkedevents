@@ -21,6 +21,19 @@ Any events that intersect with the given date range will be returned.</p>
 <pre><code>event/?start=now&amp;end=today
 </code></pre>
 <p><a href="?start=now&amp;end=today" title="json">See the result</a></p>
+<h3 id="event-hours">Event start/end time</h3>
+<p>Use <code>starts_after</code>, <code>starts_before</code>, <code>ends_after</code>, and <code>ends_before</code> 
+to filter for the events that start and end within certain hours, for example for the ones that start after 17:00 and 
+end before 21:00.
+<p>The parameters can be given as:</p>
+<ul>
+<li>Hours only</li>
+<li>Hours and minutes separated by a colon</li>
+</ul>
+<p>Example:</p>
+<pre><code>event/?starts_after=16:30&amp;ends_before=21
+</code></pre>
+<p><a href="?starts_after=16:30&amp;ends_before=21" title="json">See the result</a></p>
 <h3 id="event-location">Event location</h3>
 <h4 id="bounding-box">Bounding box</h4>
 <p>To restrict the retrieved events to a geographical region, use
