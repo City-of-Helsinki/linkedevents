@@ -28,7 +28,7 @@ django-mptt==0.11.0       # via -r requirements.in, django-munigeo, django-orghi
 django-munigeo==0.2.26    # via -r requirements.in
 django-orghierarchy==0.1.24  # via -r requirements.in
 django-reversion==3.0.5   # via -r requirements.in
-django==2.2.11            # via -r requirements.in, django-admin-autocomplete-filter, django-allauth, django-anymail, django-appconf, django-cors-headers, django-filter, django-haystack, django-helusers, django-jinja, django-leaflet, django-modeltranslation, django-mptt, django-munigeo, django-reversion, djangorestframework, djangorestframework-bulk, drf-oidc-auth, easy-thumbnails
+django==2.2.13            # via -r requirements.in, django-admin-autocomplete-filter, django-allauth, django-anymail, django-appconf, django-cors-headers, django-filter, django-haystack, django-helusers, django-jinja, django-leaflet, django-modeltranslation, django-mptt, django-munigeo, django-reversion, djangorestframework, djangorestframework-bulk, drf-oidc-auth, easy-thumbnails
 djangorestframework-bulk==0.2.1  # via -r requirements.in
 djangorestframework-gis==0.15  # via -r requirements.in
 djangorestframework-jwt==1.11.0  # via -r requirements.in
