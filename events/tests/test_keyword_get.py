@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-
 from .utils import versioned_reverse as reverse
+from events.models import Keyword
 import pytest
 from .utils import get
 
@@ -87,3 +87,26 @@ def test_get_keyword_list_verify_show_deprecated_param(api_client, keyword, keyw
     ids = [entry['id'] for entry in response.data['data']]
     assert keyword.id in ids
     assert keyword2.id in ids
+
+
+@pytest.mark.django_db
+def test_get_keyword_with_upcoming_events(api_client, keyword, keyword2, event, past_event):
+    event.keywords.add(keyword)
+    event.save()
+    past_event.keywords.add(keyword)
+    past_event.keywords.add(keyword2)
+    past_event.save()
+    keyword.n_events = 1
+    keyword2.n_events = 1
+    keyword.save()
+    keyword2.save()
+
+    response = get_list(api_client, data={'has_upcoming_events': True})
+    assert response.data['meta']['count'] == 0
+
+    Keyword.objects.has_upcoming_events_update()
+
+    response = get_list(api_client, data={'has_upcoming_events': True})
+    ids = [entry['id'] for entry in response.data['data']]
+    assert keyword.id in ids
+    assert keyword2.id not in ids

@@ -797,10 +797,13 @@ class KeywordListViewSet(JSONAPIViewMixin, mixins.ListModelMixin, viewsets.Gener
         if data_source:
             data_source = data_source.lower().split(',')
             queryset = queryset.filter(data_source__in=data_source)
-        if not self.request.query_params.get('show_all_keywords'):
-            queryset = queryset.filter(n_events__gt=0)
-        if not self.request.query_params.get('show_deprecated'):
-            queryset = queryset.filter(deprecated=False)
+        if self.request.query_params.get('has_upcoming_events'):
+            queryset = queryset.filter(has_upcoming_events=True)
+        else:
+            if not self.request.query_params.get('show_all_keywords'):
+                queryset = queryset.filter(n_events__gt=0)
+            if not self.request.query_params.get('show_deprecated'):
+                queryset = queryset.filter(deprecated=False)
 
         # Optionally filter keywords by filter parameter,
         # can be used e.g. with typeahead.js

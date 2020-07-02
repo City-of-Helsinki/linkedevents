@@ -273,6 +273,17 @@ class KeywordLabel(models.Model):
         unique_together = (('name', 'language'),)
 
 
+class UpcomingEventsUpdater(models.Manager):
+    def has_upcoming_events_update(self):
+        now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
+        if self.model.__name__ == 'Keyword':
+            qs = self.model.objects.filter(n_events__gte=1, deprecated=False)
+        else:
+            qs = self.model.objects
+        qs.filter(events__start_time__gte=now).update(has_upcoming_events=True)
+        qs.exclude(events__start_time__gte=now).update(has_upcoming_events=False)
+
+
 class Keyword(BaseModel, ImageMixin, ReplacedByMixin):
     publisher = models.ForeignKey(
         'django_orghierarchy.Organization', on_delete=models.CASCADE, verbose_name=_('Publisher'),
@@ -281,6 +292,7 @@ class Keyword(BaseModel, ImageMixin, ReplacedByMixin):
     alt_labels = models.ManyToManyField(KeywordLabel, blank=True, related_name='keywords')
     aggregate = models.BooleanField(default=False)
     deprecated = models.BooleanField(default=False, db_index=True)
+    has_upcoming_events = models.BooleanField(default=False, db_index=True)
     n_events = models.IntegerField(
         verbose_name=_('event count'),
         help_text=_('number of events with this keyword'),
@@ -293,6 +305,8 @@ class Keyword(BaseModel, ImageMixin, ReplacedByMixin):
         'Keyword', on_delete=models.SET_NULL, related_name='aliases', null=True, blank=True)
 
     schema_org_type = "Thing/LinkedEventKeyword"
+
+    objects = UpcomingEventsUpdater()
 
     def __str__(self):
         return self.name

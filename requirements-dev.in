@@ -3,6 +3,7 @@
 django-extensions
 flake8
 freezegun
+ipython
 pip-tools
 pyflakes
 pylint
