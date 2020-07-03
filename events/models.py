@@ -276,10 +276,11 @@ class KeywordLabel(models.Model):
 class UpcomingEventsUpdater(models.Manager):
     def has_upcoming_events_update(self):
         now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
+        qs = self.model.objects.filter(n_events__gte=1)
         if self.model.__name__ == 'Keyword':
-            qs = self.model.objects.filter(n_events__gte=1, deprecated=False)
-        else:
-            qs = self.model.objects
+            qs = qs.filter(deprecated=False)
+        elif self.model.__name__ == 'Place':
+            qs = qs.filter(deleted=False)
         qs.filter(events__start_time__gte=now).update(has_upcoming_events=True)
         qs.exclude(events__start_time__gte=now).update(has_upcoming_events=False)
 
@@ -393,6 +394,8 @@ class KeywordSet(BaseModel, ImageMixin):
 
 class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin, ReplacedByMixin):
     objects = BaseTreeQuerySet.as_manager()
+    upcoming_events = UpcomingEventsUpdater()
+
     geo_objects = objects
 
     publisher = models.ForeignKey(
@@ -420,6 +423,7 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin, ReplacedByMi
     replaced_by = models.ForeignKey('Place', on_delete=models.SET_NULL, related_name='aliases', null=True, blank=True)
     divisions = models.ManyToManyField(AdministrativeDivision, verbose_name=_('Divisions'), related_name='places',
                                        blank=True)
+    has_upcoming_events = models.BooleanField(default=False, db_index=True)
     n_events = models.IntegerField(
         verbose_name=_('event count'),
         help_text=_('number of events in this location'),

@@ -110,3 +110,8 @@ def test_get_keyword_with_upcoming_events(api_client, keyword, keyword2, event, 
     ids = [entry['id'] for entry in response.data['data']]
     assert keyword.id in ids
     assert keyword2.id not in ids
+
+    response = get_list(api_client, data={'has_upcoming_events': False})
+    ids = [entry['id'] for entry in response.data['data']]
+    assert keyword.id in ids
+    assert keyword2.id in ids

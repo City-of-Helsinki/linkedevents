@@ -222,6 +222,15 @@ def validate_hours(val, param):
     return hour, 0
 
 
+def validate_bool(val, param):
+    if val.lower() == 'true':
+        return True
+    elif val.lower() == 'false':
+        return False
+    else:
+        raise ParseError(f'{param} can take the values True or False. You passed {val}.')
+
+
 class JSONLDRelatedField(relations.HyperlinkedRelatedField):
     """
     Support of showing and saving of expanded JSON nesting or just a resource
@@ -797,7 +806,8 @@ class KeywordListViewSet(JSONAPIViewMixin, mixins.ListModelMixin, viewsets.Gener
         if data_source:
             data_source = data_source.lower().split(',')
             queryset = queryset.filter(data_source__in=data_source)
-        if self.request.query_params.get('has_upcoming_events'):
+        if self.request.query_params.get('has_upcoming_events') and validate_bool(
+               self.request.query_params.get('has_upcoming_events'), 'has_upcoming_events'):
             queryset = queryset.filter(has_upcoming_events=True)
         else:
             if not self.request.query_params.get('show_all_keywords'):
@@ -986,10 +996,14 @@ class PlaceListViewSet(JSONAPIViewMixin, GeoModelAPIView,
         if data_source:
             data_source = data_source.lower().split(',')
             queryset = queryset.filter(data_source__in=data_source)
-        if not self.request.query_params.get('show_all_places'):
-            queryset = queryset.filter(n_events__gt=0)
-        if not self.request.query_params.get('show_deleted'):
-            queryset = queryset.filter(deleted=False)
+        if self.request.query_params.get('has_upcoming_events') and validate_bool(
+                self.request.query_params.get('has_upcoming_events'), 'has_upcoming_events'):
+            queryset = queryset.filter(has_upcoming_events=True)
+        else:
+            if not self.request.query_params.get('show_all_places'):
+                queryset = queryset.filter(n_events__gt=0)
+            if not self.request.query_params.get('show_deleted'):
+                queryset = queryset.filter(deleted=False)
 
         # Optionally filter places by filter parameter,
         # can be used e.g. with typeahead.js
