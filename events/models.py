@@ -780,7 +780,7 @@ class EventLink(models.Model, SimpleValueMixin):
 
 
 class Video(models.Model, SimpleValueMixin):
-    name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True, default='')
+    name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True, blank=True, null=True)
     event = models.ForeignKey(Event, on_delete=models.CASCADE, db_index=True, related_name='videos')
     url = models.URLField()
     alt_text = models.CharField(verbose_name=_('Alt text'), max_length=320, null=True, blank=True)

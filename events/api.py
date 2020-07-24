@@ -1171,7 +1171,7 @@ class ImageViewSet(JSONAPIViewMixin, viewsets.ModelViewSet):
 register_view(ImageViewSet, 'image', basename='image')
 
 
-class VideoSerializer(serializers.ModelSerializer):
+class VideoSerializer(TranslatedModelSerializer, serializers.ModelSerializer):
     def to_representation(self, obj):
         ret = super().to_representation(obj)
         if not ret['name']:
