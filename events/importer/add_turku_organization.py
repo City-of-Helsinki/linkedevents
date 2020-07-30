@@ -175,7 +175,10 @@ class OrganizationImporter(Importer):
         #Create virtual events location if not already made
         defaults5 = dict(data_source=self.data_source_virtual,
                         publisher=self.organization_virtual,
-                        name='Virtuaalitapahtuman paikka',
+                        name='Virtuaalitapahtuma',
+                        name_fi='Virtuaalitapahtuma',
+                        name_sv='Virtuell evenemang',
+                        name_en='Virtual event',
                         #in helsinki id = helsinki:internet and description= Tapahtuma vain internetissä.
                         description='Toistaiseksi kaikki virtuaalitapahtumat merkitään tähän paikkatietoon.',)
         self.internet_location, _ = Place.objects.get_or_create(id=VIRTUAL_LOCATION_ID, defaults=defaults5)
