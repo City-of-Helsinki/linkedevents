@@ -16,6 +16,7 @@ from django.db.transaction import atomic
 from django.http import Http404, HttpResponsePermanentRedirect
 from django.utils import translation
 from django.core.exceptions import PermissionDenied
+from django.core.files.base import ContentFile
 from django.db.utils import IntegrityError
 from django.conf import settings
 from django.urls import NoReverseMatch
@@ -1116,17 +1117,30 @@ class ImageSerializer(LinkedEventsSerializer):
             representation['url'] = representation['image']
         representation.pop('image')
         return representation
-
+    
     def validate(self, data):
         # name the image after the file, if name was not provided
         if 'name' not in data or not data['name']:
             if 'url' in data:
-                data['name'] = str(data['url']).rsplit('/', 1)[-1]
+                data['name']['fi'] = str(data['url']).rsplit('/', 1)[-1]
             if 'image' in data:
-                data['name'] = str(data['image']).rsplit('/', 1)[-1]
+                data['name']['fi'] = str(data['image']).rsplit('/', 1)[-1]
         super().validate(data)
         return data
-
+    
+    def to_internal_value(self, data):
+        if 'image' in data and isinstance(data['image'],str) and ';base64,' in data['image']:
+            if 'file_name' in data:
+                img_name = data['file_name'] + '.'
+            else:
+                img_name = 'image' + '.'
+            
+            formatt, imgstr = data['image'].split(';base64,')
+            ext = formatt.split('/')[-1]
+            data['image'] = ContentFile(base64.b64decode(imgstr), name=img_name + ext)
+        data = super().to_internal_value(data)
+        return data
+    
 
 class ImageViewSet(JSONAPIViewMixin, viewsets.ModelViewSet):
     queryset = Image.objects.all()
