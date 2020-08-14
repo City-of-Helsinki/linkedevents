@@ -108,22 +108,22 @@ class YsoImporter(Importer):
         #public finnish ontology
         ds_args0 = dict(id='yso', user_editable=True)
         defaults0 = dict(name='Yleinen suomalainen ontologia')
-        self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults0, **ds_args0)       
+        self.data_source, _ = DataSource.objects.update_or_create(defaults=defaults0, **ds_args0)       
 
         #public data source for organizations model
         ds_args1 = dict(id='org', user_editable=True)
         defaults1 = dict(name='Ulkoa tuodut organisaatiotiedot')
-        self.data_source1, _ = DataSource.objects.get_or_create(defaults=defaults1, **ds_args1)  
+        self.data_source1, _ = DataSource.objects.update_or_create(defaults=defaults1, **ds_args1)  
 
         #public organizations class for all instans (this includes also city of Turku specifig organization class)
         ds_args = dict(origin_id='13', data_source=self.data_source1)
         defaults = dict(name='Sanasto')
-        self.organizationclass13, _ =  OrganizationClass.objects.get_or_create(defaults=defaults, **ds_args)
+        self.organizationclass13, _ =  OrganizationClass.objects.update_or_create(defaults=defaults, **ds_args)
         
         #public organizations for keywords
         org_args = dict(origin_id='1200', data_source=self.data_source, classification_id="org:13")
         defaults = dict(name='YSO')
-        self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
+        self.organization, _ = Organization.objects.update_or_create(defaults=defaults, **org_args)
 
     def import_keywords(self):
         logger.info("Importing YSO keywords")

@@ -37,22 +37,22 @@ class TprekImporter(Importer):
         #public data source for organisations model
         ds_args = dict(id='org', user_editable=True)
         defaults = dict(name='Ulkoa tuodut organisaatiotiedot')
-        self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)         
+        self.data_source, _ = DataSource.objects.update_or_create(defaults=defaults, **ds_args)         
         
         #public organisation class for all places
         ds_args = dict(origin_id='12', data_source=self.data_source)
         defaults = dict(name='Paikkatieto')
-        self.organizationclass, _ =  OrganizationClass.objects.get_or_create(defaults=defaults, **ds_args)
+        self.organizationclass, _ =  OrganizationClass.objects.update_or_create(defaults=defaults, **ds_args)
 
         #Unit data source
         ds_args = dict(id='tpr', user_editable=True)
         defaults = dict(name='Ulkoa tuodut paikkatiedot toimipisteille')
-        self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
+        self.data_source, _ = DataSource.objects.update_or_create(defaults=defaults, **ds_args)
         
         #Organization for units register  
         org_args = dict(origin_id='1100', data_source= self.data_source, classification_id="org:12")
         defaults = dict(name='Toimipisterekisteri')
-        self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
+        self.organization, _ = Organization.objects.update_or_create(defaults=defaults, **org_args)
         if self.options.get('remap', None):
             # This will prevent deletion checking, marking all deleted places as deleted
             # again and remapping them accordingly! Otherwise, places already deleted
@@ -193,8 +193,8 @@ class TprekImporter(Importer):
 
             try:
                 picture_url = info.get('picture_url', '').strip()#this is right (same level than Helsinki json)
-                if picture_url:
-                    self.set_image(obj, {'url': picture_url})
+                #if picture_url:
+                #    self.set_image(obj, {'url': picture_url})
             except:
                 NONEVALUES.append('unit ID: ' + str(info['id']) + ' picture_url field is empty!')
                 pass

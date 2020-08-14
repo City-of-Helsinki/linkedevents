@@ -30,22 +30,22 @@ class OsoiteImporter(Importer):
         #public data source for organizations model
         ds_args = dict(id='org', user_editable=True)
         defaults = dict(name='Ulkoa tuodut organisaatiotiedot')
-        self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)         
+        self.data_source, _ = DataSource.objects.update_or_create(defaults=defaults, **ds_args)         
         
         #public organization class for all places
         ds_args = dict(origin_id='12', data_source=self.data_source)
         defaults = dict(name='Paikkatieto')
-        self.organizationclass, _ =  OrganizationClass.objects.get_or_create(defaults=defaults, **ds_args)
+        self.organizationclass, _ =  OrganizationClass.objects.update_or_create(defaults=defaults, **ds_args)
     
         #address data source  
         ds_args = dict(id='osoite', user_editable=True)
         defaults = dict(name='Ulkoa tuodut osoitetiedot (sis. paikan)')
-        self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
+        self.data_source, _ = DataSource.objects.update_or_create(defaults=defaults, **ds_args)
         
         #Organization for addresses
         org_args = dict(origin_id='1000', data_source=self.data_source, classification_id="org:12")
         defaults = dict(name='Osoiterekisteri')
-        self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
+        self.organization, _ = Organization.objects.update_or_create(defaults=defaults, **org_args)
         if self.options.get('remap', None):
             # This will prevent deletion checking, marking all deleted places as deleted
             # again and remapping them accordingly! Otherwise, places already deleted

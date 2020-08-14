@@ -1,7 +1,8 @@
-# -> Dev notes: 11/08/2020:
+# -> Dev notes: 13/08/2020:
 # 
-# Add turku organization version 2 prototype.
-# Logger will be added later.
+# Turku Organization importer for importing all Turku Organization data such as Datasources, Organizations, Organization Classes and support for Virtual Events.
+# Contains the latest Turku Linkedevents Organization Model.
+# Logger implementation added.
 
 #Dependencies
 import logging
@@ -51,31 +52,31 @@ logger.addHandler(
 
 def get_create_ds(ob, args):
     try:
-        ds, _ = DataSource.objects.get_or_create(defaults=args[1], **args[0])
+        ds, _ = DataSource.objects.update_or_create(defaults=args[1], **args[0])
         return ds
     except:
-        logger.warn("DataSource get_or_create did NOT pass: "+ob+" correctly.")
+        logger.warn("DataSource update_or_create did NOT pass: "+ob+" correctly. Argument/Arguments incompatible.")
 
 def get_create_organization(ob, args):
     try:
-        org, _ = Organization.objects.get_or_create(defaults=args[1], **args[0])
+        org, _ = Organization.objects.update_or_create(defaults=args[1], **args[0])
         return org
     except:
-        logger.warn("Organization get_or_create did NOT pass: "+ob+" correctly.")
+        logger.warn("Organization update_or_create did NOT pass: "+ob+" correctly. Argument/Arguments incompatible.")
 
 def get_create_organizationclass(ob, args):
     try:
-        orgclass, _ = OrganizationClass.objects.get_or_create(defaults=args[1], **args[0])
+        orgclass, _ = OrganizationClass.objects.update_or_create(defaults=args[1], **args[0])
         return orgclass
     except:
-        logger.warn("OrganizationClass get_or_create did NOT pass: "+ob+" correctly.")
+        logger.warn("OrganizationClass update_or_create did NOT pass: "+ob+" correctly. Argument/Arguments incompatible.")
 
 def get_create_place(ob, args):
     try:
-        placey, _ = Place.objects.get_or_create(defaults=args[1], **args[0])
+        placey, _ = Place.objects.update_or_create(defaults=args[1], **args[0])
         return placey
     except:
-        logger.warn("Place get_or_create did NOT pass: "+ob+" correctly.")
+        logger.warn("Place update_or_create did NOT pass: "+ob+" correctly. Argument/Arguments incompatible.")
 
 def preprocess():
     #DataSource
@@ -92,20 +93,20 @@ def preprocess():
     #OrganizationClass
     # -> ds_orgs_class contains all objects with a data_source component.
     ds_orgs_class = {
-        'valt_toim':[dict(origin_id='1', data_source=return_ds[1], user_editable=True), dict(name='Valtiollinen toimija')],
-        'maak_toim':[dict(origin_id='2', data_source=return_ds[1], user_editable=True), dict(name='Maakunnallinen toimija')],
-        'kunta':[dict(origin_id='3', data_source=return_ds[1], user_editable=True), dict(name='Kunta')],
-        'kunnan_liik':[dict(origin_id='4', data_source=return_ds[1], user_editable=True), dict(name='Kunnan liikelaitos')],
-        'valt_liik':[dict(origin_id='5', data_source=return_ds[1], user_editable=True), dict(name='Valtion liikelaitos')],
-        'yritys':[dict(origin_id='6', data_source=return_ds[1], user_editable=True), dict(name='Yritys')],
-        'säätiö':[dict(origin_id='7', data_source=return_ds[1], user_editable=True), dict(name='Säätiö')],
-        'seurakunta':[dict(origin_id='8', data_source=return_ds[1], user_editable=True), dict(name='Seurakunta')],
-        'yhdseur':[dict(origin_id='9', data_source=return_ds[1], user_editable=True), dict(name='Yhdistys tai seura')],
-        'muuyht':[dict(origin_id='10', data_source=return_ds[1], user_editable=True), dict(name='Muu yhteisö')],
-        'ykshenk':[dict(origin_id='11', data_source=return_ds[1], user_editable=True), dict(name='Yksityishenkilö')],
-        'paiktieto':[dict(origin_id='12', data_source=return_ds[1], user_editable=True), dict(name='Paikkatieto')],
-        'sanasto':[dict(origin_id='13', data_source=return_ds[1], user_editable=True), dict(name='Sanasto')],
-        'virtuaalitapah':[dict(origin_id='14', data_source=return_ds[1], user_editable=True), dict(name='Virtuaalitapahtuma')],
+        'valttoim':[dict(origin_id='1', data_source=return_ds[1]), dict(name='Valtiollinen toimija')],
+        'maaktoim':[dict(origin_id='2', data_source=return_ds[1]), dict(name='Maakunnallinen toimija')],
+        'kunta':[dict(origin_id='3', data_source=return_ds[1]), dict(name='Kunta')],
+        'kunnanliik':[dict(origin_id='4', data_source=return_ds[1]), dict(name='Kunnan liikelaitos')],
+        'valtliik':[dict(origin_id='5', data_source=return_ds[1]), dict(name='Valtion liikelaitos')],
+        'yrityss':[dict(origin_id='6', data_source=return_ds[1]), dict(name='Yritys')],
+        'saatioo':[dict(origin_id='7', data_source=return_ds[1]), dict(name='Säätiö')],
+        'seurakuntaa':[dict(origin_id='8', data_source=return_ds[1]), dict(name='Seurakunta')],
+        'yhdseurr':[dict(origin_id='9', data_source=return_ds[1]), dict(name='Yhdistys tai seura')],
+        'muuyhtt':[dict(origin_id='10', data_source=return_ds[1]), dict(name='Muu yhteisö')],
+        'ykshenkk':[dict(origin_id='11', data_source=return_ds[1]), dict(name='Yksityishenkilö')],
+        'paiktietoo':[dict(origin_id='12', data_source=return_ds[1]), dict(name='Paikkatieto')],
+        'sanastoo':[dict(origin_id='13', data_source=return_ds[1]), dict(name='Sanasto')],
+        'virtuaalitapahh':[dict(origin_id='14', data_source=return_ds[1]), dict(name='Virtuaalitapahtuma')],
     }
     return_orgclass_ds = [get_create_organizationclass(keys, values) for keys, values in ds_orgs_class.items()]
     # ds_orgs_class needs a datasource get value, hence why return_ds[0] -
