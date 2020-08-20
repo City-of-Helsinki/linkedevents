@@ -16,8 +16,10 @@ import bleach
 import django_filters
 import pytz
 from django.conf import settings
+from django.contrib.postgres.search import TrigramSimilarity
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q, QuerySet
+from django.db.models.functions import Greatest
 from django.db.transaction import atomic
 from django.db.utils import IntegrityError
 from django.http import Http404, HttpResponsePermanentRedirect
@@ -809,6 +811,14 @@ class KeywordListViewSet(JSONAPIViewMixin, mixins.ListModelMixin, viewsets.Gener
         if self.request.query_params.get('has_upcoming_events') and validate_bool(
                self.request.query_params.get('has_upcoming_events'), 'has_upcoming_events'):
             queryset = queryset.filter(has_upcoming_events=True)
+        if self.request.query_params.get('free_text'):
+            val = self.request.query_params.get('free_text')
+            # no need to search English if there are accented letters
+            langs = ['fi', 'sv'] if re.search('[\u00C0-\u00FF]', val) else ['fi', 'sv', 'en']
+            tri = [TrigramSimilarity(f'name_{i}', val) for i in langs]
+            queryset = queryset.annotate(simile=Greatest(*tri)).filter(simile__gt=0.2)
+            self.ordering_fields = ('simile', *self.ordering_fields)
+            self.ordering = ('-simile', *self.ordering)
         else:
             if not self.request.query_params.get('show_all_keywords'):
                 queryset = queryset.filter(n_events__gt=0)
