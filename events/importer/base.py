@@ -479,6 +479,11 @@ class Importer(object):
         if 'start_time' in obj._changed_fields:
             self._set_field(obj, 'event_status', Event.Status.RESCHEDULED)
 
+        # The event may be cancelled
+        status = info.get('event_status', None)
+        if status:
+            self._set_field(obj, 'event_status', status)
+
         if obj._changed or obj._created:
             # Finally, we must save the whole object, even when only related fields changed.
             # Also, we want to log all that happened.

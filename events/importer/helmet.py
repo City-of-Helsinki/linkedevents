@@ -311,6 +311,11 @@ class HelmetImporter(Importer):
                 event['images'] = [{'url': HELMET_BASE_URL + img_url}]
             del ext_props['Images']
 
+        if 'WillTakePlace' in ext_props:
+            # WillTakePlace value "1" rather counterintuitively means the event has been cancelled
+            if ext_props['WillTakePlace'] == '1':
+                event['event_status'] = Event.Status.CANCELLED
+
         event['url'][lang] = '%s/api/opennc/v1/Contents(%s)' % (
             HELMET_BASE_URL, eid
         )
