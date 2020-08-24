@@ -1643,6 +1643,35 @@ def _filter_event_queryset(queryset, params, srs=None):
 
         queryset = queryset.filter(qset)
 
+    #  Filter by event translated fields and keywords combined. The code is
+    #  repeated as this is the first iteration, which will be replaced by a similarity
+    #  based search on the index.
+    val = params.get('combined_text', None)
+    if val:
+        val = val.lower()
+        qset = Q()
+
+        # Free string search from all translated event fields
+        event_fields = EventTranslationOptions.fields
+        for field in event_fields:
+            # check all languages for each field
+            qset |= _text_qset_by_translated_field(field, val)
+
+        # Free string search from all translated place fields
+        place_fields = PlaceTranslationOptions.fields
+        for field in place_fields:
+            location_field = 'location__' + field
+            # check all languages for each field
+            qset |= _text_qset_by_translated_field(location_field, val)
+
+        langs = ['fi', 'sv'] if re.search('[\u00C0-\u00FF]', val) else ['fi', 'sv', 'en']
+        tri = [TrigramSimilarity(f'name_{i}', val) for i in langs]
+        keywords = Keyword.objects.annotate(simile=Greatest(*tri)).filter(simile__gt=0.2).order_by('-simile')[:3]
+        if keywords:
+            qset |= Q(keywords__in=keywords)
+
+        queryset = queryset.filter(qset)
+
     val = params.get('last_modified_since', None)
     # This should be in format which dateutil.parser recognizes, e.g.
     # 2014-10-29T12:00:00Z == 2014-10-29T12:00:00+0000 (UTC time)
