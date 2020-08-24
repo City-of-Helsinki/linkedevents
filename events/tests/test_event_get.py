@@ -963,3 +963,15 @@ def test_start_end_events_without_endtime(api_client, make_event):
     # short event (exact start) that already started should not be included
     expected_events = [event1, event3, event4]
     assert_events_in_response(expected_events, response)
+
+
+@pytest.mark.django_db
+def test_keyword_and_text(api_client, event, event2, keyword):
+    keyword.name_fi = 'lappset'
+    keyword.save()
+    event.keywords.add(keyword)
+    event.save()
+    event2.description_fi = 'lapset'
+    event2.save()
+    response = get_list(api_client, query_string='combined_text=lapset')
+    assert_events_in_response([event, event2], response)
