@@ -306,7 +306,11 @@ class TurkuOriginalImporter(Importer):
                 "en": bleach.clean(self.with_value(eventTku, 'lead_paragraph_markup_en', ''),   tags=[],   strip=True)
             }
 
-            eventItem['provider'] = {"fi": 'Turku', "sv": 'Åbo', "en": 'Turku'}
+            if eventTku['event_organizer']:
+                eo = eventTku['event_organizer']
+                eventItem['provider'] = {"fi": eo, "sv": eo, "en": eo}
+            else:
+                eventItem['provider'] = {"fi": 'Turku', "sv": 'Åbo', "en": 'Turku'}
 
             location_extra_info = ''
 
@@ -328,24 +332,23 @@ class TurkuOriginalImporter(Importer):
 
             event_image_ext_url = ''
             image_license = ''
-            event_image_license = self.event_only_license
+            #event_image_license = self.event_only_license
 
             #NOTE! Events image is not usable in Helmet must use this Lippupiste.py way to do it         
             if event_image_url:
-                event_image_ext_url = event_image_url
 
                 #event_image_license 1 or 2 (1 is 'event_only' and 2 is 'cc_by' in Linked Events) NOTE! CHECK VALUES IN DRUPAL!
                 if eventTku['event_image_license']:
                     image_license = eventTku['event_image_license']
                     if image_license == '1':
-                        event_image_license = self.event_only_license
-                    elif image_license == '2':
                         event_image_license = self.cc_by_license
-
-                eventItem['images'] = [{
-                    'url': event_image_ext_url,
-                    'license': event_image_license,
-                    }]
+                        eventItem['images'] = [{
+                        'url': event_image_url,
+                        'license': event_image_license,
+                        }]
+                    #if image_license == '2':
+                        # -> We don't import nor necessarily need to mark the publication banned images, hence why this is commented out until further use.
+                        #event_image_license = self.event_only_license
 
             def set_attr(field_name, val):
                 if field_name in eventItem:
