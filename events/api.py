@@ -1650,27 +1650,30 @@ def _filter_event_queryset(queryset, params, srs=None):
     if val:
         val = val.lower()
         qset = Q()
+        vals = val.split(',')
+        qsets = []
+        for val in vals:
+            # Free string search from all translated event fields
+            event_fields = EventTranslationOptions.fields
+            for field in event_fields:
+                # check all languages for each field
+                qset |= _text_qset_by_translated_field(field, val)
 
-        # Free string search from all translated event fields
-        event_fields = EventTranslationOptions.fields
-        for field in event_fields:
-            # check all languages for each field
-            qset |= _text_qset_by_translated_field(field, val)
+            # Free string search from all translated place fields
+            place_fields = PlaceTranslationOptions.fields
+            for field in place_fields:
+                location_field = 'location__' + field
+                # check all languages for each field
+                qset |= _text_qset_by_translated_field(location_field, val)
 
-        # Free string search from all translated place fields
-        place_fields = PlaceTranslationOptions.fields
-        for field in place_fields:
-            location_field = 'location__' + field
-            # check all languages for each field
-            qset |= _text_qset_by_translated_field(location_field, val)
-
-        langs = ['fi', 'sv'] if re.search('[\u00C0-\u00FF]', val) else ['fi', 'sv', 'en']
-        tri = [TrigramSimilarity(f'name_{i}', val) for i in langs]
-        keywords = Keyword.objects.annotate(simile=Greatest(*tri)).filter(simile__gt=0.2).order_by('-simile')[:3]
-        if keywords:
-            qset |= Q(keywords__in=keywords)
-
-        queryset = queryset.filter(qset)
+            langs = ['fi', 'sv'] if re.search('[\u00C0-\u00FF]', val) else ['fi', 'sv', 'en']
+            tri = [TrigramSimilarity(f'name_{i}', val) for i in langs]
+            keywords = Keyword.objects.annotate(simile=Greatest(*tri)).filter(simile__gt=0.2).order_by('-simile')[:3]
+            if keywords:
+                qset |= Q(keywords__in=keywords)
+            qsets.append(qset)
+            qset = Q()
+        queryset = queryset.filter(*qsets)
 
     val = params.get('last_modified_since', None)
     # This should be in format which dateutil.parser recognizes, e.g.

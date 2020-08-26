@@ -975,3 +975,7 @@ def test_keyword_and_text(api_client, event, event2, keyword):
     event2.save()
     response = get_list(api_client, query_string='combined_text=lapset')
     assert_events_in_response([event, event2], response)
+    event.description_fi = 'lapset ja aikuiset'
+    event.save()
+    response = get_list(api_client, query_string='combined_text=lapset,aikuiset')
+    assert_events_in_response([event], response)
