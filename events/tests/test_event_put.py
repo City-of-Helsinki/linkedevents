@@ -795,6 +795,7 @@ def test_can_edit_events_in_the_past_with_past_events_allowed(
     assert_event_data_is_equal(minimal_event_dict, response.data)
 
 
+@pytest.mark.django_db
 def test_response_contains_replacing_event(api_client, event, minimal_event_dict, user):
     api_client.force_authenticate(user)
 
