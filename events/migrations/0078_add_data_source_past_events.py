@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0050_lengthen_offer_price_field'),
+        ('events', '0077_place_has_upcoming_events'),
     ]
 
     operations = [
