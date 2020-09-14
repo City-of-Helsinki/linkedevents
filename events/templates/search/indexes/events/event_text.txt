@@ -1,4 +1,6 @@
+{% load html_to_plaintext_linebreaks %}
 {{object.name}}
 {{object.short_description}}
-{{object.description}}
+{{object.description | html_to_plaintext_linebreaks | striptags}}
 {{object.location.name}}
+{{object.provider}}

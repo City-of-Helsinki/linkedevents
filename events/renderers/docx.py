@@ -28,6 +28,8 @@ def get_description(event):
         return event['short_description']
     elif event['description']:
         return event['description']
+    else:
+        return {}
 
 
 def get_price(raw_event):
@@ -209,12 +211,12 @@ class DOCXRenderer(renderers.BaseRenderer):
         if start is None:
             query_start_date = event_parser.earliest_date
         else:
-            query_start_date = parse_time(start, True)
+            query_start_date = parse_time(start, True)[0]
 
         if end is None:
             query_end_date = event_parser.latest_date
         else:
-            query_end_date = parse_time(end, False)
+            query_end_date = parse_time(end, False)[0]
 
         total_date_range = DateRange(query_start_date, query_end_date)
 

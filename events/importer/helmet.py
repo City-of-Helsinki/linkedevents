@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import logging
 import requests
 import requests_cache
 import re
@@ -14,8 +15,13 @@ from django_orghierarchy.models import Organization
 from pytz import timezone
 import pytz
 import bleach
+from django.conf import settings
+from .util import clean_text
 
 from .sync import ModelSyncher
+
+# Per module logger
+logger = logging.getLogger(__name__)
 
 YSO_BASE_URL = 'http://www.yso.fi/onto/yso/'
 YSO_KEYWORD_MAPS = {
@@ -23,15 +29,15 @@ YSO_KEYWORD_MAPS = {
     u'Lapset': u'p4354',
     u'Kirjastot': u'p2787',
     u'Opiskelijat': u'p16486',
-    u'Konsertit ja klubit': (u'p11185', u'p20421'),  # -> konsertit, musiikkiklubit
+    u'Konsertit ja klubit': (u'p11185', u'p20421', u'p360'),  # -> konsertit, musiikkiklubit, kulttuuritapahtumat
     u'Kurssit': u'p9270',
     u'venäjä': u'p7643',  # -> venäjän kieli
-    u'Seniorit': u'p2434',  # -> vanhukset
+    u'Seniorit': u'p2433',  # -> vanhukset
     u'Näyttelyt': u'p5121',
     u'Toivoa kirjallisuudesta': u'p8113',  # -> kirjallisuus
     u'Suomi 100': u'p29385',  # -> Suomi 100 vuotta -juhlavuosi
     u'Kirjallisuus': u'p8113',
-    u'Kielikahvilat ja keskusteluryhmät': (u'p18105', u'p556'),  # -> keskusteluryhmät
+    u'Kielikahvilat ja keskusteluryhmät': (u'p14004', u'p556'),  # -> keskustelu, kieli ja kielet
     u'Maahanmuuttajat': u'p6165',
     u'Opastukset ja kurssit': (u'p2149', u'p9270'),  # -> opastus, kurssit
     u'Nuoret': u'p11617',
@@ -39,10 +45,11 @@ YSO_KEYWORD_MAPS = {
     u'Satutunnit': u'p14710',
     u'Koululaiset': u'p16485',
     u'Lasten ja nuorten tapahtumat': (u'p4354', u'p11617'),  # -> lapset, nuoret
-    u'Lapset ja perheet': (u'p4354', u'p4363'),  # -> lapset, perheet
-    u'Lukupiirit': u'p11406',  # -> lukeminen
+    u'Lapset ja perheet': (u'p4354', u'p13050'),  # -> lapset, lapsiperheet
+    u'Lukupiirit': (u'p11406', u'p14004'),  # -> lukeminen, keskustelu
     u'Musiikki': u'p1808',  # -> musiikki
     u'muut kielet': u'p556',  # -> kielet
+    u'Etätapahtumat': u'p26626',  # -> etäosallistuminen
 }
 
 LOCATIONS = {
@@ -65,6 +72,7 @@ LOCATIONS = {
     u"Kauniaisten kirjasto": ((10799, 11301), 14432),
     u"Kirjasto 10": ((10800, 11303), 8286),
     u"Kirjasto Omena": ((10801, 11305), 15395),
+    u"Kirjasto Oodi": ((11893, 11895), 51342),
     u"Kivenlahden kirjasto": ((10803, 11309), 15334),
     u"Kaupunkiverstas": ((10804, 11311), 8145),  # former Kohtaamispaikka
     u"Koivukylän kirjasto": ((10805, 11313), 19572),
@@ -86,6 +94,7 @@ LOCATIONS = {
     u"Myllypuron mediakirjasto": ((10826, 11349), 8348),
     u"Myyrmäen kirjasto": ((10827, 11351), 18241),
     u"Nöykkiön kirjasto": ((10828, 11353), 15396),
+    u"Otaniemen kirjasto": ((11980,), 60321),
     u"Oulunkylän kirjasto": ((10829, 11355), 8177),
     u"Paloheinän kirjasto": ((10830, 11357), 8362),
     u"Pasilan kirjasto": ((10831, 11359), 8269),
@@ -116,6 +125,9 @@ LOCATIONS = {
     u"Vuosaaren kirjasto": ((10856, 11405), 8310),
 }
 
+# "Etätapahtumat" are mapped to our new fancy "Tapahtuma vain internetissä." location
+INTERNET_LOCATION_ID = settings.SYSTEM_DATA_SOURCE_ID + ':internet'
+
 HELMET_BASE_URL = 'https://www.helmet.fi'
 HELMET_API_URL = (
     HELMET_BASE_URL + '/api/opennc/v1/ContentLanguages({lang_code})'
@@ -126,8 +138,14 @@ HELMET_API_URL = (
 HELMET_LANGUAGES = {
     'fi': 1,
     'sv': 3,
-    'en': 2
+    'en': 2,
+    'ru': 11
 }
+LANG_BY_HELMET_ID = {id: lang for lang, id in HELMET_LANGUAGES.items()}
+
+# try to detect any installed languages not officially present in the feed
+LANGUAGES_TO_DETECT = [lang[0].replace('-', '_') for lang in settings.LANGUAGES
+                       if lang[0] not in HELMET_LANGUAGES]
 
 
 def get_lang(lang_id):
@@ -138,14 +156,6 @@ def get_lang(lang_id):
 
 
 LOCAL_TZ = timezone('Europe/Helsinki')
-
-
-def clean_text(text, strip_newlines=False):
-    text = text.replace('\xa0', ' ').replace('\x1f', '')
-    if strip_newlines:
-        text = text.replace('\r', '').replace('\n', ' ')
-    # remove consecutive whitespaces
-    return re.sub(r'\s\s+', ' ', text, re.U).strip()
 
 
 def mark_deleted(obj):
@@ -163,7 +173,7 @@ class APIBrokenError(Exception):
 @register_importer
 class HelmetImporter(Importer):
     name = "helmet"
-    supported_languages = ['fi', 'sv', 'en']
+    supported_languages = ['fi', 'sv', 'en', 'ru']
     current_tick_index = 0
     kwcache = {}
 
@@ -174,10 +184,16 @@ class HelmetImporter(Importer):
             defaults=defaults, **ds_args)
         self.tprek_data_source = DataSource.objects.get(id='tprek')
         self.ahjo_data_source = DataSource.objects.get(id='ahjo')
+        system_data_source_defaults = {'user_editable': True}
+        self.system_data_source = DataSource.objects.get_or_create(id=settings.SYSTEM_DATA_SOURCE_ID,
+                                                                   defaults=system_data_source_defaults)
 
-        org_args = dict(origin_id='U4804001010', data_source=self.ahjo_data_source)
+        org_args = dict(origin_id='u4804001010', data_source=self.ahjo_data_source)
         defaults = dict(name='Helsingin kaupunginkirjasto')
         self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
+        org_args = dict(origin_id='00001', data_source=self.ahjo_data_source)
+        defaults = dict(name='Helsingin kaupunki')
+        self.city, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
 
         # Build a cached list of Places
         loc_id_list = [l[1] for l in LOCATIONS.values()]
@@ -185,6 +201,13 @@ class HelmetImporter(Importer):
             data_source=self.tprek_data_source
         ).filter(origin_id__in=loc_id_list)
         self.tprek_by_id = {p.origin_id: p.id for p in place_list}
+
+        # Create "Tapahtuma vain internetissä" location if not present
+        defaults = dict(data_source=self.system_data_source,
+                        publisher=self.city,
+                        name='Internet',
+                        description='Tapahtuma vain internetissä.',)
+        self.internet_location, _ = Place.objects.get_or_create(id=INTERNET_LOCATION_ID, defaults=defaults)
 
         try:
             yso_data_source = DataSource.objects.get(id='yso')
@@ -262,29 +285,36 @@ class HelmetImporter(Importer):
         ext_props = HelmetImporter._get_extended_properties(event_el)
 
         if 'Name' in ext_props:
-            event['name'][lang] = clean_text(ext_props['Name'], True)
+            name = clean_text(ext_props['Name'], True)
+            Importer._set_multiscript_field(name, event, [lang]+LANGUAGES_TO_DETECT, 'name')
             del ext_props['Name']
 
         if ext_props.get('Description', ''):
             desc = ext_props['Description']
             ok_tags = ('u', 'b', 'h2', 'h3', 'em', 'ul', 'li', 'strong', 'br', 'p', 'a')
             desc = bleach.clean(desc, tags=ok_tags, strip=True)
-
-            event['description'][lang] = clean_text(desc)
+            # long description is html formatted, so we don't want plain text whitespaces
+            desc = clean_text(desc, True)
+            Importer._set_multiscript_field(desc, event, [lang]+LANGUAGES_TO_DETECT, 'description')
             del ext_props['Description']
 
         if ext_props.get('LiftContent', ''):
             text = ext_props['LiftContent']
             text = clean_text(strip_tags(text))
-            event['short_description'][lang] = text
+            Importer._set_multiscript_field(text, event, [lang]+LANGUAGES_TO_DETECT, 'short_description')
             del ext_props['LiftContent']
 
         if 'Images' in ext_props:
             matches = re.findall(r'src="(.*?)"', str(ext_props['Images']))
             if matches:
                 img_url = matches[0]
-                event['image'] = HELMET_BASE_URL + img_url
+                event['images'] = [{'url': HELMET_BASE_URL + img_url}]
             del ext_props['Images']
+
+        if 'WillTakePlace' in ext_props:
+            # WillTakePlace value "1" rather counterintuitively means the event has been cancelled
+            if ext_props['WillTakePlace'] == '1':
+                event['event_status'] = Event.Status.CANCELLED
 
         event['url'][lang] = '%s/api/opennc/v1/Contents(%s)' % (
             HELMET_BASE_URL, eid
@@ -293,8 +323,8 @@ class HelmetImporter(Importer):
         def set_attr(field_name, val):
             if field_name in event:
                 if event[field_name] != val:
-                    self.logger.warning('Event %s: %s mismatch (%s vs. %s)' %
-                                        (eid, field_name, event[field_name], val))
+                    logger.warning('Event %s: %s mismatch (%s vs. %s)' %
+                                   (eid, field_name, event[field_name], val))
                     return
             event[field_name] = val
 
@@ -308,6 +338,7 @@ class HelmetImporter(Importer):
 
         event_keywords = event.get('keywords', set())
         event_audience = event.get('audience', set())
+        event_in_language = event.get('in_language', set())
 
         for classification in event_el['Classifications']:
             # Save original keyword in the raw too
@@ -351,42 +382,55 @@ class HelmetImporter(Importer):
 
             # One of the type 7 nodes (either Tapahtumat, or just the library name)
             # points to the location, which is mapped to Linked Events keyword ID
+            # Online events lurk in node 7 as well
             if node_type == 7:
                 if 'location' not in event:
-                    for k, v in LOCATIONS.items():
-                        if classification['NodeId'] in v[0]:
-                            event['location']['id'] = self.tprek_by_id[str(v[1])]
-                            break
-            else:
-                if not self.yso_by_id:
-                    continue
-                # Map some classifications to YSO based keywords
-                if str(classification['NodeName']) in YSO_KEYWORD_MAPS.keys():
-                    yso = YSO_KEYWORD_MAPS[str(classification['NodeName'])]
-                    if isinstance(yso, tuple):
-                        for t_v in yso:
-                            event_keywords.add(self.yso_by_id['yso:' + t_v])
-                            if t_v in KEYWORDS_TO_ADD_TO_AUDIENCE:
-                                # retain the keyword in keywords as well, for backwards compatibility
-                                event_audience.add(self.yso_by_id['yso:' + t_v])
-
+                    if classification['NodeId'] == 11996:
+                        # The event is only online, do not consider other locations
+                        event['location']['id'] = INTERNET_LOCATION_ID
                     else:
-                        event_keywords.add(self.yso_by_id['yso:' + yso])
-                        if yso in KEYWORDS_TO_ADD_TO_AUDIENCE:
+                        for k, v in LOCATIONS.items():
+                            if classification['NodeId'] in v[0]:
+                                event['location']['id'] = self.tprek_by_id[str(v[1])]
+                                break
+            if not self.yso_by_id:
+                continue
+            # Map some classifications to YSO based keywords, including online events
+            if str(classification['NodeName']) in YSO_KEYWORD_MAPS.keys():
+                yso = YSO_KEYWORD_MAPS[str(classification['NodeName'])]
+                if isinstance(yso, tuple):
+                    for t_v in yso:
+                        event_keywords.add(self.yso_by_id['yso:' + t_v])
+                        if t_v in KEYWORDS_TO_ADD_TO_AUDIENCE:
                             # retain the keyword in keywords as well, for backwards compatibility
-                            event_audience.add(self.yso_by_id['yso:' + yso])
+                            event_audience.add(self.yso_by_id['yso:' + t_v])
+
+                else:
+                    event_keywords.add(self.yso_by_id['yso:' + yso])
+                    if yso in KEYWORDS_TO_ADD_TO_AUDIENCE:
+                        # retain the keyword in keywords as well, for backwards compatibility
+                        event_audience.add(self.yso_by_id['yso:' + yso])
+
+        # Finally, go through the languages that are properly denoted in helmet:
+        for translation in event_el['LanguageVersions']:
+            language = LANG_BY_HELMET_ID.get(translation['LanguageId'])
+            if language:
+                event_in_language.add(self.languages[language])
+        # Also, the current language is always included
+        event_in_language.add(self.languages[lang])
 
         event['keywords'] = event_keywords
         event['audience'] = event_audience
+        event['in_language'] = event_in_language
 
         if 'location' in event:
             extra_info = clean_text(ext_props.get('PlaceExtraInfo', ''))
             if extra_info:
-                event['location']['extra_info'][lang] = extra_info
+                Importer._set_multiscript_field(extra_info, event, [lang] + LANGUAGES_TO_DETECT, 'location_extra_info')
                 del ext_props['PlaceExtraInfo']
         else:
-            self.logger.warning('Missing TPREK location map for event %s (%s)' %
-                                (event['name'][lang], str(eid)))
+            logger.warning('Missing TPREK location map for event %s (%s)' %
+                           (event['name'][lang], str(eid)))
             del events[event['origin_id']]
             return event
 
@@ -397,13 +441,23 @@ class HelmetImporter(Importer):
         event['custom_fields']['ExpiryDate'] = dt_parse(
             event_el['ExpiryDate']).strftime("%Y-%m-%dT%H:%M:%SZ")
 
+        # Add a default offer
+        free_offer = {
+            'is_free': True,
+            'price': None,
+            'description': None,
+            'info_url': None,
+        }
+        event['offers'] = [free_offer]
+
         return event
 
     def _recur_fetch_paginated_url(self, url, lang, events):
-        for _ in range(0, 5):
+        max_tries = 5
+        for try_number in range(0, max_tries):
             response = requests.get(url)
             if response.status_code != 200:
-                self.logger.error("HelMet API reported HTTP %d" % response.status_code)
+                logger.warning("HelMet API reported HTTP %d" % response.status_code)
                 time.sleep(2)
                 if self.cache:
                     self.cache.delete_url(url)
@@ -411,14 +465,14 @@ class HelmetImporter(Importer):
             try:
                 root_doc = response.json()
             except ValueError:
-                self.logger.error("HelMet API returned invalid JSON")
+                logger.warning("HelMet API returned invalid JSON (try {} of {})".format(try_number + 1, max_tries))
                 if self.cache:
                     self.cache.delete_url(url)
                 time.sleep(5)
                 continue
             break
         else:
-            self.logger.error("HelMet API broken again, giving up")
+            logger.error("HelMet API broken again, giving up")
             raise APIBrokenError()
 
         documents = root_doc['value']
@@ -442,13 +496,12 @@ class HelmetImporter(Importer):
                 ), lang, events)
 
     def import_events(self):
-        print("Importing HelMet events")
+        logger.info("Importing HelMet events")
         events = recur_dict()
         for lang in self.supported_languages:
             helmet_lang_id = HELMET_LANGUAGES[lang]
             url = HELMET_API_URL.format(lang_code=helmet_lang_id, start_date='2016-01-01')
-            print("Processing lang " + lang)
-            print("from URL " + url)
+            logger.info("Processing lang {} from URL {}".format(lang, url))
             try:
                 self._recur_fetch_paginated_url(url, lang, events)
             except APIBrokenError:
@@ -464,5 +517,5 @@ class HelmetImporter(Importer):
             obj = self.save_event(event)
             self.syncher.mark(obj)
 
-        self.syncher.finish()
-        print("%d events processed" % len(events.values()))
+        self.syncher.finish(force=self.options['force'])
+        logger.info("%d events processed" % len(events.values()))

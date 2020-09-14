@@ -371,9 +371,9 @@ class CitySDKExporter(Exporter):
                             CATEGORY_URL, 'poi', extra_filters=filters)
 
     def _export_places(self):
-            filters = {'event__in': Event.objects.all()}
-            self._export_models(Place, self._generate_exportable_place,
-                                POIS_URL, 'poi', extra_filters=filters)
+        filters = {'event__in': Event.objects.all()}
+        self._export_models(Place, self._generate_exportable_place,
+                            POIS_URL, 'poi', extra_filters=filters)
 
     def _export_events(self):
         self._export_models(Event, self._generate_exportable_event,

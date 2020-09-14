@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import re
+import logging
 import requests
 import requests_cache
 
@@ -14,6 +14,9 @@ from events.models import DataSource, Place
 from .sync import ModelSyncher
 from .base import Importer, register_importer
 
+# Per module logger
+logger = logging.getLogger(__name__)
+
 URL_BASE = 'http://www.hel.fi/palvelukarttaws/rest/v4/'
 GK25_SRID = 3879
 
@@ -23,8 +26,7 @@ class TprekImporter(Importer):
     name = 'tprek'
     supported_languages = ['fi', 'sv', 'en']
 
-    def __init__(self, *args, **kwargs):
-        super(TprekImporter, self).__init__(*args, **kwargs)
+    def setup(self):
         ds_args = dict(id='tprek')
         defaults = dict(name='Toimipisterekisteri')
         self.data_source, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
@@ -33,7 +35,7 @@ class TprekImporter(Importer):
         defaults = dict(name='Ahjo')
         ahjo_ds, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
 
-        org_args = dict(origin_id='U021600', data_source=ahjo_ds)
+        org_args = dict(origin_id='u021600', data_source=ahjo_ds)
         defaults = dict(name='Tietotekniikka- ja viestintäosasto')
         self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
         if self.options.get('remap', None):
@@ -41,21 +43,12 @@ class TprekImporter(Importer):
             # again and remapping them accordingly! Otherwise, places already deleted
             # will not be remapped by the syncher.
             self.check_deleted = lambda x: False
-            self.mark_deleted = self.delete_and_replace
-
-    def clean_text(self, text):
-        # remove consecutive whitespaces
-        text = re.sub(r'\s\s+', ' ', text, re.U)
-        # remove nil bytes
-        text = text.replace(u'\u0000', ' ')
-        text = text.strip()
-        return text
 
     def pk_get(self, resource_name, res_id=None):
         url = "%s%s/" % (URL_BASE, resource_name)
         if res_id is not None:
             url = "%s%s/" % (url, res_id)
-        print("Fetching URL %s" % url)
+        logger.info("Fetching URL %s" % url)
         resp = requests.get(url)
         assert resp.status_code == 200
         return resp.json()
@@ -75,11 +68,11 @@ class TprekImporter(Importer):
                 call_command('event_import', 'matko', places=True, single=obj.name)
                 replaced = replace_location(replace=obj, by_source='matko')
             if not replaced:
-                self.logger.warning("Tprek deleted location %s (%s) with events."
-                                    "No unambiguous replacement was found. "
-                                    "Please look for a replacement location and save it in the replaced_by field. "
-                                    "Until then, events will stay mapped to the deleted location." %
-                                    (obj.id, str(obj)))
+                logger.warning("Tprek deleted location %s (%s) with events."
+                               "No unambiguous replacement was found. "
+                               "Please look for a replacement location and save it in the replaced_by field. "
+                               "Until then, events will stay mapped to the deleted location." %
+                               (obj.id, str(obj)))
         return True
 
     def mark_deleted(self, obj):
@@ -89,49 +82,6 @@ class TprekImporter(Importer):
 
     def check_deleted(self, obj):
         return obj.deleted
-
-    def _save_translated_field(self, obj, obj_field_name, info,
-                               info_field_name, max_length=None):
-        for lang in ('fi', 'sv', 'en'):
-            key = '%s_%s' % (info_field_name, lang)
-            if key in info:
-                val = self.clean_text(info[key])
-            else:
-                val = None
-
-            if max_length and val and len(val) > max_length:
-                self.logger.warning("%s: field %s too long" % (obj, info_field_name))
-                val = None
-
-            obj_key = '%s_%s' % (obj_field_name, lang)
-            obj_val = getattr(obj, obj_key, None)
-            if obj_val == val:
-                continue
-
-            setattr(obj, obj_key, val)
-            if lang == 'fi':
-                setattr(obj, obj_field_name, val)
-            obj._changed_fields.append(obj_key)
-            obj._changed = True
-
-    def _save_field(self, obj, obj_field_name, info,
-                    info_field_name, max_length=None):
-            if info_field_name in info:
-                val = self.clean_text(info[info_field_name])
-            else:
-                val = None
-
-            if max_length and val and len(val) > max_length:
-                self.logger.warning("%s: field %s too long" % (obj, info_field_name))
-                val = None
-
-            obj_val = getattr(obj, obj_field_name, None)
-            if obj_val == val:
-                return
-
-            setattr(obj, obj_field_name, val)
-            obj._changed_fields.append(obj_field_name)
-            obj._changed = True
 
     @db.transaction.atomic
     def _import_unit(self, syncher, info):
@@ -180,11 +130,11 @@ class TprekImporter(Importer):
                     p.transform(self.gps_to_target_ct)
                 position = p
             else:
-                print("Invalid coordinates (%f, %f) for %s" % (n, e, obj))
+                logger.warning("Invalid coordinates (%f, %f) for %s" % (n, e, obj))
 
         picture_url = info.get('picture_url', '').strip()
-        image_object = self.get_or_create_image(picture_url)
-        self.set_image(obj, image_object)
+        if picture_url:
+            self.set_image(obj, {'url': picture_url})
 
         if position and obj.position:
             # If the distance is less than 10cm, assume the location
@@ -206,7 +156,7 @@ class TprekImporter(Importer):
             obj.deleted = False
             # location has been reinstated in tprek, hip hip hooray!
             replace_location(from_source='matko', by=obj)
-            obj._changed_fields.append('undeleted')
+            obj._changed_fields.append('deleted')
             obj._changed = True
 
         if obj._changed:
@@ -214,7 +164,7 @@ class TprekImporter(Importer):
                 verb = "created"
             else:
                 verb = "changed (fields: %s)" % ', '.join(obj._changed_fields)
-            print("%s %s" % (obj, verb))
+            logger.info("%s %s" % (obj, verb))
             obj.save()
 
         syncher.mark(obj)
@@ -229,14 +179,14 @@ class TprekImporter(Importer):
             obj_list = [self.pk_get('unit', obj_id)]
             queryset = queryset.filter(id=obj_id)
         else:
-            print("Loading units...")
+            logger.info("Loading units...")
             obj_list = self.pk_get('unit')
-            print("%s units loaded" % len(obj_list))
+            logger.info("%s units loaded" % len(obj_list))
         syncher = ModelSyncher(queryset, lambda obj: obj.origin_id, delete_func=self.mark_deleted,
                                check_deleted_func=self.check_deleted)
         for idx, info in enumerate(obj_list):
             if idx and (idx % 1000) == 0:
-                print("%s units processed" % idx)
+                logger.info("%s units processed" % idx)
             self._import_unit(syncher, info)
 
         syncher.finish(self.options.get('remap', False))

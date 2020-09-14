@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-from datetime import timedelta
+from datetime import datetime, timedelta
 from copy import deepcopy
+from dateutil.parser import parse as dateutil_parse
 
 import pytz
 from django.utils import timezone
@@ -13,7 +14,6 @@ from .utils import versioned_reverse as reverse
 
 from events.tests.utils import assert_event_data_is_equal
 from events.tests.test_event_post import create_with_post
-from .conftest import keyword_id, location_id
 from events.models import Event, Keyword, Place
 from django.conf import settings
 
@@ -28,6 +28,7 @@ def update_with_put(api_client, event_id, event_data, credentials=None):
 
 
 # === tests ===
+
 
 @pytest.mark.django_db
 def test__update_a_draft_with_put(api_client, minimal_event_dict, user):
@@ -54,7 +55,73 @@ def test__update_a_draft_with_put(api_client, minimal_event_dict, user):
 
 
 @pytest.mark.django_db
-def test__keyword_n_events_updated(api_client, minimal_event_dict, user, data_source):
+def test__cannot_update_a_draft_without_a_name(api_client, minimal_event_dict, user):
+
+    # create an event
+    api_client.force_authenticate(user=user)
+    minimal_event_dict.pop('location')
+    minimal_event_dict.pop('keywords')
+    minimal_event_dict['publication_status'] = 'draft'
+    response = create_with_post(api_client, minimal_event_dict)
+    assert_event_data_is_equal(minimal_event_dict, response.data)
+    data2 = response.data
+
+    # delete name
+    data2['name'] = {'fi': None}
+    event_id = data2.pop('@id')
+    response2 = update_with_put(api_client, event_id, data2)
+    assert response2.status_code == 400
+    assert 'name' in response2.data
+    data2.pop('name')
+    response2 = update_with_put(api_client, event_id, data2)
+    assert response2.status_code == 400
+    assert 'name' in response2.data
+
+
+@pytest.mark.django_db
+def test__cannot_update_an_event_without_a_short_description(api_client, minimal_event_dict, user):
+
+    # create an event
+    api_client.force_authenticate(user=user)
+    response = create_with_post(api_client, minimal_event_dict)
+    assert_event_data_is_equal(minimal_event_dict, response.data)
+    data2 = response.data
+
+    # delete name
+    data2['short_description'] = {'fi': None}
+    event_id = data2.pop('@id')
+    response2 = update_with_put(api_client, event_id, data2)
+    assert response2.status_code == 400
+    assert 'short_description' in response2.data
+    data2.pop('short_description')
+    response2 = update_with_put(api_client, event_id, data2)
+    assert response2.status_code == 400
+    assert 'short_description' in response2.data
+
+
+@pytest.mark.django_db
+def test__cannot_update_an_event_without_a_description(api_client, minimal_event_dict, user):
+
+    # create an event
+    api_client.force_authenticate(user=user)
+    response = create_with_post(api_client, minimal_event_dict)
+    assert_event_data_is_equal(minimal_event_dict, response.data)
+    data2 = response.data
+
+    # delete name
+    data2['description'] = {'fi': None}
+    event_id = data2.pop('@id')
+    response2 = update_with_put(api_client, event_id, data2)
+    assert response2.status_code == 400
+    assert 'description' in response2.data
+    data2.pop('description')
+    response2 = update_with_put(api_client, event_id, data2)
+    assert response2.status_code == 400
+    assert 'description' in response2.data
+
+
+@pytest.mark.django_db
+def test__keyword_n_events_updated(api_client, minimal_event_dict, user, data_source, make_keyword_id):
 
     # create an event
     api_client.force_authenticate(user=user)
@@ -68,8 +135,8 @@ def test__keyword_n_events_updated(api_client, minimal_event_dict, user, data_so
 
     # change the keyword and add an audience
     event_id = data2.pop('@id')
-    data2['keywords'] = [{'@id': keyword_id(data_source, 'test2')}]
-    data2['audience'] = [{'@id': keyword_id(data_source, 'test3')}]
+    data2['keywords'] = [{'@id': make_keyword_id(data_source, 'test2')}]
+    data2['audience'] = [{'@id': make_keyword_id(data_source, 'test3')}]
     response2 = update_with_put(api_client, event_id, data2)
     print('got the put response')
     print(response2.data)
@@ -81,7 +148,7 @@ def test__keyword_n_events_updated(api_client, minimal_event_dict, user, data_so
 
 @pytest.mark.django_db
 def test__location_n_events_updated(api_client, minimal_event_dict, user, data_source,
-                                    other_data_source, place2):
+                                    other_data_source, place2, make_location_id):
 
     # create an event
     api_client.force_authenticate(user=user)
@@ -95,7 +162,7 @@ def test__location_n_events_updated(api_client, minimal_event_dict, user, data_s
 
     # change the location
     event_id = data2.pop('@id')
-    data2['location'] = {'@id': location_id(place2)}
+    data2['location'] = {'@id': make_location_id(place2)}
     response2 = update_with_put(api_client, event_id, data2)
     print('got the put response')
     print(response2.data)
@@ -169,6 +236,28 @@ def test__update_an_event_with_put(api_client, complex_event_dict, user):
 
 
 @pytest.mark.django_db
+def test__update_an_event_with_naive_datetime(api_client, minimal_event_dict, user):
+
+    # create an event
+    api_client.force_authenticate(user=user)
+    response = create_with_post(api_client, minimal_event_dict)
+    assert_event_data_is_equal(minimal_event_dict, response.data)
+    data2 = response.data
+
+    # store updates
+    event_id = data2.pop('@id')
+    data2['start_time'] = (datetime.now() + timedelta(days=1)).isoformat()
+    response2 = update_with_put(api_client, event_id, data2)
+
+    # API should have assumed UTC datetime
+    data2['start_time'] = pytz.utc.localize(dateutil_parse(data2['start_time'])).isoformat().replace('+00:00', 'Z')
+    data2['event_status'] = 'EventRescheduled'
+
+    # assert
+    assert_event_data_is_equal(data2, response2.data)
+
+
+@pytest.mark.django_db
 def test__reschedule_an_event_with_put(api_client, complex_event_dict, user):
 
     # create an event
@@ -222,6 +311,10 @@ def test__postpone_an_event_with_put(api_client, complex_event_dict, user):
     data2 = response.data
     data2['start_time'] = None
 
+    # postponing (like deleting) should be allowed even if event is incomplete (external events etc.)
+    data2['keywords'] = []
+    data2['location'] = None
+
     # update the event
     event_id = data2.pop('@id')
     response2 = update_with_put(api_client, event_id, data2)
@@ -230,8 +323,10 @@ def test__postpone_an_event_with_put(api_client, complex_event_dict, user):
     data2['event_status'] = 'EventPostponed'
     assert_event_data_is_equal(data2, response2.data)
 
-    # try to cancel marking as postponed
+    # try to cancel marking as postponed, fill in missing data
     data2 = response2.data
+    data2['keywords'] = complex_event_dict['keywords']
+    data2['location'] = complex_event_dict['location']
     data2['event_status'] = 'EventScheduled'
     response3 = api_client.put(event_id, data2, format='json')
 
@@ -263,6 +358,18 @@ def test__postpone_an_event_with_put(api_client, complex_event_dict, user):
     data2['event_status'] = 'EventRescheduled'
     assert_event_data_is_equal(data2, response2.data)
 
+    # remove the start_time
+    data2 = response2.data
+    data2['start_time'] = None
+
+    # update the event
+    event_id = data2.pop('@id')
+    response2 = update_with_put(api_client, event_id, data2)
+
+    # assert backend postponed the event again
+    data2['event_status'] = 'EventPostponed'
+    assert_event_data_is_equal(data2, response2.data)
+
 
 @pytest.mark.django_db
 def test__cancel_an_event_with_put(api_client, complex_event_dict, user):
@@ -274,6 +381,10 @@ def test__cancel_an_event_with_put(api_client, complex_event_dict, user):
     # mark the event cancelled
     data2 = response.data
     data2['event_status'] = 'EventCancelled'
+
+    # cancelling (like deleting) should be allowed even if event is incomplete (external events etc.)
+    data2['keywords'] = []
+    data2['location'] = None
 
     # update the event
     event_id = data2.pop('@id')
@@ -409,6 +520,34 @@ def test__non_editable_fields_at_put(api_client, minimal_event_dict, user,
         assert list(non_permitted_input)[0] in response2.data
 
 
+# the following values may not be posted
+@pytest.mark.django_db
+@pytest.mark.parametrize("non_permitted_input,non_permitted_response", [
+    ({'id': 'not_allowed:1'}, 400),  # may not fake id
+    ({'id': settings.SYSTEM_DATA_SOURCE_ID + ':changed'}, 400),  # may not change object id
+    ({'data_source': 'theotherdatasourceid'}, 400),  # may not fake data source
+    ({'publisher': 'test_organization2'}, 400),  # may not fake organization
+])
+def test__apikey_non_editable_fields_at_put(api_client, minimal_event_dict, organization, data_source,
+                                            non_permitted_input, non_permitted_response):
+    # create the event first
+    data_source.owner = organization
+    data_source.save()
+    response = create_with_post(api_client, minimal_event_dict, data_source)
+    data2 = response.data
+    event_id = data2.pop('@id')
+
+    # try to put non permitted values
+    data2.update(non_permitted_input)
+
+    response2 = api_client.put(event_id, data2, format='json',
+                               credentials={'apikey': data_source.api_key})
+    assert response2.status_code == non_permitted_response
+    if non_permitted_response >= 400:
+        # check that there is an error message for the corresponding field
+        assert list(non_permitted_input)[0] in response2.data
+
+
 @pytest.mark.django_db
 def test__an_admin_can_update_an_event_from_another_data_source(api_client, event2, keyword, offer,
                                                                 other_data_source, organization, user):
@@ -429,6 +568,24 @@ def test__an_admin_can_update_an_event_from_another_data_source(api_client, even
 
 
 @pytest.mark.django_db
+def test__apikey_cannot_update_an_event_from_another_data_source(api_client, event2, keyword, offer,
+                                                                 data_source, other_data_source, organization):
+    other_data_source.owner = organization
+    other_data_source.save()
+    event2.publisher = organization
+    event2.keywords.add(keyword)  # keyword is needed in testing POST and PUT with event data
+    event2.offers.add(offer)  # ditto for offer
+    event2.save()
+
+    detail_url = reverse('event-detail', kwargs={'pk': event2.pk})
+    response = api_client.get(detail_url, format='json')
+    assert response.status_code == 200
+    response = update_with_put(api_client, detail_url, response.data,
+                               credentials={'apikey': data_source.api_key})
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
 def test__correct_api_key_can_update_an_event(api_client, event, complex_event_dict, data_source, organization):
 
     data_source.owner = organization
@@ -439,6 +596,43 @@ def test__correct_api_key_can_update_an_event(api_client, event, complex_event_d
                                credentials={'apikey': data_source.api_key})
     assert response.status_code == 200
     assert ApiKeyUser.objects.all().count() == 1
+
+
+@pytest.mark.django_db
+def test__correct_api_key_can_update_an_event_in_suborganization(api_client, event2, complex_event_dict,
+                                                                 other_data_source, organization, organization2):
+
+    other_data_source.owner = organization
+    other_data_source.save()
+
+    organization2.parent = organization
+    organization2.save()
+    del(complex_event_dict['publisher'])
+    del(complex_event_dict['data_source'])
+
+    detail_url = reverse('event-detail', kwargs={'pk': event2.pk})
+    response = update_with_put(api_client, detail_url, complex_event_dict,
+                               credentials={'apikey': other_data_source.api_key})
+    assert response.status_code == 200
+    assert ApiKeyUser.objects.all().count() == 1
+
+
+@pytest.mark.django_db
+def test__correct_api_key_cannot_update_an_event_in_superorganization(api_client, event, complex_event_dict,
+                                                                      other_data_source, organization, organization2):
+
+    other_data_source.owner = organization2
+    other_data_source.save()
+
+    organization2.parent = organization
+    organization2.save()
+    del(complex_event_dict['publisher'])
+    del(complex_event_dict['data_source'])
+
+    detail_url = reverse('event-detail', kwargs={'pk': event.pk})
+    response = update_with_put(api_client, detail_url, complex_event_dict,
+                               credentials={'apikey': other_data_source.api_key})
+    assert response.status_code == 403
 
 
 @pytest.mark.django_db
@@ -455,7 +649,6 @@ def test__wrong_api_key_cannot_update_an_event(api_client, event, complex_event_
     response = update_with_put(api_client, detail_url, complex_event_dict,
                                credentials={'apikey': other_data_source.api_key})
     assert response.status_code == 403
-    assert ApiKeyUser.objects.all().count() == 1
 
 
 @pytest.mark.django_db
@@ -515,14 +708,13 @@ def test_multiple_event_update_with_incorrect_json(api_client, minimal_event_dic
     api_client.credentials(apikey=data_source.api_key)
     response = api_client.put(reverse('event-list'), minimal_event_dict, format='json')
     assert response.status_code == 400
-    assert ApiKeyUser.objects.all().count() == 1
 
 
 @pytest.mark.django_db
-def test_multiple_event_update_second_fails(api_client, minimal_event_dict, user):
+def test_multiple_event_update_missing_data_fails(api_client, minimal_event_dict, user):
     api_client.force_authenticate(user)
     minimal_event_dict_2 = deepcopy(minimal_event_dict)
-    minimal_event_dict_2['name']['fi'] = 'testing_2'
+    minimal_event_dict_2['name']['fi'] = 'testaus_2'
 
     # create events first
     resp = create_with_post(api_client, minimal_event_dict)
@@ -540,7 +732,33 @@ def test_multiple_event_update_second_fails(api_client, minimal_event_dict, user
     event_names = set(Event.objects.values_list('name_fi', flat=True))
 
     # verify that first event isn't updated either
-    assert event_names == {'testing', 'testing_2'}
+    assert event_names == {'testaus', 'testaus_2'}
+
+
+@pytest.mark.django_db
+def test_multiple_event_update_non_allowed_data_fails(api_client, minimal_event_dict, other_data_source, user):
+    api_client.force_authenticate(user)
+    minimal_event_dict_2 = deepcopy(minimal_event_dict)
+    minimal_event_dict_2['name']['fi'] = 'testaus_2'
+
+    # create events first
+    resp = create_with_post(api_client, minimal_event_dict)
+    minimal_event_dict['id'] = resp.data['id']
+    resp = create_with_post(api_client, minimal_event_dict_2)
+    minimal_event_dict_2['id'] = resp.data['id']
+
+    minimal_event_dict['name']['fi'] = 'updated_name'
+    minimal_event_dict_2['data_source'] = other_data_source.id  # data source not allowed
+
+    response = api_client.put(reverse('event-list'), [minimal_event_dict, minimal_event_dict_2], format='json')
+    print(response.data)
+    assert response.status_code == 400
+    assert 'data_source' in response.data
+
+    event_names = set(Event.objects.values_list('name_fi', flat=True))
+
+    # verify that first event isn't updated either
+    assert event_names == {'testaus', 'testaus_2'}
 
 
 @pytest.mark.django_db
@@ -575,3 +793,15 @@ def test_can_edit_events_in_the_past_with_past_events_allowed(
     response = api_client.put(reverse('event-detail', kwargs={'pk': event.id}), minimal_event_dict, format='json')
     assert response.status_code == 200
     assert_event_data_is_equal(minimal_event_dict, response.data)
+
+
+def test_response_contains_replacing_event(api_client, event, minimal_event_dict, user):
+    api_client.force_authenticate(user)
+
+    response = create_with_post(api_client, minimal_event_dict)
+
+    pk = response.data['id']
+    minimal_event_dict['replaced_by'] = event.pk
+    response2 = api_client.put(reverse('event-detail', kwargs={'pk': pk}), minimal_event_dict, format='json')
+    assert response2.status_code == 200
+    assert response2.data['id'] == event.pk

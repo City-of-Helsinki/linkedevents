@@ -1,6 +1,7 @@
 language: python
 python:
-- '3.4'
+- '3.6'
+- '3.7'
 
 cache:
   directories:
@@ -10,14 +11,15 @@ env:
 - DJANGO=Django>=1.9
 sudo: false
 addons:
-  postgresql: '9.4'
+  postgresql: '10'
   apt:
     packages:
-      postgresql-9.4-postgis-2.3
+      postgresql-10-postgis-2.5
+      postgresql-10-postgis-2.5-scripts
 
 install:
 - pip install --upgrade pip
-- pip install codecov pytest-cov -r requirements.txt
+- pip install codecov pytest-cov -r requirements.txt -r requirements-dev.txt
 
 before_script:
 - psql template1 -c 'create extension hstore;'
@@ -26,6 +28,10 @@ before_script:
 script:
 - flake8 events
 - py.test --cov . events
+- flake8 helevents
+- py.test --cov . helevents
+- flake8 extension_course
+- py.test --cov . extension_course --ds=extension_course.tests.settings
 
 before_cache:
 - rm -f $HOME/.cache/pip/log/debug.log
