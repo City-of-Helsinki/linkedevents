@@ -9,7 +9,7 @@ from events.importer.base import get_importers
 class Command(BaseCommand):
     help = "Import event data"
 
-    importer_types = ['places', 'events', 'keywords']
+    importer_types = ['places', 'events', 'keywords', 'courses']
 
     def __init__(self):
         super().__init__()
@@ -27,6 +27,8 @@ class Command(BaseCommand):
                             help='Import only single entity')
         parser.add_argument('--remap', action='store_true', dest='remap',
                             help='Remap all deleted entities to new ones')
+        parser.add_argument('--force', action='store_true', dest='force',
+                            help='Allow deleting any number of entities if necessary')
 
         for imp in self.importer_types:
             parser.add_argument('--%s' % imp, dest=imp, action='store_true', help='import %s' % imp)
@@ -45,7 +47,8 @@ class Command(BaseCommand):
                               'verbosity': int(options['verbosity']),
                               'cached': options['cached'],
                               'single': options['single'],
-                              'remap': options['remap']})
+                              'remap': options['remap'],
+                              'force': options['force']})
 
         # Activate the default language for the duration of the import
         # to make sure translated fields are populated correctly.
@@ -57,7 +60,9 @@ class Command(BaseCommand):
             method = getattr(importer, name, None)
             if options[imp_type]:
                 if not method:
-                    raise CommandError("Importer %s does not support importing %s" % (name, imp_type))
+                    raise CommandError("Importer {} does not support importing {}".format(importer.name, imp_type))
+                if imp_type == 'courses' and 'extension_course' not in settings.INSTALLED_APPS:
+                    raise CommandError("Course extension must be installed when importing courses.")
             else:
                 if not options['all']:
                     continue

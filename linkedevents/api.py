@@ -21,7 +21,7 @@ class LinkedEventsAPIRouter(DefaultRouter):
         if view['class'] in self.registered_api_views:
             return
         self.registered_api_views.add(view['class'])
-        self.register(view['name'], view['class'], base_name=view.get("base_name"))
+        self.register(view['name'], view['class'], basename=view.get("base_name"))
 
     def _register_all_views(self):
         for view in events_views:

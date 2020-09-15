@@ -5,7 +5,7 @@ from django.conf import settings
 from django.test import TestCase
 import haystack
 import datetime
-from haystack.management.commands import rebuild_index, clear_index
+# from haystack.management.commands import rebuild_index, clear_index
 from rest_framework.test import APIClient
 
 from ..models import Event
@@ -41,7 +41,8 @@ class EventSearchTests(TestCase, TestDataMixin):
         self.dummy.save()
 
         # refresh haystack's index
-        rebuild_index.Command().handle(interactive=False)
+        # simple backend doesn't have an index, so we cannot test indexing
+        # rebuild_index.Command().handle(interactive=False)
 
         super(EventSearchTests, self).setUp()
 
@@ -50,23 +51,36 @@ class EventSearchTests(TestCase, TestDataMixin):
 
     def test__search_should_respond(self):
         response = self._get_response('a random search query')
-        self.assertEquals(response.status_code, 200, msg=response.content)
+        self.assertEqual(response.status_code, 200, msg=response.content)
 
     def test__search_should_return_at_least_one_match(self):
         query = self.dummy.name.split()[0]  # let's use just the first word
         response = self._get_response(query)
 
-        self.assertEquals(response.status_code, 200, msg=response.content)
+        self.assertEqual(response.status_code, 200, msg=response.content)
         self.assertTrue(response.data['meta']['count'] >= 1)
 
     def test__search_shouldnt_return_matches(self):
         response = self._get_response('ASearchQueryThatShouldntReturnMatches')
-        self.assertEquals(response.status_code, 200, msg=response.content)
+        self.assertEqual(response.status_code, 200, msg=response.content)
         self.assertTrue(response.data['meta']['count'] == 0)
+
+    # simple backend doesn't have an index, so we cannot test index updates
+    # def test__search_shouldnt_return_deleted_matches(self):
+    #     self.dummy.deleted = True
+    #     self.dummy.save()
+    #
+    #
+    #     query = self.dummy.name.split()[0]  # let's use just the first word
+    #     response = self._get_response(query)
+    #
+    #     self.assertEqual(response.status_code, 200, msg=response.content)
+    #     self.assertTrue(response.data['meta']['count'] == 0)
 
     def tearDown(self):
         # delete dummy
         self.dummy.delete()
 
         # clear index
-        clear_index.Command().handle(interactive=False)
+        # simple backend doesn't have an index, so we cannot test indexing
+        # clear_index.Command().handle(interactive=False)

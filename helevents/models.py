@@ -22,13 +22,7 @@ class User(AbstractUser, UserModelPermissionMixin):
         return admin_org or regular_org
 
     def is_admin(self, publisher):
-        # check if publisher exists in user's admin organizations or their descendants
-        admin_orgs = self.admin_organizations.all()
-        for org in admin_orgs:
-            if org.get_descendants(include_self=True).filter(id=publisher.id).exists():
-                return True
-
-        return False
+        return publisher in self.get_admin_organizations_and_descendants()
 
     def is_regular_user(self, publisher):
         return self.organization_memberships.filter(id=publisher.id).exists()

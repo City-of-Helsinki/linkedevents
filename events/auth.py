@@ -1,6 +1,7 @@
 from rest_framework import authentication
 from rest_framework import exceptions
 from events.models import DataSource
+from django_orghierarchy.models import Organization
 from django.utils.translation import ugettext_lazy as _
 from django.contrib.gis.db import models
 from django.contrib.auth import get_user_model
@@ -39,7 +40,7 @@ class ApiKeyAuthentication(authentication.BaseAuthentication):
 
 
 class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
-    data_source = models.OneToOneField(DataSource, primary_key=True)
+    data_source = models.OneToOneField(DataSource, on_delete=models.CASCADE, primary_key=True)
 
     def get_display_name(self):
         return 'API key from data source %s' % self.data_source
@@ -51,10 +52,18 @@ class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
         return self.data_source.owner
 
     def is_admin(self, publisher):
-        return self.data_source.owner == publisher
+        return publisher in self.data_source.owner.get_descendants(include_self=True)
 
     def is_regular_user(self, publisher):
         return False
+
+    @property
+    def admin_organizations(self):
+        return Organization.objects.filter(id=self.data_source.owner.id)
+
+    @property
+    def organization_memberships(self):
+        return Organization.objects.none()
 
 
 class ApiKeyAuth(object):

@@ -24,6 +24,7 @@ def assert_event_data_is_equal(d1, d2, version='v1'):
         'offers',
         'in_language',
         'external_links',
+        'videos',
         'start_time',
         'end_time',
     )
@@ -114,7 +115,7 @@ def assert_list_contains_matching_dictionary(l1, dictionary):
 
 def assert_fields_exist(data, fields):
     for field in fields:
-        assert field in data
+        assert field in data, '{} not found in {}'.format(field, data)
     assert len(data) == len(fields)
 
 
@@ -124,3 +125,17 @@ def versioned_reverse(view, version='v1', **kwargs):
     request.versioning_scheme = api_settings.DEFAULT_VERSIONING_CLASS()
     request.version = version
     return reverse(view, request=request, **kwargs)
+
+
+def post_event(api_client, event_data):
+    url = reverse('event-list', kwargs={'version': 'v1'})
+    response = api_client.post(url, event_data, format='json')
+    assert response.status_code == 201, '{} {}'.format(response.status_code, response.data)
+    return response
+
+
+def put_event(api_client, event, event_data):
+    url = reverse('event-detail', kwargs={'version': 'v1', 'pk': event.pk})
+    response = api_client.put(url, event_data, format='json')
+    assert response.status_code == 200, '{} {}'.format(response.status_code, response.data)
+    return response

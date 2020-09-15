@@ -14,6 +14,7 @@ from .utils import get, assert_fields_exist, assert_event_data_is_equal
 
 # event_list_url is used as magic fixture, which flake8 doesn't see
 from .test_event_post import create_with_post, list_url as event_list_url  # noqa
+from events.tests.test_event_put import update_with_put
 from events.models import Image
 from events.auth import ApiKeyUser
 
@@ -65,11 +66,8 @@ def assert_image_fields_exist(data, version='v1'):
         'license',
         'photographer_name',
         'data_source',
+        'alt_text',
     )
-    if version == 'v0.1':
-        fields += (
-            'last_modified_by'
-        )
 
     assert_fields_exist(data, fields)
 
@@ -206,8 +204,6 @@ def test__upload_an_image_with_api_key(api_client, settings, list_url, image_dat
     assert ApiKeyUser.objects.all().count() == 1
 
     image = Image.objects.get(pk=response.data['id'])
-    assert image.created_by is None
-    assert image.last_modified_by is None
     assert image.publisher == organization
 
     # image url should contain the image file's path relative to MEDIA_ROOT.
@@ -300,7 +296,6 @@ def test__image_cannot_be_edited_outside_organization_with_apikey(
 
     detail_url = reverse('image-detail', kwargs={'pk': response.data['id']})
     response2 = api_client.put(detail_url, {'name': 'this is needed'})
-    assert ApiKeyUser.objects.all().count() == 1
     assert response2.status_code == 403
     response3 = api_client.delete(detail_url)
     assert response3.status_code == 403
@@ -310,7 +305,7 @@ def test__image_cannot_be_edited_outside_organization_with_apikey(
 @override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL='')  # noqa
 @pytest.mark.django_db
 def test__create_an_event_with_uploaded_image(
-        api_client, list_url, event_list_url, minimal_event_dict, image_data, user):
+        api_client, list_url, event_list_url, minimal_event_dict, image_data, user):  # noqa
     api_client.force_authenticate(user)
 
     image_response = api_client.post(list_url, image_data)
@@ -326,9 +321,41 @@ def test__create_an_event_with_uploaded_image(
 
     # the event data should contain the expanded image data
     minimal_event_dict['images'][0].update(image_response.data)
-    # only the image field url changes between endpoints
+    # the image field url changes between endpoints
+    # also, admin only fields are not displayed in inlined resources
     minimal_event_dict['images'][0].pop('url')
+    minimal_event_dict['images'][0].pop('created_by')
+    minimal_event_dict['images'][0].pop('last_modified_by')
     assert_event_data_is_equal(minimal_event_dict, response.data)
+
+
+# event_list_url is used as magic fixture, which flake8 doesn't see
+@override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL='')  # noqa
+@pytest.mark.django_db
+def test__update_an_event_with_uploaded_image(
+        api_client, list_url, event_list_url, minimal_event_dict, image_data, user):  # noqa
+    api_client.force_authenticate(user)
+    response = create_with_post(api_client, minimal_event_dict)
+
+    image_response = api_client.post(list_url, image_data)
+    assert image_response.status_code == 201
+    assert Image.objects.all().count() == 1
+
+    image = Image.objects.get(pk=image_response.data['id'])
+    assert image.created_by == user
+    assert image.last_modified_by == user
+
+    minimal_event_dict.update({'images': [{'@id': str(image_response.data['@id'])}]})
+    response2 = update_with_put(api_client, response.data['@id'], minimal_event_dict)
+
+    # the event data should contain the expanded image data
+    minimal_event_dict['images'][0].update(image_response.data)
+    # the image field url changes between endpoints
+    # also, admin only fields are not displayed in inlined resources
+    minimal_event_dict['images'][0].pop('url')
+    minimal_event_dict['images'][0].pop('created_by')
+    minimal_event_dict['images'][0].pop('last_modified_by')
+    assert_event_data_is_equal(minimal_event_dict, response2.data)
 
 
 @pytest.mark.django_db
@@ -360,8 +387,6 @@ def test__upload_an_url_with_api_key(api_client, settings, list_url, image_url, 
     assert ApiKeyUser.objects.all().count() == 1
 
     image = Image.objects.get(pk=response.data['id'])
-    assert image.created_by is None
-    assert image.last_modified_by is None
     assert image.publisher == organization
 
     # image url should stay the same as when input
