@@ -74,6 +74,8 @@ class DataSource(models.Model):
         'django_orghierarchy.Organization', on_delete=models.SET_NULL,
         related_name='owned_systems', null=True, blank=True)
     user_editable = models.BooleanField(default=False, verbose_name=_('Objects may be edited by users'))
+    edit_past_events = models.BooleanField(default=False, verbose_name=_('Past events may be edited using API'))
+    create_past_events = models.BooleanField(default=False, verbose_name=_('Past events may be created using API'))
 
     def __str__(self):
         return self.id

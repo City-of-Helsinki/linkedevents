@@ -155,7 +155,7 @@ admin.site.register(Place, PlaceAdmin)
 
 
 class DataSourceAdmin(BaseAdmin, VersionAdmin):
-    fields = ('id', 'name', 'api_key', 'owner', 'user_editable')
+    fields = ('id', 'name', 'api_key', 'owner', 'user_editable', 'create_past_events', 'edit_past_events')
     autocomplete_fields = ('owner',)
 
     def get_readonly_fields(self, request, obj=None):
