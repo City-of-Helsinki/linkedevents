@@ -458,11 +458,23 @@ def make_location_id():
 
     return _make_location_id
 
+@pytest.mark.django_db
+@pytest.fixture
+def keyword_dict(data_source, organization):
+    return {
+        'origin_id': 'testi-12345',
+        'data_source': data_source.id,
+        "publisher": organization.id,
+        "name": {
+            "fi": "Testi avainsana",
+            "en": "Test keyword",
+        }
+    }
 
 @pytest.mark.django_db
 @pytest.fixture(scope="class")
 def make_keyword():
-    def _make_keyword(data_source, kw_name):
+    def _make_keyword(data_source, organization, kw_name):
         lang_objs = [
             Language.objects.get_or_create(id=lang)[0]
             for lang in ['fi', 'sv', 'en']
@@ -479,6 +491,7 @@ def make_keyword():
         obj = Keyword.objects.create(
             id=data_source.id + ':' + kw_name,
             name=kw_name,
+            publisher=organization,
             data_source=data_source
         )
         for label in labels:
@@ -492,27 +505,27 @@ def make_keyword():
 
 @pytest.mark.django_db
 @pytest.fixture
-def keyword(data_source, kw_name, make_keyword):
-    return make_keyword(data_source, kw_name)
+def keyword(data_source, organization, kw_name, make_keyword):
+    return make_keyword(data_source, organization, kw_name)
 
 
 @pytest.mark.django_db
 @pytest.fixture
-def keyword2(data_source, kw_name_2, make_keyword):
-    return make_keyword(data_source, kw_name_2)
+def keyword2(data_source, organization, kw_name_2, make_keyword):
+    return make_keyword(data_source, organization, kw_name_2)
 
 
 @pytest.mark.django_db
 @pytest.fixture
-def keyword3(data_source, kw_name_3, make_keyword):
-    return make_keyword(data_source, kw_name_3)
+def keyword3(data_source, organization, kw_name_3, make_keyword):
+    return make_keyword(data_source, organization, kw_name_3)
 
 
 @pytest.mark.django_db
 @pytest.fixture(scope="class")
 def make_keyword_id(make_keyword):
-    def _make_keyword_id(data_source, kw_name):
-        obj = make_keyword(data_source, kw_name)
+    def _make_keyword_id(data_source, organization, kw_name):
+        obj = make_keyword(data_source, organization, kw_name)
         obj_id = reverse(KeywordSerializer().view_name, kwargs={'pk': obj.id})
         return obj_id
 
@@ -521,8 +534,8 @@ def make_keyword_id(make_keyword):
 
 @pytest.mark.django_db
 @pytest.fixture
-def keyword_id(data_source, kw_name, make_keyword_id):
-    return make_keyword_id(data_source, kw_name)
+def keyword_id(data_source, organization, kw_name, make_keyword_id):
+    return make_keyword_id(data_source, organization, kw_name)
 
 
 @pytest.mark.django_db
@@ -575,14 +588,14 @@ def make_complex_event_dict(make_keyword_id):
             'event_status': 'EventScheduled',
             'location': {'@id': location_id},
             'keywords': [
-                {'@id': make_keyword_id(data_source, 'simple')},
-                {'@id': make_keyword_id(data_source, 'test')},
-                {'@id': make_keyword_id(data_source, 'keyword')},
+                {'@id': make_keyword_id(data_source, organization, 'simple')},
+                {'@id': make_keyword_id(data_source, organization, 'test')},
+                {'@id': make_keyword_id(data_source, organization, 'keyword')},
             ],
             'audience': [
-                {'@id': make_keyword_id(data_source, 'test_audience1')},
-                {'@id': make_keyword_id(data_source, 'test_audience2')},
-                {'@id': make_keyword_id(data_source, 'test_audience3')},
+                {'@id': make_keyword_id(data_source, organization, 'test_audience1')},
+                {'@id': make_keyword_id(data_source, organization, 'test_audience2')},
+                {'@id': make_keyword_id(data_source, organization, 'test_audience3')},
             ],
             'external_links': [
                 {'name': TEXT_FI, 'link': URL, 'language': 'fi'},

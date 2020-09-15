@@ -752,6 +752,7 @@ class JSONAPIViewMixin(object):
 
 
 class EditableLinkedEventsObjectSerializer(LinkedEventsSerializer):
+    
     def validate_id(self, value):
         if value:
             id_data_source_prefix = value.split(':', 1)[0]
@@ -761,10 +762,11 @@ class EditableLinkedEventsObjectSerializer(LinkedEventsSerializer):
                     if self.publisher.owned_systems.filter(id=id_data_source_prefix).exists():
                         return value
                 raise serializers.ValidationError(
-                        {'id': _("Setting id to %(given)s " +
-                                 " is not allowed for your organization. The id"
-                                 " must be left blank or set to %(data_source)s:desired_id") %
-                            {'given': str(value), 'data_source': self.data_source}})
+                    {'id': _(
+                        "Setting id to %(given)s " +
+                        " is not allowed for your organization. The id"
+                        " must be left blank or set to %(data_source)s:desired_id") %
+                        {'given': str(value), 'data_source': self.data_source}})
         return value
 
     def create(self, validated_data):
@@ -785,10 +787,7 @@ class KeywordSerializer(EditableLinkedEventsObjectSerializer):
         exclude = ('n_events_changed',)
 
 
-class KeywordRetrieveViewSet(mixins.RetrieveModelMixin,
-                             mixins.UpdateModelMixin,
-                             mixins.DestroyModelMixin,
-                             viewsets.GenericViewSet):
+class KeywordRetrieveViewSet(JSONAPIViewMixin, mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):
     queryset = Keyword.objects.all()
     queryset = queryset.select_related('publisher')
     serializer_class = KeywordSerializer
@@ -974,7 +973,7 @@ def filter_division(queryset, name, value):
             return queryset.filter(**{name + '__name__in': names})
 
 
-class PlaceSerializer(EditableLinkedEventsObjectSerializer):
+class PlaceSerializer(EditableLinkedEventsObjectSerializer, GeoModelSerializer):
     id = serializers.CharField(required=False)
     origin_id = serializers.CharField(required=False)
     data_source = serializers.PrimaryKeyRelatedField(queryset=DataSource.objects.all(),
@@ -1310,7 +1309,7 @@ class VideoSerializer(serializers.ModelSerializer):
         exclude = ['id', 'event']
 
 
-class EventSerializer(EditableLinkedEventsObjectSerializer, GeoModelAPIView):
+class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIView):
     id = serializers.CharField(required=False)
     location = JSONLDRelatedField(serializer=PlaceSerializer, required=False, allow_null=True,
                                   view_name='place-detail', queryset=Place.objects.all())
@@ -1459,6 +1458,10 @@ class EventSerializer(EditableLinkedEventsObjectSerializer, GeoModelAPIView):
         return data
 
     def create(self, validated_data):
+        # if id was not provided, we generate it upon creation:
+        if 'id' not in validated_data:
+            validated_data['id'] = generate_id(self.data_source)
+
         offers = validated_data.pop('offers', [])
         links = validated_data.pop('external_links', [])
         videos = validated_data.pop('videos', [])
