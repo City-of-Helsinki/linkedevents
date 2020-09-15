@@ -35,7 +35,7 @@ from munigeo.api import (GeoModelAPIView, GeoModelSerializer,
                          build_bbox_filter, srid_to_srs)
 from munigeo.models import AdministrativeDivision
 from rest_framework import (filters, generics, mixins, permissions, relations,
-                            serializers, viewsets)
+                            serializers, viewsets, status)
 from rest_framework.exceptions import APIException, ParseError
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.fields import DateTimeField
@@ -805,8 +805,6 @@ class KeywordRetrieveViewSet(JSONAPIViewMixin, mixins.RetrieveModelMixin, mixins
     def retrieve(self, request, *args, **kwargs):
         try:
             keyword = Keyword.objects.get(pk=kwargs['pk'])
-            if keyword.deprecated:
-                raise KeywordDeprecatedException()
         except Keyword.DoesNotExist:
             raise Http404()
         if keyword.replaced_by:
@@ -814,6 +812,9 @@ class KeywordRetrieveViewSet(JSONAPIViewMixin, mixins.RetrieveModelMixin, mixins
             return HttpResponsePermanentRedirect(reverse('keyword-detail',
                                                          kwargs={'pk': keyword.pk},
                                                          request=request))
+        if keyword.deprecated:
+            raise KeywordDeprecatedException()
+
         return super().retrieve(request, *args, **kwargs)
 
 class KeywordDeprecatedException(APIException):
