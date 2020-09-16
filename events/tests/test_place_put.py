@@ -85,14 +85,12 @@ def test__correct_api_key_can_update_a_place(api_client, place, place_dict, data
     assert ApiKeyUser.objects.all().count() == 1
 
 
-# @pytest.mark.django_db
-# def test__wrong_api_key_cannot_update_a_place(api_client, place, place_dict, data_source, other_data_source):
-#
-#     detail_url = reverse('place-detail', kwargs={'pk': place.pk})
-#     response = update_with_put(api_client, detail_url, place_dict,
-#                                credentials={'apikey': other_data_source.api_key})
-#     assert response.status_code == 403
-#     assert ApiKeyUser.objects.all().count() == 1
+@pytest.mark.django_db
+def test__wrong_api_key_cannot_update_a_place(api_client, place, place_dict, data_source, other_data_source):
+    detail_url = reverse('place-detail', kwargs={'pk': place.pk})
+    response = update_with_put(api_client, detail_url, place_dict,
+                               credentials={'apikey': other_data_source.api_key})
+    assert response.status_code == 403
 
 
 @pytest.mark.django_db
