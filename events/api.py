@@ -579,8 +579,8 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
             ret['@type'] = obj.__class__.__name__
         # display non-public fields if 1) obj has publisher org and 2) user belongs to the same org tree
         # never modify self.skip_fields, as it survives multiple calls in the serializer across objects
-        obj_skip_fields = set(self.skip_fields)
-        if hasattr(self, 'user') and self.user and hasattr(obj, 'publisher') and obj.publisher and obj.publisher.tree_id in self.admin_tree_ids:
+        obj_skip_fields = set(self.skip_fields)        
+        if self.user and hasattr(obj, 'publisher') and obj.publisher and obj.publisher.tree_id in self.admin_tree_ids:
             for field in self.only_admin_visible_fields:
                 obj_skip_fields.remove(field)
         for field in obj_skip_fields:
@@ -788,7 +788,11 @@ class KeywordSerializer(EditableLinkedEventsObjectSerializer):
         exclude = ('n_events_changed',)
 
 
-class KeywordRetrieveViewSet(JSONAPIViewMixin, mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):
+class KeywordRetrieveViewSet(JSONAPIViewMixin, 
+                            mixins.RetrieveModelMixin, 
+                            mixins.UpdateModelMixin, 
+                            mixins.DestroyModelMixin, 
+                            viewsets.GenericViewSet):
     queryset = Keyword.objects.all()
     queryset = queryset.select_related('publisher')
     serializer_class = KeywordSerializer
@@ -823,7 +827,10 @@ class KeywordDeprecatedException(APIException):
     default_detail = 'Keyword has been deprecated.'
     default_code = 'gone'
 
-class KeywordListViewSet(JSONAPIViewMixin, mixins.ListModelMixin, mixins.CreateModelMixin, viewsets.GenericViewSet):
+class KeywordListViewSet(JSONAPIViewMixin, 
+                        mixins.ListModelMixin, 
+                        mixins.CreateModelMixin, 
+                        viewsets.GenericViewSet):
     queryset = Keyword.objects.all()
     queryset = queryset.select_related('publisher').prefetch_related('alt_labels__name')
     serializer_class = KeywordSerializer
@@ -1006,11 +1013,12 @@ class PlaceFilter(django_filters.rest_framework.FilterSet):
         return filter_division(queryset, name, value)
 
 
-class PlaceRetrieveViewSet(JSONAPIViewMixin, GeoModelAPIView,
-                           viewsets.GenericViewSet,
-                           mixins.UpdateModelMixin,
-                           mixins.DestroyModelMixin,                           
-                           mixins.RetrieveModelMixin):
+class PlaceRetrieveViewSet(JSONAPIViewMixin, 
+                            GeoModelAPIView,
+                            mixins.RetrieveModelMixin, 
+                            mixins.UpdateModelMixin, 
+                            mixins.DestroyModelMixin, 
+                            viewsets.GenericViewSet):
     queryset = Place.objects.all()
     queryset = queryset.select_related('publisher')
     serializer_class = PlaceSerializer
@@ -1051,11 +1059,11 @@ class PlaceDeletedException(APIException):
     default_detail = 'Place has been deleted.'
     default_code = 'gone'
 
-
 class PlaceListViewSet(GeoModelAPIView,
-                       viewsets.GenericViewSet,
-                       mixins.ListModelMixin,
-                       mixins.CreateModelMixin):
+                        JSONAPIViewMixin, 
+                        mixins.ListModelMixin, 
+                        mixins.CreateModelMixin, 
+                        viewsets.GenericViewSet):
     queryset = Place.objects.all()
     queryset = queryset.select_related('publisher')
     serializer_class = PlaceSerializer
