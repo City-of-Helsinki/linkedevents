@@ -580,7 +580,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         # display non-public fields if 1) obj has publisher org and 2) user belongs to the same org tree
         # never modify self.skip_fields, as it survives multiple calls in the serializer across objects
         obj_skip_fields = set(self.skip_fields)
-        if self.user and hasattr(obj, 'publisher') and obj.publisher and obj.publisher.tree_id in self.admin_tree_ids:
+        if hasattr(self, 'user') and self.user and hasattr(obj, 'publisher') and obj.publisher and obj.publisher.tree_id in self.admin_tree_ids:
             for field in self.only_admin_visible_fields:
                 obj_skip_fields.remove(field)
         for field in obj_skip_fields:
