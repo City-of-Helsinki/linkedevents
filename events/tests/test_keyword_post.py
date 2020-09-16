@@ -71,12 +71,12 @@ def test__api_key_with_organization_can_create_a_keyword(api_client, keyword_dic
     assert ApiKeyUser.objects.all().count() == 1
 
 
-#@pytest.mark.django_db
-#def test__api_key_without_organization_cannot_create_a_keyword(api_client, keyword_dict, data_source):
+# @pytest.mark.django_db
+# def test__api_key_without_organization_cannot_create_a_keyword(api_client, keyword_dict, data_source):
 #
-#    api_client.credentials(apikey=data_source.api_key)
-#    response = api_client.post(reverse('keyword-list'), keyword_dict, format='json')
-#    assert response.status_code == 403
+#     api_client.credentials(apikey=data_source.api_key)
+#     response = api_client.post(reverse('keyword-list'), keyword_dict, format='json')
+#     assert response.status_code == 403
 
 
 @pytest.mark.django_db

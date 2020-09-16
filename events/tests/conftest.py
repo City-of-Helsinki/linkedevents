@@ -458,6 +458,7 @@ def make_location_id():
 
     return _make_location_id
 
+
 @pytest.mark.django_db
 @pytest.fixture
 def keyword_dict(data_source, organization):
@@ -470,6 +471,7 @@ def keyword_dict(data_source, organization):
             "en": "Test keyword",
         }
     }
+
 
 @pytest.mark.django_db
 @pytest.fixture(scope="class")
