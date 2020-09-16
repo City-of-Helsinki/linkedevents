@@ -777,6 +777,7 @@ class EditableLinkedEventsObjectSerializer(LinkedEventsSerializer):
 
 
 class KeywordSerializer(EditableLinkedEventsObjectSerializer):
+    id = serializers.CharField(required=False)
     view_name = 'keyword-detail'
     alt_labels = serializers.SlugRelatedField(slug_field='name', read_only=True, many=True)
     created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)

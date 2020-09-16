@@ -367,6 +367,13 @@ class Keyword(BaseModel, ImageMixin, ReplacedByMixin):
                     event.audience.remove(self)
                     event.audience.add(self.replaced_by)
 
+
+    def can_be_edited_by(self, user):
+        """Check if current place can be edited by the given user"""
+        if user.is_superuser:
+            return True
+        return user.is_admin(self.publisher)
+
     class Meta:
         verbose_name = _('keyword')
         verbose_name_plural = _('keywords')
