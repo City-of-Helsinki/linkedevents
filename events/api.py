@@ -656,43 +656,6 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         super().validate(data)
         return data
 
-    def create(self, validated_data):
-        if 'data_source' not in validated_data:
-            validated_data['data_source'] = self.data_source
-        # data source has already been validated
-        if 'publisher' not in validated_data:
-            validated_data['publisher'] = self.publisher
-        # publisher has already been validated
-        validated_data['created_by'] = self.user
-        validated_data['last_modified_by'] = self.user
-        try:
-            instance = super().create(validated_data)
-        except IntegrityError as error:
-            if 'duplicate' and 'pkey' in str(error):
-                raise serializers.ValidationError({'id': _("An object with given id already exists.")})
-            else:
-                raise error
-        return instance
-
-    def update(self, instance, validated_data):
-        validated_data['last_modified_by'] = self.user
-
-        if 'id' in validated_data:
-            if instance.id != validated_data['id']:
-                raise serializers.ValidationError({'id': _("You may not change the id of an existing object.")})
-        if 'publisher' in validated_data:
-            if validated_data['publisher'] not in (instance.publisher, instance.publisher.replaced_by):
-                raise serializers.ValidationError(
-                    {'publisher': _("You may not change the publisher of an existing object.")}
-                    )
-        if 'data_source' in validated_data:
-            if instance.data_source != validated_data['data_source']:
-                raise serializers.ValidationError(
-                    {'data_source': _("You may not change the data source of an existing object.")}
-                    )
-        super().update(instance, validated_data)
-        return instance
-
 
 def _clean_qp(query_params):
     """
@@ -753,6 +716,51 @@ class JSONAPIViewMixin(object):
 
 class EditableLinkedEventsObjectSerializer(LinkedEventsSerializer):
 
+    def create(self, validated_data):
+        if 'data_source' not in validated_data:
+            validated_data['data_source'] = self.data_source
+        # data source has already been validated
+        if 'publisher' not in validated_data:
+            validated_data['publisher'] = self.publisher
+        # publisher has already been validated
+        validated_data['created_by'] = self.user
+        validated_data['last_modified_by'] = self.user
+        try:
+            instance = super().create(validated_data)
+        except IntegrityError as error:
+            if 'duplicate' and 'pkey' in str(error):
+                raise serializers.ValidationError({'id': _("An object with given id already exists.")})
+            else:
+                raise error
+        return instance
+
+    def update(self, instance, validated_data):
+        validated_data['last_modified_by'] = self.user
+
+        if 'id' in validated_data:
+            if instance.id != validated_data['id']:
+                raise serializers.ValidationError({'id': _("You may not change the id of an existing object.")})
+        if 'publisher' in validated_data:
+            if validated_data['publisher'] not in (instance.publisher, instance.publisher.replaced_by):
+                raise serializers.ValidationError(
+                    {'publisher': _("You may not change the publisher of an existing object.")}
+                    )
+        if 'data_source' in validated_data:
+            if instance.data_source != validated_data['data_source']:
+                raise serializers.ValidationError(
+                    {'data_source': _("You may not change the data source of an existing object.")}
+                    )
+        super().update(instance, validated_data)
+        return instance        
+
+
+class KeywordSerializer(EditableLinkedEventsObjectSerializer):
+    id = serializers.CharField(required=False)
+    view_name = 'keyword-detail'
+    alt_labels = serializers.SlugRelatedField(slug_field='name', read_only=True, many=True)
+    created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
+    last_modified_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
+
     def validate_id(self, value):
         if value:
             id_data_source_prefix = value.split(':', 1)[0]
@@ -774,14 +782,6 @@ class EditableLinkedEventsObjectSerializer(LinkedEventsSerializer):
         if 'id' not in validated_data:
             validated_data['id'] = generate_id(self.data_source)
         return super().create(validated_data)
-
-
-class KeywordSerializer(EditableLinkedEventsObjectSerializer):
-    id = serializers.CharField(required=False)
-    view_name = 'keyword-detail'
-    alt_labels = serializers.SlugRelatedField(slug_field='name', read_only=True, many=True)
-    created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
-    last_modified_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
 
     class Meta:
         model = Keyword
@@ -884,9 +884,6 @@ class KeywordListViewSet(JSONAPIViewMixin,
             qset = _text_qset_by_translated_field('name', val) | Q(alt_labels__name__icontains=val)
             queryset = queryset.filter(qset).distinct()
         return queryset
-
-    def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
 
 
 register_view(KeywordRetrieveViewSet, 'keyword')
@@ -997,6 +994,12 @@ class PlaceSerializer(EditableLinkedEventsObjectSerializer, GeoModelSerializer):
     created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
     last_modified_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
 
+    def create(self, validated_data):
+        # if id was not provided, we generate it upon creation:
+        if 'id' not in validated_data:
+            validated_data['id'] = generate_id(self.data_source)
+        return super().create(validated_data)
+        
     class Meta:
         model = Place
         exclude = ('n_events_changed',)
@@ -1235,7 +1238,7 @@ class OfferSerializer(TranslatedModelSerializer):
         exclude = ['id', 'event']
 
 
-class ImageSerializer(LinkedEventsSerializer):
+class ImageSerializer(EditableLinkedEventsObjectSerializer):
     view_name = 'image-detail'
     license = serializers.PrimaryKeyRelatedField(queryset=License.objects.all(), required=False)
     created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
@@ -1321,7 +1324,7 @@ class VideoSerializer(serializers.ModelSerializer):
         exclude = ['id', 'event']
 
 
-class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIView):
+class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer, GeoModelAPIView):
     id = serializers.CharField(required=False)
     location = JSONLDRelatedField(serializer=PlaceSerializer, required=False, allow_null=True,
                                   view_name='place-detail', queryset=Place.objects.all())
