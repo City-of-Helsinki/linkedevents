@@ -95,7 +95,7 @@ def test__empty_api_key_cannot_create_a_keyword(api_client, keyword_dict):
 
 
 @pytest.mark.django_db
-def test__non_user_editable_cannot_create_a_keyword(api_client, keyword, keyword_dict, data_source, organization, user):
+def test__non_user_editable_cannot_create_keyword(api_client, keyword, keyword_dict, data_source, organization, user):
     data_source.owner = organization
     data_source.user_editable = False
     data_source.save()
@@ -105,7 +105,7 @@ def test__non_user_editable_cannot_create_a_keyword(api_client, keyword, keyword
 
 
 @pytest.mark.django_db
-def test__user_editable_can_create_a_keyword(api_client, keyword, keyword_dict, data_source, organization, user):
+def test__user_editable_can_create_keyword(api_client, keyword, keyword_dict, data_source, organization, user):
     data_source.owner = organization
     data_source.user_editable = True
     data_source.save()

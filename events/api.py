@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from pprint import pprint
 import base64
 import re
 import struct
@@ -756,7 +755,7 @@ class EditableLinkedEventsObjectSerializer(LinkedEventsSerializer):
                     {'data_source': _("You may not change the data source of an existing object.")}
                     )
         super().update(instance, validated_data)
-        return instance        
+        return instance
 
 
 class KeywordSerializer(EditableLinkedEventsObjectSerializer):
@@ -1004,7 +1003,7 @@ class PlaceSerializer(EditableLinkedEventsObjectSerializer, GeoModelSerializer):
         if 'id' not in validated_data:
             validated_data['id'] = generate_id(self.data_source)
         return super().create(validated_data)
-        
+
     class Meta:
         model = Place
         exclude = ('n_events_changed',)
