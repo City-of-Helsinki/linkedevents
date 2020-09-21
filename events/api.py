@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+from pprint import pprint
 import base64
 import re
 import struct
@@ -725,6 +726,10 @@ class EditableLinkedEventsObjectSerializer(LinkedEventsSerializer):
         # publisher has already been validated
         validated_data['created_by'] = self.user
         validated_data['last_modified_by'] = self.user
+
+        if not isinstance(self.user, ApiKeyUser) and not validated_data['data_source'].user_editable:
+            raise PermissionDenied()
+
         try:
             instance = super().create(validated_data)
         except IntegrityError as error:

@@ -120,3 +120,23 @@ def test__empty_api_key_cannot_update_a_keyword(api_client, keyword, keyword_dic
     response = update_with_put(api_client, detail_url, keyword_dict,
                                credentials={'apikey': ''})
     assert response.status_code == 401
+
+@pytest.mark.django_db
+def test__non_user_editable_cannot_update_a_keyword(api_client, keyword, keyword_dict, data_source, organization, user):
+    data_source.owner = organization
+    data_source.user_editable = False
+    data_source.save()
+    api_client.force_authenticate(user=user)
+    detail_url = reverse('keyword-detail', kwargs={'pk': keyword.pk})
+    response = update_with_put(api_client, detail_url, keyword_dict)
+    assert response.status_code == 403
+
+@pytest.mark.django_db
+def test__user_editable_can_update_a_keyword(api_client, keyword, keyword_dict, data_source, organization, user):
+    data_source.owner = organization
+    data_source.user_editable = True
+    data_source.save()
+    api_client.force_authenticate(user=user)
+    detail_url = reverse('keyword-detail', kwargs={'pk': keyword.pk})
+    response = update_with_put(api_client, detail_url, keyword_dict)
+    assert response.status_code == 200
