@@ -59,6 +59,8 @@ class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
 
     @property
     def admin_organizations(self):
+        if not self.data_source.owner:
+            return Organization.objects.none()
         return Organization.objects.filter(id=self.data_source.owner.id)
 
     @property
