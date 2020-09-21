@@ -93,6 +93,7 @@ def test__empty_api_key_cannot_create_a_keyword(api_client, keyword_dict):
     response = api_client.post(reverse('keyword-list'), keyword_dict, format='json')
     assert response.status_code == 401
 
+
 @pytest.mark.django_db
 def test__non_user_editable_cannot_create_a_keyword(api_client, keyword, keyword_dict, data_source, organization, user):
     data_source.owner = organization
@@ -101,6 +102,7 @@ def test__non_user_editable_cannot_create_a_keyword(api_client, keyword, keyword
     api_client.force_authenticate(user=user)
     response = api_client.post(reverse('keyword-list'), keyword_dict, format='json')
     assert response.status_code == 403
+
 
 @pytest.mark.django_db
 def test__user_editable_can_create_a_keyword(api_client, keyword, keyword_dict, data_source, organization, user):
