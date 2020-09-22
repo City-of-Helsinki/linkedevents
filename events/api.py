@@ -893,8 +893,7 @@ class KeywordListViewSet(JSONAPIViewMixin,
 register_view(KeywordRetrieveViewSet, 'keyword')
 register_view(KeywordListViewSet, 'keyword')
 
-
-class KeywordSetSerializer(LinkedEventsSerializer):
+class KeywordSetSerializer(EditableLinkedEventsObjectSerializer):
     view_name = 'keywordset-detail'
     keywords = JSONLDRelatedField(
         serializer=KeywordSerializer, many=True, required=True, allow_empty=False,
@@ -902,13 +901,18 @@ class KeywordSetSerializer(LinkedEventsSerializer):
     usage = EnumChoiceField(KeywordSet.USAGES)
     created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
     last_modified_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
+    
+    def create(self, validated_data):
+        # if id was not provided, we generate it upon creation:
+        if 'id' not in validated_data:
+            validated_data['id'] = generate_id(self.data_source)
+        return super().create(validated_data)
 
     class Meta:
         model = KeywordSet
         fields = '__all__'
 
-
-class KeywordSetViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
+class KeywordSetViewSet(JSONAPIViewMixin, mixins.ListModelMixin, mixins.CreateModelMixin, viewsets.GenericViewSet):
     queryset = KeywordSet.objects.all()
     serializer_class = KeywordSetSerializer
 
