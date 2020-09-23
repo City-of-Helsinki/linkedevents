@@ -637,7 +637,7 @@ class TurkuOriginalImporter(Importer):
             if event_type == "m":
                 evItem['super_event_type'] = Event.SuperEventType.RECURRING
             if event_type == "c" or event_type == "s":
-                evItem['super_event_type'] = ""
+                evItem['super_event_type'] = None
 
             return evItem
 
