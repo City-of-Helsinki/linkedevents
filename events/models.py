@@ -314,6 +314,12 @@ class Keyword(BaseModel, ImageMixin, ReplacedByMixin):
     def __str__(self):
         return self.name
 
+    def is_admin(self, user):
+        if user.is_superuser:
+            return True
+        else:
+            return user in self.publisher.admin_users.all()
+
     def deprecate(self):
         self.deprecated = True
         self.save(update_fields=['deprecated'])
@@ -362,6 +368,12 @@ class Keyword(BaseModel, ImageMixin, ReplacedByMixin):
                 if self in event.audience.all():
                     event.audience.remove(self)
                     event.audience.add(self.replaced_by)
+
+    def can_be_edited_by(self, user):
+        """Check if current place can be edited by the given user"""
+        if user.is_superuser:
+            return True
+        return user.is_admin(self.publisher)
 
     class Meta:
         verbose_name = _('keyword')
@@ -481,6 +493,26 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin, ReplacedByMi
                 geometry__boundary__contains=self.position))
         else:
             self.divisions.clear()
+
+    def is_admin(self, user):
+        if user.is_superuser:
+            return True
+        else:
+            return user in self.publisher.admin_users.all()
+
+    def soft_delete(self, using=None):
+        self.deleted = True
+        self.save(update_fields=("deleted",), using=using, force_update=True)
+
+    def undelete(self, using=None):
+        self.deleted = False
+        self.save(update_fields=("deleted",), using=using, force_update=True)
+
+    def can_be_edited_by(self, user):
+        """Check if current place can be edited by the given user"""
+        if user.is_superuser:
+            return True
+        return user.is_admin(self.publisher)
 
 
 reversion.register(Place)
