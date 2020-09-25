@@ -35,7 +35,7 @@ from munigeo.api import (GeoModelAPIView, GeoModelSerializer,
                          build_bbox_filter, srid_to_srs)
 from munigeo.models import AdministrativeDivision
 from rest_framework import (filters, generics, mixins, permissions, relations,
-                            serializers, viewsets)
+                            serializers, viewsets, status)
 from rest_framework.exceptions import APIException, ParseError
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.fields import DateTimeField
@@ -656,43 +656,6 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         super().validate(data)
         return data
 
-    def create(self, validated_data):
-        if 'data_source' not in validated_data:
-            validated_data['data_source'] = self.data_source
-        # data source has already been validated
-        if 'publisher' not in validated_data:
-            validated_data['publisher'] = self.publisher
-        # publisher has already been validated
-        validated_data['created_by'] = self.user
-        validated_data['last_modified_by'] = self.user
-        try:
-            instance = super().create(validated_data)
-        except IntegrityError as error:
-            if 'duplicate' and 'pkey' in str(error):
-                raise serializers.ValidationError({'id': _("An object with given id already exists.")})
-            else:
-                raise error
-        return instance
-
-    def update(self, instance, validated_data):
-        validated_data['last_modified_by'] = self.user
-
-        if 'id' in validated_data:
-            if instance.id != validated_data['id']:
-                raise serializers.ValidationError({'id': _("You may not change the id of an existing object.")})
-        if 'publisher' in validated_data:
-            if validated_data['publisher'] not in (instance.publisher, instance.publisher.replaced_by):
-                raise serializers.ValidationError(
-                    {'publisher': _("You may not change the publisher of an existing object.")}
-                    )
-        if 'data_source' in validated_data:
-            if instance.data_source != validated_data['data_source']:
-                raise serializers.ValidationError(
-                    {'data_source': _("You may not change the data source of an existing object.")}
-                    )
-        super().update(instance, validated_data)
-        return instance
-
 
 def _clean_qp(query_params):
     """
@@ -751,21 +714,117 @@ class JSONAPIViewMixin(object):
         return context
 
 
-class KeywordSerializer(LinkedEventsSerializer):
+class EditableLinkedEventsObjectSerializer(LinkedEventsSerializer):
+
+    def create(self, validated_data):
+        if 'data_source' not in validated_data:
+            validated_data['data_source'] = self.data_source
+        # data source has already been validated
+        if 'publisher' not in validated_data:
+            validated_data['publisher'] = self.publisher
+        # publisher has already been validated
+        validated_data['created_by'] = self.user
+        validated_data['last_modified_by'] = self.user
+
+        if not isinstance(self.user, ApiKeyUser) and not validated_data['data_source'].user_editable:
+            raise PermissionDenied()
+
+        try:
+            instance = super().create(validated_data)
+        except IntegrityError as error:
+            if 'duplicate' and 'pkey' in str(error):
+                raise serializers.ValidationError({'id': _("An object with given id already exists.")})
+            else:
+                raise error
+        return instance
+
+    def update(self, instance, validated_data):
+        validated_data['last_modified_by'] = self.user
+
+        if 'id' in validated_data:
+            if instance.id != validated_data['id']:
+                raise serializers.ValidationError({'id': _("You may not change the id of an existing object.")})
+        if 'publisher' in validated_data:
+            if validated_data['publisher'] not in (instance.publisher, instance.publisher.replaced_by):
+                raise serializers.ValidationError(
+                    {'publisher': _("You may not change the publisher of an existing object.")}
+                    )
+        if 'data_source' in validated_data:
+            if instance.data_source != validated_data['data_source']:
+                raise serializers.ValidationError(
+                    {'data_source': _("You may not change the data source of an existing object.")}
+                    )
+        super().update(instance, validated_data)
+        return instance
+
+
+class KeywordSerializer(EditableLinkedEventsObjectSerializer):
+    id = serializers.CharField(required=False)
     view_name = 'keyword-detail'
     alt_labels = serializers.SlugRelatedField(slug_field='name', read_only=True, many=True)
     created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
     last_modified_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
+
+    def validate_id(self, value):
+        if value:
+            id_data_source_prefix = value.split(':', 1)[0]
+            if not id_data_source_prefix == self.data_source.id:
+                # the object might be from another data source by the same organization, and we are only editing it
+                if self.instance:
+                    if self.publisher.owned_systems.filter(id=id_data_source_prefix).exists():
+                        return value
+                raise serializers.ValidationError(
+                    {'id': _(
+                        "Setting id to %(given)s " +
+                        " is not allowed for your organization. The id"
+                        " must be left blank or set to %(data_source)s:desired_id") %
+                        {'given': str(value), 'data_source': self.data_source}})
+        return value
+
+    def create(self, validated_data):
+        # if id was not provided, we generate it upon creation:
+        if 'id' not in validated_data:
+            validated_data['id'] = generate_id(self.data_source)
+        return super().create(validated_data)
 
     class Meta:
         model = Keyword
         exclude = ('n_events_changed',)
 
 
-class KeywordRetrieveViewSet(JSONAPIViewMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+class KeywordRetrieveViewSet(JSONAPIViewMixin,
+                             mixins.RetrieveModelMixin,
+                             mixins.UpdateModelMixin,
+                             mixins.DestroyModelMixin,
+                             viewsets.GenericViewSet):
     queryset = Keyword.objects.all()
     queryset = queryset.select_related('publisher')
     serializer_class = KeywordSerializer
+
+    def update(self, request, *args, **kwargs):
+        self.data_source, self.organization = get_authenticated_data_source_and_publisher(self.request)
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        self.data_source, self.organization = get_authenticated_data_source_and_publisher(self.request)
+        instance = self.get_object()
+        user = request.user
+
+        if not instance.can_be_edited_by(user):
+            raise PermissionDenied()
+
+        if isinstance(user, ApiKeyUser):
+            # allow deleting only if the api key matches instance data source
+            if not instance.data_source == self.data_source:
+                raise PermissionDenied()
+        else:
+            # without api key, the user will have to be admin
+            if not instance.is_user_editable():
+                raise PermissionDenied()
+
+        instance.deprecate()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def retrieve(self, request, *args, **kwargs):
         try:
@@ -777,10 +836,22 @@ class KeywordRetrieveViewSet(JSONAPIViewMixin, mixins.RetrieveModelMixin, viewse
             return HttpResponsePermanentRedirect(reverse('keyword-detail',
                                                          kwargs={'pk': keyword.pk},
                                                          request=request))
+        if keyword.deprecated:
+            raise KeywordDeprecatedException()
+
         return super().retrieve(request, *args, **kwargs)
 
 
-class KeywordListViewSet(JSONAPIViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
+class KeywordDeprecatedException(APIException):
+    status_code = 410
+    default_detail = 'Keyword has been deprecated.'
+    default_code = 'gone'
+
+
+class KeywordListViewSet(JSONAPIViewMixin,
+                         mixins.ListModelMixin,
+                         mixins.CreateModelMixin,
+                         viewsets.GenericViewSet):
     queryset = Keyword.objects.all()
     queryset = queryset.select_related('publisher').prefetch_related('alt_labels__name')
     serializer_class = KeywordSerializer
@@ -930,11 +1001,24 @@ def filter_division(queryset, name, value):
             return queryset.filter(**{name + '__name__in': names})
 
 
-class PlaceSerializer(LinkedEventsSerializer, GeoModelSerializer):
+class PlaceSerializer(EditableLinkedEventsObjectSerializer, GeoModelSerializer):
+    id = serializers.CharField(required=False)
+    origin_id = serializers.CharField(required=False)
+    data_source = serializers.PrimaryKeyRelatedField(queryset=DataSource.objects.all(),
+                                                     required=False, allow_null=True)
+    publisher = serializers.PrimaryKeyRelatedField(queryset=Organization.objects.all(),
+                                                   required=False, allow_null=True)
+
     view_name = 'place-detail'
     divisions = DivisionSerializer(many=True, read_only=True)
     created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
     last_modified_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
+
+    def create(self, validated_data):
+        # if id was not provided, we generate it upon creation:
+        if 'id' not in validated_data:
+            validated_data['id'] = generate_id(self.data_source)
+        return super().create(validated_data)
 
     class Meta:
         model = Place
@@ -954,12 +1038,45 @@ class PlaceFilter(django_filters.rest_framework.FilterSet):
         return filter_division(queryset, name, value)
 
 
-class PlaceRetrieveViewSet(JSONAPIViewMixin, GeoModelAPIView,
-                           viewsets.GenericViewSet,
-                           mixins.RetrieveModelMixin):
+class PlaceRetrieveViewSet(JSONAPIViewMixin,
+                           GeoModelAPIView,
+                           mixins.RetrieveModelMixin,
+                           mixins.UpdateModelMixin,
+                           mixins.DestroyModelMixin,
+                           viewsets.GenericViewSet):
     queryset = Place.objects.all()
     queryset = queryset.select_related('publisher')
     serializer_class = PlaceSerializer
+
+    def get_serializer_context(self):
+        context = super(PlaceRetrieveViewSet, self).get_serializer_context()
+        context.setdefault('skip_fields', set()).add('origin_id')
+        return context
+
+    def update(self, request, *args, **kwargs):
+        self.data_source, self.organization = get_authenticated_data_source_and_publisher(self.request)
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        self.data_source, self.organization = get_authenticated_data_source_and_publisher(self.request)
+        instance = self.get_object()
+        user = request.user
+
+        if not instance.can_be_edited_by(user):
+            raise PermissionDenied()
+
+        if isinstance(user, ApiKeyUser):
+            # allow deleting only if the api key matches instance data source
+            if not instance.data_source == self.data_source:
+                raise PermissionDenied()
+        else:
+            # without api key, the user will have to be admin
+            if not instance.is_user_editable():
+                raise PermissionDenied()
+
+        instance.soft_delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def retrieve(self, request, *args, **kwargs):
         try:
@@ -972,12 +1089,22 @@ class PlaceRetrieveViewSet(JSONAPIViewMixin, GeoModelAPIView,
                 return HttpResponsePermanentRedirect(reverse('place-detail',
                                                              kwargs={'pk': place.pk},
                                                              request=request))
+            else:
+                raise PlaceDeletedException()
         return super().retrieve(request, *args, **kwargs)
 
 
-class PlaceListViewSet(JSONAPIViewMixin, GeoModelAPIView,
-                       viewsets.GenericViewSet,
-                       mixins.ListModelMixin):
+class PlaceDeletedException(APIException):
+    status_code = 410
+    default_detail = 'Place has been deleted.'
+    default_code = 'gone'
+
+
+class PlaceListViewSet(GeoModelAPIView,
+                       JSONAPIViewMixin,
+                       mixins.ListModelMixin,
+                       mixins.CreateModelMixin,
+                       viewsets.GenericViewSet):
     queryset = Place.objects.all()
     queryset = queryset.select_related('publisher')
     serializer_class = PlaceSerializer
@@ -1147,7 +1274,7 @@ class OfferSerializer(TranslatedModelSerializer):
         exclude = ['id', 'event']
 
 
-class ImageSerializer(LinkedEventsSerializer):
+class ImageSerializer(EditableLinkedEventsObjectSerializer):
     view_name = 'image-detail'
     license = serializers.PrimaryKeyRelatedField(queryset=License.objects.all(), required=False)
     created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
@@ -1233,7 +1360,7 @@ class VideoSerializer(serializers.ModelSerializer):
         exclude = ['id', 'event']
 
 
-class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIView):
+class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer, GeoModelAPIView):
     id = serializers.CharField(required=False)
     location = JSONLDRelatedField(serializer=PlaceSerializer, required=False, allow_null=True,
                                   view_name='place-detail', queryset=Place.objects.all())
