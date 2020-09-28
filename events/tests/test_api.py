@@ -4,7 +4,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django_orghierarchy.models import Organization
-from rest_framework import status, serializers
+from rest_framework import status
 from rest_framework.test import APITestCase
 
 from .utils import versioned_reverse as reverse
@@ -65,11 +65,16 @@ def test_serializer_validate_publisher():
         data_source=data_source,
         replaced_by=org_1,
     )
+    user_model = get_user_model()
+    user = user_model.objects.create(username='testuser')
+    user.admin_organizations.add(org_2)
 
     le_serializer = EventSerializer()
     le_serializer.publisher = org_2
-    with pytest.raises(serializers.ValidationError):
-        le_serializer.validate_publisher(org_2)
+    le_serializer.user = user
+    le_serializer.method = 'POST'
+
+    assert le_serializer.validate_publisher(org_2) == org_1
 
 
 class TestOrganizationSerializer(TestCase):
@@ -92,6 +97,15 @@ class TestOrganizationSerializer(TestCase):
             parent=self.normal_org,
             internal_type=Organization.AFFILIATED,
         )
+        self.org_with_regular_users = Organization.objects.create(
+            name='org_with_regular_users',
+            origin_id='org_with_regular_users',
+            data_source=data_source,
+        )
+        user_model = get_user_model()
+        user = user_model.objects.create(username='regular_user')
+        user2 = user_model.objects.create(username='regular_user2')
+        self.org_with_regular_users.regular_users.add(user, user2)
 
     def test_get_is_affiliated(self):
         is_affiliated = self.serializer.get_is_affiliated(self.normal_org)
@@ -99,6 +113,13 @@ class TestOrganizationSerializer(TestCase):
 
         is_affiliated = self.serializer.get_is_affiliated(self.affiliated_org)
         self.assertTrue(is_affiliated)
+
+    def test_has_regular_users(self):
+        has_regular_users = self.serializer.get_has_regular_users(self.normal_org)
+        self.assertFalse(has_regular_users)
+
+        has_regular_users = self.serializer.get_has_regular_users(self.org_with_regular_users)
+        self.assertTrue(has_regular_users)
 
 
 class TestOrganizationAPI(APITestCase):
@@ -138,6 +159,22 @@ class TestOrganizationAPI(APITestCase):
 
         self.assertEqual(response.data['sub_organizations'], [normal_org_url])
         self.assertEqual(response.data['affiliated_organizations'], [affiliated_org_url])
+
+    def test_child_and_parent_filters(self):
+        url = reverse('organization-list') + '?parent=' + self.org.id
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['data']), 2)
+
+        url = reverse('organization-list') + '?child=' + self.normal_org.id
+        response = self.client.get(url)
+        parent = response.data['data'][0]
+        self.assertEqual(parent.pop('id'), self.org.id)
+
+        url = reverse('organization-list') + '?child=' + 'invalid_id'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['data']), 0)
 
 
 class TestImageAPI(APITestCase):

@@ -3,7 +3,7 @@ from functools import lru_cache
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from events.models import Event, Keyword, KeywordSet
+from events.models import Event, Keyword, KeywordSet, DataSource
 
 HELSINKI_KEYWORD_SET_DATA = {
     'id': 'helsinki:audiences',
@@ -20,7 +20,7 @@ KEYWORD_MAPPING = {
     'helfi:2': ['yso:p11617'],  # nuoret -> nuoret (ikään liittyvä rooli)
     'helfi:3': ['yso:p6165'],  # maahanmuuttajat -> maahanmuuttajat
     'helfi:4': ['yso:p7179'],  # vammaiset -> vammaiset
-    'helfi:5': ['yso:p2434'],  # vanhukset -> vanhukset
+    'helfi:5': ['yso:p2433'],  # vanhukset -> ikääntyneet
     'helfi:6': ['yso:p3128'],  # yritykset -> yritykset
     'helfi:7': ['yso:p1393'],  # yhdistykset -> järjestöt
 }
@@ -116,6 +116,11 @@ class Command(BaseCommand):
                         self.stdout.write('added %s (%s) to %s' % (yso_keyword_obj, yso_keyword_id, event))
 
     def handle(self, *args, **options):
+        # Helsinki data source must be created if missing. Note that it is not necessarily the system data source.
+        # If we are creating it, it *may* still be the system data source, so it must be user editable!
+        helsinki_data_source_defaults = {'user_editable': True}
+        DataSource.objects.get_or_create(id=HELSINKI_KEYWORD_SET_DATA['data_source_id'],
+                                         defaults=helsinki_data_source_defaults)
         self.create_sote_keywords()
         self.create_helsinki_audiences_keyword_set()
         self.add_yso_audience_keywords_to_events()

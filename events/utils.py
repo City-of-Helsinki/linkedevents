@@ -94,11 +94,13 @@ def recache_n_events_in_locations(place_ids, all=False):
 def parse_time(time_str, is_start):
     local_tz = pytz.timezone(settings.TIME_ZONE)
     time_str = time_str.strip()
+    is_exact = True
     # Handle dates first. Assume dates are given in local timezone.
     # FIXME: What if there's no local timezone?
     try:
         dt = datetime.strptime(time_str, '%Y-%m-%d')
         dt = local_tz.localize(dt)
+        is_exact = False
     except ValueError:
         dt = None
     if not dt:
@@ -106,16 +108,41 @@ def parse_time(time_str, is_start):
             dt = datetime.utcnow().replace(tzinfo=pytz.utc)
             dt = dt.astimezone(local_tz)
             dt = dt.replace(hour=0, minute=0, second=0, microsecond=0)
-    if dt:
+            is_exact = False
+        if time_str.lower() == 'now':
+            dt = datetime.utcnow().replace(tzinfo=pytz.utc)
+            is_exact = True
+    if dt and not is_exact:
         # With start timestamps, we treat dates as beginning
         # at midnight the same day. End timestamps are taken to
         # mean midnight on the following day.
         if not is_start:
             dt = dt + timedelta(days=1)
-    else:
+    elif not dt:
         try:
             # Handle all other times through dateutil.
             dt = dateutil_parse(time_str)
+            # Dateutil may allow dates with too large negative tzoffset, crashing psycopg later
+            if dt.tzinfo and abs(dt.tzinfo.utcoffset(dt)) > timedelta(hours=15):
+                raise ParseError(f'Time zone given in timestamp {dt} out of bounds.')
+            # Datetimes without timezone are assumed UTC by drf
         except (TypeError, ValueError):
             raise ParseError('time in invalid format (try ISO 8601 or yyyy-mm-dd)')
-    return dt
+    return dt, is_exact
+
+
+def get_fixed_lang_codes():
+    lang_codes = []
+    for language in settings.LANGUAGES:
+        lang_code = language[0]
+        lang_code = lang_code.replace('-', '_')  # to handle complex codes like e.g. zh-hans
+        lang_codes.append(lang_code)
+    return lang_codes
+
+
+def get_deleted_object_name():
+    return {
+        'fi': 'POISTETTU',
+        'sv': 'RADERAD',
+        'en': 'DELETED',
+    }

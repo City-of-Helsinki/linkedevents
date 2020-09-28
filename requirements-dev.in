@@ -1,0 +1,12 @@
+-c requirements.txt # Constrained by requirements.txt
+
+django-extensions
+flake8
+freezegun
+ipython
+pip-tools
+pyflakes
+pylint
+pytest-django
+pytest
+Werkzeug

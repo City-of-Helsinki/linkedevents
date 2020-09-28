@@ -3,11 +3,14 @@ from django.conf import settings
 from django.utils import translation
 from haystack import connections
 from haystack.backends import BaseEngine, BaseSearchBackend, BaseSearchQuery
+from haystack.backends.simple_backend import SimpleEngine, SimpleSearchBackend
 from haystack.utils.loading import load_backend
 
 
 class MultilingualSearchBackend(BaseSearchBackend):
-    def update(self, index, iterable, commit=True):
+
+    def forward_to_backends(self, method, *args, **kwargs):
+        # forwards the desired backend method to all the language backends
         initial_language = translation.get_language()
         # retrieve unique backend name
         backends = []
@@ -20,15 +23,21 @@ class MultilingualSearchBackend(BaseSearchBackend):
                 backends.append(using)
             translation.activate(language)
             backend = connections[using].get_backend()
-            backend.parent_class.update(backend, index, iterable, commit)
+            getattr(backend.parent_class, method)(backend, *args, **kwargs)
 
         if initial_language is not None:
             translation.activate(initial_language)
         else:
             translation.deactivate()
 
+    def update(self, index, iterable, commit=True):
+        self.forward_to_backends('update', index, iterable, commit)
+
     def clear(self, **kwargs):
-        return
+        self.forward_to_backends('clear', **kwargs)
+
+    def remove(self, obj_or_string):
+        self.forward_to_backends('remove', obj_or_string)
 
 
 # class MultilingualSearchQuery(BaseSearchQuery):
@@ -72,3 +81,18 @@ class LanguageSearchEngine(BaseEngine):
         self.query = base_engine.query
 
         super(LanguageSearchEngine, self).__init__(**kwargs)
+
+
+class SimpleSearchBackendWithoutWarnings(SimpleSearchBackend):
+    def update(self, indexer, iterable, commit=True):
+        pass
+
+    def remove(self, obj, commit=True):
+        pass
+
+    def clear(self, models=None, commit=True):
+        pass
+
+
+class SimpleEngineWithoutWarnings(SimpleEngine):
+    backend = SimpleSearchBackendWithoutWarnings

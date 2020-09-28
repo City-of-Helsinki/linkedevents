@@ -1,0 +1,22 @@
+DEBUG = True
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': 'linkedevents',
+        'USER': 'linkedevents',
+        'PASSWORD': 'linkedevents',
+        'HOST': 'linkedevents-db'
+    }
+}
+
+CUSTOM_MAPPINGS = {
+    'autosuggest': {
+        'search_analyzer': 'standard',
+        'index_analyzer': 'edgengram_analyzer',
+        'analyzer': None
+    },
+    'text': {
+        'analyzer': 'default'
+    }
+}

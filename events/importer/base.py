@@ -2,7 +2,9 @@ import os
 import logging
 import itertools
 import datetime
-from collections import defaultdict
+import pytz
+from collections import defaultdict, namedtuple
+from functools import partial
 import operator
 
 from django.conf import settings
@@ -10,9 +12,19 @@ from rest_framework.exceptions import ValidationError
 from django.contrib.gis.geos import Point, Polygon
 from django.contrib.gis.gdal import SpatialReference, CoordTransform
 
+from events.importer.sync import ModelSyncher
+from .util import separate_scripts, clean_text
+
 from modeltranslation.translator import translator
 
-from events.models import Image, Language, Event, License, Offer, EventLink, Place
+from events.models import Image, Language, Event, Offer, EventLink, Place
+
+# Per module logger
+logger = logging.getLogger(__name__)
+
+EXTENSION_COURSE_FIELDS = ('enrolment_start_time', 'enrolment_end_time', 'maximum_attendee_capacity',
+                           'minimum_attendee_capacity', 'remaining_attendee_capacity')
+LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
 
 
 # Using a recursive default dictionary
@@ -25,10 +37,7 @@ def recur_dict():
 class Importer(object):
     def __init__(self, options):
         super(Importer, self).__init__()
-        self._images = {obj.url: obj for obj in Image.objects.all()}
         self.options = options
-        self.verbosity = options['verbosity']
-        self.logger = logging.getLogger(__name__)
 
         importer_langs = set(self.supported_languages)
         configured_langs = set(l[0] for l in settings.LANGUAGES)
@@ -44,7 +53,7 @@ class Importer(object):
         target_srs = SpatialReference(self.target_srid)
         if getattr(settings, 'BOUNDING_BOX'):
             self.bounding_box = Polygon.from_bbox(settings.BOUNDING_BOX)
-            self.bounding_box.set_srid(self.target_srid)
+            self.bounding_box.srid = self.target_srid
             target_to_gps_ct = CoordTransform(target_srs, gps_srs)
             self.bounding_box.transform(target_to_gps_ct)
         else:
@@ -53,26 +62,120 @@ class Importer(object):
 
         self.setup()
 
+        # this has to be run after setup, as it relies on organization and data source being set
+        self._images = {obj.url: obj for obj in Image.objects.filter(publisher=self.organization,
+                                                                     data_source=self.data_source)}
+
     def setup(self):
         pass
 
-    def get_or_create_image(self, url):
-        if url is None or len(url) == 0:
-            return None
-        if url in self._images:
-            return self._images[url]
+    @staticmethod
+    def _set_multiscript_field(string, event, languages, field):
+        """
+        Will overwrite the event field in specified languages with any paragraphs
+        in those languages discovered in string.
 
-        defaults = {'publisher': self.organization, 'data_source': self.data_source}
-        img, created = Image.objects.get_or_create(
-            url=url, defaults=defaults)
-        return img
+        :param string: The string of paragraphs to process.
+        :param event: The event to update
+        :param languages: An iterable of desired languages, preferred language first.
+        :param field: The field to update
+        :return:
+        """
+        different_scripts = separate_scripts(string, languages)
+        for script, string in different_scripts.items():
+            if string:
+                event[field][script] = string
 
-    def set_image(self, obj, image_object):
-        if obj is None or image_object is None:
+    def set_image(self, obj, image_data):
+        if not image_data:
+            self._set_field(obj, 'image', None)
             return
-        if image_object.id != obj.image_id:
+
+        image_url = image_data.get('url', '').strip()
+        if not image_url:
+            print('Invalid image url "{}" obj {}'.format(image_data.get('url'), obj))
+            return
+
+        image = self._get_image(image_url)
+        image = self._update_image(image, image_data)
+        self._set_field(obj, 'image', image)
+
+        if image._changed:
             obj._changed = True
-            obj.image = image_object
+            obj._changed_fields.append('image')
+
+    def set_images(self, obj, images_data):
+        image_syncher = ModelSyncher(obj.images.all(),
+                                     lambda image: image.url,
+                                     delete_func=partial(self._remove_image, obj))
+
+        for image_data in images_data:
+            image_url = image_data.get('url', '').strip()
+            if not image_url:
+                print('Invalid image url "{}" obj {}'.format(image_data.get('url'), obj))
+                continue
+
+            new_image = False
+            image = image_syncher.get(image_url)
+
+            if not image:
+                new_image = True
+                image = self._get_image(image_url)
+
+            image = self._update_image(image, image_data)
+
+            if new_image:
+                obj.images.add(image)
+                obj._changed = True
+                obj._changed_fields.append('images')
+            elif image._changed:
+                obj._changed = True
+                obj._changed_fields.append('images')
+
+            image_syncher.mark(image)
+
+        image_syncher.finish(force=True)
+
+    def _remove_image(self, obj, image):
+        # we need this to mark the object changed if an image is removed
+        obj._changed = True
+        obj._changed_fields.append('images')
+        obj.images.remove(image)
+        return True
+
+    def _get_image(self, image_url):
+        if not image_url:
+            return None
+
+        if image_url in self._images:
+            return self._images[image_url]
+
+        image = Image(
+            publisher=self.organization,
+            data_source=self.data_source,
+            url=image_url,
+        )
+        self._images[image_url] = image
+        image._changed = True
+        image._created = True
+
+        return image
+
+    def _update_image(self, image, image_data):
+        if not hasattr(image, '_changed'):
+            image._changed = False
+
+        self._set_field(image, 'publisher', self.organization)
+        self._set_field(image, 'data_source', self.data_source)
+
+        for field in ('name', 'photographer_name', 'cropping', 'license', 'alt_text'):
+            if field in image_data:
+                self._set_field(image, field, image_data.get(field))
+
+        if image._changed:
+            image.save()
+
+        return image
 
     def link_recurring_events(self, events, instance_fields=[]):
         """Finds events that are instances of a common parent
@@ -106,15 +209,46 @@ class Importer(object):
 
     def _set_field(self, obj, field_name, val):
         if not hasattr(obj, field_name):
-            print(vars(obj))
-        obj_val = getattr(obj, field_name)
-        # this prevents overwriting manually edited values with empty values
-        if obj_val == val or (hasattr(obj, 'is_user_edited') and obj.is_user_edited() and not val):
+            logger.debug(vars(obj))
+        obj_val = getattr(obj, field_name, None)
+        if obj_val == val:
+            return
+        # This prevents overwriting manually edited events with lower quality data
+        # Always update booleans tho, this will e.g. reinstate deleted events (deleted=False)
+        if hasattr(obj, 'is_user_edited') and obj.is_user_edited() and not type(val) == bool:
+            logger.debug('%s edited by user, will not change field %s' % (obj, field_name))
             return
         setattr(obj, field_name, val)
         obj._changed = True
+        if not hasattr(obj, '_changed_fields'):
+            obj._changed_fields = []
+        obj._changed_fields.append(field_name)
+
+    def _save_field(self, obj, obj_field_name, info,
+                    info_field_name, max_length=None):
+        # atm only used by place importers, do some extra cleaning and validation before setting value
+        if info_field_name in info:
+            val = clean_text(info[info_field_name])
+        else:
+            val = None
+        if max_length and val and len(val) > max_length:
+            self.logger.warning("%s: field %s too long" % (obj, info_field_name))
+            val = None
+        self._set_field(obj, obj_field_name, val)
+
+    def _save_translated_field(self, obj, obj_field_name, info,
+                               info_field_name, max_length=None):
+        # atm only used by place importers, do some extra cleaning and validation before setting value
+        for lang in self.supported_languages:
+            key = '%s_%s' % (info_field_name, lang)
+            obj_key = '%s_%s' % (obj_field_name, lang)
+
+            self._save_field(obj, obj_key, info, key, max_length)
+            if lang == 'fi':
+                self._save_field(obj, obj_field_name, info, key, max_length)
 
     def _update_fields(self, obj, info, skip_fields):
+        # all non-place importers use this method, automatically takes care of translated fields
         obj_fields = list(obj._meta.fields)
         trans_fields = translator.get_options_for_model(type(obj)).fields
         for field_name, lang_fields in trans_fields.items():
@@ -166,18 +300,24 @@ class Importer(object):
             obj._created = True
             obj.id = obj_id
         obj._changed = False
+        obj._changed_fields = []
 
         location_id = None
         if 'location' in info:
             location = info['location']
             if 'id' in location:
                 location_id = location['id']
-            info['location_extra_info'] = location.get('extra_info', None)
+            if 'extra_info' in location:
+                info['location_extra_info'] = location['extra_info']
 
         assert info['start_time']
         if 'has_start_time' not in info:
             info['has_start_time'] = True
         if not info['has_start_time']:
+            # Event start time is not exactly defined.
+            # Use midnight in event timezone, or, if given in utc, local timezone
+            if info['start_time'].tzinfo == pytz.utc:
+                info['start_time'] = info['start_time'].astimezone(LOCAL_TZ)
             info['start_time'] = info['start_time'].replace(hour=0, minute=0, second=0)
 
         # If no end timestamp supplied, we treat the event as ending at midnight.
@@ -190,42 +330,36 @@ class Importer(object):
 
         # If end date is supplied but no time, the event ends at midnight of the following day.
         if not info['has_end_time']:
+            # Event end time is not exactly defined.
+            # Use midnight in event timezone, or, if given in utc, local timezone
+            if info['end_time'].tzinfo == pytz.utc:
+                info['end_time'] = info['start_time'].astimezone(LOCAL_TZ)
             info['end_time'] = info['end_time'].replace(hour=0, minute=0, second=0)
             info['end_time'] += datetime.timedelta(days=1)
 
-        skip_fields = ['id', 'location', 'publisher', 'offers', 'keywords', 'image', 'image_license']
+        skip_fields = ['id', 'location', 'publisher', 'offers', 'keywords', 'images']
         self._update_fields(obj, info, skip_fields)
 
         self._set_field(obj, 'location_id', location_id)
 
         self._set_field(obj, 'publisher_id', info['publisher'].id)
 
-        image_url = info.get('image', '').strip()
-        image_object = self.get_or_create_image(image_url)
-
-        if 'image_license' in info:
-            license_id = info['image_license']
-            if image_object.license_id != license_id:
-                try:
-                    license_object = License.objects.get(id=license_id)
-                except License.DoesNotExist:
-                    print('Invalid license id "%s" image %s event %s' % (license_id, image_url, obj))
-                    return
-                image_object.license = license_object
-                image_object.save(update_fields=('license',))
-
-        self.set_image(obj, image_object)
-
         self._set_field(obj, 'deleted', False)
 
-        if obj._created or obj._changed:
+        if obj._created:
+            # We have to save new objects here to be able to add related fields.
+            # Changed objects will be saved only *after* related fields have been changed.
             try:
                 obj.save()
             except ValidationError as error:
-                print('Event ' + str(obj) + ' could not be saved: ' + str(error))
+                logger.error('Event {} could not be saved: {}'.format(obj, error))
                 raise
 
         # many-to-many fields
+
+        # if images change and event has been user edited, do not reinstate old image!!!
+        if not obj.is_user_edited() and 'images' in info:
+            self.set_images(obj, info['images'])
 
         keywords = info.get('keywords', [])
         new_keywords = set([kw.id for kw in keywords])
@@ -237,8 +371,9 @@ class Importer(object):
                     obj.keywords.add(*new_keywords)
                     obj._changed = True
             else:
-                obj.keywords = new_keywords
+                obj.keywords.set(new_keywords)
                 obj._changed = True
+            obj._changed_fields.append('keywords')
         audience = info.get('audience', [])
         new_audience = set([kw.id for kw in audience])
         old_audience = set(obj.audience.values_list('id', flat=True))
@@ -249,8 +384,22 @@ class Importer(object):
                     obj.audience.add(*new_audience)
                     obj._changed = True
             else:
-                obj.audience = new_audience
+                obj.audience.set(new_audience)
                 obj._changed = True
+            obj._changed_fields.append('audience')
+        in_language = info.get('in_language', [])
+        new_languages = set([lang.id for lang in in_language])
+        old_languages = set(obj.in_language.values_list('id', flat=True))
+        if new_languages != old_languages:
+            if obj.is_user_edited():
+                # this prevents overwriting manually added languages
+                if not new_languages <= old_languages:
+                    obj.in_language.add(*new_languages)
+                    obj._changed = True
+            else:
+                obj.in_language.set(in_language)
+                obj._changed = True
+            obj._changed_fields.append('in_language')
 
         # one-to-many fields with foreign key pointing to event
 
@@ -268,42 +417,88 @@ class Importer(object):
                 for o in offers:
                     o.save()
                 obj._changed = True
+                obj._changed_fields.append('offers')
 
-        links = []
-        if 'external_links' in info:
-            for lang in info['external_links'].keys():
-                for l in info['external_links'][lang]:
-                    l['language'] = lang
-                links += info['external_links'][lang]
+        if info['external_links']:
+            ExternalLink = namedtuple('ExternalLink', ['language', 'name', 'url'])
 
-        # TODO: use simple_value logic like for offers above?
-        def obj_make_link_id(obj):
-            return '%s:%s:%s' % (obj.language_id, obj.name, obj.link)
+            def list_obj_links(obj):
+                links = set()
+                for link in obj.external_links.all():
+                    links.add(ExternalLink(link.language.id, link.name, link.link))
+                return links
 
-        def info_make_link_id(info):
-            return '%s:%s:%s' % (info['language'], info.get('name', ''), info['link'])
+            def list_external_links(external_links):
+                links = set()
+                for language in external_links.keys():
+                    for link_name in external_links[language].keys():
+                        links.add(ExternalLink(language, link_name, external_links[language][link_name]))
+                return links
 
-        new_links = set([info_make_link_id(link) for link in links])
-        old_links = set([obj_make_link_id(link) for link in obj.external_links.all()])
-        if old_links != new_links:
-            # this prevents overwriting manually added links. do not update links if we have added ones
-            if not obj.is_user_edited() or len(new_links) >= len(old_links):
+            new_links = list_external_links(info['external_links'])
+            old_links = list_obj_links(obj)
+            if not obj.is_user_edited() and new_links != old_links:
                 obj.external_links.all().delete()
-                for link in links:
-                    link_obj = EventLink(event=obj, language_id=link['language'], link=link['link'])
-                    if len(link['link']) > 200:
+                for link in new_links:
+                    if len(link.url) > 200:
+                        logger.error(f'{obj} required external link of length {len(link.url)}, current limit 200')
                         continue
-                    if 'name' in link:
-                        link_obj.name = link['name']
+                    link_obj = EventLink(event=obj,
+                                         language_id=link.language,
+                                         name=link.name,
+                                         link=link.url)
                     link_obj.save()
                 obj._changed = True
+                obj._changed_fields.append('links')
+
+        if 'extension_course' in settings.INSTALLED_APPS:
+            extension_data = info.get('extension_course')
+            if extension_data is not None:
+                from extension_course.models import Course
+
+                try:
+                    course = obj.extension_course
+                    course._changed = False
+                    for field in EXTENSION_COURSE_FIELDS:
+                        self._set_field(course, field, extension_data.get(field))
+
+                    course_changed = course._changed
+                    if course_changed:
+                        course.save()
+
+                except Course.DoesNotExist:
+                    Course.objects.create(
+                        event=obj,
+                        **{field: extension_data.get(field) for field in EXTENSION_COURSE_FIELDS}
+                    )
+                    course_changed = True
+
+                if course_changed:
+                    obj._changed = True
+                    obj._changed_fields.append('extension_course')
+
+        # If event start time changed, it was rescheduled.
+        if 'start_time' in obj._changed_fields:
+            self._set_field(obj, 'event_status', Event.Status.RESCHEDULED)
+
+        # The event may be cancelled
+        status = info.get('event_status', None)
+        if status:
+            self._set_field(obj, 'event_status', status)
 
         if obj._changed or obj._created:
+            # Finally, we must save the whole object, even when only related fields changed.
+            # Also, we want to log all that happened.
+            try:
+                obj.save()
+            except ValidationError as error:
+                print('Event ' + str(obj) + ' could not be saved: ' + str(error))
+                raise
             if obj._created:
                 verb = "created"
             else:
-                verb = "changed"
-            print("%s %s" % (obj, verb))
+                verb = "changed (fields: %s)" % ', '.join(obj._changed_fields)
+            logger.debug("{} {}".format(obj, verb))
 
         return obj
 
@@ -333,7 +528,7 @@ class Importer(object):
                     p.transform(self.gps_to_target_ct)
                 position = p
             else:
-                print("Invalid coordinates (%f, %f) for %s" % (n, e, obj))
+                logger.warning("Invalid coordinates (%f, %f) for %s" % (n, e, obj))
 
         if position and obj.position:
             # If the distance is less than 10cm, assume the position
@@ -357,7 +552,7 @@ class Importer(object):
                 verb = "created"
             else:
                 verb = "changed"
-            print("%s %s" % (obj, verb))
+            logger.debug("%s %s" % (obj, verb))
             obj.save()
 
         return obj
