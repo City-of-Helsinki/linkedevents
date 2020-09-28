@@ -17,12 +17,11 @@ def create_with_post(api_client, keyword_set_data, data_source=None, version='v1
 
     # save with post
     response = api_client.post(create_url, keyword_set_data, format='json')
-    assert response.content == 400
     assert response.status_code == 201, str(response.content)
 
     # double-check with get
     resp2 = api_client.get(response.data['@id'])
-    assert resp2.status_code == 200, str(response.content)
+    assert resp2.status_code == 200, str(resp2.content)
 
     return resp2
 
@@ -36,12 +35,14 @@ def test__create_keyword_set_with_post(api_client, keyword_set_dict, user):
     response = create_with_post(api_client, keyword_set_dict)    
     assert_keyword_set_data_is_equal(keyword_set_dict, response.data)
 
-"""
+
 @pytest.mark.django_db
 def test__cannot_create_an_keyword_set_with_existing_id(api_client, keyword_set_dict, user):
     api_client.force_authenticate(user=user)
-    keyword_set_dict['id'] = settings.SYSTEM_DATA_SOURCE_ID + ':1'
-    create_with_post(api_client, keyword_set_dict)
+    
+    response1 = api_client.post(reverse('keywordset-list'), keyword_set_dict, format='json')
+    assert response1.status_code == 201
+
     response2 = api_client.post(reverse('keywordset-list'), keyword_set_dict, format='json')
     assert response2.status_code == 400
 
@@ -113,4 +114,3 @@ def test__user_editable_can_create_keyword_set(api_client, keyword, keyword_set_
     api_client.force_authenticate(user=user)
     response = api_client.post(reverse('keywordset-list'), keyword_set_dict, format='json')
     assert response.status_code == 201
-"""

@@ -474,6 +474,25 @@ def keyword_dict(data_source, organization):
 
 
 @pytest.mark.django_db
+@pytest.fixture
+def keyword_set_dict(data_source, organization, make_keyword_id):
+    return {
+        "id": data_source.id + ':kws1',
+        'data_source': data_source.id,
+        'keywords': [
+            {'@id': make_keyword_id(data_source, organization, 'simple')},
+            {'@id': make_keyword_id(data_source, organization, 'test')},
+            {'@id': make_keyword_id(data_source, organization, 'keyword')},
+        ],
+        "usage": "keyword",
+        "name": {
+            "fi": "Testi avainsanat",
+            "en": "Test keywordset",
+        }
+    }
+
+
+@pytest.mark.django_db
 @pytest.fixture(scope="class")
 def make_keyword():
     def _make_keyword(data_source, organization, kw_name):
