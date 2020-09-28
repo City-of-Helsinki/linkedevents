@@ -806,8 +806,24 @@ class KeywordRetrieveViewSet(JSONAPIViewMixin,
         return super().update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
+        self.data_source, self.organization = get_authenticated_data_source_and_publisher(self.request)
         instance = self.get_object()
+        user = request.user
+
+        if not instance.can_be_edited_by(user):
+            raise PermissionDenied()
+
+        if isinstance(user, ApiKeyUser):
+            # allow deleting only if the api key matches instance data source
+            if not instance.data_source == self.data_source:
+                raise PermissionDenied()
+        else:
+            # without api key, the user will have to be admin
+            if not instance.is_user_editable():
+                raise PermissionDenied()
+
         instance.deprecate()
+
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def retrieve(self, request, *args, **kwargs):
@@ -1046,8 +1062,24 @@ class PlaceRetrieveViewSet(JSONAPIViewMixin,
         return super().update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
+        self.data_source, self.organization = get_authenticated_data_source_and_publisher(self.request)
         instance = self.get_object()
+        user = request.user
+
+        if not instance.can_be_edited_by(user):
+            raise PermissionDenied()
+
+        if isinstance(user, ApiKeyUser):
+            # allow deleting only if the api key matches instance data source
+            if not instance.data_source == self.data_source:
+                raise PermissionDenied()
+        else:
+            # without api key, the user will have to be admin
+            if not instance.is_user_editable():
+                raise PermissionDenied()
+
         instance.soft_delete()
+
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def retrieve(self, request, *args, **kwargs):

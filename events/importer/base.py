@@ -3,7 +3,7 @@ import logging
 import itertools
 import datetime
 import pytz
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from functools import partial
 import operator
 
@@ -419,32 +419,34 @@ class Importer(object):
                 obj._changed = True
                 obj._changed_fields.append('offers')
 
-        links = []
-        if 'external_links' in info:
-            for lang in info['external_links'].keys():
-                for l in info['external_links'][lang]:
-                    l['language'] = lang
-                links += info['external_links'][lang]
+        if info['external_links']:
+            ExternalLink = namedtuple('ExternalLink', ['language', 'name', 'url'])
 
-        # TODO: use simple_value logic like for offers above?
-        def obj_make_link_id(obj):
-            return '%s:%s:%s' % (obj.language_id, obj.name, obj.link)
+            def list_obj_links(obj):
+                links = set()
+                for link in obj.external_links.all():
+                    links.add(ExternalLink(link.language.id, link.name, link.link))
+                return links
 
-        def info_make_link_id(info):
-            return '%s:%s:%s' % (info['language'], info.get('name', ''), info['link'])
+            def list_external_links(external_links):
+                links = set()
+                for language in external_links.keys():
+                    for link_name in external_links[language].keys():
+                        links.add(ExternalLink(language, link_name, external_links[language][link_name]))
+                return links
 
-        new_links = set([info_make_link_id(link) for link in links])
-        old_links = set([obj_make_link_id(link) for link in obj.external_links.all()])
-        if old_links != new_links:
-            # this prevents overwriting manually added links. do not update links if we have added ones
-            if not obj.is_user_edited() or len(new_links) >= len(old_links):
+            new_links = list_external_links(info['external_links'])
+            old_links = list_obj_links(obj)
+            if not obj.is_user_edited() and new_links != old_links:
                 obj.external_links.all().delete()
-                for link in links:
-                    link_obj = EventLink(event=obj, language_id=link['language'], link=link['link'])
-                    if len(link['link']) > 200:
+                for link in new_links:
+                    if len(link.url) > 200:
+                        logger.error(f'{obj} required external link of length {len(link.url)}, current limit 200')
                         continue
-                    if 'name' in link:
-                        link_obj.name = link['name']
+                    link_obj = EventLink(event=obj,
+                                         language_id=link.language,
+                                         name=link.name,
+                                         link=link.url)
                     link_obj.save()
                 obj._changed = True
                 obj._changed_fields.append('links')
