@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<EventService>
+  <TotalItems>200</TotalItems>
+  <Items>0</Items>
+  <Start>1</Start>
+  <Limit>1</Limit>
+  <Locale>sv_SE</Locale>
+  <SortField>Date</SortField>
+  <SortDir>ASC</SortDir>
+  <RootLink>https://events.example.fi/</RootLink>
+  <ServiceLink>https://events.example.fi/</ServiceLink>
+  <EventsLink>https://events.example.fi/fi/tapahtumat/</EventsLink>
+  <Events>___EVENTS___</Events>
+</EventService>

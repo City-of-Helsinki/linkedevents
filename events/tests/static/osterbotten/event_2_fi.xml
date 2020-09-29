@@ -1,0 +1,59 @@
+<Event>
+  <ID>123457</ID>
+  <LastEdited>2030-10-05 05:15:04</LastEdited>
+  <Start>2030-10-05 08:00:00</Start>
+  <End>2030-10-23 16:00:00</End>
+  <Link>https://events.example.fi/fi/tapahtumat/nayta/123457</Link>
+  <Title>Testi 2</Title>
+  <EventText>T&#xE4;m&#xE4; on testitapahtuma 2</EventText>
+  <EventTextShort>T&#xE4;m&#xE4; on testi 2</EventTextShort>
+  <Homepage>http://home.example.com/</Homepage>
+  <Place>Testipaikka</Place>
+  <OnlineEvent>0</OnlineEvent>
+  <PostalAddress>Testitie 1</PostalAddress>
+  <PostalCode>12345</PostalCode>
+  <PostalOffice>Testila</PostalOffice>
+  <GoogleMAP>Testitie 1,12345, Testila</GoogleMAP>
+  <ShowGoogleMap>1</ShowGoogleMap>
+  <PriceType>Free</PriceType>
+  <PriceText>Ilmainen</PriceText>
+  <PriceHidden>0</PriceHidden>
+  <ExternalLink/>
+  <ExternalLinkText/>
+  <Categories>
+    <Category>
+      <ID>14</ID>
+      <Name>Testit</Name>
+    </Category>
+  </Categories>
+  <TargetGroups>
+    <TargetGroup>
+      <ID>7</ID>
+      <Name>Kaikille</Name>
+    </TargetGroup>
+  </TargetGroups>
+  <Attachments/>
+  <Municipality id="1">Testi</Municipality>
+  <Dates>
+    <Date>
+      <ID>123</ID>
+      <Start>2030-10-05 08:00:00</Start>
+      <End>2030-10-05 20:00:00</End>
+    </Date>
+    <Date>
+      <ID>234</ID>
+      <Start>2030-10-06 08:00:00</Start>
+      <End>2030-10-06 20:00:00</End>
+    </Date>
+  </Dates>
+  <Images/>
+  <Association>
+    <Name>Esimerkki</Name>
+    <PostalAddress/>
+    <PostalCode/>
+    <PostalOffice/>
+    <Phone>12 3456789, 3456789</Phone>
+    <Email/>
+    <Homepage/>
+  </Association>
+</Event>

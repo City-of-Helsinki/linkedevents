@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<EventService>
+  <Items>1</Items>
+  <Locale>fi_FI</Locale>
+  <Municipalities>
+    <Municipality>
+      <ID>1</ID>
+      <Name>Test</Name>
+      <Name_sv_SE>Testi</Name_sv_SE>
+      <Name_fi_FI>Testa</Name_fi_FI>
+      <Name_en_US>Test</Name_en_US>
+      <Events>1</Events>
+    </Municipality>
+    <Municipality>
+      <ID>2</ID>
+      <Name>Muu kunta</Name>
+      <Name_sv_SE>&#xD6;vrig kommun</Name_sv_SE>
+      <Name_fi_FI>Muu kunta</Name_fi_FI>
+      <Name_en_US>Other</Name_en_US>
+      <Events>0</Events>
+    </Municipality>
+  </Municipalities>
+</EventService>
