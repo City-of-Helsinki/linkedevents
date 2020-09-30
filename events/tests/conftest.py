@@ -477,7 +477,6 @@ def keyword_dict(data_source, organization):
 @pytest.fixture
 def keyword_set_dict(data_source, organization, make_keyword_id):
     return {
-        "id": data_source.id + ':keywordsset1',
         'data_source': data_source.id,
         'keywords': [
             {'@id': make_keyword_id(data_source, organization, 'simple')},
@@ -562,7 +561,7 @@ def keyword_id(data_source, organization, kw_name, make_keyword_id):
 @pytest.mark.django_db
 @pytest.fixture
 def keyword_set(data_source, keyword, keyword2):
-    kw_set = KeywordSet.objects.create(id=data_source.id + ':kws',data_source=data_source)
+    kw_set = KeywordSet.objects.create(id=data_source.id + ':kws', data_source=data_source)
     kw_set.keywords.set([keyword, keyword2])
     return kw_set
 

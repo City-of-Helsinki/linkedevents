@@ -720,9 +720,7 @@ class EditableLinkedEventsObjectSerializer(LinkedEventsSerializer):
         if 'data_source' not in validated_data:
             validated_data['data_source'] = self.data_source
         # data source has already been validated
-        if 'publisher' not in validated_data and 'publisher' in self:
-            validated_data['publisher'] = self.publisher
-        # publisher has already been validated
+
         validated_data['created_by'] = self.user
         validated_data['last_modified_by'] = self.user
 
@@ -784,7 +782,10 @@ class KeywordSerializer(EditableLinkedEventsObjectSerializer):
     def create(self, validated_data):
         # if id was not provided, we generate it upon creation:
         if 'id' not in validated_data:
-            validated_data['id'] = generate_id(self.data_source)
+            validated_data['id'] = generate_id(self.data_source)        
+        if 'publisher' not in validated_data:
+            validated_data['publisher'] = self.publisher
+
         return super().create(validated_data)
 
     class Meta:
@@ -909,7 +910,9 @@ class KeywordListViewSet(JSONAPIViewMixin,
 register_view(KeywordRetrieveViewSet, 'keyword')
 register_view(KeywordListViewSet, 'keyword')
 
+
 class KeywordSetSerializer(EditableLinkedEventsObjectSerializer):
+    id = serializers.CharField(required=False)
     view_name = 'keywordset-detail'
     keywords = JSONLDRelatedField(
         serializer=KeywordSerializer, many=True, required=True, allow_empty=False,
@@ -917,10 +920,17 @@ class KeywordSetSerializer(EditableLinkedEventsObjectSerializer):
     usage = EnumChoiceField(KeywordSet.USAGES)
     created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
     last_modified_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
-    
+
+    def create(self, validated_data):
+        # if id was not provided, we generate it upon creation:
+        if 'id' not in validated_data:
+            validated_data['id'] = generate_id(self.data_source)
+        return super().create(validated_data)
+
     class Meta:
         model = KeywordSet
         fields = '__all__'
+
 
 class KeywordSetViewSet(JSONAPIViewMixin, mixins.ListModelMixin, mixins.CreateModelMixin, viewsets.GenericViewSet):
     queryset = KeywordSet.objects.all()
@@ -928,15 +938,15 @@ class KeywordSetViewSet(JSONAPIViewMixin, mixins.ListModelMixin, mixins.CreateMo
 
 
 class KeywordSetRetrieveViewSet(JSONAPIViewMixin,
-                             mixins.RetrieveModelMixin,
-                             viewsets.GenericViewSet):
+                                mixins.RetrieveModelMixin,
+                                viewsets.GenericViewSet):
     queryset = KeywordSet.objects.all()
     serializer_class = KeywordSetSerializer
-    
+
     def retrieve(self, request, *args, **kwargs):
         try:
-            keywordSet = KeywordSet.objects.get(pk=kwargs['pk'])
-        except keywordSet.DoesNotExist:
+            KeywordSet.objects.get(pk=kwargs['pk'])
+        except KeywordSet.DoesNotExist:
             raise Http404()
 
         return super().retrieve(request, *args, **kwargs)
@@ -1032,6 +1042,8 @@ class PlaceSerializer(EditableLinkedEventsObjectSerializer, GeoModelSerializer):
         # if id was not provided, we generate it upon creation:
         if 'id' not in validated_data:
             validated_data['id'] = generate_id(self.data_source)
+        if 'publisher' not in validated_data:
+            validated_data['publisher'] = self.publisher
         return super().create(validated_data)
 
     class Meta:
@@ -1299,6 +1311,11 @@ class ImageSerializer(EditableLinkedEventsObjectSerializer):
     class Meta:
         model = Image
         fields = '__all__'
+
+    def create(self, validated_data):
+        if 'publisher' not in validated_data:
+            validated_data['publisher'] = self.publisher
+        return super().create(validated_data)
 
     def to_representation(self, obj):
         # the url field is customized based on image and url

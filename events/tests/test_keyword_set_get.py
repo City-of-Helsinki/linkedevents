@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 import pytest
 
-from pprint import pprint
-from events.models import Keyword
-
 from .utils import get
 from .utils import versioned_reverse as reverse
 
@@ -21,7 +18,6 @@ def get_detail(api_client, detail_pk, version='v1', data=None):
 
 @pytest.mark.django_db
 def test_get_keyword_set_detail(api_client, keyword_set):
-    pprint(keyword_set)
     response = get_detail(api_client, keyword_set.pk)
     assert response.data['id'] == keyword_set.pk
 
