@@ -782,7 +782,7 @@ class KeywordSerializer(EditableLinkedEventsObjectSerializer):
     def create(self, validated_data):
         # if id was not provided, we generate it upon creation:
         if 'id' not in validated_data:
-            validated_data['id'] = generate_id(self.data_source)        
+            validated_data['id'] = generate_id(self.data_source)
         if 'publisher' not in validated_data:
             validated_data['publisher'] = self.publisher
 
