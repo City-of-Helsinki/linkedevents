@@ -1,13 +1,3 @@
-# Last updated 04/09/2020
-
-# PEP8 mode (Exceeding line length unavoidable at times),
-# Processing improvements (List comprehension, JSON update methods),
-# JSON re-usage through return instead of global. (Globals are bad practice),
-# Category key updated & JSON misspelling compensation,
-# Necessary Image field improvements (alt_text, name, photographer),
-# Images are shown on front-end without crash.
-
-# Dependencies
 import logging
 import requests
 import requests_cache
@@ -115,6 +105,7 @@ TURKU_DRUPAL_CATEGORY_EN_YSOID = {
     'Theatre and other performance art': ['yso:p2850', 'yso:p2625'],  # Esittävä taide
     'Sports': 'yso:p965',  # Urheilu, Idrott
     'Literature': 'yso:p8113',  # Kirjallisuus, litteratur
+    'Virtual events': 'yso:p26626',  # Etäosallistuminen
 }
 
 TURKU_DRUPAL_AUDIENCES_KEYWORD_EN_YSOID = {
@@ -215,7 +206,7 @@ class TurkuOriginalImporter(Importer):
             name_sv='Virtuell evenemang',
             name_en='Virtual event',
             description='Virtuaalitapahtumat merkitään tähän paikkatietoon.'
-            )
+        )
         self.internet_location, _ = Place.objects.update_or_create(
             id=VIRTUAL_LOCATION_ID,
             defaults=defaults5
@@ -270,8 +261,8 @@ class TurkuOriginalImporter(Importer):
     def dt_parse(self, dt_str):
         """Convert a string to UTC datetime"""  # Times are in UTC+02:00 TZ
         return TZ.localize(
-                dateutil.parser.parse(dt_str),
-                is_dst=None).astimezone(pytz.utc)
+            dateutil.parser.parse(dt_str),
+            is_dst=None).astimezone(pytz.utc)
 
     def timeToTimestamp(self, origTime):
         timestamp = time.mktime(time.strptime(origTime, '%d.%m.%Y %H.%M'))
@@ -378,21 +369,42 @@ class TurkuOriginalImporter(Importer):
             if location_extra_info.strip().endswith(','):
                 location_extra_info = location_extra_info.strip()[:-1]
 
+            location_extra_info_formatted = '%(address)s / %(extra)s' % {'address': eventTku['address'], 'extra': location_extra_info} if location_extra_info else eventTku['address']
+            # Define location_extra_info dict.
             evItem['location_extra_info'] = {
-                "fi": location_extra_info if location_extra_info else None,
-                "sv": location_extra_info if location_extra_info else None,
-                "en": location_extra_info if location_extra_info else None
+                "fi": location_extra_info_formatted,
+                "sv": location_extra_info_formatted,
+                "en": location_extra_info_formatted
             }
 
             if eventTku['event_image_ext_url']:
-                if int(eventTku['event_image_license']) == 1:
-                    evItem['images'] = [{
-                        'url': eventTku['event_image_ext_url']['src'],
-                        'license': self.cc_by_license,
-                        'alt_text': '',
-                        'name': '',
-                        'photographer_name': ''
-                    }]
+                if int(eventTku['event_image_license']) == 1 and event_type in ('m', 's'):
+                    # Saves an image from the URL onto our server & database Image table.
+                    # We only want mother event images and single event images.
+
+                    IMAGE_TYPE = 'jpg'
+                    PATH_EXTEND = 'images'
+
+                    def request_image_url():
+                        img = requests.get(eventTku['event_image_ext_url']['src'],
+                                           headers={'User-Agent': 'Mozilla/5.0'}).content
+                        imgfile = eventTku['drupal_nid']
+                        path = '%(root)s/%(pathext)s/%(img)s.%(type)s' % ({
+                            'root': settings.MEDIA_ROOT,
+                            'pathext': PATH_EXTEND,
+                            'img': imgfile,
+                            'type': IMAGE_TYPE
+                        })
+                        with open(path, 'wb') as file:
+                            file.write(img)
+                        return '%s/%s.%s' % (PATH_EXTEND, imgfile, IMAGE_TYPE)
+
+                    self.image_obj, _ = Image.objects.update_or_create(
+                        defaults=dict(name='', photographer_name='', alt_text=''), **dict(
+                            license=self.cc_by_license,
+                            data_source=self.data_source,
+                            publisher=self.organization,
+                            image=request_image_url()))
 
             def set_attr(field_name, val):
                 if field_name in evItem:
@@ -434,6 +446,8 @@ class TurkuOriginalImporter(Importer):
                     if name == 'Theatre and other perfomance art':
                         name = 'Theatre and other performance art'
                         # Theatre and other performance art is spelled incorrectly in the JSON. "Perfomance".
+                    if name == 'Virtual events':
+                        evItem['location']['id'] = VIRTUAL_LOCATION_ID
                     if name in TURKU_DRUPAL_CATEGORY_EN_YSOID.keys():
                         ysoId = TURKU_DRUPAL_CATEGORY_EN_YSOID[name]
                         if isinstance(ysoId, list):
@@ -482,138 +496,14 @@ class TurkuOriginalImporter(Importer):
                 "en": eventTku['website_url']
             }
 
-            tprNo = ''
-
-            if eventTku.get('event_categories', None):
-                node_type = eventTku['event_categories'][0]
-                if node_type == 'Virtual events':
-                    evItem['location']['id'] = VIRTUAL_LOCATION_ID
-                elif str(eventTku['palvelukanava_code']):
-                    tprNo = str(eventTku['palvelukanava_code'])
-                    if tprNo == '10123':
-                        tprNo = '148'
-                    elif tprNo == '10132':
-                        return
-                    elif tprNo == '10174':
-                        return
-                    elif tprNo == '10129':
-                        return
-
-                    evItem['location']['id'] = ('tpr:' + tprNo)
-                else:
-                    def numeric(string):
-                        from hashlib import md5
-                        h = md5()
-                        h.update(string.encode())
-                        return str(int(h.hexdigest(), 16))[0:6]
-
-                    if eventTku['address']:
-                        import re
-                        event_address = copy(eventTku['address'])
-                        event_address_name = copy(eventTku['address'])
-                        event_name = ""
-                        event_postal_code = None
-                        regex = re.search(
-                            r'\d{4,6}', event_address_name, re.IGNORECASE
-                        )
-                        if regex:
-                            event_postal_code = regex.group(0)
-                        if event_address_name.startswith('('):
-
-                            regex = re.search(
-                                r'\((.*?)\)\\?(.*|[a-z]|[0-9])',
-                                event_address,
-                                re.IGNORECASE
-                            )  # Match: (str, str) str
-                            event_name = '%s' % regex.group(1)
-
-                            try:
-                                _regex = re.search(
-                                    r'(?<=\))[^\]][^,]+',
-                                    regex.group(0),
-                                    re.IGNORECASE
-                                )
-                                event_address_name = _regex.group(0).strip().capitalize()
-                            except:
-                                _regex = re.search(
-                                    r'(?<=\))[^\]][^,]+',
-                                    regex.group(1),
-                                    re.IGNORECASE
-                                )
-                                event_address_name = _regex.group(0).strip().capitalize()
-
-                        else:
-                            _regex = re.search(
-                                r'(?<=)[^\]][^,]+',
-                                event_address_name,
-                                re.IGNORECASE
-                            )
-                            event_name = _regex.group(0).strip().capitalize()
-                        city = ""
-                        for _city in CITY_LIST:
-                            if len(event_address.split(',')) >= 2:
-                                q = event_address.split(',')[1].lower().strip()
-                                if q == _city.lower():
-                                    city = _city
-                                    break
-
-                        addr = 'osoite:%s' % (''.join(
-                                event_address.replace(' ', '_')
-                                .split(','))
-                                .strip()
-                                .lower()
-                                .replace('k.', 'katu'))
-
-                        if city and not addr.endswith(city):
-                            addr += '_%s' % city.lower()
-                        elif city and addr.endswith(city):
-                            ...
-                        elif not city and not addr.endswith('_turku'):
-                            addr += '_turku'
-
-                        origin_id = numeric(addr)
-                        tpr = '%s:%s' % (
-                            str(evItem.get('data_source')),
-                            origin_id
-                            )  # Mimic tpr
-                        try:
-                            place_id = Place.objects.get(id=tpr)
-                        except:
-                            def place_info(data: dict, translated=[]) -> Place:
-                                p = Place()
-                                for k in data:
-                                    __setattr__(p, k, data[k])
-                                    if k in translated:
-                                        __setattr__(p, '%s_fi' % k, data[k])
-                                        __setattr__(p, '%s_en' % k, data[k])
-                                        __setattr__(p, '%s_sv' % k, data[k])
-                                return p
-
-                            place = \
-                                place_info({
-                                    'name': event_name,
-                                    'street_address': event_address_name,
-                                    'id': tpr,
-                                    'origin_id': origin_id,
-                                    'data_source': evItem.get('data_source'),
-                                    'publisher': evItem.get('publisher'),
-                                    'postal_code': event_postal_code
-                                }, translated=[
-                                    'name',
-                                    'street_address'
-                                    ]
-                                )
-                            place.save()
-                        evItem['location']['id'] = tpr
-
-            if event_type == "m" or event_type == "s":
+            if event_type in ('m', 's'):
                 # Add a default offer
                 free_offer = {
                     'is_free': True,
                     'price': None,
                     'description': None,
                     'info_url': None,
-                    }
+                }
                 eventOffer_is_free = bool(int(eventTku['free_event']))
                 # Fill if events is not free price event
                 if not eventOffer_is_free:
@@ -642,7 +532,7 @@ class TurkuOriginalImporter(Importer):
             return evItem
 
     def _recur_fetch_paginated_url(self, url, lang, events):
-        max_tries = 5
+        max_tries = 10
         logger.info("Establishing connection to Drupal JSON...")
         for try_number in range(0, max_tries):
             response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
@@ -797,8 +687,25 @@ class TurkuOriginalImporter(Importer):
             if json_event['twitter_url']:
                 fb_tw('twitter')
 
+            # Match Events & Images together in the ManyToMany relationship table.
+            try:
+                def fetch_from_image_table(p, p2):
+                    try:
+                        eventObj = Event.objects.get(origin_id=json_event[p])
+                        img_format = '%s/%s.%s' % ('images', json_event[p2], 'jpg')
+                        img_obj_returned = Image.objects.get(image=img_format)
+                        eventObj.images.add(img_obj_returned.id)
+                        return img_obj_returned
+                    except:
+                        pass
+                    return None
+                fetched_img = fetch_from_image_table('drupal_nid', 'drupal_nid')  # Mothers and Singles
+                if not fetched_img:
+                    fetch_from_image_table('drupal_nid', 'drupal_nid_super')  # Children inherit their Mothers images.
+            except:
+                pass
+
     def import_events(self):
-        import requests
         events = recur_dict()
         URL = 'https://kalenteri.turku.fi/admin/event-exports/json_beta'
         lang = self.supported_languages

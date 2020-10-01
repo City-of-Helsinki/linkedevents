@@ -1,5 +1,9 @@
 import logging
 import os
+import requests
+import time
+import base64
+import struct
 from django import db
 from django.conf import settings
 from django.core.management import call_command
@@ -60,28 +64,61 @@ class ImageBankImporter(Importer):
         except License.DoesNotExist:
             self.cc_by_license = None
 
+        def generate_id():
+            t = time.time() * 1000000
+            b = base64.b32encode(struct.pack(">Q", int(t)).lstrip(b'\x00')).strip(b'=').lower()
+            return b.decode('utf8')
+
+        IMAGE_BANK_IMAGES = {
+            'https://i.imgur.com/eANHbqh.jpg',
+            'https://i.imgur.com/hpF5Ugz.jpg',
+            'https://i.imgur.com/nNbigmG.jpg',
+            'https://i.imgur.com/e750x68.jpg'
+        }
+
+        IMAGE_BANK_IMAGES = iter(IMAGE_BANK_IMAGES)
+        IMAGE_TYPE = 'jpg'
+        PATH_EXTEND = 'images'
+
+        def request_image_url():
+            img = requests.get(next(IMAGE_BANK_IMAGES),
+                               headers={'User-Agent': 'Mozilla/5.0'}).content
+            imgfile = generate_id()
+            path = '%(root)s/%(pathext)s/%(img)s.%(type)s' % ({
+                'root': settings.MEDIA_ROOT,
+                'pathext': PATH_EXTEND,
+                'img': imgfile,
+                'type': IMAGE_TYPE
+            })
+            with open(path, 'wb') as file:
+                file.write(img)
+            return '%s/%s.%s' % (PATH_EXTEND, imgfile, IMAGE_TYPE)
+
         # Default Image URL's.
         self.image_1, _ = Image.objects.update_or_create(
             defaults=dict(name='', photographer_name='', alt_text=''), **dict(
                 license=self.cc_by_license,
                 data_source=self.data_source,
                 publisher=self.organization,
-                url='https://kalenteri.turku.fi/sites/default/files/styles/event_node/public/images/event_ext/sadonkorjuutori.jpg'))
+                image=request_image_url()))
+
         self.image_2, _ = Image.objects.update_or_create(
             defaults=dict(name='', photographer_name='', alt_text=''), **dict(
                 license=self.cc_by_license,
                 data_source=self.data_source,
                 publisher=self.organization,
-                url='https://kalenteri.turku.fi/sites/default/files/styles/event_node/public/images/event_ext/img_2738.jpg'))
+                image=request_image_url()))
+
         self.image_3, _ = Image.objects.update_or_create(
             defaults=dict(name='', photographer_name='', alt_text=''), **dict(
                 license=self.cc_by_license,
                 data_source=self.data_source,
                 publisher=self.organization,
-                url='https://kalenteri.turku.fi/sites/default/files/styles/event_node/public/images/event_ext/66611781_2613563701989600_82393011928956928_n_7.jpg'))
+                image=request_image_url()))
+
         self.image_4, _ = Image.objects.update_or_create(
             defaults=dict(name='', photographer_name='', alt_text=''), **dict(
                 license=self.cc_by_license,
                 data_source=self.data_source,
                 publisher=self.organization,
-                url='https://kalenteri.turku.fi/sites/default/files/styles/event_node/public/images/event_ext/nuorten_viikonloppu_turun_seudun_tapahtumakalenterin_kuva_yhdistetty.jpg'))
+                image=request_image_url()))
