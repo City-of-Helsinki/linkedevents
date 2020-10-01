@@ -16,12 +16,13 @@
 !multilingual_haystack*
 !notifications*
 !templates*
+!deploy
+!notifications
 
 #################################################
 # Whitelisted files
 #################################################
 !config_dev.toml
-!local_settings.py
 !manage.py
 !pytest.ini
 !requirements*

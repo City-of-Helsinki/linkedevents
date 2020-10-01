@@ -18,19 +18,20 @@ services:
     django:
         build:
             context: ./
-            dockerfile: ./docker/django/Dockerfile
-            target: development
+            dockerfile: ./Dockerfile
         environment:
-            - APPLY_MIGRATIONS=true
-            - CREATE_SUPERUSER=true
             - DEBUG=true
             - DATABASE_URL=postgis://linkedevents:linkedevents@postgres/linkedevents
-            - DEV_SERVER=true
-            - RUNSERVER_ADDRESS=0.0.0.0:8000
             - WAIT_FOR_IT_ADDRESS=postgres:5432
+        env_file:
+            - config_dev.env
         volumes:
-            - .:/app:cached
-            - django-media-volume:/var/media/
+            - .:/linkedevents:cached
+            - django-media-volume:/srv/media
+            - $HOME/maintenance:/maintenance
+            - $HOME/le_logs:/logs
+            - $HOME/le_input:/kulke_input
+        command: ["start_django_development_server"]
         ports:
             - "127.0.0.1:8000:8000"
 
