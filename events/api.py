@@ -1877,6 +1877,14 @@ def _filter_event_queryset(queryset, params, srs=None):
         val = val.split(',')
         queryset = queryset.filter(location_id__in=val)
 
+    # Filter by custom value key value pairs using : as key value separator
+    val = params.get('custom_data', None)
+    if val:
+        val = val.split(',')
+        for custom_data_filter in val:
+            custom_data_filter = custom_data_filter.split(":")
+            queryset = queryset.filter(custom_data__contains={custom_data_filter[0]: custom_data_filter[1]})
+
     # Filter by keyword id, multiple ids separated by comma
     val = params.get('keyword', None)
     if val:

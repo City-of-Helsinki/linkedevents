@@ -979,3 +979,29 @@ def test_keyword_and_text(api_client, event, event2, keyword):
     event.save()
     response = get_list(api_client, query_string='combined_text=lapset,aikuiset')
     assert_events_in_response([event], response)
+
+
+@pytest.mark.django_db
+def test_custom_data_filter(api_client, event, event2):
+
+    event.custom_data = {"test": "testvalue", "test2": "testvalue2"}
+    event.save()
+
+    event2.custom_data = {"test": "testvalue2", "test2": "testvalue2", "test3": "testvalue3"}
+    event2.save()
+
+    response = get_list(api_client, query_string='custom_data=test:testvalue')
+    ids = {e['id'] for e in response.data['data']}
+    assert event.id in ids
+    assert event2.id not in ids
+
+
+    response = get_list(api_client, query_string='custom_data=test2:testvalue2,test3:testvalue3')
+    ids = {e['id'] for e in response.data['data']}
+    assert event.id not in ids
+    assert event2.id in ids
+
+    response = get_list(api_client, query_string='custom_data=test2:testvalue2')
+    ids = {e['id'] for e in response.data['data']}
+    assert event.id in ids
+    assert event2.id in ids
