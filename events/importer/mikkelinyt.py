@@ -118,12 +118,9 @@ class MikkeliNytImporter(Importer):
 
         _id = 'mikkelinyt:{}'.format(origin_id)
 
-        external_links = []
+        external_links = {}
         if registration:
-            external_links.append({
-                'name': 'rekisteröityminen',
-                'link': registration
-            })
+            external_links['rekisteröityminen'] = registration
 
         event = {
             'id': _id,
