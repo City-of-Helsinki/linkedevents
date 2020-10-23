@@ -228,12 +228,12 @@ class TprekImporter(Importer):
             queryset = queryset.filter(id=obj_id)
         else:
             logger.info("Fetching all unit pages...")
-            obj_list = async_main() # Optional async_main(True) if you want to log errors.
+            obj_list = async_main()  # Optional async_main(True) if you want to log errors.
             if obj_list:
                 logger.info("Successfully gathered unit data!")
             else:
                 logger.warn("Something went wrong... No unit data was found?")
-
+                return
         syncher = ModelSyncher(queryset, lambda obj: obj.origin_id, delete_func=self.mark_deleted,
                                check_deleted_func=self.check_deleted)
         for idx, infos in enumerate(obj_list, start=1):
