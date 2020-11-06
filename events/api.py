@@ -51,7 +51,7 @@ from rest_framework_bulk import (BulkListSerializer, BulkModelViewSet,
 
 from events import utils
 from events.api_pagination import LargeResultsSetPagination
-from events.auth import ApiKeyAuth, ApiKeyUser
+from events.auth import ExternalAuth, ApiKeyAuth, ApiKeyUser
 from events.custom_elasticsearch_search_backend import \
     CustomEsSearchQuerySet as SearchQuerySet
 from events.extensions import (apply_select_and_prefetch,
@@ -138,11 +138,14 @@ def get_authenticated_data_source_and_publisher(request):
         if not publisher:
             raise PermissionDenied(_("Data source doesn't belong to any organization"))
     else:
-        # objects *created* by api are marked coming from the system data source unless api_key is provided
-        # we must optionally create the system data source here, as the settings may have changed at any time
-        system_data_source_defaults = {'user_editable': True}
-        data_source, created = DataSource.objects.get_or_create(id=settings.SYSTEM_DATA_SOURCE_ID,
-                                                                defaults=system_data_source_defaults)
+        if isinstance(request.auth, ExternalAuth):
+          data_source = request.auth.get_authenticated_data_source()
+        else:
+          # objects *created* by api are marked coming from the system data source unless api_key is provided
+          # we must optionally create the system data source here, as the settings may have changed at any time
+          system_data_source_defaults = {'user_editable': True}
+          data_source, created = DataSource.objects.get_or_create(id=settings.SYSTEM_DATA_SOURCE_ID,
+                                                                    defaults=system_data_source_defaults)
         # user organization is used unless api_key is provided
         user = request.user
         if isinstance(user, User):
