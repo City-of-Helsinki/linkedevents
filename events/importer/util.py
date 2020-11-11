@@ -2,6 +2,7 @@
 
 import re
 import logging
+from bs4 import BeautifulSoup
 from langdetect import detect
 from langdetect.lang_detect_exception import LangDetectException
 from django.utils.translation.trans_real import activate, deactivate
@@ -13,13 +14,16 @@ from events.models import Place
 logger = logging.getLogger(__name__)
 
 
-def clean_text(text, strip_newlines=False):
+def clean_text(text, strip_newlines=False, parse_html=False):
+    if parse_html:
+        soup = BeautifulSoup(text, features="html.parser")
+        text = soup.get_text()
     # remove non-breaking spaces and separators
     text = text.replace('\xa0', ' ').replace('\x1f', '')
-    # remove nil bytes
-    text = text.replace(u'\u0000', ' ')
+    # remove nil bytes and tabs
+    text = text.replace(u'\u0000', ' ').replace('\u200b', ' ').replace('\t', ' ')
     if strip_newlines:
-        text = text.replace('\r', '').replace('\n', ' ')
+        text = text.replace('\r', ' ').replace('\n', ' ')
     # remove consecutive whitespaces
     return re.sub(r'\s\s+', ' ', text, re.U).strip()
 

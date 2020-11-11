@@ -74,6 +74,8 @@ class DataSource(models.Model):
         'django_orghierarchy.Organization', on_delete=models.SET_NULL,
         related_name='owned_systems', null=True, blank=True)
     user_editable = models.BooleanField(default=False, verbose_name=_('Objects may be edited by users'))
+    edit_past_events = models.BooleanField(default=False, verbose_name=_('Past events may be edited using API'))
+    create_past_events = models.BooleanField(default=False, verbose_name=_('Past events may be created using API'))
 
     def __str__(self):
         return self.id
@@ -273,6 +275,18 @@ class KeywordLabel(models.Model):
         unique_together = (('name', 'language'),)
 
 
+class UpcomingEventsUpdater(models.Manager):
+    def has_upcoming_events_update(self):
+        now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
+        qs = self.model.objects.filter(n_events__gte=1)
+        if self.model.__name__ == 'Keyword':
+            qs = qs.filter(deprecated=False)
+        elif self.model.__name__ == 'Place':
+            qs = qs.filter(deleted=False)
+        qs.filter(events__start_time__gte=now).update(has_upcoming_events=True)
+        qs.exclude(events__start_time__gte=now).update(has_upcoming_events=False)
+
+
 class Keyword(BaseModel, ImageMixin, ReplacedByMixin):
     publisher = models.ForeignKey(
         'django_orghierarchy.Organization', on_delete=models.CASCADE, verbose_name=_('Publisher'),
@@ -281,6 +295,7 @@ class Keyword(BaseModel, ImageMixin, ReplacedByMixin):
     alt_labels = models.ManyToManyField(KeywordLabel, blank=True, related_name='keywords')
     aggregate = models.BooleanField(default=False)
     deprecated = models.BooleanField(default=False, db_index=True)
+    has_upcoming_events = models.BooleanField(default=False, db_index=True)
     n_events = models.IntegerField(
         verbose_name=_('event count'),
         help_text=_('number of events with this keyword'),
@@ -294,8 +309,16 @@ class Keyword(BaseModel, ImageMixin, ReplacedByMixin):
 
     schema_org_type = "Thing/LinkedEventKeyword"
 
+    objects = UpcomingEventsUpdater()
+
     def __str__(self):
         return self.name
+
+    def is_admin(self, user):
+        if user.is_superuser:
+            return True
+        else:
+            return user in self.publisher.admin_users.all()
 
     def deprecate(self):
         self.deprecated = True
@@ -346,6 +369,12 @@ class Keyword(BaseModel, ImageMixin, ReplacedByMixin):
                     event.audience.remove(self)
                     event.audience.add(self.replaced_by)
 
+    def can_be_edited_by(self, user):
+        """Check if current place can be edited by the given user"""
+        if user.is_superuser:
+            return True
+        return user.is_admin(self.publisher)
+
     class Meta:
         verbose_name = _('keyword')
         verbose_name_plural = _('keywords')
@@ -379,6 +408,8 @@ class KeywordSet(BaseModel, ImageMixin):
 
 class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin, ReplacedByMixin):
     objects = BaseTreeQuerySet.as_manager()
+    upcoming_events = UpcomingEventsUpdater()
+
     geo_objects = objects
 
     publisher = models.ForeignKey(
@@ -406,6 +437,7 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin, ReplacedByMi
     replaced_by = models.ForeignKey('Place', on_delete=models.SET_NULL, related_name='aliases', null=True, blank=True)
     divisions = models.ManyToManyField(AdministrativeDivision, verbose_name=_('Divisions'), related_name='places',
                                        blank=True)
+    has_upcoming_events = models.BooleanField(default=False, db_index=True)
     n_events = models.IntegerField(
         verbose_name=_('event count'),
         help_text=_('number of events in this location'),
@@ -461,6 +493,26 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin, ReplacedByMi
                 geometry__boundary__contains=self.position))
         else:
             self.divisions.clear()
+
+    def is_admin(self, user):
+        if user.is_superuser:
+            return True
+        else:
+            return user in self.publisher.admin_users.all()
+
+    def soft_delete(self, using=None):
+        self.deleted = True
+        self.save(update_fields=("deleted",), using=using, force_update=True)
+
+    def undelete(self, using=None):
+        self.deleted = False
+        self.save(update_fields=("deleted",), using=using, force_update=True)
+
+    def can_be_edited_by(self, user):
+        """Check if current place can be edited by the given user"""
+        if user.is_superuser:
+            return True
+        return user.is_admin(self.publisher)
 
 
 reversion.register(Place)

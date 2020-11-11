@@ -4,8 +4,10 @@ django-extensions
 flake8
 freezegun
 gitlint==0.12.0
+ipython
 pip-tools
 pyflakes
 pylint
 pytest-django
 pytest
+Werkzeug

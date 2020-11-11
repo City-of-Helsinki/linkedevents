@@ -5,33 +5,37 @@
 #    pip-compile requirements-dev.in
 #
 arrow==0.14.2             # via gitlint
-astroid==2.3.3            # via pylint
+astroid==2.4.2            # via pylint
 attrs==19.3.0             # via pytest
-click==7.0                # via gitlint, pip-tools
-django-extensions==2.2.6
+click==7.1.2              # via gitlint, pip-tools
+django-extensions==3.0.1
 entrypoints==0.3          # via flake8
-flake8==3.7.9
+flake8==3.8.3
 freezegun==0.3.15
 gitlint==0.12.0
-importlib-metadata==1.5.0  # via pluggy, pytest
+importlib-metadata==1.7.0 # via flake8, pluggy, pytest
 isort==4.3.21             # via pylint
 lazy-object-proxy==1.4.3  # via astroid
 mccabe==0.6.1             # via flake8, pylint
-more-itertools==8.2.0     # via pytest
-packaging==20.1           # via pytest
-pip-tools==4.4.1
+more-itertools==8.4.0     # via pytest
+packaging==20.4           # via -c requirements.txt, pytest
+pip-tools==5.2.1          # via -r requirements-dev.in
 pluggy==0.13.1            # via pytest
-py==1.8.1                 # via pytest
-pycodestyle==2.5.0        # via flake8
-pyflakes==2.1.1
-pylint==2.4.4
-pyparsing==2.4.6          # via packaging
-pytest-django==3.8.0
-pytest==5.3.5
+py==1.9.0                 # via pytest
+pycodestyle==2.6.0        # via flake8
+pyflakes==2.2.0
+pylint==2.5.3
+pyparsing==2.4.7          # via packaging
+pytest-django==3.9.0
+pytest==5.4.3
 python-dateutil==2.8.1    # via arrow, freezegun
 sh==1.12.14               # via gitlint
-six==1.14.0               # via astroid, django-extensions, freezegun, packaging, pip-tools, python-dateutil
+six==1.15.0               # via astroid, django-extensions, freezegun, packaging, pip-tools, python-dateutil
 typed-ast==1.4.1          # via astroid
-wcwidth==0.1.8            # via pytest
-wrapt==1.11.2             # via astroid
-zipp==2.1.0               # via importlib-metadata
+wcwidth==0.2.5            # via pytest
+werkzeug==1.0.1           # via -r requirements-dev.in
+wrapt==1.12.1             # via astroid
+zipp==3.1.0               # via -c requirements.txt, importlib-metadata
+
+# The following packages are considered to be unsafe in a requirements file:
+# pip
