@@ -52,13 +52,15 @@ class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
         return self.data_source.owner
 
     def is_admin(self, publisher):
-        return self.data_source.owner == publisher
+        return publisher in self.data_source.owner.get_descendants(include_self=True)
 
     def is_regular_user(self, publisher):
         return False
 
     @property
     def admin_organizations(self):
+        if not self.data_source.owner:
+            return Organization.objects.none()
         return Organization.objects.filter(id=self.data_source.owner.id)
 
     @property

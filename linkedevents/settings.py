@@ -180,10 +180,10 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.gis',
     'django.contrib.postgres',
-    'django_extensions',
     'events',
     'corsheaders',
     'rest_framework',
+    'rest_framework_gis',
     'rest_framework_jwt',
     'mptt',
     'reversion',
@@ -208,9 +208,9 @@ INSTALLED_APPS = [
     'storages',
 ] + env('EXTRA_INSTALLED_APPS')
 
-if not DEBUG:
-    # Remove this application from production, so that we don't need to install dev deps there
-    INSTALLED_APPS.remove("django_extensions")
+# django-extensions is a set of developer friendly tools
+if DEBUG:
+    INSTALLED_APPS.append('django_extensions')
 
 if env('SENTRY_DSN'):
     sentry_sdk.init(
@@ -559,3 +559,5 @@ if env('MAIL_MAILGUN_KEY'):
         'MAILGUN_API_URL': env('MAIL_MAILGUN_API'),
     }
     EMAIL_BACKEND = 'anymail.backends.mailgun.EmailBackend'
+elif not env('MAIL_MAILGUN_KEY') and DEBUG is True:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

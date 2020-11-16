@@ -1,15 +1,18 @@
 # -*- coding: utf-8 -*-
-from .utils import versioned_reverse as reverse
-import pytest
-from .utils import get, assert_fields_exist
-from events.models import (
-    Event, PublicationStatus, Language
-)
-from django.contrib.gis.gdal import SpatialReference, CoordTransform
-from django.contrib.gis.geos import Point
-from django.conf import settings
+from datetime import datetime
+
 import dateutil.parser
+import pytest
+import pytz
+from django.conf import settings
+from django.contrib.gis.gdal import CoordTransform, SpatialReference
+from django.contrib.gis.geos import Point
 from freezegun import freeze_time
+
+from events.models import Event, Language, PublicationStatus
+
+from .utils import assert_fields_exist, get
+from .utils import versioned_reverse as reverse
 
 # === util methods ===
 
@@ -19,6 +22,13 @@ def get_list(api_client, version='v1', data=None, query_string=None):
     if query_string:
         url = '%s?%s' % (url, query_string)
     return get(api_client, url, data=data)
+
+
+def get_list_no_code_assert(api_client, version='v1', data=None, query_string=None):
+    url = reverse('event-list', version=version)
+    if query_string:
+        url = '%s?%s' % (url, query_string)
+    return api_client.get(url, data=data, format='json')
 
 
 def get_detail(api_client, detail_pk, version='v1', data=None):
@@ -160,6 +170,123 @@ def test_get_event_list_verify_bbox_filter(api_client, event, event2):
     # this way we will catch any errors if the default SRS changes, breaking the API
     assert event.id in [entry['id'] for entry in response.data['data']]
     assert event2.id not in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
+def test_get_event_list_verify_audience_max_age_lt_filter(api_client, keyword, event):
+    event.audience_max_age = 16
+    event.save()
+    response = get_list(api_client, data={'audience_max_age_lt': event.audience_max_age})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'audience_max_age_lt': event.audience_max_age - 1})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'audience_max_age_lt': event.audience_max_age + 1})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
+def test_get_event_list_verify_audience_max_age_gt_filter(api_client, keyword, event):
+    #  'audience_max_age' parameter is identical to audience_max_age_gt and is kept for compatibility's sake
+    event.audience_max_age = 16
+    event.save()
+    response = get_list(api_client, data={'audience_max_age_gt': event.audience_max_age})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'audience_max_age_gt': event.audience_max_age - 1})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'audience_max_age_gt': event.audience_max_age + 1})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'audience_max_age': event.audience_max_age})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'audience_max_age': event.audience_max_age - 1})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'audience_max_age': event.audience_max_age + 1})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
+def test_get_event_list_verify_audience_min_age_lt_filter(api_client, keyword, event):
+    #  'audience_max_age' parameter is identical to audience_max_age_gt and is kept for compatibility's sake
+    event.audience_min_age = 14
+    event.save()
+    response = get_list(api_client, data={'audience_min_age_lt': event.audience_min_age})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'audience_min_age_lt': event.audience_min_age - 1})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'audience_min_age_lt': event.audience_min_age + 1})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    #  'audience_max_age' parameter is identical to audience_max_age_gt and is kept for compatibility's sake
+    response = get_list(api_client, data={'audience_min_age': event.audience_min_age})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'audience_min_age': event.audience_min_age - 1})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'audience_min_age': event.audience_min_age + 1})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
+def test_get_event_list_verify_audience_min_age_gt_filter(api_client, keyword, event):
+    #  'audience_max_age' parameter is identical to audience_max_age_gt and is kept for compatibility's sake
+    event.audience_min_age = 14
+    event.save()
+    response = get_list(api_client, data={'audience_min_age_gt': event.audience_min_age})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'audience_min_age_gt': event.audience_min_age - 1})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'audience_min_age_gt': event.audience_min_age + 1})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
+def test_get_event_list_start_hour_filter(api_client, keyword, event):
+    event.start_time = datetime(2020, 1, 1, 16, 30).astimezone(pytz.timezone('Europe/Helsinki'))
+    event.save()
+
+    response = get_list(api_client, data={'starts_after': '16'})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'starts_after': '16:'})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'starts_after': '15:59'})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'starts_after': '16:30'})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'starts_after': '17:30'})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+    response = get_list_no_code_assert(api_client, data={'starts_after': '27:30'})
+    assert response.status_code == 400
+    response = get_list_no_code_assert(api_client, data={'starts_after': '18:70'})
+    assert response.status_code == 400
+    response = get_list_no_code_assert(api_client, data={'starts_after': ':70'})
+    assert response.status_code == 400
+    response = get_list_no_code_assert(api_client, data={'starts_after': '18:70:'})
+    assert response.status_code == 400
+
+    response = get_list(api_client, data={'starts_before': '15:59'})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'starts_before': '16:30'})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'starts_before': '17:30'})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+
+
+@pytest.mark.django_db
+def test_get_event_list_end_hour_filter(api_client, keyword, event):
+    event.start_time = datetime(2020, 1, 1, 13, 30).astimezone(pytz.timezone('Europe/Helsinki'))
+    event.end_time = datetime(2020, 1, 1, 16, 30).astimezone(pytz.timezone('Europe/Helsinki'))
+    event.save()
+
+    response = get_list(api_client, data={'ends_after': '15:59'})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'ends_after': '16:30'})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'ends_after': '17:30'})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+
+    response = get_list(api_client, data={'ends_before': '15:59'})
+    assert event.id not in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'ends_before': '16:30'})
+    assert event.id in [entry['id'] for entry in response.data['data']]
+    response = get_list(api_client, data={'ends_before': '17:30'})
+    assert event.id in [entry['id'] for entry in response.data['data']]
 
 
 @pytest.mark.django_db
@@ -836,3 +963,19 @@ def test_start_end_events_without_endtime(api_client, make_event):
     # short event (exact start) that already started should not be included
     expected_events = [event1, event3, event4]
     assert_events_in_response(expected_events, response)
+
+
+@pytest.mark.django_db
+def test_keyword_and_text(api_client, event, event2, keyword):
+    keyword.name_fi = 'lappset'
+    keyword.save()
+    event.keywords.add(keyword)
+    event.save()
+    event2.description_fi = 'lapset'
+    event2.save()
+    response = get_list(api_client, query_string='combined_text=lapset')
+    assert_events_in_response([event, event2], response)
+    event.description_fi = 'lapset ja aikuiset'
+    event.save()
+    response = get_list(api_client, query_string='combined_text=lapset,aikuiset')
+    assert_events_in_response([event], response)

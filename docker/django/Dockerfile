@@ -15,6 +15,7 @@ RUN chmod +x /tini
 
 RUN set -eux \
     && apt-get update && apt-get install -y --no-install-recommends --no-install-suggests \
+      build-essential \
       gdal-bin \
       gettext \
     && apt-get autoremove -y \

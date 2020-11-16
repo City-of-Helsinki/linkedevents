@@ -7,6 +7,8 @@ from django.core.management import call_command
 # This fails with modeltranslate, as the serialization is done before
 # sync_translation_fields has a chance to run. Thus the fields are missing
 # and serialization fails horribly.
+
+
 @pytest.fixture(scope='session')
 def django_db_modify_db_settings(django_db_modify_db_settings_xdist_suffix):
     settings.DATABASES['default']['TEST']['SERIALIZE'] = False

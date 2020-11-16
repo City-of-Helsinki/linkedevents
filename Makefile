@@ -231,6 +231,19 @@ update_places:
 	linkedevents-admin \
 	python manage.py update_n_events place
 
+.PHONY: update_upcoming_events
+update_upcoming_events:
+	@docker run \
+	--rm \
+	--network=host \
+	-e DB_APP_PASSWORD=secret \
+	-e DB_APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py update_has_upcoming_events
+
 .PHONY: createsuperuser
 createsuperuser:
 	@docker run \

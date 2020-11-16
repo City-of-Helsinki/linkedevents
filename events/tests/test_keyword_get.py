@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
-
-from .utils import versioned_reverse as reverse
 import pytest
+
+from events.models import Keyword
+
 from .utils import get
+from .utils import versioned_reverse as reverse
 
 
 def get_list(api_client, version='v1', data=None):
@@ -87,3 +89,45 @@ def test_get_keyword_list_verify_show_deprecated_param(api_client, keyword, keyw
     ids = [entry['id'] for entry in response.data['data']]
     assert keyword.id in ids
     assert keyword2.id in ids
+
+
+@pytest.mark.django_db
+def test_get_keyword_with_upcoming_events(api_client, keyword, keyword2, event, past_event):
+    event.keywords.add(keyword)
+    event.save()
+    past_event.keywords.add(keyword)
+    past_event.keywords.add(keyword2)
+    past_event.save()
+    keyword.n_events = 1
+    keyword2.n_events = 1
+    keyword.save()
+    keyword2.save()
+
+    response = get_list(api_client, data={'has_upcoming_events': True})
+    assert response.data['meta']['count'] == 0
+
+    Keyword.objects.has_upcoming_events_update()
+
+    response = get_list(api_client, data={'has_upcoming_events': True})
+    ids = [entry['id'] for entry in response.data['data']]
+    assert keyword.id in ids
+    assert keyword2.id not in ids
+
+    response = get_list(api_client, data={'has_upcoming_events': False})
+    ids = [entry['id'] for entry in response.data['data']]
+    assert keyword.id in ids
+    assert keyword2.id in ids
+
+
+@pytest.mark.django_db
+def test_get_keyword_free_search(api_client, keyword, keyword2, keyword3):
+    keyword.name_fi = 'cheese'
+    keyword2.name_en = 'blue cheese'
+    keyword3.name_sv = 'chess'
+    keyword.save()
+    keyword2.save()
+    keyword3.save()
+
+    response = get_list(api_client, data={'free_text': 'cheeese'})
+    ids = [entry['id'] for entry in response.data['data']]
+    assert ids == [keyword.id, keyword2.id, keyword3.id]

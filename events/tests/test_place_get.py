@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 from django.core.management import call_command
-
 from .utils import versioned_reverse as reverse
 import pytest
 from .utils import get
 from .test_event_get import get_detail as get_event_detail
+from events.models import Place
 
 
 def get_list(api_client, version='v1', data=None):
@@ -137,3 +137,31 @@ def test_get_place_list_check_division(api_client, place, administrative_divisio
     assert division['name'] == {'en': 'test division'}
     assert division['ocd_id'] == 'ocd-division/test:1'
     assert division['municipality'] == 'test municipality'
+
+
+@pytest.mark.django_db
+def test_get_place_with_upcoming_events(api_client, place, place2, event, past_event):
+    event.location = place
+    past_event.location = place2
+    place.n_events = 1
+    place2.n_events = 1
+
+    event.save()
+    past_event.save()
+    place.save()
+    place2.save()
+
+    response = get_list(api_client, data={'has_upcoming_events': True})
+    assert response.data['meta']['count'] == 0
+
+    Place.upcoming_events.has_upcoming_events_update()
+
+    response = get_list(api_client, data={'has_upcoming_events': True})
+    ids = [entry['id'] for entry in response.data['data']]
+    assert place.id in ids
+    assert place2.id not in ids
+
+    response = get_list(api_client, data={'has_upcoming_events': False})
+    ids = [entry['id'] for entry in response.data['data']]
+    assert place.id in ids
+    assert place2.id in ids

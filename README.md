@@ -31,6 +31,51 @@ Therefore, instructions written in this README.md should be written accordingly.
 
 The best way to contribute is to open a new PR for discussion. We strive to be able to support various cities with various use cases, so suggestions and new features (as long as they fit in with existing functionality) are welcome.
 
+## Syncing changes from Helsinki's Linked Events
+
+If you haven't already set Helsinki's Linked Events repository as a remote, you can do so by running (for more
+information, see https://docs.github.com/en/free-pro-team@latest/github/collaborating-with-issues-and-pull-requests/configuring-a-remote-for-a-fork):
+
+```
+git remote add upstream https://github.com/City-of-Helsinki/linkedevents.git
+```
+
+To sync the changes via a feature branch and a pull request, run:
+
+```
+# Fetch the latest changes from Helsinki's Linked Events
+git fetch upstream
+
+# Ensure that your Espoo Events fork master branch is up-to-date
+git pull origin master
+
+# Create new feature branch for the changes in Helsinki's Linked Events
+git checkout -b feat/sync-with-linkedevents master
+
+# Merge the changes from Helsinki's Linked Events to the feature branch. Note that there may be conflicts that you need
+# to resolve before you can commit the changes. If there are any other changes that you need to do related to the synced
+# changes, it might be better to do them in their own commits instead of in the merge commit. This way, it might be
+# clearer what the other changes are.
+git merge upstream/master
+
+# Push the feature branch to GitHub and create a pull request. Also, remember to document clearly what changes might
+# have been necessary to resolve any conflicts so that it's easier to distinguish how Espoo Events differs from
+# Helsinki's Linked Events.
+git push -u origin feat/sync-with-linkedevents
+```
+
+Another possibility is to merge the synced changes directly to the master branch (https://docs.github.com/en/free-pro-team@latest/github/collaborating-with-issues-and-pull-requests/syncing-a-fork):
+```
+git fetch upstream
+git checkout master
+git merge upstream/master
+# This requires that GitHub's protection setting is disabled for the master branch
+git push origin master
+```
+
+The benefit of the first approach is that the pull request groups together all of the synced changes so that it's easier
+to see what's changed.
+
 ## How to setup your local development environment
 If all you want is a barebone application to work with for your own city:
 

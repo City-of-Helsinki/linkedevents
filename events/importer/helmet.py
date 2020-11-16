@@ -184,7 +184,9 @@ class HelmetImporter(Importer):
             defaults=defaults, **ds_args)
         self.tprek_data_source = DataSource.objects.get(id='tprek')
         self.ahjo_data_source = DataSource.objects.get(id='ahjo')
-        self.system_data_source = DataSource.objects.get(id=settings.SYSTEM_DATA_SOURCE_ID)
+        system_data_source_defaults = {'user_editable': True}
+        self.system_data_source = DataSource.objects.get_or_create(id=settings.SYSTEM_DATA_SOURCE_ID,
+                                                                   defaults=system_data_source_defaults)
 
         org_args = dict(origin_id='u4804001010', data_source=self.ahjo_data_source)
         defaults = dict(name='Helsingin kaupunginkirjasto')
@@ -308,6 +310,11 @@ class HelmetImporter(Importer):
                 img_url = matches[0]
                 event['images'] = [{'url': HELMET_BASE_URL + img_url}]
             del ext_props['Images']
+
+        if 'WillTakePlace' in ext_props:
+            # WillTakePlace value "1" rather counterintuitively means the event has been cancelled
+            if ext_props['WillTakePlace'] == '1':
+                event['event_status'] = Event.Status.CANCELLED
 
         event['url'][lang] = '%s/api/opennc/v1/Contents(%s)' % (
             HELMET_BASE_URL, eid

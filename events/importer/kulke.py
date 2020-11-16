@@ -238,6 +238,20 @@ class KulkeImporter(Importer):
         defaults = dict(name='Yleiset kulttuuripalvelut')
         self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
 
+        # Create the internet location if missing
+        org_args = dict(origin_id='00001', data_source=ahjo_ds)
+        defaults = dict(name='Helsingin kaupunki')
+        self.city, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
+
+        system_data_source_defaults = {'user_editable': True}
+        self.system_data_source = DataSource.objects.get_or_create(id=settings.SYSTEM_DATA_SOURCE_ID,
+                                                                   defaults=system_data_source_defaults)
+        defaults = dict(data_source=self.system_data_source,
+                        publisher=self.city,
+                        name='Internet',
+                        description='Tapahtuma vain internetissä.',)
+        self.internet_location, _ = Place.objects.get_or_create(id=INTERNET_LOCATION_ID, defaults=defaults)
+
         # Build a cached list of Places to avoid frequent hits to the db
         id_list = LOCATION_TPREK_MAP.values()
         place_list = Place.objects.filter(data_source=self.tprek_data_source).filter(origin_id__in=id_list)

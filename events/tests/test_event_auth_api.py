@@ -23,7 +23,6 @@ class TestEventAPI(APITestCase):
         self.system_data_source = DataSource.objects.create(
             id='ds',
             name='data-source',
-            api_key="test_api_key",
             user_editable=True,
         )
         # this is a data source that only allows POST with api_key (external systems), but users may still PUT
@@ -468,7 +467,29 @@ class TestEventAPI(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_410_GONE)
 
+    def test_api_key_delete_event(self):
+        self.org_1.admin_users.add(self.user)
+
+        url = reverse('event-detail', kwargs={'pk': self.event_1.id})
+        self.client.force_authenticate(self.user)
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_410_GONE)
+
     def test_admin_delete_sub_organization_event(self):
+        self.org_1.admin_users.add(self.user)
+
+        url = reverse('event-detail', kwargs={'pk': self.event_3.id})
+        self.client.force_authenticate(self.user)
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_410_GONE)
+
+    def test_api_key_delete_sub_organization_event(self):
         self.org_1.admin_users.add(self.user)
 
         url = reverse('event-detail', kwargs={'pk': self.event_3.id})
@@ -496,6 +517,23 @@ class TestEventAPI(APITestCase):
         self.event_3.refresh_from_db()
         self.assertEqual(self.event_3.publication_status, PublicationStatus.PUBLIC)
 
+    def test_api_key_update_sub_organization_event(self):
+        self.org_1.admin_users.add(self.user)
+        location_id = reverse('place-detail', kwargs={'pk': self.place.id})
+
+        url = reverse('event-detail', kwargs={'pk': self.event_3.id})
+        data = self.make_complex_event_dict(self.system_data_source, self.org_3, location_id, self.languages)
+        data['publication_status'] = 'public'
+        self.client.force_authenticate(self.user)
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('publication_status', response.data)
+        self.assertIn('created_by', response.data)
+        self.assertIn('last_modified_by', response.data)
+
+        self.event_3.refresh_from_db()
+        self.assertEqual(self.event_3.publication_status, PublicationStatus.PUBLIC)
+
     def test_admin_delete_affiliated_organization_event(self):
         self.org_1.admin_users.add(self.user)
 
@@ -507,7 +545,35 @@ class TestEventAPI(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_410_GONE)
 
+    def test_api_key_delete_affiliated_organization_event(self):
+        self.org_1.admin_users.add(self.user)
+
+        url = reverse('event-detail', kwargs={'pk': self.event_5.id})
+        self.client.force_authenticate(self.user)
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_410_GONE)
+
     def test_admin_update_affiliated_organization_event(self):
+        self.org_1.admin_users.add(self.user)
+        location_id = reverse('place-detail', kwargs={'pk': self.place.id})
+
+        url = reverse('event-detail', kwargs={'pk': self.event_5.id})
+        data = self.make_complex_event_dict(self.system_data_source, self.org_4, location_id, self.languages)
+        data['publication_status'] = 'public'
+        self.client.force_authenticate(self.user)
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('publication_status', response.data)
+        self.assertIn('created_by', response.data)
+        self.assertIn('last_modified_by', response.data)
+
+        self.event_5.refresh_from_db()
+        self.assertEqual(self.event_5.publication_status, PublicationStatus.PUBLIC)
+
+    def test_api_key_update_affiliated_organization_event(self):
         self.org_1.admin_users.add(self.user)
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
 
@@ -600,6 +666,17 @@ class TestEventAPI(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_api_key_create_spoof_editable_data_source_denied(self):
+        url = reverse('event-list')
+        location_id = reverse('place-detail', kwargs={'pk': self.place.id})
+        # here, we are trying to use an allowed data source that is DIFFERENT from api key data source
+        data = self.make_complex_event_dict(self.editable_data_source, self.org_1, location_id, self.languages)
+
+        self.client.credentials(apikey=self.non_editable_data_source.api_key)
+        response = self.client.post(url, data, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
     def test_admin_create_editable_data_source_denied(self):
         self.org_1.admin_users.add(self.user)
         url = reverse('event-list')
@@ -656,6 +733,19 @@ class TestEventAPI(APITestCase):
         self.event_1.refresh_from_db()
         self.assertEqual(self.event_6.data_source, self.system_data_source)
 
+    def test_api_key_update_spoof_data_source_denied(self):
+        location_id = reverse('place-detail', kwargs={'pk': self.place.id})
+
+        url = reverse('event-detail', kwargs={'pk': self.event_7.id})
+        # here, we are trying to use an allowed data source that is DIFFERENT from API key data source
+        data = self.make_complex_event_dict(self.non_editable_data_source, self.org_1, location_id, self.languages)
+        self.client.credentials(apikey=self.editable_data_source.api_key)
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        self.event_1.refresh_from_db()
+        self.assertEqual(self.event_7.data_source, self.editable_data_source)
+
     def test_admin_update_change_data_source_denied(self):
         self.org_1.admin_users.add(self.user)
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
@@ -666,6 +756,21 @@ class TestEventAPI(APITestCase):
         self.client.force_authenticate(self.user)
         response = self.client.put(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        self.event_1.refresh_from_db()
+        self.assertEqual(self.event_1.data_source, self.system_data_source)
+
+    def test_api_key_update_change_data_source_denied(self):
+        location_id = reverse('place-detail', kwargs={'pk': self.place.id})
+
+        url = reverse('event-detail', kwargs={'pk': self.event_1.id})
+        # here, we are trying to use an allowed data source that is the SAME as API key data source
+        data = self.make_complex_event_dict(self.editable_data_source, self.org_1, location_id, self.languages)
+        self.client.credentials(apikey=self.editable_data_source.api_key)
+        response = self.client.put(url, data, format='json')
+
+        # api key should have no rights to original data source
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         self.event_1.refresh_from_db()
         self.assertEqual(self.event_1.data_source, self.system_data_source)
@@ -684,6 +789,19 @@ class TestEventAPI(APITestCase):
         self.event_1.refresh_from_db()
         self.assertEqual(self.event_1.data_source, self.system_data_source)
 
+    def test_api_key_update_system_data_source_denied(self):
+        location_id = reverse('place-detail', kwargs={'pk': self.place.id})
+
+        url = reverse('event-detail', kwargs={'pk': self.event_1.id})
+        # the system data source has no api key
+        data = self.make_complex_event_dict(self.system_data_source, self.org_1, location_id, self.languages)
+        self.client.credentials(apikey=self.editable_data_source.api_key)
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.event_1.refresh_from_db()
+        self.assertEqual(self.event_1.data_source, self.system_data_source)
+
     def test_admin_update_editable_data_source_allowed(self):
         self.org_1.admin_users.add(self.user)
         location_id = reverse('place-detail', kwargs={'pk': self.place.id})
@@ -692,6 +810,19 @@ class TestEventAPI(APITestCase):
         # here, we are just editing the event without changing the data source
         data = self.make_complex_event_dict(self.editable_data_source, self.org_1, location_id, self.languages)
         self.client.force_authenticate(self.user)
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.event_7.refresh_from_db()
+        self.assertEqual(self.event_7.data_source, self.editable_data_source)
+
+    def test_api_key_update_editable_data_source_allowed(self):
+        location_id = reverse('place-detail', kwargs={'pk': self.place.id})
+
+        url = reverse('event-detail', kwargs={'pk': self.event_7.id})
+        # here, we are just editing the event without changing the data source
+        data = self.make_complex_event_dict(self.editable_data_source, self.org_1, location_id, self.languages)
+        self.client.credentials(apikey=self.editable_data_source.api_key)
         response = self.client.put(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
