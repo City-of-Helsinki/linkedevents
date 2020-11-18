@@ -57,6 +57,8 @@ up:
 lint:
 	@docker run \
 	--rm \
+	--network=host \
+	-e WAIT_FOR_IT_ADDRESS=localhost:5432 \
 	-v `pwd`:/app \
 	-w /app \
 	--name linkedevents-lint \
@@ -84,6 +86,7 @@ import_yso:
 	-e DB_APP_USER=linkedevents_application \
 	-e DB_HOST=localhost \
 	-e DB_NAME=linkedevents \
+	-e SYSTEM_DATA_SOURCE_ID=espooevents \
 	--name linkedevents-admin \
 	linkedevents-admin \
 	python manage.py event_import yso --keywords --all
@@ -97,6 +100,7 @@ import_tprek:
 	-e DB_APP_USER=linkedevents_application \
 	-e DB_HOST=localhost \
 	-e DB_NAME=linkedevents \
+	-e SYSTEM_DATA_SOURCE_ID=espooevents \
 	--name linkedevents-admin \
 	linkedevents-admin \
 	python manage.py event_import tprek --places
@@ -110,6 +114,7 @@ import_osoite:
 	-e DB_APP_USER=linkedevents_application \
 	-e DB_HOST=localhost \
 	-e DB_NAME=linkedevents \
+	-e SYSTEM_DATA_SOURCE_ID=espooevents \
 	--name linkedevents-admin \
 	linkedevents-admin \
 	python manage.py event_import osoite --places
@@ -123,6 +128,7 @@ import_helmet:
 	-e DB_APP_USER=linkedevents_application \
 	-e DB_HOST=localhost \
 	-e DB_NAME=linkedevents \
+	-e SYSTEM_DATA_SOURCE_ID=espooevents \
 	--name linkedevents-admin \
 	linkedevents-admin \
 	python manage.py event_import helmet --events
@@ -136,9 +142,108 @@ import_espoo:
 	-e DB_APP_USER=linkedevents_application \
 	-e DB_HOST=localhost \
 	-e DB_NAME=linkedevents \
+	-e SYSTEM_DATA_SOURCE_ID=espooevents \
 	--name linkedevents-admin \
 	linkedevents-admin \
 	python manage.py event_import espoo --events
+
+.PHONY: import_finland_municipalities
+import_finland_municipalities:
+	@docker run \
+	--rm \
+	--network=host \
+	-e DB_APP_PASSWORD=secret \
+	-e DB_APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	-e SYSTEM_DATA_SOURCE_ID=espooevents \
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py geo_import finland --municipalities
+
+.PHONY: import_helsinki_divisions
+import_helsinki_divisions:
+	@docker run \
+	--rm \
+	--network=host \
+	-e DB_APP_PASSWORD=secret \
+	-e DB_APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	-e SYSTEM_DATA_SOURCE_ID=espooevents \
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py geo_import helsinki --divisions
+
+.PHONY: add_helsinki_audience
+add_helsinki_audience:
+	@docker run \
+	--rm \
+	--network=host \
+	-e DB_APP_PASSWORD=secret \
+	-e DB_APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	-e SYSTEM_DATA_SOURCE_ID=espooevents \
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py add_helsinki_audience
+
+.PHONY: add_helsinki_topics
+add_helsinki_topics:
+	@docker run \
+	--rm \
+	--network=host \
+	-e DB_APP_PASSWORD=secret \
+	-e DB_APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	-e SYSTEM_DATA_SOURCE_ID=espooevents \
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py add_helsinki_topics
+
+.PHONY: update_keywords
+update_keywords:
+	@docker run \
+	--rm \
+	--network=host \
+	-e DB_APP_PASSWORD=secret \
+	-e DB_APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	-e SYSTEM_DATA_SOURCE_ID=espooevents \
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py update_n_events keyword
+
+.PHONY: update_places
+update_places:
+	@docker run \
+	--rm \
+	--network=host \
+	-e DB_APP_PASSWORD=secret \
+	-e DB_APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	-e SYSTEM_DATA_SOURCE_ID=espooevents \
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py update_n_events place
+
+.PHONY: update_upcoming_events
+update_upcoming_events:
+	@docker run \
+	--rm \
+	--network=host \
+	-e DB_APP_PASSWORD=secret \
+	-e DB_APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	-e SYSTEM_DATA_SOURCE_ID=espooevents \
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py update_has_upcoming_events
 
 .PHONY: install_templates
 install_templates:
@@ -153,96 +258,6 @@ install_templates:
 	linkedevents-admin \
 	python manage.py install_templates helevents
 
-.PHONY: import_finland_municipalities
-import_finland_municipalities:
-	@docker run \
-	--rm \
-	--network=host \
-	-e DB_APP_PASSWORD=secret \
-	-e DB_APP_USER=linkedevents_application \
-	-e DB_HOST=localhost \
-	-e DB_NAME=linkedevents \
-	--name linkedevents-admin \
-	linkedevents-admin \
-	python manage.py geo_import finland --municipalities
-
-.PHONY: import_helsinki_divisions
-import_helsinki_divisions:
-	@docker run \
-	--rm \
-	--network=host \
-	-e DB_APP_PASSWORD=secret \
-	-e DB_APP_USER=linkedevents_application \
-	-e DB_HOST=localhost \
-	-e DB_NAME=linkedevents \
-	--name linkedevents-admin \
-	linkedevents-admin \
-	python manage.py geo_import helsinki --divisions
-
-.PHONY: add_helsinki_audience
-add_helsinki_audience:
-	@docker run \
-	--rm \
-	--network=host \
-	-e DB_APP_PASSWORD=secret \
-	-e DB_APP_USER=linkedevents_application \
-	-e DB_HOST=localhost \
-	-e DB_NAME=linkedevents \
-	--name linkedevents-admin \
-	linkedevents-admin \
-	python manage.py add_helsinki_audience
-
-.PHONY: add_helsinki_topics
-add_helsinki_topics:
-	@docker run \
-	--rm \
-	--network=host \
-	-e DB_APP_PASSWORD=secret \
-	-e DB_APP_USER=linkedevents_application \
-	-e DB_HOST=localhost \
-	-e DB_NAME=linkedevents \
-	--name linkedevents-admin \
-	linkedevents-admin \
-	python manage.py add_helsinki_topics
-
-.PHONY: update_keywords
-update_keywords:
-	@docker run \
-	--rm \
-	--network=host \
-	-e DB_APP_PASSWORD=secret \
-	-e DB_APP_USER=linkedevents_application \
-	-e DB_HOST=localhost \
-	-e DB_NAME=linkedevents \
-	--name linkedevents-admin \
-	linkedevents-admin \
-	python manage.py update_n_events keyword
-
-.PHONY: update_places
-update_places:
-	@docker run \
-	--rm \
-	--network=host \
-	-e DB_APP_PASSWORD=secret \
-	-e DB_APP_USER=linkedevents_application \
-	-e DB_HOST=localhost \
-	-e DB_NAME=linkedevents \
-	--name linkedevents-admin \
-	linkedevents-admin \
-	python manage.py update_n_events place
-
-.PHONY: update_upcoming_events
-update_upcoming_events:
-	@docker run \
-	--rm \
-	--network=host \
-	-e DB_APP_PASSWORD=secret \
-	-e DB_APP_USER=linkedevents_application \
-	-e DB_HOST=localhost \
-	-e DB_NAME=linkedevents \
-	--name linkedevents-admin \
-	linkedevents-admin \
-	python manage.py update_has_upcoming_events
 
 .PHONY: createsuperuser
 createsuperuser:
