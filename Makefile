@@ -57,6 +57,8 @@ up:
 lint:
 	@docker run \
 	--rm \
+	--network=host \
+	-e WAIT_FOR_IT_ADDRESS=localhost:5432 \
 	-v `pwd`:/app \
 	-w /app \
 	--name linkedevents-lint \
