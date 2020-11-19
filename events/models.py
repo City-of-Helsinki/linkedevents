@@ -577,6 +577,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
 
     deleted = models.BooleanField(default=False, db_index=True)
 
+    is_virtualevent = models.BooleanField(default=False, db_index=True)
+
     replaced_by = models.ForeignKey('Event', on_delete=models.SET_NULL, related_name='aliases', null=True, blank=True)
 
     # Custom fields not from schema.org
