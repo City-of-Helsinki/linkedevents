@@ -4,36 +4,52 @@
 #
 #    pip-compile requirements-dev.in
 #
-
 astroid==2.4.2            # via pylint
 attrs==19.3.0             # via -c requirements.txt, pytest
+backcall==0.2.0           # via ipython
 click==7.1.2              # via pip-tools
+decorator==4.4.2          # via ipython, traitlets
+django-debug-toolbar==3.1.1  # via -r requirements-dev.in
 django-extensions==3.0.1  # via -r requirements-dev.in
+django==2.2.13            # via -c requirements.txt, django-debug-toolbar
 flake8==3.8.3             # via -r requirements-dev.in
 freezegun==0.3.15         # via -r requirements-dev.in
 importlib-metadata==1.7.0  # via -c requirements.txt, flake8, pluggy, pytest
+ipython-genutils==0.2.0   # via traitlets
+ipython==7.16.1           # via -r requirements-dev.in
 isort==4.3.21             # via pylint
+jedi==0.17.2              # via ipython
 lazy-object-proxy==1.4.3  # via astroid
 mccabe==0.6.1             # via flake8, pylint
 more-itertools==8.4.0     # via pytest
 packaging==20.4           # via -c requirements.txt, pytest
+parso==0.7.1              # via jedi
+pexpect==4.8.0            # via ipython
+pickleshare==0.7.5        # via ipython
 pip-tools==5.2.1          # via -r requirements-dev.in
 pluggy==0.13.1            # via pytest
+prompt-toolkit==3.0.8     # via ipython
+ptyprocess==0.6.0         # via pexpect
 py==1.9.0                 # via pytest
 pycodestyle==2.6.0        # via flake8
 pyflakes==2.2.0           # via -r requirements-dev.in, flake8
+pygments==2.7.2           # via ipython
 pylint==2.5.3             # via -r requirements-dev.in
 pyparsing==2.4.7          # via -c requirements.txt, packaging
 pytest-django==3.9.0      # via -r requirements-dev.in
 pytest==5.4.3             # via -r requirements-dev.in, pytest-django
 python-dateutil==2.8.1    # via -c requirements.txt, freezegun
-six==1.15.0               # via -c requirements.txt, astroid, django-extensions, freezegun, packaging, pip-tools, python-dateutil
+pytz==2020.1              # via -c requirements.txt, django
+six==1.15.0               # via -c requirements.txt, astroid, django-extensions, freezegun, packaging, pip-tools, python-dateutil, traitlets
+sqlparse==0.3.1           # via -c requirements.txt, django, django-debug-toolbar
 toml==0.10.1              # via pylint
+traitlets==4.3.3          # via ipython
 typed-ast==1.4.1          # via astroid
-wcwidth==0.2.5            # via pytest
+wcwidth==0.2.5            # via prompt-toolkit, pytest
 werkzeug==1.0.1           # via -r requirements-dev.in
 wrapt==1.12.1             # via astroid
 zipp==3.1.0               # via -c requirements.txt, importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # pip
+# setuptools
