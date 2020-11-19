@@ -19,28 +19,32 @@ attribute to change @context when need to define schemas for custom fields.
 """
 import datetime
 import logging
+from smtplib import SMTPException
+
+import pytz
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
-import pytz
-from django.contrib.gis.db import models
-from rest_framework.exceptions import ValidationError
-from reversion import revisions as reversion
-from django.utils.translation import ugettext_lazy as _
-from mptt.models import MPTTModel, TreeForeignKey
-from mptt.querysets import TreeQuerySet
 from django.contrib.contenttypes.models import ContentType
-from events import translation_utils
-from django.utils.encoding import python_2_unicode_compatible
+from django.contrib.gis.db import models
 from django.contrib.postgres.fields import HStoreField
 from django.contrib.sites.models import Site
 from django.core.mail import send_mail
 from django.db import transaction
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
+from django.utils.encoding import python_2_unicode_compatible
+from django.utils.translation import ugettext_lazy as _
 from image_cropping import ImageRatioField
+from mptt.models import MPTTModel, TreeForeignKey
+from mptt.querysets import TreeQuerySet
 from munigeo.models import AdministrativeDivision
-from notifications.models import render_notification_template, NotificationType, NotificationTemplateException
-from smtplib import SMTPException
+from rest_framework.exceptions import ValidationError
+from reversion import revisions as reversion
+
+from events import translation_utils
+from notifications.models import (NotificationTemplateException,
+                                  NotificationType,
+                                  render_notification_template)
 
 logger = logging.getLogger(__name__)
 
@@ -198,7 +202,7 @@ class Image(models.Model):
 
     def can_be_edited_by(self, user):
         """Check if current image can be edited by the given user"""
-        if user.is_superuser:
+        if user.is_superuser or user.is_regular_user(self.publisher):
             return True
         return user.is_admin(self.publisher)
 
@@ -283,8 +287,8 @@ class UpcomingEventsUpdater(models.Manager):
             qs = qs.filter(deprecated=False)
         elif self.model.__name__ == 'Place':
             qs = qs.filter(deleted=False)
-        qs.filter(events__start_time__gte=now).update(has_upcoming_events=True)
-        qs.exclude(events__start_time__gte=now).update(has_upcoming_events=False)
+        qs.filter(events__end_time__gte=now).update(has_upcoming_events=True)
+        qs.exclude(events__end_time__gte=now).update(has_upcoming_events=False)
 
 
 class Keyword(BaseModel, ImageMixin, ReplacedByMixin):

@@ -44,7 +44,7 @@ class TestImage(TestCase):
         self.org.regular_users.add(self.user)
 
         can_be_edited = self.image.can_be_edited_by(self.user)
-        self.assertFalse(can_be_edited)
+        self.assertTrue(can_be_edited)
 
     def test_can_be_edited_by_admin_user(self):
         self.org.admin_users.add(self.user)
