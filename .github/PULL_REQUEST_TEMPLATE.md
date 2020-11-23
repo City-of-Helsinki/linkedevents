@@ -20,6 +20,7 @@
 - [ ] The change has been tested locally, e.g., with httpie
 - [ ] The change has been tested against a DB dump from test and/or staging if the models have been changed
 - [ ] The code is self-documenting or has been documented sufficiently, e.g., in the README
+- [ ] The changelog has been updated with the relevant changes
 - [ ] The branch has been rebased against master before the PR was created
 
 #### Checklist for pull request reviewer (copy to review text box)
@@ -37,5 +38,6 @@
 - [ ] The change has been tested locally, e.g., with httpie
 - [ ] The change has been tested against a DB dump from test and/or staging if the models have been changed
 - [ ] The code is self-documenting or has been documented sufficiently, e.g., in the README
+- [ ] The changelog has been updated with the relevant changes
 - [ ] The PR branch has been rebased against master and force pushed if necessary before merging
 ```

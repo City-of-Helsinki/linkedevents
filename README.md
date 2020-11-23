@@ -365,3 +365,8 @@ To implement an extension:
 6) If you want to force the extension to be enabled on every request, add the extension's identifier to `AUTO_ENABLED_EXTENSIONS` in Django settings.
 
 For an example extension implementation, see [course extension](extension_course).
+
+## Changelog
+
+This project uses a changelog to keep track of all notable changes between versions. See [CHANGELOG](CHANGELOG.md) for
+more details.
