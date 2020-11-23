@@ -333,6 +333,24 @@ jobs:
       - notify_jira
       - notify_slack
 
+  push_tag:
+    executor: python
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - *ci_espooevents_ssh_key_fingerprint
+      - checkout
+      - run:
+          name: Set mandatory Git config fields to allow creating and pushing tags
+          command: |
+            git config --global user.name "${GIT_USER_NAME}"
+            git config --global user.email "${GIT_EMAIL}"
+      - run:
+          name: Push version tag to GitHub
+          command: ./bin/push-version-tag.sh
+      - notify_jira
+      - notify_slack
+
   deploy:
     parameters:
       target_env:
@@ -385,6 +403,15 @@ workflows:
           requires:
             - build
 
+      - push_tag:
+          context: espooevents
+          requires:
+            - dockerize_dist
+            - dockerize_importer
+          filters:
+            branches:
+              only: master
+
       # Deploy to dev
       - deploy:
           <<: *voltti_global_context
@@ -392,7 +419,7 @@ workflows:
           target_env: dev
           jira_env_type: development
           requires:
-            - dockerize_dist
+            - push_tag
           filters:
             branches:
               only: master
@@ -404,7 +431,7 @@ workflows:
           target_env: test
           jira_env_type: testing
           requires:
-            - dockerize_dist
+            - push_tag
           filters:
             branches:
               only: master
