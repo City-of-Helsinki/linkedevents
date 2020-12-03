@@ -10,6 +10,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 <!-- List the changes in your PR under the Unreleased title. You can also copy this list to your PR summary. -->
 
+## [1.2.0] - 2020-12-03
+
+### Added
+
+- Versioning for `espooevents-service` based on [Semantic Versioning](https://semver.org) so that it's easier to
+  understand what type of changes each release contain and to better communicate breaking changes
+- Instructions for versioning and a rationale for why versioning is useful
+- Scripts for validating the version number and pushing the version tag to GitHub
+- CircleCI configuration for automatically pushing the version tag to GitHub when a change has been merged to `master`
+- A changelog to better document what's changed and why so that future development and maintenance would hopefully be
+  a bit easier
+- Changelog entries to all previous releases to better document the changes and their rationale for future developers
+- Checklist item to the GitHub pull request template for ensuring that the changelog has been updated and the version
+  number incremented for each release
+
 ## [1.1.1] - 2020-11-18
 
 ### Fixed
@@ -623,6 +638,7 @@ to `espooevents-service`.
   to a minimum. This version marks the initial `0.1.0` relase and the initial `linkedevents` commit on which
   `espooevents-service` is based on.
 
+[1.2.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.1.1...espoo-v1.2.0
 [1.1.1]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.1.0...espoo-v1.1.1
 [1.1.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.0.0...espoo-v1.1.0
 [1.0.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v0.20.0...espoo-v1.0.0
