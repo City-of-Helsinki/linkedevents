@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+./bin/check-version.sh

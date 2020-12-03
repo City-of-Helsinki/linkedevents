@@ -365,3 +365,56 @@ To implement an extension:
 6) If you want to force the extension to be enabled on every request, add the extension's identifier to `AUTO_ENABLED_EXTENSIONS` in Django settings.
 
 For an example extension implementation, see [course extension](extension_course).
+
+## Versioning
+
+Espoo Events Service adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The benefit of having
+explicit versions instead of just relying on commit hashes is that Semantic Versioning provides a more human-friendly
+version that also has a clear meaning. Semantic Versioning makes it possible to infer things that wouldn't be possible
+from commit hashes. For instance, it's possible to see whether the version contains just small fixes, features, or even
+breaking changes. Another benefit is that explicit versioning enables the use of a changelog. This in turn helps
+developers to more easily see what's changed between different versions of the project instead of having to browse
+through the commit history which can be tedious. Finally, it's also easier to refer to a specific version using a
+human-friendly version rather than a commit hash.
+
+It's important to note that software strictly adhering to Semantic Versioning must declare a public API. Thus, Semantic
+Versioning might not be applicable to all software (e.g., see [this](https://www.jering.tech/articles/semantic-versioning-in-practice#what-software-can-semver-version)
+and [this](https://softwareengineering.stackexchange.com/a/255201) post). Espoo Events Service isn't a library so it
+might not be directly evident why versioning is even needed. However, Espoo Events Service is a service with a REST API
+used by the City of Espoo. In addition, Espoo Events Service can also be considered an open source product that can be
+used by other parties. Thus, versioning can be helpful to communicate, e.g., breaking changes in the REST API or the
+product's features. In other words, for Espoo Events Service, the following can, for instance, be considered to
+constitute the public API:
+
+- The REST API provided by Espoo Events Service
+- Configuration used by developers for setting up the local development environment
+- Documentation (see, e.g., [SemVerDoc](https://semverdoc.org/semverdoc.html))
+- Product features
+
+The upstream repository `linkedevents` doesn't seem to use versioning or tags very actively. There are, however, some
+version tags and in order to avoid conflicts and to more easily distinguish Espoo Events version tags from Linked Events
+version tags, the version tags of Espoo Events have been prefixed with `espoo-`. In this case, e.g., `espoo-v1.2.3` is
+the version tag name and the corresponding semantic version is `1.2.3`. Since Linked Events isn't actively using
+versioning, the versioning scheme of Espoo Events doesn't deliberately have any relation to the versions in the
+`linkedevents` repository. This means that the versions between Espoo Events and Linked Events aren't comparable.
+
+It's also important to note that since we're using continuous delivery, every merge to the `master` branch is a
+potential release candidate. This means that every commit in `master` should have an explicit version associated with
+it.
+
+The version should be incremented just before a PR is merged to `master`. To create a new version, the creator of the PR
+should follow these steps:
+
+- Make sure that you've listed your changes in the [changelog](CHANGELOG.md). A good practice is to list your changes
+  during development under the `Unreleased` title. That way, you can easily move the list under the correct version when
+  it's time to increment the version.
+- Based on Semantic Versioning, decide what's the correct version number for the new version and add the new version to
+  the [changelog](CHANGELOG.md) and also update the version in the [VERSION](VERSION) file.
+
+Ask for another developer to review your PR. Once the PR has been merged to `master`, the CI pipeline should
+automatically tag the merge commit in the `master` branch with the new version.
+
+## Changelog
+
+This project uses a changelog to keep track of all notable changes between versions. See [CHANGELOG](CHANGELOG.md) for
+more details.
