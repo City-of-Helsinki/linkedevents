@@ -38,6 +38,7 @@ pyYAML
 python-dateutil
 python-docx
 python-Levenshtein
+python-memcached
 pytz
 rdflib
 requests-cache
