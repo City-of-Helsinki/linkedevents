@@ -175,8 +175,8 @@ import_helsinki_divisions:
 	linkedevents-admin \
 	python manage.py geo_import helsinki --divisions
 
-.PHONY: add_helsinki_audience
-add_helsinki_audience:
+.PHONY: add_espoo_audience
+add_espoo_audience:
 	@docker run \
 	--rm \
 	--network=host \
@@ -187,7 +187,7 @@ add_helsinki_audience:
 	-e SYSTEM_DATA_SOURCE_ID=espooevents \
 	--name linkedevents-admin \
 	linkedevents-admin \
-	python manage.py add_helsinki_audience
+	python manage.py add_espoo_audience
 
 .PHONY: add_helsinki_topics
 add_helsinki_topics:
@@ -245,6 +245,20 @@ update_upcoming_events:
 	linkedevents-admin \
 	python manage.py update_has_upcoming_events
 
+.PHONY: update_espoo_audiences
+update_espoo_audiences:
+	@docker run \
+	--rm \
+	--network=host \
+	-e DB_APP_PASSWORD=secret \
+	-e DB_APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	-e SYSTEM_DATA_SOURCE_ID=espooevents \
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py update_espoo_audiences
+
 .PHONY: install_templates
 install_templates:
 	@docker run \
@@ -257,7 +271,6 @@ install_templates:
 	--name linkedevents-admin \
 	linkedevents-admin \
 	python manage.py install_templates helevents
-
 
 .PHONY: createsuperuser
 createsuperuser:
