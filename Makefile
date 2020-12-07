@@ -245,20 +245,6 @@ update_upcoming_events:
 	linkedevents-admin \
 	python manage.py update_has_upcoming_events
 
-.PHONY: update_espoo_audiences
-update_espoo_audiences:
-	@docker run \
-	--rm \
-	--network=host \
-	-e DB_APP_PASSWORD=secret \
-	-e DB_APP_USER=linkedevents_application \
-	-e DB_HOST=localhost \
-	-e DB_NAME=linkedevents \
-	-e SYSTEM_DATA_SOURCE_ID=espooevents \
-	--name linkedevents-admin \
-	linkedevents-admin \
-	python manage.py update_espoo_audiences
-
 .PHONY: install_templates
 install_templates:
 	@docker run \

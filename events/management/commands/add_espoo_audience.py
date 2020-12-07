@@ -5,7 +5,7 @@ import logging
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from events.models import Keyword, KeywordSet, DataSource
+from events.models import Event, Keyword, KeywordSet, DataSource
 
 logger = logging.getLogger(__name__)
 
@@ -47,9 +47,30 @@ NEW_ESPOO_KEYWORDS = [
     }
 ]
 
+# A mapping of YSO audience keywords to custom Espoo audience keywords
+YSO_TO_ESPOO_KEYWORD_MAPPING = {
+    'yso:p2433': ['espoo:a1'],  # ikääntyneet -> seniorit
+}
+
 
 class Command(BaseCommand):
-    help = "Creates a keyword set with Espoo's target audiences."
+    """Creates a keyword set with Espoo's audiences and maps YSO audience keywords to custom Espoo audience keywords.
+
+    The mapping of YSO keywords to custom Espoo keywords is done so that any imported events that have any of the YSO
+    keywords specified in YSO_TO_ESPOO_KEYWORD_MAPPING are also augmented with the custom Espoo audience keywords. Of
+    course, the existing importers could be modified to instead directly add the custom Espoo keywords instead of using
+    this management command. However, then we'd need to modify multiple importers and the implementations of the
+    existing importers would diverge from the upstream linkedevents repository. This could be more fragile since any
+    future updates would need to take these changes into account. By making the update in this separate management
+    command, the changes are better isolated from existing functionality.
+
+    Since some of the importers are run hourly, this management command should also be run hourly so that any imported
+    events get augmented with the custom Espoo audience keywords.
+    """
+    help = (
+     "Creates a keyword set with Espoo's target audiences and maps YSO audience keywords to custom Espoo audience "
+     "keywords (this is meant to be run hourly)."
+    )
 
     @lru_cache()
     def get_keyword_obj(self, keyword_id):
@@ -97,6 +118,21 @@ class Command(BaseCommand):
                 existing_keywords.add(keyword)
                 logger.info('added {} ({}) to the keyword set'.format(keyword.name, keyword_id))
 
+    @transaction.atomic()
+    def add_espoo_audience_keywords_to_events(self):
+        logger.info('Adding Espoo audience keywords to events...')
+
+        for event in Event.objects.exclude(audience__isnull=True).prefetch_related('audience'):
+            for audience in event.audience.all():
+
+                # Map the given YSO audience keywords to custom Espoo audience keywords
+                for espoo_keyword_id in YSO_TO_ESPOO_KEYWORD_MAPPING.get(audience.id, []):
+                    espoo_keyword_obj = self.get_keyword_obj(espoo_keyword_id)
+
+                    if espoo_keyword_obj not in event.audience.all():
+                        event.audience.add(espoo_keyword_obj)
+                        logger.info('added {} ({}) to {}'.format(espoo_keyword_obj, espoo_keyword_id, event))
+
     def handle(self, *args, **options):
         # Espoo data source must be created if missing. Note that it is not necessarily the system data source.
         # If we are creating it, it *may* still be the system data source, so it must be user editable!
@@ -105,4 +141,5 @@ class Command(BaseCommand):
                                          defaults=espoo_data_source_defaults)
         self.create_espoo_keywords()
         self.create_espoo_audiences_keyword_set()
+        self.add_espoo_audience_keywords_to_events()
         logger.info('all done')
