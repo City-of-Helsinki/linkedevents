@@ -1230,7 +1230,7 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
                                   many=True, required=False, queryset=Keyword.objects.filter(deprecated=False))
 
     view_name = 'event-detail'
-    fields_needed_to_publish = ('keywords', 'location', 'start_time', 'short_description', 'description')
+    fields_needed_to_publish = ('keywords', 'location', 'start_time', 'short_description')
     created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
     last_modified_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
     date_published = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
@@ -1238,6 +1238,7 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
     end_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
     created_by = serializers.StringRelatedField(required=False, allow_null=True)
     last_modified_by = serializers.StringRelatedField(required=False, allow_null=True)
+    is_virtualevent = serializers.BooleanField(required=False, allow_null=False)
 
     def __init__(self, *args, skip_empties=False, **kwargs):
         super(EventSerializer, self).__init__(*args, **kwargs)
@@ -1352,6 +1353,12 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
         # if id was not provided, we generate it upon creation:
         if 'id' not in validated_data:
             validated_data['id'] = generate_id(self.data_source)
+
+        if 'location' not in validated_data:
+            try:
+                validated_data['location'] = Place.objects.get(id='virtual:public')
+            except (Place.DoesNotExist, Place.MultipleObjectsReturned):
+                print(f'Attempted to create event with default location')
 
         offers = validated_data.pop('offers', [])
         links = validated_data.pop('external_links', [])
