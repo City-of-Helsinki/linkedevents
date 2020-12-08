@@ -3,7 +3,7 @@
 django-extensions
 flake8
 freezegun
-gitlint==0.12.0
+gitlint
 ipython
 pip-tools
 pyflakes
