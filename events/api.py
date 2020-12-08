@@ -1808,7 +1808,15 @@ def _filter_event_queryset(queryset, params, srs=None):
         queryset = queryset.filter(*qsets)
 
     #  This filtering param requires populate_local_event_cache management command
-    val = params.get('combined_local_ongoing', None)
+    val = params.get('local_ongoing_AND', None)
+    if val:
+        cache = caches['ongoing_local']
+        val = val.lower()
+        vals = val.split(',')
+        ids = {k for k, v in cache.get('ids').items() if all(val in v for val in vals)}
+        queryset = queryset.filter(id__in=ids)
+
+    val = params.get('local_ongoing_OR', None)
     if val:
         cache = caches['ongoing_local']
         val = val.lower()

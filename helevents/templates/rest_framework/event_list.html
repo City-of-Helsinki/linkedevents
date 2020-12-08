@@ -125,13 +125,13 @@ fields, use the query parameter <code>text</code>.</p>
 <pre><code>event/?text=shostakovich
 </code></pre>
 <p><a href="?text=shostakovich" title="json">See the result</a></p>
-<h3 id="combined-local-ongoing">Combined search for local events</h3>
-<p>Use to quickly access local events that are upcoming or have not ended yet. Combines the search on a number of 
-description, name, and keyword fields</p>
+<h3 id="local-ongoing">Local ongoing events</h3>
+<p>Use to quickly access local (municipality level) events that are upcoming or have not ended yet. Combines the search on a number of 
+description, name, and keyword fields. Locality is defined on the basis of MUNIGEO_MUNI value, which is set in the settings file. In the Helsinki case all the events would be retrieved that happen within Helsinki. Comes in two flavors: AND and OR. Use <code>event/?local_ongoing_AND=lapset,musiiki</code> to search for the events with both search terms in the description fields and <code>?local_ongoing_OR</code> to search for the events with at least one term mentioned.</p>
 <p>Example:</p>
-<pre><code>event/?combined_local_ongoing=rock
+<pre><code>event/?local_ongoing_AND=lapset,musiikki
 </code></pre>
-<p><a href="?combined_local_ongoing=rock" title="json">See the result</a></p>
+<p><a href="?local_ongoing_AND=lapset,musiikki" title="json">See the result</a></p>
 <h3 id="event-price">Event price</h3>
 <p>Events may or may not contain the <code>offers</code> field that lists event pricing. To return only
 free or non-free events, use the query parameter<code>is_free</code>. However, note that from some
