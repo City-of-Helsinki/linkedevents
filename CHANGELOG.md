@@ -10,6 +10,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 <!-- List the changes in your PR under the Unreleased title. You can also copy this list to your PR summary. -->
 
+## [1.3.0] - 2020-12-08
+
+### Added
+
+- A new Django management command `add_espoo_audience` for adding a new keyword set `espoo:audiences` with Espoo's
+  target audience keywords. The management command also adds a new custom Espoo audience keyword `espoo:a1` (seniorit)
+  to all events that have the `yso:p2433` (ikääntyneet) YSO keyword. The custom Espoo audience keyword has been added
+  because Espoo wants to use the term `seniorit` instead of the term `ikääntyneet` since `seniorit` is the established
+  term that Espoo is using in Espoo.fi. Instead of renaming the YSO keyword or implementing the mapping directly in the
+  importers, the mapping is now done in this management command in order to better isolate the change and thus minimize
+  changes to existing functionality for keeping the repository compatible with the upstream `linkedevents` repository.
+  Since the mapping needs to be done to newly imported events, it's recommended to run this management command hourly
+  since some of the importers should also be run hourly.
+
+### Changed
+
+- The `yso` importer's `KEYWORDS_TO_ADD_TO_AUDIENCE` list to only include the YSO keywords that the `espoo:audiences`
+  keyword set contains so that only the audience keywords that are relevant to Espoo are added to an event's audience
+  list in event imports. Note that this doesn't affect just the `yso` importer since other importers use the
+  `KEYWORDS_TO_ADD_TO_AUDIENCE` list although it's defined in the `yso` importer.
+- Replaced the `add_helsinki_audience` example command in `Makefile` with the new `add_espoo_audience` command
+
 ## [1.2.1] - 2020-12-08
 
 ### Fixed
@@ -647,6 +669,7 @@ to `espooevents-service`.
   to a minimum. This version marks the initial `0.1.0` relase and the initial `linkedevents` commit on which
   `espooevents-service` is based on.
 
+[1.3.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.2.1...espoo-v1.3.0
 [1.2.1]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.2.0...espoo-v1.2.1
 [1.2.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.1.1...espoo-v1.2.0
 [1.1.1]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.1.0...espoo-v1.1.1
