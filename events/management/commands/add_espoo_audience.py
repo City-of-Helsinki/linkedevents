@@ -49,7 +49,7 @@ NEW_ESPOO_KEYWORDS = [
 
 # A mapping of YSO audience keywords to custom Espoo audience keywords
 YSO_TO_ESPOO_KEYWORD_MAPPING = {
-    'yso:p2433': ['espoo:a1'],  # ikääntyneet -> seniorit
+    'yso:p2433': 'espoo:a1',  # ikääntyneet -> seniorit
 }
 
 
@@ -125,13 +125,16 @@ class Command(BaseCommand):
         for event in Event.objects.exclude(audience__isnull=True).prefetch_related('audience'):
             for audience in event.audience.all():
 
-                # Map the given YSO audience keywords to custom Espoo audience keywords
-                for espoo_keyword_id in YSO_TO_ESPOO_KEYWORD_MAPPING.get(audience.id, []):
-                    espoo_keyword_obj = self.get_keyword_obj(espoo_keyword_id)
+                if audience.id not in YSO_TO_ESPOO_KEYWORD_MAPPING:
+                    continue
 
-                    if espoo_keyword_obj not in event.audience.all():
-                        event.audience.add(espoo_keyword_obj)
-                        logger.info('added {} ({}) to {}'.format(espoo_keyword_obj, espoo_keyword_id, event))
+                # Map the given YSO audience keyword to a custom Espoo audience keyword
+                espoo_keyword_id = YSO_TO_ESPOO_KEYWORD_MAPPING.get(audience.id)
+                espoo_keyword_obj = self.get_keyword_obj(espoo_keyword_id)
+
+                if espoo_keyword_obj not in event.audience.all():
+                    event.audience.add(espoo_keyword_obj)
+                    logger.info('added {} ({}) to {}'.format(espoo_keyword_obj, espoo_keyword_id, event))
 
     def handle(self, *args, **options):
         # Espoo data source must be created if missing. Note that it is not necessarily the system data source.
