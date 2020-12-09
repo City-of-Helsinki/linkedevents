@@ -30,6 +30,7 @@ KEYWORDS_TO_ADD_TO_AUDIENCE = [
     'p13050',
     'p16596',
     'p11617',
+    'p2433',
     'p7179',
 ]
 
