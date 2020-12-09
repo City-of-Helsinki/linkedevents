@@ -10,6 +10,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 <!-- List the changes in your PR under the Unreleased title. You can also copy this list to your PR summary. -->
 
+## [1.4.0] - 2020-12-09
+
+### Changed
+
+- Replaced all of the YSO keywords added by the `add_espoo_audience` management command with custom Espoo audience
+  keywords so that the Finnish audience terms and their translations correspond to the terms and translations in
+  Espoo.fi. The terms used in Espoo.fi differ from the corresponding YSO keywords which makes the YSO keywords
+  unsuitable for Espoo.
+
+  **NOTE!** If you've already added the `espoo:audiences` keyword set, you need to remove it and run the
+  `add_espoo_audience` again to add the correct audience keywords. For instance, the ID of the `seniorit` keyword has
+  changed from `espoo:a1` to `espoo:a4` so you also need to remove any references to it.
+- The `add_espoo_audience` management command to use Python 3's [f-strings](https://docs.python.org/3/tutorial/inputoutput.html#formatted-string-literals)
+  for formatting strings instead of the older `format()` function since `f-strings` make the template strings more
+  readable
+
+### Fixed
+
+- Added the missing YSO audience keyword `p2433` to the `KEYWORDS_TO_ADD_TO_AUDIENCE` dictionary in the `yso` importer.
+  The `p2433` keyword corresponds to one of the custom Espoo audience keywords and should therefore be added to the
+  audience list. This fixes the issue where other importers using the `KEYWORDS_TO_ADD_TO_AUDIENCE` dict didn't add the `p2433` keyword to the audience list when encountering the keyword.
+- The English translation of the custom `seniorit` Espoo audience keyword from `senior citizens` to `elderly` which is
+  the correct translation that Espoo uses
+
 ## [1.3.0] - 2020-12-08
 
 ### Added
@@ -669,6 +693,7 @@ to `espooevents-service`.
   to a minimum. This version marks the initial `0.1.0` relase and the initial `linkedevents` commit on which
   `espooevents-service` is based on.
 
+[1.4.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.3.0...espoo-v1.4.0
 [1.3.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.2.1...espoo-v1.3.0
 [1.2.1]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.2.0...espoo-v1.2.1
 [1.2.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.1.1...espoo-v1.2.0
