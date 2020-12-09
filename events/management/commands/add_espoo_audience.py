@@ -77,7 +77,7 @@ class Command(BaseCommand):
         try:
             keyword = Keyword.objects.get(id=keyword_id)
         except Keyword.DoesNotExist:
-            raise CommandError('keyword "{}" does not exist'.format(keyword_id))
+            raise CommandError(f"keyword \"{keyword_id}\" does not exist")
         return keyword
 
     @transaction.atomic()
@@ -90,9 +90,9 @@ class Command(BaseCommand):
                 defaults=new_keyword
             )
             if created:
-                logger.info('created keyword {} ({})'.format(new_keyword['name_fi'], new_keyword['id']))
+                logger.info(f"created keyword {new_keyword['name_fi']} ({new_keyword['id']})")
             else:
-                logger.info('keyword {} ({}) already exist'.format(new_keyword['name_fi'], new_keyword['id']))
+                logger.info(f"keyword {new_keyword['name_fi']} ({new_keyword['id']}) already exist")
 
     @transaction.atomic()
     def _create_espoo_audiences_keyword_set(self):
@@ -104,9 +104,9 @@ class Command(BaseCommand):
             defaults=ESPOO_AUDIENCE_KEYWORD_SET_DATA
         )
         if created:
-            logger.info('created keyword set "{}"'.format(ESPOO_AUDIENCE_KEYWORD_SET_DATA['id']))
+            logger.info(f"created keyword set \"{ESPOO_AUDIENCE_KEYWORD_SET_DATA['id']}\"")
         else:
-            logger.info('keyword set "{}" already exist'.format(ESPOO_AUDIENCE_KEYWORD_SET_DATA['id']))
+            logger.info(f"keyword set \"{ESPOO_AUDIENCE_KEYWORD_SET_DATA['id']}\" already exist")
 
         # add the keywords to the set
         existing_keywords = set(keyword_set.keywords.all())
@@ -116,11 +116,11 @@ class Command(BaseCommand):
             if keyword not in existing_keywords:
                 keyword_set.keywords.add(keyword)
                 existing_keywords.add(keyword)
-                logger.info('added {} ({}) to the keyword set'.format(keyword.name, keyword_id))
+                logger.info(f"added {keyword.name} ({keyword_id}) to the keyword set")
 
     @transaction.atomic()
     def _add_espoo_audience_keywords_to_events(self):
-        logger.info('Adding Espoo audience keywords to events...')
+        logger.info('adding Espoo audience keywords to events...')
 
         for event in Event.objects.exclude(audience__isnull=True).prefetch_related('audience'):
             for audience in event.audience.all():
@@ -134,7 +134,7 @@ class Command(BaseCommand):
 
                 if espoo_keyword_obj not in event.audience.all():
                     event.audience.add(espoo_keyword_obj)
-                    logger.info('added {} ({}) to {}'.format(espoo_keyword_obj, espoo_keyword_id, event))
+                    logger.info(f"added {espoo_keyword_obj} ({espoo_keyword_id}) to {event}")
 
     def handle(self, *args, **options):
         # Espoo data source must be created if missing. Note that it is not necessarily the system data source.
