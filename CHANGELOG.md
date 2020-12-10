@@ -10,6 +10,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 <!-- List the changes in your PR under the Unreleased title. You can also copy this list to your PR summary. -->
 
+## [1.5.0] - 2020-12-10
+
+### Added
+
+- A new Django management command `add_espoo_topics` for adding a new keyword set `espoo:topics` with Espoo's topic
+  keywords. All of the keywords in the keyword set are based on existing YSO keywords. Since the `add_espoo_topics`
+  command only adds a new keyword set and adds existing YSO keywords to the set, there's no need to run the management
+  command based on a regular schedule. In other words, it's sufficient to run the management command manually only when
+  the keyword set or its keywords change.
+
+### Changed
+
+- Replaced the `add_helsinki_topics` example command in `Makefile` with the new `add_espoo_topics` command
+
+### Fixed
+
+- A couple of small typos in the log messages of the `add_espoo_audience` management command
+
 ## [1.4.0] - 2020-12-09
 
 ### Changed
@@ -693,6 +711,7 @@ to `espooevents-service`.
   to a minimum. This version marks the initial `0.1.0` relase and the initial `linkedevents` commit on which
   `espooevents-service` is based on.
 
+[1.5.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.4.0...espoo-v1.5.0
 [1.4.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.3.0...espoo-v1.4.0
 [1.3.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.2.1...espoo-v1.3.0
 [1.2.1]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.2.0...espoo-v1.2.1

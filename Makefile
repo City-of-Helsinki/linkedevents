@@ -189,8 +189,8 @@ add_espoo_audience:
 	linkedevents-admin \
 	python manage.py add_espoo_audience
 
-.PHONY: add_helsinki_topics
-add_helsinki_topics:
+.PHONY: add_espoo_topics
+add_espoo_topics:
 	@docker run \
 	--rm \
 	--network=host \
@@ -201,7 +201,7 @@ add_helsinki_topics:
 	-e SYSTEM_DATA_SOURCE_ID=espooevents \
 	--name linkedevents-admin \
 	linkedevents-admin \
-	python manage.py add_helsinki_topics
+	python manage.py add_espoo_topics
 
 .PHONY: update_keywords
 update_keywords:

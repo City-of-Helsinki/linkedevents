@@ -124,7 +124,7 @@ class Command(BaseCommand):
             if created:
                 logger.info(f"created keyword {new_keyword['name_fi']} ({new_keyword['id']})")
             else:
-                logger.info(f"keyword {new_keyword['name_fi']} ({new_keyword['id']}) already exist")
+                logger.info(f"keyword {new_keyword['name_fi']} ({new_keyword['id']}) already exists")
 
     @transaction.atomic()
     def _create_espoo_audiences_keyword_set(self):
@@ -138,7 +138,7 @@ class Command(BaseCommand):
         if created:
             logger.info(f"created keyword set \"{ESPOO_AUDIENCE_KEYWORD_SET_DATA['id']}\"")
         else:
-            logger.info(f"keyword set \"{ESPOO_AUDIENCE_KEYWORD_SET_DATA['id']}\" already exist")
+            logger.info(f"keyword set \"{ESPOO_AUDIENCE_KEYWORD_SET_DATA['id']}\" already exists")
 
         # add the keywords to the set
         existing_keywords = set(keyword_set.keywords.all())
