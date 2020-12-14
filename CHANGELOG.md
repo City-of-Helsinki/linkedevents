@@ -10,6 +10,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 <!-- List the changes in your PR under the Unreleased title. You can also copy this list to your PR summary. -->
 
+## [1.6.0] - 2020-12-15
+
+### Added
+
+- A new Django management command `add_espoo_places` for adding a new keyword set `espoo:places` with Espoo's place
+  keywords. The keywords in the keyword set are based on Espoo's neighborhoods (Finnish: kaupunginosat).
+
+  Another option would've been to instead of keywords add the neighborhoods in the place hierarchy similarly as the
+  `python manage.py geo_import helsinki --divisions` command does for, e.g., Helsinki's neighborhoods. However, this
+  would've required that the Espoo place hierarchy is defined or can be fetched from somewhere and that a new
+  [django-munigeo](https://github.com/City-of-Helsinki/django-munigeo/tree/master/munigeo/importer) importer would've
+  been implemented for Espoo. This could of course still be implemented in the future if it's deemed necessary.
+
+  For now, the Espoo places are added using the keywords-based implementation since it was considered simpler to
+  implement and more flexible from the event management perspective. A downside is that there isn't a strong link
+  between the event places and the event place keywords. Thus, it's possible that the place keyword of an event isn't
+  correct in relation to the event place which can occur, e.g., because of a human error. A keywords-based
+  implementation is, on the other hand, more flexible since it allows to tag an event with multiple place keywords.
+  Also, not all events might have an explicit and unambiguous place or the event place information might be incomplete
+  whereby a keywords-based place implementation might be more suitable than the place hierarcy based implementation.
+
+  The management command also automatically adds the "Online event" (`espoo:p62`) place keyword to any events that have
+  the YSO "remote participation" (`yso:p26626`) keyword. This is mostly relevant for events added to Espoo Events by the
+  importers. Instead of implementing the mapping directly in the importers, the mapping is now done in this management
+  command in order to better isolate the change and thus minimize changes to existing functionality. This in turn helps
+  to keep the repository compatible with the upstream `linkedevents` repository. Since the mapping needs to be done to
+  newly imported events, it's recommended to run this management command hourly since some of the importers should also
+  be run hourly.
+- Example command to `Makefile` for running the `add_espoo_places` management command locally
+
 ## [1.5.0] - 2020-12-10
 
 ### Added
@@ -711,6 +741,7 @@ to `espooevents-service`.
   to a minimum. This version marks the initial `0.1.0` relase and the initial `linkedevents` commit on which
   `espooevents-service` is based on.
 
+[1.6.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.5.0...espoo-v1.6.0
 [1.5.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.4.0...espoo-v1.5.0
 [1.4.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.3.0...espoo-v1.4.0
 [1.3.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.2.1...espoo-v1.3.0
