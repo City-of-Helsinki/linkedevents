@@ -409,48 +409,55 @@ CUSTOM_ESPOO_PLACE_KEYWORDS = [
     },
     {
         'id': 'espoo:p56',
+        'name_fi': 'Vanha-Nuuksio',
+        'name_sv': 'Gamla Noux',
+        'name_en': 'Vanha-Nuuksio',
+        'data_source_id': ESPOO_DATA_SOURCE_ID,
+    },
+    {
+        'id': 'espoo:p57',
         'name_fi': 'Vanttila',
         'name_sv': 'Fantsby',
         'name_en': 'Vanttila',
         'data_source_id': ESPOO_DATA_SOURCE_ID,
     },
     {
-        'id': 'espoo:p57',
+        'id': 'espoo:p58',
         'name_fi': 'Velskola',
         'name_sv': 'Vällskog',
         'name_en': 'Velskola',
         'data_source_id': ESPOO_DATA_SOURCE_ID,
     },
     {
-        'id': 'espoo:p58',
+        'id': 'espoo:p59',
         'name_fi': 'Westend',
         'name_sv': 'Westend',
         'name_en': 'Westend',
         'data_source_id': ESPOO_DATA_SOURCE_ID,
     },
     {
-        'id': 'espoo:p59',
+        'id': 'espoo:p60',
         'name_fi': 'Viherlaakso',
         'name_sv': 'Gröndal',
         'name_en': 'Viherlaakso',
         'data_source_id': ESPOO_DATA_SOURCE_ID,
     },
     {
-        'id': 'espoo:p60',
+        'id': 'espoo:p61',
         'name_fi': 'Ämmässuo',
         'name_sv': 'Käringmossen',
         'name_en': 'Ämmässuo',
         'data_source_id': ESPOO_DATA_SOURCE_ID,
     },
     {
-        'id': 'espoo:p61',
+        'id': 'espoo:p62',
         'name_fi': 'Muu kuin Espoo',
         'name_sv': 'Annat än Esbo',
         'name_en': 'Other than Espoo',
         'data_source_id': ESPOO_DATA_SOURCE_ID,
     },
     {
-        'id': 'espoo:p62',
+        'id': 'espoo:p63',
         'name_fi': 'Online-tapahtuma',
         'name_sv': 'Online-evenemang',
         'name_en': 'Online event',
@@ -460,7 +467,7 @@ CUSTOM_ESPOO_PLACE_KEYWORDS = [
 
 # A mapping of YSO keywords to custom Espoo place keywords
 YSO_TO_ESPOO_PLACE_KEYWORD_MAPPING = {
-    'yso:p26626': 'espoo:p62',  # YSO etäosallistuminen -> Espoo online-tapahtuma
+    'yso:p26626': 'espoo:p63',  # YSO etäosallistuminen -> Espoo online-tapahtuma
 }
 
 

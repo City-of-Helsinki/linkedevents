@@ -10,6 +10,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 <!-- List the changes in your PR under the Unreleased title. You can also copy this list to your PR summary. -->
 
+## [1.6.1] - 2020-12-15
+
+### Changed
+
+- The IDs of some of the place keywords in the `espoo:places` keyword set since we've added the missing place keyword
+  `Vanha-Nuuksio` in between the other place keywords. Since the `espoo:places` keyword set hasn't been taken into use
+  yet in Espoo Events, we can safely change the IDs of the place keywords to follow the original order in the
+  specification. This is done just as a cosmetic change and it doesn't have any other practical reasons.
+
+  **NOTE!** If you've already added the `espoo:places` keyword set, you need to remove it and run the
+  `add_espoo_places` command again to add the place keywords with their new IDs. For instance, the ID of the
+  `Online event` place keyword has changed from `espoo:p62` to `espoo:p63` so you also need to remove any references to
+  it.
+
+### Fixed
+
+- The `espoo:places` keyword set by adding the missing place keyword `Vanha-Nuuksio`
+
 ## [1.6.0] - 2020-12-15
 
 ### Added
@@ -78,7 +96,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Added the missing YSO audience keyword `p2433` to the `KEYWORDS_TO_ADD_TO_AUDIENCE` dictionary in the `yso` importer.
   The `p2433` keyword corresponds to one of the custom Espoo audience keywords and should therefore be added to the
-  audience list. This fixes the issue where other importers using the `KEYWORDS_TO_ADD_TO_AUDIENCE` dict didn't add the `p2433` keyword to the audience list when encountering the keyword.
+  audience list. This fixes the issue where other importers using the `KEYWORDS_TO_ADD_TO_AUDIENCE` dict didn't add the
+  `p2433` keyword to the audience list when encountering the keyword.
 - The English translation of the custom `seniorit` Espoo audience keyword from `senior citizens` to `elderly` which is
   the correct translation that Espoo uses
 
@@ -741,6 +760,7 @@ to `espooevents-service`.
   to a minimum. This version marks the initial `0.1.0` relase and the initial `linkedevents` commit on which
   `espooevents-service` is based on.
 
+[1.6.1]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.6.0...espoo-v1.6.1
 [1.6.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.5.0...espoo-v1.6.0
 [1.5.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.4.0...espoo-v1.5.0
 [1.4.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.3.0...espoo-v1.4.0
