@@ -203,6 +203,20 @@ add_espoo_topics:
 	linkedevents-admin \
 	python manage.py add_espoo_topics
 
+.PHONY: add_espoo_places
+add_espoo_places:
+	@docker run \
+	--rm \
+	--network=host \
+	-e DB_APP_PASSWORD=secret \
+	-e DB_APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	-e SYSTEM_DATA_SOURCE_ID=espooevents \
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py add_espoo_places
+
 .PHONY: update_keywords
 update_keywords:
 	@docker run \
