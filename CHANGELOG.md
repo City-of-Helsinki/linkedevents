@@ -78,7 +78,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Added the missing YSO audience keyword `p2433` to the `KEYWORDS_TO_ADD_TO_AUDIENCE` dictionary in the `yso` importer.
   The `p2433` keyword corresponds to one of the custom Espoo audience keywords and should therefore be added to the
-  audience list. This fixes the issue where other importers using the `KEYWORDS_TO_ADD_TO_AUDIENCE` dict didn't add the `p2433` keyword to the audience list when encountering the keyword.
+  audience list. This fixes the issue where other importers using the `KEYWORDS_TO_ADD_TO_AUDIENCE` dict didn't add the
+  `p2433` keyword to the audience list when encountering the keyword.
 - The English translation of the custom `seniorit` Espoo audience keyword from `senior citizens` to `elderly` which is
   the correct translation that Espoo uses
 
