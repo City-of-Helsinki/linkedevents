@@ -168,7 +168,7 @@ class DataSourceAdmin(BaseAdmin, VersionAdmin):
 admin.site.register(DataSource, DataSourceAdmin)
 
 
-class LanguageAdmin(BaseAdmin, VersionAdmin):
+class LanguageAdmin(BaseAdmin, TranslationAdmin, VersionAdmin):
     fields = ('id', 'name')
 
     def get_readonly_fields(self, request, obj=None):
