@@ -49,7 +49,9 @@ class Importer(object):
         self.languages = {}
         for lang_code in importer_langs & configured_langs:
             # FIXME: get language name translations from Django
-            lang_obj, _ = Language.objects.get_or_create(id=lang_code)
+            lang_obj, _ = Language.objects.get_or_create(
+                id=lang_code, defaults={"name": lang_code}
+            )
             self.languages[lang_code] = lang_obj
 
         self.target_srid = settings.PROJECTION_SRID
