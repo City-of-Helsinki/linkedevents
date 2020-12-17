@@ -1,12 +1,15 @@
+import debug_toolbar
+import environ
+from django.conf.urls import include, url
+from django.contrib import admin
 from django.urls import reverse
-from django.conf.urls import url, include
 from django.views.generic import RedirectView
 from events.views import HealthResponse
 
 from .api import LinkedEventsAPIRouter
-from django.contrib import admin
 
 api_router = LinkedEventsAPIRouter()
+env = environ.Env(DEBUG=(bool, False))
 
 
 class RedirectToAPIRootView(RedirectView):
@@ -23,3 +26,6 @@ urlpatterns = [
     url(r'^health/', HealthResponse.as_view()),
     url(r'^$', RedirectToAPIRootView.as_view()),
 ]
+
+if env('DEBUG'):
+    urlpatterns.append(url(r'^__debug__/', include(debug_toolbar.urls)))

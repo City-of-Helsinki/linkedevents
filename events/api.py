@@ -17,6 +17,7 @@ import django_filters
 import pytz
 from django.conf import settings
 from django.contrib.postgres.search import TrigramSimilarity
+from django.core.cache import caches
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q, QuerySet
 from django.db.models.functions import Greatest
@@ -35,7 +36,7 @@ from munigeo.api import (GeoModelAPIView, GeoModelSerializer,
                          build_bbox_filter, srid_to_srs)
 from munigeo.models import AdministrativeDivision
 from rest_framework import (filters, generics, mixins, permissions, relations,
-                            serializers, viewsets, status)
+                            serializers, status, viewsets)
 from rest_framework.exceptions import APIException, ParseError
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.fields import DateTimeField
@@ -1805,6 +1806,15 @@ def _filter_event_queryset(queryset, params, srs=None):
             qsets.append(qset)
             qset = Q()
         queryset = queryset.filter(*qsets)
+
+    #  This filtering param requires populate_local_event_cache management command
+    val = params.get('combined_local_ongoing', None)
+    if val:
+        cache = caches['ongoing_local']
+        val = val.lower()
+        vals = val.split(',')
+        ids = {k for k, v in cache.get('ids').items() if any(val in v for val in vals)}
+        queryset = queryset.filter(id__in=ids)
 
     val = params.get('last_modified_since', None)
     # This should be in format which dateutil.parser recognizes, e.g.
