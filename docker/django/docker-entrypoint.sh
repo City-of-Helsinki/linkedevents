@@ -17,10 +17,14 @@ if [[ $# -lt 1 ]] || [[ "$1" == "runserver" ]]; then
   : "${DB_MIGRATION_USER:?}"
   : "${DB_NAME:?}"
 
+  CACHE_DB="${CACHE_DB:-"1"}"
+  # Use the same cache DB for the ongoing_local cache if the cache DB isn't explicitly defined
+  ONGOING_LOCAL_CACHE_DB="${ONGOING_LOCAL_CACHE_DB:-$CACHE_DB}"
+
   # Redis doesn't provide TSL by default and the local Redis container doesn't have any extra configuration for setting
   # up TSL so we use Redis without TSL in the local environment
-  CACHE_URL="redis://:${CACHE_PASSWORD}@${CACHE_HOST}/1"
-  ONGOING_LOCAL_CACHE_URL="redis://:${CACHE_PASSWORD}@${CACHE_HOST}/2"
+  CACHE_URL="redis://:${CACHE_PASSWORD}@${CACHE_HOST}/${CACHE_DB}"
+  ONGOING_LOCAL_CACHE_URL="redis://:${CACHE_PASSWORD}@${CACHE_HOST}/${ONGOING_LOCAL_CACHE_DB}"
   APP_DATABASE_URL="postgis://${DB_APP_USER}:${DB_APP_PASSWORD}@${DB_HOST}/${DB_NAME}"
   MIGRATION_DATABASE_URL="postgis://${DB_MIGRATION_USER}:${DB_MIGRATION_PASSWORD}@${DB_HOST}/${DB_NAME}"
 

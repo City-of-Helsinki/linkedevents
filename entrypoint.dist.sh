@@ -17,9 +17,13 @@ set -euo pipefail
 : "${TOKEN_AUTH_ACCEPTED_AUDIENCE:?}"
 : "${TOKEN_AUTH_SHARED_SECRET:?}"
 
+CACHE_DB="${CACHE_DB:-"1"}"
+# Use the same cache DB for the ongoing_local cache if the cache DB isn't explicitly defined
+ONGOING_LOCAL_CACHE_DB="${ONGOING_LOCAL_CACHE_DB:-$CACHE_DB}"
+
 # NOTE! We're using rediss (double s) as a scheme since that creates a TLS connection
-CACHE_URL="rediss://:${CACHE_PASSWORD}@${CACHE_HOST}/1"
-ONGOING_LOCAL_CACHE_URL="rediss://:${CACHE_PASSWORD}@${CACHE_HOST}/2"
+CACHE_URL="rediss://:${CACHE_PASSWORD}@${CACHE_HOST}/${CACHE_DB}"
+ONGOING_LOCAL_CACHE_URL="rediss://:${CACHE_PASSWORD}@${CACHE_HOST}/${ONGOING_LOCAL_CACHE_DB}"
 APP_DATABASE_URL="postgis://${DB_APP_USER}:${DB_APP_PASSWORD}@${DB_HOST}/${DB_NAME}"
 MIGRATION_DATABASE_URL="postgis://${DB_MIGRATION_USER}:${DB_MIGRATION_PASSWORD}@${DB_HOST}/${DB_NAME}"
 unset CACHE_PASSWORD
