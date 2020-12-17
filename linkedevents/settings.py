@@ -2,12 +2,16 @@
 Django settings module for linkedevents project.
 """
 import os
+import subprocess
+
+import bleach
 import environ
 import sentry_sdk
-import subprocess
-from sentry_sdk.integrations.django import DjangoIntegration
 from django.conf.global_settings import LANGUAGES as GLOBAL_LANGUAGES
 from django.core.exceptions import ImproperlyConfigured
+from django_jinja.builtins import DEFAULT_EXTENSIONS
+from easy_thumbnails.conf import Settings as thumbnail_settings
+from sentry_sdk.integrations.django import DjangoIntegration
 
 CONFIG_FILE_NAME = "config_dev.toml"
 
@@ -142,7 +146,7 @@ INSTALLED_APPS = [
     'events',
     'corsheaders',
     'rest_framework',
-    'rest_framework_gis', 
+    'rest_framework_gis',
     'rest_framework_jwt',
     'mptt',
     'reversion',
@@ -152,7 +156,6 @@ INSTALLED_APPS = [
     'django_jinja',
     'notifications',
     'anymail',
-
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
@@ -164,10 +167,6 @@ INSTALLED_APPS = [
     'django_orghierarchy',
     'admin_auto_filters',
 ] + env('EXTRA_INSTALLED_APPS')
-
-# django-extensions is a set of developer friendly tools
-if DEBUG:
-    INSTALLED_APPS.append('django_extensions')
 
 if env('SENTRY_DSN'):
     sentry_sdk.init(
@@ -191,6 +190,11 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# django-extensions is a set of developer friendly tools
+if DEBUG:
+    INSTALLED_APPS.extend(['django_extensions', 'debug_toolbar', 'extension_course'])
+    MIDDLEWARE.append('debug_toolbar.middleware.DebugToolbarMiddleware')
 
 ROOT_URLCONF = 'linkedevents.urls'
 
@@ -295,7 +299,6 @@ CORS_ORIGIN_ALLOW_ALL = True
 CSRF_COOKIE_NAME = '%s-csrftoken' % env('COOKIE_PREFIX')
 SESSION_COOKIE_NAME = '%s-sessionid' % env('COOKIE_PREFIX')
 
-from django_jinja.builtins import DEFAULT_EXTENSIONS # noqa
 
 TEMPLATES = [
     {
@@ -421,10 +424,8 @@ for language in [l[0] for l in LANGUAGES]:
     HAYSTACK_CONNECTIONS.update(connection)
 
 
-import bleach  # noqa
 BLEACH_ALLOWED_TAGS = bleach.ALLOWED_TAGS + ["p", "div", "br"]
 
-from easy_thumbnails.conf import Settings as thumbnail_settings  # noqa
 THUMBNAIL_PROCESSORS = (
     'image_cropping.thumbnail_processors.crop_corners',
 ) + thumbnail_settings.THUMBNAIL_PROCESSORS
@@ -483,3 +484,20 @@ if env('MAIL_MAILGUN_KEY'):
     EMAIL_BACKEND = 'anymail.backends.mailgun.EmailBackend'
 elif not env('MAIL_MAILGUN_KEY') and DEBUG is True:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+        'LOCATION': '127.0.0.1:11211',
+        'TIMEOUT': 300,
+    },
+    'ongoing_local': {
+        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+        'LOCATION': '127.0.0.1:11211',
+        'TIMEOUT': None,
+        'OPTIONS': {
+            'server_max_value_length': 1024 * 1024 * 500,
+        }
+    }
+}

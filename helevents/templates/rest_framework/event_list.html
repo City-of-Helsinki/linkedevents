@@ -125,6 +125,13 @@ fields, use the query parameter <code>text</code>.</p>
 <pre><code>event/?text=shostakovich
 </code></pre>
 <p><a href="?text=shostakovich" title="json">See the result</a></p>
+<h3 id="combined-local-ongoing">Combined search for local events</h3>
+<p>Use to quickly access local events that are upcoming or have not ended yet. Combines the search on a number of 
+description, name, and keyword fields</p>
+<p>Example:</p>
+<pre><code>event/?combined_local_ongoing=rock
+</code></pre>
+<p><a href="?combined_local_ongoing=rock" title="json">See the result</a></p>
 <h3 id="event-price">Event price</h3>
 <p>Events may or may not contain the <code>offers</code> field that lists event pricing. To return only
 free or non-free events, use the query parameter<code>is_free</code>. However, note that from some
