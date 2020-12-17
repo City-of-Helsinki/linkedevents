@@ -44,6 +44,7 @@ env = environ.Env(
     SYSTEM_DATA_SOURCE_ID=(str, 'system'),
     LANGUAGES=(list, ['fi', 'sv', 'en', 'zh-hans', 'ru', 'ar']),
     CACHE_URL=(str, 'redis://redis/0'),
+    ONGOING_LOCAL_CACHE_URL=(str, 'redis://redis/1'),
     DATABASE_URL=(str, 'postgis:///linkedevents'),
     TOKEN_AUTH_ACCEPTED_AUDIENCE=(str, ''),
     TOKEN_AUTH_SHARED_SECRET=(str, ''),
@@ -119,6 +120,14 @@ CACHES = {
         'LOCATION': env('CACHE_URL'),
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    },
+    'ongoing_local': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': env('ONGOING_LOCAL_CACHE_URL'),
+        'TIMEOUT': None,
+        'OPTIONS': {
+            'server_max_value_length': 1024 * 1024 * 500,
         }
     }
 }
@@ -562,20 +571,3 @@ if env('MAIL_MAILGUN_KEY'):
     EMAIL_BACKEND = 'anymail.backends.mailgun.EmailBackend'
 elif not env('MAIL_MAILGUN_KEY') and DEBUG is True:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
-
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
-        'LOCATION': '127.0.0.1:11211',
-        'TIMEOUT': 300,
-    },
-    'ongoing_local': {
-        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
-        'LOCATION': '127.0.0.1:11211',
-        'TIMEOUT': None,
-        'OPTIONS': {
-            'server_max_value_length': 1024 * 1024 * 500,
-        }
-    }
-}

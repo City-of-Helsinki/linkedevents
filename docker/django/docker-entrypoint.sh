@@ -17,7 +17,10 @@ if [[ $# -lt 1 ]] || [[ "$1" == "runserver" ]]; then
   : "${DB_MIGRATION_USER:?}"
   : "${DB_NAME:?}"
 
+  # Redis doesn't provide TSL by default and the local Redis container doesn't have any extra configuration for setting
+  # up TSL so we use Redis without TSL in the local environment
   CACHE_URL="redis://:${CACHE_PASSWORD}@${CACHE_HOST}/1"
+  ONGOING_LOCAL_CACHE_URL="redis://:${CACHE_PASSWORD}@${CACHE_HOST}/2"
   APP_DATABASE_URL="postgis://${DB_APP_USER}:${DB_APP_PASSWORD}@${DB_HOST}/${DB_NAME}"
   MIGRATION_DATABASE_URL="postgis://${DB_MIGRATION_USER}:${DB_MIGRATION_PASSWORD}@${DB_HOST}/${DB_NAME}"
 
@@ -34,6 +37,7 @@ if [[ $# -lt 1 ]] || [[ "$1" == "runserver" ]]; then
 
   if [[ "$DEV_SERVER" = "true" ]]; then
     export CACHE_URL
+    export ONGOING_LOCAL_CACHE_URL
     export DATABASE_URL=$APP_DATABASE_URL
     ./manage.py runserver "$RUNSERVER_ADDRESS"
   else

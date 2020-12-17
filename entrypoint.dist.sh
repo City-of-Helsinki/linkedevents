@@ -19,6 +19,7 @@ set -euo pipefail
 
 # NOTE! We're using rediss (double s) as a scheme since that creates a TLS connection
 CACHE_URL="rediss://:${CACHE_PASSWORD}@${CACHE_HOST}/1"
+ONGOING_LOCAL_CACHE_URL="rediss://:${CACHE_PASSWORD}@${CACHE_HOST}/2"
 APP_DATABASE_URL="postgis://${DB_APP_USER}:${DB_APP_PASSWORD}@${DB_HOST}/${DB_NAME}"
 MIGRATION_DATABASE_URL="postgis://${DB_MIGRATION_USER}:${DB_MIGRATION_PASSWORD}@${DB_HOST}/${DB_NAME}"
 unset CACHE_PASSWORD
@@ -47,6 +48,7 @@ if [[ $# -lt 1 ]] || [[ "$1" == "--"* ]]; then
   unset MIGRATION_DATABASE_URL
 
   export CACHE_URL
+  export ONGOING_LOCAL_CACHE_URL
   export DATABASE_URL=$APP_DATABASE_URL
   unset APP_DATABASE_URL
 
