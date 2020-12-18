@@ -112,6 +112,8 @@ class OIDCAuthentication(JSONWebTokenAuthentication):
         if not last_name:
             raise exceptions.AuthenticationFailed('Invalid payload. family_name missing')
 
+        organization = data_source.owner
+
         try:
             user = User.objects.get(email=email)
             return user
@@ -131,12 +133,18 @@ class OIDCAuthentication(JSONWebTokenAuthentication):
             last_name=last_name
         )
 
-        user.organization_memberships.add(data_source.owner)
-        
+        users_organizations = user.organization_memberships.all()
+
+        if organization not in users_organizations:
+            user.organization_memberships.add(organization)
+
         return user
 
     def get_data_source(self, payload):
-        audiences = [ payload.get("aud") ]
+        audiences = payload.get("aud")
+        if not isinstance(audiences, list): 
+          audiences = [ audiences ]
+
         for audience in audiences:
             try:
                 data_source = DataSource.objects.get(id=audience)
