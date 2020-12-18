@@ -7,11 +7,9 @@ from django.contrib.gis.db import models
 from django.contrib.auth import get_user_model
 from django.utils.encoding import smart_text
 from django.utils.functional import cached_property
-from django.conf import settings
 from django.contrib.auth.hashers import make_password
 
 from rest_framework import authentication, exceptions
-from rest_framework.settings import api_settings
 from events.models import DataSource
 from helevents.models import User
 from oidc_auth.authentication import JSONWebTokenAuthentication
@@ -20,6 +18,7 @@ from datetime import datetime
 from .permissions import UserModelPermissionMixin
 
 logger = logging.getLogger(__name__)
+
 
 class ApiKeyAuthentication(authentication.BaseAuthentication):
     def authenticate(self, request):
@@ -53,34 +52,34 @@ class ApiKeyAuthentication(authentication.BaseAuthentication):
 
 class OIDCAuthentication(JSONWebTokenAuthentication):
     provider_name = "oidc"
-    
+
     @cached_property
     def auth_scheme(self):
         return 'Bearer'
-        
+
     def authenticate(self, request):
-        jwt_value = self.get_jwt_value(request)        
+        jwt_value = self.get_jwt_value(request)
         if jwt_value is None:
             return None
 
         try:
             payload = self.decode_jwt(jwt_value)
-        except exceptions.AuthenticationFailed as e:
+        except exceptions.AuthenticationFailed:
             logger.error("Invalid token signature")
             return None
 
         data_source = self.get_data_source(payload)
         if not data_source:
-          return None
+            return None
 
         try:
             self.validate_claims(payload)
-        except exceptions.AuthenticationFailed as e:
+        except exceptions.AuthenticationFailed:
             logger.error("Claims validation failed")
             return None
 
         user = self.get_or_create_user(payload, data_source)
-        
+
         return user, OIDCAuth(data_source)
 
     def get_jwt_value(self, request):
@@ -112,39 +111,48 @@ class OIDCAuthentication(JSONWebTokenAuthentication):
         if not last_name:
             raise exceptions.AuthenticationFailed('Invalid payload. family_name missing')
 
+        organization = data_source.owner
+
         try:
             user = User.objects.get(email=email)
             return user
-        except User.DoesNotExist as e:
+        except User.DoesNotExist:
             pass
 
         user = User.objects.create(
-            email=email, 
-            password=make_password(None), 
-            is_superuser=False, 
+            email=email,
+            password=make_password(None),
+            is_superuser=False,
             is_staff=False,
             is_active=True,
             date_joined=datetime.utcnow(),
             uuid=str(uuid.uuid4()),
-            username=email, 
+            username=email,
             first_name=first_name,
             last_name=last_name
         )
 
-        user.organization_memberships.add(data_source.owner)
-        
+        users_organizations = user.organization_memberships.all()
+
+        if organization not in users_organizations:
+            user.organization_memberships.add(organization)
+
         return user
 
     def get_data_source(self, payload):
-        audiences = [ payload.get("aud") ]
+        audiences = payload.get("aud")
+        if not isinstance(audiences, list):
+            audiences = [audiences]
+
         for audience in audiences:
             try:
                 data_source = DataSource.objects.get(id=audience)
                 return data_source
-            except DataSource.DoesNotExist as e:
-              pass
-              
+            except DataSource.DoesNotExist:
+                pass
+
         return None
+
 
 class OIDCAuthenticationUser(get_user_model(), UserModelPermissionMixin):
     data_source = models.OneToOneField(DataSource, on_delete=models.CASCADE, primary_key=True)
@@ -163,6 +171,7 @@ class OIDCAuthenticationUser(get_user_model(), UserModelPermissionMixin):
         if not self.data_source.owner:
             return Organization.objects.none()
         return Organization.objects.filter(id=self.data_source.owner.id)
+
 
 class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
     data_source = models.OneToOneField(DataSource, on_delete=models.CASCADE, primary_key=True)
@@ -191,6 +200,7 @@ class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
     @property
     def organization_memberships(self):
         return Organization.objects.none()
+
 
 class ExternalAuth(object):
     def __init__(self, data_source):
