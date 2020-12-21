@@ -20,9 +20,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   specification. This is done just as a cosmetic change and it doesn't have any other practical reasons.
 
   **NOTE!** If you've already added the `espoo:places` keyword set, you need to remove it and run the
-  `add_espoo_places` command again to add the place keywords with their new IDs. For instance, the ID of the
+  `add_espoo_places` management command again to add the place keywords with their new IDs. For instance, the ID of the
   `Online event` place keyword has changed from `espoo:p62` to `espoo:p63` so you also need to remove any references to
-  it.
+  it. You can run the following SQL statements to delete any existing Espoo place keywords from the database:
+
+  ```
+  DELETE FROM events_event_keywords WHERE keyword_id ILIKE 'espoo:p%';
+  DELETE FROM events_keywordset_keywords WHERE keywordset_id = 'espoo:places';
+  DELETE FROM events_keywordset WHERE id = 'espoo:places';
+  DELETE FROM events_keyword WHERE id ILIKE 'espoo:p%';
+  ```
 
 ### Fixed
 
@@ -86,8 +93,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   unsuitable for Espoo.
 
   **NOTE!** If you've already added the `espoo:audiences` keyword set, you need to remove it and run the
-  `add_espoo_audience` again to add the correct audience keywords. For instance, the ID of the `seniorit` keyword has
-  changed from `espoo:a1` to `espoo:a4` so you also need to remove any references to it.
+  `add_espoo_audience` management command again to add the correct audience keywords. For instance, the ID of the
+  `seniorit` keyword has changed from `espoo:a1` to `espoo:a4` so you also need to remove any references to it. You can
+  run the following SQL statements to delete any existing Espoo audience keywords from the database:
+
+  ```
+  DELETE FROM events_event_keywords WHERE keyword_id ILIKE 'espoo:a%';
+  DELETE FROM events_keywordset_keywords WHERE keywordset_id = 'espoo:audiences';
+  DELETE FROM events_keywordset WHERE id = 'espoo:audiences';
+  DELETE FROM events_keyword WHERE id ILIKE 'espoo:a%';
+  ```
 - The `add_espoo_audience` management command to use Python 3's [f-strings](https://docs.python.org/3/tutorial/inputoutput.html#formatted-string-literals)
   for formatting strings instead of the older `format()` function since `f-strings` make the template strings more
   readable
