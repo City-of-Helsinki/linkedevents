@@ -264,7 +264,7 @@ LANGUAGE_CODE = env('LANGUAGES')[0]
 TIME_ZONE = 'Europe/Helsinki'
 
 MUNIGEO_COUNTRY = 'country:fi'
-MUNIGEO_MUNI = 'kunta:helsinki'
+MUNIGEO_MUNI = 'kunta:espoo'
 
 USE_I18N = True
 USE_L10N = True
