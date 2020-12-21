@@ -56,6 +56,10 @@ git checkout -b feat/sync-with-linkedevents master
 # to resolve before you can commit the changes. If there are any other changes that you need to do related to the synced
 # changes, it might be better to do them in their own commits instead of in the merge commit. This way, it might be
 # clearer what the other changes are.
+# NOTE! Remember to run any git rebase commands for the feature branch with caution after you've merged the upstream
+# changes since rebasing can in certain situations mess the merged commits. For instance, dont' use
+# "git rebase -i origin/master". Instead, you can use "git rebase -i HEAD~2" where the integer is the number of commits
+# from HEAD to the first commit after the merge commit.
 git merge upstream/master
 
 # Push the feature branch to GitHub and create a pull request. Also, remember to document clearly what changes might
