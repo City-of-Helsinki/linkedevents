@@ -1,4 +1,3 @@
-import debug_toolbar
 import environ
 from django.conf.urls import include, url
 from django.contrib import admin
@@ -28,4 +27,5 @@ urlpatterns = [
 ]
 
 if env('DEBUG'):
+    import debug_toolbar
     urlpatterns.append(url(r'^__debug__/', include(debug_toolbar.urls)))
