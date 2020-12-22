@@ -33,6 +33,8 @@ The best way to contribute is to open a new PR for discussion. We strive to be a
 
 ## Syncing changes from Helsinki's Linked Events
 
+### Syncing all latest changes
+
 If you haven't already set Helsinki's Linked Events repository as a remote, you can do so by running (for more
 information, see https://docs.github.com/en/free-pro-team@latest/github/collaborating-with-issues-and-pull-requests/configuring-a-remote-for-a-fork):
 
@@ -79,6 +81,39 @@ git push origin master
 
 The benefit of the first approach is that the pull request groups together all of the synced changes so that it's easier
 to see what's changed.
+
+### Syncing a specific pull request
+
+If you for some reason want to sync a specific pull request, e.g., because the pull request has been submitted to the
+upstream but it hasn't been merged yet, you can run the following commands:
+
+```
+# Ensure that your Espoo Events fork master branch is up-to-date
+git pull origin master
+
+# Create new feature branch for the changes that you want to sync
+git checkout -b feat/sync-linkedevents-pr master
+
+# Fetch the specific pull request and create a new local branch for it
+# Format: git fetch upstream refs/pull/{pr_id}/head:linkedevents-pr-{pr_id}, where "pr_id" is the id of the pull request
+# and "linkedevents-pr-{pr_id}" is the name of the local branch to be created. For instance:
+git fetch upstream refs/pull/438/head:linkedevents-pr-438
+
+# Merge the PR changes from Helsinki's Linked Events to the feature branch. Note that there may be conflicts that you
+# need to resolve before you can commit the changes. If there are any other changes that you need to do related to the
+# synced changes, it might be better to do them in their own commits instead of in the merge commit. This way, it might
+# be clearer what the other changes are.
+# NOTE! Remember to run any git rebase commands for the feature branch with caution after you've merged the upstream
+# changes since rebasing can in certain situations mess the merged commits. For instance, dont' use
+# "git rebase -i origin/master". Instead, you can use "git rebase -i HEAD~2" where the integer is the number of commits
+# from HEAD to the first commit after the merge commit.
+git merge linkedevents-pr-438
+
+# Push the feature branch to GitHub and create a pull request. Also, remember to document clearly what changes might
+# have been necessary to resolve any conflicts so that it's easier to distinguish how Espoo Events differs from
+# Helsinki's Linked Events.
+git push -u origin feat/sync-linkedevents-pr
+```
 
 ## How to setup your local development environment
 If all you want is a barebone application to work with for your own city:
