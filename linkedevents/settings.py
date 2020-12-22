@@ -2,12 +2,16 @@
 Django settings module for linkedevents project.
 """
 import os
+import subprocess
+
+import bleach
 import environ
 import sentry_sdk
-import subprocess
-from sentry_sdk.integrations.django import DjangoIntegration
 from django.conf.global_settings import LANGUAGES as GLOBAL_LANGUAGES
 from django.core.exceptions import ImproperlyConfigured
+from django_jinja.builtins import DEFAULT_EXTENSIONS
+from easy_thumbnails.conf import Settings as thumbnail_settings
+from sentry_sdk.integrations.django import DjangoIntegration
 
 CONFIG_FILE_NAME = "config_dev.toml"
 
@@ -40,6 +44,7 @@ env = environ.Env(
     SYSTEM_DATA_SOURCE_ID=(str, 'system'),
     LANGUAGES=(list, ['fi', 'sv', 'en', 'zh-hans', 'ru', 'ar']),
     CACHE_URL=(str, 'redis://redis/0'),
+    ONGOING_LOCAL_CACHE_URL=(str, 'redis://redis/1'),
     DATABASE_URL=(str, 'postgis:///linkedevents'),
     TOKEN_AUTH_ACCEPTED_AUDIENCE=(str, ''),
     TOKEN_AUTH_SHARED_SECRET=(str, ''),
@@ -115,6 +120,14 @@ CACHES = {
         'LOCATION': env('CACHE_URL'),
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    },
+    'ongoing_local': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': env('ONGOING_LOCAL_CACHE_URL'),
+        'TIMEOUT': None,
+        'OPTIONS': {
+            'server_max_value_length': 1024 * 1024 * 500,
         }
     }
 }
@@ -193,7 +206,6 @@ INSTALLED_APPS = [
     'django_jinja',
     'notifications',
     'anymail',
-
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
@@ -207,10 +219,6 @@ INSTALLED_APPS = [
 
     'storages',
 ] + env('EXTRA_INSTALLED_APPS')
-
-# django-extensions is a set of developer friendly tools
-if DEBUG:
-    INSTALLED_APPS.append('django_extensions')
 
 if env('SENTRY_DSN'):
     sentry_sdk.init(
@@ -232,6 +240,11 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# django-extensions is a set of developer friendly tools
+if DEBUG:
+    INSTALLED_APPS.extend(['django_extensions', 'debug_toolbar', 'extension_course'])
+    MIDDLEWARE.append('debug_toolbar.middleware.DebugToolbarMiddleware')
+
 ROOT_URLCONF = 'linkedevents.urls'
 
 WSGI_APPLICATION = 'linkedevents.wsgi.application'
@@ -251,7 +264,7 @@ LANGUAGE_CODE = env('LANGUAGES')[0]
 TIME_ZONE = 'Europe/Helsinki'
 
 MUNIGEO_COUNTRY = 'country:fi'
-MUNIGEO_MUNI = 'kunta:helsinki'
+MUNIGEO_MUNI = 'kunta:espoo'
 
 USE_I18N = True
 USE_L10N = True
@@ -369,7 +382,6 @@ CORS_ORIGIN_ALLOW_ALL = True
 CSRF_COOKIE_NAME = '%s-csrftoken' % env('COOKIE_PREFIX')
 SESSION_COOKIE_NAME = '%s-sessionid' % env('COOKIE_PREFIX')
 
-from django_jinja.builtins import DEFAULT_EXTENSIONS # noqa
 
 TEMPLATES = [
     {
@@ -495,10 +507,8 @@ for language in [l[0] for l in LANGUAGES]:
     HAYSTACK_CONNECTIONS.update(connection)
 
 
-import bleach  # noqa
 BLEACH_ALLOWED_TAGS = bleach.ALLOWED_TAGS + ["p", "div", "br"]
 
-from easy_thumbnails.conf import Settings as thumbnail_settings  # noqa
 THUMBNAIL_PROCESSORS = (
     'image_cropping.thumbnail_processors.crop_corners',
 ) + thumbnail_settings.THUMBNAIL_PROCESSORS

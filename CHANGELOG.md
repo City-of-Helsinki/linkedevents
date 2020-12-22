@@ -10,6 +10,57 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 <!-- List the changes in your PR under the Unreleased title. You can also copy this list to your PR summary. -->
 
+## [1.7.0] - 2020-12-22
+
+This release syncs the latest changes from [linkedevents](https://github.com/City-of-Helsinki/linkedevents)
+([commits 76d10d2...70d3504](https://github.com/City-of-Helsinki/linkedevents/compare/76d10d2aae0cef430ea7cae77919cf5c8122c757...70d3504efd0b51a2fb617c72317c44eb4febee02))
+to `espooevents-service`.
+
+### Added
+
+- The [django-debug-toolbar](https://github.com/jazzband/django-debug-toolbar) to display various types of debug
+  information in local development ([City-of-Helsinki/linkedevents#435](https://github.com/City-of-Helsinki/linkedevents/pull/435))
+  - **NOTE!** Fixed a bug with the `django-debug-toolbar` change that caused the dependency to be mandatory also in the
+    production environment.
+- `combined_local_ongoing` filter for events for filtering local events based on `settings.MUNIGEO_MUNI` that are
+  currently ongoing or are upcoming ([City-of-Helsinki/linkedevents#436](https://github.com/City-of-Helsinki/linkedevents/pull/436))
+  - **NOTE!** The changes related to the new `ongoing_local` cache have been customized for Espoo Events. Also,
+    [python-memcached](https://github.com/linsomniac/python-memcached) has been dropped since `espooevents-service`
+    already has [django-redis](https://github.com/jazzband/django-redis) configured.
+- `populate_local_event_cache` management command that should be run hourly to update the `combined_local_ongoing` cache
+  used by the `combined_local_ongoing` filter ([City-of-Helsinki/linkedevents#436](https://github.com/City-of-Helsinki/linkedevents/pull/436))
+- `ONGOING_LOCAL_CACHE_URL` environment variable setting for specifying the `ongoing_local` cache URL for the Django app
+- The following new environment variables for the local and distribution Docker images:
+  - `CACHE_DB` for configuring the Django `default` cache DB. The default value is `1` if `CACHE_DB` hasn't been
+    specified.
+  - `ONGOING_LOCAL_CACHE_DB` for configuring the Django `ongoing_local` cache DB. The default value is the value of
+    `CACHE_DB` if `ONGOING_LOCAL_CACHE_DB` hasn't been specified.
+- The following new environment variable for the admin Docker image:
+  - `CACHE_HOST` for specifying the Redis host
+  - `CACHE_PASSWORD_SSM_KEY` for specifying the SSM key for the cache password. This is used for fetching the password
+    for the `ongoing_local` cache from AWS SSM in the Docker entrypoint script. This is currently only needed for
+    running the `populate_local_event_cache` management command. Alternatively, the `CACHE_PASSWORD` environment
+    variable can also be passed but this shouldn't be used for AWS Batch jobs since the password would be visible, e.g.,
+    in AWS Console.
+  - `CACHE_TLS` for specifying whether a TLS connection should be used for the Redis connection. This is needed since
+    the admin Docker image is used in both the local and non-local environments but the local Redis container doesn't
+    have TLS configured whereas the non-local environments have TLS configured.
+  - `ONGOING_LOCAL_CACHE_DB` for configuring the Django `ongoing_local` cache DB. The default value is `1` if
+    `ONGOING_LOCAL_CACHE_DB` hasn't been specified.
+- Example command to `Makefile` for running the `populate_local_event_cache` management command locally
+- A note in `README` about being careful when rebasing changes synced from the upstream `linkedevents` repository
+
+### Changed
+
+- The hardcoded value of the `MUNIGEO_MUNI` setting from `kunta:helsinki` to `kunta:espoo`. The value is used by the new
+  `populate_local_event_cache` management command to search for local upcoming events. Since we want to search for local
+  events in Espoo, the value needs to be `kunta:espoo`.
+
+### Fixed
+
+- An issue with image uploading ([City-of-Helsinki/linkedevents#435](https://github.com/City-of-Helsinki/linkedevents/pull/435))
+- The `has_upcoming_events` field to also take into account the ongoing events ([City-of-Helsinki/linkedevents#435](https://github.com/City-of-Helsinki/linkedevents/pull/435))
+
 ## [1.6.1] - 2020-12-15
 
 ### Changed
@@ -20,9 +71,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   specification. This is done just as a cosmetic change and it doesn't have any other practical reasons.
 
   **NOTE!** If you've already added the `espoo:places` keyword set, you need to remove it and run the
-  `add_espoo_places` command again to add the place keywords with their new IDs. For instance, the ID of the
+  `add_espoo_places` management command again to add the place keywords with their new IDs. For instance, the ID of the
   `Online event` place keyword has changed from `espoo:p62` to `espoo:p63` so you also need to remove any references to
-  it.
+  it. You can run the following SQL statements to delete any existing Espoo place keywords from the database:
+
+  ```
+  DELETE FROM events_event_keywords WHERE keyword_id ILIKE 'espoo:p%';
+  DELETE FROM events_keywordset_keywords WHERE keywordset_id = 'espoo:places';
+  DELETE FROM events_keywordset WHERE id = 'espoo:places';
+  DELETE FROM events_keyword WHERE id ILIKE 'espoo:p%';
+  ```
 
 ### Fixed
 
@@ -86,8 +144,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   unsuitable for Espoo.
 
   **NOTE!** If you've already added the `espoo:audiences` keyword set, you need to remove it and run the
-  `add_espoo_audience` again to add the correct audience keywords. For instance, the ID of the `seniorit` keyword has
-  changed from `espoo:a1` to `espoo:a4` so you also need to remove any references to it.
+  `add_espoo_audience` management command again to add the correct audience keywords. For instance, the ID of the
+  `seniorit` keyword has changed from `espoo:a1` to `espoo:a4` so you also need to remove any references to it. You can
+  run the following SQL statements to delete any existing Espoo audience keywords from the database:
+
+  ```
+  DELETE FROM events_event_keywords WHERE keyword_id ILIKE 'espoo:a%';
+  DELETE FROM events_keywordset_keywords WHERE keywordset_id = 'espoo:audiences';
+  DELETE FROM events_keywordset WHERE id = 'espoo:audiences';
+  DELETE FROM events_keyword WHERE id ILIKE 'espoo:a%';
+  ```
 - The `add_espoo_audience` management command to use Python 3's [f-strings](https://docs.python.org/3/tutorial/inputoutput.html#formatted-string-literals)
   for formatting strings instead of the older `format()` function since `f-strings` make the template strings more
   readable
@@ -760,6 +826,7 @@ to `espooevents-service`.
   to a minimum. This version marks the initial `0.1.0` relase and the initial `linkedevents` commit on which
   `espooevents-service` is based on.
 
+[1.7.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.6.1...espoo-v1.7.0
 [1.6.1]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.6.0...espoo-v1.6.1
 [1.6.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.5.0...espoo-v1.6.0
 [1.5.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.4.0...espoo-v1.5.0

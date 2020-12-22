@@ -259,6 +259,24 @@ update_upcoming_events:
 	linkedevents-admin \
 	python manage.py update_has_upcoming_events
 
+.PHONY: populate_local_event_cache
+populate_local_event_cache:
+	@docker run \
+	--rm \
+	--network=host \
+	-e ONGOING_LOCAL_CACHE_DB=2 \
+	-e CACHE_HOST=localhost \
+	-e CACHE_PASSWORD=secret \
+	-e CACHE_TLS=false \
+	-e DB_APP_PASSWORD=secret \
+	-e DB_APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	-e SYSTEM_DATA_SOURCE_ID=espooevents \
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py populate_local_event_cache
+
 .PHONY: install_templates
 install_templates:
 	@docker run \
