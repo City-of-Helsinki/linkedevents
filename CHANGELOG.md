@@ -10,6 +10,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 <!-- List the changes in your PR under the Unreleased title. You can also copy this list to your PR summary. -->
 
+## [1.8.0] - 2020-12-22
+
+This release syncs the pull request [City-of-Helsinki/linkedevents#438](https://github.com/City-of-Helsinki/linkedevents/pull/438)
+from [linkedevents](https://github.com/City-of-Helsinki/linkedevents) to `espooevents-service`. The pull request is
+synced separately since it's still unmerged in the upstream `linkedevents` repository but we already need the change in
+`espooevents-service`.
+
+### Added
+
+- Possibility to view and edit `Language` object translations in the Django admin so that the appropriate language names
+  and translations can be displayed instead of language codes ([City-of-Helsinki/linkedevents#438](https://github.com/City-of-Helsinki/linkedevents/pull/438)).
+  This is useful, e.g., when displaying the event languages in `espooevents-frontend`.
+- Instructions for syncing a specific pull request from Helsinki's Linked Events repository to the Espoo Events
+  repository. This can be useful, e.g., when wanting to sync an unmerged pull request needed by `espooevents-service`
+  from the upstream repository.
+
+### Fixed
+
+- The `Language` rows not being clickable in the Django admin ([City-of-Helsinki/linkedevents#438](https://github.com/City-of-Helsinki/linkedevents/pull/438)).
+  Currently, when no languages have been created and an importer is run, a set of languages are dynamically created
+  based on `settings.LANGUAGES` and the languages supported by the importer. However, the current implementation sets
+  only the `id` field for the new `Language` and not the `name` field which is shown in the Django admin list view.
+  Thus, the created languages can't be clicked in the Django admin list view and the only way to get to the edit view is
+  by a direct URL. This change fixes the issue by setting the `name` field for the created `Language` so that the
+  language can be clicked in the Django admin.
+
 ## [1.7.0] - 2020-12-22
 
 This release syncs the latest changes from [linkedevents](https://github.com/City-of-Helsinki/linkedevents)
@@ -826,6 +852,7 @@ to `espooevents-service`.
   to a minimum. This version marks the initial `0.1.0` relase and the initial `linkedevents` commit on which
   `espooevents-service` is based on.
 
+[1.8.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.7.0...espoo-v1.8.0
 [1.7.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.6.1...espoo-v1.7.0
 [1.6.1]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.6.0...espoo-v1.6.1
 [1.6.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.5.0...espoo-v1.6.0
