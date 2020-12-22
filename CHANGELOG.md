@@ -10,6 +10,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 <!-- List the changes in your PR under the Unreleased title. You can also copy this list to your PR summary. -->
 
+## [1.8.1] - 2020-12-22
+
+### Fixed
+
+- The location mapping from Espoo's NetCommunity CMS Node IDs to Palvelukartta (tprek) location IDs in the `espoo`
+  importer. It seems that the tprek IDs have changed for some of the existing places and the hardcoded mapping is thus
+  out of date.
+
+  For `espooevents-service` instances that have already imported the locations with the old IDs, the espoo importer
+  doesn't fail since the old IDs defined in the mapping are found in the database. However, for new clean instances
+  which don't have the locations with the old IDs, the `espoo` importer fails for the missing location IDs.
+
+  To fix the issue, we replace the old tprek IDs in the location mapping with the corresponding new tprek IDs. These
+  have been found by just looking up the new locations imported by the `tprek` importer in the database based on the
+  place names.
+
+  Note, also, that for `espooevents-service` instances that already have the locations with the old IDs, the old
+  locations have been correctly marked as replaced by the newer locations.
+- The incorrect `install_templates` example command in `Makefile`. The current `install_templates` example command
+  doesn't actually work since it installs the templates in the admin Docker image and not the local development Docker
+  image. To fix the issue, we change the command to be run directly on the host instead of in the admin Docker container
+  so that the templates are installed in the host source code directory. Since the host source code directory is mounted
+  in the development Docker container, running the `install_templates` command will now correctly install the templates
+  for the local development environment.
+
 ## [1.8.0] - 2020-12-22
 
 This release syncs the pull request [City-of-Helsinki/linkedevents#438](https://github.com/City-of-Helsinki/linkedevents/pull/438)
@@ -852,6 +877,7 @@ to `espooevents-service`.
   to a minimum. This version marks the initial `0.1.0` relase and the initial `linkedevents` commit on which
   `espooevents-service` is based on.
 
+[1.8.1]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.8.0...espoo-v1.8.1
 [1.8.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.7.0...espoo-v1.8.0
 [1.7.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.6.1...espoo-v1.7.0
 [1.6.1]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.6.0...espoo-v1.6.1
