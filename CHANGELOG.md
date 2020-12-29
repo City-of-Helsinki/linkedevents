@@ -10,6 +10,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 <!-- List the changes in your PR under the Unreleased title. You can also copy this list to your PR summary. -->
 
+## [1.9.0] - 2020-12-29
+
+### Added
+
+- A new `HELMET_CITY` environment variable and corresponding Django setting for controlling whether the `helmet`
+  importer imports Helmet events located in all Helmet cities (i.e., Espoo, Helsinki, Kauniainen, and Vantaa) or just
+  events located in Espoo. The default value of `HELMET_CITY` is `all` which tells the `helmet` importer to import
+  events from all Helmet cities.
+- Some documentation for the Helmet API queries to ease future maintanance and development
+
+### Changed
+
+- Grouped the Helmet libraries in the `helmet` importer `LOCATIONS` mapping by city so that it's easier to see whether
+  the mapping is up-to-date and what libraries are missing (Helmet.fi also lists the libraries based on city).
+
+  **KNOWN ISSUES:** The current `helmet` importer `LOCATIONS` mapping isn't up-to-date, e.g., some Espoo libraries are
+  missing. To update the mapping, we'd need an up-to-date list of the libraries along with their Helmet Node IDs from
+  the Helmet maintainer.
+- The example `helmet` command in `Makefile` to only import events located in Espoo
+- The `install_templates` command to be run in a Docker container. This was previously changed to be run on the host
+  in version `1.8.1` since the previous command that executed the command in a Docker container didn't work. However,
+  the command can easily be fixed to work in a Docker container by just mounting the source code directory to the
+  container where the `install_templates` command is being run. This way, the installed templates are correctly
+  installed to the correct host source code directory which is also visible to the container that runs
+  `espooevents-service`.
+
 ## [1.8.1] - 2020-12-22
 
 ### Fixed
@@ -877,6 +903,7 @@ to `espooevents-service`.
   to a minimum. This version marks the initial `0.1.0` relase and the initial `linkedevents` commit on which
   `espooevents-service` is based on.
 
+[1.9.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.8.1...espoo-v1.9.0
 [1.8.1]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.8.0...espoo-v1.8.1
 [1.8.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.7.0...espoo-v1.8.0
 [1.7.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.6.1...espoo-v1.7.0
