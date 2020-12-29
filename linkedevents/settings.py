@@ -81,6 +81,7 @@ env = environ.Env(
     AWS_MEDIA_S3_CUSTOM_DOMAIN=(str, ''),
     # Enabling notifications requires that email has been configured
     ENABLE_NOTIFICATIONS=(bool, False),
+    HELMET_CITY=(str, 'all')
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -431,6 +432,10 @@ CITYSDK_API_SETTINGS = {
     'SRS_URL': 'http://www.opengis.net/def/crs/EPSG/0/%d' % PROJECTION_SRID,
     'DEFAULT_POI_CATEGORY': '53562f3238653c0a842a3bf7'
 }
+
+# Used in Helmet importer to determine whether to import events from all Helmet cities or just a specific city. For
+# valid values, check the helmet importer.
+HELMET_CITY = env('HELMET_CITY')
 
 # Used in Lippupiste importer
 LIPPUPISTE_EVENT_API_URL = env('LIPPUPISTE_EVENT_API_URL')

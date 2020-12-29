@@ -52,86 +52,129 @@ YSO_KEYWORD_MAPS = {
     u'Etätapahtumat': u'p26626',  # -> etäosallistuminen
 }
 
+# NOTE: This location list isn't up-to-date and some libraries are missing. An up-to-date list with libraries and their
+# IDs should be requested from the Helmet maintainer.
 LOCATIONS = {
     # Library name in Finnish -> ((library node ids in event feed), tprek id)
-    u"Arabianrannan kirjasto": ((10784, 11271), 8254),
+
+    # Espoo libraries
     u"Entressen kirjasto": ((10659, 11274), 15321),
-    u"Etelä-Haagan kirjasto": ((10786, 11276), 8150),
-    u"Hakunilan kirjasto": ((10787, 11278), 19580),
     u"Haukilahden kirjasto": ((10788, 11280), 19580),
+    u"Kalajärven kirjasto": ((10793, 11290), 15365),
+    u"Karhusuon kirjasto": ((10796, 11296), 15422),
+    u"Kauklahden kirjasto": ((10798, 11298), 15317),
+    u"Kirjasto Omena": ((10801, 11305), 15395),
+    u"Kivenlahden kirjasto": ((10803, 11309), 15334),
+    u"Laajalahden kirjasto": ((10813, 11321), 15344),
+    u"Laaksolahden kirjasto": ((10815, 11325), 15309),
+    u"Nöykkiön kirjasto": ((10828, 11353), 15396),
+    u"Otaniemen kirjasto": ((11980,), 60321),
+    u"Saunalahden kirjasto": ((11712, 11714), 29805),
+    u"Sellon kirjasto": ((10844, 11383), 15417),
+    u"Soukan kirjasto": ((10845, 11385), 15376),
+    u"Tapiolan kirjasto": ((10849, 11395), 15311),
+    u"Viherlaakson kirjasto": ((10854, 11401), 15429),
+
+    # Helsinki libraries
+    u"Arabianrannan kirjasto": ((10784, 11271), 8254),
+    u"Etelä-Haagan kirjasto": ((10786, 11276), 8150),
     u"Herttoniemen kirjasto": ((10789, 11282), 8325),
-    u"Hiekkaharjun kirjasto": ((10790, 11284), 18584),
     u"Itäkeskuksen kirjasto": ((10791, 11286), 8184),
     u"Jakomäen kirjasto": ((10792, 11288), 8324),
     u"Jätkäsaaren kirjasto": ((11858,), 45317),
-    u"Kalajärven kirjasto": ((10793, 11290), 15365),
     u"Kallion kirjasto": ((10794, 11291), 8215),
     u"Kannelmäen kirjasto": ((10795, 11294), 8141),
-    u"Karhusuon kirjasto": ((10796, 11296), 15422),
-    u"Kauklahden kirjasto": ((10798, 11298), 15317),
-    u"Kauniaisten kirjasto": ((10799, 11301), 14432),
-    u"Kirjasto 10": ((10800, 11303), 8286),
-    u"Kirjasto Omena": ((10801, 11305), 15395),
-    u"Kirjasto Oodi": ((11893, 11895), 51342),
-    u"Kivenlahden kirjasto": ((10803, 11309), 15334),
     u"Kaupunkiverstas": ((10804, 11311), 8145),  # former Kohtaamispaikka
-    u"Koivukylän kirjasto": ((10805, 11313), 19572),
+    u"Kirjasto 10": ((10800, 11303), 8286),
+    u"Kirjasto Oodi": ((11893, 11895), 51342),
     u"Kontulan kirjasto u": ((10806, 11315), 8178),
-    u"Kotipalvelu": ((10811, 11317), 8285),
     u"Käpylän kirjasto": ((10812, 11319), 8302),
-    u"Laajalahden kirjasto": ((10813, 11321), 15344),
     u"Laajasalon kirjasto": ((10814, 11323), 8143),
-    u"Laaksolahden kirjasto": ((10815, 11325), 15309),
     u"Lauttasaaren kirjasto": ((10817, 11329), 8344),
-    u"Lumon kirjasto": ((10818, 11331), 18262),
-    u"Länsimäen kirjasto": ((10819, 11333), 18620),
     u"Malmin kirjasto": ((10820, 11335), 8192),
     u"Malminkartanon kirjasto": ((10821, 11337), 8220),
-    u"Martinlaakson kirjasto": ((10822, 11339), 19217),
     u"Maunulan kirjasto": ((10823, 11341), 8350),
     u"Monikielinen kirjasto": ((10824, 11345), 8223),
     u"Munkkiniemen kirjasto": ((10825, 11347), 8158),
     u"Myllypuron mediakirjasto": ((10826, 11349), 8348),
-    u"Myyrmäen kirjasto": ((10827, 11351), 18241),
-    u"Nöykkiön kirjasto": ((10828, 11353), 15396),
-    u"Otaniemen kirjasto": ((11980,), 60321),
     u"Oulunkylän kirjasto": ((10829, 11355), 8177),
     u"Paloheinän kirjasto": ((10830, 11357), 8362),
     u"Pasilan kirjasto": ((10831, 11359), 8269),
     u"Pikku Huopalahden lastenkirjasto": ((10832, 11361), 8294),
     u"Pitäjänmäen kirjasto": ((10833, 11363), 8292),
     u"Pohjois-Haagan kirjasto": ((10834, 11365), 8205),
-    u"Pointin kirjasto": ((10835, 11367), 18658),
     u"Puistolan kirjasto": ((10837, 11369), 8289),
     u"Pukinmäen kirjasto": ((10838, 11371), 8232),
-    u"Pähkinärinteen kirjasto": ((10839, 11373), 18855),
     u"Rikhardinkadun kirjasto": ((10840, 11375), 8154),
     u"Roihuvuoren kirjasto": ((10841, 11377), 8369),
     u"Ruoholahden lastenkirjasto": ((10842, 11379), 8146),
     u"Sakarinmäen lastenkirjasto": ((10843, 11381), 10037),
-    u"Saunalahden kirjasto": ((11712, 11714), 29805),
-    u"Sellon kirjasto": ((10844, 11383), 15417),
-    u"Soukan kirjasto": ((10845, 11385), 15376),
     u"Suomenlinnan kirjasto": ((10846, 11387), 8244),
     u"Suutarilan kirjasto": ((10847, 11389), 8277),
     u"Tapanilan kirjasto": ((10848, 11391), 8359),
-    u"Tapiolan kirjasto": ((10849, 11395), 15311),
     u"Tapulikaupungin kirjasto": ((10850, 11397), 8288),
-    u"Tikkurilan kirjasto": ((10851, 11202), 18703),
     u"Töölön kirjasto": ((10852, 11393), 8149),
     u"Vallilan kirjasto": ((10853, 11399), 8199),
-    u"Viherlaakson kirjasto": ((10854, 11401), 15429),
     u"Viikin kirjasto": ((10855, 11403), 8308),
     u"Vuosaaren kirjasto": ((10856, 11405), 8310),
+
+    # Kaunainen libraries
+    u"Kauniaisten kirjasto": ((10799, 11301), 14432),
+
+    # Vantaa libraries
+    u"Hakunilan kirjasto": ((10787, 11278), 19580),
+    u"Hiekkaharjun kirjasto": ((10790, 11284), 18584),
+    u"Koivukylän kirjasto": ((10805, 11313), 19572),
+    u"Lumon kirjasto": ((10818, 11331), 18262),
+    u"Länsimäen kirjasto": ((10819, 11333), 18620),
+    u"Martinlaakson kirjasto": ((10822, 11339), 19217),
+    u"Myyrmäen kirjasto": ((10827, 11351), 18241),
+    u"Pointin kirjasto": ((10835, 11367), 18658),
+    u"Pähkinärinteen kirjasto": ((10839, 11373), 18855),
+    u"Tikkurilan kirjasto": ((10851, 11202), 18703),
+
+    # Misc
+    u"Kotipalvelu": ((10811, 11317), 8285),
 }
 
 # "Etätapahtumat" are mapped to our new fancy "Tapahtuma vain internetissä." location
 INTERNET_LOCATION_ID = settings.SYSTEM_DATA_SOURCE_ID + ':internet'
 
+# The node ID of the Espoo keyword in the NetCommunity CMS used by Helmet. This has been verified with the maintainer
+# of Helmet. The Espoo node ID is used to filter only the Helmet events that are located in Espoo.
+HELMET_ESPOO_NODE_ID = 10690
 HELMET_BASE_URL = 'https://www.helmet.fi'
+
+# Note that the Helmet API doesn't have any public API description. Thus ,the below API queries have been adapted based
+# on the public API description of Espoo who also uses NetCommunity for the current Espoo.fi site. For more information
+# regarding the NetCommunity API syntax, see:
+# - https://www.espoo.fi/fi-FI/Asioi_verkossa/Muut_palvelut/Espoofisivuston_avoimet_rajapinnat
+# - https://www.espoo.fi/download/noname/%7B8746234F-923A-47DF-839A-4423C20CB288%7D/45317
+
+# Helmet API URL for filtering events based on the following criteria (without classifications):
+# - "ContentLanguages({lang_code})" tells to filter only content based on the given language code. For available Helmet
+#   languages, see https://www.helmet.fi/api/opennc/v1/ContentLanguages?$format=json.
+# - "TemplateID eq 3" tells to filter content based on the "Event" content type which has the ID "3" in Helmet's
+#   NetCommunity. For available Helmet content types, see https://www.helmet.fi/api/opennc/v1/Templates?$format=json.
 HELMET_API_URL = (
-    HELMET_BASE_URL + '/api/opennc/v1/ContentLanguages({lang_code})'
-    '/Contents?$filter=TemplateId eq 3&$expand=ExtendedProperties,LanguageVersions'
+    HELMET_BASE_URL + '/api/opennc/v1/ContentLanguages({lang_code})/Contents'
+    '?$filter=TemplateId eq 3'
+    '&$expand=ExtendedProperties,LanguageVersions'
+    '&$orderby=EventEndDate desc&$format=json'
+)
+
+# Helmet API URL for filtering events based on the following criteria including classifications:
+# - "ContentLanguages({lang_code})" tells to filter only content based on the given language code. For available Helmet
+#   languages, see https://www.helmet.fi/api/opennc/v1/ContentLanguages?$format=json.
+# - "TemplateID eq 3" tells to filter content based on the "Event" content type which has the ID "3" in Helmet's
+#   NetCommunity. For available Helmet content types, see https://www.helmet.fi/api/opennc/v1/Templates?$format=json.
+# - "Classifications/any(c: c/NodeId eq {classification_node_id})" tells to filter content based on the given
+#   classification keyword node IDs. For instance, we could filter based on the "Espoo" keyword node ID given to all
+#   events that are located in Espoo. Currently, there is no way to list the available node IDs through the API.
+HELMET_API_URL_WITH_CLASSIFICATIONS_FILTER_ = (
+    HELMET_BASE_URL + '/api/opennc/v1/ContentLanguages({lang_code})/Contents'
+    '?$filter=TemplateId eq 3 and Classifications/any(c: c/NodeId eq {classification_node_id})'
+    '&$expand=ExtendedProperties,LanguageVersions'
     '&$orderby=EventEndDate desc&$format=json'
 )
 
@@ -166,7 +209,31 @@ def mark_deleted(obj):
     return True
 
 
+HELMET_CITY_ALL = 'all'
+HELMET_CITY_ESPOO = 'espoo'
+
+VALID_HELMET_CITIES = [
+    HELMET_CITY_ALL,
+    HELMET_CITY_ESPOO,
+]
+
+
+def is_valid_city_setting(city_setting):
+    """Determines the valid values for the HELMET_CITY setting.
+
+    Currently, only supports the following values:
+    - 'all' to import events from all cities
+    - 'espoo' to only import events located in Espoo
+    """
+    valid_city_settings = VALID_HELMET_CITIES
+    return city_setting in valid_city_settings
+
+
 class APIBrokenError(Exception):
+    pass
+
+
+class InvalidHelmetCitySetting(Exception):
     pass
 
 
@@ -235,6 +302,22 @@ class HelmetImporter(Importer):
             self.cache = requests_cache.get_cache()
         else:
             self.cache = None
+
+    def __get_helmet_url(self, lang_code):
+        helmet_lang_id = HELMET_LANGUAGES[lang_code]
+        helmet_city = settings.HELMET_CITY
+
+        if not is_valid_city_setting(helmet_city):
+            logger.error(f"Invalid HELMET_CITY value: {helmet_city}")
+            raise InvalidHelmetCitySetting()
+
+        if helmet_city == HELMET_CITY_ALL:
+            return HELMET_API_URL.format(lang_code=helmet_lang_id)
+        elif helmet_city == HELMET_CITY_ESPOO:
+            return HELMET_API_URL_WITH_CLASSIFICATIONS_FILTER_.format(
+                lang_code=helmet_lang_id,
+                classification_node_id=HELMET_ESPOO_NODE_ID,
+            )
 
     @staticmethod
     def _get_extended_properties(event_el):
@@ -499,8 +582,7 @@ class HelmetImporter(Importer):
         logger.info("Importing HelMet events")
         events = recur_dict()
         for lang in self.supported_languages:
-            helmet_lang_id = HELMET_LANGUAGES[lang]
-            url = HELMET_API_URL.format(lang_code=helmet_lang_id, start_date='2016-01-01')
+            url = self.__get_helmet_url(lang)
             logger.info("Processing lang {} from URL {}".format(lang, url))
             try:
                 self._recur_fetch_paginated_url(url, lang, events)
