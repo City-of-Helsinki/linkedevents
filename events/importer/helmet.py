@@ -312,17 +312,11 @@ class HelmetImporter(Importer):
             raise InvalidHelmetCitySetting()
 
         if helmet_city == HELMET_CITY_ALL:
-            return HELMET_API_URL.format(
-                lang_code=helmet_lang_id,
-                # Is the start_date even used?
-                start_date='2016-01-01',
-            )
+            return HELMET_API_URL.format(lang_code=helmet_lang_id)
         elif helmet_city == HELMET_CITY_ESPOO:
             return HELMET_API_URL_WITH_CLASSIFICATIONS_FILTER_.format(
                 lang_code=helmet_lang_id,
                 classification_node_id=HELMET_ESPOO_NODE_ID,
-                # Is the start_date even used?
-                start_date='2016-01-01',
             )
 
     @staticmethod
