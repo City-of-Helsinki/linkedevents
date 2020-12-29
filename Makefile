@@ -128,6 +128,7 @@ import_helmet:
 	-e DB_APP_USER=linkedevents_application \
 	-e DB_HOST=localhost \
 	-e DB_NAME=linkedevents \
+	-e HELMET_CITY=espoo \
 	-e SYSTEM_DATA_SOURCE_ID=espooevents \
 	--name linkedevents-admin \
 	linkedevents-admin \

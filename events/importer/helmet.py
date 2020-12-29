@@ -142,25 +142,38 @@ INTERNET_LOCATION_ID = settings.SYSTEM_DATA_SOURCE_ID + ':internet'
 
 # The node ID of the Espoo keyword in the NetCommunity CMS used by Helmet. This has been verified with the maintainer
 # of Helmet. The Espoo node ID is used to filter only the Helmet events that are located in Espoo.
-#
-# Note that the Helmet API doesn't have any public API description. Thus ,the below API query has been adapted based on
-# the public API description of Espoo who also uses NetCommunity for the current Espoo.fi site. For more information
+HELMET_ESPOO_NODE_ID = 10690
+HELMET_BASE_URL = 'https://www.helmet.fi'
+
+# Note that the Helmet API doesn't have any public API description. Thus ,the below API queries have been adapted based
+# on the public API description of Espoo who also uses NetCommunity for the current Espoo.fi site. For more information
 # regarding the NetCommunity API syntax, see:
 # - https://www.espoo.fi/fi-FI/Asioi_verkossa/Muut_palvelut/Espoofisivuston_avoimet_rajapinnat
 # - https://www.espoo.fi/download/noname/%7B8746234F-923A-47DF-839A-4423C20CB288%7D/45317
-HELMET_ESPOO_NODE_ID = 10690
-HELMET_BASE_URL = 'https://www.helmet.fi'
-# Helmet API URL for filtering events based on the following criteria:
+
+# Helmet API URL for filtering events based on the following criteria (without classifications):
 # - "ContentLanguages({lang_code})" tells to filter only content based on the given language code. For available Helmet
 #   languages, see https://www.helmet.fi/api/opennc/v1/ContentLanguages?$format=json.
 # - "TemplateID eq 3" tells to filter content based on the "Event" content type which has the ID "3" in Helmet's
 #   NetCommunity. For available Helmet content types, see https://www.helmet.fi/api/opennc/v1/Templates?$format=json.
-# - "Classifications/any(c: c/NodeId eq {city_node_id})" tells to filter content based on the given classification
-#   keyword node IDs. In this case, we are filtering based on the "Espoo" keyword node ID given to all events that are
-#   located in Espoo. Currently, there is no way to list the available node IDs through the API.
 HELMET_API_URL = (
     HELMET_BASE_URL + '/api/opennc/v1/ContentLanguages({lang_code})/Contents'
-    '?$filter=TemplateId eq 3 and Classifications/any(c: c/NodeId eq {city_node_id})'
+    '?$filter=TemplateId eq 3'
+    '&$expand=ExtendedProperties,LanguageVersions'
+    '&$orderby=EventEndDate desc&$format=json'
+)
+
+# Helmet API URL for filtering events based on the following criteria including classifications:
+# - "ContentLanguages({lang_code})" tells to filter only content based on the given language code. For available Helmet
+#   languages, see https://www.helmet.fi/api/opennc/v1/ContentLanguages?$format=json.
+# - "TemplateID eq 3" tells to filter content based on the "Event" content type which has the ID "3" in Helmet's
+#   NetCommunity. For available Helmet content types, see https://www.helmet.fi/api/opennc/v1/Templates?$format=json.
+# - "Classifications/any(c: c/NodeId eq {classification_node_id})" tells to filter content based on the given
+#   classification keyword node IDs. For instance, we could filter based on the "Espoo" keyword node ID given to all
+#   events that are located in Espoo. Currently, there is no way to list the available node IDs through the API.
+HELMET_API_URL_WITH_CLASSIFICATIONS_FILTER_ = (
+    HELMET_BASE_URL + '/api/opennc/v1/ContentLanguages({lang_code})/Contents'
+    '?$filter=TemplateId eq 3 and Classifications/any(c: c/NodeId eq {classification_node_id})'
     '&$expand=ExtendedProperties,LanguageVersions'
     '&$orderby=EventEndDate desc&$format=json'
 )
@@ -196,7 +209,31 @@ def mark_deleted(obj):
     return True
 
 
+HELMET_CITY_ALL = 'all'
+HELMET_CITY_ESPOO = 'espoo'
+
+VALID_HELMET_CITIES = [
+    HELMET_CITY_ALL,
+    HELMET_CITY_ESPOO,
+]
+
+
+def is_valid_city_setting(city_setting):
+    """Determines the valid values for the HELMET_CITY setting.
+
+    Currently, only supports the following values:
+    - 'all' to import events from all cities
+    - 'espoo' to only import events located in Espoo
+    """
+    valid_city_settings = VALID_HELMET_CITIES
+    return city_setting in valid_city_settings
+
+
 class APIBrokenError(Exception):
+    pass
+
+
+class InvalidHelmetCitySetting(Exception):
     pass
 
 
@@ -265,6 +302,28 @@ class HelmetImporter(Importer):
             self.cache = requests_cache.get_cache()
         else:
             self.cache = None
+
+    def __get_helmet_url(self, lang_code):
+        helmet_lang_id = HELMET_LANGUAGES[lang_code]
+        helmet_city = settings.HELMET_CITY
+
+        if not is_valid_city_setting(helmet_city):
+            logger.error(f"Invalid HELMET_CITY value: {helmet_city}")
+            raise InvalidHelmetCitySetting()
+
+        if helmet_city == HELMET_CITY_ALL:
+            return HELMET_API_URL.format(
+                lang_code=helmet_lang_id,
+                # Is the start_date even used?
+                start_date='2016-01-01',
+            )
+        elif helmet_city == HELMET_CITY_ESPOO:
+            return HELMET_API_URL_WITH_CLASSIFICATIONS_FILTER_.format(
+                lang_code=helmet_lang_id,
+                classification_node_id=HELMET_ESPOO_NODE_ID,
+                # Is the start_date even used?
+                start_date='2016-01-01',
+            )
 
     @staticmethod
     def _get_extended_properties(event_el):
@@ -529,10 +588,7 @@ class HelmetImporter(Importer):
         logger.info("Importing HelMet events")
         events = recur_dict()
         for lang in self.supported_languages:
-            helmet_lang_id = HELMET_LANGUAGES[lang]
-            url = HELMET_API_URL.format(
-                lang_code=helmet_lang_id, city_node_id=HELMET_ESPOO_NODE_ID, start_date='2016-01-01'
-            )
+            url = self.__get_helmet_url(lang)
             logger.info("Processing lang {} from URL {}".format(lang, url))
             try:
                 self._recur_fetch_paginated_url(url, lang, events)
