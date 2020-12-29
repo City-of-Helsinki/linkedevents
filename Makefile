@@ -280,7 +280,18 @@ populate_local_event_cache:
 
 .PHONY: install_templates
 install_templates:
-	@python manage.py install_templates helevents
+	@docker run \
+	--rm \
+	--network=host \
+	-e DB_APP_PASSWORD=secret \
+	-e DB_APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	-v `pwd`:/app \
+	-w /app \
+	--name linkedevents-admin \
+	linkedevents-admin \
+	python manage.py install_templates helevents
 
 .PHONY: createsuperuser
 createsuperuser:
