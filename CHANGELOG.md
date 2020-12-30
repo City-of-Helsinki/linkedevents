@@ -10,6 +10,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 <!-- List the changes in your PR under the Unreleased title. You can also copy this list to your PR summary. -->
 
+## [1.9.1] - 2020-12-30
+
+This release syncs the pull request [City-of-Helsinki/linkedevents#440](https://github.com/City-of-Helsinki/linkedevents/pull/440)
+from [linkedevents](https://github.com/City-of-Helsinki/linkedevents) to `espooevents-service`. The pull request is
+synced separately since it's still unmerged in the upstream `linkedevents` repository but we already need the change in
+`espooevents-service`.
+
+### Added
+
+- Instructions for submitting a pull request to the Helsinki Linked Events repository. This is useful, e.g., when we
+  have more general changes that aren't Espoo-specific and which should therefore be included in the upstream
+  `linkedevents` repository to prevent `linkedevents` and `espooevents-service` from diverging too much from each other.
+
+### Fixed
+
+- The automatic creation of the `Internet` location in the `helmet` importer. Currently, the `helmet` importer checks if
+  an `Internet` location exists and creates one if it doesn't exist. This, however, currently fails since the
+  `self.system_data_source` variable passed as an argument to the `Place` creation query contains a tuple and not a
+  `DataSource` object resulting in the following error:
+
+  ```
+  ValueError: Cannot assign "(<DataSource: espooevents>, True)": "Place.data_source" must be a "DataSource" instance.
+  ```
+
+  This change fixes the bug by correctly assigning the `DataSource` object to the `self.system_data_source` variable so
+  that the `Internet` location can be successfully created if it doesn't already exist.
+
 ## [1.9.0] - 2020-12-29
 
 ### Added
@@ -903,6 +930,7 @@ to `espooevents-service`.
   to a minimum. This version marks the initial `0.1.0` relase and the initial `linkedevents` commit on which
   `espooevents-service` is based on.
 
+[1.9.1]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.9.0...espoo-v1.9.1
 [1.9.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.8.1...espoo-v1.9.0
 [1.8.1]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.8.0...espoo-v1.8.1
 [1.8.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.7.0...espoo-v1.8.0
