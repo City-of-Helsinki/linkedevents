@@ -31,6 +31,43 @@ Therefore, instructions written in this README.md should be written accordingly.
 
 The best way to contribute is to open a new PR for discussion. We strive to be able to support various cities with various use cases, so suggestions and new features (as long as they fit in with existing functionality) are welcome.
 
+### Submitting a pull request to Helsinki's Linked Events
+
+If the change you're making isn't Espoo-specific but more general, you should consider submitting a pull request with
+the change to the Helsinki `linkedevents` repository. This way, others using `linkedevents` can also benefit from the
+change in the same way as `espooevents-service` benefits from new features and changes submitted by others to
+`linkedevents`. Submitting changes to `linkedevents` is also important to prevent `espooevents-service` from diverging
+too much from `linkedevents` which could cause incompatibilities and difficulties in syncing future changes from
+`linkedevents` to `espooevents-service`. To submit a pull request to the Helsinki Linked Events repository, follow these
+steps:
+
+```
+# Ensure that your Espoo Events fork master branch is up-to-date
+git pull origin master
+
+# Create new feature branch from origin/master for the change and commit your changes to it
+git checkout -b feat/new-general-feature master
+
+# Once, you've committed the changes, fetch the latest changes from Helsinki's Linked Events
+git fetch upstream
+
+# Since you've created the feature branch based on espooevents-service's master branch (so that you can test the changes
+# locally), the branch naturally includes all the changes in the master branch that diverge from linkedevents' master
+# branch. Thus, if you'd push the changes and create a PR, you'd notice that the pull request would contain all these
+# diverging commits in addition to the new commits that you've just made. Since we only want to include the new
+# commits, we need to first rebase the new changes on top of linkedevents' master branch. This can be done using the
+# following command which says to rebase all commits in feat/new-general-feature since origin/master on top of
+# upstream/master:
+git rebase --onto upstream/master origin/master feat/new-general-feature
+
+# Now, you can push the branch and create the PR in GitHub and wait for it to merged to linkedevents' master branch. If
+# you're in a hurry to get the PR to espooevents-service and don't want to wait for it to first be merged to
+# linkedevents, you can follow the instructions below to sync a specific linkedevents PR to espooevents-service. This
+# isn't recommended unless it's a must since it can cause the repositories to diverge if, e.g., some fixes are made to
+# the PR in the linkedevents repository after the PR has already been incorporated to espooevents-service.
+git push origin feat/new-general-feature
+```
+
 ## Syncing changes from Helsinki's Linked Events
 
 ### Syncing all latest changes
