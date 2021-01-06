@@ -547,6 +547,20 @@ POSTAL_CODE_TO_PLACE_KEYWORD_ID = {
   '02980': ['espoo:p29', 'espoo:p58'],  # Lakisto -> Lakisto, Velskola
 }
 
+NON_GEOGRAPHICAL_POSTAL_CODES_FOR_ESPOO = [
+  '00095', '02008', '02010', '02014', '02020', '02022', '02044', '02066', '02070', '02101', '02104', '02105', '02124',
+  '02131', '02134', '02135', '02151', '02154', '02155', '02171', '02174', '02175', '02184', '02201', '02204', '02207',
+  '02211', '02214', '02215', '02231', '02234', '02235', '02241', '02244', '02254', '02264', '02271', '02274', '02275',
+  '02284', '02285', '02304', '02321', '02324', '02325', '02334', '02335', '02344', '02361', '02364', '02365', '02601',
+  '02604', '02605', '02611', '02614', '02615', '02621', '02624', '02631', '02634', '02635', '02654', '02661', '02664',
+  '02665', '02677', '02684', '02711', '02715', '02725', '02744', '02754', '02755', '02761', '02764', '02765', '02771',
+  '02774', '02775', '02781', '02784', '02885', '02921', '02924', '02925', '02941', '02944', '02945',
+]
+
+NON_GEOGRAPHICAL_POSTAL_CODE_LOCATION_TO_PLACE_KEYWORD_ID = {
+  'tprek:26429': 'espoo:p31',  # Sellosali -> Leppävaara
+}
+
 
 class Command(BaseCommand):
     """Creates a keyword set with Espoo's places and maps YSO keywords to custom Espoo place keywords.
@@ -643,6 +657,9 @@ class Command(BaseCommand):
     def _is_espoo_district_place_keyword(self, keyword_id):
         return keyword_id.startswith('espoo:p') and keyword_id not in NON_DISTRICT_PLACE_KEYWORD_IDS
 
+    def _is_postal_code_espoo_non_geographical(self, postal_code):
+        return postal_code in NON_GEOGRAPHICAL_POSTAL_CODES_FOR_ESPOO
+
     def _add_espoo_district_keywords_based_on_postal_code(self, event):
         location_place_keyword_ids = POSTAL_CODE_TO_PLACE_KEYWORD_ID[event.location.postal_code]
 
@@ -678,6 +695,26 @@ class Command(BaseCommand):
         event.keywords.add(non_espoo_place_keyword_obj)
         logger.info(f"added {non_espoo_place_keyword_obj} ({NON_ESPOO_PLACE_KEYWORD_ID}) to {event}")
 
+    def _add_espoo_district_keyword_for_location_with_non_geographical_postal_code(self, event):
+        if event.location.id not in NON_GEOGRAPHICAL_POSTAL_CODE_LOCATION_TO_PLACE_KEYWORD_ID:
+            return
+
+        espoo_place_keyword_id = NON_GEOGRAPHICAL_POSTAL_CODE_LOCATION_TO_PLACE_KEYWORD_ID[event.location.id]
+        espoo_place_keyword_obj = self._get_keyword_obj(espoo_place_keyword_id)
+
+        for keyword in event.keywords.all():
+            # The location of the event might have changed if the event has been reimported. Thus, we remove any
+            # existing Espoo place keywords from the event.
+            if self._is_espoo_district_place_keyword(keyword.id) and keyword.id != espoo_place_keyword_id:
+                event.keywords.remove(keyword)
+                logger.info(f"removed {keyword} ({keyword.id}) from {event}")
+
+        if espoo_place_keyword_obj in event.keywords.all():
+            return
+
+        event.keywords.add(espoo_place_keyword_obj)
+        logger.info(f"added {espoo_place_keyword_obj} ({espoo_place_keyword_id}) to {event}")
+
     @transaction.atomic()
     def _add_espoo_place_keywords_to_events_based_on_location(self):
         """Adds the Espoo district place keywords to events based on their postal code."""
@@ -691,6 +728,10 @@ class Command(BaseCommand):
 
             # The events imported with the espoo importer already have the right Espoo place keywords
             if event.data_source.id == 'espoo':
+                continue
+
+            if self._is_postal_code_espoo_non_geographical(event.location.postal_code):
+                self._add_espoo_district_keyword_for_location_with_non_geographical_postal_code(event)
                 continue
 
             if event.location.postal_code in POSTAL_CODE_TO_PLACE_KEYWORD_ID:
