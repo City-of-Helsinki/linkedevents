@@ -466,7 +466,86 @@ CUSTOM_ESPOO_PLACE_KEYWORDS = [
 ]
 
 YSO_REMOTE_PARTICIPATION_KEYWORD_ID = 'yso:p26626'
+NON_ESPOO_PLACE_KEYWORD_ID = 'espoo:p62'
 ESPOO_ONLINE_PLACE_KEYWORD_ID = 'espoo:p63'
+
+NON_DISTRICT_PLACE_KEYWORD_IDS = [
+  NON_ESPOO_PLACE_KEYWORD_ID,
+  ESPOO_ONLINE_PLACE_KEYWORD_ID,
+]
+
+# Note that mapping locations to districts based on postal codes is a naive implementation since the mapping isn't
+# unambiguous. For instance, certain postal codes can map to multiple districts and vice versa. The mapping also isn't
+# exactly one-to-one in the sense that postal code areas do not exactly follow district borders. Thus, it might happen
+# that an event is organized in a location which has a certain postal code and is thus mapped to a certain district but
+# the actual location is outside the district. Also, note that some locations may have postal codes that aren't exactly
+# tied to the actual location. For instance, Sellosali has the postal code "02070" which is the postal code for the
+# City of Espoo and not a certain geographical area such as Leppävaara where Sellosali is actually located. Thus,
+# certain postal codes can't be used to map events to specific geographical districts automatically. Currently, there
+# are 135 postal codes for Espoo of which 46 are mapped to actual geographical districts. These 46 postal codes have
+# been mapped to districts in the below mapping. This mapping is based on information from:
+# - Statistics Finland (http://www.stat.fi/tup/paavo/tietosisalto_ja_esimerkit.html, file: "Postinumero-kunta -avain
+#   2020 (xlsx)") for getting the mapping of postal codes to districts
+# - Wikipedia (https://fi.wikipedia.org/wiki/Luettelo_Suomen_postinumeroista_kunnittain) for getting the mapping of
+#   postal codes to districts
+# - The Paikkatietoikkuna service (https://kartta.paikkatietoikkuna.fi) for getting the mapping of postal codes to
+#   districts based on postal code and district borders. This can be achieved by selecting, e.g., the map layers:
+#   Paavo-postinumeroalueet 2020, Espoon tilastoalueet, and Kuntajako.
+# - Posti's Postal Code Data File (PCF) for getting a listing of all postal codes for Espoo including those that aren't
+#   tied to a certain geographical district (https://www.posti.fi/fi/asiakastuki/postinumerotiedostot)
+# - Wikipedia (https://fi.wikipedia.org/wiki/Luettelo_Espoon_kaupunginosista) for a listing of Espoo's districts and
+#   their postal codes
+# NOTE! If you update this mapping, remember to also update the corresponding mapping in espooevents-frontend.
+POSTAL_CODE_TO_PLACE_KEYWORD_ID = {
+  # The names of the places in the comments are based on the postal code area name in the "Postinumero-kunta-avain"
+  # file and the place keyword name in Espoo Events
+  '02100': ['espoo:p54'],  # Tapiola -> Tapiola
+  '02110': ['espoo:p54'],  # Otsolahti -> Tapiola
+  '02120': ['espoo:p54'],  # Länsikorkee-Suvikumpu -> Tapiola
+  '02130': ['espoo:p46'],  # Pohjois-Tapiola -> Pohjois-Tapiola
+  '02140': ['espoo:p26'],  # Laajalahti -> Laajalahti
+  '02150': ['espoo:p18', 'espoo:p44'],  # Otaniemi -> Keilaniemi, Otaniemi
+  '02160': ['espoo:p59'],  # Westend -> Westend
+  '02170': ['espoo:p7'],  # Haukilahti -> Haukilahti
+  '02180': ['espoo:p35'],  # Mankkaa -> Mankkaa
+  '02200': ['espoo:p39'],  # Niittykumpu -> Niittykumpu
+  '02210': ['espoo:p43'],  # Olari -> Olari
+  '02230': ['espoo:p36'],  # Matinkylä -> Matinkylä
+  '02240': ['espoo:p43'],  # Friisilä -> Olari
+  '02250': ['espoo:p8', 'espoo:p52'],  # Henttaa -> Henttaa, Suurpelto
+  '02260': ['espoo:p11'],  # Kaitaa -> Kaitaa
+  '02270': ['espoo:p5'],  # Finnoo-Eestinmalmi -> Finnoo
+  '02280': ['espoo:p30', 'espoo:p42'],  # Malminmäki-Eestinlaakso -> Latokaski, Nöykkiö
+  '02290': ['espoo:p43'],  # Puolarmetsän sairaala -> Olari
+  '02300': ['espoo:p42'],  # Nöykkiönpuro -> Nöykkiö
+  '02320': ['espoo:p4', 'espoo:p21'],  # Espoonlahti -> Espoonlahti, Kivenlahti
+  '02330': ['espoo:p42', 'espoo:p48'],  # Saunalahti-Kattilalaakso -> Nöykkiö, Saunalahti
+  '02340': ['espoo:p30'],  # Latokaski -> Latokaski
+  '02360': ['espoo:p51'],  # Soukka -> Soukka
+  '02380': ['espoo:p53'],  # Suvisaaristo -> Suvisaaristo
+  '02600': ['espoo:p26', 'espoo:p31'],  # Etelä-Leppävaara -> Laajalahti, Leppävaara
+  '02610': ['espoo:p20'],  # Kilo -> Kilo
+  '02620': ['espoo:p13'],  # Karakallio -> Karakallio
+  '02630': ['espoo:p19', 'espoo:p20'],  # Nihtisilta -> Kera, Kilo
+  '02650': ['espoo:p31'],  # Pohjois-Leppävaara -> Leppävaara
+  '02660': ['espoo:p32'],  # Lintuvaara -> Lintuvaara
+  '02680': ['espoo:p32'],  # Uusmäki -> Lintuvaara
+  '02710': ['espoo:p60'],  # Viherlaakso -> Viherlaakso
+  '02720': ['espoo:p27'],  # Lähderanta -> Laaksolahti
+  '02730': ['espoo:p30'],  # Jupperi -> Laaksolahti
+  '02740': ['espoo:p15', 'espoo:p23'],  # Bemböle-Pakankylä -> Karvasmäki, Kunnarla
+  '02750': ['espoo:p25', 'espoo:p35', 'espoo:p49'],  # Sepänkylä-Kuurinniitty -> Kuurinniitty, Mankkaa, Sepänkylä
+  '02760': ['espoo:p2'],  # Tuomarila-Suvela -> Espoon keskus
+  '02770': ['espoo:p2', 'espoo:p17', 'espoo:p37'],  # Espoon Keskus -> Espoon keskus, Kaupunginkallio, Muurala
+  '02780': ['espoo:p3', 'espoo:p16', 'espoo:p24', 'espoo:p57'],  # Kauklahti -> Espoonkartano, Kauklahti, Kurttila, Vanttila  # noqa: E501
+  '02810': ['espoo:p6', 'espoo:p14'],  # Gumböle-Karhusuo -> Gumböle, Karhusuo
+  '02820': ['espoo:p22', 'espoo:p40', 'espoo:p41', 'espoo:p56'],  # Nupuri-Nuuksio -> Kolmperä, Nupuri, Nuuksio, Vanha-Nuuksio  # noqa: E501
+  '02860': ['espoo:p50'],  # Siikajärvi -> Siikajärvi
+  '02920': ['espoo:p38', 'espoo:p45', 'espoo:p55', 'espoo:p61'],  # Niipperi -> Niipperi, Perusmäki, Vanhakartano, Ämmässuo  # noqa: E501
+  '02940': ['espoo:p1', 'espoo:p9', 'espoo:p10', 'espoo:p33', 'espoo:p47'],  # Lippajärvi-Järvenperä -> Bodom, Högnäs, Järvenperä, Lippajärvi, Röylä  # noqa: E501
+  '02970': ['espoo:p12', 'espoo:p28', 'espoo:p34'],  # Kalajärvi -> Kalajärvi, Lahnus, Luukki
+  '02980': ['espoo:p29', 'espoo:p58'],  # Lakisto -> Lakisto, Velskola
+}
 
 
 class Command(BaseCommand):
@@ -561,6 +640,46 @@ class Command(BaseCommand):
             event.keywords.add(espoo_online_place_keyword_obj)
             logger.info(f"added {espoo_online_place_keyword_obj} ({ESPOO_ONLINE_PLACE_KEYWORD_ID}) to {event}")
 
+    def _is_espoo_district_place_keyword(self, keyword_id):
+        return keyword_id.startswith('espoo:p') and keyword_id not in NON_DISTRICT_PLACE_KEYWORD_IDS
+
+    @transaction.atomic()
+    def _add_espoo_district_keywords_to_events_based_on_postal_code(self):
+        """Adds the Espoo district place keywords to events based on their postal code."""
+        logger.info('adding Espoo district place keywords to events based on their postal code...')
+
+        for event in Event.objects.filter(location__postal_code__isnull=False).prefetch_related('keywords'):
+            # We only want to add place keywords to events that have not been edited by users so that we don't
+            # accidentally overwrite any place keywords modified by a user
+            if event.is_user_edited():
+                continue
+
+            # The events imported with the espoo importer already have the right Espoo place keywords
+            if event.data_source.id == 'espoo':
+                continue
+
+            if event.location.postal_code not in POSTAL_CODE_TO_PLACE_KEYWORD_ID:
+                continue
+
+            location_place_keyword_ids = POSTAL_CODE_TO_PLACE_KEYWORD_ID[event.location.postal_code]
+
+            for keyword in event.keywords.all():
+                # The location of the event might have changed if the event has been reimported. Thus, we remove any
+                # existing Espoo place keywords from the event that don't correspond to the postal code's place
+                # keywords.
+                if self._is_espoo_district_place_keyword(keyword.id) and keyword.id not in location_place_keyword_ids:
+                    event.keywords.remove(keyword)
+                    logger.info(f"removed {keyword} ({keyword.id}) from {event}")
+
+            for espoo_place_keyword_id in location_place_keyword_ids:
+                espoo_place_keyword_obj = self._get_keyword_obj(espoo_place_keyword_id)
+
+                if espoo_place_keyword_obj in event.keywords.all():
+                    continue
+
+                event.keywords.add(espoo_place_keyword_obj)
+                logger.info(f"added {espoo_place_keyword_obj} ({espoo_place_keyword_id}) to {event}")
+
     def handle(self, *args, **options):
         # Espoo data source must be created if missing. Note that it is not necessarily the system data source.
         # If we are creating it, it *may* still be the system data source, so it must be user editable!
@@ -570,4 +689,5 @@ class Command(BaseCommand):
         self._create_espoo_place_keywords()
         self._create_espoo_places_keyword_set()
         self._add_espoo_online_place_keyword_to_events()
+        self._add_espoo_district_keywords_to_events_based_on_postal_code()
         logger.info('all done')
