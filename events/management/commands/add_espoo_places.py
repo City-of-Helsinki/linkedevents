@@ -465,10 +465,8 @@ CUSTOM_ESPOO_PLACE_KEYWORDS = [
     }
 ]
 
-# A mapping of YSO keywords to custom Espoo place keywords
-YSO_TO_ESPOO_PLACE_KEYWORD_MAPPING = {
-    'yso:p26626': 'espoo:p63',  # YSO etäosallistuminen -> Espoo online-tapahtuma
-}
+YSO_REMOTE_PARTICIPATION_KEYWORD_ID = 'yso:p26626'
+ESPOO_ONLINE_PLACE_KEYWORD_ID = 'espoo:p63'
 
 
 class Command(BaseCommand):
@@ -538,22 +536,30 @@ class Command(BaseCommand):
                 logger.info(f"added {keyword.name} ({keyword_dict['id']}) to the keyword set")
 
     @transaction.atomic()
-    def _add_espoo_place_keywords_to_events(self):
-        logger.info('adding Espoo place keywords to events...')
+    def _add_espoo_online_place_keyword_to_events(self):
+        """Adds the Espoo online place keyword to remote events.
 
-        for event in Event.objects.prefetch_related('keywords'):
-            for keyword in event.keywords.all():
+        In practice, this adds the 'espoo:p63' keyword to all events that have the YSO remote participation keyword
+        'yso:p26626'.
+        """
+        logger.info('adding Espoo online place keyword to remote events...')
 
-                if keyword.id not in YSO_TO_ESPOO_PLACE_KEYWORD_MAPPING:
-                    continue
+        espoo_online_place_keyword_obj = self._get_keyword_obj(ESPOO_ONLINE_PLACE_KEYWORD_ID)
+        events_to_update = (
+            Event.objects
+            .filter(keywords__id=YSO_REMOTE_PARTICIPATION_KEYWORD_ID)
+            .exclude(keywords__id=ESPOO_ONLINE_PLACE_KEYWORD_ID)
+            .prefetch_related('keywords')
+        )
 
-                # Map the given YSO keyword to a custom Espoo place keyword
-                espoo_keyword_id = YSO_TO_ESPOO_PLACE_KEYWORD_MAPPING.get(keyword.id)
-                espoo_keyword_obj = self._get_keyword_obj(espoo_keyword_id)
+        for event in events_to_update:
+            # We only want to add place keywords to events that have not been edited by users so that we don't
+            # accidentally overwrite any place keywords modified by a user
+            if event.is_user_edited():
+                continue
 
-                if espoo_keyword_obj not in event.keywords.all():
-                    event.keywords.add(espoo_keyword_obj)
-                    logger.info(f"added {espoo_keyword_obj} ({espoo_keyword_id}) to {event}")
+            event.keywords.add(espoo_online_place_keyword_obj)
+            logger.info(f"added {espoo_online_place_keyword_obj} ({ESPOO_ONLINE_PLACE_KEYWORD_ID}) to {event}")
 
     def handle(self, *args, **options):
         # Espoo data source must be created if missing. Note that it is not necessarily the system data source.
@@ -563,5 +569,5 @@ class Command(BaseCommand):
                                          defaults=espoo_data_source_defaults)
         self._create_espoo_place_keywords()
         self._create_espoo_places_keyword_set()
-        self._add_espoo_place_keywords_to_events()
+        self._add_espoo_online_place_keyword_to_events()
         logger.info('all done')
