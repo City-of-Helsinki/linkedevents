@@ -155,6 +155,11 @@ class Command(BaseCommand):
         logger.info('adding Espoo audience keywords to events...')
 
         for event in Event.objects.exclude(audience__isnull=True).prefetch_related('audience'):
+            # We only want to add audience keywords to events that have not been edited by users so that we don't
+            # accidentally overwrite any audience keywords modified by the user
+            if event.is_user_edited():
+                continue
+
             for audience in event.audience.all():
 
                 if audience.id not in YSO_TO_ESPOO_AUDIENCE_KEYWORD_MAPPING:
@@ -164,9 +169,11 @@ class Command(BaseCommand):
                 espoo_keyword_id = YSO_TO_ESPOO_AUDIENCE_KEYWORD_MAPPING.get(audience.id)
                 espoo_keyword_obj = self._get_keyword_obj(espoo_keyword_id)
 
-                if espoo_keyword_obj not in event.audience.all():
-                    event.audience.add(espoo_keyword_obj)
-                    logger.info(f"added {espoo_keyword_obj} ({espoo_keyword_id}) to {event}")
+                if espoo_keyword_obj in event.audience.all():
+                    continue
+
+                event.audience.add(espoo_keyword_obj)
+                logger.info(f"added {espoo_keyword_obj} ({espoo_keyword_id}) to {event}")
 
     def handle(self, *args, **options):
         # Espoo data source must be created if missing. Note that it is not necessarily the system data source.
