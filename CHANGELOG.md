@@ -10,6 +10,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 <!-- List the changes in your PR under the Unreleased title. You can also copy this list to your PR summary. -->
 
+## [1.9.2] - 2021-01-06
+
+### Fixed
+
+- The `helmet` importer (or any other importer for that matter) from removing Espoo audience keywords added by the
+  `add_espoo_audience` management command and Espoo place keywords added by the `add_espoo_places` management command
+  when reimporting and thus updating an existing event. This change fixes the issue by checking whether the event has
+  any Espoo audiences or keywords and keeping them although the reimported event data doesn't have any Espoo audiences
+  or keywords. This way, we don't accidentally overwrite any audiences and keywords for events that have been augmented
+  by the `add_espoo_audience` and `add_espoo_places` management commands.
+
 ## [1.9.1] - 2020-12-30
 
 This release syncs the pull request [City-of-Helsinki/linkedevents#440](https://github.com/City-of-Helsinki/linkedevents/pull/440)
@@ -930,6 +941,7 @@ to `espooevents-service`.
   to a minimum. This version marks the initial `0.1.0` relase and the initial `linkedevents` commit on which
   `espooevents-service` is based on.
 
+[1.9.2]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.9.1...espoo-v1.9.2
 [1.9.1]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.9.0...espoo-v1.9.1
 [1.9.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.8.1...espoo-v1.9.0
 [1.8.1]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.8.0...espoo-v1.8.1
