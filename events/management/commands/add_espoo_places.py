@@ -643,8 +643,43 @@ class Command(BaseCommand):
     def _is_espoo_district_place_keyword(self, keyword_id):
         return keyword_id.startswith('espoo:p') and keyword_id not in NON_DISTRICT_PLACE_KEYWORD_IDS
 
+    def _add_espoo_district_keywords_based_on_postal_code(self, event):
+        location_place_keyword_ids = POSTAL_CODE_TO_PLACE_KEYWORD_ID[event.location.postal_code]
+
+        for keyword in event.keywords.all():
+            # The location of the event might have changed if the event has been reimported. Thus, we remove any
+            # existing Espoo place keywords from the event that don't correspond to the postal code's place
+            # keywords.
+            if self._is_espoo_district_place_keyword(keyword.id) and keyword.id not in location_place_keyword_ids:
+                event.keywords.remove(keyword)
+                logger.info(f"removed {keyword} ({keyword.id}) from {event}")
+
+        for espoo_place_keyword_id in location_place_keyword_ids:
+            espoo_place_keyword_obj = self._get_keyword_obj(espoo_place_keyword_id)
+
+            if espoo_place_keyword_obj in event.keywords.all():
+                continue
+
+            event.keywords.add(espoo_place_keyword_obj)
+            logger.info(f"added {espoo_place_keyword_obj} ({espoo_place_keyword_id}) to {event}")
+
+    def _add_non_espoo_place_keyword(self, event):
+        non_espoo_place_keyword_obj = self._get_keyword_obj(NON_ESPOO_PLACE_KEYWORD_ID)
+
+        for keyword in event.keywords.all():
+            # Remove any Espoo district place keywords
+            if self._is_espoo_district_place_keyword(keyword.id):
+                event.keywords.remove(keyword)
+                logger.info(f"removed {keyword} ({keyword.id}) from {event}")
+
+        if non_espoo_place_keyword_obj in event.keywords.all():
+            return
+
+        event.keywords.add(non_espoo_place_keyword_obj)
+        logger.info(f"added {non_espoo_place_keyword_obj} ({NON_ESPOO_PLACE_KEYWORD_ID}) to {event}")
+
     @transaction.atomic()
-    def _add_espoo_district_keywords_to_events_based_on_postal_code(self):
+    def _add_espoo_place_keywords_to_events_based_on_location(self):
         """Adds the Espoo district place keywords to events based on their postal code."""
         logger.info('adding Espoo district place keywords to events based on their postal code...')
 
@@ -658,27 +693,10 @@ class Command(BaseCommand):
             if event.data_source.id == 'espoo':
                 continue
 
-            if event.location.postal_code not in POSTAL_CODE_TO_PLACE_KEYWORD_ID:
-                continue
-
-            location_place_keyword_ids = POSTAL_CODE_TO_PLACE_KEYWORD_ID[event.location.postal_code]
-
-            for keyword in event.keywords.all():
-                # The location of the event might have changed if the event has been reimported. Thus, we remove any
-                # existing Espoo place keywords from the event that don't correspond to the postal code's place
-                # keywords.
-                if self._is_espoo_district_place_keyword(keyword.id) and keyword.id not in location_place_keyword_ids:
-                    event.keywords.remove(keyword)
-                    logger.info(f"removed {keyword} ({keyword.id}) from {event}")
-
-            for espoo_place_keyword_id in location_place_keyword_ids:
-                espoo_place_keyword_obj = self._get_keyword_obj(espoo_place_keyword_id)
-
-                if espoo_place_keyword_obj in event.keywords.all():
-                    continue
-
-                event.keywords.add(espoo_place_keyword_obj)
-                logger.info(f"added {espoo_place_keyword_obj} ({espoo_place_keyword_id}) to {event}")
+            if event.location.postal_code in POSTAL_CODE_TO_PLACE_KEYWORD_ID:
+                self._add_espoo_district_keywords_based_on_postal_code(event)
+            else:
+                self._add_non_espoo_place_keyword(event)
 
     def handle(self, *args, **options):
         # Espoo data source must be created if missing. Note that it is not necessarily the system data source.
@@ -689,5 +707,5 @@ class Command(BaseCommand):
         self._create_espoo_place_keywords()
         self._create_espoo_places_keyword_set()
         self._add_espoo_online_place_keyword_to_events()
-        self._add_espoo_district_keywords_to_events_based_on_postal_code()
+        self._add_espoo_place_keywords_to_events_based_on_location()
         logger.info('all done')
