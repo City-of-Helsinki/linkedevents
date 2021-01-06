@@ -286,6 +286,35 @@ class Importer(object):
                 continue
             self._set_field(obj, field_name, info[field_name])
 
+    def _has_espoo_keywords(self, keywords):
+        """Checks if the given keywords set contains Espoo keywords, i.e., keywords starting with 'espoo:'.
+
+        Args:
+            keywords: The set of keywords which should be checked for any Espoo keywords.
+
+        Returns:
+            True if the given set contains an Espoo keyword and False if it doesn't contain any Espoo keywords.
+        """
+        for keyword in keywords:
+            if keyword.startswith('espoo:'):
+                return True
+        return False
+
+    def _get_espoo_keywords_from_set(self, keywords):
+        """Gets the Espoo keywords, i.e., keywords starting with 'espoo:' from the given keywords set.
+
+        Args:
+            keywords: The set of keywords from which the Espoo keywords should be extracted.
+
+        Returns:
+            The set of Espoo keywords extracted from the given keywords set.
+        """
+        espoo_keywords = set()
+        for keyword in keywords:
+            if keyword.startswith('espoo:'):
+                espoo_keywords.add(keyword)
+        return espoo_keywords
+
     def save_event(self, info):
         info = info.copy()
 
@@ -370,6 +399,27 @@ class Importer(object):
                 if not new_keywords <= old_keywords:
                     obj.keywords.add(*new_keywords)
                     obj._changed = True
+            elif self._has_espoo_keywords(old_keywords):
+                # This prevents overwriting place keywords added by the add_espoo_places management command.
+                # Note that this a somewhat ugly hack since it tries to infer whether the event keywords have been
+                # modified by, e.g., the add_espoo_places management command by checking if the event has any Espoo
+                # keywords. That is, if the event hasn't been modified by a user but it has Espoo keywords, the Espoo
+                # keywords have probably been added by the add_espoo_places management command. In that case, we don't
+                # want to overwrite the Espoo keywords added by the add_espoo_places management command. Instead, we
+                # want to merge the Espoo keywords added by the add_espoo_places management command with the new
+                # keywords. This way, if any of the non-Espoo keywords have changed, then those changes will be
+                # reflected in the event's keywords.
+                #
+                # Note that this doesn't necessarily work correctly if the importer itself has added any Espoo keywords
+                # for the event. The check for Espoo keywords naively relies on checking whether a keyword is prefixed
+                # with ':espoo' or not. Thus, it can't distinguish whether a Espoo keyword has been added by the
+                # add_espoo_places management command or by the importer itself. So, if the importer itself has added
+                # any Espoo keywords previously but they have been deleted in data source after that, then the event
+                # will still have those keywords since the following code assumes that they've been added by the
+                # add_espoo_places command and thus keeps them.
+                espoo_keywords = self._get_espoo_keywords_from_set(old_keywords)
+                obj.keywords.set(new_keywords.union(espoo_keywords))
+                obj._changed = True
             else:
                 obj.keywords.set(new_keywords)
                 obj._changed = True
@@ -383,6 +433,27 @@ class Importer(object):
                 if not new_audience <= old_audience:
                     obj.audience.add(*new_audience)
                     obj._changed = True
+            elif self._has_espoo_keywords(old_audience):
+                # This prevents overwriting audience keywords added by the add_espoo_audience management command.
+                # Note that this a somewhat ugly hack since it tries to infer whether the event audiences have been
+                # modified by, e.g., the add_espoo_audience management command by checking if the event has any Espoo
+                # audiences. That is, if the event hasn't been modified by a user but it has Espoo audiences, the Espoo
+                # audiences have probably been added by the add_espoo_audience management command. In that case, we
+                # don't want to overwrite the Espoo audiences added by the add_espoo_audience management command.
+                # Instead, we want to merge the Espoo audiences added by the add_espoo_audience management command with
+                # the new audiences. This way, if any of the non-Espoo audiences have changed, then those changes will
+                # be reflected in the event's audiences.
+                #
+                # Note that this doesn't necessarily work correctly if the importer itself has added any Espoo
+                # audiences for the event. The check for Espoo audiences naively relies on checking whether an audience
+                # is prefixed with ':espoo' or not. Thus, it can't distinguish whether an Espoo audience has been added
+                # by the add_espoo_audience management command or by the importer itself. So, if the importer itself
+                # has added any Espoo audiences previously but they have been deleted in data source after that, then
+                # the event will still have those audiences since the following code assumes that they've been added by
+                # the add_espoo_audience command and thus keeps them.
+                espoo_audiences = self._get_espoo_keywords_from_set(old_audience)
+                obj.audience.set(new_audience.union(espoo_audiences))
+                obj._changed = True
             else:
                 obj.audience.set(new_audience)
                 obj._changed = True
