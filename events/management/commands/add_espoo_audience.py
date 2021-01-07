@@ -151,20 +151,41 @@ class Command(BaseCommand):
                 logger.info(f"added {keyword.name} ({keyword_dict['id']}) to the keyword set")
 
     @transaction.atomic()
-    def _add_espoo_audience_keywords_to_events(self):
+    def _update_espoo_audience_keywords_for_events(self):
         logger.info('adding Espoo audience keywords to events...')
 
+        espoo_audience_to_yso_keyword_mapping = {v: k for k, v in YSO_TO_ESPOO_AUDIENCE_KEYWORD_MAPPING.items()}
+
         for event in Event.objects.exclude(audience__isnull=True).prefetch_related('audience'):
+            # We only want to update audience keywords for events that have not been edited by users so that we don't
+            # accidentally overwrite any audience keywords modified by a user
+            if event.is_user_edited():
+                continue
+
             for audience in event.audience.all():
 
-                if audience.id not in YSO_TO_ESPOO_AUDIENCE_KEYWORD_MAPPING:
-                    continue
+                if audience.id.startswith('espoo:a'):
+                    # Remove any Espoo audience keywords whose corresponding YSO keywords have been removed
+                    yso_keyword_id = espoo_audience_to_yso_keyword_mapping.get(audience.id)
+                    yso_keyword_obj = self._get_keyword_obj(yso_keyword_id)
 
-                # Map the given YSO audience keyword to a custom Espoo audience keyword
-                espoo_keyword_id = YSO_TO_ESPOO_AUDIENCE_KEYWORD_MAPPING.get(audience.id)
-                espoo_keyword_obj = self._get_keyword_obj(espoo_keyword_id)
+                    if yso_keyword_obj in event.audience.all():
+                        continue
 
-                if espoo_keyword_obj not in event.audience.all():
+                    event.audience.remove(audience)
+                    logger.info(f"removed {audience} ({audience.id}) from {event}")
+                else:
+                    # Add any Espoo audience keywords that correspond to YSO keywords in our mapping
+                    if audience.id not in YSO_TO_ESPOO_AUDIENCE_KEYWORD_MAPPING:
+                        continue
+
+                    # Map the given YSO audience keyword to a custom Espoo audience keyword
+                    espoo_keyword_id = YSO_TO_ESPOO_AUDIENCE_KEYWORD_MAPPING.get(audience.id)
+                    espoo_keyword_obj = self._get_keyword_obj(espoo_keyword_id)
+
+                    if espoo_keyword_obj in event.audience.all():
+                        continue
+
                     event.audience.add(espoo_keyword_obj)
                     logger.info(f"added {espoo_keyword_obj} ({espoo_keyword_id}) to {event}")
 
@@ -176,5 +197,5 @@ class Command(BaseCommand):
                                          defaults=espoo_data_source_defaults)
         self._create_espoo_audience_keywords()
         self._create_espoo_audiences_keyword_set()
-        self._add_espoo_audience_keywords_to_events()
+        self._update_espoo_audience_keywords_for_events()
         logger.info('all done')

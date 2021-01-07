@@ -10,6 +10,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 <!-- List the changes in your PR under the Unreleased title. You can also copy this list to your PR summary. -->
 
+## [1.10.0] - 2021-01-07
+
+### Added
+
+- A feature to the `add_espoo_places` management command for automatically adding Espoo place keywords to existing
+  imported events based on the event location. This needs to be done in order for the imported events to have any Espoo
+  place keywords and thus be visible in the new Espoo.fi site. The feature works in the following way:
+  - If an imported event has a location in Espoo with a geographical postal code, the corresponding place keywords are
+    automatically added for the event based on a hardcoded mapping of Espoo postal codes to place keywords.
+  - If an imported event has a location in Espoo with a non-geographical postal code, the corresponding place keyword is
+    automatically added based on a hardcoded mapping of location IDs to place keywords. Currently, only `Sellosali`
+    has been mapped to a place keyword since it has a lot of events and has a postal code of `02070` which isn't tied to
+    a specific geographical area.
+  - If an imported event has a location with a postal code outside of Espoo, the place keyword `Other than Espoo` will
+    be automatically added for the event.
+- A feature to the `add_espoo_places` management command for automatically removing the Espoo place keyword
+  `Online event` from such events that don't have the YSO keyword `Remote participation` anymore. The reason why a
+  reimported event might not have the YSO keyword anymore is that the event might have changed from being a remote event
+  to a non-remote event.
+- A feature to the `add_espoo_audience` management command for automatically removing any Espoo audience keywords whose
+  corresponding YSO keywords have been removed from a reimported event. This way, the Espoo audience keywords are kept
+  in sync with the events' YSO audience keywords also for removed YSO audience keywords.
+
+### Changed
+
+- The `add_espoo_audience` management command to only update Espoo audience keywords for events that haven't been edited
+  by a user since we don't want to accidentally overwrite any keywords modified by a user.
+- The `add_espoo_places` management command to only add the Espoo place keyword `Online event` to remote events that
+  haven't been edited by a user since we don't want to accidentally overwrite any keywords modified by a user.
+
 ## [1.9.2] - 2021-01-06
 
 ### Fixed
@@ -941,6 +971,7 @@ to `espooevents-service`.
   to a minimum. This version marks the initial `0.1.0` relase and the initial `linkedevents` commit on which
   `espooevents-service` is based on.
 
+[1.10.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.9.2...espoo-v1.10.0
 [1.9.2]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.9.1...espoo-v1.9.2
 [1.9.1]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.9.0...espoo-v1.9.1
 [1.9.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.8.1...espoo-v1.9.0

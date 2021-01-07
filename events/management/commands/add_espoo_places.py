@@ -465,30 +465,120 @@ CUSTOM_ESPOO_PLACE_KEYWORDS = [
     }
 ]
 
-# A mapping of YSO keywords to custom Espoo place keywords
-YSO_TO_ESPOO_PLACE_KEYWORD_MAPPING = {
-    'yso:p26626': 'espoo:p63',  # YSO etäosallistuminen -> Espoo online-tapahtuma
+YSO_REMOTE_PARTICIPATION_KEYWORD_ID = 'yso:p26626'
+NON_ESPOO_PLACE_KEYWORD_ID = 'espoo:p62'
+ESPOO_ONLINE_PLACE_KEYWORD_ID = 'espoo:p63'
+
+NON_DISTRICT_PLACE_KEYWORD_IDS = [
+  NON_ESPOO_PLACE_KEYWORD_ID,
+  ESPOO_ONLINE_PLACE_KEYWORD_ID,
+]
+
+# Note that mapping locations to districts based on postal codes is a naive implementation since the mapping isn't
+# unambiguous. For instance, certain postal codes can map to multiple districts and vice versa. The mapping also isn't
+# exactly one-to-one in the sense that postal code areas do not exactly follow district borders. Thus, it might happen
+# that an event is organized in a location which has a certain postal code and is thus mapped to a certain district but
+# the actual location is outside the district. Also, note that some locations may have postal codes that aren't exactly
+# tied to the actual location. For instance, Sellosali has the postal code "02070" which is the postal code for the
+# City of Espoo and not a certain geographical area such as Leppävaara where Sellosali is actually located. Thus,
+# certain postal codes can't be used to map events to specific geographical districts automatically. Currently, there
+# are 135 postal codes for Espoo of which 46 are mapped to actual geographical districts. These 46 postal codes have
+# been mapped to districts in the below mapping. This mapping is based on information from:
+# - Statistics Finland (http://www.stat.fi/tup/paavo/tietosisalto_ja_esimerkit.html, file: "Postinumero-kunta -avain
+#   2020 (xlsx)") for getting the mapping of postal codes to districts
+# - Wikipedia (https://fi.wikipedia.org/wiki/Luettelo_Suomen_postinumeroista_kunnittain) for getting the mapping of
+#   postal codes to districts
+# - The Paikkatietoikkuna service (https://kartta.paikkatietoikkuna.fi) for getting the mapping of postal codes to
+#   districts based on postal code and district borders. This can be achieved by selecting, e.g., the map layers:
+#   Paavo-postinumeroalueet 2020, Espoon tilastoalueet, and Kuntajako.
+# - Posti's Postal Code Data File (PCF) for getting a listing of all postal codes for Espoo including those that aren't
+#   tied to a certain geographical district (https://www.posti.fi/fi/asiakastuki/postinumerotiedostot)
+# - Wikipedia (https://fi.wikipedia.org/wiki/Luettelo_Espoon_kaupunginosista) for a listing of Espoo's districts and
+#   their postal codes
+# NOTE! If you update this mapping, remember to also update the corresponding mapping in espooevents-frontend.
+POSTAL_CODE_TO_PLACE_KEYWORD_ID = {
+  # The names of the places in the comments are based on the postal code area name in the "Postinumero-kunta-avain"
+  # file and the place keyword name in Espoo Events
+  '02100': ['espoo:p54'],  # Tapiola -> Tapiola
+  '02110': ['espoo:p54'],  # Otsolahti -> Tapiola
+  '02120': ['espoo:p54'],  # Länsikorkee-Suvikumpu -> Tapiola
+  '02130': ['espoo:p46'],  # Pohjois-Tapiola -> Pohjois-Tapiola
+  '02140': ['espoo:p26'],  # Laajalahti -> Laajalahti
+  '02150': ['espoo:p18', 'espoo:p44'],  # Otaniemi -> Keilaniemi, Otaniemi
+  '02160': ['espoo:p59'],  # Westend -> Westend
+  '02170': ['espoo:p7'],  # Haukilahti -> Haukilahti
+  '02180': ['espoo:p35'],  # Mankkaa -> Mankkaa
+  '02200': ['espoo:p39'],  # Niittykumpu -> Niittykumpu
+  '02210': ['espoo:p43'],  # Olari -> Olari
+  '02230': ['espoo:p36'],  # Matinkylä -> Matinkylä
+  '02240': ['espoo:p43'],  # Friisilä -> Olari
+  '02250': ['espoo:p8', 'espoo:p52'],  # Henttaa -> Henttaa, Suurpelto
+  '02260': ['espoo:p11'],  # Kaitaa -> Kaitaa
+  '02270': ['espoo:p5'],  # Finnoo-Eestinmalmi -> Finnoo
+  '02280': ['espoo:p30', 'espoo:p42'],  # Malminmäki-Eestinlaakso -> Latokaski, Nöykkiö
+  '02290': ['espoo:p43'],  # Puolarmetsän sairaala -> Olari
+  '02300': ['espoo:p42'],  # Nöykkiönpuro -> Nöykkiö
+  '02320': ['espoo:p4', 'espoo:p21'],  # Espoonlahti -> Espoonlahti, Kivenlahti
+  '02330': ['espoo:p42', 'espoo:p48'],  # Saunalahti-Kattilalaakso -> Nöykkiö, Saunalahti
+  '02340': ['espoo:p30'],  # Latokaski -> Latokaski
+  '02360': ['espoo:p51'],  # Soukka -> Soukka
+  '02380': ['espoo:p53'],  # Suvisaaristo -> Suvisaaristo
+  '02600': ['espoo:p26', 'espoo:p31'],  # Etelä-Leppävaara -> Laajalahti, Leppävaara
+  '02610': ['espoo:p20'],  # Kilo -> Kilo
+  '02620': ['espoo:p13'],  # Karakallio -> Karakallio
+  '02630': ['espoo:p19', 'espoo:p20'],  # Nihtisilta -> Kera, Kilo
+  '02650': ['espoo:p31'],  # Pohjois-Leppävaara -> Leppävaara
+  '02660': ['espoo:p32'],  # Lintuvaara -> Lintuvaara
+  '02680': ['espoo:p32'],  # Uusmäki -> Lintuvaara
+  '02710': ['espoo:p60'],  # Viherlaakso -> Viherlaakso
+  '02720': ['espoo:p27'],  # Lähderanta -> Laaksolahti
+  '02730': ['espoo:p30'],  # Jupperi -> Laaksolahti
+  '02740': ['espoo:p15', 'espoo:p23'],  # Bemböle-Pakankylä -> Karvasmäki, Kunnarla
+  '02750': ['espoo:p25', 'espoo:p35', 'espoo:p49'],  # Sepänkylä-Kuurinniitty -> Kuurinniitty, Mankkaa, Sepänkylä
+  '02760': ['espoo:p2'],  # Tuomarila-Suvela -> Espoon keskus
+  '02770': ['espoo:p2', 'espoo:p17', 'espoo:p37'],  # Espoon Keskus -> Espoon keskus, Kaupunginkallio, Muurala
+  '02780': ['espoo:p3', 'espoo:p16', 'espoo:p24', 'espoo:p57'],  # Kauklahti -> Espoonkartano, Kauklahti, Kurttila, Vanttila  # noqa: E501
+  '02810': ['espoo:p6', 'espoo:p14'],  # Gumböle-Karhusuo -> Gumböle, Karhusuo
+  '02820': ['espoo:p22', 'espoo:p40', 'espoo:p41', 'espoo:p56'],  # Nupuri-Nuuksio -> Kolmperä, Nupuri, Nuuksio, Vanha-Nuuksio  # noqa: E501
+  '02860': ['espoo:p50'],  # Siikajärvi -> Siikajärvi
+  '02920': ['espoo:p38', 'espoo:p45', 'espoo:p55', 'espoo:p61'],  # Niipperi -> Niipperi, Perusmäki, Vanhakartano, Ämmässuo  # noqa: E501
+  '02940': ['espoo:p1', 'espoo:p9', 'espoo:p10', 'espoo:p33', 'espoo:p47'],  # Lippajärvi-Järvenperä -> Bodom, Högnäs, Järvenperä, Lippajärvi, Röylä  # noqa: E501
+  '02970': ['espoo:p12', 'espoo:p28', 'espoo:p34'],  # Kalajärvi -> Kalajärvi, Lahnus, Luukki
+  '02980': ['espoo:p29', 'espoo:p58'],  # Lakisto -> Lakisto, Velskola
+}
+
+NON_GEOGRAPHICAL_POSTAL_CODES_FOR_ESPOO = [
+  '00095', '02008', '02010', '02014', '02020', '02022', '02044', '02066', '02070', '02101', '02104', '02105', '02124',
+  '02131', '02134', '02135', '02151', '02154', '02155', '02171', '02174', '02175', '02184', '02201', '02204', '02207',
+  '02211', '02214', '02215', '02231', '02234', '02235', '02241', '02244', '02254', '02264', '02271', '02274', '02275',
+  '02284', '02285', '02304', '02321', '02324', '02325', '02334', '02335', '02344', '02361', '02364', '02365', '02601',
+  '02604', '02605', '02611', '02614', '02615', '02621', '02624', '02631', '02634', '02635', '02654', '02661', '02664',
+  '02665', '02677', '02684', '02711', '02715', '02725', '02744', '02754', '02755', '02761', '02764', '02765', '02771',
+  '02774', '02775', '02781', '02784', '02885', '02921', '02924', '02925', '02941', '02944', '02945',
+]
+
+NON_GEOGRAPHICAL_POSTAL_CODE_LOCATION_TO_PLACE_KEYWORD_ID = {
+  'tprek:26429': 'espoo:p31',  # Sellosali -> Leppävaara
 }
 
 
 class Command(BaseCommand):
-    """Creates a keyword set with Espoo's places and maps YSO keywords to custom Espoo place keywords.
+    """Creates a keyword set with Espoo's places and adds Espoo place keywords to events based on location.
 
-    The mapping of the YSO keywords to custom Espoo keywords is done so that any imported events that have any of the
-    YSO keywords specified in YSO_TO_ESPOO_PLACE_KEYWORD_MAPPING are also augmented with the corresponding custom
-    Espoo place keywords. Of course, the existing importers could be modified to instead directly add the custom
-    Espoo keywords instead of using this management command. However, then we'd need to modify multiple importers and
-    the implementations of the existing importers would diverge from the upstream linkedevents repository. This could
-    be more fragile since any future updates would need to take these changes into account. By making the update in
-    this separate management command, the changes are better isolated from the existing functionality.
+    The augmentation of existing events with custom Espoo place keywords is done in this management commands instead of
+    in the existing importers to keep functionality that relates to Espoo places in one place. Otherwise, multiple
+    importers might need to be modified with similar changes. This would also cause the existing importers to diverge
+    from the upstream linkedevents repository. This could in turn be more fragile since any future updates would need
+    to take these changes into account. By making the changes only in this separate management command, the changes are
+    better isolated from the existing functionality.
 
     Since some of the importers are run hourly, this management command should also be run hourly so that any imported
     events get augmented with the custom Espoo place keywords.
     """
     help = "Creates a keyword set with Espoo's places."
     help = (
-     "Creates a keyword set with Espoo's places and maps YSO keywords to custom Espoo place keywords (this is meant "
-     "to be run hourly)."
+     "Creates a keyword set with Espoo's places and adds Espoo place keywords to events based on location (this is "
+     "meant to be run hourly)."
     )
 
     @lru_cache()
@@ -538,22 +628,141 @@ class Command(BaseCommand):
                 logger.info(f"added {keyword.name} ({keyword_dict['id']}) to the keyword set")
 
     @transaction.atomic()
-    def _add_espoo_place_keywords_to_events(self):
-        logger.info('adding Espoo place keywords to events...')
+    def _add_espoo_online_place_keyword_to_events(self):
+        """Adds the Espoo online place keyword to remote events.
 
-        for event in Event.objects.prefetch_related('keywords'):
-            for keyword in event.keywords.all():
+        In practice, this adds the 'espoo:p63' keyword to all events that have the YSO remote participation keyword
+        'yso:p26626'.
+        """
+        logger.info('adding Espoo online place keyword to remote events...')
 
-                if keyword.id not in YSO_TO_ESPOO_PLACE_KEYWORD_MAPPING:
-                    continue
+        espoo_online_place_keyword_obj = self._get_keyword_obj(ESPOO_ONLINE_PLACE_KEYWORD_ID)
+        events_to_update = (
+            Event.objects
+            .filter(keywords__id=YSO_REMOTE_PARTICIPATION_KEYWORD_ID)
+            .exclude(keywords__id=ESPOO_ONLINE_PLACE_KEYWORD_ID)
+            .prefetch_related('keywords')
+        )
 
-                # Map the given YSO keyword to a custom Espoo place keyword
-                espoo_keyword_id = YSO_TO_ESPOO_PLACE_KEYWORD_MAPPING.get(keyword.id)
-                espoo_keyword_obj = self._get_keyword_obj(espoo_keyword_id)
+        for event in events_to_update:
+            # We only want to add place keywords to events that have not been edited by users so that we don't
+            # accidentally overwrite any place keywords modified by a user
+            if event.is_user_edited():
+                continue
 
-                if espoo_keyword_obj not in event.keywords.all():
-                    event.keywords.add(espoo_keyword_obj)
-                    logger.info(f"added {espoo_keyword_obj} ({espoo_keyword_id}) to {event}")
+            event.keywords.add(espoo_online_place_keyword_obj)
+            logger.info(f"added {espoo_online_place_keyword_obj} ({ESPOO_ONLINE_PLACE_KEYWORD_ID}) to {event}")
+
+    @transaction.atomic()
+    def _remove_espoo_online_place_keyword_from_non_remote_events(self):
+        """Removes the Espoo online place keyword from non-remote events.
+
+        In practice, this removes the 'espoo:p63' keyword from all events that don't have the YSO remote participation
+        keyword 'yso:p26626'.
+        """
+        logger.info('removing Espoo online place keyword from non-remote events...')
+
+        espoo_online_place_keyword_obj = self._get_keyword_obj(ESPOO_ONLINE_PLACE_KEYWORD_ID)
+        events_to_update = (
+            Event.objects
+            .filter(keywords__id=ESPOO_ONLINE_PLACE_KEYWORD_ID)
+            .exclude(keywords__id=YSO_REMOTE_PARTICIPATION_KEYWORD_ID)
+            .prefetch_related('keywords')
+        )
+
+        for event in events_to_update:
+            # We only want to remove place keywords from events that have not been edited by users so that we don't
+            # accidentally overwrite any place keywords modified by a user
+            if event.is_user_edited():
+                continue
+
+            event.keywords.remove(espoo_online_place_keyword_obj)
+            logger.info(f"removed {espoo_online_place_keyword_obj} ({ESPOO_ONLINE_PLACE_KEYWORD_ID}) from {event}")
+
+    def _is_espoo_district_place_keyword(self, keyword_id):
+        return keyword_id.startswith('espoo:p') and keyword_id not in NON_DISTRICT_PLACE_KEYWORD_IDS
+
+    def _is_postal_code_espoo_non_geographical(self, postal_code):
+        return postal_code in NON_GEOGRAPHICAL_POSTAL_CODES_FOR_ESPOO
+
+    def _add_espoo_district_keywords_based_on_postal_code(self, event):
+        location_place_keyword_ids = POSTAL_CODE_TO_PLACE_KEYWORD_ID[event.location.postal_code]
+
+        for keyword in event.keywords.all():
+            # The location of the event might have changed if the event has been reimported. Thus, we remove any
+            # existing Espoo place keywords from the event that don't correspond to the postal code's place
+            # keywords.
+            if self._is_espoo_district_place_keyword(keyword.id) and keyword.id not in location_place_keyword_ids:
+                event.keywords.remove(keyword)
+                logger.info(f"removed {keyword} ({keyword.id}) from {event}")
+
+        for espoo_place_keyword_id in location_place_keyword_ids:
+            espoo_place_keyword_obj = self._get_keyword_obj(espoo_place_keyword_id)
+
+            if espoo_place_keyword_obj in event.keywords.all():
+                continue
+
+            event.keywords.add(espoo_place_keyword_obj)
+            logger.info(f"added {espoo_place_keyword_obj} ({espoo_place_keyword_id}) to {event}")
+
+    def _add_non_espoo_place_keyword(self, event):
+        non_espoo_place_keyword_obj = self._get_keyword_obj(NON_ESPOO_PLACE_KEYWORD_ID)
+
+        for keyword in event.keywords.all():
+            # Remove any Espoo district place keywords
+            if self._is_espoo_district_place_keyword(keyword.id):
+                event.keywords.remove(keyword)
+                logger.info(f"removed {keyword} ({keyword.id}) from {event}")
+
+        if non_espoo_place_keyword_obj in event.keywords.all():
+            return
+
+        event.keywords.add(non_espoo_place_keyword_obj)
+        logger.info(f"added {non_espoo_place_keyword_obj} ({NON_ESPOO_PLACE_KEYWORD_ID}) to {event}")
+
+    def _add_espoo_district_keyword_for_location_with_non_geographical_postal_code(self, event):
+        if event.location.id not in NON_GEOGRAPHICAL_POSTAL_CODE_LOCATION_TO_PLACE_KEYWORD_ID:
+            return
+
+        espoo_place_keyword_id = NON_GEOGRAPHICAL_POSTAL_CODE_LOCATION_TO_PLACE_KEYWORD_ID[event.location.id]
+        espoo_place_keyword_obj = self._get_keyword_obj(espoo_place_keyword_id)
+
+        for keyword in event.keywords.all():
+            # The location of the event might have changed if the event has been reimported. Thus, we remove any
+            # existing Espoo place keywords from the event.
+            if self._is_espoo_district_place_keyword(keyword.id) and keyword.id != espoo_place_keyword_id:
+                event.keywords.remove(keyword)
+                logger.info(f"removed {keyword} ({keyword.id}) from {event}")
+
+        if espoo_place_keyword_obj in event.keywords.all():
+            return
+
+        event.keywords.add(espoo_place_keyword_obj)
+        logger.info(f"added {espoo_place_keyword_obj} ({espoo_place_keyword_id}) to {event}")
+
+    @transaction.atomic()
+    def _add_espoo_place_keywords_to_events_based_on_location(self):
+        """Adds the Espoo district place keywords to events based on their postal code."""
+        logger.info('adding Espoo district place keywords to events based on their postal code...')
+
+        for event in Event.objects.filter(location__postal_code__isnull=False).prefetch_related('keywords'):
+            # We only want to add place keywords to events that have not been edited by users so that we don't
+            # accidentally overwrite any place keywords modified by a user
+            if event.is_user_edited():
+                continue
+
+            # The events imported with the espoo importer already have the right Espoo place keywords
+            if event.data_source.id == 'espoo':
+                continue
+
+            if self._is_postal_code_espoo_non_geographical(event.location.postal_code):
+                self._add_espoo_district_keyword_for_location_with_non_geographical_postal_code(event)
+                continue
+
+            if event.location.postal_code in POSTAL_CODE_TO_PLACE_KEYWORD_ID:
+                self._add_espoo_district_keywords_based_on_postal_code(event)
+            else:
+                self._add_non_espoo_place_keyword(event)
 
     def handle(self, *args, **options):
         # Espoo data source must be created if missing. Note that it is not necessarily the system data source.
@@ -563,5 +772,7 @@ class Command(BaseCommand):
                                          defaults=espoo_data_source_defaults)
         self._create_espoo_place_keywords()
         self._create_espoo_places_keyword_set()
-        self._add_espoo_place_keywords_to_events()
+        self._add_espoo_online_place_keyword_to_events()
+        self._remove_espoo_online_place_keyword_from_non_remote_events()
+        self._add_espoo_place_keywords_to_events_based_on_location()
         logger.info('all done')
