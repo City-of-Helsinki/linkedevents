@@ -563,23 +563,22 @@ NON_GEOGRAPHICAL_POSTAL_CODE_LOCATION_TO_PLACE_KEYWORD_ID = {
 
 
 class Command(BaseCommand):
-    """Creates a keyword set with Espoo's places and maps YSO keywords to custom Espoo place keywords.
+    """Creates a keyword set with Espoo's places and adds Espoo place keywords to events based on location.
 
-    The mapping of the YSO keywords to custom Espoo keywords is done so that any imported events that have any of the
-    YSO keywords specified in YSO_TO_ESPOO_PLACE_KEYWORD_MAPPING are also augmented with the corresponding custom
-    Espoo place keywords. Of course, the existing importers could be modified to instead directly add the custom
-    Espoo keywords instead of using this management command. However, then we'd need to modify multiple importers and
-    the implementations of the existing importers would diverge from the upstream linkedevents repository. This could
-    be more fragile since any future updates would need to take these changes into account. By making the update in
-    this separate management command, the changes are better isolated from the existing functionality.
+    The augmentation of existing events with custom Espoo place keywords is done in this management commands instead of
+    in the existing importers to keep functionality that relates to Espoo places in one place. Otherwise, multiple
+    importers might need to be modified with similar changes. This would also cause the existing importers to diverge
+    from the upstream linkedevents repository. This could in turn be more fragile since any future updates would need
+    to take these changes into account. By making the changes only in this separate management command, the changes are
+    better isolated from the existing functionality.
 
     Since some of the importers are run hourly, this management command should also be run hourly so that any imported
     events get augmented with the custom Espoo place keywords.
     """
     help = "Creates a keyword set with Espoo's places."
     help = (
-     "Creates a keyword set with Espoo's places and maps YSO keywords to custom Espoo place keywords (this is meant "
-     "to be run hourly)."
+     "Creates a keyword set with Espoo's places and adds Espoo place keywords to events based on location (this is "
+     "meant to be run hourly)."
     )
 
     @lru_cache()
