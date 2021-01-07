@@ -654,6 +654,32 @@ class Command(BaseCommand):
             event.keywords.add(espoo_online_place_keyword_obj)
             logger.info(f"added {espoo_online_place_keyword_obj} ({ESPOO_ONLINE_PLACE_KEYWORD_ID}) to {event}")
 
+    @transaction.atomic()
+    def _remove_espoo_online_place_keyword_from_non_remote_events(self):
+        """Removes the Espoo online place keyword from non-remote events.
+
+        In practice, this removes the 'espoo:p63' keyword from all events that don't have the YSO remote participation
+        keyword 'yso:p26626'.
+        """
+        logger.info('removing Espoo online place keyword from non-remote events...')
+
+        espoo_online_place_keyword_obj = self._get_keyword_obj(ESPOO_ONLINE_PLACE_KEYWORD_ID)
+        events_to_update = (
+            Event.objects
+            .filter(keywords__id=ESPOO_ONLINE_PLACE_KEYWORD_ID)
+            .exclude(keywords__id=YSO_REMOTE_PARTICIPATION_KEYWORD_ID)
+            .prefetch_related('keywords')
+        )
+
+        for event in events_to_update:
+            # We only want to remove place keywords from events that have not been edited by users so that we don't
+            # accidentally overwrite any place keywords modified by a user
+            if event.is_user_edited():
+                continue
+
+            event.keywords.remove(espoo_online_place_keyword_obj)
+            logger.info(f"removed {espoo_online_place_keyword_obj} ({ESPOO_ONLINE_PLACE_KEYWORD_ID}) from {event}")
+
     def _is_espoo_district_place_keyword(self, keyword_id):
         return keyword_id.startswith('espoo:p') and keyword_id not in NON_DISTRICT_PLACE_KEYWORD_IDS
 
@@ -748,5 +774,6 @@ class Command(BaseCommand):
         self._create_espoo_place_keywords()
         self._create_espoo_places_keyword_set()
         self._add_espoo_online_place_keyword_to_events()
+        self._remove_espoo_online_place_keyword_from_non_remote_events()
         self._add_espoo_place_keywords_to_events_based_on_location()
         logger.info('all done')
