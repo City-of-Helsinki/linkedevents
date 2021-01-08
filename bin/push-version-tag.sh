@@ -17,10 +17,14 @@ if [ ! -d .git ]; then
   exit 1
 fi
 
-./bin/check-version.sh
+./bin/check-version.sh --skip-exists-check
 
 VERSION="espoo-v$(tr -d '\n' < VERSION)"
 
-# Create an annotated tag which contains, e.g., author metadata
-git tag -a "$VERSION" -m "$VERSION"
-git push --no-verify origin "$VERSION"
+if [[ $(git tag -l "$VERSION") ]]; then
+  echo "Git tag $VERSION already exists, not pushing anything"
+else
+  # If the version doesn't already exist, create an annotated tag which contains, e.g., author metadata
+  git tag -a "$VERSION" -m "$VERSION"
+  git push --no-verify origin "$VERSION"
+fi
