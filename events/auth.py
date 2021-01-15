@@ -99,6 +99,10 @@ class OIDCAuthentication(JSONWebTokenAuthentication):
         return auth[1]
 
     def get_or_create_user(self, payload, data_source):
+        sub = payload.get("sub")
+        if not sub:
+            raise  exceptions.AuthenticationFailed('Invalid payload. sub missing')
+
         email = payload.get("email")
         if not email:
             raise exceptions.AuthenticationFailed('Invalid payload. email missing')
@@ -111,7 +115,12 @@ class OIDCAuthentication(JSONWebTokenAuthentication):
         if not last_name:
             raise exceptions.AuthenticationFailed('Invalid payload. family_name missing')
 
-        organization = data_source.owner
+        organization, _ = Organization.objects.get_or_create(
+            parent_id=data_source.owner.id,
+            origin_id="oidc:user:" + sub,
+            data_source=data_source,
+            name=sub
+        )
 
         try:
             user = User.objects.get(email=email)
@@ -132,10 +141,10 @@ class OIDCAuthentication(JSONWebTokenAuthentication):
             last_name=last_name
         )
 
-        users_organizations = user.organization_memberships.all()
+        users_organizations = user.admin_organizations.all()
 
         if organization not in users_organizations:
-            user.organization_memberships.add(organization)
+            user.admin_organizations.add(organization)
 
         return user
 
