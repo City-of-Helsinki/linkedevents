@@ -122,24 +122,25 @@ class OIDCAuthentication(JSONWebTokenAuthentication):
             name=sub
         )
 
-        try:
-            user = User.objects.get(email=email)
-            return user
-        except User.DoesNotExist:
-            pass
+        user = self.get_user_by_email(email)
 
-        user = User.objects.create(
-            email=email,
-            password=make_password(None),
-            is_superuser=False,
-            is_staff=False,
-            is_active=True,
-            date_joined=datetime.utcnow(),
-            uuid=str(uuid.uuid4()),
-            username=email,
-            first_name=first_name,
-            last_name=last_name
-        )
+        if not user:
+            logger.info("OIDC user with email %s does not exist. Creating new user" % email)
+
+            user = User.objects.create(
+                email=email,
+                password=make_password(None),
+                is_superuser=False,
+                is_staff=False,
+                is_active=True,
+                date_joined=datetime.utcnow(),
+                uuid=str(uuid.uuid4()),
+                username=email,
+                first_name=first_name,
+                last_name=last_name
+            )
+        else:
+            logger.info("OIDC user with email %s already exist" % email)
 
         users_organizations = user.admin_organizations.all()
 
@@ -147,6 +148,12 @@ class OIDCAuthentication(JSONWebTokenAuthentication):
             user.admin_organizations.add(organization)
 
         return user
+
+    def get_user_by_email(self, email):
+        try:
+            return User.objects.get(email=email)
+        except User.DoesNotExist:
+            return None
 
     def get_data_source(self, payload):
         audiences = payload.get("aud")
