@@ -8,6 +8,27 @@ from smtplib import SMTPException
 
 logger = logging.getLogger(__name__)
 
+def post_update(instance, *args, **kwargs):
+    try:
+        if instance.sub_event_type == 'sub_recurring':
+            if instance.start_time < instance.super_event.start_time:
+                instance.super_event.start_time = instance.start_time             
+            if instance.end_time > instance.super_event.end_time:
+                instance.super_event.end_time = instance.end_time
+            instance.super_event.save()
+    except:
+        pass
+
+def post_save(instance, *args, **kwargs):
+    try:
+        if instance.sub_event_type == 'sub_recurring':
+            if instance.start_time < instance.super_event.start_time:
+                instance.super_event.start_time = instance.start_time             
+            if instance.end_time > instance.super_event.end_time:
+                instance.super_event.end_time = instance.end_time
+            instance.super_event.save()
+    except:
+        pass
 
 def organization_post_save(sender, instance, created, **kwargs):
     if not created and instance.replaced_by:

@@ -68,7 +68,7 @@ from events.models import (
 from events.translation import EventTranslationOptions
 from helevents.models import User
 from events.renderers import DOCXRenderer
-
+from events.signals import post_save, post_update
 
 def get_view_name(view):
     if type(view) is APIRootView:
@@ -1285,6 +1285,12 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
             self.fields_needed_to_publish.remove('location')
             self.fields_needed_to_publish.append('virtualevent_url')
             self.fields_needed_to_publish = tuple(self.fields_needed_to_publish)
+
+        if 'super_event_type' in data:
+            if data['super_event_type'] == 'recurring':
+                self.fields_needed_to_publish = list (self.fields_needed_to_publish)
+                self.fields_needed_to_publish.remove('start_time')
+                self.fields_needed_to_publish = tuple(self.fields_needed_to_publish)
             
         # check that published events have a location, keyword and start_time
         languages = utils.get_fixed_lang_codes()
@@ -1398,6 +1404,8 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
         for ext in extensions:
             ext.post_create_event(request=request, event=event, data=original_validated_data)
 
+        post_save(event)
+
         return event
 
     def update(self, instance, validated_data):
@@ -1472,6 +1480,8 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
 
         for ext in extensions:
             ext.post_update_event(request=request, event=instance, data=original_validated_data)
+
+        post_update(instance)
 
         return instance
 
