@@ -578,6 +578,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
     deleted = models.BooleanField(default=False, db_index=True)
 
     is_virtualevent = models.BooleanField(default=False, db_index=True)
+    virtualevent_url = models.URLField(verbose_name=_('Virtual event location'), blank=True, null=True, max_length=1000)
 
     replaced_by = models.ForeignKey('Event', on_delete=models.SET_NULL, related_name='aliases', null=True, blank=True)
 

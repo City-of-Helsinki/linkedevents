@@ -1280,6 +1280,12 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
             data = self.run_extension_validations(data)
             return data
 
+        if (data['is_virtualevent'] == True):
+            self.fields_needed_to_publish = list(self.fields_needed_to_publish)
+            self.fields_needed_to_publish.remove('location')
+            self.fields_needed_to_publish.append('virtualevent_url')
+            self.fields_needed_to_publish = tuple(self.fields_needed_to_publish)
+            
         # check that published events have a location, keyword and start_time
         languages = utils.get_fixed_lang_codes()
 
