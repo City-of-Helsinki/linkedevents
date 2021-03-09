@@ -3,6 +3,7 @@ import logging
 from django.core.mail import send_mail
 from django.contrib.auth import get_user_model
 from django.contrib.sites.models import Site
+from events.models import Event
 from notifications.models import (NotificationType, NotificationTemplateException, render_notification_template)
 from smtplib import SMTPException
 
@@ -11,11 +12,20 @@ logger = logging.getLogger(__name__)
 def post_update(instance, *args, **kwargs):
     try:
         if instance.sub_event_type == 'sub_recurring':
-            if instance.start_time < instance.super_event.start_time:
-                instance.super_event.start_time = instance.start_time             
-            if instance.end_time > instance.super_event.end_time:
-                instance.super_event.end_time = instance.end_time
-            instance.super_event.save()
+            try:
+                # Mothers values need to be updated based on the min child start_time and max end_time date.
+                ev_objs = Event.objects.filter(super_event_id=instance.super_event.id)
+                '''
+                child_list appends both start_time and end_time values from the above returned query (mothers all children).
+                We can safely do this because logically, an end_time can never pre date a start_time. 
+                Max will always be an end_time and respectively; minimum will always be a start_time.
+                '''
+                child_list = [v for x in ev_objs for v in (x.start_time, x.end_time)]
+                instance.super_event.start_time = min(child_list)
+                instance.super_event.end_time = max(child_list)
+                instance.super_event.save()
+            except Exception as e:
+                pass
     except:
         pass
 
