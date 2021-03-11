@@ -1281,10 +1281,11 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
             return data
 
         if (data['is_virtualevent'] == True):
-            self.fields_needed_to_publish = list(self.fields_needed_to_publish)
-            self.fields_needed_to_publish.remove('location')
-            self.fields_needed_to_publish.append('virtualevent_url')
-            self.fields_needed_to_publish = tuple(self.fields_needed_to_publish)
+            if 'location' in self.fields_needed_to_publish:
+                self.fields_needed_to_publish = list(self.fields_needed_to_publish)
+                self.fields_needed_to_publish.remove('location')
+                self.fields_needed_to_publish.append('virtualevent_url')
+                self.fields_needed_to_publish = tuple(self.fields_needed_to_publish)
 
         if 'super_event_type' in data:
             if data['super_event_type'] == 'recurring':
