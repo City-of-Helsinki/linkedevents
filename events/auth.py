@@ -57,12 +57,19 @@ class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
     def is_regular_user(self, publisher):
         return False
 
+    def is_private_user(self, publisher):
+        return False
+        
     @property
     def admin_organizations(self):
         return Organization.objects.filter(id=self.data_source.owner.id)
 
     @property
     def organization_memberships(self):
+        return Organization.objects.none()
+
+    @property
+    def public_memberships(self):
         return Organization.objects.none()
 
 

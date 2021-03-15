@@ -19,10 +19,17 @@ class User(AbstractUser, UserModelPermissionMixin):
             replaced_by__isnull=True,
         ).order_by('created_time').first()
 
-        return admin_org or regular_org
+        private_org = self.public_memberships.filter(
+            replaced_by__isnull=True,
+        ).order_by('created_time').first()
+
+        return admin_org or regular_org or private_org
 
     def is_admin(self, publisher):
         return publisher in self.get_admin_organizations_and_descendants()
 
     def is_regular_user(self, publisher):
         return self.organization_memberships.filter(id=publisher.id).exists()
+
+    def is_private_user(self, publisher):
+        return self.public_memberships.filter(id=publisher.id).exists()

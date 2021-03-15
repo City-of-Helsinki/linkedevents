@@ -22,6 +22,7 @@ class UserSerializer(serializers.ModelSerializer):
             rep['organization'] = default_org.id
         rep['admin_organizations'] = [org.id for org in obj.admin_organizations.all()]
         rep['organization_memberships'] = [org.id for org in obj.organization_memberships.all()]
+        rep['public_memberships'] = [org.id for org in obj.public_memberships.all()]
         return rep
 
     class Meta:

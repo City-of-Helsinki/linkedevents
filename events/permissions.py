@@ -17,6 +17,10 @@ class UserModelPermissionMixin:
         """Check if current user is a regular user of the publisher organization"""
         raise NotImplementedError()
 
+    def is_private_user(self, publisher):
+        """Check if current user is a private user of the publisher organistaion"""
+        raise NotImplementedError()
+
     @property
     def admin_organizations(self):
         raise NotImplementedError()
@@ -25,10 +29,16 @@ class UserModelPermissionMixin:
     def organization_memberships(self):
         raise NotImplementedError()
 
+    @property
+    def public_memberships(self):
+        raise NotImplementedError()
+
     def can_edit_event(self, publisher, publication_status):
         """Check if current user can edit (create, change, modify)
         event with the given publisher and publication_status"""
         if self.is_admin(publisher):
+            return True
+        if self.is_private_user(publisher):
             return True
         if self.is_regular_user(publisher) and publication_status == PublicationStatus.DRAFT:
             return True
@@ -41,8 +51,10 @@ class UserModelPermissionMixin:
             publisher__in=self.get_admin_organizations_and_descendants()
         ) | queryset.filter(
             publication_status=PublicationStatus.DRAFT, publisher__in=self.organization_memberships.all()
+        ) | queryset.filter(
+            publication_status=PublicationStatus.PUBLIC, publisher__in=self.public_memberships.all()
         )
-
+        
     def get_admin_tree_ids(self):
         # returns tree ids for all normal admin organizations and their replacements
         admin_queryset = self.admin_organizations.filter(internal_type='normal').select_related('replaced_by')
