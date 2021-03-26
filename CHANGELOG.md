@@ -7,6 +7,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.10.5] - 2021-03-26
+
+### Fixed
+
+- Fix [CVE-2020-24583](https://github.com/advisories/GHSA-m6gj-h9gm-gw44),
+[CVE-2020-24584](https://github.com/advisories/GHSA-fr28-569j-53c4) and
+[CVE-2021-3281](https://github.com/advisories/GHSA-fvgf-6h6h-3322)
+by upgrading django from 2.2.13 to 2.2.18(automatic Dependabot upgrade)
+
 ## [1.10.4] - 2021-03-26
 
 ### Fixed
@@ -1000,6 +1009,7 @@ to `espooevents-service`.
   to a minimum. This version marks the initial `0.1.0` relase and the initial `linkedevents` commit on which
   `espooevents-service` is based on.
 
+[1.10.5]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.4...espoo-v1.10.5
 [1.10.4]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.3...espoo-v1.10.4
 [1.10.3]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.2...espoo-v1.10.3
 [1.10.2]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.1...espoo-v1.10.2
