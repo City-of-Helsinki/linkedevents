@@ -100,7 +100,7 @@ djangorestframework-gis==0.15
     # via -r requirements.in
 djangorestframework-jwt==1.11.0
     # via -r requirements.in
-djangorestframework==3.11.0
+djangorestframework==3.11.2
     # via
     #   -r requirements.in
     #   django-orghierarchy
