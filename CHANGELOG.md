@@ -6,6 +6,13 @@ short reasoning for why the change was introduced.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.3] - 2021-03-26
+
+### Fixed
+
+- Ingored `/venv` folder at gitignore to avoid trying to commit it's contents.
+
+
 ## [1.10.2] - 2021-03-26
 
 ### Fixed
@@ -985,6 +992,7 @@ to `espooevents-service`.
   to a minimum. This version marks the initial `0.1.0` relase and the initial `linkedevents` commit on which
   `espooevents-service` is based on.
 
+[1.10.3]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.2...espoo-v1.10.3
 [1.10.2]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.1...espoo-v1.10.2
 [1.10.1]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.0...espoo-v1.10.1
 [1.10.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.9.2...espoo-v1.10.0
