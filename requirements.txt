@@ -71,7 +71,7 @@ django-reversion==3.0.7
     # via -r requirements.in
 django-storages==1.9.1
     # via -r requirements.in
-django==2.2.13
+django==2.2.18
     # via
     #   -r requirements.in
     #   django-admin-autocomplete-filter
