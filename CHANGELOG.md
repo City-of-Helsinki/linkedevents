@@ -6,6 +6,13 @@ short reasoning for why the change was introduced.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.10] - 2021-03-29
+
+### Fixed
+
+- Fix [CVE-2021-28957](https://github.com/advisories/GHSA-jq4v-f5q6-mjqq), [CVE-2020-27783](https://github.com/advisories/GHSA-pgww-xf46-h92r) by upgrading lxml from 4.5.1 to 4.6.3
+(automatic Dependabot upgrade)
+
 ## [1.10.9] - 2021-03-29
 
 ### Fixed
@@ -1036,6 +1043,7 @@ to `espooevents-service`.
   to a minimum. This version marks the initial `0.1.0` relase and the initial `linkedevents` commit on which
   `espooevents-service` is based on.
 
+[1.10.10]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.9...espoo-v1.10.10
 [1.10.9]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.8...espoo-v1.10.9
 [1.10.8]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.7...espoo-v1.10.8
 [1.10.7]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.6...espoo-v1.10.7
