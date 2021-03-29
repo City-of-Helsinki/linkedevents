@@ -131,7 +131,7 @@ isodate==0.6.0
     # via
     #   -r requirements.in
     #   rdflib
-jinja2==2.11.2
+jinja2==2.11.3
     # via
     #   -r requirements.in
     #   django-jinja
