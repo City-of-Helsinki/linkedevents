@@ -6,6 +6,18 @@ short reasoning for why the change was introduced.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+<!-- List the changes in your PR under the Unreleased title. You can also copy this list to your PR summary. -->
+
+
+## [1.10.11] - 2021-03-30
+
+### Fixed
+
+- Fix [CVE-2021-27291](https://github.com/advisories/GHSA-pq64-v7f5-gqh8) by upgrading pygments from 2.7.2 to 2.7.4
+(automatic Dependabot upgrade)
+
 ## [1.10.10] - 2021-03-29
 
 ### Fixed
@@ -70,10 +82,6 @@ by upgrading django from 2.2.13 to 2.2.18(automatic Dependabot upgrade)
 
 - Fix CircleCI by changing builder_image_version.
 
-
-## Unreleased
-
-<!-- List the changes in your PR under the Unreleased title. You can also copy this list to your PR summary. -->
 
 ## [1.10.1] - 2021-01-08
 
@@ -1043,6 +1051,7 @@ to `espooevents-service`.
   to a minimum. This version marks the initial `0.1.0` relase and the initial `linkedevents` commit on which
   `espooevents-service` is based on.
 
+[1.10.11]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.10...espoo-v1.10.11
 [1.10.10]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.9...espoo-v1.10.10
 [1.10.9]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.8...espoo-v1.10.9
 [1.10.8]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.7...espoo-v1.10.8
