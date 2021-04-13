@@ -41,6 +41,7 @@ python-Levenshtein
 python-memcached
 pytz
 rdflib
+regex
 requests-cache
 requests>=2.20.0
 sentry-sdk

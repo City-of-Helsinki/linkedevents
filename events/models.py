@@ -27,9 +27,12 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.gis.db import models
 from django.contrib.postgres.fields import HStoreField
+from django.contrib.postgres.indexes import Index
+from django.contrib.postgres.search import SearchVectorField
 from django.contrib.sites.models import Site
 from django.core.mail import send_mail
 from django.db import transaction
+from django.db.models import Q
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 from django.utils.encoding import python_2_unicode_compatible
@@ -382,6 +385,12 @@ class Keyword(BaseModel, ImageMixin, ReplacedByMixin):
     class Meta:
         verbose_name = _('keyword')
         verbose_name_plural = _('keywords')
+        indexes = [
+            Index(name='keywords_index',
+                  fields=('name', 'name_fi'),
+                  condition=Q(n_events__gt=0),
+                  )
+        ]
 
 
 class KeywordSet(BaseModel, ImageMixin):
@@ -639,6 +648,14 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
     keywords = models.ManyToManyField(Keyword, related_name='events')
     audience = models.ManyToManyField(Keyword, related_name='audience_events', blank=True)
 
+    # this field is redundant, but allows to avoid expensive joins when searching for local events
+    local = models.BooleanField(default=False, db_index=True)
+
+    # these fields are populated and kept up to date by the db. See migration 0080
+    search_vector_fi = SearchVectorField(null=True)
+    search_vector_en = SearchVectorField(null=True)
+    search_vector_sv = SearchVectorField(null=True)
+
     class Meta:
         verbose_name = _('event')
         verbose_name_plural = _('events')
@@ -687,6 +704,9 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
                                                  str(self.keywords.filter(deprecated=True).values('id')) + " or " +
                                                  str(self.audience.filter(deprecated=True).values('id')) +
                                                  ". Please use up-to-date keywords.")})
+
+        # if self.location__divisions__ocd_id__endswith == MUNIGEO_MUNI:
+        #     self.local = True
 
         super(Event, self).save(*args, **kwargs)
 
