@@ -274,6 +274,9 @@ class Language(models.Model):
 class KeywordLabel(models.Model):
     name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True)
     language = models.ForeignKey(Language, on_delete=models.CASCADE, blank=False, null=False)
+    search_vector_fi = SearchVectorField(null=True)
+    search_vector_en = SearchVectorField(null=True)
+    search_vector_sv = SearchVectorField(null=True)
 
     def __str__(self):
         return self.name + ' (' + str(self.language) + ')'

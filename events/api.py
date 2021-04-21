@@ -1767,7 +1767,7 @@ def _filter_event_queryset(queryset, params, srs=None):
         language = params.get('language', 'fi')
         langs = settings.FULLTEXT_SEARCH_LANGUAGES
         if language not in langs.keys():
-            raise ParseError(f"{language} not supported. Supported options are: {' '.join(settings.FULLTEXT_SEARCH_LANGUAGES)}") # noqa E501
+            raise ParseError(f"{language} not supported. Supported options are: {' '.join(langs.values())}")
 
         query = SearchQuery(val, config=langs[language], search_type='plain')
         kwargs = {f'search_vector_{language}': query}
