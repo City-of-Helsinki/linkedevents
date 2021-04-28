@@ -311,8 +311,7 @@ class EnumChoiceField(serializers.Field):
     def to_representation(self, obj):
         if obj is None:
             return None
-        return self.prefix + utils.get_value_from_tuple_list(self.choices,
-                                                             obj, 1)
+        return self.prefix + str(utils.get_value_from_tuple_list(self.choices, obj, 1))
 
     def to_internal_value(self, data):
         value = utils.get_value_from_tuple_list(self.choices,
@@ -1361,6 +1360,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
     super_event = JSONLDRelatedField(serializer='EventSerializer', required=False, view_name='event-detail',
                                      queryset=Event.objects.all(), allow_null=True)
     event_status = EnumChoiceField(Event.STATUSES, required=False)
+    type_id = EnumChoiceField(Event.TYPE_IDS, required=False)
     publication_status = EnumChoiceField(PUBLICATION_STATUSES, required=False)
     external_links = EventLinkSerializer(many=True, required=False)
     offers = OfferSerializer(many=True, required=False)
