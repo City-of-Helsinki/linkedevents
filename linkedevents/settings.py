@@ -504,3 +504,8 @@ CACHES = {
 
 # this is relevant for the fulltext search as implemented in _filter_event_queryset()
 FULLTEXT_SEARCH_LANGUAGES = {'fi':'finnish', 'sv':'swedish', 'en':'english'}
+
+#
+# Vapaaehtoistyö.fi
+#
+VAPAAEHTOISTYOFI_API_KEY = env('VAPAAEHTOISTYOFI_API_KEY')
