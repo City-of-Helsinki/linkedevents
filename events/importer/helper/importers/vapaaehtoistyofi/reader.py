@@ -12,6 +12,8 @@ class Reader:
     cached_entries = True
 
     def __init__(self, api_key):
+        if not api_key:
+            raise ValueError("Really need API-key!")
         self.api_key = api_key
 
         if self.cached_entries:
