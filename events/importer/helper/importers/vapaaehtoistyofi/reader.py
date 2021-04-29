@@ -39,7 +39,7 @@ class Reader:
         if not self.cached_entries:
             return self._load_entry_api(id)
 
-        if not id in self.entries:
+        if id not in self.entries:
             return False
 
         return self.entries[id]
@@ -106,8 +106,8 @@ class Reader:
         if 'status' not in data or data['status'] != "ok":
             raise RuntimeError("Vapaaehtoistyö.fi response isn't ok!")
         if 'data' not in data:
-            #log.error("%s: %s" % (id, data))
-            #raise RuntimeError("Vapaaehtoistyö.fi response doesn't contain 'data'!"
+            # log.error("%s: %s" % (id, data))
+            # raise RuntimeError("Vapaaehtoistyö.fi response doesn't contain 'data'!"
             log.warning("Requested photo for %s, but didn't receive any data!" % id)
             return None, None
         if data['data']['photo']['type'] != "Buffer":

@@ -5,7 +5,7 @@ import pytz
 from datetime import datetime, timedelta
 from django import db
 from django.conf import settings
-from django.contrib.gis.geos import Point, GEOSGeometry
+from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
 from django.core.management import call_command
 from django_orghierarchy.models import Organization
@@ -23,7 +23,7 @@ from events.models import (
     License
 )
 from .sync import ModelSyncher
-from .base import Importer, recur_dict, register_importer
+from .base import Importer, register_importer
 from .util import clean_text
 from events.importer.helper.importers import vapaaehtoistyofi
 
@@ -224,11 +224,13 @@ class VapaaehtoistyofiImporter(Importer):
                              event_obj.address_coordinates['lat'],
                              srid=4326)
         # Query for anything within 100 meters
-        places = Place.objects. \
-                     filter(position__dwithin=(ref_location, 100.0)). \
-                     filter(data_source_id='osoite'). \
-                     annotate(distance=Distance("position", ref_location)). \
-                     order_by("distance")[:3]
+        # Note: flake8 doesn't allow this to be formatted in a readable way :-(
+        places = Place.objects.filter(
+            position__dwithin=(ref_location, 100.0)).filter(
+            data_source_id='osoite').annotate(
+            distance=Distance(
+                "position", ref_location)).order_by(
+            "distance")[:3]
         if not places:
             logger.warning("Failed to find any locations for task id %s!" % event_obj.id)
             return False
