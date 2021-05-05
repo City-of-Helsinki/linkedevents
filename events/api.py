@@ -1938,6 +1938,18 @@ def _filter_event_queryset(queryset, params, srs=None):
 
         queryset = queryset.filter(qset)
 
+    val = params.get('event_type', None)
+    if val:
+        vals = val.lower().split(',')
+        event_types = {k[1].lower(): k[0] for k in Event.TYPE_IDS}
+        search_vals = []
+        for v in vals:
+            if v not in event_types:
+                raise ParseError(_(f'Event type can be of the following values:{" ".join(event_types.keys())}'))
+            search_vals.append(event_types[v])
+
+        queryset = queryset.filter(type_id__in=search_vals)
+
     val = params.get('last_modified_since', None)
     # This should be in format which dateutil.parser recognizes, e.g.
     # 2014-10-29T12:00:00Z == 2014-10-29T12:00:00+0000 (UTC time)
