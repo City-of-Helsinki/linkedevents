@@ -118,7 +118,7 @@ class VapaaehtoistyofiImporter(Importer):
         return obj.deleted
 
     def _import_event(self, event_obj):
-        event = event_obj.to_dict()
+        event = dict(event_obj.__dict__)
         logger.debug("Task id %s" % event_obj.id)
         event['id'] = '%s:%s' % (self.data_source.id, event_obj.id)
         event['origin_id'] = event_obj.id
@@ -143,7 +143,7 @@ class VapaaehtoistyofiImporter(Importer):
         cut_off_date.replace(tzinfo=pytz.UTC)
         end_date = event_obj.timestamp_end.replace(tzinfo=pytz.UTC)
         if end_date < cut_off_date:
-            logger.debug("Skipping task %s. Has ended %s" % end_date)
+            logger.debug("Skipping task %s. Has ended %s" % (event_obj.id, end_date))
             return None
 
         event['start_time'] = django_timezone.make_aware(event_obj.timestamp_start, pytz.UTC)
@@ -207,7 +207,7 @@ class VapaaehtoistyofiImporter(Importer):
                         kw = None
                     if kw:
                         event_keywords.append(kw)
-        logger.debug("Task %s: Got keywords: %s" % (tag_id, ', '.join([o.id for o in event_keywords])))
+        logger.debug("Task %s: Got keywords: %s" % (event_obj.id, ', '.join([o.id for o in event_keywords])))
 
         return event_keywords
 
