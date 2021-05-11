@@ -924,3 +924,22 @@ class EventAggregate(models.Model):
 class EventAggregateMember(models.Model):
     event_aggregate = models.ForeignKey(EventAggregate, on_delete=models.CASCADE, related_name='members')
     event = models.OneToOneField(Event, on_delete=models.CASCADE)
+
+
+class Feedback(models.Model):
+
+    name = models.CharField(verbose_name=_('Name'), max_length=255, blank=True)
+    email = models.EmailField(verbose_name=_('E-mail'))
+    subject = models.CharField(verbose_name=_('Subject'), max_length=255, blank=True)
+    body = models.TextField(verbose_name=_('Body'), max_length=255, blank=True)
+
+    def save(self, *args, **kwargs):
+        try:
+            send_mail(subject=f'[LinkedEvents] {self.subject} reported by {self.name}',
+                      message=self.body,
+                      from_email=self.email,
+                      recipient_list=[settings.SUPPORT_EMAIL],
+                      fail_silently=False)
+        except SMTPException as e:
+            logger.error(e, exc_info=True)
+        super(Feedback, self).save(*args, **kwargs)

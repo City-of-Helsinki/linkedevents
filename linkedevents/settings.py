@@ -66,7 +66,8 @@ env = environ.Env(
     MAIL_MAILGUN_KEY=(str, ''),
     MAIL_MAILGUN_DOMAIN=(str, ''),
     MAIL_MAILGUN_API=(str, ''),
-    LIPPUPISTE_EVENT_API_URL=(str, None)
+    LIPPUPISTE_EVENT_API_URL=(str, None),
+    SUPPORT_EMAIL=(str, '')
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -503,4 +504,7 @@ CACHES = {
 }
 
 # this is relevant for the fulltext search as implemented in _filter_event_queryset()
-FULLTEXT_SEARCH_LANGUAGES = {'fi':'finnish', 'sv':'swedish', 'en':'english'}
+FULLTEXT_SEARCH_LANGUAGES = {'fi': 'finnish', 'sv': 'swedish', 'en': 'english'}
+
+# Email address used to send feedback forms
+SUPPORT_EMAIL = env('SUPPORT_EMAIL')
