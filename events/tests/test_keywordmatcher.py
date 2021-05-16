@@ -49,7 +49,7 @@ def test_keyword_match(languages, data_source, organization, keyword, keyword2):
     keyword2.alt_labels.add(kl2)
 
     matcher = KeywordMatcher()
-    assert set([keyword, keyword2]) == set(matcher.match('[lapsi! teatteriin}'))
+    assert set([keyword, keyword2]) == set(matcher.match('[lapsi!,teatteriin}'))
     assert set([keyword, keyword2]) == set(matcher.match('[lapsi! teatteriin}', language='fi'))
     assert matcher.match('[lapsi! teatteriin}', language='en') is None
 

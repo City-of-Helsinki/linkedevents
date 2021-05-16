@@ -1,3 +1,6 @@
+import re
+import string
+
 from django.conf import settings
 from django.contrib.postgres.search import SearchQuery, TrigramSimilarity
 from rest_framework.exceptions import ParseError
@@ -50,7 +53,7 @@ class KeywordMatcher(object):
             return [label]
 
         # if no matches found let's check if we could split the string
-        texts = text.split()
+        texts = re.split(f'[{string.punctuation} ]', text)
         if len(texts) > 1:
             all_the_labels = []
             for word in texts:
