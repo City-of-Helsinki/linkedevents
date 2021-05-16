@@ -13,7 +13,7 @@ class KeywordMatcher(object):
         used_langs = settings.FULLTEXT_SEARCH_LANGUAGES
         if language:
             if language not in used_langs.keys():
-                raise ParseError(f"{language} not supported. Supported options are: {' '.join(used_langs.values())}")
+                raise ParseError(f"{language} not supported. Supported options are: {' '.join(used_langs.keys())}")
             languages = [language]
         else:
             languages = used_langs.keys()
@@ -40,17 +40,11 @@ class KeywordMatcher(object):
             return None
 
     def label_match(self, text, language=None):
-        # Looking for an exact match regardless of the language
-        label = KeywordLabel.objects.filter(name__iexact=text)
-        if label:
-            return label
 
-        # If no exact matches found, let's use Postgres full-text search
-        # to find a label matched by lexeme and rank the results with
-        # TrigramSimilarity as ft SearchRank is not suitable for ranking matched
-        # individual words. If no language is passed we cycle through all
-        # the options as specified in FULLTEXT_SEARCH_LANGUAGES and select
-        # the best match according to similarity.
+        # Let's use Postgres full-text search to find a label matched by lexeme and rank the results with
+        # TrigramSimilarity as fulltext SearchRank is not suitable for ranking matched individual words. If no language
+        # is passed we cycle through all options as specified in FULLTEXT_SEARCH_LANGUAGES and select the best match
+        # according to similarity.
         label = self.full_text_matching(text, language)
         if label:
             return [label]
