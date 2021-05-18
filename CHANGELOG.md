@@ -11,6 +11,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 <!-- List the changes in your PR under the Unreleased title. You can also copy this list to your PR summary. -->
 
 
+## [1.10.12] - 2021-05-18
+
+### Fixed
+
+- Fix [CVE-2020-25658](https://github.com/advisories/GHSA-xrx6-fmxq-rjj2) by upgrading rsa from 4.6 to 4.7
+(automatic Dependabot upgrade)
+
 ## [1.10.11] - 2021-03-30
 
 ### Fixed
@@ -1051,6 +1058,7 @@ to `espooevents-service`.
   to a minimum. This version marks the initial `0.1.0` relase and the initial `linkedevents` commit on which
   `espooevents-service` is based on.
 
+[1.10.12]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.11...espoo-v1.10.12
 [1.10.11]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.10...espoo-v1.10.11
 [1.10.10]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.9...espoo-v1.10.10
 [1.10.9]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.8...espoo-v1.10.9
