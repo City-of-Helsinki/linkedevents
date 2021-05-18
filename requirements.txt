@@ -217,7 +217,7 @@ requests==2.24.0
     #   pyjwkest
     #   requests-cache
     #   requests-oauthlib
-rsa==4.6
+rsa==4.7
     # via python-jose
 s3transfer==0.3.3
     # via boto3
