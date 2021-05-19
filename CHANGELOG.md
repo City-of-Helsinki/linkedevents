@@ -10,6 +10,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 <!-- List the changes in your PR under the Unreleased title. You can also copy this list to your PR summary. -->
 
+## [1.10.15] - 2021-05-19
+
+### Security
+
+- Fix [GHSA-pghf-347x-c2gj](https://github.com/advisories/GHSA-pghf-347x-c2gj) by upgrading django-debug-toolbar from 3.1.1 to 3.2.1
+  (automatic Dependabot upgrade)
+
 ## [1.10.14] - 2021-05-19
 
 ### Security
@@ -1071,6 +1078,7 @@ to `espooevents-service`.
   to a minimum. This version marks the initial `0.1.0` relase and the initial `linkedevents` commit on which
   `espooevents-service` is based on.
 
+[1.10.15]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.14...espoo-v1.10.15
 [1.10.14]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.13...espoo-v1.10.14
 [1.10.13]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.12...espoo-v1.10.13
 [1.10.12]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.11...espoo-v1.10.12
