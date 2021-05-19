@@ -10,6 +10,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 <!-- List the changes in your PR under the Unreleased title. You can also copy this list to your PR summary. -->
 
+## [1.10.13] - 2021-05-19
+
+### Security
+
+- Fix [CVE-2020-29651](https://github.com/advisories/GHSA-hj5v-574p-mj7c) by upgrading py from 1.9.0 to 1.10.0
+  (automatic Dependabot upgrade)
 
 ## [1.10.12] - 2021-05-18
 
@@ -1058,6 +1064,7 @@ to `espooevents-service`.
   to a minimum. This version marks the initial `0.1.0` relase and the initial `linkedevents` commit on which
   `espooevents-service` is based on.
 
+[1.10.13]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.12...espoo-v1.10.13
 [1.10.12]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.11...espoo-v1.10.12
 [1.10.11]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.10...espoo-v1.10.11
 [1.10.10]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.9...espoo-v1.10.10
