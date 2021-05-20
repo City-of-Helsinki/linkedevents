@@ -676,7 +676,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
     audience = models.ManyToManyField(Keyword, related_name='audience_events', blank=True)
 
     # this field is redundant, but allows to avoid expensive joins when searching for local events
-    local = models.BooleanField(default=False, db_index=True)
+    local = models.BooleanField(default=False)
 
     # these fields are populated and kept up to date by the db. See migration 0080
     search_vector_fi = SearchVectorField(null=True)
@@ -921,3 +921,22 @@ class EventAggregate(models.Model):
 class EventAggregateMember(models.Model):
     event_aggregate = models.ForeignKey(EventAggregate, on_delete=models.CASCADE, related_name='members')
     event = models.OneToOneField(Event, on_delete=models.CASCADE)
+
+
+class Feedback(models.Model):
+
+    name = models.CharField(verbose_name=_('Name'), max_length=255, blank=True)
+    email = models.EmailField(verbose_name=_('E-mail'))
+    subject = models.CharField(verbose_name=_('Subject'), max_length=255, blank=True)
+    body = models.TextField(verbose_name=_('Body'), max_length=255, blank=True)
+
+    def save(self, *args, **kwargs):
+        try:
+            send_mail(subject=f'[LinkedEvents] {self.subject} reported by {self.name}',
+                      message=self.body,
+                      from_email=self.email,
+                      recipient_list=[settings.SUPPORT_EMAIL],
+                      fail_silently=False)
+        except SMTPException as e:
+            logger.error(e, exc_info=True)
+        super(Feedback, self).save(*args, **kwargs)

@@ -59,9 +59,10 @@ from events.custom_elasticsearch_search_backend import \
 from events.extensions import (apply_select_and_prefetch,
                                get_extensions_from_request)
 from events.models import (PUBLICATION_STATUSES, DataSource, Event, EventLink,
-                           Image, Keyword, KeywordSet, Language, License,
-                           Offer, OpeningHoursSpecification, Place,
+                           Feedback, Image, Keyword, KeywordSet, Language,
+                           License, Offer, OpeningHoursSpecification, Place,
                            PublicationStatus, Video)
+from events.permissions import GuestPost
 from events.renderers import DOCXRenderer
 from events.translation import EventTranslationOptions, PlaceTranslationOptions
 from helevents.models import User
@@ -2661,3 +2662,24 @@ class SearchViewSet(JSONAPIViewMixin, GeoModelAPIView, viewsets.ViewSetMixin, ge
 
 
 register_view(SearchViewSet, 'search', base_name='search')
+
+
+class FeedbackSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Feedback
+        fields = '__all__'
+
+
+class FeedbackViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    serializer_class = FeedbackSerializer
+
+
+register_view(FeedbackViewSet, 'feedback', base_name='feedback')
+
+
+class GuestFeedbackViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    serializer_class = FeedbackSerializer
+    permission_classes = (GuestPost,)
+
+
+register_view(GuestFeedbackViewSet, 'guest-feedback', base_name='guest-feedback')
