@@ -311,8 +311,7 @@ class EnumChoiceField(serializers.Field):
     def to_representation(self, obj):
         if obj is None:
             return None
-        return self.prefix + utils.get_value_from_tuple_list(self.choices,
-                                                             obj, 1)
+        return self.prefix + str(utils.get_value_from_tuple_list(self.choices, obj, 1))
 
     def to_internal_value(self, data):
         value = utils.get_value_from_tuple_list(self.choices,
@@ -1361,6 +1360,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
     super_event = JSONLDRelatedField(serializer='EventSerializer', required=False, view_name='event-detail',
                                      queryset=Event.objects.all(), allow_null=True)
     event_status = EnumChoiceField(Event.STATUSES, required=False)
+    type_id = EnumChoiceField(Event.TYPE_IDS, required=False)
     publication_status = EnumChoiceField(PUBLICATION_STATUSES, required=False)
     external_links = EventLinkSerializer(many=True, required=False)
     offers = OfferSerializer(many=True, required=False)
@@ -1937,6 +1937,18 @@ def _filter_event_queryset(queryset, params, srs=None):
             qset |= _text_qset_by_translated_field(location_field, val)
 
         queryset = queryset.filter(qset)
+
+    val = params.get('event_type', None)
+    if val:
+        vals = val.lower().split(',')
+        event_types = {k[1].lower(): k[0] for k in Event.TYPE_IDS}
+        search_vals = []
+        for v in vals:
+            if v not in event_types:
+                raise ParseError(_(f'Event type can be of the following values:{" ".join(event_types.keys())}'))
+            search_vals.append(event_types[v])
+
+        queryset = queryset.filter(type_id__in=search_vals)
 
     val = params.get('last_modified_since', None)
     # This should be in format which dateutil.parser recognizes, e.g.

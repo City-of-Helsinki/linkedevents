@@ -32,8 +32,9 @@ def get_value_from_tuple_list(list_of_tuples, search_key, value_index):
                         returned and which is used as a key
     :return: Value from either side of tuple
     """
+
     for i, v in enumerate(list_of_tuples):
-        if v[value_index ^ 1] == search_key:
+        if str(v[value_index ^ 1]) == str(search_key):
             return v[value_index]
 
 

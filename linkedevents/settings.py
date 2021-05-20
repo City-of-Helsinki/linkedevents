@@ -193,7 +193,7 @@ MIDDLEWARE = [
 
 # django-extensions is a set of developer friendly tools
 if DEBUG:
-    INSTALLED_APPS.extend(['django_extensions', 'debug_toolbar', 'extension_course'])
+    INSTALLED_APPS.extend(['django_extensions', 'debug_toolbar'])
     MIDDLEWARE.append('debug_toolbar.middleware.DebugToolbarMiddleware')
 
 ROOT_URLCONF = 'linkedevents.urls'
