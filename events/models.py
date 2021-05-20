@@ -639,9 +639,9 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
     has_start_time = models.BooleanField(default=True)
     has_end_time = models.BooleanField(default=True)
 
-    audience_min_age = models.SmallIntegerField(verbose_name=_('Minimum recommended age'),
+    audience_min_age = models.PositiveSmallIntegerField(verbose_name=_('Minimum recommended age'),
                                                 blank=True, null=True, db_index=True)
-    audience_max_age = models.SmallIntegerField(verbose_name=_('Maximum recommended age'),
+    audience_max_age = models.PositiveSmallIntegerField(verbose_name=_('Maximum recommended age'),
                                                 blank=True, null=True, db_index=True)
 
     super_event = TreeForeignKey('self', null=True, blank=True,
@@ -661,13 +661,13 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
 
     replaced_by = models.ForeignKey('Event', on_delete=models.SET_NULL, related_name='aliases', null=True, blank=True)
 
-    maximum_attendee_capacity = models.PositiveIntegerField(
+    maximum_attendee_capacity = models.PositiveSmallIntegerField(
         verbose_name=_('maximum attendee capacity'), null=True, blank=True
     )
 
     # TODO: make into agreement with schema.org
     # Custom fields not from schema.org
-    minimum_attendee_capacity = models.PositiveIntegerField(
+    minimum_attendee_capacity = models.PositiveSmallIntegerField(
         verbose_name=_('minimum attendee capacity'), null=True, blank=True
     )
     enrolment_start_time = models.DateTimeField(verbose_name=_('enrolment start time'), null=True, blank=True)
