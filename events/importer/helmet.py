@@ -281,6 +281,7 @@ class HelmetImporter(Importer):
             event['origin_id'] = eid
             event['data_source'] = self.data_source
             event['publisher'] = self.organization
+            event['type_id'] = 1
 
         ext_props = HelmetImporter._get_extended_properties(event_el)
 

@@ -79,6 +79,11 @@ def assert_event_fields_exist(data, version='v1'):
         'search_vector_sv',
         'search_vector_fi',
         'search_vector_en',
+        'type_id',
+        'enrolment_start_time',
+        'maximum_attendee_capacity',
+        'minimum_attendee_capacity',
+        'enrolment_end_time'
     )
     if version == 'v0.1':
         fields += (
@@ -1016,3 +1021,20 @@ def test_keyword_OR_set_search(api_client, event, event2, event3, keyword, keywo
     load = f'keyword_OR_set1={keyword.id},{keyword2.id}&keyword_OR_set2={keyword3.id}'
     response = get_list(api_client, query_string=load)
     assert_events_in_response([event, event2], response)
+
+
+@pytest.mark.django_db
+def test_event_get_by_type(api_client, event, event2, event3):
+    #  default type is General
+    event2.type_id = 2
+    event2.save()
+    event3.type_id = 3
+    event3.save()
+    response = get_list(api_client, query_string='event_type=general')
+    assert_events_in_response([event], response)
+    response = get_list(api_client, query_string='event_type=general,course')
+    assert_events_in_response([event, event2], response)
+    response = get_list(api_client, query_string='event_type=course,volunteering')
+    assert_events_in_response([event2, event3], response)
+    response = get_list_no_code_assert(api_client, query_string='event_type=sometypohere')
+    assert response.status_code == 400

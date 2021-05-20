@@ -1,24 +1,28 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+
+import functools
+import logging
 import os
 import re
-import functools
-from lxml import etree
-import logging
-import dateutil
 from datetime import time
-from pytz import timezone
+
+import dateutil
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
 from django_orghierarchy.models import Organization
+from lxml import etree
+from pytz import timezone
 
-from .base import Importer, register_importer, recur_dict
-from .yso import KEYWORDS_TO_ADD_TO_AUDIENCE
-from .util import unicodetext, clean_url
-from events.models import DataSource, Event, EventAggregate, EventAggregateMember, Keyword, Place, License
 from events.keywords import KeywordMatcher
+from events.models import (DataSource, Event, EventAggregate,
+                           EventAggregateMember, Keyword, License, Place)
 from events.translation_utils import expand_model_fields
+
+from .base import Importer, recur_dict, register_importer
+from .util import clean_url, unicodetext
+from .yso import KEYWORDS_TO_ADD_TO_AUDIENCE
 
 # Per module logger
 logger = logging.getLogger(__name__)
@@ -403,6 +407,11 @@ class KulkeImporter(Importer):
                 return False
 
         event = events[eid]
+        if is_course:
+            event['type_id'] = 2
+        else:
+            event['type_id'] = 1
+
         event['data_source'] = self.data_source
         event['publisher'] = self.organization
         event['origin_id'] = eid
@@ -453,13 +462,13 @@ class KulkeImporter(Importer):
             assert len(links)
         else:
             links = []
-        external_links = []
+        external_links = {}
         for link_el in links:
             if link_el is None or link_el.text is None:
                 continue
             link = clean_url(link_el.text)
             if link:
-                external_links.append({'link': link})
+                external_links['link'] = link
         event['external_links'][lang] = external_links
 
         eventattachments = event_el.find('eventattachments')
