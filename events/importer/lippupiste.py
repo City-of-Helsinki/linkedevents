@@ -381,6 +381,7 @@ class LippupisteImporter(Importer):
         event['origin_id'] = event_source_id
         event['data_source'] = self.data_source
         event['publisher'] = self.organization
+        event['type_id'] = 1
 
         event_date = datetime.strptime(source_event['EventDate'], '%d.%m.%Y').date()
         event_time = datetime.strptime(source_event['EventTime'], '%H:%M').time()

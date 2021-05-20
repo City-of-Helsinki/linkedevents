@@ -585,6 +585,17 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
         (SuperEventType.UMBRELLA, _('Umbrella event')),
     )
 
+    class Type_Id:
+        GENERAL = 1
+        COURSE = 2
+        VOLUNTEERING = 3
+
+    TYPE_IDS = (
+        (Type_Id.GENERAL, _("General")),
+        (Type_Id.COURSE, _("Course")),
+        (Type_Id.VOLUNTEERING, _("Volunteering")),
+        )
+
     # Properties from schema.org/Thing
     info_url = models.URLField(verbose_name=_('Event home page'), blank=True, null=True, max_length=1000)
     description = models.TextField(verbose_name=_('Description'), blank=True, null=True)
@@ -628,9 +639,9 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
     has_start_time = models.BooleanField(default=True)
     has_end_time = models.BooleanField(default=True)
 
-    audience_min_age = models.SmallIntegerField(verbose_name=_('Minimum recommended age'),
+    audience_min_age = models.PositiveSmallIntegerField(verbose_name=_('Minimum recommended age'),
                                                 blank=True, null=True, db_index=True)
-    audience_max_age = models.SmallIntegerField(verbose_name=_('Maximum recommended age'),
+    audience_max_age = models.PositiveSmallIntegerField(verbose_name=_('Maximum recommended age'),
                                                 blank=True, null=True, db_index=True)
 
     super_event = TreeForeignKey('self', null=True, blank=True,
@@ -638,6 +649,9 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
 
     super_event_type = models.CharField(max_length=255, blank=True, null=True, db_index=True,
                                         default=None, choices=SUPER_EVENT_TYPES)
+
+    type_id = models.CharField(max_length=255, blank=False, null=False, db_index=False,
+                               default=Type_Id.GENERAL, choices=TYPE_IDS)
 
     in_language = models.ManyToManyField(Language, verbose_name=_('In language'), related_name='events', blank=True)
 
@@ -647,12 +661,22 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
 
     replaced_by = models.ForeignKey('Event', on_delete=models.SET_NULL, related_name='aliases', null=True, blank=True)
 
+    maximum_attendee_capacity = models.PositiveSmallIntegerField(
+        verbose_name=_('maximum attendee capacity'), null=True, blank=True
+    )
+
+    # TODO: make into agreement with schema.org
     # Custom fields not from schema.org
+    minimum_attendee_capacity = models.PositiveSmallIntegerField(
+        verbose_name=_('minimum attendee capacity'), null=True, blank=True
+    )
+    enrolment_start_time = models.DateTimeField(verbose_name=_('enrolment start time'), null=True, blank=True)
+    enrolment_end_time = models.DateTimeField(verbose_name=_('enrolment end time'), null=True, blank=True)
     keywords = models.ManyToManyField(Keyword, related_name='events')
     audience = models.ManyToManyField(Keyword, related_name='audience_events', blank=True)
 
     # this field is redundant, but allows to avoid expensive joins when searching for local events
-    local = models.BooleanField(default=False, db_index=True)
+    local = models.BooleanField(default=False)
 
     # these fields are populated and kept up to date by the db. See migration 0080
     search_vector_fi = SearchVectorField(null=True)
@@ -897,3 +921,22 @@ class EventAggregate(models.Model):
 class EventAggregateMember(models.Model):
     event_aggregate = models.ForeignKey(EventAggregate, on_delete=models.CASCADE, related_name='members')
     event = models.OneToOneField(Event, on_delete=models.CASCADE)
+
+
+class Feedback(models.Model):
+
+    name = models.CharField(verbose_name=_('Name'), max_length=255, blank=True)
+    email = models.EmailField(verbose_name=_('E-mail'))
+    subject = models.CharField(verbose_name=_('Subject'), max_length=255, blank=True)
+    body = models.TextField(verbose_name=_('Body'), max_length=255, blank=True)
+
+    def save(self, *args, **kwargs):
+        try:
+            send_mail(subject=f'[LinkedEvents] {self.subject} reported by {self.name}',
+                      message=self.body,
+                      from_email=self.email,
+                      recipient_list=[settings.SUPPORT_EMAIL],
+                      fail_silently=False)
+        except SMTPException as e:
+            logger.error(e, exc_info=True)
+        super(Feedback, self).save(*args, **kwargs)

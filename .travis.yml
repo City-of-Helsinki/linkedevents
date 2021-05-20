@@ -30,8 +30,6 @@ script:
 - py.test --cov . events
 - flake8 helevents
 - py.test --cov . helevents
-- flake8 extension_course
-- py.test --cov . extension_course --ds=extension_course.tests.settings
 
 before_cache:
 - rm -f $HOME/.cache/pip/log/debug.log

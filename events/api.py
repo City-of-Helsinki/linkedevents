@@ -59,9 +59,10 @@ from events.custom_elasticsearch_search_backend import \
 from events.extensions import (apply_select_and_prefetch,
                                get_extensions_from_request)
 from events.models import (PUBLICATION_STATUSES, DataSource, Event, EventLink,
-                           Image, Keyword, KeywordSet, Language, License,
-                           Offer, OpeningHoursSpecification, Place,
+                           Feedback, Image, Keyword, KeywordSet, Language,
+                           License, Offer, OpeningHoursSpecification, Place,
                            PublicationStatus, Video)
+from events.permissions import GuestPost
 from events.renderers import DOCXRenderer
 from events.translation import EventTranslationOptions, PlaceTranslationOptions
 from helevents.models import User
@@ -311,8 +312,7 @@ class EnumChoiceField(serializers.Field):
     def to_representation(self, obj):
         if obj is None:
             return None
-        return self.prefix + utils.get_value_from_tuple_list(self.choices,
-                                                             obj, 1)
+        return self.prefix + str(utils.get_value_from_tuple_list(self.choices, obj, 1))
 
     def to_internal_value(self, data):
         value = utils.get_value_from_tuple_list(self.choices,
@@ -1361,6 +1361,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
     super_event = JSONLDRelatedField(serializer='EventSerializer', required=False, view_name='event-detail',
                                      queryset=Event.objects.all(), allow_null=True)
     event_status = EnumChoiceField(Event.STATUSES, required=False)
+    type_id = EnumChoiceField(Event.TYPE_IDS, required=False)
     publication_status = EnumChoiceField(PUBLICATION_STATUSES, required=False)
     external_links = EventLinkSerializer(many=True, required=False)
     offers = OfferSerializer(many=True, required=False)
@@ -1937,6 +1938,18 @@ def _filter_event_queryset(queryset, params, srs=None):
             qset |= _text_qset_by_translated_field(location_field, val)
 
         queryset = queryset.filter(qset)
+
+    val = params.get('event_type', None)
+    if val:
+        vals = val.lower().split(',')
+        event_types = {k[1].lower(): k[0] for k in Event.TYPE_IDS}
+        search_vals = []
+        for v in vals:
+            if v not in event_types:
+                raise ParseError(_(f'Event type can be of the following values:{" ".join(event_types.keys())}'))
+            search_vals.append(event_types[v])
+
+        queryset = queryset.filter(type_id__in=search_vals)
 
     val = params.get('last_modified_since', None)
     # This should be in format which dateutil.parser recognizes, e.g.
@@ -2649,3 +2662,24 @@ class SearchViewSet(JSONAPIViewMixin, GeoModelAPIView, viewsets.ViewSetMixin, ge
 
 
 register_view(SearchViewSet, 'search', base_name='search')
+
+
+class FeedbackSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Feedback
+        fields = '__all__'
+
+
+class FeedbackViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    serializer_class = FeedbackSerializer
+
+
+register_view(FeedbackViewSet, 'feedback', base_name='feedback')
+
+
+class GuestFeedbackViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    serializer_class = FeedbackSerializer
+    permission_classes = (GuestPost,)
+
+
+register_view(GuestFeedbackViewSet, 'guest-feedback', base_name='guest-feedback')

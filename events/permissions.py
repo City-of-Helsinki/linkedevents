@@ -1,6 +1,9 @@
 from functools import reduce
-from .models import PublicationStatus
+
 from django_orghierarchy.models import Organization
+from rest_framework.permissions import BasePermission
+
+from .models import PublicationStatus
 
 
 class UserModelPermissionMixin:
@@ -64,3 +67,12 @@ class UserModelPermissionMixin:
                 admin_orgs.append(admin_org.replaced_by.get_descendants(include_self=True))
         # for multiple admin_orgs, we have to combine the querysets and filter distinct
         return reduce(lambda a, b: a | b, admin_orgs).distinct()
+
+
+class GuestPost(BasePermission):
+
+    def has_permission(self, request, view):
+        if view.action == 'create':
+            return True
+        else:
+            return False

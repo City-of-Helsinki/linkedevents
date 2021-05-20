@@ -707,3 +707,8 @@ def create_initial_licenses():
             'url': 'https://creativecommons.org/licenses/by/4.0/',
         }
     )
+
+
+@pytest.fixture(scope="session", autouse=True)
+def setup_env():
+    settings.SUPPORT_EMAIL = 'test@test.com'
