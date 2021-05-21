@@ -91,7 +91,7 @@ class OsoiteImporter(Importer):
     @db.transaction.atomic
     def _import_address(self, syncher, address_obj):
         # addresses have no static ids, just format the address cleanly
-        origin_id = str(address_obj).replace(' - ', '-').replace(',', '').replace(' ', '_').lower()
+        origin_id = str(address_obj).replace(' - ', '-').replace(',', '').replace(' ', '_').replace('.', '_').lower()
         obj = syncher.get(origin_id)
         obj_id = 'osoite:' + origin_id
         if not obj:
