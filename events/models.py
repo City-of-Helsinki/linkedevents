@@ -640,9 +640,9 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
     has_end_time = models.BooleanField(default=True)
 
     audience_min_age = models.PositiveSmallIntegerField(verbose_name=_('Minimum recommended age'),
-                                                blank=True, null=True, db_index=True)
+                                                        blank=True, null=True, db_index=True)
     audience_max_age = models.PositiveSmallIntegerField(verbose_name=_('Maximum recommended age'),
-                                                blank=True, null=True, db_index=True)
+                                                        blank=True, null=True, db_index=True)
 
     super_event = TreeForeignKey('self', null=True, blank=True,
                                  on_delete=models.SET_NULL, related_name='sub_events')
