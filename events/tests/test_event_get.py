@@ -8,6 +8,7 @@ from django.conf import settings
 from django.contrib.gis.gdal import CoordTransform, SpatialReference
 from django.contrib.gis.geos import Point
 from freezegun import freeze_time
+from rest_framework.test import APIClient
 
 from events.models import Event, Language, PublicationStatus
 
@@ -94,13 +95,21 @@ def assert_event_fields_exist(data, version='v1'):
     assert_fields_exist(data, fields)
 
 
-def assert_events_in_response(events, response):
+def assert_events_in_response(events, response, query=''):
     response_event_ids = {event['id'] for event in response.data['data']}
     expected_event_ids = {event.id for event in events}
-    assert response_event_ids == expected_event_ids
+    if query:
+        assert response_event_ids == expected_event_ids, f'\nquery: {query}'
+    else:
+        assert response_event_ids == expected_event_ids
 
+
+def get_list_and_assert_events(query: str, events: list, api_client: APIClient):
+    response = get_list(api_client, query_string=query)
+    assert_events_in_response(events, response, query)
 
 # === tests ===
+
 
 @pytest.mark.django_db
 def test_get_event_list_html_renders(api_client, event):
@@ -1025,16 +1034,14 @@ def test_keyword_OR_set_search(api_client, event, event2, event3, keyword, keywo
 
 @pytest.mark.django_db
 def test_event_get_by_type(api_client, event, event2, event3):
-    #  default type is General
+    #  default type is General, only general events should be present in the default search
     event2.type_id = 2
     event2.save()
     event3.type_id = 3
     event3.save()
-    response = get_list(api_client, query_string='event_type=general')
-    assert_events_in_response([event], response)
-    response = get_list(api_client, query_string='event_type=general,course')
-    assert_events_in_response([event, event2], response)
-    response = get_list(api_client, query_string='event_type=course,volunteering')
-    assert_events_in_response([event2, event3], response)
+    get_list_and_assert_events(query='', events=[event], api_client=api_client)
+    get_list_and_assert_events(query='event_type=general', events=[event], api_client=api_client)
+    get_list_and_assert_events(query='event_type=general,course', events=[event, event2], api_client=api_client)
+    get_list_and_assert_events(query='event_type=course,volunteering', events=[event2, event3], api_client=api_client)
     response = get_list_no_code_assert(api_client, query_string='event_type=sometypohere')
     assert response.status_code == 400

@@ -182,6 +182,7 @@ def offer(event2):
 def make_minimal_event_dict(make_keyword_id):
     def _make_minimal_event_dict(data_source, organization, location_id):
         return {
+            'type_id': 'General',
             'name': {'fi': TEXT_FI},
             'start_time': datetime.strftime(timezone.now() + timedelta(days=1), '%Y-%m-%d'),
             'location': {'@id': location_id},
