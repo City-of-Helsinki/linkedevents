@@ -1951,7 +1951,7 @@ def _filter_event_queryset(queryset, params, srs=None):
 
         queryset = queryset.filter(type_id__in=search_vals)
     else:
-        queryset = queryset.filter(type_id=1)
+        queryset = queryset.filter(type_id=Event.Type_Id.GENERAL)
 
     val = params.get('last_modified_since', None)
     # This should be in format which dateutil.parser recognizes, e.g.
