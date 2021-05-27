@@ -248,7 +248,10 @@ class Importer(object):
         # Multilevel is used by tpr importer but does not use nodename or max length.
         # We have retained some of these parameters for future use.
         if info and info_field_name and info[info_field_name]:
-            val = clean_text(info[info_field_name][lang])
+            if info[info_field_name][lang] != None:
+                val = clean_text(info[info_field_name][lang])
+            else:
+                val = info[info_field_name][lang]
         else:
             val = None
         if max_length and val and len(val) > max_length:
