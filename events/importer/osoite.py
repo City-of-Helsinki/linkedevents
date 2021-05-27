@@ -52,22 +52,24 @@ class OsoiteImporter(Importer):
             # will not be remapped by the syncher.
             self.check_deleted = lambda x: False
             self.mark_deleted = self.delete_and_replace
-
+            
     def get_street_address(self, address, language):
         # returns the address sans municipality in the desired language, or Finnish as fallback
-        street = getattr(address.street, 'name_' + language) or getattr(address.street, 'name_fi')
-        s = '%s %s' % (street, address.number)
-        if address.number_end:
-            s += '-%s' % address.number_end
-        if address.letter:
-            s += '%s' % address.letter
-        return s
+        street = getattr(address.street, 'name_' + language)
+        if street:
+            s = '%s %s' % (street, address.number)
+            if address.number_end:
+                s += '-%s' % address.number_end
+            if address.letter:
+                s += '%s' % address.letter
+            return s
 
     def get_whole_address(self, address, language):
         # returns the address plus municipality in the desired language, or Finnish as fallback
-        municipality = getattr(address.street.municipality, 'name_' + language) \
-            or getattr(address.street.municipality, 'name_fi')
-        return self.get_street_address(address, language) + ', ' + municipality
+        municipality = getattr(address.street.municipality, 'name_' + language)
+        rtn = self.get_street_address(address, language)
+        if rtn:
+            return rtn + ', ' + municipality
 
     def pk_get(self, resource_name, res_id=None):
         # support all munigeo resources, not just addresses
@@ -129,13 +131,16 @@ class OsoiteImporter(Importer):
         self._save_translated_field(obj, 'address_locality', info, 'municipality')
 
         position = address_obj.location
-
+        #print("[OSOITE.PY]: ---> POSITION: ", position)
+        position = None
+        obj._changed = True
         if position and obj.position:
             # If the distance is less than 10cm, assume the location
             # hasn't changed.
             assert obj.position.srid == settings.PROJECTION_SRID
             if position.distance(obj.position) < 0.10:
                 position = obj.position
+                position = None
         if position != obj.position:
             obj._changed = True
             obj._changed_fields.append('position')
