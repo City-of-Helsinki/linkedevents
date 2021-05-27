@@ -70,10 +70,10 @@ class ImageBankImporter(Importer):
             return b.decode('utf8')
 
         IMAGE_BANK_IMAGES = {
-            'https://i.imgur.com/eANHbqh.jpg',
-            'https://i.imgur.com/hpF5Ugz.jpg',
-            'https://i.imgur.com/nNbigmG.jpg',
-            'https://i.imgur.com/e750x68.jpg'
+            'https://i.imgur.com/XxE918k.jpg',
+            'https://i.imgur.com/bNjPBXO.jpg',
+            'https://i.imgur.com/IA5NbEy.jpg',
+            'https://i.imgur.com/hYAcCOg.jpg'
         }
 
         IMAGE_BANK_IMAGES = iter(IMAGE_BANK_IMAGES)
