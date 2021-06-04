@@ -22,7 +22,7 @@ django-debug-toolbar==3.2.1
     # via -r requirements-dev.in
 django-extensions==3.0.1
     # via -r requirements-dev.in
-django==2.2.20
+django==2.2.21
     # via
     #   -c requirements.txt
     #   django-debug-toolbar
