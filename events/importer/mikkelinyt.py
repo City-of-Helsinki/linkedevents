@@ -1,19 +1,19 @@
+import hashlib
+import logging
 import os
 import re
+from datetime import datetime
+from html import unescape
+
+import pytz
 import requests
 import requests_cache
-import pytz
-import logging
-import hashlib
-
-from datetime import datetime
-from html.parser import HTMLParser
-
-from events.models import DataSource, Event, Keyword
 from django_orghierarchy.models import Organization
 
+from events.models import DataSource, Event, Keyword
+
+from .base import Importer, recur_dict, register_importer
 from .sync import ModelSyncher
-from .base import Importer, register_importer, recur_dict
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ class MikkeliNytImporter(Importer):
 
     def strip_html(self, text):
         result = re.sub(r"\<.*?>", " ", text, 0, re.MULTILINE)
-        result = HTMLParser().unescape(result)
+        result = unescape(result)
         result = " ".join(result.split())
         return result.strip()
 

@@ -7,10 +7,11 @@ from django_orghierarchy.models import Organization
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .utils import versioned_reverse as reverse
-from ..api import get_authenticated_data_source_and_publisher, EventSerializer, OrganizationSerializer
+from ..api import (EventSerializer, OrganizationSerializer,
+                   get_authenticated_data_source_and_publisher)
 from ..auth import ApiKeyAuth
 from ..models import DataSource, Image
+from .utils import versioned_reverse as reverse
 
 
 @pytest.mark.django_db

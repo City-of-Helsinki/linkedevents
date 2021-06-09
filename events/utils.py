@@ -1,11 +1,11 @@
-from datetime import datetime, timedelta
-import re
 import collections
+import re
+from datetime import datetime, timedelta
 
 import pytz
-from django.db import transaction
-from django.conf import settings
 from dateutil.parser import parse as dateutil_parse
+from django.conf import settings
+from django.db import transaction
 from rest_framework.exceptions import ParseError
 
 from events.models import Keyword, Place
@@ -129,6 +129,8 @@ def parse_time(time_str, is_start):
             # Datetimes without timezone are assumed UTC by drf
         except (TypeError, ValueError):
             raise ParseError('time in invalid format (try ISO 8601 or yyyy-mm-dd)')
+    # if not dt.tzinfo:
+    #     dt = dt.astimezone(pytz.timezone('UTC'))
     return dt, is_exact
 
 

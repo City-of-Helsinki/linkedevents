@@ -1,23 +1,20 @@
 # -*- coding: utf-8 -*-
-from datetime import datetime
-
-import dateutil.parser
 import pytest
-import pytz
+from dateutil import parser
 from django.conf import settings
 from django.contrib.gis.gdal import CoordTransform, SpatialReference
 from django.contrib.gis.geos import Point
 from freezegun import freeze_time
-from rest_framework.test import APIClient
 
 from events.models import Event, Language, PublicationStatus
+from events.tests.conftest import APIClient
+from events.tests.utils import assert_fields_exist, datetime_zone_aware, get
+from events.tests.utils import versioned_reverse as reverse
 
-from .utils import assert_fields_exist, get
-from .utils import versioned_reverse as reverse
+api_client = APIClient()
+
 
 # === util methods ===
-
-
 def get_list(api_client, version='v1', data=None, query_string=None):
     url = reverse('event-list', version=version)
     if query_string:
@@ -104,13 +101,17 @@ def assert_events_in_response(events, response, query=''):
         assert response_event_ids == expected_event_ids
 
 
-def get_list_and_assert_events(query: str, events: list, api_client: APIClient):
+def get_list_and_assert_events(query: str, events: list, api_client: APIClient = api_client):
     response = get_list(api_client, query_string=query)
     assert_events_in_response(events, response, query)
 
+
+def get_detail_and_assert_events(query: str, events: list, api_client: APIClient = api_client):
+    response = get(api_client, query_string=query)
+    assert_events_in_response(events, response, query)
+
+
 # === tests ===
-
-
 @pytest.mark.django_db
 def test_get_event_list_html_renders(api_client, event):
     url = reverse('event-list', version='v1')
@@ -145,34 +146,24 @@ def test_get_unknown_event_detail_check_404(api_client):
 @pytest.mark.django_db
 def test_get_event_list_verify_text_filter(api_client, event, event2):
     # Search with event name
-    response = get_list(api_client, data={'text': 'event'})
-    assert event.id not in [entry['id'] for entry in response.data['data']]
-    assert event2.id in [entry['id'] for entry in response.data['data']]
+    get_list_and_assert_events(f'text={event.name}', [event])
     # Search with place name
-    response = get_list(api_client, data={'text': 'paikka'})
-    assert event.id in [entry['id'] for entry in response.data['data']]
-    assert event2.id not in [entry['id'] for entry in response.data['data']]
+    get_list_and_assert_events(f'text={event.location.name}', [event])
 
 
 @pytest.mark.django_db
 def test_get_event_list_verify_data_source_filter(api_client, data_source, event, event2):
-    response = get_list(api_client, data={'data_source': data_source.id})
-    assert event.id in [entry['id'] for entry in response.data['data']]
-    assert event2.id not in [entry['id'] for entry in response.data['data']]
+    get_list_and_assert_events(f'data_source={data_source.id}', [event])
 
 
 @pytest.mark.django_db
 def test_get_event_list_verify_data_source_negative_filter(api_client, data_source, event, event2):
-    response = get_list(api_client, data={'data_source!': data_source.id})
-    assert event.id not in [entry['id'] for entry in response.data['data']]
-    assert event2.id in [entry['id'] for entry in response.data['data']]
+    get_list_and_assert_events(f'data_source!={data_source.id}', [event2])
 
 
 @pytest.mark.django_db
 def test_get_event_list_verify_location_filter(api_client, place, event, event2):
-    response = get_list(api_client, data={'location': place.id})
-    assert event.id in [entry['id'] for entry in response.data['data']]
-    assert event2.id not in [entry['id'] for entry in response.data['data']]
+    get_list_and_assert_events(f'location={place.id}', [event])
 
 
 @pytest.mark.django_db
@@ -183,23 +174,16 @@ def test_get_event_list_verify_bbox_filter(api_client, event, event2):
     ct = CoordTransform(SpatialReference(settings.PROJECTION_SRID), SpatialReference(4326))
     left_bottom.transform(ct)
     right_top.transform(ct)
-    bbox_string = f"{left_bottom.x},{left_bottom.y},{right_top.x},{right_top.y}"
-    response = get_list(api_client, data={'bbox': bbox_string})
-    # this way we will catch any errors if the default SRS changes, breaking the API
-    assert event.id in [entry['id'] for entry in response.data['data']]
-    assert event2.id not in [entry['id'] for entry in response.data['data']]
+    get_list_and_assert_events(f'bbox={left_bottom.x},{left_bottom.y},{right_top.x},{right_top.y}', [event])
 
 
 @pytest.mark.django_db
 def test_get_event_list_verify_audience_max_age_lt_filter(api_client, keyword, event):
     event.audience_max_age = 16
     event.save()
-    response = get_list(api_client, data={'audience_max_age_lt': event.audience_max_age})
-    assert event.id in [entry['id'] for entry in response.data['data']]
-    response = get_list(api_client, data={'audience_max_age_lt': event.audience_max_age - 1})
-    assert event.id not in [entry['id'] for entry in response.data['data']]
-    response = get_list(api_client, data={'audience_max_age_lt': event.audience_max_age + 1})
-    assert event.id in [entry['id'] for entry in response.data['data']]
+    get_list_and_assert_events(f'audience_max_age_lt={event.audience_max_age}', [event])
+    get_list_and_assert_events(f'audience_max_age_lt={event.audience_max_age - 1}', [])
+    get_list_and_assert_events(f'audience_max_age_lt={event.audience_max_age + 1}', [event])
 
 
 @pytest.mark.django_db
@@ -207,18 +191,12 @@ def test_get_event_list_verify_audience_max_age_gt_filter(api_client, keyword, e
     #  'audience_max_age' parameter is identical to audience_max_age_gt and is kept for compatibility's sake
     event.audience_max_age = 16
     event.save()
-    response = get_list(api_client, data={'audience_max_age_gt': event.audience_max_age})
-    assert event.id in [entry['id'] for entry in response.data['data']]
-    response = get_list(api_client, data={'audience_max_age_gt': event.audience_max_age - 1})
-    assert event.id in [entry['id'] for entry in response.data['data']]
-    response = get_list(api_client, data={'audience_max_age_gt': event.audience_max_age + 1})
-    assert event.id not in [entry['id'] for entry in response.data['data']]
-    response = get_list(api_client, data={'audience_max_age': event.audience_max_age})
-    assert event.id in [entry['id'] for entry in response.data['data']]
-    response = get_list(api_client, data={'audience_max_age': event.audience_max_age - 1})
-    assert event.id in [entry['id'] for entry in response.data['data']]
-    response = get_list(api_client, data={'audience_max_age': event.audience_max_age + 1})
-    assert event.id not in [entry['id'] for entry in response.data['data']]
+    get_list_and_assert_events(f'audience_max_age_gt={event.audience_max_age}', [event])
+    get_list_and_assert_events(f'audience_max_age_gt={event.audience_max_age - 1}', [event])
+    get_list_and_assert_events(f'audience_max_age_gt={event.audience_max_age + 1}', [])
+    get_list_and_assert_events(f'audience_max_age={event.audience_max_age}', [event])
+    get_list_and_assert_events(f'audience_max_age={event.audience_max_age - 1}', [event])
+    get_list_and_assert_events(f'audience_max_age={event.audience_max_age + 1}', [])
 
 
 @pytest.mark.django_db
@@ -226,19 +204,14 @@ def test_get_event_list_verify_audience_min_age_lt_filter(api_client, keyword, e
     #  'audience_max_age' parameter is identical to audience_max_age_gt and is kept for compatibility's sake
     event.audience_min_age = 14
     event.save()
-    response = get_list(api_client, data={'audience_min_age_lt': event.audience_min_age})
-    assert event.id in [entry['id'] for entry in response.data['data']]
-    response = get_list(api_client, data={'audience_min_age_lt': event.audience_min_age - 1})
-    assert event.id not in [entry['id'] for entry in response.data['data']]
-    response = get_list(api_client, data={'audience_min_age_lt': event.audience_min_age + 1})
-    assert event.id in [entry['id'] for entry in response.data['data']]
-    #  'audience_max_age' parameter is identical to audience_max_age_gt and is kept for compatibility's sake
-    response = get_list(api_client, data={'audience_min_age': event.audience_min_age})
-    assert event.id in [entry['id'] for entry in response.data['data']]
-    response = get_list(api_client, data={'audience_min_age': event.audience_min_age - 1})
-    assert event.id not in [entry['id'] for entry in response.data['data']]
-    response = get_list(api_client, data={'audience_min_age': event.audience_min_age + 1})
-    assert event.id in [entry['id'] for entry in response.data['data']]
+    get_list_and_assert_events(f'audience_min_age_lt={event.audience_min_age}', [event])
+    get_list_and_assert_events(f'audience_min_age_lt={event.audience_min_age - 1}', [])
+    get_list_and_assert_events(f'audience_min_age_lt={event.audience_min_age + 1}', [event])
+
+    #  'audience_max_age' parameter is identical to audience_max_age_lt and is kept for compatibility's sake
+    get_list_and_assert_events(f'audience_min_age={event.audience_min_age}', [event])
+    get_list_and_assert_events(f'audience_min_age={event.audience_min_age - 1}', [])
+    get_list_and_assert_events(f'audience_min_age={event.audience_min_age + 1}', [event])
 
 
 @pytest.mark.django_db
@@ -246,29 +219,21 @@ def test_get_event_list_verify_audience_min_age_gt_filter(api_client, keyword, e
     #  'audience_max_age' parameter is identical to audience_max_age_gt and is kept for compatibility's sake
     event.audience_min_age = 14
     event.save()
-    response = get_list(api_client, data={'audience_min_age_gt': event.audience_min_age})
-    assert event.id in [entry['id'] for entry in response.data['data']]
-    response = get_list(api_client, data={'audience_min_age_gt': event.audience_min_age - 1})
-    assert event.id in [entry['id'] for entry in response.data['data']]
-    response = get_list(api_client, data={'audience_min_age_gt': event.audience_min_age + 1})
-    assert event.id not in [entry['id'] for entry in response.data['data']]
+    get_list_and_assert_events(f'audience_min_age_gt={event.audience_min_age}', [event])
+    get_list_and_assert_events(f'audience_min_age_gt={event.audience_min_age - 1}', [event])
+    get_list_and_assert_events(f'audience_min_age_gt={event.audience_min_age + 1}', [])
 
 
 @pytest.mark.django_db
 def test_get_event_list_start_hour_filter(api_client, keyword, event):
-    event.start_time = datetime(2020, 1, 1, 16, 30).astimezone(pytz.timezone('Europe/Helsinki'))
+    event.start_time = datetime_zone_aware(2020, 1, 1, 16, 30)
     event.save()
+    get_list_and_assert_events('starts_after=16', [event])
+    get_list_and_assert_events('starts_after=16:', [event])
+    get_list_and_assert_events('starts_after=15:59', [event])
+    get_list_and_assert_events('starts_after=16:30', [event])
+    get_list_and_assert_events('starts_after=17:30', [])
 
-    response = get_list(api_client, data={'starts_after': '16'})
-    assert event.id in [entry['id'] for entry in response.data['data']]
-    response = get_list(api_client, data={'starts_after': '16:'})
-    assert event.id in [entry['id'] for entry in response.data['data']]
-    response = get_list(api_client, data={'starts_after': '15:59'})
-    assert event.id in [entry['id'] for entry in response.data['data']]
-    response = get_list(api_client, data={'starts_after': '16:30'})
-    assert event.id in [entry['id'] for entry in response.data['data']]
-    response = get_list(api_client, data={'starts_after': '17:30'})
-    assert event.id not in [entry['id'] for entry in response.data['data']]
     response = get_list_no_code_assert(api_client, data={'starts_after': '27:30'})
     assert response.status_code == 400
     response = get_list_no_code_assert(api_client, data={'starts_after': '18:70'})
@@ -278,52 +243,36 @@ def test_get_event_list_start_hour_filter(api_client, keyword, event):
     response = get_list_no_code_assert(api_client, data={'starts_after': '18:70:'})
     assert response.status_code == 400
 
-    response = get_list(api_client, data={'starts_before': '15:59'})
-    assert event.id not in [entry['id'] for entry in response.data['data']]
-    response = get_list(api_client, data={'starts_before': '16:30'})
-    assert event.id in [entry['id'] for entry in response.data['data']]
-    response = get_list(api_client, data={'starts_before': '17:30'})
-    assert event.id in [entry['id'] for entry in response.data['data']]
+    get_list_and_assert_events('starts_before=16:30', [event])
+    get_list_and_assert_events('starts_before=17:30', [event])
+    get_list_and_assert_events('starts_before=16:29', [])
 
 
 @pytest.mark.django_db
 def test_get_event_list_end_hour_filter(api_client, keyword, event):
-    event.start_time = datetime(2020, 1, 1, 13, 30).astimezone(pytz.timezone('Europe/Helsinki'))
-    event.end_time = datetime(2020, 1, 1, 16, 30).astimezone(pytz.timezone('Europe/Helsinki'))
+    event.start_time = datetime_zone_aware(2020, 1, 1, 13, 30)
+    event.end_time = datetime_zone_aware(2020, 1, 1, 16, 30)
     event.save()
+    get_list_and_assert_events('ends_after=16:30', [event])
+    get_list_and_assert_events('ends_after=17:30', [])
+    get_list_and_assert_events('ends_after=16:29', [event])
 
-    response = get_list(api_client, data={'ends_after': '15:59'})
-    assert event.id in [entry['id'] for entry in response.data['data']]
-    response = get_list(api_client, data={'ends_after': '16:30'})
-    assert event.id in [entry['id'] for entry in response.data['data']]
-    response = get_list(api_client, data={'ends_after': '17:30'})
-    assert event.id not in [entry['id'] for entry in response.data['data']]
-
-    response = get_list(api_client, data={'ends_before': '15:59'})
-    assert event.id not in [entry['id'] for entry in response.data['data']]
-    response = get_list(api_client, data={'ends_before': '16:30'})
-    assert event.id in [entry['id'] for entry in response.data['data']]
-    response = get_list(api_client, data={'ends_before': '17:30'})
-    assert event.id in [entry['id'] for entry in response.data['data']]
+    get_list_and_assert_events('ends_before=16:30', [event])
+    get_list_and_assert_events('ends_before=17:30', [event])
+    get_list_and_assert_events('ends_before=16:29', [])
 
 
 @pytest.mark.django_db
-def test_get_event_list_verify_keyword_filter(api_client, keyword, event):
+def test_get_event_list_verify_keyword_filter(api_client, keyword, event, event2):
     event.keywords.add(keyword)
-    response = get_list(api_client, data={'keyword': keyword.id})
-    assert event.id in [entry['id'] for entry in response.data['data']]
-    response = get_list(api_client, data={'keyword': 'unknown_keyword'})
-    assert event.id not in [entry['id'] for entry in response.data['data']]
+    get_list_and_assert_events(f'keyword={keyword.id}', [event])
 
 
 @pytest.mark.django_db
-def test_get_event_list_verify_keyword_or_filter(api_client, keyword, event):
+def test_get_event_list_verify_keyword_or_filter(api_client, keyword, event, event2):
     # "keyword_OR" filter should be the same as "keyword" filter
     event.keywords.add(keyword)
-    response = get_list(api_client, data={'keyword_OR': keyword.id})
-    assert event.id in [entry['id'] for entry in response.data['data']]
-    response = get_list(api_client, data={'keyword_OR': 'unknown_keyword'})
-    assert event.id not in [entry['id'] for entry in response.data['data']]
+    get_list_and_assert_events(f'keyword_OR={keyword.id}', [event])
 
 
 @pytest.mark.django_db
@@ -331,42 +280,30 @@ def test_get_event_list_verify_combine_keyword_and_keyword_or(api_client, keywor
     # If "keyword" and "keyword_OR" are both present "AND" them together
     event.keywords.add(keyword, keyword2)
     event2.keywords.add(keyword2)
-    response = get_list(api_client, data={'keyword': keyword.id, 'keyword_OR': keyword2.id})
-    assert event.id in [entry['id'] for entry in response.data['data']]
-    assert event2.id not in [entry['id'] for entry in response.data['data']]
+    get_list_and_assert_events(f'keyword={keyword.id}&keyword_OR={keyword2.id}', [event])
 
 
 @pytest.mark.django_db
 def test_get_event_list_verify_keyword_and(api_client, keyword, keyword2, event, event2):
     event.keywords.add(keyword)
     event2.keywords.add(keyword, keyword2)
-    response = get_list(api_client, data={'keyword_AND': ','.join([keyword.id, keyword2.id])})
-    assert event.id not in [entry['id'] for entry in response.data['data']]
-    assert event2.id in [entry['id'] for entry in response.data['data']]
+    get_list_and_assert_events(f'keyword_AND={keyword.id},{keyword2.id}', [event2])
 
     event2.keywords.remove(keyword2)
     event2.audience.add(keyword2)
-    response = get_list(api_client, data={'keyword_AND': ','.join([keyword.id, keyword2.id])})
-    assert event.id not in [entry['id'] for entry in response.data['data']]
-    assert event2.id in [entry['id'] for entry in response.data['data']]
+    get_list_and_assert_events(f'keyword_AND={keyword.id},{keyword2.id}', [event2])
 
 
 @pytest.mark.django_db
 def test_get_event_list_verify_keyword_negative_filter(api_client, keyword, keyword2, event, event2):
     event.keywords.set([keyword])
     event2.keywords.set([keyword2])
-    response = get_list(api_client, data={'keyword!': keyword.id})
-    assert event.id not in [entry['id'] for entry in response.data['data']]
-    assert event2.id in [entry['id'] for entry in response.data['data']]
-
-    response = get_list(api_client, data={'keyword!': ','.join([keyword.id, keyword2.id])})
-    assert event.id not in [entry['id'] for entry in response.data['data']]
-    assert event2.id not in [entry['id'] for entry in response.data['data']]
+    get_list_and_assert_events(f'keyword!={keyword.id}', [event2])
+    get_list_and_assert_events(f'keyword!={keyword.id},{keyword2.id}', [])
 
     event.keywords.set([])
     event.audience.set([keyword])
-    response = get_list(api_client, data={'keyword!': keyword.id})
-    assert event.id not in [entry['id'] for entry in response.data['data']]
+    get_list_and_assert_events(f'keyword!={keyword.id}', [event2])
 
 
 @pytest.mark.django_db
@@ -375,11 +312,8 @@ def test_get_event_list_verify_replaced_keyword_filter(api_client, keyword, keyw
     keyword.replaced_by = keyword2
     keyword.deleted = True
     keyword.save()
-    response = get_list(api_client, data={'keyword': keyword.id})
-    # if we asked for a replaced keyword, return events with the current keyword instead
-    assert event.id in [entry['id'] for entry in response.data['data']]
-    response = get_list(api_client, data={'keyword': 'unknown_keyword'})
-    assert event.id not in [entry['id'] for entry in response.data['data']]
+    get_list_and_assert_events(f'keyword={keyword.id}', [event])
+    get_list_and_assert_events('keyword=unknown_keyword', [])
 
 
 @pytest.mark.django_db
@@ -388,20 +322,8 @@ def test_get_event_list_verify_division_filter(api_client, event, event2, event3
     event.location.divisions.set([administrative_division])
     event2.location.divisions.set([administrative_division2])
 
-    # filter using one value
-    response = get_list(api_client, data={'division': administrative_division.ocd_id})
-    data = response.data['data']
-    assert len(data) == 1
-    assert event.id in [entry['id'] for entry in data]
-
-    # filter using two values
-    filter_value = '%s,%s' % (administrative_division.ocd_id, administrative_division2.ocd_id)
-    response = get_list(api_client, data={'division': filter_value})
-    data = response.data['data']
-    assert len(data) == 2
-    ids = [entry['id'] for entry in data]
-    assert event.id in ids
-    assert event2.id in ids
+    get_list_and_assert_events(f'division={administrative_division.ocd_id}', [event])
+    get_list_and_assert_events(f'division={administrative_division.ocd_id},{administrative_division2.ocd_id}', [event, event2])  # noqa E501
 
 
 @pytest.mark.django_db
@@ -411,15 +333,8 @@ def test_get_event_list_super_event_filters(api_client, event, event2):
     event2.super_event = event
     event2.save()
 
-    # fetch non-subevents
-    response = get_list(api_client, query_string='super_event=none')
-    assert len(response.data['data']) == 1
-    assert response.data['data'][0]['id'] == event.id
-
-    # fetch subevents
-    response = get_list(api_client, query_string='super_event='+event.id)
-    assert len(response.data['data']) == 1
-    assert response.data['data'][0]['id'] == event2.id
+    get_list_and_assert_events('super_event=none', [event])
+    get_list_and_assert_events(f'super_event={event.id}', [event2])
 
 
 @pytest.mark.django_db
@@ -429,15 +344,8 @@ def test_get_event_list_recurring_filters(api_client, event, event2):
     event2.super_event = event
     event2.save()
 
-    # fetch superevents
-    response = get_list(api_client, query_string='recurring=super')
-    assert len(response.data['data']) == 1
-    assert response.data['data'][0]['id'] == event.id
-
-    # fetch subevents
-    response = get_list(api_client, query_string='recurring=sub')
-    assert len(response.data['data']) == 1
-    assert response.data['data'][0]['id'] == event2.id
+    get_list_and_assert_events('recurring=super', [event])
+    get_list_and_assert_events('recurring=sub', [event2])
 
 
 @pytest.mark.django_db
@@ -449,22 +357,14 @@ def test_super_event_type_filter(api_client, event, event2):
 
     # "none" and "null" should return only the non super event
     for value in ('none', 'null'):
-        response = get_list(api_client, query_string='super_event_type=%s' % value)
-        ids = {e['id'] for e in response.data['data']}
-        assert ids == {event2.id}
+        get_list_and_assert_events(f'super_event_type={value}', [event2])
 
     # "recurring" should return only the recurring super event
-    response = get_list(api_client, query_string='super_event_type=recurring')
-    ids = {e['id'] for e in response.data['data']}
-    assert ids == {event.id}
+    get_list_and_assert_events('super_event_type=recurring', [event])
 
     # "recurring,none" should return both
-    response = get_list(api_client, query_string='super_event_type=recurring,none')
-    ids = {e['id'] for e in response.data['data']}
-    assert ids == {event.id, event2.id}
-
-    response = get_list(api_client, query_string='super_event_type=fwfiuwhfiuwhiw')
-    assert len(response.data['data']) == 0
+    get_list_and_assert_events('super_event_type=recurring,none', [event, event2])
+    get_list_and_assert_events('super_event_type=fwfiuwhfiuwhiw', [])
 
 
 @pytest.mark.django_db
@@ -499,34 +399,22 @@ def test_language_filter(api_client, event, event2, event3):
     event3.save()
 
     # Finnish should be the default language
-    response = get_list(api_client, query_string='language=fi')
-    ids = {e['id'] for e in response.data['data']}
-    assert ids == {event.id, event2.id, event3.id}
+    get_list_and_assert_events('language=fi', [event, event2, event3])
 
     # Swedish should have two events (matches in_language and name_sv)
-    response = get_list(api_client, query_string='language=sv')
-    ids = {e['id'] for e in response.data['data']}
-    assert ids == {event.id, event2.id}
+    get_list_and_assert_events('language=sv', [event, event2])
 
     # English should have one event (matches in_language)
-    response = get_list(api_client, query_string='language=en')
-    ids = {e['id'] for e in response.data['data']}
-    assert ids == {event2.id}
+    get_list_and_assert_events('language=en', [event2])
 
     # Russian should have one event (matches name_ru)
-    response = get_list(api_client, query_string='language=ru')
-    ids = {e['id'] for e in response.data['data']}
-    assert ids == {event3.id}
+    get_list_and_assert_events('language=ru', [event3])
 
     # Chinese should have no events
-    response = get_list(api_client, query_string='language=zh_hans')
-    ids = {e['id'] for e in response.data['data']}
-    assert ids == set()
+    get_list_and_assert_events('language=zh_hans', [])
 
     # Estonian should have one event (matches in_language), even without translations available
-    response = get_list(api_client, query_string='language=et')
-    ids = {e['id'] for e in response.data['data']}
-    assert ids == {event3.id}
+    get_list_and_assert_events('language=et', [event3])
 
 
 @pytest.mark.django_db
@@ -538,12 +426,7 @@ def test_event_list_filters(api_client, event, event2):
 
     for filter_values, filter_name in filters:
         q = ','.join(filter_values)
-        response = get_list(api_client, query_string='%s=%s' % (filter_name, q))
-        data = response.data['data']
-        assert(len(data) == 2)
-        ids = [e['id'] for e in data]
-        assert event.id in ids
-        assert event2.id in ids
+        get_list_and_assert_events(f'{filter_name}={q}', [event, event2])
 
 
 @pytest.mark.django_db
@@ -554,11 +437,7 @@ def test_event_list_publisher_ancestor_filter(api_client, event, event2, organiz
     event.save()
     event2.publisher = organization3
     event2.save()
-    response = get_list(api_client, query_string=f'publisher_ancestor={organization.id}')
-    data = response.data['data']
-    assert(len(data) == 1)
-    ids = [e['id'] for e in data]
-    assert event.id in ids
+    get_list_and_assert_events(f'publisher_ancestor={organization.id}', [event])
 
 
 @pytest.mark.django_db
@@ -570,79 +449,37 @@ def test_publication_status_filter(api_client, event, event2, user, organization
     event2.save()
 
     api_client.force_authenticate(user=user)
-
-    response = get_list(api_client, query_string='show_all=true&publication_status=public')
-    ids = {e['id'] for e in response.data['data']}
-    assert event.id in ids
-    assert event2.id not in ids
+    get_list_and_assert_events('show_all=true&publication_status=public', [event], api_client)
 
     # cannot see drafts from other organizations
-    response = get_list(api_client, query_string='show_all=true&publication_status=draft')
-    ids = {e['id'] for e in response.data['data']}
-    assert event2.id not in ids
-    assert event.id not in ids
+    get_list_and_assert_events('show_all=true&publication_status=draft', [], api_client)
 
     event2.publisher = organization
     event2.data_source = data_source
     event2.save()
-
-    response = get_list(api_client, query_string='show_all=true&publication_status=draft')
-    ids = {e['id'] for e in response.data['data']}
-    assert event2.id in ids
-    assert event.id not in ids
+    get_list_and_assert_events('show_all=true&publication_status=draft', [event2], api_client)
 
 
 @pytest.mark.django_db
 def test_event_status_filter(api_client, event, event2, event3, event4, user, organization, data_source):
     event.event_status = Event.Status.SCHEDULED
     event.save()
-
     event2.event_status = Event.Status.RESCHEDULED
     event2.save()
-
     event3.event_status = Event.Status.CANCELLED
     event3.save()
-
     event4.event_status = Event.Status.POSTPONED
     event4.save()
-
-    response = get_list(api_client, query_string='event_status=eventscheduled')
-    ids = {e['id'] for e in response.data['data']}
-    assert event.id in ids
-    assert event2.id not in ids
-    assert event3.id not in ids
-    assert event4.id not in ids
-
-    response = get_list(api_client, query_string='event_status=eventrescheduled')
-    ids = {e['id'] for e in response.data['data']}
-    assert event.id not in ids
-    assert event2.id in ids
-    assert event3.id not in ids
-    assert event4.id not in ids
-
-    response = get_list(api_client, query_string='event_status=eventcancelled')
-    ids = {e['id'] for e in response.data['data']}
-    assert event.id not in ids
-    assert event2.id not in ids
-    assert event3.id in ids
-    assert event4.id not in ids
-
-    response = get_list(api_client, query_string='event_status=eventpostponed')
-    ids = {e['id'] for e in response.data['data']}
-    assert event.id not in ids
-    assert event2.id not in ids
-    assert event3.id not in ids
-    assert event4.id in ids
+    get_list_and_assert_events('event_status=eventscheduled', [event])
+    get_list_and_assert_events('event_status=eventrescheduled', [event2])
+    get_list_and_assert_events('event_status=eventcancelled', [event3])
+    get_list_and_assert_events('event_status=eventpostponed', [event4])
 
 
 @pytest.mark.django_db
 def test_admin_user_filter(api_client, event, event2, user):
     api_client.force_authenticate(user=user)
-
-    response = get_list(api_client, query_string='admin_user=true')
-    ids = {e['id'] for e in response.data['data']}
-    assert event.id in ids
-    assert event2.id not in ids
+    get_list_and_assert_events('admin_user=true', [event], api_client)
 
 
 @pytest.mark.django_db
@@ -727,11 +564,7 @@ def test_event_list_show_deleted_param(api_client, event, event2, user):
     assert event_data['name']['fi'] == 'POISTETTU'
     assert event_data['name']['sv'] == 'RADERAD'
     assert event_data['name']['en'] == 'DELETED'
-
-    response = get_list(api_client)
-    assert response.status_code == 200
-    assert event.id not in {e['id'] for e in response.data['data']}
-    assert event2.id in {e['id'] for e in response.data['data']}
+    get_list_and_assert_events('', [event2], api_client)
 
 
 @pytest.mark.django_db
@@ -753,109 +586,70 @@ def test_event_list_deleted_param(api_client, event, event2, user):
     assert event_data['name']['fi'] == 'POISTETTU'
     assert event_data['name']['sv'] == 'RADERAD'
     assert event_data['name']['en'] == 'DELETED'
-
-    response = get_list(api_client)
-    assert response.status_code == 200
-    assert event.id not in {e['id'] for e in response.data['data']}
-    assert event2.id in {e['id'] for e in response.data['data']}
+    get_list_and_assert_events('', [event2], api_client)
 
 
 @pytest.mark.django_db
 def test_event_list_is_free_filter(api_client, event, event2, event3, offer):
-    response = get_list(api_client, query_string='is_free=true')
-    assert {event2.id} == {e['id'] for e in response.data['data']}
-
-    response = get_list(api_client, query_string='is_free=false')
-    assert {event.id, event3.id} == {e['id'] for e in response.data['data']}
+    get_list_and_assert_events('is_free=true', [event2])
+    get_list_and_assert_events('is_free=false', [event, event3])
 
 
 @pytest.mark.django_db
 def test_start_end_iso_date(api_client, make_event):
-    parse_date = dateutil.parser.parse
-    event1 = make_event('1', parse_date('2020-02-19 23:00:00+02'), parse_date('2020-02-19 23:30:00+02'))
-    event2 = make_event('2', parse_date('2020-02-19 23:30:00+02'), parse_date('2020-02-20 00:00:00+02'))
-    event3 = make_event('3', parse_date('2020-02-19 23:30:00+02'), parse_date('2020-02-20 00:30:00+02'))
-    event4 = make_event('4', parse_date('2020-02-20 00:00:00+02'), parse_date('2020-02-20 00:30:00+02'))
-    event5 = make_event('5', parse_date('2020-02-20 12:00:00+02'), parse_date('2020-02-20 13:00:00+02'))
-    event6 = make_event('6', parse_date('2020-02-21 12:00:00+02'), parse_date('2020-02-21 13:00:00+02'))
+    event1 = make_event('1', parser.parse('2020-02-19 23:00:00+02'), parser.parse('2020-02-19 23:30:00+02'))
+    event2 = make_event('2', parser.parse('2020-02-19 23:30:00+02'), parser.parse('2020-02-20 00:00:00+02'))
+    event3 = make_event('3', parser.parse('2020-02-19 23:30:00+02'), parser.parse('2020-02-20 00:30:00+02'))
+    event4 = make_event('4', parser.parse('2020-02-20 00:00:00+02'), parser.parse('2020-02-20 00:30:00+02'))
+    event5 = make_event('5', parser.parse('2020-02-20 12:00:00+02'), parser.parse('2020-02-20 13:00:00+02'))
+    event6 = make_event('6', parser.parse('2020-02-21 12:00:00+02'), parser.parse('2020-02-21 13:00:00+02'))
     event7 = make_event('7')   # postponed event
 
     # Start parameter
-
-    response = get_list(api_client, query_string='start=2020-02-19')
-    expected_events = [event1, event2, event3, event4, event5, event6, event7]
-    assert_events_in_response(expected_events, response)
+    get_list_and_assert_events('start=2020-02-19', [event1, event2, event3, event4, event5, event6, event7])
 
     response = get_list(api_client, query_string='start=2020-02-20')
     expected_events = [event3, event4, event5, event6, event7]
     assert_events_in_response(expected_events, response)
+    get_list_and_assert_events('start=2020-02-20', [event3, event4, event5, event6, event7])
 
     # End parameter
-
-    response = get_list(api_client, query_string='end=2020-02-19')
-    expected_events = [event1, event2, event3, event4]
-    assert_events_in_response(expected_events, response)
-
-    response = get_list(api_client, query_string='end=2020-02-20')
-    expected_events = [event1, event2, event3, event4, event5]
-    assert_events_in_response(expected_events, response)
+    get_list_and_assert_events('end=2020-02-19', [event1, event2, event3, event4])
+    get_list_and_assert_events('end=2020-02-20', [event1, event2, event3, event4, event5])
 
     # Start and end parameters
-
-    response = get_list(api_client, query_string='start=2020-02-20&end=2020-02-20')
-    expected_events = [event3, event4, event5]
-    assert_events_in_response(expected_events, response)
-
-    response = get_list(api_client, query_string='start=2020-02-19&end=2020-02-21')
-    expected_events = [event1, event2, event3, event4, event5, event6]
-    assert_events_in_response(expected_events, response)
+    get_list_and_assert_events('start=2020-02-20&end=2020-02-20', [event3, event4, event5])
+    get_list_and_assert_events('start=2020-02-19&end=2020-02-21', [event1, event2, event3, event4, event5, event6])
 
 
 @pytest.mark.django_db
 def test_start_end_iso_date_time(api_client, make_event):
-    parse_date = dateutil.parser.parse
-    event1 = make_event('1', parse_date('2020-02-19 10:00:00+02'), parse_date('2020-02-19 11:22:33+02'))
-    event2 = make_event('2', parse_date('2020-02-19 11:22:33+02'), parse_date('2020-02-19 22:33:44+02'))
-    event3 = make_event('3', parse_date('2020-02-20 11:22:33+02'), parse_date('2020-02-20 22:33:44+02'))
+    event1 = make_event('1', parser.parse('2020-02-19 10:00:00+02'), parser.parse('2020-02-19 11:22:33+02'))
+    event2 = make_event('2', parser.parse('2020-02-19 11:22:33+02'), parser.parse('2020-02-19 22:33:44+02'))
+    event3 = make_event('3', parser.parse('2020-02-20 11:22:33+02'), parser.parse('2020-02-20 22:33:44+02'))
     event4 = make_event('4')   # postponed event
 
     # Start parameter
-
-    response = get_list(api_client, query_string='start=2020-02-19T11:22:32')
-    expected_events = [event1, event2, event3, event4]
-    assert_events_in_response(expected_events, response)
-
-    response = get_list(api_client, query_string='start=2020-02-19T11:22:33')
-    expected_events = [event2, event3, event4]
-    assert_events_in_response(expected_events, response)
+    get_list_and_assert_events('start=2020-02-19T11:22:32', [event1, event2, event3, event4])
+    get_list_and_assert_events('start=2020-02-19T11:22:33', [event2, event3, event4])
 
     # End parameter
-
-    response = get_list(api_client, query_string='end=2020-02-19T11:22:32')
-    expected_events = [event1]
-    assert_events_in_response(expected_events, response)
-
-    response = get_list(api_client, query_string='end=2020-02-19T11:22:33')
-    expected_events = [event1, event2]
-    assert_events_in_response(expected_events, response)
+    get_list_and_assert_events('end=2020-02-19T11:22:32', [event1])
+    get_list_and_assert_events('end=2020-02-19T11:22:33', [event1, event2])
 
     # Start and end parameters
-
-    response = get_list(api_client, query_string='start=2020-02-19T11:22:33&end=2020-02-19T11:22:33')
-    expected_events = [event2]
-    assert_events_in_response(expected_events, response)
+    get_list_and_assert_events('start=2020-02-19T11:22:33&end=2020-02-19T11:22:33', [event2])
 
 
 @pytest.mark.django_db
 def test_start_end_today(api_client, make_event):
-    parse_date = dateutil.parser.parse
-    event1 = make_event('1', parse_date('2020-02-19 23:00:00+02'), parse_date('2020-02-19 23:30:00+02'))
-    event2 = make_event('2', parse_date('2020-02-19 23:30:00+02'), parse_date('2020-02-20 00:00:00+02'))
-    event3 = make_event('3', parse_date('2020-02-19 23:30:00+02'), parse_date('2020-02-20 00:30:00+02'))
-    event4 = make_event('4', parse_date('2020-02-20 00:00:00+02'), parse_date('2020-02-20 00:30:00+02'))
-    event5 = make_event('5', parse_date('2020-02-20 12:00:00+02'), parse_date('2020-02-20 13:00:00+02'))
-    event6 = make_event('6', parse_date('2020-02-21 00:00:00+02'), parse_date('2020-02-21 01:00:00+02'))
-    event7 = make_event('7', parse_date('2020-02-21 12:00:00+02'), parse_date('2020-02-21 13:00:00+02'))
+    event1 = make_event('1', parser.parse('2020-02-19 23:00:00+02'), parser.parse('2020-02-19 23:30:00+02'))
+    event2 = make_event('2', parser.parse('2020-02-19 23:30:00+02'), parser.parse('2020-02-20 00:00:00+02'))
+    event3 = make_event('3', parser.parse('2020-02-19 23:30:00+02'), parser.parse('2020-02-20 00:30:00+02'))
+    event4 = make_event('4', parser.parse('2020-02-20 00:00:00+02'), parser.parse('2020-02-20 00:30:00+02'))
+    event5 = make_event('5', parser.parse('2020-02-20 12:00:00+02'), parser.parse('2020-02-20 13:00:00+02'))
+    event6 = make_event('6', parser.parse('2020-02-21 00:00:00+02'), parser.parse('2020-02-21 01:00:00+02'))
+    event7 = make_event('7', parser.parse('2020-02-21 12:00:00+02'), parser.parse('2020-02-21 13:00:00+02'))
     event8 = make_event('8')   # postponed event
 
     def times():
@@ -864,123 +658,80 @@ def test_start_end_today(api_client, make_event):
         yield '2020-02-20 23:59:59+02'
 
     # Start parameter
-
     with freeze_time(times):
-        response = get_list(api_client, query_string='start=today')
-        expected_events = [event3, event4, event5, event6, event7, event8]
-        assert_events_in_response(expected_events, response)
+        get_list_and_assert_events('start=today', [event3, event4, event5, event6, event7, event8])
 
     # End parameter
-
     with freeze_time(times):
-        response = get_list(api_client, query_string='end=today')
-        expected_events = [event1, event2, event3, event4, event5, event6]
-        assert_events_in_response(expected_events, response)
+        get_list_and_assert_events('end=today', [event1, event2, event3, event4, event5, event6])
 
     # Start and end parameters
-
     with freeze_time(times):
-        response = get_list(api_client, query_string='start=today&end=today')
-        expected_events = [event3, event4, event5, event6]
-        assert_events_in_response(expected_events, response)
+        get_list_and_assert_events('start=today&end=today', [event3, event4, event5, event6])
 
 
 @pytest.mark.django_db
 def test_start_end_now(api_client, make_event):
-    parse_date = dateutil.parser.parse
-    event1 = make_event('1', parse_date('2020-02-19 23:00:00+02'), parse_date('2020-02-19 23:30:00+02'))
-    event2 = make_event('2', parse_date('2020-02-19 23:30:00+02'), parse_date('2020-02-20 00:00:00+02'))
-    event3 = make_event('3', parse_date('2020-02-19 23:30:00+02'), parse_date('2020-02-20 00:30:00+02'))
-    event4 = make_event('4', parse_date('2020-02-20 00:00:00+02'), parse_date('2020-02-20 00:30:00+02'))
-    event5 = make_event('5', parse_date('2020-02-20 12:00:00+02'), parse_date('2020-02-20 13:00:00+02'))
-    event6 = make_event('6', parse_date('2020-02-21 00:00:00+02'), parse_date('2020-02-21 01:00:00+02'))
-    event7 = make_event('7', parse_date('2020-02-21 12:00:00+02'), parse_date('2020-02-21 13:00:00+02'))
+    event1 = make_event('1', parser.parse('2020-02-19 23:00:00+02'), parser.parse('2020-02-19 23:30:00+02'))
+    event2 = make_event('2', parser.parse('2020-02-19 23:30:00+02'), parser.parse('2020-02-20 00:00:00+02'))
+    event3 = make_event('3', parser.parse('2020-02-19 23:30:00+02'), parser.parse('2020-02-20 00:30:00+02'))
+    event4 = make_event('4', parser.parse('2020-02-20 00:00:00+02'), parser.parse('2020-02-20 00:30:00+02'))
+    event5 = make_event('5', parser.parse('2020-02-20 12:00:00+02'), parser.parse('2020-02-20 13:00:00+02'))
+    event6 = make_event('6', parser.parse('2020-02-21 00:00:00+02'), parser.parse('2020-02-21 01:00:00+02'))
+    event7 = make_event('7', parser.parse('2020-02-21 12:00:00+02'), parser.parse('2020-02-21 13:00:00+02'))
     event8 = make_event('8')   # postponed event
 
     # Start parameter
-
     with freeze_time('2020-02-20 00:30:00+02'):
-        response = get_list(api_client, query_string='start=now')
-        expected_events = [event5, event6, event7, event8]
-        assert_events_in_response(expected_events, response)
+        get_list_and_assert_events('start=now', [event5, event6, event7, event8])
 
     # End parameter
-
     with freeze_time('2020-02-20 12:00:00+02'):
-        response = get_list(api_client, query_string='end=now')
-        expected_events = [event1, event2, event3, event4, event5]
-        assert_events_in_response(expected_events, response)
+        get_list_and_assert_events('end=now', [event1, event2, event3, event4, event5])
 
     # Start and end parameters
-
     with freeze_time('2020-02-20 12:00:00+02'):
-        response = get_list(api_client, query_string='start=now&end=now')
-        expected_events = [event5]
-        assert_events_in_response(expected_events, response)
+        get_list_and_assert_events('start=now&end=now', [event5])
 
 
 @pytest.mark.django_db
 def test_start_end_events_without_endtime(api_client, make_event):
-    parse_date = dateutil.parser.parse
-    event1 = make_event('1', parse_date('2020-02-19 23:00:00+02'))
-    event2 = make_event('2', parse_date('2020-02-20 12:00:00+02'))
-    event3 = make_event('3', parse_date('2020-02-21 12:34:56+02'))
+    event1 = make_event('1', parser.parse('2020-02-19 23:00:00+02'))
+    event2 = make_event('2', parser.parse('2020-02-20 12:00:00+02'))
+    event3 = make_event('3', parser.parse('2020-02-21 12:34:56+02'))
     event4 = make_event('4')   # postponed event
 
     # Start parameter
-
-    response = get_list(api_client, query_string='start=2020-02-19T23:00:00')
-    expected_events = [event1, event2, event3, event4]
-    assert_events_in_response(expected_events, response)
-
-    response = get_list(api_client, query_string='start=2020-02-20T01:00:00')
-    expected_events = [event2, event3, event4]
-    assert_events_in_response(expected_events, response)
+    get_list_and_assert_events('start=2020-02-19T23:00:00', [event1, event2, event3, event4])
+    get_list_and_assert_events('start=2020-02-20T01:00:00', [event2, event3, event4])
 
     # End parameter
-
-    response = get_list(api_client, query_string='end=2020-02-20T12:00:00')
-    expected_events = [event1, event2]
-    assert_events_in_response(expected_events, response)
-
-    response = get_list(api_client, query_string='end=2020-02-21T23:00:00')
-    expected_events = [event1, event2, event3]
-    assert_events_in_response(expected_events, response)
+    get_list_and_assert_events('end=2020-02-20T12:00:00', [event1, event2])
+    get_list_and_assert_events('end=2020-02-21T23:00:00', [event1, event2, event3])
 
     # Start and end parameters
-
-    response = get_list(api_client, query_string='start=2020-02-19T23:00:00&end=2020-02-21T12:34:56')
-    expected_events = [event1, event2, event3]
-    assert_events_in_response(expected_events, response)
-
-    response = get_list(api_client, query_string='start=2020-02-19T23:00:01&end=2020-02-21T12:34:55')
-    expected_events = [event2]
-    assert_events_in_response(expected_events, response)
+    get_list_and_assert_events('start=2020-02-19T23:00:00&end=2020-02-21T12:34:56', [event1, event2, event3])  # noqa E501
+    get_list_and_assert_events('start=2020-02-19T23:00:01&end=2020-02-21T12:34:55', [event2])
 
     # Kulke special case: multiple day event but no specific start or end times, only dates
-    event1.start_time = parse_date('2020-02-19 00:00:00+02')
-    event1.end_time = parse_date('2020-02-21 00:00:00+02')
+    event1.start_time = parser.parse('2020-02-19 00:00:00+02')
+    event1.end_time = parser.parse('2020-02-21 00:00:00+02')
     event1.has_start_time = False
     event1.has_end_time = False
     event1.save()
     # Kulke special case: single day event, specific start but no end time
-    event2.start_time = parse_date('2020-02-20 18:00:00+02')
-    event2.end_time = parse_date('2020-02-21 00:00:00+02')
+    event2.start_time = parser.parse('2020-02-20 18:00:00+02')
+    event2.end_time = parser.parse('2020-02-21 00:00:00+02')
     event2.has_start_time = True
     event2.has_end_time = False
     event2.save()
 
     # Start parameter for Kulke special case
-
-    response = get_list(api_client, query_string='start=2020-02-20T12:00:00')
     # long event (no exact start) that already started should be included
-    expected_events = [event1, event2, event3, event4]
-    assert_events_in_response(expected_events, response)
+    get_list_and_assert_events('start=2020-02-20T12:00:00', [event1, event2, event3, event4])
 
-    response = get_list(api_client, query_string='start=2020-02-20T21:00:00')
     # short event (exact start) that already started should not be included
-    expected_events = [event1, event3, event4]
-    assert_events_in_response(expected_events, response)
+    get_list_and_assert_events('start=2020-02-20T21:00:00', [event1, event3, event4])
 
 
 @pytest.mark.django_db
@@ -991,12 +742,11 @@ def test_keyword_and_text(api_client, event, event2, keyword):
     event.save()
     event2.description_fi = 'lapset'
     event2.save()
-    response = get_list(api_client, query_string='combined_text=lapset')
-    assert_events_in_response([event, event2], response)
+    get_list_and_assert_events('combined_text=lapset', [event, event2])
+
     event.description_fi = 'lapset ja aikuiset'
     event.save()
-    response = get_list(api_client, query_string='combined_text=lapset,aikuiset')
-    assert_events_in_response([event], response)
+    get_list_and_assert_events('combined_text=lapset,aikuiset', [event])
 
 
 @pytest.mark.django_db
@@ -1008,14 +758,12 @@ def test_keywordset_search(api_client, event, event2, event3, keyword, keyword2,
     event2.save()
     event3.keywords.add(keyword, keyword2)
     event3.save()
-    response = get_list(api_client, query_string='keyword_set_AND=set:1,set:2')
-    assert_events_in_response([event, event2], response)
-    response = get_list(api_client, query_string='keyword_set_OR=set:1,set:2')
-    assert_events_in_response([event, event2, event3], response)
+    get_list_and_assert_events('keyword_set_AND=set:1,set:2', [event, event2])
+    get_list_and_assert_events('keyword_set_OR=set:1,set:2', [event, event2, event3])
+
     event3.keywords.remove(keyword, keyword2)
     event3.save()
-    response = get_list(api_client, query_string='keyword_set_AND=set:1,set:2')
-    assert_events_in_response([event, event2], response)
+    get_list_and_assert_events('keyword_set_AND=set:1,set:2', [event, event2])
 
 
 @pytest.mark.django_db
@@ -1028,20 +776,24 @@ def test_keyword_OR_set_search(api_client, event, event2, event3, keyword, keywo
     event3.keywords.add(keyword, keyword2)
     event3.save()
     load = f'keyword_OR_set1={keyword.id},{keyword2.id}&keyword_OR_set2={keyword3.id}'
-    response = get_list(api_client, query_string=load)
-    assert_events_in_response([event, event2], response)
+    get_list_and_assert_events(load, [event, event2])
 
 
 @pytest.mark.django_db
 def test_event_get_by_type(api_client, event, event2, event3):
     #  default type is General, only general events should be present in the default search
-    event2.type_id = 2
+    event2.type_id = Event.Type_Id.COURSE
     event2.save()
-    event3.type_id = 3
+    event3.type_id = Event.Type_Id.VOLUNTEERING
     event3.save()
-    get_list_and_assert_events(query='', events=[event], api_client=api_client)
-    get_list_and_assert_events(query='event_type=general', events=[event], api_client=api_client)
-    get_list_and_assert_events(query='event_type=general,course', events=[event, event2], api_client=api_client)
-    get_list_and_assert_events(query='event_type=course,volunteering', events=[event2, event3], api_client=api_client)
+    get_list_and_assert_events('', [event])
+    get_list_and_assert_events('event_type=general', [event])
+    get_list_and_assert_events('event_type=general,course', [event, event2])
+    get_list_and_assert_events('event_type=course,volunteering', [event2, event3])
     response = get_list_no_code_assert(api_client, query_string='event_type=sometypohere')
     assert response.status_code == 400
+
+
+@pytest.mark.django_db
+def test_event_get_by_id(api_client, event, event2, event3):
+    get_list_and_assert_events(f'ids={event.id},{event2.id}', [event, event2])

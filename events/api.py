@@ -1939,6 +1939,10 @@ def _filter_event_queryset(queryset, params, srs=None):
 
         queryset = queryset.filter(qset)
 
+    val = params.get('ids', None)
+    if val:
+        queryset = queryset.filter(id__in=val.strip('/').split(','))
+
     val = params.get('event_type', None)
     if val:
         vals = val.lower().split(',')
@@ -1989,6 +1993,8 @@ def _filter_event_queryset(queryset, params, srs=None):
 
     if start:
         dt = utils.parse_time(start, is_start=True)[0]
+        if not dt.tzinfo:
+            dt = dt.astimezone(pytz.timezone('UTC'))
         # only return events with specified end times, or unspecified start times, during the whole of the event
         # this gets of rid pesky one-day events with no known end time (but known start) after they started
         queryset = queryset.filter(Q(end_time__gt=dt, has_end_time=True) |
@@ -1998,6 +2004,8 @@ def _filter_event_queryset(queryset, params, srs=None):
 
     if end:
         dt = utils.parse_time(end, is_start=False)[0]
+        if not dt.tzinfo:
+            dt = dt.astimezone(pytz.timezone('UTC'))
         queryset = queryset.filter(Q(end_time__lt=dt) | Q(start_time__lte=dt))
 
     val = params.get('bbox', None)
