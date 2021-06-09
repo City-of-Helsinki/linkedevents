@@ -1,6 +1,10 @@
+from datetime import datetime
+
+import pytz
+from django.conf import settings
 from rest_framework.reverse import reverse
-from rest_framework.test import APIRequestFactory
 from rest_framework.settings import api_settings
+from rest_framework.test import APIRequestFactory
 
 
 def assert_event_data_is_equal(d1, d2, version='v1'):
@@ -139,3 +143,7 @@ def put_event(api_client, event, event_data):
     response = api_client.put(url, event_data, format='json')
     assert response.status_code == 200, '{} {}'.format(response.status_code, response.data)
     return response
+
+
+def datetime_zone_aware(year, month, day, hour, minute):
+    return datetime(year, month, day, hour, minute).astimezone(pytz.timezone(settings.TIME_ZONE))

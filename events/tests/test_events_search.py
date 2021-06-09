@@ -1,17 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import datetime
+
+import haystack
 from django.conf import settings
 from django.test import TestCase
-import haystack
-import datetime
+from pytz import timezone
 # from haystack.management.commands import rebuild_index, clear_index
 from rest_framework.test import APIClient
 
 from ..models import Event
-
 from .common import TestDataMixin
-
 
 # Make sure we don't overwrite our main indices
 for key, val in settings.HAYSTACK_CONNECTIONS.items():
@@ -35,8 +35,8 @@ class EventSearchTests(TestCase, TestDataMixin):
         self.dummy = Event(name='dummy event',
                            data_source=self.test_ds,
                            publisher=self.test_org,
-                           start_time=datetime.datetime.now(),
-                           end_time=datetime.datetime.now()
+                           start_time=datetime.datetime.now().astimezone(timezone('UTC')),
+                           end_time=datetime.datetime.now().astimezone(timezone('UTC')),
                            )
         self.dummy.save()
 

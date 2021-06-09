@@ -1,16 +1,16 @@
-import pytest
-import pytz
 import re
+from datetime import datetime, timedelta
+from html import unescape
+from unittest.mock import MagicMock
 
 import dateutil.parser
-from datetime import datetime, timedelta
-from html.parser import HTMLParser
+import pytest
+import pytz
+
 from events.importer.mikkelinyt import MikkeliNytImporter
-from unittest.mock import MagicMock
 
 from .utils import get
 from .utils import versioned_reverse as reverse
-
 
 # === util methods ===
 
@@ -61,7 +61,7 @@ def assert_imported_time(mikkelinyt_event_time, api_event_time):
 
 def strip_html(text):
     result = re.sub(r"\<.*?>", " ", text, 0, re.MULTILINE)
-    result = HTMLParser().unescape(result)
+    result = unescape(result)
     result = " ".join(result.split())
     return result.strip()
 
@@ -82,8 +82,8 @@ def mikkelinyt_event_1():
         "name": "Test event 123456",
         "description": "Event 123456 for testing",
         "niceDatetime": "2.1.2020 - 2.1.2021 klo 14:00 - 16:20",
-        "start": get_mikkelinyt_formatted_time(datetime.now() + timedelta(hours=1)),
-        "end": get_mikkelinyt_formatted_time(datetime.now() + timedelta(days=10)),
+        "start": get_mikkelinyt_formatted_time((datetime.now() + timedelta(hours=1)).astimezone(pytz.timezone('UTC'))),
+        "end": get_mikkelinyt_formatted_time((datetime.now() + timedelta(days=10)).astimezone(pytz.timezone('UTC'))),
         "city": "<span class=\"City\">Example</span>",
         "place": "<span class=\"place\">Example place</span>",
         "address": "<span class=\"Address\">Example street 1</span>",
@@ -114,8 +114,8 @@ def mikkelinyt_event_2():
         "name": "Test event 223456",
         "description": "Event 223456 for testing\r\n<br />\r\n with linebreaks!",
         "niceDatetime": "2.1.2020 - 2.1.2020 klo 14:00 - 16:20",
-        "start": get_mikkelinyt_formatted_time(datetime.now() + timedelta(hours=1)),
-        "end": get_mikkelinyt_formatted_time(datetime.now() + timedelta(hours=2)),
+        "start": get_mikkelinyt_formatted_time((datetime.now() + timedelta(hours=1))),
+        "end": get_mikkelinyt_formatted_time((datetime.now() + timedelta(hours=2))),
         "city": "<span class=\"City\">Example</span>",
         "place": "<span class=\"place\">Example place</span>",
         "address": "<span class=\"Address\">Example street 1</span>",
@@ -169,8 +169,8 @@ def test_import_mikkelinyt_events_removed(api_client, mikkelinyt_event_1, mikkel
     assert_imported_mikkelinyt_event(get_event(api_client, event_2_id), mikkelinyt_event_2)
 
     importer2 = MikkeliNytImporter({'verbosity': True, 'cached': False})
-    importer2.items_from_url = MagicMock(return_value=[mikkelinyt_event_1])
     importer2.setup()
+    importer2.items_from_url = MagicMock(return_value=[mikkelinyt_event_1])
     importer2.import_events()
 
     assert_imported_mikkelinyt_event(get_event(api_client, event_1_id), mikkelinyt_event_1)

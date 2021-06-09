@@ -1,24 +1,23 @@
 # -*- coding: utf-8 -*-
-from datetime import datetime, timedelta
 from copy import deepcopy
-from dateutil.parser import parse as dateutil_parse
-
-import pytz
-from django.utils import timezone
-from django.core.management import call_command
+from datetime import datetime, timedelta
 
 import pytest
+import pytz
+from dateutil.parser import parse as dateutil_parse
+from django.conf import settings
+from django.core.management import call_command
+from django.utils import timezone
 
 from events.auth import ApiKeyUser
+from events.models import Event, Keyword, Place
+from events.tests.test_event_post import create_with_post
+from events.tests.utils import assert_event_data_is_equal
+
 from .utils import versioned_reverse as reverse
 
-from events.tests.utils import assert_event_data_is_equal
-from events.tests.test_event_post import create_with_post
-from events.models import Event, Keyword, Place
-from django.conf import settings
-
-
 # === util methods ===
+
 
 def update_with_put(api_client, event_id, event_data, credentials=None):
     if credentials:
@@ -253,7 +252,9 @@ def test__update_an_event_with_naive_datetime(api_client, minimal_event_dict, us
     data2['start_time'] = pytz.utc.localize(dateutil_parse(data2['start_time'])).isoformat().replace('+00:00', 'Z')
     data2['event_status'] = 'EventRescheduled'
 
-    # assert
+    # last modified times cannot be equal as the event was updated
+    data2.pop('last_modified_time')
+    response2.data.pop('last_modified_time')
     assert_event_data_is_equal(data2, response2.data)
 
 
