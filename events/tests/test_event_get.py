@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
+from datetime import datetime, timedelta
+
 import pytest
+import pytz
 from dateutil import parser
 from django.conf import settings
 from django.contrib.gis.gdal import CoordTransform, SpatialReference
@@ -797,3 +800,39 @@ def test_event_get_by_type(api_client, event, event2, event3):
 @pytest.mark.django_db
 def test_event_get_by_id(api_client, event, event2, event3):
     get_list_and_assert_events(f'ids={event.id},{event2.id}', [event, event2])
+
+
+@pytest.mark.django_db
+def test_event_get_superevent_that_has_started_but_not_ended(api_client, event, event2, event3, event4, make_event):
+    '''The query selects the super events that have already started, but not ended yet, i.e. the super-events that have
+    sub-events both in the past and in the future.
+    '''
+    yesterday = datetime.now().astimezone(pytz.timezone('UTC')) - timedelta(days=1)
+    tomorrow = datetime.now().astimezone(pytz.timezone('UTC')) + timedelta(days=1)
+
+    event.super_event_type = 'recurring'
+    event2.super_event_type = 'recurring'
+
+    event3.start_time = yesterday
+    event3.end_time = yesterday + timedelta(hours=1)
+    event4.start_time = tomorrow
+    event4.end_time = tomorrow + timedelta(hours=1)
+    event3.super_event = event
+    event4.super_event = event
+
+    event5 = make_event('5', tomorrow, tomorrow + timedelta(hours=1))
+    event6 = make_event('6', tomorrow, tomorrow + timedelta(hours=1))
+    event5.super_event = event2
+    event6.super_event = event2
+
+    event9 = make_event('9', yesterday, tomorrow + timedelta(hours=1))
+    event9.super_event_type = 'recurring'
+    event7 = make_event('7', yesterday, yesterday + timedelta(hours=1))
+    event8 = make_event('8', yesterday, yesterday + timedelta(hours=1))
+    event7.super_event = event9
+    event8.super_event = event9
+
+    events = [event, event2, event3, event4, event5, event6, event7, event8, event9]
+    Event.objects.bulk_update(events, ['start_time', 'end_time', 'super_event_type', 'super_event'])
+
+    get_list_and_assert_events('rolling=true', [event])

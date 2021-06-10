@@ -20,7 +20,7 @@ from django.conf import settings
 from django.contrib.postgres.search import SearchQuery, TrigramSimilarity
 from django.core.cache import caches
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q, QuerySet
+from django.db.models import Q, QuerySet, Subquery
 from django.db.models.functions import Greatest
 from django.db.transaction import atomic
 from django.db.utils import IntegrityError
@@ -1762,6 +1762,15 @@ def _filter_event_queryset(queryset, params, srs=None):
     """
     # Filter by string (case insensitive). This searches from all fields
     # which are marked translatable in translation.py
+    val = params.get('rolling', None)
+    if val and validate_bool(val, 'rolling'):
+        passed = Event.objects.exclude(super_event=None).filter(start_time__lte=datetime.now()
+                                                                                .astimezone(pytz.timezone('UTC'))  # noqa E127
+                                                                                ).values_list('super_event__pk')  # noqa E124
+        not_yet = Event.objects.exclude(super_event=None).filter(start_time__gte=datetime.now()
+                                                                                 .astimezone(pytz.timezone('UTC'))  # noqa E127    
+                                                                                 ).values_list('super_event__pk')  # noqa E124
+        queryset = queryset.filter(Q(pk__in=Subquery(passed)) & Q(pk__in=Subquery(not_yet)))
 
     val = params.get('local_ongoing_text', None)
     if val:

@@ -253,6 +253,15 @@ events which have no superevent included.</p>
 <pre><code>event/?super_event=linkedevents:agg-103
 </code></pre>
 <p><a href="?super_event=linkedevents:agg-103" title="json">See the result</a></p>
+
+<h2 id="getting-rolling-superevents">Getting rolling/ongoing superevents</h2>
+<p>To retrieve the superevents that have already started, but have not yet ended set
+<code>rolling</code> to <code>true</code>. This will retrieve the superevents that have some subevents
+that have already started and some that have not started yet. Superevents with all subevents in the past or all subevents in the future will not be retrieved.</p>
+<p>Example:</p>
+<pre><code>event/?rolling=true
+</code></pre>
+
 <h2 id="getting-detailed-data">Getting detailed data</h2>
 <p>In the default case, keywords, locations, and other fields that
 refer to separate resources are only displayed as simple references.</p>
