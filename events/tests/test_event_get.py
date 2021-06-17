@@ -842,4 +842,4 @@ def test_suitable_for_certain_age(api_client, make_event, event, event2, event3,
     assert str(response.data['detail']) == 'suitable_for must be an integer, you passed "error"'
 
     response = get_list_no_code_assert(api_client, query_string='suitable_for=12,13,14')
-    assert str(response.data['detail']) == 'suitable_for takes maximum two values, you provided 3'
+    assert str(response.data['detail']) == 'suitable_for takes at maximum two values, you provided 3'

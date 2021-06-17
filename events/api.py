@@ -206,7 +206,7 @@ def clean_text_fields(data, allowed_html_fields=[]):
     return data
 
 
-def validate_hours(val, param):
+def parse_hours(val, param):
 
     if len(val) > 2:
         raise ParseError(f'Only hours and minutes can be given in {param}. For example: 16:00.')
@@ -227,7 +227,7 @@ def validate_hours(val, param):
     return hour, 0
 
 
-def validate_bool(val, param):
+def parse_bool(val, param):
     if val.lower() == 'true':
         return True
     elif val.lower() == 'false':
@@ -236,7 +236,7 @@ def validate_bool(val, param):
         raise ParseError(f'{param} can take the values True or False. You passed {val}.')
 
 
-def validate_digit(val, param=None):
+def parse_digit(val, param):
     try:
         return int(val)
     except ValueError:
@@ -876,7 +876,7 @@ class KeywordListViewSet(JSONAPIViewMixin,
         if data_source:
             data_source = data_source.lower().split(',')
             queryset = queryset.filter(data_source__in=data_source)
-        if self.request.query_params.get('has_upcoming_events') and validate_bool(
+        if self.request.query_params.get('has_upcoming_events') and parse_bool(
                self.request.query_params.get('has_upcoming_events'), 'has_upcoming_events'):
             queryset = queryset.filter(has_upcoming_events=True)
         if self.request.query_params.get('free_text'):
@@ -1130,7 +1130,7 @@ class PlaceListViewSet(GeoModelAPIView,
         if data_source:
             data_source = data_source.lower().split(',')
             queryset = queryset.filter(data_source__in=data_source)
-        if self.request.query_params.get('has_upcoming_events') and validate_bool(
+        if self.request.query_params.get('has_upcoming_events') and parse_bool(
                 self.request.query_params.get('has_upcoming_events'), 'has_upcoming_events'):
             queryset = queryset.filter(has_upcoming_events=True)
         else:
@@ -1808,7 +1808,7 @@ def _filter_event_queryset(queryset, params, srs=None):
         queryset = queryset.filter(id__in=ids)
 
     val = params.get('all_ongoing', None)
-    if val and validate_bool(val, 'all_ongoing'):
+    if val and parse_bool(val, 'all_ongoing'):
         ids = {k for i in cache.get_many(['internet_ids', 'local_ids']).values() for k, v in i.items()}
         queryset = queryset.filter(id__in=ids)
 
@@ -1891,7 +1891,7 @@ def _filter_event_queryset(queryset, params, srs=None):
                 queryset = queryset.filter(keywords__pk__in=val)
 
     val = params.get('internet_based', None)
-    if val and validate_bool(val, 'internet_based'):
+    if val and parse_bool(val, 'internet_based'):
         queryset = queryset.filter(location__id__contains='internet')
 
     #  Filter by event translated fields and keywords combined. The code is
@@ -2183,28 +2183,28 @@ def _filter_event_queryset(queryset, params, srs=None):
     param = 'starts_after'
     if val:
         split_time = val.split(':')
-        hour, minute = validate_hours(split_time, param)
+        hour, minute = parse_hours(split_time, param)
         queryset = queryset.filter(start_time__time__gte=datetime_time(hour, minute))
 
     val = params.get('starts_before', None)
     param = 'starts_before'
     if val:
         split_time = val.split(':')
-        hour, minute = validate_hours(split_time, param)
+        hour, minute = parse_hours(split_time, param)
         queryset = queryset.filter(start_time__time__lte=datetime_time(hour, minute))
 
     val = params.get('ends_after', None)
     param = 'ends_after'
     if val:
         split_time = val.split(':')
-        hour, minute = validate_hours(split_time, param)
+        hour, minute = parse_hours(split_time, param)
         queryset = queryset.filter(end_time__time__gte=datetime_time(hour, minute))
 
     val = params.get('ends_before', None)
     param = 'ends_before'
     if val:
         split_time = val.split(':')
-        hour, minute = validate_hours(split_time, param)
+        hour, minute = parse_hours(split_time, param)
         queryset = queryset.filter(end_time__time__lte=datetime_time(hour, minute))
 
     # Filter by translation only
@@ -2227,23 +2227,23 @@ def _filter_event_queryset(queryset, params, srs=None):
     # Filter by audience min age
     val = params.get('audience_min_age', None) or params.get('audience_min_age_lt', None)
     if val:
-        min_age = validate_digit(val, 'audience_min_age')
+        min_age = parse_digit(val, 'audience_min_age')
         queryset = queryset.filter(audience_min_age__lte=min_age)
 
     val = params.get('audience_min_age_gt', None)
     if val:
-        min_age = validate_digit(val, 'audience_min_age_gt')
+        min_age = parse_digit(val, 'audience_min_age_gt')
         queryset = queryset.filter(audience_min_age__gte=min_age)
 
     # Filter by audience max age
     val = params.get('audience_max_age', None) or params.get('audience_max_age_gt', None)
     if val:
-        max_age = validate_digit(val, 'audience_max_age')
+        max_age = parse_digit(val, 'audience_max_age')
         queryset = queryset.filter(audience_max_age__gte=max_age)
 
     val = params.get('audience_max_age_lt', None)
     if val:
-        max_age = validate_digit(val, 'audience_min_age_lt')
+        max_age = parse_digit(val, 'audience_min_age_lt')
         queryset = queryset.filter(audience_max_age__lte=max_age)
 
     # Filter deleted events
@@ -2271,8 +2271,8 @@ def _filter_event_queryset(queryset, params, srs=None):
     if val:
         vals = val.split(',')
         if len(vals) > 2:
-            raise ParseError(f'suitable_for takes maximum two values, you provided {len(vals)}')
-        int_vals = [validate_digit(i, 'suitable_for') for i in vals]
+            raise ParseError(f'suitable_for takes at maximum two values, you provided {len(vals)}')
+        int_vals = [parse_digit(i, 'suitable_for') for i in vals]
         if len(int_vals) == 2:
             lower_boundary = min(int_vals)
             upper_boundary = max(int_vals)
