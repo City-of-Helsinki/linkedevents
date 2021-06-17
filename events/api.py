@@ -240,7 +240,7 @@ def validate_digit(val, param=None):
     try:
         return int(val)
     except ValueError:
-        raise ParseError(f'{param} must be an integer, you passed {val}')
+        raise ParseError(f'{param} must be an integer, you passed "{val}"')
 
 
 class JSONLDRelatedField(relations.HyperlinkedRelatedField):
@@ -2264,12 +2264,23 @@ def _filter_event_queryset(queryset, params, srs=None):
             queryset = queryset.exclude(offers__is_free=True)
 
     val = params.get('suitable_for', None)
-    if val:
-        val = validate_digit(val, 'suitable_for')
-        queryset = queryset.exclude(Q(audience_min_age__gt=val) |
-                                    Q(audience_max_age__lt=val) |
-                                    Q(Q(audience_min_age=None) & Q(audience_max_age=None)))
+    ''' Excludes all the events that have max age limit below or min age limit above the age or age range specified.
+    Suitable events with just one age boundary specified are returned, events with no age limits specified are
+    excluded. '''
 
+    if val:
+        vals = val.split(',')
+        if len(vals) > 2:
+            raise ParseError(f'suitable_for takes maximum two values, you provided {len(vals)}')
+        int_vals = [validate_digit(i, 'suitable_for') for i in vals]
+        if len(int_vals) == 2:
+            lower_boundary = min(int_vals)
+            upper_boundary = max(int_vals)
+        else:
+            lower_boundary = upper_boundary = int_vals[0]
+        queryset = queryset.exclude(Q(audience_min_age__gt=lower_boundary) |
+                                    Q(audience_max_age__lt=upper_boundary) |
+                                    Q(Q(audience_min_age=None) & Q(audience_max_age=None)))
     return queryset
 
 

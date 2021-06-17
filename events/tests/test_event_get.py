@@ -804,7 +804,8 @@ def test_event_get_by_id(api_client, event, event2, event3):
 
 @pytest.mark.django_db
 def test_suitable_for_certain_age(api_client, make_event, event, event2, event3, event4):
-    age = 12
+    age_upper = 12
+    age_lower = 11
     # suitable
     event.audience_min_age = 11
     event.audience_max_age = 13
@@ -828,9 +829,17 @@ def test_suitable_for_certain_age(api_client, make_event, event, event2, event3,
     # suitable
     event6 = make_event('6', datetime.now().astimezone(pytz.timezone('UTC')),
                         datetime.now().astimezone(pytz.timezone('UTC')) + timedelta(hours=1))
-    event6.audience_min_age = 12
+    event6.audience_min_age = 11
     event6.audience_max_age = None
 
     events = [event, event2, event3, event4, event5, event6]
     Event.objects.bulk_update(events, ['audience_min_age', 'audience_max_age'])
-    get_list_and_assert_events(f'suitable_for={age}', [event, event4, event6])
+    get_list_and_assert_events(f'suitable_for={age_upper}', [event, event4, event6])
+    get_list_and_assert_events(f'suitable_for={age_upper}, {age_lower}', [event, event4, event6])
+    get_list_and_assert_events(f'suitable_for={age_lower}, {age_upper}', [event, event4, event6])
+
+    response = get_list_no_code_assert(api_client, query_string='suitable_for=error')
+    assert str(response.data['detail']) == 'suitable_for must be an integer, you passed "error"'
+
+    response = get_list_no_code_assert(api_client, query_string='suitable_for=12,13,14')
+    assert str(response.data['detail']) == 'suitable_for takes maximum two values, you provided 3'
