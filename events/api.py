@@ -2265,6 +2265,7 @@ def _filter_event_queryset(queryset, params, srs=None):
 
     val = params.get('suitable_for', None)
     if val:
+        val = validate_digit(val, 'suitable_for')
         queryset = queryset.exclude(Q(audience_min_age__gt=val) |
                                     Q(audience_max_age__lt=val) |
                                     Q(Q(audience_min_age=None) & Q(audience_max_age=None)))
