@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
+from datetime import datetime, timedelta
+
 import pytest
+import pytz
 from dateutil import parser
 from django.conf import settings
 from django.contrib.gis.gdal import CoordTransform, SpatialReference
@@ -797,3 +800,37 @@ def test_event_get_by_type(api_client, event, event2, event3):
 @pytest.mark.django_db
 def test_event_get_by_id(api_client, event, event2, event3):
     get_list_and_assert_events(f'ids={event.id},{event2.id}', [event, event2])
+
+
+@pytest.mark.django_db
+def test_suitable_for_certain_age(api_client, make_event, event, event2, event3, event4):
+    age = 12
+    # suitable
+    event.audience_min_age = 11
+    event.audience_max_age = 13
+
+    # not suitable, min age too high
+    event2.audience_min_age = 13
+
+    # not suitable, max age too low
+    event3.audience_max_age = 11
+
+    # suitable
+    event4.audience_min_age = None
+    event4.audience_max_age = 20
+
+    # not suitable, neither of age limits defined
+    event5 = make_event('5', datetime.now().astimezone(pytz.timezone('UTC')),
+                        datetime.now().astimezone(pytz.timezone('UTC')) + timedelta(hours=1))
+    event5.audience_min_age = None
+    event5.audience_max_age = None
+
+    # suitable
+    event6 = make_event('6', datetime.now().astimezone(pytz.timezone('UTC')),
+                        datetime.now().astimezone(pytz.timezone('UTC')) + timedelta(hours=1))
+    event6.audience_min_age = 12
+    event6.audience_max_age = None
+
+    events = [event, event2, event3, event4, event5, event6]
+    Event.objects.bulk_update(events, ['audience_min_age', 'audience_max_age'])
+    get_list_and_assert_events(f'suitable_for={age}', [event, event4, event6])

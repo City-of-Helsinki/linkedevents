@@ -236,6 +236,13 @@ def validate_bool(val, param):
         raise ParseError(f'{param} can take the values True or False. You passed {val}.')
 
 
+def validate_digit(val, param=None):
+    try:
+        return int(val)
+    except ValueError:
+        raise ParseError(f'{param} must be an integer, you passed {val}')
+
+
 class JSONLDRelatedField(relations.HyperlinkedRelatedField):
     """
     Support of showing and saving of expanded JSON nesting or just a resource
@@ -2220,35 +2227,23 @@ def _filter_event_queryset(queryset, params, srs=None):
     # Filter by audience min age
     val = params.get('audience_min_age', None) or params.get('audience_min_age_lt', None)
     if val:
-        try:
-            min_age = int(val)
-        except ValueError:
-            raise ParseError(_('Audience minimum age must be a digit.'))
+        min_age = validate_digit(val, 'audience_min_age')
         queryset = queryset.filter(audience_min_age__lte=min_age)
 
     val = params.get('audience_min_age_gt', None)
     if val:
-        try:
-            min_age = int(val)
-        except ValueError:
-            raise ParseError(_('Audience minimum age must be a digit.'))
+        min_age = validate_digit(val, 'audience_min_age_gt')
         queryset = queryset.filter(audience_min_age__gte=min_age)
 
     # Filter by audience max age
     val = params.get('audience_max_age', None) or params.get('audience_max_age_gt', None)
     if val:
-        try:
-            max_age = int(val)
-        except ValueError:
-            raise ParseError(_('Audience maximum age must be a digit.'))
+        max_age = validate_digit(val, 'audience_max_age')
         queryset = queryset.filter(audience_max_age__gte=max_age)
 
     val = params.get('audience_max_age_lt', None)
     if val:
-        try:
-            max_age = int(val)
-        except ValueError:
-            raise ParseError(_('Audience maximum age must be a digit.'))
+        max_age = validate_digit(val, 'audience_min_age_lt')
         queryset = queryset.filter(audience_max_age__lte=max_age)
 
     # Filter deleted events
@@ -2267,6 +2262,12 @@ def _filter_event_queryset(queryset, params, srs=None):
             queryset = queryset.filter(offers__is_free=True)
         elif val.lower() == 'false':
             queryset = queryset.exclude(offers__is_free=True)
+
+    val = params.get('suitable_for', None)
+    if val:
+        queryset = queryset.exclude(Q(audience_min_age__gt=val) |
+                                    Q(audience_max_age__lt=val) |
+                                    Q(Q(audience_min_age=None) & Q(audience_max_age=None)))
 
     return queryset
 
