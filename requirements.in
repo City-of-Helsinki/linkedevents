@@ -1,3 +1,4 @@
+aiohttp
 bleach
 django-admin-autocomplete-filter
 django-allauth
@@ -14,10 +15,10 @@ django-jinja
 django-leaflet
 django-modeltranslation
 django-mptt
-django-munigeo
-django-orghierarchy
+django-munigeo-turku>=0.2.31
+django-orghierarchy-turku
 django-reversion
-django==2.2.11
+django==2.2.24
 djangorestframework
 djangorestframework-bulk
 djangorestframework-gis
@@ -29,7 +30,7 @@ icalendar
 isodate
 jinja2
 langdetect
-lxml==4.5.0
+lxml==4.6.3
 markdown
 pillow
 --no-binary psycopg2
