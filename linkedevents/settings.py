@@ -194,8 +194,12 @@ MIDDLEWARE = [
 
 # django-extensions is a set of developer friendly tools
 if DEBUG:
-    INSTALLED_APPS.extend(['django_extensions', 'debug_toolbar'])
-    MIDDLEWARE.append('debug_toolbar.middleware.DebugToolbarMiddleware')
+    INSTALLED_APPS.extend(['django_extensions', 'silk'])
+    MIDDLEWARE.insert(0, 'silk.middleware.SilkyMiddleware')
+    SILKY_AUTHENTICATION = True
+    SILKY_AUTHORISATION = True
+
+
 
 ROOT_URLCONF = 'linkedevents.urls'
 

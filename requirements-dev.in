@@ -1,7 +1,7 @@
 -c requirements.txt # Constrained by requirements.txt
 
 django-extensions
-django-debug-toolbar
+django-silk
 flake8
 freezegun
 ipython
