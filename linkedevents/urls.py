@@ -25,5 +25,4 @@ urlpatterns = [
 ]
 
 if env('DEBUG'):
-    import debug_toolbar
-    urlpatterns.append(url(r'^__debug__/', include(debug_toolbar.urls)))
+    urlpatterns += [url(r'^silk/', include('silk.urls', namespace='silk'))]

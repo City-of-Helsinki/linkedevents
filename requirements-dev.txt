@@ -6,20 +6,27 @@
 #
 astroid==2.4.2            # via pylint
 attrs==19.3.0             # via -c requirements.txt, pytest
+autopep8==1.5.7           # via django-silk
 backcall==0.2.0           # via ipython
+certifi==2020.6.20        # via -c requirements.txt, requests
+chardet==3.0.4            # via -c requirements.txt, requests
 click==7.1.2              # via pip-tools
 decorator==4.4.2          # via ipython, traitlets
-django-debug-toolbar==3.1.1  # via -r requirements-dev.in
 django-extensions==3.0.1  # via -r requirements-dev.in
-django==2.2.13            # via -c requirements.txt, django-debug-toolbar
-flake8==3.8.3             # via -r requirements-dev.in
+django-silk==4.1.0        # via -r requirements-dev.in
+django==2.2.13            # via -c requirements.txt, django-silk
+flake8==3.9.2             # via -r requirements-dev.in
 freezegun==0.3.15         # via -r requirements-dev.in
+gprof2dot==2021.2.21      # via django-silk
+idna==2.10                # via -c requirements.txt, requests
 importlib-metadata==1.7.0  # via -c requirements.txt, flake8, pluggy, pytest
 ipython-genutils==0.2.0   # via traitlets
 ipython==7.16.1           # via -r requirements-dev.in
 isort==4.3.21             # via pylint
 jedi==0.17.2              # via ipython
+jinja2==2.11.2            # via -c requirements.txt, django-silk
 lazy-object-proxy==1.4.3  # via astroid
+markupsafe==1.1.1         # via -c requirements.txt, jinja2
 mccabe==0.6.1             # via flake8, pylint
 more-itertools==8.4.0     # via pytest
 packaging==20.4           # via -c requirements.txt, pytest
@@ -31,20 +38,22 @@ pluggy==0.13.1            # via pytest
 prompt-toolkit==3.0.8     # via ipython
 ptyprocess==0.6.0         # via pexpect
 py==1.9.0                 # via pytest
-pycodestyle==2.6.0        # via flake8
-pyflakes==2.2.0           # via -r requirements-dev.in, flake8
-pygments==2.7.2           # via ipython
+pycodestyle==2.7.0        # via autopep8, flake8
+pyflakes==2.3.1           # via -r requirements-dev.in, flake8
+pygments==2.7.2           # via django-silk, ipython
 pylint==2.5.3             # via -r requirements-dev.in
 pyparsing==2.4.7          # via -c requirements.txt, packaging
 pytest-django==3.9.0      # via -r requirements-dev.in
 pytest==5.4.3             # via -r requirements-dev.in, pytest-django
-python-dateutil==2.8.1    # via -c requirements.txt, freezegun
-pytz==2020.1              # via -c requirements.txt, django
+python-dateutil==2.8.1    # via -c requirements.txt, django-silk, freezegun
+pytz==2020.1              # via -c requirements.txt, django, django-silk
+requests==2.24.0          # via -c requirements.txt, django-silk
 six==1.15.0               # via -c requirements.txt, astroid, django-extensions, freezegun, packaging, pip-tools, python-dateutil, traitlets
-sqlparse==0.3.1           # via -c requirements.txt, django, django-debug-toolbar
-toml==0.10.1              # via pylint
+sqlparse==0.3.1           # via -c requirements.txt, django, django-silk
+toml==0.10.1              # via autopep8, pylint
 traitlets==4.3.3          # via ipython
 typed-ast==1.4.1          # via astroid
+urllib3==1.25.9           # via -c requirements.txt, requests
 wcwidth==0.2.5            # via prompt-toolkit, pytest
 werkzeug==1.0.1           # via -r requirements-dev.in
 wrapt==1.12.1             # via astroid
