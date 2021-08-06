@@ -10,6 +10,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 <!-- List the changes in your PR under the Unreleased title. You can also copy this list to your PR summary. -->
 
+## [1.10.17] - 2021-08-06
+
+### Security
+
+- Fix [CVE-2021-33203](https://github.com/advisories/GHSA-68w8-qjq3-2gfm) by upgrading django from 2.2.20 to 2.2.24
+  (automatic Dependabot upgrade)
+- Fix [CVE-2021-33571](https://github.com/advisories/GHSA-p99v-5w3c-jqq9) by upgrading django from 2.2.20 to 2.2.24
+  (automatic Dependabot upgrade)
+- Fix [CVE-2021-32052](https://github.com/advisories/GHSA-qm57-vhq3-3fwf) by upgrading django from 2.2.20 to 2.2.24
+  (automatic Dependabot upgrade)
+- Fix [CVE-2021-31542](https://github.com/advisories/GHSA-rxjp-mfm9-w4wr) by upgrading django from 2.2.20 to 2.2.24
+  (automatic Dependabot upgrade)
+
 ## [1.10.16] - 2021-06-03
 
 ### Fixed
@@ -1084,6 +1097,7 @@ to `espooevents-service`.
   to a minimum. This version marks the initial `0.1.0` relase and the initial `linkedevents` commit on which
   `espooevents-service` is based on.
 
+[1.10.17]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.16...espoo-v1.10.17
 [1.10.16]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.15...espoo-v1.10.16
 [1.10.15]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.14...espoo-v1.10.15
 [1.10.14]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.13...espoo-v1.10.14
