@@ -10,6 +10,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 <!-- List the changes in your PR under the Unreleased title. You can also copy this list to your PR summary. -->
 
+## [1.10.18] - 2021-08-06
+
+### Security
+
+- Fix [CVE-2021-25288](https://github.com/advisories/GHSA-rwv7-3v45-hg29) by upgrading pillow from 8.1.1 to 8.2.0
+- Fix [CVE-2021-28677](https://github.com/advisories/GHSA-q5hq-fp76-qmrc) by upgrading pillow from 8.1.1 to 8.2.0
+- Fix [CVE-2021-28675](https://github.com/advisories/GHSA-g6rj-rv7j-xwp4) by upgrading pillow from 8.1.1 to 8.2.0
+- Fix [CVE-2021-28676](https://github.com/advisories/GHSA-7r7m-5h27-29hp) by upgrading pillow from 8.1.1 to 8.2.0
+- Fix [CVE-2021-25287](https://github.com/advisories/GHSA-77gc-v2xv-rvvh) by upgrading pillow from 8.1.1 to 8.2.0
+- Fix [CVE-2021-28678](https://github.com/advisories/GHSA-hjfx-8p6c-g7gx) by upgrading pillow from 8.1.1 to 8.2.0
+(automatic Dependabot upgrade)
+
 ## [1.10.17] - 2021-08-06
 
 ### Security
@@ -1097,6 +1109,7 @@ to `espooevents-service`.
   to a minimum. This version marks the initial `0.1.0` relase and the initial `linkedevents` commit on which
   `espooevents-service` is based on.
 
+[1.10.18]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.17...espoo-v1.10.18
 [1.10.17]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.16...espoo-v1.10.17
 [1.10.16]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.15...espoo-v1.10.16
 [1.10.15]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.14...espoo-v1.10.15
