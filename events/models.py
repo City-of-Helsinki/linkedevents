@@ -86,6 +86,7 @@ class SimpleValueMixin(object):
     of their related object. These models have no existence
     outside their related object.
     """
+
     def value_fields(self):
         return []
 
@@ -508,6 +509,19 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
         (Status.RESCHEDULED, "EventRescheduled"),
     )
 
+    class Type_Id:
+        GENERAL = 1
+        COURSE = 2
+        VOLUNTEERING = 3
+        HOBBIES = 4
+
+    TYPE_IDS = (
+        (Type_Id.GENERAL, _("General")),
+        (Type_Id.COURSE, _("Course")),
+        (Type_Id.VOLUNTEERING, _("Volunteering")),
+        (Type_Id.HOBBIES, _("Hobbies")),
+    )
+
     class SuperEventType:
         RECURRING = 'recurring'
         UMBRELLA = 'umbrella'
@@ -569,19 +583,32 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
     has_start_time = models.BooleanField(default=True)
     has_end_time = models.BooleanField(default=True)
 
-    audience_min_age = models.SmallIntegerField(verbose_name=_('Minimum recommended age'),
-                                                blank=True, null=True, db_index=True)
-    audience_max_age = models.SmallIntegerField(verbose_name=_('Maximum recommended age'),
-                                                blank=True, null=True, db_index=True)
+    audience_min_age = models.PositiveSmallIntegerField(verbose_name=_('Minimum recommended age'),
+                                                        blank=True, null=True, db_index=True)
+    audience_max_age = models.PositiveSmallIntegerField(verbose_name=_('Maximum recommended age'),
+                                                        blank=True, null=True, db_index=True)
+
+    maximum_attendee_capacity = models.PositiveSmallIntegerField(
+        verbose_name=_('maximum attendee capacity'), null=True, blank=True)
+
+    minimum_attendee_capacity = models.PositiveSmallIntegerField(
+        verbose_name=_('minimum attendee capacity'), null=True, blank=True)
+
+    enrolment_start_time = models.DateTimeField(verbose_name=_('enrolment start time'), null=True, blank=True)
+
+    enrolment_end_time = models.DateTimeField(verbose_name=_('enrolment end time'), null=True, blank=True)
 
     super_event = TreeForeignKey('self', null=True, blank=True,
                                  on_delete=models.SET_NULL, related_name='sub_events')
 
+    type_id = models.SmallIntegerField(blank=False, null=False, db_index=False,
+                                       default=Type_Id.GENERAL, choices=TYPE_IDS)
+
     super_event_type = models.CharField(max_length=255, blank=True, null=True, db_index=True,
                                         default=None, choices=SUPER_EVENT_TYPES)
 
-    sub_event_type = models.CharField(max_length=255, blank=True, null=True, db_index=True, 
-                                        default=None, choices=SUB_EVENT_TYPES)
+    sub_event_type = models.CharField(max_length=255, blank=True, null=True,
+                                      db_index=True, default=None, choices=SUB_EVENT_TYPES)
 
     in_language = models.ManyToManyField(Language, verbose_name=_('In language'), related_name='events', blank=True)
 
@@ -590,7 +617,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
     deleted = models.BooleanField(default=False, db_index=True)
 
     is_virtualevent = models.BooleanField(default=False, db_index=True)
-    virtualevent_url = models.URLField(verbose_name=_('Virtual event location'), blank=True, null=True, max_length=1000)
+    virtualevent_url = models.URLField(verbose_name=_('Virtual event location'),
+                                       blank=True, null=True, max_length=1000)
 
     replaced_by = models.ForeignKey('Event', on_delete=models.SET_NULL, related_name='aliases', null=True, blank=True)
 
