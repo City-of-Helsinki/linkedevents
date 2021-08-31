@@ -288,8 +288,7 @@ class EnumChoiceField(serializers.Field):
     def to_representation(self, obj):
         if obj is None:
             return None
-        return self.prefix + utils.get_value_from_tuple_list(self.choices,
-                                                             obj, 1)
+        return self.prefix + str(utils.get_value_from_tuple_list(self.choices, obj, 1))
 
     def to_internal_value(self, data):
         value = utils.get_value_from_tuple_list(self.choices,
@@ -1262,6 +1261,7 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
     super_event = JSONLDRelatedField(serializer='EventSerializer', required=False, view_name='event-detail',
                                      queryset=Event.objects.all(), allow_null=True)
     event_status = EnumChoiceField(Event.STATUSES, required=False)
+    type_id = EnumChoiceField(Event.TYPE_IDS, required=False)
     publication_status = EnumChoiceField(PUBLICATION_STATUSES, required=False)
     external_links = EventLinkSerializer(many=True, required=False)
     offers = OfferSerializer(many=True, required=False)
@@ -1702,7 +1702,7 @@ def _filter_image_queryset(queryset, params, srs=None):
         for field in fields:
             # Multilanguage field filtering for image_text
             qset |= _text_qset_by_translated_field(field, image_text)
-        
+
         # We chain two querysets, the translated field ones, and make it
         # work as the photographer name. (We wanted diff params but this is
         # what was asked for).
@@ -1926,6 +1926,22 @@ def _filter_event_queryset(queryset, params, srs=None):
         queryset = queryset.filter(event_status=Event.Status.CANCELLED)
     elif val and val.lower() == 'eventpostponed':
         queryset = queryset.filter(event_status=Event.Status.POSTPONED)
+
+    # Filter by event type
+    val = params.get('type_id', None)
+    if val:
+        val = val.split(',')
+        q = Q()
+        for type_id_val in val:
+            if type_id_val.lower() == 'eventgeneral':
+                q = q | Q(type_id=Event.Type_Id.GENERAL)
+            elif type_id_val.lower() == 'eventcourse':
+                q = q | Q(type_id=Event.Type_Id.COURSE)
+            elif type_id_val.lower() == 'eventvolunteering':
+                q = q | Q(type_id=Event.Type_Id.VOLUNTEERING)
+            elif type_id_val.lower() == 'eventhobbies':
+                q = q | Q(type_id=Event.Type_Id.HOBBIES)
+        queryset = queryset.filter(q)
 
     # Filter by language, checking both string content and in_language field
     val = params.get('language', None)
