@@ -618,7 +618,7 @@ class TurkuOriginalImporter(Importer):
                             elif mother.super_event_type == "umbrella":
                                 sub_event_type = "sub_umbrella"
 
-                            if not bool(int(mother.is_hobby)):
+                            if int(mother.is_hobby) == 1:
                                 type_id = 1
                             else:
                                 type_id = 4
