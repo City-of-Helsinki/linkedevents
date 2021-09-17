@@ -603,13 +603,6 @@ class TurkuOriginalImporter(Importer):
         now = datetime.now().replace(tzinfo=TZ)
         return root_doc, mothers_with_children, mothers_children
 
-    def check_hobby(x):
-        if int(x['is_hobby']) == 1:
-            type_id = 4
-        else:
-            type_id = 1
-        return type_id
-
     def save_extra(self, drupal_url, mothersList, childList):
 
         for json_mother_event in drupal_url['events']:
