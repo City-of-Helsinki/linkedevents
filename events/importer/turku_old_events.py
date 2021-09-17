@@ -288,248 +288,251 @@ class TurkuOriginalImporter(Importer):
         if end_time < datetime.now().replace(tzinfo=TZ) - timedelta(days=365):
             return {'start_time': start_time, 'end_time': end_time}
 
-        if not bool(int(eventTku['is_hobby'])):
-            eid = int(eventTku['drupal_nid'])
-            evItem = events[eid]
-            evItem['id'] = '%s:%s' % (self.data_source.id, eid)
-            evItem['origin_id'] = eid
-            evItem['data_source'] = self.data_source
-            evItem['publisher'] = self.organization
-            evItem['end_time'] = end_time
+        # if not bool(int(eventTku['is_hobby'])):
 
-            ok_tags = (
-                'u', 'b', 'h2', 'h3', 'em', 'ul',
-                'li', 'strong', 'br', 'p', 'a'
-            )
+        eid = int(eventTku['drupal_nid'])
+        evItem = events[eid]
+        evItem['id'] = '%s:%s' % (self.data_source.id, eid)
+        evItem['origin_id'] = eid
+        evItem['data_source'] = self.data_source
+        evItem['publisher'] = self.organization
+        evItem['end_time'] = end_time
+        
+        ok_tags = (
+            'u', 'b', 'h2', 'h3', 'em', 'ul',
+            'li', 'strong', 'br', 'p', 'a'
+        )
 
-            evItem['name'] = {
-                "fi": eventTku['title_fi'],
-                "sv": eventTku['title_sv'],
-                "en": eventTku['title_en']
+        evItem['name'] = {
+            "fi": eventTku['title_fi'],
+            "sv": eventTku['title_sv'],
+            "en": eventTku['title_en']
+        }
+
+        evItem['description'] = {
+            "fi": bleach.clean(self.with_value(
+                eventTku,
+                'description_markup_fi',
+                ''),   tags=[],   strip=True),
+            "sv": bleach.clean(self.with_value(
+                eventTku,
+                'description_markup_sv',
+                ''),   tags=[],   strip=True),
+            "en": bleach.clean(self.with_value(
+                eventTku,
+                'description_markup_en',
+                ''),   tags=[],   strip=True)
+        }
+
+        evItem['short_description'] = {
+            "fi": bleach.clean(self.with_value(
+                eventTku,
+                'lead_paragraph_markup_fi',
+                ''),   tags=[],   strip=True),
+            "sv": bleach.clean(self.with_value(
+                eventTku,
+                'lead_paragraph_markup_sv',
+                ''),   tags=[],   strip=True),
+            "en": bleach.clean(self.with_value(
+                eventTku,
+                'lead_paragraph_markup_en',
+                ''),   tags=[],   strip=True)
+        }
+
+        if eventTku['event_organizer']:
+            eo = eventTku['event_organizer']
+            evItem['provider'] = {
+                "fi": eo, "sv": eo, "en": eo
+            }
+        else:
+            evItem['provider'] = {
+                "fi": 'Turku', "sv": 'Åbo', "en": 'Turku'
             }
 
-            evItem['description'] = {
-                "fi": bleach.clean(self.with_value(
-                    eventTku,
-                    'description_markup_fi',
-                    ''),   tags=[],   strip=True),
-                "sv": bleach.clean(self.with_value(
-                    eventTku,
-                    'description_markup_sv',
-                    ''),   tags=[],   strip=True),
-                "en": bleach.clean(self.with_value(
-                    eventTku,
-                    'description_markup_en',
-                    ''),   tags=[],   strip=True)
-            }
+        location_extra_info = ''
 
-            evItem['short_description'] = {
-                "fi": bleach.clean(self.with_value(
-                    eventTku,
-                    'lead_paragraph_markup_fi',
-                    ''),   tags=[],   strip=True),
-                "sv": bleach.clean(self.with_value(
-                    eventTku,
-                    'lead_paragraph_markup_sv',
-                    ''),   tags=[],   strip=True),
-                "en": bleach.clean(self.with_value(
-                    eventTku,
-                    'lead_paragraph_markup_en',
-                    ''),   tags=[],   strip=True)
-            }
+        if self.with_value(eventTku, 'address_extension', ''):
+            location_extra_info += '%s, ' % bleach.clean(self.with_value(
+                eventTku,
+                'address_extension',
+                ''), tags=[], strip=True)
+        if self.with_value(eventTku, 'city_district', ''):
+            location_extra_info += '%s, ' % bleach.clean(self.with_value(
+                eventTku,
+                'city_district',
+                ''), tags=[], strip=True)
+        if self.with_value(eventTku, 'place', ''):
+            location_extra_info += '%s' % bleach.clean(self.with_value(
+                eventTku,
+                'place',
+                ''), tags=[], strip=True)
 
-            if eventTku['event_organizer']:
-                eo = eventTku['event_organizer']
-                evItem['provider'] = {
-                    "fi": eo, "sv": eo, "en": eo
-                }
-            else:
-                evItem['provider'] = {
-                    "fi": 'Turku', "sv": 'Åbo', "en": 'Turku'
-                }
+        if location_extra_info.strip().endswith(','):
+            location_extra_info = location_extra_info.strip()[:-1]
 
-            location_extra_info = ''
+        location_extra_info_formatted = '%(address)s / %(extra)s' % {'address': eventTku['address'], 'extra': location_extra_info} if location_extra_info else eventTku['address']
+        # Define location_extra_info dict.
+        evItem['location_extra_info'] = {
+            "fi": location_extra_info_formatted,
+            "sv": location_extra_info_formatted,
+            "en": location_extra_info_formatted
+        }
 
-            if self.with_value(eventTku, 'address_extension', ''):
-                location_extra_info += '%s, ' % bleach.clean(self.with_value(
-                    eventTku,
-                    'address_extension',
-                    ''), tags=[], strip=True)
-            if self.with_value(eventTku, 'city_district', ''):
-                location_extra_info += '%s, ' % bleach.clean(self.with_value(
-                    eventTku,
-                    'city_district',
-                    ''), tags=[], strip=True)
-            if self.with_value(eventTku, 'place', ''):
-                location_extra_info += '%s' % bleach.clean(self.with_value(
-                    eventTku,
-                    'place',
-                    ''), tags=[], strip=True)
+        if eventTku['event_image_ext_url']:
+            if int(eventTku['event_image_license']) == 1 and event_type in ('m', 's'):
+                # Saves an image from the URL onto our server & database Image table.
+                # We only want mother event images and single event images.
 
-            if location_extra_info.strip().endswith(','):
-                location_extra_info = location_extra_info.strip()[:-1]
+                IMAGE_TYPE = 'jpg'
+                PATH_EXTEND = 'images'
 
-            location_extra_info_formatted = '%(address)s / %(extra)s' % {'address': eventTku['address'], 'extra': location_extra_info} if location_extra_info else eventTku['address']
-            # Define location_extra_info dict.
-            evItem['location_extra_info'] = {
-                "fi": location_extra_info_formatted,
-                "sv": location_extra_info_formatted,
-                "en": location_extra_info_formatted
-            }
+                def request_image_url():
+                    img = requests.get(eventTku['event_image_ext_url']['src'],
+                                        headers={'User-Agent': 'Mozilla/5.0'}).content
+                    imgfile = eventTku['drupal_nid']
+                    path = '%(root)s/%(pathext)s/%(img)s.%(type)s' % ({
+                        'root': settings.MEDIA_ROOT,
+                        'pathext': PATH_EXTEND,
+                        'img': imgfile,
+                        'type': IMAGE_TYPE
+                    })
+                    with open(path, 'wb') as file:
+                        file.write(img)
+                    return '%s/%s.%s' % (PATH_EXTEND, imgfile, IMAGE_TYPE)
 
-            if eventTku['event_image_ext_url']:
-                if int(eventTku['event_image_license']) == 1 and event_type in ('m', 's'):
-                    # Saves an image from the URL onto our server & database Image table.
-                    # We only want mother event images and single event images.
+                self.image_obj, _ = Image.objects.update_or_create(
+                    defaults=dict(name='', photographer_name='', alt_text=''), **dict(
+                        license=self.cc_by_license,
+                        data_source=self.data_source,
+                        publisher=self.organization,
+                        image=request_image_url()))
 
-                    IMAGE_TYPE = 'jpg'
-                    PATH_EXTEND = 'images'
+        def set_attr(field_name, val):
+            if field_name in evItem:
+                if evItem[field_name] != val:
+                    logger.warning(
+                        'Event %s: %s mismatch (%s vs. %s)' %
+                        (eid, field_name, evItem[field_name], val)
+                    )
+                    return
+            evItem[field_name] = val
 
-                    def request_image_url():
-                        img = requests.get(eventTku['event_image_ext_url']['src'],
-                                           headers={'User-Agent': 'Mozilla/5.0'}).content
-                        imgfile = eventTku['drupal_nid']
-                        path = '%(root)s/%(pathext)s/%(img)s.%(type)s' % ({
-                            'root': settings.MEDIA_ROOT,
-                            'pathext': PATH_EXTEND,
-                            'img': imgfile,
-                            'type': IMAGE_TYPE
-                        })
-                        with open(path, 'wb') as file:
-                            file.write(img)
-                        return '%s/%s.%s' % (PATH_EXTEND, imgfile, IMAGE_TYPE)
+        evItem['date_published'] = self.dt_parse(self.timeToTimestamp(
+            str(eventTku['start_date']))
+        )
+        set_attr('start_time', self.dt_parse(self.timeToTimestamp(
+            str(eventTku['start_date'])))
+        )
+        set_attr('end_time', self.dt_parse(self.timeToTimestamp(
+            str(eventTku['end_date'])))
+        )
+        event_in_language = evItem.get('in_language', set())
+        try:
+            eventLang = Language.objects.get(id='fi')
+        except:
+            logger.info('Language (fi) not found.')
+        if eventLang:
+            event_in_language.add(self.languages[eventLang.id])
 
-                    self.image_obj, _ = Image.objects.update_or_create(
-                        defaults=dict(name='', photographer_name='', alt_text=''), **dict(
-                            license=self.cc_by_license,
-                            data_source=self.data_source,
-                            publisher=self.organization,
-                            image=request_image_url()))
+        evItem['in_language'] = event_in_language
 
-            def set_attr(field_name, val):
-                if field_name in evItem:
-                    if evItem[field_name] != val:
-                        logger.warning(
-                            'Event %s: %s mismatch (%s vs. %s)' %
-                            (eid, field_name, evItem[field_name], val)
-                        )
-                        return
-                evItem[field_name] = val
+        event_keywords = evItem.get('keywords', set())
+        event_audience = evItem.get('audience', set())
 
-            evItem['date_published'] = self.dt_parse(self.timeToTimestamp(
-                str(eventTku['start_date']))
-            )
-            set_attr('start_time', self.dt_parse(self.timeToTimestamp(
-                str(eventTku['start_date'])))
-            )
-            set_attr('end_time', self.dt_parse(self.timeToTimestamp(
-                str(eventTku['end_date'])))
-            )
-            event_in_language = evItem.get('in_language', set())
-            try:
-                eventLang = Language.objects.get(id='fi')
-            except:
-                logger.info('Language (fi) not found.')
-            if eventLang:
-                event_in_language.add(self.languages[eventLang.id])
-
-            evItem['in_language'] = event_in_language
-
-            event_keywords = evItem.get('keywords', set())
-            event_audience = evItem.get('audience', set())
-
-            if eventTku['event_categories'] is not None:
-                eventTku['event_categories'] = eventTku['event_categories']+','
-                categories = eventTku['event_categories'].split(',')
-                for name in categories:
-                    name = name.strip()
-                    if name == 'Theatre and other perfomance art':
-                        name = 'Theatre and other performance art'
-                        # Theatre and other performance art is spelled incorrectly in the JSON. "Perfomance".
-                    if name == 'Virtual events':
-                        evItem['location']['id'] = VIRTUAL_LOCATION_ID
-                    if name in TURKU_DRUPAL_CATEGORY_EN_YSOID.keys():
-                        ysoId = TURKU_DRUPAL_CATEGORY_EN_YSOID[name]
-                        if isinstance(ysoId, list):
-                            for x in range(len(ysoId)):
-                                event_keywords.add(
-                                    Keyword.objects.get(id=ysoId[x])
-                                )
-                        else:
+        if eventTku['event_categories'] is not None:
+            eventTku['event_categories'] = eventTku['event_categories']+','
+            categories = eventTku['event_categories'].split(',')
+            for name in categories:
+                name = name.strip()
+                if name == 'Theatre and other perfomance art':
+                    name = 'Theatre and other performance art'
+                    # Theatre and other performance art is spelled incorrectly in the JSON. "Perfomance".
+                if name == 'Virtual events':
+                    evItem['location']['id'] = VIRTUAL_LOCATION_ID
+                if name in TURKU_DRUPAL_CATEGORY_EN_YSOID.keys():
+                    ysoId = TURKU_DRUPAL_CATEGORY_EN_YSOID[name]
+                    if isinstance(ysoId, list):
+                        for x in range(len(ysoId)):
                             event_keywords.add(
-                                Keyword.objects.get(id=ysoId)
+                                Keyword.objects.get(id=ysoId[x])
                             )
-
-            if eventTku.get('keywords', None):
-                eventTku['keywords'] = eventTku['keywords'] + ','
-                keywords = eventTku['keywords'].split(',')
-                for name in keywords:
-                    name.strip()
-                    if name not in TURKU_DRUPAL_CATEGORY_EN_YSOID.keys():
-                        try:
-                            event_keywords.add(
-                                Keyword.objects.get(name=name)
-                            )
-                        except:
-                            if name != "":
-                                notFoundKeys.append({
-                                    name: eventTku['drupal_nid']
-                                })
-                            pass
-
-            evItem['keywords'] = event_keywords
-
-            if eventTku['target_audience'] is not None:
-                eventTku['target_audience'] = eventTku['target_audience'] + ','
-                audience = eventTku['target_audience'].split(',')
-                for name in audience:
-                    if name in TURKU_DRUPAL_AUDIENCES_KEYWORD_EN_YSOID.keys():
-                        ysoId = TURKU_DRUPAL_AUDIENCES_KEYWORD_EN_YSOID[name]
-                        event_audience.add(
+                    else:
+                        event_keywords.add(
                             Keyword.objects.get(id=ysoId)
                         )
 
-            evItem['audience'] = event_audience
-            evItem['info_url'] = {
-                "fi": eventTku['website_url'],
-                "sv": eventTku['website_url'],
-                "en": eventTku['website_url']
-            }
-
-            if event_type in ('m', 's'):
-                # Add a default offer
-                free_offer = {
-                    'is_free': True,
-                    'price': None,
-                    'description': None,
-                    'info_url': None,
-                }
-                eventOffer_is_free = bool(int(eventTku['free_event']))
-                # Fill if events is not free price event
-                if not eventOffer_is_free:
-                    free_offer['is_free'] = False
-                    if eventTku['event_price']:
-                        ok_tags = (
-                            'u', 'b', 'h2', 'h3', 'em', 'ul',
-                            'li', 'strong', 'br', 'p', 'a'
+        if eventTku.get('keywords', None):
+            eventTku['keywords'] = eventTku['keywords'] + ','
+            keywords = eventTku['keywords'].split(',')
+            for name in keywords:
+                name.strip()
+                if name not in TURKU_DRUPAL_CATEGORY_EN_YSOID.keys():
+                    try:
+                        event_keywords.add(
+                            Keyword.objects.get(name=name)
                         )
-                        price = str(eventTku['event_price'])
-                        price = bleach.clean(price, tags=ok_tags, strip=True)
-                        free_offer_price = clean_text(price, True)
-                        free_offer['price'] = {'fi': free_offer_price}
-                        free_offer['info_url'] = {'fi': None}
-                    if str(eventTku['buy_tickets_url']):
-                        free_offer_buy_tickets = eventTku['buy_tickets_url']
-                        free_offer['info_url'] = {'fi': free_offer_buy_tickets}
-                    free_offer['description'] = None
-                evItem['offers'] = [free_offer]
+                    except:
+                        if name != "":
+                            notFoundKeys.append({
+                                name: eventTku['drupal_nid']
+                            })
+                        pass
 
-            if event_type == "m":
-                evItem['super_event_type'] = Event.SuperEventType.RECURRING
-            if event_type == "c" or event_type == "s":
-                evItem['super_event_type'] = None
+        evItem['keywords'] = event_keywords
 
-            return evItem
+        if eventTku['target_audience'] is not None:
+            eventTku['target_audience'] = eventTku['target_audience'] + ','
+            audience = eventTku['target_audience'].split(',')
+            for name in audience:
+                if name in TURKU_DRUPAL_AUDIENCES_KEYWORD_EN_YSOID.keys():
+                    ysoId = TURKU_DRUPAL_AUDIENCES_KEYWORD_EN_YSOID[name]
+                    event_audience.add(
+                        Keyword.objects.get(id=ysoId)
+                    )
+
+        evItem['audience'] = event_audience
+        evItem['info_url'] = {
+            "fi": eventTku['website_url'],
+            "sv": eventTku['website_url'],
+            "en": eventTku['website_url']
+        }
+
+        if event_type in ('m', 's'):
+            # Add a default offer
+            free_offer = {
+                'is_free': True,
+                'price': None,
+                'description': None,
+                'info_url': None,
+            }
+            eventOffer_is_free = bool(int(eventTku['free_event']))
+            # Fill if events is not free price event
+            if not eventOffer_is_free:
+                free_offer['is_free'] = False
+                if eventTku['event_price']:
+                    ok_tags = (
+                        'u', 'b', 'h2', 'h3', 'em', 'ul',
+                        'li', 'strong', 'br', 'p', 'a'
+                    )
+                    price = str(eventTku['event_price'])
+                    price = bleach.clean(price, tags=ok_tags, strip=True)
+                    free_offer_price = clean_text(price, True)
+                    free_offer['price'] = {'fi': free_offer_price}
+                    free_offer['info_url'] = {'fi': None}
+                if str(eventTku['buy_tickets_url']):
+                    free_offer_buy_tickets = eventTku['buy_tickets_url']
+                    free_offer['info_url'] = {'fi': free_offer_buy_tickets}
+                free_offer['description'] = None
+            evItem['offers'] = [free_offer]
+
+        if event_type == "m":
+            evItem['super_event_type'] = Event.SuperEventType.RECURRING
+        if event_type == "c" or event_type == "s":
+            evItem['super_event_type'] = None
+
+        evItem['is_hobby'] = eventTku['is_hobby']
+        
+        return evItem
 
     def _recur_fetch_paginated_url(self, url, lang, events):
         max_tries = 10
@@ -601,8 +604,22 @@ class TurkuOriginalImporter(Importer):
         return root_doc, mothers_with_children, mothers_children
 
     def save_extra(self, drupal_url, mothersList, childList):
+
         for json_mother_event in drupal_url['events']:
             json_event = json_mother_event['event']
+
+            try:
+                # Updating the existing DB events that need is_hobby.
+                eventToUpdate = Event.objects.get(origin_id=json_event['drupal_nid'])
+                if int(json_event['is_hobby']) == 1:
+                    eventToUpdate.type_id = 4
+                else:
+                    eventToUpdate.type_id = 1
+
+                eventToUpdate.save()
+            except:
+                pass
+
             if json_event['drupal_nid']:
                 for x in childList:
                     if json_event['drupal_nid'] == x['drupal_nid_super']:
@@ -614,6 +631,7 @@ class TurkuOriginalImporter(Importer):
                             #sub_recurring, sub_umbrella
                             if mother.super_event_type == "recurring":
                                 sub_event_type = "sub_recurring"
+
                             elif mother.super_event_type == "umbrella":
                                 sub_event_type = "sub_umbrella"
 
