@@ -289,7 +289,7 @@ class TurkuOriginalImporter(Importer):
             return {'start_time': start_time, 'end_time': end_time}
 
         # if not bool(int(eventTku['is_hobby'])):
-    
+
         eid = int(eventTku['drupal_nid'])
         evItem = events[eid]
         evItem['id'] = '%s:%s' % (self.data_source.id, eid)
@@ -297,7 +297,7 @@ class TurkuOriginalImporter(Importer):
         evItem['data_source'] = self.data_source
         evItem['publisher'] = self.organization
         evItem['end_time'] = end_time
-
+        
         ok_tags = (
             'u', 'b', 'h2', 'h3', 'em', 'ul',
             'li', 'strong', 'br', 'p', 'a'
@@ -530,6 +530,8 @@ class TurkuOriginalImporter(Importer):
         if event_type == "c" or event_type == "s":
             evItem['super_event_type'] = None
 
+        evItem['is_hobby'] = eventTku['is_hobby']
+        
         return evItem
 
     def _recur_fetch_paginated_url(self, url, lang, events):
@@ -601,9 +603,30 @@ class TurkuOriginalImporter(Importer):
         now = datetime.now().replace(tzinfo=TZ)
         return root_doc, mothers_with_children, mothers_children
 
+    def check_hobby(x):
+        if int(x['is_hobby']) == 1:
+            type_id = 4
+        else:
+            type_id = 1
+        return type_id
+
     def save_extra(self, drupal_url, mothersList, childList):
+
         for json_mother_event in drupal_url['events']:
             json_event = json_mother_event['event']
+
+            try:
+                # Updating the existing DB events that need is_hobby.
+                eventToUpdate = Event.objects.get(origin_id=json_event['drupal_nid'])
+                if int(json_event['is_hobby']) == 1:
+                    eventToUpdate.type_id = 4
+                else:
+                    eventToUpdate.type_id = 1
+
+                eventToUpdate.save()
+            except:
+                pass
+
             if json_event['drupal_nid']:
                 for x in childList:
                     if json_event['drupal_nid'] == x['drupal_nid_super']:
@@ -615,13 +638,9 @@ class TurkuOriginalImporter(Importer):
                             #sub_recurring, sub_umbrella
                             if mother.super_event_type == "recurring":
                                 sub_event_type = "sub_recurring"
+
                             elif mother.super_event_type == "umbrella":
                                 sub_event_type = "sub_umbrella"
-
-                            if int(mother.is_hobby) == 1:
-                                type_id = 1
-                            else:
-                                type_id = 4
 
                             try:
                                 Event.objects.update_or_create(
@@ -651,7 +670,6 @@ class TurkuOriginalImporter(Importer):
                                         'info_url_en': mother.info_url_fi,
                                         'super_event': mother,
                                         'sub_event_type': sub_event_type,
-                                        'type_id': type_id,
                                     }
                                 )
                             except Exception as ex:
