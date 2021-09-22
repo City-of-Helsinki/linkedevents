@@ -928,7 +928,7 @@ class Feedback(models.Model):
     name = models.CharField(verbose_name=_('Name'), max_length=255, blank=True)
     email = models.EmailField(verbose_name=_('E-mail'))
     subject = models.CharField(verbose_name=_('Subject'), max_length=255, blank=True)
-    body = models.TextField(verbose_name=_('Body'), blank=True)
+    body = models.TextField(verbose_name=_('Body'), max_length=10000, blank=True)
 
     def save(self, *args, **kwargs):
         try:

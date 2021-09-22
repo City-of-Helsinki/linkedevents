@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-
 import base64
 import re
 import struct
@@ -300,6 +299,18 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
 
     def is_expanded(self):
         return getattr(self, 'expanded', False)
+
+    def get_queryset(self):
+        #  For certain related fields we preload the queryset to avoid *.objects.all() query which can easily overload
+        #  the memory as database grows.
+        if isinstance(self._kwargs['serializer'], str):
+            return super(JSONLDRelatedField, self).get_queryset()
+        current_model = self._kwargs['serializer'].Meta.model
+        preloaded_fields = {Place: 'location', Keyword: 'keywords'}
+        if current_model in preloaded_fields.keys():
+            return self.context.get(preloaded_fields[current_model])
+        else:
+            return super(JSONLDRelatedField, self).get_queryset()
 
 
 class EnumChoiceField(serializers.Field):
@@ -1360,13 +1371,15 @@ class VideoSerializer(serializers.ModelSerializer):
 class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer, GeoModelAPIView):
     id = serializers.CharField(required=False)
     location = JSONLDRelatedField(serializer=PlaceSerializer, required=False, allow_null=True,
-                                  view_name='place-detail', queryset=Place.objects.all())
+                                  view_name='place-detail')
     # provider = OrganizationSerializer(hide_ld_context=True)
     keywords = JSONLDRelatedField(serializer=KeywordSerializer, many=True, allow_empty=True,
                                   required=False,
-                                  view_name='keyword-detail', queryset=Keyword.objects.filter(deprecated=False))
+                                  view_name='keyword-detail')
     super_event = JSONLDRelatedField(serializer='EventSerializer', required=False, view_name='event-detail',
-                                     queryset=Event.objects.all(), allow_null=True)
+                                     allow_null=True, queryset=Event.objects.filter(
+                                                                Q(super_event_type=Event.SuperEventType.RECURRING) |
+                                                                Q(super_event_type=Event.SuperEventType.UMBRELLA)))
     event_status = EnumChoiceField(Event.STATUSES, required=False)
     type_id = EnumChoiceField(Event.TYPE_IDS, required=False)
     publication_status = EnumChoiceField(PUBLICATION_STATUSES, required=False)
@@ -1378,14 +1391,14 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
                                                    required=False)
     sub_events = JSONLDRelatedField(serializer='EventSerializer',
                                     required=False, view_name='event-detail',
-                                    many=True, queryset=Event.objects.filter(deleted=False))
+                                    many=True)
     images = JSONLDRelatedField(serializer=ImageSerializer, required=False, allow_null=True, many=True,
-                                view_name='image-detail', queryset=Image.objects.all(), expanded=True)
+                                view_name='image-detail', expanded=True, queryset=Image.objects.all())
     videos = VideoSerializer(many=True, required=False)
     in_language = JSONLDRelatedField(serializer=LanguageSerializer, required=False,
                                      view_name='language-detail', many=True, queryset=Language.objects.all())
     audience = JSONLDRelatedField(serializer=KeywordSerializer, view_name='keyword-detail',
-                                  many=True, required=False, queryset=Keyword.objects.filter(deprecated=False))
+                                  many=True, required=False)
 
     view_name = 'event-detail'
     fields_needed_to_publish = ('keywords', 'location', 'start_time', 'short_description', 'description')
@@ -2452,8 +2465,33 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
     def allow_bulk_destroy(self, qs, filtered):
         return False
 
-    def update(self, *args, **kwargs):
-        response = super().update(*args, **kwargs)
+    def update(self, request, *args, **kwargs):
+        pk = kwargs.get('pk', None)
+        queryset = Event.objects.filter(id=pk).prefetch_related('offers', 'images__publisher', 'external_links',
+                                                                'sub_events', 'in_language', 'videos'
+                                                                ).select_related('publisher')
+        context = self.get_serializer_context()
+
+        context['queryset'] = queryset
+        context['keywords'], context['location'], bulk = self.cache_related_fields(request)
+        serializer = EventSerializer(Event.objects.get(id=pk), data=request.data, context=context)
+        serializer.is_valid(raise_exception=True)
+
+        if not self.request.user.can_edit_event(serializer.instance.publisher, serializer.instance.publication_status):
+            raise DRFPermissionDenied()
+        if isinstance(serializer.validated_data, list):
+            event_data_list = serializer.validated_data
+        else:
+            event_data_list = [serializer.validated_data]
+        for event_data in event_data_list:
+            org = self.organization
+            if hasattr(event_data, 'publisher'):
+                org = event_data['publisher']
+            if not self.request.user.can_edit_event(org, event_data['publication_status']):
+                raise DRFPermissionDenied()
+        serializer.save()
+        response = Response(data=serializer.data)
+
         original_event = Event.objects.get(id=response.data['id'])
         if original_event.replaced_by is not None:
             replacing_event = original_event.replaced_by
@@ -2465,11 +2503,6 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
         # Prevent changing an event that user does not have write permissions
         # For bulk update, the editable queryset is filtered in filter_queryset
         # method
-        if isinstance(serializer, EventSerializer) and not self.request.user.can_edit_event(
-                serializer.instance.publisher,
-                serializer.instance.publication_status,
-        ):
-            raise DRFPermissionDenied()
 
         # Prevent changing existing events to a state that user doe snot have write permissions
         if isinstance(serializer.validated_data, list):
@@ -2484,15 +2517,76 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
             if not self.request.user.can_edit_event(org, event_data['publication_status']):
                 raise DRFPermissionDenied()
 
+        if isinstance(serializer, EventSerializer) and not self.request.user.can_edit_event(
+                serializer.instance.publisher,
+                serializer.instance.publication_status,
+        ):
+            raise DRFPermissionDenied()
         super().perform_update(serializer)
 
     @atomic
     def bulk_update(self, request, *args, **kwargs):
-        return super().bulk_update(request, *args, **kwargs)
+        context = self.get_serializer_context()
+
+        context['keywords'], context['location'], bulk = self.cache_related_fields(request)
+        serializer = EventSerializer(self.filter_queryset(self.get_queryset()),
+                                     data=request.data,
+                                     context=context,
+                                     many=bulk,
+                                     partial=partial,)
+        if not serializer.instance:
+            raise serializers.ValidationError('Missing matching events to update.')
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @atomic
     def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
+        context = self.get_serializer_context()
+        context['keywords'], context['location'], bulk = self.cache_related_fields(request)
+        serializer = EventSerializer(data=request.data,
+                                     context=context,
+                                     many=bulk,)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def cache_related_fields(self, request):
+
+        def retrieve_ids(key, event):
+            if key in event.keys():
+                if isinstance(event[key], list):
+                    event_list = event.get(key, [])
+                else:
+                    event_list = [event.get(key, [])]
+                ids = [i['@id'].rstrip('/').split('/').pop() for i in event_list if i and
+                                                                                    isinstance(i, dict) and  # noqa E127 
+                                                                                    i.get('@id', None)]  # noqa E127
+                return ids
+            else:
+                return []
+
+        bulk = isinstance(request.data, list)
+
+        if not bulk:
+            events = [request.data]
+        else:
+            events = request.data
+
+        keywords = Keyword.objects.none()
+        locations = Place.objects.none()
+        keyword_ids = []
+        location_ids = []
+        for event in events:
+            keyword_ids.extend(retrieve_ids('keywords', event))
+            keyword_ids.extend(retrieve_ids('audience', event))
+            location_ids.extend(retrieve_ids('location', event))
+        if location_ids:
+            locations = Place.objects.filter(id__in=location_ids)
+        if keyword_ids:
+            keywords = Keyword.objects.filter(id__in=keyword_ids)
+        return keywords, locations, bulk
 
     def perform_create(self, serializer):
         if isinstance(serializer.validated_data, list):
