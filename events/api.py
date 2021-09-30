@@ -336,7 +336,7 @@ class EnumChoiceField(serializers.Field):
         value = utils.get_value_from_tuple_list(self.choices,
                                                 self.prefix + str(data), 0)
         if value is None:
-            raise ParseError(_("Invalid value in event_status"))
+            raise ParseError(_(f'Invalid value "{data}"'))
         return value
 
 
@@ -2458,8 +2458,9 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
             # prevent changing events user does not have write permissions (for bulk operations)
             queryset = self.request.user.get_editable_events(original_queryset)
 
-        queryset = _filter_event_queryset(queryset, self.request.query_params,
-                                          srs=self.srs)
+        if self.request.method == 'GET':
+            queryset = _filter_event_queryset(queryset, self.request.query_params, srs=self.srs)
+
         return queryset.filter()
 
     def allow_bulk_destroy(self, qs, filtered):

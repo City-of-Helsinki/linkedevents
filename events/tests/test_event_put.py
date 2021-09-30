@@ -197,7 +197,7 @@ def test__update_minimal_event_with_autopopulated_fields_with_put(api_client, mi
 
 
 @pytest.mark.django_db
-def test__update_an_event_with_put(api_client, complex_event_dict, user):
+def test__update_an_event_complex_dict(api_client, complex_event_dict, user):
 
     # create an event
     api_client.force_authenticate(user=user)
@@ -215,6 +215,7 @@ def test__update_an_event_with_put(api_client, complex_event_dict, user):
             if lang in data2[key]:
                 data2[key][lang] = '%s updated' % data2[key][lang]
 
+    data2['type_id'] = 'Volunteering'
     data2['offers'] = [
         {
             "is_free": False,
@@ -232,6 +233,47 @@ def test__update_an_event_with_put(api_client, complex_event_dict, user):
 
     # assert
     assert_event_data_is_equal(data2, response2.data)
+
+
+@pytest.mark.django_db
+def test__change_event_type(api_client, complex_event_dict, user):
+
+    # create an event
+    api_client.force_authenticate(user=user)
+    response = create_with_post(api_client, complex_event_dict)
+
+    data2 = response.data
+    data2['type_id'] = 'Course'
+    event_id = data2['@id']
+    response2 = update_with_put(api_client, event_id, data2)
+    assert_event_data_is_equal(data2, response2.data)
+
+    data2['type_id'] = 'General'
+    event_id = data2['@id']
+    response2 = update_with_put(api_client, event_id, data2)
+    assert_event_data_is_equal(data2, response2.data)
+
+    data2['type_id'] = 'Non existing event type'
+    event_id = data2['@id']
+    response2 = update_with_put(api_client, event_id, data2)
+    assert str(response2.data['detail']) == 'Invalid value "Non existing event type"'
+
+
+@pytest.mark.django_db
+def test__bulk_update_single_event(api_client, complex_event_dict, user):
+    api_client.force_authenticate(user=user)
+    response = create_with_post(api_client, complex_event_dict)
+
+    data2 = response.data
+    data2['type_id'] = 'Volunteering'
+    data3 = [data2]
+    response2 = api_client.put('http://testserver/v1/event/', data3, format='json')
+    assert_event_data_is_equal(data3, response2.data)
+
+    data2['type_id'] = 'Course'
+    data3 = [data2]
+    response2 = api_client.put('http://testserver/v1/event/', data3, format='json')
+    assert_event_data_is_equal(data3, response2.data)
 
 
 @pytest.mark.django_db
