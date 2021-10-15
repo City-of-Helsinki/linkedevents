@@ -1419,7 +1419,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         if self.context:
             for ext in self.context.get('extensions', ()):
                 self.fields['extension_{}'.format(ext.identifier)] = ext.get_extension_serializer()
-    
+
     def parse_datetimes(self, data):
         # here, we also set has_start_time and has_end_time accordingly
         for field in ['date_published', 'start_time', 'end_time']:
@@ -2429,7 +2429,6 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
         TODO: convert to use proper filter framework
         """
         original_queryset = super(EventViewSet, self).filter_queryset(queryset)
-
         if self.request.method in SAFE_METHODS:
             # we cannot use distinct for performance reasons
             public_queryset = original_queryset.filter(publication_status=PublicationStatus.PUBLIC)
@@ -2456,6 +2455,7 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
                     queryset = queryset.none()
         else:
             # prevent changing events user does not have write permissions (for bulk operations)
+            original_queryset = Event.objects.filter(id__in=[i['id'] for i in self.request.data])
             queryset = self.request.user.get_editable_events(original_queryset)
 
         if self.request.method == 'GET':
@@ -2474,10 +2474,9 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
         context = self.get_serializer_context()
 
         context['queryset'] = queryset
-        context['keywords'], context['location'], context['image'], bulk = self.cache_related_fields(request)
+        context['keywords'], context['location'], context['image'], context['sub_events'], bulk = self.cache_related_fields(request)  # noqa E501
         serializer = EventSerializer(Event.objects.get(id=pk), data=request.data, context=context)
         serializer.is_valid(raise_exception=True)
-
         if not self.request.user.can_edit_event(serializer.instance.publisher, serializer.instance.publication_status):
             raise DRFPermissionDenied()
         if isinstance(serializer.validated_data, list):
@@ -2521,14 +2520,14 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
         if isinstance(serializer, EventSerializer) and not self.request.user.can_edit_event(
                 serializer.instance.publisher,
                 serializer.instance.publication_status,
-        ):  
+        ):
             raise DRFPermissionDenied()
         super().perform_update(serializer)
 
     @atomic
     def bulk_update(self, request, *args, **kwargs):
         context = self.get_serializer_context()
-        context['keywords'], context['location'], context['image'], bulk = self.cache_related_fields(request)
+        context['keywords'], context['location'], context['image'], context['sub_events'], bulk = self.cache_related_fields(request)  # noqa E501
         serializer = EventSerializer(self.filter_queryset(self.get_queryset()),
                                      data=request.data,
                                      context=context,
@@ -2543,7 +2542,7 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
     @atomic
     def create(self, request, *args, **kwargs):
         context = self.get_serializer_context()
-        context['keywords'], context['location'], context['image'], bulk = self.cache_related_fields(request)
+        context['keywords'], context['location'], context['image'], context['sub_events'], bulk = self.cache_related_fields(request)  # noqa E501
         serializer = EventSerializer(data=request.data,
                                      context=context,
                                      many=bulk,)
@@ -2577,21 +2576,26 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
         keywords = Keyword.objects.none()
         locations = Place.objects.none()
         images = Image.objects.none()
+        sub_events = Event.objects.none()
         keyword_ids = []
         location_ids = []
         image_ids = []
+        subevent_ids = []
         for event in events:
             keyword_ids.extend(retrieve_ids('keywords', event))
             keyword_ids.extend(retrieve_ids('audience', event))
             location_ids.extend(retrieve_ids('location', event))
             image_ids.extend(retrieve_ids('images', event))
+            subevent_ids.extend(retrieve_ids('sub_events', event))
         if location_ids:
             locations = Place.objects.filter(id__in=location_ids)
         if keyword_ids:
             keywords = Keyword.objects.filter(id__in=keyword_ids)
         if image_ids:
             images = Image.objects.filter(id__in=image_ids)
-        return keywords, locations, images, bulk
+        if subevent_ids:
+            sub_events = Event.objects.filter(id__in=subevent_ids)
+        return keywords, locations, images, sub_events, bulk
 
     def perform_create(self, serializer):
         if isinstance(serializer.validated_data, list):
