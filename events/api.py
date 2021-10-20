@@ -65,6 +65,7 @@ from events.permissions import GuestPost
 from events.renderers import DOCXRenderer
 from events.translation import EventTranslationOptions, PlaceTranslationOptions
 from helevents.models import User
+from registrations.models import Registration
 
 
 def get_view_name(view):
@@ -306,7 +307,7 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
         if isinstance(self._kwargs['serializer'], str):
             return super(JSONLDRelatedField, self).get_queryset()
         current_model = self._kwargs['serializer'].Meta.model
-        preloaded_fields = {Place: 'location', Keyword: 'keywords', Image: 'image'}
+        preloaded_fields = {Place: 'location', Keyword: 'keywords', Image: 'image', Event: 'sub_events'}
         if current_model in preloaded_fields.keys():
             return self.context.get(preloaded_fields[current_model])
         else:
@@ -918,6 +919,27 @@ register_view(KeywordRetrieveViewSet, 'keyword')
 register_view(KeywordListViewSet, 'keyword')
 
 
+class RegistrationSerializer(EditableLinkedEventsObjectSerializer):
+    view_name = 'registration-detail'
+
+    class Meta:
+        fields = '__all__'
+        model = Registration
+
+
+class RegistrationViewSet(JSONAPIViewMixin,
+                          mixins.CreateModelMixin,
+                          mixins.RetrieveModelMixin,
+                          mixins.UpdateModelMixin,
+                          mixins.DestroyModelMixin,
+                          viewsets.GenericViewSet):
+    serializer_class = RegistrationSerializer
+    queryset = Registration.objects.all()
+
+
+register_view(RegistrationViewSet, 'registration')
+
+
 class KeywordSetSerializer(LinkedEventsSerializer):
     view_name = 'keywordset-detail'
     keywords = JSONLDRelatedField(
@@ -1376,6 +1398,8 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
     keywords = JSONLDRelatedField(serializer=KeywordSerializer, many=True, allow_empty=True,
                                   required=False,
                                   view_name='keyword-detail')
+    registration = JSONLDRelatedField(serializer=RegistrationSerializer, many=False, allow_empty=True, required=False,
+                                      view_name='registration-detail')
     super_event = JSONLDRelatedField(serializer='EventSerializer', required=False, view_name='event-detail',
                                      allow_null=True, queryset=Event.objects.filter(
                                                                 Q(super_event_type=Event.SuperEventType.RECURRING) |
