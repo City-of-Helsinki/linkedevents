@@ -161,6 +161,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'helusers.providers.helsinki',
+    'registrations',
 
     'helevents',
     'munigeo',

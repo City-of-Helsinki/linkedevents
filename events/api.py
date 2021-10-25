@@ -929,6 +929,7 @@ class RegistrationSerializer(EditableLinkedEventsObjectSerializer):
 
 class RegistrationViewSet(JSONAPIViewMixin,
                           mixins.CreateModelMixin,
+                          mixins.ListModelMixin,
                           mixins.RetrieveModelMixin,
                           mixins.UpdateModelMixin,
                           mixins.DestroyModelMixin,
