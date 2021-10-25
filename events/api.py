@@ -936,6 +936,7 @@ class RegistrationViewSet(JSONAPIViewMixin,
                           viewsets.GenericViewSet):
     serializer_class = RegistrationSerializer
     queryset = Registration.objects.all()
+    permission_classes = (permissions.IsAuthenticated,)
 
 
 register_view(RegistrationViewSet, 'registration')
