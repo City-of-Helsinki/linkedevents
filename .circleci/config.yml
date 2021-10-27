@@ -14,7 +14,7 @@ aliases:
   # The tilde (home path) has been removed since it doesn't work in docker commands in bin/test_ci.sh
   - &site_packages_path .local/lib/python3.7/site-packages
 
-  - &builder_image_version 18.04-d7214c52ce3670639a5b6868607198bde918cbcb
+  - &builder_image_version 18.04-a5a07c25c46622d35ac60836c5d5b0117f00b026
 
   - &workspace_root ~/repo
 
