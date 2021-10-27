@@ -10,7 +10,7 @@ orbs:
 aliases:
   # Remember to update the site_packages_path if you update the python version
   # lxml doesn't yet have a Python 3.8 wheel package so use Python 3.7 instead
-  - &python_image_version 3.7.6
+  - &python_image_version 3.7.12
   # The tilde (home path) has been removed since it doesn't work in docker commands in bin/test_ci.sh
   - &site_packages_path .local/lib/python3.7/site-packages
 
@@ -298,7 +298,7 @@ jobs:
       - run:
           name: Install dependencies required for running the management commands
           command: |
-            sudo apt-get --allow-releaseinfo-change update
+            sudo apt-get update
             sudo apt-get install -y --no-install-recommends --no-install-suggests \
               gdal-bin
       # This could also be done inside a container built from Dockerfile.dist (see, e.g., Makefile for more details)
