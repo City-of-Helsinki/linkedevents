@@ -10,6 +10,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 <!-- List the changes in your PR under the Unreleased title. You can also copy this list to your PR summary. -->
 
+## [1.10.20] - 2021-10-27
+
+### Changed
+
+- Change importer base url ESPOO_BASE_URL to espoo.eu
+
 ## [1.10.19] - 2021-10-27
 
 ### Fixed
@@ -1115,6 +1121,7 @@ to `espooevents-service`.
   to a minimum. This version marks the initial `0.1.0` relase and the initial `linkedevents` commit on which
   `espooevents-service` is based on.
 
+[1.10.20]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.19...espoo-v1.10.20
 [1.10.19]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.18...espoo-v1.10.19
 [1.10.18]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.17...espoo-v1.10.18
 [1.10.17]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.16...espoo-v1.10.17

@@ -158,7 +158,7 @@ LOCATIONS = {
     u'Talomuseo Glims': ((28954,), 20410),
 }
 
-ESPOO_BASE_URL = 'http://www.espoo.fi'
+ESPOO_BASE_URL = 'http://www.espoo.eu'
 ESPOO_API_URL = (
     ESPOO_BASE_URL + '/api/opennc/v1/ContentLanguages({lang_code})'
     '/Contents?$filter=TemplateId eq 58&$expand=ExtendedProperties,LanguageVersions'
