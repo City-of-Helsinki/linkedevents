@@ -919,7 +919,7 @@ register_view(KeywordRetrieveViewSet, 'keyword')
 register_view(KeywordListViewSet, 'keyword')
 
 
-class RegistrationSerializer(EditableLinkedEventsObjectSerializer):
+class RegistrationSerializer(serializers.ModelSerializer):
     view_name = 'registration-detail'
 
     class Meta:
@@ -1417,7 +1417,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
                                                    required=False)
     sub_events = JSONLDRelatedField(serializer='EventSerializer',
                                     required=False, view_name='event-detail',
-                                    many=True)
+                                    many=True,  queryset=Event.objects.filter(deleted=False))
     images = JSONLDRelatedField(serializer=ImageSerializer, required=False, allow_null=True, many=True,
                                 view_name='image-detail', expanded=True)
     videos = VideoSerializer(many=True, required=False)
