@@ -139,7 +139,7 @@ class TslImporter(Importer):
             for k, v in self.keywords.items():
                 kw = Keyword(data_source=getattr(self, 'data_source'))
                 kw.id = k
-                kw.publisher_id = getattr(self, 'organization')
+                kw.publisher = getattr(self, 'organization')
                 for lang, lang_val in v.items():
                     langformat = 'name_%s' % lang
                     setattr(kw, langformat, lang_val)
