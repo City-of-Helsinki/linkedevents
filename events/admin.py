@@ -6,7 +6,7 @@ from modeltranslation.admin import TranslationAdmin
 from reversion.admin import VersionAdmin
 from admin_auto_filters.filters import AutocompleteFilter
 from events.api import generate_id
-from events.models import Place, License, DataSource, Event, Keyword, KeywordSet, Language
+from events.models import Place, License, DataSource, Event, Keyword, KeywordSet, Language, PaymentMethod
 
 
 class BaseAdmin(admin.ModelAdmin):
@@ -57,11 +57,14 @@ class EventAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
               'provider_contact_info', 'event_status', 'super_event', 'info_url', 'in_language',
               'publication_status', 'replaced_by', 'deleted')
     search_fields = ('name', 'location__name')
-    list_display = ('id', 'name', 'start_time', 'end_time', 'publisher', 'location')
-    list_filter = ('data_source', PublisherFilter, CreatedByFilter, LocationFilter)
+    list_display = ('id', 'name', 'start_time',
+                    'end_time', 'publisher', 'location')
+    list_filter = ('data_source', PublisherFilter,
+                   CreatedByFilter, LocationFilter)
     ordering = ('-last_modified_time',)
     date_hierarchy = 'end_time'
-    autocomplete_fields = ('location', 'keywords', 'audience', 'super_event', 'publisher', 'replaced_by')
+    autocomplete_fields = ('location', 'keywords', 'audience',
+                           'super_event', 'publisher', 'replaced_by')
 
     def get_readonly_fields(self, request, obj=None):
         if obj:
@@ -78,7 +81,8 @@ admin.site.register(Event, EventAdmin)
 
 class KeywordAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
     # TODO: only allow user_editable editable fields
-    fields = ('id', 'data_source', 'origin_id',  'publisher', 'name', 'replaced_by', 'deprecated')
+    fields = ('id', 'data_source', 'origin_id',  'publisher',
+              'name', 'replaced_by', 'deprecated')
     search_fields = ('name',)
     list_display = ('id', 'name', 'n_events')
     list_filter = ('data_source',)
@@ -194,3 +198,17 @@ class LicenseAdmin(BaseAdmin, TranslationAdmin, VersionAdmin):
 
 
 admin.site.register(License, LicenseAdmin)
+
+
+class PaymentAdmin(BaseAdmin, TranslationAdmin):
+    fields = ('id', 'name')
+    list_display = ('id', 'name')
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ['id']
+        else:
+            return []
+
+
+admin.site.register(PaymentMethod, PaymentAdmin)

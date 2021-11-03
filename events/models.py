@@ -854,6 +854,14 @@ def keyword_added_or_removed(sender, model=None,
             instance.save(update_fields=("n_events_changed",))
 
 
+class PaymentMethod(models.Model, SimpleValueMixin):
+    id = models.CharField(max_length=100, primary_key=True)
+    name = models.CharField(verbose_name=('Name'), blank=True, max_length=25)
+
+    def value_fields(self):
+        return ['name']
+
+
 class Offer(models.Model, SimpleValueMixin):
     event = models.ForeignKey(
         Event, on_delete=models.CASCADE, db_index=True, related_name='offers')
@@ -866,6 +874,8 @@ class Offer(models.Model, SimpleValueMixin):
     # Don't expose is_free as an API field. It is used to distinguish
     # between missing price info and confirmed free entry.
     is_free = models.BooleanField(verbose_name=_('Is free'), default=False)
+    payment_methods = models.ManyToManyField(
+        PaymentMethod, blank=True, related_name='paymentmethods')
 
     def value_fields(self):
         return ['price', 'info_url', 'description', 'is_free']

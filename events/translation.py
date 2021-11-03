@@ -1,5 +1,5 @@
 from modeltranslation.translator import translator, TranslationOptions
-from .models import Language, Keyword, KeywordSet, Place, Event, Offer, License, Video, Image
+from .models import Language, Keyword, KeywordSet, Place, Event, Offer, License, Video, Image, PaymentMethod
 
 
 class LanguageTranslationOptions(TranslationOptions):
@@ -24,7 +24,8 @@ translator.register(KeywordSet, KeywordTranslationOptions)
 
 
 class PlaceTranslationOptions(TranslationOptions):
-    fields = ('name', 'description', 'info_url', 'street_address', 'address_locality', 'telephone')
+    fields = ('name', 'description', 'info_url',
+              'street_address', 'address_locality', 'telephone')
 
 
 translator.register(Place, PlaceTranslationOptions)
@@ -37,6 +38,13 @@ class EventTranslationOptions(TranslationOptions):
 
 
 translator.register(Event, EventTranslationOptions)
+
+
+class PaymentMethodOptions(TranslationOptions):
+    fields = ('name',)
+
+
+translator.register(PaymentMethod, PaymentMethodOptions)
 
 
 class OfferTranslationOptions(TranslationOptions):
@@ -62,5 +70,6 @@ translator.register(Video, VideoTranslationOptions)
 
 class ImageTranslationOptions(TranslationOptions):
     fields = ('alt_text', 'name')
+
 
 translator.register(Image, ImageTranslationOptions)
