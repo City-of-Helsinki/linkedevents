@@ -28,6 +28,7 @@ services:
             dockerfile: ./docker/django/Dockerfile
             target: development
         environment:
+            - ALLOWED_HOSTS=*
             - APPLY_MIGRATIONS=true
             - CREATE_SUPERUSER=true
             - DEBUG=true
