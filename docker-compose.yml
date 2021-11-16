@@ -41,7 +41,7 @@ services:
             - .:/app:cached
             - django-media-volume:/var/media/
         ports:
-            - "127.0.0.1:8000:8000"
+            - "127.0.0.1:8080:8000"
         depends_on:
             - postgres
             - memcached
