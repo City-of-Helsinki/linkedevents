@@ -20,9 +20,11 @@ if [[ "$CREATE_SUPERUSER" = "true" ]]; then
     ./manage.py create_admin_superuser
 fi
 
-
-if [[ "$DEV_SERVER" = "true" ]]; then
-    ./manage.py runserver $RUNSERVER_ADDRESS
+# Start server
+if [[ ! -z "$@" ]]; then
+    "$@"
+elif [[ "$DEV_SERVER" = "true" ]]; then
+    python -Wd ./manage.py runserver $RUNSERVER_ADDRESS
 else
-    uwsgi ./.prod/uwsgi_configuration.ini
+    uwsgi --ini .prod/uwsgi_configuration.ini
 fi
