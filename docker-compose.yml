@@ -14,6 +14,7 @@ services:
             - "127.0.0.1:5555:5432"
         volumes:
             - postgres-data-volume:/var/lib/postgresql/data
+        container_name: linkedevents-db
 
     django:
         build:
@@ -24,15 +25,18 @@ services:
             - APPLY_MIGRATIONS=true
             - CREATE_SUPERUSER=true
             - DEBUG=true
-            - DATABASE_URL=postgis://linkedevents:linkedevents@postgres/linkedevents
+            - DATABASE_URL=postgis://linkedevents:linkedevents@linkedevents-db/linkedevents
             - DEV_SERVER=true
             - RUNSERVER_ADDRESS=0.0.0.0:8000
-            - WAIT_FOR_IT_ADDRESS=postgres:5432
+            - WAIT_FOR_IT_ADDRESS=linkedevents-db:5432
         volumes:
             - .:/app:cached
             - django-media-volume:/var/media/
         ports:
             - "127.0.0.1:8000:8000"
+        depends_on:
+            - postgres
+        container_name: linkedevents-backend
 
 volumes:
         postgres-data-volume:
