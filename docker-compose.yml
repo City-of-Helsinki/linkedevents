@@ -16,6 +16,12 @@ services:
             - postgres-data-volume:/var/lib/postgresql/data
         container_name: linkedevents-db
 
+    memcached:
+        image: memcached:1.6
+        ports:
+            - "127.0.0.1:11211:11211"
+        container_name: linkedevents-memcached
+
     django:
         build:
             context: ./
@@ -29,6 +35,7 @@ services:
             - DEV_SERVER=true
             - RUNSERVER_ADDRESS=0.0.0.0:8000
             - WAIT_FOR_IT_ADDRESS=linkedevents-db:5432
+            - MEMCACHED_URL=linkedevents-memcached:11211
         volumes:
             - .:/app:cached
             - django-media-volume:/var/media/
@@ -36,6 +43,7 @@ services:
             - "127.0.0.1:8000:8000"
         depends_on:
             - postgres
+            - memcached
         container_name: linkedevents-backend
 
 volumes:
