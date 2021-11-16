@@ -8,6 +8,13 @@ FROM helsinkitest/python:${PYTHON_VERSION}-${IMAGE_VARIANT} AS base_stage
 ENV PYTHONDONTWRITEBYTECODE true
 ENV PYTHONUNBUFFERED true
 
+COPY --chown=appuser:appuser requirements.txt /app/
+
+RUN apt-install.sh build-essential gdal-bin gettext \
+    && pip install --no-cache-dir -r /app/requirements.txt \
+    && pip --no-cache-dir install uwsgi==2.0.18 \
+    && apt-cleanup.sh build-essential
+
 # Add tini init system https://github.com/krallin/tini
 ENV TINI_VERSION v0.18.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
@@ -17,13 +24,6 @@ EXPOSE 8000
 
 COPY --chown=appuser:appuser ./docker/django/docker-entrypoint.sh /app/
 ENTRYPOINT ["/tini", "--", "/app/docker/django/docker-entrypoint.sh"]
-
-COPY --chown=appuser:appuser requirements.txt /app/
-
-RUN apt-install.sh build-essential gdal-bin gettext \
-    && pip install --no-cache-dir -r /app/requirements.txt \
-    && pip --no-cache-dir install uwsgi==2.0.18 \
-    && apt-cleanup.sh build-essential
 
 # ==============================
 FROM base_stage AS development
