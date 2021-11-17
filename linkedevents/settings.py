@@ -67,7 +67,8 @@ env = environ.Env(
     MAIL_MAILGUN_DOMAIN=(str, ''),
     MAIL_MAILGUN_API=(str, ''),
     LIPPUPISTE_EVENT_API_URL=(str, None),
-    SUPPORT_EMAIL=(str, '')
+    SUPPORT_EMAIL=(str, ''),
+    MEMCACHED_URL=(str, "127.0.0.1:11211"),
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -494,12 +495,12 @@ elif not env('MAIL_MAILGUN_KEY') and DEBUG is True:
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
-        'LOCATION': '127.0.0.1:11211',
+        'LOCATION': env("MEMCACHED_URL"),
         'TIMEOUT': 300,
     },
     'ongoing_events': {
         'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
-        'LOCATION': '127.0.0.1:11211',
+        'LOCATION': env("MEMCACHED_URL"),
         'TIMEOUT': None,
         'OPTIONS': {
             'server_max_value_length': 1024 * 1024 * 500,
