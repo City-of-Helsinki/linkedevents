@@ -65,7 +65,7 @@ from events.permissions import GuestPost
 from events.renderers import DOCXRenderer
 from events.translation import EventTranslationOptions, PlaceTranslationOptions
 from helevents.models import User
-from registrations.models import Registration
+from registrations.models import Registration, SignUp
 
 
 def get_view_name(view):
@@ -922,24 +922,59 @@ register_view(KeywordListViewSet, 'keyword')
 class RegistrationSerializer(serializers.ModelSerializer):
     view_name = 'registration-detail'
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        event_id = kwargs['context']['request'].data['event']
+        event = Event.objects.filter(id=event_id).select_related('publisher')
+        if len(event) == 0:
+            raise DRFPermissionDenied(_('No event with id {event_id}'))
+        user = kwargs['context']['user']
+        if user.is_admin(event[0].publisher) or kwargs['context']['request'].method in SAFE_METHODS:
+            pass
+        else:
+            raise DRFPermissionDenied(_(f"User {user} cannot modify event {event}"))
+
     class Meta:
         fields = '__all__'
         model = Registration
 
 
 class RegistrationViewSet(JSONAPIViewMixin,
-                          mixins.CreateModelMixin,
                           mixins.ListModelMixin,
                           mixins.RetrieveModelMixin,
                           mixins.UpdateModelMixin,
                           mixins.DestroyModelMixin,
-                          viewsets.GenericViewSet):
+                          viewsets.GenericViewSet,
+                          mixins.CreateModelMixin,):
     serializer_class = RegistrationSerializer
     queryset = Registration.objects.all()
     permission_classes = (permissions.IsAuthenticated,)
 
 
 register_view(RegistrationViewSet, 'registration')
+
+
+class SignUpSerializer(serializers.ModelSerializer):
+    view_name = 'signup'
+
+    class Meta:
+        fields = '__all__'
+        model = SignUp
+
+    def create(self, request, *args, **kwargs):
+        instance = super().create(request, *args, **kwargs)
+        return instance
+
+
+class SignUpViewSet(JSONAPIViewMixin,
+                    mixins.CreateModelMixin,
+                    viewsets.GenericViewSet,):
+    serializer_class = SignUpSerializer
+    queryset = SignUp.objects.all()
+    permission_classes = (GuestPost,)
+
+
+register_view(SignUpViewSet, 'signup', base_name='signup')
 
 
 class KeywordSetSerializer(LinkedEventsSerializer):

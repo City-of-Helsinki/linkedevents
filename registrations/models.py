@@ -1,3 +1,4 @@
+from uuid import uuid4
 from django.conf import settings
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
@@ -22,8 +23,8 @@ class Registration(models.Model):
     last_modified_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
                                          related_name="registration_last_modified_by")
 
-    enrollment_start_time = models.DateTimeField(verbose_name=_('Enrollment start time'), blank=True, null=True)
-    enrollment_end_time = models.DateTimeField(verbose_name=_('Enrollment end time'), blank=True, null=True)
+    enrolment_start_time = models.DateTimeField(verbose_name=_('Enrollment start time'), blank=True, null=True)
+    enrolment_end_time = models.DateTimeField(verbose_name=_('Enrollment end time'), blank=True, null=True)
 
     confirmation_message = models.TextField(verbose_name=_('Confirmation message'), blank=True, null=True)
     instructions = models.TextField(verbose_name=_('Instructions'), blank=True, null=True)
@@ -34,3 +35,32 @@ class Registration(models.Model):
                                                                  null=True, blank=True)
     waiting_list_capacity = models.PositiveSmallIntegerField(verbose_name=_('Minimum attendee capacity'),
                                                              null=True, blank=True)
+
+
+class SignUp(models.Model):
+    class NotificationType:
+        NO_NOTIFICATION = 0
+        SMS = 1
+        EMAIL = 2
+        SMS_EMAIL = 3
+
+    NOTIFICATION_TYPES = (
+        (NotificationType.NO_NOTIFICATION, _("No Notification")),
+        (NotificationType.SMS, _("SMS")),
+        (NotificationType.EMAIL, _("E-Mail")),
+        (NotificationType.SMS_EMAIL, _("Both SMS and email."))
+        )
+
+    registration = models.ForeignKey(Registration, on_delete=models.CASCADE, related_name='signups')
+    name = models.CharField(max_length=50)
+    city = models.CharField(max_length=50, blank=True, default='')
+    email = models.EmailField()
+    extra_info = models.TextField(blank=True, default='')
+    membership_number = models.CharField(max_length=50, blank=True, default='')
+    phone_number = models.CharField(max_length=18, blank=True, default='')
+    notifications = models.PositiveSmallIntegerField(verbose_name=_("Notification type"), choices=NOTIFICATION_TYPES,
+                                                     default=NotificationType.NO_NOTIFICATION)
+    cancellation_code = models.UUIDField(default=uuid4, editable=False)
+
+    class Meta:
+        unique_together = [['email', 'registration'], ['phone_number', 'registration']]
