@@ -47,62 +47,63 @@ def tsl() -> dict:
     Prefix & ID are hardcoded as visual cues for mapping the management commands.
     '''
     data = {
-        'tsl:p1': {'fi': 'Ajanvietepelit', 'sv': 'Fritidsspel', 'en': 'Recreational games'}, # DONE, ON
-        'tsl:p2': {'fi': 'Eläimet', 'sv': 'Djur', 'en': 'Animals'}, # DONE, ON
-        'tsl:p3': {'fi': 'Kielet', 'sv': 'Språk', 'en': 'Languages'}, # DONE, ON
-        'tsl:p4': {'fi': 'Kirjallisuus ja sanataide', 'sv': 'Litteratur och ordkonst', 'en': 'Literature and literary art'}, # DONE, ON
-        'tsl:p5': {'fi': 'Kuvataide ja media', 'sv': 'Bildkonst och media', 'en': 'Fine arts and media'}, # DONE, ON
-        'tsl:p6': {'fi': 'Kädentaidot', 'sv': 'Hantverk', 'en': 'Handicrafts'}, # DONE, ON
-        'tsl:p7': {'fi': 'Liikunta ja urheilu', 'sv': 'Motion och idrott', 'en': 'Physical exercise and sports'}, # DONE, ON
-        'tsl:p8': {'fi': 'Luonto', 'sv': 'Naturen', 'en': 'Nature'}, # DONE, ON
-        'tsl:p9': {'fi': 'Musiikki', 'sv': 'Musik', 'en': 'Music'}, # DONE, ON
-        'tsl:p10': {'fi': 'Ruoka ja juoma', 'sv': 'Mat och drycker', 'en': 'Food and beverages'}, # DONE, ON
-        'tsl:p11': {'fi': 'Teatteri, performanssi ja sirkus', 'sv': 'Teaterkonst, performance och cirkus', 'en': 'Theatre, performance and circus'}, # DONE, ON
-        'tsl:p12': {'fi': 'Tiede ja tekniikka', 'sv': 'Vetenskap och teknik', 'en': 'Science and technology'}, # DONE, ON
-        'tsl:p13': {'fi': 'Yhteisöllisyys ja auttaminen', 'sv': 'Sammanhållning och hjälp', 'en': 'Communality and helping'}, # DONE, ON
-        #'tsl:p14': {'fi': 'Muut', 'sv': 'Övriga', 'en': 'Other'},  # Shared. # EI OLE! REPLACED BY: TSL:P55
-        'tsl:p15': {'fi': 'Maahanmuuttaneet', 'sv': 'Invandrare', 'en': 'Immigrants'}, # DONE, ON
-        'tsl:p16': {'fi': 'Toimintarajoitteiset', 'sv': 'Personer med funktionsbegränsning', 'en': 'Disabled persons'}, # DONE, ON
-        'tsl:p17': {'fi': 'Vauvat ja taaperot', 'sv': 'Babyer och barn i småbarnsåldern', 'en': 'Babies and toddlers'}, # DONE, ON
-        'tsl:p18': {'fi': 'Lapset ja lapsiperheet', 'sv': 'Barn och barnfamiljer', 'en': 'Children and families with children'}, # DONE, ON
-        'tsl:p19': {'fi': 'Nuoret', 'sv': 'Ungdomar', 'en': 'Young people'}, # DONE, ON
-        'tsl:p20': {'fi': 'Nuoret aikuiset', 'sv': 'Unga vuxna', 'en': 'Young adults'}, # DONE, ON
-        'tsl:p21': {'fi': 'Aikuiset', 'sv': 'Vuxna', 'en': 'Adults'}, # DONE, ON 
-        'tsl:p22': {'fi': 'Ikääntyneet', 'sv': 'Äldre', 'en': 'Older adults'}, # DONE, ON
-        'tsl:p23': {'fi': 'Opiskelijat', 'sv': 'Studerande', 'en': 'Students'}, # DONE, ON
-        #'tsl:p24': {'fi': 'Matkailijat', 'sv': 'Resenärer', 'en': 'Travelers'}, # EI OLE OLEMASSA, REPLACED BY: NUORET AIKUISET P20
-        'tsl:p25': {'fi': 'Työnhakijat', 'sv': 'Arbetssökande', 'en': 'Jobseekers'}, # DONE, ON
-        'tsl:p26': {'fi': 'Yrittäjät', 'sv': 'Företagare', 'en': 'Entrepreneurs'}, # DONE, ON
-        #'tsl:p27': {'fi': 'Harrastajat', 'sv': 'Hobbyister', 'en': 'Hobbyists'}, # EI OLE OLEMASSA, EI OLE REPLACEMENT
-        'tsl:p28': {'fi': 'Kuvataide', 'sv': 'Bildkonst', 'en': 'Visual arts'}, # DONE, ON
-        'tsl:p29': {'fi': 'Tanssi', 'sv': 'Dans', 'en': 'Dance'}, # DONE, ON
-        'tsl:p30': {'fi': 'Elokuva', 'sv': 'Filmkonst', 'en': 'Cinema'}, # DONE, ON
-        'tsl:p31': {'fi': 'Käsityöt', 'sv': 'Handarbeten och hantverk', 'en': 'Handicrafts'}, # DONE, ON
-        'tsl:p32': {'fi': 'Terveys ja hyvinvointi', 'sv': 'Hälsa och välbefinnande', 'en': 'Health and well-being'}, # DONE, ON
-        'tsl:p33': {'fi': 'Luonto ja kulttuuriympäristö', 'sv': 'Naturen och kulturmiljö', 'en': 'Nature and cultural environment'}, # DONE, ON
-        'tsl:p34': {'fi': 'Uskonto ja hengellisyys', 'sv': 'Religion och andlighet', 'en': 'Religion and religious spirituality'}, # DONE, ON
-        'tsl:p35': {'fi': 'Yritystoiminta ja työelämä', 'sv': 'Företagsverksamhet och arbetsliv', 'en': 'Business operations and working life'}, # DONE, ON
-        'tsl:p36': {'fi': 'Yhteiskunta', 'sv': 'Samhället', 'en': 'Society'}, # DONE, ON
-        'tsl:p37': {'fi': 'Historia', 'sv': 'Historia', 'en': 'History'}, # DONE, ON
-        'tsl:p38': {'fi': 'Festivaalit', 'sv': 'Festivaler', 'en': 'Festivals'}, # DONE, ON
-        'tsl:p39': {'fi': 'Kaupunkitapahtumat', 'sv': 'Stadsevenemang', 'en': 'Urban events'}, # DONE, ON
-        'tsl:p40': {'fi': 'Keskustelutilaisuudet', 'sv': 'Diskussionsevenemang', 'en': 'Discussions'}, # DONE, ON
-        'tsl:p41': {'fi': 'Kilpailut', 'sv': 'Tävlingar', 'en': 'Competitions'}, # DONE, ON
-        'tsl:p42': {'fi': 'Kokoukset, seminaarit ja kongressit', 'sv': 'Möten, seminarier och konferenser', 'en': 'Meetings, seminars and conferences'}, # DONE, ON
-        'tsl:p43': {'fi': 'Konsertit', 'sv': 'Konserter', 'en': 'Concerts'}, # DONE, ON
-        'tsl:p44': {'fi': 'Koulutustapahtumat', 'sv': 'Utbildningsevenemang', 'en': 'Educational events'}, # DONE, ON
-        'tsl:p45': {'fi': 'Leirit', 'sv': 'Läger', 'en': 'Camps'}, # DONE, ON
-        'tsl:p46': {'fi': 'Luennot', 'sv': 'Föreläsningar', 'en': 'Lectures'}, # DONE, ON
-        'tsl:p47': {'fi': 'Markkinat', 'sv': 'Marknader', 'en': 'Fairs and markets'}, # DONE, ON
-        'tsl:p48': {'fi': 'Messut', 'sv': 'Mässor', 'en': 'Trade fairs'}, # DONE, ON
-        'tsl:p49': {'fi': 'Myyjäiset', 'sv': 'Försäljningar', 'en': 'Jumble sales'}, # DONE, ON
-        'tsl:p50': {'fi': 'Näyttelyt', 'sv': 'Utställningar', 'en': 'Exhibitions'}, # DONE, ON
-        'tsl:p51': {'fi': 'Opastukset', 'sv': 'Guidade turer', 'en': 'Guided tours'}, # DONE, ON
-        'tsl:p52': {'fi': 'Retket', 'sv': 'Utfärder', 'en': 'Trips'}, # DONE, ON
-        'tsl:p53': {'fi': 'Työpajat', 'sv': 'Verkstäder', 'en': 'Workshops'}, # DONE, ON
-        'tsl:p54': {'fi': 'Verkostoitumistapahtumat', 'sv': 'Nätverksevenemang', 'en': 'Networking events'}, # DONE, ON
-        'tsl:p55': {'fi': 'Muu', 'sv': 'Övrig', 'en': 'Other'}, # DONE, ON.
-        'tsl:p56': {'fi': 'Teatteri, tanssi ja sirkus', 'sv': 'Teaterkonst, dans och cirkus', 'en': 'Theatre, dance and circus'}, # DONE, LISÄTTY UUSI
+        'tsl:p1': {'fi': 'Ajanvietepelit', 'sv': 'Fritidsspel', 'en': 'Recreational games'},
+        'tsl:p2': {'fi': 'Eläimet', 'sv': 'Djur', 'en': 'Animals'},
+        'tsl:p3': {'fi': 'Kielet', 'sv': 'Språk', 'en': 'Languages'},
+        'tsl:p4': {'fi': 'Kirjallisuus ja sanataide', 'sv': 'Litteratur och ordkonst', 'en': 'Literature and literary art'},
+        'tsl:p5': {'fi': 'Kuvataide ja media', 'sv': 'Bildkonst och media', 'en': 'Fine arts and media'},
+        'tsl:p6': {'fi': 'Kädentaidot', 'sv': 'Hantverk', 'en': 'Handicrafts'},
+        'tsl:p7': {'fi': 'Liikunta ja urheilu', 'sv': 'Motion och idrott', 'en': 'Physical exercise and sports'},
+        'tsl:p8': {'fi': 'Luonto', 'sv': 'Naturen', 'en': 'Nature'},
+        'tsl:p9': {'fi': 'Musiikki', 'sv': 'Musik', 'en': 'Music'},
+        'tsl:p10': {'fi': 'Ruoka ja juoma', 'sv': 'Mat och drycker', 'en': 'Food and beverages'},
+        'tsl:p11': {'fi': 'Teatteri, performanssi ja sirkus', 'sv': 'Teaterkonst, performance och cirkus', 'en': 'Theatre, performance and circus'},
+        'tsl:p12': {'fi': 'Tiede ja tekniikka', 'sv': 'Vetenskap och teknik', 'en': 'Science and technology'},
+        'tsl:p13': {'fi': 'Yhteisöllisyys ja auttaminen', 'sv': 'Sammanhållning och hjälp', 'en': 'Communality and helping'},
+        # 'tsl:p14': {'fi': 'Muut', 'sv': 'Övriga', 'en': 'Other'},  # Shared. # EI OLE! REPLACED BY: TSL:P55
+        'tsl:p15': {'fi': 'Maahanmuuttaneet', 'sv': 'Invandrare', 'en': 'Immigrants'},
+        'tsl:p16': {'fi': 'Toimintarajoitteiset', 'sv': 'Personer med funktionsbegränsning', 'en': 'Disabled persons'},
+        'tsl:p17': {'fi': 'Vauvat ja taaperot', 'sv': 'Babyer och barn i småbarnsåldern', 'en': 'Babies and toddlers'},
+        'tsl:p18': {'fi': 'Lapset ja lapsiperheet', 'sv': 'Barn och barnfamiljer', 'en': 'Children and families with children'},
+        'tsl:p19': {'fi': 'Nuoret', 'sv': 'Ungdomar', 'en': 'Young people'},
+        'tsl:p20': {'fi': 'Nuoret aikuiset', 'sv': 'Unga vuxna', 'en': 'Young adults'},
+        'tsl:p21': {'fi': 'Aikuiset', 'sv': 'Vuxna', 'en': 'Adults'},
+        'tsl:p22': {'fi': 'Ikääntyneet', 'sv': 'Äldre', 'en': 'Older adults'},
+        'tsl:p23': {'fi': 'Opiskelijat', 'sv': 'Studerande', 'en': 'Students'},
+        # 'tsl:p24': {'fi': 'Matkailijat', 'sv': 'Resenärer', 'en': 'Travelers'}, # EI OLE OLEMASSA, REPLACED BY: NUORET AIKUISET P20
+        'tsl:p25': {'fi': 'Työnhakijat', 'sv': 'Arbetssökande', 'en': 'Jobseekers'},
+        'tsl:p26': {'fi': 'Yrittäjät', 'sv': 'Företagare', 'en': 'Entrepreneurs'},
+        # 'tsl:p27': {'fi': 'Harrastajat', 'sv': 'Hobbyister', 'en': 'Hobbyists'}, # EI OLE OLEMASSA, EI OLE REPLACEMENT
+        'tsl:p28': {'fi': 'Kuvataide', 'sv': 'Bildkonst', 'en': 'Visual arts'},
+        'tsl:p29': {'fi': 'Tanssi', 'sv': 'Dans', 'en': 'Dance'},
+        'tsl:p30': {'fi': 'Elokuva', 'sv': 'Filmkonst', 'en': 'Cinema'},
+        'tsl:p31': {'fi': 'Käsityöt', 'sv': 'Handarbeten och hantverk', 'en': 'Handicrafts'},
+        'tsl:p32': {'fi': 'Terveys ja hyvinvointi', 'sv': 'Hälsa och välbefinnande', 'en': 'Health and well-being'},
+        'tsl:p33': {'fi': 'Luonto ja kulttuuriympäristö', 'sv': 'Naturen och kulturmiljö', 'en': 'Nature and cultural environment'},
+        'tsl:p34': {'fi': 'Uskonto ja hengellisyys', 'sv': 'Religion och andlighet', 'en': 'Religion and religious spirituality'},
+        'tsl:p35': {'fi': 'Yritystoiminta ja työelämä', 'sv': 'Företagsverksamhet och arbetsliv', 'en': 'Business operations and working life'},
+        'tsl:p36': {'fi': 'Yhteiskunta', 'sv': 'Samhället', 'en': 'Society'},
+        'tsl:p37': {'fi': 'Historia', 'sv': 'Historia', 'en': 'History'},
+        'tsl:p38': {'fi': 'Festivaalit', 'sv': 'Festivaler', 'en': 'Festivals'},
+        'tsl:p39': {'fi': 'Kaupunkitapahtumat', 'sv': 'Stadsevenemang', 'en': 'Urban events'},
+        'tsl:p40': {'fi': 'Keskustelutilaisuudet', 'sv': 'Diskussionsevenemang', 'en': 'Discussions'},
+        'tsl:p41': {'fi': 'Kilpailut', 'sv': 'Tävlingar', 'en': 'Competitions'},
+        'tsl:p42': {'fi': 'Kokoukset, seminaarit ja kongressit', 'sv': 'Möten, seminarier och konferenser', 'en': 'Meetings, seminars and conferences'},
+        'tsl:p43': {'fi': 'Konsertit', 'sv': 'Konserter', 'en': 'Concerts'},
+        'tsl:p44': {'fi': 'Koulutustapahtumat', 'sv': 'Utbildningsevenemang', 'en': 'Educational events'},
+        'tsl:p45': {'fi': 'Leirit', 'sv': 'Läger', 'en': 'Camps'},
+        'tsl:p46': {'fi': 'Luennot', 'sv': 'Föreläsningar', 'en': 'Lectures'},
+        'tsl:p47': {'fi': 'Markkinat', 'sv': 'Marknader', 'en': 'Fairs and markets'},
+        'tsl:p48': {'fi': 'Messut', 'sv': 'Mässor', 'en': 'Trade fairs'},
+        'tsl:p49': {'fi': 'Myyjäiset', 'sv': 'Försäljningar', 'en': 'Jumble sales'},
+        'tsl:p50': {'fi': 'Näyttelyt', 'sv': 'Utställningar', 'en': 'Exhibitions'},
+        'tsl:p51': {'fi': 'Opastukset', 'sv': 'Guidade turer', 'en': 'Guided tours'},
+        'tsl:p52': {'fi': 'Retket', 'sv': 'Utfärder', 'en': 'Trips'},
+        'tsl:p53': {'fi': 'Työpajat', 'sv': 'Verkstäder', 'en': 'Workshops'},
+        'tsl:p54': {'fi': 'Verkostoitumistapahtumat', 'sv': 'Nätverksevenemang', 'en': 'Networking events'},
+        'tsl:p55': {'fi': 'Muu sisältö', 'sv': 'Övrigt innehåll', 'en': 'Other content'},
+        'tsl:p56': {'fi': 'Teatteri, tanssi ja sirkus', 'sv': 'Teaterkonst, dans och cirkus', 'en': 'Theatre, dance and circus'},
+        'tsl:p57': {'fi': 'Muu tapahtumatyyppi', 'sv': 'Övrig evenemangstyp', 'en': 'Other event type'},
     }
     return data
 
