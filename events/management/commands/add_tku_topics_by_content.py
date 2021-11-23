@@ -6,36 +6,37 @@ from django.db import transaction
 from events.models import Keyword, KeywordSet, DataSource
 
 TURKU_KEYWORD_SET_DATA = {
-    'id': 'turku:hobbytopics',
-    'name_en': 'Turku hobbytopics',
-    'name_fi': 'Turku-harrastusaihepiirit',
-    'name_sv': 'Åbo-hobbyämnen',
+    'id': 'turku:topic_content',
+    'name_en': 'Content based Turku topics',
+    'name_fi': 'Turku-aihepiirit sisällön mukaan',
+    'name_sv': 'Åbo-ämnen efter innehåll',
     'data_source_id': 'turku',
     'usage': KeywordSet.KEYWORD,
 }
 
-
 TURKU_KEYWORD_IDS = [
-    # Hobby content target:
-    'tsl:p1',  # Ajanvietepelit
-    'tsl:p2',  # Eläimet
-    'tsl:p3',  # Kielet
-    'tsl:p4',  # Kirjallisuus ja sanataide
-    'tsl:p5',  # Kuvataide ja media
-    'tsl:p6',  # Kädentaidot
-    'tsl:p7',  # Liikunta ja urheilu
-    'tsl:p8',  # Luonto
+    # Event content based:
+    'tsl:p28',  # Kuvataide
+    'tsl:p29',  # Tanssi
     'tsl:p9',  # Musiikki
+    'tsl:p11',  # Teatteri, performanssi ja sirkus
+    'tsl:p4',  # Kirjallisuus ja sanataide
+    'tsl:p30',  # Elokuva
+    'tsl:p31',  # Käsityöt
     'tsl:p10',  # Ruoka ja juoma
-    'tsl:p56',  # Teatteri, tanssi ja sirkus (previously "Teatteri, performanssi ja sirkus - tsl:p11")
-    'tsl:p12',  # Tiede ja tekniikka
-    'tsl:p13',  # Yhteisöllisyys ja auttaminen
-    'tsl:p58',  # Muu (previously "Muut - tsl:p14")
+    'tsl:p7',  # Liikunta ja urheilu
+    'tsl:p32',  # Terveys ja hyvinvointi
+    'tsl:p33',  # Luonto ja kulttuuriympäristö
+    'tsl:p34',  # Uskonto ja hengellisyys
+    'tsl:p35',  # Yritystoiminta ja työelämä
+    'tsl:p36',  # Yhteiskunta
+    'tsl:p37',  # Historia
+    'tsl:p55',  # Muu sisältö
 ]
 
 
 class Command(BaseCommand):
-    help = "Creates Turku TSL hobbytopics keyword set."
+    help = "Creates Turku topics keyword set."
 
     @lru_cache()
     def get_keyword_obj(self, keyword_id):
@@ -46,8 +47,8 @@ class Command(BaseCommand):
         return keyword
 
     @transaction.atomic()
-    def create_tsl_hobbytopics_keyword_set(self):
-        self.stdout.write('creating Turku TSL hobbytopics keyword set...')
+    def create_tsl_topics_keyword_set(self):
+        self.stdout.write('creating Turku TSL topics keyword set...')
 
         keyword_set, created = KeywordSet.objects.update_or_create(
             id=TURKU_KEYWORD_SET_DATA['id'],
@@ -75,5 +76,5 @@ class Command(BaseCommand):
             'name': 'Kuntakohtainen data Turun Kaupunki', 'user_editable': True}
         DataSource.objects.get_or_create(id=TURKU_KEYWORD_SET_DATA['data_source_id'],
                                          defaults=turku_data_source_defaults)
-        self.create_tsl_hobbytopics_keyword_set()
+        self.create_tsl_topics_keyword_set()
         self.stdout.write('all done')

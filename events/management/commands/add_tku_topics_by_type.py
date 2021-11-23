@@ -6,33 +6,15 @@ from django.db import transaction
 from events.models import Keyword, KeywordSet, DataSource
 
 TURKU_KEYWORD_SET_DATA = {
-    'id': 'turku:topic',
-    'name_en': 'Turku topic',
-    'name_fi': 'Turku-aihepiiri',
-    'name_sv': 'Åbo-tema',
+    'id': 'turku:topic_type',
+    'name_en': 'Type based Turku topics',
+    'name_fi': 'Turku-aihepiirit tyypin mukaan',
+    'name_sv': 'Åbo-ämnen efter typ',
     'data_source_id': 'turku',
     'usage': KeywordSet.KEYWORD,
 }
 
 TURKU_KEYWORD_IDS = [
-    # Event content based:
-    'tsl:p28',  # Kuvataide
-    'tsl:p29',  # Tanssi
-    'tsl:p9',  # Musiikki
-    'tsl:p11',  # Teatteri, performanssi ja sirkus
-    'tsl:p4',  # Kirjallisuus ja sanataide
-    'tsl:p30',  # Elokuva
-    'tsl:p31',  # Käsityöt
-    'tsl:p10',  # Ruoka ja juoma
-    'tsl:p7',  # Liikunta ja urheilu
-    'tsl:p32',  # Terveys ja hyvinvointi
-    'tsl:p33',  # Luonto ja kulttuuriympäristö
-    'tsl:p34',  # Uskonto ja hengellisyys
-    'tsl:p35',  # Yritystoiminta ja työelämä
-    'tsl:p36',  # Yhteiskunta
-    'tsl:p37',  # Historia
-    'tsl:p14',  # Muut
-
     # Event type based:
     'tsl:p38',  # Festivaalit
     'tsl:p39',  # Kaupunkitapahtumat
@@ -51,7 +33,7 @@ TURKU_KEYWORD_IDS = [
     'tsl:p52',  # Retket
     'tsl:p53',  # Työpajat
     'tsl:p54',  # Verkostoitumistapahtumat
-    'tsl:p55',  # Muu
+    'tsl:p57',  # Muu tapahtumatyyppi
 ]
 
 

@@ -57,10 +57,11 @@ TURKU_LUOKITUS_KEYWORD_IDS = {
     'Luonto': 'tsl:p8',  # Luonto
     'Musiikki': 'tsl:p9',  # Musiikki
     'Ruoka ja juoma': 'tsl:p10',  # Ruoka ja juoma
-    'Teatteri, performanssi ja sirkus': 'tsl:p11',  # Teatteri, performanssi ja sirkus
+    # Teatteri, tanssi ja sirkus (Previously "Teatteri, performanssi ja sirkus - tsl:p11")
+    'Teatteri, tanssi ja sirkus': 'tsl:p56',
     'Tiede ja tekniikka': 'tsl:p12',  # Tiede ja tekniikka
     'Yhteisöllisyys ja auttaminen': 'tsl:p13',  # Yhteisöllisyys ja auttaminen
-    'Muut': 'tsl:p14',  # Muut
+    'Muu': 'tsl:p58',  # Muu (Previously "Muut - tsl:p14")
 
     # Event content based:
     'Kuvataide': 'tsl:p28',  # Kuvataide
@@ -78,7 +79,7 @@ TURKU_LUOKITUS_KEYWORD_IDS = {
     'Yritystoiminta ja työelämä': 'tsl:p35',  # Yritystoiminta ja työelämä
     'Yhteiskunta': 'tsl:p36',  # Yhteiskunta
     'Historia': 'tsl:p37',  # Historia
-    'Muut': 'tsl:p14',  # Muut
+    'Muu sisältö': 'tsl:p55',  # Muu sisältö
 
     # Event type based:
     'Festivaalit': 'tsl:p38',  # Festivaalit
@@ -98,7 +99,7 @@ TURKU_LUOKITUS_KEYWORD_IDS = {
     'Retket': 'tsl:p52',  # Retket
     'Työpajat': 'tsl:p53',  # Työpajat
     'Verkostoitumistapahtumat': 'tsl:p54',  # Verkostoitumistapahtumat
-    'Muu': 'tsl:p55',  # Muu
+    'Muu tapahtumatyyppi': 'tsl:p57',  # Muu tapahtumatyyppi
 }
 
 # These words are not meant to be changed, as they come from the API.
@@ -111,7 +112,7 @@ TURKU_DRUPAL_CATEGORY_EN_YSOID = {
     'Museum': 'tsl:p37',  # Historia
     'Lectures': 'tsl:p46',  # Luennot
     'Participation': 'tsl:p55',  # Muu
-    'Multiculturalism': 'tsl:p14',  # Muut
+    'Multiculturalism': 'tsl:p55',  # Muu (Previously "Muut - p14")
     'cruises and tours': 'tsl:p52',  # Retket
     'Trips': 'tsl:p52',  # Retket
     'Guided tours and sightseeing tours': 'tsl:p51',  # Opastukset
@@ -125,7 +126,7 @@ TURKU_DRUPAL_AUDIENCES_KEYWORD_EN_YSOID = {
     'Adults': 'tsl:p21',  # Aikuiset
     'Child families': 'tsl:p18',  # Lapset ja lapsiperheet
     'Immigrants': 'tsl:p15',  # Maahamuuttaneet
-    'Travellers': 'tsl:p24',  # Matkailijat
+    'Travellers': 'tsl:p20',  # Nuoret aikuiset (Previously "Matkailijat - tsl:p24")
     'Youth': 'tsl:p19',  # Nuoret
     'Elderly': 'tsl:p22',  # Ikääntyneet
     'Jobseekers': 'tsl:p25',  # Työnhakijat

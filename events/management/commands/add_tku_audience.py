@@ -15,17 +15,17 @@ TURKU_KEYWORD_SET_DATA = {
 }
 
 TURKU_KEYWORD_IDS = [
-    'tsl:p21',  # Aikuiset
+    'tsl:p17',  # Vauvat ja taaperot
     'tsl:p18',  # Lapset ja lapsiperheet
-    'tsl:p15',  # Maahanmuuttaneet
-    'tsl:p20',  # Nuoret aikuiset
     'tsl:p19',  # Nuoret
+    'tsl:p20',  # Nuoret aikuiset
+    'tsl:p21',  # Aikuiset
     'tsl:p22',  # Ikääntyneet
     'tsl:p23',  # Opiskelijat
-    'tsl:p25',  # Työnhakijat
+    'tsl:p15',  # Maahanmuuttaneet
     'tsl:p16',  # Toimintarajoitteiset
-    'tsl:p17',  # Vauvat ja taaperot
-    'tsl:p26',  # Yrittäjät, Järjestöt, Viranomaiset
+    'tsl:p25',  # Työnhakijat
+    'tsl:p26',  # Yrittäjät (Järjestöt, Viranomaiset)
 ]
 
 

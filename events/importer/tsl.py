@@ -104,6 +104,7 @@ def tsl() -> dict:
         'tsl:p55': {'fi': 'Muu sisältö', 'sv': 'Övrigt innehåll', 'en': 'Other content'},
         'tsl:p56': {'fi': 'Teatteri, tanssi ja sirkus', 'sv': 'Teaterkonst, dans och cirkus', 'en': 'Theatre, dance and circus'},
         'tsl:p57': {'fi': 'Muu tapahtumatyyppi', 'sv': 'Övrig evenemangstyp', 'en': 'Other event type'},
+        'tsl:p58': {'fi': 'Muu', 'sv': 'Övrig', 'en': 'Other'},
     }
     return data
 
