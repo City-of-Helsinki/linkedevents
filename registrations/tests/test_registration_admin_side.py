@@ -52,6 +52,31 @@ def test_basic_registration_functionality(api_client, user, user2, event):
 
 
 @pytest.mark.django_db
+def test_list_all_registrations(api_client, user, user2, event, event2, event3):
+    url = reverse('registration-list')
+
+    # create registrations from two different users
+    api_client.force_authenticate(user)
+    registration_data = {"event": event.id}
+    response = api_client.post(url, registration_data, format='json')
+    assert response.status_code == 201
+    registration_data = {"event": event3.id}
+    response = api_client.post(url, registration_data, format='json')
+    assert response.status_code == 201
+
+    api_client.force_authenticate(user2)
+    registration_data = {"event": event2.id}
+    response = api_client.post(url, registration_data, format='json')
+    assert response.status_code == 201
+
+    # log out and check the list of registrations
+    api_client.force_authenticate(user=None)
+    response = api_client.get(url)
+    assert response.status_code == 200
+    
+
+
+@pytest.mark.django_db
 def test_successful_sign_up(api_client, user, event):
     url = reverse('registration-list')
 
@@ -64,7 +89,8 @@ def test_successful_sign_up(api_client, user, event):
     sign_up_data = {'registration': registration_id,
                     'name': 'Michael Jackson',
                     'email': 'test@test.com',
-                    'phone_number': '0441111111'}
+                    'phone_number': '0441111111',
+                    'notifications': 'sms'}
     url = reverse('signup-list')
 
     response = api_client.post(url, sign_up_data, format='json')
@@ -74,6 +100,7 @@ def test_successful_sign_up(api_client, user, event):
     assert signup.name == sign_up_data['name']
     assert signup.email == sign_up_data['email']
     assert signup.phone_number == sign_up_data['phone_number']
+    assert signup.notifications == SignUp.NotificationType.SMS
 
 
 @pytest.mark.django_db

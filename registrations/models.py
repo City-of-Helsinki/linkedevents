@@ -39,10 +39,10 @@ class Registration(models.Model):
 
 class SignUp(models.Model):
     class NotificationType:
-        NO_NOTIFICATION = 0
-        SMS = 1
-        EMAIL = 2
-        SMS_EMAIL = 3
+        NO_NOTIFICATION = 'none'
+        SMS = 'sms'
+        EMAIL = 'email'
+        SMS_EMAIL = 'sms and email'
 
     NOTIFICATION_TYPES = (
         (NotificationType.NO_NOTIFICATION, _("No Notification")),
@@ -58,8 +58,8 @@ class SignUp(models.Model):
     extra_info = models.TextField(blank=True, default='')
     membership_number = models.CharField(max_length=50, blank=True, default='')
     phone_number = models.CharField(max_length=18, blank=True, default='')
-    notifications = models.PositiveSmallIntegerField(verbose_name=_("Notification type"), choices=NOTIFICATION_TYPES,
-                                                     default=NotificationType.NO_NOTIFICATION)
+    notifications = models.CharField(max_length=25, verbose_name=_("Notification type"), choices=NOTIFICATION_TYPES,
+                                     default=NotificationType.NO_NOTIFICATION)
     cancellation_code = models.UUIDField(default=uuid4, editable=False)
 
     class Meta:
