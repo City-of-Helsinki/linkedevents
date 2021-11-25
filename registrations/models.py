@@ -52,15 +52,15 @@ class SignUp(models.Model):
         )
 
     registration = models.ForeignKey(Registration, on_delete=models.CASCADE, related_name='signups')
-    name = models.CharField(max_length=50)
-    city = models.CharField(max_length=50, blank=True, default='')
-    email = models.EmailField()
-    extra_info = models.TextField(blank=True, default='')
-    membership_number = models.CharField(max_length=50, blank=True, default='')
-    phone_number = models.CharField(max_length=18, blank=True, default='')
-    notifications = models.CharField(max_length=25, verbose_name=_("Notification type"), choices=NOTIFICATION_TYPES,
+    name = models.CharField(verbose_name=_('Name'), max_length=50)
+    city = models.CharField(verbose_name=_('City'), max_length=50, blank=True, default='')
+    email = models.EmailField(verbose_name=_('E-mail'), blank=True, null=True, default=None)
+    extra_info = models.TextField(verbose_name=_('Extra info'), blank=True, default='')
+    membership_number = models.CharField(verbose_name=_('Membership number'), max_length=50, blank=True, default='')
+    phone_number = models.CharField(verbose_name=_('Phone number'), max_length=18, blank=True, null=True, default=None)
+    notifications = models.CharField(verbose_name=_('Notification type'), max_length=25, choices=NOTIFICATION_TYPES,
                                      default=NotificationType.NO_NOTIFICATION)
-    cancellation_code = models.UUIDField(default=uuid4, editable=False)
+    cancellation_code = models.UUIDField(verbose_name=_('Cancellation code'), default=uuid4, editable=False)
 
     class Meta:
         unique_together = [['email', 'registration'], ['phone_number', 'registration']]
