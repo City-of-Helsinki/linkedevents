@@ -17,6 +17,7 @@ import pytz
 import regex
 from django.conf import settings
 from django.contrib.postgres.search import SearchQuery, TrigramSimilarity
+from django.contrib.auth.models import AnonymousUser
 from django.core.cache import caches
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q, QuerySet
@@ -921,6 +922,7 @@ register_view(KeywordListViewSet, 'keyword')
 
 class RegistrationSerializer(serializers.ModelSerializer):
     view_name = 'registration-detail'
+    signups = serializers.SerializerMethodField()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -934,6 +936,20 @@ class RegistrationSerializer(serializers.ModelSerializer):
                 pass
             else:
                 raise DRFPermissionDenied(_(f"User {user} cannot modify event {event}"))
+
+    def get_signups(self, obj):
+        params = self.context['request'].query_params
+        if params.get('include', None) and params['include'] == 'signups':
+            #  only the organization admins should be able to access the signup information
+            user = self.context['user']
+            event = obj.event
+            if not isinstance(user, AnonymousUser) and user.is_admin(event.publisher):
+                queryset = SignUp.objects.filter(registration__id=obj.id)
+                return SignUpSerializer(queryset, many=True, read_only=True).data
+            else:
+                return f'Only the admins of the organization that published the event {event.id} have access rights.'
+        else:
+            return None
 
     class Meta:
         fields = '__all__'
@@ -963,9 +979,6 @@ class SignUpSerializer(serializers.ModelSerializer):
 
 
 class SignUpViewSet(JSONAPIViewMixin,
-                    mixins.RetrieveModelMixin,
-                    mixins.UpdateModelMixin,
-                    mixins.DestroyModelMixin,
                     mixins.CreateModelMixin,
                     viewsets.GenericViewSet,):
     serializer_class = SignUpSerializer
