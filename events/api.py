@@ -989,6 +989,17 @@ class SignUpViewSet(JSONAPIViewMixin,
 register_view(SignUpViewSet, 'signup', base_name='signup')
 
 
+class SignUpEditViewSet(JSONAPIViewMixin,
+                        mixins.RetrieveModelMixin,
+                        mixins.UpdateModelMixin,
+                        viewsets.GenericViewSet):
+    serializer_class = SignUpSerializer
+    queryset = SignUp.objects.all()
+
+
+register_view(SignUpEditViewSet, 'signup_edit')
+
+
 class KeywordSetSerializer(LinkedEventsSerializer):
     view_name = 'keywordset-detail'
     keywords = JSONLDRelatedField(
