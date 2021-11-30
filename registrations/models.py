@@ -8,7 +8,7 @@ User = settings.AUTH_USER_MODEL
 
 
 class Registration(models.Model):
-    event = models.OneToOneField(Event, on_delete=models.CASCADE, related_name='registration', null=False)
+    event = models.OneToOneField(Event, on_delete=models.CASCADE, related_name='registration', null=False, blank=True)
     attendee_registration = models.BooleanField(default=False, null=False)
     audience_min_age = models.PositiveSmallIntegerField(verbose_name=_('Minimum recommended age'),
                                                         blank=True, null=True, db_index=True)
@@ -38,6 +38,15 @@ class Registration(models.Model):
 
 
 class SignUp(models.Model):
+    class AttendeeStatus:
+        WAITING_LIST = 'waitlisted'
+        ATTENDING = 'attending'
+
+    ATTENDEE_STATUSES = (
+        (AttendeeStatus.WAITING_LIST, _("Waitlisted")),
+        (AttendeeStatus.ATTENDING, _("Attending"))
+        )
+
     class NotificationType:
         NO_NOTIFICATION = 'none'
         SMS = 'sms'
@@ -61,6 +70,8 @@ class SignUp(models.Model):
     notifications = models.CharField(verbose_name=_('Notification type'), max_length=25, choices=NOTIFICATION_TYPES,
                                      default=NotificationType.NO_NOTIFICATION)
     cancellation_code = models.UUIDField(verbose_name=_('Cancellation code'), default=uuid4, editable=False)
+    attendee_status = models.CharField(verbose_name=_('Attendee status'), max_length=25, choices=ATTENDEE_STATUSES,
+                                       default=AttendeeStatus.ATTENDING)
 
     class Meta:
         unique_together = [['email', 'registration'], ['phone_number', 'registration']]
