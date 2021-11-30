@@ -923,6 +923,7 @@ register_view(KeywordListViewSet, 'keyword')
 class RegistrationSerializer(serializers.ModelSerializer):
     view_name = 'registration-detail'
     signups = serializers.SerializerMethodField()
+    current_attendee_count = serializers.SerializerMethodField()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -950,6 +951,9 @@ class RegistrationSerializer(serializers.ModelSerializer):
                 return f'Only the admins of the organization that published the event {event.id} have access rights.'
         else:
             return None
+
+    def get_current_attendee_count(self, obj):
+        return SignUp.objects.filter(registration__id=obj.id).count()
 
     class Meta:
         fields = '__all__'
