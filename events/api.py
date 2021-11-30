@@ -924,6 +924,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
     view_name = 'registration-detail'
     signups = serializers.SerializerMethodField()
     current_attendee_count = serializers.SerializerMethodField()
+    current_waiting_list_count = serializers.SerializerMethodField()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -953,7 +954,12 @@ class RegistrationSerializer(serializers.ModelSerializer):
             return None
 
     def get_current_attendee_count(self, obj):
-        return SignUp.objects.filter(registration__id=obj.id).count()
+        return SignUp.objects.filter(registration__id=obj.id,
+                                     attendee_status=SignUp.AttendeeStatus.ATTENDING).count()
+
+    def get_current_waiting_list_count(self, obj):
+        return SignUp.objects.filter(registration__id=obj.id,
+                                     attendee_status=SignUp.AttendeeStatus.WAITING_LIST).count()
 
     class Meta:
         fields = '__all__'
