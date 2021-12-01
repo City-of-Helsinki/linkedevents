@@ -43,7 +43,7 @@ from rest_framework.exceptions import APIException, ParseError
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.fields import DateTimeField
 from rest_framework.filters import BaseFilterBackend
-from rest_framework.permissions import SAFE_METHODS
+from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.routers import APIRootView
@@ -1038,6 +1038,7 @@ class SignUpEditViewSet(JSONAPIViewMixin,
                         viewsets.GenericViewSet):
     serializer_class = SignUpSerializer
     queryset = SignUp.objects.all()
+    permission_classes = (IsAuthenticated,)
 
 
 register_view(SignUpEditViewSet, 'signup_edit')
