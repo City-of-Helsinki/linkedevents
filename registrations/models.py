@@ -62,6 +62,7 @@ class SignUp(models.Model):
 
     registration = models.ForeignKey(Registration, on_delete=models.CASCADE, related_name='signups')
     name = models.CharField(verbose_name=_('Name'), max_length=50)
+    date_of_birth = models.DateField(verbose_name=_('Date of birth'), blank=True, null=True)
     city = models.CharField(verbose_name=_('City'), max_length=50, blank=True, default='')
     email = models.EmailField(verbose_name=_('E-mail'), blank=True, null=True, default=None)
     extra_info = models.TextField(verbose_name=_('Extra info'), blank=True, default='')

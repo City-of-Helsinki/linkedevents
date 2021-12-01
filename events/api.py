@@ -15,6 +15,7 @@ import bleach
 import django_filters
 import pytz
 import regex
+from datetime import date
 from django.conf import settings
 from django.contrib.postgres.search import SearchQuery, TrigramSimilarity
 from django.contrib.auth.models import AnonymousUser
@@ -994,6 +995,17 @@ class SignUpSerializer(serializers.ModelSerializer):
                                                    attendee_status=SignUp.AttendeeStatus.WAITING_LIST).count()
         attendee_capacity = registration.maximum_attendee_capacity
         waiting_list_capacity = registration.waiting_list_capacity
+        if registration.audience_min_age or registration.audience_max_age:
+            if 'date_of_birth' not in validated_data.keys():
+                raise DRFPermissionDenied('Date of birth has to be specified.')
+            dob = validated_data['date_of_birth']
+            today = date.today()
+            current_age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.year))
+            if registration.audience_min_age and current_age < registration.audience_min_age:
+                raise DRFPermissionDenied('The participant is too young.')
+            if registration.audience_max_age and current_age > registration.audience_max_age:
+                print(current_age)
+                raise DRFPermissionDenied('The participant is too old.')
         if (attendee_capacity is None) or (already_attending < attendee_capacity):
             return super().create(validated_data)
         elif (waiting_list_capacity is None) or (already_waitlisted < waiting_list_capacity):

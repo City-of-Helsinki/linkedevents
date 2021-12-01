@@ -215,3 +215,81 @@ def test_current_attendee_and_waitlist_count(api_client, user, event):
     response = api_client.get(registration_detail_url, format='json')
     assert response.data['current_attendee_count'] == 1
     assert response.data['current_waiting_list_count'] == 1
+
+
+@pytest.mark.django_db
+def test_signup_age_is_mandatory_if_audience_min_or_max_age_specified(api_client, user, event):
+    registration_url = reverse('registration-list')
+
+    api_client.force_authenticate(user)
+    registration_data = {"event": event.id}
+    response = api_client.post(registration_url, registration_data, format='json')
+    registration_id = response.data['id']
+
+    api_client.force_authenticate(user=None)
+    sign_up_data = {'registration': registration_id,
+                    'name': 'Michael Jackson',
+                    'email': 'test@test.com',
+                    'phone_number': '0441111111',
+                    'notifications': 'sms'}
+    signup_url = reverse('signup-list')
+
+    response = api_client.post(signup_url, sign_up_data, format='json')
+    assert response.status_code == 201
+    
+    api_client.force_authenticate(user=user)
+    put_url = f"{registration_url}{registration_id}/"
+    registration_data['audience_max_age'] = 100
+    response = api_client.put(put_url, registration_data, format='json')
+    
+    api_client.force_authenticate(user=None)
+    sign_up_data2 = {'registration': registration_id,
+                    'name': 'Michael Jackson 2',
+                    'email': 'test2@test.com',
+                    'phone_number': '20441111111',
+                    'notifications': 'sms'}
+    response = api_client.post(signup_url, sign_up_data2, format='json')
+    assert response.status_code == 403
+    assert str(response.data['detail']) == 'Date of birth has to be specified.'
+    
+    sign_up_data2['date_of_birth'] = '1980-12-30'
+    response = api_client.post(signup_url, sign_up_data2, format='json')
+    assert response.status_code == 201
+
+
+@pytest.mark.django_db
+def test_age_has_to_match_the_audience_min_max_age(api_client, user, event):
+    registration_url = reverse('registration-list')
+
+    api_client.force_authenticate(user)
+    registration_data = {"event": event.id,
+                         "audience_max_age": 40,
+                         "audience_min_age": 20}
+    response = api_client.post(registration_url, registration_data, format='json')
+    registration_id = response.data['id']
+
+    api_client.force_authenticate(user=None)
+    sign_up_data = {'registration': registration_id,
+                    'name': 'Michael Jackson',
+                    'email': 'test@test.com',
+                    'phone_number': '0441111111',
+                    'notifications': 'sms',
+                    'date_of_birth': '2011-04-07'}
+    signup_url = reverse('signup-list')
+
+    response = api_client.post(signup_url, sign_up_data, format='json')
+    assert response.status_code == 403
+    assert str(response.data['detail']) == 'The participant is too young.'
+
+
+    sign_up_data['date_of_birth'] = '1879-03-14'
+    response = api_client.post(signup_url, sign_up_data, format='json')
+    assert response.status_code == 403
+    assert str(response.data['detail']) == 'The participant is too old.'
+
+    sign_up_data['date_of_birth'] = '2000-02-29'
+    response = api_client.post(signup_url, sign_up_data, format='json')
+    assert response.status_code == 201
+
+
+
