@@ -983,6 +983,27 @@ register_view(RegistrationViewSet, 'registration')
 class SignUpSerializer(serializers.ModelSerializer):
     view_name = 'signup'
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def create(self, validated_data):
+        registration = validated_data['registration']
+        already_attending = SignUp.objects.filter(registration=registration,
+                                                  attendee_status=SignUp.AttendeeStatus.ATTENDING).count()
+        already_waitlisted = SignUp.objects.filter(registration=registration,
+                                                   attendee_status=SignUp.AttendeeStatus.WAITING_LIST).count()
+        attendee_capacity = registration.maximum_attendee_capacity
+        waiting_list_capacity = registration.waiting_list_capacity
+        if already_attending < attendee_capacity:
+            return super().create(validated_data)
+        elif already_waitlisted < waiting_list_capacity:
+            signup = super().create(validated_data)
+            signup.attendee_status = SignUp.AttendeeStatus.WAITING_LIST
+            signup.save()
+            return signup
+        else:
+            raise DRFPermissionDenied('The waiting list is already full')
+
     class Meta:
         fields = '__all__'
         model = SignUp

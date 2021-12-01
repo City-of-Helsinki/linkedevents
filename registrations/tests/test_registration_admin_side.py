@@ -145,3 +145,52 @@ def test_cannot_sign_up_twice_with_same_phone_or_email(api_client, user, event):
     sign_up_data_same_phone['email'] = 'another@email.com'
     response = api_client.post(url, sign_up_data_same_email, format='json')
     assert response.status_code == 400
+
+@pytest.mark.django_db
+def test_current_attendee_and_waitlist_count(api_client, user, event):
+    url = reverse('registration-list')
+
+    api_client.force_authenticate(user)
+    registration_data = {"event": event.id,
+                         "maximum_attendee_capacity": 1,
+                         "waiting_list_capacity": 1}
+    response = api_client.post(url, registration_data, format='json')
+    registration_id = response.data['id']
+
+    api_client.force_authenticate(user=None)
+    sign_up_data = {'registration': registration_id,
+                    'name': 'Michael Jackson',
+                    'email': 'test@test.com',
+                    'phone_number': '0441111111',
+                    'notifications': 'sms'}
+    signup_url = reverse('signup-list')
+    registration_detail_url = f'{url}{registration_id}/'
+
+    response = api_client.get(registration_detail_url, format='json')
+    assert response.data['current_attendee_count'] == 0
+    assert response.data['current_waiting_list_count'] == 0
+
+    api_client.post(signup_url, sign_up_data, format='json')
+    response = api_client.get(registration_detail_url, format='json')
+    assert response.data['current_attendee_count'] == 1
+    assert response.data['current_waiting_list_count'] == 0
+
+    sign_up_data2 = {'registration': registration_id,
+                    'name': 'Michael Jackson 2',
+                    'email': 'test2@test.com',
+                    'phone_number': '20441111111',
+                    'notifications': 'sms'}
+    api_client.post(signup_url, sign_up_data2, format='json')
+    response = api_client.get(registration_detail_url, format='json')
+    assert response.data['current_attendee_count'] == 1
+    assert response.data['current_waiting_list_count'] == 1
+
+    sign_up_data3 = {'registration': registration_id,
+                    'name': 'Michael Jackson 3',
+                    'email': 'test3@test.com',
+                    'phone_number': '30441111111',
+                    'notifications': 'sms'}
+    api_client.post(signup_url, sign_up_data3, format='json')
+    response = api_client.get(registration_detail_url, format='json')
+    assert response.data['current_attendee_count'] == 1
+    assert response.data['current_waiting_list_count'] == 1
