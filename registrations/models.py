@@ -2,7 +2,7 @@ from uuid import uuid4
 from django.conf import settings
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
-from events.models import Event
+from events.models import Event, Language
 
 User = settings.AUTH_USER_MODEL
 
@@ -73,6 +73,10 @@ class SignUp(models.Model):
     cancellation_code = models.UUIDField(verbose_name=_('Cancellation code'), default=uuid4, editable=False)
     attendee_status = models.CharField(verbose_name=_('Attendee status'), max_length=25, choices=ATTENDEE_STATUSES,
                                        default=AttendeeStatus.ATTENDING)
+    native_language = models.ForeignKey(Language, on_delete=models.SET_NULL, null=True, blank=True,
+                                        related_name="signup_native_language")
+    service_language = models.ForeignKey(Language, on_delete=models.SET_NULL, null=True, blank=True,
+                                         related_name="signup_service_language")
 
     class Meta:
         unique_together = [['email', 'registration'], ['phone_number', 'registration']]

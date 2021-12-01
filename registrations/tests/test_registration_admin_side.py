@@ -3,6 +3,7 @@ from copy import deepcopy
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import Registration, SignUp
 from events.tests.conftest import *
+from events.models import Language
 
 
 @pytest.mark.django_db
@@ -98,6 +99,10 @@ def test_list_all_registrations(api_client, user, user2, event, event2, event3):
 @pytest.mark.django_db
 def test_successful_sign_up(api_client, user, event):
     url = reverse('registration-list')
+    l = Language()
+    l.id = 'fi'
+    l.name = 'finnish'
+    l.save()
 
     api_client.force_authenticate(user)
     registration_data = {"event": event.id}
@@ -109,7 +114,9 @@ def test_successful_sign_up(api_client, user, event):
                     'name': 'Michael Jackson',
                     'email': 'test@test.com',
                     'phone_number': '0441111111',
-                    'notifications': 'sms'}
+                    'notifications': 'sms',
+                    'service_language': 'fi',
+                    'native_language': 'fi'}
     url = reverse('signup-list')
 
     response = api_client.post(url, sign_up_data, format='json')
@@ -120,6 +127,7 @@ def test_successful_sign_up(api_client, user, event):
     assert signup.email == sign_up_data['email']
     assert signup.phone_number == sign_up_data['phone_number']
     assert signup.notifications == SignUp.NotificationType.SMS
+    assert signup.native_language.name == 'finnish'
 
 
 @pytest.mark.django_db
@@ -290,6 +298,3 @@ def test_age_has_to_match_the_audience_min_max_age(api_client, user, event):
     sign_up_data['date_of_birth'] = '2000-02-29'
     response = api_client.post(signup_url, sign_up_data, format='json')
     assert response.status_code == 201
-
-
-
