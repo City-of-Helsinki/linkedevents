@@ -52,6 +52,25 @@ def test_basic_registration_functionality(api_client, user, user2, event):
 
 
 @pytest.mark.django_db
+def test_filter_events_with_registrations(api_client, user, event, event2):
+    registration_url = reverse('registration-list')
+    event_url = reverse('event-list')
+
+    api_client.force_authenticate(user)
+    registration_data = {"event": event.id}
+    response = api_client.post(registration_url, registration_data, format='json')
+    assert response.status_code == 201
+    
+    api_client.force_authenticate(user=None)
+    response = api_client.get(event_url, format='json')
+    assert response.data['meta']['count'] == 2
+
+    response = api_client.get(f'{event_url}?registration=true', format='json')
+    assert response.data['meta']['count'] == 1
+    assert response.data['data'][0]['id'] == event.id
+
+
+@pytest.mark.django_db
 def test_list_all_registrations(api_client, user, user2, event, event2, event3):
     url = reverse('registration-list')
 
@@ -120,7 +139,9 @@ def test_cannot_sign_up_twice_with_same_phone_or_email(api_client, user, event):
     url = reverse('registration-list')
 
     api_client.force_authenticate(user)
-    registration_data = {"event": event.id}
+    registration_data = {"event": event.id,
+                         "maximum_attendee_capacity": 10,
+                         "waiting_list_capacity": 10}
     response = api_client.post(url, registration_data, format='json')
     registration_id = response.data['id']
 

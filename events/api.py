@@ -994,9 +994,9 @@ class SignUpSerializer(serializers.ModelSerializer):
                                                    attendee_status=SignUp.AttendeeStatus.WAITING_LIST).count()
         attendee_capacity = registration.maximum_attendee_capacity
         waiting_list_capacity = registration.waiting_list_capacity
-        if already_attending < attendee_capacity:
+        if (attendee_capacity is None) or (already_attending < attendee_capacity):
             return super().create(validated_data)
-        elif already_waitlisted < waiting_list_capacity:
+        elif (waiting_list_capacity is None) or (already_waitlisted < waiting_list_capacity):
             signup = super().create(validated_data)
             signup.attendee_status = SignUp.AttendeeStatus.WAITING_LIST
             signup.save()
@@ -1898,6 +1898,9 @@ def _filter_event_queryset(queryset, params, srs=None):
     # Filter by string (case insensitive). This searches from all fields
     # which are marked translatable in translation.py
 
+    val = params.get('registration', None)
+    if val:
+        queryset = queryset.exclude(registration=None)
     val = params.get('local_ongoing_text', None)
     if val:
         language = params.get('language', 'fi')
