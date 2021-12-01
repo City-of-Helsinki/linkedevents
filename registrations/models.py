@@ -77,6 +77,8 @@ class SignUp(models.Model):
                                         related_name="signup_native_language")
     service_language = models.ForeignKey(Language, on_delete=models.SET_NULL, null=True, blank=True,
                                          related_name="signup_service_language")
+    street_address = models.CharField(verbose_name=_('Street address'), max_length=500, blank=True, null=True, default=None)
+    zipcode = models.CharField(verbose_name=_('Street address'), max_length=10, blank=True, null=True, default=None)
 
     class Meta:
         unique_together = [['email', 'registration'], ['phone_number', 'registration']]

@@ -116,7 +116,9 @@ def test_successful_sign_up(api_client, user, event):
                     'phone_number': '0441111111',
                     'notifications': 'sms',
                     'service_language': 'fi',
-                    'native_language': 'fi'}
+                    'native_language': 'fi',
+                    'street_address': 'my street',
+                    'zipcode': 'myzip1'}
     url = reverse('signup-list')
 
     response = api_client.post(url, sign_up_data, format='json')
@@ -128,6 +130,8 @@ def test_successful_sign_up(api_client, user, event):
     assert signup.phone_number == sign_up_data['phone_number']
     assert signup.notifications == SignUp.NotificationType.SMS
     assert signup.native_language.name == 'finnish'
+    assert signup.street_address == sign_up_data['street_address']
+    assert signup.zipcode == sign_up_data['zipcode']
 
 
 @pytest.mark.django_db
