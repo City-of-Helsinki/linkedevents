@@ -1033,7 +1033,7 @@ class SignUpViewSet(JSONAPIViewMixin,
     def delete(self, request, *args, **kwargs):
         code = request.data.get('cancellation_code', 'no code')
         if code == 'no code':
-            DRFPermissionDenied('Cancellation code has to be provided')
+            raise DRFPermissionDenied('Cancellation code has to be provided')
         try:
             UUID(code)
         except ValueError:
