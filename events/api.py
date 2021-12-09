@@ -63,7 +63,7 @@ from events.models import (PUBLICATION_STATUSES, DataSource, Event, EventLink,
                            Feedback, Image, Keyword, KeywordSet, Language,
                            License, Offer, OpeningHoursSpecification, Place,
                            PublicationStatus, Video)
-from events.permissions import GuestPost
+from events.permissions import GuestPost, GuestDelete
 from events.renderers import DOCXRenderer
 from events.translation import EventTranslationOptions, PlaceTranslationOptions
 from helevents.models import User
@@ -1026,7 +1026,18 @@ class SignUpViewSet(JSONAPIViewMixin,
                     viewsets.GenericViewSet,):
     serializer_class = SignUpSerializer
     queryset = SignUp.objects.all()
-    permission_classes = (GuestPost,)
+    permission_classes = [GuestPost|GuestDelete]
+
+
+    def delete(self, request, *args, **kwargs):
+        code = request.data.get('cancellation_code', 'no code')
+        if code == 'no code':
+            DRFPermissionDenied('Cancellation code has to be provided')
+        qs = SignUp.objects.filter(cancellation_code=code)
+        if qs.count == 0:
+            DRFPermissionDenied('Cancellation code did not match any registration')
+        qs.delete()
+        return Response('SignUp deleted.', status=status.HTTP_200_OK)
 
 
 register_view(SignUpViewSet, 'signup', base_name='signup')

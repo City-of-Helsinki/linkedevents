@@ -302,3 +302,29 @@ def test_age_has_to_match_the_audience_min_max_age(api_client, user, event):
     sign_up_data['date_of_birth'] = '2000-02-29'
     response = api_client.post(signup_url, sign_up_data, format='json')
     assert response.status_code == 201
+
+
+@pytest.mark.django_db
+def test_signup_deletion(api_client, user, event):
+    registration_url = reverse('registration-list')
+
+    api_client.force_authenticate(user)
+    registration_data = {"event": event.id}
+
+    response = api_client.post(registration_url, registration_data, format='json')
+    registration_id = response.data['id']
+
+    api_client.force_authenticate(user=None)
+    sign_up_payload = {'registration': registration_id,
+                    'name': 'Michael Jackson',
+                    'email': 'test@test.com',
+                    'phone_number': '0441111111',
+                    'notifications': 'sms',
+                    'date_of_birth': '2011-04-07'}
+    signup_url = reverse('signup-list')
+
+    response = api_client.post(signup_url, sign_up_payload, format='json')
+    delete_payload = {'cancellation_code': response.data['cancellation_code']}
+     
+    response = api_client.delete(signup_url, delete_payload, format='json')
+    assert response.status_code == 200
