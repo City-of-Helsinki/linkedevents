@@ -1039,8 +1039,8 @@ class SignUpViewSet(JSONAPIViewMixin,
         except ValueError:
             raise DRFPermissionDenied('Malformed UUID.')
         qs = SignUp.objects.filter(cancellation_code=code)
-        if qs.count == 0:
-            DRFPermissionDenied('Cancellation code did not match any registration')
+        if qs.count() == 0:
+            raise DRFPermissionDenied('Cancellation code did not match any registration')
         qs.delete()
         return Response('SignUp deleted.', status=status.HTTP_200_OK)
 
