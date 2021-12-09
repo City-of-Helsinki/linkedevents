@@ -328,3 +328,30 @@ def test_signup_deletion(api_client, user, event):
      
     response = api_client.delete(signup_url, delete_payload, format='json')
     assert response.status_code == 200
+
+
+@pytest.mark.django_db
+def test_signup_deletion_wrong_code(api_client, user, event):
+    registration_url = reverse('registration-list')
+
+    api_client.force_authenticate(user)
+    registration_data = {"event": event.id}
+
+    response = api_client.post(registration_url, registration_data, format='json')
+    registration_id = response.data['id']
+
+    api_client.force_authenticate(user=None)
+    sign_up_payload = {'registration': registration_id,
+                    'name': 'Michael Jackson',
+                    'email': 'test@test.com',
+                    'phone_number': '0441111111',
+                    'notifications': 'sms',
+                    'date_of_birth': '2011-04-07'}
+    signup_url = reverse('signup-list')
+
+    response = api_client.post(signup_url, sign_up_payload, format='json')
+    delete_payload = {'cancellation_code': 'not a code'}
+     
+    response = api_client.delete(signup_url, delete_payload, format='json')
+    assert str(response.data['detail']) == 'Malformed UUID.'
+    assert response.status_code == 403

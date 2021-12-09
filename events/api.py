@@ -10,6 +10,7 @@ from datetime import datetime
 from datetime import time as datetime_time
 from datetime import timedelta
 from functools import partial
+from uuid import UUID
 
 import bleach
 import django_filters
@@ -1033,6 +1034,10 @@ class SignUpViewSet(JSONAPIViewMixin,
         code = request.data.get('cancellation_code', 'no code')
         if code == 'no code':
             DRFPermissionDenied('Cancellation code has to be provided')
+        try:
+            UUID(code)
+        except ValueError:
+            raise DRFPermissionDenied('Malformed UUID.')
         qs = SignUp.objects.filter(cancellation_code=code)
         if qs.count == 0:
             DRFPermissionDenied('Cancellation code did not match any registration')
