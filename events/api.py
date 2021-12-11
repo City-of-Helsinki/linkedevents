@@ -1027,8 +1027,7 @@ class SignUpViewSet(JSONAPIViewMixin,
                     viewsets.GenericViewSet,):
     serializer_class = SignUpSerializer
     queryset = SignUp.objects.all()
-    permission_classes = [GuestPost|GuestDelete]
-
+    permission_classes = [GuestPost | GuestDelete]
 
     def delete(self, request, *args, **kwargs):
         code = request.data.get('cancellation_code', 'no code')
@@ -1041,7 +1040,14 @@ class SignUpViewSet(JSONAPIViewMixin,
         qs = SignUp.objects.filter(cancellation_code=code)
         if qs.count() == 0:
             raise DRFPermissionDenied('Cancellation code did not match any registration')
+        waitlisted = SignUp.objects.filter(registration=qs[0].registration,
+                                           attendee_status=SignUp.AttendeeStatus.WAITING_LIST
+                                           ).order_by('id')
         qs.delete()
+        if len(waitlisted) > 0:
+            first_on_list = waitlisted[0]
+            first_on_list.attendee_status = SignUp.AttendeeStatus.ATTENDING
+            first_on_list.save()
         return Response('SignUp deleted.', status=status.HTTP_200_OK)
 
 

@@ -382,3 +382,43 @@ def test_signup_deletion_wrong_code(api_client, user, event):
     response = api_client.delete(signup_url, delete_payload, format='json')
     assert str(response.data['detail']) == 'Malformed UUID.'
     assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(api_client, user, event):
+    registration_url = reverse('registration-list')
+
+    api_client.force_authenticate(user)
+    registration_data = {"event": event.id,
+                         "maximum_attendee_capacity": 1}
+
+    response = api_client.post(registration_url, registration_data, format='json')
+    registration_id = response.data['id']
+
+    api_client.force_authenticate(user=None)
+    sign_up_payload = {'registration': registration_id,
+                       'name': 'Michael Jackson1',
+                       'email': 'test@test.com'}
+    signup_url = reverse('signup-list')
+
+    response = api_client.post(signup_url, sign_up_payload, format='json')
+    delete_payload = {'cancellation_code': response.data['cancellation_code']}
+
+    sign_up_payload2 = {'registration': registration_id,
+                        'name': 'Michael Jackson2',
+                        'email': 'test1@test.com'}
+    api_client.post(signup_url, sign_up_payload2, format='json')
+
+    sign_up_payload3 = {'registration': registration_id,
+                        'name': 'Michael Jackson3',
+                        'email': 'test2@test.com'}
+    api_client.post(signup_url, sign_up_payload3, format='json')
+    
+    assert SignUp.objects.get(email='test2@test.com').attendee_status == SignUp.AttendeeStatus.WAITING_LIST
+    assert SignUp.objects.get(email='test1@test.com').attendee_status == SignUp.AttendeeStatus.WAITING_LIST
+    assert SignUp.objects.get(email='test@test.com').attendee_status == SignUp.AttendeeStatus.ATTENDING
+
+
+    response = api_client.delete(signup_url, delete_payload, format='json')
+    assert SignUp.objects.get(email='test1@test.com').attendee_status == SignUp.AttendeeStatus.ATTENDING
+    assert SignUp.objects.get(email='test2@test.com').attendee_status == SignUp.AttendeeStatus.WAITING_LIST
