@@ -64,7 +64,7 @@ from events.models import (PUBLICATION_STATUSES, DataSource, Event, EventLink,
                            Feedback, Image, Keyword, KeywordSet, Language,
                            License, Offer, OpeningHoursSpecification, Place,
                            PublicationStatus, Video)
-from events.permissions import GuestPost, GuestDelete
+from events.permissions import GuestPost, GuestDelete, GuestGet
 from events.renderers import DOCXRenderer
 from events.translation import EventTranslationOptions, PlaceTranslationOptions
 from helevents.models import User
@@ -1027,12 +1027,11 @@ class SignUpViewSet(JSONAPIViewMixin,
                     viewsets.GenericViewSet,):
     serializer_class = SignUpSerializer
     queryset = SignUp.objects.all()
-    permission_classes = [GuestPost | GuestDelete]
+    permission_classes = [GuestPost | GuestDelete | GuestGet]
 
-    def delete(self, request, *args, **kwargs):
-        code = request.data.get('cancellation_code', 'no code')
+    def get_signup_by_code(self, code):
         if code == 'no code':
-            raise DRFPermissionDenied('Cancellation code has to be provided')
+            raise DRFPermissionDenied('cancellation_code parameter has to be provided')
         try:
             UUID(code)
         except ValueError:
@@ -1040,10 +1039,20 @@ class SignUpViewSet(JSONAPIViewMixin,
         qs = SignUp.objects.filter(cancellation_code=code)
         if qs.count() == 0:
             raise DRFPermissionDenied('Cancellation code did not match any registration')
-        waitlisted = SignUp.objects.filter(registration=qs[0].registration,
+        return qs[0]
+
+    def get(self, request, *args, **kwargs):
+        code = request.GET.get('cancellation_code', 'no code')
+        signup = self.get_signup_by_code(code)
+        return Response(SignUpSerializer(signup).data)
+
+    def delete(self, request, *args, **kwargs):
+        code = request.data.get('cancellation_code', 'no code')
+        signup = self.get_signup_by_code(code)
+        waitlisted = SignUp.objects.filter(registration=signup.registration,
                                            attendee_status=SignUp.AttendeeStatus.WAITING_LIST
                                            ).order_by('id')
-        qs.delete()
+        signup.delete()
         if len(waitlisted) > 0:
             first_on_list = waitlisted[0]
             first_on_list.attendee_status = SignUp.AttendeeStatus.ATTENDING
@@ -1051,7 +1060,7 @@ class SignUpViewSet(JSONAPIViewMixin,
         return Response('SignUp deleted.', status=status.HTTP_200_OK)
 
 
-register_view(SignUpViewSet, 'signup', base_name='signup')
+register_view(SignUpViewSet, 'signup')
 
 
 class SignUpEditViewSet(JSONAPIViewMixin,

@@ -1,5 +1,6 @@
 import pytest
 from copy import deepcopy
+from django.core import mail
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import Registration, SignUp
 from events.tests.conftest import *
@@ -422,3 +423,49 @@ def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(api_c
     response = api_client.delete(signup_url, delete_payload, format='json')
     assert SignUp.objects.get(email='test1@test.com').attendee_status == SignUp.AttendeeStatus.ATTENDING
     assert SignUp.objects.get(email='test2@test.com').attendee_status == SignUp.AttendeeStatus.WAITING_LIST
+
+
+@pytest.mark.django_db
+def test_email_sent_on_successful_signup(api_client, user, event):
+    registration_url = reverse('registration-list')
+
+    api_client.force_authenticate(user)
+    registration_data = {"event": event.id}
+
+    response = api_client.post(registration_url, registration_data, format='json')
+    registration_id = response.data['id']
+    
+    api_client.force_authenticate(user=None)
+    sign_up_payload = {'registration': registration_id,
+                       'name': 'Michael Jackson1',
+                       'email': 'test@test.com'}
+    signup_url = reverse('signup-list')
+    response = api_client.post(signup_url, sign_up_payload, format='json')
+    #  assert that the registration was successful
+    assert 'cancellation_code' in response.data
+    #  assert that the email was sent
+    assert len(mail.outbox) == 1
+
+
+@pytest.mark.django_db
+def test_signup_info_with_cancellation_code(api_client, user, event):
+    registration_url = reverse('registration-list')
+
+    api_client.force_authenticate(user)
+    registration_data = {"event": event.id}
+
+    response = api_client.post(registration_url, registration_data, format='json')
+    registration_id = response.data['id']
+    
+    api_client.force_authenticate(user=None)
+    sign_up_payload = {'registration': registration_id,
+                       'name': 'Michael Jackson1',
+                       'email': 'test@test.com'}
+    signup_url = reverse('signup-list')
+    response = api_client.post(signup_url, sign_up_payload, format='json')
+    
+    delete_payload = {'cancellation_code': response.data['cancellation_code']}
+    
+    response = api_client.get(f'{signup_url}?cancellation_code={response.data["cancellation_code"]}')
+    assert response.data['name'] == 'Michael Jackson1'
+    
