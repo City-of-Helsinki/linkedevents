@@ -85,3 +85,13 @@ class GuestDelete(BasePermission):
             return True
         else:
             return False
+
+
+class GuestGet(BasePermission):
+
+    def has_permission(self, request, view):
+        if request.method == 'GET':
+            return True
+        else:
+            return False
+
