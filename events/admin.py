@@ -23,13 +23,13 @@ class BaseAdmin(admin.ModelAdmin):
 class AutoIdBaseAdmin(BaseAdmin):
 
     def save_model(self, request, obj, form, change):
-        system_id = settings.SYSTEM_DATA_SOURCE_ID
-        obj.data_source_id = system_id
+        if not obj.data_source_id:
+            obj.data_source_id = settings.SYSTEM_DATA_SOURCE_ID
         if not obj.id:
             if obj.origin_id:
-                obj.id = ':'.join([system_id, obj.origin_id])
+                obj.id = ':'.join([obj.data_source_id, obj.origin_id])
             else:
-                obj.id = generate_id(system_id)
+                obj.id = generate_id(obj.data_source_id)
         obj.origin_id = obj.id.split(':')[1]
 
         super().save_model(request, obj, form, change)
