@@ -1030,8 +1030,6 @@ class SignUpViewSet(JSONAPIViewMixin,
     permission_classes = [GuestPost | GuestDelete | GuestGet]
 
     def get_signup_by_code(self, code):
-        if code == 'no code':
-            raise DRFPermissionDenied('cancellation_code parameter has to be provided')
         try:
             UUID(code)
         except ValueError:
@@ -1043,11 +1041,17 @@ class SignUpViewSet(JSONAPIViewMixin,
 
     def get(self, request, *args, **kwargs):
         code = request.GET.get('cancellation_code', 'no code')
+        import pdb
+        pdb.set_trace()
+        if code == 'no code':
+            raise DRFPermissionDenied('cancellation_code parameter has to be provided')
         signup = self.get_signup_by_code(code)
         return Response(SignUpSerializer(signup).data)
 
     def delete(self, request, *args, **kwargs):
         code = request.data.get('cancellation_code', 'no code')
+        if code == 'no code':
+            raise DRFPermissionDenied('cancellation_code parameter has to be provided')
         signup = self.get_signup_by_code(code)
         waitlisted = SignUp.objects.filter(registration=signup.registration,
                                            attendee_status=SignUp.AttendeeStatus.WAITING_LIST
