@@ -83,6 +83,7 @@ class DataSource(models.Model):
     user_editable = models.BooleanField(default=False, verbose_name=_('Objects may be edited by users'))
     edit_past_events = models.BooleanField(default=False, verbose_name=_('Past events may be edited using API'))
     create_past_events = models.BooleanField(default=False, verbose_name=_('Past events may be created using API'))
+    private = models.BooleanField(default=False, verbose_name=_('Do not show events created by this data_source by default.'), db_index=True)
 
     def __str__(self):
         return self.id
