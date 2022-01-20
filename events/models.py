@@ -307,6 +307,11 @@ class Keyword(BaseModel, ImageMixin, ReplacedByMixin):
         'Keyword', on_delete=models.SET_NULL, related_name='aliases', null=True, blank=True)
 
     schema_org_type = "Thing/LinkedEventKeyword"
+    is_hidden = models.BooleanField(
+        default=False,
+        verbose_name=_('Is hidden'),
+        help_text=_('Is this keyword excluded from keyword list and set searches')
+    )
 
     def __str__(self):
         return self.name

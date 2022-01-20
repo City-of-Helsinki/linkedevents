@@ -87,3 +87,14 @@ def test_get_keyword_list_verify_show_deprecated_param(api_client, keyword, keyw
     ids = [entry['id'] for entry in response.data['data']]
     assert keyword.id in ids
     assert keyword2.id in ids
+
+
+@pytest.mark.django_db
+def test_get_keyword_list_excludes_hidden_keywords(api_client, keyword, keyword2):
+    keyword.is_hidden = True
+    keyword.save()
+
+    response = get_list(api_client, data={'show_all_keywords': True})
+    ids = [entry['id'] for entry in response.data['data']]
+    assert keyword.id not in ids
+    assert keyword2.id in ids

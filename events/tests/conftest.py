@@ -485,6 +485,16 @@ def keyword_set(data_source, keyword, keyword2):
 
 @pytest.mark.django_db
 @pytest.fixture
+def keyword_set2(data_source, keyword, keyword2):
+    kw_set = KeywordSet.objects.create(
+        data_source=data_source,
+        id='test-kw-set-2')
+    kw_set.keywords.set([keyword, keyword2])
+    return kw_set
+
+
+@pytest.mark.django_db
+@pytest.fixture
 def languages():
     lang_objs = [
         Language.objects.get_or_create(id=lang)[0]
