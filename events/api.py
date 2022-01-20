@@ -1041,8 +1041,6 @@ class SignUpViewSet(JSONAPIViewMixin,
 
     def get(self, request, *args, **kwargs):
         code = request.GET.get('cancellation_code', 'no code')
-        import pdb
-        pdb.set_trace()
         if code == 'no code':
             raise DRFPermissionDenied('cancellation_code parameter has to be provided')
         signup = self.get_signup_by_code(code)
@@ -1538,7 +1536,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
                                   required=False,
                                   view_name='keyword-detail')
     registration = JSONLDRelatedField(serializer=RegistrationSerializer, many=False, allow_empty=True, required=False,
-                                      view_name='registration-detail')
+                                      view_name='registration-detail', allow_null=True)
     super_event = JSONLDRelatedField(serializer='EventSerializer', required=False, view_name='event-detail',
                                      allow_null=True, queryset=Event.objects.filter(
                                                                 Q(super_event_type=Event.SuperEventType.RECURRING) |
@@ -2205,6 +2203,8 @@ def _filter_event_queryset(queryset, params, srs=None):
     if val:
         val = val.split(',')
         queryset = queryset.filter(data_source_id__in=val)
+    else:
+        queryset = queryset.exclude(data_source__private=True)
 
     # Negative filter by data source, multiple sources separated by comma
     val = params.get('data_source!', None)
@@ -2621,7 +2621,10 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
                     queryset = queryset.none()
         else:
             # prevent changing events user does not have write permissions (for bulk operations)
-            original_queryset = Event.objects.filter(id__in=[i['id'] for i in self.request.data])
+            try:
+                original_queryset = Event.objects.filter(id__in=[i.get('id', '') for i in self.request.data])
+            except:
+                raise DRFPermissionDenied('Invalid JSON in request.')
             queryset = self.request.user.get_editable_events(original_queryset)
 
         if self.request.method == 'GET':
