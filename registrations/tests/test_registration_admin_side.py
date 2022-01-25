@@ -494,14 +494,18 @@ def test_get_signup_info_with_cancel_code_no_auth(api_client, user, event):
 
 
 @pytest.mark.django_db
-def test_filter_signups_within_registration(api_client, user, event):
+def test_filter_signups(api_client, user, user2, event, event2):
     registration_url = reverse('registration-list')
 
     api_client.force_authenticate(user)
     registration_data = {"event": event.id}
-
     response = api_client.post(registration_url, registration_data, format='json')
     registration_id = response.data['id']
+    
+    api_client.force_authenticate(user2)
+    registration_data = {"event": event2.id}
+    response = api_client.post(registration_url, registration_data, format='json')
+    registration_id2 = response.data['id']
     
     api_client.force_authenticate(user=None)
     sign_up_payload = {'registration': registration_id,
@@ -515,22 +519,74 @@ def test_filter_signups_within_registration(api_client, user, event):
                        'email': 'test2@test.com'}
     sign_up_payload3 = {'registration': registration_id,
                        'name': 'Michael Jackson3',
-                       'email': 'test3@test.com'} 
+                       'email': 'test3@test.com'}
+    sign_up_payload4 = {'registration': registration_id2,
+                       'name': 'Joe Biden',
+                       'email': 'test@test.com',
+                       'extra_info': 'cdef'}
+    sign_up_payload5 = {'registration': registration_id2,
+                       'name': 'Hillary Clinton',
+                       'email': 'test1@test.com',
+                       'extra_info': 'abcd'}
+    sign_up_payload6 = {'registration': registration_id2,
+                       'name': 'Donald Duck',
+                       'email': 'test2@test.com',
+                       'membership_number': '1234'}
+    sign_up_payload7 = {'registration': registration_id2,
+                       'name': 'Mickey Mouse',
+                       'email': 'test3@test.com',
+                       'membership_number': '3456'}
     signup_url = reverse('signup-list')
     api_client.post(signup_url, sign_up_payload, format='json')
     api_client.post(signup_url, sign_up_payload1, format='json')
     api_client.post(signup_url, sign_up_payload2, format='json')
     api_client.post(signup_url, sign_up_payload3, format='json')
-    
-    search_url = f"{signup_url}?registration={registration_id}"
+    api_client.post(signup_url, sign_up_payload4, format='json')
+    api_client.post(signup_url, sign_up_payload5, format='json')
+    api_client.post(signup_url, sign_up_payload6, format='json')
+    api_client.post(signup_url, sign_up_payload7, format='json')
+
+    search_url = f"{signup_url}?registrations={registration_id},{registration_id+10}"
     # one has to be logged in to browse signups
     response = api_client.get(search_url)
     assert response.status_code == 403
-
+    
     api_client.force_authenticate(user)
     response = api_client.get(search_url)
-    assert response.status_code == 200
+    assert len(response.data) == 4
+    
+    #  registration id from an event that is not managed by the user results in zero signups
+    api_client.force_authenticate(user2)
+    response = api_client.get(search_url)
+    assert len(response.data) == 0
 
+    #  when no registration id is provided, giving signups from all the events that are managed by the user
+    search_url=signup_url
+    response = api_client.get(search_url)
+    assert len(response.data) == 4
+    
+    #  search signups by name
+    search_url=f'{signup_url}?text=mickey'
+    response = api_client.get(search_url)
+    assert len(response.data) == 1
 
+    #  search signups by membership number
+    search_url=f'{signup_url}?text=34'
+    response = api_client.get(search_url)
+    assert len(response.data) == 2
+    search_url=f'{signup_url}?text=3456'
+    response = api_client.get(search_url)
+    assert len(response.data) == 1
 
+    #  search signups by extra_info
+    search_url=f'{signup_url}?text=cd'
+    response = api_client.get(search_url)
+    assert len(response.data) == 2
+    search_url=f'{signup_url}?text=abcd'
+    response = api_client.get(search_url)
+    assert len(response.data) == 1
 
+    #  search signups by membership number
+    search_url=f'{signup_url}?events={event2.id}'
+    response = api_client.get(search_url)
+    assert len(response.data) == 4

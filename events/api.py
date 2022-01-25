@@ -1040,11 +1040,45 @@ class SignUpViewSet(JSONAPIViewMixin,
         return qs[0]
 
     def get(self, request, *args, **kwargs):
-        code = request.GET.get('cancellation_code', 'no code')
-        if code == 'no code':
-            raise DRFPermissionDenied('cancellation_code parameter has to be provided')
-        signup = self.get_signup_by_code(code)
-        return Response(SignUpSerializer(signup).data)
+        # First dealing with the cancellation codes
+        if isinstance(request.user, AnonymousUser):
+            code = request.GET.get('cancellation_code', 'no code')
+            if code == 'no code':
+                raise DRFPermissionDenied('cancellation_code parameter has to be provided')
+            signup = self.get_signup_by_code(code)
+            return Response(SignUpSerializer(signup).data)
+        # Provided user is logged in
+        else:
+            reg_ids = []
+            event_ids = []
+            val = request.query_params.get('registrations', None)
+            if val:
+                reg_ids = val.split(',')
+            val = request.query_params.get('events', None)
+            if val:
+                event_ids = val.split(',')
+            qs = Event.objects.filter(Q(id__in=event_ids) | Q(registration__id__in=reg_ids))
+
+            if len(reg_ids) == 0 and len(event_ids) == 0:
+                qs = Event.objects.exclude(registration=None)
+            authorized_events = request.user.get_editable_events(qs)
+
+            signups = SignUp.objects.filter(registration__event__in=authorized_events)
+
+            val = request.query_params.get('text', None)
+            if val:
+                signups = signups.filter(Q(name__icontains=val) |
+                                         Q(email__icontains=val) |
+                                         Q(extra_info__icontains=val) |
+                                         Q(membership_number__icontains=val) |
+                                         Q(phone_number__icontains=val))
+            val = request.query_params.get('attendee_status', None)
+            if val:
+                if val in ['waitlisted', 'attending']:
+                    signups = signups.filter(attendee_status=val)
+                else:
+                    raise DRFPermissionDenied(f"attendee_status can take values waitlisted and attending, not {val}")
+            return Response(SignUpSerializer(signups, many=True).data)
 
     def delete(self, request, *args, **kwargs):
         code = request.data.get('cancellation_code', 'no code')
@@ -2623,7 +2657,7 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
             # prevent changing events user does not have write permissions (for bulk operations)
             try:
                 original_queryset = Event.objects.filter(id__in=[i.get('id', '') for i in self.request.data])
-            except:
+            except:  # noqa E722
                 raise DRFPermissionDenied('Invalid JSON in request.')
             queryset = self.request.user.get_editable_events(original_queryset)
 
