@@ -3,6 +3,10 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 from events.models import Event, Language
+from django.template.loader import render_to_string
+from django.core.mail import send_mail
+from smtplib import SMTPException
+from django.contrib.sites.models import Site
 
 User = settings.AUTH_USER_MODEL
 
@@ -82,3 +86,19 @@ class SignUp(models.Model):
 
     class Meta:
         unique_together = [['email', 'registration'], ['phone_number', 'registration']]
+
+
+    def send_notification(self):
+        rendered_body = render_to_string('signup_confirmation.html', {'username': self.name,
+                                                                 'event': self.registration.event,
+                                                                 'cancellation_code': self.cancellation_code})
+        try:
+            send_mail(
+                f'{self.registration} confirmation',
+                rendered_body,
+                f'letest@{Site.objects.get_current().domain}',
+                [self.email],
+                html_message=rendered_body
+            )
+        except SMTPException:
+            pass

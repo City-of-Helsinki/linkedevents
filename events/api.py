@@ -1014,7 +1014,9 @@ class SignUpSerializer(serializers.ModelSerializer):
                 print(current_age)
                 raise DRFPermissionDenied('The participant is too old.')
         if (attendee_capacity is None) or (already_attending < attendee_capacity):
-            return super().create(validated_data)
+            signup = super().create(validated_data)
+            signup.send_notification()
+            return signup
         elif (waiting_list_capacity is None) or (already_waitlisted < waiting_list_capacity):
             signup = super().create(validated_data)
             signup.attendee_status = SignUp.AttendeeStatus.WAITING_LIST
