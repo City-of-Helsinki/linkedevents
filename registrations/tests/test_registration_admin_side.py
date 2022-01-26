@@ -590,3 +590,31 @@ def test_filter_signups(api_client, user, user2, event, event2):
     search_url=f'{signup_url}?events={event2.id}'
     response = api_client.get(search_url)
     assert len(response.data) == 4
+
+@pytest.mark.django_db
+def test_filter_registrations(api_client, user, user2, event, event2):
+    registration_url = reverse('registration-list')
+
+    api_client.force_authenticate(user)
+    registration_data = {"event": event.id}
+    response = api_client.post(registration_url, registration_data, format='json')
+    registration_id = response.data['id']
+    
+    api_client.force_authenticate(user2)
+    registration_data = {"event": event2.id}
+    response = api_client.post(registration_url, registration_data, format='json')
+    registration_id2 = response.data['id']
+
+    event2.type_id = Event.Type_Id.COURSE
+    event2.save()
+
+    response = api_client.get(registration_url)
+    assert len(response.data) == 2
+
+    response = api_client.get(f'{registration_url}?event_type=Course')
+    assert len(response.data['data']) == 1
+    assert registration_id2 == response.data['data'][0]['id']
+
+    response = api_client.get(f'{registration_url}?text={event.name}')
+    assert len(response.data['data']) == 1
+    assert registration_id == response.data['data'][0]['id']    

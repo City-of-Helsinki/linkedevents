@@ -969,14 +969,20 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
 
 class RegistrationViewSet(JSONAPIViewMixin,
-                          mixins.ListModelMixin,
                           mixins.RetrieveModelMixin,
                           mixins.UpdateModelMixin,
                           mixins.DestroyModelMixin,
-                          viewsets.GenericViewSet,
-                          mixins.CreateModelMixin,):
+                          mixins.ListModelMixin,
+                          mixins.CreateModelMixin,
+                          viewsets.GenericViewSet):
     serializer_class = RegistrationSerializer
     queryset = Registration.objects.all()
+
+    def filter_queryset(self, queryset):
+        events = Event.objects.exclude(registration=None)
+        events = _filter_event_queryset(qs, self.request.query_params)
+        registrations = Registration.objects.filter(event__in=events)
+        return registrations
 
 
 register_view(RegistrationViewSet, 'registration')
