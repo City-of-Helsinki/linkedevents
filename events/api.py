@@ -980,7 +980,7 @@ class RegistrationViewSet(JSONAPIViewMixin,
 
     def filter_queryset(self, queryset):
         events = Event.objects.exclude(registration=None)
-        events = _filter_event_queryset(qs, self.request.query_params)
+        events = _filter_event_queryset(events, self.request.query_params)
         registrations = Registration.objects.filter(event__in=events)
         return registrations
 
