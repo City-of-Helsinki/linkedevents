@@ -1,25 +1,26 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+
 import base64
 import re
 import struct
 import time
 import urllib.parse
 from copy import deepcopy
-from datetime import datetime
+from datetime import date, datetime
 from datetime import time as datetime_time
 from datetime import timedelta
-from functools import partial
+from functools import partial, reduce
+from operator import or_
 from uuid import UUID
 
 import bleach
 import django_filters
 import pytz
 import regex
-from datetime import date
 from django.conf import settings
-from django.contrib.postgres.search import SearchQuery, TrigramSimilarity
 from django.contrib.auth.models import AnonymousUser
+from django.contrib.postgres.search import SearchQuery, TrigramSimilarity
 from django.core.cache import caches
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q, QuerySet
@@ -64,7 +65,7 @@ from events.models import (PUBLICATION_STATUSES, DataSource, Event, EventLink,
                            Feedback, Image, Keyword, KeywordSet, Language,
                            License, Offer, OpeningHoursSpecification, Place,
                            PublicationStatus, Video)
-from events.permissions import GuestPost, GuestDelete, GuestGet
+from events.permissions import GuestDelete, GuestGet, GuestPost
 from events.renderers import DOCXRenderer
 from events.translation import EventTranslationOptions, PlaceTranslationOptions
 from helevents.models import User
@@ -1143,10 +1144,10 @@ class KeywordSetViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
         qexpression = None
         val = self.request.query_params.get('text', None)
         if val:
-            qlist = [Q(name__icontains=i)|
-                     Q(name_fi__icontains=i)|
-                     Q(name_en__icontains=i)|
-                     Q(name_sv__icontains=i)|
+            qlist = [Q(name__icontains=i) |
+                     Q(name_fi__icontains=i) |
+                     Q(name_en__icontains=i) |
+                     Q(name_sv__icontains=i) |
                      Q(id__icontains=i) for i in val.split(',')]
             qexpression = reduce(or_, qlist)
         if qexpression:
