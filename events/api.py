@@ -1137,6 +1137,33 @@ class KeywordSetViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
     queryset = KeywordSet.objects.all()
     serializer_class = KeywordSetSerializer
 
+    def filter_queryset(self, queryset):
+        # orderd by name, id, usage
+        # search by name
+        qexpression = None
+        val = self.request.query_params.get('text', None)
+        if val:
+            qlist = [Q(name__icontains=i)|
+                     Q(name_fi__icontains=i)|
+                     Q(name_en__icontains=i)|
+                     Q(name_sv__icontains=i)|
+                     Q(id__icontains=i) for i in val.split(',')]
+            qexpression = reduce(or_, qlist)
+        if qexpression:
+            qset = KeywordSet.objects.filter(qexpression)
+        else:
+            qset = KeywordSet.objects.all()
+
+        val = self.request.query_params.get('sort', None)
+        if val:
+            allowed_fields = {'name', 'id', 'usage', '-name', '-id', '-usage'}
+            vals = val.split(',')
+            unallowed_params = set(vals) - allowed_fields
+            if unallowed_params:
+                raise ParseError(f'It is possible to sort with the following params only: {allowed_fields}')
+            qset = qset.order_by(*vals)
+        return qset
+
 
 register_view(KeywordSetViewSet, 'keyword_set')
 
