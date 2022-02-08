@@ -983,8 +983,11 @@ class RegistrationViewSet(JSONAPIViewMixin,
         events = Event.objects.exclude(registration=None)
         events = _filter_event_queryset(events, self.request.query_params)
         val = self.request.query_params.get('admin_user', None)
-        if val and str(val).lower() == 'true' and not isinstance(self.request.user, AnonymousUser):
-            events = self.request.user.get_editable_events(events)
+        if val and str(val).lower() == 'true':
+            if isinstance(self.request.user, AnonymousUser):
+                events = Event.objects.none()
+            else:
+                events = self.request.user.get_editable_events(events)
         registrations = Registration.objects.filter(event__in=events)
 
         return registrations
