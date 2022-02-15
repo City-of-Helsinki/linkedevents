@@ -9,6 +9,7 @@ from rdflib.namespace import DCTERMS, OWL, SKOS
 
 # Logging:
 import time
+import math
 import logging
 from os import mkdir
 from os.path import abspath, join, dirname, exists, basename, splitext
@@ -46,15 +47,20 @@ logger.addHandler(
     logFile
 )
 
+def proc_time_frmt(stage) -> None:
+    ft = math.modf(time.process_time())
+    curtime = float(str(ft[0])[:3])+ft[1]
+    logger.info("%s finished after %s seconds from the initial start!" % (stage, curtime))
 
 def fetch_graph() -> dict:
     # Generate graph base, and parse the file.
     try:
         graph = rdflib.Graph()
-        graph.parse('http://finto.fi/rest/v1/jupo/data')
+        graph.parse('http://finto.fi/rest/v1/yso/data')
     except Exception as e:
-        logger.error("Error while fetching JUPO Graph file: %s" % e)
+        logger.error("Error while fetching YSO Graph file: %s" % e)
     # LICENSE http://creativecommons.org/licenses/by/3.0/: https://finto.fi/jupo/fi/
+    proc_time_frmt("Graph fetch & parsing")
     return graph
 
 def uri_format(subj_uriRef) -> str:
@@ -69,10 +75,11 @@ class OntologyImporter(Importer):
     supported_languages = ['fi', 'sv', 'en']  # Base file requirement.
 
     def iterator(self, data: dict, key: str, query: Any, obj_model: tuple, attr_map: tuple) -> None:
-        ''' Main class data logic. Create DB objects & set class attributes.
-            This was created with easy expandability of the setup data dictionary in mind.
-            We are using save() throughout this program to avoid race conditions with update_or_create()
-            '''
+        ''' 
+        Main class data logic. Create DB objects & set class attributes.
+        This was created with easy expandability of the setup data dictionary in mind.
+        We are using save() throughout this program to avoid race conditions with update_or_create()
+        '''
         for idx, sub_key in enumerate(data[key]):
             try:
                 q_obj = query()
@@ -93,22 +100,19 @@ class OntologyImporter(Importer):
     def process_graph(self, graph: dict) -> Tuple[dict, List[Any]]:
         processed = {}
         deprecated = []
+        '''
+        The metatag is not the @prefix name, it is the one used in the uriRef formatting;
+        ex. @prefix yso-meta1: <http://www.yso.fi/onto/yso-meta/> .
+        In case you want to use a special ontology file with multiple ontologies, feel free to map them here:
+        '''
         specifications = {
-            # The metatag is not the @prefix name, it is the one used in the uriRef formatting;
-            # ex. @prefix yso-meta1: <http://www.yso.fi/onto/yso-meta/> .
             'yso': {
                 'types': (
                     ('Concept', 1), # Structural similarity to the ontology_type implementation in the models.
-                    ('Individual', 2),
+                    ('Individual', 1),
                     ('Hierarchy', 2)
                 ),
                 'meta': ('yso-meta', ),
-            },
-            'jupo': {
-                'types': (
-                    ('Concept', 1),
-                ),
-                'meta': ('jupo-meta', ),
             },
         }
 
@@ -149,12 +153,13 @@ class OntologyImporter(Importer):
                     deprecated.append([formatted_onto, isReplacedBy])
 
                 sub_skos.update({
-                    'type': subj_type, 
-                    'id': subj_id, 
+                    'type': subj_type,
+                    'id': subj_id,
                     'ontoType': dict(specifications['yso']['types'])[ot]
                     })
                 processed.update(dict({formatted_onto: sub_skos}))
 
+        proc_time_frmt("Graph processing")
         return processed, deprecated
 
     def save_alt_keywords(self, processed: dict) -> None:
@@ -173,16 +178,13 @@ class OntologyImporter(Importer):
                                 name=altlang, language=language)
                             label_object.save()
                     except Exception as e:
-                        logger.error(e)
+                        logger.error("Error: %s for alt keyword obj %s with language %s" % (e, altk, lang))
+        proc_time_frmt("Alt keywords saving")
 
     def save_keywords(self, processed: dict) -> None:
         for k, v in processed.items():
             try:
-                if v['type'] == 'jupo':
-                    keyword = Keyword(data_source=getattr(
-                        self, 'data_source_jupo'))
-                else:
-                    keyword = Keyword(data_source=getattr(self, 'data_source'))
+                keyword = Keyword(data_source=getattr(self, 'data_source'))
                 keyword.id = k
                 keyword.created_time = BaseModel.now()
                 for lang, lang_val in v['prefLabel'].items():
@@ -209,6 +211,7 @@ class OntologyImporter(Importer):
                     keyword.save()
             except Exception as e:
                 logger.error(e)
+        proc_time_frmt("Keywords saving")
 
     def graph_relation(self, processed: dict) -> None:
         # Relations are established between the keywords after they are all saved to the DB.
@@ -231,39 +234,42 @@ class OntologyImporter(Importer):
                 curObj.save()
             except Exception as e:
                 logger.error(e)
+        proc_time_frmt("Graph relation generation")
 
     def mark_deprecated(self, deprecated: dict) -> None:
         for value in deprecated:
             onto = value[0]
             replacement = value[1]
-            #logger.info("Kw is: %s and replacement is: %s" % (onto, replacement))
+
             try:
                 kw = Keyword.objects.get(id=onto)
                 kw.deprecated = True
                 kw.created_time = BaseModel.now()
                 kw.save()
-                #logger.info("Marked deprecated: %s" % value[0])
-            except:
-                pass
-
-            try:
-                if replacement:
+            except Exception as e:
+                logger.warn(
+                    'Could not deprecate keyword %s with error: %s' % (onto, e))
+                continue
+            
+            if replacement:
+                try:
                     replaced_kw = Keyword.objects.get(id=replacement)
                     kw.replaced_by = replaced_kw
                     kw.created_time = BaseModel.now()
                     kw.save()
-            except:
-                logger.warn(
-                    'Could not find replacement key for %s with replacement key_id: %s' % (onto, replacement))
-                continue
-
+                except Exception as e:
+                    logger.warn(
+                        'Could not find replacement key in the database for %s with replacement key_id: %s with error: %s' % (onto, replacement, e))
+                    continue
+            else:
+                logger.warn('Replacement for deprecated keyword %s is None.' % onto)
+        proc_time_frmt("Marked deprecated keywords")
 
     def setup(self) -> None:
         self.data = {
             # YSO, JUPO and the Public DataSource for Organizations model.
             'ds': {
                 'yso': ('yso', 'Yleinen suomalainen ontologia', True),
-                'jupo': ('jupo', 'Julkisen hallinnon palveluontologia', True),
                 'org': ('org', 'Ulkoa tuodut organisaatiotiedot', True),
             },
             # Public organization class for all instances.
@@ -272,11 +278,11 @@ class OntologyImporter(Importer):
             },
             # General ontology organization for keywords.
             'org': {
-                'onto': ['onto:1200', '1200', 'Ontology', BaseModel.now(), 'org:13', 'ds_org']
+                'yso': ['yso:1200', '1200', 'YSO', BaseModel.now(), 'org:13', 'ds_yso']
             },
             # Attribute name mapping for all due to class related attributes (ex. data_source and organization are necessary).
             'attr_maps': {
-                'ds': ('data_source', 'data_source_jupo', 'data_source_org'),
+                'ds': ('data_source', 'data_source_org'),
                 'orgclass': ('organization_class_13', ),
                 'org': ('organization', ),
             },
@@ -299,29 +305,15 @@ class OntologyImporter(Importer):
         for args in mapped:
             self.iterator(
                 data=self.data, key=args[0], query=args[1], obj_model=args[2], attr_map=args[3])
-        logger.info(
-            "#1: Setup finished in: %s. Fetching JUPO turtle graph file..." % time.process_time())
+        proc_time_frmt("Setup")
         self.handle()
-
 
     def handle(self) -> None:
         # Handler function for passing the graph between functions. More organized at the cost of more function calls.
         self.graph = fetch_graph()
-        logger.info("#2: Graph parsing finished in: %s. Preparing graph..." %
-                    time.process_time())
         self.processed, self.deprecated = self.process_graph(graph=self.graph)
-        logger.info("#3: Graph processing finished in: %s..." %
-                    time.process_time())
         self.save_alt_keywords(processed=self.processed)
-        logger.info("#4: Alt keyword saving finished in: %s..." %
-                    time.process_time())
         self.save_keywords(processed=self.processed)
-        logger.info("#5: Saved keywords in: %s..." %
-                    time.process_time())
         self.graph_relation(processed=self.processed)
-        logger.info("#6: Generated the ontology graph in: %s..." %
-                    time.process_time())
         self.mark_deprecated(self.deprecated)
-        logger.info("#7: Handled deprecated keywords in: %s..." %
-                    time.process_time())
-        logger.info("Importer finished in: %s" % time.process_time())
+        proc_time_frmt("Importer")
