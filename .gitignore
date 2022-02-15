@@ -160,3 +160,5 @@ dmypy.json
 config_dev.toml
 venv/
 .vscode/
+
+logs/

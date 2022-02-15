@@ -146,3 +146,15 @@ def get_deleted_object_name():
         'sv': 'RADERAD',
         'en': 'DELETED',
     }
+
+
+def build_url(request, pk, **kwargs):
+    parent = kwargs.get('parent', None)
+    url = request.build_absolute_uri(request.get_full_path())
+    if parent:
+        url = url.replace(f"{parent.pk}/", '')
+    if re.search(r'/\?', url):
+        url = url.replace(re.search(r'\?.*$', url)[0], '')
+    if re.search(str(pk), url):
+        return url
+    return f"{url}{pk}/"

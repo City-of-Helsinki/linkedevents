@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 import base64
 import re
 import struct
+import difflib
 import time
 import urllib.parse
 from copy import deepcopy
@@ -20,7 +21,7 @@ from django.core.files.base import ContentFile
 from django.db.utils import IntegrityError
 from django.conf import settings
 from django.urls import NoReverseMatch
-from django.db.models import Q, QuerySet
+from django.db.models import Q, QuerySet, When, Case, CharField
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 from django.utils.encoding import force_text
@@ -716,8 +717,7 @@ def _text_qset_by_translated_field(field, val):
     languages = utils.get_fixed_lang_codes()
     qset = Q()
     for lang in languages:
-        kwarg = {field + '_' + lang + '__icontains': val}
-        qset |= Q(**kwarg)
+        qset |= Q(**{"%s_%s__icontains" % (field, lang): val})
     return qset
 
 
@@ -749,6 +749,22 @@ class JSONAPIViewMixin(object):
         return context
 
 
+class KeywordFilterSerializer(TranslatedModelSerializer):
+    ontology_type = EnumChoiceField(Keyword.ONTOLOGY_TYPES, required=False)
+    id = serializers.CharField(required=False)
+
+    class Meta:
+        model = Keyword
+        fields = ('id', 'name', 'ontology_type')
+
+    def to_representation(self, instance):
+        request = self.context['request']
+        parent = self.context.get('parent', None)
+        ret = super().to_representation(instance)
+        ret['@id'] = utils.build_url(request, instance.pk, parent=parent)
+        return ret
+
+
 class KeywordSerializer(LinkedEventsSerializer):
     view_name = 'keyword-detail'
     alt_labels = serializers.SlugRelatedField(
@@ -757,10 +773,32 @@ class KeywordSerializer(LinkedEventsSerializer):
         default_timezone=pytz.UTC, required=False, allow_null=True)
     last_modified_time = DateTimeField(
         default_timezone=pytz.UTC, required=False, allow_null=True)
+    parents = JSONLDRelatedField(
+        serializer=KeywordFilterSerializer, many=True, required=True, allow_empty=False,
+        view_name='keyword-detail', queryset=Keyword.objects.all())
+    children = JSONLDRelatedField(
+        serializer=KeywordFilterSerializer, many=True, required=True, allow_empty=False,
+        view_name='keyword-detail', queryset=Keyword.objects.all())
+    ontology_type = EnumChoiceField(Keyword.ONTOLOGY_TYPES, required=False)
 
     class Meta:
         model = Keyword
-        exclude = ('n_events_changed',)
+        exclude = ('n_events_changed', )
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+
+        def _cp(val):
+            c_or_p = []
+            for value in getattr(instance, val).all():
+                data = KeywordFilterSerializer(
+                    context={'request': self.request, 'parent': instance}).to_representation(value)
+                c_or_p.append(data)
+            return c_or_p
+
+        ret['children'] = _cp('children')
+        ret['parents'] = _cp('parents')
+        return ret
 
 
 class KeywordRetrieveViewSet(JSONAPIViewMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
@@ -787,9 +825,6 @@ class KeywordListViewSet(JSONAPIViewMixin, mixins.ListModelMixin, viewsets.Gener
     queryset = queryset.select_related(
         'publisher').prefetch_related('alt_labels__name')
     serializer_class = KeywordSerializer
-    filter_backends = (filters.OrderingFilter,)
-    ordering_fields = ('n_events', 'id', 'name', 'data_source')
-    ordering = ('-data_source', '-n_events', 'name')
 
     def get_queryset(self):
         """
@@ -805,6 +840,7 @@ class KeywordListViewSet(JSONAPIViewMixin, mixins.ListModelMixin, viewsets.Gener
         filter (only keywords containing the specified string are included)
         show_all_keywords (keywords without events are included)
         show_deprecated (deprecated keywords are included)
+        locale (automatically used depending on the chosen language in frontend)
         """
         queryset = Keyword.objects.exclude(is_hidden=True)
         data_source = self.request.query_params.get('data_source')
@@ -821,11 +857,42 @@ class KeywordListViewSet(JSONAPIViewMixin, mixins.ListModelMixin, viewsets.Gener
         # can be used e.g. with typeahead.js
         val = self.request.query_params.get(
             'text') or self.request.query_params.get('filter')
+
         if val:
-            # Also consider alternative labels to broaden the search!
-            qset = _text_qset_by_translated_field(
-                'name', val) | Q(alt_labels__name__icontains=val)
-            queryset = queryset.filter(qset).distinct()
+            ''' 
+            If search results do not return keywords, 
+            we expand the search results with alt labels. 
+            '''
+            qset = Q(**{"name_%s__icontains" % self.request.query_params.get('locale'): val})
+            if not (queryset.filter(qset).distinct()).exists():
+                qset = qset | Q(alt_labels__name__icontains=val)
+                queryset = queryset.filter(qset).distinct()
+            else:
+                queryset = queryset.filter(qset).distinct()
+
+        def _get_preserved_order(ids):
+            """
+            Returns a Case expression that can be used in the order_by method,
+            ordering will be equal to the order of ids in the ids list.
+            """
+            if ids:
+                return Case(*[When(id=idx, then=pos) for pos, idx in enumerate(ids)])
+            else:
+                return Case()
+
+        ''' 
+        String diffing algorithm (using difflib) for better search results;
+        Difflib uses a modified ratcliff/obershelp algorithm.
+        '''
+        ratio_list, ordered_ratio_list = [], []
+        for termi in queryset:
+            tempi = difflib.SequenceMatcher(None, val, termi.name)
+            ratio_list.append((termi.id, tempi.ratio()))
+
+        ratio_list.sort(key=lambda x: x[1], reverse=True)
+        ordered_ratio_list = [x[0] for x in ratio_list]
+        queryset = queryset.order_by(_get_preserved_order(ordered_ratio_list))
+
         return queryset
 
 
@@ -859,6 +926,9 @@ class KeywordSetSerializer(LinkedEventsSerializer):
 class KeywordSetViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
     queryset = KeywordSet.objects.all()
     serializer_class = KeywordSetSerializer
+    filter_backends = (filters.OrderingFilter,)
+    ordering_fields = ('name')
+    ordering = ('name')
 
 
 register_view(KeywordSetViewSet, 'keyword_set')
@@ -1059,6 +1129,9 @@ class LanguageSerializer(LinkedEventsSerializer):
 class LanguageViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
     queryset = Language.objects.all()
     serializer_class = LanguageSerializer
+    filter_backends = (filters.OrderingFilter,)
+    ordering_fields = ('name')
+    ordering = ('name')
 
 
 register_view(LanguageViewSet, 'language')
@@ -1160,6 +1233,9 @@ class PaymentMethodSerializer(LinkedEventsSerializer):
 class PaymentViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
     queryset = PaymentMethod.objects.all()
     serializer_class = PaymentMethodSerializer
+    filter_backends = (filters.OrderingFilter,)
+    ordering_fields = ('name')
+    ordering = ('name')
 
 
 register_view(PaymentViewSet, 'paymentmethod')

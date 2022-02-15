@@ -287,6 +287,16 @@ class KeywordLabel(models.Model):
 
 
 class Keyword(BaseModel, ImageMixin, ReplacedByMixin):
+
+    class Ontology_type:
+        CONCEPT = 1
+        HIERARCHY = 2
+
+    ONTOLOGY_TYPES = (
+        (Ontology_type.CONCEPT, "OntologyConcept"),
+        (Ontology_type.HIERARCHY, "OntologyHierarchy"),
+    )
+
     publisher = models.ForeignKey(
         'django_orghierarchy.Organization', on_delete=models.CASCADE, verbose_name=_('Publisher'),
         db_index=True, null=True, blank=True,
@@ -302,6 +312,12 @@ class Keyword(BaseModel, ImageMixin, ReplacedByMixin):
         editable=False,
         db_index=True
     )
+    ontology_type = models.SmallIntegerField(verbose_name=_('Ontology type'),
+                                             default=Ontology_type.CONCEPT, choices=ONTOLOGY_TYPES)
+    parents = models.ManyToManyField(
+        "self", blank=True, symmetrical=False, related_name='keyword-parents+')
+    children = models.ManyToManyField(
+        "self", blank=True, symmetrical=False, related_name='keyword-children+')
     n_events_changed = models.BooleanField(default=False, db_index=True)
     replaced_by = models.ForeignKey(
         'Keyword', on_delete=models.SET_NULL, related_name='aliases', null=True, blank=True)
