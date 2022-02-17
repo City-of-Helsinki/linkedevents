@@ -844,6 +844,7 @@ class KeywordListViewSet(JSONAPIViewMixin, mixins.ListModelMixin, viewsets.Gener
         """
         queryset = Keyword.objects.exclude(is_hidden=True)
         data_source = self.request.query_params.get('data_source')
+        locale = self.request.query_params.get('locale', 'fi')
         # Filter by data source, multiple sources separated by comma
         if data_source:
             data_source = data_source.lower().split(',')
@@ -863,7 +864,7 @@ class KeywordListViewSet(JSONAPIViewMixin, mixins.ListModelMixin, viewsets.Gener
             If search results do not return keywords, 
             we expand the search results with alt labels. 
             '''
-            qset = Q(**{"name_%s__icontains" % self.request.query_params.get('locale'): val})
+            qset = Q(**{"name_%s__icontains" % locale: val})
             if not (queryset.filter(qset).distinct()).exists():
                 qset = qset | Q(alt_labels__name__icontains=val)
                 queryset = queryset.filter(qset).distinct()
@@ -886,7 +887,7 @@ class KeywordListViewSet(JSONAPIViewMixin, mixins.ListModelMixin, viewsets.Gener
         '''
         ratio_list, ordered_ratio_list = [], []
         for termi in queryset:
-            tempi = difflib.SequenceMatcher(None, val, termi.name)
+            tempi = difflib.SequenceMatcher(None, val, getattr(termi, "name_%s" % locale))
             ratio_list.append((termi.id, tempi.ratio()))
 
         ratio_list.sort(key=lambda x: x[1], reverse=True)
