@@ -53,7 +53,6 @@ from rest_framework.settings import api_settings
 from rest_framework.views import get_view_name as original_get_view_name
 from rest_framework_bulk import (BulkListSerializer, BulkModelViewSet,
                                  BulkSerializerMixin)
-
 from events import utils
 from events.api_pagination import LargeResultsSetPagination
 from events.auth import ApiKeyAuth, ApiKeyUser
@@ -1130,18 +1129,24 @@ register_view(SignUpEditViewSet, 'signup_edit')
 class KeywordSetSerializer(LinkedEventsSerializer):
     view_name = 'keywordset-detail'
     keywords = JSONLDRelatedField(
-        serializer=KeywordSerializer, many=True, required=True, allow_empty=False,
-        view_name='keyword-detail', queryset=Keyword.objects.all())
+        serializer=KeywordSerializer, many=True, required=False, allow_empty=True,
+        view_name='keyword-detail', queryset=Keyword.objects.none())
     usage = EnumChoiceField(KeywordSet.USAGES)
     created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
     last_modified_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
+
+    def to_internal_value(self, data):
+        # extracting ids from the '@id':'http://testserver/v1/keyword/system:tunnettu_avainsana/' type record
+        keyword_ids = [i.get('@id', '').rstrip('/').split('/')[-1] for i in data.get('keywords', {})]
+        self.context['keywords'] = Keyword.objects.filter(id__in=keyword_ids)
+        return super().to_internal_value(data)
 
     class Meta:
         model = KeywordSet
         fields = '__all__'
 
 
-class KeywordSetViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
+class KeywordSetViewSet(JSONAPIViewMixin, viewsets.ModelViewSet):
     queryset = KeywordSet.objects.all()
     serializer_class = KeywordSetSerializer
 
@@ -1171,6 +1176,27 @@ class KeywordSetViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
                 raise ParseError(f'It is possible to sort with the following params only: {allowed_fields}')
             qset = qset.order_by(*vals)
         return qset
+
+    def create(self, request, *args, **kwargs):
+        if isinstance(request.user, AnonymousUser):
+            raise DRFPermissionDenied('Only admin users are allowed to create KeywordSets.')
+        data_source = request.user.get_default_organization().data_source
+        request.data['data_source'] = data_source
+        id_ending = request.data.pop('id_second_part', None)
+        if id_ending:
+            request.data['id'] = f'{data_source}:{id_ending}'
+        else:
+            kw_id = request.data.get('id', None)
+            if kw_id is None:
+                raise ParseError('Id or id_ending have to be provided')
+            if kw_id.split(':')[0] != data_source.id:
+                raise DRFPermissionDenied("Trying to set data source different from the user's organization.")
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        data_source = request.user.get_default_organization().data_source
+        request.data['data_source'] = data_source
+        return super().update(request, *args, **kwargs)
 
 
 register_view(KeywordSetViewSet, 'keyword_set')

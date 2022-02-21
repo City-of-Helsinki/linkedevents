@@ -417,6 +417,11 @@ class KeywordSet(BaseModel, ImageMixin):
                                      verbose_name=_('Organization which uses this set'), null=True)
     keywords = models.ManyToManyField(Keyword, blank=False, related_name='sets')
 
+    def can_be_edited_by(self, user):
+        if user.is_superuser:
+            return True
+        return user.get_default_organization().data_source == self.data_source
+
     def save(self, *args, **kwargs):
         if any([keyword.deprecated for keyword in self.keywords.all()]):
             raise ValidationError(_("KeywordSet can't have deprecated keywords"))
