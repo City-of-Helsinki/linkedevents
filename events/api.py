@@ -1150,6 +1150,11 @@ class KeywordSetViewSet(JSONAPIViewMixin, viewsets.ModelViewSet):
     queryset = KeywordSet.objects.all()
     serializer_class = KeywordSetSerializer
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.data_source = None
+        self.organization = None
+
     def filter_queryset(self, queryset):
         # orderd by name, id, usage
         # search by name
