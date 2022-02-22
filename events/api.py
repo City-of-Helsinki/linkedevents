@@ -1135,6 +1135,10 @@ class KeywordSetSerializer(LinkedEventsSerializer):
     created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
     last_modified_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.data_source = self.context['request'].data.get('data_source')
+
     def to_internal_value(self, data):
         # extracting ids from the '@id':'http://testserver/v1/keyword/system:tunnettu_avainsana/' type record
         keyword_ids = [i.get('@id', '').rstrip('/').split('/')[-1] for i in data.get('keywords', {})]
