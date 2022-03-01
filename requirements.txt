@@ -30,6 +30,27 @@ defusedxml==0.6.0
     # via
     #   python3-openid
     #   social-auth-core
+django==2.2.27
+    # via
+    #   -r requirements.in
+    #   django-admin-autocomplete-filter
+    #   django-allauth
+    #   django-anymail
+    #   django-appconf
+    #   django-cors-headers
+    #   django-filter
+    #   django-haystack
+    #   django-helusers
+    #   django-jinja
+    #   django-leaflet
+    #   django-modeltranslation
+    #   django-mptt
+    #   django-munigeo-turku
+    #   django-reversion
+    #   djangorestframework
+    #   djangorestframework-bulk
+    #   drf-oidc-auth
+    #   easy-thumbnails
 django-admin-autocomplete-filter==0.4
     # via -r requirements.in
 django-allauth==0.41.0
@@ -71,40 +92,13 @@ django-munigeo-turku==0.2.31
     # via -r requirements.in
 django-orghierarchy-turku==0.1.27
     # via -r requirements.in
-django-parler-rest==2.1
-    # via django-munigeo-turku
 django-parler==2.0.1
     # via
     #   django-munigeo-turku
     #   django-parler-rest
+django-parler-rest==2.1
+    # via django-munigeo-turku
 django-reversion==3.0.7
-    # via -r requirements.in
-django==2.2.24
-    # via
-    #   -r requirements.in
-    #   django-admin-autocomplete-filter
-    #   django-allauth
-    #   django-anymail
-    #   django-appconf
-    #   django-cors-headers
-    #   django-filter
-    #   django-haystack
-    #   django-helusers
-    #   django-jinja
-    #   django-leaflet
-    #   django-modeltranslation
-    #   django-mptt
-    #   django-munigeo-turku
-    #   django-reversion
-    #   djangorestframework
-    #   djangorestframework-bulk
-    #   drf-oidc-auth
-    #   easy-thumbnails
-djangorestframework-bulk==0.2.1
-    # via -r requirements.in
-djangorestframework-gis==0.15
-    # via -r requirements.in
-djangorestframework-jwt==1.11.0
     # via -r requirements.in
 djangorestframework==3.11.2
     # via
@@ -114,6 +108,12 @@ djangorestframework==3.11.2
     #   djangorestframework-bulk
     #   djangorestframework-gis
     #   drf-oidc-auth
+djangorestframework-bulk==0.2.1
+    # via -r requirements.in
+djangorestframework-gis==0.15
+    # via -r requirements.in
+djangorestframework-jwt==1.11.0
+    # via -r requirements.in
 drf-oidc-auth==0.9
     # via django-helusers
 easy-thumbnails==2.7
@@ -209,14 +209,6 @@ pyyaml==5.4
     #   django-munigeo-turku
 rdflib==4.2.2
     # via -r requirements.in
-requests-cache==0.6.0.dev1
-    # via
-    #   -r requirements.in
-    #   django-munigeo-turku
-requests-oauthlib==1.3.0
-    # via
-    #   django-allauth
-    #   social-auth-core
 requests==2.23.0
     # via
     #   -r requirements.in
@@ -229,6 +221,14 @@ requests==2.23.0
     #   pyjwkest
     #   requests-cache
     #   requests-oauthlib
+    #   social-auth-core
+requests-cache==0.6.0.dev1
+    # via
+    #   -r requirements.in
+    #   django-munigeo-turku
+requests-oauthlib==1.3.0
+    # via
+    #   django-allauth
     #   social-auth-core
 rsa==4.7
     # via python-jose
