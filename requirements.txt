@@ -142,7 +142,7 @@ jinja2==2.11.3
     #   django-jinja
 langdetect==1.0.8
     # via -r requirements.in
-lxml==4.6.3
+lxml==4.6.5
     # via
     #   -r requirements.in
     #   python-docx
