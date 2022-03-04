@@ -1464,7 +1464,6 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
                 self.fields_needed_to_publish = list(
                     self.fields_needed_to_publish)
                 self.fields_needed_to_publish.remove('location')
-                self.fields_needed_to_publish.append('virtualevent_url')
                 self.fields_needed_to_publish = tuple(
                     self.fields_needed_to_publish)
 
