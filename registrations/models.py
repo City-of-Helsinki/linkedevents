@@ -92,7 +92,10 @@ class SignUp(models.Model):
         rendered_body = render_to_string('signup_confirmation.html', {'username': self.name,
                                                                  'event': self.registration.event.name_fi,
                                                                  'cancellation_code': self.cancellation_code,
-                                                                 'registration_id': self.registration.id})
+                                                                 'registration_id': self.registration.id,
+                                                                 'confirmation_message': self.registration.confirmation_message,
+                                                                 'instructions': self.registration.event
+                                                                 })
         try:
             send_mail(
                 f'{self.registration.event.name} ilmoittautuminen onnistuu!',
