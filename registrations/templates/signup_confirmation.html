@@ -1,4 +1,325 @@
-<p>Dear {{username}},
-Your participation to {{event}} has been confirmed.</p>
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style type="text/css">
+      @font-face {
+        font-family: 'HelsinkiGrotesk';
+        font-display: swap;
+        src: url('https://makasiini.hel.ninja/delivery/HelsinkiGrotesk/565d73a693abe0776c801607ac28f0bf.woff') format('woff');
+        font-weight: 400;
+        font-style: normal;
+        text-rendering: optimizeLegibility;
+      }
 
-<p>Should you change your mind, please cancel your participation using the following {{cancellation_code}}.</p>
+      @font-face {
+        font-family: 'HelsinkiGrotesk';
+        font-display: swap;
+        src: url('https://makasiini.hel.ninja/delivery/HelsinkiGrotesk/7c46f288e8133b87e6b12b45dac71865.woff') format('woff');
+        font-weight: 500;
+        font-style: normal;
+        text-rendering: optimizeLegibility;
+      }
+
+      @font-face {
+        font-family: 'HelsinkiGrotesk';
+        font-display: swap;
+        src: url('https://makasiini.hel.ninja/delivery/HelsinkiGrotesk/533af26cf28d7660f24c2884d3c27eac.woff') format('woff');
+        font-weight: 700;
+        font-style: normal;
+        text-rendering: optimizeLegibility;
+      }
+
+      @media screen and (max-width: 576px) {
+        .body {
+          padding: 0px !important;
+        }
+
+        .language-selector-cell a:not(:last-child) {
+          margin-right: 16px !important;
+        }
+
+        .brand-name {
+          font-size: 16px !important;
+        }
+
+        .brand-name img {
+          height: 40px !important;
+          width: 87px !important;
+        }
+
+        .brand-name span {
+          line-height: 36px !important;
+        }
+
+        .content-container h1 {
+          font-size: 24px !important;
+          line-height: 29px !important;
+          text-align: center;
+        }
+
+        .content-container h2 {
+          font-size: 18px !important;
+          line-height: 22px !important;
+          text-align: center;
+        }
+
+        .cta-button-wrapper,
+        .link-wrapper {
+          text-align: center;
+        }
+
+        .koro {
+          height: 20px !important;
+          background-size: 106px 20px !important;
+          background-image: url(https://linkedcomponents-ui.test.kuva.hel.ninja/images/email/koro-light-dense.png) !important;
+        }
+
+        .footer-title {
+          text-align: center;
+        }
+
+        .footer-title h2 {
+          margin: 12px auto 0px !important;
+          display: block !important;
+        }
+
+        .footer-title img {
+          margin: 0px auto !important;
+          display: block !important;
+        }
+
+        .footer-utilities {
+          display: block !important;
+          direction: unset !important;
+        }
+
+        .footer-utilities div {
+          display: block !important;
+          direction: unset !important;
+          text-align: center !important;
+        }
+
+        .footer-utilities .footer-some {
+          margin-bottom: 12px;
+        }
+
+        .footer-navigation a {
+          display: block !important;
+          margin-right: 0 !important;
+        }
+
+        .footer-navigation a:not(:last-child) {
+          margin-bottom: 12px;
+        }
+
+        .copyright {
+          text-align: center;
+        }
+
+        .footer-links {
+          text-align: center;
+        }
+
+        .footer-links a {
+          display: block;
+          margin-right: unset !important;
+        }
+
+        .footer-links a:not(:last-child) {
+          margin-bottom: 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <style type="text/css">
+      @font-face {
+        font-family: 'HelsinkiGrotesk';
+        font-display: swap;
+        src: url('https://makasiini.hel.ninja/delivery/HelsinkiGrotesk/565d73a693abe0776c801607ac28f0bf.woff') format('woff');
+        font-weight: 400;
+        font-style: normal;
+        text-rendering: optimizeLegibility;
+      }
+
+      @font-face {
+        font-family: 'HelsinkiGrotesk';
+        font-display: swap;
+        src: url('https://makasiini.hel.ninja/delivery/HelsinkiGrotesk/7c46f288e8133b87e6b12b45dac71865.woff') format('woff');
+        font-weight: 500;
+        font-style: normal;
+        text-rendering: optimizeLegibility;
+      }
+
+      @font-face {
+        font-family: 'HelsinkiGrotesk';
+        font-display: swap;
+        src: url('https://makasiini.hel.ninja/delivery/HelsinkiGrotesk/533af26cf28d7660f24c2884d3c27eac.woff') format('woff');
+        font-weight: 700;
+        font-style: normal;
+        text-rendering: optimizeLegibility;
+      }
+
+      @media screen and (max-width: 576px) {
+        .body {
+          padding: 0px !important;
+        }
+
+        .language-selector-cell a:not(:last-child) {
+          margin-right: 16px !important;
+        }
+
+        .brand-name {
+          font-size: 16px !important;
+        }
+
+        .brand-name img {
+          height: 40px !important;
+          width: 87px !important;
+        }
+
+        .brand-name span {
+          line-height: 36px !important;
+        }
+
+        .content-container h1 {
+          font-size: 24px !important;
+          line-height: 29px !important;
+          text-align: center;
+        }
+
+        .content-container h2 {
+          font-size: 18px !important;
+          line-height: 22px !important;
+          text-align: center;
+        }
+
+        .cta-button-wrapper,
+        .link-wrapper {
+          text-align: center;
+        }
+
+        .koro {
+          height: 20px !important;
+          background-size: 106px 20px !important;
+          background-image: url(https://linkedcomponents-ui.test.kuva.hel.ninja/images/email/koro-light-dense.png) !important;
+        }
+
+        .footer-title {
+          text-align: center;
+        }
+
+        .footer-title h2 {
+          margin: 12px auto 0px !important;
+          display: block !important;
+        }
+
+        .footer-title img {
+          margin: 0px auto !important;
+          display: block !important;
+        }
+
+        .footer-utilities {
+          display: block !important;
+          direction: unset !important;
+        }
+
+        .footer-utilities div {
+          display: block !important;
+          direction: unset !important;
+          text-align: center !important;
+        }
+
+        .footer-utilities .footer-some {
+          margin-bottom: 12px;
+        }
+
+        .footer-navigation a {
+          display: block !important;
+          margin-right: 0 !important;
+        }
+
+        .footer-navigation a:not(:last-child) {
+          margin-bottom: 12px;
+        }
+
+        .copyright {
+          text-align: center;
+        }
+
+        .footer-links {
+          text-align: center;
+        }
+
+        .footer-links a {
+          display: block;
+          margin-right: unset !important;
+        }
+
+        .footer-links a:not(:last-child) {
+          margin-bottom: 12px;
+        }
+      }
+    </style>
+    <div class="body" style='min-height:100%;margin:0;padding:24px 0px;font-size:16px;color:#1a1a1a;font-family:"HelsinkiGrotesk", Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;-webkit-font-smoothing:antialiased;width:100%;font-weight:300;margin:0;background-color:#ededed;'>
+      <table class="email-content-table" style="border-collapse:separate;border-spacing:0;max-width:600px;padding:0;width:100%;margin:16px auto;background-color:#fff;">
+        <tr>
+          <td class="header-cell" style="padding:0;font-weight:normal;margin:0;text-align:left;padding:32px 16px;">
+            <a href="https://linkedcomponents-ui.test.kuva.hel.ninja/fi" target="_blank" class="brand-name" style="text-decoration:none;color:#1a1a1a;font-size:24px;font-weight:700;">
+              <img alt="" aria-hidden="true" src="https://linkedcomponents-ui.test.kuva.hel.ninja/images/email/logo.png" style="height:60px;width:130px;margin-right:16px;vertical-align:top;" />
+              <span style="line-height:52px;">Linked Events</span>
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td class="content-cell" style="padding:0;margin:0;text-align:left;">
+            <div class="content-container" style="padding:0 16px;">
+              <h1 style="color:#1a1a1a;font-size:36px;line-height:43px;font-weight:700;margin:0 0 12px;">Tervetuloa {{username}}</h1>
+              <h2 style="color:#1a1a1a;font-size:24px;font-weight:700;line-height:29px;margin:0;">Ilmoittautuminen {{event_type}} {{event}} tallennettu.</h2>
+              <div class="divider" style="background:#0000bf;border-radius:0px;height:3px;width:100%;margin:24px 0;"></div>
+              <div style="margin: 56px 0px 40px">
+                <p style="color:#1a1a1a;font-size:16px;font-weight:normal;line-height:24px;margin:0px;">Onnittelut! Olet onnistuneesti ilmoittautunut {{event_type}} {{event}}.</p>
+              </div>
+              <div class="cta-button-wrapper" style="margin: 0px 0px 40px">
+                <a href="https://linkedregistrations-ui.test.kuva.hel.ninja/fi/registration/{{registration_id}}/enrolment/{{cancellation_code}}/edit" target="_blank" class="cta-button" style="background:#0000bf;border-radius:0px;border:none;height:56px;text-align:center;text-decoration:none;vertical-align:middle;padding:16px 24px;box-sizing:border-box;display:inline-block;">
+                  <span style="color:#ffffff;font-size:16px;font-weight:500;line-height:24px;">Tarkastele ilmoittautumistasi täällä</span>
+                  <img alt="" aria-hidden="true" src="https://linkedcomponents-ui.test.kuva.hel.ninja/images/email/icon-arrow-right-white.png" style="height:24px;width:24px;margin-left:16px;vertical-align:top;" />
+                </a>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <footer class="footer" style="margin-top:32px;">
+              <section>
+                <div class="koro" style="height:30px;background-size:200px 30px;background-repeat:repeat-x;background-image:url(https://linkedcomponents-ui.test.kuva.hel.ninja/images/email/koro-light.png);"></div>
+                <div class="footer-content" style="background-color:#f2f2f2;padding:32px 16px;">
+                  <div class="footer-title">
+                    <img alt="" aria-hidden="true" src="https://linkedcomponents-ui.test.kuva.hel.ninja/images/email/logo.png" style="height:40px;width:87px;margin-right:16px;display:inline-block;vertical-align:top;" />
+                    <h2 style="color:#1a1a1a;font-size:20px;font-weight:700;line-height:36px;margin:0px;display:inline-block;margin:0px;">Linked Events</h2>
+                  </div>
+                  <div class="footer-divider" style="background:#1a1a1a;border-radius:0px;height:1px;width:100%;margin:24px 0;"></div>
+                  <div class="footer-utilities" style="display:table;width:100%;direction:rtl;">
+                    <div class="footer-navigation" style="display:table-cell;vertical-align:top;direction:ltr;text-align:left;">
+                      <a href="mailto:linkedevents@hel.fi" style="color:#1a1a1a;font-size:16px;font-weight:normal;text-decoration:none;line-height:24px;margin-right:24px;">Ota yhteyttä</a>
+                      <a target="_blank" href="https://linkedcomponents-ui.test.kuva.hel.ninja/fi/help/support/contact" style="color:#1a1a1a;font-size:16px;font-weight:normal;text-decoration:none;line-height:24px;">Anna palautetta</a>
+                    </div>
+                  </div>
+                  <div class="footer-divider" style="background:#1a1a1a;border-radius:0px;height:1px;width:100%;margin:24px 0;"></div>
+                  <div class="copyright" style="margin-bottom:12px;">
+                    <span style="font-size:14px;margin-right:4px;">© City of Helsinki 2022</span>
+                    <span class="copyright-dot" style="font-size:14px;margin-right:4px;">•</span>
+                    <span style="font-size:14px;">All rights reserved</span>
+                  </div>
+                </div>
+              </section>
+            </footer>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </body>
+</html>
