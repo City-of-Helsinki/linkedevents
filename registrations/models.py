@@ -81,21 +81,33 @@ class SignUp(models.Model):
                                         related_name="signup_native_language")
     service_language = models.ForeignKey(Language, on_delete=models.SET_NULL, null=True, blank=True,
                                          related_name="signup_service_language")
-    street_address = models.CharField(verbose_name=_('Street address'), max_length=500, blank=True, null=True, default=None)
+    street_address = models.CharField(verbose_name=_('Street address'),
+                                      max_length=500, blank=True, null=True, default=None)
     zipcode = models.CharField(verbose_name=_('Street address'), max_length=10, blank=True, null=True, default=None)
 
     class Meta:
         unique_together = [['email', 'registration'], ['phone_number', 'registration']]
 
-
     def send_notification(self):
-        rendered_body = render_to_string('signup_confirmation.html', {'username': self.name,
-                                                                 'event': self.registration.event.name_fi,
-                                                                 'cancellation_code': self.cancellation_code,
-                                                                 'registration_id': self.registration.id,
-                                                                 'confirmation_message': self.registration.confirmation_message,
-                                                                 'instructions': self.registration.event
-                                                                 })
+        email_variables = {'username': self.name,
+                           'event': self.registration.event.name_fi,
+                           'cancellation_code': self.cancellation_code,
+                           'registration_id': self.registration.id}
+
+        if self.registration.confirmation_message:
+            email_variables['confirmation_message'] = self.registration.confirmation_message
+
+        if self.registration.instructions:
+            email_variables['instructions'] = self.registration.instructions
+
+        event_type_name = {str(Event.Type_Id.GENERAL): 'tapahtumaan',
+                           str(Event.Type_Id.COURSE): 'kurssille',
+                           str(Event.Type_Id.VOLUNTEERING): 'vapaaehtoistehtävään'}
+
+        email_variables['event_type'] = event_type_name[self.registration.event.type_id]
+
+        rendered_body = render_to_string('signup_confirmation.html', email_variables)
+
         try:
             send_mail(
                 f'{self.registration.event.name} ilmoittautuminen onnistuu!',
