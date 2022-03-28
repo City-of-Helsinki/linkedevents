@@ -403,13 +403,18 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({field_name: 'This field is a translated field. Instead of a string,'
                                                    ' you must supply an object with strings corresponding'
                                                    ' to desired language ids.'})
-            for language in (lang for lang in utils.get_fixed_lang_codes() if lang in obj):
-                value = obj[language]  # "musiikkiklubit"
-                if language == settings.LANGUAGES[0][0]:  # default language
-                    # { "name": "musiikkiklubit" }
-                    extra_fields[field_name] = value
-                # { "name_fi": "musiikkiklubit" }
+            
+            for language in (lang for lang in utils.get_fixed_lang_codes()):
+                value = None
+                if language in obj:
+                    value = obj[language]  # "musiikkiklubit"
+                    if language == settings.LANGUAGES[0][0]:  # default language
+                        # { "name": "musiikkiklubit" }
+                        extra_fields[field_name] = value
+
+                # { "name_fi": "musiikkiklubit" } or {"name_fi": None}
                 extra_fields['{}_{}'.format(field_name, language)] = value
+                
             del data[field_name]  # delete original translated fields
 
         # handle other than translated fields
