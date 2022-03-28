@@ -9,10 +9,10 @@ init-db \
   "" \
   "$POSTGRES_USER" \
   "$POSTGRES_PASSWORD" \
-  "$DB_MIGRATION_USER" \
-  "$DB_MIGRATION_PASSWORD" \
-  "$DB_APP_USER" \
-  "$DB_APP_PASSWORD" \
+  "$MIGRATION_USER" \
+  "$MIGRATION_PASSWORD" \
+  "$APP_USER" \
+  "$APP_PASSWORD" \
   "$POSTGRES_DB" \
   "false" \
   "true"
