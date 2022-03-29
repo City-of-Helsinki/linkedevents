@@ -1,17 +1,10 @@
 # Linked Events
 
-[![Build status](https://travis-ci.org/City-of-Helsinki/linkedevents.svg)](https://travis-ci.org/City-of-Helsinki/linkedevents)
-[![codecov](https://codecov.io/gh/City-of-Helsinki/linkedevents/branch/master/graph/badge.svg)](https://codecov.io/gh/City-of-Helsinki/linkedevents)
-[![Requirements](https://requires.io/github/City-of-Helsinki/linkedevents/requirements.svg?branch=master)](https://requires.io/github/City-of-Helsinki/linkedevents/requirements/?branch=master)
-[![Gitter](https://img.shields.io/gitter/room/City-of-Helsinki/heldev.svg?maxAge=2592000)](https://gitter.im/City-of-Helsinki/heldev)
-
 ![High-level diagram of Linked Events](./assets/Linked_Events.jpg?raw=true)
-
 
 #### TL;DR => Linked Events is a REST API which allows you to set up an _**event**_* publication hub.
 
 \*_**event**_  here means a happening where people get together and do something.
-
 
 Linked Events is event information:
 
@@ -31,104 +24,117 @@ Therefore, instructions written in this README.md should be written accordingly.
 
 The best way to contribute is to open a new PR for discussion. We strive to be able to support various cities with various use cases, so suggestions and new features (as long as they fit in with existing functionality) are welcome.
 
-## How to setup your local development environment
-If all you want is a barebone application to work with for your own city:
+## Manual installation of Linked Events on physical or virtual machine:
 
-* Start django application and database server:
-  ```
-  docker-compose up
-  ```
-
-* Access application on [localhost:8000](http://localhost:8000)
-
-* You are done 🔥
-
-If you wish to use locations, addresses and events data from the Helsinki capital region:
-
-* Read [linked-events-importers.md](./linked-events-importers.md#linked-events-importers-and-commands) and decide the importers or commands you would like to use.
-
-* You can then serve the [UI for Linked Events API](https://github.com/City-of-Helsinki/linkedevents-ui) for example by setting authentication keys to `local_settings.py`
-
-* UI app is specific to Helsinki at the moment and requires general Finnish ontology as well as additional Helsinki specific audiences
-and keywords to be present. However, UI code should be easily adaptable to your own city if you have an OAuth2 authentication server present
-
-
-Development installation on physical or virtual machine
-----------------------------
-These instructions assume an $INSTALL_BASE, like so:
+Install following packages with your distros package manager
 ```bash
-INSTALL_BASE=$HOME/linkedevents
+postgresql postgis nginx virtualenv python3-dev python3-pip build-essential libpq-dev
 ```
-If you've already cloned this repository, just move repository root into $INSTALL_BASE/linkedevents. Otherwise just clone the repository, like so:
+
+### Preparing your PostgreSQL:
+	
+Generate required locales
 ```bash
-git clone https://github.com/City-of-Helsinki/linkedevents.git $INSTALL_BASE/linkedevents
-```
-Prepare Python 3.x virtualenv using your favorite tools and activate it. Plain virtualenv is like so:
+sudo locale-gen fi_FI.UTF-8
+sudo systemctl restart postgresql
+```		
+Create a new role in postgresql
 ```bash
-virtualenv -p python3 $INSTALL_BASE/venv
-source $INSTALL_BASE/venv/bin/activate
-```
-Install required Python packages into the virtualenv
-```bash
-cd $INSTALL_BASE/linkedevents
-pip install -r requirements.txt
-```
-Create the database, like so: (we have only tested on PostgreSQL)
-```bash
-cd $INSTALL_BASE/linkedevents
 sudo -u postgres createuser -R -S linkedevents
-# Following is for US locale, we are not certain whether Linkedevents
-# behaves differently depending on DB collation & ctype
-#sudo -u postgres createdb -Olinkedevents linkedevents
-# This is is for Finnish locale
-sudo -u postgres createdb -Olinkedevents -Ttemplate0 -lfi_FI.UTF-8 linkedevents
-# Create extensions in the database
+```
+Create a new database in postgresql
+```bash
+sudo -u postgres createdb -O linkedevents -T template0 -l fi_FI.UTF-8 linkedevents
+```
+Create extensions for the database
+```bash
 sudo -u postgres psql linkedevents -c "CREATE EXTENSION postgis;"
 sudo -u postgres psql linkedevents -c "CREATE EXTENSION hstore;"
-# This fills the database with a basic skeleton
+```
+### Preparing your local repository:
+
+Clone your repository
+```bash
+git clone https://github.com/City-of-Turku/linkedevents.git
+```
+Create a virtual environment for your python
+```bash
+virtualenv -p python3 venv
+```
+Activate your virtual environment
+```bash
+source venv/bin/activate
+```
+Install requirements.txt
+```bash
+pip install -r requirements.txt
+```
+Install requirements-dev.txt
+```bash
+pip install -r requirements-dev.txt
+```
+### Fill your database with included migrations:
+	
+Run basic migrations
+```bash
 python manage.py migrate
-# This adds language fields based on settings.LANGUAGES (which may be missing in external dependencies)
+```
+Additional changes to language fields according to settings.LANGUAGES
+```bash
 python manage.py sync_translation_fields
 ```
+After this you have a very basic installation of Linked Events ready,
+but it's recommended to run at least some of the supported importers if you
+want to have all of the features working.
 
-If you wish to install Linkedevents without any Helsinki specific data (an empty database), and instead customize everything for your own city, you have a working install right now.
-
-The last steps are needed if you wish to use location, address or event data from the Helsinki metropolitan region, or if you wish to run the Helsinki UI (https://linkedevents.hel.fi) from https://github.com/City-of-Helsinki/linkedevents-ui. Currently, the UI is specific to Helsinki and requires the general Finnish ontology as well as additional Helsinki specific audiences and keywords to be present, though its code should be easily adaptable to your own city if you have an OAuth2 authentication server present.
-
-The commands below are documented in more detail in [linked-events-importers.md](./linked-events-importers.md#linked-events-importers-and-commands).
+### Use importers to add installation specific data:
 
 ```bash
-cd $INSTALL_BASE/linkedevents
-# Import general Finnish ontology (used by Helsinki UI and Helsinki events)
-python manage.py event_import yso --all
-# Add keyword set to display in the UI event audience selection
-python manage.py add_helsinki_audience
-# Add keyword set to display in the UI main category selection
-python manage.py add_helsinki_topics
-# Import places from Helsinki metropolitan region service registry (used by events from following sources)
-python manage.py event_import tprek --places
-# Import places from Helsinki metropolitan region address registry (used as fallback locations)
+#YSO(General Finnish Ontology)-importer that adds all the concepts and their alt labels and hierarchies.
+#A large part of Linked Events features are built on top of YSO, this importer should be used in all installations.
+python manage.py event_import ontology
+
+#TSL-wordlist(Turun sanalista)-importer adds a City-of-Turku specific wordlist that is used by some of the keyword set importers.
+#Use this if you don't plan on using your own keyword sets based on YSO or your own wordlists.
+python manage.py event_import tsl --all
+
+  #Add a new keyword set to display in the UI general audience selection.
+  #!Based on TSL-wordlist so import that first!
+  python manage.py add_tku_audience
+
+  #Add a new keyword set to display in the UI event category selections.
+  #!Based on TSL-wordlist so import that first!
+  python manage.py add_tku_topics_by_content
+
+  #Add a new keyword set to display in the UI event category selections.
+  #!Based on TSL-wordlist so import that first!
+  python manage.py add_tku_topics_by_type
+  
+  #Add a new keyword set to display in the UI hobby category selections.
+  #!Based on TSL-wordlist so import that first!
+  python manage.py add_tku_hobbytopics
+
+#Import places from Turku Servicemap API.
+#It's recommended to use at least one of the place importers when developing Linked Events.
+python manage.py event_import tpr --places
+
+#Import Turku-region street addresses from api.turku.fi
+#It's recommended to use at least one of the place importers when developing Linked Events.
 python manage.py event_import osoite --places
-# Import events from Helsinki metropolitan region libraries
-python manage.py event_import helmet --events
-# Import events from Espoo
-python manage.py event_import espoo --events
-# Import City of Helsinki hierarchical organization for UI user rights management
-python manage.py import_organizations https://api.hel.fi/paatos/v1/organization/ -s helsinki:ahjo
-# Import municipalities in Finland
-python manage.py geo_import finland --municipalities
-# Import districts in Helsinki
-python manage.py geo_import helsinki --divisions
-# install API frontend templates:
-python manage.py install_templates helevents
+
+#Import City of Turku hierarchical organization for UI user rights management
+python manage.py event_import turku_organization
+
+#Add default payment methods to display in the UI.
+python manage.py event_import payment_method_defaults
+				
+#Import Turku specific images for Linked Events image bank.
+#! Before importing, create media\images folder in the main project folder
+python manage.py event_import turku_image_bank
+		
+#Import event data from the old Turku events calendar.
+python manage.py event_import turku_old_events --events
 ```
-
-The last command installs the `helevents/templates/rest_framework/api.html` template,
-which contains Helsinki event data summary and license. You may customize the template
-for your favorite city by creating `your_favorite_city/templates/rest_framework/api.html`.
-For further erudition, take a look at the DRF documentation on [customizing the browsable API](http://www.django-rest-framework.org/topics/browsable-api/#customizing)
-
-After this, everything but search endpoint (/search) is working. See [search](#search)
 
 Production notes
 ----------------
@@ -191,41 +197,6 @@ pinned versions for updates.
 To remove a dependency, remove it from `requirements.in`,
 run `pip-compile` and then `pip-sync`. If everything works
 as expected, commit the changes.
-
-Search
-------
-Linkedevents uses Elasticsearch for generating results on the /search-endpoint. If you wish to use that functionality, proceed like so:
-
-1. Install elasticsearch
-
-    We've only tested using the rather ancient 1.7 version. Version 5.x will certainly not work as the `django-haystack`-library does not support it. If you are using Ubuntu 16.04, 1.7 will be available in the official repository.
-
-2. (For Finnish support) Install elasticsearch-analyzer-voikko, libvoikko and needed dictionaries
-
-    `/usr/share/elasticsearch/bin/plugin -i fi.evident.elasticsearch/elasticsearch-analysis-voikko/0.4.0`
-    This specific command is for Debian derivatives. The path to `plugin` command might be different on yours. Note that version 0.4.0 is the one compatible with Elasticsearch 1.7
-
-    Installing libvoikko:
-    `apt-get install libvoikko1`
-
-    Installing the dictionaries (v5 dictionaries are needed for libvoikko version included in Ubuntu 16.04):
-
-    ```
-    wget -P $INSTALL_BASE http://www.puimula.org/htp/testing/voikko-snapshot-v5/dict-morpho.zip
-    unzip $INSTALL_BASE/dict-morpho.zip -d /etc/voikko
-    ```
-
-3. Configure the thing
-
-    Set the `ELASTICSEARCH_URL` environment variable (or variable in `config_dev.toml`, if you are running in development mode) to your elasticsearch instance. The default value is `http://localhost:9200/`.
-
-    Haystack configuration for all Linkedevents languages happens automatically if `ELASTICSEARCH_URL` is set, but you may customize it manually using `local_settings.py` if you know Haystack and wish to do so.
-
-4. Rebuild the search indexes
-
-   `python manage.py rebuild_index`
-
-   You should now have a working /search endpoint, give or take a few.
 
 Event extensions
 ----------------
