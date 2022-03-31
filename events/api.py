@@ -403,18 +403,19 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({field_name: 'This field is a translated field. Instead of a string,'
                                                    ' you must supply an object with strings corresponding'
                                                    ' to desired language ids.'})
-            
+
             for language in (lang for lang in utils.get_fixed_lang_codes()):
                 value = None
                 if language in obj:
                     value = obj[language]  # "musiikkiklubit"
-                    if language == settings.LANGUAGES[0][0]:  # default language
+                    # default language
+                    if language == settings.LANGUAGES[0][0]:
                         # { "name": "musiikkiklubit" }
                         extra_fields[field_name] = value
 
                 # { "name_fi": "musiikkiklubit" } or {"name_fi": None}
                 extra_fields['{}_{}'.format(field_name, language)] = value
-                
+
             del data[field_name]  # delete original translated fields
 
         # handle other than translated fields
@@ -850,6 +851,9 @@ class KeywordListViewSet(JSONAPIViewMixin, mixins.ListModelMixin, viewsets.Gener
         queryset = Keyword.objects.exclude(is_hidden=True)
         data_source = self.request.query_params.get('data_source')
         locale = self.request.query_params.get('locale', 'fi')
+        # Validate supported language types.
+        if locale not in ('fi', 'sv', 'en'):
+            locale = 'fi'
         # Filter by data source, multiple sources separated by comma
         if data_source:
             data_source = data_source.lower().split(',')
@@ -886,18 +890,31 @@ class KeywordListViewSet(JSONAPIViewMixin, mixins.ListModelMixin, viewsets.Gener
             else:
                 return Case()
 
-        ''' 
-        String diffing algorithm (using difflib) for better search results;
-        Difflib uses a modified ratcliff/obershelp algorithm.
-        '''
-        ratio_list, ordered_ratio_list = [], []
-        for termi in queryset:
-            tempi = difflib.SequenceMatcher(None, val, getattr(termi, "name_%s" % locale))
-            ratio_list.append((termi.id, tempi.ratio()))
-
-        ratio_list.sort(key=lambda x: x[1], reverse=True)
-        ordered_ratio_list = [x[0] for x in ratio_list]
-        queryset = queryset.order_by(_get_preserved_order(ordered_ratio_list))
+        if isinstance(val, str):
+            if val.strip() != '':
+                ''' 
+                String diffing algorithm (using difflib) for better search results;
+                Difflib uses a modified ratcliff/obershelp algorithm.
+                '''
+                ratio_list, ordered_ratio_list = [], []
+                for termi in queryset:
+                    if termi:
+                        has_name_locale = getattr(termi, "name_%s" % locale)
+                        if isinstance(has_name_locale, str):
+                            if has_name_locale.strip() != '':
+                                tempi = difflib.SequenceMatcher(
+                                    None, val, has_name_locale)
+                                if tempi:
+                                    rat = tempi.ratio()
+                                    if not isinstance(rat, bool) and isinstance(rat, (int, float)):
+                                        ratio_list.append(
+                                            (termi.id, rat))
+                if ratio_list:
+                    if len(ratio_list) > 1:
+                        ratio_list.sort(key=lambda x: x[1], reverse=True)
+                    ordered_ratio_list = [x[0] for x in ratio_list]
+                    queryset = queryset.order_by(
+                        _get_preserved_order(ordered_ratio_list))
 
         return queryset
 
@@ -917,10 +934,10 @@ class KeywordSetSerializer(LinkedEventsSerializer):
     last_modified_time = DateTimeField(
         default_timezone=pytz.UTC, required=False, allow_null=True)
 
-
     def to_representation(self, obj):
         data = super(KeywordSetSerializer, self).to_representation(obj)
-        non_hidden_keywords = [keyword for keyword in data.get('keywords') if not keyword.get('is_hidden')]
+        non_hidden_keywords = [keyword for keyword in data.get(
+            'keywords') if not keyword.get('is_hidden')]
         data['keywords'] = non_hidden_keywords
         return data
 
