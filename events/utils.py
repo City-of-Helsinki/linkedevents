@@ -158,3 +158,10 @@ def build_url(request, pk, **kwargs):
     if re.search(str(pk), url):
         return url
     return f"{url}{pk}/"
+
+
+def get_field_translations(instance, field):
+    ret = [('', getattr(instance, field))]
+    for lang in ('sv', 'en', 'fi'):
+        ret.append((lang, getattr(instance, '%s_%s' % (field, lang), '')))
+    return ret
