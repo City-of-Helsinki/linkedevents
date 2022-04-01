@@ -105,6 +105,16 @@ def tsl() -> dict:
         'tsl:p56': {'fi': 'Teatteri, tanssi ja sirkus', 'sv': 'Teaterkonst, dans och cirkus', 'en': 'Theatre, dance and circus'},
         'tsl:p57': {'fi': 'Muu tapahtumatyyppi', 'sv': 'Övrig evenemangstyp', 'en': 'Other event type'},
         'tsl:p58': {'fi': 'Muu', 'sv': 'Övrig', 'en': 'Other'},
+        'tsl:p59': {'fi': 'Kädentaidot', 'sv': 'Hantverk', 'en': 'Handicrafts'},
+        'tsl:p60': {'fi': 'Liikunta', 'sv': 'Motion', 'en': 'Physical exercise'},
+        'tsl:p61': {'fi': 'Kielet ja kirjallisuus', 'sv': 'Språk och litteratur', 'en': 'Languages and literature'},
+        'tsl:p62': {'fi': 'Viestintä ja media', 'sv': 'Kommunikation och media', 'en': 'Communication and media'},
+        'tsl:p63': {'fi': 'Historia, yhteiskunta ja talous', 'sv': 'Historia, samhälle och ekonomi', 'en': 'History, society and economy'},
+        'tsl:p64': {'fi': 'Psykologia ja filosofia', 'sv': 'Psykologi och filosofi', 'en': 'Psychology and philosophy'},
+        'tsl:p65': {'fi': 'Kasvien hoito ja viljely', 'sv': 'Växtskötsel och odling', 'en': 'Plant care and cultivation'},
+        'tsl:p66': {'fi': 'Luonto ja ympäristö', 'sv': 'Natur och miljö', 'en': 'Nature and environment'},
+        'tsl:p67': {'fi': 'Tietotekniikka', 'sv': 'Informationsteknik', 'en': 'Information technology'},
+        'tsl:p68': {'fi': 'Muu koulutus', 'sv': 'Övrig utbildning', 'en': 'Other education'},
     }
     return data
 
