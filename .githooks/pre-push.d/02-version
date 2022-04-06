@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-./bin/check-version.sh
+./bin/check-version.sh --skip-exists-check
