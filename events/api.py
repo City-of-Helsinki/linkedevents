@@ -1722,7 +1722,7 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
         print("keski ----"*7)
 
         # update validated fields
-        super().update(instance, validated_data)
+        #super().update(instance, validated_data)
 
         # update offers
         if isinstance(offers, list):
@@ -1753,6 +1753,8 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
                 request=request, event=instance, data=original_validated_data)
 
         post_update(instance)
+
+        super().update(instance, validated_data)
 
         print(instance)
         print(instance.publication_status)
