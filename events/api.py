@@ -1530,11 +1530,12 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
 
         if 'super_event_type' in data:
             if data['super_event_type'] == 'recurring':
-                self.fields_needed_to_publish = list(
-                    self.fields_needed_to_publish)
-                self.fields_needed_to_publish.remove('start_time')
-                self.fields_needed_to_publish = tuple(
-                    self.fields_needed_to_publish)
+                if 'start_time' in self.fields_needed_to_publish:
+                    self.fields_needed_to_publish = list(
+                        self.fields_needed_to_publish)
+                    self.fields_needed_to_publish.remove('start_time')
+                    self.fields_needed_to_publish = tuple(
+                        self.fields_needed_to_publish)
 
         # check that published events have a location, keyword and start_time
         languages = utils.get_fixed_lang_codes()
