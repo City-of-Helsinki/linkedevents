@@ -1669,8 +1669,9 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
         return event
 
     def update(self, instance, validated_data):
+        print(instance)
         print(instance.publication_status)
-        print("----"*7)
+        print("eka ----"*7)
         offers = validated_data.pop('offers', None)
         links = validated_data.pop('external_links', None)
         videos = validated_data.pop('videos', None)
@@ -1716,6 +1717,10 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
             if field_name.startswith('extension_') and field.source in validated_data:
                 validated_data.pop(field.source)
 
+        print(instance)
+        print(instance.publication_status)
+        print("keski ----"*7)
+
         # update validated fields
         super().update(instance, validated_data)
 
@@ -1748,6 +1753,10 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
                 request=request, event=instance, data=original_validated_data)
 
         post_update(instance)
+
+        print(instance)
+        print(instance.publication_status)
+        print("viimene ----"*7)
 
         return instance
 
