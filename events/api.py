@@ -1669,9 +1669,6 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
         return event
 
     def update(self, instance, validated_data):
-        print(instance)
-        print(instance.publication_status)
-        print("eka ----"*7)
         offers = validated_data.pop('offers', None)
         links = validated_data.pop('external_links', None)
         videos = validated_data.pop('videos', None)
@@ -1717,13 +1714,6 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
             if field_name.startswith('extension_') and field.source in validated_data:
                 validated_data.pop(field.source)
 
-        print(instance)
-        print(instance.publication_status)
-        print("keski ----"*7)
-
-        # update validated fields
-        #super().update(instance, validated_data)
-
         # update offers
         if isinstance(offers, list):
             instance.offers.all().delete()
@@ -1753,12 +1743,8 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
                 request=request, event=instance, data=original_validated_data)
 
         post_update(instance)
-
+        # update validated fields
         super().update(instance, validated_data)
-
-        print(instance)
-        print(instance.publication_status)
-        print("viimene ----"*7)
 
         return instance
 
@@ -2463,13 +2449,9 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
             context = self.get_serializer_context()
             response.data = EventSerializer(
                 replacing_event, context=context).data
-            print("-------\n"*10)
-            print("update", self.get_serializer_context())
         return response
 
     def perform_update(self, serializer):
-        print("-------\n"*10)
-        print("perform update", serializer)
         # Prevent changing an event that user does not have write permissions
         # For bulk update, the editable queryset is filtered in filter_queryset
         # method
@@ -2486,20 +2468,13 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
             event_data_list = [serializer.validated_data]
 
         for event_data in event_data_list:
-            print("event data:", event_data)
             org = self.organization
             if hasattr(event_data, 'publisher'):
                 org = event_data['publisher']
             if not self.request.user.can_edit_event(org, event_data['publication_status']):
                 raise DRFPermissionDenied()
 
-        print("-----------")
-        print(event_data['publication_status'])
-        print("-------\n"*5)
-
         super().perform_update(serializer)
-
-        print(event_data['publication_status'])
 
     @atomic
     def bulk_update(self, request, *args, **kwargs):
