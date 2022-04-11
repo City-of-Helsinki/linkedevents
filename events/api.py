@@ -216,20 +216,25 @@ def clean_text_fields(data, allowed_html_fields=[]):
 def parse_hours(val, param):
 
     if len(val) > 2:
-        raise ParseError(f'Only hours and minutes can be given in {param}. For example: 16:00.')
+        raise ParseError(
+            f'Only hours and minutes can be given in {param}. For example: 16:00.')
     try:
         hour = int(val[0])
     except ValueError:
-        raise ParseError(f'Hours should be passed as numbers in {param}. For example: 16:00.')
+        raise ParseError(
+            f'Hours should be passed as numbers in {param}. For example: 16:00.')
     if not (0 <= hour <= 23):
-        raise ParseError(f'Hours should be between 0 and 23 in {param}, for example: 16:00. You have passed {hour}.')
+        raise ParseError(
+            f'Hours should be between 0 and 23 in {param}, for example: 16:00. You have passed {hour}.')
     if len(val) == 2 and val[1]:
         try:
             minute = int(val[1])
         except ValueError:
-            raise ParseError(f'Minutes should be passed as numbers in {param}. For example: 16:20.')
+            raise ParseError(
+                f'Minutes should be passed as numbers in {param}. For example: 16:20.')
         if not (0 <= minute <= 59):
-            raise ParseError(f'Minutes should be between 0 and 59 in {param} as in 16:20. You passed {minute}.')
+            raise ParseError(
+                f'Minutes should be between 0 and 59 in {param} as in 16:20. You passed {minute}.')
         return hour, minute
     return hour, 0
 
@@ -240,7 +245,8 @@ def parse_bool(val, param):
     elif val.lower() == 'false':
         return False
     else:
-        raise ParseError(f'{param} can take the values True or False. You passed {val}.')
+        raise ParseError(
+            f'{param} can take the values True or False. You passed {val}.')
 
 
 def parse_digit(val, param):
@@ -1662,6 +1668,7 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
         return event
 
     def update(self, instance, validated_data):
+        print(instance.publication_status)
         offers = validated_data.pop('offers', None)
         links = validated_data.pop('external_links', None)
         videos = validated_data.pop('videos', None)
@@ -2153,28 +2160,32 @@ def _filter_event_queryset(queryset, params, srs=None):
     if val:
         split_time = val.split(':')
         hour, minute = parse_hours(split_time, param)
-        queryset = queryset.filter(start_time__time__gte=datetime_time(hour, minute))
+        queryset = queryset.filter(
+            start_time__time__gte=datetime_time(hour, minute))
 
     val = params.get('starts_before', None)
     param = 'starts_before'
     if val:
         split_time = val.split(':')
         hour, minute = parse_hours(split_time, param)
-        queryset = queryset.filter(start_time__time__lte=datetime_time(hour, minute))
+        queryset = queryset.filter(
+            start_time__time__lte=datetime_time(hour, minute))
 
     val = params.get('ends_after', None)
     param = 'ends_after'
     if val:
         split_time = val.split(':')
         hour, minute = parse_hours(split_time, param)
-        queryset = queryset.filter(end_time__time__gte=datetime_time(hour, minute))
+        queryset = queryset.filter(
+            end_time__time__gte=datetime_time(hour, minute))
 
     val = params.get('ends_before', None)
     param = 'ends_before'
     if val:
         split_time = val.split(':')
         hour, minute = parse_hours(split_time, param)
-        queryset = queryset.filter(end_time__time__lte=datetime_time(hour, minute))
+        queryset = queryset.filter(
+            end_time__time__lte=datetime_time(hour, minute))
 
     # Filter by translation only
     val = params.get('translation', None)
@@ -2195,7 +2206,8 @@ def _filter_event_queryset(queryset, params, srs=None):
         queryset = queryset.filter(q)
 
     # Filter by audience min age
-    val = params.get('audience_min_age', None) or params.get('audience_min_age_lt', None)
+    val = params.get('audience_min_age', None) or params.get(
+        'audience_min_age_lt', None)
     if val:
         min_age = parse_digit(val, 'audience_min_age')
         queryset = queryset.filter(audience_min_age__lte=min_age)
@@ -2206,7 +2218,8 @@ def _filter_event_queryset(queryset, params, srs=None):
         queryset = queryset.filter(audience_min_age__gte=min_age)
 
     # Filter by audience max age
-    val = params.get('audience_max_age', None) or params.get('audience_max_age_gt', None)
+    val = params.get('audience_max_age', None) or params.get(
+        'audience_max_age_gt', None)
     if val:
         max_age = parse_digit(val, 'audience_max_age')
         queryset = queryset.filter(audience_max_age__gte=max_age)
@@ -2241,7 +2254,8 @@ def _filter_event_queryset(queryset, params, srs=None):
     if val:
         vals = val.split(',')
         if len(vals) > 2:
-            raise ParseError(f'suitable_for takes at maximum two values, you provided {len(vals)}')
+            raise ParseError(
+                f'suitable_for takes at maximum two values, you provided {len(vals)}')
         int_vals = [parse_digit(i, 'suitable_for') for i in vals]
         if len(int_vals) == 2:
             lower_boundary = min(int_vals)
