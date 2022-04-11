@@ -1669,6 +1669,8 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
         return event
 
     def update(self, instance, validated_data):
+        print(instance)
+        print("----"*7)
         offers = validated_data.pop('offers', None)
         links = validated_data.pop('external_links', None)
         videos = validated_data.pop('videos', None)
@@ -2479,13 +2481,14 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
                 org = event_data['publisher']
             if not self.request.user.can_edit_event(org, event_data['publication_status']):
                 raise DRFPermissionDenied()
-        pdb.set_trace()
 
         print("-----------")
         print(event_data['publication_status'])
         print("-------\n"*5)
 
         super().perform_update(serializer)
+
+        print(event_data['publication_status'])
 
     @atomic
     def bulk_update(self, request, *args, **kwargs):
