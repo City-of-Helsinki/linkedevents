@@ -2479,8 +2479,7 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
                 raise DRFPermissionDenied()
 
         print("-----------")
-        print(event_data['publication_status'],
-              serializer.instance.publication_status)
+        print(event_data['publication_status'])
         print("-------\n"*5)
 
         super().perform_update(serializer)
