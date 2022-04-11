@@ -1669,7 +1669,7 @@ class EventSerializer(BulkSerializerMixin, LinkedEventsSerializer, GeoModelAPIVi
         return event
 
     def update(self, instance, validated_data):
-        print(instance)
+        print(instance.publication_status)
         print("----"*7)
         offers = validated_data.pop('offers', None)
         links = validated_data.pop('external_links', None)
