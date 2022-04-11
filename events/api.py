@@ -2478,7 +2478,9 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
             if not self.request.user.can_edit_event(org, event_data['publication_status']):
                 raise DRFPermissionDenied()
 
-        print(event_data['publication_status'], serializer.instance)
+        print("-----------")
+        print(event_data['publication_status'],
+              serializer.instance.publication_status)
         print("-------\n"*5)
 
         super().perform_update(serializer)
