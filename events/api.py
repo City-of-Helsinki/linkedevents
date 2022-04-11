@@ -8,6 +8,7 @@ import struct
 import difflib
 import time
 import urllib.parse
+import pdb
 from copy import deepcopy
 from datetime import datetime
 from datetime import time as datetime_time
@@ -2472,11 +2473,13 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
             event_data_list = [serializer.validated_data]
 
         for event_data in event_data_list:
+            print("event data:", event_data)
             org = self.organization
             if hasattr(event_data, 'publisher'):
                 org = event_data['publisher']
             if not self.request.user.can_edit_event(org, event_data['publication_status']):
                 raise DRFPermissionDenied()
+        pdb.set_trace()
 
         print("-----------")
         print(event_data['publication_status'])
