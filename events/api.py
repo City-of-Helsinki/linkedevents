@@ -2443,6 +2443,7 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
         return False
 
     def update(self, *args, **kwargs):
+        print("update", self.get_serializer_context())
         response = super().update(*args, **kwargs)
         original_event = Event.objects.get(id=response.data['id'])
         if original_event.replaced_by is not None:
@@ -2453,6 +2454,7 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
         return response
 
     def perform_update(self, serializer):
+        print("perform update", serializer)
         # Prevent changing an event that user does not have write permissions
         # For bulk update, the editable queryset is filtered in filter_queryset
         # method
