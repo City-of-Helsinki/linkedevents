@@ -1,7 +1,7 @@
 from uuid import uuid4
 from django.conf import settings
 from django.db import models
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from events.models import Event, Language
 from django.template.loader import render_to_string
 from django.core.mail import send_mail
@@ -88,7 +88,7 @@ class SignUp(models.Model):
     class Meta:
         unique_together = [['email', 'registration'], ['phone_number', 'registration']]
 
-    def send_notification(self):
+    def send_notification(self, confirmation_type):
         email_variables = {'username': self.name,
                            'event': self.registration.event.name_fi,
                            'cancellation_code': self.cancellation_code,
@@ -105,8 +105,10 @@ class SignUp(models.Model):
                            str(Event.Type_Id.VOLUNTEERING): 'vapaaehtoistehtävään'}
 
         email_variables['event_type'] = event_type_name[self.registration.event.type_id]
-
-        rendered_body = render_to_string('signup_confirmation.html', email_variables)
+        
+        confirmation_types = {'confirmation': 'signup_confirmation.html',
+                              'cancellation': 'cancellation_confirmation.html'}
+        rendered_body = render_to_string(confirmation_types[confirmation_type], email_variables)
 
         try:
             send_mail(

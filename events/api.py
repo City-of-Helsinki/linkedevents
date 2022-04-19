@@ -31,7 +31,7 @@ from django.http import Http404, HttpResponsePermanentRedirect
 from django.urls import NoReverseMatch
 from django.utils import timezone, translation
 from django.utils.encoding import force_text
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
 from haystack.query import AutoQuery
 from isodate import Duration, duration_isoformat, parse_duration
@@ -1022,7 +1022,7 @@ class SignUpSerializer(serializers.ModelSerializer):
                 raise DRFPermissionDenied('The participant is too old.')
         if (attendee_capacity is None) or (already_attending < attendee_capacity):
             signup = super().create(validated_data)
-            signup.send_notification()
+            signup.send_notification('confirmation')
             return signup
         elif (waiting_list_capacity is None) or (already_waitlisted < waiting_list_capacity):
             signup = super().create(validated_data)
@@ -1103,6 +1103,7 @@ class SignUpViewSet(JSONAPIViewMixin,
         waitlisted = SignUp.objects.filter(registration=signup.registration,
                                            attendee_status=SignUp.AttendeeStatus.WAITING_LIST
                                            ).order_by('id')
+        signup.send_notification('cancellation')
         signup.delete()
         if len(waitlisted) > 0:
             first_on_list = waitlisted[0]
@@ -1688,7 +1689,6 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         # The following can be used when serializing when
         # testing and debugging.
         self.skip_empties = skip_empties
-
         if self.context:
             for ext in self.context.get('extensions', ()):
                 self.fields['extension_{}'.format(ext.identifier)] = ext.get_extension_serializer()

@@ -5,7 +5,7 @@ from django.db import models
 from django.utils import translation, timezone
 from django.utils.html import strip_tags
 from django.utils.translation import activate
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.utils.formats import date_format
 from jinja2 import StrictUndefined
 from jinja2.exceptions import TemplateError

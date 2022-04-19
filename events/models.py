@@ -35,8 +35,8 @@ from django.db import transaction
 from django.db.models import Q
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
-from django.utils.encoding import python_2_unicode_compatible
-from django.utils.translation import ugettext_lazy as _
+from six import python_2_unicode_compatible
+from django.utils.translation import gettext_lazy as _
 from image_cropping import ImageRatioField
 from mptt.models import MPTTModel, TreeForeignKey
 from mptt.querysets import TreeQuerySet
