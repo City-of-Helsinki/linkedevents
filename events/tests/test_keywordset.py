@@ -165,3 +165,41 @@ def test_put(user, user2, api_client, keyword, keyword2):
     assert response.status_code == 200
     response = api_client.get(f'{url}system:id/')
     assert response.data['name']['fi'] == keyword_set_load['name']['fi']
+
+@pytest.mark.django_db
+def test_put_user_from_empty_or_another_org(user, user2, organization2, api_client, keyword, keyword2):
+    url = reverse('keywordset-list')
+    api_client.force_authenticate(user)
+
+    keyword_set_load = {
+        'id': 'system:id',
+        'usage': 'audience',
+        'name': {
+            'fi': 'AvainSanaRyhmä',
+            'en': 'KeywordSet name'
+        },
+        'keywords': [
+            {'@id': reverse(KeywordSerializer().view_name, kwargs={'pk': keyword.id})},
+            {'@id': reverse(KeywordSerializer().view_name, kwargs={'pk': keyword2.id})}
+        ]
+    }
+
+    response = api_client.post(url, keyword_set_load, format='json')
+    assert response.status_code == 201
+
+    keyword_set_load = {
+        'id': 'system:id',
+        'usage': 'audience',
+        'name': {
+            'fi': 'AvainSanaRyhmä2',
+            'en': 'KeywordSet name'
+        }
+    }
+    
+    api_client.force_authenticate(user2)
+    response = api_client.put(f'{url}system:id/', keyword_set_load, format='json')
+    assert response.status_code == 403
+
+    api_client.force_authenticate(user)
+    response = api_client.put(f'{url}system:id/', keyword_set_load, format='json')
+    assert response.status_code == 200

@@ -1204,6 +1204,8 @@ class KeywordSetViewSet(JSONAPIViewMixin, viewsets.ModelViewSet):
         return super().create(request, *args, **kwargs)
 
     def update(self, request, *args, **kwargs):
+        if isinstance(request.user, AnonymousUser) or request.user.get_default_organization() is None:
+            raise DRFPermissionDenied('Only admin users are allowed to update KeywordSets.')
         data_source = request.user.get_default_organization().data_source
         request.data['data_source'] = data_source
         return super().update(request, *args, **kwargs)
