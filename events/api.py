@@ -32,7 +32,7 @@ from django.urls import NoReverseMatch
 from django.utils import timezone, translation
 from django.utils.encoding import force_text
 from django.utils.translation import gettext_lazy as _
-from django_orghierarchy.models import Organization
+from django_orghierarchy.models import Organization, OrganizationClass
 from haystack.query import AutoQuery
 from isodate import Duration, duration_isoformat, parse_duration
 from modeltranslation.translator import NotRegistered, translator
@@ -1550,6 +1550,27 @@ class OrganizationViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
 
 
 register_view(OrganizationViewSet, 'organization')
+
+
+class OrganizationClassSerializer(LinkedEventsSerializer):
+    view_name = 'organization_class-list'
+
+    class Meta:
+        model = OrganizationClass
+        fields = '__all__'
+
+
+class OrganizationClassViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
+    queryset = OrganizationClass.objects.all()
+    serializer_class = OrganizationClassSerializer
+
+    def list(self, request, *args, **kwargs):
+        if isinstance(request.user, AnonymousUser) or request.user.get_default_organization() is None:
+            raise DRFPermissionDenied('Only admin users are allowed to see Organization Classes')
+        return super().list(request, *args, **kwargs)
+
+
+register_view(OrganizationClassViewSet, 'organization_class')
 
 
 class EventLinkSerializer(serializers.ModelSerializer):
