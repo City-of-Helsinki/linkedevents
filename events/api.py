@@ -53,6 +53,7 @@ from rest_framework.settings import api_settings
 from rest_framework.views import get_view_name as original_get_view_name
 from rest_framework_bulk import (BulkListSerializer, BulkModelViewSet,
                                  BulkSerializerMixin)
+
 from events import utils
 from events.api_pagination import LargeResultsSetPagination
 from events.auth import ApiKeyAuth, ApiKeyUser
@@ -1209,6 +1210,19 @@ class KeywordSetViewSet(JSONAPIViewMixin, viewsets.ModelViewSet):
         data_source = request.user.get_default_organization().data_source
         request.data['data_source'] = data_source
         return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        if isinstance(request.user, AnonymousUser) or request.user.get_default_organization() is None:
+            raise DRFPermissionDenied('Only admin users are allowed to delete KeywordSets.')
+        request_data_source = request.user.get_default_organization().data_source
+        original_keyword_set = KeywordSet.objects.filter(id=kwargs['pk'])
+        if original_keyword_set:
+            original_data_source = original_keyword_set[0].data_source
+        else:
+            raise DRFPermissionDenied(f'KeywordSet {kwargs["pk"]} not found.')
+        if request_data_source != original_data_source:
+            raise DRFPermissionDenied(f'KeywordSet belongs to {original_data_source} and the user to {request_data_source}.')  # noqa E501
+        return super().destroy(request, *args, **kwargs)
 
 
 register_view(KeywordSetViewSet, 'keyword_set')
