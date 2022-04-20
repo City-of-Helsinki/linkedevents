@@ -1589,6 +1589,27 @@ class OrganizationViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
 register_view(OrganizationViewSet, 'organization')
 
 
+class DataSourceSerializer(LinkedEventsSerializer):
+    view_name = 'data_source-list'
+
+    class Meta:
+        model = DataSource
+        fields = '__all__'
+
+
+class DataSourceViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
+    queryset = DataSource.objects.all()
+    serializer_class = DataSourceSerializer
+
+    def list(self, request, *args, **kwargs):
+        if isinstance(request.user, AnonymousUser) or request.user.get_default_organization() is None:
+            raise DRFPermissionDenied('Only admin users are allowed to see datasources.')
+        return super().list(request, *args, **kwargs)
+
+
+register_view(DataSourceViewSet, 'data_source')
+
+
 class OrganizationClassSerializer(LinkedEventsSerializer):
     view_name = 'organization_class-list'
 
