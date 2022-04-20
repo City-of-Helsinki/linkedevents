@@ -523,7 +523,7 @@ POSTAL_CODE_TO_PLACE_KEYWORD_ID = {
   '02340': ['espoo:p30'],  # Latokaski -> Latokaski
   '02360': ['espoo:p51'],  # Soukka -> Soukka
   '02380': ['espoo:p53'],  # Suvisaaristo -> Suvisaaristo
-  '02600': ['espoo:p26', 'espoo:p31'],  # Etelä-Leppävaara -> Laajalahti, Leppävaara
+  '02600': ['espoo:p31'],  # Etelä-Leppävaara -> Leppävaara
   '02610': ['espoo:p20'],  # Kilo -> Kilo
   '02620': ['espoo:p13'],  # Karakallio -> Karakallio
   '02630': ['espoo:p19', 'espoo:p20'],  # Nihtisilta -> Kera, Kilo
