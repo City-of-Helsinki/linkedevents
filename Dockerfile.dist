@@ -32,6 +32,7 @@ RUN set -eux \
       build-essential \
       gdal-bin \
       locales \
+      libpq-dev \
       tzdata \
       wget \
     && ln -fs /usr/share/zoneinfo/Europe/Helsinki /etc/localtime \
