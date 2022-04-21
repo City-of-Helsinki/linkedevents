@@ -594,6 +594,7 @@ def make_complex_event_dict(make_keyword_id):
             'data_source': data_source.id,
             'name': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
             'event_status': 'EventScheduled',
+            'type_id': 'General',
             'location': {'@id': location_id},
             'keywords': [
                 {'@id': make_keyword_id(data_source, organization, 'simple')},

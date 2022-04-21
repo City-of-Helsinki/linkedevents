@@ -84,7 +84,8 @@ def assert_event_fields_exist(data, version='v1'):
         'enrolment_start_time',
         'maximum_attendee_capacity',
         'minimum_attendee_capacity',
-        'enrolment_end_time'
+        'enrolment_end_time',
+        'registration'
     )
     if version == 'v0.1':
         fields += (
@@ -843,3 +844,12 @@ def test_suitable_for_certain_age(api_client, make_event, event, event2, event3,
 
     response = get_list_no_code_assert(api_client, query_string='suitable_for=12,13,14')
     assert str(response.data['detail']) == 'suitable_for takes at maximum two values, you provided 3'
+
+
+@pytest.mark.django_db
+def test_private_datasource_events(api_client, event, event2, event3, other_data_source):
+     get_list_and_assert_events('', [event, event2, event3])
+     other_data_source.private = True
+     other_data_source.save()
+     get_list_and_assert_events('', [event, event3])
+     get_list_and_assert_events(f'data_source={other_data_source.id}', [event2])

@@ -72,7 +72,26 @@ class UserModelPermissionMixin:
 class GuestPost(BasePermission):
 
     def has_permission(self, request, view):
-        if view.action == 'create':
+        if request.method == 'POST':
             return True
         else:
             return False
+
+
+class GuestDelete(BasePermission):
+
+    def has_permission(self, request, view):
+        if request.method == 'DELETE':
+            return True
+        else:
+            return False
+
+
+class GuestGet(BasePermission):
+
+    def has_permission(self, request, view):
+        if request.method == 'GET':
+            return True
+        else:
+            return False
+

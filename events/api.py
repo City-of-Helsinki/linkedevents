@@ -7,16 +7,19 @@ import struct
 import time
 import urllib.parse
 from copy import deepcopy
-from datetime import datetime
+from datetime import date, datetime
 from datetime import time as datetime_time
 from datetime import timedelta
-from functools import partial
+from functools import partial, reduce
+from operator import or_
+from uuid import UUID
 
 import bleach
 import django_filters
 import pytz
 import regex
 from django.conf import settings
+from django.contrib.auth.models import AnonymousUser
 from django.contrib.postgres.search import SearchQuery, TrigramSimilarity
 from django.core.cache import caches
 from django.core.exceptions import PermissionDenied
@@ -28,8 +31,8 @@ from django.http import Http404, HttpResponsePermanentRedirect
 from django.urls import NoReverseMatch
 from django.utils import timezone, translation
 from django.utils.encoding import force_text
-from django.utils.translation import ugettext_lazy as _
-from django_orghierarchy.models import Organization
+from django.utils.translation import gettext_lazy as _
+from django_orghierarchy.models import Organization, OrganizationClass
 from haystack.query import AutoQuery
 from isodate import Duration, duration_isoformat, parse_duration
 from modeltranslation.translator import NotRegistered, translator
@@ -42,7 +45,7 @@ from rest_framework.exceptions import APIException, ParseError
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.fields import DateTimeField
 from rest_framework.filters import BaseFilterBackend
-from rest_framework.permissions import SAFE_METHODS
+from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.routers import APIRootView
@@ -62,10 +65,12 @@ from events.models import (PUBLICATION_STATUSES, DataSource, Event, EventLink,
                            Feedback, Image, Keyword, KeywordSet, Language,
                            License, Offer, OpeningHoursSpecification, Place,
                            PublicationStatus, Video)
-from events.permissions import GuestPost
+from events.permissions import GuestDelete, GuestGet, GuestPost
 from events.renderers import DOCXRenderer
 from events.translation import EventTranslationOptions, PlaceTranslationOptions
 from helevents.models import User
+from helevents.api import UserSerializer
+from registrations.models import Registration, SignUp
 
 
 def get_view_name(view):
@@ -301,6 +306,18 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
     def is_expanded(self):
         return getattr(self, 'expanded', False)
 
+    def get_queryset(self):
+        #  For certain related fields we preload the queryset to avoid *.objects.all() query which can easily overload
+        #  the memory as database grows.
+        if isinstance(self._kwargs['serializer'], str):
+            return super(JSONLDRelatedField, self).get_queryset()
+        current_model = self._kwargs['serializer'].Meta.model
+        preloaded_fields = {Place: 'location', Keyword: 'keywords', Image: 'image', Event: 'sub_events'}
+        if current_model in preloaded_fields.keys():
+            return self.context.get(preloaded_fields[current_model])
+        else:
+            return super(JSONLDRelatedField, self).get_queryset()
+
 
 class EnumChoiceField(serializers.Field):
     """
@@ -325,7 +342,7 @@ class EnumChoiceField(serializers.Field):
         value = utils.get_value_from_tuple_list(self.choices,
                                                 self.prefix + str(data), 0)
         if value is None:
-            raise ParseError(_("Invalid value in event_status"))
+            raise ParseError(_(f'Invalid value "{data}"'))
         return value
 
 
@@ -907,23 +924,306 @@ register_view(KeywordRetrieveViewSet, 'keyword')
 register_view(KeywordListViewSet, 'keyword')
 
 
+class RegistrationSerializer(serializers.ModelSerializer):
+    view_name = 'registration-detail'
+    signups = serializers.SerializerMethodField()
+    current_attendee_count = serializers.SerializerMethodField()
+    current_waiting_list_count = serializers.SerializerMethodField()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if kwargs['context']['request'].data.get('event', None):
+            event_id = kwargs['context']['request'].data['event']
+            event = Event.objects.filter(id=event_id).select_related('publisher')
+            if len(event) == 0:
+                raise DRFPermissionDenied(_('No event with id {event_id}'))
+            user = kwargs['context']['user']
+            if user.is_admin(event[0].publisher) or kwargs['context']['request'].method in SAFE_METHODS:
+                pass
+            else:
+                raise DRFPermissionDenied(_(f"User {user} cannot modify event {event}"))
+
+    def get_signups(self, obj):
+        params = self.context['request'].query_params
+        if params.get('include', None) and params['include'] == 'signups':
+            #  only the organization admins should be able to access the signup information
+            user = self.context['user']
+            event = obj.event
+            if not isinstance(user, AnonymousUser) and user.is_admin(event.publisher):
+                queryset = SignUp.objects.filter(registration__id=obj.id)
+                return SignUpSerializer(queryset, many=True, read_only=True).data
+            else:
+                return f'Only the admins of the organization that published the event {event.id} have access rights.'
+        else:
+            return None
+
+    def get_current_attendee_count(self, obj):
+        return SignUp.objects.filter(registration__id=obj.id,
+                                     attendee_status=SignUp.AttendeeStatus.ATTENDING).count()
+
+    def get_current_waiting_list_count(self, obj):
+        return SignUp.objects.filter(registration__id=obj.id,
+                                     attendee_status=SignUp.AttendeeStatus.WAITING_LIST).count()
+
+    class Meta:
+        fields = '__all__'
+        model = Registration
+
+
+class RegistrationViewSet(JSONAPIViewMixin,
+                          mixins.RetrieveModelMixin,
+                          mixins.UpdateModelMixin,
+                          mixins.DestroyModelMixin,
+                          mixins.ListModelMixin,
+                          mixins.CreateModelMixin,
+                          viewsets.GenericViewSet):
+    serializer_class = RegistrationSerializer
+    queryset = Registration.objects.all()
+
+    def filter_queryset(self, queryset):
+        events = Event.objects.exclude(registration=None)
+        events = _filter_event_queryset(events, self.request.query_params)
+        val = self.request.query_params.get('admin_user', None)
+        if val and str(val).lower() == 'true':
+            if isinstance(self.request.user, AnonymousUser):
+                events = Event.objects.none()
+            else:
+                events = self.request.user.get_editable_events(events)
+        registrations = Registration.objects.filter(event__in=events)
+
+        return registrations
+
+
+register_view(RegistrationViewSet, 'registration')
+
+
+class SignUpSerializer(serializers.ModelSerializer):
+    view_name = 'signup'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def create(self, validated_data):
+        registration = validated_data['registration']
+        already_attending = SignUp.objects.filter(registration=registration,
+                                                  attendee_status=SignUp.AttendeeStatus.ATTENDING).count()
+        already_waitlisted = SignUp.objects.filter(registration=registration,
+                                                   attendee_status=SignUp.AttendeeStatus.WAITING_LIST).count()
+        attendee_capacity = registration.maximum_attendee_capacity
+        waiting_list_capacity = registration.waiting_list_capacity
+        if registration.audience_min_age or registration.audience_max_age:
+            if 'date_of_birth' not in validated_data.keys():
+                raise DRFPermissionDenied('Date of birth has to be specified.')
+            dob = validated_data['date_of_birth']
+            today = date.today()
+            current_age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.year))
+            if registration.audience_min_age and current_age < registration.audience_min_age:
+                raise DRFPermissionDenied('The participant is too young.')
+            if registration.audience_max_age and current_age > registration.audience_max_age:
+                print(current_age)
+                raise DRFPermissionDenied('The participant is too old.')
+        if (attendee_capacity is None) or (already_attending < attendee_capacity):
+            signup = super().create(validated_data)
+            signup.send_notification('confirmation')
+            return signup
+        elif (waiting_list_capacity is None) or (already_waitlisted < waiting_list_capacity):
+            signup = super().create(validated_data)
+            signup.attendee_status = SignUp.AttendeeStatus.WAITING_LIST
+            signup.save()
+            return signup
+        else:
+            raise DRFPermissionDenied('The waiting list is already full')
+
+    class Meta:
+        fields = '__all__'
+        model = SignUp
+
+
+class SignUpViewSet(JSONAPIViewMixin,
+                    mixins.CreateModelMixin,
+                    viewsets.GenericViewSet,):
+    serializer_class = SignUpSerializer
+    queryset = SignUp.objects.all()
+    permission_classes = [GuestPost | GuestDelete | GuestGet]
+
+    def get_signup_by_code(self, code):
+        try:
+            UUID(code)
+        except ValueError:
+            raise DRFPermissionDenied('Malformed UUID.')
+        qs = SignUp.objects.filter(cancellation_code=code)
+        if qs.count() == 0:
+            raise DRFPermissionDenied('Cancellation code did not match any registration')
+        return qs[0]
+
+    def get(self, request, *args, **kwargs):
+        # First dealing with the cancellation codes
+        if isinstance(request.user, AnonymousUser):
+            code = request.GET.get('cancellation_code', 'no code')
+            if code == 'no code':
+                raise DRFPermissionDenied('cancellation_code parameter has to be provided')
+            signup = self.get_signup_by_code(code)
+            return Response(SignUpSerializer(signup).data)
+        # Provided user is logged in
+        else:
+            reg_ids = []
+            event_ids = []
+            val = request.query_params.get('registrations', None)
+            if val:
+                reg_ids = val.split(',')
+            val = request.query_params.get('events', None)
+            if val:
+                event_ids = val.split(',')
+            qs = Event.objects.filter(Q(id__in=event_ids) | Q(registration__id__in=reg_ids))
+
+            if len(reg_ids) == 0 and len(event_ids) == 0:
+                qs = Event.objects.exclude(registration=None)
+            authorized_events = request.user.get_editable_events(qs)
+
+            signups = SignUp.objects.filter(registration__event__in=authorized_events)
+
+            val = request.query_params.get('text', None)
+            if val:
+                signups = signups.filter(Q(name__icontains=val) |
+                                         Q(email__icontains=val) |
+                                         Q(extra_info__icontains=val) |
+                                         Q(membership_number__icontains=val) |
+                                         Q(phone_number__icontains=val))
+            val = request.query_params.get('attendee_status', None)
+            if val:
+                if val in ['waitlisted', 'attending']:
+                    signups = signups.filter(attendee_status=val)
+                else:
+                    raise DRFPermissionDenied(f"attendee_status can take values waitlisted and attending, not {val}")
+            return Response(SignUpSerializer(signups, many=True).data)
+
+    def delete(self, request, *args, **kwargs):
+        code = request.data.get('cancellation_code', 'no code')
+        if code == 'no code':
+            raise DRFPermissionDenied('cancellation_code parameter has to be provided')
+        signup = self.get_signup_by_code(code)
+        waitlisted = SignUp.objects.filter(registration=signup.registration,
+                                           attendee_status=SignUp.AttendeeStatus.WAITING_LIST
+                                           ).order_by('id')
+        signup.send_notification('cancellation')
+        signup.delete()
+        if len(waitlisted) > 0:
+            first_on_list = waitlisted[0]
+            first_on_list.attendee_status = SignUp.AttendeeStatus.ATTENDING
+            first_on_list.save()
+        return Response('SignUp deleted.', status=status.HTTP_200_OK)
+
+
+register_view(SignUpViewSet, 'signup')
+
+
+class SignUpEditViewSet(JSONAPIViewMixin,
+                        mixins.RetrieveModelMixin,
+                        mixins.UpdateModelMixin,
+                        viewsets.GenericViewSet):
+    serializer_class = SignUpSerializer
+    queryset = SignUp.objects.all()
+    permission_classes = (IsAuthenticated,)
+
+
+register_view(SignUpEditViewSet, 'signup_edit')
+
+
 class KeywordSetSerializer(LinkedEventsSerializer):
     view_name = 'keywordset-detail'
     keywords = JSONLDRelatedField(
-        serializer=KeywordSerializer, many=True, required=True, allow_empty=False,
-        view_name='keyword-detail', queryset=Keyword.objects.all())
+        serializer=KeywordSerializer, many=True, required=False, allow_empty=True,
+        view_name='keyword-detail', queryset=Keyword.objects.none())
     usage = EnumChoiceField(KeywordSet.USAGES)
     created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
     last_modified_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.data_source = self.context['request'].data.get('data_source')
+
+    def to_internal_value(self, data):
+        # extracting ids from the '@id':'http://testserver/v1/keyword/system:tunnettu_avainsana/' type record
+        keyword_ids = [i.get('@id', '').rstrip('/').split('/')[-1] for i in data.get('keywords', {})]
+        self.context['keywords'] = Keyword.objects.filter(id__in=keyword_ids)
+        return super().to_internal_value(data)
 
     class Meta:
         model = KeywordSet
         fields = '__all__'
 
 
-class KeywordSetViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
+class KeywordSetViewSet(JSONAPIViewMixin, viewsets.ModelViewSet):
     queryset = KeywordSet.objects.all()
     serializer_class = KeywordSetSerializer
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.data_source = None
+        self.organization = None
+
+    def filter_queryset(self, queryset):
+        # orderd by name, id, usage
+        # search by name
+        qexpression = None
+        val = self.request.query_params.get('text', None)
+        if val:
+            qlist = [Q(name__icontains=i) |
+                     Q(name_fi__icontains=i) |
+                     Q(name_en__icontains=i) |
+                     Q(name_sv__icontains=i) |
+                     Q(id__icontains=i) for i in val.split(',')]
+            qexpression = reduce(or_, qlist)
+        if qexpression:
+            qset = KeywordSet.objects.filter(qexpression)
+        else:
+            qset = KeywordSet.objects.all()
+
+        val = self.request.query_params.get('sort', None)
+        if val:
+            allowed_fields = {'name', 'id', 'usage', '-name', '-id', '-usage'}
+            vals = val.split(',')
+            unallowed_params = set(vals) - allowed_fields
+            if unallowed_params:
+                raise ParseError(f'It is possible to sort with the following params only: {allowed_fields}')
+            qset = qset.order_by(*vals)
+        return qset
+
+    def create(self, request, *args, **kwargs):
+        if isinstance(request.user, AnonymousUser):
+            raise DRFPermissionDenied('Only admin users are allowed to create KeywordSets.')
+        data_source = request.user.get_default_organization().data_source
+        request.data['data_source'] = data_source
+        id_ending = request.data.pop('id_second_part', None)
+        if id_ending:
+            request.data['id'] = f'{data_source}:{id_ending}'
+        else:
+            kw_id = request.data.get('id', None)
+            if kw_id is None:
+                raise ParseError('Id or id_ending have to be provided')
+            if kw_id.split(':')[0] != data_source.id:
+                raise DRFPermissionDenied("Trying to set data source different from the user's organization.")
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        if isinstance(request.user, AnonymousUser) or request.user.get_default_organization() is None:
+            raise DRFPermissionDenied('Only admin users are allowed to update KeywordSets.')
+        data_source = request.user.get_default_organization().data_source
+        request.data['data_source'] = data_source
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        if isinstance(request.user, AnonymousUser) or request.user.get_default_organization() is None:
+            raise DRFPermissionDenied('Only admin users are allowed to delete KeywordSets.')
+        request_data_source = request.user.get_default_organization().data_source
+        original_keyword_set = KeywordSet.objects.filter(id=kwargs['pk'])
+        if original_keyword_set:
+            original_data_source = original_keyword_set[0].data_source
+        else:
+            raise DRFPermissionDenied(f'KeywordSet {kwargs["pk"]} not found.')
+        if request_data_source != original_data_source:
+            raise DRFPermissionDenied(f'KeywordSet belongs to {original_data_source} and the user to {request_data_source}.')  # noqa E501
+        return super().destroy(request, *args, **kwargs)
 
 
 register_view(KeywordSetViewSet, 'keyword_set')
@@ -1226,9 +1526,45 @@ class OrganizationSerializer(LinkedEventsSerializer):
         return obj.regular_users.count() > 0
 
 
+class OrganizationDetailSerializer(OrganizationSerializer):
+    regular_users = serializers.SerializerMethodField()
+    admin_users = serializers.SerializerMethodField()
+
+    def get_regular_users(self, obj):
+        user = self.context['user']
+        if not isinstance(user, AnonymousUser) and user.is_admin(obj):
+            return UserSerializer(obj.regular_users.all(), read_only=True, many=True).data
+        else:
+            return ''
+
+    def get_admin_users(self, obj):
+        user = self.context['user']
+        if not isinstance(user, AnonymousUser) and user.is_admin(obj):
+            return UserSerializer(obj.admin_users.all(), read_only=True, many=True).data
+        else:
+            return ''
+
+    class Meta:
+        model = Organization
+        fields = (
+            'id', 'data_source', 'origin_id',
+            'classification', 'name', 'founding_date',
+            'dissolution_date', 'parent_organization',
+            'sub_organizations', 'affiliated_organizations',
+            'created_time', 'last_modified_time', 'created_by',
+            'last_modified_by', 'is_affiliated', 'replaced_by',
+            'has_regular_users', 'regular_users', 'admin_users'
+        )
+
+
 class OrganizationViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
     queryset = Organization.objects.all()
-    serializer_class = OrganizationSerializer
+
+    def get_serializer_class(self, *args, **kwargs):
+        if self.action == 'retrieve':
+            return OrganizationDetailSerializer
+        else:
+            return OrganizationSerializer
 
     def get_queryset(self):
         queryset = Organization.objects.all()
@@ -1251,6 +1587,48 @@ class OrganizationViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
 
 
 register_view(OrganizationViewSet, 'organization')
+
+
+class DataSourceSerializer(LinkedEventsSerializer):
+    view_name = 'data_source-list'
+
+    class Meta:
+        model = DataSource
+        fields = '__all__'
+
+
+class DataSourceViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
+    queryset = DataSource.objects.all()
+    serializer_class = DataSourceSerializer
+
+    def list(self, request, *args, **kwargs):
+        if isinstance(request.user, AnonymousUser) or request.user.get_default_organization() is None:
+            raise DRFPermissionDenied('Only admin users are allowed to see datasources.')
+        return super().list(request, *args, **kwargs)
+
+
+register_view(DataSourceViewSet, 'data_source')
+
+
+class OrganizationClassSerializer(LinkedEventsSerializer):
+    view_name = 'organization_class-list'
+
+    class Meta:
+        model = OrganizationClass
+        fields = '__all__'
+
+
+class OrganizationClassViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
+    queryset = OrganizationClass.objects.all()
+    serializer_class = OrganizationClassSerializer
+
+    def list(self, request, *args, **kwargs):
+        if isinstance(request.user, AnonymousUser) or request.user.get_default_organization() is None:
+            raise DRFPermissionDenied('Only admin users are allowed to see Organization Classes')
+        return super().list(request, *args, **kwargs)
+
+
+register_view(OrganizationClassViewSet, 'organization_class')
 
 
 class EventLinkSerializer(serializers.ModelSerializer):
@@ -1360,13 +1738,17 @@ class VideoSerializer(serializers.ModelSerializer):
 class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer, GeoModelAPIView):
     id = serializers.CharField(required=False)
     location = JSONLDRelatedField(serializer=PlaceSerializer, required=False, allow_null=True,
-                                  view_name='place-detail', queryset=Place.objects.all())
+                                  view_name='place-detail')
     # provider = OrganizationSerializer(hide_ld_context=True)
     keywords = JSONLDRelatedField(serializer=KeywordSerializer, many=True, allow_empty=True,
                                   required=False,
-                                  view_name='keyword-detail', queryset=Keyword.objects.filter(deprecated=False))
+                                  view_name='keyword-detail')
+    registration = JSONLDRelatedField(serializer=RegistrationSerializer, many=False, allow_empty=True, required=False,
+                                      view_name='registration-detail', allow_null=True)
     super_event = JSONLDRelatedField(serializer='EventSerializer', required=False, view_name='event-detail',
-                                     queryset=Event.objects.all(), allow_null=True)
+                                     allow_null=True, queryset=Event.objects.filter(
+                                                                Q(super_event_type=Event.SuperEventType.RECURRING) |
+                                                                Q(super_event_type=Event.SuperEventType.UMBRELLA)))
     event_status = EnumChoiceField(Event.STATUSES, required=False)
     type_id = EnumChoiceField(Event.TYPE_IDS, required=False)
     publication_status = EnumChoiceField(PUBLICATION_STATUSES, required=False)
@@ -1378,14 +1760,14 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
                                                    required=False)
     sub_events = JSONLDRelatedField(serializer='EventSerializer',
                                     required=False, view_name='event-detail',
-                                    many=True, queryset=Event.objects.filter(deleted=False))
+                                    many=True,  queryset=Event.objects.filter(deleted=False))
     images = JSONLDRelatedField(serializer=ImageSerializer, required=False, allow_null=True, many=True,
-                                view_name='image-detail', queryset=Image.objects.all(), expanded=True)
+                                view_name='image-detail', expanded=True)
     videos = VideoSerializer(many=True, required=False)
     in_language = JSONLDRelatedField(serializer=LanguageSerializer, required=False,
                                      view_name='language-detail', many=True, queryset=Language.objects.all())
     audience = JSONLDRelatedField(serializer=KeywordSerializer, view_name='keyword-detail',
-                                  many=True, required=False, queryset=Keyword.objects.filter(deprecated=False))
+                                  many=True, required=False)
 
     view_name = 'event-detail'
     fields_needed_to_publish = ('keywords', 'location', 'start_time', 'short_description', 'description')
@@ -1402,7 +1784,6 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         # The following can be used when serializing when
         # testing and debugging.
         self.skip_empties = skip_empties
-
         if self.context:
             for ext in self.context.get('extensions', ()):
                 self.fields['extension_{}'.format(ext.identifier)] = ext.get_extension_serializer()
@@ -1770,6 +2151,9 @@ def _filter_event_queryset(queryset, params, srs=None):
     # Filter by string (case insensitive). This searches from all fields
     # which are marked translatable in translation.py
 
+    val = params.get('registration', None)
+    if val:
+        queryset = queryset.exclude(registration=None)
     val = params.get('local_ongoing_text', None)
     if val:
         language = params.get('language', 'fi')
@@ -2026,6 +2410,8 @@ def _filter_event_queryset(queryset, params, srs=None):
     if val:
         val = val.split(',')
         queryset = queryset.filter(data_source_id__in=val)
+    else:
+        queryset = queryset.exclude(data_source__private=True)
 
     # Negative filter by data source, multiple sources separated by comma
     val = params.get('data_source!', None)
@@ -2416,7 +2802,6 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
         TODO: convert to use proper filter framework
         """
         original_queryset = super(EventViewSet, self).filter_queryset(queryset)
-
         if self.request.method in SAFE_METHODS:
             # we cannot use distinct for performance reasons
             public_queryset = original_queryset.filter(publication_status=PublicationStatus.PUBLIC)
@@ -2443,17 +2828,46 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
                     queryset = queryset.none()
         else:
             # prevent changing events user does not have write permissions (for bulk operations)
+            try:
+                original_queryset = Event.objects.filter(id__in=[i.get('id', '') for i in self.request.data])
+            except:  # noqa E722
+                raise DRFPermissionDenied('Invalid JSON in request.')
             queryset = self.request.user.get_editable_events(original_queryset)
 
-        queryset = _filter_event_queryset(queryset, self.request.query_params,
-                                          srs=self.srs)
+        if self.request.method == 'GET':
+            queryset = _filter_event_queryset(queryset, self.request.query_params, srs=self.srs)
+
         return queryset.filter()
 
     def allow_bulk_destroy(self, qs, filtered):
         return False
 
-    def update(self, *args, **kwargs):
-        response = super().update(*args, **kwargs)
+    def update(self, request, *args, **kwargs):
+        pk = kwargs.get('pk', None)
+        queryset = Event.objects.filter(id=pk).prefetch_related('offers', 'images__publisher', 'external_links',
+                                                                'sub_events', 'in_language', 'videos'
+                                                                ).select_related('publisher')
+        context = self.get_serializer_context()
+
+        context['queryset'] = queryset
+        context['keywords'], context['location'], context['image'], context['sub_events'], bulk = self.cache_related_fields(request)  # noqa E501
+        serializer = EventSerializer(Event.objects.get(id=pk), data=request.data, context=context)
+        serializer.is_valid(raise_exception=True)
+        if not self.request.user.can_edit_event(serializer.instance.publisher, serializer.instance.publication_status):
+            raise DRFPermissionDenied()
+        if isinstance(serializer.validated_data, list):
+            event_data_list = serializer.validated_data
+        else:
+            event_data_list = [serializer.validated_data]
+        for event_data in event_data_list:
+            org = self.organization
+            if hasattr(event_data, 'publisher'):
+                org = event_data['publisher']
+            if not self.request.user.can_edit_event(org, event_data['publication_status']):
+                raise DRFPermissionDenied()
+        serializer.save()
+        response = Response(data=serializer.data)
+
         original_event = Event.objects.get(id=response.data['id'])
         if original_event.replaced_by is not None:
             replacing_event = original_event.replaced_by
@@ -2465,11 +2879,6 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
         # Prevent changing an event that user does not have write permissions
         # For bulk update, the editable queryset is filtered in filter_queryset
         # method
-        if isinstance(serializer, EventSerializer) and not self.request.user.can_edit_event(
-                serializer.instance.publisher,
-                serializer.instance.publication_status,
-        ):
-            raise DRFPermissionDenied()
 
         # Prevent changing existing events to a state that user doe snot have write permissions
         if isinstance(serializer.validated_data, list):
@@ -2484,15 +2893,85 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
             if not self.request.user.can_edit_event(org, event_data['publication_status']):
                 raise DRFPermissionDenied()
 
+        if isinstance(serializer, EventSerializer) and not self.request.user.can_edit_event(
+                serializer.instance.publisher,
+                serializer.instance.publication_status,
+        ):
+            raise DRFPermissionDenied()
         super().perform_update(serializer)
 
     @atomic
     def bulk_update(self, request, *args, **kwargs):
-        return super().bulk_update(request, *args, **kwargs)
+        context = self.get_serializer_context()
+        context['keywords'], context['location'], context['image'], context['sub_events'], bulk = self.cache_related_fields(request)  # noqa E501
+        serializer = EventSerializer(self.filter_queryset(self.get_queryset()),
+                                     data=request.data,
+                                     context=context,
+                                     many=bulk,
+                                     partial=partial,)
+        if not serializer.instance:
+            raise serializers.ValidationError('Missing matching events to update.')
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @atomic
     def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
+        context = self.get_serializer_context()
+        context['keywords'], context['location'], context['image'], context['sub_events'], bulk = self.cache_related_fields(request)  # noqa E501
+        serializer = EventSerializer(data=request.data,
+                                     context=context,
+                                     many=bulk,)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def cache_related_fields(self, request):
+
+        def retrieve_ids(key, event):
+            if key in event.keys():
+                if isinstance(event[key], list):
+                    event_list = event.get(key, [])
+                else:
+                    event_list = [event.get(key, [])]
+                ids = [i['@id'].rstrip('/').split('/').pop() for i in event_list if i and
+                                                                                    isinstance(i, dict) and  # noqa E127 
+                                                                                    i.get('@id', None)]  # noqa E127
+                return ids
+            else:
+                return []
+
+        bulk = isinstance(request.data, list)
+
+        if not bulk:
+            events = [request.data]
+        else:
+            events = request.data
+
+        keywords = Keyword.objects.none()
+        locations = Place.objects.none()
+        images = Image.objects.none()
+        sub_events = Event.objects.none()
+        keyword_ids = []
+        location_ids = []
+        image_ids = []
+        subevent_ids = []
+        for event in events:
+            keyword_ids.extend(retrieve_ids('keywords', event))
+            keyword_ids.extend(retrieve_ids('audience', event))
+            location_ids.extend(retrieve_ids('location', event))
+            image_ids.extend(retrieve_ids('images', event))
+            subevent_ids.extend(retrieve_ids('sub_events', event))
+        if location_ids:
+            locations = Place.objects.filter(id__in=location_ids)
+        if keyword_ids:
+            keywords = Keyword.objects.filter(id__in=keyword_ids)
+        if image_ids:
+            images = Image.objects.filter(id__in=image_ids)
+        if subevent_ids:
+            sub_events = Event.objects.filter(id__in=subevent_ids)
+        return keywords, locations, images, sub_events, bulk
 
     def perform_create(self, serializer):
         if isinstance(serializer.validated_data, list):

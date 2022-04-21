@@ -35,8 +35,8 @@ from django.db import transaction
 from django.db.models import Q
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
-from django.utils.encoding import python_2_unicode_compatible
-from django.utils.translation import ugettext_lazy as _
+from six import python_2_unicode_compatible
+from django.utils.translation import gettext_lazy as _
 from image_cropping import ImageRatioField
 from mptt.models import MPTTModel, TreeForeignKey
 from mptt.querysets import TreeQuerySet
@@ -83,6 +83,7 @@ class DataSource(models.Model):
     user_editable = models.BooleanField(default=False, verbose_name=_('Objects may be edited by users'))
     edit_past_events = models.BooleanField(default=False, verbose_name=_('Past events may be edited using API'))
     create_past_events = models.BooleanField(default=False, verbose_name=_('Past events may be created using API'))
+    private = models.BooleanField(default=False, verbose_name=_('Do not show events created by this data_source by default.'), db_index=True)
 
     def __str__(self):
         return self.id
@@ -415,6 +416,11 @@ class KeywordSet(BaseModel, ImageMixin):
     organization = models.ForeignKey('django_orghierarchy.Organization', on_delete=models.CASCADE,
                                      verbose_name=_('Organization which uses this set'), null=True)
     keywords = models.ManyToManyField(Keyword, blank=False, related_name='sets')
+
+    def can_be_edited_by(self, user):
+        if user.is_superuser:
+            return True
+        return user.get_default_organization().data_source == self.data_source
 
     def save(self, *args, **kwargs):
         if any([keyword.deprecated for keyword in self.keywords.all()]):
@@ -928,7 +934,7 @@ class Feedback(models.Model):
     name = models.CharField(verbose_name=_('Name'), max_length=255, blank=True)
     email = models.EmailField(verbose_name=_('E-mail'))
     subject = models.CharField(verbose_name=_('Subject'), max_length=255, blank=True)
-    body = models.TextField(verbose_name=_('Body'), blank=True)
+    body = models.TextField(verbose_name=_('Body'), max_length=10000, blank=True)
 
     def save(self, *args, **kwargs):
         try:
