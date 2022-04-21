@@ -13,6 +13,8 @@ media/
 *.iml
 *.kate-swp
 data/
+static/
+venv/
 .pytest_cache/
 templates/rest_framework/*
 
