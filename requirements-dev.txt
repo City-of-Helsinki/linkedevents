@@ -18,22 +18,22 @@ decorator==4.4.2
     # via
     #   ipython
     #   traitlets
+django==2.2.28
+    # via
+    #   -c requirements.txt
+    #   django-debug-toolbar
 django-debug-toolbar==3.2.1
     # via -r requirements-dev.in
 django-extensions==3.0.1
     # via -r requirements-dev.in
-django==2.2.20
-    # via
-    #   -c requirements.txt
-    #   django-debug-toolbar
 flake8==3.8.3
     # via -r requirements-dev.in
 freezegun==0.3.15
     # via -r requirements-dev.in
-ipython-genutils==0.2.0
-    # via traitlets
 ipython==7.16.1
     # via -r requirements-dev.in
+ipython-genutils==0.2.0
+    # via traitlets
 isort==4.3.21
     # via pylint
 jedi==0.17.2
@@ -80,12 +80,12 @@ pyparsing==2.4.7
     # via
     #   -c requirements.txt
     #   packaging
-pytest-django==3.9.0
-    # via -r requirements-dev.in
 pytest==5.4.3
     # via
     #   -r requirements-dev.in
     #   pytest-django
+pytest-django==3.9.0
+    # via -r requirements-dev.in
 python-dateutil==2.8.1
     # via
     #   -c requirements.txt
