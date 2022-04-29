@@ -23,7 +23,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.contrib.postgres.search import SearchQuery, TrigramSimilarity
 from django.core.cache import caches
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q, QuerySet
+from django.db.models import Prefetch, Q, QuerySet
 from django.db.models.functions import Greatest
 from django.db.transaction import atomic
 from django.db.utils import IntegrityError
@@ -68,8 +68,8 @@ from events.models import (PUBLICATION_STATUSES, DataSource, Event, EventLink,
 from events.permissions import GuestDelete, GuestGet, GuestPost
 from events.renderers import DOCXRenderer
 from events.translation import EventTranslationOptions, PlaceTranslationOptions
-from helevents.models import User
 from helevents.api import UserSerializer
+from helevents.models import User
 from registrations.models import Registration, SignUp
 
 
@@ -1512,11 +1512,14 @@ class OrganizationSerializer(LinkedEventsSerializer):
         fields = (
             'id', 'data_source', 'origin_id',
             'classification', 'name', 'founding_date',
-            'dissolution_date', 'parent_organization',
-            'sub_organizations', 'affiliated_organizations',
+            'dissolution_date',
+            'parent_organization',
+            'sub_organizations',
+            'affiliated_organizations',
             'created_time', 'last_modified_time', 'created_by',
-            'last_modified_by', 'is_affiliated', 'replaced_by',
-            'has_regular_users'
+            'last_modified_by', 'replaced_by',
+            'has_regular_users',
+            'is_affiliated',
         )
 
     def get_is_affiliated(self, obj):
@@ -1567,7 +1570,13 @@ class OrganizationViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
             return OrganizationSerializer
 
     def get_queryset(self):
-        queryset = Organization.objects.all()
+        queryset = Organization.objects.prefetch_related('regular_users', 'admin_users')\
+                                       .prefetch_related(Prefetch('children',
+                                                                  queryset=Organization.objects.filter(internal_type='normal'),  # noqa E501
+                                                                  to_attr='sub_organizations'),
+                                                         Prefetch('children',
+                                                                  queryset=Organization.objects.filter(internal_type='affiliated'),  # noqa E501
+                                                                  to_attr='affiliated_organizations'))
 
         id = self.request.query_params.get('child', None)
         if id:
