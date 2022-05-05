@@ -10,7 +10,7 @@ from copy import deepcopy
 from datetime import datetime
 from datetime import time as datetime_time
 from datetime import timedelta
-from functools import partial
+from functools import partial, reduce
 
 import bleach
 import django_filters
@@ -2175,14 +2175,6 @@ class EventDeletedException(APIException):
 
 
 class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelViewSet):
-    queryset = Event.objects.all()
-    # This exclude is, atm, a bit overkill, considering it causes a massive query and no such events exist.
-    # queryset = queryset.exclude(super_event_type=Event.SuperEventType.RECURRING, sub_events=None)
-    # Use select_ and prefetch_related() to reduce the amount of queries
-    queryset = queryset.select_related('location', 'publisher')
-    queryset = queryset.prefetch_related(
-        'offers', 'keywords', 'audience', 'images', 'images__publisher', 'external_links', 'sub_events', 'in_language',
-        'videos')
     serializer_class = EventSerializer
     filter_backends = (EventOrderingFilter, django_filters.rest_framework.DjangoFilterBackend,
                        EventExtensionFilterBackend)
@@ -2218,7 +2210,25 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
         return context
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = Event.objects.all()
+
+        # Filter out events with a publication date in the future. Allow
+        # organization members to see events that are not public yet.
+        date_published_filters = [Q(date_published__isnull=True), Q(date_published__lte=datetime.now())]
+        if self.request.user.is_authenticated:
+            org_memberships = {org.id for org in self.request.user.organization_memberships.all()}
+            admin_orgs = {org.id for org in self.request.user.get_admin_organizations_and_descendants()}
+            all_orgs = list(org_memberships | admin_orgs)
+            date_published_filters += [Q(publisher__in=all_orgs)]
+        queryset = queryset.filter(reduce(lambda a, b: a | b, date_published_filters))
+
+        # Use select_related() and prefetch_related() to reduce the amount of queries
+        queryset = queryset.select_related('location', 'publisher')
+        queryset = queryset.prefetch_related(
+            'offers', 'keywords', 'audience', 'images', 'images__publisher', 'external_links', 'sub_events',
+            'in_language', 'videos',
+        )
+
         context = self.get_serializer_context()
         # prefetch extra if the user want them included
         if 'include' in context:
@@ -2399,7 +2409,7 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
         return response
 
 
-register_view(EventViewSet, 'event')
+register_view(EventViewSet, 'event', base_name='event')
 
 
 class SearchSerializer(serializers.Serializer):

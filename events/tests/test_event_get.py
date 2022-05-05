@@ -125,6 +125,16 @@ def test_get_unknown_event_detail_check_404(api_client):
 
 
 @pytest.mark.django_db
+def test_get_event_list_verify_date_published(api_client, event, published_event, unpublished_event):
+    response = get_list(api_client)
+
+    expected_event_ids = {e.id for e in [event, published_event]}
+    actual_event_ids = {e['id'] for e in response.data['data']}
+
+    assert expected_event_ids == actual_event_ids
+
+
+@pytest.mark.django_db
 def test_get_event_list_verify_text_filter(api_client, event, event2):
     # Search with event name
     response = get_list(api_client, data={'text': 'event'})

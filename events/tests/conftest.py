@@ -366,6 +366,38 @@ def past_event(data_source, organization, place, user):
 
 @pytest.mark.django_db
 @pytest.fixture
+def unpublished_event(data_source, organization, place, user):
+    return Event.objects.create(
+        id=data_source.id + ':unpublished_test_event', location=place,
+        data_source=data_source, publisher=organization,
+        date_published=datetime.now() + timedelta(days=1),
+        last_modified_by=user,
+        start_time=timezone.now() - timedelta(hours=10),
+        end_time=timezone.now() - timedelta(hours=9),
+        short_description='short desc',
+        description='desc',
+        name='tapahtuma'
+    )
+
+
+@pytest.mark.django_db
+@pytest.fixture
+def published_event(data_source, organization, place, user):
+    return Event.objects.create(
+        id=data_source.id + ':published_test_event', location=place,
+        data_source=data_source, publisher=organization,
+        date_published=datetime.now() - timedelta(days=1),
+        last_modified_by=user,
+        start_time=timezone.now() - timedelta(hours=10),
+        end_time=timezone.now() - timedelta(hours=9),
+        short_description='short desc',
+        description='desc',
+        name='tapahtuma'
+    )
+
+
+@pytest.mark.django_db
+@pytest.fixture
 def place2(other_data_source, organization2):
     return Place.objects.create(
         id=other_data_source.id + ':test_location_2',
