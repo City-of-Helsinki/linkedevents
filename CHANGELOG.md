@@ -10,6 +10,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 <!-- List the changes in your PR under the Unreleased title. You can also copy this list to your PR summary. -->
 
+## [1.11.0] - 2022-05-05
+
+### Added
+
+- Timed publication of events.
+  Use the `date_published` field to support timed publication. Events with
+  `date_published` in the future are filtered out from event listings for
+  unauthenticated users and users of other organizations than the
+  publisher.
+
+### Security
+
+- Fix [CVE-2022-21699](https://github.com/advisories/GHSA-pq7m-3gw7-gq5x) by upgrading ipython from 7.16.1 to 7.16.3
+
+### Fixed
+
+- Fail the CI run if tests fail
+
 ## [1.10.21] - 2022-04-27
 
 ### Changed
