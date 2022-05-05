@@ -5,7 +5,7 @@
 # See https://circleci.com/docs/2.0/executor-types/#using-multiple-docker-images
 # See https://circleci.com/docs/2.0/building-docker-images/#separation-of-environments
 
-set -uxo pipefail
+set -euxo pipefail
 
 # Build db container
 docker build \
