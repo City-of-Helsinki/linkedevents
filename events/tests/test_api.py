@@ -7,7 +7,7 @@ from django_orghierarchy.models import Organization
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from ..api import (EventSerializer, OrganizationSerializer,
+from ..api import (EventSerializer, OrganizationListSerializer,
                    get_authenticated_data_source_and_publisher)
 from ..auth import ApiKeyAuth
 from ..models import DataSource, Image
@@ -78,10 +78,10 @@ def test_serializer_validate_publisher():
     assert le_serializer.validate_publisher(org_2) == org_1
 
 
-class TestOrganizationSerializer(TestCase):
+class TestOrganizationListSerializer(TestCase):
 
     def setUp(self):
-        self.serializer = OrganizationSerializer()
+        self.serializer = OrganizationListSerializer()
         data_source = DataSource.objects.create(
             id='ds',
             name='data-source',
@@ -126,7 +126,7 @@ class TestOrganizationSerializer(TestCase):
 class TestOrganizationAPI(APITestCase):
 
     def setUp(self):
-        self.serializer = OrganizationSerializer()
+        self.serializer = OrganizationListSerializer()
         data_source = DataSource.objects.create(
             id='ds',
             name='data-source',

@@ -750,7 +750,7 @@ def test_multiple_event_update_with_incorrect_json(api_client, minimal_event_dic
     data_source.save()
     api_client.credentials(apikey=data_source.api_key)
     response = api_client.put(reverse('event-list'), minimal_event_dict, format='json')
-    assert response.status_code == 400
+    assert response.status_code == 403
 
 
 @pytest.mark.django_db

@@ -1480,9 +1480,53 @@ register_view(LanguageViewSet, 'language')
 LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
 
 
-class OrganizationSerializer(LinkedEventsSerializer):
+class OrganizationBaseSerializer(LinkedEventsSerializer):
     view_name = 'organization-detail'
 
+    class Meta:
+        model = Organization
+        fields = '__all__'
+
+
+class OrganizationCreateSerializer(OrganizationBaseSerializer):
+
+    def validate(self, data):
+        if Organization.objects.filter(id=str(self.request.data['id'])):
+            raise DRFPermissionDenied(f"Organization with id {self.request.data['id']} already exists.")
+
+        if 'parent' in data.keys():
+            user = self.request.user
+            if user and user.get_default_organization():
+                if user.get_default_organization().id == self.request.data['parent']:
+                    pass
+                else:
+                    raise DRFPermissionDenied('User has no rights to this organization')
+            else:
+                raise DRFPermissionDenied('User must be logged in to create organizations.')
+        data = super().validate(data)
+        return data
+
+    def connected_organizations(self, org_type, org):
+        internal_types = {'sub_organizations': Organization.NORMAL,
+                          'affiliated_organizations': Organization.AFFILIATED}
+        if org_type in self.request.data.keys():
+            for conn_org_id in self.request.data[org_type]:
+                conn_org = Organization.objects.filter(id=str(conn_org_id), internal_type=internal_types[org_type])
+                if conn_org:
+                    org.children.add(conn_org[0])
+
+    def create(self, validated_data):
+        org = super().create(validated_data)
+        self.connected_organizations('sub_organizations', org)
+        self.connected_organizations('affiliated_organizations', org)
+        return org
+
+    class Meta:
+        model = Organization
+        fields = '__all__'
+
+
+class OrganizationListSerializer(OrganizationBaseSerializer):
     parent_organization = serializers.HyperlinkedRelatedField(
         queryset=Organization.objects.all(),
         source='parent',
@@ -1529,7 +1573,7 @@ class OrganizationSerializer(LinkedEventsSerializer):
         return obj.regular_users.count() > 0
 
 
-class OrganizationDetailSerializer(OrganizationSerializer):
+class OrganizationDetailSerializer(OrganizationListSerializer):
     regular_users = serializers.SerializerMethodField()
     admin_users = serializers.SerializerMethodField()
 
@@ -1560,14 +1604,22 @@ class OrganizationDetailSerializer(OrganizationSerializer):
         )
 
 
-class OrganizationViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
+class OrganizationViewSet(JSONAPIViewMixin,
+                          mixins.RetrieveModelMixin,
+                          mixins.UpdateModelMixin,
+                          mixins.DestroyModelMixin,
+                          mixins.ListModelMixin,
+                          mixins.CreateModelMixin,
+                          viewsets.GenericViewSet):
     queryset = Organization.objects.all()
 
     def get_serializer_class(self, *args, **kwargs):
         if self.action == 'retrieve':
             return OrganizationDetailSerializer
+        elif self.action == 'create':
+            return OrganizationCreateSerializer
         else:
-            return OrganizationSerializer
+            return OrganizationListSerializer
 
     def get_queryset(self):
         queryset = Organization.objects.prefetch_related('regular_users', 'admin_users')\
