@@ -67,6 +67,7 @@ from events.models import (PUBLICATION_STATUSES, DataSource, Event, EventLink,
                            PublicationStatus, Video)
 from events.permissions import GuestDelete, GuestGet, GuestPost
 from events.renderers import DOCXRenderer
+from events.renderers.json import UJSONRenderer
 from events.translation import EventTranslationOptions, PlaceTranslationOptions
 from helevents.api import UserSerializer
 from helevents.models import User
@@ -1612,6 +1613,7 @@ class OrganizationViewSet(JSONAPIViewMixin,
                           mixins.CreateModelMixin,
                           viewsets.GenericViewSet):
     queryset = Organization.objects.all()
+    renderer_classes = (UJSONRenderer,)
 
     def get_serializer_class(self, *args, **kwargs):
         if self.action == 'retrieve':
