@@ -1652,7 +1652,7 @@ class DataSourceSerializer(LinkedEventsSerializer):
 
     class Meta:
         model = DataSource
-        fields = '__all__'
+        exclude = ['api_key']
 
 
 class DataSourceViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
