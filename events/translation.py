@@ -1,5 +1,5 @@
 from modeltranslation.translator import translator, TranslationOptions
-from .models import Language, Keyword, KeywordSet, Place, Event, Offer, License
+from .models import Language, Keyword, KeywordSet, Place, Event, Offer, License, Image
 
 
 class LanguageTranslationOptions(TranslationOptions):
@@ -51,3 +51,10 @@ class LicenseTranslationOptions(TranslationOptions):
 
 
 translator.register(License, LicenseTranslationOptions)
+
+
+class ImageTranslationOptions(TranslationOptions):
+    fields = ('alt_text',)
+
+
+translator.register(Image, ImageTranslationOptions)

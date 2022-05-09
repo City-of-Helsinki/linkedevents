@@ -67,7 +67,6 @@ from events.models import (PUBLICATION_STATUSES, DataSource, Event, EventLink,
                            PublicationStatus, Video)
 from events.permissions import GuestDelete, GuestGet, GuestPost
 from events.renderers import DOCXRenderer
-from events.renderers.json import UJSONRenderer
 from events.translation import EventTranslationOptions, PlaceTranslationOptions
 from helevents.api import UserSerializer
 from helevents.models import User
@@ -1021,7 +1020,6 @@ class SignUpSerializer(serializers.ModelSerializer):
             if registration.audience_min_age and current_age < registration.audience_min_age:
                 raise DRFPermissionDenied('The participant is too young.')
             if registration.audience_max_age and current_age > registration.audience_max_age:
-                print(current_age)
                 raise DRFPermissionDenied('The participant is too old.')
         if (attendee_capacity is None) or (already_attending < attendee_capacity):
             signup = super().create(validated_data)
@@ -1613,7 +1611,6 @@ class OrganizationViewSet(JSONAPIViewMixin,
                           mixins.CreateModelMixin,
                           viewsets.GenericViewSet):
     queryset = Organization.objects.all()
-    renderer_classes = (UJSONRenderer,)
 
     def get_serializer_class(self, *args, **kwargs):
         if self.action == 'retrieve':
@@ -1631,7 +1628,6 @@ class OrganizationViewSet(JSONAPIViewMixin,
                                                          Prefetch('children',
                                                                   queryset=Organization.objects.filter(internal_type='affiliated'),  # noqa E501
                                                                   to_attr='affiliated_organizations'))
-
         id = self.request.query_params.get('child', None)
         if id:
             try:
@@ -1645,7 +1641,6 @@ class OrganizationViewSet(JSONAPIViewMixin,
                 queryset = queryset.get(id=id).get_descendants()
             except Organization.DoesNotExist:
                 queryset = queryset.none()
-
         return queryset
 
 
@@ -1744,8 +1739,11 @@ class ImageSerializer(EditableLinkedEventsObjectSerializer):
 
 
 class ImageViewSet(JSONAPIViewMixin, viewsets.ModelViewSet):
-    queryset = Image.objects.all()
-    queryset = queryset.select_related('publisher')
+    queryset = Image.objects.all().select_related('publisher',
+                                                  'data_source',
+                                                  'created_by',
+                                                  'last_modified_by',
+                                                  'license')
     serializer_class = ImageSerializer
     pagination_class = LargeResultsSetPagination
     filter_backends = (filters.OrderingFilter,)
@@ -1753,7 +1751,7 @@ class ImageViewSet(JSONAPIViewMixin, viewsets.ModelViewSet):
     ordering = ('-last_modified_time',)
 
     def get_queryset(self):
-        queryset = Image.objects.all()
+        queryset = super().get_queryset()
         publisher = self.request.query_params.get('publisher', None)
         if publisher:
             publisher = publisher.lower().split(',')
