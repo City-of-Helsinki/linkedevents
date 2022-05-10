@@ -1401,8 +1401,7 @@ class PlaceListViewSet(GeoModelAPIView,
                        mixins.ListModelMixin,
                        mixins.CreateModelMixin,
                        viewsets.GenericViewSet):
-    queryset = Place.objects.all()
-    queryset = queryset.select_related('publisher')
+    queryset = Place.objects.none()
     serializer_class = PlaceSerializer
     filter_backends = (django_filters.rest_framework.DjangoFilterBackend, filters.OrderingFilter)
     filterset_class = PlaceFilter
@@ -1423,7 +1422,10 @@ class PlaceListViewSet(GeoModelAPIView,
         show_all_places (places without events are included)
         show_deleted (deleted places are included)
         """
-        queryset = Place.objects.prefetch_related('divisions__type', 'divisions__municipality')
+        queryset = Place.objects.select_related('image', 'data_source', 'created_by', 'last_modified_by',
+                                                'publisher', 'parent', 'replaced_by'
+                                                ).prefetch_related('divisions', 'divisions__type',
+                                                                   'divisions__municipality')
         data_source = self.request.query_params.get('data_source')
         # Filter by data source, multiple sources separated by comma
         if data_source:
