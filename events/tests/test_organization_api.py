@@ -136,3 +136,54 @@ def test_post_affiliated_organizations_successfull(user, organization, organizat
     org_id = response.data['id']
     response = api_client.get(url+org_id+'/')
     assert set([i.strip('/').split('/')[-1] for i in response.data['affiliated_organizations']]) == set(payload['affiliated_organizations'])
+
+
+@pytest.mark.django_db
+def test_put_user_has_rights(user, organization, api_client):
+    url = reverse('organization-list')
+    api_client.force_authenticate(user)
+
+    payload = {'data_source': organization.data_source.id,
+            'id': organization.id,
+            'name': 'new name',
+            'origin_id': 'test_organization',
+    }
+
+    response = api_client.put(f'{url}{organization.id}/', payload)
+    assert response.data['name'] == payload['name']
+
+
+
+@pytest.mark.django_db
+def test_put_user_has_no_rights(user, user2, organization, api_client):
+    url = reverse('organization-list')
+    api_client.force_authenticate(user2)
+
+    payload = {'data_source': organization.data_source.id,
+            'id': organization.id,
+            'name': 'new name',
+            'origin_id': 'test_organization',
+    }
+
+    response = api_client.put(f'{url}{organization.id}/', payload)
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_delete_user_has_rights(user, organization, api_client):
+    url = reverse('organization-list')
+    api_client.force_authenticate(user)
+
+    response = api_client.delete(f'{url}{organization.id}/')
+    assert response.status_code == 204
+    response = api_client.get(f'{url}{organization.id}/')
+    assert response.status_code == 404
+
+
+@pytest.mark.django_db
+def test_delete_user_has_no_rights(user, user2, organization, api_client):
+    url = reverse('organization-list')
+    api_client.force_authenticate(user2)
+
+    response = api_client.delete(f'{url}{organization.id}/')
+    assert response.status_code == 403

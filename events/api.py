@@ -18,6 +18,7 @@ import bleach
 import django_filters
 import pytz
 import regex
+from django.contrib.gis.geos import Point
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.postgres.search import SearchQuery, TrigramSimilarity
@@ -246,6 +247,13 @@ def parse_digit(val, param):
         return int(val)
     except ValueError:
         raise ParseError(f'{param} must be an integer, you passed "{val}"')
+
+
+def organization_can_be_edited_by(instance, user):
+    if instance in user.admin_organizations.all():
+        return True
+    else:
+        return False
 
 
 class JSONLDRelatedField(relations.HyperlinkedRelatedField):
@@ -537,6 +545,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         # in case of bulk operations, the instance may be a huge queryset, already filtered by permission
         # therefore, we only do permission checks for single instances
         if not isinstance(instance, QuerySet) and instance:
+
             # check permissions *before* validation
             if not instance.can_be_edited_by(self.user):
                 raise PermissionDenied()
@@ -1316,6 +1325,18 @@ class PlaceSerializer(EditableLinkedEventsObjectSerializer, GeoModelSerializer):
             validated_data['id'] = generate_id(self.data_source)
         return super().create(validated_data)
 
+    def update(self, instance, validated_data):
+        inst = super().update(instance, validated_data)
+        if self.request.data['position']:
+            coord = self.request.data['position']['coordinates']
+            if len(coord) == 2 and all([isinstance(i, float) for i in coord]):
+                point = Point(self.request.data['position']['coordinates'])
+                inst.position = point
+                inst.save()
+            else:
+                raise ParseError(f'Two coordinates have to be provided and they should be float. You provided {coord}')
+        return inst
+
     class Meta:
         model = Place
         exclude = ('n_events_changed',)
@@ -1605,6 +1626,24 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
         )
 
 
+class OrganizationUpdateSerializer(OrganizationBaseSerializer):
+
+    def __init__(self, instance=None, context=None, *args, **kwargs):
+        instance.can_be_edited_by = organization_can_be_edited_by
+        if not instance.can_be_edited_by(instance, context['request'].user):
+            raise DRFPermissionDenied(f"User {context['request'].user} can't modify {instance}")
+        self.method = 'PUT'
+        self.hide_ld_context = True
+        self.skip_fields = ''
+        self.user = context['request'].user
+        super(LinkedEventsSerializer, self).__init__(
+            instance=instance, context=context, **kwargs)
+
+    class Meta:
+        model = Organization
+        fields = '__all__'
+
+
 class OrganizationViewSet(JSONAPIViewMixin,
                           mixins.RetrieveModelMixin,
                           mixins.UpdateModelMixin,
@@ -1619,6 +1658,8 @@ class OrganizationViewSet(JSONAPIViewMixin,
             return OrganizationDetailSerializer
         elif self.action == 'create':
             return OrganizationCreateSerializer
+        elif self.action == 'update':
+            return OrganizationUpdateSerializer
         else:
             return OrganizationListSerializer
 
@@ -1644,6 +1685,17 @@ class OrganizationViewSet(JSONAPIViewMixin,
             except Organization.DoesNotExist:
                 queryset = queryset.none()
         return queryset
+
+    def destroy(self, request, *args, **kwargs):
+        qset = Organization.objects.filter(id=kwargs['pk'])
+        if qset.count == 0:
+            raise ParseError(f"Organization {kwargs['pk']} not found.")
+        else:
+            instance = qset[0]
+        if organization_can_be_edited_by(instance, request.user):
+            return super().destroy(request, *args, **kwargs)
+        else:
+            raise DRFPermissionDenied(f'User {request.user} has no right to delete {instance}')
 
 
 register_view(OrganizationViewSet, 'organization')
