@@ -1518,8 +1518,11 @@ class OrganizationCreateSerializer(OrganizationBaseSerializer):
 
         if 'parent' in data.keys():
             user = self.request.user
-            if user and user.get_default_organization():
-                if user.get_default_organization().id == self.request.data['parent']:
+            potential_parent = Organization.objects.filter(id=self.request.data['parent'])
+            if potential_parent.count() == 0:
+                raise ParseError(f"{self.request.data['parent']} does not exist.")
+            if user:
+                if organization_can_be_edited_by(potential_parent[0], user):
                     pass
                 else:
                     raise DRFPermissionDenied('User has no rights to this organization')
