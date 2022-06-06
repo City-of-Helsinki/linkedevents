@@ -53,12 +53,12 @@ def test_post_parent_user_has_rights(user, organization, data_source, api_client
             'id': data_source.id + 'test_organization2',
             'origin_id': 'test_organization2',
             'name': 'test org',
-            'parent': organization.id
+            'parent_organization': f'{url}{organization.id}/'
     }
     
     response = api_client.post(url, payload, format='json')
     assert response.status_code == 201
-    assert response.data['parent'] == payload['parent']
+    assert response.data['parent_organization'] == payload['parent_organization']
 
 @pytest.mark.django_db
 def test_post_parent_user_has_no_rights(user2, organization, organization2, data_source, api_client):
@@ -69,7 +69,7 @@ def test_post_parent_user_has_no_rights(user2, organization, organization2, data
             'id': data_source.id + 'test_organization2',
             'origin_id': 'test_organization2',
             'name': 'test org',
-            'parent': organization.id
+            'parent_organization': f'{url}{organization.id}/'
     }
     
     response = api_client.post(url, payload, format='json')
@@ -124,7 +124,7 @@ def test_post_affiliated_organizations_successfull(user, organization, organizat
             'id': data_source.id + 'test_organization2',
             'origin_id': 'test_organization2',
             'name': 'test org',
-            'affiliated_organizations': [organization.id, organization2.id]
+            'affiliated_organizations': [f'{url}{organization.id}/', f'{url}{organization2.id}/']
     }
     
     for i in [organization, organization2]:
@@ -135,7 +135,7 @@ def test_post_affiliated_organizations_successfull(user, organization, organizat
     assert response.status_code == 201
     org_id = response.data['id']
     response = api_client.get(url+org_id+'/')
-    assert set([i.strip('/').split('/')[-1] for i in response.data['affiliated_organizations']]) == set(payload['affiliated_organizations'])
+    assert set(response.data['affiliated_organizations']) == set(payload['affiliated_organizations'])
 
 
 @pytest.mark.django_db
