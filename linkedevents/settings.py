@@ -138,6 +138,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    "debug_toolbar",
 
     # disable Django’s development server static file handling
     'whitenoise.runserver_nostatic',
@@ -184,6 +185,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     # WhiteNoiseMiddleware should be placed as high as possible
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
 
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',

@@ -3,6 +3,7 @@ from django.conf.urls import include, url
 from django.contrib import admin
 from django.urls import reverse
 from django.views.generic import RedirectView
+import debug_toolbar
 
 from .api import LinkedEventsAPIRouter
 
@@ -22,6 +23,7 @@ urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^accounts/', include('allauth.urls')),
     url(r'^$', RedirectToAPIRootView.as_view()),
+    url(r'^__debug__/', include(debug_toolbar.urls))
 ]
 
 if env('DEBUG'):
