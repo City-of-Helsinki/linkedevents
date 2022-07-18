@@ -1822,7 +1822,7 @@ def _filter_event_queryset(queryset, params, srs=None):
     # or 2014-10-29T12:00:00+0200 (local time)
     if val:
         dt = utils.parse_time(val, is_start=False)[0]
-        queryset = queryset.filter(Q(last_modified_time__gte=dt))
+        queryset = queryset.filter(Q(last_modified_time__gte=dt) | Q(date_published__gte=dt))
 
     start = params.get('start')
     end = params.get('end')
