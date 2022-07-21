@@ -28,7 +28,8 @@ ENV LC_ALL C.UTF-8
 ENV LANG C.UTF-8
 ENV LANGUAGE C.UTF-8
 RUN set -eux \
-    && apt-get update && apt-get install -y --no-install-recommends --no-install-suggests \
+    && apt-get update && apt-get -y dist-upgrade \
+    && apt-get install -y --no-install-recommends --no-install-suggests \
       build-essential \
       gdal-bin \
       locales \
