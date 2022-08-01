@@ -355,10 +355,10 @@ jobs:
     parameters:
       target_env:
         type: enum
-        enum: ["dev", "test", "staging", "prod"]
+        enum: ["test", "staging", "prod"]
       jira_env_type:
         type: enum
-        enum: ["development", "testing", "staging", "production"]
+        enum: ["testing", "staging", "production"]
     executor: builder
     steps:
       - deploy_ecs:
@@ -408,18 +408,6 @@ workflows:
           requires:
             - dockerize_dist
             - dockerize_importer
-          filters:
-            branches:
-              only: master
-
-      # Deploy to dev
-      - deploy:
-          <<: *voltti_global_context
-          name: deploy_dev
-          target_env: dev
-          jira_env_type: development
-          requires:
-            - push_tag
           filters:
             branches:
               only: master

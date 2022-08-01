@@ -33,7 +33,8 @@ unset DB_MIGRATION_PASSWORD
 unset DB_MIGRATION_USER
 
 # Append host ip to ALLOWED_HOSTS so that ALB health checks can access the health endpoint
-export HOST_IP=$(wget -qO- http://169.254.169.254/latest/meta-data/local-ipv4)
+# shellcheck disable=SC2155
+export HOST_IP="$(wget -qO- http://169.254.169.254/latest/meta-data/local-ipv4)"
 export ALLOWED_HOSTS="${ALLOWED_HOSTS},${HOST_IP}"
 
 # if the first argument to `docker run` starts with `--`, the user is passing gunicorn arguments
