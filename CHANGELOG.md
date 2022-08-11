@@ -10,6 +10,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 <!-- List the changes in your PR under the Unreleased title. You can also copy this list to your PR summary. -->
 
+## [1.11.1] - 2022-08-11
+
+### Added
+
+- Return recently published events with the last_modified_since query
+
+### Security
+
+- Update container deps to latests when building
+
+### Fixed
+
+- Fix postgres container build
 ## [1.11.0] - 2022-05-05
 
 ### Added
@@ -1147,6 +1160,8 @@ to `espooevents-service`.
   to a minimum. This version marks the initial `0.1.0` relase and the initial `linkedevents` commit on which
   `espooevents-service` is based on.
 
+[1.11.1]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.11.0...espoo-v1.11.1
+[1.11.0]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.21...espoo-v1.11.0
 [1.10.21]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.20...espoo-v1.10.21
 [1.10.20]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.19...espoo-v1.10.20
 [1.10.19]: https://github.com/espoon-voltti/espooevents-service/compare/espoo-v1.10.18...espoo-v1.10.19
