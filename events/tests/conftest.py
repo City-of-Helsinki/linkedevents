@@ -239,7 +239,7 @@ def administrative_division_type2():
 @pytest.fixture
 def administrative_division(administrative_division_type, municipality):
     division = AdministrativeDivision.objects.create(
-        name_en='test division',
+        name='test division',
         type=administrative_division_type,
         ocd_id='ocd-division/test:1',
         municipality=municipality,

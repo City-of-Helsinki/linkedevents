@@ -43,7 +43,8 @@ class OsoiteImporter(Importer):
 
     def get_street_address(self, address, language):
         # returns the address sans municipality in the desired language, or Finnish as fallback
-        street = getattr(address.street, 'name_' + language) or getattr(address.street, 'name_fi')
+        address.street.set_current_language(language)
+        street = address.street.name
         s = '%s %s' % (street, address.number)
         if address.number_end:
             s += '-%s' % address.number_end
@@ -52,9 +53,9 @@ class OsoiteImporter(Importer):
         return s
 
     def get_whole_address(self, address, language):
-        # returns the address plus municipality in the desired language, or Finnish as fallback
-        municipality = getattr(address.street.municipality, 'name_' + language) \
-            or getattr(address.street.municipality, 'name_fi')
+        # returns the address plus municipality in the desired language
+        address.street.municipality.set_current_language(language)
+        municipality = address.street.municipality.name
         return self.get_street_address(address, language) + ', ' + municipality
 
     def pk_get(self, resource_name, res_id=None):
@@ -109,8 +110,8 @@ class OsoiteImporter(Importer):
         for lang in self.supported_languages:
             info['name_' + lang] = self.get_whole_address(address_obj, lang)
             info['street_address_' + lang] = self.get_street_address(address_obj, lang)
-            info['municipality_' + lang] = getattr(address_obj.street.municipality, 'name_' + lang) \
-                or getattr(address_obj.street.municipality, 'name_fi')
+            address_obj.street.municipality.set_current_language(lang)
+            info['municipality_' + lang] = address_obj.street.municipality.name
 
         self._save_translated_field(obj, 'name', info, 'name')
         self._save_translated_field(obj, 'street_address', info, 'street_address')

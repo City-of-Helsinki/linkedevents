@@ -3,6 +3,7 @@ from django.conf.urls import include, url
 from django.contrib import admin
 from django.urls import reverse
 from django.views.generic import RedirectView
+import debug_toolbar
 
 from .api import LinkedEventsAPIRouter
 
@@ -25,4 +26,4 @@ urlpatterns = [
 ]
 
 if env('DEBUG'):
-    urlpatterns += [url(r'^silk/', include('silk.urls', namespace='silk'))]
+    urlpatterns += [url(r'^__debug__/', include(debug_toolbar.urls))]

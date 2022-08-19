@@ -1632,7 +1632,9 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
         )
 
 
-class OrganizationUpdateSerializer(OrganizationBaseSerializer):
+class OrganizationUpdateSerializer(OrganizationListSerializer):
+    regular_users = serializers.SerializerMethodField()
+    admin_users = serializers.SerializerMethodField()
 
     def __init__(self, instance=None, context=None, *args, **kwargs):
         instance.can_be_edited_by = organization_can_be_edited_by
@@ -1642,8 +1644,40 @@ class OrganizationUpdateSerializer(OrganizationBaseSerializer):
         self.hide_ld_context = True
         self.skip_fields = ''
         self.user = context['request'].user
+        if 'data_source' not in context['request'].data.keys():
+            context['request'].data['data_source']=instance.data_source
+        if 'origin_id' not in context['request'].data.keys():
+            context['request'].data['origin_id']=instance.origin_id
+        if 'name' not in context['request'].data.keys():
+            context['request'].data['name']=instance.name
         super(LinkedEventsSerializer, self).__init__(
             instance=instance, context=context, **kwargs)
+        self.admin_users = context['request'].data.pop('admin_users', {'username': ''})
+        self.regular_users = context['request'].data.pop('regular_users', {'username': ''})
+
+    def update(self, instance, validated_data):
+        if isinstance(self.admin_users, dict) and isinstance(self.regular_users, dict):
+            pass
+        else:
+            raise ParseError('Dictionaries expected for admin and regular_users.')
+        if ('username' not in self.admin_users.keys()) or ('username' not in self.regular_users.keys()):
+            raise ParseError('Username field should be used to pass admin_users and regular_users')
+
+        admin_users = User.objects.filter(username__in=self.admin_users['username'])
+        regular_users = User.objects.filter(username__in=self.regular_users['username'])
+        instance.admin_users.clear()
+        instance.admin_users.add(*admin_users)
+        instance.admin_users.add(self.user)  # so that the user does not accidentally remove himself from admin
+        instance.regular_users.clear()
+        instance.regular_users.add(*regular_users)
+        super().update(instance, validated_data)
+        return instance
+
+    def get_regular_users(self, obj):
+        return UserSerializer(obj.regular_users.all(), read_only=True, many=True).data
+
+    def get_admin_users(self, obj):
+        return UserSerializer(obj.admin_users.all(), read_only=True, many=True).data
 
     class Meta:
         model = Organization
