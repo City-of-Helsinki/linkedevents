@@ -44,7 +44,6 @@ env = environ.Env(
     SYSTEM_DATA_SOURCE_ID=(str, 'system'),
     LANGUAGES=(list, ['fi', 'sv', 'en', 'zh-hans', 'ru', 'ar']),
     DATABASE_URL=(str, 'postgis:///linkedevents'),
-    TOKEN_AUTH_ACCEPTED_AUDIENCE=(str, ''),
     TOKEN_AUTH_SHARED_SECRET=(str, ''),
     ELASTICSEARCH_URL=(str, None),
     SECRET_KEY=(str, ''),
@@ -69,6 +68,11 @@ env = environ.Env(
     LIPPUPISTE_EVENT_API_URL=(str, None),
     SUPPORT_EMAIL=(str, ''),
     MEMCACHED_URL=(str, "127.0.0.1:11211"),
+    TOKEN_AUTH_ACCEPTED_AUDIENCE=(str, "https://api.hel.fi/auth/linkedevents"),
+    TOKEN_AUTH_ACCEPTED_SCOPE_PREFIX=(str, "linkedevents"),
+    TOKEN_AUTH_AUTHSERVER_URL=(str, "https://api.hel.fi/sso/openid"),
+    TOKEN_AUTH_FIELD_FOR_CONSENTS=(str, "https://api.hel.fi/auth"),
+    TOKEN_AUTH_REQUIRE_SCOPE_PREFIX=(bool, True),
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -130,10 +134,10 @@ LOGGING = {
 
 # Application definition
 INSTALLED_APPS = [
-    'helusers',
+    'helusers.apps.HelusersConfig',
+    'helusers.apps.HelusersAdminConfig',
     'django.contrib.sites',
     'modeltranslation',
-    'helusers.apps.HelusersAdminConfig',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -198,10 +202,7 @@ MIDDLEWARE = [
 
 # django-extensions is a set of developer friendly tools
 if DEBUG:
-    INSTALLED_APPS.extend(['django_extensions', 'silk'])
-    MIDDLEWARE.insert(0, 'silk.middleware.SilkyMiddleware')
-    SILKY_AUTHENTICATION = True
-    SILKY_AUTHORISATION = True
+    INSTALLED_APPS.extend(['django_extensions'])
 
 
 
@@ -516,3 +517,13 @@ FULLTEXT_SEARCH_LANGUAGES = {'fi': 'finnish', 'sv': 'swedish', 'en': 'english'}
 
 # Email address used to send feedback forms
 SUPPORT_EMAIL = env('SUPPORT_EMAIL')
+
+OIDC_API_TOKEN_AUTH = {
+    "AUDIENCE": env.str("TOKEN_AUTH_ACCEPTED_AUDIENCE"),
+    "API_SCOPE_PREFIX": env.str("TOKEN_AUTH_ACCEPTED_SCOPE_PREFIX"),
+    "ISSUER": env.str("TOKEN_AUTH_AUTHSERVER_URL"),
+    "API_AUTHORIZATION_FIELD": env.str("TOKEN_AUTH_FIELD_FOR_CONSENTS"),
+    "REQUIRE_API_SCOPE_FOR_AUTHENTICATION": env.bool("TOKEN_AUTH_REQUIRE_SCOPE_PREFIX"),
+}
+
+OIDC_AUTH = {"OIDC_LEEWAY": 60 * 60}

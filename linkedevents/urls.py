@@ -23,8 +23,7 @@ urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^accounts/', include('allauth.urls')),
     url(r'^$', RedirectToAPIRootView.as_view()),
-    url(r'^__debug__/', include(debug_toolbar.urls))
 ]
 
 if env('DEBUG'):
-    urlpatterns += [url(r'^silk/', include('silk.urls', namespace='silk'))]
+    urlpatterns += [url(r'^__debug__/', include(debug_toolbar.urls))]

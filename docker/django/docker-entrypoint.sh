@@ -24,7 +24,7 @@ fi
 if [[ ! -z "$@" ]]; then
     "$@"
 elif [[ "$DEV_SERVER" = "true" ]]; then
-    python -Wd ./manage.py runserver $RUNSERVER_ADDRESS
+    python -Wd ./manage.py runserver_plus $RUNSERVER_ADDRESS
 else
     uwsgi --ini .prod/uwsgi_configuration.ini
 fi
