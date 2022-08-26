@@ -1,0 +1,50 @@
+# Continuous integration (CI) triggers cause a pipeline to run whenever you push
+# an update to the specified branches or you push specified tags.
+trigger:
+  batch: true
+  branches:
+    include:
+      - main
+      # other examples:
+      - release/*
+      - refs/tags/*
+  paths:
+    exclude:
+      - README.md
+
+# Pull request (PR) triggers cause a pipeline to run whenever a pull request is
+# opened with one of the specified target branches, or when updates are made to
+# such a pull request.
+#
+# GitHub creates a new ref when a pull request is created. The ref points to a
+# merge commit, which is the merged code between the source and target branches
+# of the pull request.
+#
+# Opt out of pull request validation
+pr: none
+
+# By default, use self-hosted agents
+pool: Default
+
+# Image tag name for Fuse projects
+#parameters:
+#- name: imagetag
+#  displayName: Image tag to be built and/or deployed
+#  type: string
+#  default: latest
+
+resources:
+  repositories:
+    # Azure DevOps repository
+    - repository: linkedevents-pipelines
+      type: git
+      # Azure DevOps project/repository
+      name: linkedevents/linkedevents-pipelines
+
+extends:
+  # Filename in Azure DevOps Repository (note possible -ui or -api)
+  # Django example: azure-pipelines-linkedevents-api-release.yml
+  # Drupal example: azure-pipelines-drupal-release.yml
+  template: azure-pipelines-build-linkedevents-api.yml@linkedevents-pipelines
+  #parameters:
+  #imagetag: ${{ parameters.imagetag }}
