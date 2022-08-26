@@ -15,6 +15,7 @@ RUN apt-install.sh build-essential gdal-bin gettext \
     && pip install --upgrade pip \
     && pip install --no-cache-dir -r /app/requirements.txt \
     && pip --no-cache-dir install uwsgi==2.0.18 \
+    && pip install django-debug-toolbar \
     && apt-cleanup.sh build-essential
 
 COPY --chown=appuser:appuser ./docker/django/docker-entrypoint.sh /app/
