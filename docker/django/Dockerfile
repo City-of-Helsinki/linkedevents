@@ -4,12 +4,10 @@ ARG IMAGE_VARIANT=slim
 # ==============================
 FROM helsinkitest/python:${PYTHON_VERSION}-${IMAGE_VARIANT} AS base_stage
 # ==============================
-
+RUN chown -R appuser:appuser /app
 
 ENV PYTHONDONTWRITEBYTECODE true
 ENV PYTHONUNBUFFERED true
-
-RUN mkdir /app && chown -R appuser:appuser /app
 
 COPY --chown=appuser:appuser requirements.txt /app/
 
