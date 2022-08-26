@@ -26,6 +26,8 @@ FROM base_stage AS development
 # ==============================
 
 COPY --chown=appuser:appuser requirements-dev.txt /app/
+COPY --chown=appuser:appuser requirements.txt /app/requirements.txt
+
 
 RUN pip --no-cache-dir install -r /app/requirements-dev.txt
 
