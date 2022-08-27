@@ -1,14 +1,9 @@
 # Continuous integration (CI) triggers cause a pipeline to run whenever you push
 # an update to the specified branches or you push specified tags.
-# trigger:
-#   batch: true
-#   branches:
-#     include:
-#     - master
-#   paths:
-#     exclude:
-#     - README.md
-trigger: none
+trigger:
+   branches:
+     include:
+     - develop
 # Pull request (PR) triggers cause a pipeline to run whenever a pull request is
 # opened with one of the specified target branches, or when updates are made to
 # such a pull request.
