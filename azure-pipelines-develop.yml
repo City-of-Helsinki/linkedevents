@@ -39,4 +39,4 @@ stages:
         command: build
         dockerfile: '$(Build.SourcesDirectory)/docker/django/Dockerfile'
         tags: |
-          $(tag)
+          $(tag) 
