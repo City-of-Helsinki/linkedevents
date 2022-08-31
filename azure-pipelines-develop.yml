@@ -38,5 +38,6 @@ stages:
       inputs:
         command: build
         dockerfile: '$(Build.SourcesDirectory)/docker/django/Dockerfile'
+        buildContext: $(Build.SourcesDirectory)
         tags: |
           $(tag) 
