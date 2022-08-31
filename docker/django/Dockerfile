@@ -9,6 +9,9 @@ FROM helsinkitest/python:${PYTHON_VERSION}-${IMAGE_VARIANT} AS base_stage
 ENV PYTHONDONTWRITEBYTECODE true
 ENV PYTHONUNBUFFERED true
 
+RUN echo develop && ls .
+
+
 COPY --chown=appuser:appuser requirements.txt /app/
 
 RUN apt-install.sh build-essential gdal-bin gettext \
