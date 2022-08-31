@@ -94,7 +94,7 @@ def deprecate_and_replace(graph, keyword):
 @register_importer
 class YsoImporter(Importer):
     name = "yso"
-    supported_languages = ['fi', 'sv', 'en']
+    supported_languages = set(['fi', 'sv', 'en'])
 
     def setup(self):
         defaults = dict(
@@ -247,6 +247,9 @@ class YsoImporter(Importer):
         label_text = str(label)
         if label.language is None:
             logger.error('Error: {} has no language'.format(label))
+            return None
+        if label.language not in YsoImporter.supported_languages:
+            logger.error('Error: {} has not supported language: {}'.format(label, label.language))
             return None
         label_object = syncher.get((label_text, str(label.language)))
         if label_object is None:
