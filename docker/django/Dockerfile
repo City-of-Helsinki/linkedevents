@@ -4,7 +4,7 @@ ARG IMAGE_VARIANT=slim
 # ==============================
 FROM helsinkitest/python:${PYTHON_VERSION}-${IMAGE_VARIANT} AS base_stage
 # ==============================
-
+RUN chown -R appuser:appuser /app
 
 ENV PYTHONDONTWRITEBYTECODE true
 ENV PYTHONUNBUFFERED true
@@ -15,6 +15,7 @@ RUN apt-install.sh build-essential gdal-bin gettext \
     && pip install --upgrade pip \
     && pip install --no-cache-dir -r /app/requirements.txt \
     && pip --no-cache-dir install uwsgi==2.0.18 \
+    && pip install django-debug-toolbar \
     && apt-cleanup.sh build-essential
 
 # ==============================
@@ -22,6 +23,8 @@ FROM base_stage AS development
 # ==============================
 
 COPY --chown=appuser:appuser requirements-dev.txt /app/
+COPY --chown=appuser:appuser requirements.txt /app/requirements.txt
+
 
 RUN pip --no-cache-dir install -r /app/requirements-dev.txt
 
