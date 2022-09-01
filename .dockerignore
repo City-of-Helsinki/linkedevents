@@ -16,6 +16,8 @@
 !multilingual_haystack*
 !notifications*
 !templates*
+!.prod
+!registrations
 
 #################################################
 # Whitelisted files
