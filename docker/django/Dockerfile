@@ -14,7 +14,7 @@ COPY --chown=appuser:appuser requirements.txt /app/
 RUN apt-install.sh build-essential gdal-bin gettext \
     && pip install --upgrade pip \
     && pip install --no-cache-dir -r /app/requirements.txt \
-    && pip --no-cache-dir install uwsgi==2.0.18 \
+    && pip --no-cache-dir install uwsgi==2.0.20 \
     && apt-cleanup.sh build-essential
 
 # ==============================
