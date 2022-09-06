@@ -2,13 +2,7 @@
 # Build a Docker image
 # https://docs.microsoft.com/azure/devops/pipelines/languages/docker
 
-trigger:
-  batch: false
-  branches:
-    include:
-      - develop
-      - master
-      - features/*
+trigger: none
 
 pr:
  autoCancel: true
