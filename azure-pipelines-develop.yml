@@ -39,4 +39,4 @@ extends:
   template: azure-pipelines-deploy-linkedevents-api-dev.yml@linkedevents-pipelines
   # Image tag name for Fuse projects
   #parameters:
-  #imagetag: ${{ parameters.imagetag }}
+  #imagetag: ${{ parameters.imagetag }} 
