@@ -1,27 +1,8 @@
+# This is a base build pipeline and it should not be triggered, 
 # Continuous integration (CI) triggers cause a pipeline to run whenever you push
 # an update to the specified branches or you push specified tags.
-trigger:
-  batch: true
-  branches:
-    include:
-      - main
-      # other examples:
-      - release/*
-      - refs/tags/*
-  paths:
-    exclude:
-      - README.md
+trigger: none
 
-# Pull request (PR) triggers cause a pipeline to run whenever a pull request is
-# opened with one of the specified target branches, or when updates are made to
-# such a pull request.
-#
-# GitHub creates a new ref when a pull request is created. The ref points to a
-# merge commit, which is the merged code between the source and target branches
-# of the pull request.
-#
-# Opt out of pull request validation
-pr: none
 
 # By default, use self-hosted agents
 pool: Default
@@ -37,14 +18,29 @@ resources:
   repositories:
     # Azure DevOps repository
     - repository: linkedevents-pipelines
-      type: git
-      # Azure DevOps project/repository
       name: linkedevents/linkedevents-pipelines
+      type: git
 
 extends:
   # Filename in Azure DevOps Repository (note possible -ui or -api)
-  # Django example: azure-pipelines-linkedevents-api-release.yml
-  # Drupal example: azure-pipelines-drupal-release.yml
   template: azure-pipelines-build-linkedevents-api.yml@linkedevents-pipelines
   #parameters:
   #imagetag: ${{ parameters.imagetag }}
+
+stages:
+- stage: Build
+  displayName: Build image
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: Docker@2
+      displayName: Build an image
+      inputs:
+        command: build
+        dockerfile: '$(Build.SourcesDirectory)/docker/django/Dockerfile'
+        buildContext: $(Build.SourcesDirectory)
+        tags: |
+          $(tag) 
