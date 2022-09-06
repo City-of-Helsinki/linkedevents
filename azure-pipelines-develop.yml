@@ -4,14 +4,6 @@
 
 trigger: none
 
-pr:
- autoCancel: true
- drafts: true
- branches:
-   include:
-     - develop
-     - master
-
 resources:
   repositories:
     # Azure DevOps repository

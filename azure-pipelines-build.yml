@@ -9,6 +9,14 @@ trigger:
       - master
       - features/*
 
+pr:
+ autoCancel: true
+ drafts: true
+ branches:
+   include:
+     - develop
+     - master
+
 # By default, use self-hosted agents
 pool: Default
 
