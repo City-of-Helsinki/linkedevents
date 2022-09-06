@@ -32,9 +32,6 @@ resources:
       # Run deploy-dev pipeline when any run of build pipeline completes
       trigger: true
 
-variables:
-  tag: '$(Build.BuildId)'
-
 extends:
   # Filename in Azure DevOps Repository (note possible -ui or -api)
   # Django example: azure-pipelines-linkedevents-api-master.yml
