@@ -228,12 +228,16 @@ class YsoImporter(Importer):
 
     def update_keyword(self, keyword, graph, subject):
         for _, literal in graph.preferredLabel(subject):
-            with active_language(literal.language):
-                if keyword.name != str(literal):
-                    logger.debug('(re)naming keyword ' + keyword.name + ' to ' + str(literal))
-                    keyword.name = str(literal)
-                    keyword._changed = True
-                    keyword.last_modified_time = BaseModel.now()
+            if literal.language not in YsoImporter.supported_languages:
+                logger.debug('Skipping: literal {} has not supported language: {}'.format(literal, literal.language))
+            else:
+                with active_language(literal.language):
+                    if keyword.name != str(literal):
+                        logger.info('(re)naming keyword {} to {} with active language {}'.format(
+                            keyword.name, literal, literal.language))
+                        keyword.name = str(literal)
+                        keyword._changed = True
+                        keyword.last_modified_time = BaseModel.now()
 
     def save_keywords_in_bulk(self, graph):
         keywords = []
