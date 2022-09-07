@@ -1,0 +1,34 @@
+# This is a base build pipeline and it should not be triggered, 
+# Continuous integration (CI) triggers cause a pipeline to run whenever you push
+# an update to the specified branches or you push specified tags.
+trigger:
+  batch: false
+  branches:
+    include:
+      - develop
+      - master
+      - features/*
+
+pr:
+ autoCancel: true
+ drafts: true
+ branches:
+   include:
+     - develop
+     - master
+
+# By default, use self-hosted agents
+pool: Default
+
+resources:
+  repositories:
+    # Azure DevOps repository
+    - repository: linkedevents-pipelines
+      name: linkedevents/linkedevents-pipelines
+      type: git
+
+extends:
+  # Filename in Azure DevOps Repository (note possible -ui or -api)
+  template: azure-pipelines-build-linkedevents-api.yml@linkedevents-pipelines
+  #parameters:
+  #imagetag: ${{ parameters.imagetag }}
