@@ -15,8 +15,9 @@ from functools import partial
 import bleach
 import django_filters
 import pytz
+import regex
 from django.conf import settings
-from django.contrib.postgres.search import TrigramSimilarity
+from django.contrib.postgres.search import SearchQuery, TrigramSimilarity
 from django.core.cache import caches
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q, QuerySet
@@ -368,18 +369,6 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
                 if key in self.fields:
                     del self.fields[key]
             del self.fields[field_name]
-
-    # def get_field(self, model_field):
-    #     kwargs = {}
-    #     if issubclass(
-    #             model_field.__class__,
-    #                   (django_db_models.CharField,
-    #                    django_db_models.TextField)):
-    #         if model_field.null:
-    #             kwargs['allow_none'] = True
-    #         kwargs['max_length'] = getattr(model_field, 'max_length')
-    #         return fields.CharField(**kwargs)
-    #     return super(TranslatedModelSerializer, self).get_field(model_field)
 
     def to_representation(self, obj):
         ret = super(TranslatedModelSerializer, self).to_representation(obj)
@@ -1748,32 +1737,154 @@ def parse_duration_string(duration):
     return int(val) * mul
 
 
+def _terms_to_regex(terms, operator, fuzziness=3):
+    """
+    Create a  compiled regex from of the rpvided terms of the form
+    r'(\b(term1){e<2}')|(\b(term2){e<2})" This would match a string
+    with terms aligned in any order allowing two edits per term.
+    """
+
+    vals = terms.split(',')
+    valexprs = [r'(\b' + f'({val}){{e<{fuzziness}}})' for val in vals]
+    if operator == 'AND':
+        regex_join = ''
+    elif operator == 'OR':
+        regex_join = '|'
+    expr = f"{regex_join.join(valexprs)}"
+    return regex.compile(expr, regex.IGNORECASE)
+
+
 def _filter_event_queryset(queryset, params, srs=None):
     """
     Filter events queryset by params
-    (e.g. self.request.query_params in EventViewSet)
+    (e.g. self.request.query_params ingit EventViewSet)
     """
     # Filter by string (case insensitive). This searches from all fields
     # which are marked translatable in translation.py
-    val = params.get('text', None)
+
+    val = params.get('local_ongoing_text', None)
     if val:
-        val = val.lower()
-        qset = Q()
+        language = params.get('language', 'fi')
+        langs = settings.FULLTEXT_SEARCH_LANGUAGES
+        if language not in langs.keys():
+            raise ParseError(f"{language} not supported. Supported options are: {' '.join(langs.values())}")
 
-        # Free string search from all translated event fields
-        event_fields = EventTranslationOptions.fields
-        for field in event_fields:
-            # check all languages for each field
-            qset |= _text_qset_by_translated_field(field, val)
+        query = SearchQuery(val, config=langs[language], search_type='plain')
+        kwargs = {f'search_vector_{language}': query}
+        queryset = queryset.filter(**kwargs).filter(end_time__gte=datetime.utcnow().replace(tzinfo=pytz.utc),
+                                                    deleted=False,
+                                                    local=True)
+    cache = caches['ongoing_events']
+    val = params.get('local_ongoing_OR', None)
+    if val:
+        rc = _terms_to_regex(val, 'OR')
+        ids = {k for k, v in cache.get('local_ids').items() if rc.search(v, concurrent=True)}
+        queryset = queryset.filter(id__in=ids)
 
-        # Free string search from all translated place fields
-        place_fields = PlaceTranslationOptions.fields
-        for field in place_fields:
-            location_field = 'location__' + field
-            # check all languages for each field
-            qset |= _text_qset_by_translated_field(location_field, val)
+    val = params.get('local_ongoing_AND', None)
+    if val:
+        rc = _terms_to_regex(val, 'AND')
+        ids = {k for k, v in cache.get('local_ids').items() if rc.search(v, concurrent=True)}
+        queryset = queryset.filter(id__in=ids)
 
-        queryset = queryset.filter(qset)
+    val = params.get('internet_ongoing_AND', None)
+    if val:
+        rc = _terms_to_regex(val, 'AND')
+        ids = {k for k, v in cache.get('internet_ids').items() if rc.search(v, concurrent=True)}
+        queryset = queryset.filter(id__in=ids)
+
+    val = params.get('internet_ongoing_OR', None)
+    if val:
+        rc = _terms_to_regex(val, 'OR')
+        ids = {k for k, v in cache.get('internet_ids').items() if rc.search(v, concurrent=True)}
+        queryset = queryset.filter(id__in=ids)
+
+    val = params.get('all_ongoing', None)
+    if val and validate_bool(val, 'all_ongoing'):
+        ids = {k for i in cache.get_many(['internet_ids', 'local_ids']).values() for k, v in i.items()}
+        queryset = queryset.filter(id__in=ids)
+
+    val = params.get('all_ongoing_AND', None)
+    if val:
+        rc = _terms_to_regex(val, 'AND')
+        cached_ids = {k: v for i in cache.get_many(['internet_ids', 'local_ids']).values() for k, v in i.items()}
+        ids = {k for k, v in cached_ids.items() if rc.search(v, concurrent=True)}
+        queryset = queryset.filter(id__in=ids)
+
+    val = params.get('all_ongoing_OR', None)
+    if val:
+        rc = _terms_to_regex(val, 'OR')
+        cached_ids = {k: v for i in cache.get_many(['internet_ids', 'local_ids']).values() for k, v in i.items()}
+        ids = {k for k, v in cached_ids.items() if rc.search(v, concurrent=True)}
+        queryset = queryset.filter(id__in=ids)
+
+    vals = params.get('keyword_set_AND', None)
+    if vals:
+        vals = vals.split(',')
+        keyword_sets = KeywordSet.objects.filter(id__in=vals)
+        for keyword_set in keyword_sets:
+            keywords = keyword_set.keywords.all()
+            qset = Q(keywords__in=keywords)
+            queryset = queryset.filter(qset)
+
+    vals = params.get('keyword_set_OR', None)
+    if vals:
+        vals = vals.split(',')
+        keyword_sets = KeywordSet.objects.filter(id__in=vals)
+        all_keywords = set()
+        for keyword_set in keyword_sets:
+            keywords = keyword_set.keywords.all()
+            all_keywords.update(keywords)
+
+    if 'local_ongoing_OR_set' in ''.join(params):
+        count = 1
+        all_ids = []
+        while f'local_ongoing_OR_set{count}' in params:
+            val = params.get(f'local_ongoing_OR_set{count}', None)
+            if val:
+                rc = _terms_to_regex(val, 'OR')
+                all_ids.append({k for k, v in cache.get('local_ids').items() if rc.search(v, concurrent=True)})
+            count += 1
+        ids = set.intersection(*all_ids)
+        queryset = queryset.filter(id__in=ids)
+
+    if 'internet_ongoing_OR_set' in ''.join(params):
+        count = 1
+        all_ids = []
+        while f'internet_ongoing_OR_set{count}' in params:
+            val = params.get(f'internet_ongoing_OR_set{count}', None)
+            if val:
+                rc = _terms_to_regex(val, 'OR')
+                all_ids.append({k for k, v in cache.get('internet_ids').items() if rc.search(v, concurrent=True)})
+            count += 1
+        ids = set.intersection(*all_ids)
+        queryset = queryset.filter(id__in=ids)
+
+    if 'all_ongoing_OR_set' in ''.join(params):
+        count = 1
+        all_ids = []
+        while f'all_ongoing_OR_set{count}' in params:
+            val = params.get(f'all_ongoing_OR_set{count}', None)
+            if val:
+                rc = _terms_to_regex(val, 'OR')
+                cached_ids = {k: v for i in cache.get_many(['internet_ids', 'local_ids']).values() for k, v in i.items()}  # noqa E501
+                all_ids.append({k for k, v in cached_ids.items() if rc.search(v, concurrent=True)})
+            count += 1
+        ids = set.intersection(*all_ids)
+        queryset = queryset.filter(id__in=ids)
+
+    if 'keyword_OR_set' in ''.join(params):
+        rc = regex.compile('keyword_OR_set[0-9]*')
+        all_sets = rc.findall(''.join(params))
+        for i in all_sets:
+            val = params.get(i, None)
+            if val:
+                val = val.split(',')
+                queryset = queryset.filter(keywords__pk__in=val)
+
+    val = params.get('internet_based', None)
+    if val and validate_bool(val, 'internet_based'):
+        queryset = queryset.filter(location__id__contains='internet')
 
     #  Filter by event translated fields and keywords combined. The code is
     #  repeated as this is the first iteration, which will be replaced by a similarity
@@ -1807,14 +1918,25 @@ def _filter_event_queryset(queryset, params, srs=None):
             qset = Q()
         queryset = queryset.filter(*qsets)
 
-    #  This filtering param requires populate_local_event_cache management command
-    val = params.get('combined_local_ongoing', None)
+    val = params.get('text', None)
     if val:
-        cache = caches['ongoing_local']
         val = val.lower()
-        vals = val.split(',')
-        ids = {k for k, v in cache.get('ids').items() if any(val in v for val in vals)}
-        queryset = queryset.filter(id__in=ids)
+        qset = Q()
+
+        # Free string search from all translated event fields
+        event_fields = EventTranslationOptions.fields
+        for field in event_fields:
+            # check all languages for each field
+            qset |= _text_qset_by_translated_field(field, val)
+
+        # Free string search from all translated place fields
+        place_fields = PlaceTranslationOptions.fields
+        for field in place_fields:
+            location_field = 'location__' + field
+            # check all languages for each field
+            qset |= _text_qset_by_translated_field(location_field, val)
+
+        queryset = queryset.filter(qset)
 
     val = params.get('last_modified_since', None)
     # This should be in format which dateutil.parser recognizes, e.g.
@@ -2016,7 +2138,7 @@ def _filter_event_queryset(queryset, params, srs=None):
                 q = q | Q(in_language__id=lang) | Q(**name_arg) | Q(**desc_arg) | Q(**short_desc_arg)
             else:
                 q = q | Q(in_language__id=lang)
-        queryset = queryset.filter(q)
+        queryset = queryset.filter(q).distinct()
 
     # Filter by in_language field only
     val = params.get('in_language', None)

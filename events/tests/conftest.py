@@ -1,31 +1,28 @@
 # -*- coding: utf-8 -*-
-from datetime import timedelta, datetime
-
-# django
-from django.core.management import call_command
-from django.contrib.auth import get_user_model
-from django.utils import timezone
-from .utils import versioned_reverse as reverse
-from .test_event_get import get_list
-from django.contrib.gis.geos import Point, Polygon, MultiPolygon
-from munigeo.models import (AdministrativeDivision, AdministrativeDivisionType, AdministrativeDivisionGeometry,
-                            Municipality)
+from datetime import datetime, timedelta
 
 # 3rd party
 import pytest
-from rest_framework.test import APIClient
-from django_orghierarchy.models import Organization
-
-# events
-from events.models import (
-    DataSource, Place, Language, Keyword, KeywordLabel, Event,
-    Offer, KeywordSet)
-from events.api import (
-    KeywordSerializer, PlaceSerializer, LanguageSerializer
-)
 from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.contrib.gis.geos import MultiPolygon, Point, Polygon
+# django
+from django.core.management import call_command
+from django.utils import timezone
+from django_orghierarchy.models import Organization
+from munigeo.models import (AdministrativeDivision,
+                            AdministrativeDivisionGeometry,
+                            AdministrativeDivisionType, Municipality)
+from rest_framework.test import APIClient
+
+from events.api import KeywordSerializer, LanguageSerializer, PlaceSerializer
+# events
+from events.models import (DataSource, Event, Keyword, KeywordLabel,
+                           KeywordSet, Language, Offer, Place)
 
 from ..models import License, PublicationStatus
+from .test_event_get import get_list
+from .utils import versioned_reverse as reverse
 
 TEXT_FI = 'testaus'
 TEXT_SV = 'testning'
@@ -543,8 +540,16 @@ def keyword_id(data_source, organization, kw_name, make_keyword_id):
 @pytest.mark.django_db
 @pytest.fixture
 def keyword_set(data_source, keyword, keyword2):
-    kw_set = KeywordSet.objects.create(data_source=data_source)
+    kw_set = KeywordSet.objects.create(data_source=data_source, name='name1', id='set:1')
     kw_set.keywords.set([keyword, keyword2])
+    return kw_set
+
+
+@pytest.mark.django_db
+@pytest.fixture
+def keyword_set2(data_source, keyword3):
+    kw_set = KeywordSet.objects.create(data_source=data_source, name='name2', id='set:2')
+    kw_set.keywords.set([keyword3])
     return kw_set
 
 

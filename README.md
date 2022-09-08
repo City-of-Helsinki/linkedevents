@@ -72,6 +72,7 @@ Install required Python packages into the virtualenv
 ```bash
 cd $INSTALL_BASE/linkedevents
 pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
 Create the database, like so: (we have only tested on PostgreSQL)
 ```bash
@@ -96,6 +97,8 @@ If you wish to install Linkedevents without any Helsinki specific data (an empty
 The last steps are needed if you wish to use location, address or event data from the Helsinki metropolitan region, or if you wish to run the Helsinki UI (https://linkedevents.hel.fi) from https://github.com/City-of-Helsinki/linkedevents-ui. Currently, the UI is specific to Helsinki and requires the general Finnish ontology as well as additional Helsinki specific audiences and keywords to be present, though its code should be easily adaptable to your own city if you have an OAuth2 authentication server present.
 
 The commands below are documented in more detail in [linked-events-importers.md](./linked-events-importers.md#linked-events-importers-and-commands).
+
+**Note**: Running below commands to import all data will take several hours to complete.
 
 ```bash
 cd $INSTALL_BASE/linkedevents
@@ -129,6 +132,69 @@ for your favorite city by creating `your_favorite_city/templates/rest_framework/
 For further erudition, take a look at the DRF documentation on [customizing the browsable API](http://www.django-rest-framework.org/topics/browsable-api/#customizing)
 
 After this, everything but search endpoint (/search) is working. See [search](#search)
+
+## `local_settings.py`
+Create this file from `local_settings.py.template` and edit it to contain
+settings specific for your own workstation
+
+### Example
+Assumptions:
+* Windows 10 workstation
+* Django running on Windows for development
+* Database running PostGIS on a Docker container accessible at _localhost:5555_
+* Installed GeoDjango into `C:\OSGeo4W64\`
+
+File contents are:
+```python
+import os
+
+DEBUG = True
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': 'linkedevents',
+        'USER': 'linkedevents',
+        'PASSWORD': 'linkedevents',
+        'HOST': 'localhost',
+        'PORT': 5555
+    }
+}
+
+CUSTOM_MAPPINGS = {
+    'autosuggest': {
+        'search_analyzer': 'standard',
+        'index_analyzer': 'edgengram_analyzer',
+        'analyzer': None
+    },
+    'text': {
+        'analyzer': 'default'
+    }
+}
+
+GDAL_LIBRARY_PATH = r'C:\OSGeo4W64\bin\gdal204'
+GEOS_LIBRARY_PATH = r'C:\OSGeo4W64\bin\geos_c'
+GDAL_DATA = r'C:\OSGeo4W64\share\epsg_csv'
+os.environ["GDAL_DATA"] = GDAL_DATA
+```
+
+### GeoDjango
+
+#### Linux
+tbd
+
+#### macOS
+tbd
+
+#### Windows
+1. Go to https://trac.osgeo.org/osgeo4w/
+1. Download appropriate installation binaries
+1. Install
+1. Edit `local_settings.py` to contain `GDAL_LIBRARY_PATH = r'C:\OSGeo4W64\bin\gdal204'`
+1. For any WFS-access with HTTPS to work (example: Osoite-import), need to have environment variable
+   `CURL_CA_BUNDLE=C:\OSGeo4W64\bin\curl-ca-bundle.crt`
+1. Done!
+
 
 Production notes
 ----------------
