@@ -29,14 +29,15 @@ pool: Default
 
 resources:
   repositories:
-    # Azure DevOps repository
-    - repository: linkedevents-pipelines
-      name: linkedevents/linkedevents-pipelines
-      type: git
-    - repository: templates
-      type: git
-      ref: refs/heads/dev
-      name: devops-toolchain/pipeline-templates
+  # Azure Repos
+  - repository: templates
+    type: git
+    ref: refs/heads/dev
+    name: devops-toolchain/pipeline-templates
+  # Azure Repos
+  - repository: pipelines
+    type: git
+    name: linkedevents-pipelines
 
 
 stages:
