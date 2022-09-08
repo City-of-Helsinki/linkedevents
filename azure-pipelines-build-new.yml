@@ -34,8 +34,20 @@ resources:
       name: linkedevents/linkedevents-pipelines
       type: git
 
-extends:
-  # Filename in Azure DevOps Repository (note possible -ui or -api)
-  template: azure-pipelines-build-linkedevents-api.yml@linkedevents-pipelines
-  #parameters:
-  #imagetag: ${{ parameters.imagetag }}
+stages:
+- stage: Build
+  displayName: Build image
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: Docker@2
+      displayName: Build an image
+      inputs:
+        command: build
+        dockerfile: '$(Build.SourcesDirectory)/docker/django/Dockerfile'
+        buildContext: $(Build.SourcesDirectory)
+        tags: |
+          $(tag)
