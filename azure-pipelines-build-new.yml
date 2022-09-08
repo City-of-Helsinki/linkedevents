@@ -35,6 +35,12 @@ resources:
       type: git
 
 stages:
+- template: stage-templates/build-pipeline.yml@templates
+  parameters:
+    environment: development
+    openShiftServiceConnection: linkedevents-dev
+    app: linkedevents-api
+    project: linkedevents
 - stage: Build
   displayName: Build image
   jobs:
