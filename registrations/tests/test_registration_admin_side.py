@@ -618,3 +618,25 @@ def test_filter_registrations(api_client, user, user2, event, event2):
     response = api_client.get(f'{registration_url}?text={event.name}')
     assert len(response.data['data']) == 1
     assert registration_id == response.data['data'][0]['id']    
+
+
+@pytest.mark.django_db
+def test_filter_expired_registrations(api_client, user, user2, event, event2):
+    registration_url = reverse('registration-list')
+    event_url = reverse('event-list')
+
+    api_client.force_authenticate(user)
+    registration_data = {"event": event.id,
+                         "enrolment_end_time": "2050-06-29T23:00:00Z"}
+    api_client.post(registration_url, registration_data, format='json')
+    
+    api_client.force_authenticate(user2)
+    registration_data = {"event": event2.id,
+                         "enrolment_end_time": "2021-06-29T23:00:00Z"}
+    api_client.post(registration_url, registration_data, format='json')
+    response = api_client.get(event_url, format='json')
+    assert len(response.data['data']) == 2
+
+    response = api_client.get(f'{event_url}?registration_open=true', format='json')
+    assert len(response.data['data']) == 1
+    assert response.data['data'][0]['id'] == event.id

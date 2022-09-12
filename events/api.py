@@ -1645,11 +1645,11 @@ class OrganizationUpdateSerializer(OrganizationListSerializer):
         self.skip_fields = ''
         self.user = context['request'].user
         if 'data_source' not in context['request'].data.keys():
-            context['request'].data['data_source']=instance.data_source
+            context['request'].data['data_source'] = instance.data_source
         if 'origin_id' not in context['request'].data.keys():
-            context['request'].data['origin_id']=instance.origin_id
+            context['request'].data['origin_id'] = instance.origin_id
         if 'name' not in context['request'].data.keys():
-            context['request'].data['name']=instance.name
+            context['request'].data['name'] = instance.name
         super(LinkedEventsSerializer, self).__init__(
             instance=instance, context=context, **kwargs)
         self.admin_users = context['request'].data.pop('admin_users', {'username': ''})
@@ -2309,6 +2309,9 @@ def _filter_event_queryset(queryset, params, srs=None):
     val = params.get('registration', None)
     if val:
         queryset = queryset.exclude(registration=None)
+    val = params.get('registration_open', None)
+    if val:
+        queryset = queryset.filter(registration__enrolment_end_time__gte=datetime.now())
     val = params.get('local_ongoing_text', None)
     if val:
         language = params.get('language', 'fi')
