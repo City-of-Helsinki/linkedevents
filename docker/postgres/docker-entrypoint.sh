@@ -2,6 +2,7 @@
 
 set -eo pipefail
 
+# shellcheck disable=SC1091
 source /docker-entrypoint-initdb.d/init-db.sh
 
 init-db \

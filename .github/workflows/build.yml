@@ -1,0 +1,270 @@
+---
+
+name: Build
+on: [push]
+
+env:
+  AWS_REGION: eu-west-1
+  ECR_REGISTRY: 307238562370.dkr.ecr.eu-west-1.amazonaws.com
+
+jobs:
+  lint-shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: espoon-voltti/voltti-actions/shellcheck@v1
+
+  dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.7.12'
+          cache: 'pip'
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+
+  lint:
+    needs: dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.7.12'
+          cache: 'pip'
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: Lint
+        run: flake8 .
+
+  test:
+    needs: dependencies
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: linkedevents
+      DB_MIGRATION_USER: linkedevents_migration
+      DB_MIGRATION_PASSWORD: secret
+      DB_APP_USER: linkedevents_application
+      DB_APP_PASSWORD: secret
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.7.12'
+          cache: 'pip'
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: Test
+        run: ./bin/test_ci.sh
+
+  build:
+    needs:
+      - dependencies
+      - lint
+      - test
+      - lint-shell
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.7.12'
+          cache: 'pip'
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: Install dependencies required for running the management commands
+        run: |
+            #sudo apt-get update
+            sudo apt-get install -y --no-install-recommends --no-install-suggests \
+              gdal-bin
+      - name: Override the default Linked Events templates with city specific templates
+        run: python manage.py install_templates helevents
+
+      - name: Upload build
+        uses: actions/upload-artifact@v3
+        with:
+          name: templates
+          path: |
+            templates/
+          retention-days: 7
+
+  dockerize-dist:
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download build
+        uses: actions/download-artifact@v3
+        with:
+          name: templates
+          path: templates/
+
+      - name: Build image
+        uses: espoon-voltti/voltti-actions/docker-build-push@master
+        id: build
+        with:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_ROLE_TO_ASSUME: ${{ secrets.REGISTRY_ROLE }}
+          AWS_REGION: ${{ env.AWS_REGION }}
+          AWS_CONFIG: ${{ secrets.AWS_CONFIG }}
+          registry: ${{ env.ECR_REGISTRY }}
+          name: espooevents/service
+          target: dist
+          dockerfile: Dockerfile.dist
+          build-args: |
+            build=${{ github.run_number }}
+            commit=${{ github.sha }}
+            BASE_IMAGE_VERSION=3.7.12-slim
+    outputs:
+      image: ${{ steps.build.outputs.image }}
+
+  dockerize-importer:
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download build
+        uses: actions/download-artifact@v3
+        with:
+          name: templates
+          path: templates/
+
+      - name: Build image
+        uses: espoon-voltti/voltti-actions/docker-build-push@master
+        id: build
+        with:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_ROLE_TO_ASSUME: ${{ secrets.REGISTRY_ROLE }}
+          AWS_REGION: ${{ env.AWS_REGION }}
+          AWS_CONFIG: ${{ secrets.AWS_CONFIG }}
+          registry: ${{ env.ECR_REGISTRY }}
+          name: espooevents/service-importer
+          dockerfile: Dockerfile.dist
+          target: admin
+          build-args: |
+            build=${{ github.run_number }}
+            commit=${{ github.sha }}
+            BASE_IMAGE_VERSION=3.7.12-slim
+
+  tag:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    needs:
+      - dockerize-dist
+      - dockerize-importer
+    steps:
+      - uses: actions/checkout@v3
+      - run: git fetch --prune --unshallow
+
+      - name: Setup SSH
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+        env:
+          SSH_KEY: ${{ secrets.ESPOOEVENTS_SSH_KEY }}
+
+      - name: Create tag
+        run: |
+          git config user.name "$(git log -n 1 --pretty=format:%an)"
+          git config user.email "$(git log -n 1 --pretty=format:%ae)"
+          ./bin/push-version-tag.sh
+
+      - if: always()
+        run: rm -rf ~/.aws
+
+
+  deploy:
+    if: ${{ github.ref == 'refs/heads/master' }}
+    runs-on: ubuntu-latest
+    needs:
+      - tag
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - environment: test
+          - environment: staging
+          - environment: prod
+    environment:
+      name: ${{ matrix.environment }}
+
+    env:
+      SERVICE_NAME: espooevents-service
+      MODULE_NAME: espooevents_service
+
+    steps:
+      - name: Check out infra
+        uses: actions/checkout@v3
+        with:
+          repository: espoon-voltti/espooevents-infra
+          ssh-key: '${{ secrets.ESPOOEVENTS_SSH_KEY }}'
+          ref: 'refs/heads/master'
+
+      - name: Write AWS config
+        shell: bash
+        run: |
+          mkdir -p ~/.aws
+          echo '${{ secrets.AWS_CONFIG_TERRAFORM }}' > ~/.aws/config
+          cat << EOF > ~/.aws/credentials
+          [voltti-federation]
+          aws_access_key_id = ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          EOF
+
+      - uses: espoon-voltti/voltti-actions/tfenv@master
+
+      - name: Setup SSH
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+        env:
+          SSH_KEY: ${{ secrets.ESPOOEVENTS_SSH_KEY }}
+
+      - name: Prepare Terraform
+        working-directory: terraform/espooevents-ecs
+        run: |
+          terraform init
+          terraform workspace select "${{ matrix.environment }}"
+
+      - name: Install applications
+        working-directory: terraform/espooevents-ecs
+        run: |
+          terraform apply \
+            -input=false \
+            -auto-approve \
+            -lock-timeout=300s \
+            -var "${SERVICE_NAME}_version=${{ github.sha }}" \
+            -target="module.${MODULE_NAME}"
+
+      - name: Wait for stable
+        run: |
+          aws ecs \
+            wait services-stable \
+            --region eu-west-1 \
+            --profile "voltti-${{ matrix.environment }}" \
+            --cluster "voltti-ecs-cluster-${{ matrix.environment }}" \
+            --services "${SERVICE_NAME}"
+
+      - if: always()
+        run: rm -rf ~/.aws
+
+      - if: failure()
+        uses: espoon-voltti/voltti-actions/notify@v1
+        with:
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
