@@ -67,7 +67,7 @@ CUSTOM_ESPOO_AUDIENCE_KEYWORDS = [
     {
         'id': 'espoo:a5',
         'name_fi': 'vammaiset',
-        'name_sv': 'handikappade',
+        'name_sv': 'funktionsnedsatta',
         'name_en': 'disabled',
         'data_source_id': ESPOO_DATA_SOURCE_ID,
     },
