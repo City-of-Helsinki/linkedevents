@@ -62,7 +62,7 @@ def test_filter_events_with_registrations(api_client, user, event, event2):
     registration_data = {"event": event.id}
     response = api_client.post(registration_url, registration_data, format='json')
     assert response.status_code == 201
-    
+
     api_client.force_authenticate(user=None)
     response = api_client.get(event_url, format='json')
     assert response.data['meta']['count'] == 2
@@ -94,7 +94,6 @@ def test_list_all_registrations(api_client, user, user2, event, event2, event3):
     api_client.force_authenticate(user=None)
     response = api_client.get(url)
     assert response.status_code == 200
-    
 
 
 @pytest.mark.django_db
@@ -180,6 +179,7 @@ def test_cannot_sign_up_twice_with_same_phone_or_email(api_client, user, event):
     response = api_client.post(url, sign_up_data_same_email, format='json')
     assert response.status_code == 400
 
+
 @pytest.mark.django_db
 def test_current_attendee_and_waitlist_count(api_client, user, event):
     url = reverse('registration-list')
@@ -210,20 +210,20 @@ def test_current_attendee_and_waitlist_count(api_client, user, event):
     assert response.data['current_waiting_list_count'] == 0
 
     sign_up_data2 = {'registration': registration_id,
-                    'name': 'Michael Jackson 2',
-                    'email': 'test2@test.com',
-                    'phone_number': '20441111111',
-                    'notifications': 'sms'}
+                     'name': 'Michael Jackson 2',
+                     'email': 'test2@test.com',
+                     'phone_number': '20441111111',
+                     'notifications': 'sms'}
     api_client.post(signup_url, sign_up_data2, format='json')
     response = api_client.get(registration_detail_url, format='json')
     assert response.data['current_attendee_count'] == 1
     assert response.data['current_waiting_list_count'] == 1
 
     sign_up_data3 = {'registration': registration_id,
-                    'name': 'Michael Jackson 3',
-                    'email': 'test3@test.com',
-                    'phone_number': '30441111111',
-                    'notifications': 'sms'}
+                     'name': 'Michael Jackson 3',
+                     'email': 'test3@test.com',
+                     'phone_number': '30441111111',
+                     'notifications': 'sms'}
     api_client.post(signup_url, sign_up_data3, format='json')
     response = api_client.get(registration_detail_url, format='json')
     assert response.data['current_attendee_count'] == 1
@@ -249,22 +249,22 @@ def test_signup_age_is_mandatory_if_audience_min_or_max_age_specified(api_client
 
     response = api_client.post(signup_url, sign_up_data, format='json')
     assert response.status_code == 201
-    
+
     api_client.force_authenticate(user=user)
     put_url = f"{registration_url}{registration_id}/"
     registration_data['audience_max_age'] = 100
     response = api_client.put(put_url, registration_data, format='json')
-    
+
     api_client.force_authenticate(user=None)
     sign_up_data2 = {'registration': registration_id,
-                    'name': 'Michael Jackson 2',
-                    'email': 'test2@test.com',
-                    'phone_number': '20441111111',
-                    'notifications': 'sms'}
+                     'name': 'Michael Jackson 2',
+                     'email': 'test2@test.com',
+                     'phone_number': '20441111111',
+                     'notifications': 'sms'}
     response = api_client.post(signup_url, sign_up_data2, format='json')
     assert response.status_code == 403
     assert str(response.data['detail']) == 'Date of birth has to be specified.'
-    
+
     sign_up_data2['date_of_birth'] = '1980-12-30'
     response = api_client.post(signup_url, sign_up_data2, format='json')
     assert response.status_code == 201
@@ -294,7 +294,6 @@ def test_age_has_to_match_the_audience_min_max_age(api_client, user, event):
     assert response.status_code == 403
     assert str(response.data['detail']) == 'The participant is too young.'
 
-
     sign_up_data['date_of_birth'] = '1879-03-14'
     response = api_client.post(signup_url, sign_up_data, format='json')
     assert response.status_code == 403
@@ -317,16 +316,16 @@ def test_signup_deletion(api_client, user, event):
 
     api_client.force_authenticate(user=None)
     sign_up_payload = {'registration': registration_id,
-                    'name': 'Michael Jackson',
-                    'email': 'test@test.com',
-                    'phone_number': '0441111111',
-                    'notifications': 'sms',
-                    'date_of_birth': '2011-04-07'}
+                       'name': 'Michael Jackson',
+                       'email': 'test@test.com',
+                       'phone_number': '0441111111',
+                       'notifications': 'sms',
+                       'date_of_birth': '2011-04-07'}
     signup_url = reverse('signup-list')
 
     response = api_client.post(signup_url, sign_up_payload, format='json')
     delete_payload = {'cancellation_code': response.data['cancellation_code']}
-     
+
     response = api_client.delete(signup_url, delete_payload, format='json')
     assert response.status_code == 200
 
@@ -343,16 +342,16 @@ def test_signup_deletion_missing_signup(api_client, user, event):
 
     api_client.force_authenticate(user=None)
     sign_up_payload = {'registration': registration_id,
-                    'name': 'Michael Jackson',
-                    'email': 'test@test.com',
-                    'phone_number': '0441111111',
-                    'notifications': 'sms',
-                    'date_of_birth': '2011-04-07'}
+                       'name': 'Michael Jackson',
+                       'email': 'test@test.com',
+                       'phone_number': '0441111111',
+                       'notifications': 'sms',
+                       'date_of_birth': '2011-04-07'}
     signup_url = reverse('signup-list')
 
     response = api_client.post(signup_url, sign_up_payload, format='json')
     delete_payload = {'cancellation_code': response.data['cancellation_code']}
-     
+
     response = api_client.delete(signup_url, delete_payload, format='json')
     response = api_client.delete(signup_url, delete_payload, format='json')
     assert response.status_code == 403
@@ -370,16 +369,16 @@ def test_signup_deletion_wrong_code(api_client, user, event):
 
     api_client.force_authenticate(user=None)
     sign_up_payload = {'registration': registration_id,
-                    'name': 'Michael Jackson',
-                    'email': 'test@test.com',
-                    'phone_number': '0441111111',
-                    'notifications': 'sms',
-                    'date_of_birth': '2011-04-07'}
+                       'name': 'Michael Jackson',
+                       'email': 'test@test.com',
+                       'phone_number': '0441111111',
+                       'notifications': 'sms',
+                       'date_of_birth': '2011-04-07'}
     signup_url = reverse('signup-list')
 
     response = api_client.post(signup_url, sign_up_payload, format='json')
     delete_payload = {'cancellation_code': 'not a code'}
-     
+
     response = api_client.delete(signup_url, delete_payload, format='json')
     assert str(response.data['detail']) == 'Malformed UUID.'
     assert response.status_code == 403
@@ -414,11 +413,10 @@ def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(api_c
                         'name': 'Michael Jackson3',
                         'email': 'test2@test.com'}
     api_client.post(signup_url, sign_up_payload3, format='json')
-    
+
     assert SignUp.objects.get(email='test2@test.com').attendee_status == SignUp.AttendeeStatus.WAITING_LIST
     assert SignUp.objects.get(email='test1@test.com').attendee_status == SignUp.AttendeeStatus.WAITING_LIST
     assert SignUp.objects.get(email='test@test.com').attendee_status == SignUp.AttendeeStatus.ATTENDING
-
 
     response = api_client.delete(signup_url, delete_payload, format='json')
     assert SignUp.objects.get(email='test1@test.com').attendee_status == SignUp.AttendeeStatus.ATTENDING
@@ -434,7 +432,7 @@ def test_email_sent_on_successful_signup(api_client, user, event):
 
     response = api_client.post(registration_url, registration_data, format='json')
     registration_id = response.data['id']
-    
+
     api_client.force_authenticate(user=None)
     sign_up_payload = {'registration': registration_id,
                        'name': 'Michael Jackson1',
@@ -456,16 +454,16 @@ def test_get_signup_info_with_cancel_code_no_auth(api_client, user, event):
 
     response = api_client.post(registration_url, registration_data, format='json')
     registration_id = response.data['id']
-    
+
     api_client.force_authenticate(user=None)
     sign_up_payload = {'registration': registration_id,
                        'name': 'Michael Jackson',
                        'email': 'test@test.com'}
     signup_url = reverse('signup-list')
     response = api_client.post(signup_url, sign_up_payload, format='json')
-    
+
     delete_payload = {'cancellation_code': response.data['cancellation_code']}
-    
+
     response = api_client.get(f'{signup_url}?cancellation_code={response.data["cancellation_code"]}')
     assert response.data['name'] == 'Michael Jackson'
 
@@ -479,16 +477,16 @@ def test_get_signup_info_with_cancel_code_no_auth(api_client, user, event):
 
     response = api_client.post(registration_url, registration_data, format='json')
     registration_id = response.data['id']
-    
+
     api_client.force_authenticate(user=None)
     sign_up_payload = {'registration': registration_id,
                        'name': 'Michael Jackson',
                        'email': 'test@test.com'}
     signup_url = reverse('signup-list')
     response = api_client.post(signup_url, sign_up_payload, format='json')
-    
+
     delete_payload = {'cancellation_code': response.data['cancellation_code']}
-    
+
     response = api_client.get(f'{signup_url}?cancellation_code={response.data["cancellation_code"]}')
     assert response.data['name'] == 'Michael Jackson'
 
@@ -501,41 +499,41 @@ def test_filter_signups(api_client, user, user2, event, event2):
     registration_data = {"event": event.id}
     response = api_client.post(registration_url, registration_data, format='json')
     registration_id = response.data['id']
-    
+
     api_client.force_authenticate(user2)
     registration_data = {"event": event2.id}
     response = api_client.post(registration_url, registration_data, format='json')
     registration_id2 = response.data['id']
-    
+
     api_client.force_authenticate(user=None)
     sign_up_payload = {'registration': registration_id,
                        'name': 'Michael Jackson',
                        'email': 'test@test.com'}
     sign_up_payload1 = {'registration': registration_id,
-                       'name': 'Michael Jackson1',
-                       'email': 'test1@test.com'}
+                        'name': 'Michael Jackson1',
+                        'email': 'test1@test.com'}
     sign_up_payload2 = {'registration': registration_id,
-                       'name': 'Michael Jackson2',
-                       'email': 'test2@test.com'}
+                        'name': 'Michael Jackson2',
+                        'email': 'test2@test.com'}
     sign_up_payload3 = {'registration': registration_id,
-                       'name': 'Michael Jackson3',
-                       'email': 'test3@test.com'}
+                        'name': 'Michael Jackson3',
+                        'email': 'test3@test.com'}
     sign_up_payload4 = {'registration': registration_id2,
-                       'name': 'Joe Biden',
-                       'email': 'test@test.com',
-                       'extra_info': 'cdef'}
+                        'name': 'Joe Biden',
+                        'email': 'test@test.com',
+                        'extra_info': 'cdef'}
     sign_up_payload5 = {'registration': registration_id2,
-                       'name': 'Hillary Clinton',
-                       'email': 'test1@test.com',
-                       'extra_info': 'abcd'}
+                        'name': 'Hillary Clinton',
+                        'email': 'test1@test.com',
+                        'extra_info': 'abcd'}
     sign_up_payload6 = {'registration': registration_id2,
-                       'name': 'Donald Duck',
-                       'email': 'test2@test.com',
-                       'membership_number': '1234'}
+                        'name': 'Donald Duck',
+                        'email': 'test2@test.com',
+                        'membership_number': '1234'}
     sign_up_payload7 = {'registration': registration_id2,
-                       'name': 'Mickey Mouse',
-                       'email': 'test3@test.com',
-                       'membership_number': '3456'}
+                        'name': 'Mickey Mouse',
+                        'email': 'test3@test.com',
+                        'membership_number': '3456'}
     signup_url = reverse('signup-list')
     api_client.post(signup_url, sign_up_payload, format='json')
     api_client.post(signup_url, sign_up_payload1, format='json')
@@ -550,46 +548,47 @@ def test_filter_signups(api_client, user, user2, event, event2):
     # one has to be logged in to browse signups
     response = api_client.get(search_url)
     assert response.status_code == 403
-    
+
     api_client.force_authenticate(user)
     response = api_client.get(search_url)
     assert len(response.data) == 4
-    
+
     #  registration id from an event that is not managed by the user results in zero signups
     api_client.force_authenticate(user2)
     response = api_client.get(search_url)
     assert len(response.data) == 0
 
     #  when no registration id is provided, giving signups from all the events that are managed by the user
-    search_url=signup_url
+    search_url = signup_url
     response = api_client.get(search_url)
     assert len(response.data) == 4
-    
+
     #  search signups by name
-    search_url=f'{signup_url}?text=mickey'
+    search_url = f'{signup_url}?text=mickey'
     response = api_client.get(search_url)
     assert len(response.data) == 1
 
     #  search signups by membership number
-    search_url=f'{signup_url}?text=34'
+    search_url = f'{signup_url}?text=34'
     response = api_client.get(search_url)
     assert len(response.data) == 2
-    search_url=f'{signup_url}?text=3456'
+    search_url = f'{signup_url}?text=3456'
     response = api_client.get(search_url)
     assert len(response.data) == 1
 
     #  search signups by extra_info
-    search_url=f'{signup_url}?text=cd'
+    search_url = f'{signup_url}?text=cd'
     response = api_client.get(search_url)
     assert len(response.data) == 2
-    search_url=f'{signup_url}?text=abcd'
+    search_url = f'{signup_url}?text=abcd'
     response = api_client.get(search_url)
     assert len(response.data) == 1
 
     #  search signups by membership number
-    search_url=f'{signup_url}?events={event2.id}'
+    search_url = f'{signup_url}?events={event2.id}'
     response = api_client.get(search_url)
     assert len(response.data) == 4
+
 
 @pytest.mark.django_db
 def test_filter_registrations(api_client, user, user2, event, event2):
@@ -599,7 +598,7 @@ def test_filter_registrations(api_client, user, user2, event, event2):
     registration_data = {"event": event.id}
     response = api_client.post(registration_url, registration_data, format='json')
     registration_id = response.data['id']
-    
+
     api_client.force_authenticate(user2)
     registration_data = {"event": event2.id}
     response = api_client.post(registration_url, registration_data, format='json')
@@ -617,26 +616,108 @@ def test_filter_registrations(api_client, user, user2, event, event2):
 
     response = api_client.get(f'{registration_url}?text={event.name}')
     assert len(response.data['data']) == 1
-    assert registration_id == response.data['data'][0]['id']    
+    assert registration_id == response.data['data'][0]['id']
 
 
 @pytest.mark.django_db
-def test_filter_expired_registrations(api_client, user, user2, event, event2):
-    registration_url = reverse('registration-list')
-    event_url = reverse('event-list')
+def test_event_with_open_registrations_and_places_at_the_event(api_client,
+                                                               registration,
+                                                               registration2,
+                                                               registration3,
+                                                               user,
+                                                               user2):
+    ''' Show the events that have:
+        - registration open AND places available at the event
+    '''
 
-    api_client.force_authenticate(user)
-    registration_data = {"event": event.id,
-                         "enrolment_end_time": "2050-06-29T23:00:00Z"}
-    api_client.post(registration_url, registration_data, format='json')
-    
-    api_client.force_authenticate(user2)
-    registration_data = {"event": event2.id,
-                         "enrolment_end_time": "2021-06-29T23:00:00Z"}
-    api_client.post(registration_url, registration_data, format='json')
-    response = api_client.get(event_url, format='json')
+    event_url = reverse('event-list')
+    signup_url = reverse('signup-list')
+
+    response = api_client.get(f'{event_url}?enrolment_open=true', format='json')
     assert len(response.data['data']) == 2
 
-    response = api_client.get(f'{event_url}?registration_open=true', format='json')
+    # if registration is expired the respective event should not be returned
+    registration2.enrolment_start_time = datetime.now() - timedelta(days=10)
+    registration2.enrolment_end_time = datetime.now() - timedelta(days=5)
+    registration2.save()
+    response = api_client.get(f'{event_url}?enrolment_open=true', format='json')
     assert len(response.data['data']) == 1
-    assert response.data['data'][0]['id'] == event.id
+    assert registration.event.id == response.data['data'][0]['id']
+
+    # if there are no seats, the respective event should not be returned
+    registration2.enrolment_start_time = datetime.now()
+    registration2.enrolment_end_time = datetime.now() + timedelta(days=5)
+    registration2.maximum_attendee_capacity = 1
+    registration2.save()
+    api_client.force_authenticate(user=None)
+    sign_up_payload = {'registration': registration2.id,
+                       'name': 'Michael Jackson',
+                       'email': 'test@test.com',
+                       'date_of_birth': (datetime.now() - timedelta(days=3650)).strftime('%Y-%m-%d')}
+    response = api_client.post(signup_url, sign_up_payload, format='json')
+    response = api_client.get(f'{event_url}?enrolment_open=true', format='json')
+    assert len(response.data['data']) == 1
+    assert registration.event.id == response.data['data'][0]['id']
+
+
+@pytest.mark.django_db
+def test_event_with_open_registrations_and_places_at_the_event_or_waiting_list(api_client,
+                                                                               registration,
+                                                                               registration2,
+                                                                               registration3,
+                                                                               user,
+                                                                               user2):
+    ''' Return the events that have:
+        - registration open AND places available at the event OR in the waiting list
+                       enrolment open |  places available | waitlist places | return
+        registration        yes       |        yes        |      yes        |   yes
+        registration        yes       |        no         |      yes        |   yes
+        registration        yes       |        no         |      no         |   no
+        registration        no        |        yes        |      yes        |   no
+    '''
+
+    event_url = reverse('event-list')
+    signup_url = reverse('signup-list')
+
+    response = api_client.get(f'{event_url}?enrolment_open_waitlist=true', format='json')
+    assert len(response.data['data']) == 2
+
+    # if registration is expired the respective event should not be returned
+    registration2.enrolment_start_time = datetime.now() - timedelta(days=10)
+    registration2.enrolment_end_time = datetime.now() - timedelta(days=5)
+    registration2.maximum_attendee_capacity = 20
+    registration2.waiting_list_capacity = 10
+    registration2.save()
+    response = api_client.get(f'{event_url}?enrolment_open_waitlist=true', format='json')
+    assert len(response.data['data']) == 1
+    assert registration.event.id == response.data['data'][0]['id']
+
+    # no seats at event, places in waiting list
+    registration2.enrolment_start_time = datetime.now()
+    registration2.enrolment_end_time = datetime.now() + timedelta(days=5)
+    registration2.maximum_attendee_capacity = 1
+    registration2.waiting_list_capacity = 10
+    registration2.save()
+    api_client.force_authenticate(user=None)
+    sign_up_payload = {'registration': registration2.id,
+                       'name': 'Michael Jackson',
+                       'email': 'test@test.com',
+                       'date_of_birth': (datetime.now() - timedelta(days=3650)).strftime('%Y-%m-%d')}
+    response = api_client.post(signup_url, sign_up_payload, format='json')
+    response = api_client.get(f'{event_url}?enrolment_open_waitlist=true', format='json')
+    assert len(response.data['data']) == 2
+
+    # no seats at event, no places in waiting list
+    registration2.enrolment_start_time = datetime.now()
+    registration2.enrolment_end_time = datetime.now() + timedelta(days=5)
+    registration2.maximum_attendee_capacity = 1
+    registration2.waiting_list_capacity = 0
+    registration2.save()
+    api_client.force_authenticate(user=None)
+    sign_up_payload = {'registration': registration2.id,
+                       'name': 'Michael Jackson',
+                       'email': 'test@test.com',
+                       'date_of_birth': (datetime.now() - timedelta(days=3650)).strftime('%Y-%m-%d')}
+    response = api_client.post(signup_url, sign_up_payload, format='json')
+    response = api_client.get(f'{event_url}?enrolment_open_waitlist=true', format='json')
+    assert len(response.data['data']) == 1

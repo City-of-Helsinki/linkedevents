@@ -24,7 +24,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.contrib.postgres.search import SearchQuery, TrigramSimilarity
 from django.core.cache import caches
 from django.core.exceptions import PermissionDenied
-from django.db.models import Prefetch, Q, QuerySet
+from django.db.models import Prefetch, Q, QuerySet, Count, F
 from django.db.models.functions import Greatest
 from django.db.transaction import atomic
 from django.db.utils import IntegrityError
@@ -2309,9 +2309,16 @@ def _filter_event_queryset(queryset, params, srs=None):
     val = params.get('registration', None)
     if val:
         queryset = queryset.exclude(registration=None)
-    val = params.get('registration_open', None)
+    val = params.get('enrolment_open', None)
     if val:
-        queryset = queryset.filter(registration__enrolment_end_time__gte=datetime.now())
+        queryset = queryset.filter(registration__enrolment_end_time__gte=datetime.now()
+                                  ).annotate(free=(F('registration__maximum_attendee_capacity') - Count('registration__signups')),
+                                                  ).filter(free__gte=1)
+    val = params.get('enrolment_open_waitlist', None)
+    if val:
+        queryset = queryset.filter(registration__enrolment_end_time__gte=datetime.now()
+                                  ).annotate(free=((F('registration__maximum_attendee_capacity') + F('registration__waiting_list_capacity')) - Count('registration__signups')),
+                                            ).filter(free__gte=1)
     val = params.get('local_ongoing_text', None)
     if val:
         language = params.get('language', 'fi')

@@ -19,7 +19,7 @@ from events.api import KeywordSerializer, LanguageSerializer, PlaceSerializer
 # events
 from events.models import (DataSource, Event, Keyword, KeywordLabel,
                            KeywordSet, Language, Offer, Place)
-
+from registrations.models import Registration
 from ..models import License, PublicationStatus
 from .test_event_get import get_list
 from .utils import versioned_reverse as reverse
@@ -281,7 +281,7 @@ def place_dict(data_source, organization):
             'en': 'Test location',
             'fi': 'Testipaikka'
         },
-        'description':  {
+        'description': {
             'en': 'Testipaikka - en',
             'fi': 'Testipaikka - fi'
         },
@@ -716,14 +716,59 @@ def setup_env():
     settings.SUPPORT_EMAIL = 'test@test.com'
 
 
-@pytest.fixture(autouse=True)
-def whitenoise_autorefresh(settings):
-    """
-    Get rid of whitenoise "No directory at" warning, as it's not helpful when running tests.
+@pytest.mark.django_db
+@pytest.fixture
+def registration(event, user):
+    return Registration.objects.create(
+        event=event,
+        audience_min_age=6,
+        audience_max_age=18,
+        created_by=user,
+        last_modified_by=user,
+        enrolment_start_time=datetime.now(),
+        enrolment_end_time=datetime.now() + timedelta(days=10),
+        confirmation_message='Your registration is confirmed',
+        maximum_attendee_capacity=20,
+        waiting_list_capacity=20)
 
-    Related:
-        - https://github.com/evansd/whitenoise/issues/215
-        - https://github.com/evansd/whitenoise/issues/191
-        - https://github.com/evansd/whitenoise/commit/4204494d44213f7a51229de8bc224cf6d84c01eb
-    """
-    settings.WHITENOISE_AUTOREFRESH = True
+
+@pytest.mark.django_db
+@pytest.fixture
+def registration2(event2, user2):
+    return Registration.objects.create(
+        event=event2,
+        audience_min_age=6,
+        audience_max_age=18,
+        created_by=user2,
+        last_modified_by=user2,
+        enrolment_start_time=datetime.now(),
+        enrolment_end_time=datetime.now() + timedelta(days=10),
+        confirmation_message='Your registration is confirmed',
+        maximum_attendee_capacity=20,
+        waiting_list_capacity=20)
+
+
+@pytest.mark.django_db
+@pytest.fixture
+def registration3(event3, user):
+    return Registration.objects.create(
+        event=event3,
+        audience_min_age=6,
+        audience_max_age=18,
+        created_by=user,
+        last_modified_by=user,
+        confirmation_message='Your registration is confirmed',
+        waiting_list_capacity=20)
+
+
+@pytest.mark.django_db
+@pytest.fixture
+def registration4(event4, user):
+    return Registration.objects.create(
+        event=event4,
+        audience_min_age=6,
+        audience_max_age=18,
+        created_by=user,
+        last_modified_by=user,
+        confirmation_message='Your registration is confirmed',
+        waiting_list_capacity=20)
