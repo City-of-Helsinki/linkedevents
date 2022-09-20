@@ -154,7 +154,7 @@ jobs:
           build-args: |
             build=${{ github.run_number }}
             commit=${{ github.sha }}
-            BASE_IMAGE_VERSION=3.7.12-slim
+            BASE_IMAGE_VERSION=3.7.12-slim-buster
 
   tag:
     if: github.ref == 'refs/heads/master'

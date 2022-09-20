@@ -20,7 +20,7 @@ build_dist:
 .PHONY: build_admin
 build_admin:
 	@docker build \
-	--build-arg BASE_IMAGE_VERSION=3.7-slim \
+	--build-arg BASE_IMAGE_VERSION=3.7.12-slim-buster \
 	--target admin \
 	-f Dockerfile.dist \
 	-t linkedevents-admin \
