@@ -2832,7 +2832,7 @@ def _filter_event_queryset(queryset, params, srs=None):
         queryset = queryset.exclude(Q(audience_min_age__gt=lower_boundary) |
                                     Q(audience_max_age__lt=upper_boundary) |
                                     Q(Q(audience_min_age=None) & Q(audience_max_age=None)))
-    return queryset
+    return queryset.distinct()
 
 
 class EventExtensionFilterBackend(BaseFilterBackend):
