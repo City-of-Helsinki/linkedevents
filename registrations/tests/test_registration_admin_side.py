@@ -417,6 +417,7 @@ def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(api_c
     assert SignUp.objects.get(email='test2@test.com').attendee_status == SignUp.AttendeeStatus.WAITING_LIST
     assert SignUp.objects.get(email='test1@test.com').attendee_status == SignUp.AttendeeStatus.WAITING_LIST
     assert SignUp.objects.get(email='test@test.com').attendee_status == SignUp.AttendeeStatus.ATTENDING
+ 
 
     response = api_client.delete(signup_url, delete_payload, format='json')
     assert SignUp.objects.get(email='test1@test.com').attendee_status == SignUp.AttendeeStatus.ATTENDING
@@ -623,7 +624,6 @@ def test_filter_registrations(api_client, user, user2, event, event2):
 def test_event_with_open_registrations_and_places_at_the_event(api_client,
                                                                registration,
                                                                registration2,
-                                                               registration3,
                                                                user,
                                                                user2):
     ''' Show the events that have:
@@ -659,6 +659,20 @@ def test_event_with_open_registrations_and_places_at_the_event(api_client,
     assert len(response.data['data']) == 1
     assert registration.event.id == response.data['data'][0]['id']
 
+    # if maximum attendee capacity is None event should be returned
+    registration2.enrolment_start_time = datetime.now()
+    registration2.enrolment_end_time = datetime.now() + timedelta(days=5)
+    registration2.maximum_attendee_capacity = None
+    registration2.save()
+    api_client.force_authenticate(user=None)
+    sign_up_payload = {'registration': registration2.id,
+                       'name': 'Michael Jackson',
+                       'email': 'test@test.com',
+                       'date_of_birth': (datetime.now() - timedelta(days=3650)).strftime('%Y-%m-%d')}
+    response = api_client.post(signup_url, sign_up_payload, format='json')
+    response = api_client.get(f'{event_url}?enrolment_open=true', format='json')
+    assert len(response.data['data']) == 2
+
 
 @pytest.mark.django_db
 def test_event_with_open_registrations_and_places_at_the_event_or_waiting_list(api_client,
@@ -673,12 +687,14 @@ def test_event_with_open_registrations_and_places_at_the_event_or_waiting_list(a
         registration        yes       |        yes        |      yes        |   yes
         registration        yes       |        no         |      yes        |   yes
         registration        yes       |        no         |      no         |   no
+        registration        yes       |        no         |      None       |   yes
         registration        no        |        yes        |      yes        |   no
     '''
 
     event_url = reverse('event-list')
     signup_url = reverse('signup-list')
-
+    
+    # seats at the event available
     response = api_client.get(f'{event_url}?enrolment_open_waitlist=true', format='json')
     assert len(response.data['data']) == 2
 
@@ -721,3 +737,12 @@ def test_event_with_open_registrations_and_places_at_the_event_or_waiting_list(a
     response = api_client.post(signup_url, sign_up_payload, format='json')
     response = api_client.get(f'{event_url}?enrolment_open_waitlist=true', format='json')
     assert len(response.data['data']) == 1
+
+    # seats at event, waiting list capacity null
+    registration2.enrolment_start_time = datetime.now()
+    registration2.enrolment_end_time = datetime.now() + timedelta(days=5)
+    registration2.maximum_attendee_capacity = 10
+    registration2.waiting_list_capacity = None
+    registration2.save()
+    response = api_client.get(f'{event_url}?enrolment_open_waitlist=true', format='json')
+    assert len(response.data['data']) == 2

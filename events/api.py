@@ -2313,12 +2313,12 @@ def _filter_event_queryset(queryset, params, srs=None):
     if val:
         queryset = queryset.filter(registration__enrolment_end_time__gte=datetime.now()
                                   ).annotate(free=(F('registration__maximum_attendee_capacity') - Count('registration__signups')),
-                                                  ).filter(free__gte=1)
+                                                  ).filter(Q(free__gte=1)|Q(registration__maximum_attendee_capacity__isnull=True))
     val = params.get('enrolment_open_waitlist', None)
     if val:
         queryset = queryset.filter(registration__enrolment_end_time__gte=datetime.now()
                                   ).annotate(free=((F('registration__maximum_attendee_capacity') + F('registration__waiting_list_capacity')) - Count('registration__signups')),
-                                            ).filter(free__gte=1)
+                                            ).filter(Q(free__gte=1) | Q(registration__maximum_attendee_capacity__isnull=True) | Q(registration__waiting_list_capacity__isnull=True))
     val = params.get('local_ongoing_text', None)
     if val:
         language = params.get('language', 'fi')

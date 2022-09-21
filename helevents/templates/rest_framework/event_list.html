@@ -284,8 +284,16 @@ You may also order results by <code>start_time</code>, <code>end_time</code>,
 <code>name</code> and <code>duration</code>. Descending order is denoted by
 adding <code>-</code> in front of the parameter, default order is ascending.
 For example:</p>
-<pre><code>event/?sort=-end_time
-</code></pre>
+<pre><code>event/?sort=-end_time</code></pre>
 <p><a href="?sort=-end_time" title="json">See the result</a></p>
+<h2 id="enrolment">Open enrolment</h2>
+<p>Two endpoints show the events that have connected registrations and have places either
+    at the event itself <code>enrolment_open</code> or in the waiting lists <code>
+    enrolment_open_waitlist</code>. Note that the latter query parameter when set to <code>True</code>
+    returns also the events that have open spots at the event itself. Null values are regarded
+    as unlimited number of spots at the event or in the waiting list.
+For example:</p>
+<pre><code>event/?enrolment_open_waitilist=true</code></pre>
+<p><a href="?enrolment_open_waitilist=true" title="json">See the result</a></p>
     </div>
 </div>
