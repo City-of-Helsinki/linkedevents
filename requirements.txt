@@ -127,6 +127,8 @@ icalendar==4.0.6
     # via -r requirements.in
 idna==2.10
     # via requests
+importlib-metadata==4.13.0
+    # via -r requirements.in
 isodate==0.6.0
     # via
     #   -r requirements.in
@@ -252,6 +254,8 @@ urllib3==1.25.9
     #   sentry-sdk
 webencodings==0.5.1
     # via bleach
+zipp==3.10.0
+    # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
