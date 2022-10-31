@@ -1610,14 +1610,14 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
         if not isinstance(user, AnonymousUser) and user.is_admin(obj):
             return UserSerializer(obj.regular_users.all(), read_only=True, many=True).data
         else:
-            return ''
+            return []
 
     def get_admin_users(self, obj):
         user = self.context['user']
         if not isinstance(user, AnonymousUser) and user.is_admin(obj):
             return UserSerializer(obj.admin_users.all(), read_only=True, many=True).data
         else:
-            return ''
+            return []
 
     class Meta:
         model = Organization
