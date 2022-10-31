@@ -1,4 +1,6 @@
+import pytz
 from uuid import uuid4
+from datetime import datetime
 from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -46,10 +48,8 @@ class SignUp(models.Model):
         WAITING_LIST = 'waitlisted'
         ATTENDING = 'attending'
 
-    ATTENDEE_STATUSES = (
-        (AttendeeStatus.WAITING_LIST, _("Waitlisted")),
-        (AttendeeStatus.ATTENDING, _("Attending"))
-        )
+    ATTENDEE_STATUSES = ((AttendeeStatus.WAITING_LIST, _("Waitlisted")),
+                         (AttendeeStatus.ATTENDING, _("Attending")))
 
     class NotificationType:
         NO_NOTIFICATION = 'none'
@@ -57,12 +57,10 @@ class SignUp(models.Model):
         EMAIL = 'email'
         SMS_EMAIL = 'sms and email'
 
-    NOTIFICATION_TYPES = (
-        (NotificationType.NO_NOTIFICATION, _("No Notification")),
-        (NotificationType.SMS, _("SMS")),
-        (NotificationType.EMAIL, _("E-Mail")),
-        (NotificationType.SMS_EMAIL, _("Both SMS and email."))
-        )
+    NOTIFICATION_TYPES = ((NotificationType.NO_NOTIFICATION, _("No Notification")),
+                          (NotificationType.SMS, _("SMS")),
+                          (NotificationType.EMAIL, _("E-Mail")),
+                          (NotificationType.SMS_EMAIL, _("Both SMS and email.")))
 
     registration = models.ForeignKey(Registration, on_delete=models.CASCADE, related_name='signups')
     name = models.CharField(verbose_name=_('Name'), max_length=50)
@@ -105,7 +103,7 @@ class SignUp(models.Model):
                            str(Event.Type_Id.VOLUNTEERING): 'vapaaehtoistehtävään'}
 
         email_variables['event_type'] = event_type_name[self.registration.event.type_id]
-        
+
         confirmation_types = {'confirmation': 'signup_confirmation.html',
                               'cancellation': 'cancellation_confirmation.html'}
         rendered_body = render_to_string(confirmation_types[confirmation_type], email_variables)
@@ -120,3 +118,10 @@ class SignUp(models.Model):
             )
         except SMTPException:
             pass
+
+
+class SeatReservationCode(models.Model):
+    seats = models.PositiveSmallIntegerField(verbose_name=_('Number of seats'), blank=False, default=0)
+    registration = models.ForeignKey(Registration, on_delete=models.CASCADE, null=False, related_name='reservations')
+    code = models.UUIDField(verbose_name=_('Seat reservation code'), default=uuid4, editable=False)
+    timestamp = models.DateTimeField(verbose_name=_('Timestamp.'), auto_now_add=True, blank=True)

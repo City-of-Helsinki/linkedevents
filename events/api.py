@@ -18,13 +18,14 @@ import bleach
 import django_filters
 import pytz
 import regex
+from django.contrib.gis.db import models
 from django.contrib.gis.geos import Point
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.postgres.search import SearchQuery, TrigramSimilarity
 from django.core.cache import caches
 from django.core.exceptions import PermissionDenied
-from django.db.models import Prefetch, Q, QuerySet, Count, F
+from django.db.models import Prefetch, Q, QuerySet, Count, F, Sum
 from django.db.models.functions import Greatest
 from django.db.transaction import atomic
 from django.db.utils import IntegrityError
@@ -42,7 +43,8 @@ from munigeo.api import (GeoModelAPIView, GeoModelSerializer,
 from munigeo.models import AdministrativeDivision
 from rest_framework import (filters, generics, mixins, permissions, relations,
                             serializers, status, viewsets)
-from rest_framework.exceptions import APIException, ParseError
+from rest_framework.decorators import action
+from rest_framework.exceptions import APIException, ParseError, NotFound
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.fields import DateTimeField
 from rest_framework.filters import BaseFilterBackend
@@ -71,7 +73,7 @@ from events.renderers import DOCXRenderer
 from events.translation import EventTranslationOptions, PlaceTranslationOptions
 from helevents.api import UserSerializer
 from helevents.models import User
-from registrations.models import Registration, SignUp
+from registrations.models import Registration, SignUp, SeatReservationCode
 
 
 def get_view_name(view):
@@ -979,6 +981,14 @@ class RegistrationSerializer(serializers.ModelSerializer):
         model = Registration
 
 
+class SeatReservationCodeSerializer(serializers.ModelSerializer):
+    timestamp = DateTimeField(default_timezone=pytz.UTC, required=False)
+
+    class Meta:
+        fields = ('seats', 'code', 'timestamp', 'registration')
+        model = SeatReservationCode
+
+
 class RegistrationViewSet(JSONAPIViewMixin,
                           mixins.RetrieveModelMixin,
                           mixins.UpdateModelMixin,
@@ -1001,6 +1011,77 @@ class RegistrationViewSet(JSONAPIViewMixin,
         registrations = Registration.objects.filter(event__in=events)
 
         return registrations
+    
+    @action(methods=['post'], detail=True, permission_classes=[GuestPost])
+    def reserve_seats(self, request, pk=None, version=None):
+        def NoneToUnlim(val):
+            # Null value in the waiting_list_capacity or maximum_attendee_capacity
+            # signifies that the amount of seats is unimited
+            if val is None:
+                return 10000
+            else:
+                return val
+
+        try:
+            registration = Registration.objects.get(id=pk)
+        except Registration.DoesNotExist:
+            raise NotFound(detail=f"Registration {pk} doesn't exist.", code=404)
+        waitlist = request.data.get('waitlist', False)
+        if waitlist:
+            waitlist_seats = NoneToUnlim(registration.waiting_list_capacity)
+        else:
+            waitlist_seats = 0  # if waitlist is False, waiting list is not to be used
+
+        seats_capacity = registration.maximum_attendee_capacity + waitlist_seats
+        seats_reserved = registration.reservations.filter(timestamp__gte=datetime.now() - timedelta(minutes=15)).aggregate(seats_sum=(Sum('seats', output_field=models.FloatField())))['seats_sum']
+        if seats_reserved is None:
+            seats_reserved = 0
+        seats_taken = registration.signups.count()
+        seats_available = seats_capacity - (seats_reserved + seats_taken)
+
+        if request.data.get('seats', 0) > seats_available:
+            return Response(status=status.HTTP_409_CONFLICT, data='Not enough seats available.')
+        else:
+            code = SeatReservationCode()
+            code.registration = registration
+            code.seats = request.data.get('seats')
+            code.save()
+            return Response(SeatReservationCodeSerializer(code, many=False).data, status=status.HTTP_201_CREATED)
+
+    @action(methods=['post'], detail=True, permission_classes=[GuestPost])
+    def signup(self, request, pk=None, version=None):
+        if 'reservation_code' not in request.data.keys():
+            raise serializers.ValidationError({'registration': 'Reservation code is missing'})
+
+        try:
+            reservation = SeatReservationCode.objects.get(code=request.data['reservation_code'])
+        except SeatReservationCode.DoesNotExist:
+            raise NotFound(detail=f"Reservation code {request.data['registration']['reservation_code']} doesn't exist.", code=404)  # noqa E501
+
+        if str(reservation.registration.id) != pk:
+            raise serializers.ValidationError({'reservation_code': f"Registration code {request.data['reservation_code']} doesn't match the registration {pk}"})  # noqa E501
+
+        if len(request.data['signups']) > reservation.seats:
+            raise serializers.ValidationError({'signups': 'Number of signups exceeds the number of requested seats'})
+
+        if reservation.timestamp > datetime.now().astimezone(pytz.utc) + timedelta(minutes=15):
+            raise serializers.ValidationError({'code': 'Reservation code has expired.'})
+
+        for i in request.data['signups']:
+            i['registration'] = pk
+
+        # First check that all the signups are valid and then actually create them
+        for i in request.data['signups']:
+            SignUpSerializer(data=i, many=False).is_valid()
+
+        for i in request.data['signups']:
+            signup = SignUpSerializer(data=i, many=False)
+            signup.is_valid()
+            signup.create(validated_data=signup.validated_data)
+
+        reservation.delete()
+
+        return Response(status=status.HTTP_201_CREATED)
 
 
 register_view(RegistrationViewSet, 'registration')
@@ -1009,10 +1090,8 @@ register_view(RegistrationViewSet, 'registration')
 class SignUpSerializer(serializers.ModelSerializer):
     view_name = 'signup'
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     def create(self, validated_data):
+
         registration = validated_data['registration']
         already_attending = SignUp.objects.filter(registration=registration,
                                                   attendee_status=SignUp.AttendeeStatus.ATTENDING).count()
