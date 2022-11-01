@@ -1,4 +1,5 @@
 import pytest
+import uuid
 from copy import deepcopy
 from django.core import mail
 from events.tests.utils import versioned_reverse as reverse
@@ -693,7 +694,7 @@ def test_event_with_open_registrations_and_places_at_the_event_or_waiting_list(a
 
     event_url = reverse('event-list')
     signup_url = reverse('signup-list')
-    
+
     # seats at the event available
     response = api_client.get(f'{event_url}?enrolment_open_waitlist=true', format='json')
     assert len(response.data['data']) == 2
@@ -746,3 +747,87 @@ def test_event_with_open_registrations_and_places_at_the_event_or_waiting_list(a
     registration2.save()
     response = api_client.get(f'{event_url}?enrolment_open_waitlist=true', format='json')
     assert len(response.data['data']) == 2
+
+
+@pytest.mark.django_db
+def test_seat_reservation_code_request_enough_seats_no_waitlist(api_client, event, registration):
+    registration_url = reverse('registration-list')
+    payload = {'seats': registration.maximum_attendee_capacity - 2,
+               'waitlist': False}
+    response = api_client.post(f'{registration_url}{registration.id}/reserve_seats/', payload, format='json')
+    assert response.status_code == 201
+    assert uuid.UUID(response.data['code'])
+    assert response.data['seats'] == registration.maximum_attendee_capacity - 2
+
+@pytest.mark.django_db
+def test_seat_reservation_code_request_enough_seats_with_waitlist(api_client, event, registration):
+    registration_url = reverse('registration-list')
+    payload = {'seats': registration.maximum_attendee_capacity + 2,
+               'waitlist': True}
+    response = api_client.post(f'{registration_url}{registration.id}/reserve_seats/', payload, format='json')
+    assert response.status_code == 201
+    assert uuid.UUID(response.data['code'])
+    assert response.data['seats'] == registration.maximum_attendee_capacity + 2    
+
+
+@pytest.mark.django_db
+def test_seat_reservation_code_request_not_enough_seats_no_waitlist(api_client, event, registration):
+    registration_url = reverse('registration-list')
+    payload = {'seats': registration.maximum_attendee_capacity + 2,
+               'waitlist': False}
+    response = api_client.post(f'{registration_url}{registration.id}/reserve_seats/', payload, format='json')
+    assert response.status_code == 409
+
+
+@pytest.mark.django_db
+def test_seat_reservation_code_request_not_enough_seats_with_waitlist(api_client, event, registration):
+    registration_url = reverse('registration-list')
+    payload = {'seats': registration.maximum_attendee_capacity + registration.waiting_list_capacity + 2,
+               'waitlist': True}
+    response = api_client.post(f'{registration_url}{registration.id}/reserve_seats/', payload, format='json')
+    assert response.status_code == 409
+
+
+@pytest.mark.django_db
+def test_group_signup_successful(api_client, registration):
+    registration_url = reverse('registration-list')
+    payload = {'seats': 2,
+               'waitlist': True}
+    response = api_client.post(f'{registration_url}{registration.id}/reserve_seats/', payload, format='json')
+    sign_up_payload = {'reservation_code': response.data['code'],
+                       'signups': [{'name': 'Mickey Mouse',
+                                    'date_of_birth': '2011-04-07',
+                                    'email': 'test3@test.com'},
+                                   {'name': 'Minney Mouse',
+                                    'date_of_birth': '2011-04-07',
+                                    'email': 'test2@test.com'}]}
+    
+    response = api_client.post(f'{registration_url}{registration.id}/signups/', sign_up_payload, format='json')
+    assert response.status_code == 201
+    assert registration.signups.count() == 2
+
+
+@pytest.mark.django_db
+def test_seat_reservation_without_code():
+    pass
+
+
+@pytest.mark.django_db
+def test_seat_reservation_with_code_too_many_signups():
+    '''more sign ups in the request than allocated to specific code'''
+    pass
+
+
+@pytest.mark.django_db
+def test_seat_reservation_with_code_success_event_seats_only():
+    pass
+
+
+@pytest.mark.django_db
+def test_seat_reservation_with_code_success_event_seats_and_waitlist():
+    pass
+
+
+@pytest.mark.django_db
+def test_seat_reservation_with_code_success_waitlist_only():
+    pass
