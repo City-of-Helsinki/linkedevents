@@ -1,11 +1,19 @@
-import pytest
+import environ
 import uuid
 from copy import deepcopy
+
+import pytest
+from dateutil.parser import parse
+from django.conf import settings
 from django.core import mail
+
+from events.models import Language
+from events.tests.conftest import *
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import Registration, SignUp
-from events.tests.conftest import *
-from events.models import Language
+
+
+env = environ.Env()
 
 
 @pytest.mark.django_db
@@ -755,9 +763,13 @@ def test_seat_reservation_code_request_enough_seats_no_waitlist(api_client, even
     payload = {'seats': registration.maximum_attendee_capacity - 2,
                'waitlist': False}
     response = api_client.post(f'{registration_url}{registration.id}/reserve_seats/', payload, format='json')
+    duration=int(env('SEAT_RESERVATION_DURATION')) + payload['seats']
     assert response.status_code == 201
     assert uuid.UUID(response.data['code'])
     assert response.data['seats'] == registration.maximum_attendee_capacity - 2
+    assert response.data['expiration'] == parse(response.data['timestamp']
+                                                ) + timedelta(minutes=duration)
+
 
 @pytest.mark.django_db
 def test_seat_reservation_code_request_enough_seats_with_waitlist(api_client, event, registration):
@@ -801,8 +813,8 @@ def test_group_signup_successful(api_client, registration):
                                    {'name': 'Minney Mouse',
                                     'date_of_birth': '2011-04-07',
                                     'email': 'test2@test.com'}]}
-    
-    response = api_client.post(f'{registration_url}{registration.id}/signups/', sign_up_payload, format='json')
+
+    response = api_client.post(f'{registration_url}{registration.id}/signup/', sign_up_payload, format='json')
     assert response.status_code == 201
     assert registration.signups.count() == 2
 

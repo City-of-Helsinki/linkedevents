@@ -987,10 +987,15 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
 class SeatReservationCodeSerializer(serializers.ModelSerializer):
     timestamp = DateTimeField(default_timezone=pytz.UTC, required=False)
+    expiration = serializers.SerializerMethodField()
 
     class Meta:
-        fields = ('seats', 'code', 'timestamp', 'registration')
+        fields = ('seats', 'code', 'timestamp', 'registration', 'expiration')
         model = SeatReservationCode
+
+    def get_expiration(self, obj):
+        duration = int(env('SEAT_RESERVATION_DURATION')) + obj.seats
+        return obj.timestamp + timedelta(minutes=duration)
 
 
 class RegistrationViewSet(JSONAPIViewMixin,
@@ -1015,7 +1020,7 @@ class RegistrationViewSet(JSONAPIViewMixin,
         registrations = Registration.objects.filter(event__in=events)
 
         return registrations
-    
+
     @action(methods=['post'], detail=True, permission_classes=[GuestPost])
     def reserve_seats(self, request, pk=None, version=None):
         def NoneToUnlim(val):
@@ -1037,7 +1042,7 @@ class RegistrationViewSet(JSONAPIViewMixin,
             waitlist_seats = 0  # if waitlist is False, waiting list is not to be used
 
         seats_capacity = registration.maximum_attendee_capacity + waitlist_seats
-        seats_reserved = registration.reservations.filter(timestamp__gte=datetime.now() - timedelta(minutes=15)).aggregate(seats_sum=(Sum('seats', output_field=models.FloatField())))['seats_sum']
+        seats_reserved = registration.reservations.filter(timestamp__gte=datetime.now() - timedelta(minutes=int(env('SEAT_RESERVATION_DURATION')))).aggregate(seats_sum=(Sum('seats', output_field=models.FloatField())))['seats_sum']
         if seats_reserved is None:
             seats_reserved = 0
         seats_taken = registration.signups.count()
