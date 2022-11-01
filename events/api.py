@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 
 import base64
+import environ
 import re
 import struct
 import time
@@ -74,6 +75,9 @@ from events.translation import EventTranslationOptions, PlaceTranslationOptions
 from helevents.api import UserSerializer
 from helevents.models import User
 from registrations.models import Registration, SignUp, SeatReservationCode
+
+
+env = environ.Env()
 
 
 def get_view_name(view):
