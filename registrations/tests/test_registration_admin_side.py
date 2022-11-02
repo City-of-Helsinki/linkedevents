@@ -763,7 +763,7 @@ def test_seat_reservation_code_request_enough_seats_no_waitlist(api_client, even
     payload = {'seats': registration.maximum_attendee_capacity - 2,
                'waitlist': False}
     response = api_client.post(f'{registration_url}{registration.id}/reserve_seats/', payload, format='json')
-    duration=int(env('SEAT_RESERVATION_DURATION')) + payload['seats']
+    duration = int(env('SEAT_RESERVATION_DURATION')) + payload['seats']
     assert response.status_code == 201
     assert uuid.UUID(response.data['code'])
     assert response.data['seats'] == registration.maximum_attendee_capacity - 2
@@ -801,8 +801,10 @@ def test_seat_reservation_code_request_not_enough_seats_with_waitlist(api_client
 
 
 @pytest.mark.django_db
-def test_group_signup_successful(api_client, registration):
+def test_group_signup_successful_with_waitlist(api_client, registration):
     registration_url = reverse('registration-list')
+    registration.maximum_attendee_capacity = 1
+    registration.save()
     payload = {'seats': 2,
                'waitlist': True}
     response = api_client.post(f'{registration_url}{registration.id}/reserve_seats/', payload, format='json')

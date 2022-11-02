@@ -7,6 +7,7 @@ import re
 import struct
 import time
 import urllib.parse
+import ujson
 from copy import deepcopy
 from datetime import date, datetime
 from datetime import time as datetime_time
@@ -985,6 +986,10 @@ class RegistrationSerializer(serializers.ModelSerializer):
         model = Registration
 
 
+def code_validity_duration(seats):
+    return int(env('SEAT_RESERVATION_DURATION')) + seats
+
+
 class SeatReservationCodeSerializer(serializers.ModelSerializer):
     timestamp = DateTimeField(default_timezone=pytz.UTC, required=False)
     expiration = serializers.SerializerMethodField()
@@ -994,8 +999,7 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
         model = SeatReservationCode
 
     def get_expiration(self, obj):
-        duration = int(env('SEAT_RESERVATION_DURATION')) + obj.seats
-        return obj.timestamp + timedelta(minutes=duration)
+        return obj.timestamp + timedelta(minutes=code_validity_duration(obj.seats))
 
 
 class RegistrationViewSet(JSONAPIViewMixin,
@@ -1059,21 +1063,26 @@ class RegistrationViewSet(JSONAPIViewMixin,
 
     @action(methods=['post'], detail=True, permission_classes=[GuestPost])
     def signup(self, request, pk=None, version=None):
+        attending = []
+        waitlisted = []
         if 'reservation_code' not in request.data.keys():
             raise serializers.ValidationError({'registration': 'Reservation code is missing'})
 
         try:
             reservation = SeatReservationCode.objects.get(code=request.data['reservation_code'])
         except SeatReservationCode.DoesNotExist:
-            raise NotFound(detail=f"Reservation code {request.data['registration']['reservation_code']} doesn't exist.", code=404)  # noqa E501
+            msg = f"Reservation code {request.data['registration']['reservation_code']} doesn't exist."
+            raise NotFound(detail=msg, code=404)
 
         if str(reservation.registration.id) != pk:
-            raise serializers.ValidationError({'reservation_code': f"Registration code {request.data['reservation_code']} doesn't match the registration {pk}"})  # noqa E501
+            msg = f"Registration code {request.data['reservation_code']} doesn't match the registration {pk}"
+            raise serializers.ValidationError({'reservation_code': msg})
 
         if len(request.data['signups']) > reservation.seats:
             raise serializers.ValidationError({'signups': 'Number of signups exceeds the number of requested seats'})
 
-        if reservation.timestamp > datetime.now().astimezone(pytz.utc) + timedelta(minutes=15):
+        expiration = reservation.timestamp + timedelta(minutes=code_validity_duration(reservation.seats))
+        if datetime.now().astimezone(pytz.utc) > expiration:
             raise serializers.ValidationError({'code': 'Reservation code has expired.'})
 
         for i in request.data['signups']:
@@ -1086,11 +1095,16 @@ class RegistrationViewSet(JSONAPIViewMixin,
         for i in request.data['signups']:
             signup = SignUpSerializer(data=i, many=False)
             signup.is_valid()
-            signup.create(validated_data=signup.validated_data)
-
+            signee = signup.create(validated_data=signup.validated_data)
+            if signee.attendee_status == SignUp.AttendeeStatus.ATTENDING:
+                attending.append({'id': signee.id, 'name': signee.name})
+            else:
+                waitlisted.append({'id': signee.id, 'name': signee.name})
         reservation.delete()
+        data = {'attending': {'count': len(attending), 'people': attending},
+                'waitlisted': {'count': len(waitlisted), 'people': waitlisted}}
 
-        return Response(status=status.HTTP_201_CREATED)
+        return Response(ujson.dumps(data), status=status.HTTP_201_CREATED)
 
 
 register_view(RegistrationViewSet, 'registration')
@@ -2400,13 +2414,13 @@ def _filter_event_queryset(queryset, params, srs=None):
     val = params.get('enrolment_open', None)
     if val:
         queryset = queryset.filter(registration__enrolment_end_time__gte=datetime.now()
-                                  ).annotate(free=(F('registration__maximum_attendee_capacity') - Count('registration__signups')),
-                                                  ).filter(Q(free__gte=1)|Q(registration__maximum_attendee_capacity__isnull=True))
+                                   ).annotate(free=(F('registration__maximum_attendee_capacity') - Count('registration__signups')),
+                                              ).filter(Q(free__gte=1) | Q(registration__maximum_attendee_capacity__isnull=True))
     val = params.get('enrolment_open_waitlist', None)
     if val:
         queryset = queryset.filter(registration__enrolment_end_time__gte=datetime.now()
-                                  ).annotate(free=((F('registration__maximum_attendee_capacity') + F('registration__waiting_list_capacity')) - Count('registration__signups')),
-                                            ).filter(Q(free__gte=1) | Q(registration__maximum_attendee_capacity__isnull=True) | Q(registration__waiting_list_capacity__isnull=True))
+                                   ).annotate(free=((F('registration__maximum_attendee_capacity') + F('registration__waiting_list_capacity')) - Count('registration__signups')),
+                                              ).filter(Q(free__gte=1) | Q(registration__maximum_attendee_capacity__isnull=True) | Q(registration__waiting_list_capacity__isnull=True))
     val = params.get('local_ongoing_text', None)
     if val:
         language = params.get('language', 'fi')
