@@ -1050,15 +1050,20 @@ class RegistrationViewSet(JSONAPIViewMixin,
             seats_reserved = 0
         seats_taken = registration.signups.count()
         seats_available = seats_capacity - (seats_reserved + seats_taken)
-
+ 
         if request.data.get('seats', 0) > seats_available:
             return Response(status=status.HTTP_409_CONFLICT, data='Not enough seats available.')
         else:
             code = SeatReservationCode()
             code.registration = registration
             code.seats = request.data.get('seats')
+            free_seats = registration.maximum_attendee_capacity - registration.signups.count()
             code.save()
-            return Response(SeatReservationCodeSerializer(code, many=False).data, status=status.HTTP_201_CREATED)
+            data = SeatReservationCodeSerializer(code).data
+            data['seats_at_event'] = free_seats if free_seats > 0 else 0
+            data['waitlist_spots'] = code.seats - data['seats_at_event']
+            
+            return Response(data, status=status.HTTP_201_CREATED)
 
     @action(methods=['post'], detail=True, permission_classes=[GuestPost])
     def signup(self, request, pk=None, version=None):
