@@ -1090,7 +1090,9 @@ class RegistrationViewSet(JSONAPIViewMixin,
 
         # First check that all the signups are valid and then actually create them
         for i in request.data['signups']:
-            SignUpSerializer(data=i, many=False).is_valid()
+            serializer = SignUpSerializer(data=i)
+            if not serializer.is_valid():
+                raise DRFPermissionDenied(serializer.errors)
 
         for i in request.data['signups']:
             signup = SignUpSerializer(data=i, many=False)
@@ -1150,7 +1152,6 @@ class SignUpSerializer(serializers.ModelSerializer):
 
 
 class SignUpViewSet(JSONAPIViewMixin,
-                    mixins.CreateModelMixin,
                     viewsets.GenericViewSet,):
     serializer_class = SignUpSerializer
     queryset = SignUp.objects.all()
