@@ -1060,8 +1060,9 @@ class RegistrationViewSet(JSONAPIViewMixin,
             free_seats = registration.maximum_attendee_capacity - registration.signups.count()
             code.save()
             data = SeatReservationCodeSerializer(code).data
-            data['seats_at_event'] = free_seats if free_seats > 0 else 0
-            data['waitlist_spots'] = code.seats - data['seats_at_event']
+            data['seats_at_event'] = min(free_seats, code.seats) if free_seats > 0 else 0
+            l = code.seats - data['seats_at_event']
+            data['waitlist_spots'] = l if l else 0
             
             return Response(data, status=status.HTTP_201_CREATED)
 
