@@ -1071,7 +1071,7 @@ class RegistrationViewSet(JSONAPIViewMixin,
         try:
             reservation = SeatReservationCode.objects.get(code=request.data['reservation_code'])
         except SeatReservationCode.DoesNotExist:
-            msg = f"Reservation code {request.data['registration']['reservation_code']} doesn't exist."
+            msg = f"Reservation code {request.data['reservation_code']} doesn't exist."
             raise NotFound(detail=msg, code=404)
 
         if str(reservation.registration.id) != pk:
