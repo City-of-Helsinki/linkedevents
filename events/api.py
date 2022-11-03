@@ -7,7 +7,6 @@ import re
 import struct
 import time
 import urllib.parse
-import ujson
 from copy import deepcopy
 from datetime import date, datetime
 from datetime import time as datetime_time
@@ -1092,7 +1091,7 @@ class RegistrationViewSet(JSONAPIViewMixin,
         for i in request.data['signups']:
             serializer = SignUpSerializer(data=i)
             if not serializer.is_valid():
-                raise DRFPermissionDenied(serializer.errors)
+                raise serializers.ValidationError(serializer.errors)
 
         for i in request.data['signups']:
             signup = SignUpSerializer(data=i, many=False)
@@ -1106,7 +1105,7 @@ class RegistrationViewSet(JSONAPIViewMixin,
         data = {'attending': {'count': len(attending), 'people': attending},
                 'waitlisted': {'count': len(waitlisted), 'people': waitlisted}}
 
-        return Response(ujson.dumps(data), status=status.HTTP_201_CREATED)
+        return Response(data, status=status.HTTP_201_CREATED)
 
 
 register_view(RegistrationViewSet, 'registration')
