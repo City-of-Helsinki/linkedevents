@@ -40,7 +40,7 @@ resources:
   pipelines:
     # Pipeline trigger
     - pipeline: build
-      source: build-linkedevents-api
+      source: City-of-Helsinki.linkedevents (1)
       # Run deploy-dev pipeline when any run of build pipeline completes
       trigger: true
 
