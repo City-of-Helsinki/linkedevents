@@ -20,15 +20,17 @@ if [[ "$CREATE_SUPERUSER" = "true" ]]; then
     ./manage.py create_admin_superuser
 fi
 
-echo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-echo !!!!!       DEBUG is $DEBUG        !!!!!!!!!!!
-echo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 # Start server
 if [[ ! -z "$@" ]]; then
     "$@"
 elif [[ "$DEBUG" = "true" ]]; then
+    echo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    echo !!!!!       DEBUG is $DEBUG        !!!!!!!!!!!
+    echo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     python -Wd ./manage.py runserver_plus $RUNSERVER_ADDRESS
 else
+    echo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    echo !!!!!!!!!  PROD MODE ON    !!!!!!!!
+    echo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     uwsgi --ini .prod/uwsgi_configuration.ini
 fi
