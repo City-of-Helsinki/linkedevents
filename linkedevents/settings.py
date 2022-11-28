@@ -2,12 +2,16 @@
 Django settings module for linkedevents project.
 """
 import os
+import subprocess
+
+import bleach
 import environ
 import sentry_sdk
-import subprocess
-from sentry_sdk.integrations.django import DjangoIntegration
 from django.conf.global_settings import LANGUAGES as GLOBAL_LANGUAGES
 from django.core.exceptions import ImproperlyConfigured
+from django_jinja.builtins import DEFAULT_EXTENSIONS
+from easy_thumbnails.conf import Settings as thumbnail_settings
+from sentry_sdk.integrations.django import DjangoIntegration
 
 CONFIG_FILE_NAME = "config_dev.toml"
 
@@ -36,33 +40,39 @@ def get_git_revision_hash() -> str:
 
 root = environ.Path(__file__) - 2  # two levels back in hierarchy
 env = environ.Env(
-    DEBUG=(bool, False),
-    SYSTEM_DATA_SOURCE_ID=(str, 'system'),
-    LANGUAGES=(list, ['fi', 'sv', 'en', 'zh-hans', 'ru', 'ar']),
-    DATABASE_URL=(str, 'postgis:///linkedevents'),
-    TOKEN_AUTH_ACCEPTED_AUDIENCE=(str, ''),
-    TOKEN_AUTH_SHARED_SECRET=(str, ''),
-    ELASTICSEARCH_URL=(str, None),
-    SECRET_KEY=(str, ''),
-    ALLOWED_HOSTS=(list, []),
     ADMINS=(list, []),
-    SECURE_PROXY_SSL_HEADER=(tuple, None),
+    ALLOWED_HOSTS=(list, []),
+    AUTO_ENABLED_EXTENSIONS=(list, []),
+    COOKIE_PREFIX=(str, 'linkedevents'),
+    DATABASE_URL=(str, 'postgis:///linkedevents'),
+    DEBUG=(bool, False),
+    ELASTICSEARCH_URL=(str, None),
+    EXTRA_INSTALLED_APPS=(list, []),
+    INSTANCE_NAME=(str, 'Linked Events'),
+    INTERNAL_IPS=(list, []),
+    LANGUAGES=(list, ['fi', 'sv', 'en', 'zh-hans', 'ru', 'ar']),
+    LIPPUPISTE_EVENT_API_URL=(str, None),
+    MAIL_MAILGUN_API=(str, ''),
+    MAIL_MAILGUN_DOMAIN=(str, ''),
+    MAIL_MAILGUN_KEY=(str, ''),
     MEDIA_ROOT=(environ.Path(), root('media')),
-    STATIC_ROOT=(environ.Path(), root('static')),
-    MEDIA_URL=(str, '/media/'),
-    STATIC_URL=(str, '/static/'),
-    TRUST_X_FORWARDED_HOST=(bool, False),
+    MEDIA_URL=(str, "/media/"),
+    MEMCACHED_URL=(str, "127.0.0.1:11211"),
+    SECRET_KEY=(str, ''),
+    SECURE_PROXY_SSL_HEADER=(tuple, None),
     SENTRY_DSN=(str, ''),
     SENTRY_ENVIRONMENT=(str, 'development'),
-    COOKIE_PREFIX=(str, 'linkedevents'),
-    INTERNAL_IPS=(list, []),
-    INSTANCE_NAME=(str, 'Linked Events'),
-    EXTRA_INSTALLED_APPS=(list, []),
-    AUTO_ENABLED_EXTENSIONS=(list, []),
-    MAIL_MAILGUN_KEY=(str, ''),
-    MAIL_MAILGUN_DOMAIN=(str, ''),
-    MAIL_MAILGUN_API=(str, ''),
-    LIPPUPISTE_EVENT_API_URL=(str, None)
+    STATIC_ROOT=(environ.Path(), root('static')),
+    STATIC_URL=(str, '/static/'),
+    SUPPORT_EMAIL=(str, ''),
+    SYSTEM_DATA_SOURCE_ID=(str, 'system'),
+    TOKEN_AUTH_ACCEPTED_AUDIENCE=(str, "https://api.hel.fi/auth/linkedevents"),
+    TOKEN_AUTH_ACCEPTED_SCOPE_PREFIX=(str, "linkedevents"),
+    TOKEN_AUTH_AUTHSERVER_URL=(str, "https://api.hel.fi/sso/openid"),
+    TOKEN_AUTH_FIELD_FOR_CONSENTS=(str, "https://api.hel.fi/auth"),
+    TOKEN_AUTH_REQUIRE_SCOPE_PREFIX=(bool, True),
+    TOKEN_AUTH_SHARED_SECRET=(str, ''),
+    TRUST_X_FORWARDED_HOST=(bool, False),
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -124,14 +134,15 @@ LOGGING = {
 
 # Application definition
 INSTALLED_APPS = [
-    'helusers',
+    'helusers.apps.HelusersConfig',
+    'helusers.apps.HelusersAdminConfig',
     'django.contrib.sites',
     'modeltranslation',
-    'helusers.apps.HelusersAdminConfig',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    "debug_toolbar",
 
     # disable Django’s development server static file handling
     'whitenoise.runserver_nostatic',
@@ -142,6 +153,7 @@ INSTALLED_APPS = [
     'events',
     'corsheaders',
     'rest_framework',
+    'rest_framework_gis',
     'rest_framework_jwt',
     'mptt',
     'reversion',
@@ -151,11 +163,11 @@ INSTALLED_APPS = [
     'django_jinja',
     'notifications',
     'anymail',
-
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
     'helusers.providers.helsinki',
+    'registrations',
 
     'helevents',
     'munigeo',
@@ -163,10 +175,6 @@ INSTALLED_APPS = [
     'django_orghierarchy',
     'admin_auto_filters',
 ] + env('EXTRA_INSTALLED_APPS')
-
-# django-extensions is a set of developer friendly tools
-if DEBUG:
-    INSTALLED_APPS.append('django_extensions')
 
 if env('SENTRY_DSN'):
     sentry_sdk.init(
@@ -181,6 +189,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     # WhiteNoiseMiddleware should be placed as high as possible
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
 
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -190,6 +199,12 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# django-extensions is a set of developer friendly tools
+if DEBUG:
+    INSTALLED_APPS.extend(['django_extensions'])
+
+
 
 ROOT_URLCONF = 'linkedevents.urls'
 
@@ -294,7 +309,6 @@ CORS_ORIGIN_ALLOW_ALL = True
 CSRF_COOKIE_NAME = '%s-csrftoken' % env('COOKIE_PREFIX')
 SESSION_COOKIE_NAME = '%s-sessionid' % env('COOKIE_PREFIX')
 
-from django_jinja.builtins import DEFAULT_EXTENSIONS # noqa
 
 TEMPLATES = [
     {
@@ -420,10 +434,8 @@ for language in [l[0] for l in LANGUAGES]:
     HAYSTACK_CONNECTIONS.update(connection)
 
 
-import bleach  # noqa
 BLEACH_ALLOWED_TAGS = bleach.ALLOWED_TAGS + ["p", "div", "br"]
 
-from easy_thumbnails.conf import Settings as thumbnail_settings  # noqa
 THUMBNAIL_PROCESSORS = (
     'image_cropping.thumbnail_processors.crop_corners',
 ) + thumbnail_settings.THUMBNAIL_PROCESSORS
@@ -482,3 +494,36 @@ if env('MAIL_MAILGUN_KEY'):
     EMAIL_BACKEND = 'anymail.backends.mailgun.EmailBackend'
 elif not env('MAIL_MAILGUN_KEY') and DEBUG is True:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+        'LOCATION': env("MEMCACHED_URL"),
+        'TIMEOUT': 300,
+    },
+    'ongoing_events': {
+        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+        'LOCATION': env("MEMCACHED_URL"),
+        'TIMEOUT': None,
+        'OPTIONS': {
+            'server_max_value_length': 1024 * 1024 * 500,
+        }
+    }
+}
+
+# this is relevant for the fulltext search as implemented in _filter_event_queryset()
+FULLTEXT_SEARCH_LANGUAGES = {'fi': 'finnish', 'sv': 'swedish', 'en': 'english'}
+
+# Email address used to send feedback forms
+SUPPORT_EMAIL = env('SUPPORT_EMAIL')
+
+OIDC_API_TOKEN_AUTH = {
+    "AUDIENCE": env.str("TOKEN_AUTH_ACCEPTED_AUDIENCE"),
+    "API_SCOPE_PREFIX": env.str("TOKEN_AUTH_ACCEPTED_SCOPE_PREFIX"),
+    "ISSUER": env.str("TOKEN_AUTH_AUTHSERVER_URL"),
+    "API_AUTHORIZATION_FIELD": env.str("TOKEN_AUTH_FIELD_FOR_CONSENTS"),
+    "REQUIRE_API_SCOPE_FOR_AUTHENTICATION": env.bool("TOKEN_AUTH_REQUIRE_SCOPE_PREFIX"),
+}
+
+OIDC_AUTH = {"OIDC_LEEWAY": 60 * 60}

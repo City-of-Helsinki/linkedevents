@@ -8,11 +8,15 @@ local_settings.py
 static/CACHE
 media/
 .vagrant/
+.env
 .idea
 .django_secret
 *.iml
 *.kate-swp
 data/
+static/
+django-munigeo/
+venv*/
 .pytest_cache/
 templates/rest_framework/*
 

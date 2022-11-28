@@ -1,11 +1,11 @@
-from datetime import datetime, timedelta
-import re
 import collections
+import re
+from datetime import datetime, timedelta
 
 import pytz
-from django.db import transaction
-from django.conf import settings
 from dateutil.parser import parse as dateutil_parse
+from django.conf import settings
+from django.db import transaction
 from rest_framework.exceptions import ParseError
 
 from events.models import Keyword, Place
@@ -32,8 +32,9 @@ def get_value_from_tuple_list(list_of_tuples, search_key, value_index):
                         returned and which is used as a key
     :return: Value from either side of tuple
     """
+
     for i, v in enumerate(list_of_tuples):
-        if v[value_index ^ 1] == search_key:
+        if str(v[value_index ^ 1]) == str(search_key):
             return v[value_index]
 
 
@@ -128,6 +129,8 @@ def parse_time(time_str, is_start):
             # Datetimes without timezone are assumed UTC by drf
         except (TypeError, ValueError):
             raise ParseError('time in invalid format (try ISO 8601 or yyyy-mm-dd)')
+    # if not dt.tzinfo:
+    #     dt = dt.astimezone(pytz.timezone('UTC'))
     return dt, is_exact
 
 

@@ -4,6 +4,35 @@
 <h2 id="filtering-retrieved-events">Filtering retrieved events</h2>
 <p>Query parameters can be used to filter the retrieved events by
 the following criteria.</p>
+<h3 id="local-ongoing">Ongoing local events</h3>
+<p>Use to quickly access local (municipality level) events that are upcoming or have not ended yet. Combines the search on a number of 
+description, name, and keyword fields. Locality is defined on the basis of MUNIGEO_MUNI value, which is set in the settings file. In the Helsinki case all the events would be retrieved that happen within Helsinki. Comes in two flavors: AND and OR. Use <code>event/?local_ongoing_AND=lapset,musiiki</code> to search for the events with both search terms in the description fields and <code>?local_ongoing_OR</code> to search for the events with at least one term mentioned. In case you need to realize a more complicated logic and search for a combination of search terms as in <code>(singing OR vocal) AND (workshop OR training)</code> use <code>?local_ongoing_OR_setX</code> parameter, where <code>X</code> is a number.
+<p>Examples:</p>
+<pre><code>event/?local_ongoing_OR=lapsi,musiikki
+</code></pre>
+<p><a href="?local_ongoing_OR=lapsi,musiikki" title="json">See the result</a></p>
+<pre><code>event/?local_ongoing_OR_set1=lapsi,musiikki&local_ongoing_OR_set2=leiri,kurssi
+</code></pre>
+<p><a href="?local_ongoing_OR=lapsi,musiikki" title="json">See the result</a></p>
+
+<h3 id="internet-ongoing">Ongoing internet events</h3>
+<p>Use to quickly access internet-based events that are upcoming or have not ended yet. Usage is the same as for local ongoing events, three variations: <code>?internet_ongoing_AND</code>, <code>?internet_ongoing_OR</code>, and <code>?internet_ongoing_OR_setX</code>, Note, that <code>local_ongoing</code> and <code>internet_ongoing</code> are mutually exclusive.</p>
+<p>Example:</p>
+<pre><code>event/?internet_ongoing_AND=lapsi,musiiki
+</code></pre>
+<p><a href="?internet_ongoing_AND=lapsi,musiiki" title="json">See the result</a></p>
+<h3 id="all-ongoing">All ongoing events</h3>
+<p>All ongoing events, both internet and local combined. Usage is the same as for local ongoing events: <code>?all_ongoing_AND</code> and <code>?all_ongoing_OR</code></p>
+<p>Example:</p>
+<pre><code>event/?all_ongoing_AND=lapsa,musiiki
+</code></pre>
+<p><a href="?all_ongoing_AND=lapsa,musiiki" title="json">See the result</a></p>
+<h3 id="internet-based">Internet based</h3>
+<p>Filter for all the events that happen in the internet, both past and upcoming.</p>
+<p>Example:</p>
+<pre><code>event/?internet_based=true
+</code></pre>
+<p><a href="?internet_based=true" title="json">See the result</a></p>
 <h3 id="event-time">Event time</h3>
 <p>Use <code>start</code> and <code>end</code> to restrict the date range of returned events.
 Any events that intersect with the given date range will be returned.</p>
@@ -77,6 +106,7 @@ regardless of division type.</p>
 <pre><code>event/?division=malmi
 </code></pre>
 <p><a href="?division=malmi" title="json">See the result</a></p>
+
 <h3 id="event-category">Event category</h3>
 <p>To restrict the retrieved events by category, use the query
 parameter <code>keyword</code>, separating values by commas if you wish to
@@ -94,6 +124,15 @@ which list the YSO keywords that are present in most events to specify event mai
 <pre><code>event/?keyword=yso:p4354
 </code></pre>
 <p><a href="?keyword=yso:p4354" title="json">See the result</a></p>
+
+<h3 id="event-category">Keyword set search</h3>
+<p>Some services maintain curated keyword sets, which can also be used in search with query parameters
+<code>keyword_set_AND</code> and <code>keyword_set_OR</code>. As names of the keyword sets can repeat 
+between the services, ids should be supplied. Say, we have one keyword set <b>Music</b> with id "myservice:1"
+that contains keywords rock and jazz, and another keyword set <b>Workshops</b> with keywords "workshop" and "seminar"
+and id "myservice:2". Then a request <code>/event/?keyword_set_AND=myservice:1,myservice:2</code>
+would return the events matching the following expression: (rock OR jazz) AND (workshop OR seminar).</p>
+
 <h3 id="event-last-modified">Event last modification time</h3>
 <p>To find events that have changed since you last polled Linkedevents API (to e.g. update your event cache),
 it is best to use the query parameter <code>last_modified_since</code>. This allows you to only return data
@@ -159,6 +198,14 @@ in <code>fi</code>, <code>sv</code>, <code>en</code>, <code>ru</code>,
 <pre><code>event/?audience_min_age_gt=10
 </code></pre>
 <p><a href="?audience_min_age_gt=10" title="json">See the result</a></p>
+
+<h3 id="suitable_for">Select events suitable for certain age.</h3>
+<p>To find events that are suitable for certain age  use the query paramter <code>suitable_for</code> that returns all the events that are suitable for the age or age range specified. Under the hood it excludes all the events that have max age limit below or min age limit above the age specified. Suitable events with just one age boundary specified are returned, events with no age limits specified are excluded. Query parameter can take either one or two arguments, the order of parameters when specifying the age range is not important.
+
+<p>Example:</p>
+<pre><code>event/?suitable_for=12
+</code></pre>
+<p><a href="?suitable_for=12,14" title="json">See the result</a></p>
 
 <h3 id="event-publisher">Event publisher</h3>
 <p>To find out events that are published by a specific organization, use the query
@@ -237,8 +284,16 @@ You may also order results by <code>start_time</code>, <code>end_time</code>,
 <code>name</code> and <code>duration</code>. Descending order is denoted by
 adding <code>-</code> in front of the parameter, default order is ascending.
 For example:</p>
-<pre><code>event/?sort=-end_time
-</code></pre>
+<pre><code>event/?sort=-end_time</code></pre>
 <p><a href="?sort=-end_time" title="json">See the result</a></p>
+<h2 id="enrolment">Open enrolment</h2>
+<p>Two endpoints show the events that have connected registrations and have places either
+    at the event itself <code>enrolment_open</code> or in the waiting lists <code>
+    enrolment_open_waitlist</code>. Note that the latter query parameter when set to <code>True</code>
+    returns also the events that have open spots at the event itself. Null values are regarded
+    as unlimited number of spots at the event or in the waiting list.
+For example:</p>
+<pre><code>event/?enrolment_open_waitilist=true</code></pre>
+<p><a href="?enrolment_open_waitilist=true" title="json">See the result</a></p>
     </div>
 </div>

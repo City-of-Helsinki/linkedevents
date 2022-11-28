@@ -2,7 +2,7 @@ from rest_framework import authentication
 from rest_framework import exceptions
 from events.models import DataSource
 from django_orghierarchy.models import Organization
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.contrib.gis.db import models
 from django.contrib.auth import get_user_model
 
@@ -59,6 +59,8 @@ class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
 
     @property
     def admin_organizations(self):
+        if not self.data_source.owner:
+            return Organization.objects.none()
         return Organization.objects.filter(id=self.data_source.owner.id)
 
     @property

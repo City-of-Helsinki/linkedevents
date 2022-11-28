@@ -1,112 +1,75 @@
 import re
-from events.models import Keyword, KeywordLabel, DataSource
-from difflib import get_close_matches
+import string
 
-ENDING_PARENTHESIS_PATTERN = r' \([^)]+\)$'
+from django.conf import settings
+from django.contrib.postgres.search import SearchQuery, TrigramSimilarity
+from rest_framework.exceptions import ParseError
+
+from events.models import KeywordLabel
 
 
 class KeywordMatcher(object):
     def __init__(self):
-        label_to_keyword_ids = {}
-        self.name_to_keyword_ids = {}
-        for label_id, keyword_id in Keyword.alt_labels.through.objects.all().values_list(
-                'keywordlabel_id', 'keyword_id'):
-            label_to_keyword_ids.setdefault(label_id, set()).add(keyword_id)
-        for label_id, name in KeywordLabel.objects.filter(language_id='fi').values_list(
-                'id', 'name'):
-            self.name_to_keyword_ids[name.lower()] = label_to_keyword_ids.get(label_id, set())
-        try:
-            yso_source = DataSource.objects.get(pk='yso')
-            self.skip = False
-        except DataSource.DoesNotExist:
-            print('No YSO keyword data source')
-            self.skip = True
-            return
-        for kid, preflabel in Keyword.objects.filter(data_source=yso_source).values_list(
-                'id', 'name_fi'):
-            if preflabel is not None:
-                text = preflabel.lower()
-                self.name_to_keyword_ids.setdefault(text, set()).add(kid)
-                without_parenthesis = re.sub(ENDING_PARENTHESIS_PATTERN, '', text)
-                if without_parenthesis != text:
-                    self.name_to_keyword_ids.setdefault(without_parenthesis, set()).add(kid)
-        self.labels = self.name_to_keyword_ids.keys()
-        print('Initialized', len(self.labels), 'keyword keys')
+        pass
 
-    def match(self, text):
-        if self.skip:
-            return None
-        wordsplit = re.compile(r'\s+')
-        # labels = KeywordLabel.objects
-        # match = labels.filter(name__iexact=text)
-
-        text = text.lower()
-        if text == 'kokous':
-            text = 'kokoukset'
-        elif text == 'kuntoilu':
-            text = 'kuntoliikunta'
-        elif text == 'samba':
-            text = 'sambat'
-
-        labels = self.labels
-        matches = [l for l in labels if l.lower() == text]
-        if matches:
-            match_type = 'exact'
-        if not matches:
-            words = wordsplit.split(text)
-            if len(words) > 1:
-                for word in words:
-                    matches.extend([l for l in labels if l.lower() == word])
-                    match_type = 'subword'  # Later attempts will override, if this wasn't a match
-        if not matches:
-            matches = [l for l in labels if l.lower().startswith(text)]
-            match_type = 'prefix'
-        if not matches:
-            matches = [l for l in labels if l.lower() == text + 't']
-            match_type = 'simple-plural'
-        if not matches:
-            matches = [l for l in labels if l.lower().startswith(text[0:-2])]
-            match_type = 'cut-two-letters'
-        if not matches:
-            if len(text) > 10:
-                matches = [l for l in labels if l.lower().startswith(text[0:-5])]
-                match_type = 'prefix'
-        if not matches:
-            for i in range(1, 10):
-                matches = [l for l in labels if l.lower() == text[i:]]
-                if matches:
-                    match_type = 'suffix'
-                    break
-
-        if not matches:
-            print('no match', text)
-            return None
-
-        keyword_ids = set()
-        if match_type not in ['exact', 'subword']:
-            cmatch = get_close_matches(
-                text, [m.lower() for m in matches], n=1)
-            if len(cmatch) == 1:
-                keyword_ids = self.name_to_keyword_ids.get(cmatch[0])
-
+    def full_text_matching(self, text, language=None):
+        used_langs = settings.FULLTEXT_SEARCH_LANGUAGES
+        if language:
+            if language not in used_langs.keys():
+                raise ParseError(f"{language} not supported. Supported options are: {' '.join(used_langs.keys())}")
+            languages = [language]
         else:
-            for m in matches:
-                keyword_ids.update(self.name_to_keyword_ids[m])
+            languages = used_langs.keys()
 
-        if len(keyword_ids) < 1:
-            print('no matches for', text)
+        contestants = {}
+        for language in languages:
+            query = SearchQuery(text, config=used_langs[language], search_type='plain')
+            kwargs = {f'search_vector_{language}': query}
+
+            # find matches via search vector and choose the best one according to trgrm similarity
+            label = KeywordLabel.objects.filter(**kwargs).annotate(similarity=TrigramSimilarity('name', text)
+                                                      ).order_by('-similarity'  # noqa E124
+                                                      ).first()  # noqa E124
+            # storing the result in a dictionary of the following structure {similarity: label}
+            # in the edge case when similarity is the same for two different languages the label will be
+            # overwritten, which is not big deal as we don't have a way to select between the two anyway.
+            if label:
+                contestants[label.similarity] = label
+
+        # selecting the match with the highest similarity, if there is anything to select
+        if contestants.keys():
+            return contestants[max(contestants.keys())]
+        else:
             return None
 
-        objects = Keyword.objects.filter(id__in=keyword_ids, deprecated=False)
-        if len(keyword_ids) > 1:
-            try:
-                aggregate_keyword = objects.get(aggregate=True)
-                aggregate_name = re.sub(ENDING_PARENTHESIS_PATTERN, '', aggregate_keyword.name_fi)
-                result = [aggregate_keyword]
-                for o in objects.exclude(name_fi__istartswith=aggregate_name):
-                    result.append(o)
-                return result
-            except Keyword.DoesNotExist:
-                pass
-            return objects
-        return objects
+    def label_match(self, text, language=None):
+
+        # Let's use Postgres full-text search to find a label matched by lexeme and rank the results with
+        # TrigramSimilarity as fulltext SearchRank is not suitable for ranking matched individual words. If no language
+        # is passed we cycle through all options as specified in FULLTEXT_SEARCH_LANGUAGES and select the best match
+        # according to similarity.
+        label = self.full_text_matching(text, language)
+        if label:
+            return [label]
+
+        # if no matches found let's check if we could split the string
+        texts = re.split(f'[{string.punctuation} ]', text)
+        if len(texts) > 1:
+            all_the_labels = []
+            for word in texts:
+                label = self.label_match(word, language)
+                if label:
+                    all_the_labels.extend(label)
+            return all_the_labels if all_the_labels else None
+        else:
+            return None
+
+    def match(self, text, language=None):
+        labels = self.label_match(text, language)
+        keywords = []
+        if labels:
+            for label in labels:
+                keywords.extend(label.keywords.all())
+            return keywords
+        else:
+            return None

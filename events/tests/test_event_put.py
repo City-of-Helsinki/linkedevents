@@ -1,24 +1,23 @@
 # -*- coding: utf-8 -*-
-from datetime import datetime, timedelta
 from copy import deepcopy
-from dateutil.parser import parse as dateutil_parse
-
-import pytz
-from django.utils import timezone
-from django.core.management import call_command
+from datetime import datetime, timedelta
 
 import pytest
+import pytz
+from dateutil.parser import parse as dateutil_parse
+from django.conf import settings
+from django.core.management import call_command
+from django.utils import timezone
 
 from events.auth import ApiKeyUser
+from events.models import Event, Keyword, Place
+from events.tests.test_event_post import create_with_post
+from events.tests.utils import assert_event_data_is_equal
+
 from .utils import versioned_reverse as reverse
 
-from events.tests.utils import assert_event_data_is_equal
-from events.tests.test_event_post import create_with_post
-from events.models import Event, Keyword, Place
-from django.conf import settings
-
-
 # === util methods ===
+
 
 def update_with_put(api_client, event_id, event_data, credentials=None):
     if credentials:
@@ -121,7 +120,7 @@ def test__cannot_update_an_event_without_a_description(api_client, minimal_event
 
 
 @pytest.mark.django_db
-def test__keyword_n_events_updated(api_client, minimal_event_dict, user, data_source, make_keyword_id):
+def test__keyword_n_events_updated(api_client, minimal_event_dict, user, data_source, organization, make_keyword_id):
 
     # create an event
     api_client.force_authenticate(user=user)
@@ -135,8 +134,8 @@ def test__keyword_n_events_updated(api_client, minimal_event_dict, user, data_so
 
     # change the keyword and add an audience
     event_id = data2.pop('@id')
-    data2['keywords'] = [{'@id': make_keyword_id(data_source, 'test2')}]
-    data2['audience'] = [{'@id': make_keyword_id(data_source, 'test3')}]
+    data2['keywords'] = [{'@id': make_keyword_id(data_source, organization, 'test2')}]
+    data2['audience'] = [{'@id': make_keyword_id(data_source, organization, 'test3')}]
     response2 = update_with_put(api_client, event_id, data2)
     print('got the put response')
     print(response2.data)
@@ -198,7 +197,7 @@ def test__update_minimal_event_with_autopopulated_fields_with_put(api_client, mi
 
 
 @pytest.mark.django_db
-def test__update_an_event_with_put(api_client, complex_event_dict, user):
+def test__update_an_event_complex_dict(api_client, complex_event_dict, user):
 
     # create an event
     api_client.force_authenticate(user=user)
@@ -216,6 +215,7 @@ def test__update_an_event_with_put(api_client, complex_event_dict, user):
             if lang in data2[key]:
                 data2[key][lang] = '%s updated' % data2[key][lang]
 
+    data2['type_id'] = 'Volunteering'
     data2['offers'] = [
         {
             "is_free": False,
@@ -236,6 +236,47 @@ def test__update_an_event_with_put(api_client, complex_event_dict, user):
 
 
 @pytest.mark.django_db
+def test__change_event_type(api_client, complex_event_dict, user):
+
+    # create an event
+    api_client.force_authenticate(user=user)
+    response = create_with_post(api_client, complex_event_dict)
+
+    data2 = response.data
+    data2['type_id'] = 'Course'
+    event_id = data2['@id']
+    response2 = update_with_put(api_client, event_id, data2)
+    assert_event_data_is_equal(data2, response2.data)
+
+    data2['type_id'] = 'General'
+    event_id = data2['@id']
+    response2 = update_with_put(api_client, event_id, data2)
+    assert_event_data_is_equal(data2, response2.data)
+
+    data2['type_id'] = 'Non existing event type'
+    event_id = data2['@id']
+    response2 = update_with_put(api_client, event_id, data2)
+    assert str(response2.data['detail']) == 'Invalid value "Non existing event type"'
+
+
+@pytest.mark.django_db
+def test__bulk_update_single_event(api_client, complex_event_dict, user):
+    api_client.force_authenticate(user=user)
+    response = create_with_post(api_client, complex_event_dict)
+
+    data2 = response.data
+    data2['type_id'] = 'Volunteering'
+    data3 = [data2]
+    response2 = api_client.put('http://testserver/v1/event/', data3, format='json')
+    assert_event_data_is_equal(data3, response2.data)
+
+    data2['type_id'] = 'Course'
+    data3 = [data2]
+    response2 = api_client.put('http://testserver/v1/event/', data3, format='json')
+    assert_event_data_is_equal(data3, response2.data)
+
+
+@pytest.mark.django_db
 def test__update_an_event_with_naive_datetime(api_client, minimal_event_dict, user):
 
     # create an event
@@ -253,7 +294,9 @@ def test__update_an_event_with_naive_datetime(api_client, minimal_event_dict, us
     data2['start_time'] = pytz.utc.localize(dateutil_parse(data2['start_time'])).isoformat().replace('+00:00', 'Z')
     data2['event_status'] = 'EventRescheduled'
 
-    # assert
+    # last modified times cannot be equal as the event was updated
+    data2.pop('last_modified_time')
+    response2.data.pop('last_modified_time')
     assert_event_data_is_equal(data2, response2.data)
 
 
@@ -707,7 +750,7 @@ def test_multiple_event_update_with_incorrect_json(api_client, minimal_event_dic
     data_source.save()
     api_client.credentials(apikey=data_source.api_key)
     response = api_client.put(reverse('event-list'), minimal_event_dict, format='json')
-    assert response.status_code == 400
+    assert response.status_code == 403
 
 
 @pytest.mark.django_db
@@ -772,6 +815,27 @@ def test_cannot_edit_events_in_the_past(api_client, event, minimal_event_dict, u
     response = api_client.put(reverse('event-detail', kwargs={'pk': event.id}), minimal_event_dict, format='json')
     assert response.status_code == 403
     assert 'Cannot edit a past event' in str(response.content)
+
+
+@pytest.mark.django_db
+def test_can_edit_events_in_the_past_with_past_events_allowed(
+        api_client,
+        event,
+        minimal_event_dict,
+        user,
+        data_source):
+    api_client.force_authenticate(user)
+
+    data_source.edit_past_events = True
+    data_source.save()
+
+    event.start_time = timezone.now() - timedelta(days=2)
+    event.end_time = timezone.now() - timedelta(days=1)
+    event.save(update_fields=('start_time', 'end_time'))
+
+    response = api_client.put(reverse('event-detail', kwargs={'pk': event.id}), minimal_event_dict, format='json')
+    assert response.status_code == 200
+    assert_event_data_is_equal(minimal_event_dict, response.data)
 
 
 @pytest.mark.django_db

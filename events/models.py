@@ -19,28 +19,35 @@ attribute to change @context when need to define schemas for custom fields.
 """
 import datetime
 import logging
+from smtplib import SMTPException
+
+import pytz
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
-import pytz
-from django.contrib.gis.db import models
-from rest_framework.exceptions import ValidationError
-from reversion import revisions as reversion
-from django.utils.translation import ugettext_lazy as _
-from mptt.models import MPTTModel, TreeForeignKey
-from mptt.querysets import TreeQuerySet
 from django.contrib.contenttypes.models import ContentType
-from events import translation_utils
-from django.utils.encoding import python_2_unicode_compatible
+from django.contrib.gis.db import models
 from django.contrib.postgres.fields import HStoreField
+from django.contrib.postgres.indexes import Index
+from django.contrib.postgres.search import SearchVectorField
 from django.contrib.sites.models import Site
 from django.core.mail import send_mail
 from django.db import transaction
+from django.db.models import Q
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
+from six import python_2_unicode_compatible
+from django.utils.translation import gettext_lazy as _
 from image_cropping import ImageRatioField
+from mptt.models import MPTTModel, TreeForeignKey
+from mptt.querysets import TreeQuerySet
 from munigeo.models import AdministrativeDivision
-from notifications.models import render_notification_template, NotificationType, NotificationTemplateException
-from smtplib import SMTPException
+from rest_framework.exceptions import ValidationError
+from reversion import revisions as reversion
+
+from events import translation_utils
+from notifications.models import (NotificationTemplateException,
+                                  NotificationType,
+                                  render_notification_template)
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +81,9 @@ class DataSource(models.Model):
         'django_orghierarchy.Organization', on_delete=models.SET_NULL,
         related_name='owned_systems', null=True, blank=True)
     user_editable = models.BooleanField(default=False, verbose_name=_('Objects may be edited by users'))
+    edit_past_events = models.BooleanField(default=False, verbose_name=_('Past events may be edited using API'))
+    create_past_events = models.BooleanField(default=False, verbose_name=_('Past events may be created using API'))
+    private = models.BooleanField(default=False, verbose_name=_('Do not show events created by this data_source by default.'), db_index=True)
 
     def __str__(self):
         return self.id
@@ -196,7 +206,7 @@ class Image(models.Model):
 
     def can_be_edited_by(self, user):
         """Check if current image can be edited by the given user"""
-        if user.is_superuser:
+        if user.is_superuser or user.is_regular_user(self.publisher):
             return True
         return user.is_admin(self.publisher)
 
@@ -265,6 +275,9 @@ class Language(models.Model):
 class KeywordLabel(models.Model):
     name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True)
     language = models.ForeignKey(Language, on_delete=models.CASCADE, blank=False, null=False)
+    search_vector_fi = SearchVectorField(null=True)
+    search_vector_en = SearchVectorField(null=True)
+    search_vector_sv = SearchVectorField(null=True)
 
     def __str__(self):
         return self.name + ' (' + str(self.language) + ')'
@@ -281,8 +294,8 @@ class UpcomingEventsUpdater(models.Manager):
             qs = qs.filter(deprecated=False)
         elif self.model.__name__ == 'Place':
             qs = qs.filter(deleted=False)
-        qs.filter(events__start_time__gte=now).update(has_upcoming_events=True)
-        qs.exclude(events__start_time__gte=now).update(has_upcoming_events=False)
+        qs.filter(events__end_time__gte=now).update(has_upcoming_events=True)
+        qs.exclude(events__end_time__gte=now).update(has_upcoming_events=False)
 
 
 class Keyword(BaseModel, ImageMixin, ReplacedByMixin):
@@ -311,6 +324,12 @@ class Keyword(BaseModel, ImageMixin, ReplacedByMixin):
 
     def __str__(self):
         return self.name
+
+    def is_admin(self, user):
+        if user.is_superuser:
+            return True
+        else:
+            return user in self.publisher.admin_users.all()
 
     def deprecate(self):
         self.deprecated = True
@@ -361,9 +380,21 @@ class Keyword(BaseModel, ImageMixin, ReplacedByMixin):
                     event.audience.remove(self)
                     event.audience.add(self.replaced_by)
 
+    def can_be_edited_by(self, user):
+        """Check if current place can be edited by the given user"""
+        if user.is_superuser:
+            return True
+        return user.is_admin(self.publisher)
+
     class Meta:
         verbose_name = _('keyword')
         verbose_name_plural = _('keywords')
+        indexes = [
+            Index(name='keywords_index',
+                  fields=('name', 'name_fi'),
+                  condition=Q(n_events__gt=0),
+                  )
+        ]
 
 
 class KeywordSet(BaseModel, ImageMixin):
@@ -385,6 +416,11 @@ class KeywordSet(BaseModel, ImageMixin):
     organization = models.ForeignKey('django_orghierarchy.Organization', on_delete=models.CASCADE,
                                      verbose_name=_('Organization which uses this set'), null=True)
     keywords = models.ManyToManyField(Keyword, blank=False, related_name='sets')
+
+    def can_be_edited_by(self, user):
+        if user.is_superuser:
+            return True
+        return user.get_default_organization().data_source == self.data_source
 
     def save(self, *args, **kwargs):
         if any([keyword.deprecated for keyword in self.keywords.all()]):
@@ -480,6 +516,26 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin, ReplacedByMi
         else:
             self.divisions.clear()
 
+    def is_admin(self, user):
+        if user.is_superuser:
+            return True
+        else:
+            return user in self.publisher.admin_users.all()
+
+    def soft_delete(self, using=None):
+        self.deleted = True
+        self.save(update_fields=("deleted",), using=using, force_update=True)
+
+    def undelete(self, using=None):
+        self.deleted = False
+        self.save(update_fields=("deleted",), using=using, force_update=True)
+
+    def can_be_edited_by(self, user):
+        """Check if current place can be edited by the given user"""
+        if user.is_superuser:
+            return True
+        return user.is_admin(self.publisher)
+
 
 reversion.register(Place)
 
@@ -535,6 +591,17 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
         (SuperEventType.UMBRELLA, _('Umbrella event')),
     )
 
+    class Type_Id:
+        GENERAL = 1
+        COURSE = 2
+        VOLUNTEERING = 3
+
+    TYPE_IDS = (
+        (Type_Id.GENERAL, _("General")),
+        (Type_Id.COURSE, _("Course")),
+        (Type_Id.VOLUNTEERING, _("Volunteering")),
+        )
+
     # Properties from schema.org/Thing
     info_url = models.URLField(verbose_name=_('Event home page'), blank=True, null=True, max_length=1000)
     description = models.TextField(verbose_name=_('Description'), blank=True, null=True)
@@ -578,16 +645,19 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
     has_start_time = models.BooleanField(default=True)
     has_end_time = models.BooleanField(default=True)
 
-    audience_min_age = models.SmallIntegerField(verbose_name=_('Minimum recommended age'),
-                                                blank=True, null=True, db_index=True)
-    audience_max_age = models.SmallIntegerField(verbose_name=_('Maximum recommended age'),
-                                                blank=True, null=True, db_index=True)
+    audience_min_age = models.PositiveSmallIntegerField(verbose_name=_('Minimum recommended age'),
+                                                        blank=True, null=True, db_index=True)
+    audience_max_age = models.PositiveSmallIntegerField(verbose_name=_('Maximum recommended age'),
+                                                        blank=True, null=True, db_index=True)
 
     super_event = TreeForeignKey('self', null=True, blank=True,
                                  on_delete=models.SET_NULL, related_name='sub_events')
 
     super_event_type = models.CharField(max_length=255, blank=True, null=True, db_index=True,
                                         default=None, choices=SUPER_EVENT_TYPES)
+
+    type_id = models.CharField(max_length=255, blank=False, null=False, db_index=False,
+                               default=Type_Id.GENERAL, choices=TYPE_IDS)
 
     in_language = models.ManyToManyField(Language, verbose_name=_('In language'), related_name='events', blank=True)
 
@@ -597,9 +667,27 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
 
     replaced_by = models.ForeignKey('Event', on_delete=models.SET_NULL, related_name='aliases', null=True, blank=True)
 
+    maximum_attendee_capacity = models.PositiveSmallIntegerField(
+        verbose_name=_('maximum attendee capacity'), null=True, blank=True
+    )
+
+    # TODO: make into agreement with schema.org
     # Custom fields not from schema.org
+    minimum_attendee_capacity = models.PositiveSmallIntegerField(
+        verbose_name=_('minimum attendee capacity'), null=True, blank=True
+    )
+    enrolment_start_time = models.DateTimeField(verbose_name=_('enrolment start time'), null=True, blank=True)
+    enrolment_end_time = models.DateTimeField(verbose_name=_('enrolment end time'), null=True, blank=True)
     keywords = models.ManyToManyField(Keyword, related_name='events')
     audience = models.ManyToManyField(Keyword, related_name='audience_events', blank=True)
+
+    # this field is redundant, but allows to avoid expensive joins when searching for local events
+    local = models.BooleanField(default=False)
+
+    # these fields are populated and kept up to date by the db. See migration 0080
+    search_vector_fi = SearchVectorField(null=True)
+    search_vector_en = SearchVectorField(null=True)
+    search_vector_sv = SearchVectorField(null=True)
 
     class Meta:
         verbose_name = _('event')
@@ -649,6 +737,9 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
                                                  str(self.keywords.filter(deprecated=True).values('id')) + " or " +
                                                  str(self.audience.filter(deprecated=True).values('id')) +
                                                  ". Please use up-to-date keywords.")})
+
+        # if self.location__divisions__ocd_id__endswith == MUNIGEO_MUNI:
+        #     self.local = True
 
         super(Event, self).save(*args, **kwargs)
 
@@ -836,3 +927,22 @@ class EventAggregate(models.Model):
 class EventAggregateMember(models.Model):
     event_aggregate = models.ForeignKey(EventAggregate, on_delete=models.CASCADE, related_name='members')
     event = models.OneToOneField(Event, on_delete=models.CASCADE)
+
+
+class Feedback(models.Model):
+
+    name = models.CharField(verbose_name=_('Name'), max_length=255, blank=True)
+    email = models.EmailField(verbose_name=_('E-mail'))
+    subject = models.CharField(verbose_name=_('Subject'), max_length=255, blank=True)
+    body = models.TextField(verbose_name=_('Body'), max_length=10000, blank=True)
+
+    def save(self, *args, **kwargs):
+        try:
+            send_mail(subject=f'[LinkedEvents] {self.subject} reported by {self.name}',
+                      message=self.body,
+                      from_email=self.email,
+                      recipient_list=[settings.SUPPORT_EMAIL],
+                      fail_silently=False)
+        except SMTPException as e:
+            logger.error(e, exc_info=True)
+        super(Feedback, self).save(*args, **kwargs)

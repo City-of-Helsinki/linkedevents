@@ -23,7 +23,7 @@ from .base import Importer, register_importer
 # Per module logger
 logger = logging.getLogger(__name__)
 
-HARRASTUSHAKU_API_BASE_URL = 'http://nk.hel.fi/harrastushaku/api/'
+HARRASTUSHAKU_API_BASE_URL = 'http://www.harrastushaku.fi/api/'
 
 TIMEZONE = pytz.timezone('Europe/Helsinki')
 
@@ -227,7 +227,7 @@ class HarrastushakuImporter(Importer):
         logger.debug('Fetching locations...')
         try:
             url = '{}location/'.format(HARRASTUSHAKU_API_BASE_URL)
-            response = requests.get(url)
+            response = requests.get(url, verify=False)
             response.raise_for_status()
             return response.json()
         except requests.RequestException as e:
@@ -238,7 +238,7 @@ class HarrastushakuImporter(Importer):
         logger.debug('Fetching courses...')
         try:
             url = '{}activity/'.format(HARRASTUSHAKU_API_BASE_URL)
-            response = requests.get(url)
+            response = requests.get(url, verify=False)
             response.raise_for_status()
             return response.json()['data']
         except requests.RequestException as e:
@@ -287,14 +287,25 @@ class HarrastushakuImporter(Importer):
         else:
             self.handle_one_time_event(event_data)
 
+    def create_registration_links(self, activity_data):
+        # Harrastushaku has own registration links which should be created in the imported events as well
+        if activity_data.get('regavailable', 0) and '1' in activity_data['regavailable']:
+            # regstart and regend sometimes take "false" value which seem to mean in the cases regavailable=='1' that
+            # the registration is going on indefinitely
+            reg_start = activity_data['regstartdate'] if isinstance(activity_data['regstartdate'], int) else 0
+            reg_end = activity_data['regenddate'] if isinstance(activity_data['regenddate'], int) else 9999999999
+            if datetime.utcfromtimestamp(reg_start) <= datetime.utcnow() <= datetime.utcfromtimestamp(reg_end):
+                return {'fi': {'registration': f"https://harrastushaku.fi/register/{activity_data['id']}"}}
+        return ''
+
     def get_event_data(self, activity_data):
         get_string, get_int, get_datetime = bind_data_getters(activity_data)
 
         keywords = self.get_event_keywords(activity_data)
         audience = self.get_event_audiences_from_ages(activity_data) | self.get_event_audiences_from_keywords(keywords)
         keywords |= audience
-
         event_data = {
+            'type_id': Event.Type_Id.COURSE,
             'name': get_string('name', localized=True),
             'description': get_string('description', localized=True),
             'audience_max_age': get_int('agemax'),
@@ -302,14 +313,13 @@ class HarrastushakuImporter(Importer):
             'start_time': get_datetime('startdate'),
             'end_time': get_datetime('enddate'),
             'date_published': get_datetime('publishdate'),
-
-            'extension_course': {
-                'enrolment_start_date': get_datetime('regstartdate'),
-                'enrolment_end_date': get_datetime('regenddate'),
-                'maximum_attendee_capacity': get_int('maxentries'),
-                'remaining_attendee_capacity': get_int('regavailable'),
-            },
-
+            'external_links': self.create_registration_links(activity_data),
+            'provider': self.get_organizer(activity_data),
+            'provider_contact_info': self.get_organizer_info(activity_data),
+            'enrolment_start_time': get_datetime('regstartdate'),
+            'enrolment_end_time': get_datetime('regenddate'),
+            'maximum_attendee_capacity': get_int('maxentries'),
+            'remaining_attendee_capacity': get_int('regavailable'),
             'data_source': self.data_source,
             'origin_id': activity_data['id'],
             'publisher': self.organization,
@@ -320,8 +330,10 @@ class HarrastushakuImporter(Importer):
             'offers': self.get_event_offers(activity_data),
             'audience': audience,
         }
-
         return event_data
+
+    def get_organizer(self, activity_data):
+        return {'fi': clean_text(activity_data.get('organiser', ''), strip_newlines=True, parse_html=True)}
 
     def handle_recurring_event(self, event_data, time_tables):
         start_date, end_date = self.get_event_start_and_end_dates(event_data)
@@ -383,6 +395,11 @@ class HarrastushakuImporter(Importer):
         end_datetime = event_data.get('end_time')
         end_date = end_datetime.date() if end_datetime else None
         return start_date, end_date
+
+    def get_organizer_info(self, activity_data):
+        org_details = clean_text(activity_data.get('organiserdetails', ''), strip_newlines=True, parse_html=True)
+        reg_details = clean_text(activity_data.get('regdetails', ''), strip_newlines=True, parse_html=True)
+        return {'fi': f'{reg_details} {org_details}'.strip()} if org_details or reg_details else ''
 
     def build_sub_event_time_ranges(self, start_date, end_date, time_tables):
         sub_event_time_ranges = []
@@ -478,14 +495,16 @@ class HarrastushakuImporter(Importer):
         return {'id': self.location_id_to_place_id.get(location_id)}
 
     def get_event_offers(self, activity_data):
+
+
         offers = []
 
         for price_data in activity_data.get('prices', ()):
             get_string = bind_data_getters(price_data)[0]
 
-            price = get_string('price', localized=True)
+            price = get_string('price', localized=False)
             description = get_string('description', localized=True)
-            is_free = price is not None and price['fi'] == '0'
+            is_free = price is not None and price == '0'
 
             if not description and len(activity_data['prices']) == 1:
                 description = get_string('pricedetails', localized=True)
@@ -514,7 +533,7 @@ class HarrastushakuImporter(Importer):
 
     @lru_cache()
     def match_keyword(self, text):
-        return self.keyword_matcher.match(text)
+        return self.keyword_matcher.match(text, language='fi')
 
 
 def get_string_from_data(data, field, localized=False):
@@ -538,7 +557,7 @@ def get_datetime_from_data(data, field):
     value = data.get(field)
     if value in (None, False, ''):
         return None
-    return datetime.utcfromtimestamp(int(value)).replace(tzinfo=pytz.utc).astimezone(TIMEZONE)
+    return datetime.fromtimestamp(int(value)).astimezone(pytz.timezone('UTC'))
 
 
 def bind_data_getters(data):
