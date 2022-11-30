@@ -95,6 +95,7 @@ INTERNAL_IPS = env('INTERNAL_IPS',
                    default=(['127.0.0.1'] if DEBUG else []))
 DATABASES = {
     'default': env.db()
+    'default'['ENGINE'] = 'django.contrib.gis.db.backends.postgis'
 }
 
 SYSTEM_DATA_SOURCE_ID = env('SYSTEM_DATA_SOURCE_ID')
