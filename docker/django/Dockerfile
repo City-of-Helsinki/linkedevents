@@ -1,7 +1,7 @@
-ARG PYTHON_VERSION=3.7.12
-ARG IMAGE_VARIANT=slim-buster
+ARG PYTHON_VERSION=3.7
+ARG IMAGE_VARIANT=slim
 # ==============================
-FROM python:${PYTHON_VERSION}-${IMAGE_VARIANT} AS base_stage
+FROM helsinkitest/python:${PYTHON_VERSION}-${IMAGE_VARIANT} AS base_stage
 # ==============================
 
 ENV PYTHONDONTWRITEBYTECODE true
