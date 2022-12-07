@@ -12,7 +12,7 @@ jobs:
       - uses: kunalnagarco/action-cve@91ea7598d2ec2765d41e4d9f999a632ed7982ee8
         with:
           # espooevents-ci user token
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          slack_webhook: ${{ secrets.SLACK_WEBHOOK }}
+          token: ${{ secrets.ESPOOEVENTS_ACCESS_TOKEN }}
+          slack_webhook: ${{ secrets.ESPOOEVENTS_SLACK_WEBHOOK }}
           # Maximum that you can send to slack due message size limit.
           count: 30
