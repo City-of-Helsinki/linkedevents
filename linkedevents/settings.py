@@ -97,6 +97,8 @@ DATABASES = {
     'default': env.db()
 }
 
+DATABASES['default']['ENGINE'] = 'django.contrib.gis.db.backends.postgis'
+
 SYSTEM_DATA_SOURCE_ID = env('SYSTEM_DATA_SOURCE_ID')
 
 SITE_ID = 1
