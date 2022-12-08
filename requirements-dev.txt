@@ -6,7 +6,7 @@
 #
 asgiref==3.5.2            # via -c requirements.txt, django
 astroid==2.4.2            # via pylint
-attrs==19.3.0             # via -c requirements.txt, pytest
+attrs==21.4.0             # via -c requirements.txt, pytest
 backcall==0.2.0           # via ipython
 click==7.1.2              # via pip-tools
 decorator==4.4.2          # via ipython, traitlets
