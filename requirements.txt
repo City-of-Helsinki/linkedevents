@@ -127,8 +127,7 @@ icalendar==4.0.6
     # via -r requirements.in
 idna==2.10
     # via requests
-importlib-metadata==4.13.0
-    # via -r requirements.in
+importlib-metadata==4.8.3
 isodate==0.6.0
     # via
     #   -r requirements.in
