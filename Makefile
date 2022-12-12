@@ -115,7 +115,6 @@ import_osoite:
 	-e DB_HOST=localhost \
 	-e DB_NAME=linkedevents \
 	-e SYSTEM_DATA_SOURCE_ID=espooevents \
-	-v `pwd`/quickfix.py:/home/linkedevents/.local/lib/python3.7/site-packages/munigeo/importer/helsinki.py \
 	--name linkedevents-admin \
 	linkedevents-admin \
 	python manage.py event_import osoite --places
