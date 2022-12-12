@@ -35,7 +35,7 @@ jobs:
           cache: 'pip'
       - run: pip install -r requirements.txt -r requirements-dev.txt
       - name: Lint
-        run: flake8 .
+        run: flake8 . --filename=quickfix.py
 
   test:
     needs: dependencies
