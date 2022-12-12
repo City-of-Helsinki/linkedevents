@@ -22,6 +22,7 @@ ESPOO_TOPIC_KEYWORD_SET_DATA = {
 TOPIC_KEYWORD_IDS = [
     'yso:p1797',  # asuminen
     'yso:p1235',  # elokuvat
+    'yso:p2901', # harrastukset
     'yso:p1947',  # hyvinvointi
     'yso:p8270',  # kaupunkisuunnittelu
     'yso:p2787',  # kirjastot
