@@ -29,6 +29,7 @@ gunicorn==20.0.4
 httmock
 icalendar
 isodate
+importlib-metadata==4.13.0
 jinja2
 langdetect
 lxml

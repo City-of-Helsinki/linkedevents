@@ -1,6 +1,5 @@
-ARG PYTHON_VERSION=3.6
+ARG PYTHON_VERSION=3.7
 ARG IMAGE_VARIANT=slim
-
 # ==============================
 FROM helsinkitest/python:${PYTHON_VERSION}-${IMAGE_VARIANT} AS base_stage
 # ==============================
