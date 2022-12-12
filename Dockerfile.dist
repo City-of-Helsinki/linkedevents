@@ -52,6 +52,9 @@ COPY --chown=1000 . ./
 RUN pip install --user --no-cache-dir -r ./requirements.txt \
     && pip install --user --no-cache-dir awscli
 
+# TODO FIXME
+COPY --chown=1000 ./quickfix.py /home/linkedevents/.local/lib/python3.7/site-packages/munigeo/importer/helsinki.py
+
 EXPOSE 8000
 
 # Define the build and commit args and set default values for them.
