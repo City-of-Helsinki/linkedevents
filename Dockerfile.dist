@@ -36,6 +36,7 @@ RUN set -eux \
       libpq-dev \
       tzdata \
       wget \
+      git \
     && ln -fs /usr/share/zoneinfo/Europe/Helsinki /etc/localtime \
     && dpkg-reconfigure --frontend noninteractive tzdata \
     && dpkg-reconfigure --frontend noninteractive locales \
@@ -51,9 +52,6 @@ COPY --chown=1000 . ./
 # Install also awscli so that we can get the db password from SSM parameter store in the admin image
 RUN pip install --user --no-cache-dir -r ./requirements.txt \
     && pip install --user --no-cache-dir awscli
-
-# TODO FIXME
-COPY --chown=1000 ./quickfix.py /home/linkedevents/.local/lib/python3.7/site-packages/munigeo/importer/helsinki.py
 
 EXPOSE 8000
 
