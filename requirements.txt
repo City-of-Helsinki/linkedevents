@@ -84,7 +84,7 @@ django-mptt==0.11.0
     #   -r requirements.in
     #   django-munigeo
     #   django-orghierarchy
-django-munigeo==0.2.26
+django-munigeo @ git+https://github.com/espoon-voltti/django-munigeo.git@0.2.27
     # via -r requirements.in
 django-orghierarchy==0.1.24
     # via -r requirements.in
