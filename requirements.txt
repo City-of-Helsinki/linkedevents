@@ -61,7 +61,7 @@ django-cors-headers==3.4.0
     # via -r requirements.in
 django-environ==0.4.5
     # via -r requirements.in
-django-filter==2.3.0
+django-filter==2.4.0
     # via -r requirements.in
 django-haystack==2.8.1
     # via -r requirements.in
