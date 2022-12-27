@@ -71,6 +71,14 @@ CUSTOM_ESPOO_AUDIENCE_KEYWORDS = [
         'name_en': 'disabled',
         'data_source_id': ESPOO_DATA_SOURCE_ID,
     },
+    {
+        'id': 'espoo:a6',
+        'name_fi': 'erityisryhmät',
+        'name_sv': 'specialgrupper',
+        'name_en': 'special groups',
+        'data_source_id': ESPOO_DATA_SOURCE_ID,
+    },
+
 ]
 
 # A mapping of YSO audience keywords to custom Espoo audience keywords
@@ -82,6 +90,7 @@ YSO_TO_ESPOO_AUDIENCE_KEYWORD_MAPPING = {
     'yso:p11617': 'espoo:a3',  # YSO nuoret -> Espoo nuoret
     'yso:p2433': 'espoo:a4',  # YSO ikääntyneet -> Espoo seniorit
     'yso:p7179': 'espoo:a5',  # YSO vammaiset -> Espoo vammaiset
+    'yso:p17354': 'espoo:a6',  # YSO erityisryhmät -> Espoo erityisryhmät
 }
 
 
