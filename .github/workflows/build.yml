@@ -8,6 +8,16 @@ env:
   ECR_REGISTRY: 307238562370.dkr.ecr.eu-west-1.amazonaws.com
 
 jobs:
+  test-ssh:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Check out infra
+        uses: actions/checkout@v3
+        with:
+          repository: espoon-voltti/espooevents-infra
+          ssh-key: '${{ secrets.ESPOOEVENTS_SSH_KEY }}'
+          ref: 'refs/heads/master'
+
   lint-shell:
     runs-on: ubuntu-20.04
     steps:
