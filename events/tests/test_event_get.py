@@ -477,7 +477,7 @@ def test_get_event_disallow_simultaneous_include_super_and_sub(api_client, event
     detail_url += '?include=super_event,sub_events'
     response = get(api_client, detail_url)
     assert_event_fields_exist(response.data)
-    assert(type(response.data['super_event'] == 'dict'))
+    assert (type(response.data['super_event'] == 'dict'))
 
 
 @pytest.mark.django_db
@@ -533,7 +533,7 @@ def test_event_list_filters(api_client, event, event2):
         q = ','.join(filter_values)
         response = get_list(api_client, query_string='%s=%s' % (filter_name, q))
         data = response.data['data']
-        assert(len(data) == 2)
+        assert (len(data) == 2)
         ids = [e['id'] for e in data]
         assert event.id in ids
         assert event2.id in ids
@@ -549,7 +549,7 @@ def test_event_list_publisher_ancestor_filter(api_client, event, event2, organiz
     event2.save()
     response = get_list(api_client, query_string=f'publisher_ancestor={organization.id}')
     data = response.data['data']
-    assert(len(data) == 1)
+    assert (len(data) == 1)
     ids = [e['id'] for e in data]
     assert event.id in ids
 

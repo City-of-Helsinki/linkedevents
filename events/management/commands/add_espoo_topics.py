@@ -47,6 +47,12 @@ TOPIC_KEYWORD_IDS = [
     'yso:p1650',  # varhaiskasvatus
     'yso:p6033',  # ympäristö
     'yso:p1182',  # yrittäjyys
+    'yso:p2739',  # kuvataide
+    'yso:p6062',  # pelit
+    'yso:p2846',  # ruoanvalmistus
+    'yso:p143',  # leirit
+    'yso:p8630',  # kädentaidot
+    'yso:p13084',  # luonto
 ]
 
 

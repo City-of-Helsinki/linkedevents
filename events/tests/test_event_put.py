@@ -610,8 +610,8 @@ def test__correct_api_key_can_update_an_event_in_suborganization(api_client, eve
 
     organization2.parent = organization
     organization2.save()
-    del(complex_event_dict['publisher'])
-    del(complex_event_dict['data_source'])
+    del (complex_event_dict['publisher'])
+    del (complex_event_dict['data_source'])
 
     detail_url = reverse('event-detail', kwargs={'pk': event2.pk})
     response = update_with_put(api_client, detail_url, complex_event_dict,
@@ -629,8 +629,8 @@ def test__correct_api_key_cannot_update_an_event_in_superorganization(api_client
 
     organization2.parent = organization
     organization2.save()
-    del(complex_event_dict['publisher'])
-    del(complex_event_dict['data_source'])
+    del (complex_event_dict['publisher'])
+    del (complex_event_dict['data_source'])
 
     detail_url = reverse('event-detail', kwargs={'pk': event.pk})
     response = update_with_put(api_client, detail_url, complex_event_dict,
@@ -646,7 +646,7 @@ def test__wrong_api_key_cannot_update_an_event(api_client, event, complex_event_
     data_source.save()
     other_data_source.owner = organization2
     other_data_source.save()
-    del(complex_event_dict['publisher'])
+    del (complex_event_dict['publisher'])
 
     detail_url = reverse('event-detail', kwargs={'pk': event.pk})
     response = update_with_put(api_client, detail_url, complex_event_dict,
