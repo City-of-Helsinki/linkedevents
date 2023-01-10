@@ -31,7 +31,9 @@ RUN set -eux \
     && apt-get update && apt-get -y dist-upgrade \
     && apt-get install -y --no-install-recommends --no-install-suggests \
       build-essential \
+      curl \
       gdal-bin \
+      jq \
       locales \
       libpq-dev \
       tzdata \
