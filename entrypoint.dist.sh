@@ -32,9 +32,22 @@ unset DB_APP_USER
 unset DB_MIGRATION_PASSWORD
 unset DB_MIGRATION_USER
 
+# shellcheck disable=SC2155
+EC2_HOST_IP="$(curl --silent --fail --show-error http://169.254.169.254/latest/meta-data/local-ipv4 || printf 'UNAVAILABLE')"
+
+# If EC2_HOST IP is unavailable it could be that we are running inside Fargate and need to fetch it 
+# via different way
+if [ "$EC2_HOST_IP" = "UNAVAILABLE" ]; then
+  JSON="$(curl --silent --fail --show-error "${ECS_CONTAINER_METADATA_URI}"/task || printf 'UNAVAILABLE')"
+  HOST_IP="$(echo "$JSON" | jq -r '.Containers[0].Networks[0].IPv4Addresses[0]')"
+  export HOST_IP
+else
+  HOST_IP=EC2_HOST_IP
+  export HOST_IP
+fi
+
 # Append host ip to ALLOWED_HOSTS so that ALB health checks can access the health endpoint
 # shellcheck disable=SC2155
-export HOST_IP="$(wget -qO- http://169.254.169.254/latest/meta-data/local-ipv4)"
 export ALLOWED_HOSTS="${ALLOWED_HOSTS},${HOST_IP}"
 
 # if the first argument to `docker run` starts with `--`, the user is passing gunicorn arguments
