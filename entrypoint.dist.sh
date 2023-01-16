@@ -42,7 +42,7 @@ if [ "$EC2_HOST_IP" = "UNAVAILABLE" ]; then
   HOST_IP="$(echo "$JSON" | jq -r '.Containers[0].Networks[0].IPv4Addresses[0]')"
   export HOST_IP
 else
-  HOST_IP=EC2_HOST_IP
+  HOST_IP=$EC2_HOST_IP
   export HOST_IP
 fi
 
