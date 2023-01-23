@@ -34,7 +34,7 @@ The best way to contribute is to open a new PR for discussion. We strive to be a
 ## How to setup your local development environment
 If all you want is a barebone application to work with for your own city:
 
-* Change ./docker/django/.env.example to ./docker/django/.env and change the variable values to your liking.
+* Copy ./docker/django/.env.example to ./docker/django/.env and change the variable values to your liking.
 * Start django application and database server:
   ```
   docker-compose up
@@ -154,6 +154,7 @@ ALTER USER "$DATABASE_USER" CREATEDB;
 \c template1
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS hstore;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 EOF
 
 ```
