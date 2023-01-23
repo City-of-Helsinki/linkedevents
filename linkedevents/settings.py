@@ -98,6 +98,7 @@ DATABASES = {
 }
 
 DATABASES['default']['ENGINE'] = 'django.contrib.gis.db.backends.postgis'
+DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
 SYSTEM_DATA_SOURCE_ID = env('SYSTEM_DATA_SOURCE_ID')
 
