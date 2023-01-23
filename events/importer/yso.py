@@ -109,6 +109,8 @@ def deprecate_and_replace(graph, keyword):
 @register_importer
 class YsoImporter(Importer):
     name = "yso"
+
+    # Note: from 2022 onwards 'se' is Northern Sami
     supported_languages = ["fi", "sv", "en"]
 
     def setup(self):
@@ -145,16 +147,12 @@ class YsoImporter(Importer):
     def save_keywords(self, graph):
         logger.debug("Saving data")
 
-        bulk_mode = False
-        if bulk_mode:
-            assert not Keyword.objects.filter(data_source=self.data_source).exists()
-        if not bulk_mode:
-            queryset = KeywordLabel.objects.all()
-            label_syncher = ModelSyncher(
-                queryset,
-                lambda obj: (obj.name, obj.language_id),
-                delete_func=lambda obj: obj.delete(),
-            )
+        queryset = KeywordLabel.objects.all()
+        label_syncher = ModelSyncher(
+            queryset,
+            lambda obj: (obj.name, obj.language_id),
+            delete_func=lambda obj: obj.delete(),
+        )
 
         keyword_labels = {}
         labels_to_create = set()
@@ -162,66 +160,44 @@ class YsoImporter(Importer):
             if (subject, RDF.type, SKOS.Concept) in graph:
                 try:
                     yid = get_yso_id(subject)
-                    if bulk_mode:
-                        if label.language is not None:
-                            language = label.language
-                            if label.language == "se":
-                                # YSO doesn't contain se, assume an error.
-                                language = "sv"
-                            labels_to_create.add((str(label), language))
-                            keyword_labels.setdefault(yid, []).append(label)
-                    else:
-                        label = self.save_alt_label(label_syncher, graph, label)
-                        if label:
-                            keyword_labels.setdefault(yid, []).append(label)
+                    label = self.save_alt_label(label_syncher, graph, label)
+                    if label:
+                        keyword_labels.setdefault(yid, []).append(label)
                 except ValidationError as e:
                     logger.error(e)
 
-        if bulk_mode:
-            KeywordLabel.objects.bulk_create(
-                [
-                    KeywordLabel(name=name, language_id=language)
-                    for name, language in labels_to_create
-                ]
-            )
-        else:
-            label_syncher.finish(force=self.options["force"])
+        label_syncher.finish(force=self.options["force"])
 
-        if bulk_mode:
-            self.save_keywords_in_bulk(graph)
-            self.save_keyword_label_relationships_in_bulk(keyword_labels)
-
-        if not bulk_mode:
-            # manually add new keywords to deprecated ones
-            for old_id, new_id in YSO_DEPRECATED_MAPS.items():
-                try:
-                    old_keyword = Keyword.objects.get(id=old_id)
-                    new_keyword = Keyword.objects.get(id=new_id)
-                except ObjectDoesNotExist:
-                    continue
-                logger.info(
-                    "Manually mapping events with %s to %s"
-                    % (str(old_keyword), str(new_keyword))
-                )
-                new_keyword.events.add(*old_keyword.events.all())
-                new_keyword.audience_events.add(*old_keyword.audience_events.all())
-
-            queryset = Keyword.objects.filter(
-                data_source=self.data_source, deprecated=False
+        # manually add new keywords to deprecated ones
+        for old_id, new_id in YSO_DEPRECATED_MAPS.items():
+            try:
+                old_keyword = Keyword.objects.get(id=old_id)
+                new_keyword = Keyword.objects.get(id=new_id)
+            except ObjectDoesNotExist:
+                continue
+            logger.info(
+                "Manually mapping events with %s to %s"
+                % (str(old_keyword), str(new_keyword))
             )
-            syncher = ModelSyncher(
-                queryset,
-                lambda keyword: keyword.id,
-                delete_func=lambda obj: deprecate_and_replace(graph, obj),
-                check_deleted_func=lambda obj: obj.deprecated,
-            )
-            save_set = set()
-            for subject in graph.subjects(RDF.type, SKOS.Concept):
-                try:
-                    self.save_keyword(syncher, graph, subject, keyword_labels, save_set)
-                except ValidationError as e:
-                    logger.error(e)
-            syncher.finish(force=self.options["force"])
+            new_keyword.events.add(*old_keyword.events.all())
+            new_keyword.audience_events.add(*old_keyword.audience_events.all())
+
+        queryset = Keyword.objects.filter(
+            data_source=self.data_source, deprecated=False
+        )
+        syncher = ModelSyncher(
+            queryset,
+            lambda keyword: keyword.id,
+            delete_func=lambda obj: deprecate_and_replace(graph, obj),
+            check_deleted_func=lambda obj: obj.deprecated,
+        )
+        save_set = set()
+        for subject in graph.subjects(RDF.type, SKOS.Concept):
+            try:
+                self.save_keyword(syncher, graph, subject, keyword_labels, save_set)
+            except ValidationError as e:
+                logger.error(e)
+        syncher.finish(force=self.options["force"])
 
     def save_keyword_label_relationships_in_bulk(self, keyword_labels):
         yids = Keyword.objects.all().values_list("id", flat=True)
@@ -278,10 +254,13 @@ class YsoImporter(Importer):
         Keyword.objects.bulk_create(keywords, batch_size=1000)
 
     def save_alt_label(self, syncher, graph, label):
-        label_text = str(label)
         if label.language is None:
             logger.error("Error: {} has no language".format(label))
             return None
+        if label.language not in self.supported_languages:
+            return None
+
+        label_text = str(label)
         label_object = syncher.get((label_text, str(label.language)))
         if label_object is None:
             language = Language.objects.get(id=label.language)
