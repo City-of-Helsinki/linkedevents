@@ -85,7 +85,7 @@ ELASTICSEARCH_URL=http://localhost:9200/
 # send exceptions to admins. Linkedevents does not do this. Still you may want
 # to set this for documentation
 # Django setting: ADMINS https://docs.djangoproject.com/en/2.2/ref/settings/#admins
-ADMINS=admin@this.linkedevents.instance,another-admin@this.linkedevents
+ADMINS=[('admin', 'admin@this.linkedevents.instance'), ('another admin', 'another-admin@this.linkedevents')]
 
 # Cookie prefix is added to the every cookie set by linkedevents. These are
 # mostly used when accessing the internal Django admin site. This applies
