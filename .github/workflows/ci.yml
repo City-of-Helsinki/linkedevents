@@ -1,0 +1,86 @@
+# This is a basic workflow to help you get started with Actions
+
+name: linkedevents-ci
+
+on:
+  push:
+    branches: [ master, develop ]
+  pull_request:
+    branches: [ master, develop ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+env:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: [3.8, 3.9]
+    services:
+      postgres:
+        image: helsinkitest/postgis:9.6-2.5-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_linkedevents
+        ports:
+          - 5432:5432
+        # needed because the postgres container does not provide a healthcheck
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+    steps:
+      - name: Run build script
+        run: ./docker/postgres/docker-entrypoint.sh
+        shell: bash
+        env:
+          POSTGRES_DB: test_linkedevents
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: psycopg2 prerequisites
+        run: sudo apt-get install libpq-dev
+
+      - name: Install dependencies
+        run: |
+          pip install -U pip
+          pip install codecov -r requirements.txt -r requirements-dev.txt
+      # https://github.com/marketplace/actions/setup-elasticsearch
+      - name: Configure sysctl limits
+        run: |
+          sudo swapoff -a
+          sudo sysctl -w vm.swappiness=1
+          sudo sysctl -w fs.file-max=262144
+          sudo sysctl -w vm.max_map_count=262144
+      #- uses: getong/elasticsearch-action@v1.2
+      #  with:
+      #    elasticsearch version: ${{env.ELASTICSEARCH_VERSION}}
+      #    host port: 9200
+      #    container port: 9200
+      #    host node port: 9300
+      #    node port: 9300
+      #    discovery type: 'single-node'
+
+      - name: Check and run migrations
+        run: |
+          python manage.py makemigrations --dry-run --check
+          python manage.py migrate
+      - name: Run black, flake8 and isort
+        run: |
+          black --check .
+          flake8
+          isort . --check-only --diff
+      - name: Run tests
+        run: |
+          pytest -ra -vvv --doctest-modules --cov=.
+      - name: Run codecov
+        run: codecov
