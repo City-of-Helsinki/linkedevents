@@ -27,9 +27,11 @@ Target audience of this README.md are developers who may or maynot have a lot of
 experience and would like to get things running as quickly as possible.
 Therefore, instructions written in this README.md should be written accordingly.
 
+
 ## Contributing
 
 The best way to contribute is to open a new PR for discussion. We strive to be able to support various cities with various use cases, so suggestions and new features (as long as they fit in with existing functionality) are welcome.
+
 
 ## How to setup your local development environment
 If all you want is a barebone application to work with for your own city:
@@ -54,8 +56,8 @@ If you wish to use locations, addresses and events data from the Helsinki capita
 and keywords to be present. However, UI code should be easily adaptable to your own city if you have an OAuth2 authentication server present
 
 
-Development installation on physical or virtual machine
-----------------------------
+## Development installation on physical or virtual machine
+
 These instructions assume an $INSTALL_BASE, like so:
 ```bash
 INSTALL_BASE=$HOME/linkedevents
@@ -131,15 +133,16 @@ For further erudition, take a look at the DRF documentation on [customizing the 
 
 After this, everything but search endpoint (/search) is working. See [search](#search)
 
-Production notes
-----------------
+
+## Production notes
 
 Development installation above will give you quite a serviceable production installation for lightish usage. You can serve out the application using your favorite WSGI-capable application server. The WSGI-entrypoint for Linked Events is ```linkedevents.wsgi``` or in file ```linkedevents/wsgi.py```. Former is used by gunicorn, latter by uwsgi. The callable is ```application```.
 
 You will also need to serve out ```static``` and ```media``` folders at ```/static``` and ```/media``` in your URL space.
 
-Running tests
-------------
+
+## Running tests
+
 Tests must be run using an user who can create (and drop) databases and write the directories
 your linkedevents installation resides in. Also the template database must include Postgis and
 HSTORE-extensions. If you are developing, you probably want to give those
@@ -167,8 +170,8 @@ py.test events
 
 Note that search tests will fail unless you configure [search](#search)
 
-Requirements
-------------
+
+## Requirements
 
 Linked Events uses two files for requirements. The workflow is as follows.
 
@@ -194,8 +197,28 @@ To remove a dependency, remove it from `requirements.in`,
 run `pip-compile` and then `pip-sync`. If everything works
 as expected, commit the changes.
 
-Search
-------
+
+## Code format
+
+This project uses
+[`black`](https://github.com/ambv/black),
+[`flake8`](https://github.com/pycqa/flake8) and
+[`isort`](https://github.com/timothycrosley/isort)
+for code formatting and quality checking. Project follows the basic
+black config, without any modifications.
+
+Basic `black` commands:
+
+* To let `black` do its magic: `black .`
+* To see which files `black` would change: `black --check .`
+
+[`pre-commit`](https://pre-commit.com/) can be used to install and
+run all the formatting tools as git hooks automatically before a
+commit.
+
+
+## Search
+
 Linkedevents uses Elasticsearch for generating results on the /search-endpoint. If you wish to use that functionality, proceed like so:
 
 1. Install elasticsearch
@@ -229,8 +252,8 @@ Linkedevents uses Elasticsearch for generating results on the /search-endpoint. 
 
    You should now have a working /search endpoint, give or take a few.
 
-Event extensions
-----------------
+
+## Event extensions
 
 It is possible to extend event data and API without touching `events` application by implementing separate extension applications. These extensions will be wired under field `extension_<extension idenfier>` in event API. If not auto enabled (see 6. below), extensions can be enabled per request using query param `extensions` with comma separated identifiers as values, or `all` for enabling all the extensions.
 
