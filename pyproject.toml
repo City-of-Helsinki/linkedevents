@@ -1,0 +1,10 @@
+[tool.black]
+line-length = 88 # Black's default value
+target-version = ["py39"]
+
+[tool.isort]
+profile = "black"
+py_version = 39
+atomic = true
+order_by_type = false
+extend_skip_glob = ["*migrations*"]

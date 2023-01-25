@@ -25,6 +25,6 @@
 !config_dev.toml
 !local_settings.py
 !manage.py
-!pytest.ini
+!pyproject.toml
 !requirements*
 !setup.cfg
