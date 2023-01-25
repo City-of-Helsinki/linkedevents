@@ -1,13 +1,15 @@
 -c requirements.txt # Constrained by requirements.txt
 
-django-extensions
+Werkzeug
+black
 django-debug-toolbar
+django-extensions
 flake8
+flake8-bugbear
 freezegun
 ipython
+isort
+pep8-naming
 pip-tools
-pyflakes
-pylint
-pytest-django
 pytest
-Werkzeug
+pytest-django
