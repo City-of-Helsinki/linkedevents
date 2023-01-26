@@ -3,21 +3,27 @@
 from django.db import migrations
 
 
-def soft_delete_replaced_objects(Model, deleted_attr='deleted', replaced_by_attr='replaced_by'):
-    for obj in Model.objects.filter(**{f'{replaced_by_attr}__isnull': False, deleted_attr: False}):
-        print(f'Found an object that is replaced but not soft deleted: "{obj}". Soft deleting now.')
+def soft_delete_replaced_objects(
+    Model, deleted_attr="deleted", replaced_by_attr="replaced_by"
+):
+    for obj in Model.objects.filter(
+        **{f"{replaced_by_attr}__isnull": False, deleted_attr: False}
+    ):
+        print(
+            f'Found an object that is replaced but not soft deleted: "{obj}". Soft deleting now.'
+        )
         setattr(obj, deleted_attr, True)
         obj.save()
 
 
 def forwards(apps, schema_editor):
     # Begin printing on a new line
-    print('')
+    print("")
 
-    Keyword = apps.get_model('events', 'Keyword')
-    Place = apps.get_model('events', 'Place')
-    Event = apps.get_model('events', 'Event')
-    soft_delete_replaced_objects(Keyword, deleted_attr='deprecated')
+    Keyword = apps.get_model("events", "Keyword")
+    Place = apps.get_model("events", "Place")
+    Event = apps.get_model("events", "Event")
+    soft_delete_replaced_objects(Keyword, deleted_attr="deprecated")
     soft_delete_replaced_objects(Place)
     soft_delete_replaced_objects(Event)
 
@@ -25,9 +31,7 @@ def forwards(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0072_allow_replaced_by_blank'),
+        ("events", "0072_allow_replaced_by_blank"),
     ]
 
-    operations = [
-        migrations.RunPython(forwards, migrations.RunPython.noop)
-    ]
+    operations = [migrations.RunPython(forwards, migrations.RunPython.noop)]

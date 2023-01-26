@@ -7,38 +7,38 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0064_lengthen_id_foreign_keys'),
+        ("events", "0064_lengthen_id_foreign_keys"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='event',
-            name='level',
+            model_name="event",
+            name="level",
             field=models.PositiveIntegerField(editable=False),
         ),
         migrations.AlterField(
-            model_name='event',
-            name='lft',
+            model_name="event",
+            name="lft",
             field=models.PositiveIntegerField(editable=False),
         ),
         migrations.AlterField(
-            model_name='event',
-            name='rght',
+            model_name="event",
+            name="rght",
             field=models.PositiveIntegerField(editable=False),
         ),
         migrations.AlterField(
-            model_name='place',
-            name='level',
+            model_name="place",
+            name="level",
             field=models.PositiveIntegerField(editable=False),
         ),
         migrations.AlterField(
-            model_name='place',
-            name='lft',
+            model_name="place",
+            name="lft",
             field=models.PositiveIntegerField(editable=False),
         ),
         migrations.AlterField(
-            model_name='place',
-            name='rght',
+            model_name="place",
+            name="rght",
             field=models.PositiveIntegerField(editable=False),
         ),
     ]

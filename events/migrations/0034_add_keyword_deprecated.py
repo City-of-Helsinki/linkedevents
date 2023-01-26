@@ -8,18 +8,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0033_add_data_source_to_image'),
+        ("events", "0033_add_data_source_to_image"),
     ]
 
     operations = [
         migrations.AlterModelManagers(
-            name='event',
-            managers=[
-            ],
+            name="event",
+            managers=[],
         ),
         migrations.AddField(
-            model_name='keyword',
-            name='deprecated',
+            model_name="keyword",
+            name="deprecated",
             field=models.BooleanField(db_index=True, default=False),
         ),
     ]

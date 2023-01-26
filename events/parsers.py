@@ -1,9 +1,10 @@
 import json
+
 import six
-from events import renderers
-from rest_framework.parsers import JSONParser, ParseError
-from events import utils
 from django.conf import settings
+from rest_framework.parsers import JSONParser, ParseError
+
+from events import renderers, utils
 
 
 def rename_fields(dataz):
@@ -29,18 +30,17 @@ def rename_fields(dataz):
 class CamelCaseJSONParser(JSONParser):
     def parse(self, stream, media_type=None, parser_context=None):
         parser_context = parser_context or {}
-        if 'disable_camelcase' in parser_context['request'].query_params:
-            return super(CamelCaseJSONParser, self).parse(media_type,
-                                                          parser_context)
+        if "disable_camelcase" in parser_context["request"].query_params:
+            return super(CamelCaseJSONParser, self).parse(media_type, parser_context)
         else:
-            encoding = parser_context.get('encoding', settings.DEFAULT_CHARSET)
+            encoding = parser_context.get("encoding", settings.DEFAULT_CHARSET)
             try:
                 data = stream.read().decode(encoding)
                 return rename_fields(json.loads(data))
             except ValueError as exc:
-                raise ParseError('JSON parse error - %s' % six.text_type(exc))
+                raise ParseError("JSON parse error - %s" % six.text_type(exc))
 
 
 class JSONLDParser(CamelCaseJSONParser):
-    media_type = 'application/ld+json'
+    media_type = "application/ld+json"
     renderer_class = renderers.JSONLDRenderer

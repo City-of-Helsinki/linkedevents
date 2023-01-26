@@ -9,12 +9,12 @@ from django.core.management import call_command
 # and serialization fails horribly.
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def django_db_modify_db_settings(django_db_modify_db_settings_xdist_suffix):
-    settings.DATABASES['default']['TEST']['SERIALIZE'] = False
+    settings.DATABASES["default"]["TEST"]["SERIALIZE"] = False
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def django_db_setup(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
-        call_command('sync_translation_fields', '--noinput')
+        call_command("sync_translation_fields", "--noinput")

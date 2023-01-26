@@ -5,19 +5,27 @@ from events.permissions import UserModelPermissionMixin
 
 class User(AbstractUser, UserModelPermissionMixin):
     def __str__(self):
-        return ' - '.join([self.get_display_name(), self.email])
+        return " - ".join([self.get_display_name(), self.email])
 
     def get_display_name(self):
-        return '{0} {1}'.format(self.first_name, self.last_name).strip()
+        return "{0} {1}".format(self.first_name, self.last_name).strip()
 
     def get_default_organization(self):
-        admin_org = self.admin_organizations.filter(
-            replaced_by__isnull=True,
-        ).order_by('created_time').first()
+        admin_org = (
+            self.admin_organizations.filter(
+                replaced_by__isnull=True,
+            )
+            .order_by("created_time")
+            .first()
+        )
 
-        regular_org = self.organization_memberships.filter(
-            replaced_by__isnull=True,
-        ).order_by('created_time').first()
+        regular_org = (
+            self.organization_memberships.filter(
+                replaced_by__isnull=True,
+            )
+            .order_by("created_time")
+            .first()
+        )
 
         return admin_org or regular_org
 

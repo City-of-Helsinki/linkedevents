@@ -1,9 +1,10 @@
-from modeltranslation.translator import translator, TranslationOptions
+from modeltranslation.translator import TranslationOptions, translator
+
 from .models import NotificationTemplate
 
 
 class NotificationTemplateTranslationOptions(TranslationOptions):
-    fields = ('subject', 'body', 'html_body')
+    fields = ("subject", "body", "html_body")
 
 
 translator.register(NotificationTemplate, NotificationTemplateTranslationOptions)

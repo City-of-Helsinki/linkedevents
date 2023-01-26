@@ -8,28 +8,36 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0052_add_image_last_modified_time_index'),
+        ("events", "0052_add_image_last_modified_time_index"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='place',
-            name='info_url',
-            field=models.URLField(blank=True, max_length=1000, null=True, verbose_name='Place home page'),
+            model_name="place",
+            name="info_url",
+            field=models.URLField(
+                blank=True, max_length=1000, null=True, verbose_name="Place home page"
+            ),
         ),
         migrations.AlterField(
-            model_name='place',
-            name='info_url_en',
-            field=models.URLField(blank=True, max_length=1000, null=True, verbose_name='Place home page'),
+            model_name="place",
+            name="info_url_en",
+            field=models.URLField(
+                blank=True, max_length=1000, null=True, verbose_name="Place home page"
+            ),
         ),
         migrations.AlterField(
-            model_name='place',
-            name='info_url_fi',
-            field=models.URLField(blank=True, max_length=1000, null=True, verbose_name='Place home page'),
+            model_name="place",
+            name="info_url_fi",
+            field=models.URLField(
+                blank=True, max_length=1000, null=True, verbose_name="Place home page"
+            ),
         ),
         migrations.AlterField(
-            model_name='place',
-            name='info_url_sv',
-            field=models.URLField(blank=True, max_length=1000, null=True, verbose_name='Place home page'),
+            model_name="place",
+            name="info_url_sv",
+            field=models.URLField(
+                blank=True, max_length=1000, null=True, verbose_name="Place home page"
+            ),
         ),
     ]

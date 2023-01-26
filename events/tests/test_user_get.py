@@ -1,39 +1,42 @@
 # -*- coding: utf-8 -*-
 import pytest
-from .utils import get, versioned_reverse as reverse, assert_fields_exist
 
+from .utils import assert_fields_exist, get
+from .utils import versioned_reverse as reverse
 
 # === util methods ===
 
-def get_list(api_client, version='v1'):
-    list_url = reverse('user-list', version=version)
+
+def get_list(api_client, version="v1"):
+    list_url = reverse("user-list", version=version)
     return get(api_client, list_url)
 
 
-def get_detail(api_client, detail_pk, version='v1'):
-    detail_url = reverse('user-detail', version=version, kwargs={'pk': detail_pk})
+def get_detail(api_client, detail_pk, version="v1"):
+    detail_url = reverse("user-detail", version=version, kwargs={"pk": detail_pk})
     return get(api_client, detail_url)
 
 
-def assert_user_fields_exist(data, version='v1'):
+def assert_user_fields_exist(data, version="v1"):
     # TODO: incorporate version parameter into version aware
     # parts of test code
     fields = (
-        'last_login',
-        'username',
-        'email',
-        'date_joined',
-        'first_name',
-        'last_name',
-        'uuid',
-        'department_name',
-        'organization',
-        'is_staff',
-        'display_name',
-        'admin_organizations',
-        'organization_memberships',
+        "last_login",
+        "username",
+        "email",
+        "date_joined",
+        "first_name",
+        "last_name",
+        "uuid",
+        "department_name",
+        "organization",
+        "is_staff",
+        "display_name",
+        "admin_organizations",
+        "organization_memberships",
     )
     assert_fields_exist(data, fields)
+
 
 # === tests ===
 

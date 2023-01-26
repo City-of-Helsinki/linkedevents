@@ -10,7 +10,9 @@ def _mail_exists(subject, to, strings, html_body):
         mail_message = str(mail_instance.message())
         if all(string in mail_message for string in strings):
             if html_body:
-                assert html_body in (a[0] for a in mail_instance.alternatives if a[1] == 'text/html')
+                assert html_body in (
+                    a[0] for a in mail_instance.alternatives if a[1] == "text/html"
+                )
             else:
                 assert not mail_instance.alternatives
             return True

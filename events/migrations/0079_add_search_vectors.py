@@ -7,27 +7,31 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0078_add_data_source_past_events'),
+        ("events", "0078_add_data_source_past_events"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='event',
-            name='search_vector_en',
+            model_name="event",
+            name="search_vector_en",
             field=django.contrib.postgres.search.SearchVectorField(null=True),
         ),
         migrations.AddField(
-            model_name='event',
-            name='search_vector_fi',
+            model_name="event",
+            name="search_vector_fi",
             field=django.contrib.postgres.search.SearchVectorField(null=True),
         ),
         migrations.AddField(
-            model_name='event',
-            name='search_vector_sv',
+            model_name="event",
+            name="search_vector_sv",
             field=django.contrib.postgres.search.SearchVectorField(null=True),
         ),
         migrations.AddIndex(
-            model_name='keyword',
-            index=models.Index(condition=models.Q(n_events__gt=0), fields=['name', 'name_fi'], name='keywords_index'),
+            model_name="keyword",
+            index=models.Index(
+                condition=models.Q(n_events__gt=0),
+                fields=["name", "name_fi"],
+                name="keywords_index",
+            ),
         ),
     ]

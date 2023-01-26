@@ -8,48 +8,48 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0048_remove_events_organization_model'),
+        ("events", "0048_remove_events_organization_model"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='event',
-            name='created_time',
+            model_name="event",
+            name="created_time",
             field=models.DateTimeField(auto_now_add=True, null=True),
         ),
         migrations.AlterField(
-            model_name='event',
-            name='last_modified_time',
+            model_name="event",
+            name="last_modified_time",
             field=models.DateTimeField(auto_now=True, db_index=True, null=True),
         ),
         migrations.AlterField(
-            model_name='keyword',
-            name='created_time',
+            model_name="keyword",
+            name="created_time",
             field=models.DateTimeField(auto_now_add=True, null=True),
         ),
         migrations.AlterField(
-            model_name='keyword',
-            name='last_modified_time',
+            model_name="keyword",
+            name="last_modified_time",
             field=models.DateTimeField(auto_now=True, db_index=True, null=True),
         ),
         migrations.AlterField(
-            model_name='keywordset',
-            name='created_time',
+            model_name="keywordset",
+            name="created_time",
             field=models.DateTimeField(auto_now_add=True, null=True),
         ),
         migrations.AlterField(
-            model_name='keywordset',
-            name='last_modified_time',
+            model_name="keywordset",
+            name="last_modified_time",
             field=models.DateTimeField(auto_now=True, db_index=True, null=True),
         ),
         migrations.AlterField(
-            model_name='place',
-            name='created_time',
+            model_name="place",
+            name="created_time",
             field=models.DateTimeField(auto_now_add=True, null=True),
         ),
         migrations.AlterField(
-            model_name='place',
-            name='last_modified_time',
+            model_name="place",
+            name="last_modified_time",
             field=models.DateTimeField(auto_now=True, db_index=True, null=True),
         ),
     ]

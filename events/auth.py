@@ -1,10 +1,10 @@
-from rest_framework import authentication
-from rest_framework import exceptions
-from events.models import DataSource
-from django_orghierarchy.models import Organization
-from django.utils.translation import gettext_lazy as _
-from django.contrib.gis.db import models
 from django.contrib.auth import get_user_model
+from django.contrib.gis.db import models
+from django.utils.translation import gettext_lazy as _
+from django_orghierarchy.models import Organization
+from rest_framework import authentication, exceptions
+
+from events.models import DataSource
 
 from .permissions import UserModelPermissionMixin
 
@@ -12,7 +12,7 @@ from .permissions import UserModelPermissionMixin
 class ApiKeyAuthentication(authentication.BaseAuthentication):
     def authenticate(self, request):
         # django converts 'apikey' to 'HTTP_APIKEY' outside runserver
-        api_key = request.META.get('apikey') or request.META.get('HTTP_APIKEY')
+        api_key = request.META.get("apikey") or request.META.get("HTTP_APIKEY")
         if not api_key:
             return None
         data_source = self.get_data_source(api_key=api_key)
@@ -32,18 +32,23 @@ class ApiKeyAuthentication(authentication.BaseAuthentication):
         try:
             data_source = DataSource.objects.get(api_key=api_key)
         except DataSource.DoesNotExist:
-            raise exceptions.AuthenticationFailed(_(
-                "Provided API key does not match any organization on record. "
-                "Please contact the API support staff to obtain a valid API key "
-                "and organization identifier for POSTing your events."))
+            raise exceptions.AuthenticationFailed(
+                _(
+                    "Provided API key does not match any organization on record. "
+                    "Please contact the API support staff to obtain a valid API key "
+                    "and organization identifier for POSTing your events."
+                )
+            )
         return data_source
 
 
 class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
-    data_source = models.OneToOneField(DataSource, on_delete=models.CASCADE, primary_key=True)
+    data_source = models.OneToOneField(
+        DataSource, on_delete=models.CASCADE, primary_key=True
+    )
 
     def get_display_name(self):
-        return 'API key from data source %s' % self.data_source
+        return "API key from data source %s" % self.data_source
 
     def __str__(self):
         return self.get_display_name()

@@ -7,28 +7,52 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registrations', '0009_auto_20211201_1014'),
+        ("registrations", "0009_auto_20211201_1014"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='signup',
-            name='street_address',
-            field=models.CharField(blank=True, default=None, max_length=500, null=True, verbose_name='Street address'),
+            model_name="signup",
+            name="street_address",
+            field=models.CharField(
+                blank=True,
+                default=None,
+                max_length=500,
+                null=True,
+                verbose_name="Street address",
+            ),
         ),
         migrations.AddField(
-            model_name='signup',
-            name='zipcode',
-            field=models.CharField(blank=True, default=None, max_length=10, null=True, verbose_name='Street address'),
+            model_name="signup",
+            name="zipcode",
+            field=models.CharField(
+                blank=True,
+                default=None,
+                max_length=10,
+                null=True,
+                verbose_name="Street address",
+            ),
         ),
         migrations.AlterField(
-            model_name='signup',
-            name='native_language',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='signup_native_language', to='events.Language'),
+            model_name="signup",
+            name="native_language",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="signup_native_language",
+                to="events.Language",
+            ),
         ),
         migrations.AlterField(
-            model_name='signup',
-            name='service_language',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='signup_service_language', to='events.Language'),
+            model_name="signup",
+            name="service_language",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="signup_service_language",
+                to="events.Language",
+            ),
         ),
     ]

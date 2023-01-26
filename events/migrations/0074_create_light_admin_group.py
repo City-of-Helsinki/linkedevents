@@ -11,15 +11,17 @@ def create_light_admin_group():
         # django.db.transaction.TransactionManagementError
         # without transaction.atomic().
         with transaction.atomic():
-            light_admin_group = Group.objects.create(name='Light Admins')
+            light_admin_group = Group.objects.create(name="Light Admins")
     except IntegrityError:
         print('\nGroup with name "Light Admins" already exists. Skipping creation.')
         return
     try:
-        regular_users_perm = Permission.objects.get(codename='change_organization_regular_users')
-        view_user = Permission.objects.get(codename='view_user')
+        regular_users_perm = Permission.objects.get(
+            codename="change_organization_regular_users"
+        )
+        view_user = Permission.objects.get(codename="view_user")
     except Permission.DoesNotExist:
-        print('\nMissing permissions. Skipping creation.')
+        print("\nMissing permissions. Skipping creation.")
         return
     light_admin_group.permissions.set([regular_users_perm, view_user])
 
@@ -31,11 +33,12 @@ def forwards(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0073_soft_delete_replaced_objects'),
-        ('django_orghierarchy', '0009_add_change_organization_regular_users_permission'),
-        ('helevents', '0001_initial')
+        ("events", "0073_soft_delete_replaced_objects"),
+        (
+            "django_orghierarchy",
+            "0009_add_change_organization_regular_users_permission",
+        ),
+        ("helevents", "0001_initial"),
     ]
 
-    operations = [
-        migrations.RunPython(forwards, migrations.RunPython.noop)
-    ]
+    operations = [migrations.RunPython(forwards, migrations.RunPython.noop)]

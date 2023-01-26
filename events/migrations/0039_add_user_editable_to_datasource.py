@@ -9,7 +9,7 @@ from django.conf import settings
 
 
 def forward(apps, schema_editor):
-    DataSource = apps.get_model('events', 'DataSource')
+    DataSource = apps.get_model("events", "DataSource")
     try:
         system_data_source = DataSource.objects.get(id=settings.SYSTEM_DATA_SOURCE_ID)
         system_data_source.user_editable = True
@@ -18,24 +18,30 @@ def forward(apps, schema_editor):
         pass
 
 
-
-
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0038_add_index_for_last_modified_time'),
+        ("events", "0038_add_index_for_last_modified_time"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='datasource',
-            name='user_editable',
-            field=models.BooleanField(default=False, verbose_name='Objects may be edited by users'),
+            model_name="datasource",
+            name="user_editable",
+            field=models.BooleanField(
+                default=False, verbose_name="Objects may be edited by users"
+            ),
         ),
         migrations.AlterField(
-            model_name='datasource',
-            name='owner',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='owned_systems', to='events.Organization'),
+            model_name="datasource",
+            name="owner",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="owned_systems",
+                to="events.Organization",
+            ),
         ),
-        migrations.RunPython(forward, migrations.RunPython.noop)
+        migrations.RunPython(forward, migrations.RunPython.noop),
     ]

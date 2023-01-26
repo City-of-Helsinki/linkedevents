@@ -8,18 +8,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('helusers', '0001_add_ad_groups'),
-        ('helevents', '0003_auto_20170915_1529'),
+        ("helusers", "0001_add_ad_groups"),
+        ("helevents", "0003_auto_20170915_1529"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='user',
-            options={'ordering': ('id',)},
+            name="user",
+            options={"ordering": ("id",)},
         ),
         migrations.AddField(
-            model_name='user',
-            name='ad_groups',
-            field=models.ManyToManyField(blank=True, to='helusers.ADGroup'),
+            model_name="user",
+            name="ad_groups",
+            field=models.ManyToManyField(blank=True, to="helusers.ADGroup"),
         ),
     ]

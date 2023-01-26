@@ -5,7 +5,7 @@
 <p>Query parameters can be used to filter the retrieved events by
 the following criteria.</p>
 <h3 id="local-ongoing">Ongoing local events</h3>
-<p>Use to quickly access local (municipality level) events that are upcoming or have not ended yet. Combines the search on a number of 
+<p>Use to quickly access local (municipality level) events that are upcoming or have not ended yet. Combines the search on a number of
 description, name, and keyword fields. Locality is defined on the basis of MUNIGEO_MUNI value, which is set in the settings file. In the Helsinki case all the events would be retrieved that happen within Helsinki. Comes in two flavors: AND and OR. Use <code>event/?local_ongoing_AND=lapset,musiiki</code> to search for the events with both search terms in the description fields and <code>?local_ongoing_OR</code> to search for the events with at least one term mentioned. In case you need to realize a more complicated logic and search for a combination of search terms as in <code>(singing OR vocal) AND (workshop OR training)</code> use <code>?local_ongoing_OR_setX</code> parameter, where <code>X</code> is a number.
 <p>Examples:</p>
 <pre><code>event/?local_ongoing_OR=lapsi,musiikki
@@ -51,8 +51,8 @@ Any events that intersect with the given date range will be returned.</p>
 </code></pre>
 <p><a href="?start=now&amp;end=today" title="json">See the result</a></p>
 <h3 id="event-hours">Event start/end time</h3>
-<p>Use <code>starts_after</code>, <code>starts_before</code>, <code>ends_after</code>, and <code>ends_before</code> 
-to filter for the events that start and end within certain hours, for example for the ones that start after 17:00 and 
+<p>Use <code>starts_after</code>, <code>starts_before</code>, <code>ends_after</code>, and <code>ends_before</code>
+to filter for the events that start and end within certain hours, for example for the ones that start after 17:00 and
 end before 21:00.
 <p>The parameters can be given as:</p>
 <ul>
@@ -127,7 +127,7 @@ which list the YSO keywords that are present in most events to specify event mai
 
 <h3 id="event-category">Keyword set search</h3>
 <p>Some services maintain curated keyword sets, which can also be used in search with query parameters
-<code>keyword_set_AND</code> and <code>keyword_set_OR</code>. As names of the keyword sets can repeat 
+<code>keyword_set_AND</code> and <code>keyword_set_OR</code>. As names of the keyword sets can repeat
 between the services, ids should be supplied. Say, we have one keyword set <b>Music</b> with id "myservice:1"
 that contains keywords rock and jazz, and another keyword set <b>Workshops</b> with keywords "workshop" and "seminar"
 and id "myservice:2". Then a request <code>/event/?keyword_set_AND=myservice:1,myservice:2</code>
@@ -215,7 +215,7 @@ internal publishers have ids of the form <code>ahjo:origin_id</code> as they ori
 the Helsinki Ahjo decisionmaking system, and have a rather complex hierarchy. External publishers may have
 their own namespaces, ids and hierarchies.</p>
 <p>Also, it is possible to fetch events under a specific publisher organization hierarchy (say
-<a href='https://api.hel.fi/linkedevents/v1/organization/ahjo:00001/'>City of Helsinki</a>) by using the 
+<a href='https://api.hel.fi/linkedevents/v1/organization/ahjo:00001/'>City of Helsinki</a>) by using the
 parameter <code>publisher_ancestor</code>, which returns all events published by any suborganizations
 (at any level) of the given organization.</p>
 <p>Example:</p>

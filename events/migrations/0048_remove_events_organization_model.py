@@ -8,39 +8,39 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0047_alter_org_fk_ref'),
+        ("events", "0047_alter_org_fk_ref"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='organization',
-            name='admin_orgs',
+            model_name="organization",
+            name="admin_orgs",
         ),
         migrations.RemoveField(
-            model_name='organization',
-            name='admin_users',
+            model_name="organization",
+            name="admin_users",
         ),
         migrations.RemoveField(
-            model_name='organization',
-            name='created_by',
+            model_name="organization",
+            name="created_by",
         ),
         migrations.RemoveField(
-            model_name='organization',
-            name='data_source',
+            model_name="organization",
+            name="data_source",
         ),
         migrations.RemoveField(
-            model_name='organization',
-            name='image',
+            model_name="organization",
+            name="image",
         ),
         migrations.RemoveField(
-            model_name='organization',
-            name='last_modified_by',
+            model_name="organization",
+            name="last_modified_by",
         ),
         migrations.RemoveField(
-            model_name='organization',
-            name='parent',
+            model_name="organization",
+            name="parent",
         ),
         migrations.DeleteModel(
-            name='Organization',
+            name="Organization",
         ),
     ]

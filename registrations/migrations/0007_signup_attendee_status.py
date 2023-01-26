@@ -6,13 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registrations', '0006_auto_20211126_0909'),
+        ("registrations", "0006_auto_20211126_0909"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='signup',
-            name='attendee_status',
-            field=models.CharField(choices=[('waitlisted', 'Waitlisted'), ('attending', 'Attending')], default='attending', max_length=25, verbose_name='Attendee status'),
+            model_name="signup",
+            name="attendee_status",
+            field=models.CharField(
+                choices=[("waitlisted", "Waitlisted"), ("attending", "Attending")],
+                default="attending",
+                max_length=25,
+                verbose_name="Attendee status",
+            ),
         ),
     ]

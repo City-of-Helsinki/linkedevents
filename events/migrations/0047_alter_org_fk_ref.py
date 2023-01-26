@@ -9,38 +9,72 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0046_migrate_organization_data'),
+        ("events", "0046_migrate_organization_data"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='datasource',
-            name='owner',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='owned_systems', to='django_orghierarchy.Organization'),
+            model_name="datasource",
+            name="owner",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="owned_systems",
+                to="django_orghierarchy.Organization",
+            ),
         ),
         migrations.AlterField(
-            model_name='event',
-            name='publisher',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='published_events', to='django_orghierarchy.Organization', verbose_name='Publisher'),
+            model_name="event",
+            name="publisher",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="published_events",
+                to="django_orghierarchy.Organization",
+                verbose_name="Publisher",
+            ),
         ),
         migrations.AlterField(
-            model_name='image',
-            name='publisher',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='Published_images', to='django_orghierarchy.Organization', verbose_name='Publisher'),
+            model_name="image",
+            name="publisher",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="Published_images",
+                to="django_orghierarchy.Organization",
+                verbose_name="Publisher",
+            ),
         ),
         migrations.AlterField(
-            model_name='keyword',
-            name='publisher',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='Published_keywords', to='django_orghierarchy.Organization', verbose_name='Publisher'),
+            model_name="keyword",
+            name="publisher",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="Published_keywords",
+                to="django_orghierarchy.Organization",
+                verbose_name="Publisher",
+            ),
         ),
         migrations.AlterField(
-            model_name='keywordset',
-            name='organization',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='django_orghierarchy.Organization', verbose_name='Organization which uses this set'),
+            model_name="keywordset",
+            name="organization",
+            field=models.ForeignKey(
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to="django_orghierarchy.Organization",
+                verbose_name="Organization which uses this set",
+            ),
         ),
         migrations.AlterField(
-            model_name='place',
-            name='publisher',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='django_orghierarchy.Organization', verbose_name='Publisher'),
+            model_name="place",
+            name="publisher",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                to="django_orghierarchy.Organization",
+                verbose_name="Publisher",
+            ),
         ),
     ]

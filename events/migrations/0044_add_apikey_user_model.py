@@ -11,28 +11,43 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('helevents', '0003_auto_20170915_1529'),
-        ('events', '0043_add_publisher_to_keyword'),
+        ("helevents", "0003_auto_20170915_1529"),
+        ("events", "0043_add_publisher_to_keyword"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='ApiKeyUser',
+            name="ApiKeyUser",
             fields=[
-                ('user_ptr', models.OneToOneField(auto_created=True, on_delete=django.db.models.deletion.CASCADE, parent_link=True, to=settings.AUTH_USER_MODEL)),
-                ('data_source', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='events.DataSource')),
+                (
+                    "user_ptr",
+                    models.OneToOneField(
+                        auto_created=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        parent_link=True,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "data_source",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        primary_key=True,
+                        serialize=False,
+                        to="events.DataSource",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
-            bases=('helevents.user',),
+            bases=("helevents.user",),
             managers=[
-                ('objects', django.contrib.auth.models.UserManager()),
+                ("objects", django.contrib.auth.models.UserManager()),
             ],
         ),
         migrations.AlterModelManagers(
-            name='place',
-            managers=[
-            ],
+            name="place",
+            managers=[],
         ),
     ]

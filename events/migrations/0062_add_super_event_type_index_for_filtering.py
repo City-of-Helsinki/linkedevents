@@ -8,13 +8,20 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0061_add_umbrella_super_event_type'),
+        ("events", "0061_add_umbrella_super_event_type"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='event',
-            name='super_event_type',
-            field=models.CharField(blank=True, choices=[('recurring', 'Recurring'), ('umbrella', 'Umbrella event')], db_index=True, default=None, max_length=255, null=True),
+            model_name="event",
+            name="super_event_type",
+            field=models.CharField(
+                blank=True,
+                choices=[("recurring", "Recurring"), ("umbrella", "Umbrella event")],
+                db_index=True,
+                default=None,
+                max_length=255,
+                null=True,
+            ),
         ),
     ]

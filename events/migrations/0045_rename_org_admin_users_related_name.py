@@ -9,13 +9,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0044_add_apikey_user_model'),
+        ("events", "0044_add_apikey_user_model"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='organization',
-            name='admin_users',
-            field=models.ManyToManyField(blank=True, related_name='admin_old_organizations', to=settings.AUTH_USER_MODEL),
+            model_name="organization",
+            name="admin_users",
+            field=models.ManyToManyField(
+                blank=True,
+                related_name="admin_old_organizations",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
     ]

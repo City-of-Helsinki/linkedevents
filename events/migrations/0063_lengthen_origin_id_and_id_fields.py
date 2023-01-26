@@ -8,48 +8,72 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0062_add_super_event_type_index_for_filtering'),
+        ("events", "0062_add_super_event_type_index_for_filtering"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='event',
-            name='id',
+            model_name="event",
+            name="id",
             field=models.CharField(max_length=100, primary_key=True, serialize=False),
         ),
         migrations.AlterField(
-            model_name='event',
-            name='origin_id',
-            field=models.CharField(blank=True, db_index=True, max_length=100, null=True, verbose_name='Origin ID'),
+            model_name="event",
+            name="origin_id",
+            field=models.CharField(
+                blank=True,
+                db_index=True,
+                max_length=100,
+                null=True,
+                verbose_name="Origin ID",
+            ),
         ),
         migrations.AlterField(
-            model_name='keyword',
-            name='id',
+            model_name="keyword",
+            name="id",
             field=models.CharField(max_length=100, primary_key=True, serialize=False),
         ),
         migrations.AlterField(
-            model_name='keyword',
-            name='origin_id',
-            field=models.CharField(blank=True, db_index=True, max_length=100, null=True, verbose_name='Origin ID'),
+            model_name="keyword",
+            name="origin_id",
+            field=models.CharField(
+                blank=True,
+                db_index=True,
+                max_length=100,
+                null=True,
+                verbose_name="Origin ID",
+            ),
         ),
         migrations.AlterField(
-            model_name='keywordset',
-            name='id',
+            model_name="keywordset",
+            name="id",
             field=models.CharField(max_length=100, primary_key=True, serialize=False),
         ),
         migrations.AlterField(
-            model_name='keywordset',
-            name='origin_id',
-            field=models.CharField(blank=True, db_index=True, max_length=100, null=True, verbose_name='Origin ID'),
+            model_name="keywordset",
+            name="origin_id",
+            field=models.CharField(
+                blank=True,
+                db_index=True,
+                max_length=100,
+                null=True,
+                verbose_name="Origin ID",
+            ),
         ),
         migrations.AlterField(
-            model_name='place',
-            name='id',
+            model_name="place",
+            name="id",
             field=models.CharField(max_length=100, primary_key=True, serialize=False),
         ),
         migrations.AlterField(
-            model_name='place',
-            name='origin_id',
-            field=models.CharField(blank=True, db_index=True, max_length=100, null=True, verbose_name='Origin ID'),
+            model_name="place",
+            name="origin_id",
+            field=models.CharField(
+                blank=True,
+                db_index=True,
+                max_length=100,
+                null=True,
+                verbose_name="Origin ID",
+            ),
         ),
     ]

@@ -6,13 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0067_modify_several_fields_on_delete'),
+        ("events", "0067_modify_several_fields_on_delete"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='image',
-            name='alt_text',
-            field=models.CharField(blank=True, max_length=320, null=True, verbose_name='Alt text'),
+            model_name="image",
+            name="alt_text",
+            field=models.CharField(
+                blank=True, max_length=320, null=True, verbose_name="Alt text"
+            ),
         ),
     ]

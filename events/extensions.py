@@ -1,7 +1,6 @@
 from django.apps import apps
 from django.conf import settings
 
-
 # For the most part this is copypasted from
 # https://github.com/6aika/issue-reporting/blob/master/issues/extensions.py
 # original author @akx (Aarni Koskela)
@@ -96,7 +95,7 @@ def get_extensions():
     :rtype: Iterable[class[EventExtension]]
     """
     for app_config in apps.get_app_configs():
-        if hasattr(app_config, 'event_extension'):
+        if hasattr(app_config, "event_extension"):
             yield app_config.event_extension
 
 
@@ -111,15 +110,19 @@ def get_extensions_from_request(request):
     :param request: rest_framework.requests.Request
     :rtype: list[events.extensions.EventExtension]
     """
-    if hasattr(request, '_event_extensions'):  # Sneaky cache
+    if hasattr(request, "_event_extensions"):  # Sneaky cache
         return request._event_extensions
-    extension_ids = _get_extension_ids_from_param(request.query_params.get('extensions'))
-    if not extension_ids and request.method in ('POST', 'PUT', 'PATCH'):
+    extension_ids = _get_extension_ids_from_param(
+        request.query_params.get("extensions")
+    )
+    if not extension_ids and request.method in ("POST", "PUT", "PATCH"):
         try:
-            extension_ids = _get_extension_ids_from_param(request.data.get('extensions'))
+            extension_ids = _get_extension_ids_from_param(
+                request.data.get("extensions")
+            )
         except (AttributeError, KeyError):
             pass
-    extension_ids |= set(getattr(settings, 'AUTO_ENABLED_EXTENSIONS', []))
+    extension_ids |= set(getattr(settings, "AUTO_ENABLED_EXTENSIONS", []))
 
     extensions = set(ex() for ex in get_extensions() if ex.identifier in extension_ids)
     request._event_extensions = extensions
@@ -127,10 +130,10 @@ def get_extensions_from_request(request):
 
 
 def _get_extension_ids_from_param(extensions_param):
-    if extensions_param in ('true', 'all'):
+    if extensions_param in ("true", "all"):
         extension_ids = get_extension_ids()
     elif extensions_param:
-        extension_ids = set(extensions_param.split(','))
+        extension_ids = set(extensions_param.split(","))
     else:
         extension_ids = set()
     return extension_ids

@@ -25,9 +25,9 @@ def get_exporters():
         return exporters
     for fname in os.listdir(os.path.dirname(__file__)):
         module, ext = os.path.splitext(fname)
-        if ext.lower() != '.py':
+        if ext.lower() != ".py":
             continue
-        if module in ('__init__', 'base'):
+        if module in ("__init__", "base"):
             continue
         full_path = "%s.%s" % (__package__, module)
         ret = __import__(full_path, locals(), globals())

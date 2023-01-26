@@ -6,10 +6,10 @@ from django.db import migrations
 
 
 def _fix_chinese_language_object(apps, schema_editor, old_lang_code, new_lang_code):
-    Language = apps.get_model('events', 'Language')
-    KeywordLabel = apps.get_model('events', 'KeywordLabel')
-    Event = apps.get_model('events', 'Event')
-    EventLink = apps.get_model('events', 'EventLink')
+    Language = apps.get_model("events", "Language")
+    KeywordLabel = apps.get_model("events", "KeywordLabel")
+    Event = apps.get_model("events", "Event")
+    EventLink = apps.get_model("events", "EventLink")
 
     try:
         # Create a new language object with identical fields as the old one
@@ -18,8 +18,12 @@ def _fix_chinese_language_object(apps, schema_editor, old_lang_code, new_lang_co
         chinese_lang.save()
 
         # Update ForeignKey links
-        KeywordLabel.objects.filter(language=old_lang_code).update(language=chinese_lang.id)
-        EventLink.objects.filter(language=old_lang_code).update(language=chinese_lang.id)
+        KeywordLabel.objects.filter(language=old_lang_code).update(
+            language=chinese_lang.id
+        )
+        EventLink.objects.filter(language=old_lang_code).update(
+            language=chinese_lang.id
+        )
         # Update ManyToMany link
         relevant_events = Event.objects.filter(in_language=old_lang_code)
         for event in relevant_events:
@@ -33,17 +37,17 @@ def _fix_chinese_language_object(apps, schema_editor, old_lang_code, new_lang_co
 
 
 def delete_zh_lang_code(apps, schema_editor):
-    _fix_chinese_language_object(apps, schema_editor, 'zh', 'zh_hans')
+    _fix_chinese_language_object(apps, schema_editor, "zh", "zh_hans")
 
 
 def delete_zh_hans_lang_code(apps, schema_editor):
-    _fix_chinese_language_object(apps, schema_editor, 'zh_hans', 'zh')
+    _fix_chinese_language_object(apps, schema_editor, "zh_hans", "zh")
 
 
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0055_fix_chinese_language_code'),
+        ("events", "0055_fix_chinese_language_code"),
     ]
 
     operations = [

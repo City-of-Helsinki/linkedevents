@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0075_add_trigram_extension'),
+        ("events", "0075_add_trigram_extension"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='keyword',
-            name='has_upcoming_events',
+            model_name="keyword",
+            name="has_upcoming_events",
             field=models.BooleanField(db_index=True, default=False),
         ),
     ]
