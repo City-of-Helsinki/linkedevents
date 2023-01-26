@@ -6,7 +6,7 @@ from django.db import migrations
 
 
 def make_many_images(apps, schema_editor):
-    Event = apps.get_model('events', 'Event')
+    Event = apps.get_model("events", "Event")
 
     for event in Event.objects.all():
         if event.image:
@@ -14,7 +14,7 @@ def make_many_images(apps, schema_editor):
 
 
 def make_one_image(apps, schema_editor):
-    Event = apps.get_model('events', 'Event')
+    Event = apps.get_model("events", "Event")
 
     for event in Event.objects.all():
         if event.images.first():
@@ -25,7 +25,7 @@ def make_one_image(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0058_add_multiple_images_to_event'),
+        ("events", "0058_add_multiple_images_to_event"),
     ]
 
     operations = [

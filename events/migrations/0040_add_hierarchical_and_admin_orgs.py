@@ -10,41 +10,51 @@ import mptt.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0039_add_user_editable_to_datasource'),
+        ("events", "0039_add_user_editable_to_datasource"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='organization',
-            name='admin_orgs',
-            field=models.ManyToManyField(blank=True, related_name='_organization_admin_orgs_+', to='events.Organization'),
+            model_name="organization",
+            name="admin_orgs",
+            field=models.ManyToManyField(
+                blank=True,
+                related_name="_organization_admin_orgs_+",
+                to="events.Organization",
+            ),
         ),
         migrations.AddField(
-            model_name='organization',
-            name='level',
+            model_name="organization",
+            name="level",
             field=models.PositiveIntegerField(db_index=True, default=0, editable=False),
             preserve_default=False,
         ),
         migrations.AddField(
-            model_name='organization',
-            name='lft',
+            model_name="organization",
+            name="lft",
             field=models.PositiveIntegerField(db_index=True, default=0, editable=False),
             preserve_default=False,
         ),
         migrations.AddField(
-            model_name='organization',
-            name='parent',
-            field=mptt.fields.TreeForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='children', to='events.Organization'),
+            model_name="organization",
+            name="parent",
+            field=mptt.fields.TreeForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="children",
+                to="events.Organization",
+            ),
         ),
         migrations.AddField(
-            model_name='organization',
-            name='rght',
+            model_name="organization",
+            name="rght",
             field=models.PositiveIntegerField(db_index=True, default=0, editable=False),
             preserve_default=False,
         ),
         migrations.AddField(
-            model_name='organization',
-            name='tree_id',
+            model_name="organization",
+            name="tree_id",
             field=models.PositiveIntegerField(db_index=True, default=0, editable=False),
             preserve_default=False,
         ),

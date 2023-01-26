@@ -1,4 +1,4 @@
-# This is a base build pipeline and it should not be triggered, 
+# This is a base build pipeline and it should not be triggered,
 # Continuous integration (CI) triggers cause a pipeline to run whenever you push
 # an update to the specified branches or you push specified tags.
 trigger:
@@ -56,4 +56,4 @@ stages:
         dockerfile: '$(Build.SourcesDirectory)/docker/django/Dockerfile'
         buildContext: $(Build.SourcesDirectory)
         tags: |
-          $(tag) 
+          $(tag)

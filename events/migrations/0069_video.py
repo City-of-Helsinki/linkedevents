@@ -8,21 +8,46 @@ import events.models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0068_image_alt_text'),
+        ("events", "0068_image_alt_text"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Video',
+            name="Video",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(db_index=True, default='', max_length=255, verbose_name='Name')),
-                ('url', models.URLField()),
-                ('alt_text', models.CharField(blank=True, max_length=320, null=True, verbose_name='Alt text')),
-                ('event', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='videos', to='events.Event')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "name",
+                    models.CharField(
+                        db_index=True, default="", max_length=255, verbose_name="Name"
+                    ),
+                ),
+                ("url", models.URLField()),
+                (
+                    "alt_text",
+                    models.CharField(
+                        blank=True, max_length=320, null=True, verbose_name="Alt text"
+                    ),
+                ),
+                (
+                    "event",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="videos",
+                        to="events.Event",
+                    ),
+                ),
             ],
             options={
-                'unique_together': {('name', 'event', 'url')},
+                "unique_together": {("name", "event", "url")},
             },
             bases=(models.Model, events.models.SimpleValueMixin),
         ),

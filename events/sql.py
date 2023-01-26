@@ -17,7 +17,8 @@ def count_events_for_keywords(keyword_ids=(), all=False):
     keyword_ids = tuple(set(keyword_ids))
     with connection.cursor() as cursor:
         if keyword_ids:
-            cursor.execute('''
+            cursor.execute(
+                """
             SELECT t.keyword_id, COUNT(DISTINCT t.event_id)
             FROM (
               SELECT keyword_id, event_id FROM events_event_keywords WHERE keyword_id IN %s
@@ -25,9 +26,12 @@ def count_events_for_keywords(keyword_ids=(), all=False):
               SELECT keyword_id, event_id FROM events_event_audience WHERE keyword_id IN %s
             ) t
             GROUP BY t.keyword_id;
-            ''', [keyword_ids, keyword_ids])
+            """,
+                [keyword_ids, keyword_ids],
+            )
         elif all:
-            cursor.execute('''
+            cursor.execute(
+                """
             SELECT t.keyword_id, COUNT(DISTINCT t.event_id)
             FROM (
               SELECT keyword_id, event_id FROM events_event_keywords
@@ -35,7 +39,8 @@ def count_events_for_keywords(keyword_ids=(), all=False):
               SELECT keyword_id, event_id FROM events_event_audience
             ) t
             GROUP BY t.keyword_id;
-            ''')
+            """
+            )
         else:
             return {}
         return dict(cursor.fetchall())
@@ -57,18 +62,23 @@ def count_events_for_places(place_ids=(), all=False):
     place_ids = tuple(set(place_ids))
     with connection.cursor() as cursor:
         if place_ids:
-            cursor.execute('''
+            cursor.execute(
+                """
             SELECT e.location_id, COUNT(*)
             FROM events_event e
             WHERE location_id IN %s
             GROUP BY e.location_id;
-            ''', [place_ids])
+            """,
+                [place_ids],
+            )
         elif all:
-            cursor.execute('''
+            cursor.execute(
+                """
             SELECT e.location_id, COUNT(*)
             FROM events_event e
             GROUP BY e.location_id;
-            ''')
+            """
+            )
         else:
             return {}
         return dict(cursor.fetchall())

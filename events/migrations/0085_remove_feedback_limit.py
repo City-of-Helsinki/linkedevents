@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0084_feedback'),
+        ("events", "0084_feedback"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='feedback',
-            name='body',
-            field=models.TextField(blank=True, verbose_name='Body'),
+            model_name="feedback",
+            name="body",
+            field=models.TextField(blank=True, verbose_name="Body"),
         ),
     ]

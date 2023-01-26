@@ -6,18 +6,39 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0083_type_id'),
+        ("events", "0083_type_id"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Feedback',
+            name="Feedback",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(blank=True, max_length=255, verbose_name='Name')),
-                ('email', models.EmailField(max_length=254, verbose_name='E-mail')),
-                ('subject', models.CharField(blank=True, max_length=255, verbose_name='Subject')),
-                ('body', models.TextField(blank=True, max_length=255, verbose_name='Subject')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "name",
+                    models.CharField(blank=True, max_length=255, verbose_name="Name"),
+                ),
+                ("email", models.EmailField(max_length=254, verbose_name="E-mail")),
+                (
+                    "subject",
+                    models.CharField(
+                        blank=True, max_length=255, verbose_name="Subject"
+                    ),
+                ),
+                (
+                    "body",
+                    models.TextField(
+                        blank=True, max_length=255, verbose_name="Subject"
+                    ),
+                ),
             ],
         ),
     ]

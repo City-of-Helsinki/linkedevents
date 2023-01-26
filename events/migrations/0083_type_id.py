@@ -6,43 +6,65 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0082_keywordlabel_search_vectors'),
+        ("events", "0082_keywordlabel_search_vectors"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='event',
-            name='enrolment_end_time',
-            field=models.DateTimeField(blank=True, null=True, verbose_name='enrolment end time'),
+            model_name="event",
+            name="enrolment_end_time",
+            field=models.DateTimeField(
+                blank=True, null=True, verbose_name="enrolment end time"
+            ),
         ),
         migrations.AddField(
-            model_name='event',
-            name='enrolment_start_time',
-            field=models.DateTimeField(blank=True, null=True, verbose_name='enrolment start time'),
+            model_name="event",
+            name="enrolment_start_time",
+            field=models.DateTimeField(
+                blank=True, null=True, verbose_name="enrolment start time"
+            ),
         ),
         migrations.AddField(
-            model_name='event',
-            name='maximum_attendee_capacity',
-            field=models.PositiveSmallIntegerField(blank=True, null=True, verbose_name='maximum attendee capacity'),
+            model_name="event",
+            name="maximum_attendee_capacity",
+            field=models.PositiveSmallIntegerField(
+                blank=True, null=True, verbose_name="maximum attendee capacity"
+            ),
         ),
         migrations.AddField(
-            model_name='event',
-            name='minimum_attendee_capacity',
-            field=models.PositiveSmallIntegerField(blank=True, null=True, verbose_name='minimum attendee capacity'),
+            model_name="event",
+            name="minimum_attendee_capacity",
+            field=models.PositiveSmallIntegerField(
+                blank=True, null=True, verbose_name="minimum attendee capacity"
+            ),
         ),
         migrations.AddField(
-            model_name='event',
-            name='type_id',
-            field=models.CharField(choices=[(1, 'General'), (2, 'Course'), (3, 'Volunteering')], default=1, max_length=255),
+            model_name="event",
+            name="type_id",
+            field=models.CharField(
+                choices=[(1, "General"), (2, "Course"), (3, "Volunteering")],
+                default=1,
+                max_length=255,
+            ),
         ),
         migrations.AlterField(
-            model_name='event',
-            name='audience_max_age',
-            field=models.PositiveSmallIntegerField(blank=True, db_index=True, null=True, verbose_name='Maximum recommended age'),
+            model_name="event",
+            name="audience_max_age",
+            field=models.PositiveSmallIntegerField(
+                blank=True,
+                db_index=True,
+                null=True,
+                verbose_name="Maximum recommended age",
+            ),
         ),
         migrations.AlterField(
-            model_name='event',
-            name='audience_min_age',
-            field=models.PositiveSmallIntegerField(blank=True, db_index=True, null=True, verbose_name='Minimum recommended age'),
+            model_name="event",
+            name="audience_min_age",
+            field=models.PositiveSmallIntegerField(
+                blank=True,
+                db_index=True,
+                null=True,
+                verbose_name="Minimum recommended age",
+            ),
         ),
     ]

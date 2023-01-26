@@ -9,20 +9,41 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0063_lengthen_origin_id_and_id_fields'),
+        ("events", "0063_lengthen_origin_id_and_id_fields"),
     ]
 
     operations = [
-        migrations.RunSQL('ALTER TABLE events_openinghoursspecification ALTER place_id TYPE varchar(100);'),
-        migrations.RunSQL('ALTER TABLE events_place_divisions ALTER place_id TYPE varchar(100);'),
-        migrations.RunSQL('ALTER TABLE events_keyword_alt_labels ALTER keyword_id TYPE varchar(100);'),
-        migrations.RunSQL('ALTER TABLE events_event_keywords ALTER keyword_id TYPE varchar(100);'),
-        migrations.RunSQL('ALTER TABLE events_event_audience ALTER keyword_id TYPE varchar(100);'),
-        migrations.RunSQL('ALTER TABLE events_keywordset_keywords ALTER keyword_id TYPE varchar(100);'),
-        migrations.RunSQL('ALTER TABLE events_keywordset_keywords ALTER keywordset_id TYPE varchar(100);'),
-        migrations.RunSQL('ALTER TABLE events_event_keywords ALTER event_id TYPE varchar(100);'),
-        migrations.RunSQL('ALTER TABLE events_event_in_language ALTER event_id TYPE varchar(100);'),
-        migrations.RunSQL('ALTER TABLE events_event_audience ALTER event_id TYPE varchar(100);'),
-        migrations.RunSQL('ALTER TABLE events_event_images ALTER event_id TYPE varchar(100);'),
-
+        migrations.RunSQL(
+            "ALTER TABLE events_openinghoursspecification ALTER place_id TYPE varchar(100);"
+        ),
+        migrations.RunSQL(
+            "ALTER TABLE events_place_divisions ALTER place_id TYPE varchar(100);"
+        ),
+        migrations.RunSQL(
+            "ALTER TABLE events_keyword_alt_labels ALTER keyword_id TYPE varchar(100);"
+        ),
+        migrations.RunSQL(
+            "ALTER TABLE events_event_keywords ALTER keyword_id TYPE varchar(100);"
+        ),
+        migrations.RunSQL(
+            "ALTER TABLE events_event_audience ALTER keyword_id TYPE varchar(100);"
+        ),
+        migrations.RunSQL(
+            "ALTER TABLE events_keywordset_keywords ALTER keyword_id TYPE varchar(100);"
+        ),
+        migrations.RunSQL(
+            "ALTER TABLE events_keywordset_keywords ALTER keywordset_id TYPE varchar(100);"
+        ),
+        migrations.RunSQL(
+            "ALTER TABLE events_event_keywords ALTER event_id TYPE varchar(100);"
+        ),
+        migrations.RunSQL(
+            "ALTER TABLE events_event_in_language ALTER event_id TYPE varchar(100);"
+        ),
+        migrations.RunSQL(
+            "ALTER TABLE events_event_audience ALTER event_id TYPE varchar(100);"
+        ),
+        migrations.RunSQL(
+            "ALTER TABLE events_event_images ALTER event_id TYPE varchar(100);"
+        ),
     ]

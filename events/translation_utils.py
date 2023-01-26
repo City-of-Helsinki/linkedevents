@@ -16,6 +16,6 @@ def expand_model_fields(model, field_names):
         else:
             return [field_name]
 
-    return [expanded
-            for unexpanded in field_names
-            for expanded in expand_field(unexpanded)]
+    return [
+        expanded for unexpanded in field_names for expanded in expand_field(unexpanded)
+    ]

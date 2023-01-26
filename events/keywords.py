@@ -16,20 +16,25 @@ class KeywordMatcher(object):
         used_langs = settings.FULLTEXT_SEARCH_LANGUAGES
         if language:
             if language not in used_langs.keys():
-                raise ParseError(f"{language} not supported. Supported options are: {' '.join(used_langs.keys())}")
+                raise ParseError(
+                    f"{language} not supported. Supported options are: {' '.join(used_langs.keys())}"
+                )
             languages = [language]
         else:
             languages = used_langs.keys()
 
         contestants = {}
         for language in languages:
-            query = SearchQuery(text, config=used_langs[language], search_type='plain')
-            kwargs = {f'search_vector_{language}': query}
+            query = SearchQuery(text, config=used_langs[language], search_type="plain")
+            kwargs = {f"search_vector_{language}": query}
 
             # find matches via search vector and choose the best one according to trgrm similarity
-            label = KeywordLabel.objects.filter(**kwargs).annotate(similarity=TrigramSimilarity('name', text)
-                                                      ).order_by('-similarity'  # noqa E124
-                                                      ).first()  # noqa E124
+            label = (
+                KeywordLabel.objects.filter(**kwargs)
+                .annotate(similarity=TrigramSimilarity("name", text))
+                .order_by("-similarity")  # noqa E124
+                .first()
+            )  # noqa E124
             # storing the result in a dictionary of the following structure {similarity: label}
             # in the edge case when similarity is the same for two different languages the label will be
             # overwritten, which is not big deal as we don't have a way to select between the two anyway.
@@ -53,7 +58,7 @@ class KeywordMatcher(object):
             return [label]
 
         # if no matches found let's check if we could split the string
-        texts = re.split(f'[{string.punctuation} ]', text)
+        texts = re.split(f"[{string.punctuation} ]", text)
         if len(texts) > 1:
             all_the_labels = []
             for word in texts:

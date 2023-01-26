@@ -2,30 +2,30 @@ from django.test import TestCase
 from django_orghierarchy.models import Organization
 
 from events.models import DataSource
+
 from ..auth import ApiKeyUser
 
 
 class TestApiKeyUser(TestCase):
-
     def setUp(self):
         self.data_source = DataSource.objects.create(
-            id='ds',
-            name='data-source',
+            id="ds",
+            name="data-source",
         )
         self.org_1 = Organization.objects.create(
             data_source=self.data_source,
-            origin_id='org-1',
+            origin_id="org-1",
         )
         self.org_2 = Organization.objects.create(
             data_source=self.data_source,
-            origin_id='org-2',
+            origin_id="org-2",
             replaced_by=self.org_1,
         )
         self.data_source.owner = self.org_1
         self.data_source.save()
 
         self.user = ApiKeyUser.objects.create(
-            username='testuser',
+            username="testuser",
             data_source=self.data_source,
         )
 

@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
-import re
 import logging
+import re
+
 from bs4 import BeautifulSoup
+from django.core.validators import URLValidator, ValidationError
+from django.utils.translation.trans_real import activate, deactivate
 from langdetect import detect
 from langdetect.lang_detect_exception import LangDetectException
-from django.utils.translation.trans_real import activate, deactivate
-from django.core.validators import URLValidator, ValidationError
 
 from events.models import Place
 
@@ -19,13 +20,13 @@ def clean_text(text, strip_newlines=False, parse_html=False):
         soup = BeautifulSoup(text, features="html.parser")
         text = soup.get_text()
     # remove non-breaking spaces and separators
-    text = text.replace('\xa0', ' ').replace('\x1f', '')
+    text = text.replace("\xa0", " ").replace("\x1f", "")
     # remove nil bytes and tabs
-    text = text.replace(u'\u0000', ' ').replace('\u200b', ' ').replace('\t', ' ')
+    text = text.replace("\u0000", " ").replace("\u200b", " ").replace("\t", " ")
     if strip_newlines:
-        text = text.replace('\r', ' ').replace('\n', ' ')
+        text = text.replace("\r", " ").replace("\n", " ")
     # remove consecutive whitespaces
-    return re.sub(r'\s\s+', ' ', text, re.U).strip()
+    return re.sub(r"\s\s+", " ", text, re.U).strip()
 
 
 def clean_url(url):
@@ -33,14 +34,14 @@ def clean_url(url):
     Takes in a string and returns it as a cleaned url, or empty if the string is not a valid URL.
     """
     url = clean_text(url, True)
-    url = url.replace(' ', '%20')
-    if not re.match(r'^\w+?://', url):
-        url = 'http://' + url
+    url = url.replace(" ", "%20")
+    if not re.match(r"^\w+?://", url):
+        url = "http://" + url
     try:
         URLValidator()(url)
         return url
     except ValidationError:
-        logger.warning('URL not valid: ' + url)
+        logger.warning("URL not valid: " + url)
         return None
 
 
@@ -55,19 +56,21 @@ def separate_scripts(text, scripts):
     :return:
     """
     # separate the text by paragraphs, matching to select html and plain text delimiters in data
-    paragraphs = re.split(r'(</p><p>|\n|</p>|<p>| – |<br><br><br>)+', text)
-    separated = {script: '' for script in scripts}
+    paragraphs = re.split(r"(</p><p>|\n|</p>|<p>| – |<br><br><br>)+", text)
+    separated = {script: "" for script in scripts}
     # the first language given is the default one
     last_language = scripts[0]
-    last_paragraph = ''
+    last_paragraph = ""
     for paragraph in paragraphs:
-        if paragraph in (r'</p><p>', r'</p>' r'\n', r'<p>', r'<br><br><br>'):
+        if paragraph in (r"</p><p>", r"</p>" r"\n", r"<p>", r"<br><br><br>"):
             # skip paragraph breaks to prevent misdetection
             separated[last_language] += paragraph
             last_paragraph = paragraph
             continue
         # replace any misleading tags left
-        paragraph_stripped = re.sub(r'(<(/)?strong>)|(<br>)+|&amp;|<a href=.*">|</a>', ' ', paragraph)
+        paragraph_stripped = re.sub(
+            r'(<(/)?strong>)|(<br>)+|&amp;|<a href=.*">|</a>', " ", paragraph
+        )
         try:
             language = detect(paragraph_stripped)
         except LangDetectException:
@@ -82,18 +85,20 @@ def separate_scripts(text, scripts):
             language = last_language
         if language != last_language:
             # fix html paragraph breaks after language change
-            logger.debug('supported language detected: ' + language)
-            if last_paragraph in (r'</p><p>', r'</p>', r'<p>'):
-                separated[last_language] = re.sub(r'<p>$', '', separated[last_language])
-                separated[language] += r'<p>'
+            logger.debug("supported language detected: " + language)
+            if last_paragraph in (r"</p><p>", r"</p>", r"<p>"):
+                separated[last_language] = re.sub(r"<p>$", "", separated[last_language])
+                separated[language] += r"<p>"
             # remove useless dashes after language change
-            if last_paragraph in (r' – ',):
-                separated[last_language] = re.sub(r' – $', '', separated[last_language])
+            if last_paragraph in (r" – ",):
+                separated[last_language] = re.sub(r" – $", "", separated[last_language])
             # replace the awful triple-<br>
-            if last_paragraph in (r'<br><br><br>',):
-                separated[last_language] = re.sub(r'<br><br><br>$', '', separated[last_language])
-                separated[last_language] += r'</p>'
-                separated[language] += r'<p>'
+            if last_paragraph in (r"<br><br><br>",):
+                separated[last_language] = re.sub(
+                    r"<br><br><br>$", "", separated[last_language]
+                )
+                separated[last_language] += r"</p>"
+                separated[language] += r"<p>"
         separated[language] += paragraph
         last_language = language
         last_paragraph = paragraph
@@ -107,7 +112,7 @@ def unicodetext(item):
 
 
 def reduced_text(text):
-    return re.sub(r'\W', '', text, flags=re.U).lower()
+    return re.sub(r"\W", "", text, flags=re.U).lower()
 
 
 def text_match(a, b):
@@ -115,23 +120,23 @@ def text_match(a, b):
 
 
 def address_eq(a, b):
-    if ('postal_code' in a and 'postal_code' in b and
-            a['postal_code'] != b['postal_code']):
+    if (
+        "postal_code" in a
+        and "postal_code" in b
+        and a["postal_code"] != b["postal_code"]
+    ):
         return False
-    for key in ['locality', 'street_address']:
+    for key in ["locality", "street_address"]:
         languages = a[key].viewkeys() | b[key].viewkeys()
         for l in languages:
-            if (l in a[key] and l in b[key] and not
-                    text_match(a[key][l], b[key][l])):
+            if l in a[key] and l in b[key] and not text_match(a[key][l], b[key][l]):
                 return False
     return True
 
 
-def replace_location(replace=None,
-                     from_source='tprek',
-                     by=None,
-                     by_source='matko',
-                     include_deleted=False):
+def replace_location(
+    replace=None, from_source="tprek", by=None, by_source="matko", include_deleted=False
+):
     """
     Takes two locations from different data sources and replaces one by the other. If one or the other is
     not provided, the other is found by the name of the other and the specified data source.
@@ -144,13 +149,17 @@ def replace_location(replace=None,
     :return: Boolean that determines whether a new location was found for the hapless events
     """
     if not by:
-        replacements = Place.objects.filter(name__iexact=replace.name, data_source=by_source, deleted=False)
+        replacements = Place.objects.filter(
+            name__iexact=replace.name, data_source=by_source, deleted=False
+        )
         if replacements.count() == 1:
             by = replacements[0]
         else:
             # the backup is to look for deleted locations and reinstate them
             if include_deleted:
-                replacements = Place.objects.filter(name__iexact=replace.name, data_source=by_source)
+                replacements = Place.objects.filter(
+                    name__iexact=replace.name, data_source=by_source
+                )
                 if replacements.count() == 1:
                     by = replacements[0]
                 else:
@@ -159,19 +168,23 @@ def replace_location(replace=None,
             else:
                 return False
     if not replace:
-        to_be_replaced = Place.objects.filter(name__iexact=by.name, data_source=from_source)
+        to_be_replaced = Place.objects.filter(
+            name__iexact=by.name, data_source=from_source
+        )
         if to_be_replaced.count() == 1:
             replace = to_be_replaced[0]
         # if no place to be replaced was found, it's alright, we might have a brand new location here!
     by.deleted = False
     by.replaced_by = None
-    by.save(update_fields=['deleted', 'replaced_by'])
+    by.save(update_fields=["deleted", "replaced_by"])
     if replace:
         replace.deleted = True
         replace.replaced_by = by
-        replace.save(update_fields=['deleted', 'replaced_by'])
-        logger.info("Location %s (%s) was deleted. Discovered replacement location %s" %
-                    (replace.id, str(replace), by.id))
+        replace.save(update_fields=["deleted", "replaced_by"])
+        logger.info(
+            "Location %s (%s) was deleted. Discovered replacement location %s"
+            % (replace.id, str(replace), by.id)
+        )
     return True
 
 

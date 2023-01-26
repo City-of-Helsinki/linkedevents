@@ -8,13 +8,19 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0060_delete_single_image_from_event'),
+        ("events", "0060_delete_single_image_from_event"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='event',
-            name='super_event_type',
-            field=models.CharField(blank=True, choices=[('recurring', 'Recurring'), ('umbrella', 'Umbrella event')], default=None, max_length=255, null=True),
+            model_name="event",
+            name="super_event_type",
+            field=models.CharField(
+                blank=True,
+                choices=[("recurring", "Recurring"), ("umbrella", "Umbrella event")],
+                default=None,
+                max_length=255,
+                null=True,
+            ),
         ),
     ]

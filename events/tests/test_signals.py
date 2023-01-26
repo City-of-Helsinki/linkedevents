@@ -6,29 +6,25 @@ from ..models import DataSource
 
 
 class TestOrganizationPostSave(TestCase):
-
     def setUp(self):
         user_model = get_user_model()
-        self.user_1 = user_model.objects.create(username='user-1')
-        self.user_2 = user_model.objects.create(username='user-2')
+        self.user_1 = user_model.objects.create(username="user-1")
+        self.user_2 = user_model.objects.create(username="user-2")
 
         self.data_source_1 = DataSource.objects.create(
-            id='ds-1',
-            name='data-source-1',
+            id="ds-1",
+            name="data-source-1",
         )
-        self.data_source_2 = DataSource.objects.create(
-            id='ds-2',
-            name='data-source-2'
-        )
+        self.data_source_2 = DataSource.objects.create(id="ds-2", name="data-source-2")
         self.org_1 = Organization.objects.create(
             data_source=self.data_source_1,
-            name='org-1',
-            origin_id='org-1',
+            name="org-1",
+            origin_id="org-1",
         )
         self.org_2 = Organization.objects.create(
             data_source=self.data_source_2,
-            name='org-2',
-            origin_id='org-2',
+            name="org-2",
+            origin_id="org-2",
         )
         self.data_source_1.owner = self.org_1
         self.data_source_1.save()
@@ -43,10 +39,14 @@ class TestOrganizationPostSave(TestCase):
         self.org_1.save()
 
         qs = self.org_2.admin_users.all()
-        self.assertQuerysetEqual(qs, [repr(self.user_1), repr(self.user_2)], ordered=False)
+        self.assertQuerysetEqual(
+            qs, [repr(self.user_1), repr(self.user_2)], ordered=False
+        )
 
         qs = self.org_2.regular_users.all()
-        self.assertQuerysetEqual(qs, [repr(self.user_1), repr(self.user_2)], ordered=False)
+        self.assertQuerysetEqual(
+            qs, [repr(self.user_1), repr(self.user_2)], ordered=False
+        )
 
         self.data_source_1.refresh_from_db()
         self.assertEqual(self.data_source_1.owner, self.org_2)

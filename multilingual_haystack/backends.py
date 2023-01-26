@@ -8,14 +8,13 @@ from haystack.utils.loading import load_backend
 
 
 class MultilingualSearchBackend(BaseSearchBackend):
-
     def forward_to_backends(self, method, *args, **kwargs):
         # forwards the desired backend method to all the language backends
         initial_language = translation.get_language()
         # retrieve unique backend name
         backends = []
         for language, _ in settings.LANGUAGES:
-            using = '%s-%s' % (self.connection_alias, language)
+            using = "%s-%s" % (self.connection_alias, language)
             # Ensure each backend is called only once
             if using in backends:
                 continue
@@ -31,13 +30,13 @@ class MultilingualSearchBackend(BaseSearchBackend):
             translation.deactivate()
 
     def update(self, index, iterable, commit=True):
-        self.forward_to_backends('update', index, iterable, commit)
+        self.forward_to_backends("update", index, iterable, commit)
 
     def clear(self, **kwargs):
-        self.forward_to_backends('clear', **kwargs)
+        self.forward_to_backends("clear", **kwargs)
 
     def remove(self, obj_or_string):
-        self.forward_to_backends('remove', obj_or_string)
+        self.forward_to_backends("remove", obj_or_string)
 
 
 # class MultilingualSearchQuery(BaseSearchQuery):
@@ -54,7 +53,7 @@ class MultilingualSearchEngine(BaseEngine):
             language = settings.LANGUAGES[0][0][:2]
         else:
             language = language[:2]
-        using = '%s-%s' % (self.using, language)
+        using = "%s-%s" % (self.using, language)
         return connections[using].get_query()
 
 
@@ -70,12 +69,15 @@ class LanguageSearchQuery(BaseSearchQuery):
 
 class LanguageSearchEngine(BaseEngine):
     def __init__(self, **kwargs):
-        conn_config = settings.HAYSTACK_CONNECTIONS[kwargs['using']]
-        base_engine = load_backend(conn_config['BASE_ENGINE'])(**kwargs)
+        conn_config = settings.HAYSTACK_CONNECTIONS[kwargs["using"]]
+        base_engine = load_backend(conn_config["BASE_ENGINE"])(**kwargs)
 
         backend_bases = (LanguageSearchBackend, base_engine.backend)
-        backend_class = type('LanguageSearchBackend', backend_bases,
-                             {'parent_class': base_engine.backend})
+        backend_class = type(
+            "LanguageSearchBackend",
+            backend_bases,
+            {"parent_class": base_engine.backend},
+        )
         self.backend = backend_class
 
         self.query = base_engine.query

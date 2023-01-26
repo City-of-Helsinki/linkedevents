@@ -217,6 +217,18 @@ run all the formatting tools as git hooks automatically before a
 commit.
 
 
+## Git blame ignore refs
+
+Project includes a `.git-blame-ignore-revs` file for ignoring certain commits from `git blame`.
+This can be useful for ignoring e.g. formatting commits, so that it is more clear from `git blame`
+where the actual code change came from. Configure your git to use it for this project with the
+following command:
+
+```shell
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
+
+
 ## Search
 
 Linkedevents uses Elasticsearch for generating results on the /search-endpoint. If you wish to use that functionality, proceed like so:

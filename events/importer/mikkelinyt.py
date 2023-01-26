@@ -17,28 +17,28 @@ from .sync import ModelSyncher
 
 logger = logging.getLogger(__name__)
 
-MIKKELINYT_BASE_URL = 'http://www.mikkelinyt.fi/json.php'
-MIKKELINYT_API_KEY = os.getenv('MIKKELINYT_API_KEY', '')
-MIKKELINYT_LOCATION = os.getenv('MIKKELINYT_LOCATION', '')
-MIKKELINYT_IMAGE_BASE_URL = 'http://www.mikkelinyt.fi/uploads/savonlinnanyt'
+MIKKELINYT_BASE_URL = "http://www.mikkelinyt.fi/json.php"
+MIKKELINYT_API_KEY = os.getenv("MIKKELINYT_API_KEY", "")
+MIKKELINYT_LOCATION = os.getenv("MIKKELINYT_LOCATION", "")
+MIKKELINYT_IMAGE_BASE_URL = "http://www.mikkelinyt.fi/uploads/savonlinnanyt"
 
 
 def mark_deleted(obj):
     if obj.deleted:
         return False
     obj.deleted = True
-    obj.save(update_fields=['deleted'])
+    obj.save(update_fields=["deleted"])
     return True
 
 
 @register_importer
 class MikkeliNytImporter(Importer):
     name = "mikkelinyt"
-    supported_languages = ['fi']
+    supported_languages = ["fi"]
 
     def __init__(self, *args, **kwargs):
         super(MikkeliNytImporter, self).__init__(*args, **kwargs)
-        self.timezone = pytz.timezone('Europe/Helsinki')
+        self.timezone = pytz.timezone("Europe/Helsinki")
 
     def items_from_url(self, url):
         logger.info(url)
@@ -50,18 +50,24 @@ class MikkeliNytImporter(Importer):
         return None
 
     def setup(self):
-        defaults = dict(name='MikkeliNyt')
-        self.data_source, _ = DataSource.objects.get_or_create(id=self.name, defaults=defaults)
-        self.mikkelinyt_data_source = DataSource.objects.get(id='mikkelinyt')
-        org_args = dict(id='mikkelinyt')
-        defaults = dict(name='MikkeliNyt', data_source=self.data_source)
-        self.organization, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
+        defaults = dict(name="MikkeliNyt")
+        self.data_source, _ = DataSource.objects.get_or_create(
+            id=self.name, defaults=defaults
+        )
+        self.mikkelinyt_data_source = DataSource.objects.get(id="mikkelinyt")
+        org_args = dict(id="mikkelinyt")
+        defaults = dict(name="MikkeliNyt", data_source=self.data_source)
+        self.organization, _ = Organization.objects.get_or_create(
+            defaults=defaults, **org_args
+        )
 
-        if self.options['cached']:
-            requests_cache.install_cache('mikkelinyt')
+        if self.options["cached"]:
+            requests_cache.install_cache("mikkelinyt")
 
     def get_url(self):
-        url = MIKKELINYT_BASE_URL + '?showall=1&apiKey={}&location={}'.format(MIKKELINYT_API_KEY, MIKKELINYT_LOCATION)
+        url = MIKKELINYT_BASE_URL + "?showall=1&apiKey={}&location={}".format(
+            MIKKELINYT_API_KEY, MIKKELINYT_LOCATION
+        )
         return url
 
     def strip_html(self, text):
@@ -71,7 +77,7 @@ class MikkeliNytImporter(Importer):
         return result.strip()
 
     def parse_offset_datetime(self, text):
-        return datetime.strptime(text, '%Y-%m-%d %H:%M:%S').astimezone(self.timezone)
+        return datetime.strptime(text, "%Y-%m-%d %H:%M:%S").astimezone(self.timezone)
 
     def import_events(self):
         logger.info("Importing MikkeliNyt events")
@@ -81,8 +87,13 @@ class MikkeliNytImporter(Importer):
             logger.info("Could not parse items, giving up...")
         else:
             syncher_queryset = Event.objects.filter(
-                end_time__gte=datetime.now(), data_source=self.data_source, deleted=False)
-            self.syncher = ModelSyncher(syncher_queryset, lambda obj: obj.origin_id, delete_func=mark_deleted)
+                end_time__gte=datetime.now(),
+                data_source=self.data_source,
+                deleted=False,
+            )
+            self.syncher = ModelSyncher(
+                syncher_queryset, lambda obj: obj.origin_id, delete_func=mark_deleted
+            )
 
             for item in items:
                 event = self.upsert_event(item)
@@ -106,7 +117,7 @@ class MikkeliNytImporter(Importer):
 
         registration = item["registration"]
 
-        location_origin_id = hashlib.md5(item["location"].encode('utf-8')).hexdigest()
+        location_origin_id = hashlib.md5(item["location"].encode("utf-8")).hexdigest()
         address = self.strip_html(item["address"])
         city = self.strip_html(item["city"])
         place = self.strip_html(item["place"])
@@ -116,54 +127,41 @@ class MikkeliNytImporter(Importer):
         categories = item["category"]
         keywords = self.upsert_keywords(categories)
 
-        _id = 'mikkelinyt:{}'.format(origin_id)
+        _id = "mikkelinyt:{}".format(origin_id)
 
         external_links = {}
         if registration:
-            external_links['rekisteröityminen'] = registration
+            external_links["rekisteröityminen"] = registration
 
         event = {
-            'id': _id,
-            'data_source': self.data_source,
-            'start_time': start,
-            'has_start_time': True,
-            'end_time': end,
-            'has_end_time': True,
-            'name': {"fi": name},
-            'origin_id': origin_id,
-            'keywords': keywords,
-            'offers': [
+            "id": _id,
+            "data_source": self.data_source,
+            "start_time": start,
+            "has_start_time": True,
+            "end_time": end,
+            "has_end_time": True,
+            "name": {"fi": name},
+            "origin_id": origin_id,
+            "keywords": keywords,
+            "offers": [
                 {
-                    'is_free': tickets == "ilmainen",
-                    'description': {'fi': tickets},
-                    'info_url': {'fi': tickets_url},
-                    'price': None
+                    "is_free": tickets == "ilmainen",
+                    "description": {"fi": tickets},
+                    "info_url": {"fi": tickets_url},
+                    "price": None,
                 }
             ],
-            'description': {
-                "fi": description
-            },
-            'short_description': {
-                "fi": description
-            },
-            'location': location,
-            'publisher': self.organization,
-            'info_url': {
-                'fi': url
-            },
-            'images': [{
-                'name': 'thumb',
-                'url': thumb
-            }, {
-                'name': 'image',
-                'url': image
-            }, {
-                'name': 'image_original',
-                'url': image_original
-            }],
-            'external_links': {
-                'fi': external_links
-            }
+            "description": {"fi": description},
+            "short_description": {"fi": description},
+            "location": location,
+            "publisher": self.organization,
+            "info_url": {"fi": url},
+            "images": [
+                {"name": "thumb", "url": thumb},
+                {"name": "image", "url": image},
+                {"name": "image_original", "url": image_original},
+            ],
+            "external_links": {"fi": external_links},
         }
 
         return self.save_event(event)
@@ -180,33 +178,33 @@ class MikkeliNytImporter(Importer):
         return keywords
 
     def upsert_keyword(self, origin_id, name):
-        _id = 'mikkelinyt:{}'.format(origin_id)
+        _id = "mikkelinyt:{}".format(origin_id)
 
         kwargs = {
-            'id': _id,
-            'data_source_id': 'mikkelinyt',
-            'name_fi': name,
-            'origin_id': origin_id,
-            'publisher': self.organization
+            "id": _id,
+            "data_source_id": "mikkelinyt",
+            "name_fi": name,
+            "origin_id": origin_id,
+            "publisher": self.organization,
         }
 
         Keyword.objects.get_or_create(**kwargs)
 
-        keywords = Keyword.objects.filter(id__exact='%s' % _id).order_by('id')
+        keywords = Keyword.objects.filter(id__exact="%s" % _id).order_by("id")
         return keywords.first()
 
     def upsert_place(self, origin_id, address, city, place, zipCode):
         result = recur_dict()
-        _id = 'mikkelinyt:{}'.format(origin_id)
+        _id = "mikkelinyt:{}".format(origin_id)
 
-        result['id'] = _id
-        result['origin_id'] = origin_id
-        result['name']['fi'] = place
-        result['street_address']['fi'] = address
-        result['postal_code'] = zipCode
-        result['address_locality']['fi'] = city
-        result['publisher'] = self.organization
-        result['data_source'] = self.data_source
+        result["id"] = _id
+        result["origin_id"] = origin_id
+        result["name"]["fi"] = place
+        result["street_address"]["fi"] = address
+        result["postal_code"] = zipCode
+        result["address_locality"]["fi"] = city
+        result["publisher"] = self.organization
+        result["data_source"] = self.data_source
 
         self.save_place(result)
 

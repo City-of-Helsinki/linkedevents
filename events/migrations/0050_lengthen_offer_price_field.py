@@ -8,28 +8,34 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0049_auto_update_datetime_fields'),
+        ("events", "0049_auto_update_datetime_fields"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='offer',
-            name='price',
-            field=models.CharField(blank=True, max_length=1000, verbose_name='Price'),
+            model_name="offer",
+            name="price",
+            field=models.CharField(blank=True, max_length=1000, verbose_name="Price"),
         ),
         migrations.AlterField(
-            model_name='offer',
-            name='price_en',
-            field=models.CharField(blank=True, max_length=1000, null=True, verbose_name='Price'),
+            model_name="offer",
+            name="price_en",
+            field=models.CharField(
+                blank=True, max_length=1000, null=True, verbose_name="Price"
+            ),
         ),
         migrations.AlterField(
-            model_name='offer',
-            name='price_fi',
-            field=models.CharField(blank=True, max_length=1000, null=True, verbose_name='Price'),
+            model_name="offer",
+            name="price_fi",
+            field=models.CharField(
+                blank=True, max_length=1000, null=True, verbose_name="Price"
+            ),
         ),
         migrations.AlterField(
-            model_name='offer',
-            name='price_sv',
-            field=models.CharField(blank=True, max_length=1000, null=True, verbose_name='Price'),
+            model_name="offer",
+            name="price_sv",
+            field=models.CharField(
+                blank=True, max_length=1000, null=True, verbose_name="Price"
+            ),
         ),
     ]

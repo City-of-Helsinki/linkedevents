@@ -7,7 +7,9 @@ from linkedevents.settings import MUNIGEO_MUNI
 
 def forwards_func(apps, schema_editor):
     Event = apps.get_model("events", "Event")
-    Event.objects.filter(location__divisions__ocd_id__endswith=MUNIGEO_MUNI).update(local=True)
+    Event.objects.filter(location__divisions__ocd_id__endswith=MUNIGEO_MUNI).update(
+        local=True
+    )
 
 
 def reverse_func(apps, schema_editor):
@@ -17,13 +19,13 @@ def reverse_func(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0080_populate_tsvectors_and_indices'),
+        ("events", "0080_populate_tsvectors_and_indices"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='event',
-            name='local',
+            model_name="event",
+            name="local",
             field=models.BooleanField(default=False),
         ),
         migrations.RunPython(forwards_func, reverse_func),

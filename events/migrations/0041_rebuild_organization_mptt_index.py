@@ -12,14 +12,14 @@ def forward(apps, schema_editor):
     Organization = apps.get_model("events", "Organization")
     manager.model = Organization
     mptt.register(Organization)
-    manager.contribute_to_class(Organization, 'objects')
+    manager.contribute_to_class(Organization, "objects")
     manager.rebuild()
 
 
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0040_add_hierarchical_and_admin_orgs'),
+        ("events", "0040_add_hierarchical_and_admin_orgs"),
     ]
 
     operations = [

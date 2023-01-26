@@ -6,11 +6,11 @@ from django.db import migrations
 
 
 def migrate_org_data(apps, schema_editor):
-    event_org_model = apps.get_model('events', 'Organization')
-    new_org_model = apps.get_model('django_orghierarchy', 'Organization')
+    event_org_model = apps.get_model("events", "Organization")
+    new_org_model = apps.get_model("django_orghierarchy", "Organization")
 
     for org in event_org_model.objects.all():
-        origin_id = org.origin_id or org.id.split(':')[-1]
+        origin_id = org.origin_id or org.id.split(":")[-1]
 
         new_org = new_org_model.objects.create(
             id=org.id,
@@ -30,16 +30,14 @@ def migrate_org_data(apps, schema_editor):
 
 
 def clean_org_data(apps, schema_editor):
-    new_org_model = apps.get_model('django_orghierarchy', 'Organization')
+    new_org_model = apps.get_model("django_orghierarchy", "Organization")
     new_org_model.objects.all().delete()
 
 
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0045_rename_org_admin_users_related_name'),
+        ("events", "0045_rename_org_admin_users_related_name"),
     ]
 
-    operations = [
-        migrations.RunPython(migrate_org_data, clean_org_data)
-    ]
+    operations = [migrations.RunPython(migrate_org_data, clean_org_data)]

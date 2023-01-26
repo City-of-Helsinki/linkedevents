@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0076_keyword_has_upcoming_events'),
+        ("events", "0076_keyword_has_upcoming_events"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='place',
-            name='has_upcoming_events',
+            model_name="place",
+            name="has_upcoming_events",
             field=models.BooleanField(db_index=True, default=False),
         ),
     ]

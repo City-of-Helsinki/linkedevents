@@ -8,27 +8,42 @@ from events.exporter.base import get_exporters
 class Command(BaseCommand):
     help = "Export event data"
 
-    exporter_types = ['events']
+    exporter_types = ["events"]
 
     def __init__(self):
         super().__init__()
         self.exporters = get_exporters()
-        self.exp_list = ', '.join(sorted(self.exporters.keys()))
-        self.missing_args_message = "Enter the name of the event exporter module. Valid exporters: %s" % self.exp_list
+        self.exp_list = ", ".join(sorted(self.exporters.keys()))
+        self.missing_args_message = (
+            "Enter the name of the event exporter module. Valid exporters: %s"
+            % self.exp_list
+        )
 
     def add_arguments(self, parser):
-        parser.add_argument('module')
-        parser.add_argument('--new', action='store_true', dest='new',
-                            help='Export entities added after last export date')
-        parser.add_argument('--delete', action='store_true', dest='delete',
-                            help='Delete exported items from target system')
+        parser.add_argument("module")
+        parser.add_argument(
+            "--new",
+            action="store_true",
+            dest="new",
+            help="Export entities added after last export date",
+        )
+        parser.add_argument(
+            "--delete",
+            action="store_true",
+            dest="delete",
+            help="Delete exported items from target system",
+        )
         for exp in self.exporter_types:
-            parser.add_argument('--%s' % exp, dest=exp, action='store_true', help='export %s' % exp)
+            parser.add_argument(
+                "--%s" % exp, dest=exp, action="store_true", help="export %s" % exp
+            )
 
     def handle(self, *args, **options):
-        module = options['module']
+        module = options["module"]
         if module not in self.exporters:
-            raise CommandError("Exporter %s not found. Valid exporters: %s" % (module, self.exp_list))
+            raise CommandError(
+                "Exporter %s not found. Valid exporters: %s" % (module, self.exp_list)
+            )
         exp_class = self.exporters[module]
 
         exporter = exp_class()
@@ -44,13 +59,13 @@ class Command(BaseCommand):
             if options[exp_type]:
                 if not method:
                     raise CommandError(
-                        "Exporter %s does not support exporter %s"
-                        % (name, exp_type))
+                        "Exporter %s does not support exporter %s" % (name, exp_type)
+                    )
             else:
-                if not options['new'] and not options['delete']:
+                if not options["new"] and not options["delete"]:
                     continue
 
             if method:
-                method(is_delete=(True if options['delete'] else False))
+                method(is_delete=(True if options["delete"] else False))
 
         activate(old_lang)

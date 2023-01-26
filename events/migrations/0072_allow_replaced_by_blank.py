@@ -7,23 +7,41 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0071_event_replaced_by'),
+        ("events", "0071_event_replaced_by"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='event',
-            name='replaced_by',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='aliases', to='events.Event'),
+            model_name="event",
+            name="replaced_by",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="aliases",
+                to="events.Event",
+            ),
         ),
         migrations.AlterField(
-            model_name='keyword',
-            name='replaced_by',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='aliases', to='events.Keyword'),
+            model_name="keyword",
+            name="replaced_by",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="aliases",
+                to="events.Keyword",
+            ),
         ),
         migrations.AlterField(
-            model_name='place',
-            name='replaced_by',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='aliases', to='events.Place'),
+            model_name="place",
+            name="replaced_by",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="aliases",
+                to="events.Place",
+            ),
         ),
     ]

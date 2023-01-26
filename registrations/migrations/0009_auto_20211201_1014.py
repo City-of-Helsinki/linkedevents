@@ -7,19 +7,33 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0085_remove_feedback_limit'),
-        ('registrations', '0008_signup_date_of_birth'),
+        ("events", "0085_remove_feedback_limit"),
+        ("registrations", "0008_signup_date_of_birth"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='signup',
-            name='native_language',
-            field=models.ForeignKey(blank=True, default='fi', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='signup_native_language', to='events.Language'),
+            model_name="signup",
+            name="native_language",
+            field=models.ForeignKey(
+                blank=True,
+                default="fi",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="signup_native_language",
+                to="events.Language",
+            ),
         ),
         migrations.AddField(
-            model_name='signup',
-            name='service_language',
-            field=models.ForeignKey(blank=True, default='fi', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='signup_service_language', to='events.Language'),
+            model_name="signup",
+            name="service_language",
+            field=models.ForeignKey(
+                blank=True,
+                default="fi",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="signup_service_language",
+                to="events.Language",
+            ),
         ),
     ]

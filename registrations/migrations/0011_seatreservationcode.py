@@ -8,18 +8,48 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registrations', '0010_auto_20211201_1038'),
+        ("registrations", "0010_auto_20211201_1038"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='SeatReservationCode',
+            name="SeatReservationCode",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('seats', models.PositiveSmallIntegerField(default=0, verbose_name='Number of seats')),
-                ('code', models.UUIDField(default=uuid.uuid4, editable=False, verbose_name='Seat reservation code')),
-                ('timestamp', models.DateTimeField(auto_now_add=True, verbose_name='Timestamp.')),
-                ('registration', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='reservations', to='registrations.registration')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "seats",
+                    models.PositiveSmallIntegerField(
+                        default=0, verbose_name="Number of seats"
+                    ),
+                ),
+                (
+                    "code",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        verbose_name="Seat reservation code",
+                    ),
+                ),
+                (
+                    "timestamp",
+                    models.DateTimeField(auto_now_add=True, verbose_name="Timestamp."),
+                ),
+                (
+                    "registration",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="reservations",
+                        to="registrations.registration",
+                    ),
+                ),
             ],
         ),
     ]

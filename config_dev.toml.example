@@ -90,7 +90,7 @@ ADMINS=admin@this.linkedevents.instance,another-admin@this.linkedevents
 # Cookie prefix is added to the every cookie set by linkedevents. These are
 # mostly used when accessing the internal Django admin site. This applies
 # to django session cookie and csrf cookie
-# Django setting: prepended to CSRF_COOKIE_NAME and SESSION_COOKIE_NAME 
+# Django setting: prepended to CSRF_COOKIE_NAME and SESSION_COOKIE_NAME
 COOKIE_PREFIX=ledev
 
 # Django INTERNAL_IPS setting allows some debugging aids for the addresses

@@ -6,9 +6,13 @@ from django.db import migrations, models
 
 
 def forward(apps, schema_editor):
-    Keyword = apps.get_model('events', 'Keyword')
-    for keyword in Keyword.objects.exclude(events=None) | Keyword.objects.exclude(audience_events=None):
-        n_events = (keyword.events.all() | keyword.audience_events.all()).distinct().count()
+    Keyword = apps.get_model("events", "Keyword")
+    for keyword in Keyword.objects.exclude(events=None) | Keyword.objects.exclude(
+        audience_events=None
+    ):
+        n_events = (
+            (keyword.events.all() | keyword.audience_events.all()).distinct().count()
+        )
         if n_events != keyword.n_events:
             print("Updating event number for " + str(keyword.name))
             keyword.n_events = n_events
@@ -18,24 +22,32 @@ def forward(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0034_add_keyword_deprecated'),
+        ("events", "0034_add_keyword_deprecated"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='keyword',
-            name='n_events',
-            field=models.IntegerField(db_index=True, default=0, editable=False, help_text='number of events with this keyword', verbose_name='event count'),
+            model_name="keyword",
+            name="n_events",
+            field=models.IntegerField(
+                db_index=True,
+                default=0,
+                editable=False,
+                help_text="number of events with this keyword",
+                verbose_name="event count",
+            ),
         ),
         migrations.AlterField(
-            model_name='event',
-            name='audience',
-            field=models.ManyToManyField(blank=True, related_name='audience_events', to='events.Keyword'),
+            model_name="event",
+            name="audience",
+            field=models.ManyToManyField(
+                blank=True, related_name="audience_events", to="events.Keyword"
+            ),
         ),
         migrations.AlterField(
-            model_name='event',
-            name='keywords',
-            field=models.ManyToManyField(related_name='events', to='events.Keyword'),
+            model_name="event",
+            name="keywords",
+            field=models.ManyToManyField(related_name="events", to="events.Keyword"),
         ),
-        migrations.RunPython(forward, migrations.RunPython.noop)
+        migrations.RunPython(forward, migrations.RunPython.noop),
     ]

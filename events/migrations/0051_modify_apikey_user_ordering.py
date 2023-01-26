@@ -8,12 +8,12 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0050_lengthen_offer_price_field'),
+        ("events", "0050_lengthen_offer_price_field"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='apikeyuser',
-            options={'ordering': ('id',)},
+            name="apikeyuser",
+            options={"ordering": ("id",)},
         ),
     ]

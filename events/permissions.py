@@ -12,6 +12,7 @@ class UserModelPermissionMixin:
     A mixin class that provides permission check methods
     for user models.
     """
+
     def is_admin(self, publisher):
         """Check if current user is an admin user of the publisher organization"""
         raise NotImplementedError()
@@ -33,7 +34,10 @@ class UserModelPermissionMixin:
         event with the given publisher and publication_status"""
         if self.is_admin(publisher):
             return True
-        if self.is_regular_user(publisher) and publication_status == PublicationStatus.DRAFT:
+        if (
+            self.is_regular_user(publisher)
+            and publication_status == PublicationStatus.DRAFT
+        ):
             return True
         return False
 
@@ -43,16 +47,22 @@ class UserModelPermissionMixin:
         return queryset.filter(
             publisher__in=self.get_admin_organizations_and_descendants()
         ) | queryset.filter(
-            publication_status=PublicationStatus.DRAFT, publisher__in=self.organization_memberships.all()
+            publication_status=PublicationStatus.DRAFT,
+            publisher__in=self.organization_memberships.all(),
         )
 
     def get_admin_tree_ids(self):
         # returns tree ids for all normal admin organizations and their replacements
-        admin_queryset = self.admin_organizations.filter(internal_type='normal').select_related('replaced_by')
-        admin_tree_ids = admin_queryset.values('tree_id')
-        admin_replaced_tree_ids = admin_queryset.filter(replaced_by__isnull=False).values('replaced_by__tree_id')
-        return (set(value['tree_id'] for value in admin_tree_ids) |
-                set(value['replaced_by__tree_id'] for value in admin_replaced_tree_ids))
+        admin_queryset = self.admin_organizations.filter(
+            internal_type="normal"
+        ).select_related("replaced_by")
+        admin_tree_ids = admin_queryset.values("tree_id")
+        admin_replaced_tree_ids = admin_queryset.filter(
+            replaced_by__isnull=False
+        ).values("replaced_by__tree_id")
+        return set(value["tree_id"] for value in admin_tree_ids) | set(
+            value["replaced_by__tree_id"] for value in admin_replaced_tree_ids
+        )
 
     def get_admin_organizations_and_descendants(self):
         # returns admin organizations and their descendants
@@ -64,34 +74,32 @@ class UserModelPermissionMixin:
             admin_orgs.append(admin_org.get_descendants(include_self=True))
             if admin_org.replaced_by:
                 # admins of replaced organizations have these rights, too!
-                admin_orgs.append(admin_org.replaced_by.get_descendants(include_self=True))
+                admin_orgs.append(
+                    admin_org.replaced_by.get_descendants(include_self=True)
+                )
         # for multiple admin_orgs, we have to combine the querysets and filter distinct
         return reduce(lambda a, b: a | b, admin_orgs).distinct()
 
 
 class GuestPost(BasePermission):
-
     def has_permission(self, request, view):
-        if request.method == 'POST':
+        if request.method == "POST":
             return True
         else:
             return False
 
 
 class GuestDelete(BasePermission):
-
     def has_permission(self, request, view):
-        if request.method == 'DELETE':
+        if request.method == "DELETE":
             return True
         else:
             return False
 
 
 class GuestGet(BasePermission):
-
     def has_permission(self, request, view):
-        if request.method == 'GET':
+        if request.method == "GET":
             return True
         else:
             return False
-

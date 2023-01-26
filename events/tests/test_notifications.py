@@ -1,18 +1,21 @@
 # -*- coding: utf-8 -*-
 
 import pytest
-
-from ..models import PublicationStatus
-from notifications.models import NotificationTemplate, NotificationType
-from notifications.tests.utils import check_received_mail_exists
 from django.contrib.auth import get_user_model
 from django.core import mail
+
+from notifications.models import NotificationTemplate, NotificationType
+from notifications.tests.utils import check_received_mail_exists
+
+from ..models import PublicationStatus
 
 
 @pytest.fixture
 def event_deleted_notification_template():
     try:
-        NotificationTemplate.objects.get(type=NotificationType.UNPUBLISHED_EVENT_DELETED).delete()
+        NotificationTemplate.objects.get(
+            type=NotificationType.UNPUBLISHED_EVENT_DELETED
+        ).delete()
     except NotificationTemplate.DoesNotExist:
         pass
     template = NotificationTemplate.objects.create(
@@ -81,11 +84,17 @@ def test_draft_event_deleted(event_deleted_notification_template, user, event):
     html_body = "event deleted <b>HTML</b> body, event name: %s!" % event.name
     assert len(mail.outbox) == 1
     check_received_mail_exists(
-        "event deleted subject, event name: %s!" % event.name, user.email, strings, html_body=html_body)
+        "event deleted subject, event name: %s!" % event.name,
+        user.email,
+        strings,
+        html_body=html_body,
+    )
 
 
 @pytest.mark.django_db
-def test_public_event_deleted_doesnt_trigger_notification(event_deleted_notification_template, user, event):
+def test_public_event_deleted_doesnt_trigger_notification(
+    event_deleted_notification_template, user, event
+):
     event.created_by = user
     event.save()
     event.soft_delete()
@@ -102,7 +111,11 @@ def test_event_published(event_published_notification_template, user, draft_even
     ]
     html_body = "event published <b>HTML</b> body, event name: %s!" % draft_event.name
     check_received_mail_exists(
-        "event published subject, event name: %s!" % draft_event.name, user.email, strings, html_body=html_body)
+        "event published subject, event name: %s!" % draft_event.name,
+        user.email,
+        strings,
+        html_body=html_body,
+    )
 
 
 @pytest.mark.django_db
@@ -112,20 +125,25 @@ def test_draft_posted(draft_posted_notification_template, user, draft_event):
     ]
     html_body = "draft posted <b>HTML</b> body, event name: %s!" % draft_event.name
     check_received_mail_exists(
-        "draft posted subject, event name: %s!" % draft_event.name, user.email, strings, html_body=html_body)
+        "draft posted subject, event name: %s!" % draft_event.name,
+        user.email,
+        strings,
+        html_body=html_body,
+    )
 
 
 @pytest.mark.django_db
 def test_user_created(user_created_notification_template, super_user):
     user = get_user_model().objects.create(
-        username='created_user',
-        first_name='New',
-        last_name='Creature',
-        email='new@creature.com'
+        username="created_user",
+        first_name="New",
+        last_name="Creature",
+        email="new@creature.com",
     )
     strings = [
         "new user created - user email: %s" % user.email,
     ]
     html_body = "<b>new user created</b> - user email: %s!" % user.email
     check_received_mail_exists(
-        "user created", super_user.email, strings, html_body=html_body)
+        "user created", super_user.email, strings, html_body=html_body
+    )

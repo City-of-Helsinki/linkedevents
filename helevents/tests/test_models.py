@@ -2,38 +2,38 @@ from django.test import TestCase
 from django_orghierarchy.models import Organization
 
 from events.models import DataSource
+
 from ..models import User
 
 
 class TestUser(TestCase):
-
     def setUp(self):
-        self.user = User.objects.create(username='testuser')
-        data_source = DataSource.objects.create(id='ds', name='data-source')
+        self.user = User.objects.create(username="testuser")
+        data_source = DataSource.objects.create(id="ds", name="data-source")
 
         self.org_1 = Organization.objects.create(
             data_source=data_source,
-            origin_id='org-1',
+            origin_id="org-1",
         )
         self.org_2 = Organization.objects.create(
             data_source=data_source,
-            origin_id='org-2',
+            origin_id="org-2",
             replaced_by=self.org_1,
         )
         self.org = Organization.objects.create(
-            name='org',
-            origin_id='org',
+            name="org",
+            origin_id="org",
             data_source=data_source,
         )
         self.child_org = Organization.objects.create(
-            name='child-org',
-            origin_id='child-org',
+            name="child-org",
+            origin_id="child-org",
             data_source=data_source,
             parent=self.org,
         )
         self.affiliated_org = Organization.objects.create(
-            name='affiliated-org',
-            origin_id='affiliated-org',
+            name="affiliated-org",
+            origin_id="affiliated-org",
             data_source=data_source,
             parent=self.org,
             internal_type=Organization.AFFILIATED,
