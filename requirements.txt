@@ -23,7 +23,7 @@ cattrs==22.1.0
     # via requests-cache
 certifi==2022.6.15
     # via
-    #   elastic-transport
+    #   elasticsearch
     #   requests
     #   sentry-sdk
 cffi==1.15.1
@@ -122,9 +122,7 @@ easy-thumbnails==2.8.3
     # via -r requirements.in
 ecdsa==0.18.0
     # via python-jose
-elastic-transport==8.1.2
-    # via elasticsearch
-elasticsearch==8.3.3
+elasticsearch==7.17.8
     # via -r requirements.in
 exceptiongroup==1.0.0rc8
     # via cattrs
@@ -248,7 +246,7 @@ url-normalize==1.4.3
     # via requests-cache
 urllib3==1.26.11
     # via
-    #   elastic-transport
+    #   elasticsearch
     #   requests
     #   requests-cache
     #   sentry-sdk

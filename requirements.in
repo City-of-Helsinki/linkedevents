@@ -24,7 +24,7 @@ djangorestframework-bulk
 djangorestframework-gis
 djangorestframework-jwt
 easy_thumbnails
-elasticsearch
+elasticsearch~=7.17
 httmock
 icalendar
 isodate

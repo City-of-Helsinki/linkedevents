@@ -235,7 +235,9 @@ Linkedevents uses Elasticsearch for generating results on the /search-endpoint. 
 
 1. Install elasticsearch
 
-    We've only tested using the rather ancient 1.7 version. Version 5.x will certainly not work as the `django-haystack`-library does not support it. If you are using Ubuntu 16.04, 1.7 will be available in the official repository.
+    We've only tested using the rather ancient 1.7 version. If you are using Ubuntu 16.04, 1.7 will be available in the official repository.
+    This limitation was originally due to django-haystack not supporting versions above 1. 
+    As of writing this the django-haystack version in use does support versions 1, 2, 5 and 7.
 
 2. (For Finnish support) Install elasticsearch-analyzer-voikko, libvoikko and needed dictionaries
 
