@@ -17,7 +17,7 @@ class LinkedEventsAPIRouter(DefaultRouter):
     )
 
     def __init__(self):
-        super(LinkedEventsAPIRouter, self).__init__()
+        super().__init__()
         self.registered_api_views = set()
         self._register_all_views()
 

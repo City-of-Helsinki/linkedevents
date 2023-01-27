@@ -5,7 +5,6 @@ import re
 
 from bs4 import BeautifulSoup
 from django.core.validators import URLValidator, ValidationError
-from django.utils.translation.trans_real import activate, deactivate
 from langdetect import detect
 from langdetect.lang_detect_exception import LangDetectException
 
@@ -128,8 +127,12 @@ def address_eq(a, b):
         return False
     for key in ["locality", "street_address"]:
         languages = a[key].viewkeys() | b[key].viewkeys()
-        for l in languages:
-            if l in a[key] and l in b[key] and not text_match(a[key][l], b[key][l]):
+        for lang in languages:
+            if (
+                lang in a[key]
+                and lang in b[key]
+                and not text_match(a[key][lang], b[key][lang])
+            ):
                 return False
     return True
 
@@ -186,15 +189,3 @@ def replace_location(
             % (replace.id, str(replace), by.id)
         )
     return True
-
-
-class active_language:
-    def __init__(self, language):
-        self.language = language
-
-    def __enter__(self):
-        activate(self.language)
-        return self.language
-
-    def __exit__(self, type, value, traceback):
-        deactivate()

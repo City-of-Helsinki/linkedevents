@@ -14,7 +14,7 @@ from notifications.models import (
 
 @pytest.fixture(scope="function")
 def notification_type():
-    setattr(NotificationType, "TEST", "test")
+    NotificationType.TEST = "test"
     yield NotificationType.TEST
     delattr(NotificationType, "TEST")
 

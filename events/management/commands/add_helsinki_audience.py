@@ -50,7 +50,7 @@ NEW_SOTE_KEYWORDS_DATA = [
 class Command(BaseCommand):
     help = "Creates SOTE keywords and Helsinki audience keyword set and adds YSO audience keywords to events."
 
-    @lru_cache()
+    @lru_cache()  # noqa: B019
     def get_keyword_obj(self, keyword_id):
         try:
             keyword = Keyword.objects.get(id=keyword_id)

@@ -207,7 +207,7 @@ class HelmetImporter(Importer):
         self.city, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
 
         # Build a cached list of Places
-        loc_id_list = [l[1] for l in LOCATIONS.values()]
+        loc_id_list = [location[1] for location in LOCATIONS.values()]
         place_list = Place.objects.filter(data_source=self.tprek_data_source).filter(
             origin_id__in=loc_id_list
         )
@@ -262,7 +262,7 @@ class HelmetImporter(Importer):
                     continue
         return ext_props
 
-    def _import_event(self, lang, event_el, events):
+    def _import_event(self, lang, event_el, events):  # noqa: C901
         def dt_parse(dt_str):
             """Convert a string to UTC datetime"""
             # Times are in UTC+02:00 timezone
@@ -419,7 +419,7 @@ class HelmetImporter(Importer):
                         # The event is only online, do not consider other locations
                         event["location"]["id"] = INTERNET_LOCATION_ID
                     else:
-                        for k, v in LOCATIONS.items():
+                        for _k, v in LOCATIONS.items():
                             if classification["NodeId"] in v[0]:
                                 event["location"]["id"] = self.tprek_by_id[str(v[1])]
                                 break

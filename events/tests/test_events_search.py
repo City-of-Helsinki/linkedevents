@@ -15,7 +15,7 @@ from ..models import Event
 from .common import TestDataMixin
 
 # Make sure we don't overwrite our main indices
-for key, val in settings.HAYSTACK_CONNECTIONS.items():
+for _key, val in settings.HAYSTACK_CONNECTIONS.items():
     if "INDEX_NAME" in val:
         val["INDEX_NAME"] = "test_%s" % val["INDEX_NAME"]
 
@@ -45,7 +45,7 @@ class EventSearchTests(TestCase, TestDataMixin):
         # simple backend doesn't have an index, so we cannot test indexing
         # rebuild_index.Command().handle(interactive=False)
 
-        super(EventSearchTests, self).setUp()
+        super().setUp()
 
     def _get_response(self, query):
         return self.client.get("/v1/search/", {"q": query}, format="json")

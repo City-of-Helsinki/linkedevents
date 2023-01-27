@@ -82,7 +82,7 @@ class LanguageSearchEngine(BaseEngine):
 
         self.query = base_engine.query
 
-        super(LanguageSearchEngine, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
 
 class SimpleSearchBackendWithoutWarnings(SimpleSearchBackend):

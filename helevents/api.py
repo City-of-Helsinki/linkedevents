@@ -15,7 +15,7 @@ class UserSerializer(serializers.ModelSerializer):
     display_name = serializers.ReadOnlyField(source="get_display_name")
 
     def to_representation(self, obj):
-        rep = super(UserSerializer, self).to_representation(obj)
+        rep = super().to_representation(obj)
         default_org = obj.get_default_organization()
         if default_org:
             rep["organization"] = default_org.id

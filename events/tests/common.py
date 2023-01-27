@@ -8,12 +8,12 @@ class TestDataMixin:
     def set_up_test_data(self):
 
         # dummy inputs
-        TEXT = "testing"
+        text = "testing"
 
         # data source
-        self.test_ds, _ = DataSource.objects.get_or_create(id=TEXT)
+        self.test_ds, _ = DataSource.objects.get_or_create(id=text)
 
         #  organization
         self.test_org, _ = Organization.objects.get_or_create(
-            id=TEXT, data_source=self.test_ds
+            id=text, data_source=self.test_ds
         )

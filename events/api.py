@@ -12,6 +12,7 @@ from datetime import time as datetime_time
 from datetime import timedelta
 from functools import partial, reduce
 from operator import or_
+from typing import Iterable, Optional
 from uuid import UUID
 
 import bleach
@@ -133,14 +134,14 @@ def register_view(klass, name, base_name=None):
 
 
 def get_serializer_for_model(model, version="v1"):
-    Viewset = viewset_classes_by_model.get(model)
-    if Viewset is None:
+    viewset_cls = viewset_classes_by_model.get(model)
+    if viewset_cls is None:
         return None
     serializer = None
-    if hasattr(Viewset, "get_serializer_class_for_version"):
-        serializer = Viewset.get_serializer_class_for_version(version)
-    elif hasattr(Viewset, "serializer_class"):
-        serializer = Viewset.serializer_class
+    if hasattr(viewset_cls, "get_serializer_class_for_version"):
+        serializer = viewset_cls.get_serializer_class_for_version(version)
+    elif hasattr(viewset_cls, "serializer_class"):
+        serializer = viewset_cls.serializer_class
     return serializer
 
 
@@ -240,7 +241,10 @@ def get_publisher_query(publisher):
     return q
 
 
-def clean_text_fields(data, allowed_html_fields=[]):
+def clean_text_fields(data, allowed_html_fields: Optional[Iterable[str]] = None):
+    if allowed_html_fields is None:
+        allowed_html_fields = []
+
     for k, v in data.items():
         if isinstance(v, str) and any(c in v for c in "<>&"):
             # only specified fields may contain allowed tags
@@ -328,7 +332,7 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
         self.related_serializer = kwargs.pop("serializer", None)
         self.hide_ld_context = kwargs.pop("hide_ld_context", False)
         self.expanded = kwargs.pop("expanded", False)
-        super(JSONLDRelatedField, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def use_pk_only_optimization(self):
         if self.is_expanded():
@@ -352,7 +356,7 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
             return self.related_serializer(
                 obj, hide_ld_context=self.hide_ld_context, context=context
             ).data
-        link = super(JSONLDRelatedField, self).to_representation(obj)
+        link = super().to_representation(obj)
         if link is None:
             return None
         return {"@id": link}
@@ -379,7 +383,7 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
         #  For certain related fields we preload the queryset to avoid *.objects.all() query which can easily overload
         #  the memory as database grows.
         if isinstance(self._kwargs["serializer"], str):
-            return super(JSONLDRelatedField, self).get_queryset()
+            return super().get_queryset()
         current_model = self._kwargs["serializer"].Meta.model
         preloaded_fields = {
             Place: "location",
@@ -390,7 +394,7 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
         if current_model in preloaded_fields.keys():
             return self.context.get(preloaded_fields[current_model])
         else:
-            return super(JSONLDRelatedField, self).get_queryset()
+            return super().get_queryset()
 
 
 class EnumChoiceField(serializers.Field):
@@ -405,7 +409,7 @@ class EnumChoiceField(serializers.Field):
     def __init__(self, choices, prefix="", **kwargs):
         self.choices = choices
         self.prefix = prefix
-        super(EnumChoiceField, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def to_representation(self, obj):
         if obj is None:
@@ -443,7 +447,7 @@ class ISO8601DurationField(serializers.Field):
 
 class MPTTModelSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
-        super(MPTTModelSerializer, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         for field_name in "lft", "rght", "tree_id", "level":
             if field_name in self.fields:
                 del self.fields[field_name]
@@ -451,7 +455,7 @@ class MPTTModelSerializer(serializers.ModelSerializer):
 
 class TranslatedModelSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
-        super(TranslatedModelSerializer, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         model = self.Meta.model
         try:
             trans_opts = translator.get_options_for_model(model)
@@ -470,7 +474,7 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
             del self.fields[field_name]
 
     def to_representation(self, obj):
-        ret = super(TranslatedModelSerializer, self).to_representation(obj)
+        ret = super().to_representation(obj)
         if obj is None:
             return ret
         return self.translated_fields_to_representation(obj, ret)
@@ -542,7 +546,7 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
                 d[lang] = val
 
             # If no text provided, leave the field as null
-            for key, val in d.items():
+            for _key, val in d.items():
                 if val is not None:
                     break
             else:
@@ -587,14 +591,14 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         context=None,
         partial=False,
         many=None,
-        skip_fields=set(),
+        skip_fields: Optional[set] = None,
         allow_add_remove=False,
         hide_ld_context=False,
         **kwargs,
     ):
-        super(LinkedEventsSerializer, self).__init__(
-            instance=instance, context=context, **kwargs
-        )
+        super().__init__(instance=instance, context=context, **kwargs)
+        if skip_fields is None:
+            skip_fields = set()
         if context is None:
             return
         if "request" in context:
@@ -666,7 +670,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         Renderer is the right place for this but now loop is done just once.
         Reversal conversion is done in parser.
         """
-        ret = super(LinkedEventsSerializer, self).to_representation(obj)
+        ret = super().to_representation(obj)
         if "id" in ret and "request" in self.context:
             try:
                 ret["@id"] = reverse(
@@ -753,14 +757,14 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                 set(self.user.get_admin_organizations_and_descendants())
                 | set(
                     map(
-                        lambda x: getattr(x, "replaced_by"),
+                        lambda x: x.replaced_by,
                         self.user.get_admin_organizations_and_descendants(),
                     )
                 )
                 | set(self.user.organization_memberships.all())
                 | set(
                     map(
-                        lambda x: getattr(x, "replaced_by"),
+                        lambda x: x.replaced_by,
                         self.user.organization_memberships.all(),
                     )
                 )
@@ -844,7 +848,7 @@ class JSONAPIViewMixin(object):
         # if srid is not specified, this will yield munigeo default 4326
         self.srs = srid_to_srs(self.request.query_params.get("srid", None))
         # check for NUL strings that crash psycopg2
-        for key, param in self.request.query_params.items():
+        for _key, param in self.request.query_params.items():
             if "\x00" in param:
                 raise ParseError(
                     "A string literal cannot contain NUL (0x00) characters. "
@@ -1206,7 +1210,7 @@ class RegistrationViewSet(
 
     @action(methods=["post"], detail=True, permission_classes=[GuestPost])
     def reserve_seats(self, request, pk=None, version=None):
-        def NoneToUnlim(val):
+        def none_to_unlim(val):
             # Null value in the waiting_list_capacity or maximum_attendee_capacity
             # signifies that the amount of seats is unimited
             if val is None:
@@ -1220,7 +1224,7 @@ class RegistrationViewSet(
             raise NotFound(detail=f"Registration {pk} doesn't exist.", code=404)
         waitlist = request.data.get("waitlist", False)
         if waitlist:
-            waitlist_seats = NoneToUnlim(registration.waiting_list_capacity)
+            waitlist_seats = none_to_unlim(registration.waiting_list_capacity)
         else:
             waitlist_seats = 0  # if waitlist is False, waiting list is not to be used
 
@@ -1252,8 +1256,8 @@ class RegistrationViewSet(
             data["seats_at_event"] = (
                 min(free_seats, code.seats) if free_seats > 0 else 0
             )
-            l = code.seats - data["seats_at_event"]
-            data["waitlist_spots"] = l if l else 0
+            waitlist_spots = code.seats - data["seats_at_event"]
+            data["waitlist_spots"] = waitlist_spots if waitlist_spots else 0
 
             return Response(data, status=status.HTTP_201_CREATED)
 
@@ -1755,7 +1759,7 @@ class PlaceRetrieveViewSet(
     serializer_class = PlaceSerializer
 
     def get_serializer_context(self):
-        context = super(PlaceRetrieveViewSet, self).get_serializer_context()
+        context = super().get_serializer_context()
         context.setdefault("skip_fields", set()).add("origin_id")
         return context
 
@@ -2274,7 +2278,7 @@ register_view(OrganizationClassViewSet, "organization_class")
 
 class EventLinkSerializer(serializers.ModelSerializer):
     def to_representation(self, obj):
-        ret = super(EventLinkSerializer, self).to_representation(obj)
+        ret = super().to_representation(obj)
         if not ret["name"]:
             ret["name"] = None
         return ret
@@ -2487,7 +2491,7 @@ class EventSerializer(
     last_modified_by = serializers.StringRelatedField(required=False, allow_null=True)
 
     def __init__(self, *args, skip_empties=False, **kwargs):
-        super(EventSerializer, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         # The following can be used when serializing when
         # testing and debugging.
         self.skip_empties = skip_empties
@@ -2766,7 +2770,7 @@ class EventSerializer(
         return instance
 
     def to_representation(self, obj):
-        ret = super(EventSerializer, self).to_representation(obj)
+        ret = super().to_representation(obj)
 
         if obj.deleted:
             keys_to_preserve = [
@@ -2846,13 +2850,13 @@ def _format_images_v0_1(data):
         data["image"] = images[0].get("url", None)
 
 
-class EventSerializerV0_1(EventSerializer):
+class EventSerializerV0_1(EventSerializer):  # noqa: N801
     def __init__(self, *args, **kwargs):
         kwargs.setdefault("context", {}).setdefault("include", []).append("image")
-        super(EventSerializerV0_1, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def to_representation(self, obj):
-        ret = super(EventSerializerV0_1, self).to_representation(obj)
+        ret = super().to_representation(obj)
         _format_images_v0_1(ret)
         return ret
 
@@ -2863,9 +2867,7 @@ class LinkedEventsOrderingFilter(filters.OrderingFilter):
 
 class EventOrderingFilter(LinkedEventsOrderingFilter):
     def filter_queryset(self, request, queryset, view):
-        queryset = super(EventOrderingFilter, self).filter_queryset(
-            request, queryset, view
-        )
+        queryset = super().filter_queryset(request, queryset, view)
         ordering = self.get_ordering(request, queryset, view)
         if not ordering:
             ordering = []
@@ -2917,7 +2919,7 @@ def _terms_to_regex(terms, operator, fuzziness=3):
     return regex.compile(expr, regex.IGNORECASE)
 
 
-def _filter_event_queryset(queryset, params, srs=None):
+def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
     """
     Filter events queryset by params
     (e.g. self.request.query_params ingit EventViewSet)
@@ -3215,7 +3217,7 @@ def _filter_event_queryset(queryset, params, srs=None):
 
         queryset = queryset.filter(type_id__in=search_vals)
     else:
-        queryset = queryset.filter(type_id=Event.Type_Id.GENERAL)
+        queryset = queryset.filter(type_id=Event.TypeId.GENERAL)
 
     val = params.get("last_modified_since", None)
     # This should be in format which dateutil.parser recognizes, e.g.
@@ -3249,9 +3251,9 @@ def _filter_event_queryset(queryset, params, srs=None):
 
     if not end:
         # postponed events are considered to be "far" in the future and should be included if end is *not* given
-        postponed_Q = Q(event_status=Event.Status.POSTPONED)
+        postponed_q = Q(event_status=Event.Status.POSTPONED)
     else:
-        postponed_Q = Q()
+        postponed_q = Q()
 
     if start:
         dt = utils.parse_time(start, is_start=True)[0]
@@ -3263,7 +3265,7 @@ def _filter_event_queryset(queryset, params, srs=None):
             Q(end_time__gt=dt, has_end_time=True)
             | Q(end_time__gt=dt, has_start_time=False)
             | Q(start_time__gte=dt)
-            | postponed_Q
+            | postponed_q
         )
 
     if end:
@@ -3687,7 +3689,7 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
         return EventViewSet.get_serializer_class_for_version(self.request.version)
 
     def get_serializer_context(self):
-        context = super(EventViewSet, self).get_serializer_context()
+        context = super().get_serializer_context()
         context.setdefault("skip_fields", set()).update(
             set(["headline", "secondary_headline"])
         )
@@ -3738,7 +3740,7 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
         """
         TODO: convert to use proper filter framework
         """
-        original_queryset = super(EventViewSet, self).filter_queryset(queryset)
+        original_queryset = super().filter_queryset(queryset)
         if self.request.method in SAFE_METHODS:
             # we cannot use distinct for performance reasons
             public_queryset = original_queryset.filter(
@@ -4051,9 +4053,9 @@ class SearchSerializer(serializers.Serializer):
         return data
 
 
-class SearchSerializerV0_1(SearchSerializer):
+class SearchSerializerV0_1(SearchSerializer):  # noqa: N801
     def to_representation(self, search_result):
-        ret = super(SearchSerializerV0_1, self).to_representation(search_result)
+        ret = super().to_representation(search_result)
         if "resource_type" in ret:
             ret["object_type"] = ret["resource_type"]
             del ret["resource_type"]
