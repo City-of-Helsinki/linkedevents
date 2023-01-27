@@ -76,7 +76,6 @@ jobs:
           black --check .
 
       - name: Check flake8
-        continue-on-error: true # TODO remove once flake8 issues are sorted out
         uses: liskin/gh-problem-matcher-wrap@v2
         with:
           linters: flake8
