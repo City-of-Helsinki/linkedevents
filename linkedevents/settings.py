@@ -50,6 +50,8 @@ env = environ.Env(
     DEBUG=(bool, False),
     ELASTICSEARCH_URL=(str, None),
     EXTRA_INSTALLED_APPS=(list, []),
+    HAYSTACK_SIGNAL_PROCESSOR=(str, "haystack.signals.RealtimeSignalProcessor"),
+    HAYSTACK_BATCH_SIZE=(int, 1000),
     INSTANCE_NAME=(str, "Linked Events"),
     INTERNAL_IPS=(list, []),
     LANGUAGES=(list, ["fi", "sv", "en", "zh-hans", "ru", "ar"]),
@@ -397,8 +399,8 @@ def dummy_haystack_connection_for_lang(language_code):
     }
 
 
-HAYSTACK_SIGNAL_PROCESSOR = "haystack.signals.RealtimeSignalProcessor"
-
+HAYSTACK_SIGNAL_PROCESSOR = env("HAYSTACK_SIGNAL_PROCESSOR")
+HAYSTACK_BATCH_SIZE = env("HAYSTACK_BATCH_SIZE")
 CUSTOM_MAPPINGS = {
     "autosuggest": {
         "search_analyzer": "standard",

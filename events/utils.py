@@ -5,7 +5,9 @@ from datetime import datetime, timedelta
 import pytz
 from dateutil.parser import parse as dateutil_parse
 from django.conf import settings
-from django.db import transaction
+from django.db import models, transaction
+from haystack import signals
+from haystack.exceptions import NotHandled
 from rest_framework.exceptions import ParseError
 
 from events.models import Keyword, Place
@@ -157,3 +159,50 @@ def get_deleted_object_name():
         "sv": "RADERAD",
         "en": "DELETED",
     }
+
+
+class QueuedUpdateSignalProcessor(signals.BaseSignalProcessor):
+    save_queue = None
+
+    def setup(self):
+        models.signals.post_save.connect(self.enqueue_save)
+        models.signals.post_delete.connect(self.handle_delete)
+        self.save_queue = collections.defaultdict(lambda: [])
+
+    def teardown(self):
+        models.signals.post_save.disconnect(self.enqueue_save)
+        models.signals.post_delete.disconnect(self.handle_delete)
+
+    def enqueue_save(self, sender, instance, **kwargs):
+        self.save_queue[sender].append(instance)
+
+    def flush(self):
+        sender_map = {}
+        backend_map = {}
+        instance_map = collections.defaultdict(lambda: [])
+        for sender, instances in self.save_queue.items():
+            if sender not in sender_map:
+                sender_map[sender] = sender
+
+            for instance in instances:
+                using_backends = self.connection_router.for_write(instance=instance)
+                for using_backend in using_backends:
+                    if using_backend not in backend_map:
+                        backend_map[using_backend] = using_backend
+                    instance_map[(sender, using_backend)].append(instance)
+
+        for (str_sender, str_using_backend), instances in instance_map.items():
+            sender = sender_map[str_sender]
+            using_backend = backend_map[str_using_backend]
+            engine = self.connections[using_backend]
+            try:
+                index = engine.get_unified_index().get_index(sender)
+            except NotHandled:
+                # We receive naively signals from all models, including those
+                # that are not registered to the index.
+                # These will raise NotHandled and can be safely ignored as
+                # irrelevant noise.
+                continue
+            engine.get_backend().update(index, instances)
+
+        self.save_queue.clear()

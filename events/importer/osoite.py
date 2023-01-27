@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 import logging
 
-from django import db
+from django.apps import apps
 from django.conf import settings
 from django.core.management import call_command
+from django.db import transaction
 from django.utils.module_loading import import_string
 from django_orghierarchy.models import Organization
 
@@ -22,6 +23,7 @@ GK25_SRID = 3879
 class OsoiteImporter(Importer):
     name = "osoite"
     supported_languages = ["fi", "sv"]
+    signal_processor = None
 
     def setup(self):
         ds_args = dict(id="osoite")
@@ -45,6 +47,16 @@ class OsoiteImporter(Importer):
             # will not be remapped by the syncher.
             self.check_deleted = lambda x: False
             self.mark_deleted = self.delete_and_replace
+
+        # Ensure this batch runs with queue
+        haystack_config = apps.get_app_config("haystack")
+        self.signal_processor = haystack_config.signal_processor
+        if not hasattr(self.signal_processor, "flush"):
+            raise ValueError(
+                "Signal processor must have a flush method, "
+                "try running with: HAYSTACK_SIGNAL_PROCESSOR"
+                '="events.utils.QueuedUpdateSignalProcessor"'
+            )
 
     def get_street_address(self, address, language):
         # returns the address sans municipality in the desired language, or Finnish as fallback
@@ -95,7 +107,13 @@ class OsoiteImporter(Importer):
     def check_deleted(self, obj):
         return obj.deleted
 
-    @db.transaction.atomic
+    @transaction.atomic
+    def _import_address_batch(self, syncher, address_objs):
+        for address_obj in address_objs:
+            self._import_address(syncher, address_obj)
+
+        self.signal_processor.flush()
+
     def _import_address(self, syncher, address_obj):
         # addresses have no static ids, just format the address cleanly
         origin_id = (
@@ -189,9 +207,16 @@ class OsoiteImporter(Importer):
             delete_func=self.mark_deleted,
             check_deleted_func=self.check_deleted,
         )
-        for idx, obj in enumerate(obj_list):
-            if idx and (idx % 1000) == 0:
-                logger.info("%s addresses processed" % idx)
-            self._import_address(syncher, obj)
+
+        batch_size = settings.HAYSTACK_BATCH_SIZE
+        for i in range(58000, len(obj_list), batch_size):
+            objs = obj_list[i : i + batch_size]
+            self._import_address_batch(syncher, objs)
+            logger.info("%s addresses processed" % i)
+
+        # for idx, obj in enumerate(obj_list):
+        #    if idx and (idx % 1000) == 0:
+        #        logger.info("%s addresses processed" % idx)
+        #    self._import_address(syncher, obj)
 
         syncher.finish(self.options.get("remap", False))

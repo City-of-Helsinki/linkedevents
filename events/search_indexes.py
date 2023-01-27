@@ -1,4 +1,6 @@
-from haystack import indexes
+from typing import List
+
+from haystack import indexes, connections
 
 from .models import Event, Place, PublicationStatus
 
