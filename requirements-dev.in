@@ -12,4 +12,5 @@ isort
 pep8-naming
 pip-tools
 pytest
+pytest-cov
 pytest-django
