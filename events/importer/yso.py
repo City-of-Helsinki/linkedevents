@@ -4,6 +4,7 @@ import logging
 import rdflib
 import requests
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.utils.translation import override
 from django_orghierarchy.models import Organization
 from rdflib import RDF
 from rdflib.namespace import DCTERMS, OWL, SKOS
@@ -12,7 +13,6 @@ from events.models import BaseModel, DataSource, Keyword, KeywordLabel, Language
 
 from .base import Importer, register_importer
 from .sync import ModelSyncher
-from .util import active_language
 
 # Per module logger
 logger = logging.getLogger(__name__)
@@ -71,7 +71,7 @@ def is_aggregate_concept(graph, subject):
 
 
 def get_replacement(graph, subject):
-    for subject, verb, object in graph.triples((subject, DCTERMS.isReplacedBy, None)):
+    for _subject, _verb, object in graph.triples((subject, DCTERMS.isReplacedBy, None)):
         return object
 
 
@@ -155,7 +155,6 @@ class YsoImporter(Importer):
         )
 
         keyword_labels = {}
-        labels_to_create = set()
         for subject, label in graph.subject_objects(SKOS.altLabel):
             if (subject, RDF.type, SKOS.Concept) in graph:
                 try:
@@ -203,9 +202,9 @@ class YsoImporter(Importer):
         yids = Keyword.objects.all().values_list("id", flat=True)
         labels = KeywordLabel.objects.all().values("id", "name", "language")
         label_id_from_name_and_language = {
-            (l["name"], l["language"]): l["id"] for l in labels
+            (label["name"], label["language"]): label["id"] for label in labels
         }
-        KeywordAltLabels = Keyword.alt_labels.through
+        keyword_alt_labels_model = Keyword.alt_labels.through
         relations_to_create = []
         for yid, url_labels in keyword_labels.items():
             if yid not in yids:
@@ -220,8 +219,8 @@ class YsoImporter(Importer):
                     ),
                 )
                 if params["keyword_id"] and params["keywordlabel_id"]:
-                    relations_to_create.append(KeywordAltLabels(**params))
-        KeywordAltLabels.objects.bulk_create(relations_to_create)
+                    relations_to_create.append(keyword_alt_labels_model(**params))
+        keyword_alt_labels_model.objects.bulk_create(relations_to_create)
 
     def create_keyword(self, graph, subject):
         if is_deprecated(graph, subject):
@@ -236,7 +235,7 @@ class YsoImporter(Importer):
 
     def update_keyword(self, keyword, graph, subject):
         for _, literal in graph.preferredLabel(subject):
-            with active_language(literal.language):
+            with override(literal.language, deactivate=True):
                 if keyword.name != str(literal):
                     logger.debug(
                         "(re)naming keyword " + keyword.name + " to " + str(literal)

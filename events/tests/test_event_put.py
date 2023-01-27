@@ -220,8 +220,8 @@ def test__update_an_event_complex_dict(api_client, complex_event_dict, user):
     response = create_with_post(api_client, complex_event_dict)
 
     # dummy inputs
-    TEXT = "text updated"
-    URL = "http://localhost"
+    text = "text updated"
+    url = "http://localhost"
 
     # set up updates
     data2 = response.data
@@ -235,9 +235,9 @@ def test__update_an_event_complex_dict(api_client, complex_event_dict, user):
     data2["offers"] = [
         {
             "is_free": False,
-            "price": {"en": TEXT, "sv": TEXT, "fi": TEXT},
-            "description": {"en": TEXT, "fi": TEXT},
-            "info_url": {"en": URL, "sv": URL, "fi": URL},
+            "price": {"en": text, "sv": text, "fi": text},
+            "description": {"en": text, "fi": text},
+            "info_url": {"en": url, "sv": url, "fi": url},
         }
     ]
     data2["keywords"] = data2["keywords"][:1]

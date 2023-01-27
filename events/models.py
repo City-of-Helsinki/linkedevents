@@ -249,7 +249,7 @@ class Image(models.Model):
         if self.url and self.image:
             raise ValidationError(_("You can only provide image or url, not both."))
         self.last_modified_time = BaseModel.now()
-        super(Image, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
     def is_user_editable(self):
         return bool(self.data_source and self.data_source.user_editable)
@@ -743,15 +743,15 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
         (SuperEventType.UMBRELLA, _("Umbrella event")),
     )
 
-    class Type_Id:
+    class TypeId:
         GENERAL = 1
         COURSE = 2
         VOLUNTEERING = 3
 
     TYPE_IDS = (
-        (Type_Id.GENERAL, _("General")),
-        (Type_Id.COURSE, _("Course")),
-        (Type_Id.VOLUNTEERING, _("Volunteering")),
+        (TypeId.GENERAL, _("General")),
+        (TypeId.COURSE, _("Course")),
+        (TypeId.VOLUNTEERING, _("Volunteering")),
     )
 
     # Properties from schema.org/Thing
@@ -851,7 +851,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
         blank=False,
         null=False,
         db_index=False,
-        default=Type_Id.GENERAL,
+        default=TypeId.GENERAL,
         choices=TYPE_IDS,
     )
 
@@ -973,7 +973,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
         # if self.location__divisions__ocd_id__endswith == MUNIGEO_MUNI:
         #     self.local = True
 
-        super(Event, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
         # needed to cache location event numbers
         if not old_location and self.location:
@@ -1180,7 +1180,7 @@ class ExportInfo(models.Model):
 
     def save(self, *args, **kwargs):
         self.last_exported_time = BaseModel.now()
-        super(ExportInfo, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
 
 class EventAggregate(models.Model):
@@ -1214,4 +1214,4 @@ class Feedback(models.Model):
             )
         except SMTPException as e:
             logger.error(e, exc_info=True)
-        super(Feedback, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)

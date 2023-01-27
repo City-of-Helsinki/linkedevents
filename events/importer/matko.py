@@ -116,7 +116,7 @@ class MatkoImporter(Importer):
     supported_languages = ["fi", "sv", "en"]
 
     def __init__(self, *args, **kwargs):
-        super(MatkoImporter, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.timezone = pytz.timezone("Europe/Helsinki")
 
     def put(self, rdict, key, val):

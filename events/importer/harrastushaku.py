@@ -358,7 +358,7 @@ class HarrastushakuImporter(Importer):
         ) | self.get_event_audiences_from_keywords(keywords)
         keywords |= audience
         event_data = {
-            "type_id": Event.Type_Id.COURSE,
+            "type_id": Event.TypeId.COURSE,
             "name": get_string("name", localized=True),
             "description": get_string("description", localized=True),
             "audience_max_age": get_int("agemax"),
@@ -627,7 +627,7 @@ class HarrastushakuImporter(Importer):
     def get_event_audiences_from_keywords(self, keywords):
         return {kw for kw in keywords if kw.id in KEYWORDS_TO_ADD_TO_AUDIENCE}
 
-    @lru_cache()
+    @lru_cache()  # noqa: B019
     def match_keyword(self, text):
         return self.keyword_matcher.match(text, language="fi")
 

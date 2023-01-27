@@ -466,7 +466,7 @@ class KulkeImporter(Importer):
             formatted_paragraphs.append(formatted_paragraph)
         return "".join(formatted_paragraphs)
 
-    def _import_event(self, lang, event_el, events, is_course=False):
+    def _import_event(self, lang, event_el, events, is_course=False):  # noqa: C901
         def text(t):
             return unicodetext(event_el.find("event" + t))
 
@@ -811,7 +811,7 @@ class KulkeImporter(Importer):
 
         # The name may vary within a recurring event; hence, take the common part
         if expand_model_fields(super_event, ["headline"])[0] not in common_fields:
-            words = getattr(events.first(), "headline").split(" ")
+            words = events.first().headline.split(" ")
             name = ""
             while words and all(
                 headline.startswith(name + words[0])
@@ -820,7 +820,7 @@ class KulkeImporter(Importer):
                 name += words.pop(0) + " "
                 logger.warning(words)
                 logger.warning(name)
-            setattr(super_event, "name", name)
+            super_event.name = name
 
         for lang in self.languages.keys():
             headline = getattr(super_event, "headline_{}".format(lang))

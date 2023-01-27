@@ -951,7 +951,7 @@ def test_keywordset_search(
 
 
 @pytest.mark.django_db
-def test_keyword_OR_set_search(
+def test_keyword_or_set_search(
     api_client,
     event,
     event2,
@@ -975,9 +975,9 @@ def test_keyword_OR_set_search(
 @pytest.mark.django_db
 def test_event_get_by_type(api_client, event, event2, event3):
     #  default type is General, only general events should be present in the default search
-    event2.type_id = Event.Type_Id.COURSE
+    event2.type_id = Event.TypeId.COURSE
     event2.save()
-    event3.type_id = Event.Type_Id.VOLUNTEERING
+    event3.type_id = Event.TypeId.VOLUNTEERING
     event3.save()
     get_list_and_assert_events("", [event])
     get_list_and_assert_events("event_type=general", [event])

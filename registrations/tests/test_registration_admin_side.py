@@ -1,14 +1,14 @@
 import uuid
 from copy import deepcopy
+from datetime import datetime, timedelta
 
 import environ
 import pytest
 from dateutil.parser import parse
-from django.conf import settings
 from django.core import mail
 
-from events.models import Language
-from events.tests.conftest import *
+from events.models import Event, Language
+from events.tests.conftest import *  # noqa
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import Registration, SignUp
 
@@ -107,10 +107,10 @@ def test_list_all_registrations(api_client, user, user2, event, event2, event3):
 @pytest.mark.django_db
 def test_successful_sign_up(api_client, user, event):
     url = reverse("registration-list")
-    l = Language()
-    l.id = "fi"
-    l.name = "finnish"
-    l.save()
+    lang = Language()
+    lang.id = "fi"
+    lang.name = "finnish"
+    lang.save()
 
     api_client.force_authenticate(user)
     registration_data = {"event": event.id}
@@ -528,35 +528,6 @@ def test_get_signup_info_with_cancel_code_no_auth(api_client, user, event):
     signup_url = reverse("signup-list")
     response = api_client.post(signup_url, sign_up_payload, format="json")
 
-    delete_payload = {"cancellation_code": response.data["cancellation_code"]}
-
-    response = api_client.get(
-        f'{signup_url}?cancellation_code={response.data["cancellation_code"]}'
-    )
-    assert response.data["name"] == "Michael Jackson"
-
-
-@pytest.mark.django_db
-def test_get_signup_info_with_cancel_code_no_auth(api_client, user, event):
-    registration_url = reverse("registration-list")
-
-    api_client.force_authenticate(user)
-    registration_data = {"event": event.id}
-
-    response = api_client.post(registration_url, registration_data, format="json")
-    registration_id = response.data["id"]
-
-    api_client.force_authenticate(user=None)
-    sign_up_payload = {
-        "registration": registration_id,
-        "name": "Michael Jackson",
-        "email": "test@test.com",
-    }
-    signup_url = reverse("signup-list")
-    response = api_client.post(signup_url, sign_up_payload, format="json")
-
-    delete_payload = {"cancellation_code": response.data["cancellation_code"]}
-
     response = api_client.get(
         f'{signup_url}?cancellation_code={response.data["cancellation_code"]}'
     )
@@ -692,7 +663,7 @@ def test_filter_registrations(api_client, user, user2, event, event2):
     response = api_client.post(registration_url, registration_data, format="json")
     registration_id2 = response.data["id"]
 
-    event2.type_id = Event.Type_Id.COURSE
+    event2.type_id = Event.TypeId.COURSE
     event2.save()
 
     response = api_client.get(registration_url)

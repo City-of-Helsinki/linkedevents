@@ -10,7 +10,7 @@ from rest_framework.test import APIRequestFactory
 def assert_event_data_is_equal(d1, d2, version="v1"):
     # TODO: start using version parameter
     # make sure the saved data is equal to the one we posted before
-    FIELDS = (
+    fields = (
         "data_source",
         "publisher",
         "location",
@@ -33,19 +33,19 @@ def assert_event_data_is_equal(d1, d2, version="v1"):
         "end_time",
     )
     if version == "v1":
-        FIELDS += ("images",)
+        fields += ("images",)
     elif version == "v0.1":
-        FIELDS += (
+        fields += (
             "image",
             "headline",
             "secondary_headline",
             "origin_id",
         )
-    assert_data_is_equal(d1, d2, FIELDS)
+    assert_data_is_equal(d1, d2, fields)
 
 
 def assert_place_data_is_equal(d1, d2, version="v1"):
-    FIELDS = (
+    fields = (
         "data_source",
         "publisher",
         "email",
@@ -55,12 +55,12 @@ def assert_place_data_is_equal(d1, d2, version="v1"):
         "street_address",
         "address_locality",
     )
-    assert_data_is_equal(d1, d2, FIELDS)
+    assert_data_is_equal(d1, d2, fields)
 
 
 def assert_keyword_data_is_equal(d1, d2, version="v1"):
-    FIELDS = ("data_source", "publisher", "name")
-    assert_data_is_equal(d1, d2, FIELDS)
+    fields = ("data_source", "publisher", "name")
+    assert_data_is_equal(d1, d2, fields)
 
 
 def assert_data_is_equal(d1, d2, fields):

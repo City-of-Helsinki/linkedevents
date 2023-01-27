@@ -37,7 +37,7 @@ class MikkeliNytImporter(Importer):
     supported_languages = ["fi"]
 
     def __init__(self, *args, **kwargs):
-        super(MikkeliNytImporter, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.timezone = pytz.timezone("Europe/Helsinki")
 
     def items_from_url(self, url):
@@ -121,8 +121,8 @@ class MikkeliNytImporter(Importer):
         address = self.strip_html(item["address"])
         city = self.strip_html(item["city"])
         place = self.strip_html(item["place"])
-        zipCode = self.strip_html(item["zip"])
-        location = self.upsert_place(location_origin_id, address, city, place, zipCode)
+        zip_code = self.strip_html(item["zip"])
+        location = self.upsert_place(location_origin_id, address, city, place, zip_code)
 
         categories = item["category"]
         keywords = self.upsert_keywords(categories)
@@ -193,7 +193,7 @@ class MikkeliNytImporter(Importer):
         keywords = Keyword.objects.filter(id__exact="%s" % _id).order_by("id")
         return keywords.first()
 
-    def upsert_place(self, origin_id, address, city, place, zipCode):
+    def upsert_place(self, origin_id, address, city, place, zip_code):
         result = recur_dict()
         _id = "mikkelinyt:{}".format(origin_id)
 
@@ -201,7 +201,7 @@ class MikkeliNytImporter(Importer):
         result["origin_id"] = origin_id
         result["name"]["fi"] = place
         result["street_address"]["fi"] = address
-        result["postal_code"] = zipCode
+        result["postal_code"] = zip_code
         result["address_locality"]["fi"] = city
         result["publisher"] = self.organization
         result["data_source"] = self.data_source

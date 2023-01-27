@@ -386,12 +386,12 @@ class LippupisteImporter(Importer):
                 "address match, pick the name with most common words and least different words, if any:"
             )
             if len(matches_by_address) > 1:
-                for common_words, match_list in sorted(
+                for _common_words, match_list in sorted(
                     matches_by_partial_name.items(),
                     key=(lambda x: int(x[0])),
                     reverse=True,
                 ):
-                    for different_words, sublist in sorted(
+                    for _different_words, sublist in sorted(
                         match_list.items(), key=(lambda x: int(x[0]))
                     ):
                         address_and_word_matches = set(matches_by_address) & set(

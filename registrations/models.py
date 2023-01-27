@@ -1,8 +1,6 @@
-from datetime import datetime
 from smtplib import SMTPException
 from uuid import uuid4
 
-import pytz
 from django.conf import settings
 from django.contrib.sites.models import Site
 from django.core.mail import send_mail
@@ -187,9 +185,9 @@ class SignUp(models.Model):
             email_variables["instructions"] = self.registration.instructions
 
         event_type_name = {
-            str(Event.Type_Id.GENERAL): "tapahtumaan",
-            str(Event.Type_Id.COURSE): "kurssille",
-            str(Event.Type_Id.VOLUNTEERING): "vapaaehtoistehtävään",
+            str(Event.TypeId.GENERAL): "tapahtumaan",
+            str(Event.TypeId.COURSE): "kurssille",
+            str(Event.TypeId.VOLUNTEERING): "vapaaehtoistehtävään",
         }
 
         email_variables["event_type"] = event_type_name[self.registration.event.type_id]

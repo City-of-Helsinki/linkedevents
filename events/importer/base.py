@@ -40,11 +40,11 @@ def recur_dict():
 
 class Importer(object):
     def __init__(self, options):
-        super(Importer, self).__init__()
+        super().__init__()
         self.options = options
 
         importer_langs = set(self.supported_languages)
-        configured_langs = set(l[0] for l in settings.LANGUAGES)
+        configured_langs = set(lang[0] for lang in settings.LANGUAGES)
         # Intersection is all the languages possible for the importer to use.
         self.languages = {}
         for lang_code in importer_langs & configured_langs:
@@ -55,7 +55,7 @@ class Importer(object):
         self.target_srid = settings.PROJECTION_SRID
         gps_srs = SpatialReference(4326)
         target_srs = SpatialReference(self.target_srid)
-        if getattr(settings, "BOUNDING_BOX"):
+        if settings.BOUNDING_BOX:
             self.bounding_box = Polygon.from_bbox(settings.BOUNDING_BOX)
             self.bounding_box.srid = self.target_srid
             target_to_gps_ct = CoordTransform(target_srs, gps_srs)
@@ -189,7 +189,7 @@ class Importer(object):
 
         return image
 
-    def link_recurring_events(self, events, instance_fields=[]):
+    def link_recurring_events(self, events):
         """Finds events that are instances of a common parent
         event by comparing the fields that do not differ between
         instances, for example different nights of the same play.
@@ -205,7 +205,7 @@ class Importer(object):
 
         events.sort(key=event_name)
         parent_events = []
-        for name_fi, subevents in itertools.groupby(events, event_name):
+        for _name_fi, subevents in itertools.groupby(events, event_name):
             subevents = list(subevents)
             if len(subevents) < 2:
                 parent_events.extend(subevents)
@@ -306,7 +306,7 @@ class Importer(object):
                 continue
             self._set_field(obj, field_name, info[field_name])
 
-    def save_event(self, info):
+    def save_event(self, info):  # noqa: C901
         info = info.copy()
 
         args = dict(data_source=info["data_source"], origin_id=info["origin_id"])

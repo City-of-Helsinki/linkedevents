@@ -65,10 +65,10 @@ class OsoiteImporter(Importer):
 
     def pk_get(self, resource_name, res_id=None):
         # support all munigeo resources, not just addresses
-        Klass = import_string("munigeo.models." + resource_name)
+        klass = import_string("munigeo.models." + resource_name)
         if res_id is not None:
-            return Klass.objects.get(origin_id=res_id)
-        return Klass.objects.all()
+            return klass.objects.get(origin_id=res_id)
+        return klass.objects.all()
 
     def delete_and_replace(self, obj):
         obj.deleted = True

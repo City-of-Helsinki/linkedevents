@@ -10,7 +10,7 @@ import sentry_sdk
 from django.conf.global_settings import LANGUAGES as GLOBAL_LANGUAGES
 from django.core.exceptions import ImproperlyConfigured
 from django_jinja.builtins import DEFAULT_EXTENSIONS
-from easy_thumbnails.conf import Settings as thumbnail_settings
+from easy_thumbnails.conf import Settings as thumbnail_settings  # noqa: N813
 from sentry_sdk.integrations.django import DjangoIntegration
 
 CONFIG_FILE_NAME = "config_dev.toml"
@@ -214,7 +214,7 @@ WSGI_APPLICATION = "linkedevents.wsgi.application"
 # thus some gyrations
 language_map = {x: y for x, y in GLOBAL_LANGUAGES}
 try:
-    LANGUAGES = tuple((l, language_map[l]) for l in env("LANGUAGES"))
+    LANGUAGES = tuple((lang, language_map[lang]) for lang in env("LANGUAGES"))
 except KeyError as e:
     raise ImproperlyConfigured(f'unknown language code "{e.args[0]}"')
 LANGUAGE_CODE = env("LANGUAGES")[0]
@@ -414,7 +414,7 @@ HAYSTACK_CONNECTIONS = {
     }
 }
 
-for language in [l[0] for l in LANGUAGES]:
+for language in [lang[0] for lang in LANGUAGES]:
     if env("ELASTICSEARCH_URL"):
         connection = haystack_connection_for_lang(language)
     else:

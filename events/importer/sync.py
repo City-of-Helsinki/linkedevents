@@ -43,7 +43,7 @@ class ModelSyncher(object):
 
     def finish(self, force=False):
         delete_list = []
-        for obj_id, obj in self.obj_dict.items():
+        for _obj_id, obj in self.obj_dict.items():
             if obj._found:
                 # We have to reset _found so we don't mark or match the same object across several synchers.
                 # Only relevant if consecutive synchers get different querysets;

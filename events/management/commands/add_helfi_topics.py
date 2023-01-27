@@ -63,7 +63,7 @@ NEW_HELFI_KEYWORDS_DATA = [
 class Command(BaseCommand):
     help = "Creates www.hel.fi topic keywords and keyword set used by the UI."
 
-    @lru_cache()
+    @lru_cache()  # noqa: B019
     def get_keyword_obj(self, keyword_id):
         try:
             keyword = Keyword.objects.get(id=keyword_id)

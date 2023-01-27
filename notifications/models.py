@@ -2,7 +2,7 @@ import logging
 
 from django.conf import settings
 from django.db import models
-from django.utils import timezone, translation
+from django.utils import timezone
 from django.utils.formats import date_format
 from django.utils.html import strip_tags
 from django.utils.translation import activate

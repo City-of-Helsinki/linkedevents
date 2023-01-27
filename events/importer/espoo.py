@@ -197,12 +197,12 @@ def mark_deleted(obj):
 
 
 def clean_street_address(address):
-    LATIN1_CHARSET = "a-zàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ"
+    latin1_charset = "a-zàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ"
 
     address = address.strip()
     pattern = re.compile(
         r"([%s\ -]*[0-9-\ ]*\ ?[a-z]{0,2}),?\ *(0?2[0-9]{3})?\ *(espoo|esbo)?"
-        % LATIN1_CHARSET,
+        % latin1_charset,
         re.I,
     )
     match = pattern.match(address)
@@ -247,7 +247,7 @@ class EspooImporter(Importer):
     location_cache = {}
 
     def _build_cache_places(self):
-        loc_id_list = [l[1] for l in LOCATIONS.values()]
+        loc_id_list = [location[1] for location in LOCATIONS.values()]
         place_list = Place.objects.filter(data_source=self.tprek_data_source).filter(
             origin_id__in=loc_id_list
         )
@@ -499,7 +499,7 @@ class EspooImporter(Importer):
         self.keyword_by_id.update(dict({k.id: k for k in keywords}))
         return keywords
 
-    def _import_event(self, lang, event_el, events):
+    def _import_event(self, lang, event_el, events):  # noqa: C901
         # Times are in Helsinki timezone
         def to_utc(dt):
             return LOCAL_TZ.localize(dt, is_dst=None).astimezone(pytz.utc)
