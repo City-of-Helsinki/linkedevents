@@ -440,11 +440,11 @@ INSTANCE_NAME = env("INSTANCE_NAME")
 # like database and email that differ between development and production.
 f = os.path.join(BASE_DIR, "local_settings.py")
 if os.path.exists(f):
-    import imp
     import sys
+    import types
 
     module_name = "%s.local_settings" % ROOT_URLCONF.split(".")[0]
-    module = imp.new_module(module_name)
+    module = types.ModuleType(module_name)
     module.__file__ = f
     sys.modules[module_name] = module
     exec(open(f, "rb").read())
