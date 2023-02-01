@@ -150,6 +150,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.gis",
     "django.contrib.postgres",
+    "linkedevents",
     "events",
     "corsheaders",
     "rest_framework",
