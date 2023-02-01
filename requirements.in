@@ -8,7 +8,7 @@ django-cleanup
 django-cors-headers
 django-environ
 django-filter>=2.1.0
-django-haystack
+django-haystack[elasticsearch]
 django-helusers
 django-image-cropping
 django-jinja==2.10.2
@@ -24,7 +24,6 @@ djangorestframework-bulk
 djangorestframework-gis
 djangorestframework-jwt
 easy_thumbnails
-elasticsearch~=7.17
 httmock
 icalendar
 isodate
