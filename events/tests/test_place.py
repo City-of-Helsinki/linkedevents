@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import pytest
 from django.contrib.gis.geos import Point
 

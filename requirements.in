@@ -44,5 +44,4 @@ requests-cache
 requests>=2.20.0
 sentry-sdk
 ujson
-six
 whitenoise
