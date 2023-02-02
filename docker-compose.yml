@@ -23,7 +23,7 @@ services:
         container_name: linkedevents-memcached
 
     django:
-        restart: always
+        restart: unless-stopped
         build:
             context: ./
             dockerfile: ./docker/django/Dockerfile
