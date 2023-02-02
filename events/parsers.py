@@ -1,6 +1,5 @@
 import json
 
-import six
 from django.conf import settings
 from rest_framework.parsers import JSONParser, ParseError
 
@@ -38,7 +37,7 @@ class CamelCaseJSONParser(JSONParser):
                 data = stream.read().decode(encoding)
                 return rename_fields(json.loads(data))
             except ValueError as exc:
-                raise ParseError("JSON parse error - %s" % six.text_type(exc))
+                raise ParseError("JSON parse error - %s" % str(exc))
 
 
 class JSONLDParser(CamelCaseJSONParser):

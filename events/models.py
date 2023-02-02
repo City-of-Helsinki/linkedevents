@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Models are modeled after schema.org.
 
@@ -42,7 +41,6 @@ from mptt.querysets import TreeQuerySet
 from munigeo.models import AdministrativeDivision
 from rest_framework.exceptions import ValidationError
 from reversion import revisions as reversion
-from six import python_2_unicode_compatible
 
 from events import translation_utils
 from notifications.models import (
@@ -74,7 +72,6 @@ class SchemalessFieldMixin(models.Model):
         abstract = True
 
 
-@python_2_unicode_compatible
 class DataSource(models.Model):
     id = models.CharField(max_length=100, primary_key=True)
     name = models.CharField(verbose_name=_("Name"), max_length=255)
@@ -273,7 +270,6 @@ class ImageMixin(models.Model):
         abstract = True
 
 
-@python_2_unicode_compatible
 class BaseModel(models.Model):
     objects = BaseQuerySet.as_manager()
 
@@ -607,7 +603,7 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin, ReplacedByMi
         verbose_name_plural = _("places")
         unique_together = (("data_source", "origin_id"),)
 
-    def __unicode__(self):
+    def __str__(self):
         values = filter(
             lambda x: x, [self.street_address, self.postal_code, self.address_locality]
         )
