@@ -4,6 +4,8 @@ from smtplib import SMTPException
 from django.contrib.auth import get_user_model
 from django.contrib.sites.models import Site
 from django.core.mail import send_mail
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 from notifications.models import (
     NotificationTemplateException,
@@ -14,7 +16,13 @@ from notifications.models import (
 logger = logging.getLogger(__name__)
 
 
-def organization_post_save(sender, instance, created, **kwargs):
+@receiver(
+    post_save,
+    sender="django_orghierarchy.Organization",
+    dispatch_uid="organization_replaced",
+)
+def organization_replaced(sender, instance, created, **kwargs):
+    """Copy users from the old organization to the new one."""
     if not created and instance.replaced_by:
         new_org = instance.replaced_by
 
@@ -26,7 +34,9 @@ def organization_post_save(sender, instance, created, **kwargs):
         instance.owned_systems.update(owner=new_org)
 
 
-def user_post_save(sender, instance, created, **kwargs):
+@receiver(post_save, sender=get_user_model(), dispatch_uid="user_created_notification")
+def user_created_notification(sender, instance, created, **kwargs):
+    """Send a notification to superusers when a user gets created."""
     if created:
         user_model = get_user_model()
         recipient_list = [
