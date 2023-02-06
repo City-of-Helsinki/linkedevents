@@ -13,6 +13,7 @@ from typing import Iterable, Optional
 from uuid import UUID
 
 import bleach
+import django.forms
 import django_filters
 import environ
 import pytz
@@ -21,6 +22,7 @@ from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.gis.db import models
 from django.contrib.gis.geos import Point
+from django.contrib.gis.measure import D
 from django.contrib.postgres.search import SearchQuery, TrigramSimilarity
 from django.core.cache import caches
 from django.core.exceptions import PermissionDenied
@@ -3605,6 +3607,13 @@ def in_or_null_filter(field_name, queryset, name, value):
     return queryset.filter(q)
 
 
+class DistanceWithinWidget(django_filters.widgets.SuffixedMultiWidget):
+    suffixes = ["origin", "metres"]
+
+    def __init__(self):
+        super().__init__([django_filters.widgets.CSVWidget, django.forms.NumberInput])
+
+
 class EventFilter(django_filters.rest_framework.FilterSet):
     division = django_filters.Filter(
         field_name="location__divisions",
@@ -3621,10 +3630,32 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         widget=django_filters.widgets.CSVWidget(),
         method=partial(in_or_null_filter, "super_event"),
     )
+    dwithin = django_filters.Filter(
+        method="filter_dwithin", widget=DistanceWithinWidget()
+    )
 
     class Meta:
         model = Event
         fields = ("division", "super_event_type", "super_event")
+
+    @staticmethod
+    def filter_dwithin(queryset, name, value: tuple[tuple[str, str], str]):
+        origin, metres = value
+        if not (origin and metres):
+            # Need both values for filtering
+            return queryset
+
+        origin_x, origin_y = origin
+        metres = float(metres)
+
+        places = Place.geo_objects.filter(
+            position__distance_lte=(
+                Point(float(origin_x), float(origin_y)),
+                D(m=metres),
+            )
+        )
+
+        return queryset.filter(location__in=places)
 
 
 class EventDeletedException(APIException):
