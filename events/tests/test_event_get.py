@@ -193,6 +193,30 @@ def test_get_event_list_verify_bbox_filter(api_client, event, event2):
 
 
 @pytest.mark.django_db
+def test_get_event_list_verify_dwithin_filter(event, event2):
+    origin = Point(24, 24)
+    # Sanity check for distances
+    assert origin.distance(event.location.position) > 36
+    assert origin.distance(event2.location.position) < 34
+
+    # Don't filter if missing either origin or metres.
+    get_list_and_assert_events(f"dwithin_origin={origin.x},{origin.y}", [event, event2])
+    get_list_and_assert_events("dwithin_metres=35", [event, event2])
+
+    get_list_and_assert_events(
+        f"dwithin_origin={origin.x},{origin.y}&dwithin_metres=35", [event2]
+    )
+    get_list_and_assert_events(
+        f"dwithin_origin={origin.x},{origin.y}&dwithin_metres=37", [event, event2]
+    )
+
+    # Should work with a float distance as well.
+    get_list_and_assert_events(
+        f"dwithin_origin={origin.x},{origin.y}&dwithin_metres=35.01", [event2]
+    )
+
+
+@pytest.mark.django_db
 def test_get_event_list_verify_audience_max_age_lt_filter(api_client, keyword, event):
     event.audience_max_age = 16
     event.save()
