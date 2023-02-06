@@ -14,7 +14,7 @@ class TestImage(TestCase):
             id="ds",
             name="data-source",
             api_key="test_api_key",
-            user_editable=True,
+            user_editable_resources=True,
         )
         self.org = Organization.objects.create(
             name="org",
@@ -61,7 +61,7 @@ class TestEvent(TestCase):
             id="ds",
             name="data-source",
             api_key="test_api_key",
-            user_editable=True,
+            user_editable_resources=True,
         )
         self.org = Organization.objects.create(
             name="org",

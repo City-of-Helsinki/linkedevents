@@ -83,8 +83,11 @@ class DataSource(models.Model):
         null=True,
         blank=True,
     )
-    user_editable = models.BooleanField(
-        default=False, verbose_name=_("Objects may be edited by users")
+    user_editable_resources = models.BooleanField(
+        default=False, verbose_name=_("Resources may be edited by users")
+    )
+    user_editable_organizations = models.BooleanField(
+        default=False, verbose_name=_("Organizations may be edited by users")
     )
     edit_past_events = models.BooleanField(
         default=False, verbose_name=_("Past events may be edited using API")
@@ -122,10 +125,10 @@ class SimpleValueMixin(object):
 
 
 class BaseQuerySet(models.QuerySet):
-    def is_user_editable(self):
+    def is_user_editable_resources(self):
         return not bool(
             self.filter(data_source__isnull=True)
-            and self.filter(data_source__user_editable=False)
+            and self.filter(data_source__user_editable_resources=False)
         )
 
     def can_be_edited_by(self, user):
@@ -248,11 +251,11 @@ class Image(models.Model):
         self.last_modified_time = BaseModel.now()
         super().save(*args, **kwargs)
 
-    def is_user_editable(self):
-        return bool(self.data_source and self.data_source.user_editable)
+    def is_user_editable_resources(self):
+        return bool(self.data_source and self.data_source.user_editable_resources)
 
     def is_user_edited(self):
-        return bool(self.is_user_editable() and self.last_modified_by)
+        return bool(self.is_user_editable_resources() and self.last_modified_by)
 
     def can_be_edited_by(self, user):
         """Check if current image can be edited by the given user"""
@@ -322,11 +325,11 @@ class BaseModel(models.Model):
     class Meta:
         abstract = True
 
-    def is_user_editable(self):
-        return self.data_source.user_editable
+    def is_user_editable_resources(self):
+        return self.data_source.user_editable_resources
 
     def is_user_edited(self):
-        return bool(self.data_source.user_editable and self.last_modified_by)
+        return bool(self.data_source.user_editable_resources and self.last_modified_by)
 
 
 class Language(models.Model):

@@ -275,7 +275,7 @@ def test__image_from_another_data_source_can_be_edited_by_admin(
     assert image.data_source == data_source
     image.data_source = other_data_source
     image.save()
-    other_data_source.user_editable = True
+    other_data_source.user_editable_resources = True
     other_data_source.owner = organization
     other_data_source.save()
     assert image.data_source == other_data_source

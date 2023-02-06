@@ -24,28 +24,32 @@ class TestEventAPI(APITestCase):
         self.system_data_source = DataSource.objects.create(
             id="ds",
             name="data-source",
-            user_editable=True,
+            user_editable_resources=True,
+            user_editable_organizations=True,
         )
         # this is a data source that only allows POST with api_key (external systems), but users may still PUT
         self.editable_data_source = DataSource.objects.create(
             id="eds",
             name="editable-data-source",
             api_key="test_api_key_2",
-            user_editable=True,
+            user_editable_resources=True,
+            user_editable_organizations=True,
         )
         # this is a data source that only allows POST and PUT with api_key (external systems)
         self.non_editable_data_source = DataSource.objects.create(
             id="neds",
             name="non-editable-data-source",
             api_key="test_api_key_3",
-            user_editable=False,
+            user_editable_resources=False,
+            user_editable_organizations=False,
         )
         # this is a data source that only allows POST with api_key (external systems), but users may still PUT
         self.external_editable_data_source = DataSource.objects.create(
             id="eeds",
             name="external-editable-data-source",
             api_key="test_api_key_4",
-            user_editable=True,
+            user_editable_resources=True,
+            user_editable_organizations=True,
         )
         self.org_1 = Organization.objects.create(
             name="org-1",

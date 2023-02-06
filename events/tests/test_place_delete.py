@@ -15,11 +15,11 @@ def test_place_delete(api_client, user, place):
 
 
 @pytest.mark.django_db
-def test__non_user_editable_cannot_delete_a_place(
+def test__non_user_editable_resources_cannot_delete_a_place(
     api_client, place, data_source, organization, user
 ):
     data_source.owner = organization
-    data_source.user_editable = False
+    data_source.user_editable_resources = False
     data_source.save()
 
     api_client.force_authenticate(user=user)
@@ -29,11 +29,11 @@ def test__non_user_editable_cannot_delete_a_place(
 
 
 @pytest.mark.django_db
-def test__user_editable_can_delete_a_place(
+def test__user_editable_resources_can_delete_a_place(
     api_client, place, data_source, organization, user
 ):
     data_source.owner = organization
-    data_source.user_editable = True
+    data_source.user_editable_resources = True
     data_source.save()
 
     api_client.force_authenticate(user=user)

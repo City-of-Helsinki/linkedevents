@@ -647,7 +647,7 @@ def test__an_admin_can_update_an_event_from_another_data_source(
     api_client, event2, keyword, offer, other_data_source, organization, user
 ):
     other_data_source.owner = organization
-    other_data_source.user_editable = True
+    other_data_source.user_editable_resources = True
     other_data_source.save()
     event2.publisher = organization
     event2.keywords.add(

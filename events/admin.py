@@ -62,7 +62,7 @@ class LocationFilter(AutocompleteFilter):
 
 
 class EventAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
-    # TODO: only allow user_editable editable fields
+    # TODO: only allow user_editable_resources editable fields
     fields = (
         "id",
         "data_source",
@@ -115,7 +115,7 @@ admin.site.register(Event, EventAdmin)
 
 
 class KeywordAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
-    # TODO: only allow user_editable editable fields
+    # TODO: only allow user_editable_resources editable fields
     fields = (
         "id",
         "data_source",
@@ -166,7 +166,7 @@ class HelsinkiGeoAdmin(LeafletGeoAdmin):
 
 
 class PlaceAdmin(HelsinkiGeoAdmin, AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
-    # TODO: only allow user_editable editable fields
+    # TODO: only allow user_editable_resources editable fields
     fieldsets = (
         (
             None,
@@ -230,7 +230,8 @@ class DataSourceAdmin(BaseAdmin, VersionAdmin):
         "name",
         "api_key",
         "owner",
-        "user_editable",
+        "user_editable_resources",
+        "user_editable_organizations",
         "create_past_events",
         "edit_past_events",
     )
