@@ -185,7 +185,10 @@ def get_authenticated_data_source_and_publisher(request):
     else:
         # objects *created* by api are marked coming from the system data source unless api_key is provided
         # we must optionally create the system data source here, as the settings may have changed at any time
-        system_data_source_defaults = {"user_editable": True}
+        system_data_source_defaults = {
+            "user_editable_resources": True,
+            "user_editable_organizations": True,
+        }
         data_source, created = DataSource.objects.get_or_create(
             id=settings.SYSTEM_DATA_SOURCE_ID, defaults=system_data_source_defaults
         )
@@ -652,7 +655,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                     raise PermissionDenied()
             else:
                 # without api key, the user will have to be admin
-                if not instance.is_user_editable():
+                if not instance.is_user_editable_resources():
                     raise PermissionDenied()
 
     def to_internal_value(self, data):
@@ -885,7 +888,7 @@ class EditableLinkedEventsObjectSerializer(LinkedEventsSerializer):
 
         if (
             not isinstance(self.user, ApiKeyUser)
-            and not validated_data["data_source"].user_editable
+            and not validated_data["data_source"].user_editable_resources
         ):
             raise PermissionDenied()
 
@@ -1014,7 +1017,7 @@ class KeywordRetrieveViewSet(
                 raise PermissionDenied()
         else:
             # without api key, the user will have to be admin
-            if not instance.is_user_editable():
+            if not instance.is_user_editable_resources():
                 raise PermissionDenied()
 
         instance.deprecate()
@@ -1787,7 +1790,7 @@ class PlaceRetrieveViewSet(
                 raise PermissionDenied()
         else:
             # without api key, the user will have to be admin
-            if not instance.is_user_editable():
+            if not instance.is_user_editable_resources():
                 raise PermissionDenied()
 
         instance.soft_delete()

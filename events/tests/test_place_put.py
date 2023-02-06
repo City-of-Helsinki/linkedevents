@@ -57,7 +57,7 @@ def test__an_admin_can_update_an_place_from_another_data_source(
     api_client, place2, other_data_source, organization, user
 ):
     other_data_source.owner = organization
-    other_data_source.user_editable = True
+    other_data_source.user_editable_resources = True
     other_data_source.save()
     place2.publisher = organization
     place2.name = {"en": "Test location - updated", "fi": "Testipaikka - updated"}
@@ -138,11 +138,11 @@ def test__empty_api_key_cannot_update_a_place(
 
 
 @pytest.mark.django_db
-def test__non_user_editable_cannot_update_a_place(
+def test__non_user_editable_resources_cannot_update_a_place(
     api_client, place, place_dict, data_source, organization, user
 ):
     data_source.owner = organization
-    data_source.user_editable = False
+    data_source.user_editable_resources = False
     data_source.save()
     api_client.force_authenticate(user=user)
     detail_url = reverse("place-detail", kwargs={"pk": place.pk})
@@ -151,11 +151,11 @@ def test__non_user_editable_cannot_update_a_place(
 
 
 @pytest.mark.django_db
-def test__user_editable_can_update_a_place(
+def test__user_editable_resources_can_update_a_place(
     api_client, place, place_dict, data_source, organization, user
 ):
     data_source.owner = organization
-    data_source.user_editable = True
+    data_source.user_editable_resources = True
     data_source.save()
     api_client.force_authenticate(user=user)
     detail_url = reverse("place-detail", kwargs={"pk": place.pk})

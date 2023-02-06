@@ -321,7 +321,10 @@ class KulkeImporter(Importer):
         defaults = dict(name="Helsingin kaupunki")
         self.city, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
 
-        system_data_source_defaults = {"user_editable": True}
+        system_data_source_defaults = {
+            "user_editable_resources": True,
+            "user_editable_organizations": True,
+        }
         self.system_data_source = DataSource.objects.get_or_create(
             id=settings.SYSTEM_DATA_SOURCE_ID, defaults=system_data_source_defaults
         )

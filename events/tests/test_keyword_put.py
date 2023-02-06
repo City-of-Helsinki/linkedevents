@@ -58,7 +58,7 @@ def test__an_admin_can_update_an_keyword_from_another_data_source(
     api_client, keyword2, other_data_source, organization, user
 ):
     other_data_source.owner = organization
-    other_data_source.user_editable = True
+    other_data_source.user_editable_resources = True
     other_data_source.save()
     keyword2.publisher = organization
     keyword2.name = {"en": "Test location - updated", "fi": "Testipaikka - updated"}
@@ -146,11 +146,11 @@ def test__empty_api_key_cannot_update_a_keyword(
 
 
 @pytest.mark.django_db
-def test__non_user_editable_cannot_update_keyword(
+def test__non_user_editable_resources_cannot_update_keyword(
     api_client, keyword, keyword_dict, data_source, organization, user
 ):
     data_source.owner = organization
-    data_source.user_editable = False
+    data_source.user_editable_resources = False
     data_source.save()
     api_client.force_authenticate(user=user)
     detail_url = reverse("keyword-detail", kwargs={"pk": keyword.pk})
@@ -159,11 +159,11 @@ def test__non_user_editable_cannot_update_keyword(
 
 
 @pytest.mark.django_db
-def test__user_editable_can_update_keyword(
+def test__user_editable_resources_can_update_keyword(
     api_client, keyword, keyword_dict, data_source, organization, user
 ):
     data_source.owner = organization
-    data_source.user_editable = True
+    data_source.user_editable_resources = True
     data_source.save()
     api_client.force_authenticate(user=user)
     detail_url = reverse("keyword-detail", kwargs={"pk": keyword.pk})

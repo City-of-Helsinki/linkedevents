@@ -94,7 +94,10 @@ def user_api_client(user):
 @pytest.fixture
 def data_source():
     return DataSource.objects.create(
-        id=settings.SYSTEM_DATA_SOURCE_ID, api_key="test_api_key", user_editable=True
+        id=settings.SYSTEM_DATA_SOURCE_ID,
+        api_key="test_api_key",
+        user_editable_resources=True,
+        user_editable_organizations=True,
     )
 
 

@@ -196,7 +196,8 @@ class TestImageAPI(APITestCase):
             id="ds",
             name="data-source",
             api_key="test_api_key",
-            user_editable=True,
+            user_editable_resources=True,
+            user_editable_organizations=True,
         )
         self.org_1 = Organization.objects.create(
             name="org-1",

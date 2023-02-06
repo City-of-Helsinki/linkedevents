@@ -192,7 +192,10 @@ class HelmetImporter(Importer):
         )
         self.tprek_data_source = DataSource.objects.get(id="tprek")
         self.ahjo_data_source = DataSource.objects.get(id="ahjo")
-        system_data_source_defaults = {"user_editable": True}
+        system_data_source_defaults = {
+            "user_editable_resources": True,
+            "user_editable_organizations": True,
+        }
         self.system_data_source, _ = DataSource.objects.get_or_create(
             id=settings.SYSTEM_DATA_SOURCE_ID, defaults=system_data_source_defaults
         )
