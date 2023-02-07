@@ -3645,12 +3645,18 @@ class EventFilter(django_filters.rest_framework.FilterSet):
             # Need both values for filtering
             return queryset
 
-        origin_x, origin_y = origin
-        metres = float(metres)
+        try:
+            origin_x, origin_y = [float(i) for i in origin]
+        except ValueError:
+            raise ParseError("Origin must be a tuple of two numbers")
+        try:
+            metres = float(metres)
+        except ValueError:
+            raise ParseError("Metres must be a number")
 
-        places = Place.geo_objects.filter(
-            position__distance_lte=(
-                Point(float(origin_x), float(origin_y)),
+        places = Place.objects.filter(
+            position__dwithin=(
+                Point(origin_x, origin_y),
                 D(m=metres),
             )
         )

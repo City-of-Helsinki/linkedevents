@@ -216,6 +216,30 @@ def test_get_event_list_verify_dwithin_filter(event, event2):
     )
 
 
+@pytest.mark.parametrize(
+    "query_string,expected_message",
+    [
+        ("dwithin_origin=0,0&dwithin_metres=foo", "Metres must be a number"),
+        ("dwithin_origin=0&dwithin_metres=35", "Origin must be a tuple of two numbers"),
+        (
+            "dwithin_origin=0,0,0&dwithin_metres=35",
+            "Origin must be a tuple of two numbers",
+        ),
+        (
+            "dwithin_origin=0,foo&dwithin_metres=35",
+            "Origin must be a tuple of two numbers",
+        ),
+    ],
+)
+@pytest.mark.django_db
+def test_get_event_list_verify_dwithin_filter_error(
+    query_string, expected_message, api_client, event, event2
+):
+    response = get_list_no_code_assert(api_client, query_string=query_string)
+    assert response.status_code == 400
+    assert response.data["detail"] == expected_message
+
+
 @pytest.mark.django_db
 def test_get_event_list_verify_audience_max_age_lt_filter(api_client, keyword, event):
     event.audience_max_age = 16
