@@ -740,6 +740,9 @@ def create_initial_licenses():
 @pytest.fixture(scope="session", autouse=True)
 def setup_env():
     settings.SUPPORT_EMAIL = "test@test.com"
+    settings.JWT_AUTH[
+        "JWT_SECRET_KEY"
+    ] = "abcdefghacbdefgabcdefghacbdefgabcdefghacbdefgabcdefghacbdefgabcdefghacbdefg"
 
 
 @pytest.mark.django_db

@@ -37,6 +37,16 @@ django-debug-toolbar==3.5.0
     # via -r requirements-dev.in
 django-extensions==3.0.1
     # via -r requirements-dev.in
+ecdsa==0.18.0
+    # via
+    #   -c requirements.txt
+    #   python-jose
+factory-boy==3.2.1
+    # via
+    #   -r requirements-dev.in
+    #   pytest-factoryboy
+faker==16.6.1
+    # via factory-boy
 flake8==6.0.0
     # via
     #   -r requirements-dev.in
@@ -46,6 +56,8 @@ flake8-bugbear==23.1.20
     # via -r requirements-dev.in
 freezegun==0.3.15
     # via -r requirements-dev.in
+inflection==0.5.1
+    # via pytest-factoryboy
 ipython==7.16.1
     # via -r requirements-dev.in
 ipython-genutils==0.2.0
@@ -87,6 +99,11 @@ ptyprocess==0.6.0
     # via pexpect
 py==1.9.0
     # via pytest
+pyasn1==0.4.8
+    # via
+    #   -c requirements.txt
+    #   python-jose
+    #   rsa
 pycodestyle==2.10.0
     # via flake8
 pyflakes==3.0.1
@@ -104,22 +121,35 @@ pytest==5.4.3
     #   -r requirements-dev.in
     #   pytest-cov
     #   pytest-django
+    #   pytest-factoryboy
 pytest-cov==4.0.0
     # via -r requirements-dev.in
 pytest-django==3.9.0
     # via -r requirements-dev.in
+pytest-factoryboy==2.5.1
+    # via -r requirements-dev.in
 python-dateutil==2.8.2
     # via
     #   -c requirements.txt
+    #   faker
     #   freezegun
+python-jose==3.3.0
+    # via
+    #   -c requirements.txt
+    #   -r requirements-dev.in
 pytz==2022.1
     # via
     #   -c requirements.txt
     #   django
+rsa==4.9
+    # via
+    #   -c requirements.txt
+    #   python-jose
 six==1.16.0
     # via
     #   -c requirements.txt
     #   django-extensions
+    #   ecdsa
     #   freezegun
     #   python-dateutil
     #   traitlets
@@ -136,7 +166,9 @@ tomli==2.0.1
 traitlets==4.3.3
     # via ipython
 typing-extensions==4.4.0
-    # via black
+    # via
+    #   black
+    #   pytest-factoryboy
 wcwidth==0.2.5
     # via
     #   prompt-toolkit
