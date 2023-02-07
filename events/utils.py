@@ -1,14 +1,17 @@
 import collections
 import re
+import warnings
 from datetime import datetime, timedelta
+from typing import Optional
 
 import pytz
 from dateutil.parser import parse as dateutil_parse
 from django.conf import settings
 from django.db import transaction
+from django_orghierarchy.models import Organization
 from rest_framework.exceptions import ParseError
 
-from events.models import Keyword, Place
+from events.models import DataSource, Keyword, Place
 from events.sql import count_events_for_keywords, count_events_for_places
 
 
@@ -157,3 +160,28 @@ def get_deleted_object_name():
         "sv": "RADERAD",
         "en": "DELETED",
     }
+
+
+def get_or_create_default_organization() -> Optional[Organization]:
+    """Create (if needed) the default organization to which users can be added if they
+    don't belong to any organization.
+    """
+    if not settings.USER_DEFAULT_ORGANIZATION_ID:
+        warnings.warn(
+            "USER_DEFAULT_ORGANIZATION_ID is empty, will not set or create "
+            "default organization."
+        )
+        return None
+
+    data_source, created = DataSource.objects.get_or_create(
+        id=settings.SYSTEM_DATA_SOURCE_ID,
+        defaults={
+            "user_editable_resources": True,
+            "user_editable_organizations": True,
+        },
+    )
+    organization, _ = Organization.objects.get_or_create(
+        id=settings.USER_DEFAULT_ORGANIZATION_ID,
+        defaults={"name": "Muu", "data_source": data_source},
+    )
+    return organization

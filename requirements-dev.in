@@ -4,6 +4,7 @@ Werkzeug
 black
 django-debug-toolbar
 django-extensions
+factory_boy
 flake8
 flake8-bugbear
 freezegun
@@ -14,3 +15,5 @@ pip-tools
 pytest
 pytest-cov
 pytest-django
+pytest-factoryboy
+python-jose

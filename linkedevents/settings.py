@@ -49,6 +49,7 @@ env = environ.Env(
     DATABASE_URL=(str, "postgis:///linkedevents"),
     DEBUG=(bool, False),
     ELASTICSEARCH_URL=(str, None),
+    ENABLE_USER_DEFAULT_ORGANIZATION=(bool, False),
     EXTRA_INSTALLED_APPS=(list, []),
     INSTANCE_NAME=(str, "Linked Events"),
     INTERNAL_IPS=(list, []),
@@ -75,6 +76,7 @@ env = environ.Env(
     TOKEN_AUTH_REQUIRE_SCOPE_PREFIX=(bool, True),
     TOKEN_AUTH_SHARED_SECRET=(str, ""),
     TRUST_X_FORWARDED_HOST=(bool, False),
+    USER_DEFAULT_ORGANIZATION_ID=(str, "others"),
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -259,6 +261,12 @@ LOGIN_REDIRECT_URL = "/"
 ACCOUNT_LOGOUT_ON_GET = True
 SOCIALACCOUNT_ADAPTER = "helusers.adapter.SocialAccountAdapter"
 
+# User will be assigned to a default organization if user doesn't have any
+ENABLE_USER_DEFAULT_ORGANIZATION = env("ENABLE_USER_DEFAULT_ORGANIZATION")
+# Default organization to which a user will be assigned if user doesn't
+# have any organization. Default organization is created if it doesn't exist.
+USER_DEFAULT_ORGANIZATION_ID = env("USER_DEFAULT_ORGANIZATION_ID")
+
 #
 # REST Framework
 #
@@ -283,7 +291,7 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "events.auth.ApiKeyAuthentication",
-        "helusers.jwt.JWTAuthentication",
+        "events.auth.LinkedEventsJWTAuthentication",
     ),
     "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.URLPathVersioning",
     "VIEW_NAME_FUNCTION": "events.api.get_view_name",
