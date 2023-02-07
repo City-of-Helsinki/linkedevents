@@ -292,6 +292,7 @@ JWT_AUTH = {
     "JWT_PAYLOAD_GET_USER_ID_HANDLER": "helusers.jwt.get_user_id_from_payload_handler",
     "JWT_AUDIENCE": env("TOKEN_AUTH_ACCEPTED_AUDIENCE"),
     "JWT_SECRET_KEY": env("TOKEN_AUTH_SHARED_SECRET"),
+    "JWT_AUTH_HEADER_PREFIX": "Bearer",
 }
 
 CORS_ORIGIN_ALLOW_ALL = True
