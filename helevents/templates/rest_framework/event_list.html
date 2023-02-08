@@ -64,6 +64,7 @@ end before 21:00.
 </code></pre>
 <p><a href="?starts_after=16:30&amp;ends_before=21" title="json">See the result</a></p>
 <h3 id="event-location">Event location</h3>
+
 <h4 id="bounding-box">Bounding box</h4>
 <p>To restrict the retrieved events to a geographical region, use
 the query parameter <code>bbox</code> in the format</p>
@@ -76,6 +77,7 @@ and so on. The coordinate system is the trusty old EPSG:4326 known from all onli
 <pre><code>event/?bbox=24.9348,60.1762,24.9681,60.1889
 </code></pre>
 <p><a href="?bbox=24.9348,60.1762,24.9681,60.1889" title="json">See the result</a></p>
+
 <h4 id="specific-location">Specific location</h4>
 <p>To restrict the retrieved events to a known location(s), use
 the query parameter <code>location</code>, separating values by commas
@@ -106,6 +108,20 @@ regardless of division type.</p>
 <pre><code>event/?division=malmi
 </code></pre>
 <p><a href="?division=malmi" title="json">See the result</a></p>
+
+<h4 id="distance-filter">Within a distance (or "circle filter")</h4>
+<p>To restrict the retrieved events to a certain distance from a point,
+use the query parameters <code>dwithin_origin</code> and <code>dwithin_metres</code> in the format</p>
+<pre><code>dwithin_origin=lon,lat&dwithin_metres=distance
+</code></pre>
+<p>Where <code>lon</code> is the longitude of the origin point,
+<code>lat</code> is the latitude of the origin point,
+and <code>distance</code> is the radius in metres.
+Both parameters are required. The coordinate system is EPSG:4326.</p>
+<p>Example:</p>
+<pre><code>event/?dwithin_origin=24.9348,60.1762&dwithin_metres=1000
+</code></pre>
+<p><a href="?dwithin_origin=24.9348,60.1762&dwithin_metres=1000" title="json">See the result</a></p>
 
 <h3 id="event-category">Event category</h3>
 <p>To restrict the retrieved events by category, use the query
