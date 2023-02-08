@@ -102,6 +102,10 @@ jobs:
       - name: Codecov
         uses: codecov/codecov-action@v3
 
+      # Without this workaround Sonar reports a warning about an incorrect source path
+      - name: Override coverage report source path for Sonar
+        run: sed -i 's@'$GITHUB_WORKSPACE'@/github/workspace/@g' coverage.xml
+
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
         env:
