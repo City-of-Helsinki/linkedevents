@@ -3638,8 +3638,8 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         model = Event
         fields = ("division", "super_event_type", "super_event")
 
-    @staticmethod
-    def filter_dwithin(queryset, name, value: tuple[tuple[str, str], str]):
+    def filter_dwithin(self, queryset, name, value: tuple[tuple[str, str], str]):
+        srs = srid_to_srs(self.request.query_params.get("srid"))
         origin, metres = value
         if not (origin and metres):
             # Need both values for filtering
@@ -3656,7 +3656,7 @@ class EventFilter(django_filters.rest_framework.FilterSet):
 
         places = Place.objects.filter(
             position__dwithin=(
-                Point(origin_x, origin_y),
+                Point(origin_x, origin_y, srid=srs.srid),
                 D(m=metres),
             )
         )
