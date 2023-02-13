@@ -72,7 +72,8 @@ the query parameter <code>bbox</code> in the format</p>
 </code></pre>
 <p>Where <code>west</code> is the longitude of the rectangle's western boundary,
 <code>south</code> is the latitude of the rectangle's southern boundary,
-and so on. The coordinate system is the trusty old EPSG:4326 known from all online maps.</p>
+and so on. The default coordinate system is the trusty old EPSG:4326 known from all online
+maps, and can be overridden with <code>srid</code> parameter.</p>
 <p>Example:</p>
 <pre><code>event/?bbox=24.9348,60.1762,24.9681,60.1889
 </code></pre>
@@ -117,7 +118,8 @@ use the query parameters <code>dwithin_origin</code> and <code>dwithin_metres</c
 <p>Where <code>lon</code> is the longitude of the origin point,
 <code>lat</code> is the latitude of the origin point,
 and <code>distance</code> is the radius in metres.
-Both parameters are required. The coordinate system is EPSG:4326.</p>
+Both parameters are required. The default coordinate system is EPSG:4326 and can be overridden with
+the <code>srid</code> parameter.</p>
 <p>Example:</p>
 <pre><code>event/?dwithin_origin=24.9348,60.1762&dwithin_metres=1000
 </code></pre>
