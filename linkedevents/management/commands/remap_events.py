@@ -54,13 +54,12 @@ class Command(BaseCommand):
         else:
             self.stdout.write(self.style.SUCCESS("Done"))
 
-    @transaction.atomic
     def process_remap(self, remap: dict[str, str]):
         for old_id, new_id in remap.items():
             try:
                 new_place = Place.objects.get(pk=new_id)
             except Place.DoesNotExist:
-                error_msg = f"New place {old_id} does not exist"
+                error_msg = f"New place {new_id} does not exist"
                 raise ValueError(error_msg)
 
             rows = Event.objects.filter(location_id=old_id).update(location=new_place)
