@@ -8,6 +8,7 @@ import pytz
 from dateutil.parser import parse as dateutil_parse
 from django.conf import settings
 from django.db import transaction
+from django.utils import timezone
 from django_orghierarchy.models import Organization
 from rest_framework.exceptions import ParseError
 
@@ -115,19 +116,24 @@ def parse_time(time_str, is_start):
         dt = None
     if not dt:
         if time_str.lower() == "today":
-            dt = datetime.utcnow().replace(tzinfo=pytz.utc)
-            dt = dt.astimezone(local_tz)
+            # DST safe
+            dt = timezone.now().astimezone(local_tz).replace(tzinfo=None)
             dt = dt.replace(hour=0, minute=0, second=0, microsecond=0)
+            dt = local_tz.localize(dt)
+
             is_exact = False
         if time_str.lower() == "now":
-            dt = datetime.utcnow().replace(tzinfo=pytz.utc)
+            dt = timezone.now()
             is_exact = True
     if dt and not is_exact:
         # With start timestamps, we treat dates as beginning
         # at midnight the same day. End timestamps are taken to
         # mean midnight on the following day.
         if not is_start:
-            dt = dt + timedelta(days=1)
+            # DST safe
+            naive_datetime = dt.astimezone(local_tz).replace(tzinfo=None)
+            naive_datetime += timedelta(days=1)
+            dt = local_tz.localize(naive_datetime)
     elif not dt:
         try:
             # Handle all other times through dateutil.
@@ -136,7 +142,7 @@ def parse_time(time_str, is_start):
             if dt.tzinfo and abs(dt.tzinfo.utcoffset(dt)) > timedelta(hours=15):
                 raise ParseError(f"Time zone given in timestamp {dt} out of bounds.")
             # Datetimes without timezone are assumed UTC by drf
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, OverflowError):
             raise ParseError("time in invalid format (try ISO 8601 or yyyy-mm-dd)")
     # if not dt.tzinfo:
     #     dt = dt.astimezone(pytz.timezone('UTC'))
