@@ -2509,9 +2509,13 @@ class EventSerializer(
             val = data.get(field, None)
             if val:
                 if isinstance(val, str):
-                    data[field], data["has_" + field] = utils.parse_time(
-                        val, not field == "end_time"
-                    )
+                    if field == "end_time":
+                        dt, is_date = utils.parse_end_time(val)
+                    else:
+                        dt, is_date = utils.parse_time(val)
+
+                    data[field] = dt
+                    data[f"has_{field}"] = not is_date
         return data
 
     def to_internal_value(self, data):
@@ -2596,12 +2600,7 @@ class EventSerializer(
                 data["end_time"] = None
             else:
                 data["has_end_time"] = False
-                data["end_time"] = (
-                    timezone.localtime(data["start_time"])
-                    .replace(hour=0, minute=0, second=0, microsecond=0)
-                    .astimezone(pytz.utc)
-                )
-                data["end_time"] += timedelta(days=1)
+                data["end_time"] = utils.start_of_next_day(data["start_time"])
 
         past_allowed = self.data_source.create_past_events
         if self.instance:
@@ -2796,16 +2795,17 @@ class EventSerializer(
             # Return only the date part
             ret["start_time"] = obj.start_time.astimezone(LOCAL_TZ).strftime("%Y-%m-%d")
         if obj.end_time and not obj.has_end_time:
-            # If we're storing only the date part, do not pretend we have the exact time.
-            # Timestamp is of the form %Y-%m-%dT00:00:00, so we report the previous date.
-            ret["end_time"] = (
-                (obj.end_time - timedelta(days=1))
-                .astimezone(LOCAL_TZ)
-                .strftime("%Y-%m-%d")
-            )
-            # Unless the event is short, then no need for end time
+            # If the event is short (<24h), then no need for end time
             if obj.start_time and obj.end_time - obj.start_time <= timedelta(days=1):
                 ret["end_time"] = None
+
+            else:
+                # If we're storing only the date part, do not pretend we have the exact time.
+                # Timestamp is of the form %Y-%m-%dT00:00:00, so we report the previous date.
+                ret["end_time"] = utils.start_of_previous_day(obj.end_time).strftime(
+                    "%Y-%m-%d"
+                )
+
         del ret["has_start_time"]
         del ret["has_end_time"]
         if hasattr(obj, "days_left"):
@@ -3226,7 +3226,10 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
     # 2014-10-29T12:00:00Z == 2014-10-29T12:00:00+0000 (UTC time)
     # or 2014-10-29T12:00:00+0200 (local time)
     if val:
-        dt = utils.parse_time(val, is_start=False)[0]
+        # This feels like a bug to use end time, but that's how the original
+        # implementation since 2014 has worked. No test coverage here at the
+        # time of writing, so go figure.
+        dt = utils.parse_end_time(val)[0]
         queryset = queryset.filter(Q(last_modified_time__gte=dt))
 
     start = params.get("start")
@@ -3258,9 +3261,9 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
         postponed_q = Q()
 
     if start:
-        dt = utils.parse_time(start, is_start=True)[0]
-        if not dt.tzinfo:
-            dt = dt.astimezone(pytz.timezone("UTC"))
+        # Inconsistent behaviour, see test_inconsistent_tz_default
+        dt = utils.parse_time(start, default_tz=pytz.timezone(settings.TIME_ZONE))[0]
+
         # only return events with specified end times, or unspecified start times, during the whole of the event
         # this gets of rid pesky one-day events with no known end time (but known start) after they started
         queryset = queryset.filter(
@@ -3271,9 +3274,8 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
         )
 
     if end:
-        dt = utils.parse_time(end, is_start=False)[0]
-        if not dt.tzinfo:
-            dt = dt.astimezone(pytz.timezone("UTC"))
+        # Inconsistent behaviour, see test_inconsistent_tz_default
+        dt = utils.parse_end_time(end, default_tz=pytz.timezone(settings.TIME_ZONE))[0]
         queryset = queryset.filter(Q(end_time__lt=dt) | Q(start_time__lte=dt))
 
     val = params.get("bbox", None)
@@ -4162,12 +4164,12 @@ class SearchViewSet(
 
             start = params.get("start", None)
             if start:
-                dt = utils.parse_time(start, is_start=True)[0]
+                dt = utils.parse_time(start)[0]
                 queryset = queryset.filter(Q(end_time__gt=dt) | Q(start_time__gte=dt))
 
             end = params.get("end", None)
             if end:
-                dt = utils.parse_time(end, is_start=False)[0]
+                dt = utils.parse_end_time(end)[0]
                 queryset = queryset.filter(Q(end_time__lt=dt) | Q(start_time__lte=dt))
 
             if not start and not end and hasattr(queryset.query, "add_decay_function"):

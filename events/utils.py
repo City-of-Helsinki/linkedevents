@@ -102,51 +102,101 @@ def recache_n_events_in_locations(place_ids, all=False):
             Place.objects.filter(id=place_id).update(n_events=n_events)
 
 
-def parse_time(time_str, is_start):
+def parse_time(time_str: str, default_tz=pytz.utc) -> (datetime, bool):
+    """
+    Parse a time string into a datetime object. Accepts ISO8061,
+    date format "YYYY-MM-DD", "today" and "now".
+
+    :param time_str:
+    :param default_tz: default timezone to assume for naive datetimes
+    :return: a tuple containing the parsed datetime and a boolean indicating
+             whether the returned datetime represents a date
+    :raises: ParseError
+    """
     local_tz = pytz.timezone(settings.TIME_ZONE)
     time_str = time_str.strip()
-    is_exact = True
-    # Handle dates first. Assume dates are given in local timezone.
-    # FIXME: What if there's no local timezone?
-    try:
-        dt = datetime.strptime(time_str, "%Y-%m-%d")
-        dt = local_tz.localize(dt)
-        is_exact = False
-    except ValueError:
-        dt = None
-    if not dt:
-        if time_str.lower() == "today":
-            # DST safe
-            dt = timezone.now().astimezone(local_tz).replace(tzinfo=None)
-            dt = dt.replace(hour=0, minute=0, second=0, microsecond=0)
-            dt = local_tz.localize(dt)
 
-            is_exact = False
-        if time_str.lower() == "now":
-            dt = timezone.now()
-            is_exact = True
-    if dt and not is_exact:
-        # With start timestamps, we treat dates as beginning
-        # at midnight the same day. End timestamps are taken to
-        # mean midnight on the following day.
-        if not is_start:
-            # DST safe
-            naive_datetime = dt.astimezone(local_tz).replace(tzinfo=None)
-            naive_datetime += timedelta(days=1)
-            dt = local_tz.localize(naive_datetime)
-    elif not dt:
-        try:
-            # Handle all other times through dateutil.
-            dt = dateutil_parse(time_str)
-            # Dateutil may allow dates with too large negative tzoffset, crashing psycopg later
-            if dt.tzinfo and abs(dt.tzinfo.utcoffset(dt)) > timedelta(hours=15):
-                raise ParseError(f"Time zone given in timestamp {dt} out of bounds.")
-            # Datetimes without timezone are assumed UTC by drf
-        except (TypeError, ValueError, OverflowError):
-            raise ParseError("time in invalid format (try ISO 8601 or yyyy-mm-dd)")
-    # if not dt.tzinfo:
-    #     dt = dt.astimezone(pytz.timezone('UTC'))
-    return dt, is_exact
+    if time_str.lower() == "today":
+        return start_of_day(timezone.now()), True
+    if time_str.lower() == "now":
+        return timezone.now(), False
+
+    try:
+        return local_tz.localize(datetime.strptime(time_str, "%Y-%m-%d")), True
+    except ValueError:
+        pass
+
+    try:
+        # Handle all other times through dateutil.
+        dt = dateutil_parse(time_str)
+        # Dateutil may allow dates with too large negative tzoffset, crashing psycopg later
+        if dt.tzinfo and abs(dt.tzinfo.utcoffset(dt)) > timedelta(hours=15):
+            raise ParseError(f"Time zone given in timestamp {dt} out of bounds.")
+
+        # Based on a previous comment, the original intended behaviour is to
+        # use UTC if no timezone is given.
+        if is_naive_datetime(dt):
+            dt = default_tz.localize(dt)
+
+        return dt, False
+    except (TypeError, ValueError, OverflowError):
+        raise ParseError("time in invalid format (try ISO 8601 or yyyy-mm-dd)")
+
+
+def parse_end_time(time_str: str, default_tz=pytz.utc) -> (datetime, bool):
+    """
+    Parse a time string and if it turns out to be a date, convert it to
+    end of day (= start of next day)
+    :param time_str:
+    :return:
+    """
+    dt, is_date = parse_time(time_str, default_tz=default_tz)
+    if is_date:
+        dt = start_of_next_day(dt)
+    return dt, is_date
+
+
+def is_naive_datetime(dt: datetime) -> bool:
+    """
+    Check if the given datetime is naive (i.e. has no timezone information).
+    :param dt: a datetime object
+    :return: True if the datetime is naive, False otherwise
+    """
+    return dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None
+
+
+def start_of_day(dt: datetime) -> datetime:
+    """
+    Return the start of the day for the given datetime.
+    :param dt: a datetime object
+    :return: the earliest aware datetime of the same day (at 00:00:00)
+    """
+    tz = pytz.timezone(settings.TIME_ZONE)
+    return tz.localize(
+        dt.astimezone(tz).replace(
+            hour=0, minute=0, second=0, microsecond=0, tzinfo=None
+        )
+    )
+
+
+def start_of_next_day(dt: datetime) -> datetime:
+    """
+    Return the start of the day after the given datetime.
+    :param dt: a datetime object
+    :return: the earliest datetime of the next day (at 00:00:00)
+    """
+    tz = pytz.timezone(settings.TIME_ZONE)
+    return start_of_day(dt.astimezone(tz).replace(tzinfo=None) + timedelta(days=1))
+
+
+def start_of_previous_day(dt: datetime) -> datetime:
+    """
+    Return the start of the day before the given datetime
+    :param dt: a datetime object
+    :return: the earliest aware datetime of the previous day (at 00:00:00)
+    """
+    tz = pytz.timezone(settings.TIME_ZONE)
+    return start_of_day(dt.astimezone(tz).replace(tzinfo=None) - timedelta(days=1))
 
 
 def get_fixed_lang_codes():
