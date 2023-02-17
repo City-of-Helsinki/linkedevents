@@ -1,18 +1,12 @@
 import uuid
 from copy import deepcopy
-from datetime import datetime, timedelta
 
-import environ
-import pytest
 from dateutil.parser import parse
 from django.core import mail
 
-from events.models import Event, Language
 from events.tests.conftest import *  # noqa
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import Registration, SignUp
-
-env = environ.Env()
 
 
 @pytest.mark.django_db
@@ -821,14 +815,14 @@ def test_event_with_open_registrations_and_places_at_the_event_or_waiting_list(
 
 @pytest.mark.django_db
 def test_seat_reservation_code_request_enough_seats_no_waitlist(
-    api_client, event, registration
+    api_client, event, registration, settings
 ):
     registration_url = reverse("registration-list")
     payload = {"seats": registration.maximum_attendee_capacity - 2, "waitlist": False}
     response = api_client.post(
         f"{registration_url}{registration.id}/reserve_seats/", payload, format="json"
     )
-    duration = int(env("SEAT_RESERVATION_DURATION")) + payload["seats"]
+    duration = settings.SEAT_RESERVATION_DURATION + payload["seats"]
     assert response.status_code == 201
     assert uuid.UUID(response.data["code"])
     assert response.data["seats"] == registration.maximum_attendee_capacity - 2

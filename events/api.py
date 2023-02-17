@@ -15,7 +15,6 @@ from uuid import UUID
 import bleach
 import django.forms
 import django_filters
-import environ
 import pytz
 import regex
 from django.conf import settings
@@ -103,8 +102,6 @@ from events.translation import EventTranslationOptions, PlaceTranslationOptions
 from helevents.api import UserSerializer
 from helevents.models import User
 from registrations.models import Registration, SeatReservationCode, SignUp
-
-env = environ.Env()
 
 
 def get_view_name(view):
@@ -1170,7 +1167,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
 
 def code_validity_duration(seats):
-    return int(env("SEAT_RESERVATION_DURATION")) + seats
+    return settings.SEAT_RESERVATION_DURATION + seats
 
 
 class SeatReservationCodeSerializer(serializers.ModelSerializer):
@@ -1233,7 +1230,7 @@ class RegistrationViewSet(
         seats_capacity = registration.maximum_attendee_capacity + waitlist_seats
         seats_reserved = registration.reservations.filter(
             timestamp__gte=datetime.now()
-            - timedelta(minutes=int(env("SEAT_RESERVATION_DURATION")))
+            - timedelta(minutes=settings.SEAT_RESERVATION_DURATION)
         ).aggregate(seats_sum=(Sum("seats", output_field=models.FloatField())))[
             "seats_sum"
         ]
