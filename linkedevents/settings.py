@@ -61,6 +61,7 @@ env = environ.Env(
     MEDIA_ROOT=(environ.Path(), root("media")),
     MEDIA_URL=(str, "/media/"),
     MEMCACHED_URL=(str, "127.0.0.1:11211"),
+    SEAT_RESERVATION_DURATION=(int, 15),
     SECRET_KEY=(str, ""),
     SECURE_PROXY_SSL_HEADER=(tuple, None),
     SENTRY_DSN=(str, ""),
@@ -358,6 +359,9 @@ CITYSDK_API_SETTINGS = {
 
 # Used in Lippupiste importer
 LIPPUPISTE_EVENT_API_URL = env("LIPPUPISTE_EVENT_API_URL")
+
+# Seat reservation duration in minutes
+SEAT_RESERVATION_DURATION = env("SEAT_RESERVATION_DURATION")
 
 
 def haystack_connection_for_lang(language_code):
