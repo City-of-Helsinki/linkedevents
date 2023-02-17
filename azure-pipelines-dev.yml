@@ -37,12 +37,6 @@ resources:
       type: git
       # Azure DevOps project/repository
       name: linkedevents/linkedevents-pipelines
-  pipelines:
-    # Pipeline trigger
-    - pipeline: build
-      source: City-of-Helsinki.linkedevents (1)
-      # Run deploy-dev pipeline when any run of build pipeline completes
-      trigger: true
 
 extends:
   # Filename in Azure DevOps Repository (note possible -ui or -api)
