@@ -9,7 +9,7 @@ from docx import Document
 from rest_framework import renderers
 from rest_framework.utils.serializer_helpers import ReturnDict
 
-from events.utils import parse_time
+from events import utils
 
 
 def get_any_language(dictionary, default="fi", language_codes=None):
@@ -209,12 +209,12 @@ class DOCXRenderer(renderers.BaseRenderer):
         if start is None:
             query_start_date = event_parser.earliest_date
         else:
-            query_start_date = parse_time(start, True)[0]
+            query_start_date = utils.parse_time(start)[0]
 
         if end is None:
             query_end_date = event_parser.latest_date
         else:
-            query_end_date = parse_time(end, False)[0]
+            query_end_date = utils.parse_end_time(end)[0]
 
         total_date_range = DateRange(query_start_date, query_end_date)
 

@@ -1,5 +1,5 @@
 import debug_toolbar
-import environ
+from django.conf import settings
 from django.conf.urls import include, url
 from django.contrib import admin
 from django.urls import reverse
@@ -8,7 +8,6 @@ from django.views.generic import RedirectView
 from .api import LinkedEventsAPIRouter
 
 api_router = LinkedEventsAPIRouter()
-env = environ.Env(DEBUG=(bool, False))
 
 
 class RedirectToAPIRootView(RedirectView):
@@ -21,9 +20,8 @@ class RedirectToAPIRootView(RedirectView):
 urlpatterns = [
     url(r"^(?P<version>(v0.1|v1))/", include(api_router.urls)),
     url(r"^admin/", admin.site.urls),
-    url(r"^accounts/", include("allauth.urls")),
     url(r"^$", RedirectToAPIRootView.as_view()),
 ]
 
-if env("DEBUG"):
+if settings.DEBUG:
     urlpatterns += [url(r"^__debug__/", include(debug_toolbar.urls))]
