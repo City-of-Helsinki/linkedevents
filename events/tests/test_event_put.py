@@ -9,11 +9,13 @@ from django.core.management import call_command
 from django.utils import timezone
 
 from events.auth import ApiKeyUser
-from events.models import Event, Keyword, Place
+from events.models import Event, Keyword, Place, Image
 from events.tests.test_event_post import create_with_post
 from events.tests.utils import assert_event_data_is_equal
 
 from .utils import versioned_reverse as reverse
+from ..api import ImageSerializer
+
 
 # === util methods ===
 
@@ -972,7 +974,7 @@ def test_response_contains_replacing_event(api_client, event, minimal_event_dict
     api_client.force_authenticate(user)
 
     response = create_with_post(api_client, minimal_event_dict)
-
+    event_url = response.data.pop("@id")
     pk = response.data["id"]
     minimal_event_dict["replaced_by"] = event.pk
     response2 = api_client.put(
@@ -980,3 +982,40 @@ def test_response_contains_replacing_event(api_client, event, minimal_event_dict
     )
     assert response2.status_code == 200
     assert response2.data["id"] == event.pk
+
+
+@pytest.mark.django_db
+def test_update_draft_with_image_from_different_datasource(
+    api_client,
+    organization,
+    data_source,
+    organization2,
+    other_data_source,
+    minimal_event_dict,
+    user,
+):
+    api_client.force_authenticate(user=user)
+
+    minimal_event_dict.pop("location")
+    minimal_event_dict.pop("keywords")
+    minimal_event_dict["publication_status"] = "draft"
+    response = create_with_post(api_client, minimal_event_dict)
+    assert_event_data_is_equal(minimal_event_dict, response.data)
+
+    response_data = response.data
+    event_id = response_data.pop("@id")
+    image = Image.objects.create(
+        name="image",
+        data_source=other_data_source,
+        publisher=organization,
+        url="http://fake.url/image/",
+    )
+
+    image_url = reverse(ImageSerializer.view_name, kwargs={"pk": image.id})
+
+    response_data["images"] = [{"@id": image_url}]
+
+    response = update_with_put(api_client, event_id, response_data)
+
+    # TODO this fails because image data source is not editable
+    assert response.status_code == 200
