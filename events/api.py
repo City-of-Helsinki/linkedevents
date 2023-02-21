@@ -757,7 +757,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
             raise serializers.ValidationError(
                 {"name": _("The name must be specified.")}
             )
-        super().validate(data)
+        data = super().validate(data)
         return data
 
 
