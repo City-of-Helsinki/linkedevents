@@ -87,7 +87,6 @@ from events.models import (
     Language,
     License,
     Offer,
-    OpeningHoursSpecification,
     Place,
     PUBLICATION_STATUSES,
     PublicationStatus,
@@ -1482,11 +1481,6 @@ class PlaceListViewSet(
 
 register_view(PlaceRetrieveViewSet, "place")
 register_view(PlaceListViewSet, "place")
-
-
-class OpeningHoursSpecificationSerializer(LinkedEventsSerializer):
-    class Meta:
-        model = OpeningHoursSpecification
 
 
 class LanguageSerializer(LinkedEventsSerializer):
