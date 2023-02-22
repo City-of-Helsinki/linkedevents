@@ -305,6 +305,8 @@ class TestEventAPI(APITestCase):
             self.assertIn("last_modified_by", event)
 
     def test_bulk_destroy(self):
+        # Without organization this will fail already in permission check
+        self.org_1.admin_users.add(self.user)
         url = reverse("event-list")
         self.client.force_authenticate(self.user)
         response = self.client.delete(url)
@@ -840,6 +842,10 @@ class TestEventAPI(APITestCase):
 
         # api key should have no rights to original data source
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(
+            "Object data source does not match user data source",
+            str(response.data["detail"]),
+        )
 
         self.event_1.refresh_from_db()
         self.assertEqual(self.event_1.data_source, self.system_data_source)

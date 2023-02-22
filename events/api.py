@@ -23,7 +23,7 @@ from django.contrib.gis.measure import D
 from django.contrib.postgres.search import SearchQuery, TrigramSimilarity
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count, F, Prefetch, Q, QuerySet
+from django.db.models import Count, F, Prefetch, Q
 from django.db.models.functions import Greatest
 from django.db.transaction import atomic
 from django.db.utils import IntegrityError
@@ -31,6 +31,7 @@ from django.http import Http404, HttpResponsePermanentRedirect
 from django.urls import NoReverseMatch
 from django.utils import timezone, translation
 from django.utils.encoding import force_text
+from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization, OrganizationClass
 from haystack.query import AutoQuery
@@ -59,7 +60,6 @@ from rest_framework.exceptions import APIException, ParseError
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.fields import DateTimeField
 from rest_framework.filters import BaseFilterBackend
-from rest_framework.permissions import SAFE_METHODS
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.settings import api_settings
@@ -71,7 +71,7 @@ from rest_framework_bulk import (
 
 from events import utils
 from events.api_pagination import LargeResultsSetPagination
-from events.auth import ApiKeyAuth, ApiKeyUser
+from events.auth import ApiKeyAuth
 from events.custom_elasticsearch_search_backend import (
     CustomEsSearchQuerySet as SearchQuerySet,
 )
@@ -92,7 +92,11 @@ from events.models import (
     PublicationStatus,
     Video,
 )
-from events.permissions import GuestPost
+from events.permissions import (
+    DataSourceOrganizationEditPermission,
+    DataSourceResourceEditPermission,
+    GuestPost,
+)
 from events.renderers import DOCXRenderer
 from events.translation import (
     EventTranslationOptions,
@@ -153,6 +157,48 @@ def get_authenticated_data_source_and_publisher(request):
         if publisher and publisher.replaced_by:
             publisher = publisher.replaced_by
     return data_source, publisher
+
+
+class UserDataSourceAndOrganizationMixin:
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        (
+            context["data_source"],
+            context["publisher"],
+        ) = self.user_data_source_and_organization
+        return context
+
+    @cached_property
+    def user_data_source_and_organization(self):
+        request = self.request
+        # api_key takes precedence over user
+        if isinstance(request.auth, ApiKeyAuth):
+            data_source = request.auth.get_authenticated_data_source()
+            publisher = data_source.owner
+            if not publisher:
+                raise PermissionDenied(
+                    _("Data source doesn't belong to any organization")
+                )
+        else:
+            # objects *created* by api are marked coming from the system data source unless api_key is provided
+            # we must optionally create the system data source here, as the settings may have changed at any time
+            system_data_source_defaults = {
+                "user_editable_resources": True,
+                "user_editable_organizations": True,
+            }
+            data_source, created = DataSource.objects.get_or_create(
+                id=settings.SYSTEM_DATA_SOURCE_ID, defaults=system_data_source_defaults
+            )
+            # user organization is used unless api_key is provided
+            user = request.user
+            if isinstance(user, User):
+                publisher = user.get_default_organization()
+            else:
+                publisher = None
+            # no sense in doing the replacement check later, the authenticated publisher must be current to begin with
+            if publisher and publisher.replaced_by:
+                publisher = publisher.replaced_by
+        return data_source, publisher
 
 
 def get_publisher_query(publisher):
@@ -552,17 +598,13 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         if skip_fields is None:
             skip_fields = set()
 
-        if "request" in context:  # TODO check usage, unconventional
+        if "request" in context:
             self.request = context["request"]
 
-            self.method = self.request.method  # TODO check usage, unconventional
-        else:
-            self.method = None
-
         # for post and put methods as well as field visibility, user information is needed
-        if "user" in context:  # TODO check usage, unconventional
+        if "user" in context:
             self.user = context["user"]
-        if "admin_tree_ids" in context:  # TODO check usge, unconventional
+        if "admin_tree_ids" in context:
             self.admin_tree_ids = context["admin_tree_ids"]
 
         # by default, admin fields are skipped
@@ -583,31 +625,6 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         self.skip_fields |= context.get("skip_fields", set())
 
         self.hide_ld_context = hide_ld_context
-
-        # TODO this is not the right place for this
-        if self.method is None or self.method in permissions.SAFE_METHODS:
-            return
-        # post and put methods need further authentication
-        self.data_source, self.publisher = get_authenticated_data_source_and_publisher(
-            self.request
-        )
-        if not self.publisher:
-            raise PermissionDenied(_("User doesn't belong to any organization"))
-        # in case of bulk operations, the instance may be a huge queryset, already filtered by permission
-        # therefore, we only do permission checks for single instances
-        instance = self.instance
-        if not isinstance(instance, QuerySet) and instance:
-            # check permissions *before* validation
-            if not instance.can_be_edited_by(self.user):
-                raise PermissionDenied()
-            if isinstance(self.user, ApiKeyUser):
-                # allow updating only if the api key matches instance data source
-                if instance.data_source != self.data_source:
-                    raise PermissionDenied()
-            else:
-                # without api key, the user will have to be admin
-                if not instance.is_user_editable_resources():
-                    raise PermissionDenied()
 
     def to_internal_value(self, data):
         for field in self.system_generated_fields:
@@ -672,24 +689,27 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
 
     def validate_data_source(self, value):
         # a single POST always comes from a single source
-        if value and self.method == "POST" and value != self.data_source:
-            raise DRFPermissionDenied(
-                {
-                    "data_source": _(
-                        "Setting data_source to %(given)s "
-                        + " is not allowed for this user. The data_source"
-                        " must be left blank or set to %(required)s "
-                    )
-                    % {"given": str(value), "required": self.data_source}
-                }
-            )
+        data_source = self.context["data_source"]
+        if value and self.context["request"].method == "POST":
+            if value != data_source:
+                raise DRFPermissionDenied(
+                    {
+                        "data_source": _(
+                            "Setting data_source to %(given)s "
+                            + " is not allowed for this user. The data_source"
+                            " must be left blank or set to %(required)s "
+                        )
+                        % {"given": str(value), "required": data_source}
+                    }
+                )
         return value
 
     def validate_id(self, value):
         # a single POST always comes from a single source
-        if value and self.method == "POST":
+        data_source = self.context["data_source"]
+        if value and self.context["request"].method == "POST":
             id_data_source_prefix = value.split(":", 1)[0]
-            if id_data_source_prefix != self.data_source.id:
+            if id_data_source_prefix != data_source.id:
                 # if we are creating, there's no excuse to have any other data source than the request gave
                 raise serializers.ValidationError(
                     {
@@ -698,14 +718,14 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                             + " is not allowed for your organization. The id"
                             " must be left blank or set to %(data_source)s:desired_id"
                         )
-                        % {"given": str(value), "data_source": self.data_source}
+                        % {"given": str(value), "data_source": data_source}
                     }
                 )
         return value
 
     def validate_publisher(self, value):
         # a single POST always comes from a single source
-        if value and self.method == "POST":
+        if value and self.context["request"].method == "POST":
             if value not in (
                 set(self.user.get_admin_organizations_and_descendants())
                 | set(
@@ -722,6 +742,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                     )
                 )
             ):
+                publisher = self.context["publisher"]
                 raise serializers.ValidationError(
                     {
                         "publisher": _(
@@ -733,9 +754,9 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                         % {
                             "given": str(value),
                             "required": str(
-                                self.publisher
-                                if not self.publisher.replaced_by
-                                else self.publisher.replaced_by
+                                publisher
+                                if not publisher.replaced_by
+                                else publisher.replaced_by
                             ),
                         }
                     }
@@ -809,19 +830,16 @@ class JSONAPIViewMixin(object):
 class EditableLinkedEventsObjectSerializer(LinkedEventsSerializer):
     def create(self, validated_data):
         if "data_source" not in validated_data:
-            validated_data["data_source"] = self.data_source
+            validated_data["data_source"] = self.context["data_source"]
         # data source has already been validated
         if "publisher" not in validated_data:
-            validated_data["publisher"] = self.publisher
+            validated_data["publisher"] = self.context["publisher"]
         # publisher has already been validated
-        validated_data["created_by"] = self.user
-        validated_data["last_modified_by"] = self.user
 
-        if (
-            not isinstance(self.user, ApiKeyUser)
-            and not validated_data["data_source"].user_editable_resources
-        ):
-            raise PermissionDenied()
+        request = self.context["request"]
+        user = request.user
+        validated_data["created_by"] = user
+        validated_data["last_modified_by"] = user
 
         try:
             instance = super().create(validated_data)
@@ -883,13 +901,14 @@ class KeywordSerializer(EditableLinkedEventsObjectSerializer):
     def validate_id(self, value):
         if value:
             id_data_source_prefix = value.split(":", 1)[0]
-            if id_data_source_prefix != self.data_source.id:
+            data_source = self.context["data_source"]
+            if id_data_source_prefix != data_source.id:
                 # the object might be from another data source by the same organization, and we are only editing it
                 if (
                     self.instance
-                    and self.publisher.owned_systems.filter(
-                        id=id_data_source_prefix
-                    ).exists()
+                    and self.context["publisher"]
+                    .owned_systems.filter(id=id_data_source_prefix)
+                    .exists()
                 ):
                     return value
                 raise serializers.ValidationError(
@@ -899,7 +918,7 @@ class KeywordSerializer(EditableLinkedEventsObjectSerializer):
                             + " is not allowed for your organization. The id"
                             " must be left blank or set to %(data_source)s:desired_id"
                         )
-                        % {"given": str(value), "data_source": self.data_source}
+                        % {"given": str(value), "data_source": data_source}
                     }
                 )
         return value
@@ -907,7 +926,7 @@ class KeywordSerializer(EditableLinkedEventsObjectSerializer):
     def create(self, validated_data):
         # if id was not provided, we generate it upon creation:
         if "id" not in validated_data:
-            validated_data["id"] = generate_id(self.data_source)
+            validated_data["id"] = generate_id(self.context["data_source"])
         return super().create(validated_data)
 
     class Meta:
@@ -915,7 +934,8 @@ class KeywordSerializer(EditableLinkedEventsObjectSerializer):
         exclude = ("n_events_changed",)
 
 
-class KeywordRetrieveViewSet(
+class KeywordViewSet(
+    UserDataSourceAndOrganizationMixin,
     JSONAPIViewMixin,
     mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
@@ -925,34 +945,10 @@ class KeywordRetrieveViewSet(
     queryset = Keyword.objects.all()
     queryset = queryset.select_related("publisher")
     serializer_class = KeywordSerializer
-
-    def update(self, request, *args, **kwargs):
-        (
-            self.data_source,
-            self.organization,
-        ) = get_authenticated_data_source_and_publisher(self.request)
-        return super().update(request, *args, **kwargs)
+    permission_classes = (DataSourceResourceEditPermission,)
 
     def destroy(self, request, *args, **kwargs):
-        (
-            self.data_source,
-            self.organization,
-        ) = get_authenticated_data_source_and_publisher(self.request)
         instance = self.get_object()
-        user = request.user
-
-        if not instance.can_be_edited_by(user):
-            raise PermissionDenied()
-
-        if isinstance(user, ApiKeyUser):
-            # allow deleting only if the api key matches instance data source
-            if instance.data_source != self.data_source:
-                raise PermissionDenied()
-        else:
-            # without api key, the user will have to be admin
-            if not instance.is_user_editable_resources():
-                raise PermissionDenied()
-
         instance.deprecate()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -980,6 +976,7 @@ class KeywordDeprecatedException(APIException):
 
 
 class KeywordListViewSet(
+    UserDataSourceAndOrganizationMixin,
     JSONAPIViewMixin,
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
@@ -991,6 +988,7 @@ class KeywordListViewSet(
     filter_backends = (filters.OrderingFilter,)
     ordering_fields = ("n_events", "id", "name", "data_source")
     ordering = ("-data_source", "-n_events", "name")
+    permission_classes = (DataSourceResourceEditPermission,)
 
     def get_queryset(self):
         """
@@ -1048,7 +1046,7 @@ class KeywordListViewSet(
         return queryset
 
 
-register_view(KeywordRetrieveViewSet, "keyword")
+register_view(KeywordViewSet, "keyword")
 register_view(KeywordListViewSet, "keyword")
 
 
@@ -1070,10 +1068,6 @@ class KeywordSetSerializer(LinkedEventsSerializer):
         default_timezone=pytz.UTC, required=False, allow_null=True
     )
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.data_source = self.context["request"].data.get("data_source")
-
     def to_internal_value(self, data):
         # extracting ids from the '@id':'http://testserver/v1/keyword/system:tunnettu_avainsana/' type record
         keyword_ids = [
@@ -1088,14 +1082,13 @@ class KeywordSetSerializer(LinkedEventsSerializer):
         fields = "__all__"
 
 
-class KeywordSetViewSet(JSONAPIViewMixin, viewsets.ModelViewSet):
+class KeywordSetViewSet(
+    UserDataSourceAndOrganizationMixin, JSONAPIViewMixin, viewsets.ModelViewSet
+):
     queryset = KeywordSet.objects.all()
     serializer_class = KeywordSetSerializer
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.data_source = None
-        self.organization = None
+    permission_classes = (DataSourceResourceEditPermission,)
+    permit_regular_user_edit = True
 
     def filter_queryset(self, queryset):
         # orderd by name, id, usage
@@ -1130,11 +1123,7 @@ class KeywordSetViewSet(JSONAPIViewMixin, viewsets.ModelViewSet):
         return qset
 
     def create(self, request, *args, **kwargs):
-        if isinstance(request.user, AnonymousUser):
-            raise DRFPermissionDenied(
-                "Only admin users are allowed to create KeywordSets."
-            )
-        data_source = request.user.get_default_organization().data_source
+        data_source, _ = self.user_data_source_and_organization
         request.data["data_source"] = data_source
         id_ending = request.data.pop("id_second_part", None)
         if id_ending:
@@ -1150,34 +1139,20 @@ class KeywordSetViewSet(JSONAPIViewMixin, viewsets.ModelViewSet):
         return super().create(request, *args, **kwargs)
 
     def update(self, request, *args, **kwargs):
-        if (
-            isinstance(request.user, AnonymousUser)
-            or request.user.get_default_organization() is None
-        ):
-            raise DRFPermissionDenied(
-                "Only admin users are allowed to update KeywordSets."
-            )
-        data_source = request.user.get_default_organization().data_source
+        data_source, _ = self.user_data_source_and_organization
         request.data["data_source"] = data_source
         return super().update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
-        if (
-            isinstance(request.user, AnonymousUser)
-            or request.user.get_default_organization() is None
-        ):
-            raise DRFPermissionDenied(
-                "Only admin users are allowed to delete KeywordSets."
-            )
-        request_data_source = request.user.get_default_organization().data_source
+        user_data_source, _ = self.user_data_source_and_organization
         original_keyword_set = KeywordSet.objects.filter(id=kwargs["pk"])
         if original_keyword_set:
             original_data_source = original_keyword_set[0].data_source
         else:
             raise DRFPermissionDenied(f'KeywordSet {kwargs["pk"]} not found.')
-        if request_data_source != original_data_source:
+        if user_data_source != original_data_source:
             raise DRFPermissionDenied(
-                f"KeywordSet belongs to {original_data_source} and the user to {request_data_source}."
+                f"KeywordSet belongs to {original_data_source} and the user to {user_data_source}."
             )  # noqa E501
         return super().destroy(request, *args, **kwargs)
 
@@ -1296,7 +1271,7 @@ class PlaceSerializer(EditableLinkedEventsObjectSerializer, GeoModelSerializer):
     def create(self, validated_data):
         # if id was not provided, we generate it upon creation:
         if "id" not in validated_data:
-            validated_data["id"] = generate_id(self.data_source)
+            validated_data["id"] = generate_id(self.context["data_source"])
         instance = super().create(validated_data)
         if point := self._handle_position():
             instance.position = point
@@ -1332,6 +1307,7 @@ class PlaceFilter(django_filters.rest_framework.FilterSet):
 
 
 class PlaceRetrieveViewSet(
+    UserDataSourceAndOrganizationMixin,
     JSONAPIViewMixin,
     GeoModelAPIView,
     mixins.RetrieveModelMixin,
@@ -1342,39 +1318,15 @@ class PlaceRetrieveViewSet(
     queryset = Place.objects.all()
     queryset = queryset.select_related("publisher")
     serializer_class = PlaceSerializer
+    permission_classes = (DataSourceResourceEditPermission,)
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context.setdefault("skip_fields", set()).add("origin_id")
         return context
 
-    def update(self, request, *args, **kwargs):
-        (
-            self.data_source,
-            self.organization,
-        ) = get_authenticated_data_source_and_publisher(self.request)
-        return super().update(request, *args, **kwargs)
-
     def destroy(self, request, *args, **kwargs):
-        (
-            self.data_source,
-            self.organization,
-        ) = get_authenticated_data_source_and_publisher(self.request)
         instance = self.get_object()
-        user = request.user
-
-        if not instance.can_be_edited_by(user):
-            raise PermissionDenied()
-
-        if isinstance(user, ApiKeyUser):
-            # allow deleting only if the api key matches instance data source
-            if instance.data_source != self.data_source:
-                raise PermissionDenied()
-        else:
-            # without api key, the user will have to be admin
-            if not instance.is_user_editable_resources():
-                raise PermissionDenied()
-
         instance.soft_delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -1402,6 +1354,7 @@ class PlaceDeletedException(APIException):
 
 
 class PlaceListViewSet(
+    UserDataSourceAndOrganizationMixin,
     GeoModelAPIView,
     JSONAPIViewMixin,
     mixins.ListModelMixin,
@@ -1428,6 +1381,7 @@ class PlaceListViewSet(
         "-data_source",
         "name",
     )  # we want to display tprek before osoite etc.
+    permission_classes = (DataSourceResourceEditPermission,)
 
     def get_queryset(self):
         """
@@ -1733,6 +1687,7 @@ class OrganizationUpdateSerializer(OrganizationListSerializer):
 
 
 class OrganizationViewSet(
+    UserDataSourceAndOrganizationMixin,
     JSONAPIViewMixin,
     mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
@@ -1742,6 +1697,7 @@ class OrganizationViewSet(
     viewsets.GenericViewSet,
 ):
     queryset = Organization.objects.all()
+    permission_classes = (DataSourceOrganizationEditPermission,)
 
     def get_serializer_class(self, *args, **kwargs):
         if self.action == "retrieve":
@@ -1786,19 +1742,6 @@ class OrganizationViewSet(
             except Organization.DoesNotExist:
                 queryset = queryset.none()
         return queryset
-
-    def destroy(self, request, *args, **kwargs):
-        qset = Organization.objects.filter(id=kwargs["pk"])
-        if qset.count == 0:
-            raise ParseError(f"Organization {kwargs['pk']} not found.")
-        else:
-            instance = qset[0]
-        if organization_can_be_edited_by(instance, request.user):
-            return super().destroy(request, *args, **kwargs)
-        else:
-            raise DRFPermissionDenied(
-                f"User {request.user} has no right to delete {instance}"
-            )
 
 
 register_view(OrganizationViewSet, "organization")
@@ -1911,7 +1854,9 @@ class ImageSerializer(EditableLinkedEventsObjectSerializer):
         return data
 
 
-class ImageViewSet(JSONAPIViewMixin, viewsets.ModelViewSet):
+class ImageViewSet(
+    UserDataSourceAndOrganizationMixin, JSONAPIViewMixin, viewsets.ModelViewSet
+):
     queryset = Image.objects.all().select_related(
         "publisher", "data_source", "created_by", "last_modified_by", "license"
     )
@@ -1920,6 +1865,7 @@ class ImageViewSet(JSONAPIViewMixin, viewsets.ModelViewSet):
     filter_backends = (filters.OrderingFilter,)
     ordering_fields = ("last_modified_time", "id", "name")
     ordering = ("-last_modified_time",)
+    permission_classes = (DataSourceResourceEditPermission,)
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -1981,9 +1927,7 @@ class VideoSerializer(serializers.ModelSerializer):
         exclude = ["id", "event"]
 
 
-class EventSerializer(
-    BulkSerializerMixin, EditableLinkedEventsObjectSerializer, GeoModelAPIView
-):
+class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer):
     id = serializers.CharField(required=False)
     location = JSONLDRelatedField(
         serializer=PlaceSerializer,
@@ -2113,6 +2057,7 @@ class EventSerializer(
         return data
 
     def validate(self, data):
+        context = self.context
         # clean all text fields, only description may contain any html
         data = clean_text_fields(data, allowed_html_fields=["description"])
 
@@ -2191,9 +2136,10 @@ class EventSerializer(
                 data["has_end_time"] = False
                 data["end_time"] = utils.start_of_next_day(data["start_time"])
 
-        past_allowed = self.data_source.create_past_events
+        data_source = context["data_source"]
+        past_allowed = data_source.create_past_events
         if self.instance:
-            past_allowed = self.data_source.edit_past_events
+            past_allowed = data_source.edit_past_events
 
         if (
             data.get("end_time")
@@ -2220,8 +2166,12 @@ class EventSerializer(
 
     def create(self, validated_data):
         # if id was not provided, we generate it upon creation:
+        data_source = self.context["data_source"]
+        request = self.context["request"]
+        user = request.user
+
         if "id" not in validated_data:
-            validated_data["id"] = generate_id(self.data_source)
+            validated_data["id"] = generate_id(data_source)
 
         offers = validated_data.pop("offers", [])
         links = validated_data.pop("external_links", [])
@@ -2229,8 +2179,8 @@ class EventSerializer(
 
         validated_data.update(
             {
-                "created_by": self.user,
-                "last_modified_by": self.user,
+                "created_by": user,
+                "last_modified_by": user,
                 "created_time": Event.now(),  # we must specify creation time as we are setting id
                 "event_status": Event.Status.SCHEDULED,  # mark all newly created events as scheduled
             }
@@ -2252,7 +2202,6 @@ class EventSerializer(
         for video in videos:
             Video.objects.create(event=event, **video)
 
-        request = self.context["request"]
         extensions = get_extensions_from_request(request)
 
         for ext in extensions:
@@ -2266,11 +2215,12 @@ class EventSerializer(
         offers = validated_data.pop("offers", None)
         links = validated_data.pop("external_links", None)
         videos = validated_data.pop("videos", None)
+        data_source = self.context["data_source"]
 
         if (
             instance.end_time
             and instance.end_time < timezone.now()
-            and not self.data_source.edit_past_events
+            and not data_source.edit_past_events
         ):
             raise DRFPermissionDenied(_("Cannot edit a past event."))
 
@@ -3269,22 +3219,26 @@ class EventDeletedException(APIException):
     default_code = "gone"
 
 
-class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelViewSet):
-    queryset = Event.objects.all()
-    # This exclude is, atm, a bit overkill, considering it causes a massive query and no such events exist.
-    # queryset = queryset.exclude(super_event_type=Event.SuperEventType.RECURRING, sub_events=None)
-    # Use select_ and prefetch_related() to reduce the amount of queries
-    queryset = queryset.select_related("location", "publisher")
-    queryset = queryset.prefetch_related(
-        "offers",
-        "keywords",
-        "audience",
-        "images",
-        "images__publisher",
-        "external_links",
-        "sub_events",
-        "in_language",
-        "videos",
+class EventViewSet(
+    UserDataSourceAndOrganizationMixin,
+    JSONAPIViewMixin,
+    BulkModelViewSet,
+    viewsets.ModelViewSet,
+):
+    queryset = (
+        Event.objects.all()
+        .select_related("location", "publisher")
+        .prefetch_related(
+            "offers",
+            "keywords",
+            "audience",
+            "images",
+            "images__publisher",
+            "external_links",
+            "sub_events",
+            "in_language",
+            "videos",
+        )
     )
     serializer_class = EventSerializer
     filter_backends = (
@@ -3302,18 +3256,8 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
     )
     ordering = ("-last_modified_time",)
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES + [DOCXRenderer]
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.data_source = None
-        self.organization = None
-
-    def initial(self, request, *args, **kwargs):
-        super().initial(request, *args, **kwargs)
-        (
-            self.data_source,
-            self.organization,
-        ) = get_authenticated_data_source_and_publisher(request)
+    permission_classes = (DataSourceResourceEditPermission,)
+    permit_regular_user_edit = True
 
     @staticmethod
     def get_serializer_class_for_version(version):
@@ -3327,38 +3271,43 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context.setdefault("skip_fields", set()).update(
-            set(["headline", "secondary_headline"])
+            {"headline", "secondary_headline"}
         )
         context["extensions"] = get_extensions_from_request(self.request)
+        (
+            context["keywords"],
+            context["location"],
+            context["image"],
+            context["sub_events"],
+            bulk,
+        ) = self.cache_related_fields(self.request)
+
         return context
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        context = self.get_serializer_context()
-        # prefetch extra if the user want them included
-        if "include" in context:
-            for included in context["include"]:
-                if included == "location":
-                    queryset = queryset.prefetch_related(
-                        "location__divisions",
-                        "location__divisions__type",
-                        "location__divisions__municipality",
-                    )
-                if included == "keywords":
-                    queryset = queryset.prefetch_related(
-                        "keywords__alt_labels", "audience__alt_labels"
-                    )
-        return apply_select_and_prefetch(
-            queryset=queryset, extensions=get_extensions_from_request(self.request)
-        )
+        if self.action == "list":
+            context = self.get_serializer_context()
+            # prefetch extra if the user want them included
+            if "include" in context:
+                for included in context["include"]:
+                    if included == "location":
+                        queryset = queryset.prefetch_related(
+                            "location__divisions",
+                            "location__divisions__type",
+                            "location__divisions__municipality",
+                        )
+                    if included == "keywords":
+                        queryset = queryset.prefetch_related(
+                            "keywords__alt_labels", "audience__alt_labels"
+                        )
+            return apply_select_and_prefetch(
+                queryset=queryset, extensions=get_extensions_from_request(self.request)
+            )
+        return queryset
 
     def get_object(self):
-        # Overridden to prevent queryset filtering from being applied
-        # outside list views.
-        try:
-            event = Event.objects.get(pk=self.kwargs["pk"])
-        except Event.DoesNotExist:
-            raise Http404("Event does not exist")
+        event = super().get_object()
         if (
             event.publication_status == PublicationStatus.PUBLIC
             or self.request.user.is_authenticated
@@ -3377,7 +3326,7 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
         TODO: convert to use proper filter framework
         """
         original_queryset = super().filter_queryset(queryset)
-        if self.request.method in SAFE_METHODS:
+        if self.action == "list":
             # we cannot use distinct for performance reasons
             public_queryset = original_queryset.filter(
                 publication_status=PublicationStatus.PUBLIC
@@ -3405,20 +3354,20 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
                     queryset = queryset.filter(created_by=self.request.user)
                 else:
                     queryset = queryset.none()
-        else:
-            # prevent changing events user does not have write permissions (for bulk operations)
-            try:
-                original_queryset = Event.objects.filter(
-                    id__in=[i.get("id", "") for i in self.request.data]
-                )
-            except:  # noqa E722
-                raise DRFPermissionDenied("Invalid JSON in request.")
-            queryset = self.request.user.get_editable_events(original_queryset)
-
-        if self.request.method == "GET":
             queryset = _filter_event_queryset(
                 queryset, self.request.query_params, srs=self.srs
             )
+        elif self.request.method not in permissions.SAFE_METHODS:
+            # prevent changing events user does not have write permissions (for bulk operations)
+            if isinstance(self.request.data, list):
+                try:
+                    original_queryset = Event.objects.filter(
+                        id__in=[i.get("id", "") for i in self.request.data]
+                    )
+                except:  # noqa E722
+                    raise DRFPermissionDenied("Invalid JSON in request.")
+
+                queryset = self.request.user.get_editable_events(original_queryset)
 
         return queryset.filter()
 
@@ -3426,51 +3375,18 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
         return False
 
     def update(self, request, *args, **kwargs):
-        pk = kwargs.get("pk", None)
-        queryset = (
-            Event.objects.filter(id=pk)
-            .prefetch_related(
-                "offers",
-                "images__publisher",
-                "external_links",
-                "sub_events",
-                "in_language",
-                "videos",
-            )
-            .select_related("publisher")
-        )
-        context = self.get_serializer_context()
-
-        context["queryset"] = queryset
-        (
-            context["keywords"],
-            context["location"],
-            context["image"],
-            context["sub_events"],
-            bulk,
-        ) = self.cache_related_fields(
-            request
-        )  # noqa E501
-        serializer = EventSerializer(
-            Event.objects.get(id=pk), data=request.data, context=context
-        )
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
-        if not self.request.user.can_edit_event(
-            serializer.instance.publisher, serializer.instance.publication_status
-        ):
+
+        event_data = serializer.validated_data
+
+        _, org = self.user_data_source_and_organization
+        if "publisher" in event_data:
+            org = event_data["publisher"]
+        if not self.request.user.can_edit_event(org, event_data["publication_status"]):
             raise DRFPermissionDenied()
-        if isinstance(serializer.validated_data, list):
-            event_data_list = serializer.validated_data
-        else:
-            event_data_list = [serializer.validated_data]
-        for event_data in event_data_list:
-            org = self.organization
-            if hasattr(event_data, "publisher"):
-                org = event_data["publisher"]
-            if not self.request.user.can_edit_event(
-                org, event_data["publication_status"]
-            ):
-                raise DRFPermissionDenied()
+
         serializer.save()
         response = Response(data=serializer.data)
 
@@ -3481,20 +3397,15 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
             response.data = EventSerializer(replacing_event, context=context).data
         return response
 
-    def perform_update(self, serializer):
+    def perform_bulk_update(self, serializer):
         # Prevent changing an event that user does not have write permissions
         # For bulk update, the editable queryset is filtered in filter_queryset
         # method
 
         # Prevent changing existing events to a state that user doe snot have write permissions
-        if isinstance(serializer.validated_data, list):
-            event_data_list = serializer.validated_data
-        else:
-            event_data_list = [serializer.validated_data]
-
-        for event_data in event_data_list:
-            org = self.organization
-            if hasattr(event_data, "publisher"):
+        for event_data in serializer.validated_data:
+            _, org = self.user_data_source_and_organization
+            if "publisher" in event_data:
                 org = event_data["publisher"]
             if not self.request.user.can_edit_event(
                 org, event_data["publication_status"]
@@ -3512,6 +3423,11 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
 
     @atomic
     def bulk_update(self, request, *args, **kwargs):
+        if not isinstance(request.data, list):
+            raise DRFPermissionDenied(
+                "Invalid JSON in request. Bulk update requires a list"
+            )
+
         context = self.get_serializer_context()
         (
             context["keywords"],
@@ -3532,7 +3448,7 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
         if not serializer.instance:
             raise serializers.ValidationError("Missing matching events to update.")
         serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
+        self.perform_bulk_update(serializer)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @atomic
@@ -3544,9 +3460,7 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
             context["image"],
             context["sub_events"],
             bulk,
-        ) = self.cache_related_fields(
-            request
-        )  # noqa E501
+        ) = self.cache_related_fields(request)
         serializer = EventSerializer(
             data=request.data,
             context=context,
@@ -3613,8 +3527,8 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
             event_data_list = [serializer.validated_data]
 
         for event_data in event_data_list:
-            org = self.organization
-            if hasattr(event_data, "publisher"):
+            _, org = self.user_data_source_and_organization
+            if "publisher" in event_data:
                 org = event_data["publisher"]
             if not self.request.user.can_edit_event(
                 org, event_data["publication_status"]

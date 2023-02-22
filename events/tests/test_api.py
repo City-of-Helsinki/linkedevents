@@ -73,7 +73,21 @@ def test_serializer_validate_publisher():
     user = user_model.objects.create(username="testuser")
     user.admin_organizations.add(org_2)
 
-    le_serializer = EventSerializer()
+    class MockRequest:
+        @property
+        def user(self):
+            return user
+
+        @property
+        def method(self):
+            return "POST"
+
+    le_serializer = EventSerializer(
+        context={
+            "publisher": org_2,
+            "request": MockRequest(),
+        }
+    )
     le_serializer.publisher = org_2
     le_serializer.user = user
     le_serializer.method = "POST"

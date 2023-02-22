@@ -9,13 +9,12 @@ from django.core.management import call_command
 from django.utils import timezone
 
 from events.auth import ApiKeyUser
-from events.models import Event, Keyword, Place, Image
+from events.models import Event, Image, Keyword, Place
 from events.tests.test_event_post import create_with_post
 from events.tests.utils import assert_event_data_is_equal
 
-from .utils import versioned_reverse as reverse
 from ..api import ImageSerializer
-
+from .utils import versioned_reverse as reverse
 
 # === util methods ===
 
@@ -974,7 +973,7 @@ def test_response_contains_replacing_event(api_client, event, minimal_event_dict
     api_client.force_authenticate(user)
 
     response = create_with_post(api_client, minimal_event_dict)
-    event_url = response.data.pop("@id")
+
     pk = response.data["id"]
     minimal_event_dict["replaced_by"] = event.pk
     response2 = api_client.put(
@@ -1017,5 +1016,4 @@ def test_update_draft_with_image_from_different_datasource(
 
     response = update_with_put(api_client, event_id, response_data)
 
-    # TODO this fails because image data source is not editable
     assert response.status_code == 200, str(response.content)
