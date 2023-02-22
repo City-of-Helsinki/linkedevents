@@ -23,8 +23,8 @@ def test_create_id_second_part_specified(user, api_client, keyword, keyword2):
         "usage": "audience",
         "name": {"fi": "AvainSanaRyhmä", "en": "KeywordSet name"},
         "keywords": [
-            {"@id": reverse(KeywordSerializer().view_name, kwargs={"pk": keyword.id})},
-            {"@id": reverse(KeywordSerializer().view_name, kwargs={"pk": keyword2.id})},
+            {"@id": reverse(KeywordSerializer.view_name, kwargs={"pk": keyword.id})},
+            {"@id": reverse(KeywordSerializer.view_name, kwargs={"pk": keyword2.id})},
         ],
     }
 
@@ -126,8 +126,8 @@ def test_put(user, user2, api_client, keyword, keyword2):
         "usage": "audience",
         "name": {"fi": "AvainSanaRyhmä", "en": "KeywordSet name"},
         "keywords": [
-            {"@id": reverse(KeywordSerializer().view_name, kwargs={"pk": keyword.id})},
-            {"@id": reverse(KeywordSerializer().view_name, kwargs={"pk": keyword2.id})},
+            {"@id": reverse(KeywordSerializer.view_name, kwargs={"pk": keyword.id})},
+            {"@id": reverse(KeywordSerializer.view_name, kwargs={"pk": keyword2.id})},
         ],
     }
 
@@ -159,8 +159,8 @@ def test_put_user_from_empty_or_another_org(
         "usage": "audience",
         "name": {"fi": "AvainSanaRyhmä", "en": "KeywordSet name"},
         "keywords": [
-            {"@id": reverse(KeywordSerializer().view_name, kwargs={"pk": keyword.id})},
-            {"@id": reverse(KeywordSerializer().view_name, kwargs={"pk": keyword2.id})},
+            {"@id": reverse(KeywordSerializer.view_name, kwargs={"pk": keyword.id})},
+            {"@id": reverse(KeywordSerializer.view_name, kwargs={"pk": keyword2.id})},
         ],
     }
 
@@ -192,8 +192,8 @@ def test_delete(user, user2, organization2, api_client, keyword, keyword2):
         "usage": "audience",
         "name": {"fi": "AvainSanaRyhmä", "en": "KeywordSet name"},
         "keywords": [
-            {"@id": reverse(KeywordSerializer().view_name, kwargs={"pk": keyword.id})},
-            {"@id": reverse(KeywordSerializer().view_name, kwargs={"pk": keyword2.id})},
+            {"@id": reverse(KeywordSerializer.view_name, kwargs={"pk": keyword.id})},
+            {"@id": reverse(KeywordSerializer.view_name, kwargs={"pk": keyword2.id})},
         ],
     }
 
