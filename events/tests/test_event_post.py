@@ -729,3 +729,34 @@ def test_create_super_event_with_subevents(api_client, minimal_event_dict, user)
         [sub_event.name_fi for sub_event in super_event.sub_events.all()]
     )
     assert sub_event_names == {"sub event 1", "sub event 2"}
+
+
+@pytest.mark.django_db
+def test__create_event_with_image_not_exists(api_client, data_source, organization, minimal_event_dict, user):
+    api_client.force_authenticate(user=user)
+    minimal_event_dict['images'] = [{
+        '@id': 'http://testserver/v1/image/1/',
+        'name': "image",
+        'data_source': data_source.id,
+        'publisher': organization.id,
+        'url': 'https://example.com/image.jpg'
+    }]
+    create_url = reverse("event-list")
+    response = api_client.post(create_url, minimal_event_dict, format="json")
+    assert response.status_code == 400, response.data
+    assert "objektia ei ole" in response.json()["images"][0], response.data
+
+
+@pytest.mark.django_db
+def test__create_event_with_image_without_id(api_client, data_source, organization, minimal_event_dict, user):
+    api_client.force_authenticate(user=user)
+    minimal_event_dict['images'] = [{
+        'name': "image",
+        'data_source': data_source.id,
+        'publisher': organization.id,
+        'url': 'https://example.com/image.jpg'
+    }]
+    create_url = reverse("event-list")
+    response = api_client.post(create_url, minimal_event_dict, format="json")
+    assert response.status_code == 400, response.data
+    assert "@id field missing" in response.json()['images'][0], response.data

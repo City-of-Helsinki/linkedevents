@@ -1018,4 +1018,4 @@ def test_update_draft_with_image_from_different_datasource(
     response = update_with_put(api_client, event_id, response_data)
 
     # TODO this fails because image data source is not editable
-    assert response.status_code == 200
+    assert response.status_code == 200, str(response.content)
