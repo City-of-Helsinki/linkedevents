@@ -83,7 +83,6 @@ def test_serializer_validate_publisher():
 
 class TestOrganizationListSerializer(TestCase):
     def setUp(self):
-        self.serializer = OrganizationListSerializer()
         data_source = DataSource.objects.create(
             id="ds",
             name="data-source",
@@ -111,17 +110,21 @@ class TestOrganizationListSerializer(TestCase):
         self.org_with_regular_users.regular_users.add(user, user2)
 
     def test_get_is_affiliated(self):
-        is_affiliated = self.serializer.get_is_affiliated(self.normal_org)
+        is_affiliated = OrganizationListSerializer.get_is_affiliated(self.normal_org)
         self.assertFalse(is_affiliated)
 
-        is_affiliated = self.serializer.get_is_affiliated(self.affiliated_org)
+        is_affiliated = OrganizationListSerializer.get_is_affiliated(
+            self.affiliated_org
+        )
         self.assertTrue(is_affiliated)
 
     def test_has_regular_users(self):
-        has_regular_users = self.serializer.get_has_regular_users(self.normal_org)
+        has_regular_users = OrganizationListSerializer.get_has_regular_users(
+            self.normal_org
+        )
         self.assertFalse(has_regular_users)
 
-        has_regular_users = self.serializer.get_has_regular_users(
+        has_regular_users = OrganizationListSerializer.get_has_regular_users(
             self.org_with_regular_users
         )
         self.assertTrue(has_regular_users)
@@ -129,7 +132,6 @@ class TestOrganizationListSerializer(TestCase):
 
 class TestOrganizationAPI(APITestCase):
     def setUp(self):
-        self.serializer = OrganizationListSerializer()
         data_source = DataSource.objects.create(
             id="ds",
             name="data-source",

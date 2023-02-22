@@ -1560,10 +1560,12 @@ class OrganizationListSerializer(OrganizationBaseSerializer):
             "is_affiliated",
         )
 
-    def get_is_affiliated(self, obj):
+    @staticmethod
+    def get_is_affiliated(obj):
         return obj.internal_type == Organization.AFFILIATED
 
-    def get_has_regular_users(self, obj):
+    @staticmethod
+    def get_has_regular_users(obj):
         return obj.regular_users.count() > 0
 
 
