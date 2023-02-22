@@ -540,48 +540,51 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
 
     def __init__(
         self,
-        instance=None,
-        context=None,
+        *args,
         skip_fields: Optional[set] = None,
         hide_ld_context=False,
         **kwargs,
     ):
-        super().__init__(instance=instance, context=context, **kwargs)
+        super().__init__(*args, **kwargs)
+        context = self.context
+
         if skip_fields is None:
             skip_fields = set()
-        if context is None:
-            return
-        if "request" in context:
+
+        if "request" in context:  # TODO check usage, unconventional
             self.request = context["request"]
 
+            self.method = self.request.method  # TODO check usage, unconventional
+        else:
+            self.method = None
+
         # for post and put methods as well as field visibility, user information is needed
-        self.method = self.request.method
-        if "user" in context:
+        if "user" in context:  # TODO check usage, unconventional
             self.user = context["user"]
-        if "admin_tree_ids" in context:
+        if "admin_tree_ids" in context:  # TODO check usge, unconventional
             self.admin_tree_ids = context["admin_tree_ids"]
 
         # by default, admin fields are skipped
         self.skip_fields = skip_fields | set(self.only_admin_visible_fields)
 
-        if context is not None:
-            # query allows non-skipped fields to be expanded
-            include_fields = context.get("include", [])
-            for field_name in include_fields:
-                if field_name not in self.fields:
-                    continue
-                field = self.fields[field_name]
-                if isinstance(field, relations.ManyRelatedField):
-                    field = field.child_relation
-                if not isinstance(field, JSONLDRelatedField):
-                    continue
-                field.expanded = True
-            # query allows additional fields to be skipped
-            self.skip_fields |= context.get("skip_fields", set())
+        # query allows non-skipped fields to be expanded
+        include_fields = context.get("include", [])
+        for field_name in include_fields:
+            if field_name not in self.fields:
+                continue
+            field = self.fields[field_name]
+            if isinstance(field, relations.ManyRelatedField):
+                field = field.child_relation
+            if not isinstance(field, JSONLDRelatedField):
+                continue
+            field.expanded = True
+        # query allows additional fields to be skipped
+        self.skip_fields |= context.get("skip_fields", set())
 
         self.hide_ld_context = hide_ld_context
 
-        if self.method in permissions.SAFE_METHODS:
+        # TODO this is not the right place for this
+        if self.method is None or self.method in permissions.SAFE_METHODS:
             return
         # post and put methods need further authentication
         self.data_source, self.publisher = get_authenticated_data_source_and_publisher(
@@ -591,6 +594,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
             raise PermissionDenied(_("User doesn't belong to any organization"))
         # in case of bulk operations, the instance may be a huge queryset, already filtered by permission
         # therefore, we only do permission checks for single instances
+        instance = self.instance
         if not isinstance(instance, QuerySet) and instance:
             # check permissions *before* validation
             if not instance.can_be_edited_by(self.user):
