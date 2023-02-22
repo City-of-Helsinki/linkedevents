@@ -280,6 +280,7 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
     """
 
     invalid_json_error = _("Incorrect JSON. Expected JSON, received %s.")
+    id_missing_error = _("@id field missing")
 
     def __init__(self, *args, **kwargs):
         self.related_serializer = kwargs.pop("serializer", None)
@@ -315,11 +316,12 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
         return {"@id": link}
 
     def to_internal_value(self, value):
-        # TODO: JA If @id is missing, this will complain just about value not being JSON
-        if not isinstance(value, dict) or "@id" not in value:
+        if not isinstance(value, dict):
             raise serializers.ValidationError(
                 self.invalid_json_error % type(value).__name__
             )
+        if "@id" not in value:
+            raise serializers.ValidationError(self.id_missing_error)
 
         url = value["@id"]
         if not url:
