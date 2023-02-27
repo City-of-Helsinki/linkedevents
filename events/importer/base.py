@@ -1,4 +1,3 @@
-import datetime
 import itertools
 import logging
 import operator
@@ -16,6 +15,7 @@ from rest_framework.exceptions import ValidationError
 from events.importer.sync import ModelSyncher
 from events.models import Event, EventLink, Image, Language, Offer, Place
 
+from .. import utils
 from .util import clean_text, separate_scripts
 
 # Per module logger
@@ -354,8 +354,7 @@ class Importer(object):
             # Use midnight in event timezone, or, if given in utc, local timezone
             if info["end_time"].tzinfo == pytz.utc:
                 info["end_time"] = info["start_time"].astimezone(LOCAL_TZ)
-            info["end_time"] = info["end_time"].replace(hour=0, minute=0, second=0)
-            info["end_time"] += datetime.timedelta(days=1)
+            info["end_time"] = utils.start_of_next_day(info["end_time"])
 
         skip_fields = ["id", "location", "publisher", "offers", "keywords", "images"]
         self._update_fields(obj, info, skip_fields)
