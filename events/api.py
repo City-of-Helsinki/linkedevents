@@ -1621,7 +1621,7 @@ class DivisionSerializer(TranslatedModelSerializer):
         fields = ("type", "name", "ocd_id", "municipality")
 
 
-def filter_division(queryset, name, value):
+def filter_division(queryset, name: str, value: Iterable[str]):
     """
     Allows division filtering by both division name and more specific ocd id (identified by colon in the parameter)
 
@@ -1674,9 +1674,11 @@ def filter_division(queryset, name, value):
     if hasattr(queryset, "distinct"):
         # do the join with Q objects (not querysets) in case the queryset has extra fields that would crash qs join
         query = Q(**{name + "__ocd_id__in": ocd_ids}) | Q(
-            **{name + "__name__in": names}
+            **{name + "__translations__name__in": names}
         )
-        return (queryset.filter(query)).distinct()
+        return (
+            queryset.filter(query).prefetch_related(name + "__translations").distinct()
+        )
     else:
         # Haystack SearchQuerySet does not support distinct, so we only support one type of search at a time:
         if ocd_ids:
@@ -4157,7 +4159,9 @@ class SearchViewSet(
         if len(models) == 1 and Event in models:
             division = params.get("division", None)
             if division:
-                queryset = filter_division(queryset, "location__divisions", division)
+                queryset = filter_division(
+                    queryset, "location__divisions", division.split(",")
+                )
 
             start = params.get("start", None)
             if start:
@@ -4180,7 +4184,7 @@ class SearchViewSet(
         if len(models) == 1 and Place in models:
             division = params.get("division", None)
             if division:
-                queryset = filter_division(queryset, "divisions", division)
+                queryset = filter_division(queryset, "divisions", division.split(","))
 
         if len(models) > 0:
             queryset = queryset.models(*list(models))
