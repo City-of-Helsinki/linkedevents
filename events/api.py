@@ -44,6 +44,7 @@ from munigeo.api import (
     GeoModelSerializer,
     srid_to_srs,
 )
+from munigeo.api import TranslatedModelSerializer as ParlerTranslatedModelSerializer
 from munigeo.models import AdministrativeDivision
 from rest_framework import (
     filters,
@@ -1612,13 +1613,13 @@ class KeywordSetViewSet(JSONAPIViewMixin, viewsets.ModelViewSet):
 register_view(KeywordSetViewSet, "keyword_set")
 
 
-class DivisionSerializer(TranslatedModelSerializer):
+class DivisionSerializer(ParlerTranslatedModelSerializer):
     type = serializers.SlugRelatedField(slug_field="type", read_only=True)
     municipality = serializers.SlugRelatedField(slug_field="name", read_only=True)
 
     class Meta:
         model = AdministrativeDivision
-        fields = ("type", "name", "ocd_id", "municipality")
+        fields = ("type", "ocd_id", "municipality", "translations")
 
 
 def filter_division(queryset, name: str, value: Iterable[str]):

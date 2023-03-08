@@ -13,6 +13,7 @@ from munigeo.models import (
     AdministrativeDivisionType,
     Municipality,
 )
+from parler.utils.context import switch_language
 from rest_framework.test import APIClient
 
 from events.api import KeywordSerializer, LanguageSerializer, PlaceSerializer
@@ -240,11 +241,13 @@ def administrative_division_type2():
 @pytest.fixture
 def administrative_division(administrative_division_type, municipality):
     division = AdministrativeDivision.objects.create(
-        name="test division",
         type=administrative_division_type,
         ocd_id="ocd-division/test:1",
         municipality=municipality,
     )
+    with switch_language(division, "en"):
+        division.name = "test division"
+        division.save()
     coords = ((0, 0), (0, 200), (200, 200), (200, 0), (0, 0))
     AdministrativeDivisionGeometry.objects.create(
         division=division, boundary=MultiPolygon([Polygon(coords)])
@@ -255,10 +258,12 @@ def administrative_division(administrative_division_type, municipality):
 @pytest.fixture
 def administrative_division2(administrative_division_type):
     division = AdministrativeDivision.objects.create(
-        name="test division 2",
         type=administrative_division_type,
         ocd_id="ocd-division/test:2",
     )
+    with switch_language(division, "en"):
+        division.name = "test division 2"
+        division.save()
     coords = ((100, 100), (100, 300), (300, 300), (300, 100), (100, 100))
     AdministrativeDivisionGeometry.objects.create(
         division=division, boundary=MultiPolygon([Polygon(coords)])
