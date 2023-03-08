@@ -11,8 +11,6 @@ attrs==22.2.0
     #   -r requirements.in
     #   cattrs
     #   requests-cache
-authlib==1.2.0
-    # via drf-oidc-auth
 beautifulsoup4==4.11.2
     # via -r requirements.in
 bleach==6.0.0
@@ -31,10 +29,7 @@ cffi==1.15.1
 charset-normalizer==3.1.0
     # via requests
 cryptography==39.0.2
-    # via
-    #   authlib
-    #   drf-oidc-auth
-    #   social-auth-core
+    # via social-auth-core
 defusedxml==0.7.1
     # via
     #   python3-openid
@@ -119,9 +114,10 @@ djangorestframework==3.14.0
 djangorestframework-bulk==0.2.1
     # via -r requirements.in
 djangorestframework-gis==1.0
+    # via -r requirements.in
 djangorestframework-jwt==1.11.0
     # via -r requirements.in
-drf-oidc-auth==3.0.0
+drf-oidc-auth==0.10.0
     # via -r requirements.in
 easy-thumbnails==2.8.5
     # via -r requirements.in
@@ -131,6 +127,8 @@ elasticsearch==7.17.9
     # via django-haystack
 exceptiongroup==1.1.0
     # via cattrs
+future==0.18.3
+    # via pyjwkest
 httmock==1.4.0
     # via -r requirements.in
 icalendar==5.0.4
@@ -177,8 +175,14 @@ pyasn1==0.4.8
     #   rsa
 pycparser==2.21
     # via cffi
+pycryptodomex==3.17
+    # via pyjwkest
+pyjwkest==1.4.2
+    # via drf-oidc-auth
 pyjwt==1.7.1
-    # via social-auth-core
+    # via
+    #   djangorestframework-jwt
+    #   social-auth-core
 pyparsing==3.0.9
     # via rdflib
 python-dateutil==2.8.2
@@ -214,8 +218,8 @@ requests==2.28.2
     #   django-helusers
     #   django-munigeo
     #   django-orghierarchy
-    #   drf-oidc-auth
     #   httmock
+    #   pyjwkest
     #   requests-cache
     #   requests-oauthlib
     #   social-auth-core
@@ -236,6 +240,7 @@ six==1.16.0
     #   ecdsa
     #   isodate
     #   langdetect
+    #   pyjwkest
     #   python-dateutil
     #   python-memcached
     #   social-auth-app-django

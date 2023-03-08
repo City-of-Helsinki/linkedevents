@@ -22,7 +22,7 @@ djangorestframework
 djangorestframework-bulk
 djangorestframework-gis
 djangorestframework-jwt
-drf-oidc-auth
+drf-oidc-auth==0.10.0
 easy_thumbnails
 httmock
 icalendar
