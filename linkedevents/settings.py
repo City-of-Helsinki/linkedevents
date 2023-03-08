@@ -66,7 +66,7 @@ env = environ.Env(
     SECURE_PROXY_SSL_HEADER=(tuple, None),
     SENTRY_DSN=(str, ""),
     SENTRY_ENVIRONMENT=(str, "development"),
-    SOCIAL_AUTH_TUNNISTAMO_KEY="linkedevents-api-dev",
+    SOCIAL_AUTH_TUNNISTAMO_KEY=(str, "linkedevents-api-dev"),
     SOCIAL_AUTH_TUNNISTAMO_SECRET=(str, "dummy_key"),
     STATIC_ROOT=(environ.Path(), root("static")),
     STATIC_URL=(str, "/static/"),
@@ -105,6 +105,9 @@ DATABASES["default"]["ENGINE"] = "django.contrib.gis.db.backends.postgis"
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
 SYSTEM_DATA_SOURCE_ID = env("SYSTEM_DATA_SOURCE_ID")
+
+SOCIAL_AUTH_TUNNISTAMO_KEY = env("SOCIAL_AUTH_TUNNISTAMO_KEY")
+SOCIAL_AUTH_TUNNISTAMO_SECRET = env("SOCIAL_AUTH_TUNNISTAMO_SECRET")
 
 SITE_ID = 1
 
