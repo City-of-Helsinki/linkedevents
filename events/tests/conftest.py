@@ -280,7 +280,7 @@ def place_dict(data_source, organization):
         "publisher": organization.id,
         "position": {
             "type": "Point",
-            "coordinates": [384574.0894343857, 6672362.664316102],
+            "coordinates": [24.91958, 60.1718],
         },
         "email": "testi@example.com",
         "postal_code": "00100",

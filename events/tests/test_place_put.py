@@ -21,7 +21,6 @@ def update_with_put(api_client, place_id, place_data, credentials=None):
 
 @pytest.mark.django_db
 def test__update_a_place_with_put(api_client, place_dict, user):
-
     # create an place
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, place_dict)
@@ -73,7 +72,6 @@ def test__an_admin_can_update_an_place_from_another_data_source(
 def test__correct_api_key_can_update_a_place(
     api_client, place, place_dict, data_source, organization
 ):
-
     data_source.owner = organization
     data_source.save()
 
@@ -103,7 +101,6 @@ def test__wrong_api_key_cannot_update_a_place(
 def test__api_key_without_organization_cannot_update_a_place(
     api_client, place, place_dict, data_source
 ):
-
     detail_url = reverse("place-detail", kwargs={"pk": place.pk})
     response = update_with_put(
         api_client, detail_url, place_dict, credentials={"apikey": data_source.api_key}
@@ -113,7 +110,6 @@ def test__api_key_without_organization_cannot_update_a_place(
 
 @pytest.mark.django_db
 def test__unknown_api_key_cannot_update_a_place(api_client, place, place_dict):
-
     detail_url = reverse("place-detail", kwargs={"pk": place.pk})
     response = update_with_put(
         api_client, detail_url, place_dict, credentials={"apikey": "unknown"}
@@ -127,7 +123,6 @@ def test__empty_api_key_cannot_update_a_place(
     place,
     place_dict,
 ):
-
     detail_url = reverse("place-detail", kwargs={"pk": place.pk})
     response = update_with_put(
         api_client, detail_url, place_dict, credentials={"apikey": ""}
@@ -159,3 +154,20 @@ def test__user_editable_resources_can_update_a_place(
     detail_url = reverse("place-detail", kwargs={"pk": place.pk})
     response = update_with_put(api_client, detail_url, place_dict)
     assert response.status_code == 200
+
+
+@pytest.mark.django_db
+def test__put_place_position(place, user, api_client):
+    api_client.force_authenticate(user)
+    detail_url = reverse("place-detail", kwargs={"pk": place.pk})
+    payload = {
+        "id": place.id,
+        "name": {"fi": "Testi1 EDITED", "sv": "", "en": ""},
+        "data_source": place.data_source.id,
+        "publisher": place.publisher.id,
+        "position": {"type": "Point", "coordinates": [25.01497, 60.250507]},
+    }
+
+    response = update_with_put(api_client, detail_url, payload)
+
+    assert response.data["position"] == payload["position"]

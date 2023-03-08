@@ -40,6 +40,7 @@ from isodate import Duration, duration_isoformat, parse_duration
 from modeltranslation.translator import NotRegistered, translator
 from munigeo.api import (
     build_bbox_filter,
+    DEFAULT_SRS,
     GeoModelAPIView,
     GeoModelSerializer,
     srid_to_srs,
@@ -1707,25 +1708,36 @@ class PlaceSerializer(EditableLinkedEventsObjectSerializer, GeoModelSerializer):
         default_timezone=pytz.UTC, required=False, allow_null=True
     )
 
-    def create(self, validated_data):
-        # if id was not provided, we generate it upon creation:
-        if "id" not in validated_data:
-            validated_data["id"] = generate_id(self.data_source)
-        return super().create(validated_data)
-
-    def update(self, instance, validated_data):
-        inst = super().update(instance, validated_data)
+    def _handle_position(self):
+        srs = self.context.get("srs", DEFAULT_SRS)
         if self.request.data["position"]:
             coord = self.request.data["position"]["coordinates"]
             if len(coord) == 2 and all([isinstance(i, float) for i in coord]):
-                point = Point(self.request.data["position"]["coordinates"])
-                inst.position = point
-                inst.save()
+                return Point(
+                    self.request.data["position"]["coordinates"], srid=srs.srid
+                )
             else:
                 raise ParseError(
                     f"Two coordinates have to be provided and they should be float. You provided {coord}"
                 )
-        return inst
+        return None
+
+    def create(self, validated_data):
+        # if id was not provided, we generate it upon creation:
+        if "id" not in validated_data:
+            validated_data["id"] = generate_id(self.data_source)
+        instance = super().create(validated_data)
+        if point := self._handle_position():
+            instance.position = point
+            instance.save()
+        return instance
+
+    def update(self, instance, validated_data):
+        instance = super().update(instance, validated_data)
+        if point := self._handle_position():
+            instance.position = point
+            instance.save()
+        return instance
 
     class Meta:
         model = Place
