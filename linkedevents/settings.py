@@ -66,8 +66,8 @@ env = environ.Env(
     SECURE_PROXY_SSL_HEADER=(tuple, None),
     SENTRY_DSN=(str, ""),
     SENTRY_ENVIRONMENT=(str, "development"),
-    SOCIAL_AUTH_TUNNISTAMO_KEY='linkedevents-api-dev',
-    SOCIAL_AUTH_TUNNISTAMO_SECRET=(str, 'dummy_key'),
+    SOCIAL_AUTH_TUNNISTAMO_KEY="linkedevents-api-dev",
+    SOCIAL_AUTH_TUNNISTAMO_SECRET=(str, "dummy_key"),
     STATIC_ROOT=(environ.Path(), root("static")),
     STATIC_URL=(str, "/static/"),
     SUPPORT_EMAIL=(str, ""),
@@ -527,7 +527,7 @@ FULLTEXT_SEARCH_LANGUAGES = {"fi": "finnish", "sv": "swedish", "en": "english"}
 # Email address used to send feedback forms
 SUPPORT_EMAIL = env("SUPPORT_EMAIL")
 
-SESSION_SERIALIZER = 'django.contrib.sessions.serializers.PickleSerializer'
+SESSION_SERIALIZER = "django.contrib.sessions.serializers.PickleSerializer"
 
 
 OIDC_API_TOKEN_AUTH = {
