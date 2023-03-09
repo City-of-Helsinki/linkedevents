@@ -44,6 +44,9 @@ resources:
       # Run deploy-dev pipeline when any run of build pipeline completes
       trigger: true
 
+variables:
+  - group: linkedevents-api-development
+
 extends:
   # Filename in Azure DevOps Repository (note possible -ui or -api)
   # Django example: azure-pipelines-linkedevents-api-master.yml
