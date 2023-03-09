@@ -36,7 +36,7 @@ defusedxml==0.7.1
     #   social-auth-core
 deprecation==2.1.0
     # via django-helusers
-django==3.2
+django==3.2.18
     # via
     #   -r requirements.in
     #   django-admin-autocomplete-filter
@@ -125,8 +125,6 @@ ecdsa==0.18.0
     # via python-jose
 elasticsearch==7.17.9
     # via django-haystack
-exceptiongroup==1.1.0
-    # via cattrs
 future==0.18.3
     # via pyjwkest
 httmock==1.4.0
@@ -135,8 +133,6 @@ icalendar==5.0.4
     # via -r requirements.in
 idna==3.4
     # via requests
-importlib-metadata==6.0.0
-    # via markdown
 isodate==0.6.1
     # via
     #   -r requirements.in
@@ -274,8 +270,6 @@ webencodings==0.5.1
     # via bleach
 whitenoise==6.4.0
     # via -r requirements.in
-zipp==3.15.0
-    # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
