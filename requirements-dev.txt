@@ -41,10 +41,6 @@ ecdsa==0.18.0
     # via
     #   -c requirements.txt
     #   python-jose
-exceptiongroup==1.1.0
-    # via
-    #   -c requirements.txt
-    #   pytest
 factory-boy==3.2.1
     # via
     #   -r requirements-dev.in
@@ -72,6 +68,10 @@ isort==5.12.0
     # via -r requirements-dev.in
 jedi==0.17.2
     # via ipython
+markupsafe==2.1.2
+    # via
+    #   -c requirements.txt
+    #   werkzeug
 mccabe==0.7.0
     # via flake8
 mypy-extensions==0.4.3
@@ -158,22 +158,15 @@ sqlparse==0.4.3
     #   -c requirements.txt
     #   django
     #   django-debug-toolbar
-tomli==2.0.1
-    # via
-    #   black
-    #   build
-    #   coverage
-    #   pytest
 traitlets==4.3.3
     # via ipython
 typing-extensions==4.5.0
     # via
     #   -c requirements.txt
-    #   black
     #   pytest-factoryboy
 wcwidth==0.2.5
     # via prompt-toolkit
-werkzeug==1.0.1
+werkzeug==2.2.3
     # via -r requirements-dev.in
 wheel==0.38.4
     # via pip-tools
