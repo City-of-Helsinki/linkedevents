@@ -55,9 +55,9 @@ env = environ.Env(
     INTERNAL_IPS=(list, []),
     LANGUAGES=(list, ["fi", "sv", "en", "zh-hans", "ru", "ar"]),
     LIPPUPISTE_EVENT_API_URL=(str, None),
-    MAIL_MAILGUN_API=(str, ""),
-    MAIL_MAILGUN_DOMAIN=(str, ""),
-    MAIL_MAILGUN_KEY=(str, ""),
+    MAILGUN_API_URL=(str, ""),
+    MAILGUN_SENDER_DOMAIN=(str, ""),
+    MAILGUN_API_KEY=(str, ""),
     MEDIA_ROOT=(environ.Path(), root("media")),
     MEDIA_URL=(str, "/media/"),
     MEMCACHED_URL=(str, "127.0.0.1:11211"),
@@ -66,6 +66,8 @@ env = environ.Env(
     SECURE_PROXY_SSL_HEADER=(tuple, None),
     SENTRY_DSN=(str, ""),
     SENTRY_ENVIRONMENT=(str, "development"),
+    SOCIAL_AUTH_TUNNISTAMO_KEY=(str, "linkedevents-api-dev"),
+    SOCIAL_AUTH_TUNNISTAMO_SECRET=(str, "dummy_key"),
     STATIC_ROOT=(environ.Path(), root("static")),
     STATIC_URL=(str, "/static/"),
     SUPPORT_EMAIL=(str, ""),
@@ -103,6 +105,9 @@ DATABASES["default"]["ENGINE"] = "django.contrib.gis.db.backends.postgis"
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
 SYSTEM_DATA_SOURCE_ID = env("SYSTEM_DATA_SOURCE_ID")
+
+SOCIAL_AUTH_TUNNISTAMO_KEY = env("SOCIAL_AUTH_TUNNISTAMO_KEY")
+SOCIAL_AUTH_TUNNISTAMO_SECRET = env("SOCIAL_AUTH_TUNNISTAMO_SECRET")
 
 SITE_ID = 1
 
@@ -167,9 +172,6 @@ INSTALLED_APPS = [
     "django_jinja",
     "notifications",
     "anymail",
-    "allauth",
-    "allauth.account",
-    "allauth.socialaccount",
     "helusers.providers.helsinki",
     "registrations",
     "helevents",
@@ -255,13 +257,13 @@ USE_X_FORWARDED_HOST = env("TRUST_X_FORWARDED_HOST")
 #
 AUTH_USER_MODEL = "helevents.User"
 AUTHENTICATION_BACKENDS = (
+    "helusers.tunnistamo_oidc.TunnistamoOIDCAuth",
     "django.contrib.auth.backends.ModelBackend",
-    "allauth.account.auth_backends.AuthenticationBackend",
 )
-SOCIALACCOUNT_PROVIDERS = {"helsinki": {"VERIFIED_EMAIL": True}}
+
 LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/"
 ACCOUNT_LOGOUT_ON_GET = True
-SOCIALACCOUNT_ADAPTER = "helusers.adapter.SocialAccountAdapter"
 
 # User will be assigned to a default organization if user doesn't have any
 ENABLE_USER_DEFAULT_ORGANIZATION = env("ENABLE_USER_DEFAULT_ORGANIZATION")
@@ -436,7 +438,7 @@ for language in [lang[0] for lang in LANGUAGES]:
     HAYSTACK_CONNECTIONS.update(connection)
 
 
-BLEACH_ALLOWED_TAGS = bleach.ALLOWED_TAGS + ["p", "div", "br"]
+BLEACH_ALLOWED_TAGS = frozenset(list(bleach.ALLOWED_TAGS) + ["p", "div", "br"])
 
 THUMBNAIL_PROCESSORS = (
     "image_cropping.thumbnail_processors.crop_corners",
@@ -498,14 +500,14 @@ if "SECRET_KEY" not in locals():
 # Anymail
 #
 
-if env("MAIL_MAILGUN_KEY"):
+if env("MAILGUN_API_KEY"):
     ANYMAIL = {
-        "MAILGUN_API_KEY": env("MAIL_MAILGUN_KEY"),
-        "MAILGUN_SENDER_DOMAIN": env("MAIL_MAILGUN_DOMAIN"),
-        "MAILGUN_API_URL": env("MAIL_MAILGUN_API"),
+        "MAILGUN_API_KEY": env("MAILGUN_API_KEY"),
+        "MAILGUN_SENDER_DOMAIN": env("MAILGUN_SENDER_DOMAIN"),
+        "MAILGUN_API_URL": env("MAILGUN_API_URL"),
     }
     EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
-elif not env("MAIL_MAILGUN_KEY") and DEBUG is True:
+elif not env("MAILGUN_API_KEY") and DEBUG is True:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 
@@ -530,6 +532,9 @@ FULLTEXT_SEARCH_LANGUAGES = {"fi": "finnish", "sv": "swedish", "en": "english"}
 
 # Email address used to send feedback forms
 SUPPORT_EMAIL = env("SUPPORT_EMAIL")
+
+SESSION_SERIALIZER = "django.contrib.sessions.serializers.PickleSerializer"
+
 
 OIDC_API_TOKEN_AUTH = {
     "AUDIENCE": env.str("TOKEN_AUTH_ACCEPTED_AUDIENCE"),

@@ -2,7 +2,6 @@ attrs
 beautifulsoup4
 bleach
 django-admin-autocomplete-filter
-django-allauth
 django-anymail
 django-cleanup
 django-cors-headers
@@ -15,7 +14,7 @@ django-jinja==2.10.2
 django-leaflet
 django-modeltranslation>=0.18.4
 django-mptt>=0.10.0
-git+https://github.com/dankiki/django-munigeo.git@0.3.10#egg=django-munigeo
+django-munigeo
 django-orghierarchy>=0.1.24
 django-reversion
 django==3.2
@@ -23,6 +22,7 @@ djangorestframework
 djangorestframework-bulk
 djangorestframework-gis
 djangorestframework-jwt
+drf-oidc-auth==0.10.0
 easy_thumbnails
 httmock
 icalendar
@@ -43,5 +43,7 @@ regex
 requests-cache
 requests>=2.20.0
 sentry-sdk
+social-auth-app-django
+social-auth-core
 ujson
 whitenoise
