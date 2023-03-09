@@ -1,32 +1,18 @@
 import os
 import random
-import shutil
-import tempfile
 from io import BytesIO
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test.utils import override_settings
 from PIL import Image as PILImage
 
 from events.auth import ApiKeyUser
 from events.models import Image
 from events.tests.test_event_put import update_with_put
 
-# event_list_url is used as magic fixture, which flake8 doesn't see
 from .test_event_post import create_with_post
-from .test_event_post import list_url as event_list_url  # noqa
 from .utils import assert_event_data_is_equal, assert_fields_exist, get
 from .utils import versioned_reverse as reverse
-
-temp_dir = tempfile.mkdtemp()
-
-
-@pytest.yield_fixture(autouse=True)
-def tear_down():
-    yield
-    shutil.rmtree(temp_dir, ignore_errors=True)
-
 
 # === util methods ===
 
@@ -175,7 +161,6 @@ def test__unauthenticated_user_cannot_upload_an_url(
     assert response.status_code == 401
 
 
-@override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL="")
 @pytest.mark.django_db
 def test__upload_an_image(
     api_client, settings, list_url, image_data, user, organization
@@ -193,17 +178,15 @@ def test__upload_an_image(
     assert image.publisher == organization
 
     # image url should contain the image file's path relative to MEDIA_ROOT.
-    assert image.image.url.startswith("images/test_image")
+    assert image.image.url.startswith("/images/test_image")
     assert image.image.url.endswith(".png")
 
     # check the actual image file
-    image_path = os.path.join(settings.MEDIA_ROOT, image.image.url)
-    image = PILImage.open(image_path)
+    image = PILImage.open(image.image.path)
     assert image.size == (512, 256)
     assert image.format == "PNG"
 
 
-@override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL="")
 @pytest.mark.django_db
 def test__upload_an_image_with_api_key(
     api_client, settings, list_url, image_data, data_source, organization
@@ -221,12 +204,11 @@ def test__upload_an_image_with_api_key(
     assert image.publisher == organization
 
     # image url should contain the image file's path relative to MEDIA_ROOT.
-    assert image.image.url.startswith("images/test_image")
+    assert image.image.url.startswith("/images/test_image")
     assert image.image.url.endswith(".png")
 
     # check the actual image file
-    image_path = os.path.join(settings.MEDIA_ROOT, image.image.url)
-    image = PILImage.open(image_path)
+    image = PILImage.open(image.image.path)
     assert image.size == (512, 256)
     assert image.format == "PNG"
 
@@ -327,12 +309,10 @@ def test__image_cannot_be_edited_outside_organization_with_apikey(
     assert response3.status_code == 403
 
 
-# event_list_url is used as magic fixture, which flake8 doesn't see
-@override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL="")  # noqa
 @pytest.mark.django_db
 def test__create_an_event_with_uploaded_image(
-    api_client, list_url, event_list_url, minimal_event_dict, image_data, user
-):  # noqa
+    api_client, list_url, minimal_event_dict, image_data, user
+):
     api_client.force_authenticate(user)
 
     image_response = api_client.post(list_url, image_data)
@@ -356,12 +336,10 @@ def test__create_an_event_with_uploaded_image(
     assert_event_data_is_equal(minimal_event_dict, response.data)
 
 
-# event_list_url is used as magic fixture, which flake8 doesn't see
-@override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL="")  # noqa
 @pytest.mark.django_db
 def test__update_an_event_with_uploaded_image(
-    api_client, list_url, event_list_url, minimal_event_dict, image_data, user
-):  # noqa
+    api_client, list_url, minimal_event_dict, image_data, user
+):
     api_client.force_authenticate(user)
     response = create_with_post(api_client, minimal_event_dict)
 
@@ -438,7 +416,6 @@ def test__upload_an_image_and_url(
         assert "You can only provide image or url, not both" in line
 
 
-@override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL="")
 @pytest.mark.django_db(transaction=True)  # transaction is needed for django-cleanup
 def test__delete_an_image(api_client, settings, user, organization):
     api_client.force_authenticate(user)
@@ -453,7 +430,7 @@ def test__delete_an_image(api_client, settings, user, organization):
     assert Image.objects.all().count() == 1
 
     # verify that the image file exists at first just in case
-    image_path = os.path.join(settings.MEDIA_ROOT, existing_image.image.url)
+    image_path = existing_image.image.path
     assert os.path.isfile(image_path)
 
     detail_url = reverse("image-detail", kwargs={"pk": existing_image.pk})
@@ -465,7 +442,6 @@ def test__delete_an_image(api_client, settings, user, organization):
     assert not os.path.isfile(image_path)
 
 
-@override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL="")
 @pytest.mark.django_db(transaction=True)  # transaction is needed for django-cleanup
 def test__delete_an_image_with_api_key(api_client, settings, organization, data_source):
     data_source.owner = organization
@@ -484,7 +460,7 @@ def test__delete_an_image_with_api_key(api_client, settings, organization, data_
     assert Image.objects.all().count() == 1
 
     # verify that the image file exists at first just in case
-    image_path = os.path.join(settings.MEDIA_ROOT, existing_image.image.url)
+    image_path = existing_image.image.path
     assert os.path.isfile(image_path)
 
     detail_url = reverse("image-detail", kwargs={"pk": existing_image.pk})
@@ -497,7 +473,6 @@ def test__delete_an_image_with_api_key(api_client, settings, organization, data_
     assert not os.path.isfile(image_path)
 
 
-@override_settings(MEDIA_ROOT=temp_dir, MEDIA_URL="")
 @pytest.mark.django_db
 def test__upload_a_non_valid_image(api_client, list_url, user, organization):
     organization.admin_users.add(user)

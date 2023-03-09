@@ -40,10 +40,12 @@ from isodate import Duration, duration_isoformat, parse_duration
 from modeltranslation.translator import NotRegistered, translator
 from munigeo.api import (
     build_bbox_filter,
+    DEFAULT_SRS,
     GeoModelAPIView,
     GeoModelSerializer,
     srid_to_srs,
 )
+from munigeo.api import TranslatedModelSerializer as ParlerTranslatedModelSerializer
 from munigeo.models import AdministrativeDivision
 from rest_framework import (
     filters,
@@ -260,7 +262,6 @@ def clean_text_fields(data, allowed_html_fields: Optional[Iterable[str]] = None)
 
 
 def parse_hours(val, param):
-
     if len(val) > 2:
         raise ParseError(
             f"Only hours and minutes can be given in {param}. For example: 16:00."
@@ -641,13 +642,12 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         # in case of bulk operations, the instance may be a huge queryset, already filtered by permission
         # therefore, we only do permission checks for single instances
         if not isinstance(instance, QuerySet) and instance:
-
             # check permissions *before* validation
             if not instance.can_be_edited_by(self.user):
                 raise PermissionDenied()
             if isinstance(self.user, ApiKeyUser):
                 # allow updating only if the api key matches instance data source
-                if not instance.data_source == self.data_source:
+                if instance.data_source != self.data_source:
                     raise PermissionDenied()
             else:
                 # without api key, the user will have to be admin
@@ -717,25 +717,24 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
 
     def validate_data_source(self, value):
         # a single POST always comes from a single source
-        if value and self.method == "POST":
-            if value != self.data_source:
-                raise DRFPermissionDenied(
-                    {
-                        "data_source": _(
-                            "Setting data_source to %(given)s "
-                            + " is not allowed for this user. The data_source"
-                            " must be left blank or set to %(required)s "
-                        )
-                        % {"given": str(value), "required": self.data_source}
-                    }
-                )
+        if value and self.method == "POST" and value != self.data_source:
+            raise DRFPermissionDenied(
+                {
+                    "data_source": _(
+                        "Setting data_source to %(given)s "
+                        + " is not allowed for this user. The data_source"
+                        " must be left blank or set to %(required)s "
+                    )
+                    % {"given": str(value), "required": self.data_source}
+                }
+            )
         return value
 
     def validate_id(self, value):
         # a single POST always comes from a single source
         if value and self.method == "POST":
             id_data_source_prefix = value.split(":", 1)[0]
-            if not id_data_source_prefix == self.data_source.id:
+            if id_data_source_prefix != self.data_source.id:
                 # if we are creating, there's no excuse to have any other data source than the request gave
                 raise serializers.ValidationError(
                     {
@@ -902,32 +901,32 @@ class EditableLinkedEventsObjectSerializer(LinkedEventsSerializer):
     def update(self, instance, validated_data):
         validated_data["last_modified_by"] = self.user
 
-        if "id" in validated_data:
-            if instance.id != validated_data["id"]:
-                raise serializers.ValidationError(
-                    {"id": _("You may not change the id of an existing object.")}
-                )
-        if "publisher" in validated_data:
-            if validated_data["publisher"] not in (
-                instance.publisher,
-                instance.publisher.replaced_by,
-            ):
-                raise serializers.ValidationError(
-                    {
-                        "publisher": _(
-                            "You may not change the publisher of an existing object."
-                        )
-                    }
-                )
-        if "data_source" in validated_data:
-            if instance.data_source != validated_data["data_source"]:
-                raise serializers.ValidationError(
-                    {
-                        "data_source": _(
-                            "You may not change the data source of an existing object."
-                        )
-                    }
-                )
+        if "id" in validated_data and instance.id != validated_data["id"]:
+            raise serializers.ValidationError(
+                {"id": _("You may not change the id of an existing object.")}
+            )
+        if "publisher" in validated_data and validated_data["publisher"] not in (
+            instance.publisher,
+            instance.publisher.replaced_by,
+        ):
+            raise serializers.ValidationError(
+                {
+                    "publisher": _(
+                        "You may not change the publisher of an existing object."
+                    )
+                }
+            )
+        if (
+            "data_source" in validated_data
+            and instance.data_source != validated_data["data_source"]
+        ):
+            raise serializers.ValidationError(
+                {
+                    "data_source": _(
+                        "You may not change the data source of an existing object."
+                    )
+                }
+            )
         super().update(instance, validated_data)
         return instance
 
@@ -948,13 +947,15 @@ class KeywordSerializer(EditableLinkedEventsObjectSerializer):
     def validate_id(self, value):
         if value:
             id_data_source_prefix = value.split(":", 1)[0]
-            if not id_data_source_prefix == self.data_source.id:
+            if id_data_source_prefix != self.data_source.id:
                 # the object might be from another data source by the same organization, and we are only editing it
-                if self.instance:
-                    if self.publisher.owned_systems.filter(
+                if (
+                    self.instance
+                    and self.publisher.owned_systems.filter(
                         id=id_data_source_prefix
-                    ).exists():
-                        return value
+                    ).exists()
+                ):
+                    return value
                 raise serializers.ValidationError(
                     {
                         "id": _(
@@ -1009,7 +1010,7 @@ class KeywordRetrieveViewSet(
 
         if isinstance(user, ApiKeyUser):
             # allow deleting only if the api key matches instance data source
-            if not instance.data_source == self.data_source:
+            if instance.data_source != self.data_source:
                 raise PermissionDenied()
         else:
             # without api key, the user will have to be admin
@@ -1325,7 +1326,6 @@ class SignUpSerializer(serializers.ModelSerializer):
     view_name = "signup"
 
     def create(self, validated_data):
-
         registration = validated_data["registration"]
         already_attending = SignUp.objects.filter(
             registration=registration, attendee_status=SignUp.AttendeeStatus.ATTENDING
@@ -1612,16 +1612,16 @@ class KeywordSetViewSet(JSONAPIViewMixin, viewsets.ModelViewSet):
 register_view(KeywordSetViewSet, "keyword_set")
 
 
-class DivisionSerializer(TranslatedModelSerializer):
+class DivisionSerializer(ParlerTranslatedModelSerializer):
     type = serializers.SlugRelatedField(slug_field="type", read_only=True)
     municipality = serializers.SlugRelatedField(slug_field="name", read_only=True)
 
     class Meta:
         model = AdministrativeDivision
-        fields = ("type", "name", "ocd_id", "municipality")
+        fields = ("type", "ocd_id", "municipality", "translations")
 
 
-def filter_division(queryset, name, value):
+def filter_division(queryset, name: str, value: Iterable[str]):
     """
     Allows division filtering by both division name and more specific ocd id (identified by colon in the parameter)
 
@@ -1674,9 +1674,11 @@ def filter_division(queryset, name, value):
     if hasattr(queryset, "distinct"):
         # do the join with Q objects (not querysets) in case the queryset has extra fields that would crash qs join
         query = Q(**{name + "__ocd_id__in": ocd_ids}) | Q(
-            **{name + "__name__in": names}
+            **{name + "__translations__name__in": names}
         )
-        return (queryset.filter(query)).distinct()
+        return (
+            queryset.filter(query).prefetch_related(name + "__translations").distinct()
+        )
     else:
         # Haystack SearchQuerySet does not support distinct, so we only support one type of search at a time:
         if ocd_ids:
@@ -1704,25 +1706,36 @@ class PlaceSerializer(EditableLinkedEventsObjectSerializer, GeoModelSerializer):
         default_timezone=pytz.UTC, required=False, allow_null=True
     )
 
-    def create(self, validated_data):
-        # if id was not provided, we generate it upon creation:
-        if "id" not in validated_data:
-            validated_data["id"] = generate_id(self.data_source)
-        return super().create(validated_data)
-
-    def update(self, instance, validated_data):
-        inst = super().update(instance, validated_data)
+    def _handle_position(self):
+        srs = self.context.get("srs", DEFAULT_SRS)
         if self.request.data["position"]:
             coord = self.request.data["position"]["coordinates"]
             if len(coord) == 2 and all([isinstance(i, float) for i in coord]):
-                point = Point(self.request.data["position"]["coordinates"])
-                inst.position = point
-                inst.save()
+                return Point(
+                    self.request.data["position"]["coordinates"], srid=srs.srid
+                )
             else:
                 raise ParseError(
                     f"Two coordinates have to be provided and they should be float. You provided {coord}"
                 )
-        return inst
+        return None
+
+    def create(self, validated_data):
+        # if id was not provided, we generate it upon creation:
+        if "id" not in validated_data:
+            validated_data["id"] = generate_id(self.data_source)
+        instance = super().create(validated_data)
+        if point := self._handle_position():
+            instance.position = point
+            instance.save()
+        return instance
+
+    def update(self, instance, validated_data):
+        instance = super().update(instance, validated_data)
+        if point := self._handle_position():
+            instance.position = point
+            instance.save()
+        return instance
 
     class Meta:
         model = Place
@@ -1782,7 +1795,7 @@ class PlaceRetrieveViewSet(
 
         if isinstance(user, ApiKeyUser):
             # allow deleting only if the api key matches instance data source
-            if not instance.data_source == self.data_source:
+            if instance.data_source != self.data_source:
                 raise PermissionDenied()
         else:
             # without api key, the user will have to be admin
@@ -2191,17 +2204,17 @@ class OrganizationViewSet(
                 to_attr="affiliated_organizations",
             ),
         )
-        id = self.request.query_params.get("child", None)
-        if id:
+        child_id = self.request.query_params.get("child", None)
+        if child_id:
             try:
-                queryset = queryset.get(id=id).get_ancestors()
+                queryset = queryset.get(id=child_id).get_ancestors()
             except Organization.DoesNotExist:
                 queryset = queryset.none()
 
-        id = self.request.query_params.get("parent", None)
-        if id:
+        parent_id = self.request.query_params.get("parent", None)
+        if parent_id:
             try:
-                queryset = queryset.get(id=id).get_descendants()
+                queryset = queryset.get(id=parent_id).get_descendants()
             except Organization.DoesNotExist:
                 queryset = queryset.none()
         return queryset
@@ -2368,7 +2381,7 @@ class ImageViewSet(JSONAPIViewMixin, viewsets.ModelViewSet):
         data_source, organization = get_authenticated_data_source_and_publisher(
             self.request
         )
-        if not organization == instance.publisher:
+        if organization != instance.publisher:
             raise PermissionDenied()
         super().perform_destroy(instance)
 
@@ -2504,15 +2517,14 @@ class EventSerializer(
         # here, we also set has_start_time and has_end_time accordingly
         for field in ["date_published", "start_time", "end_time"]:
             val = data.get(field, None)
-            if val:
-                if isinstance(val, str):
-                    if field == "end_time":
-                        dt, is_date = utils.parse_end_time(val)
-                    else:
-                        dt, is_date = utils.parse_time(val)
+            if val and isinstance(val, str):
+                if field == "end_time":
+                    dt, is_date = utils.parse_end_time(val)
+                else:
+                    dt, is_date = utils.parse_time(val)
 
-                    data[field] = dt
-                    data[f"has_{field}"] = not is_date
+                data[field] = dt
+                data[f"has_{field}"] = not is_date
         return data
 
     def to_internal_value(self, data):
@@ -2684,20 +2696,23 @@ class EventSerializer(
 
         # The API only allows scheduling and cancelling events.
         # POSTPONED and RESCHEDULED may not be set, but should be allowed in already set instances.
-        if validated_data.get("event_status") in (
-            Event.Status.POSTPONED,
-            Event.Status.RESCHEDULED,
+        if (
+            validated_data.get("event_status")
+            in (
+                Event.Status.POSTPONED,
+                Event.Status.RESCHEDULED,
+            )
+            and validated_data.get("event_status") != instance.event_status
         ):
-            if validated_data.get("event_status") != instance.event_status:
-                raise serializers.ValidationError(
-                    {
-                        "event_status": _(
-                            "POSTPONED and RESCHEDULED statuses cannot be set directly."
-                            "Changing event start_time or marking start_time null"
-                            "will reschedule or postpone an event."
-                        )
-                    }
-                )
+            raise serializers.ValidationError(
+                {
+                    "event_status": _(
+                        "POSTPONED and RESCHEDULED statuses cannot be set directly."
+                        "Changing event start_time or marking start_time null"
+                        "will reschedule or postpone an event."
+                    )
+                }
+            )
 
         # Update event_status if a PUBLIC SCHEDULED or CANCELLED event start_time is updated.
         # DRAFT events will remain SCHEDULED up to publication.
@@ -2817,9 +2832,8 @@ class EventSerializer(
                     # not list/dict
                     pass
         request = self.context.get("request")
-        if request:
-            if not request.user.is_authenticated:
-                del ret["publication_status"]
+        if request and not request.user.is_authenticated:
+            del ret["publication_status"]
 
         if ret["sub_events"]:
             sub_events_relation = self.fields["sub_events"].child_relation
@@ -4150,14 +4164,15 @@ class SearchViewSet(
                 elif t == "place":
                     models.add(Place)
 
-        if self.request.version == "v0.1":
-            if len(models) == 0:
-                models.add(Event)
+        if self.request.version == "v0.1" and len(models) == 0:
+            models.add(Event)
 
         if len(models) == 1 and Event in models:
             division = params.get("division", None)
             if division:
-                queryset = filter_division(queryset, "location__divisions", division)
+                queryset = filter_division(
+                    queryset, "location__divisions", division.split(",")
+                )
 
             start = params.get("start", None)
             if start:
@@ -4180,7 +4195,7 @@ class SearchViewSet(
         if len(models) == 1 and Place in models:
             division = params.get("division", None)
             if division:
-                queryset = filter_division(queryset, "divisions", division)
+                queryset = filter_division(queryset, "divisions", division.split(","))
 
         if len(models) > 0:
             queryset = queryset.models(*list(models))

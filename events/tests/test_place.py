@@ -1,8 +1,6 @@
 import pytest
 from django.contrib.gis.geos import Point
 
-from events.tests.utils import versioned_reverse as reverse
-
 
 @pytest.mark.parametrize(
     "position, is_division_expected",
@@ -64,19 +62,3 @@ def test_prevent_circular_place_replacement(place, place2, place3):
     place3.replaced_by = place
     with pytest.raises(Exception):
         place.save()
-
-
-@pytest.mark.django_db
-def test_put_place_position(place, user, api_client):
-    api_client.force_authenticate(user)
-    url = reverse("place-list")
-
-    payload = {
-        "id": place.id,
-        "name": {"fi": "Testi1 EDITED", "sv": "", "en": ""},
-        "data_source": place.data_source.id,
-        "publisher": place.publisher.id,
-        "position": {"type": "Point", "coordinates": [25.01497, 60.250507]},
-    }
-    response = api_client.put(f"{url}{place.id}/", payload, format="json")
-    assert response.data["position"] == payload["position"]

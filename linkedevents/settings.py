@@ -345,6 +345,7 @@ TEMPLATES = [
 
 POSTGIS_VERSION = (2, 1, 1)
 
+WGS84_SRID = 4326  # WGS84 / GPS Spatial Reference System ID
 # Use ETRS-TM35FIN projection by default
 PROJECTION_SRID = 3067
 # Bounding box of Finland and then some
@@ -491,7 +492,7 @@ if "SECRET_KEY" not in locals():
             secret.write(SECRET_KEY)
             secret.close()
         except IOError:
-            Exception(
+            raise Exception(
                 "Please create a %s file with random characters to generate your secret key!"
                 % secret_file
             )

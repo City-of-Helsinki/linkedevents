@@ -53,7 +53,7 @@ class Importer(object):
             self.languages[lang_code] = lang_obj
 
         self.target_srid = settings.PROJECTION_SRID
-        gps_srs = SpatialReference(4326)
+        gps_srs = SpatialReference(settings.WGS84_SRID)
         target_srs = SpatialReference(self.target_srid)
         if settings.BOUNDING_BOX:
             self.bounding_box = Polygon.from_bbox(settings.BOUNDING_BOX)
@@ -206,14 +206,14 @@ class Importer(object):
         events.sort(key=event_name)
         parent_events = []
         for _name_fi, subevents in itertools.groupby(events, event_name):
-            subevents = list(subevents)
-            if len(subevents) < 2:
-                parent_events.extend(subevents)
+            subevents_list = list(subevents)
+            if len(subevents_list) < 2:
+                parent_events.extend(subevents_list)
                 continue
-            potential_parent = subevents[0]
+            potential_parent = subevents_list[0]
             children = []
             for matching_event in (
-                e for e in subevents if e["common"] == potential_parent["common"]
+                e for e in subevents_list if e["common"] == potential_parent["common"]
             ):
                 children.append(matching_event["instance"])
             if len(children) > 0:
@@ -555,9 +555,9 @@ class Importer(object):
         e = info.get("longitude", 0)
         position = None
         if n and e:
-            p = Point(e, n, srid=4326)  # GPS coordinate system
+            p = Point(e, n, srid=settings.WGS84_SRID)  # GPS coordinate system
             if p.within(self.bounding_box):
-                if self.target_srid != 4326:
+                if self.target_srid != settings.WGS84_SRID:
                     p.transform(self.gps_to_target_ct)
                 position = p
             else:

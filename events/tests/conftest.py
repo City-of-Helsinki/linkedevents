@@ -1,13 +1,10 @@
 from datetime import datetime, timedelta
 
 # 3rd party
-import pytest
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.gis.geos import MultiPolygon, Point, Polygon
 
 # django
-from django.core.management import call_command
 from django.utils import timezone
 from django_orghierarchy.models import Organization
 from munigeo.models import (
@@ -16,6 +13,7 @@ from munigeo.models import (
     AdministrativeDivisionType,
     Municipality,
 )
+from parler.utils.context import switch_language
 from rest_framework.test import APIClient
 
 from events.api import KeywordSerializer, LanguageSerializer, PlaceSerializer
@@ -31,6 +29,7 @@ from events.models import (
     Offer,
     Place,
 )
+from linkedevents.tests.conftest import *  # noqa
 from registrations.models import Registration
 
 from ..models import License, PublicationStatus
@@ -44,22 +43,6 @@ URL = "http://localhost"
 DATETIME = (timezone.now() + timedelta(days=1)).isoformat().replace("+00:00", "Z")
 
 OTHER_DATA_SOURCE_ID = "testotherdatasourceid"
-
-
-# Django test harness tries to serialize DB in order to support transactions
-# within tests. (It restores the snapshot after such tests).
-# This fails with modeltranslate, as the serialization is done before
-# sync_translation_fields has a chance to run. Thus the fields are missing
-# and serialization fails horribly.
-@pytest.fixture(scope="session")
-def django_db_modify_db_settings(django_db_modify_db_settings_xdist_suffix):
-    settings.DATABASES["default"]["TEST"]["SERIALIZE"] = False
-
-
-@pytest.fixture(scope="session")
-def django_db_setup(django_db_setup, django_db_blocker):
-    with django_db_blocker.unblock():
-        call_command("sync_translation_fields", "--noinput")
 
 
 @pytest.fixture
@@ -258,11 +241,13 @@ def administrative_division_type2():
 @pytest.fixture
 def administrative_division(administrative_division_type, municipality):
     division = AdministrativeDivision.objects.create(
-        name="test division",
         type=administrative_division_type,
         ocd_id="ocd-division/test:1",
         municipality=municipality,
     )
+    with switch_language(division, "en"):
+        division.name = "test division"
+        division.save()
     coords = ((0, 0), (0, 200), (200, 200), (200, 0), (0, 0))
     AdministrativeDivisionGeometry.objects.create(
         division=division, boundary=MultiPolygon([Polygon(coords)])
@@ -273,10 +258,12 @@ def administrative_division(administrative_division_type, municipality):
 @pytest.fixture
 def administrative_division2(administrative_division_type):
     division = AdministrativeDivision.objects.create(
-        name_en="test division 2",
         type=administrative_division_type,
         ocd_id="ocd-division/test:2",
     )
+    with switch_language(division, "en"):
+        division.name = "test division 2"
+        division.save()
     coords = ((100, 100), (100, 300), (300, 300), (300, 100), (100, 100))
     AdministrativeDivisionGeometry.objects.create(
         division=division, boundary=MultiPolygon([Polygon(coords)])
@@ -293,7 +280,7 @@ def place_dict(data_source, organization):
         "publisher": organization.id,
         "position": {
             "type": "Point",
-            "coordinates": [384574.0894343857, 6672362.664316102],
+            "coordinates": [24.91958, 60.1718],
         },
         "email": "testi@example.com",
         "postal_code": "00100",

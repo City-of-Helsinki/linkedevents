@@ -55,6 +55,7 @@ def assert_place_data_is_equal(d1, d2, version="v1"):
         "description",
         "street_address",
         "address_locality",
+        "position",
     )
     assert_data_is_equal(d1, d2, fields)
 

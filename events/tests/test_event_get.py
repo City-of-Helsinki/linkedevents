@@ -183,7 +183,8 @@ def test_get_event_list_verify_bbox_filter(api_client, event, event2):
     left_bottom = Point(25, 25)
     right_top = Point(75, 75)
     ct = CoordTransform(
-        SpatialReference(settings.PROJECTION_SRID), SpatialReference(4326)
+        SpatialReference(settings.PROJECTION_SRID),
+        SpatialReference(settings.WGS84_SRID),
     )
     left_bottom.transform(ct)
     right_top.transform(ct)

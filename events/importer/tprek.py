@@ -132,9 +132,9 @@ class TprekImporter(Importer):
         e = info.get("longitude", 0)
         position = None
         if n and e:
-            p = Point(e, n, srid=4326)  # GPS coordinate system
+            p = Point(e, n, srid=settings.WGS84_SRID)  # GPS coordinate system
             if p.within(self.bounding_box):
-                if self.target_srid != 4326:
+                if self.target_srid != settings.WGS84_SRID:
                     p.transform(self.gps_to_target_ct)
                 position = p
             else:
