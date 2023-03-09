@@ -217,7 +217,7 @@ class Image(models.Model):
         blank=True,
     )
 
-    image = models.ImageField(upload_to="images", null=True, blank=True)
+    image = models.ImageField(upload_to="images", max_length=255, null=True, blank=True)
     url = models.URLField(
         verbose_name=_("Image"), max_length=400, null=True, blank=True
     )
