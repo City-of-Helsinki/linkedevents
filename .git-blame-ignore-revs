@@ -1,2 +1,4 @@
 # Reformat code with black, isort and pre-commit hooks
 0363cb1f8201fcfa521de7eb205da46607c3a634
+# Remove code smells
+a1103d293315605ce0bf09f457cd976596f430fb
