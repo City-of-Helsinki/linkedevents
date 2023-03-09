@@ -38,9 +38,6 @@ resources:
       # Azure DevOps project/repository
       name: linkedevents/linkedevents-pipelines
 
-variables:
-  - group: linkedevents-api-development
-
 extends:
   # Filename in Azure DevOps Repository (note possible -ui or -api)
   # Django example: azure-pipelines-linkedevents-api-master.yml
