@@ -100,6 +100,8 @@ from helevents.api import UserSerializer
 from helevents.models import User
 from registrations.serializers import RegistrationSerializer
 
+LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
+
 viewset_classes_by_model = {}
 
 all_views = []
@@ -1518,8 +1520,6 @@ class LanguageViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
 
 
 register_view(LanguageViewSet, "language")
-
-LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
 
 
 class OrganizationBaseSerializer(LinkedEventsSerializer):
