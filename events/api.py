@@ -98,27 +98,10 @@ from events.renderers import DOCXRenderer
 from events.translation import EventTranslationOptions, PlaceTranslationOptions
 from helevents.models import User
 from helevents.serializers import UserSerializer
+from linkedevents.registry import register_view, viewset_classes_by_model
 from registrations.serializers import RegistrationSerializer
 
 LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
-
-viewset_classes_by_model = {}
-
-all_views = []
-
-
-def register_view(klass, name, base_name=None):
-    entry = {"class": klass, "name": name}
-    if base_name is not None:
-        entry["base_name"] = base_name
-    all_views.append(entry)
-    if (
-        klass.serializer_class
-        and hasattr(klass.serializer_class, "Meta")
-        and hasattr(klass.serializer_class.Meta, "model")
-    ):
-        model = klass.serializer_class.Meta.model
-        viewset_classes_by_model[model] = klass
 
 
 def get_serializer_for_model(model, version="v1"):

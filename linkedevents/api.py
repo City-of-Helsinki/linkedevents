@@ -2,9 +2,7 @@ import copy
 
 from rest_framework.routers import DefaultRouter, SimpleRouter
 
-from events.api import all_views as events_views
-from helevents.api import all_views as users_views
-from registrations.api import all_views as registrations_views
+from linkedevents.registry import all_views
 
 
 class LinkedEventsAPIRouter(DefaultRouter):
@@ -29,9 +27,10 @@ class LinkedEventsAPIRouter(DefaultRouter):
         self.register(view["name"], view["class"], basename=view.get("base_name"))
 
     def _register_all_views(self):
-        for view in events_views:
-            self._register_view(view)
-        for view in users_views:
-            self._register_view(view)
-        for view in registrations_views:
+        # Imports run register_view for all views
+        import events.api  # noqa
+        import helevents.api  # noqa
+        import registrations.api  # noqa
+
+        for view in all_views:
             self._register_view(view)
