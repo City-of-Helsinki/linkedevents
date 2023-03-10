@@ -4,13 +4,12 @@ import struct
 import time
 import urllib.parse
 from copy import deepcopy
-from datetime import date, datetime
+from datetime import datetime
 from datetime import time as datetime_time
 from datetime import timedelta
 from functools import partial, reduce
 from operator import or_
 from typing import Iterable, Optional
-from uuid import UUID
 
 import bleach
 import django.forms
@@ -19,13 +18,12 @@ import pytz
 import regex
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
-from django.contrib.gis.db import models
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
 from django.contrib.postgres.search import SearchQuery, TrigramSimilarity
 from django.core.cache import caches
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count, F, Prefetch, Q, QuerySet, Sum
+from django.db.models import Count, F, Prefetch, Q, QuerySet
 from django.db.models.functions import Greatest
 from django.db.transaction import atomic
 from django.db.utils import IntegrityError
@@ -57,12 +55,11 @@ from rest_framework import (
     status,
     viewsets,
 )
-from rest_framework.decorators import action
-from rest_framework.exceptions import APIException, NotFound, ParseError
+from rest_framework.exceptions import APIException, ParseError
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.fields import DateTimeField
 from rest_framework.filters import BaseFilterBackend
-from rest_framework.permissions import IsAuthenticated, SAFE_METHODS
+from rest_framework.permissions import SAFE_METHODS
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.routers import APIRootView
@@ -98,12 +95,12 @@ from events.models import (
     PublicationStatus,
     Video,
 )
-from events.permissions import GuestDelete, GuestGet, GuestPost
+from events.permissions import GuestPost
 from events.renderers import DOCXRenderer
 from events.translation import EventTranslationOptions, PlaceTranslationOptions
 from helevents.api import UserSerializer
 from helevents.models import User
-from registrations.models import Registration, SeatReservationCode, SignUp
+from registrations.serializers import RegistrationSerializer
 
 
 def get_view_name(view):
@@ -1087,369 +1084,6 @@ class KeywordListViewSet(
 
 register_view(KeywordRetrieveViewSet, "keyword")
 register_view(KeywordListViewSet, "keyword")
-
-
-class RegistrationSerializer(serializers.ModelSerializer):
-    view_name = "registration-detail"
-    signups = serializers.SerializerMethodField()
-    current_attendee_count = serializers.SerializerMethodField()
-    current_waiting_list_count = serializers.SerializerMethodField()
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if kwargs["context"]["request"].data.get("event", None):
-            event_id = kwargs["context"]["request"].data["event"]
-            event = Event.objects.filter(id=event_id).select_related("publisher")
-            if len(event) == 0:
-                raise DRFPermissionDenied(_("No event with id {event_id}"))
-            user = kwargs["context"]["user"]
-            if (
-                user.is_admin(event[0].publisher)
-                or kwargs["context"]["request"].method in SAFE_METHODS
-            ):
-                pass
-            else:
-                raise DRFPermissionDenied(_(f"User {user} cannot modify event {event}"))
-
-    def get_signups(self, obj):
-        params = self.context["request"].query_params
-        if params.get("include", None) and params["include"] == "signups":
-            #  only the organization admins should be able to access the signup information
-            user = self.context["user"]
-            event = obj.event
-            if not isinstance(user, AnonymousUser) and user.is_admin(event.publisher):
-                queryset = SignUp.objects.filter(registration__id=obj.id)
-                return SignUpSerializer(queryset, many=True, read_only=True).data
-            else:
-                return f"Only the admins of the organization that published the event {event.id} have access rights."
-        else:
-            return None
-
-    def get_current_attendee_count(self, obj):
-        return SignUp.objects.filter(
-            registration__id=obj.id, attendee_status=SignUp.AttendeeStatus.ATTENDING
-        ).count()
-
-    def get_current_waiting_list_count(self, obj):
-        return SignUp.objects.filter(
-            registration__id=obj.id, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
-        ).count()
-
-    class Meta:
-        fields = "__all__"
-        model = Registration
-
-
-def code_validity_duration(seats):
-    return settings.SEAT_RESERVATION_DURATION + seats
-
-
-class SeatReservationCodeSerializer(serializers.ModelSerializer):
-    timestamp = DateTimeField(default_timezone=pytz.UTC, required=False)
-    expiration = serializers.SerializerMethodField()
-
-    class Meta:
-        fields = ("seats", "code", "timestamp", "registration", "expiration")
-        model = SeatReservationCode
-
-    def get_expiration(self, obj):
-        return obj.timestamp + timedelta(minutes=code_validity_duration(obj.seats))
-
-
-class RegistrationViewSet(
-    JSONAPIViewMixin,
-    mixins.RetrieveModelMixin,
-    mixins.UpdateModelMixin,
-    mixins.DestroyModelMixin,
-    mixins.ListModelMixin,
-    mixins.CreateModelMixin,
-    viewsets.GenericViewSet,
-):
-    serializer_class = RegistrationSerializer
-    queryset = Registration.objects.all()
-
-    def filter_queryset(self, queryset):
-        events = Event.objects.exclude(registration=None)
-        events = _filter_event_queryset(events, self.request.query_params)
-        val = self.request.query_params.get("admin_user", None)
-        if val and str(val).lower() == "true":
-            if isinstance(self.request.user, AnonymousUser):
-                events = Event.objects.none()
-            else:
-                events = self.request.user.get_editable_events(events)
-        registrations = Registration.objects.filter(event__in=events)
-
-        return registrations
-
-    @action(methods=["post"], detail=True, permission_classes=[GuestPost])
-    def reserve_seats(self, request, pk=None, version=None):
-        def none_to_unlim(val):
-            # Null value in the waiting_list_capacity or maximum_attendee_capacity
-            # signifies that the amount of seats is unimited
-            if val is None:
-                return 10000
-            else:
-                return val
-
-        try:
-            registration = Registration.objects.get(id=pk)
-        except Registration.DoesNotExist:
-            raise NotFound(detail=f"Registration {pk} doesn't exist.", code=404)
-        waitlist = request.data.get("waitlist", False)
-        if waitlist:
-            waitlist_seats = none_to_unlim(registration.waiting_list_capacity)
-        else:
-            waitlist_seats = 0  # if waitlist is False, waiting list is not to be used
-
-        seats_capacity = registration.maximum_attendee_capacity + waitlist_seats
-        seats_reserved = registration.reservations.filter(
-            timestamp__gte=datetime.now()
-            - timedelta(minutes=settings.SEAT_RESERVATION_DURATION)
-        ).aggregate(seats_sum=(Sum("seats", output_field=models.FloatField())))[
-            "seats_sum"
-        ]
-        if seats_reserved is None:
-            seats_reserved = 0
-        seats_taken = registration.signups.count()
-        seats_available = seats_capacity - (seats_reserved + seats_taken)
-
-        if request.data.get("seats", 0) > seats_available:
-            return Response(
-                status=status.HTTP_409_CONFLICT, data="Not enough seats available."
-            )
-        else:
-            code = SeatReservationCode()
-            code.registration = registration
-            code.seats = request.data.get("seats")
-            free_seats = (
-                registration.maximum_attendee_capacity - registration.signups.count()
-            )
-            code.save()
-            data = SeatReservationCodeSerializer(code).data
-            data["seats_at_event"] = (
-                min(free_seats, code.seats) if free_seats > 0 else 0
-            )
-            waitlist_spots = code.seats - data["seats_at_event"]
-            data["waitlist_spots"] = waitlist_spots if waitlist_spots else 0
-
-            return Response(data, status=status.HTTP_201_CREATED)
-
-    @action(methods=["post"], detail=True, permission_classes=[GuestPost])
-    def signup(self, request, pk=None, version=None):
-        attending = []
-        waitlisted = []
-        if "reservation_code" not in request.data.keys():
-            raise serializers.ValidationError(
-                {"registration": "Reservation code is missing"}
-            )
-
-        try:
-            reservation = SeatReservationCode.objects.get(
-                code=request.data["reservation_code"]
-            )
-        except SeatReservationCode.DoesNotExist:
-            msg = f"Reservation code {request.data['reservation_code']} doesn't exist."
-            raise NotFound(detail=msg, code=404)
-
-        if str(reservation.registration.id) != pk:
-            msg = f"Registration code {request.data['reservation_code']} doesn't match the registration {pk}"
-            raise serializers.ValidationError({"reservation_code": msg})
-
-        if len(request.data["signups"]) > reservation.seats:
-            raise serializers.ValidationError(
-                {"signups": "Number of signups exceeds the number of requested seats"}
-            )
-
-        expiration = reservation.timestamp + timedelta(
-            minutes=code_validity_duration(reservation.seats)
-        )
-        if datetime.now().astimezone(pytz.utc) > expiration:
-            raise serializers.ValidationError({"code": "Reservation code has expired."})
-
-        for i in request.data["signups"]:
-            i["registration"] = pk
-
-        # First check that all the signups are valid and then actually create them
-        for i in request.data["signups"]:
-            serializer = SignUpSerializer(data=i)
-            if not serializer.is_valid():
-                raise serializers.ValidationError(serializer.errors)
-
-        for i in request.data["signups"]:
-            signup = SignUpSerializer(data=i, many=False)
-            signup.is_valid()
-            signee = signup.create(validated_data=signup.validated_data)
-            if signee.attendee_status == SignUp.AttendeeStatus.ATTENDING:
-                attending.append({"id": signee.id, "name": signee.name})
-            else:
-                waitlisted.append({"id": signee.id, "name": signee.name})
-        reservation.delete()
-        data = {
-            "attending": {"count": len(attending), "people": attending},
-            "waitlisted": {"count": len(waitlisted), "people": waitlisted},
-        }
-
-        return Response(data, status=status.HTTP_201_CREATED)
-
-
-register_view(RegistrationViewSet, "registration")
-
-
-class SignUpSerializer(serializers.ModelSerializer):
-    view_name = "signup"
-
-    def create(self, validated_data):
-        registration = validated_data["registration"]
-        already_attending = SignUp.objects.filter(
-            registration=registration, attendee_status=SignUp.AttendeeStatus.ATTENDING
-        ).count()
-        already_waitlisted = SignUp.objects.filter(
-            registration=registration,
-            attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
-        ).count()
-        attendee_capacity = registration.maximum_attendee_capacity
-        waiting_list_capacity = registration.waiting_list_capacity
-        if registration.audience_min_age or registration.audience_max_age:
-            if "date_of_birth" not in validated_data.keys():
-                raise DRFPermissionDenied("Date of birth has to be specified.")
-            dob = validated_data["date_of_birth"]
-            today = date.today()
-            current_age = (
-                today.year
-                - dob.year
-                - ((today.month, today.day) < (dob.month, dob.year))
-            )
-            if (
-                registration.audience_min_age
-                and current_age < registration.audience_min_age
-            ):
-                raise DRFPermissionDenied("The participant is too young.")
-            if (
-                registration.audience_max_age
-                and current_age > registration.audience_max_age
-            ):
-                raise DRFPermissionDenied("The participant is too old.")
-        if (attendee_capacity is None) or (already_attending < attendee_capacity):
-            signup = super().create(validated_data)
-            signup.send_notification("confirmation")
-            return signup
-        elif (waiting_list_capacity is None) or (
-            already_waitlisted < waiting_list_capacity
-        ):
-            signup = super().create(validated_data)
-            signup.attendee_status = SignUp.AttendeeStatus.WAITING_LIST
-            signup.save()
-            return signup
-        else:
-            raise DRFPermissionDenied("The waiting list is already full")
-
-    class Meta:
-        fields = "__all__"
-        model = SignUp
-
-
-class SignUpViewSet(
-    JSONAPIViewMixin,
-    viewsets.GenericViewSet,
-):
-    serializer_class = SignUpSerializer
-    queryset = SignUp.objects.all()
-    permission_classes = [GuestPost | GuestDelete | GuestGet]
-
-    def get_signup_by_code(self, code):
-        try:
-            UUID(code)
-        except ValueError:
-            raise DRFPermissionDenied("Malformed UUID.")
-        qs = SignUp.objects.filter(cancellation_code=code)
-        if qs.count() == 0:
-            raise DRFPermissionDenied(
-                "Cancellation code did not match any registration"
-            )
-        return qs[0]
-
-    def get(self, request, *args, **kwargs):
-        # First dealing with the cancellation codes
-        if isinstance(request.user, AnonymousUser):
-            code = request.GET.get("cancellation_code", "no code")
-            if code == "no code":
-                raise DRFPermissionDenied(
-                    "cancellation_code parameter has to be provided"
-                )
-            signup = self.get_signup_by_code(code)
-            return Response(SignUpSerializer(signup).data)
-        # Provided user is logged in
-        else:
-            reg_ids = []
-            event_ids = []
-            val = request.query_params.get("registrations", None)
-            if val:
-                reg_ids = val.split(",")
-            val = request.query_params.get("events", None)
-            if val:
-                event_ids = val.split(",")
-            qs = Event.objects.filter(
-                Q(id__in=event_ids) | Q(registration__id__in=reg_ids)
-            )
-
-            if len(reg_ids) == 0 and len(event_ids) == 0:
-                qs = Event.objects.exclude(registration=None)
-            authorized_events = request.user.get_editable_events(qs)
-
-            signups = SignUp.objects.filter(registration__event__in=authorized_events)
-
-            val = request.query_params.get("text", None)
-            if val:
-                signups = signups.filter(
-                    Q(name__icontains=val)
-                    | Q(email__icontains=val)
-                    | Q(extra_info__icontains=val)
-                    | Q(membership_number__icontains=val)
-                    | Q(phone_number__icontains=val)
-                )
-            val = request.query_params.get("attendee_status", None)
-            if val:
-                if val in ["waitlisted", "attending"]:
-                    signups = signups.filter(attendee_status=val)
-                else:
-                    raise DRFPermissionDenied(
-                        f"attendee_status can take values waitlisted and attending, not {val}"
-                    )
-            return Response(SignUpSerializer(signups, many=True).data)
-
-    def delete(self, request, *args, **kwargs):
-        code = request.data.get("cancellation_code", "no code")
-        if code == "no code":
-            raise DRFPermissionDenied("cancellation_code parameter has to be provided")
-        signup = self.get_signup_by_code(code)
-        waitlisted = SignUp.objects.filter(
-            registration=signup.registration,
-            attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
-        ).order_by("id")
-        signup.send_notification("cancellation")
-        signup.delete()
-        if len(waitlisted) > 0:
-            first_on_list = waitlisted[0]
-            first_on_list.attendee_status = SignUp.AttendeeStatus.ATTENDING
-            first_on_list.save()
-        return Response("SignUp deleted.", status=status.HTTP_200_OK)
-
-
-register_view(SignUpViewSet, "signup")
-
-
-class SignUpEditViewSet(
-    JSONAPIViewMixin,
-    mixins.RetrieveModelMixin,
-    mixins.UpdateModelMixin,
-    viewsets.GenericViewSet,
-):
-    serializer_class = SignUpSerializer
-    queryset = SignUp.objects.all()
-    permission_classes = (IsAuthenticated,)
-
-
-register_view(SignUpEditViewSet, "signup_edit")
 
 
 class KeywordSetSerializer(LinkedEventsSerializer):

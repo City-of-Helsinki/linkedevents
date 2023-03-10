@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter, SimpleRouter
 
 from events.api import all_views as events_views
 from helevents.api import all_views as users_views
+from registrations.api import all_views as registrations_views
 
 
 class LinkedEventsAPIRouter(DefaultRouter):
@@ -31,4 +32,6 @@ class LinkedEventsAPIRouter(DefaultRouter):
         for view in events_views:
             self._register_view(view)
         for view in users_views:
+            self._register_view(view)
+        for view in registrations_views:
             self._register_view(view)
