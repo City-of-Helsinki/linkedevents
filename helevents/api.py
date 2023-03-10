@@ -2,15 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import generics, permissions, viewsets
 
 from helevents.serializers import UserSerializer
-
-all_views = []
-
-
-def register_view(klass, name, base_name=None):
-    entry = {"class": klass, "name": name}
-    if base_name is not None:
-        entry["base_name"] = base_name
-    all_views.append(entry)
+from linkedevents.registry import register_view
 
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):

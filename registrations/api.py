@@ -16,6 +16,7 @@ from rest_framework.response import Response
 from events.api import _filter_event_queryset, JSONAPIViewMixin
 from events.models import Event
 from events.permissions import GuestDelete, GuestGet, GuestPost
+from linkedevents.registry import register_view
 from registrations.models import Registration, SeatReservationCode, SignUp
 from registrations.serializers import (
     RegistrationSerializer,
@@ -23,24 +24,6 @@ from registrations.serializers import (
     SignUpSerializer,
 )
 from registrations.utils import code_validity_duration
-
-viewset_classes_by_model = {}
-
-all_views = []
-
-
-def register_view(klass, name, base_name=None):
-    entry = {"class": klass, "name": name}
-    if base_name is not None:
-        entry["base_name"] = base_name
-    all_views.append(entry)
-    if (
-        klass.serializer_class
-        and hasattr(klass.serializer_class, "Meta")
-        and hasattr(klass.serializer_class.Meta, "model")
-    ):
-        model = klass.serializer_class.Meta.model
-        viewset_classes_by_model[model] = klass
 
 
 class SignUpViewSet(
