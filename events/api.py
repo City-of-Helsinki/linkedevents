@@ -96,8 +96,8 @@ from events.models import (
 from events.permissions import GuestPost
 from events.renderers import DOCXRenderer
 from events.translation import EventTranslationOptions, PlaceTranslationOptions
-from helevents.api import UserSerializer
 from helevents.models import User
+from helevents.serializers import UserSerializer
 from registrations.serializers import RegistrationSerializer
 
 LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
