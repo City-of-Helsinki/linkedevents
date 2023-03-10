@@ -298,7 +298,7 @@ REST_FRAMEWORK = {
         "events.auth.LinkedEventsJWTAuthentication",
     ),
     "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.URLPathVersioning",
-    "VIEW_NAME_FUNCTION": "events.api.get_view_name",
+    "VIEW_NAME_FUNCTION": "linkedevents.utils.get_view_name",
 }
 JWT_AUTH = {
     "JWT_PAYLOAD_GET_USER_ID_HANDLER": "helusers.jwt.get_user_id_from_payload_handler",

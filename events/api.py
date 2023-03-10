@@ -62,9 +62,7 @@ from rest_framework.filters import BaseFilterBackend
 from rest_framework.permissions import SAFE_METHODS
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
-from rest_framework.routers import APIRootView
 from rest_framework.settings import api_settings
-from rest_framework.views import get_view_name as original_get_view_name
 from rest_framework_bulk import (
     BulkListSerializer,
     BulkModelViewSet,
@@ -101,13 +99,6 @@ from events.translation import EventTranslationOptions, PlaceTranslationOptions
 from helevents.api import UserSerializer
 from helevents.models import User
 from registrations.serializers import RegistrationSerializer
-
-
-def get_view_name(view):
-    if type(view) is APIRootView:
-        return getattr(settings, "INSTANCE_NAME", "Linked Events")
-    return original_get_view_name(view)
-
 
 viewset_classes_by_model = {}
 
