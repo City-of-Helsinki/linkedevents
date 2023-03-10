@@ -138,21 +138,6 @@ def generate_id(namespace):
     return "{}:{}".format(namespace, postfix)
 
 
-def parse_id_from_uri(uri):
-    """
-    Parse id part from @id uri like
-    'http://127.0.0.1:8000/v0.1/event/matko%3A666/' -> 'matko:666'
-    :param uri: str
-    :return: str id
-    """
-    if not uri.startswith("http"):
-        return uri
-    path = urllib.parse.urlparse(uri).path
-    _id = path.rstrip("/").split("/")[-1]
-    _id = urllib.parse.unquote(_id)
-    return _id
-
-
 def get_authenticated_data_source_and_publisher(request):
     # api_key takes precedence over user
     if isinstance(request.auth, ApiKeyAuth):
