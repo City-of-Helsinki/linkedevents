@@ -1,9 +1,8 @@
 import pytest
 
-from .utils import assert_fields_exist, get
-from .utils import versioned_reverse as reverse
-
-# === util methods ===
+from events.tests.utils import assert_fields_exist, get
+from events.tests.utils import versioned_reverse as reverse
+from helevents.tests.factories import UserFactory
 
 
 def get_list(api_client, version="v1"):
@@ -18,7 +17,7 @@ def get_detail(api_client, detail_pk, version="v1"):
 
 def assert_user_fields_exist(data, version="v1"):
     # TODO: incorporate version parameter into version aware
-    # parts of test code
+    #  parts of test code
     fields = (
         "last_login",
         "username",
@@ -37,13 +36,31 @@ def assert_user_fields_exist(data, version="v1"):
     assert_fields_exist(data, fields)
 
 
-# === tests ===
-
-
 @pytest.mark.django_db
-def test__get_user_list(api_client, user, organization):
-    organization.admin_users.add(user)
+def test__get_user_detail(api_client, user, organization):
     api_client.force_authenticate(user=user)
+
     response = get_detail(api_client, user.pk)
-    print(response.data)
+
     assert_user_fields_exist(response.data)
+
+
+@pytest.mark.parametrize("is_admin", [True, False])
+@pytest.mark.django_db
+def test__get_user_list(api_client, user, organization, is_admin):
+    if is_admin:
+        user.is_superuser = True
+        user.save()
+    other_user = UserFactory()
+    api_client.force_authenticate(user=user)
+
+    response = get_list(api_client)
+
+    data = response.data["data"]
+    uuids = {u["uuid"] for u in data}
+    if is_admin:
+        assert len(data) == 2
+        assert uuids == {str(user.uuid), str(other_user.uuid)}
+    else:
+        assert len(data) == 1
+        assert uuids == {str(user.uuid)}
