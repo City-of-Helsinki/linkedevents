@@ -165,14 +165,6 @@ def parse_id_from_uri(uri):
     return _id
 
 
-def perform_id_magic_for(data):
-    if "id" in data:
-        err = "Do not send 'id' when POSTing a new Event (got id='{}')"
-        raise ParseError(err.format(data["id"]))
-    data["id"] = generate_id(data["data_source"])
-    return data
-
-
 def get_authenticated_data_source_and_publisher(request):
     # api_key takes precedence over user
     if isinstance(request.auth, ApiKeyAuth):
