@@ -79,7 +79,7 @@ def user_api_client(user):
 
 
 @pytest.fixture
-def data_source():
+def data_source(settings):
     return DataSource.objects.create(
         id=settings.SYSTEM_DATA_SOURCE_ID,
         api_key="test_api_key",

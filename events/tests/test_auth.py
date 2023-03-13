@@ -6,26 +6,45 @@ from django.test import RequestFactory, TestCase
 from django_orghierarchy.models import Organization
 from helusers.settings import api_token_auth_settings
 from jose import jwt
-from rest_framework_jwt.settings import api_settings
 
 from events.models import DataSource
 from helevents.tests.factories import UserFactory
 
-from ..auth import ApiKeyUser, LinkedEventsJWTAuthentication
-from .utils import build_hmac_key
+from ..auth import ApiKeyUser, LinkedEventsApiOidcAuthentication
+from .keys import rsa_key
 
 DEFAULT_ORGANIZATION_ID = "others"
+
+req_mock = None
+
+
+@pytest.fixture(autouse=True)
+def global_requests_mock(requests_mock):
+    global req_mock
+    req_mock = requests_mock
+    yield requests_mock
+
+    req_mock = None
 
 
 def get_api_token_for_user_with_scopes(user_uuid, scopes: list):
     """Build a proper auth token with desired scopes."""
-    hmac_key = build_hmac_key(api_settings.JWT_SECRET_KEY)
     audience = api_token_auth_settings.AUDIENCE
     issuer = api_token_auth_settings.ISSUER
     auth_field = api_token_auth_settings.API_AUTHORIZATION_FIELD
+    config_url = f"{issuer}/.well-known/openid-configuration"
+    jwks_url = f"{issuer}/jwks"
+
+    configuration = {
+        "issuer": issuer,
+        "jwks_uri": jwks_url,
+    }
+
+    keys = {"keys": [rsa_key.public_key_jwk]}
 
     now = datetime.datetime.now()
     expire = now + datetime.timedelta(days=14)
+
     jwt_data = {
         "iss": issuer,
         "aud": audience,
@@ -35,21 +54,26 @@ def get_api_token_for_user_with_scopes(user_uuid, scopes: list):
         auth_field: scopes,
     }
     encoded_jwt = jwt.encode(
-        jwt_data, key=hmac_key.secret, algorithm=hmac_key.jose_algorithm
+        jwt_data, key=rsa_key.private_key_pem, algorithm=rsa_key.jose_algorithm
     )
 
-    return encoded_jwt
+    req_mock.get(config_url, json=configuration)
+    req_mock.get(jwks_url, json=keys)
+
+    auth_header = f"{api_token_auth_settings.AUTH_SCHEME} {encoded_jwt}"
+
+    return auth_header
 
 
-def do_authentication(user_uuid, auth_scheme="Bearer"):
-    auth = LinkedEventsJWTAuthentication()
+def do_authentication(user_uuid):
+    auth = LinkedEventsApiOidcAuthentication()
 
-    encoded_jwt = get_api_token_for_user_with_scopes(
+    auth_header = get_api_token_for_user_with_scopes(
         user_uuid, [api_token_auth_settings.API_SCOPE_PREFIX]
     )
 
     rf = RequestFactory()
-    request = rf.get("/path", HTTP_AUTHORIZATION=f"{auth_scheme} {encoded_jwt}")
+    request = rf.get("/path", HTTP_AUTHORIZATION=auth_header)
 
     return auth.authenticate(request)
 

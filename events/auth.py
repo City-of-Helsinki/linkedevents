@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.gis.db import models
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
-from helusers.jwt import JWTAuthentication
+from helusers.oidc import ApiTokenAuthentication
 from rest_framework import authentication, exceptions
 
 from events.models import DataSource
@@ -12,13 +12,14 @@ from .permissions import UserModelPermissionMixin
 from .utils import get_or_create_default_organization
 
 
-class LinkedEventsJWTAuthentication(JWTAuthentication):
-    def authenticate_credentials(self, payload):
-        """Add default organization to user if it doesn't have one yet."""
-        user = super().authenticate_credentials(payload)
+class LinkedEventsApiOidcAuthentication(ApiTokenAuthentication):
+    def authenticate(self, request):
+        auth = super().authenticate(request)
+        user = auth[0] if auth else None
 
         if (
-            settings.ENABLE_USER_DEFAULT_ORGANIZATION
+            user
+            and settings.ENABLE_USER_DEFAULT_ORGANIZATION
             and settings.USER_DEFAULT_ORGANIZATION_ID
             and not user.organization_memberships.exists()
             and not user.admin_organizations.exists()
@@ -26,7 +27,7 @@ class LinkedEventsJWTAuthentication(JWTAuthentication):
             if org := get_or_create_default_organization():
                 user.organization_memberships.add(org)
 
-        return user
+        return auth
 
 
 class ApiKeyAuthentication(authentication.BaseAuthentication):

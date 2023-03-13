@@ -39,6 +39,11 @@ URL = "http://localhost"
 DATETIME = (timezone.now() + timedelta(days=1)).isoformat().replace("+00:00", "Z")
 
 
+@pytest.fixture(autouse=True)
+def setup_env(settings):
+    settings.SUPPORT_EMAIL = "test@test.com"
+
+
 @pytest.fixture
 def kw_name():
     return "tunnettu_avainsana"
@@ -614,14 +619,6 @@ def create_initial_licenses():
             "url": "https://creativecommons.org/licenses/by/4.0/",
         },
     )
-
-
-@pytest.fixture(scope="session", autouse=True)
-def setup_env():
-    settings.SUPPORT_EMAIL = "test@test.com"
-    settings.JWT_AUTH[
-        "JWT_SECRET_KEY"
-    ] = "abcdefghacbdefgabcdefghacbdefgabcdefghacbdefgabcdefghacbdefgabcdefghacbdefg"
 
 
 @pytest.mark.django_db

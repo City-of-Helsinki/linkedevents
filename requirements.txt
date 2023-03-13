@@ -78,7 +78,7 @@ django-environ==0.10.0
     # via -r requirements.in
 django-filter==22.1
     # via -r requirements.in
-django-haystack[elasticsearch]==3.2.1
+django-haystack==3.2.1
     # via -r requirements.in
 django-helusers==0.7.1
     # via -r requirements.in
@@ -121,8 +121,6 @@ djangorestframework-bulk==0.2.1
     # via -r requirements.in
 djangorestframework-gis==1.0
     # via -r requirements.in
-djangorestframework-jwt==1.11.0
-    # via -r requirements.in
 drf-oidc-auth==0.10.0
     # via -r requirements.in
 easy-thumbnails==2.8.5
@@ -130,7 +128,7 @@ easy-thumbnails==2.8.5
 ecdsa==0.18.0
     # via python-jose
 elasticsearch==7.17.9
-    # via django-haystack
+    # via -r requirements.in
 exceptiongroup==1.1.0
     # via cattrs
 executing==1.2.0
@@ -208,9 +206,7 @@ pygments==2.14.0
 pyjwkest==1.4.2
     # via drf-oidc-auth
 pyjwt==1.7.1
-    # via
-    #   djangorestframework-jwt
-    #   social-auth-core
+    # via social-auth-core
 pyparsing==3.0.9
     # via rdflib
 python-dateutil==2.8.2

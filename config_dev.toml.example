@@ -50,12 +50,6 @@ DEBUG=True
 # Does not correspond to standard Django setting
 TOKEN_AUTH_ACCEPTED_AUDIENCE=string-identifying-this-linkedevent-instance
 
-# This key is used by Linkedevents to verify the JWT token is from trusted
-# Identity Provider (OpenID terminology). The provider must have signed
-# the JWT TOKEN using this shared secret
-# Does not correspond to standard Django setting
-TOKEN_AUTH_SHARED_SECRET=abcdefghacbdefgabcdefghacbdefgabcdefghacbdefgabcdefghacbdefgabcdefghacbdefg
-
 # Linkedevents uses Elasticsearch for generating the results available
 # through /search endpoint. For this to work you will need an elasticsearch
 # instance running. This is handily available through docker-compose.yml

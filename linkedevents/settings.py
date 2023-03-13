@@ -71,7 +71,8 @@ env = environ.Env(
     SENTRY_DSN=(str, ""),
     SENTRY_ENVIRONMENT=(str, "development"),
     SOCIAL_AUTH_TUNNISTAMO_KEY=(str, "linkedevents-api-dev"),
-    SOCIAL_AUTH_TUNNISTAMO_SECRET=(str, "dummy_key"),
+    SOCIAL_AUTH_TUNNISTAMO_SECRET=(str, ""),
+    SOCIAL_AUTH_TUNNISTAMO_OIDC_ENDPOINT=(str, ""),
     STATIC_ROOT=(environ.Path(), root("static")),
     STATIC_URL=(str, "/static/"),
     SUPPORT_EMAIL=(str, ""),
@@ -81,7 +82,6 @@ env = environ.Env(
     TOKEN_AUTH_AUTHSERVER_URL=(str, "https://api.hel.fi/sso/openid"),
     TOKEN_AUTH_FIELD_FOR_CONSENTS=(str, "https://api.hel.fi/auth"),
     TOKEN_AUTH_REQUIRE_SCOPE_PREFIX=(bool, True),
-    TOKEN_AUTH_SHARED_SECRET=(str, ""),
     TRUST_X_FORWARDED_HOST=(bool, False),
     USER_DEFAULT_ORGANIZATION_ID=(str, "others"),
 )
@@ -112,6 +112,7 @@ SYSTEM_DATA_SOURCE_ID = env("SYSTEM_DATA_SOURCE_ID")
 
 SOCIAL_AUTH_TUNNISTAMO_KEY = env("SOCIAL_AUTH_TUNNISTAMO_KEY")
 SOCIAL_AUTH_TUNNISTAMO_SECRET = env("SOCIAL_AUTH_TUNNISTAMO_SECRET")
+SOCIAL_AUTH_TUNNISTAMO_OIDC_ENDPOINT = env("SOCIAL_AUTH_TUNNISTAMO_OIDC_ENDPOINT")
 
 SITE_ID = 1
 
@@ -148,6 +149,7 @@ LOGGING = {
 
 # Application definition
 INSTALLED_APPS = [
+    "social_django",
     "helusers.apps.HelusersConfig",
     "helusers.apps.HelusersAdminConfig",
     "django.contrib.sites",
@@ -161,27 +163,26 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.gis",
     "django.contrib.postgres",
-    "linkedevents",
-    "events",
     "corsheaders",
     "rest_framework",
     "rest_framework_gis",
-    "rest_framework_jwt",
     "mptt",
     "reversion",
     "haystack",
     "django_cleanup",
     "django_filters",
     "django_jinja",
-    "notifications",
     "anymail",
-    "helusers.providers.helsinki",
-    "registrations",
-    "helevents",
     "munigeo",
     "leaflet",
     "django_orghierarchy",
     "admin_auto_filters",
+    # Local apps
+    "linkedevents",
+    "helevents",
+    "notifications",
+    "events",
+    "registrations",
 ] + env("EXTRA_INSTALLED_APPS")
 
 # django-extensions is a set of developer friendly tools
@@ -309,16 +310,10 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "events.auth.ApiKeyAuthentication",
-        "events.auth.LinkedEventsJWTAuthentication",
+        "events.auth.LinkedEventsApiOidcAuthentication",
     ),
     "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.URLPathVersioning",
     "VIEW_NAME_FUNCTION": "linkedevents.utils.get_view_name",
-}
-JWT_AUTH = {
-    "JWT_PAYLOAD_GET_USER_ID_HANDLER": "helusers.jwt.get_user_id_from_payload_handler",
-    "JWT_AUDIENCE": env("TOKEN_AUTH_ACCEPTED_AUDIENCE"),
-    "JWT_SECRET_KEY": env("TOKEN_AUTH_SHARED_SECRET"),
-    "JWT_AUTH_HEADER_PREFIX": "Bearer",
 }
 
 CORS_ORIGIN_ALLOW_ALL = True
