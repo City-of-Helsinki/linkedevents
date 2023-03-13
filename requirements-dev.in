@@ -16,3 +16,4 @@ pytest-cov
 pytest-django
 pytest-factoryboy
 python-jose
+requests-mock

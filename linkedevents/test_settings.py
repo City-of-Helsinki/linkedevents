@@ -17,3 +17,17 @@ def dummy_haystack_connection_without_warnings_for_lang(language_code):
 for language in [lang[0] for lang in LANGUAGES]:
     connection = dummy_haystack_connection_without_warnings_for_lang(language)
     HAYSTACK_CONNECTIONS.update(connection)
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.dummy.DummyCache",
+    },
+    "ongoing_events": {
+        "BACKEND": "django.core.cache.backends.dummy.DummyCache",
+    },
+}
+
+
+# Auth
+SOCIAL_AUTH_TUNNISTAMO_OIDC_ENDPOINT = "https://test_issuer"
+OIDC_API_TOKEN_AUTH["ISSUER"] = "https://test_issuer"

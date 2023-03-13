@@ -2,7 +2,6 @@ from datetime import datetime
 
 import pytz
 from django.conf import settings
-from jose.constants import ALGORITHMS
 from rest_framework.reverse import reverse
 from rest_framework.settings import api_settings
 from rest_framework.test import APIRequestFactory
@@ -151,14 +150,3 @@ def datetime_zone_aware(year, month, day, hour, minute):
     return datetime(year, month, day, hour, minute).astimezone(
         pytz.timezone(settings.TIME_ZONE)
     )
-
-
-def build_hmac_key(secret):
-    class _Key:
-        pass
-
-    key = _Key()
-    key.jose_algorithm = ALGORITHMS.HS256
-    key.secret = secret
-
-    return key

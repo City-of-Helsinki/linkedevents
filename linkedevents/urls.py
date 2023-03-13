@@ -19,6 +19,8 @@ class RedirectToAPIRootView(RedirectView):
 urlpatterns = [
     url(r"^(?P<version>(v0.1|v1))/", include(api_router.urls)),
     url(r"^admin/", admin.site.urls),
+    url(r"^pysocial/", include("social_django.urls", namespace="social")),
+    url(r"^helauth/", include("helusers.urls")),
     url(r"^$", RedirectToAPIRootView.as_view()),
 ]
 
