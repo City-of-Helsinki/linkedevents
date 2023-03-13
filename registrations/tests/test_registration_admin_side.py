@@ -5,58 +5,103 @@ from datetime import datetime, timedelta
 import pytest
 from dateutil.parser import parse
 from django.core import mail
+from rest_framework import status
 
 from events.models import Event
 from events.tests.utils import versioned_reverse as reverse
+from helevents.tests.factories import UserFactory
 from registrations.models import Registration, SignUp
 
 
+@pytest.mark.parametrize(
+    "has_right_to_edit,expected_status",
+    [(True, status.HTTP_201_CREATED), (False, status.HTTP_403_FORBIDDEN)],
+)
 @pytest.mark.django_db
-def test_basic_registration_functionality(api_client, user, user2, event):
+def test_create_registration(api_client, event, has_right_to_edit, expected_status):
     registration_url = reverse("registration-list")
-
-    # create registration, user has no rights to modify event
-    api_client.force_authenticate(user2)
-    registration_data = {"event": event.id}
-    response = api_client.post(registration_url, registration_data, format="json")
-    assert response.status_code == 403
-
-    # create registration, user has rights
+    user = UserFactory()
+    if has_right_to_edit:
+        event.publisher.admin_users.add(user)
     api_client.force_authenticate(user)
     registration_data = {"event": event.id}
+
     response = api_client.post(registration_url, registration_data, format="json")
-    assert response.status_code == 201
-    registration_id = response.data["id"]
 
-    # modify registration
-    assert response.data["audience_max_age"] is None
-    registration_data["audience_max_age"] = 10
-    put_url = reverse("registration-detail", kwargs={"pk": registration_id})
+    assert response.status_code == expected_status
 
-    response = api_client.put(put_url, registration_data, format="json")
-    assert response.status_code == 200
-    assert response.data["audience_max_age"] == 10
 
-    # user from another organization cannot modify registration
-    api_client.force_authenticate(user2)
-    response = api_client.put(put_url, registration_data, format="json")
-    assert response.status_code == 403
-
-    # only one registration per event
+@pytest.mark.django_db
+def test_create_registration__only_one_registration_allowed(api_client, event):
+    registration_url = reverse("registration-list")
+    user = UserFactory()
+    event.publisher.admin_users.add(user)
     api_client.force_authenticate(user)
+    registration_data = {"event": event.id}
+
+    api_client.post(registration_url, registration_data, format="json")
     response = api_client.post(registration_url, registration_data, format="json")
-    assert response.status_code == 400
 
-    # user with appropriate rights can delete registration
-    api_client.force_authenticate(user)
-    response = api_client.delete(put_url)
-    assert response.status_code == 204
-    assert len(Registration.objects.all()) == 0
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    # no registration for a nonexistent event
+
+@pytest.mark.django_db
+def test_create_registration__nonexistent_event(api_client, user):
+    """No registration for a nonexistent event."""
+    registration_url = reverse("registration-list")
     registration_data = {"event": "nonexistent-id"}
+    api_client.force_authenticate(user)
+
     response = api_client.post(registration_url, registration_data, format="json")
+
     assert response.status_code == 403
+
+
+@pytest.mark.parametrize(
+    "has_right_to_edit,expected_status",
+    [(True, status.HTTP_200_OK), (False, status.HTTP_403_FORBIDDEN)],
+)
+@pytest.mark.django_db
+def test_update_registration(
+    api_client, event, registration, has_right_to_edit, expected_status
+):
+    update_url = reverse("registration-detail", kwargs={"pk": registration.id})
+    user = UserFactory()
+    if has_right_to_edit:
+        event.publisher.admin_users.add(user)
+    api_client.force_authenticate(user)
+    expected_max_age = 10 if has_right_to_edit else registration.audience_max_age
+    new_max_age = 10
+    registration_data = {"event": event.id, "audience_max_age": new_max_age}
+    assert registration.audience_max_age != new_max_age
+
+    response = api_client.put(update_url, registration_data, format="json")
+
+    assert response.status_code == expected_status
+    if has_right_to_edit:
+        assert response.data["audience_max_age"] == expected_max_age
+    registration.refresh_from_db()
+    assert registration.audience_max_age == expected_max_age
+
+
+@pytest.mark.parametrize(
+    "has_right_to_edit,expected_status,expected_count",
+    [(True, status.HTTP_204_NO_CONTENT, 0), (False, status.HTTP_403_FORBIDDEN, 1)],
+)
+@pytest.mark.django_db
+def test_delete_registration(
+    api_client, event, registration, has_right_to_edit, expected_status, expected_count
+):
+    delete_url = reverse("registration-detail", kwargs={"pk": registration.id})
+    user = UserFactory()
+    if has_right_to_edit:
+        event.publisher.admin_users.add(user)
+    api_client.force_authenticate(user)
+
+    response = api_client.delete(delete_url)
+
+    assert response.status_code == expected_status
+    assert Registration.objects.count() == expected_count
 
 
 @pytest.mark.django_db
