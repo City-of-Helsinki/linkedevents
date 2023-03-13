@@ -6,8 +6,9 @@ from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.gis.db import models
 from django.db.models import Q, Sum
+from django.utils.translation import gettext_lazy as _
 from rest_framework import mixins, serializers, status, viewsets
-from rest_framework.decorators import action
+from rest_framework.decorators import action, permission_classes
 from rest_framework.exceptions import NotFound
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.permissions import IsAuthenticated
@@ -141,6 +142,18 @@ class RegistrationViewSet(
 ):
     serializer_class = RegistrationSerializer
     queryset = Registration.objects.all()
+
+    @permission_classes([IsAuthenticated])
+    def destroy(self, request, *args, **kwargs):
+        user = self.request.user
+        instance = self.get_object()
+
+        if not user.is_admin(instance.event.publisher):
+            raise DRFPermissionDenied(
+                _(f"User {user} cannot modify event {instance.event}")
+            )
+
+        return super().destroy(request, *args, **kwargs)
 
     def filter_queryset(self, queryset):
         events = Event.objects.exclude(registration=None)
