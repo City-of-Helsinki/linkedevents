@@ -172,7 +172,7 @@ class RegistrationViewSet(
     def reserve_seats(self, request, pk=None, version=None):
         def none_to_unlim(val):
             # Null value in the waiting_list_capacity or maximum_attendee_capacity
-            # signifies that the amount of seats is unimited
+            # signifies that the amount of seats is unlimited
             if val is None:
                 return 10000
             else:
@@ -188,7 +188,11 @@ class RegistrationViewSet(
         else:
             waitlist_seats = 0  # if waitlist is False, waiting list is not to be used
 
-        seats_capacity = registration.maximum_attendee_capacity + waitlist_seats
+        maximum_attendee_capacity = none_to_unlim(
+            registration.maximum_attendee_capacity
+        )
+
+        seats_capacity = maximum_attendee_capacity + waitlist_seats
         seats_reserved = registration.reservations.filter(
             timestamp__gte=datetime.now()
             - timedelta(minutes=settings.SEAT_RESERVATION_DURATION)
@@ -208,9 +212,7 @@ class RegistrationViewSet(
             code = SeatReservationCode()
             code.registration = registration
             code.seats = request.data.get("seats")
-            free_seats = (
-                registration.maximum_attendee_capacity - registration.signups.count()
-            )
+            free_seats = maximum_attendee_capacity - registration.signups.count()
             code.save()
             data = SeatReservationCodeSerializer(code).data
             data["seats_at_event"] = (
