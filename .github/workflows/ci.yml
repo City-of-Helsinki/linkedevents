@@ -93,7 +93,6 @@ jobs:
       # With pytest-cov use: --cov=.
       # Some errors, skipping --doctest-modules for now
       - name: Run tests
-        continue-on-error: true # TODO remove once tests are sorted out
         uses: liskin/gh-problem-matcher-wrap@v2
         with:
           linters: pytest
