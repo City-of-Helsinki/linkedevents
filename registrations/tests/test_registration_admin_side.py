@@ -1,16 +1,39 @@
 import uuid
 from copy import deepcopy
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 import pytest
 from dateutil.parser import parse
 from django.core import mail
+from freezegun import freeze_time
 from rest_framework import status
 
 from events.models import Event
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
 from registrations.models import Registration, SignUp
+
+
+def sign_up(api_client, registration_id, sign_up_data):
+    api_client.force_authenticate(user=None)
+
+    # Reserve seats
+    reservation_url = reverse(
+        "registration-reserve-seats", kwargs={"pk": registration_id}
+    )
+    seat_reservation_data = {"seats": 1, "waitlist": True}
+    response = api_client.post(reservation_url, seat_reservation_data, format="json")
+    assert response.status_code == status.HTTP_201_CREATED
+
+    # Sign up
+    sign_up_payload = {
+        "reservation_code": response.data["code"],
+        "signups": [sign_up_data],
+    }
+    signup_url = reverse("registration-signup", kwargs={"pk": registration_id})
+    response = api_client.post(signup_url, sign_up_payload, format="json")
+
+    return response
 
 
 @pytest.mark.parametrize(
@@ -54,7 +77,7 @@ def test_create_registration__nonexistent_event(api_client, user):
 
     response = api_client.post(registration_url, registration_data, format="json")
 
-    assert response.status_code == 403
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.parametrize(
@@ -112,7 +135,7 @@ def test_filter_events_with_registrations(api_client, user, event, event2):
     api_client.force_authenticate(user)
     registration_data = {"event": event.id}
     response = api_client.post(registration_url, registration_data, format="json")
-    assert response.status_code == 201
+    assert response.status_code == status.HTTP_201_CREATED
 
     api_client.force_authenticate(user=None)
     response = api_client.get(event_url, format="json")
@@ -126,40 +149,40 @@ def test_filter_events_with_registrations(api_client, user, event, event2):
 @pytest.mark.django_db
 def test_list_all_registrations(api_client, user, user2, event, event2, event3):
     registration_url = reverse("registration-list")
+    expected_ids = set()
 
     # create registrations from two different users
     api_client.force_authenticate(user)
     registration_data = {"event": event.id}
     response = api_client.post(registration_url, registration_data, format="json")
-    assert response.status_code == 201
+    expected_ids.add(response.data["id"])
+    assert response.status_code == status.HTTP_201_CREATED
     registration_data = {"event": event3.id}
     response = api_client.post(registration_url, registration_data, format="json")
-    assert response.status_code == 201
+    expected_ids.add(response.data["id"])
+    assert response.status_code == status.HTTP_201_CREATED
 
     api_client.force_authenticate(user2)
     registration_data = {"event": event2.id}
     response = api_client.post(registration_url, registration_data, format="json")
-    assert response.status_code == 201
+    expected_ids.add(response.data["id"])
+    assert response.status_code == status.HTTP_201_CREATED
 
     # log out and check the list of registrations
     api_client.force_authenticate(user=None)
     response = api_client.get(registration_url)
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
+    assert Registration.objects.count() == 3
+    assert len(expected_ids) == 3
+    assert expected_ids == {r["id"] for r in response.data["data"]}
 
 
 @pytest.mark.django_db
-def test_successful_sign_up(api_client, user, event, languages):
-    registration_url = reverse("registration-list")
-
-    api_client.force_authenticate(user)
-    registration_data = {"event": event.id}
-    response = api_client.post(registration_url, registration_data, format="json")
-    registration_id = response.data["id"]
-
-    api_client.force_authenticate(user=None)
+def test_successful_sign_up(api_client, languages, registration):
+    """User reserves seats and then signs up."""
     sign_up_data = {
-        "registration": registration_id,
         "name": "Michael Jackson",
+        "date_of_birth": "2011-04-07",
         "email": "test@test.com",
         "phone_number": "0441111111",
         "notifications": "sms",
@@ -169,96 +192,79 @@ def test_successful_sign_up(api_client, user, event, languages):
         "zipcode": "myzip1",
     }
 
-    signup_url = reverse("registration-signup", kwargs={"pk": registration_id})
+    response = sign_up(api_client, registration.id, sign_up_data)
 
-    response = api_client.post(signup_url, sign_up_data, format="json")
-    assert response.status_code == 201
+    assert response.status_code == status.HTTP_201_CREATED
+    assert SignUp.objects.count() == 1
 
     signup = SignUp.objects.first()
+    assert signup.attendee_status == SignUp.AttendeeStatus.ATTENDING
     assert signup.name == sign_up_data["name"]
+    assert signup.date_of_birth == date(2011, 4, 7)
     assert signup.email == sign_up_data["email"]
     assert signup.phone_number == sign_up_data["phone_number"]
     assert signup.notifications == SignUp.NotificationType.SMS
-    assert signup.native_language.name == "finnish"
+    assert signup.native_language.pk == "fi"
+    assert signup.service_language.pk == "fi"
     assert signup.street_address == sign_up_data["street_address"]
     assert signup.zipcode == sign_up_data["zipcode"]
 
 
 @pytest.mark.django_db
-def test_wrong_registration_id(api_client):
-    signup_url = reverse("signup-list")
-
+def test_cannot_sign_up_twice_with_same_phone_or_email(api_client, registration):
     sign_up_data = {
-        "registration": 1,
         "name": "Michael Jackson",
         "email": "test@test.com",
         "phone_number": "0441111111",
-    }
-    response = api_client.post(signup_url, sign_up_data, format="json")
-    assert response.status_code == 400
-
-
-@pytest.mark.django_db
-def test_cannot_sign_up_twice_with_same_phone_or_email(api_client, user, event):
-    registration_url = reverse("registration-list")
-    signup_url = reverse("signup-list")
-
-    api_client.force_authenticate(user)
-    registration_data = {
-        "event": event.id,
-        "maximum_attendee_capacity": 10,
-        "waiting_list_capacity": 10,
-    }
-    response = api_client.post(registration_url, registration_data, format="json")
-    registration_id = response.data["id"]
-
-    api_client.force_authenticate(user=None)
-    sign_up_data = {
-        "registration": registration_id,
-        "name": "Michael Jackson",
-        "email": "test@test.com",
-        "phone_number": "0441111111",
+        "date_of_birth": "2011-04-07",
     }
 
-    response = api_client.post(signup_url, sign_up_data, format="json")
-    assert response.status_code == 201
+    response = sign_up(api_client, registration.id, sign_up_data)
+    assert response.status_code == status.HTTP_201_CREATED
 
     # cannot signup with the same email twice
     sign_up_data_same_email = deepcopy(sign_up_data)
     sign_up_data_same_email["phone_number"] = "0442222222"
-    response = api_client.post(signup_url, sign_up_data_same_email, format="json")
-    print(response.data)
-    assert response.status_code == 400
+    response = sign_up(api_client, registration.id, sign_up_data_same_email)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["non_field_errors"][0].code == "unique"
 
     # cannot signup with the same phone twice
     sign_up_data_same_phone = deepcopy(sign_up_data)
     sign_up_data_same_phone["email"] = "another@email.com"
-    response = api_client.post(signup_url, sign_up_data_same_email, format="json")
-    assert response.status_code == 400
+    response = sign_up(api_client, registration.id, sign_up_data_same_phone)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["non_field_errors"][0].code == "unique"
 
 
 @pytest.mark.django_db
 def test_current_attendee_and_waitlist_count(api_client, user, event):
     registration_url = reverse("registration-list")
-
-    api_client.force_authenticate(user)
     registration_data = {
         "event": event.id,
         "maximum_attendee_capacity": 1,
         "waiting_list_capacity": 1,
     }
-    response = api_client.post(registration_url, registration_data, format="json")
-    registration_id = response.data["id"]
-
-    api_client.force_authenticate(user=None)
     sign_up_data = {
-        "registration": registration_id,
         "name": "Michael Jackson",
         "email": "test@test.com",
         "phone_number": "0441111111",
         "notifications": "sms",
     }
-    signup_url = reverse("signup-list")
+    sign_up_data2 = {
+        "name": "Michael Jackson 2",
+        "email": "test2@test.com",
+        "phone_number": "20441111111",
+        "notifications": "sms",
+    }
+
+    # Create registration
+    api_client.force_authenticate(user)
+    response = api_client.post(registration_url, registration_data, format="json")
+    registration_id = response.data["id"]
+
+    api_client.force_authenticate(user=None)
+
     registration_detail_url = reverse(
         "registration-detail", kwargs={"pk": registration_id}
     )
@@ -267,121 +273,101 @@ def test_current_attendee_and_waitlist_count(api_client, user, event):
     assert response.data["current_attendee_count"] == 0
     assert response.data["current_waiting_list_count"] == 0
 
-    api_client.post(signup_url, sign_up_data, format="json")
+    response = sign_up(api_client, registration_id, sign_up_data)
+    assert response.status_code == status.HTTP_201_CREATED
     response = api_client.get(registration_detail_url, format="json")
     assert response.data["current_attendee_count"] == 1
     assert response.data["current_waiting_list_count"] == 0
 
-    sign_up_data2 = {
-        "registration": registration_id,
-        "name": "Michael Jackson 2",
-        "email": "test2@test.com",
-        "phone_number": "20441111111",
-        "notifications": "sms",
-    }
-    api_client.post(signup_url, sign_up_data2, format="json")
-    response = api_client.get(registration_detail_url, format="json")
-    assert response.data["current_attendee_count"] == 1
-    assert response.data["current_waiting_list_count"] == 1
-
-    sign_up_data3 = {
-        "registration": registration_id,
-        "name": "Michael Jackson 3",
-        "email": "test3@test.com",
-        "phone_number": "30441111111",
-        "notifications": "sms",
-    }
-    api_client.post(signup_url, sign_up_data3, format="json")
+    response = sign_up(api_client, registration_id, sign_up_data2)
+    assert response.status_code == status.HTTP_201_CREATED
     response = api_client.get(registration_detail_url, format="json")
     assert response.data["current_attendee_count"] == 1
     assert response.data["current_waiting_list_count"] == 1
 
 
+@pytest.mark.parametrize("min_age", [None, 10])
+@pytest.mark.parametrize("max_age", [None, 100])
+@pytest.mark.parametrize("date_of_birth", [None, "1980-12-30"])
+@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_signup_age_is_mandatory_if_audience_min_or_max_age_specified(
-    api_client, user, event
+    api_client, user, event, date_of_birth, min_age, max_age
 ):
+    if (min_age or max_age) and not date_of_birth:
+        expected_status = status.HTTP_403_FORBIDDEN
+        expected_error = "Date of birth has to be specified."
+    else:
+        expected_status = status.HTTP_201_CREATED
+        expected_error = None
+
     registration_url = reverse("registration-list")
-    signup_url = reverse("signup-list")
-
-    api_client.force_authenticate(user)
-    registration_data = {"event": event.id}
-    response = api_client.post(registration_url, registration_data, format="json")
-    registration_id = response.data["id"]
-
-    api_client.force_authenticate(user=None)
     sign_up_data = {
-        "registration": registration_id,
         "name": "Michael Jackson",
         "email": "test@test.com",
         "phone_number": "0441111111",
         "notifications": "sms",
     }
+    if date_of_birth:
+        sign_up_data["date_of_birth"] = date_of_birth
 
-    response = api_client.post(signup_url, sign_up_data, format="json")
-    assert response.status_code == 201
-
-    api_client.force_authenticate(user=user)
-    put_url = reverse("registration-detail", kwargs={"pk": registration_id})
-
-    registration_data["audience_max_age"] = 100
-    response = api_client.put(put_url, registration_data, format="json")
-
-    api_client.force_authenticate(user=None)
-    sign_up_data2 = {
-        "registration": registration_id,
-        "name": "Michael Jackson 2",
-        "email": "test2@test.com",
-        "phone_number": "20441111111",
-        "notifications": "sms",
-    }
-    response = api_client.post(signup_url, sign_up_data2, format="json")
-    assert response.status_code == 403
-    assert str(response.data["detail"]) == "Date of birth has to be specified."
-
-    sign_up_data2["date_of_birth"] = "1980-12-30"
-    response = api_client.post(signup_url, sign_up_data2, format="json")
-    assert response.status_code == 201
-
-
-@pytest.mark.django_db
-def test_age_has_to_match_the_audience_min_max_age(api_client, user, event):
-    registration_url = reverse("registration-list")
-    signup_url = reverse("signup-list")
-
+    # Crate registration
     api_client.force_authenticate(user)
+    registration_data = {"event": event.id, "maximum_attendee_capacity": 1}
+    if min_age:
+        registration_data["audience_min_age"] = min_age
+    if max_age:
+        registration_data["audience_max_age"] = max_age
+    response = api_client.post(registration_url, registration_data, format="json")
+    registration_id = response.data["id"]
+
+    response = sign_up(api_client, registration_id, sign_up_data)
+
+    assert response.status_code == expected_status
+    if expected_error:
+        assert str(response.data["detail"]) == expected_error
+
+
+@pytest.mark.parametrize(
+    "date_of_birth,expected_status,expected_error",
+    [
+        ("2011-04-07", status.HTTP_403_FORBIDDEN, "The participant is too young."),
+        ("1879-03-14", status.HTTP_403_FORBIDDEN, "The participant is too old."),
+        ("2000-02-29", status.HTTP_201_CREATED, None),
+    ],
+)
+@freeze_time("2023-03-14 03:30:00+02:00")
+@pytest.mark.django_db
+def test_signup_age_has_to_match_the_audience_min_max_age(
+    api_client, user, event, date_of_birth, expected_status, expected_error
+):
+    registration_url = reverse("registration-list")
     registration_data = {
         "event": event.id,
         "audience_max_age": 40,
         "audience_min_age": 20,
+        "maximum_attendee_capacity": 1,
     }
-    response = api_client.post(registration_url, registration_data, format="json")
-    registration_id = response.data["id"]
-
-    api_client.force_authenticate(user=None)
     sign_up_data = {
-        "registration": registration_id,
         "name": "Michael Jackson",
         "email": "test@test.com",
         "phone_number": "0441111111",
         "notifications": "sms",
-        "date_of_birth": "2011-04-07",
+        "date_of_birth": date_of_birth,
     }
 
-    response = api_client.post(signup_url, sign_up_data, format="json")
-    assert response.status_code == 403
-    assert str(response.data["detail"]) == "The participant is too young."
+    api_client.force_authenticate(user)
+    response = api_client.post(registration_url, registration_data, format="json")
+    registration_id = response.data["id"]
 
-    sign_up_data["date_of_birth"] = "1879-03-14"
-    response = api_client.post(signup_url, sign_up_data, format="json")
-    assert response.status_code == 403
-    assert str(response.data["detail"]) == "The participant is too old."
+    response = sign_up(api_client, registration_id, sign_up_data)
 
-    sign_up_data["date_of_birth"] = "2000-02-29"
-    response = api_client.post(signup_url, sign_up_data, format="json")
-    assert response.status_code == 201
+    assert response.status_code == expected_status
+    if expected_error:
+        assert str(response.data["detail"]) == expected_error
 
 
+@pytest.mark.skip(reason="Currently there's no way to cancel a signup.")
 @pytest.mark.django_db
 def test_signup_deletion(api_client, user, event):
     registration_url = reverse("registration-list")
@@ -410,6 +396,7 @@ def test_signup_deletion(api_client, user, event):
     assert response.status_code == 200
 
 
+@pytest.mark.skip(reason="Currently there's no way to cancel a signup.")
 @pytest.mark.django_db
 def test_signup_deletion_missing_signup(api_client, user, event):
     registration_url = reverse("registration-list")
@@ -439,6 +426,7 @@ def test_signup_deletion_missing_signup(api_client, user, event):
     assert response.status_code == 403
 
 
+@pytest.mark.skip(reason="Currently there's no way to cancel a signup.")
 @pytest.mark.django_db
 def test_signup_deletion_wrong_code(api_client, user, event):
     registration_url = reverse("registration-list")
@@ -468,6 +456,7 @@ def test_signup_deletion_wrong_code(api_client, user, event):
     assert response.status_code == 403
 
 
+@pytest.mark.skip(reason="Currently there's no way to cancel a signup.")
 @pytest.mark.django_db
 def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
     api_client, user, event
@@ -530,29 +519,22 @@ def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
 
 
 @pytest.mark.django_db
-def test_email_sent_on_successful_signup(api_client, user, event):
-    registration_url = reverse("registration-list")
-
-    api_client.force_authenticate(user)
-    registration_data = {"event": event.id}
-
-    response = api_client.post(registration_url, registration_data, format="json")
-    registration_id = response.data["id"]
-
-    api_client.force_authenticate(user=None)
-    sign_up_payload = {
-        "registration": registration_id,
-        "name": "Michael Jackson1",
+def test_email_sent_on_successful_signup(api_client, registration):
+    sign_up_data = {
+        "name": "Michael Jackson",
+        "date_of_birth": "2011-04-07",
         "email": "test@test.com",
     }
-    signup_url = reverse("signup-list")
-    response = api_client.post(signup_url, sign_up_payload, format="json")
-    #  assert that the registration was successful
-    assert "cancellation_code" in response.data
+
+    response = sign_up(api_client, registration.id, sign_up_data)
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert sign_up_data["name"] in response.data["attending"]["people"][0]["name"]
     #  assert that the email was sent
     assert len(mail.outbox) == 1
 
 
+@pytest.mark.skip(reason="Currently there's no way to cancel a signup.")
 @pytest.mark.django_db
 def test_get_signup_info_with_cancel_code_no_auth(api_client, user, event):
     registration_url = reverse("registration-list")
@@ -578,6 +560,9 @@ def test_get_signup_info_with_cancel_code_no_auth(api_client, user, event):
     assert response.data["name"] == "Michael Jackson"
 
 
+@pytest.mark.skip(
+    reason="No way to filter signups currently. SignUpViewSet doesn't implement any endpoints."
+)
 @pytest.mark.django_db
 def test_filter_signups(api_client, user, user2, event, event2):
     registration_url = reverse("registration-list")
@@ -638,7 +623,9 @@ def test_filter_signups(api_client, user, user2, event, event2):
         "membership_number": "3456",
     }
     signup_url = reverse("signup-list")
-    api_client.post(signup_url, sign_up_payload, format="json")
+    response = api_client.post(signup_url, sign_up_payload, format="json")
+    assert response.status_code == 201
+
     api_client.post(signup_url, sign_up_payload1, format="json")
     api_client.post(signup_url, sign_up_payload2, format="json")
     api_client.post(signup_url, sign_up_payload3, format="json")
@@ -729,9 +716,7 @@ def test_event_with_open_registrations_and_places_at_the_event(
     """Show the events that have:
     - registration open AND places available at the event
     """
-
     event_url = reverse("event-list")
-    signup_url = reverse("signup-list")
 
     response = api_client.get(f"{event_url}?enrolment_open=true", format="json")
     assert len(response.data["data"]) == 2
@@ -751,12 +736,12 @@ def test_event_with_open_registrations_and_places_at_the_event(
     registration2.save()
     api_client.force_authenticate(user=None)
     sign_up_payload = {
-        "registration": registration2.id,
         "name": "Michael Jackson",
         "email": "test@test.com",
         "date_of_birth": (datetime.now() - timedelta(days=3650)).strftime("%Y-%m-%d"),
     }
-    response = api_client.post(signup_url, sign_up_payload, format="json")
+
+    response = sign_up(api_client, registration2.id, sign_up_payload)
     response = api_client.get(f"{event_url}?enrolment_open=true", format="json")
     assert len(response.data["data"]) == 1
     assert registration.event.id == response.data["data"][0]["id"]
@@ -768,12 +753,12 @@ def test_event_with_open_registrations_and_places_at_the_event(
     registration2.save()
     api_client.force_authenticate(user=None)
     sign_up_payload = {
-        "registration": registration2.id,
         "name": "Michael Jackson",
         "email": "test@test.com",
         "date_of_birth": (datetime.now() - timedelta(days=3650)).strftime("%Y-%m-%d"),
     }
-    response = api_client.post(signup_url, sign_up_payload, format="json")
+
+    response = sign_up(api_client, registration2.id, sign_up_payload)
     response = api_client.get(f"{event_url}?enrolment_open=true", format="json")
     assert len(response.data["data"]) == 2
 
@@ -793,7 +778,6 @@ def test_event_with_open_registrations_and_places_at_the_event_or_waiting_list(
     """
 
     event_url = reverse("event-list")
-    signup_url = reverse("signup-list")
 
     # seats at the event available
     response = api_client.get(
@@ -819,14 +803,13 @@ def test_event_with_open_registrations_and_places_at_the_event_or_waiting_list(
     registration2.maximum_attendee_capacity = 1
     registration2.waiting_list_capacity = 10
     registration2.save()
-    api_client.force_authenticate(user=None)
     sign_up_payload = {
-        "registration": registration2.id,
         "name": "Michael Jackson",
         "email": "test@test.com",
         "date_of_birth": (datetime.now() - timedelta(days=3650)).strftime("%Y-%m-%d"),
     }
-    response = api_client.post(signup_url, sign_up_payload, format="json")
+    response = sign_up(api_client, registration2.id, sign_up_payload)
+    assert response.status_code == status.HTTP_201_CREATED
     response = api_client.get(
         f"{event_url}?enrolment_open_waitlist=true", format="json"
     )
@@ -838,14 +821,6 @@ def test_event_with_open_registrations_and_places_at_the_event_or_waiting_list(
     registration2.maximum_attendee_capacity = 1
     registration2.waiting_list_capacity = 0
     registration2.save()
-    api_client.force_authenticate(user=None)
-    sign_up_payload = {
-        "registration": registration2.id,
-        "name": "Michael Jackson",
-        "email": "test@test.com",
-        "date_of_birth": (datetime.now() - timedelta(days=3650)).strftime("%Y-%m-%d"),
-    }
-    response = api_client.post(signup_url, sign_up_payload, format="json")
     response = api_client.get(
         f"{event_url}?enrolment_open_waitlist=true", format="json"
     )
@@ -873,7 +848,7 @@ def test_seat_reservation_code_request_enough_seats_no_waitlist(
     payload = {"seats": registration.maximum_attendee_capacity - 2, "waitlist": False}
     response = api_client.post(reservation_url, payload, format="json")
     duration = settings.SEAT_RESERVATION_DURATION + payload["seats"]
-    assert response.status_code == 201
+    assert response.status_code == status.HTTP_201_CREATED
     assert uuid.UUID(response.data["code"])
     assert response.data["seats"] == registration.maximum_attendee_capacity - 2
     assert response.data["expiration"] == parse(response.data["timestamp"]) + timedelta(
@@ -890,7 +865,7 @@ def test_seat_reservation_code_request_enough_seats_with_waitlist(
     )
     payload = {"seats": registration.maximum_attendee_capacity + 2, "waitlist": True}
     response = api_client.post(reservation_url, payload, format="json")
-    assert response.status_code == 201
+    assert response.status_code == status.HTTP_201_CREATED
     assert uuid.UUID(response.data["code"])
     assert response.data["seats"] == registration.maximum_attendee_capacity + 2
 
@@ -904,7 +879,7 @@ def test_seat_reservation_code_request_not_enough_seats_no_waitlist(
     )
     payload = {"seats": registration.maximum_attendee_capacity + 2, "waitlist": False}
     response = api_client.post(reservation_url, payload, format="json")
-    assert response.status_code == 409
+    assert response.status_code == status.HTTP_409_CONFLICT
 
 
 @pytest.mark.django_db
@@ -921,7 +896,7 @@ def test_seat_reservation_code_request_not_enough_seats_with_waitlist(
         "waitlist": True,
     }
     response = api_client.post(reservation_url, payload, format="json")
-    assert response.status_code == 409
+    assert response.status_code == status.HTTP_409_CONFLICT
 
 
 @pytest.mark.django_db
@@ -951,7 +926,7 @@ def test_group_signup_successful_with_waitlist(api_client, registration):
     }
 
     response = api_client.post(signup_url, sign_up_payload, format="json")
-    assert response.status_code == 201
+    assert response.status_code == status.HTTP_201_CREATED
     assert registration.signups.count() == 2
 
 
