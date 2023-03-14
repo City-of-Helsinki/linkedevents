@@ -90,7 +90,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
     def get_signups(self, obj):
         params = self.context["request"].query_params
-        if params.get("include", None) and params["include"] == "signups":
+        if params.get("include", None) == "signups":
             #  only the organization admins should be able to access the signup information
             user = self.context["user"]
             event = obj.event
