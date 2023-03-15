@@ -33,7 +33,7 @@ django==3.2.18
     # via
     #   -c requirements.txt
     #   django-debug-toolbar
-django-debug-toolbar==3.5.0
+django-debug-toolbar==3.8.1
     # via -r requirements-dev.in
 django-extensions==3.0.1
     # via -r requirements-dev.in
