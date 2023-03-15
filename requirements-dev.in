@@ -1,4 +1,4 @@
--c requirements.txt # Constrained by requirements.txt
+-c requirements.txt
 
 Werkzeug
 black

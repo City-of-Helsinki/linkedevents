@@ -20,17 +20,15 @@ if [[ "$CREATE_SUPERUSER" = "true" ]]; then
     ./manage.py create_admin_superuser
 fi
 
+if [[ -n "$INSTALL_TEMPLATE" ]]; then
+    ./manage.py install_templates "${INSTALL_TEMPLATE}"
+fi
+
 # Start server
-if [[ ! -z "$@" ]]; then
+if [[ -n "$@" ]]; then
     "$@"
-elif [[ "$DEBUG" = "true" ]]; then
-    echo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    echo !!!!!       DEBUG is $DEBUG        !!!!!!!!!!!
-    echo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    python -Wd ./manage.py runserver_plus $RUNSERVER_ADDRESS
+elif [[ "$DEV_SERVER" = "true" ]]; then
+    python ./manage.py runserver_plus 0.0.0.0:8000
 else
-    echo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    echo !!!!!!!!!  PROD MODE ON    !!!!!!!!
-    echo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     uwsgi --ini .prod/uwsgi_configuration.ini
 fi
