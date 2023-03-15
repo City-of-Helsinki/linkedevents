@@ -8,7 +8,6 @@ factory_boy
 flake8
 flake8-bugbear
 freezegun
-ipython
 isort
 pep8-naming
 pip-tools
