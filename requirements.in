@@ -26,6 +26,7 @@ drf-oidc-auth==0.10.0
 easy_thumbnails
 httmock
 icalendar
+ipython
 isodate
 jinja2
 langdetect

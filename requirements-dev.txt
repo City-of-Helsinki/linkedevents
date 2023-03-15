@@ -13,8 +13,6 @@ attrs==22.2.0
     #   -c requirements.txt
     #   flake8-bugbear
     #   pytest
-backcall==0.2.0
-    # via ipython
 black==22.12.0
     # via -r requirements-dev.in
 build==0.10.0
@@ -25,10 +23,6 @@ click==8.1.3
     #   pip-tools
 coverage[toml]==7.2.1
     # via pytest-cov
-decorator==4.4.2
-    # via
-    #   ipython
-    #   traitlets
 django==3.2.18
     # via
     #   -c requirements.txt
@@ -64,14 +58,8 @@ inflection==0.5.1
     # via pytest-factoryboy
 iniconfig==2.0.0
     # via pytest
-ipython==7.16.1
-    # via -r requirements-dev.in
-ipython-genutils==0.2.0
-    # via traitlets
 isort==5.12.0
     # via -r requirements-dev.in
-jedi==0.17.2
-    # via ipython
 mccabe==0.7.0
     # via flake8
 mypy-extensions==0.4.3
@@ -81,16 +69,10 @@ packaging==23.0
     #   -c requirements.txt
     #   build
     #   pytest
-parso==0.7.1
-    # via jedi
 pathspec==0.11.0
     # via black
 pep8-naming==0.13.3
     # via -r requirements-dev.in
-pexpect==4.8.0
-    # via ipython
-pickleshare==0.7.5
-    # via ipython
 pip-tools==6.12.1
     # via -r requirements-dev.in
 platformdirs==3.1.0
@@ -99,10 +81,6 @@ platformdirs==3.1.0
     #   black
 pluggy==1.0.0
     # via pytest
-prompt-toolkit==3.0.8
-    # via ipython
-ptyprocess==0.6.0
-    # via pexpect
 pyasn1==0.4.8
     # via
     #   -c requirements.txt
@@ -112,8 +90,6 @@ pycodestyle==2.10.0
     # via flake8
 pyflakes==3.0.1
     # via flake8
-pygments==2.7.2
-    # via ipython
 pyproject-hooks==1.0.0
     # via build
 pytest==7.2.2
@@ -152,7 +128,6 @@ six==1.16.0
     #   ecdsa
     #   freezegun
     #   python-dateutil
-    #   traitlets
 sqlparse==0.4.3
     # via
     #   -c requirements.txt
@@ -164,15 +139,11 @@ tomli==2.0.1
     #   build
     #   coverage
     #   pytest
-traitlets==4.3.3
-    # via ipython
 typing-extensions==4.5.0
     # via
     #   -c requirements.txt
     #   black
     #   pytest-factoryboy
-wcwidth==0.2.5
-    # via prompt-toolkit
 werkzeug==1.0.1
     # via -r requirements-dev.in
 wheel==0.38.4
