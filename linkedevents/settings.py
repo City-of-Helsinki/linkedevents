@@ -16,6 +16,7 @@ from sentry_sdk.integrations.django import DjangoIntegration
 
 CONFIG_FILE_NAME = "config_dev.toml"
 
+DEBUG_TOOLBAR_AVAILABLE = importlib.util.find_spec("debug_toolbar") is not None
 DJANGO_EXTENSIONS_AVAILABLE = importlib.util.find_spec("django_extensions") is not None
 
 
@@ -155,7 +156,6 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
-    "debug_toolbar",
     # disable Django’s development server static file handling
     "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
@@ -201,7 +201,6 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     # WhiteNoiseMiddleware should be placed as high as possible
     "whitenoise.middleware.WhiteNoiseMiddleware",
-    "debug_toolbar.middleware.DebugToolbarMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -210,6 +209,18 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+if DEBUG and DEBUG_TOOLBAR_AVAILABLE:
+    import socket
+
+    INSTALLED_APPS.extend(["debug_toolbar"])
+    MIDDLEWARE.insert(
+        MIDDLEWARE.index("whitenoise.middleware.WhiteNoiseMiddleware") + 1,
+        "debug_toolbar.middleware.DebugToolbarMiddleware",
+    )
+    # Add the docker container gateway IP into internal IPs (for having debug toolbar)
+    hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
+    INTERNAL_IPS += [ip[: ip.rfind(".")] + ".1" for ip in ips]
 
 
 ROOT_URLCONF = "linkedevents.urls"
