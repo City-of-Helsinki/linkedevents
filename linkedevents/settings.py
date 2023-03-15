@@ -1,6 +1,7 @@
 """
 Django settings module for linkedevents project.
 """
+import importlib.util
 import os
 import subprocess
 
@@ -14,6 +15,8 @@ from easy_thumbnails.conf import Settings as thumbnail_settings  # noqa: N813
 from sentry_sdk.integrations.django import DjangoIntegration
 
 CONFIG_FILE_NAME = "config_dev.toml"
+
+DJANGO_EXTENSIONS_AVAILABLE = importlib.util.find_spec("django_extensions") is not None
 
 
 def get_git_revision_hash() -> str:
@@ -181,6 +184,10 @@ INSTALLED_APPS = [
     "admin_auto_filters",
 ] + env("EXTRA_INSTALLED_APPS")
 
+# django-extensions is a set of developer friendly tools
+if DJANGO_EXTENSIONS_AVAILABLE:
+    INSTALLED_APPS.extend(["django_extensions"])
+
 if env("SENTRY_DSN"):
     sentry_sdk.init(
         dsn=env("SENTRY_DSN"),
@@ -203,10 +210,6 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
-
-# django-extensions is a set of developer friendly tools
-if DEBUG:
-    INSTALLED_APPS.extend(["django_extensions"])
 
 
 ROOT_URLCONF = "linkedevents.urls"
