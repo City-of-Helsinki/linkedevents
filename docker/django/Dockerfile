@@ -2,34 +2,60 @@ ARG PYTHON_VERSION=3.9
 ARG IMAGE_VARIANT=slim
 
 # ==============================
-FROM helsinkitest/python:${PYTHON_VERSION}-${IMAGE_VARIANT} AS base_stage
+FROM helsinkitest/python:${PYTHON_VERSION}-${IMAGE_VARIANT} AS appbase
 # ==============================
+RUN mkdir /entrypoint
 
-
-ENV PYTHONDONTWRITEBYTECODE true
-ENV PYTHONUNBUFFERED true
+ENV PYTHONDONTWRITEBYTECODE=true
+ENV PYTHONUNBUFFERED=true
 
 COPY --chown=appuser:appuser requirements.txt /app/
+COPY --chown=appuser:appuser requirements-prod.txt /app/
 
-RUN apt-install.sh build-essential gdal-bin gettext postgresql-client \
+RUN apt-install.sh \
+    build-essential \
+    gdal-bin \
+    gettext \
+    postgresql-client \
     && pip install --upgrade pip \
     && pip install --no-cache-dir -r /app/requirements.txt \
-    && pip --no-cache-dir install uwsgi==2.0.20 \
+    && pip install --no-cache-dir -r /app/requirements-prod.txt \
     && apt-cleanup.sh build-essential
 
+
+COPY --chown=appuser:appuser ./docker/django/docker-entrypoint.sh /entrypoint/docker-entrypoint.sh
+ENTRYPOINT ["/entrypoint/docker-entrypoint.sh"]
+
 # ==============================
-FROM base_stage AS development
+FROM appbase AS development
 # ==============================
 
 COPY --chown=appuser:appuser requirements-dev.txt /app/
+RUN pip install --no-cache-dir -r /app/requirements-dev.txt
 
-RUN pip --no-cache-dir install -r /app/requirements-dev.txt
+ENV DEV_SERVER=true
 
 COPY --chown=appuser:appuser . /app/
 
-COPY --chown=appuser:appuser ./docker/django/docker-entrypoint.sh /app/
-ENTRYPOINT ["/app/docker/django/docker-entrypoint.sh"]
+USER appuser
 
-USER appuser:appuser
+EXPOSE 8000/tcp
 
-EXPOSE 8080
+# ==============================
+FROM appbase AS staticbuilder
+# ==============================
+
+ENV VAR_ROOT=/app
+COPY --chown=appuser:appuser . /app
+RUN python manage.py collectstatic --noinput
+
+# ==============================
+FROM appbase AS production
+# ==============================
+
+COPY --from=staticbuilder --chown=appuser:appuser /app/static /app/static
+COPY --chown=appuser:appuser . /app/
+
+USER appuser
+
+EXPOSE 8000/tcp
