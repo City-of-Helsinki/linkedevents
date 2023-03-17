@@ -31,3 +31,5 @@ CACHES = {
 # Auth
 SOCIAL_AUTH_TUNNISTAMO_OIDC_ENDPOINT = "https://test_issuer"
 OIDC_API_TOKEN_AUTH["ISSUER"] = "https://test_issuer"
+
+SECRET_KEY = "xxx"

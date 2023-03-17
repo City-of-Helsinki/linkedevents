@@ -9,6 +9,7 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 env:
+  SECRET_KEY: topsecret123
   POSTGRES_DB: test_linkedevents
   POSTGRES_USER: postgres
   POSTGRES_PASSWORD: postgres
