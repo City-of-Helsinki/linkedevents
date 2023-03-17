@@ -99,6 +99,7 @@ if os.path.exists(env_file_path):
 
 DEBUG = env("DEBUG")
 TEMPLATE_DEBUG = False
+SECRET_KEY = env("SECRET_KEY")
 
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 ADMINS = env("ADMINS")
