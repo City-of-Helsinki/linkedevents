@@ -37,6 +37,13 @@ resources:
       type: git
       # Azure DevOps project/repository
       name: linkedevents/linkedevents-pipelines
+  pipelines:
+    - pipeline: build-linkedevents-api
+      source: build-linkedevents-api
+      trigger:
+        branches:
+          include:
+            - develop
 
 extends:
   # Filename in Azure DevOps Repository (note possible -ui or -api)
