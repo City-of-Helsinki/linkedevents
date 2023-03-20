@@ -262,6 +262,11 @@ MEDIA_URL = env("MEDIA_URL")
 STATIC_ROOT = env("STATIC_ROOT")
 MEDIA_ROOT = env("MEDIA_ROOT")
 
+# Do not try to chmod when uploading images.
+# Our environments use persistent storage for media and operation will not be permitted.
+# https://helsinkisolutionoffice.atlassian.net/wiki/spaces/HELFI/pages/7723876467/Storage#Operation-not-permitted
+FILE_UPLOAD_PERMISSIONS = None
+
 # Whether to trust X-Forwarded-Host headers for all purposes
 # where Django would need to make use of its own hostname
 # fe. generating absolute URLs pointing to itself
