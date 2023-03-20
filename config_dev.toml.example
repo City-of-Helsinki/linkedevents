@@ -146,6 +146,6 @@ SENTRY_ENVIRONMENT=local-development-unconfigured
 # LIPPUPISTE_EVENT_API_URL=https://your.lippupiste.url.here
 
 # Mailgun API credentials
-#MAIL_MAILGUN_KEY=key
-#MAIL_MAILGUN_DOMAIN=do.main.com
-#MAIL_MAILGUN_API=https://mail.gun.api/
+#MAILGUN_API_KEY=key
+#MAILGUN_SENDER_DOMAIN=do.main.com
+#MAILGUN_API_URL=https://mail.gun.api/
