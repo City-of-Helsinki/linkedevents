@@ -9,6 +9,11 @@ RUN mkdir /entrypoint
 ENV PYTHONDONTWRITEBYTECODE=true
 ENV PYTHONUNBUFFERED=true
 
+## Setting the permissions beforehand makes the mounted volume inherit the permission
+## in docker compose. Useful for development with non-root user and named volume.
+## https://github.com/docker/compose/issues/3270#issuecomment-363478501
+RUN mkdir -p /var/media && chown -R appuser:appuser /var/media && chmod g=u -R /var/media
+
 COPY --chown=appuser:appuser requirements.txt /app/
 COPY --chown=appuser:appuser requirements-prod.txt /app/
 
