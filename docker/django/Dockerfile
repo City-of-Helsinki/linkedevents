@@ -56,6 +56,8 @@ FROM appbase AS production
 COPY --from=staticbuilder --chown=appuser:appuser /app/static /app/static
 COPY --chown=appuser:appuser . /app/
 
+RUN chgrp -R 0 /app/templates/rest_framework/ && chmod g+w -R /app/templates/rest_framework/
+
 USER appuser
 
 EXPOSE 8000/tcp
