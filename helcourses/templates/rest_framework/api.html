@@ -20,6 +20,8 @@
     {{ block.super }}
 {% elif name == "Event List" %}
     {% include "rest_framework/event_list.html" %}
+{% elif name == "Image List" %}
+    {% include "rest_framework/image_list.html" %}
 {% elif name == "Place List List" %}
     {% include "rest_framework/place_list.html" %}
 {% elif name == "Keyword List List" %}

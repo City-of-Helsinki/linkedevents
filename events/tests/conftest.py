@@ -18,6 +18,7 @@ from events.api import KeywordSerializer, LanguageSerializer, PlaceSerializer
 # events
 from events.models import (
     Event,
+    Image,
     Keyword,
     KeywordLabel,
     KeywordSet,
@@ -42,6 +43,36 @@ DATETIME = (timezone.now() + timedelta(days=1)).isoformat().replace("+00:00", "Z
 @pytest.fixture(autouse=True)
 def setup_env(settings):
     settings.SUPPORT_EMAIL = "test@test.com"
+
+
+@pytest.fixture
+def image_name():
+    return "tunnettu_kuva"
+
+
+@pytest.fixture
+def image_name_2():
+    return "known_image"
+
+
+@pytest.fixture
+def image_name_3():
+    return "känd_bild"
+
+
+@pytest.fixture
+def image_url():
+    return "http://fake.url/image-1/"
+
+
+@pytest.fixture
+def image_url_2():
+    return "http://fake.url/image-2/"
+
+
+@pytest.fixture
+def image_url_3():
+    return "http://fake.url/image-3/"
 
 
 @pytest.fixture
@@ -380,6 +411,20 @@ def keyword_dict(data_source, organization):
 
 @pytest.mark.django_db
 @pytest.fixture(scope="class")
+def make_image():
+    def _make_image(data_source, organization, image_name, image_url):
+        return Image.objects.create(
+            data_source=data_source,
+            name=image_name,
+            publisher=organization,
+            url=image_url,
+        )
+
+    return _make_image
+
+
+@pytest.mark.django_db
+@pytest.fixture(scope="class")
 def make_keyword():
     def _make_keyword(data_source, organization, kw_name):
         lang_objs = [
@@ -404,6 +449,24 @@ def make_keyword():
         return obj
 
     return _make_keyword
+
+
+@pytest.mark.django_db
+@pytest.fixture
+def image(data_source, organization, image_name, image_url, make_image):
+    return make_image(data_source, organization, image_name, image_url)
+
+
+@pytest.mark.django_db
+@pytest.fixture
+def image2(data_source, organization, image_name_2, image_url_2, make_image):
+    return make_image(data_source, organization, image_name_2, image_url_2)
+
+
+@pytest.mark.django_db
+@pytest.fixture
+def image3(data_source, organization, image_name_3, image_url_3, make_image):
+    return make_image(data_source, organization, image_name_3, image_url_3)
 
 
 @pytest.mark.django_db

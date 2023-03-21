@@ -95,7 +95,11 @@ from events.models import (
 )
 from events.permissions import GuestPost
 from events.renderers import DOCXRenderer
-from events.translation import EventTranslationOptions, PlaceTranslationOptions
+from events.translation import (
+    EventTranslationOptions,
+    ImageTranslationOptions,
+    PlaceTranslationOptions,
+)
 from helevents.models import User
 from helevents.serializers import UserSerializer
 from linkedevents.registry import register_view, viewset_classes_by_model
@@ -1916,7 +1920,7 @@ class ImageViewSet(JSONAPIViewMixin, viewsets.ModelViewSet):
     serializer_class = ImageSerializer
     pagination_class = LargeResultsSetPagination
     filter_backends = (filters.OrderingFilter,)
-    ordering_fields = ("last_modified_time",)
+    ordering_fields = ("last_modified_time", "id", "name")
     ordering = ("-last_modified_time",)
 
     def get_queryset(self):
@@ -1940,6 +1944,18 @@ class ImageViewSet(JSONAPIViewMixin, viewsets.ModelViewSet):
                 queryset = queryset.filter(created_by=self.request.user)
             else:
                 queryset = queryset.none()
+        val = self.request.query_params.get("text")
+        if val:
+            val = val.lower()
+            qset = Q(name__icontains=val)
+
+            # Free string search from all translated event fields
+            image_fields = ImageTranslationOptions.fields
+            for field in image_fields:
+                # check all languages for each field
+                qset |= _text_qset_by_translated_field(field, val)
+
+            queryset = queryset.filter(qset)
         return queryset
 
     def perform_destroy(self, instance):
