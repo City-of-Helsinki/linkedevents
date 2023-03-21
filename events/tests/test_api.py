@@ -228,7 +228,7 @@ class TestImageAPI(APITestCase):
             url="http://fake.url/image-2/",
         )
         self.image_3 = Image.objects.create(
-            name="image-2",
+            name="image-3",
             data_source=self.data_source,
             publisher=self.org_3,
             url="http://fake.url/image-2/",

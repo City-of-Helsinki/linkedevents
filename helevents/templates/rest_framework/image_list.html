@@ -1,0 +1,33 @@
+<div class="panel panel-default">
+    <div class="panel-body">
+        <h2 id="using-image-endpoint">Using the image endpoint</h2>
+        <p>Here, images for events are listed. Default ordering is decreasing order by <code>-last_modified_time</code>.</p>
+        <h4 id="image-text">Image text</h4>
+        <p>To find images that contain a specific string, use the query parameter <code>text</code>.</p>
+        <p>Example:</p>
+        <pre><code>image/?text=lapset</code></pre>
+        <p><a href="?text=lapset" title="json">See the result</a></p>
+        
+        <h3 id="image-publisher">Image publisher</h3>
+        <p>To find out images that are published by a specific organization, use the query
+        parameter <code>publisher</code>, separating values by commas if you wish to query for several publishers.</p>
+        <p>Existing publisher organizations are found at the <code>organization</code> endpoint.</p>
+        <p>Example:</p>
+        <pre><code>image/?publisher=ytj:0586977-6</code></pre>
+        <p><a href="?publisher=ytj:0586977-6" title="json">See the result</a></p>
+
+        <h3 id="image-data-source">Image data source</h3>
+        <p>To find out images that originate from a specific source system, use the query parameter
+        <code>data_source</code>, separating values by commas if you wish to query for several data sources.</p>
+        <p>Example:</p>
+        <pre><code>image/?data_source=helmet</code></pre>
+        <p><a href="?data_source=helmet" title="json">See the result</a></p>
+
+        <h4 id="ordering">Ordering</h4>
+        <p>Default ordering is descending order by <code>-last_modified_time</code>.
+            You may also order results by <code>id</code> and <code>name</code>.
+            For example:</p>
+        <pre><code>image/?sort=name</code></pre>
+        <p><a href="?sort=name" title="json">See the result</a></p>
+    </div>
+</div>

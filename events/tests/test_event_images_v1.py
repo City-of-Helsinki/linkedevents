@@ -110,6 +110,14 @@ def test__get_image_list_check_fields_exist_for_url(api_client):
 
 
 @pytest.mark.django_db
+def test_get_image_list_verify_text_filter(api_client, image, image2, image3):
+    response = api_client.get(reverse("image-list"), data={"text": "kuva"})
+    assert image.id in [entry["id"] for entry in response.data["data"]]
+    assert image2.id not in [entry["id"] for entry in response.data["data"]]
+    assert image3.id not in [entry["id"] for entry in response.data["data"]]
+
+
+@pytest.mark.django_db
 def test__get_detail_check_fields_exist(api_client):
     image_file = create_in_memory_image_file(name="existing_test_image")
     uploaded_image = SimpleUploadedFile(
