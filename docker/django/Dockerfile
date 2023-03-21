@@ -1,8 +1,8 @@
-ARG PYTHON_VERSION=3.9
-ARG IMAGE_VARIANT=slim
+#ARG PYTHON_VERSION=3.9
+#ARG IMAGE_VARIANT=slim
 
 # ==============================
-FROM helsinkitest/python:${PYTHON_VERSION}-${IMAGE_VARIANT} AS appbase
+FROM helsinkitest/python:3.9-slim AS appbase
 # ==============================
 RUN mkdir /entrypoint
 
