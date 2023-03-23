@@ -19,8 +19,8 @@ def forwards_func(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("munigeo", "0003_add_modified_time_to_address_and_street"),
-        ("events", "0030_merge"),
+        ("munigeo", "0001_squashed_0004_building"),
+        ("events", "0001_squashed_0030_merge"),
     ]
 
     operations = [
