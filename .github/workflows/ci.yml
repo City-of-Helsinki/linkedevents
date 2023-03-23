@@ -67,7 +67,6 @@ jobs:
           sudo sysctl -w vm.max_map_count=262144
 
       - name: Check migrations
-        continue-on-error: true # TODO remove once migrations are sorted out (LINK-1126)
         run: |
           python manage.py makemigrations --dry-run --check
 
