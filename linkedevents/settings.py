@@ -397,14 +397,10 @@ def haystack_connection_for_lang(language_code):
                         "analyzer": {
                             "default": {
                                 "tokenizer": "finnish",
-                                "filter": ["lowercase", "voikko_filter"],
+                                "filter": ["lowercase", "raudikkoFilter"],
                             }
                         },
-                        "filter": {
-                            "voikko_filter": {
-                                "type": "voikko",
-                            }
-                        },
+                        "filter": {"raudikkoFilter": {"type": "raudikko"}},
                     }
                 },
             },
