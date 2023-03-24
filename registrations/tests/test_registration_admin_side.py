@@ -54,6 +54,22 @@ def test_create_registration(api_client, event, has_right_to_edit, expected_stat
     assert response.status_code == expected_status
 
 
+@pytest.mark.parametrize(
+    "event_type",
+    [Event.TypeId.GENERAL, Event.TypeId.COURSE, Event.TypeId.VOLUNTEERING],
+)
+@pytest.mark.django_db
+def test_get_registration(api_client, event, event_type, registration):
+    event.type_id = event_type
+    event.save()
+
+    registration_url = reverse("registration-detail", kwargs={"pk": registration.id})
+    response = api_client.get(registration_url)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["id"] == registration.id
+
+
 @pytest.mark.django_db
 def test_create_registration__only_one_registration_allowed(api_client, event):
     registration_url = reverse("registration-list")
@@ -311,7 +327,7 @@ def test_signup_age_is_mandatory_if_audience_min_or_max_age_specified(
     if date_of_birth:
         sign_up_data["date_of_birth"] = date_of_birth
 
-    # Crate registration
+    # Create registration
     api_client.force_authenticate(user)
     registration_data = {"event": event.id, "maximum_attendee_capacity": 1}
     if min_age:
