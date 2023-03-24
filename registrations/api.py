@@ -157,7 +157,18 @@ class RegistrationViewSet(
 
     def filter_queryset(self, queryset):
         events = Event.objects.exclude(registration=None)
-        events = _filter_event_queryset(events, self.request.query_params)
+
+        # Copy query_params to get mutable version of it
+        query_params = self.request.query_params.copy()
+        # By default _filter_event_queryset only returns events with GENERAL type.
+        # This causes problem when getting a registration details, so filter registrations
+        # by event_type only when explicitly set
+        if not query_params.get("event_type"):
+            event_types = {k[1].lower(): k[0] for k in Event.TYPE_IDS}
+            query_params["event_type"] = ",".join(event_types.keys())
+
+        events = _filter_event_queryset(events, query_params)
+
         val = self.request.query_params.get("admin_user", None)
         if val and str(val).lower() == "true":
             if isinstance(self.request.user, AnonymousUser):
