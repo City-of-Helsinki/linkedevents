@@ -1,10 +1,14 @@
-from haystack.backends import elasticsearch_backend as es_backend
+from haystack.backends.elasticsearch7_backend import (
+    Elasticsearch7SearchBackend,
+    Elasticsearch7SearchEngine,
+    Elasticsearch7SearchQuery,
+)
 from haystack.query import SearchQuerySet
 
 from .utils import update
 
 
-class CustomEsSearchBackend(es_backend.ElasticsearchSearchBackend):
+class CustomEsSearchBackend(Elasticsearch7SearchBackend):
     """A slight modification of the default Haystack elasticsearch
     backend which allows custom mapping configurations for specified
     fields in the connection options.
@@ -53,7 +57,7 @@ class CustomEsSearchBackend(es_backend.ElasticsearchSearchBackend):
         return kwargs
 
 
-class CustomEsSearchQuery(es_backend.ElasticsearchSearchQuery):
+class CustomEsSearchQuery(Elasticsearch7SearchQuery):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.decay_functions = []
@@ -86,6 +90,6 @@ class CustomEsSearchQuerySet(SearchQuerySet):
         return clone
 
 
-class CustomEsSearchEngine(es_backend.ElasticsearchSearchEngine):
+class CustomEsSearchEngine(Elasticsearch7SearchEngine):
     backend = CustomEsSearchBackend
     query = CustomEsSearchQuery
