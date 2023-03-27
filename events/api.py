@@ -2522,9 +2522,13 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
     # Filter by string (case insensitive). This searches from all fields
     # which are marked translatable in translation.py
 
+    # filter to get events with or without a registration.
     val = params.get("registration", None)
-    if val:
+    if val and parse_bool(val, "registration"):
         queryset = queryset.exclude(registration=None)
+    elif val:
+        queryset = queryset.filter(registration=None)
+
     val = params.get("enrolment_open", None)
     if val:
         queryset = (
@@ -2539,6 +2543,7 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
                 Q(free__gte=1) | Q(registration__maximum_attendee_capacity__isnull=True)
             )
         )
+
     val = params.get("enrolment_open_waitlist", None)
     if val:
         queryset = (
@@ -2558,6 +2563,7 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
                 | Q(registration__waiting_list_capacity__isnull=True)
             )
         )
+
     val = params.get("local_ongoing_text", None)
     if val:
         language = params.get("language", "fi")
@@ -2574,6 +2580,7 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
             deleted=False,
             local=True,
         )
+
     cache = caches["ongoing_events"]
     val = params.get("local_ongoing_OR", None)
     if val:
