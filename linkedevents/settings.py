@@ -64,7 +64,9 @@ env = environ.Env(
     MAILGUN_API_KEY=(str, ""),
     MEDIA_ROOT=(environ.Path(), root("media")),
     MEDIA_URL=(str, "/media/"),
-    MEMCACHED_URL=(str, "127.0.0.1:11211"),
+    REDIS_SENTINELS=(list, []),
+    REDIS_URL=(str, None),
+    REDIS_PASSWORD=(str, None),
     SEAT_RESERVATION_DURATION=(int, 15),
     SECRET_KEY=(str, ""),
     SECURE_PROXY_SSL_HEADER=(tuple, None),
@@ -513,21 +515,43 @@ elif not env("MAILGUN_API_KEY") and DEBUG is True:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.memcached.MemcachedCache",
-        "LOCATION": env("MEMCACHED_URL"),
-        "TIMEOUT": 300,
-    },
-    "ongoing_events": {
-        "BACKEND": "django.core.cache.backends.memcached.MemcachedCache",
-        "LOCATION": env("MEMCACHED_URL"),
-        "TIMEOUT": None,
-        "OPTIONS": {
-            "server_max_value_length": 1024 * 1024 * 500,
-        },
-    },
-}
+# Ongoing events will be cached forever
+ONGOING_EVENTS_CACHE_TIMEOUT = None
+
+if env("REDIS_URL"):
+    # django.core.cache.backends.locmem.LocMemCache will be used as cache backend
+    # if redis is not defined.
+    DJANGO_REDIS_LOG_IGNORED_EXCEPTIONS = True
+    SENTINELS = []
+
+    if env("REDIS_SENTINELS"):
+        DJANGO_REDIS_CONNECTION_FACTORY = "django_redis.pool.SentinelConnectionFactory"
+        for sentinel in env("REDIS_SENTINELS"):
+            host, port = sentinel.split(":")
+            SENTINELS.append((host, port))
+
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": env("REDIS_URL"),
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.SentinelClient",
+                "CONNECTION_POOL_CLASS": "redis.sentinel.SentinelConnectionPool",
+                "PASSWORD": env("REDIS_PASSWORD"),
+                "SENTINELS": SENTINELS,
+                "SENTINEL_KWARGS": {"password": env("REDIS_PASSWORD")},
+                # Memcached like behavior for redis cache
+                # i.e. don't throw errors if redis is down.
+                "IGNORE_EXCEPTIONS": True,
+            }
+            if SENTINELS
+            else {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                "IGNORE_EXCEPTIONS": True,
+            },
+            "KEY_PREFIX": "linkedevents",
+        }
+    }
 
 # this is relevant for the fulltext search as implemented in _filter_event_queryset()
 FULLTEXT_SEARCH_LANGUAGES = {"fi": "finnish", "sv": "swedish", "en": "english"}
