@@ -16,11 +16,13 @@ services:
             - postgres-data-volume:/var/lib/postgresql/data
         container_name: linkedevents-db
 
-    memcached:
-        image: memcached:1.6
+    redis:
+        image: redis:7.0
+        volumes:
+            - redis_data:/data
         ports:
-            - "127.0.0.1:11211:11211"
-        container_name: linkedevents-memcached
+            - "127.0.0.1:6379:6379"
+        container_name: linkedevents-redis
 
     django:
         restart: unless-stopped
@@ -37,12 +39,13 @@ services:
             - "8080:8000"
         depends_on:
             - postgres
-            - memcached
+            - redis
         container_name: linkedevents-backend
 
 volumes:
         postgres-data-volume:
         django-media-volume:
+        redis_data:
 
 networks:
     default:

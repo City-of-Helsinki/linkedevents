@@ -1,7 +1,8 @@
 from datetime import datetime
 
 import pytz
-from django.core.cache import caches
+from django.conf import settings
+from django.core.cache import cache
 from django.core.management import BaseCommand
 
 from events.models import Event
@@ -14,8 +15,6 @@ class Command(BaseCommand):
            -I parameters."
 
     def handle(self, *args, **options):
-        cache = caches["ongoing_events"]
-
         local_events = Event.objects.filter(
             location__divisions__ocd_id__endswith=MUNIGEO_MUNI,
             end_time__gte=datetime.utcnow().replace(tzinfo=pytz.utc),
@@ -53,7 +52,9 @@ class Command(BaseCommand):
             for k, v in event_dict.items()
         }
 
-        cache.set("local_ids", event_strings)
+        cache.set(
+            "local_ids", event_strings, timeout=settings.ONGOING_EVENTS_CACHE_TIMEOUT
+        )
 
         inet_events = Event.objects.filter(
             location__id__endswith="internet",
@@ -92,4 +93,6 @@ class Command(BaseCommand):
             for k, v in event_dict.items()
         }
 
-        cache.set("internet_ids", event_strings)
+        cache.set(
+            "internet_ids", event_strings, timeout=settings.ONGOING_EVENTS_CACHE_TIMEOUT
+        )

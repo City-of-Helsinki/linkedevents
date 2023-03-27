@@ -8,6 +8,8 @@ asgiref==3.6.0
     # via django
 asttokens==2.2.1
     # via stack-data
+async-timeout==4.0.2
+    # via redis
 attrs==22.2.0
     # via
     #   -r requirements.in
@@ -59,6 +61,7 @@ django==3.2.18
     #   django-munigeo
     #   django-parler
     #   django-parler-rest
+    #   django-redis
     #   django-reversion
     #   djangorestframework
     #   djangorestframework-bulk
@@ -107,6 +110,8 @@ django-parler==2.3
     #   django-parler-rest
 django-parler-rest==2.2
     # via django-munigeo
+django-redis==5.2.0
+    # via -r requirements.in
 django-reversion==5.0.4
     # via -r requirements.in
 djangorestframework==3.14.0
@@ -217,8 +222,6 @@ python-docx==0.8.11
     # via -r requirements.in
 python-jose==3.3.0
     # via django-helusers
-python-memcached==1.59
-    # via -r requirements.in
 python3-openid==3.2.0
     # via social-auth-core
 pytz==2022.7.1
@@ -233,6 +236,8 @@ pyyaml==6.0
     #   django-munigeo
 rdflib==6.1.1
     # via -r requirements.in
+redis==4.5.3
+    # via django-redis
 regex==2022.10.31
     # via -r requirements.in
 requests==2.28.2
@@ -267,7 +272,6 @@ six==1.16.0
     #   langdetect
     #   pyjwkest
     #   python-dateutil
-    #   python-memcached
     #   social-auth-app-django
     #   social-auth-core
     #   url-normalize

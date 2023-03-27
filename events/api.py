@@ -21,7 +21,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
 from django.contrib.postgres.search import SearchQuery, TrigramSimilarity
-from django.core.cache import caches
+from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, F, Prefetch, Q, QuerySet
 from django.db.models.functions import Greatest
@@ -2581,7 +2581,6 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
             local=True,
         )
 
-    cache = caches["ongoing_events"]
     val = params.get("local_ongoing_OR", None)
     if val:
         rc = _terms_to_regex(val, "OR")
