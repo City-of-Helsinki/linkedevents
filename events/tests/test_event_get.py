@@ -1117,3 +1117,17 @@ def test_private_datasource_events(
     other_data_source.save()
     get_list_and_assert_events("", [event, event3])
     get_list_and_assert_events(f"data_source={other_data_source.id}", [event2])
+
+
+@pytest.mark.django_db
+def test_get_event_list_verify_registration_filter(
+    api_client, event, event2, event3, registration, registration2
+):
+    event.registration = registration
+    event.save()
+    event2.registration = registration2
+    event2.save()
+    event3.registration = None
+    event3.save()
+    get_list_and_assert_events(f"registration=true", [event, event2])
+    get_list_and_assert_events(f"registration=false", [event3])
