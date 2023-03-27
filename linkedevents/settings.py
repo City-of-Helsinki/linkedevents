@@ -391,7 +391,6 @@ def haystack_connection_for_lang(language_code):
                 "BASE_ENGINE": "events.custom_elasticsearch_search_backend.CustomEsSearchEngine",
                 "URL": env("ELASTICSEARCH_URL"),
                 "INDEX_NAME": "linkedevents-fi",
-                "MAPPINGS": CUSTOM_MAPPINGS,
                 "SETTINGS": {
                     "analysis": {
                         "analyzer": {
@@ -412,7 +411,6 @@ def haystack_connection_for_lang(language_code):
                 "BASE_ENGINE": "events.custom_elasticsearch_search_backend.CustomEsSearchEngine",
                 "URL": env("ELASTICSEARCH_URL"),
                 "INDEX_NAME": f"linkedevents-{language_code}",
-                "MAPPINGS": CUSTOM_MAPPINGS,
             }
         }
 
@@ -427,15 +425,6 @@ def dummy_haystack_connection_for_lang(language_code):
 
 
 HAYSTACK_SIGNAL_PROCESSOR = "haystack.signals.RealtimeSignalProcessor"
-
-CUSTOM_MAPPINGS = {
-    "autosuggest": {
-        "search_analyzer": "standard",
-        "index_analyzer": "edgengram_analyzer",
-        "analyzer": None,
-    },
-    "text": {"analyzer": "default"},
-}
 
 HAYSTACK_CONNECTIONS = {
     "default": {

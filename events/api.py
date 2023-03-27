@@ -3732,7 +3732,7 @@ class SearchViewSet(
 
         queryset = SearchQuerySet()
         if input_val:
-            queryset = queryset.filter(autosuggest=input_val)
+            queryset = queryset.autocomplete(autosuggest=input_val)
         else:
             queryset = queryset.filter(text=AutoQuery(q_val))
 
