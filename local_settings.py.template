@@ -9,14 +9,3 @@ DATABASES = {
         'HOST': 'linkedevents-db'
     }
 }
-
-CUSTOM_MAPPINGS = {
-    'autosuggest': {
-        'search_analyzer': 'standard',
-        'index_analyzer': 'edgengram_analyzer',
-        'analyzer': None
-    },
-    'text': {
-        'analyzer': 'default'
-    }
-}
