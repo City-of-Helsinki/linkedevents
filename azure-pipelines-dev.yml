@@ -43,7 +43,7 @@ resources:
       trigger:
         branches:
           include:
-            - develop
+            - refs/heads/develop
 
 extends:
   # Filename in Azure DevOps Repository (note possible -ui or -api)
