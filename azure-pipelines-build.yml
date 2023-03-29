@@ -5,6 +5,7 @@ trigger:
   branches:
     include:
       - develop
+      - refs/tags/staging-*
       # other examples:
       #- release/*
       #- refs/tags/*
@@ -46,3 +47,6 @@ extends:
   template: azure-pipelines-build-linkedevents-api.yml@linkedevents-pipelines
   #parameters:
   #imagetag: ${{ parameters.imagetag }}
+  ${{ if startsWith(variables['Build.SourceBranch'], 'refs/tags/staging-') }}:
+    parameters:
+      buildenv: staging
