@@ -49,4 +49,4 @@ extends:
   #imagetag: ${{ parameters.imagetag }}
   ${{ if startsWith(variables['Build.SourceBranch'], 'refs/tags/staging-') }}:
     parameters:
-      buildenv: staging
+      buildenv: -staging

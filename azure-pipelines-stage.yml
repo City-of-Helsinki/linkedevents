@@ -19,5 +19,3 @@ resources:
 
 extends:
   template: azure-pipelines-deploy-linkedevents-api-staging.yml@linkedevents-pipelines
-  parameters:
-    buildenv: staging
