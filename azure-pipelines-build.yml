@@ -47,6 +47,8 @@ extends:
   template: azure-pipelines-build-linkedevents-api.yml@linkedevents-pipelines
   #parameters:
   #imagetag: ${{ parameters.imagetag }}
-  ${{ if startsWith(variables['Build.SourceBranch'], 'refs/tags/staging-') }}:
-    parameters:
+  parameters:
+    ${{ if startsWith(variables['Build.SourceBranch'], 'refs/tags/staging-') }}:
       buildenv: -staging
+    ${{ else }}:
+      buildenv: -dev
