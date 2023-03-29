@@ -14,8 +14,7 @@ resources:
       source: build-linkedevents-api
       trigger:
         tags:
-          include:
-            - staging-*
+          - staging-*
 
 extends:
   template: azure-pipelines-deploy-linkedevents-api-staging.yml@linkedevents-pipelines
