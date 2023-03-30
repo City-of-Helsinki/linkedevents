@@ -236,7 +236,7 @@ pyyaml==6.0
     #   django-munigeo
 rdflib==6.1.1
     # via -r requirements.in
-redis==4.5.3
+redis==4.5.4
     # via django-redis
 regex==2022.10.31
     # via -r requirements.in
