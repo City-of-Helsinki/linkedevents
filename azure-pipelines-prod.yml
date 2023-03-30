@@ -23,6 +23,16 @@ pr: none
 # By default, use self-hosted agents
 pool: Default
 
+parameters:
+  - name: buildenv
+    displayName: Build environment
+    type: string
+    default: "-prod"
+    values:
+      - "-prod"
+      - "-dev"
+
+
 # Image tag name for Fuse projects
 #parameters:
 #- name: imagetag
