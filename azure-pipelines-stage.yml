@@ -2,6 +2,16 @@ trigger: none
 pr: none
 pool: Default
 
+parameters:
+  - name: buildenv
+    displayName: Build environment
+    type: string
+    default: "-prod"
+    values:
+      - "-prod"
+      - "-dev"
+
+
 resources:
   repositories:
     # Azure DevOps repository
