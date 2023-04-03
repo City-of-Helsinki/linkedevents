@@ -691,52 +691,54 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
             if id_data_source_prefix != self.data_source.id:
                 # if we are creating, there's no excuse to have any other data source than the request gave
                 raise serializers.ValidationError(
-                    {
-                        "id": _(
-                            "Setting id to %(given)s "
-                            + " is not allowed for your organization. The id"
-                            " must be left blank or set to %(data_source)s:desired_id"
-                        )
-                        % {"given": str(value), "data_source": self.data_source}
-                    }
+                    _(
+                        "Setting id to %(given)s "
+                        + "is not allowed for your organization. The id "
+                        "must be left blank or set to %(data_source)s:desired_id"
+                    )
+                    % {"given": str(value), "data_source": self.data_source}
                 )
         return value
 
-    def validate_publisher(self, value):
+    def validate_publisher(
+        self, value, field="publisher", allowed_to_regular_user=True
+    ):
         # a single POST always comes from a single source
         if value and self.method == "POST":
-            if value not in (
-                set(self.user.get_admin_organizations_and_descendants())
-                | set(
-                    map(
-                        lambda x: x.replaced_by,
-                        self.user.get_admin_organizations_and_descendants(),
-                    )
+            allowed_organizations = set(
+                self.user.get_admin_organizations_and_descendants()
+            ) | set(
+                map(
+                    lambda x: x.replaced_by,
+                    self.user.get_admin_organizations_and_descendants(),
                 )
-                | set(self.user.organization_memberships.all())
-                | set(
+            )
+            # Allow regular users to post if allowed_to_regular_user is True
+            if allowed_to_regular_user:
+                allowed_organizations |= set(
+                    self.user.organization_memberships.all()
+                ) | set(
                     map(
                         lambda x: x.replaced_by,
                         self.user.organization_memberships.all(),
                     )
                 )
-            ):
+            if value not in allowed_organizations:
                 raise serializers.ValidationError(
-                    {
-                        "publisher": _(
-                            "Setting publisher to %(given)s "
-                            + " is not allowed for this user. The publisher"
-                            + " must be left blank or set to %(required)s or any other organization"
-                            " the user belongs to."
-                        )
-                        % {
-                            "given": str(value),
-                            "required": str(
-                                self.publisher
-                                if not self.publisher.replaced_by
-                                else self.publisher.replaced_by
-                            ),
-                        }
+                    _(
+                        "Setting %(field)s to %(given)s "
+                        + "is not allowed for this user. The %(field)s "
+                        + "must be left blank or set to %(required)s or any other organization"
+                        " the user belongs to."
+                    )
+                    % {
+                        "field": str(field),
+                        "given": str(value),
+                        "required": str(
+                            self.publisher
+                            if not self.publisher.replaced_by
+                            else self.publisher.replaced_by
+                        ),
                     }
                 )
             if value.replaced_by:
@@ -892,14 +894,12 @@ class KeywordSerializer(EditableLinkedEventsObjectSerializer):
                 ):
                     return value
                 raise serializers.ValidationError(
-                    {
-                        "id": _(
-                            "Setting id to %(given)s "
-                            + " is not allowed for your organization. The id"
-                            " must be left blank or set to %(data_source)s:desired_id"
-                        )
-                        % {"given": str(value), "data_source": self.data_source}
-                    }
+                    _(
+                        "Setting id to %(given)s "
+                        + "is not allowed for your organization. The id "
+                        "must be left blank or set to %(data_source)s:desired_id"
+                    )
+                    % {"given": str(value), "data_source": self.data_source}
                 )
         return value
 
@@ -1069,10 +1069,6 @@ class KeywordSetSerializer(LinkedEventsSerializer):
         default_timezone=pytz.UTC, required=False, allow_null=True
     )
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.data_source = self.context["request"].data.get("data_source")
-
     def to_internal_value(self, data):
         # extracting ids from the '@id':'http://testserver/v1/keyword/system:tunnettu_avainsana/' type record
         keyword_ids = [
@@ -1081,6 +1077,55 @@ class KeywordSetSerializer(LinkedEventsSerializer):
         ]
         self.context["keywords"] = Keyword.objects.filter(id__in=keyword_ids)
         return super().to_internal_value(data)
+
+    def validate_organization(self, value):
+        return self.validate_publisher(
+            value, field="organization", allowed_to_regular_user=False
+        )
+
+    def create(self, validated_data):
+        validated_data["created_by"] = self.user
+        validated_data["last_modified_by"] = self.user
+
+        if (
+            not isinstance(self.user, ApiKeyUser)
+            and not validated_data["data_source"].user_editable_resources
+        ):
+            raise PermissionDenied()
+
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        validated_data["last_modified_by"] = self.user
+
+        if "id" in validated_data and instance.id != validated_data["id"]:
+            raise serializers.ValidationError(
+                {"id": _("You may not change the id of an existing object.")}
+            )
+        if "organization" in validated_data and validated_data["organization"] not in (
+            instance.organization,
+            instance.organization.replaced_by,
+        ):
+            raise serializers.ValidationError(
+                {
+                    "organization": _(
+                        "You may not change the organization of an existing object."
+                    )
+                }
+            )
+        if (
+            "data_source" in validated_data
+            and instance.data_source != validated_data["data_source"]
+        ):
+            raise serializers.ValidationError(
+                {
+                    "data_source": _(
+                        "You may not change the data source of an existing object."
+                    )
+                }
+            )
+        super().update(instance, validated_data)
+        return instance
 
     class Meta:
         model = KeywordSet
@@ -1128,56 +1173,21 @@ class KeywordSetViewSet(JSONAPIViewMixin, viewsets.ModelViewSet):
             qset = qset.order_by(*vals)
         return qset
 
-    def create(self, request, *args, **kwargs):
-        if isinstance(request.user, AnonymousUser):
-            raise DRFPermissionDenied(
-                "Only admin users are allowed to create KeywordSets."
-            )
-        data_source = request.user.get_default_organization().data_source
-        request.data["data_source"] = data_source
-        id_ending = request.data.pop("id_second_part", None)
-        if id_ending:
-            request.data["id"] = f"{data_source}:{id_ending}"
-        else:
-            kw_id = request.data.get("id", None)
-            if kw_id is None:
-                raise ParseError("Id or id_ending have to be provided")
-            if kw_id.split(":")[0] != data_source.id:
-                raise DRFPermissionDenied(
-                    "Trying to set data source different from the user's organization."
-                )
-        return super().create(request, *args, **kwargs)
-
-    def update(self, request, *args, **kwargs):
-        if (
-            isinstance(request.user, AnonymousUser)
-            or request.user.get_default_organization() is None
-        ):
-            raise DRFPermissionDenied(
-                "Only admin users are allowed to update KeywordSets."
-            )
-        data_source = request.user.get_default_organization().data_source
-        request.data["data_source"] = data_source
-        return super().update(request, *args, **kwargs)
-
     def destroy(self, request, *args, **kwargs):
-        if (
-            isinstance(request.user, AnonymousUser)
-            or request.user.get_default_organization() is None
-        ):
-            raise DRFPermissionDenied(
-                "Only admin users are allowed to delete KeywordSets."
-            )
-        request_data_source = request.user.get_default_organization().data_source
-        original_keyword_set = KeywordSet.objects.filter(id=kwargs["pk"])
-        if original_keyword_set:
-            original_data_source = original_keyword_set[0].data_source
+        instance = self.get_object()
+        user = request.user
+
+        if not instance.can_be_edited_by(user):
+            raise PermissionDenied()
+
+        if isinstance(user, ApiKeyUser):
+            # allow deleting only if the api key matches instance data source
+            if instance.data_source != user.data_source:
+                raise PermissionDenied()
         else:
-            raise DRFPermissionDenied(f'KeywordSet {kwargs["pk"]} not found.')
-        if request_data_source != original_data_source:
-            raise DRFPermissionDenied(
-                f"KeywordSet belongs to {original_data_source} and the user to {request_data_source}."
-            )  # noqa E501
+            # without api key, the user will have to be admin
+            if not instance.is_user_editable_resources():
+                raise PermissionDenied()
         return super().destroy(request, *args, **kwargs)
 
 

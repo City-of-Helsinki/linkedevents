@@ -143,7 +143,15 @@ admin.site.register(Keyword, KeywordAdmin)
 
 
 class KeywordSetAdmin(AutoIdBaseAdmin):
-    fields = ("id", "data_source", "origin_id", "name", "keywords", "usage")
+    fields = (
+        "id",
+        "data_source",
+        "organization",
+        "origin_id",
+        "name",
+        "keywords",
+        "usage",
+    )
     autocomplete_fields = ("keywords",)
 
     def get_readonly_fields(self, request, obj=None):
