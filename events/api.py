@@ -1959,12 +1959,20 @@ class ImageViewSet(JSONAPIViewMixin, viewsets.ModelViewSet):
         return queryset
 
     def perform_destroy(self, instance):
-        # ensure image can only be deleted within the organization
-        data_source, organization = get_authenticated_data_source_and_publisher(
-            self.request
-        )
-        if organization != instance.publisher:
+        user = self.request.user
+
+        # User has to be admin or superuser to delete the image
+        if not instance.can_be_deleted_by(user):
             raise PermissionDenied()
+        if isinstance(user, ApiKeyUser):
+            # allow updating only if the api key matches instance data source
+            if instance.data_source != user.data_source:
+                raise PermissionDenied()
+        else:
+            # without api key, data_source should have user_editable_resources set to True
+            if not instance.is_user_editable_resources():
+                raise PermissionDenied()
+
         super().perform_destroy(instance)
 
 

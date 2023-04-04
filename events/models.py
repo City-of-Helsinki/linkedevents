@@ -263,6 +263,12 @@ class Image(models.Model):
             return True
         return user.is_admin(self.publisher)
 
+    def can_be_deleted_by(self, user):
+        """Check if current image can be deleted by the given user"""
+        if user.is_superuser:
+            return True
+        return user.is_admin(self.publisher)
+
 
 class ImageMixin(models.Model):
     image = models.ForeignKey(
