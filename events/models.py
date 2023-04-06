@@ -252,7 +252,10 @@ class Image(models.Model):
         super().save(*args, **kwargs)
 
     def is_user_editable_resources(self):
-        return bool(self.data_source and self.data_source.user_editable_resources)
+        return bool(
+            self.data_source is None
+            or (self.data_source and self.data_source.user_editable_resources)
+        )
 
     def is_user_edited(self):
         return bool(self.is_user_editable_resources() and self.last_modified_by)
