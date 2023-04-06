@@ -35,7 +35,6 @@ from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization, OrganizationClass
 from haystack.query import AutoQuery
 from isodate import Duration, duration_isoformat, parse_duration
-from modeltranslation.translator import NotRegistered, translator
 from munigeo.api import (
     build_bbox_filter,
     DEFAULT_SRS,
@@ -70,7 +69,9 @@ from rest_framework_bulk import (
 )
 
 from events import utils
+from events.api_field import EnumChoiceField
 from events.api_pagination import LargeResultsSetPagination
+from events.api_translated import TranslatedModelSerializer
 from events.auth import ApiKeyAuth, ApiKeyUser
 from events.custom_elasticsearch_search_backend import (
     CustomEsSearchQuerySet as SearchQuerySet,
@@ -351,34 +352,6 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
             return super().get_queryset()
 
 
-class EnumChoiceField(serializers.Field):
-    """
-    Database value of tinyint is converted to and from a string representation
-    of choice field.
-
-    TODO: Find if there's standardized way to render Schema.org enumeration
-    instances in JSON-LD.
-    """
-
-    def __init__(self, choices, prefix="", **kwargs):
-        self.choices = choices
-        self.prefix = prefix
-        super().__init__(**kwargs)
-
-    def to_representation(self, obj):
-        if obj is None:
-            return None
-        return self.prefix + str(utils.get_value_from_tuple_list(self.choices, obj, 1))
-
-    def to_internal_value(self, data):
-        value = utils.get_value_from_tuple_list(
-            self.choices, self.prefix + str(data), 0
-        )
-        if value is None:
-            raise ParseError(_(f'Invalid value "{data}"'))
-        return value
-
-
 class ISO8601DurationField(serializers.Field):
     def to_representation(self, obj):
         if obj:
@@ -405,109 +378,6 @@ class MPTTModelSerializer(serializers.ModelSerializer):
         for field_name in "lft", "rght", "tree_id", "level":
             if field_name in self.fields:
                 del self.fields[field_name]
-
-
-class TranslatedModelSerializer(serializers.ModelSerializer):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        model = self.Meta.model
-        try:
-            trans_opts = translator.get_options_for_model(model)
-        except NotRegistered:
-            self.translated_fields = []
-            return
-
-        self.translated_fields = trans_opts.fields.keys()
-        lang_codes = utils.get_fixed_lang_codes()
-        # Remove the pre-existing data in the bundle.
-        for field_name in self.translated_fields:
-            for lang in lang_codes:
-                key = "%s_%s" % (field_name, lang)
-                if key in self.fields:
-                    del self.fields[key]
-            del self.fields[field_name]
-
-    def to_representation(self, obj):
-        ret = super().to_representation(obj)
-        if obj is None:
-            return ret
-        return self.translated_fields_to_representation(obj, ret)
-
-    def to_internal_value(self, data):
-        """
-        Convert complex translated json objects to flat format.
-        E.g. json structure containing `name` key like this:
-        {
-            "name": {
-                "fi": "musiikkiklubit",
-                "sv": "musikklubbar",
-                "en": "music clubs"
-            },
-            ...
-        }
-        Transforms this:
-        {
-            "name": "musiikkiklubit",
-            "name_fi": "musiikkiklubit",
-            "name_sv": "musikklubbar",
-            "name_en": "music clubs"
-            ...
-        }
-        :param data:
-        :return:
-        """
-
-        extra_fields = {}  # will contain the transformation result
-        for field_name in self.translated_fields:
-            obj = data.get(field_name, None)  # { "fi": "musiikkiklubit", "sv": ... }
-            if not obj:
-                continue
-            if not isinstance(obj, dict):
-                raise serializers.ValidationError(
-                    {
-                        field_name: "This field is a translated field. Instead of a string,"
-                        " you must supply an object with strings corresponding"
-                        " to desired language ids."
-                    }
-                )
-            for language in (
-                lang for lang in utils.get_fixed_lang_codes() if lang in obj
-            ):
-                value = obj[language]  # "musiikkiklubit"
-                if language == settings.LANGUAGES[0][0]:  # default language
-                    extra_fields[field_name] = value  # { "name": "musiikkiklubit" }
-                extra_fields[
-                    "{}_{}".format(field_name, language)
-                ] = value  # { "name_fi": "musiikkiklubit" }
-            del data[field_name]  # delete original translated fields
-
-        # handle other than translated fields
-        data = super().to_internal_value(data)
-
-        # add translated fields to the final result
-        data.update(extra_fields)
-
-        return data
-
-    def translated_fields_to_representation(self, obj, ret):
-        for field_name in self.translated_fields:
-            d = {}
-            for lang in utils.get_fixed_lang_codes():
-                key = "%s_%s" % (field_name, lang)
-                val = getattr(obj, key, None)
-                if val is None:
-                    continue
-                d[lang] = val
-
-            # If no text provided, leave the field as null
-            for _key, val in d.items():
-                if val is not None:
-                    break
-            else:
-                d = None
-            ret[field_name] = d
-
-        return ret
 
 
 class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
