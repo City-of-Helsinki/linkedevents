@@ -115,9 +115,9 @@ class Registration(models.Model):
     )
 
     waiting_list_capacity = models.PositiveSmallIntegerField(
-        verbose_name=_("Minimum attendee capacity"), null=True, blank=True
+        verbose_name=_("Waiting list capacity"), null=True, blank=True
     )
-    
+
     mandatory_fields = models.ManyToManyField(
         MandatoryField, blank=True, verbose_name=_("Mandatory fields")
     )

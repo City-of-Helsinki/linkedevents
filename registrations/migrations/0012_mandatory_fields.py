@@ -4,6 +4,7 @@ from django.db import migrations, models
 
 from registrations.models import MandatoryField
 
+
 def create_initial_mandatory_fields(apps, schema_editor):
     MandatoryField.objects.create(
         id=MandatoryField.DefaultMandatoryField.NAME,
