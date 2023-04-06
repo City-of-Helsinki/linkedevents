@@ -243,6 +243,155 @@ msgstr "Hintatietojen kuvaus"
 msgid "Is free"
 msgstr "Vapaa pääsy"
 
+#: registrations/admin.py:54
+#, fuzzy
+#| msgid "event"
+msgid "Event"
+msgstr "Tapahtuma"
+
+#: registrations/api.py:160
+#, python-brace-format
+msgid "User {user} cannot modify event {instance.event}"
+msgstr "Käyttäjä {user} ei voi muokata tapahtumaa {instance.event}"
+
+#: registrations/api.py:325
+msgid "Type can be of the following values:{\" \".join(allowed_types.keys())}"
+msgstr "Arvon tulee olla yksi seuraavista:{\" \".join(allowed_types.keys())}"
+
+#: registrations/models.py:22
+msgid "Contact details"
+msgstr "Yhteystiedot"
+
+#: registrations/models.py:23
+msgid "Registrant's basic information"
+msgstr "Ilmoittautujan perustiedot"
+
+#: registrations/models.py:33
+msgid "Address"
+msgstr "Osoite"
+
+#: registrations/models.py:34 registrations/models.py:157
+msgid "City"
+msgstr "Kaupunki"
+
+#: registrations/models.py:36 registrations/models.py:167
+msgid "Phone number"
+msgstr "Puhelinnumero"
+
+#: registrations/models.py:71
+msgid "Created at"
+msgstr "Luotu"
+
+#: registrations/models.py:74
+msgid "Modified at"
+msgstr "Viimeksi muokattu"
+
+#: registrations/models.py:94
+msgid "Enrollment start time"
+msgstr "Ilmoittautumisen alkamisaika"
+
+#: registrations/models.py:98
+msgid "Enrollment end time"
+msgstr "Ilmoittautumisen päättymisaika"
+
+#: registrations/models.py:102
+msgid "Confirmation message"
+msgstr "Vahvistusviesti"
+
+#: registrations/models.py:106
+msgid "Instructions"
+msgstr "Ohjeet"
+
+#: registrations/models.py:110
+msgid "Maximum attendee capacity"
+msgstr "Paikkojen enimmäismäärä"
+
+#: registrations/models.py:114
+msgid "Minimum attendee capacity"
+msgstr "Paikkojen vähimmäismäärä"
+
+#: registrations/models.py:118
+msgid "Waiting list capacity"
+msgstr "Jonopaikkojen lukumäärä"
+
+#: registrations/models.py:122
+msgid "Mandatory fields"
+msgstr "Pakolliset kentät"
+
+#: registrations/models.py:132
+msgid "Waitlisted"
+msgstr "Odotuslistalla"
+
+#: registrations/models.py:133
+msgid "Attending"
+msgstr "Osallistumassa"
+
+#: registrations/models.py:143
+msgid "No Notification"
+msgstr "Ei ilmoitusta"
+
+#: registrations/models.py:144
+msgid "SMS"
+msgstr "Tekstiviesti"
+
+#: registrations/models.py:145
+msgid "E-Mail"
+msgstr "Sähköposti"
+
+#: registrations/models.py:146
+msgid "Both SMS and email."
+msgstr "Sekä tekstiviesti että sähköposti."
+
+#: registrations/models.py:154
+msgid "Date of birth"
+msgstr "Syntymäaika"
+
+#: registrations/models.py:162
+#, fuzzy
+#| msgid "Location extra info"
+msgid "Extra info"
+msgstr "Paikan lisätiedot"
+
+#: registrations/models.py:164
+msgid "Membership number"
+msgstr "Jäsennumero"
+
+#: registrations/models.py:174
+msgid "Notification type"
+msgstr "Ilmoituksen tyyppi"
+
+#: registrations/models.py:180
+msgid "Cancellation code"
+msgstr "Peruutuskoodi"
+
+#: registrations/models.py:183
+#, fuzzy
+#| msgid "Event status"
+msgid "Attendee status"
+msgstr "Tapahtuman tila"
+
+#: registrations/models.py:266
+msgid "Number of seats"
+msgstr "Paikkojen lukumäärä"
+
+#: registrations/models.py:272
+msgid "Seat reservation code"
+msgstr "Paikkojen varauskoodi"
+
+#: registrations/models.py:275
+msgid "Timestamp."
+msgstr "Aikaleima"
+
+#: registrations/serializers.py:88
+#, python-brace-format
+msgid "No event with id {event_id}"
+msgstr "Ei tapahtumaa id:llä {event_id}"
+
+#: registrations/serializers.py:96
+#, python-brace-format
+msgid "User {user} cannot modify event {event}"
+msgstr "Käyttäjä {user} ei voi muokata tapahtumaa {event}"
+
 #~ msgid "Audience"
 #~ msgstr "Kohderyhmä"
 
@@ -260,3 +409,12 @@ msgstr "Vapaa pääsy"
 
 #~ msgid "Set if the event is in a given language"
 #~ msgstr "Aseta jos tapahtuma järjestetään tietyllä kielellä"
+
+#~ msgid "Registration"
+#~ msgstr "Ilmoittautuminen"
+
+#~ msgid "Registrations"
+#~ msgstr "Ilmoittautumiset"
+
+#~ msgid "Mandatory field"
+#~ msgstr "Pakollinen kenttä"
