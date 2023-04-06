@@ -34,26 +34,7 @@ class SignUpSerializer(serializers.ModelSerializer):
         ).count()
         attendee_capacity = registration.maximum_attendee_capacity
         waiting_list_capacity = registration.waiting_list_capacity
-        if registration.audience_min_age or registration.audience_max_age:
-            if "date_of_birth" not in validated_data.keys():
-                raise DRFPermissionDenied("Date of birth has to be specified.")
-            dob = validated_data["date_of_birth"]
-            today = date.today()
-            current_age = (
-                today.year
-                - dob.year
-                - ((today.month, today.day) < (dob.month, dob.year))
-            )
-            if (
-                registration.audience_min_age
-                and current_age < registration.audience_min_age
-            ):
-                raise DRFPermissionDenied("The participant is too young.")
-            if (
-                registration.audience_max_age
-                and current_age > registration.audience_max_age
-            ):
-                raise DRFPermissionDenied("The participant is too old.")
+
         if (attendee_capacity is None) or (already_attending < attendee_capacity):
             signup = super().create(validated_data)
             signup.send_notification("confirmation")
@@ -67,6 +48,68 @@ class SignUpSerializer(serializers.ModelSerializer):
             return signup
         else:
             raise DRFPermissionDenied("The waiting list is already full")
+
+    def validate(self, data):
+        errors = {}
+        registration = data["registration"]
+        mandatory_fields = {mf.id for mf in registration.mandatory_fields.all()}
+
+        mandatory_field_mapping = [
+            {
+                "field_ids": ["street_address"],
+                "mandatory_field_id": MandatoryField.DefaultMandatoryField.ADDRESS,
+            },
+            {
+                "field_ids": ["city", "zipcode"],
+                "mandatory_field_id": MandatoryField.DefaultMandatoryField.CITY,
+            },
+            {
+                "field_ids": ["name"],
+                "mandatory_field_id": MandatoryField.DefaultMandatoryField.NAME,
+            },
+            {
+                "field_ids": ["phone_number"],
+                "mandatory_field_id": MandatoryField.DefaultMandatoryField.PHONE_NUMBER,
+            },
+        ]
+
+        for m in mandatory_field_mapping:
+            if m["mandatory_field_id"] in mandatory_fields:
+                for field in m["field_ids"]:
+                    val = data.get(field)
+                    if not val:
+                        errors[field] = _("This field must be specified.")
+
+        if registration.audience_min_age or registration.audience_max_age:
+            if "date_of_birth" not in data.keys():
+                errors["date_of_birth"] = _("Date of birth must be specified.")
+            else:
+                date_of_birth = data["date_of_birth"]
+                today = date.today()
+                current_age = (
+                    today.year
+                    - date_of_birth.year
+                    - (
+                        (today.month, today.day)
+                        < (date_of_birth.month, date_of_birth.year)
+                    )
+                )
+                if (
+                    registration.audience_min_age
+                    and current_age < registration.audience_min_age
+                ):
+                    errors["date_of_birth"] = _("The participant is too young.")
+                elif (
+                    registration.audience_max_age
+                    and current_age > registration.audience_max_age
+                ):
+                    errors["date_of_birth"] = _("The participant is too old.")
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        super().validate(data)
+        return data
 
     class Meta:
         fields = "__all__"

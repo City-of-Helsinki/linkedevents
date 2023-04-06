@@ -1,4 +1,5 @@
 import pytest
+from rest_framework import status
 
 from events.tests.conftest import APIClient
 from events.tests.utils import get
@@ -8,11 +9,20 @@ from registrations.models import MandatoryField
 api_client = APIClient()
 
 # === util methods ===
-def get_list(api_client, version="v1", data=None, query_string=None):
-    url = reverse("mandatoryfield-list", version=version)
+def get_list(api_client, data=None, query_string=None):
+    url = reverse("mandatoryfield-list")
     if query_string:
         url = "%s?%s" % (url, query_string)
     return get(api_client, url, data=data)
+
+
+# === util methods ===
+def get_detail(
+    api_client,
+    detail_pk,
+):
+    detail_url = reverse("mandatoryfield-detail", kwargs={"pk": detail_pk})
+    return get(api_client, detail_url)
 
 
 def get_list_no_code_assert(api_client, data=None, query_string=None):
@@ -28,7 +38,7 @@ def assert_mandatory_fields_in_response(
     mandatory_field_ids = {
         mandatory_field["id"] for mandatory_field in response.data["data"]
     }
-    print(mandatory_field_ids, expected_mandatory_field_ids)
+
     if query:
         assert mandatory_field_ids == expected_mandatory_field_ids, f"\nquery: {query}"
     else:
@@ -75,4 +85,4 @@ def test_get_mandatory_field_list_verify_type_filter(api_client):
         },
     )
     response = get_list_no_code_assert(api_client, query_string="type=sometypohere")
-    assert response.status_code == 400
+    assert response.status_code == status.HTTP_400_BAD_REQUEST

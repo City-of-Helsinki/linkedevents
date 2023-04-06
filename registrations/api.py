@@ -310,10 +310,10 @@ class MandatoryFieldViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
 
-        type = self.request.query_params.get("type")
+        val = self.request.query_params.get("type")
         # Filter by type, multiple sources separated by comma
-        if type:
-            types = type.lower().split(",")
+        if val:
+            types = val.lower().split(",")
             allowed_types = {
                 k[0].lower(): k[1] for k in MandatoryField.MANDATORY_FIELD_TYPES
             }

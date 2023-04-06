@@ -149,7 +149,7 @@ class SignUp(models.Model):
     registration = models.ForeignKey(
         Registration, on_delete=models.CASCADE, related_name="signups"
     )
-    name = models.CharField(verbose_name=_("Name"), max_length=50)
+    name = models.CharField(verbose_name=_("Name"), blank=True, max_length=50)
     date_of_birth = models.DateField(
         verbose_name=_("Date of birth"), blank=True, null=True
     )
