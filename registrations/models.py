@@ -13,6 +13,42 @@ from events.models import Event, Language
 User = settings.AUTH_USER_MODEL
 
 
+class MandatoryField(models.Model):
+    class MandatoryFieldType:
+        CONTACT = "contact"
+        PERSON = "person"
+
+    MANDATORY_FIELD_TYPES = (
+        (MandatoryFieldType.CONTACT, _("Contact details")),
+        (MandatoryFieldType.PERSON, _("Registrant's basic information")),
+    )
+
+    class DefaultMandatoryField:
+        ADDRESS = "address"
+        CITY = "city"
+        NAME = "name"
+        PHONE_NUMBER = "phone_number"
+
+    DEFAULT_MANDATORY_FIELDS = (
+        (DefaultMandatoryField.ADDRESS, _("Address")),
+        (DefaultMandatoryField.CITY, _("City")),
+        (DefaultMandatoryField.NAME, _("Name")),
+        (DefaultMandatoryField.PHONE_NUMBER, _("Phone number")),
+    )
+
+    id = models.CharField(max_length=100, primary_key=True)
+    name = models.CharField(verbose_name=_("Name"), max_length=255)
+    type = models.CharField(
+        verbose_name=_("Type"),
+        max_length=25,
+        choices=MANDATORY_FIELD_TYPES,
+        default=MandatoryFieldType.CONTACT,
+    )
+
+    def __str__(self):
+        return self.name
+
+
 class Registration(models.Model):
     event = models.OneToOneField(
         Event,
@@ -21,15 +57,19 @@ class Registration(models.Model):
         null=False,
         blank=True,
     )
+
     attendee_registration = models.BooleanField(default=False, null=False)
+
     audience_min_age = models.PositiveSmallIntegerField(
         verbose_name=_("Minimum recommended age"), blank=True, null=True, db_index=True
     )
+
     audience_max_age = models.PositiveSmallIntegerField(
         verbose_name=_("Maximum recommended age"), blank=True, null=True, db_index=True
     )
 
     created_at = models.DateTimeField(verbose_name=_("Created at"), auto_now_add=True)
+
     last_modified_at = models.DateTimeField(
         verbose_name=_("Modified at"), null=True, blank=True, auto_now=True
     )
@@ -41,6 +81,7 @@ class Registration(models.Model):
         blank=True,
         related_name="registration_created_by",
     )
+
     last_modified_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -52,6 +93,7 @@ class Registration(models.Model):
     enrolment_start_time = models.DateTimeField(
         verbose_name=_("Enrollment start time"), blank=True, null=True
     )
+
     enrolment_end_time = models.DateTimeField(
         verbose_name=_("Enrollment end time"), blank=True, null=True
     )
@@ -59,6 +101,7 @@ class Registration(models.Model):
     confirmation_message = models.TextField(
         verbose_name=_("Confirmation message"), blank=True, null=True
     )
+
     instructions = models.TextField(
         verbose_name=_("Instructions"), blank=True, null=True
     )
@@ -66,11 +109,17 @@ class Registration(models.Model):
     maximum_attendee_capacity = models.PositiveSmallIntegerField(
         verbose_name=_("Maximum attendee capacity"), null=True, blank=True
     )
+
     minimum_attendee_capacity = models.PositiveSmallIntegerField(
         verbose_name=_("Minimum attendee capacity"), null=True, blank=True
     )
+
     waiting_list_capacity = models.PositiveSmallIntegerField(
         verbose_name=_("Minimum attendee capacity"), null=True, blank=True
+    )
+    
+    mandatory_fields = models.ManyToManyField(
+        MandatoryField, blank=True, verbose_name=_("Mandatory fields")
     )
 
 
