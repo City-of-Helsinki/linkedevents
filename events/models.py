@@ -263,6 +263,12 @@ class Image(models.Model):
             return True
         return user.is_admin(self.publisher)
 
+    def can_be_deleted_by(self, user):
+        """Check if current image can be deleted by the given user"""
+        if user.is_superuser:
+            return True
+        return user.is_admin(self.publisher)
+
 
 class ImageMixin(models.Model):
     image = models.ForeignKey(
@@ -475,7 +481,7 @@ class Keyword(BaseModel, ImageMixin, ReplacedByMixin):
                     event.audience.add(self.replaced_by)
 
     def can_be_edited_by(self, user):
-        """Check if current place can be edited by the given user"""
+        """Check if current keyword can be edited by the given user"""
         if user.is_superuser:
             return True
         return user.is_admin(self.publisher)
@@ -519,9 +525,10 @@ class KeywordSet(BaseModel, ImageMixin):
     keywords = models.ManyToManyField(Keyword, blank=False, related_name="sets")
 
     def can_be_edited_by(self, user):
+        """Check if current keyword set can be edited by the given user"""
         if user.is_superuser:
             return True
-        return user.get_default_organization().data_source == self.data_source
+        return user.is_admin(self.organization)
 
     def save(self, *args, **kwargs):
         if any([keyword.deprecated for keyword in self.keywords.all()]):

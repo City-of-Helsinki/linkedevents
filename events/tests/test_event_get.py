@@ -995,12 +995,19 @@ def test_keywordset_search(
     event2.save()
     event3.keywords.add(keyword, keyword2)
     event3.save()
-    get_list_and_assert_events("keyword_set_AND=set:1,set:2", [event, event2])
-    get_list_and_assert_events("keyword_set_OR=set:1,set:2", [event, event2, event3])
+
+    get_list_and_assert_events(
+        f"keyword_set_AND={keyword_set.id},{keyword_set2.id}", [event, event2]
+    )
+    get_list_and_assert_events(
+        f"keyword_set_OR={keyword_set.id},{keyword_set2.id}", [event, event2, event3]
+    )
 
     event3.keywords.remove(keyword, keyword2)
     event3.save()
-    get_list_and_assert_events("keyword_set_AND=set:1,set:2", [event, event2])
+    get_list_and_assert_events(
+        f"keyword_set_AND={keyword_set.id},{keyword_set2.id}", [event, event2]
+    )
 
 
 @pytest.mark.django_db
