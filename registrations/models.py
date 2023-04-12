@@ -170,6 +170,8 @@ class SignUp(models.Model):
 
     def send_notification(self, confirmation_type):
         email_variables = {
+            "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
+            "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
             "username": self.name,
             "event": self.registration.event.name_fi,
             "cancellation_code": self.cancellation_code,
@@ -185,9 +187,9 @@ class SignUp(models.Model):
             email_variables["instructions"] = self.registration.instructions
 
         event_type_name = {
-            str(Event.TypeId.GENERAL): "tapahtumaan",
-            str(Event.TypeId.COURSE): "kurssille",
-            str(Event.TypeId.VOLUNTEERING): "vapaaehtoistehtävään",
+            str(Event.TypeId.GENERAL): _("tapahtumaan"),
+            str(Event.TypeId.COURSE): _("kurssille"),
+            str(Event.TypeId.VOLUNTEERING): _("vapaaehtoistehtävään"),
         }
 
         email_variables["event_type"] = event_type_name[self.registration.event.type_id]
@@ -200,9 +202,16 @@ class SignUp(models.Model):
             confirmation_types[confirmation_type], email_variables
         )
 
+        confirmation_subjects = {
+            "confirmation": _("Vahvistus ilmoittautumisesta - %(event_name)s")
+            % {"event_name": self.registration.event.name},
+            "cancellation": _("Ilmoittautuminen peruttu - %(event_name)s")
+            % {"event_name": self.registration.event.name},
+        }
+
         try:
             send_mail(
-                f"{self.registration.event.name} ilmoittautuminen onnistuu!",
+                confirmation_subjects[confirmation_type],
                 rendered_body,
                 f"letest@{Site.objects.get_current().domain}",
                 [self.email],
