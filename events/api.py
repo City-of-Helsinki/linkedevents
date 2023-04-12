@@ -2448,7 +2448,11 @@ class EventSerializer(
 
     class Meta:
         model = Event
-        exclude = ()
+        exclude = (
+            "search_vector_en",
+            "search_vector_fi",
+            "search_vector_sv",
+        )
         list_serializer_class = BulkListSerializer
 
 
