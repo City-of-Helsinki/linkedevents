@@ -1072,7 +1072,7 @@ class KeywordSetSerializer(LinkedEventsSerializer):
     def to_internal_value(self, data):
         # extracting ids from the '@id':'http://testserver/v1/keyword/system:tunnettu_avainsana/' type record
         keyword_ids = [
-            i.get("@id", "").rstrip("/").split("/")[-1]
+            urllib.parse.unquote(i.get("@id", "").rstrip("/").split("/")[-1])
             for i in data.get("keywords", {})
         ]
         self.context["keywords"] = Keyword.objects.filter(id__in=keyword_ids)
@@ -3587,7 +3587,7 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
                 else:
                     event_list = [event.get(key, [])]
                 ids = [
-                    i["@id"].rstrip("/").split("/").pop()
+                    urllib.parse.unquote(i["@id"].rstrip("/").split("/").pop())
                     for i in event_list
                     if i and isinstance(i, dict) and i.get("@id", None)  # noqa E127
                 ]  # noqa E127
