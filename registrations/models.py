@@ -122,6 +122,27 @@ class Registration(models.Model):
         MandatoryField, blank=True, verbose_name=_("Mandatory fields")
     )
 
+    deleted = models.BooleanField(default=False, verbose_name=_("Deleted"))
+
+    def can_be_edited_by(self, user):
+        """Check if current registration can be edited by the given user"""
+        if user.is_superuser:
+            return True
+        return user.is_admin(self.event.publisher)
+
+    def is_user_editable_resources(self):
+        return bool(
+            self.event.data_source and self.event.data_source.user_editable_resources
+        )
+
+    def soft_delete(self, using=None):
+        self.deleted = True
+        self.save(update_fields=("deleted",), using=using, force_update=True)
+
+    def undelete(self, using=None):
+        self.deleted = False
+        self.save(update_fields=("deleted",), using=using, force_update=True)
+
 
 class SignUp(models.Model):
     class AttendeeStatus:

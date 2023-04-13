@@ -69,6 +69,7 @@ class RegistrationAdmin(BaseAdmin, VersionAdmin):
         "audience_min_age",
         "audience_max_age",
         "mandatory_fields",
+        "deleted",
     )
     list_display = (
         "id",

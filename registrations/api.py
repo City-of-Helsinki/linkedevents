@@ -16,6 +16,7 @@ from rest_framework.response import Response
 
 from events.api import _filter_event_queryset, JSONAPIViewMixin
 from events.api_pagination import LargeResultsSetPagination
+from events.auth import ApiKeyUser
 from events.models import Event
 from events.permissions import GuestDelete, GuestGet, GuestPost
 from linkedevents.registry import register_view
@@ -152,17 +153,33 @@ class RegistrationViewSet(
 
     @permission_classes([IsAuthenticated])
     def destroy(self, request, *args, **kwargs):
-        user = self.request.user
+        user = request.user
         instance = self.get_object()
 
-        if not user.is_admin(instance.event.publisher):
+        if not instance.can_be_edited_by(user):
             raise DRFPermissionDenied(
                 _(f"User {user} cannot modify event {instance.event}")
             )
 
-        return super().destroy(request, *args, **kwargs)
+        if isinstance(user, ApiKeyUser):
+            # allow deleting only if the api key matches instance data source
+            if instance.event.data_source != user.data_source:
+                raise DRFPermissionDenied()
+        else:
+            # without api key, the user will have to be admin
+            if not instance.is_user_editable_resources():
+                raise DRFPermissionDenied()
+
+        instance.soft_delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def filter_queryset(self, queryset):
+        """
+        If the request has no filter parameters, we only return registration that meet the following criteria:
+        -the registration has event
+        -the registration is not deleted
+        """
         events = Event.objects.exclude(registration=None)
 
         # Copy query_params to get mutable version of it
@@ -182,7 +199,13 @@ class RegistrationViewSet(
                 events = Event.objects.none()
             else:
                 events = self.request.user.get_editable_events(events)
+
         registrations = Registration.objects.filter(event__in=events)
+
+        if not self.request.query_params.get("show_deleted"):
+            registrations = registrations.filter(deleted=False)
+
+        events = Event.objects.exclude(registration=None)
 
         return registrations
 
