@@ -10,6 +10,7 @@ from rest_framework.permissions import SAFE_METHODS
 
 from events.api_field import EnumChoiceField
 from events.api_translated import TranslatedModelSerializer
+from events.auth import ApiKeyUser
 from events.models import Event
 from registrations.models import (
     MandatoryField,
@@ -124,19 +125,32 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        if kwargs["context"]["request"].method in SAFE_METHODS:
+            return
+
         if kwargs["context"]["request"].data.get("event", None):
             event_id = kwargs["context"]["request"].data["event"]
-            event = Event.objects.filter(id=event_id).select_related("publisher")
-            if len(event) == 0:
+            events = Event.objects.filter(id=event_id).select_related("publisher")
+
+            if len(events) == 0:
                 raise DRFPermissionDenied(_("No event with id {event_id}"))
+
+            event = events[0]
             user = kwargs["context"]["user"]
-            if (
-                user.is_admin(event[0].publisher)
-                or kwargs["context"]["request"].method in SAFE_METHODS
-            ):
-                pass
+            error_message = _(f"User {user} cannot modify event {event}")
+
+            if not user.is_admin(event.publisher):
+                raise DRFPermissionDenied(error_message)
+
+            if isinstance(user, ApiKeyUser):
+                # allow updating only if the api key matches instance data source
+                if event.data_source != user.data_source:
+                    raise DRFPermissionDenied(_(error_message))
             else:
-                raise DRFPermissionDenied(_(f"User {user} cannot modify event {event}"))
+                # allow updating only if event data_source has user_editable_resources set to True
+                if not event.is_user_editable_resources():
+                    raise DRFPermissionDenied(_(error_message))
 
     def get_signups(self, obj):
         params = self.context["request"].query_params

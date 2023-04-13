@@ -78,6 +78,9 @@ class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
         return self.data_source.owner
 
     def is_admin(self, publisher):
+        # get_descendants cannot be called if data_source owner is not defined
+        if not self.data_source.owner:
+            return False
         return publisher in self.data_source.owner.get_descendants(include_self=True)
 
     def is_regular_user(self, publisher):

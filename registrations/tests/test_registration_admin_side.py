@@ -11,10 +11,7 @@ from rest_framework import status
 from events.models import Event
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
-from registrations.models import MandatoryField, Registration, SignUp
-from registrations.tests.test_mandatory_field_get import (
-    get_detail as get_mandatory_field_detail,
-)
+from registrations.models import MandatoryField, SignUp
 
 
 def sign_up(api_client, registration_id, sign_up_data):
@@ -37,163 +34,6 @@ def sign_up(api_client, registration_id, sign_up_data):
     response = api_client.post(signup_url, sign_up_payload, format="json")
 
     return response
-
-
-@pytest.mark.parametrize(
-    "has_right_to_edit,expected_status",
-    [(True, status.HTTP_201_CREATED), (False, status.HTTP_403_FORBIDDEN)],
-)
-@pytest.mark.django_db
-def test_create_registration(api_client, event, has_right_to_edit, expected_status):
-    registration_url = reverse("registration-list")
-    user = UserFactory()
-    if has_right_to_edit:
-        event.publisher.admin_users.add(user)
-    api_client.force_authenticate(user)
-    registration_data = {"event": event.id}
-
-    response = api_client.post(registration_url, registration_data, format="json")
-
-    assert response.status_code == expected_status
-
-
-@pytest.mark.parametrize(
-    "event_type",
-    [Event.TypeId.GENERAL, Event.TypeId.COURSE, Event.TypeId.VOLUNTEERING],
-)
-@pytest.mark.django_db
-def test_get_registration(api_client, event, event_type, registration):
-    event.type_id = event_type
-    event.save()
-
-    registration_url = reverse("registration-detail", kwargs={"pk": registration.id})
-    response = api_client.get(registration_url)
-
-    assert response.status_code == status.HTTP_200_OK
-    assert response.data["id"] == registration.id
-
-
-@pytest.mark.django_db
-def test_create_registration__only_one_registration_allowed(api_client, event):
-    registration_url = reverse("registration-list")
-    user = UserFactory()
-    event.publisher.admin_users.add(user)
-    api_client.force_authenticate(user)
-    registration_data = {"event": event.id}
-
-    api_client.post(registration_url, registration_data, format="json")
-    response = api_client.post(registration_url, registration_data, format="json")
-
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-
-@pytest.mark.django_db
-def test_create_registration__nonexistent_event(api_client, user):
-    """No registration for a nonexistent event."""
-    registration_url = reverse("registration-list")
-    registration_data = {"event": "nonexistent-id"}
-    api_client.force_authenticate(user)
-
-    response = api_client.post(registration_url, registration_data, format="json")
-
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
-
-@pytest.mark.parametrize(
-    "has_right_to_edit,expected_status",
-    [(True, status.HTTP_200_OK), (False, status.HTTP_403_FORBIDDEN)],
-)
-@pytest.mark.django_db
-def test_update_registration(
-    api_client, event, registration, has_right_to_edit, expected_status
-):
-    update_url = reverse("registration-detail", kwargs={"pk": registration.id})
-    user = UserFactory()
-    if has_right_to_edit:
-        event.publisher.admin_users.add(user)
-    api_client.force_authenticate(user)
-    expected_max_age = 10 if has_right_to_edit else registration.audience_max_age
-    new_max_age = 10
-    registration_data = {"event": event.id, "audience_max_age": new_max_age}
-    assert registration.audience_max_age != new_max_age
-
-    response = api_client.put(update_url, registration_data, format="json")
-
-    assert response.status_code == expected_status
-    if has_right_to_edit:
-        assert response.data["audience_max_age"] == expected_max_age
-    registration.refresh_from_db()
-    assert registration.audience_max_age == expected_max_age
-
-
-@pytest.mark.parametrize(
-    "has_right_to_edit,expected_status,expected_count",
-    [(True, status.HTTP_204_NO_CONTENT, 0), (False, status.HTTP_403_FORBIDDEN, 1)],
-)
-@pytest.mark.django_db
-def test_delete_registration(
-    api_client, event, registration, has_right_to_edit, expected_status, expected_count
-):
-    delete_url = reverse("registration-detail", kwargs={"pk": registration.id})
-    user = UserFactory()
-    if has_right_to_edit:
-        event.publisher.admin_users.add(user)
-    api_client.force_authenticate(user)
-
-    response = api_client.delete(delete_url)
-
-    assert response.status_code == expected_status
-    assert Registration.objects.count() == expected_count
-
-
-@pytest.mark.django_db
-def test_filter_events_with_registrations(api_client, user, event, event2):
-    registration_url = reverse("registration-list")
-    event_url = reverse("event-list")
-
-    api_client.force_authenticate(user)
-    registration_data = {"event": event.id}
-    response = api_client.post(registration_url, registration_data, format="json")
-    assert response.status_code == status.HTTP_201_CREATED
-
-    api_client.force_authenticate(user=None)
-    response = api_client.get(event_url, format="json")
-    assert response.data["meta"]["count"] == 2
-
-    response = api_client.get(f"{event_url}?registration=true", format="json")
-    assert response.data["meta"]["count"] == 1
-    assert response.data["data"][0]["id"] == event.id
-
-
-@pytest.mark.django_db
-def test_list_all_registrations(api_client, user, user2, event, event2, event3):
-    registration_url = reverse("registration-list")
-    expected_ids = set()
-
-    # create registrations from two different users
-    api_client.force_authenticate(user)
-    registration_data = {"event": event.id}
-    response = api_client.post(registration_url, registration_data, format="json")
-    expected_ids.add(response.data["id"])
-    assert response.status_code == status.HTTP_201_CREATED
-    registration_data = {"event": event3.id}
-    response = api_client.post(registration_url, registration_data, format="json")
-    expected_ids.add(response.data["id"])
-    assert response.status_code == status.HTTP_201_CREATED
-
-    api_client.force_authenticate(user2)
-    registration_data = {"event": event2.id}
-    response = api_client.post(registration_url, registration_data, format="json")
-    expected_ids.add(response.data["id"])
-    assert response.status_code == status.HTTP_201_CREATED
-
-    # log out and check the list of registrations
-    api_client.force_authenticate(user=None)
-    response = api_client.get(registration_url)
-    assert response.status_code == status.HTTP_200_OK
-    assert Registration.objects.count() == 3
-    assert len(expected_ids) == 3
-    assert expected_ids == {r["id"] for r in response.data["data"]}
 
 
 @pytest.mark.django_db
@@ -748,35 +588,6 @@ def test_filter_signups(api_client, user, user2, event, event2):
     search_url = f"{signup_url}?events={event2.id}"
     response = api_client.get(search_url)
     assert len(response.data) == 4
-
-
-@pytest.mark.django_db
-def test_filter_registrations(api_client, user, user2, event, event2):
-    registration_url = reverse("registration-list")
-
-    api_client.force_authenticate(user)
-    registration_data = {"event": event.id}
-    response = api_client.post(registration_url, registration_data, format="json")
-    registration_id = response.data["id"]
-
-    api_client.force_authenticate(user2)
-    registration_data = {"event": event2.id}
-    response = api_client.post(registration_url, registration_data, format="json")
-    registration_id2 = response.data["id"]
-
-    event2.type_id = Event.TypeId.COURSE
-    event2.save()
-
-    response = api_client.get(registration_url)
-    assert len(response.data) == 2
-
-    response = api_client.get(f"{registration_url}?event_type=Course")
-    assert len(response.data["data"]) == 1
-    assert registration_id2 == response.data["data"][0]["id"]
-
-    response = api_client.get(f"{registration_url}?text={event.name}")
-    assert len(response.data["data"]) == 1
-    assert registration_id == response.data["data"][0]["id"]
 
 
 @pytest.mark.django_db
