@@ -170,6 +170,11 @@ class RegistrationViewSet(
             if not instance.is_user_editable_resources():
                 raise DRFPermissionDenied()
 
+        if instance.signups.count():
+            raise DRFPermissionDenied(
+                _("Registration with enrolments cannot be deleted")
+            )
+
         instance.soft_delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)

@@ -8,9 +8,7 @@ from django.core import mail
 from freezegun import freeze_time
 from rest_framework import status
 
-from events.models import Event
 from events.tests.utils import versioned_reverse as reverse
-from helevents.tests.factories import UserFactory
 from registrations.models import MandatoryField, SignUp
 
 
@@ -36,6 +34,7 @@ def sign_up(api_client, registration_id, sign_up_data):
     return response
 
 
+@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_successful_sign_up(api_client, languages, registration):
     """User reserves seats and then signs up."""
@@ -69,6 +68,7 @@ def test_successful_sign_up(api_client, languages, registration):
     assert signup.zipcode == sign_up_data["zipcode"]
 
 
+@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_cannot_sign_up_twice_with_same_phone_or_email(api_client, registration):
     sign_up_data = {
@@ -96,6 +96,7 @@ def test_cannot_sign_up_twice_with_same_phone_or_email(api_client, registration)
     assert response.data["non_field_errors"][0].code == "unique"
 
 
+@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_current_attendee_and_waitlist_count(api_client, user, event):
     registration_url = reverse("registration-list")
@@ -247,6 +248,7 @@ def test_signup_age_has_to_match_the_audience_min_max_age(
         ),
     ],
 )
+@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_signup_mandatory_fields_has_to_be_filled(
     api_client, event, field_id, mandatory_field_id, user
@@ -428,6 +430,7 @@ def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
     )
 
 
+@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_email_sent_on_successful_signup(api_client, registration):
     sign_up_data = {
