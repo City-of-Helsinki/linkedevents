@@ -380,7 +380,7 @@ msgstr "Paikkojen varauskoodi"
 
 #: registrations/models.py:275
 msgid "Timestamp."
-msgstr "Aikaleima"
+msgstr "Aikaleima."
 
 #: registrations/serializers.py:88
 #, python-brace-format

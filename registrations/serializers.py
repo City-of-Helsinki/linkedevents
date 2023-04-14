@@ -54,31 +54,10 @@ class SignUpSerializer(serializers.ModelSerializer):
         registration = data["registration"]
         mandatory_fields = {mf.id for mf in registration.mandatory_fields.all()}
 
-        mandatory_field_mapping = [
-            {
-                "field_ids": ["street_address"],
-                "mandatory_field_id": MandatoryField.DefaultMandatoryField.ADDRESS,
-            },
-            {
-                "field_ids": ["city", "zipcode"],
-                "mandatory_field_id": MandatoryField.DefaultMandatoryField.CITY,
-            },
-            {
-                "field_ids": ["name"],
-                "mandatory_field_id": MandatoryField.DefaultMandatoryField.NAME,
-            },
-            {
-                "field_ids": ["phone_number"],
-                "mandatory_field_id": MandatoryField.DefaultMandatoryField.PHONE_NUMBER,
-            },
-        ]
-
-        for m in mandatory_field_mapping:
-            if m["mandatory_field_id"] in mandatory_fields:
-                for field in m["field_ids"]:
-                    val = data.get(field)
-                    if not val:
-                        errors[field] = _("This field must be specified.")
+        for field in mandatory_fields:
+            val = data.get(field)
+            if not val:
+                errors[field] = _("This field must be specified.")
 
         if registration.audience_min_age or registration.audience_max_age:
             if "date_of_birth" not in data.keys():

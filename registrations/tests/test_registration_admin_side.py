@@ -12,9 +12,6 @@ from events.models import Event
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
 from registrations.models import MandatoryField, Registration, SignUp
-from registrations.tests.test_mandatory_field_get import (
-    get_detail as get_mandatory_field_detail,
-)
 
 
 def sign_up(api_client, registration_id, sign_up_data):
@@ -389,36 +386,34 @@ def test_signup_age_has_to_match_the_audience_min_max_age(
 
 
 @pytest.mark.parametrize(
-    "mandatory_field_id,field_id",
+    "mandatory_field_id",
     [
-        (
-            MandatoryField.DefaultMandatoryField.ADDRESS,
-            "street_address",
-        ),
-        (MandatoryField.DefaultMandatoryField.CITY, "city"),
-        (
-            MandatoryField.DefaultMandatoryField.CITY,
-            "zipcode",
-        ),
-        (MandatoryField.DefaultMandatoryField.NAME, "name"),
-        (
-            MandatoryField.DefaultMandatoryField.PHONE_NUMBER,
-            "phone_number",
-        ),
+        MandatoryField.DefaultMandatoryField.CITY,
+        MandatoryField.DefaultMandatoryField.NAME,
+        MandatoryField.DefaultMandatoryField.PHONE_NUMBER,
+        MandatoryField.DefaultMandatoryField.STREET_ADDRESS,
+        MandatoryField.DefaultMandatoryField.ZIPCODE,
+        "foobar",
     ],
 )
 @pytest.mark.django_db
 def test_signup_mandatory_fields_has_to_be_filled(
-    api_client, event, field_id, mandatory_field_id, user
+    api_client, event, mandatory_field_id, user
 ):
+    api_client.force_authenticate(user)
+
+    try:
+        MandatoryField.objects.get(pk=mandatory_field_id)
+    except MandatoryField.DoesNotExist:
+        MandatoryField.objects.create(id=mandatory_field_id)
+
     registration_url = reverse("registration-list")
     registration_data = {
         "event": event.id,
         "mandatory_fields": [mandatory_field_id],
     }
-
-    api_client.force_authenticate(user)
     response = api_client.post(registration_url, registration_data, format="json")
+    assert response.status_code == status.HTTP_201_CREATED
     registration_id = response.data["id"]
 
     sign_up_data = {
@@ -430,11 +425,11 @@ def test_signup_mandatory_fields_has_to_be_filled(
         "zipcode": "00100",
         "notifications": "sms",
     }
-    sign_up_data[field_id] = ""
+    sign_up_data[mandatory_field_id] = ""
 
     response = sign_up(api_client, registration_id, sign_up_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert str(response.data[field_id][0]) == "This field must be specified."
+    assert str(response.data[mandatory_field_id][0]) == "This field must be specified."
 
 
 @pytest.mark.skip(reason="Currently there's no way to cancel a signup.")

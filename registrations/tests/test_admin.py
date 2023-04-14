@@ -54,7 +54,7 @@ class TestMandatoryFieldAdmin(TestCase):
         request = self.factory.get("/fake-url/")
         request.user = self.admin
         qs = mandatory_field_admin.get_queryset(request)
-        address_mf = qs.get(pk=MandatoryField.DefaultMandatoryField.ADDRESS)
+        address_mf = qs.get(pk=MandatoryField.DefaultMandatoryField.STREET_ADDRESS)
 
         self.assertTrue(
             mandatory_field_admin.has_delete_permission(request, self.deletable_mf)

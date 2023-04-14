@@ -23,7 +23,15 @@ def create_initial_mandatory_fields(apps, schema_editor):
     )
 
     MandatoryField.objects.create(
-        id=MandatoryField.DefaultMandatoryField.ADDRESS,
+        id=MandatoryField.DefaultMandatoryField.ZIPCODE,
+        name_fi="Postinumero",
+        name_en="ZIP code",
+        name_sv="Postnummer",
+        type=MandatoryField.MandatoryFieldType.PERSON,
+    )
+
+    MandatoryField.objects.create(
+        id=MandatoryField.DefaultMandatoryField.STREET_ADDRESS,
         name_fi="Osoite",
         name_en="Address",
         name_sv="Adress",

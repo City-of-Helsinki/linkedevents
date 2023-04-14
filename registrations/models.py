@@ -24,16 +24,18 @@ class MandatoryField(models.Model):
     )
 
     class DefaultMandatoryField:
-        ADDRESS = "address"
         CITY = "city"
         NAME = "name"
         PHONE_NUMBER = "phone_number"
+        STREET_ADDRESS = "street_address"
+        ZIPCODE = "zipcode"
 
     DEFAULT_MANDATORY_FIELDS = (
-        (DefaultMandatoryField.ADDRESS, _("Address")),
         (DefaultMandatoryField.CITY, _("City")),
         (DefaultMandatoryField.NAME, _("Name")),
         (DefaultMandatoryField.PHONE_NUMBER, _("Phone number")),
+        (DefaultMandatoryField.STREET_ADDRESS, _("Street address")),
+        (DefaultMandatoryField.ZIPCODE, _("ZIP code")),
     )
 
     id = models.CharField(max_length=100, primary_key=True)
