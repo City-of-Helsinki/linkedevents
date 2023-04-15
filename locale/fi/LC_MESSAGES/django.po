@@ -379,8 +379,8 @@ msgid "Seat reservation code"
 msgstr "Paikkojen varauskoodi"
 
 #: registrations/models.py:275
-msgid "Timestamp."
-msgstr "Aikaleima."
+msgid "Timestamp"
+msgstr "Aikaleima"
 
 #: registrations/serializers.py:88
 #, python-brace-format

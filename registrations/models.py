@@ -274,5 +274,5 @@ class SeatReservationCode(models.Model):
         verbose_name=_("Seat reservation code"), default=uuid4, editable=False
     )
     timestamp = models.DateTimeField(
-        verbose_name=_("Timestamp."), auto_now_add=True, blank=True
+        verbose_name=_("Timestamp"), auto_now_add=True, blank=True
     )
