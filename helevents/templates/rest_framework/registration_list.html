@@ -1,0 +1,38 @@
+<div class="panel panel-default">
+    <div class="panel-body">
+        <h2 id="filtering-retrieved-registration">Filtering retrieved registration</h2>
+        <p>Query parameters can be used to filter the retrieved registrations by the following criteria.</p>
+
+        <h3 id="event-text">Event text</h3>
+        <p>To find out registrations that contain a specific string in any of its event's text
+        fields, use the query parameter <code>text</code>.</p>
+        <p>Example:</p>
+        <pre><code>registration/?text=shostakovich</code></pre>
+        <p><a href="?text=shostakovich" title="json">See the result</a></p>
+
+        <h3 id="event-type">Event type</h4>
+        <p>You may use the query parameter <code>event_type</code>, comma separated, to get
+        only registrations with event of specific types.
+        <p>Example:</p>
+        <pre><code>registration/?event_type=course</code></pre>
+        <p><a href="?event_type=course" title="json">See the result</a></p>
+            
+        <h3 id="getting-detailed-data">Getting detailed data</h2>
+        <p>In the default case, event, keywords, locations, and other fields that
+        refer to separate resources are only displayed as simple references.</p>
+        <p>If you want to include the complete data from related resources in
+        the current response, use the keyword <code>include</code>.</p> 
+        <p><strong> Please note, however,
+        that including all the resources inlined in *every* event will result in a huge number
+        of duplicate data in the json, making the json very slow to generate and process and causing
+        considerable API load and long response times when too many such requests are made. Therefore,
+        if you are listing the maximum number of events (100) or updating your cache with all events,
+        please consider caching the keyword and location data separately to prevent unnecessary API
+        slowdown and continuous repeated work. Keyword and location data seldom change and are easily
+        fetched from their own endpoints separately.
+        </strong></p>
+        <p>Example:</p>
+        <pre><code>registration/?include=event,keywords</code></pre>
+        <p><a href="?include=event,keywords" title="json">See the result</a></p>
+    </div>
+</div>
