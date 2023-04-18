@@ -8,8 +8,6 @@ from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.fields import DateTimeField
 from rest_framework.permissions import SAFE_METHODS
 
-from events.api_field import EnumChoiceField
-from events.api_translated import TranslatedModelSerializer
 from events.models import Event
 from registrations.models import (
     MandatoryField,
@@ -158,9 +156,7 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
         return obj.timestamp + timedelta(minutes=code_validity_duration(obj.seats))
 
 
-class MandatoryFieldSerializer(TranslatedModelSerializer):
-    type = EnumChoiceField(MandatoryField.MANDATORY_FIELD_TYPES, required=True)
-
+class MandatoryFieldSerializer(serializers.ModelSerializer):
     class Meta:
         model = MandatoryField
         fields = "__all__"

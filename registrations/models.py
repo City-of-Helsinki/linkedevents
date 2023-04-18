@@ -14,15 +14,6 @@ User = settings.AUTH_USER_MODEL
 
 
 class MandatoryField(models.Model):
-    class MandatoryFieldType:
-        CONTACT = "contact"
-        PERSON = "person"
-
-    MANDATORY_FIELD_TYPES = (
-        (MandatoryFieldType.CONTACT, _("Contact details")),
-        (MandatoryFieldType.PERSON, _("Registrant's basic information")),
-    )
-
     class DefaultMandatoryField:
         CITY = "city"
         NAME = "name"
@@ -39,16 +30,9 @@ class MandatoryField(models.Model):
     )
 
     id = models.CharField(max_length=100, primary_key=True)
-    name = models.CharField(verbose_name=_("Name"), max_length=255)
-    type = models.CharField(
-        verbose_name=_("Type"),
-        max_length=25,
-        choices=MANDATORY_FIELD_TYPES,
-        default=MandatoryFieldType.CONTACT,
-    )
 
     def __str__(self):
-        return self.name
+        return self.id
 
 
 class Registration(models.Model):

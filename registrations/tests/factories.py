@@ -6,7 +6,6 @@ from registrations.models import MandatoryField, Registration
 
 class MandatoryFieldFactory(factory.django.DjangoModelFactory):
     id = factory.Sequence(lambda n: "mandatory-field-{0}".format(n))
-    type = MandatoryField.MandatoryFieldType.CONTACT
 
     class Meta:
         model = MandatoryField

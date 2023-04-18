@@ -9,7 +9,7 @@ from django.db.models import Q, Sum
 from django.utils.translation import gettext_lazy as _
 from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action, permission_classes
-from rest_framework.exceptions import NotFound, ParseError
+from rest_framework.exceptions import NotFound
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -306,29 +306,6 @@ class MandatoryFieldViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
     queryset = MandatoryField.objects.all()
     serializer_class = MandatoryFieldSerializer
     pagination_class = LargeResultsSetPagination
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-
-        val = self.request.query_params.get("type")
-        # Filter by type, multiple sources separated by comma
-        if val:
-            types = val.lower().split(",")
-            allowed_types = {
-                k[0].lower(): k[1] for k in MandatoryField.MANDATORY_FIELD_TYPES
-            }
-
-            for v in types:
-                if v not in allowed_types:
-                    raise ParseError(
-                        _(
-                            f'Type can be of the following values:{" ".join(allowed_types.keys())}'
-                        )
-                    )
-
-            queryset = queryset.filter(type__in=types)
-
-        return queryset
 
 
 register_view(MandatoryFieldViewSet, "registration-mandatory-field")

@@ -1,10 +1,8 @@
 from admin_auto_filters.filters import AutocompleteFilter
 from django.contrib import admin
 from django.utils.translation import ugettext as _
-from modeltranslation.admin import TranslationAdmin
 from reversion.admin import VersionAdmin
 
-import registrations.translation  # noqa: F401
 from registrations.models import MandatoryField, Registration
 
 
@@ -22,14 +20,10 @@ class BaseAdmin(admin.ModelAdmin):
         obj.save()
 
 
-class MandatoryFieldAdmin(TranslationAdmin, VersionAdmin):
-    fields = (
-        "id",
-        "name",
-        "type",
-    )
-    search_fields = ("name", "id")
-    list_display = ("id", "name", "type")
+class MandatoryFieldAdmin(VersionAdmin):
+    fields = ("id",)
+    search_fields = ("id",)
+    list_display = ("id",)
 
     def has_delete_permission(self, request, obj=None):
         if obj:

@@ -45,7 +45,7 @@ def get_list_and_assert_mandatory_fields(
 
 # === tests ===
 @pytest.mark.django_db
-def test_get_mandatory_field_list_verify_type_filter(api_client):
+def test_get_mandatory_field_list(api_client):
     get_list_and_assert_mandatory_fields(
         "",
         {
@@ -56,27 +56,3 @@ def test_get_mandatory_field_list_verify_type_filter(api_client):
             MandatoryField.DefaultMandatoryField.ZIPCODE,
         },
     )
-    get_list_and_assert_mandatory_fields(
-        "type=person",
-        {
-            MandatoryField.DefaultMandatoryField.CITY,
-            MandatoryField.DefaultMandatoryField.NAME,
-            MandatoryField.DefaultMandatoryField.STREET_ADDRESS,
-            MandatoryField.DefaultMandatoryField.ZIPCODE,
-        },
-    )
-    get_list_and_assert_mandatory_fields(
-        "type=contact", {MandatoryField.DefaultMandatoryField.PHONE_NUMBER}
-    )
-    get_list_and_assert_mandatory_fields(
-        "type=contact,person",
-        {
-            MandatoryField.DefaultMandatoryField.CITY,
-            MandatoryField.DefaultMandatoryField.NAME,
-            MandatoryField.DefaultMandatoryField.PHONE_NUMBER,
-            MandatoryField.DefaultMandatoryField.STREET_ADDRESS,
-            MandatoryField.DefaultMandatoryField.ZIPCODE,
-        },
-    )
-    response = get_list_no_code_assert(api_client, query_string="type=sometypohere")
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
