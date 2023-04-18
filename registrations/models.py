@@ -123,6 +123,25 @@ class Registration(models.Model):
         verbose_name=_("Mandatory fields"),
     )
 
+    @property
+    def data_source(self):
+        return self.event.data_source
+
+    @property
+    def publisher(self):
+        return self.event.publisher
+
+    def can_be_edited_by(self, user):
+        """Check if current registration can be edited by the given user"""
+        if user.is_superuser:
+            return True
+        return user.is_admin(self.event.publisher)
+
+    def is_user_editable_resources(self):
+        return bool(
+            self.event.data_source and self.event.data_source.user_editable_resources
+        )
+
 
 class SignUp(models.Model):
     class AttendeeStatus:

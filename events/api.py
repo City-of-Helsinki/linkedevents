@@ -106,7 +106,7 @@ from events.translation import (
 from helevents.models import User
 from helevents.serializers import UserSerializer
 from linkedevents.registry import register_view, viewset_classes_by_model
-from registrations.serializers import RegistrationSerializer
+from registrations.serializers import RegistrationBaseSerializer
 
 LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
 
@@ -351,7 +351,7 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
                 context["include"] = [
                     x
                     for x in context["include"]
-                    if x != "sub_events" and x != "super_event"
+                    if x != "sub_events" and x != "super_event" and x != "registration"
                 ]
             return self.related_serializer(
                 obj, hide_ld_context=self.hide_ld_context, context=context
@@ -559,18 +559,14 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
 
 class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
     """Serializer with the support for JSON-LD/Schema.org.
-
     JSON-LD/Schema.org syntax::
-
       {
          "@context": "http://schema.org",
          "@type": "Event",
          "name": "Event name",
          ...
       }
-
     See full example at: http://schema.org/Event
-
     Args:
       hide_ld_context (bool):
         Hides `@context` from JSON, can be used in nested
@@ -1948,6 +1944,64 @@ class VideoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Video
         exclude = ["id", "event"]
+
+
+# RegistrationSerializer is in this file to avoid circular imports
+class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer):
+    event = JSONLDRelatedField(
+        serializer="EventSerializer",
+        many=False,
+        view_name="event-detail",
+        queryset=Event.objects.all(),
+    )
+
+    def __init__(self, instance=None, *args, **kwargs):
+        super().__init__(instance=instance, *args, **kwargs)
+
+        event_dict = kwargs["context"]["request"].data.get("event", None)
+
+        # Check user permissions if creating a new registration.
+        # LinkedEventsSerializer __init__ checks permissions in case of new registration
+        if not instance and isinstance(event_dict, dict) and "@id" in event_dict:
+            event_url = event_dict["@id"]
+            event_id = urllib.parse.unquote(event_url.rstrip("/").split("/")[-1])
+            user = kwargs["context"]["user"]
+
+            try:
+                event = Event.objects.get(pk=event_id)
+                error_message = _("User {user} cannot modify event {event}").format(
+                    user=user, event=event
+                )
+
+                if not user.is_admin(event.publisher):
+                    raise DRFPermissionDenied(error_message)
+
+                if isinstance(user, ApiKeyUser):
+                    # allow updating only if the api key matches instance data source
+                    if event.data_source != user.data_source:
+                        raise DRFPermissionDenied(_(error_message))
+                else:
+                    # allow updating only if event data_source has user_editable_resources set to True
+                    if not event.is_user_editable_resources():
+                        raise DRFPermissionDenied(_(error_message))
+            except Event.DoesNotExist:
+                pass
+
+    def create(self, request, *args, **kwargs):
+        try:
+            instance = super().create(request, *args, **kwargs)
+        except IntegrityError as error:
+            if "duplicate key value violates unique constraint" in str(error):
+                raise serializers.ValidationError(
+                    {"event": _("Event already has a registration.")}
+                )
+            else:
+                raise error
+        return instance
+
+    # LinkedEventsSerializer validates name which doesn't exist in Registration model
+    def validate(self, data):
+        return data
 
 
 class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer):

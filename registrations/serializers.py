@@ -7,9 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.fields import DateTimeField
-from rest_framework.permissions import SAFE_METHODS
 
-from events.models import Event
 from registrations.models import Registration, SeatReservationCode, SignUp
 from registrations.utils import code_validity_duration
 
@@ -91,32 +89,37 @@ class SignUpSerializer(serializers.ModelSerializer):
         model = SignUp
 
 
-class RegistrationSerializer(serializers.ModelSerializer):
+# Don't use this serializer directly but use events.api.RegistrationSerializer instead.
+# Implement methods to mutate and validate Registration in events.api.RegistrationSerializer
+class RegistrationBaseSerializer(serializers.ModelSerializer):
     view_name = "registration-detail"
+
     signups = serializers.SerializerMethodField()
+
     current_attendee_count = serializers.SerializerMethodField()
+
     current_waiting_list_count = serializers.SerializerMethodField()
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if kwargs["context"]["request"].data.get("event", None):
-            event_id = kwargs["context"]["request"].data["event"]
-            event = Event.objects.filter(id=event_id).select_related("publisher")
-            if len(event) == 0:
-                raise DRFPermissionDenied(_("No event with id {event_id}"))
+    data_source = serializers.SerializerMethodField()
 
-            user = kwargs["context"]["user"]
-            if (
-                user.is_admin(event[0].publisher)
-                or kwargs["context"]["request"].method in SAFE_METHODS
-            ):
-                pass
-            else:
-                raise DRFPermissionDenied(_(f"User {user} cannot modify event {event}"))
+    publisher = serializers.SerializerMethodField()
+
+    created_time = DateTimeField(
+        default_timezone=pytz.UTC, required=False, allow_null=True
+    )
+
+    last_modified_time = DateTimeField(
+        default_timezone=pytz.UTC, required=False, allow_null=True
+    )
+
+    created_by = serializers.StringRelatedField(required=False, allow_null=True)
+
+    last_modified_by = serializers.StringRelatedField(required=False, allow_null=True)
 
     def get_signups(self, obj):
         params = self.context["request"].query_params
-        if params.get("include", None) == "signups":
+
+        if "signups" in params.get("include", "").split(","):
             #  only the organization admins should be able to access the signup information
             user = self.context["user"]
             event = obj.event
@@ -131,14 +134,20 @@ class RegistrationSerializer(serializers.ModelSerializer):
             return None
 
     def get_current_attendee_count(self, obj):
-        return SignUp.objects.filter(
-            registration__id=obj.id, attendee_status=SignUp.AttendeeStatus.ATTENDING
+        return obj.signups.filter(
+            attendee_status=SignUp.AttendeeStatus.ATTENDING
         ).count()
 
     def get_current_waiting_list_count(self, obj):
-        return SignUp.objects.filter(
-            registration__id=obj.id, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
+        return obj.signups.filter(
+            attendee_status=SignUp.AttendeeStatus.WAITING_LIST
         ).count()
+
+    def get_data_source(self, obj):
+        return obj.data_source.id
+
+    def get_publisher(self, obj):
+        return obj.publisher.id
 
     class Meta:
         fields = "__all__"
