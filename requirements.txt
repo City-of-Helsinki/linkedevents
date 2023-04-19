@@ -283,7 +283,7 @@ social-auth-core==4.0.2
     #   social-auth-app-django
 soupsieve==2.4
     # via beautifulsoup4
-sqlparse==0.4.3
+sqlparse==0.4.4
     # via django
 stack-data==0.6.2
     # via ipython
