@@ -59,6 +59,11 @@ env = environ.Env(
     INTERNAL_IPS=(list, []),
     LANGUAGES=(list, ["fi", "sv", "en", "zh-hans", "ru", "ar"]),
     LIPPUPISTE_EVENT_API_URL=(str, None),
+    LINKED_EVENTS_UI_URL=(str, "https://linkedevents.hel.fi"),
+    LINKED_REGISTRATIONS_UI_URL=(
+        str,
+        "https://linkedregistrations-ui-prod.apps.platta.hel.fi",
+    ),
     MAILGUN_API_URL=(str, ""),
     MAILGUN_SENDER_DOMAIN=(str, ""),
     MAILGUN_API_KEY=(str, ""),
@@ -383,6 +388,11 @@ LIPPUPISTE_EVENT_API_URL = env("LIPPUPISTE_EVENT_API_URL")
 
 # Seat reservation duration in minutes
 SEAT_RESERVATION_DURATION = env("SEAT_RESERVATION_DURATION")
+
+
+# Urls to Linked Events UI and Linked Registration UI
+LINKED_EVENTS_UI_URL = env("LINKED_EVENTS_UI_URL")
+LINKED_REGISTRATIONS_UI_URL = env("LINKED_REGISTRATIONS_UI_URL")
 
 
 def haystack_connection_for_lang(language_code):

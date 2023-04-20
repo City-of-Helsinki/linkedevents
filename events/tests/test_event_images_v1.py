@@ -28,6 +28,17 @@ def create_in_memory_image_file(
     return file
 
 
+def create_uploaded_image(
+    name="existing_test_image", file_name="existing_test_image.png"
+):
+    image_file = create_in_memory_image_file(name)
+    return SimpleUploadedFile(
+        file_name,
+        image_file.read(),
+        "image/png",
+    )
+
+
 def get_list(api_client):
     list_url = reverse("image-list")
     return get(api_client, list_url)
@@ -89,12 +100,7 @@ def image_url():
 
 @pytest.mark.django_db
 def test__get_image_list_check_fields_exist(api_client):
-    image_file = create_in_memory_image_file(name="existing_test_image")
-    uploaded_image = SimpleUploadedFile(
-        "existing_test_image.png",
-        image_file.read(),
-        "image/png",
-    )
+    uploaded_image = create_uploaded_image()
     Image.objects.create(image=uploaded_image)
     response = get_list(api_client)
     assert_image_fields_exist(response.data["data"][0])
@@ -119,12 +125,7 @@ def test_get_image_list_verify_text_filter(api_client, image, image2, image3):
 
 @pytest.mark.django_db
 def test__get_detail_check_fields_exist(api_client):
-    image_file = create_in_memory_image_file(name="existing_test_image")
-    uploaded_image = SimpleUploadedFile(
-        "existing_test_image.png",
-        image_file.read(),
-        "image/png",
-    )
+    uploaded_image = create_uploaded_image()
     existing_image = Image.objects.create(image=uploaded_image)
     response = get_detail(api_client, existing_image.pk)
     assert_image_fields_exist(response.data)
@@ -141,12 +142,7 @@ def test_get_detail_check_fields_exist_for_url(api_client):
 
 @pytest.mark.django_db
 def test__get_detail_check_image_url(api_client):
-    image_file = create_in_memory_image_file(name="existing_test_image")
-    uploaded_image = SimpleUploadedFile(
-        "existing_test_image.png",
-        image_file.read(),
-        "image/png",
-    )
+    uploaded_image = create_uploaded_image()
     existing_image = Image.objects.create(image=uploaded_image)
     response = get_detail(api_client, existing_image.pk)
     assert "images/existing_test_image" in response.data["url"]
@@ -237,14 +233,12 @@ def test__image_cannot_be_edited_outside_organization(
     assert image.last_modified_by == user
     assert image.publisher == organization
 
-    # other users cannot edit or delete the image
+    # other users cannot edit the image
     organization2.admin_users.add(user2)
     api_client.force_authenticate(user2)
     detail_url = reverse("image-detail", kwargs={"pk": response.data["id"]})
     response2 = api_client.put(detail_url, {"name": "this is needed"})
     assert response2.status_code == 403
-    response3 = api_client.delete(detail_url)
-    assert response3.status_code == 403
 
 
 @pytest.mark.django_db
@@ -271,14 +265,12 @@ def test__image_from_another_data_source_can_be_edited_by_admin(
     assert image.data_source == other_data_source
     assert other_data_source in organization.owned_systems.all()
 
-    # user can still edit or delete the image
+    # user can still edit the image
     detail_url = reverse("image-detail", kwargs={"pk": response.data["id"]})
     response2 = api_client.put(
         detail_url, {"id": response.data["id"], "name": "this is needed"}
     )
     assert response2.status_code == 200
-    response3 = api_client.delete(detail_url)
-    assert response3.status_code == 204
 
 
 @pytest.mark.django_db
@@ -304,7 +296,7 @@ def test__image_cannot_be_edited_outside_organization_with_apikey(
     assert image.last_modified_by == user
     assert image.publisher == organization
 
-    # api key user cannot edit or delete the image
+    # api key user cannot edit the image
     other_data_source.owner = organization2
     other_data_source.save()
     api_client.force_authenticate(user=None)
@@ -313,8 +305,6 @@ def test__image_cannot_be_edited_outside_organization_with_apikey(
     detail_url = reverse("image-detail", kwargs={"pk": response.data["id"]})
     response2 = api_client.put(detail_url, {"name": "this is needed"})
     assert response2.status_code == 403
-    response3 = api_client.delete(detail_url)
-    assert response3.status_code == 403
 
 
 @pytest.mark.django_db
@@ -422,63 +412,6 @@ def test__upload_an_image_and_url(
     assert response.status_code == 400
     for line in response.data:
         assert "You can only provide image or url, not both" in line
-
-
-@pytest.mark.django_db(transaction=True)  # transaction is needed for django-cleanup
-def test__delete_an_image(api_client, settings, user, organization):
-    api_client.force_authenticate(user)
-
-    image_file = create_in_memory_image_file(name="existing_test_image")
-    uploaded_image = SimpleUploadedFile(
-        "existing_test_image.png",
-        image_file.read(),
-        "image/png",
-    )
-    existing_image = Image.objects.create(image=uploaded_image, publisher=organization)
-    assert Image.objects.all().count() == 1
-
-    # verify that the image file exists at first just in case
-    image_path = existing_image.image.path
-    assert os.path.isfile(image_path)
-
-    detail_url = reverse("image-detail", kwargs={"pk": existing_image.pk})
-    response = api_client.delete(detail_url)
-    assert response.status_code == 204
-    assert Image.objects.all().count() == 0
-
-    # check that the image file is deleted
-    assert not os.path.isfile(image_path)
-
-
-@pytest.mark.django_db(transaction=True)  # transaction is needed for django-cleanup
-def test__delete_an_image_with_api_key(api_client, settings, organization, data_source):
-    data_source.owner = organization
-    data_source.save()
-    api_client.credentials(apikey=data_source.api_key)
-
-    image_file = create_in_memory_image_file(name="existing_test_image")
-    uploaded_image = SimpleUploadedFile(
-        "existing_test_image.png",
-        image_file.read(),
-        "image/png",
-    )
-    existing_image = Image.objects.create(
-        image=uploaded_image, data_source=data_source, publisher=organization
-    )
-    assert Image.objects.all().count() == 1
-
-    # verify that the image file exists at first just in case
-    image_path = existing_image.image.path
-    assert os.path.isfile(image_path)
-
-    detail_url = reverse("image-detail", kwargs={"pk": existing_image.pk})
-    response = api_client.delete(detail_url)
-    assert response.status_code == 204
-    assert Image.objects.all().count() == 0
-    assert ApiKeyUser.objects.all().count() == 1
-
-    # check that the image file is deleted
-    assert not os.path.isfile(image_path)
 
 
 @pytest.mark.django_db

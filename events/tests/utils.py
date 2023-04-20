@@ -64,6 +64,11 @@ def assert_keyword_data_is_equal(d1, d2, version="v1"):
     assert_data_is_equal(d1, d2, fields)
 
 
+def assert_keyword_set_data_is_equal(d1, d2):
+    fields = ("data_source", "organization", "name")
+    assert_data_is_equal(d1, d2, fields)
+
+
 def assert_data_is_equal(d1, d2, fields):
     for key in fields:
         if key in d1:

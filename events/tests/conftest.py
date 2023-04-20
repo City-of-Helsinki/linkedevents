@@ -90,6 +90,16 @@ def kw_name_3():
     return "känd_nyckelord"
 
 
+@pytest.fixture
+def kw_name_set():
+    return "tunnettu_avainsanaryhmä"
+
+
+@pytest.fixture
+def kw_name_set_2():
+    return "known_keywordset"
+
+
 @pytest.mark.django_db
 @pytest.fixture
 def offer(event2):
@@ -505,21 +515,50 @@ def keyword_id(data_source, organization, kw_name, make_keyword_id):
 
 
 @pytest.mark.django_db
+@pytest.fixture(scope="class")
+def make_keyword_set():
+    def _make_keyword_set(data_source, organization, kw_set_name):
+        return KeywordSet.objects.create(
+            id=data_source.id + ":" + kw_set_name,
+            name=kw_set_name,
+            organization=organization,
+            data_source=data_source,
+        )
+
+    return _make_keyword_set
+
+
+@pytest.mark.django_db
 @pytest.fixture
-def keyword_set(data_source, keyword, keyword2):
-    kw_set = KeywordSet.objects.create(
-        data_source=data_source, name="name1", id="set:1"
-    )
+def keyword_set_dict(data_source, organization):
+    return {
+        "id": data_source.id + ":testi-12345",
+        "data_source": data_source.id,
+        "organization": organization.id,
+        "usage": "audience",
+        "name": {
+            "fi": "Testi avainsanaryhmä",
+            "en": "Test keyword set",
+        },
+    }
+
+
+@pytest.mark.django_db
+@pytest.fixture
+def keyword_set(
+    make_keyword_set, data_source, keyword, keyword2, organization, kw_name_set
+):
+    kw_set = make_keyword_set(data_source, organization, kw_name_set)
     kw_set.keywords.set([keyword, keyword2])
     return kw_set
 
 
 @pytest.mark.django_db
 @pytest.fixture
-def keyword_set2(data_source, keyword3):
-    kw_set = KeywordSet.objects.create(
-        data_source=data_source, name="name2", id="set:2"
-    )
+def keyword_set2(
+    make_keyword_set, other_data_source, keyword3, organization, kw_name_set_2
+):
+    kw_set = make_keyword_set(other_data_source, organization, kw_name_set_2)
     kw_set.keywords.set([keyword3])
     return kw_set
 
