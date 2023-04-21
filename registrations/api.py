@@ -150,7 +150,9 @@ class RegistrationViewSet(
 
         if not user.is_admin(instance.event.publisher):
             raise DRFPermissionDenied(
-                _(f"User {user} cannot modify event {instance.event}")
+                _("User {user} cannot modify event {event}").format(
+                    user=user, event=instance.event
+                )
             )
 
         return super().destroy(request, *args, **kwargs)

@@ -1,7 +1,8 @@
-from datetime import date, timedelta
+from datetime import timedelta
 
 import pytz
 from django.contrib.auth.models import AnonymousUser
+from django.utils.timezone import localdate
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
@@ -27,26 +28,7 @@ class SignUpSerializer(serializers.ModelSerializer):
         ).count()
         attendee_capacity = registration.maximum_attendee_capacity
         waiting_list_capacity = registration.waiting_list_capacity
-        if registration.audience_min_age or registration.audience_max_age:
-            if "date_of_birth" not in validated_data.keys():
-                raise DRFPermissionDenied("Date of birth has to be specified.")
-            dob = validated_data["date_of_birth"]
-            today = date.today()
-            current_age = (
-                today.year
-                - dob.year
-                - ((today.month, today.day) < (dob.month, dob.year))
-            )
-            if (
-                registration.audience_min_age
-                and current_age < registration.audience_min_age
-            ):
-                raise DRFPermissionDenied("The participant is too young.")
-            if (
-                registration.audience_max_age
-                and current_age > registration.audience_max_age
-            ):
-                raise DRFPermissionDenied("The participant is too old.")
+
         if (attendee_capacity is None) or (already_attending < attendee_capacity):
             signup = super().create(validated_data)
             signup.send_notification("confirmation")
@@ -59,7 +41,50 @@ class SignUpSerializer(serializers.ModelSerializer):
             signup.save()
             return signup
         else:
-            raise DRFPermissionDenied("The waiting list is already full")
+            raise DRFPermissionDenied(_("The waiting list is already full"))
+
+    def validate(self, data):
+        errors = {}
+        registration = data["registration"]
+        falsy_values = ("", None)
+
+        for field in registration.mandatory_fields:
+            if data.get(field) in falsy_values:
+                errors[field] = _("This field must be specified.")
+
+        if (
+            registration.audience_min_age not in falsy_values
+            or registration.audience_max_age not in falsy_values
+        ):
+            if "date_of_birth" not in data.keys():
+                errors["date_of_birth"] = _("This field must be specified.")
+            else:
+                date_of_birth = data["date_of_birth"]
+                today = localdate()
+                current_age = (
+                    today.year
+                    - date_of_birth.year
+                    - (
+                        (today.month, today.day)
+                        < (date_of_birth.month, date_of_birth.year)
+                    )
+                )
+                if (
+                    registration.audience_min_age
+                    and current_age < registration.audience_min_age
+                ):
+                    errors["date_of_birth"] = _("The participant is too young.")
+                elif (
+                    registration.audience_max_age
+                    and current_age > registration.audience_max_age
+                ):
+                    errors["date_of_birth"] = _("The participant is too old.")
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        super().validate(data)
+        return data
 
     class Meta:
         fields = "__all__"
@@ -79,6 +104,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
             event = Event.objects.filter(id=event_id).select_related("publisher")
             if len(event) == 0:
                 raise DRFPermissionDenied(_("No event with id {event_id}"))
+
             user = kwargs["context"]["user"]
             if (
                 user.is_admin(event[0].publisher)
@@ -98,7 +124,9 @@ class RegistrationSerializer(serializers.ModelSerializer):
                 queryset = SignUp.objects.filter(registration__id=obj.id)
                 return SignUpSerializer(queryset, many=True, read_only=True).data
             else:
-                return f"Only the admins of the organization that published the event {event.id} have access rights."
+                return _(
+                    "Only the admins of the organization that published the event {event_id} have access rights."
+                ).format(event_id=event.id)
         else:
             return None
 

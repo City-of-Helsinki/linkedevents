@@ -11,7 +11,7 @@ from rest_framework import status
 from events.models import Event
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
-from registrations.models import Registration, SignUp
+from registrations.models import MandatoryFields, Registration, SignUp
 
 
 def sign_up(api_client, registration_id, sign_up_data):
@@ -302,17 +302,21 @@ def test_current_attendee_and_waitlist_count(api_client, user, event):
     assert response.data["current_waiting_list_count"] == 1
 
 
-@pytest.mark.parametrize("min_age", [None, 10])
-@pytest.mark.parametrize("max_age", [None, 100])
+@pytest.mark.parametrize("min_age", [None, 0, 10])
+@pytest.mark.parametrize("max_age", [None, 0, 100])
 @pytest.mark.parametrize("date_of_birth", [None, "1980-12-30"])
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_signup_age_is_mandatory_if_audience_min_or_max_age_specified(
     api_client, user, event, date_of_birth, min_age, max_age
 ):
-    if (min_age or max_age) and not date_of_birth:
-        expected_status = status.HTTP_403_FORBIDDEN
-        expected_error = "Date of birth has to be specified."
+    falsy_values = ("", None)
+
+    if (
+        min_age not in falsy_values or max_age not in falsy_values
+    ) and not date_of_birth:
+        expected_status = status.HTTP_400_BAD_REQUEST
+        expected_error = "This field must be specified."
     else:
         expected_status = status.HTTP_201_CREATED
         expected_error = None
@@ -330,9 +334,9 @@ def test_signup_age_is_mandatory_if_audience_min_or_max_age_specified(
     # Create registration
     api_client.force_authenticate(user)
     registration_data = {"event": event.id, "maximum_attendee_capacity": 1}
-    if min_age:
+    if min_age not in falsy_values:
         registration_data["audience_min_age"] = min_age
-    if max_age:
+    if max_age not in falsy_values:
         registration_data["audience_max_age"] = max_age
     response = api_client.post(registration_url, registration_data, format="json")
     registration_id = response.data["id"]
@@ -341,14 +345,14 @@ def test_signup_age_is_mandatory_if_audience_min_or_max_age_specified(
 
     assert response.status_code == expected_status
     if expected_error:
-        assert str(response.data["detail"]) == expected_error
+        assert str(response.data["date_of_birth"][0]) == expected_error
 
 
 @pytest.mark.parametrize(
     "date_of_birth,expected_status,expected_error",
     [
-        ("2011-04-07", status.HTTP_403_FORBIDDEN, "The participant is too young."),
-        ("1879-03-14", status.HTTP_403_FORBIDDEN, "The participant is too old."),
+        ("2011-04-07", status.HTTP_400_BAD_REQUEST, "The participant is too young."),
+        ("1879-03-14", status.HTTP_400_BAD_REQUEST, "The participant is too old."),
         ("2000-02-29", status.HTTP_201_CREATED, None),
     ],
 )
@@ -380,7 +384,48 @@ def test_signup_age_has_to_match_the_audience_min_max_age(
 
     assert response.status_code == expected_status
     if expected_error:
-        assert str(response.data["detail"]) == expected_error
+        assert str(response.data["date_of_birth"][0]) == expected_error
+
+
+@pytest.mark.parametrize(
+    "mandatory_field_id",
+    [
+        MandatoryFields.CITY,
+        MandatoryFields.NAME,
+        MandatoryFields.PHONE_NUMBER,
+        MandatoryFields.STREET_ADDRESS,
+        MandatoryFields.ZIPCODE,
+    ],
+)
+@pytest.mark.django_db
+def test_signup_mandatory_fields_has_to_be_filled(
+    api_client, event, mandatory_field_id, user
+):
+    api_client.force_authenticate(user)
+
+    registration_url = reverse("registration-list")
+    registration_data = {
+        "event": event.id,
+        "mandatory_fields": [mandatory_field_id],
+    }
+    response = api_client.post(registration_url, registration_data, format="json")
+    assert response.status_code == status.HTTP_201_CREATED
+    registration_id = response.data["id"]
+
+    sign_up_data = {
+        "name": "Michael Jackson",
+        "email": "test@test.com",
+        "phone_number": "0441111111",
+        "street_address": "Street address",
+        "city": "Helsinki",
+        "zipcode": "00100",
+        "notifications": "sms",
+    }
+    sign_up_data[mandatory_field_id] = ""
+
+    response = sign_up(api_client, registration_id, sign_up_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert str(response.data[mandatory_field_id][0]) == "This field must be specified."
 
 
 @pytest.mark.skip(reason="Currently there's no way to cancel a signup.")
@@ -409,7 +454,7 @@ def test_signup_deletion(api_client, user, event):
     delete_payload = {"cancellation_code": response.data["cancellation_code"]}
 
     response = api_client.delete(signup_url, delete_payload, format="json")
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
 
 
 @pytest.mark.skip(reason="Currently there's no way to cancel a signup.")
@@ -439,7 +484,7 @@ def test_signup_deletion_missing_signup(api_client, user, event):
 
     response = api_client.delete(signup_url, delete_payload, format="json")
     response = api_client.delete(signup_url, delete_payload, format="json")
-    assert response.status_code == 403
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.skip(reason="Currently there's no way to cancel a signup.")
@@ -469,7 +514,7 @@ def test_signup_deletion_wrong_code(api_client, user, event):
 
     response = api_client.delete(signup_url, delete_payload, format="json")
     assert str(response.data["detail"]) == "Malformed UUID."
-    assert response.status_code == 403
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.skip(reason="Currently there's no way to cancel a signup.")
