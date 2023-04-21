@@ -24,6 +24,7 @@ class RegistrationAdmin(VersionAdmin):
         "confirmation_message",
         "audience_min_age",
         "audience_max_age",
+        "mandatory_fields",
     )
     list_display = (
         "id",

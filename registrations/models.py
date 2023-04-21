@@ -2,15 +2,54 @@ from smtplib import SMTPException
 from uuid import uuid4
 
 from django.conf import settings
+from django.contrib.postgres.fields import ArrayField
 from django.contrib.sites.models import Site
 from django.core.mail import send_mail
 from django.db import models
+from django.forms.fields import MultipleChoiceField
 from django.template.loader import render_to_string
 from django.utils.translation import gettext_lazy as _
 
 from events.models import Event, Language
 
 User = settings.AUTH_USER_MODEL
+
+
+class MandatoryFields(models.TextChoices):
+    """Choices for mandatory fields on SignUp model."""
+
+    CITY = "city", _("City")
+    NAME = "name", _("Name")
+    PHONE_NUMBER = "phone_number", _("Phone number")
+    STREET_ADDRESS = "street_address", _("Street address")
+    ZIPCODE = "zipcode", _("ZIP code")
+
+
+# https://gist.github.com/danni/f55c4ce19598b2b345ef?permalink_comment_id=4448023#gistcomment-4448023
+class _MultipleChoiceField(MultipleChoiceField):
+    def __init__(self, *args, **kwargs):
+        kwargs.pop("base_field", None)
+        kwargs.pop("max_length", None)
+        super().__init__(*args, **kwargs)
+
+
+# https://gist.github.com/danni/f55c4ce19598b2b345ef?permalink_comment_id=4448023#gistcomment-4448023
+class ChoiceArrayField(ArrayField):
+    """
+    A field that allows to store an array of choices.
+
+    Uses Django postgres ArrayField
+    and a _MultipleChoiceField for its formfield.
+    """
+
+    def formfield(self, **kwargs):
+        return super().formfield(
+            **{
+                "form_class": _MultipleChoiceField,
+                "choices": self.base_field.choices,
+                **kwargs,
+            }
+        )
 
 
 class Registration(models.Model):
@@ -70,7 +109,18 @@ class Registration(models.Model):
         verbose_name=_("Minimum attendee capacity"), null=True, blank=True
     )
     waiting_list_capacity = models.PositiveSmallIntegerField(
-        verbose_name=_("Minimum attendee capacity"), null=True, blank=True
+        verbose_name=_("Waiting list capacity"), null=True, blank=True
+    )
+
+    mandatory_fields = ChoiceArrayField(
+        models.CharField(
+            max_length=16,
+            choices=MandatoryFields.choices,
+            blank=True,
+        ),
+        default=list,
+        blank=True,
+        verbose_name=_("Mandatory fields"),
     )
 
 
@@ -100,19 +150,38 @@ class SignUp(models.Model):
     registration = models.ForeignKey(
         Registration, on_delete=models.CASCADE, related_name="signups"
     )
-    name = models.CharField(verbose_name=_("Name"), max_length=50)
+    name = models.CharField(
+        verbose_name=_("Name"),
+        max_length=50,
+        blank=True,
+        null=True,
+        default=None,
+    )
     date_of_birth = models.DateField(
         verbose_name=_("Date of birth"), blank=True, null=True
     )
     city = models.CharField(
-        verbose_name=_("City"), max_length=50, blank=True, default=""
+        verbose_name=_("City"),
+        max_length=50,
+        blank=True,
+        null=True,
+        default=None,
     )
     email = models.EmailField(
         verbose_name=_("E-mail"), blank=True, null=True, default=None
     )
-    extra_info = models.TextField(verbose_name=_("Extra info"), blank=True, default="")
+    extra_info = models.TextField(
+        verbose_name=_("Extra info"),
+        blank=True,
+        null=True,
+        default=None,
+    )
     membership_number = models.CharField(
-        verbose_name=_("Membership number"), max_length=50, blank=True, default=""
+        verbose_name=_("Membership number"),
+        max_length=50,
+        blank=True,
+        null=True,
+        default=None,
     )
     phone_number = models.CharField(
         verbose_name=_("Phone number"),
@@ -158,7 +227,7 @@ class SignUp(models.Model):
         default=None,
     )
     zipcode = models.CharField(
-        verbose_name=_("Street address"),
+        verbose_name=_("ZIP code"),
         max_length=10,
         blank=True,
         null=True,
@@ -232,5 +301,5 @@ class SeatReservationCode(models.Model):
         verbose_name=_("Seat reservation code"), default=uuid4, editable=False
     )
     timestamp = models.DateTimeField(
-        verbose_name=_("Timestamp."), auto_now_add=True, blank=True
+        verbose_name=_("Timestamp"), auto_now_add=True, blank=True
     )
