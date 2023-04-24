@@ -391,7 +391,7 @@ def draft_event(place, user):
 @pytest.mark.django_db
 @pytest.fixture
 def location_id(place):
-    obj_id = reverse(PlaceSerializer().view_name, kwargs={"pk": place.id})
+    obj_id = reverse(PlaceSerializer.view_name, kwargs={"pk": place.id})
     return obj_id
 
 
@@ -399,7 +399,7 @@ def location_id(place):
 @pytest.fixture
 def make_location_id():
     def _make_location_id(place):
-        obj_id = reverse(PlaceSerializer().view_name, kwargs={"pk": place.id})
+        obj_id = reverse(PlaceSerializer.view_name, kwargs={"pk": place.id})
         return obj_id
 
     return _make_location_id
@@ -502,7 +502,7 @@ def keyword3(data_source, organization, kw_name_3, make_keyword):
 def make_keyword_id(make_keyword):
     def _make_keyword_id(data_source, organization, kw_name):
         obj = make_keyword(data_source, organization, kw_name)
-        obj_id = reverse(KeywordSerializer().view_name, kwargs={"pk": obj.id})
+        obj_id = reverse(KeywordSerializer.view_name, kwargs={"pk": obj.id})
         return obj_id
 
     return _make_keyword_id
@@ -588,7 +588,7 @@ def languages_class(request):
 
 
 def language_id(language):
-    obj_id = reverse(LanguageSerializer().view_name, kwargs={"pk": language.pk})
+    obj_id = reverse(LanguageSerializer.view_name, kwargs={"pk": language.pk})
     return obj_id
 
 
