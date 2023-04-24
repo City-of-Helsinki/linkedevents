@@ -59,6 +59,7 @@ django==3.2.18
     #   django-leaflet
     #   django-modeltranslation
     #   django-munigeo
+    #   django-orghierarchy
     #   django-parler
     #   django-parler-rest
     #   django-redis
@@ -102,7 +103,7 @@ django-mptt==0.14.0
     #   django-orghierarchy
 django-munigeo==0.3.8
     # via -r requirements.in
-django-orghierarchy==0.1.32
+django-orghierarchy==0.2.0
     # via -r requirements.in
 django-parler==2.3
     # via
