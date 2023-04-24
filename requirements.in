@@ -15,7 +15,7 @@ django-leaflet
 django-modeltranslation>=0.18.4
 django-mptt>=0.10.0
 django-munigeo>=0.3.8
-django-orghierarchy>=0.1.32
+django-orghierarchy
 django-redis
 django-reversion
 django~=3.2
