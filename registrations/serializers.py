@@ -86,9 +86,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
             ):
                 pass
             else:
-                raise DRFPermissionDenied(_("User {user} cannot modify event {event}").format(
-                    user=user, event=event
-                ))
+                raise DRFPermissionDenied(_(f"User {user} cannot modify event {event}"))
 
     def get_signups(self, obj):
         params = self.context["request"].query_params
@@ -100,9 +98,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
                 queryset = SignUp.objects.filter(registration__id=obj.id)
                 return SignUpSerializer(queryset, many=True, read_only=True).data
             else:
-                return _(
-                    "Only the admins of the organization that published the event {event_id} have access rights."
-                ).format(event_id=event.id)
+                return f"Only the admins of the organization that published the event {event.id} have access rights."
         else:
             return None
 
