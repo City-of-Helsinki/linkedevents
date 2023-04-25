@@ -846,7 +846,7 @@ class EditableLinkedEventsObjectSerializer(LinkedEventsSerializer):
         try:
             instance = super().create(validated_data)
         except IntegrityError as error:
-            if "duplicate" and "pkey" in str(error):
+            if "duplicate" in str(error) and "pkey" in str(error):
                 raise serializers.ValidationError(
                     {"id": _("An object with given id already exists.")}
                 )
