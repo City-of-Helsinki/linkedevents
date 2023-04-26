@@ -1955,48 +1955,16 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
         queryset=Event.objects.all(),
     )
 
-    def __init__(self, instance=None, *args, **kwargs):
-        super().__init__(instance=instance, *args, **kwargs)
-
-        event_dict = kwargs["context"]["request"].data.get("event", None)
-
-        # Check user permissions if creating a new registration.
-        # LinkedEventsSerializer __init__ checks permissions in case of new registration
-        if not instance and isinstance(event_dict, dict) and "@id" in event_dict:
-            event_url = event_dict["@id"]
-            event_id = urllib.parse.unquote(event_url.rstrip("/").split("/")[-1])
-            user = kwargs["context"]["user"]
-
-            try:
-                event = Event.objects.get(pk=event_id)
-                error_message = _("User {user} cannot modify event {event}").format(
-                    user=user, event=event
-                )
-
-                if not user.is_admin(event.publisher):
-                    raise DRFPermissionDenied(error_message)
-
-                if isinstance(user, ApiKeyUser):
-                    # allow updating only if the api key matches instance data source
-                    if event.data_source != user.data_source:
-                        raise DRFPermissionDenied(_(error_message))
-                else:
-                    # allow updating only if event data_source has user_editable_resources set to True
-                    if not event.is_user_editable_resources():
-                        raise DRFPermissionDenied(_(error_message))
-            except Event.DoesNotExist:
-                pass
-
-    def create(self, request, *args, **kwargs):
+    def create(self, validated_data):
         try:
-            instance = super().create(request, *args, **kwargs)
+            instance = super().create(validated_data)
         except IntegrityError as error:
             if "duplicate key value violates unique constraint" in str(error):
                 raise serializers.ValidationError(
                     {"event": _("Event already has a registration.")}
                 )
             else:
-                raise error
+                raise
         return instance
 
     # LinkedEventsSerializer validates name which doesn't exist in Registration model
