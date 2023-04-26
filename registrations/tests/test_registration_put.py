@@ -165,3 +165,20 @@ def test__user_editable_resources_can_update_registration(
         "audience_max_age": 10,
     }
     assert_update_registration(api_client, registration.id, registration_data)
+
+
+@pytest.mark.django_db
+def test__admin_cannot_update_registrations_event(
+    api_client, event2, registration, user
+):
+    """Organization admin user cannot update registration's event to an event for
+    which they are not admin.
+    """
+    api_client.force_authenticate(user)
+
+    registration_data = {
+        "event": {"@id": get_event_url(event2.id)},
+        "audience_max_age": 10,
+    }
+    response = update_registration(api_client, registration.id, registration_data)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
