@@ -167,7 +167,7 @@ class SignUp(models.Model):
     )
 
     registration = models.ForeignKey(
-        Registration, on_delete=models.CASCADE, related_name="signups"
+        Registration, on_delete=models.PROTECT, related_name="signups"
     )
     name = models.CharField(
         verbose_name=_("Name"),

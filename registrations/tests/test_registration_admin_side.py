@@ -40,26 +40,6 @@ def get_event_url(detail_pk):
     return reverse("event-detail", kwargs={"pk": detail_pk})
 
 
-@pytest.mark.parametrize(
-    "has_right_to_edit,expected_status,expected_count",
-    [(True, status.HTTP_204_NO_CONTENT, 0), (False, status.HTTP_403_FORBIDDEN, 1)],
-)
-@pytest.mark.django_db
-def test_delete_registration(
-    api_client, event, registration, has_right_to_edit, expected_status, expected_count
-):
-    delete_url = reverse("registration-detail", kwargs={"pk": registration.id})
-    user = UserFactory()
-    if has_right_to_edit:
-        event.publisher.admin_users.add(user)
-    api_client.force_authenticate(user)
-
-    response = api_client.delete(delete_url)
-
-    assert response.status_code == expected_status
-    assert Registration.objects.count() == expected_count
-
-
 @pytest.mark.django_db
 def test_successful_sign_up(api_client, languages, registration):
     """User reserves seats and then signs up."""

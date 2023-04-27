@@ -5,7 +5,8 @@ import pytz
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.gis.db import models
-from django.db.models import Q, Sum
+from django.db.models import ProtectedError, Q, Sum
+from django.utils.translation import gettext as _
 from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
@@ -164,6 +165,14 @@ class RegistrationViewSet(
         event = serializer.validated_data.get("event", serializer.instance.event)
         self.check_object_permissions(self.request, event)
         super().perform_update(serializer)
+
+    def perform_destroy(self, instance):
+        try:
+            instance.delete()
+        # At the moment ProtecterError is raised only if user tries to remove registration with signups.
+        # Add logic to handle protected errors if more proteted fks are added in the future.
+        except ProtectedError:
+            raise DRFPermissionDenied(_("Registration with signups cannot be deleted"))
 
     def filter_queryset(self, queryset):
         events = Event.objects.exclude(registration=None)
