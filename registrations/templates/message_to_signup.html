@@ -1,0 +1,20 @@
+{% extends 'base_email.html' %}
+{% load i18n %}
+
+{% block content %}
+  <tr>
+    <td class="content-cell" style="padding:0;margin:0;text-align:left;">
+      <div class="content-container" style="padding:0 16px;">
+        <div style="margin: 0px 0px 40px">
+          <p style="color:#1a1a1a;font-size:16px;font-weight:normal;line-height:24px;margin:0px;">{{body |safe}}</p>
+        </div>
+        <div class="cta-button-wrapper" style="margin: 0px 0px 40px">
+          <a href="http://localhost:3001/fi/registration/{{registration_id}}/enrolment/{{cancellation_code}}/edit" target="_blank" rel="noopener" class="cta-button" style="background:#0000bf;border-radius:0px;border:none;height:56px;text-align:center;text-decoration:none;vertical-align:middle;padding:16px 24px;box-sizing:border-box;display:inline-block;">
+            <span style="color:#ffffff;font-size:16px;font-weight:500;line-height:24px;">{% blocktranslate %}Tarkastele ilmoittautumistasi täällä{% endblocktranslate %}</span>
+            <img alt="" aria-hidden="true" src="{{linked_events_ui_url}}/images/email/icon-arrow-right-white.png" style="height:24px;width:24px;margin-left:16px;vertical-align:top;" />
+          </a>
+        </div>
+      </div>
+    </td>
+  </tr>
+{% endblock content %}
