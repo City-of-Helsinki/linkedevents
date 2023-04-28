@@ -311,5 +311,51 @@ class RegistrationViewSet(
 
         return Response(data, status=status.HTTP_201_CREATED)
 
+    def get_signup_by_code(self, code, signup_pk):
+        registration = self.get_object()
+
+        try:
+            UUID(code)
+        except ValueError:
+            raise DRFPermissionDenied(_("Malformed UUID."))
+        try:
+            signup = registration.signups.get(pk=signup_pk, cancellation_code=code)
+        except SignUp.DoesNotExist:
+            raise DRFPermissionDenied(
+                _("Cancellation code did not match any signup")
+            )
+        return signup
+
+    # Endpoint to get a single signup
+    @action(
+        methods=["get"],
+        url_path=r"signup/(?P<signup_pk>\w+)",
+        detail=True,
+        permission_classes=[GuestGet],
+    )
+    def signup_detail(self, request, signup_pk=None, *args, **kwargs):
+        user = request.user
+        registration = self.get_object()
+
+        # Anonymous users can get signup by cancellation_code
+        if isinstance(user, AnonymousUser):
+            code = request.GET.get("cancellation_code", None)
+            if not code:
+                raise DRFPermissionDenied(
+                    _("cancellation_code parameter has to be provided")
+                )
+            signup = self.get_signup_by_code(code, signup_pk)
+        else:
+            # Only admin users are allowed to get signup details
+            if not registration.can_be_edited_by(user):
+                raise DRFPermissionDenied()
+
+            try:
+                signup = registration.signups.get(pk=signup_pk)
+            except SignUp.DoesNotExist:
+                raise NotFound()
+
+        return Response(SignUpSerializer(signup).data)
+
 
 register_view(RegistrationViewSet, "registration")
