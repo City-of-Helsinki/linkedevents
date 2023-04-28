@@ -28,6 +28,7 @@ from events.permissions import (
     GuestPost,
 )
 from linkedevents.registry import register_view
+from registrations.exceptions import ConflictException
 from registrations.models import Registration, SeatReservationCode, SignUp
 from registrations.serializers import SeatReservationCodeSerializer, SignUpSerializer
 from registrations.utils import code_validity_duration
@@ -172,7 +173,7 @@ class RegistrationViewSet(
         # At the moment ProtecterError is raised only if user tries to remove registration with signups.
         # Add logic to handle protected errors if more proteted fks are added in the future.
         except ProtectedError:
-            raise DRFPermissionDenied(_("Registration with signups cannot be deleted"))
+            raise ConflictException(_("Registration with signups cannot be deleted"))
 
     def filter_queryset(self, queryset):
         events = Event.objects.exclude(registration=None)

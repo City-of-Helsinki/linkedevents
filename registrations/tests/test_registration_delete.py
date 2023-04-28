@@ -49,7 +49,7 @@ def test__registration_with_signups_cannot_be_deleted(
     api_client.force_authenticate(user)
     response = delete_registration(api_client, registration.id)
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_409_CONFLICT
     assert response.data["detail"] == "Registration with signups cannot be deleted"
 
 
