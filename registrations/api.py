@@ -1,11 +1,16 @@
+import logging
 from datetime import datetime, timedelta
+from smtplib import SMTPException
 from uuid import UUID
 
+import bleach
 import pytz
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.gis.db import models
+from django.core.mail import EmailMultiAlternatives, get_connection
 from django.db.models import ProtectedError, Q, Sum
+from django.template.loader import render_to_string
 from django.utils.translation import gettext as _
 from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action
@@ -32,6 +37,8 @@ from registrations.exceptions import ConflictException
 from registrations.models import Registration, SeatReservationCode, SignUp
 from registrations.serializers import SeatReservationCodeSerializer, SignUpSerializer
 from registrations.utils import code_validity_duration
+
+logger = logging.getLogger(__name__)
 
 
 class SignUpViewSet(
@@ -253,6 +260,116 @@ class RegistrationViewSet(
             data["waitlist_spots"] = waitlist_spots if waitlist_spots else 0
 
             return Response(data, status=status.HTTP_201_CREATED)
+
+    @action(
+        methods=["post"],
+        detail=True,
+        permission_classes=[DataSourceResourceEditPermission],
+    )
+    def send_message(self, request, pk=None, version=None):
+        def send_mass_html_mail(
+            datatuple,
+            fail_silently=False,
+            auth_user=None,
+            auth_password=None,
+            connection=None,
+        ):
+            """
+            django.core.mail.send_mass_mail doesn't support sending html mails,
+
+            This method duplicates send_mass_mail except requires html_message for each message
+            and adds html alternative to each mail
+            """
+            connection = connection or get_connection(
+                username=auth_user,
+                password=auth_password,
+                fail_silently=fail_silently,
+            )
+            messages = []
+            for subject, message, html_message, from_email, recipient_list in datatuple:
+                mail = EmailMultiAlternatives(
+                    subject, message, from_email, recipient_list, connection=connection
+                )
+                mail.attach_alternative(html_message, "text/html")
+                messages.append(mail)
+
+            return connection.send_messages(messages)
+
+        registration = self.get_object()
+
+        errors = {}
+
+        # Validate that required fields are filled
+        required_fields = ["subject", "body"]
+        for field in required_fields:
+            if not request.data.get(field):
+                errors[field] = _("This field must be specified.")
+
+        # Send message to defined signups if signups attribute is defined and it's an array
+        # By default send message to all signups
+        if request.data.get("signups") and hasattr(
+            request.data.get("signups"), "__len__"
+        ):
+            try:
+                signups = registration.signups.filter(
+                    pk__in=[i for i in request.data.get("signups")]
+                )
+            except ValueError as error:
+                errors["signups"] = str(error)
+
+        else:
+            signups = registration.signups.all()
+        signups.exclude(email=None)
+
+        # Return validations errors if there is any
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        messages = []
+        subject = request.data["subject"]
+        body = request.data["body"]
+        cleaned_body = bleach.clean(
+            body.replace("\n", "<br>"), settings.BLEACH_ALLOWED_TAGS
+        )
+        plain_text_body = bleach.clean(body, strip=True)
+
+        # Email contains a link to a signup so make personal email for each signup
+        for signup in signups:
+            email_variables = {
+                "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
+                "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
+                "body": cleaned_body,
+                "cancellation_code": signup.cancellation_code,
+                "registration_id": registration.id,
+            }
+            rendered_body = render_to_string("message_to_signup.html", email_variables)
+            message = (
+                subject,
+                plain_text_body,
+                rendered_body,
+                settings.SUPPORT_EMAIL,
+                [signup.email],
+            )
+            messages.append(message)
+
+        try:
+            send_mass_html_mail(messages, fail_silently=False)
+        except SMTPException as e:
+            logger.error(e, exc_info=True)
+            return Response(
+                str(e),
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        return Response(
+            {
+                "emails": [su.email for su in signups],
+                "html_message": cleaned_body,
+                "message": plain_text_body,
+                "subject": subject,
+            },
+            status=status.HTTP_200_OK,
+        )
 
     @action(methods=["post"], detail=True, permission_classes=[GuestPost])
     def signup(self, request, pk=None, version=None):
