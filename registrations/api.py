@@ -9,7 +9,7 @@ from django.db.models import ProtectedError, Q, Sum
 from django.utils.translation import gettext as _
 from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import NotAuthenticated, NotFound
+from rest_framework.exceptions import NotAuthenticated, NotFound, ParseError
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -27,67 +27,11 @@ from events.permissions import (
     GuestGet,
     GuestPost,
 )
-from rest_framework.exceptions import ParseError
 from linkedevents.registry import register_view
 from registrations.exceptions import ConflictException
 from registrations.models import Registration, SeatReservationCode, SignUp
 from registrations.serializers import SeatReservationCodeSerializer, SignUpSerializer
 from registrations.utils import code_validity_duration
-
-
-class SignUpViewSet(
-    JSONAPIViewMixin,
-    viewsets.GenericViewSet,
-):
-    serializer_class = SignUpSerializer
-    queryset = SignUp.objects.all()
-    permission_classes = [GuestPost | GuestDelete | GuestGet]
-
-    def get_signup_by_code(self, code):
-        try:
-            UUID(code)
-        except ValueError:
-            raise DRFPermissionDenied("Malformed UUID.")
-        qs = SignUp.objects.filter(cancellation_code=code)
-        if qs.count() == 0:
-            raise DRFPermissionDenied(
-                "Cancellation code did not match any registration"
-            )
-        return qs[0]
-
-    def delete(self, request, *args, **kwargs):
-        code = request.data.get("cancellation_code", "no code")
-        if code == "no code":
-            raise DRFPermissionDenied("cancellation_code parameter has to be provided")
-        signup = self.get_signup_by_code(code)
-        waitlisted = SignUp.objects.filter(
-            registration=signup.registration,
-            attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
-        ).order_by("id")
-        signup.send_notification("cancellation")
-        signup.delete()
-        if len(waitlisted) > 0:
-            first_on_list = waitlisted[0]
-            first_on_list.attendee_status = SignUp.AttendeeStatus.ATTENDING
-            first_on_list.save()
-        return Response("SignUp deleted.", status=status.HTTP_200_OK)
-
-
-register_view(SignUpViewSet, "signup")
-
-
-class SignUpEditViewSet(
-    JSONAPIViewMixin,
-    mixins.RetrieveModelMixin,
-    mixins.UpdateModelMixin,
-    viewsets.GenericViewSet,
-):
-    serializer_class = SignUpSerializer
-    queryset = SignUp.objects.all()
-    permission_classes = (IsAuthenticated,)
-
-
-register_view(SignUpEditViewSet, "signup_edit")
 
 
 class RegistrationViewSet(
@@ -212,15 +156,32 @@ class RegistrationViewSet(
         except Registration.DoesNotExist:
             return NotFound()
 
+    def get_signup_by_code(self, code, registration, signup_pk):
+        try:
+            UUID(code)
+        except ValueError:
+            raise DRFPermissionDenied(_("Malformed UUID."))
+        try:
+            signup = registration.signups.get(pk=signup_pk, cancellation_code=code)
+        except SignUp.DoesNotExist:
+            raise DRFPermissionDenied(_("Cancellation code did not match any signup"))
+        return signup
+
     def check_signup_get_permissions(self, request, registration):
         if isinstance(request.user, AnonymousUser):
             raise NotAuthenticated()
         if not registration.can_be_edited_by(request.user):
             raise DRFPermissionDenied()
 
-    def signup_get_list(self, request, pk):
+    @action(
+        methods=["get"],
+        detail=True,
+        url_path="signup",
+        permission_classes=[],
+    )
+    def signup_list(self, request, pk=None, version=None):
         registration = self.registration_get(pk=pk)
-
+        self.permission_classes = [DataSourceResourceEditPermission]
         # Only admin users are allowed to get signup list
         self.check_signup_get_permissions(request, registration)
 
@@ -246,14 +207,19 @@ class RegistrationViewSet(
                     raise ParseError(
                         _(
                             "attendee_status can take following values: {statuses}, not {val}"
-                        ).format(statuses = ", ".join(statuses.keys()), val = val)
+                        ).format(statuses=", ".join(statuses.keys()), val=val)
                     )
 
             signups = signups.filter(attendee_status__in=vals)
 
         return Response(SignUpSerializer(signups, many=True).data)
 
-    def signup_post(self, request, pk=None, version=None):
+    @signup_list.mapping.post
+    def create_signup(self, request, pk=None, version=None):
+        registration = self.registration_get(pk=pk)
+        self.permission_classes = [GuestPost]
+        self.check_object_permissions(self.request, registration)
+
         attending = []
         waitlisted = []
         if "reservation_code" not in request.data.keys():
@@ -297,10 +263,11 @@ class RegistrationViewSet(
             signup = SignUpSerializer(data=i, many=False)
             signup.is_valid()
             signee = signup.create(validated_data=signup.validated_data)
+
             if signee.attendee_status == SignUp.AttendeeStatus.ATTENDING:
-                attending.append({"id": signee.id, "name": signee.name})
+                attending.append(SignUpSerializer(signee, many=False).data)
             else:
-                waitlisted.append({"id": signee.id, "name": signee.name})
+                waitlisted.append(SignUpSerializer(signee, many=False).data)
         reservation.delete()
         data = {
             "attending": {"count": len(attending), "people": attending},
@@ -309,43 +276,22 @@ class RegistrationViewSet(
 
         return Response(data, status=status.HTTP_201_CREATED)
 
-    @action(
-        methods=["get", "post"],
-        detail=True,
-        permission_classes=[DataSourceResourceEditPermission | GuestPost],
-    )
-    def signup(self, request, pk=None, version=None):
-        if request.method == "GET":
-            return self.signup_get_list(request, pk=pk)
-
-        if request.method == "POST":
-            return self.signup_post(request, pk, version)
-
-    def get_signup_by_code(self, code, registration, signup_pk):
-        try:
-            UUID(code)
-        except ValueError:
-            raise DRFPermissionDenied(_("Malformed UUID."))
-        try:
-            signup = registration.signups.get(pk=signup_pk, cancellation_code=code)
-        except SignUp.DoesNotExist:
-            raise DRFPermissionDenied(_("Cancellation code did not match any signup"))
-        return signup
-
     # Endpoint to get a single signup
     @action(
         methods=["get"],
         url_path=r"signup/(?P<signup_pk>\w+)",
         detail=True,
-        permission_classes=[GuestGet],
+        permission_classes=[],
     )
     def signup_detail(self, request, pk=None, signup_pk=None, *args, **kwargs):
         user = request.user
-        self.get_object()
-
         registration = self.registration_get(pk=pk)
+
         # Anonymous users can get signup by cancellation_code
         if isinstance(user, AnonymousUser):
+            self.permission_classes = [GuestGet]
+            self.check_object_permissions(self.request, registration)
+
             code = request.GET.get("cancellation_code", None)
             if not code:
                 raise DRFPermissionDenied(
@@ -354,6 +300,7 @@ class RegistrationViewSet(
             signup = self.get_signup_by_code(code, registration, signup_pk)
         else:
             # Only admin users are allowed to get signup details
+            self.permission_classes = [DataSourceResourceEditPermission]
             self.check_signup_get_permissions(request, registration)
 
             try:
@@ -362,6 +309,46 @@ class RegistrationViewSet(
                 raise NotFound()
 
         return Response(SignUpSerializer(signup).data)
+
+    @signup_detail.mapping.delete
+    def delete_signup(self, request, pk=None, signup_pk=None, *args, **kwargs):
+        user = request.user
+        registration = self.registration_get(pk=pk)
+        # Anonymous users can delete signup by cancellation_code
+        if isinstance(user, AnonymousUser):
+            self.permission_classes = [GuestDelete]
+            self.check_object_permissions(self.request, registration)
+            code = request.GET.get("cancellation_code", None)
+            if not code:
+                raise DRFPermissionDenied(
+                    _("cancellation_code parameter has to be provided")
+                )
+
+            signup = self.get_signup_by_code(code, registration, signup_pk)
+        else:
+            # Only admin users are allowed to delete the signup
+            self.permission_classes = [DataSourceResourceEditPermission]
+            self.check_object_permissions(self.request, registration)
+
+            try:
+                signup = registration.signups.get(pk=signup_pk)
+            except SignUp.DoesNotExist:
+                raise NotFound()
+
+        # Send notification to inform that signup is deleted and delete the signup
+        signup.send_notification("cancellation")
+        signup.delete()
+
+        # Move first signup from waitlist to attending list
+        waitlisted = registration.signups.filter(
+            registration=signup.registration,
+            attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
+        ).order_by("id")
+        if len(waitlisted) > 0:
+            first_on_list = waitlisted[0]
+            first_on_list.attendee_status = SignUp.AttendeeStatus.ATTENDING
+            first_on_list.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 register_view(RegistrationViewSet, "registration")

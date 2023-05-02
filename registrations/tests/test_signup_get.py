@@ -10,7 +10,7 @@ from registrations.models import SignUp
 
 def get_list(api_client: APIClient, registration_pk: str, query_string: str = None):
     url = reverse(
-        "registration-signup",
+        "registration-signup-list",
         kwargs={"pk": registration_pk},
     )
 
@@ -236,7 +236,7 @@ def test__signup_list_assert_text_filter(
     signup2.save()
 
     api_client.force_authenticate(user)
-    
+
     get_list_and_assert_signups(
         api_client,
         registration.id,
@@ -253,9 +253,15 @@ def test__signup_list_assert_text_filter(
         api_client,
         registration.id,
         f"attendee_status={SignUp.AttendeeStatus.ATTENDING},{SignUp.AttendeeStatus.WAITING_LIST}",
-        (signup,signup2,),
+        (
+            signup,
+            signup2,
+        ),
     )
 
     response = get_list(api_client, registration.id, "attendee_status=invalid-value")
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.data["detail"] == "attendee_status can take following values: waitlisted, attending, not invalid-value"
+    assert (
+        response.data["detail"]
+        == "attendee_status can take following values: waitlisted, attending, not invalid-value"
+    )

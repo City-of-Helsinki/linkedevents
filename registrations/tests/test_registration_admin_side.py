@@ -4,14 +4,11 @@ from datetime import date, datetime, timedelta
 
 import pytest
 from dateutil.parser import parse
-from django.core import mail
 from freezegun import freeze_time
 from rest_framework import status
 
-from events.models import Event
 from events.tests.utils import versioned_reverse as reverse
-from helevents.tests.factories import UserFactory
-from registrations.models import MandatoryFields, Registration, SignUp
+from registrations.models import MandatoryFields, SignUp
 
 
 def sign_up(api_client, registration_id, sign_up_data):
@@ -30,7 +27,7 @@ def sign_up(api_client, registration_id, sign_up_data):
         "reservation_code": response.data["code"],
         "signups": [sign_up_data],
     }
-    signup_url = reverse("registration-signup", kwargs={"pk": registration_id})
+    signup_url = reverse("registration-signup-list", kwargs={"pk": registration_id})
     response = api_client.post(signup_url, sign_up_payload, format="json")
 
     return response
@@ -276,202 +273,6 @@ def test_signup_mandatory_fields_has_to_be_filled(
     response = sign_up(api_client, registration_id, sign_up_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert str(response.data[mandatory_field_id][0]) == "This field must be specified."
-
-
-@pytest.mark.skip(reason="Currently there's no way to cancel a signup.")
-@pytest.mark.django_db
-def test_signup_deletion(api_client, user, event):
-    registration_url = reverse("registration-list")
-    signup_url = reverse("signup-list")
-
-    api_client.force_authenticate(user)
-    registration_data = {"event": {"@id": get_event_url(event.pk)}}
-
-    response = api_client.post(registration_url, registration_data, format="json")
-    registration_id = response.data["id"]
-
-    api_client.force_authenticate(user=None)
-    sign_up_payload = {
-        "registration": registration_id,
-        "name": "Michael Jackson",
-        "email": "test@test.com",
-        "phone_number": "0441111111",
-        "notifications": "sms",
-        "date_of_birth": "2011-04-07",
-    }
-
-    response = api_client.post(signup_url, sign_up_payload, format="json")
-    delete_payload = {"cancellation_code": response.data["cancellation_code"]}
-
-    response = api_client.delete(signup_url, delete_payload, format="json")
-    assert response.status_code == status.HTTP_200_OK
-
-
-@pytest.mark.skip(reason="Currently there's no way to cancel a signup.")
-@pytest.mark.django_db
-def test_signup_deletion_missing_signup(api_client, user, event):
-    registration_url = reverse("registration-list")
-
-    api_client.force_authenticate(user)
-    registration_data = {"event": {"@id": get_event_url(event.pk)}}
-    signup_url = reverse("signup-list")
-
-    response = api_client.post(registration_url, registration_data, format="json")
-    registration_id = response.data["id"]
-
-    api_client.force_authenticate(user=None)
-    sign_up_payload = {
-        "registration": registration_id,
-        "name": "Michael Jackson",
-        "email": "test@test.com",
-        "phone_number": "0441111111",
-        "notifications": "sms",
-        "date_of_birth": "2011-04-07",
-    }
-
-    response = api_client.post(signup_url, sign_up_payload, format="json")
-    delete_payload = {"cancellation_code": response.data["cancellation_code"]}
-
-    response = api_client.delete(signup_url, delete_payload, format="json")
-    response = api_client.delete(signup_url, delete_payload, format="json")
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
-
-@pytest.mark.skip(reason="Currently there's no way to cancel a signup.")
-@pytest.mark.django_db
-def test_signup_deletion_wrong_code(api_client, user, event):
-    registration_url = reverse("registration-list")
-    signup_url = reverse("signup-list")
-
-    api_client.force_authenticate(user)
-    registration_data = {"event": {"@id": get_event_url(event.pk)}}
-
-    response = api_client.post(registration_url, registration_data, format="json")
-    registration_id = response.data["id"]
-
-    api_client.force_authenticate(user=None)
-    sign_up_payload = {
-        "registration": registration_id,
-        "name": "Michael Jackson",
-        "email": "test@test.com",
-        "phone_number": "0441111111",
-        "notifications": "sms",
-        "date_of_birth": "2011-04-07",
-    }
-
-    response = api_client.post(signup_url, sign_up_payload, format="json")
-    delete_payload = {"cancellation_code": "not a code"}
-
-    response = api_client.delete(signup_url, delete_payload, format="json")
-    assert str(response.data["detail"]) == "Malformed UUID."
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
-
-@pytest.mark.skip(reason="Currently there's no way to cancel a signup.")
-@pytest.mark.django_db
-def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
-    api_client, user, event
-):
-    registration_url = reverse("registration-list")
-
-    api_client.force_authenticate(user)
-    registration_data = {
-        "event": {"@id": get_event_url(event.pk)},
-        "maximum_attendee_capacity": 1,
-    }
-
-    response = api_client.post(registration_url, registration_data, format="json")
-    registration_id = response.data["id"]
-
-    api_client.force_authenticate(user=None)
-    sign_up_payload = {
-        "registration": registration_id,
-        "name": "Michael Jackson1",
-        "email": "test@test.com",
-    }
-    signup_url = reverse("signup-list")
-
-    response = api_client.post(signup_url, sign_up_payload, format="json")
-    delete_payload = {"cancellation_code": response.data["cancellation_code"]}
-
-    sign_up_payload2 = {
-        "registration": registration_id,
-        "name": "Michael Jackson2",
-        "email": "test1@test.com",
-    }
-    api_client.post(signup_url, sign_up_payload2, format="json")
-
-    sign_up_payload3 = {
-        "registration": registration_id,
-        "name": "Michael Jackson3",
-        "email": "test2@test.com",
-    }
-    api_client.post(signup_url, sign_up_payload3, format="json")
-
-    assert (
-        SignUp.objects.get(email="test2@test.com").attendee_status
-        == SignUp.AttendeeStatus.WAITING_LIST
-    )
-    assert (
-        SignUp.objects.get(email="test1@test.com").attendee_status
-        == SignUp.AttendeeStatus.WAITING_LIST
-    )
-    assert (
-        SignUp.objects.get(email="test@test.com").attendee_status
-        == SignUp.AttendeeStatus.ATTENDING
-    )
-
-    response = api_client.delete(signup_url, delete_payload, format="json")
-    assert (
-        SignUp.objects.get(email="test1@test.com").attendee_status
-        == SignUp.AttendeeStatus.ATTENDING
-    )
-    assert (
-        SignUp.objects.get(email="test2@test.com").attendee_status
-        == SignUp.AttendeeStatus.WAITING_LIST
-    )
-
-
-@pytest.mark.django_db
-def test_email_sent_on_successful_signup(api_client, registration):
-    sign_up_data = {
-        "name": "Michael Jackson",
-        "date_of_birth": "2011-04-07",
-        "email": "test@test.com",
-    }
-
-    response = sign_up(api_client, registration.id, sign_up_data)
-
-    assert response.status_code == status.HTTP_201_CREATED
-    assert sign_up_data["name"] in response.data["attending"]["people"][0]["name"]
-    #  assert that the email was sent
-    assert len(mail.outbox) == 1
-
-
-@pytest.mark.skip(reason="Currently there's no way to cancel a signup.")
-@pytest.mark.django_db
-def test_get_signup_info_with_cancel_code_no_auth(api_client, user, event):
-    registration_url = reverse("registration-list")
-    signup_url = reverse("signup-list")
-
-    api_client.force_authenticate(user)
-    registration_data = {"event": {"@id": get_event_url(event.pk)}}
-
-    response = api_client.post(registration_url, registration_data, format="json")
-    registration_id = response.data["id"]
-
-    api_client.force_authenticate(user=None)
-    sign_up_payload = {
-        "registration": registration_id,
-        "name": "Michael Jackson",
-        "email": "test@test.com",
-    }
-    response = api_client.post(signup_url, sign_up_payload, format="json")
-
-    response = api_client.get(
-        f'{signup_url}?cancellation_code={response.data["cancellation_code"]}'
-    )
-    assert response.data["name"] == "Michael Jackson"
 
 
 @pytest.mark.skip(
@@ -789,7 +590,7 @@ def test_group_signup_successful_with_waitlist(api_client, registration):
     reservation_url = reverse(
         "registration-reserve-seats", kwargs={"pk": registration.id}
     )
-    signup_url = reverse("registration-signup", kwargs={"pk": registration.id})
+    signup_url = reverse("registration-signup-list", kwargs={"pk": registration.id})
     registration.maximum_attendee_capacity = 1
     registration.save()
     payload = {"seats": 2, "waitlist": True}

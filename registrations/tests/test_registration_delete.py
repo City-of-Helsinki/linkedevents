@@ -114,7 +114,7 @@ def test__api_key_of_other_organization_cannot_delete_registration(
 
 
 @pytest.mark.django_db
-def test__api_key_from_wrong_data_source_cannot_update_registration(
+def test__api_key_from_wrong_data_source_cannot_delete_registration(
     api_client, organization, other_data_source, registration
 ):
     other_data_source.owner = organization
@@ -126,7 +126,7 @@ def test__api_key_from_wrong_data_source_cannot_update_registration(
 
 
 @pytest.mark.django_db
-def test__unknown_api_key_cannot_delete_keywordset(api_client, registration):
+def test__unknown_api_key_cannot_delete_registration(api_client, registration):
     api_client.credentials(apikey="unknown")
 
     response = delete_registration(api_client, registration.id)
