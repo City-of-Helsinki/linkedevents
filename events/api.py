@@ -3155,9 +3155,9 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
             queryset = queryset.exclude(offers__is_free=True)
 
     val = params.get("suitable_for", None)
-    """ Excludes all the events that have max age limit below or min age limit above the age or age range specified.
-    Suitable events with just one age boundary specified are returned, events with no age limits specified are
-    excluded. """
+    # Excludes all the events that have max age limit below or min age limit above the age or age range specified.
+    # Suitable events with just one age boundary specified are returned, events with no age limits specified are
+    # excluded.
 
     if val:
         vals = val.split(",")
