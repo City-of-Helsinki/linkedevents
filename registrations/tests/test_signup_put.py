@@ -3,6 +3,7 @@ from freezegun import freeze_time
 from rest_framework import status
 
 from events.tests.utils import versioned_reverse as reverse
+from registrations.models import SignUp
 
 # === util methods ===
 
@@ -112,6 +113,50 @@ def test__update_signup(api_client, registration, signup, user):
 
     response = assert_update_signup(api_client, registration.id, signup.id, signup_data)
     response.data["name"] = "Edited name"
+
+
+@freeze_time("2023-03-14 03:30:00+02:00")
+@pytest.mark.django_db
+def test__cannot_update_attendee_status_of_signup(
+    api_client, registration, signup, user
+):
+    signup.attendee_status = SignUp.AttendeeStatus.ATTENDING
+    signup.save()
+    api_client.force_authenticate(user)
+
+    signup_data = {
+        "name": "Edited name",
+        "date_of_birth": "2015-01-01",
+        "attendee_status": SignUp.AttendeeStatus.WAITING_LIST,
+    }
+
+    response = update_signup(api_client, registration.id, signup.id, signup_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert (
+        response.data["attendee_status"]
+        == "You may not change the attendee_status of an existing object."
+    )
+
+
+@freeze_time("2023-03-14 03:30:00+02:00")
+@pytest.mark.django_db
+def test__cannot_update_registration_of_signup(
+    api_client, registration, registration2, signup, user
+):
+    api_client.force_authenticate(user)
+
+    signup_data = {
+        "name": "Edited name",
+        "date_of_birth": "2015-01-01",
+        "registration": registration2.id,
+    }
+
+    response = update_signup(api_client, registration.id, signup.id, signup_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert (
+        response.data["registration"]
+        == "You may not change the registration of an existing object."
+    )
 
 
 @pytest.mark.django_db

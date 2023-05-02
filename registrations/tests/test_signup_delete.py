@@ -8,6 +8,8 @@ from registrations.tests.test_registration_admin_side import get_event_url
 from registrations.tests.test_registration_post import assert_create_registration
 from registrations.tests.test_signup_post import assert_create_signup
 
+# === util methods ===
+
 
 def delete_signup(api_client, registration_pk, signup_pk, query_string=None):
     signup_url = reverse(
@@ -23,6 +25,9 @@ def delete_signup(api_client, registration_pk, signup_pk, query_string=None):
 def assert_delete_signup(api_client, registration_pk, signup_pk, query_string=None):
     response = delete_signup(api_client, registration_pk, signup_pk, query_string)
     assert response.status_code == status.HTTP_204_NO_CONTENT
+
+
+# === tests ===
 
 
 @pytest.mark.django_db
