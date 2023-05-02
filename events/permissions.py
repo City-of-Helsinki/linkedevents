@@ -109,6 +109,14 @@ class GuestGet(BasePermission):
             return False
 
 
+class GuestPut(BasePermission):
+    def has_permission(self, request, view):
+        if request.method == "PUT":
+            return True
+        else:
+            return False
+
+
 class DataSourceResourceEditPermission(IsAuthenticatedOrReadOnly):
     def has_permission(self, request, view):
         if not super().has_permission(request, view):

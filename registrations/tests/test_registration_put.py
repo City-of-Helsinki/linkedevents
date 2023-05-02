@@ -20,7 +20,7 @@ def update_registration(api_client, pk, registration_data, data_source=None):
 
 def assert_update_registration(api_client, pk, registration_data, data_source=None):
     response = update_registration(api_client, pk, registration_data, data_source)
-    print(response.data)
+
     assert response.status_code == status.HTTP_200_OK
     assert response.data["id"] == pk
 

@@ -41,9 +41,38 @@ class SignUpSerializer(serializers.ModelSerializer):
         else:
             raise DRFPermissionDenied(_("The waiting list is already full"))
 
+    def update(self, instance, validated_data):
+        errors = {}
+
+        if (
+            "attendee_status" in validated_data
+            and instance.attendee_status != validated_data["attendee_status"]
+        ):
+            errors["attendee_status"] = _(
+                "You may not change the attendee_status of an existing object."
+            )
+        if (
+            "registration" in validated_data
+            and instance.registration != validated_data["registration"]
+        ):
+            errors["registration"] = _(
+                "You may not change the registration of an existing object."
+            )
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        super().update(instance, validated_data)
+        return instance
+
     def validate(self, data):
         errors = {}
-        registration = data["registration"]
+
+        if isinstance(self.instance, SignUp):
+            registration = self.instance.registration
+        else:
+            registration = data["registration"]
+
         falsy_values = ("", None)
 
         for field in registration.mandatory_fields:

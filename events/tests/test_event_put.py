@@ -919,7 +919,7 @@ def test_multiple_event_update_non_allowed_data_fails(
     response = api_client.put(
         reverse("event-list"), [minimal_event_dict, minimal_event_dict_2], format="json"
     )
-    print(response.data)
+
     assert response.status_code == 400
     assert "data_source" in response.data
 

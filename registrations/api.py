@@ -11,7 +11,6 @@ from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotAuthenticated, NotFound, ParseError
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from events.api import (
@@ -26,6 +25,7 @@ from events.permissions import (
     GuestDelete,
     GuestGet,
     GuestPost,
+    GuestPut,
 )
 from linkedevents.registry import register_view
 from registrations.exceptions import ConflictException
@@ -156,11 +156,23 @@ class RegistrationViewSet(
         except Registration.DoesNotExist:
             return NotFound()
 
-    def get_signup_by_code(self, code, registration, signup_pk):
+    def registration_signup_get(self, registration, signup_pk):
+        try:
+            return registration.signups.get(pk=signup_pk)
+        except SignUp.DoesNotExist:
+            raise NotFound()
+
+    def get_signup_by_code(self, request, registration, signup_pk):
+        code = request.GET.get("cancellation_code", None)
+        if not code:
+            raise DRFPermissionDenied(
+                _("cancellation_code parameter has to be provided")
+            )
         try:
             UUID(code)
         except ValueError:
             raise DRFPermissionDenied(_("Malformed UUID."))
+
         try:
             signup = registration.signups.get(pk=signup_pk, cancellation_code=code)
         except SignUp.DoesNotExist:
@@ -292,21 +304,13 @@ class RegistrationViewSet(
             self.permission_classes = [GuestGet]
             self.check_object_permissions(self.request, registration)
 
-            code = request.GET.get("cancellation_code", None)
-            if not code:
-                raise DRFPermissionDenied(
-                    _("cancellation_code parameter has to be provided")
-                )
-            signup = self.get_signup_by_code(code, registration, signup_pk)
+            signup = self.get_signup_by_code(self.request, registration, signup_pk)
         else:
             # Only admin users are allowed to get signup details
             self.permission_classes = [DataSourceResourceEditPermission]
             self.check_signup_get_permissions(request, registration)
 
-            try:
-                signup = registration.signups.get(pk=signup_pk)
-            except SignUp.DoesNotExist:
-                raise NotFound()
+            signup = self.registration_signup_get(registration, signup_pk)
 
         return Response(SignUpSerializer(signup).data)
 
@@ -318,22 +322,14 @@ class RegistrationViewSet(
         if isinstance(user, AnonymousUser):
             self.permission_classes = [GuestDelete]
             self.check_object_permissions(self.request, registration)
-            code = request.GET.get("cancellation_code", None)
-            if not code:
-                raise DRFPermissionDenied(
-                    _("cancellation_code parameter has to be provided")
-                )
 
-            signup = self.get_signup_by_code(code, registration, signup_pk)
+            signup = self.get_signup_by_code(self.request, registration, signup_pk)
         else:
             # Only admin users are allowed to delete the signup
             self.permission_classes = [DataSourceResourceEditPermission]
             self.check_object_permissions(self.request, registration)
 
-            try:
-                signup = registration.signups.get(pk=signup_pk)
-            except SignUp.DoesNotExist:
-                raise NotFound()
+            signup = self.registration_signup_get(registration, signup_pk)
 
         # Send notification to inform that signup is deleted and delete the signup
         signup.send_notification("cancellation")
@@ -349,6 +345,30 @@ class RegistrationViewSet(
             first_on_list.attendee_status = SignUp.AttendeeStatus.ATTENDING
             first_on_list.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @signup_detail.mapping.put
+    def update_signup(self, request, pk=None, signup_pk=None, *args, **kwargs):
+        user = request.user
+        registration = self.registration_get(pk=pk)
+        print("TEST 1")
+
+        if isinstance(user, AnonymousUser):
+            self.permission_classes = [GuestPut]
+            self.check_object_permissions(self.request, registration)
+
+            signup = self.get_signup_by_code(self.request, registration, signup_pk)
+        else:
+            # Only admin users are allowed to delete the signup
+            self.permission_classes = [DataSourceResourceEditPermission]
+            self.check_object_permissions(self.request, registration)
+
+            signup = self.registration_signup_get(registration, signup_pk)
+
+        serializer = SignUpSerializer(signup, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(serializer.data)
 
 
 register_view(RegistrationViewSet, "registration")
