@@ -4,8 +4,10 @@ from rest_framework import status
 
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import SignUp
-from registrations.tests.test_registration_admin_side import get_event_url
-from registrations.tests.test_registration_post import assert_create_registration
+from registrations.tests.test_registration_post import (
+    assert_create_registration,
+    get_event_url,
+)
 from registrations.tests.test_signup_post import assert_create_signup
 
 # === util methods ===

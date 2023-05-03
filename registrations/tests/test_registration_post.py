@@ -2,7 +2,8 @@ import pytest
 from rest_framework import status
 
 from events.tests.utils import versioned_reverse as reverse
-from registrations.tests.test_registration_admin_side import get_event_url
+
+# === util methods ===
 
 
 def create_registration(api_client, registration_data, data_source=None):
@@ -20,6 +21,13 @@ def assert_create_registration(api_client, registration_data, data_source=None):
     assert response.data["event"] == registration_data["event"]
 
     return response
+
+
+def get_event_url(detail_pk):
+    return reverse("event-detail", kwargs={"pk": detail_pk})
+
+
+# === tests ===
 
 
 @pytest.mark.django_db

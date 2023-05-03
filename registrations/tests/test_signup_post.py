@@ -1,12 +1,14 @@
 from copy import deepcopy
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
+from dateutil.parser import parse
 from freezegun import freeze_time
 from rest_framework import status
 
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import MandatoryFields, SignUp
+from registrations.tests.test_reserve_seats_post import reserve_seats
 
 # === util methods ===
 
@@ -17,7 +19,7 @@ def create_signup(api_client, registration_pk, signup_data):
         "registration-reserve-seats", kwargs={"pk": registration_pk}
     )
     seat_reservation_data = {"seats": 1, "waitlist": True}
-    response = api_client.post(reservation_url, seat_reservation_data, format="json")
+    response = reserve_seats(api_client, registration_pk, seat_reservation_data)
     assert response.status_code == status.HTTP_201_CREATED
 
     # Sign up
@@ -39,10 +41,6 @@ def assert_create_signup(api_client, registration_pk, signup_data):
     assert response.status_code == status.HTTP_201_CREATED
 
     return response
-
-
-def get_event_url(detail_pk):
-    return reverse("event-detail", kwargs={"pk": detail_pk})
 
 
 # === tests ===
@@ -218,3 +216,32 @@ def test_signup_mandatory_fields_has_to_be_filled(
     response = create_signup(api_client, registration.id, sign_up_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert str(response.data[mandatory_field_id][0]) == "This field must be specified."
+
+
+@pytest.mark.django_db
+def test_group_signup_successful_with_waitlist(api_client, registration):
+    registration.maximum_attendee_capacity = 1
+    registration.save()
+    signup_url = reverse("registration-signup-list", kwargs={"pk": registration.id})
+
+    payload = {"seats": 2, "waitlist": True}
+    response = reserve_seats(api_client, registration.id, payload)
+    sign_up_payload = {
+        "reservation_code": response.data["code"],
+        "signups": [
+            {
+                "name": "Mickey Mouse",
+                "date_of_birth": "2011-04-07",
+                "email": "test3@test.com",
+            },
+            {
+                "name": "Minney Mouse",
+                "date_of_birth": "2011-04-07",
+                "email": "test2@test.com",
+            },
+        ],
+    }
+
+    response = api_client.post(signup_url, sign_up_payload, format="json")
+    assert response.status_code == status.HTTP_201_CREATED
+    assert registration.signups.count() == 2
