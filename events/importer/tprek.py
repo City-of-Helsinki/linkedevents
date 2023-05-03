@@ -2,10 +2,10 @@ import logging
 
 import requests
 import requests_cache
-from django import db
 from django.conf import settings
 from django.contrib.gis.geos import Point
 from django.core.management import call_command
+from django.db import transaction
 from django_orghierarchy.models import Organization
 
 from events.importer.util import replace_location
@@ -91,7 +91,7 @@ class TprekImporter(Importer):
     def check_deleted(self, obj):
         return obj.deleted
 
-    @db.transaction.atomic
+    @transaction.atomic
     def _import_unit(self, syncher, info):
         obj = syncher.get(str(info["id"]))
         obj_id = "tprek:%s" % str(info["id"])

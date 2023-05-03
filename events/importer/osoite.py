@@ -1,8 +1,8 @@
 import logging
 
-from django import db
 from django.conf import settings
 from django.core.management import call_command
+from django.db import transaction
 from django.utils.module_loading import import_string
 from django_orghierarchy.models import Organization
 
@@ -94,7 +94,7 @@ class OsoiteImporter(Importer):
     def check_deleted(self, obj):
         return obj.deleted
 
-    @db.transaction.atomic
+    @transaction.atomic
     def _import_address(self, syncher, address_obj):
         # addresses have no static ids, just format the address cleanly
         origin_id = (
