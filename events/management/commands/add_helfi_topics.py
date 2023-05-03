@@ -71,7 +71,7 @@ class Command(BaseCommand):
             raise CommandError('keyword "%s" does not exist' % keyword_id)
         return keyword
 
-    @transaction.atomic()
+    @transaction.atomic
     def create_helfi_keywords(self):
         self.stdout.write("creating new helfi keywords...")
 
@@ -90,7 +90,7 @@ class Command(BaseCommand):
                     % (new_keyword_data["name_fi"], new_keyword_data["id"])
                 )
 
-    @transaction.atomic()
+    @transaction.atomic
     def create_helfi_topics_keyword_set(self):
         self.stdout.write("creating www.hel.fi topics keyword set...")
 

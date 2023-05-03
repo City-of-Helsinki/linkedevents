@@ -58,7 +58,7 @@ class Command(BaseCommand):
             raise CommandError('keyword "%s" does not exist' % keyword_id)
         return keyword
 
-    @transaction.atomic()
+    @transaction.atomic
     def create_sote_keywords(self):
         self.stdout.write("creating new SOTE keywords...")
 
@@ -77,7 +77,7 @@ class Command(BaseCommand):
                     % (new_keyword_data["name_fi"], new_keyword_data["id"])
                 )
 
-    @transaction.atomic()
+    @transaction.atomic
     def create_helsinki_audiences_keyword_set(self):
         self.stdout.write("creating Helsinki audiences keyword set...")
 
@@ -118,7 +118,7 @@ class Command(BaseCommand):
                     "added %s (%s) to the keyword set" % (keyword.name, keyword_id)
                 )
 
-    @transaction.atomic()
+    @transaction.atomic
     def add_yso_audience_keywords_to_events(self):
         self.stdout.write("adding YSO audience keywords to events...")
 

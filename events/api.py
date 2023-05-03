@@ -23,9 +23,9 @@ from django.contrib.gis.measure import D
 from django.contrib.postgres.search import SearchQuery, TrigramSimilarity
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
 from django.db.models import Count, F, Prefetch, Q
 from django.db.models.functions import Greatest
-from django.db.transaction import atomic
 from django.db.utils import IntegrityError
 from django.http import Http404, HttpResponsePermanentRedirect
 from django.urls import NoReverseMatch
@@ -3470,7 +3470,7 @@ class EventViewSet(
             raise DRFPermissionDenied()
         super().perform_update(serializer)
 
-    @atomic
+    @transaction.atomic
     def bulk_update(self, request, *args, **kwargs):
         if not isinstance(request.data, list):
             raise DRFPermissionDenied(
@@ -3500,7 +3500,7 @@ class EventViewSet(
         self.perform_bulk_update(serializer)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @atomic
+    @transaction.atomic
     def create(self, request, *args, **kwargs):
         context = self.get_serializer_context()
         (
@@ -3586,7 +3586,7 @@ class EventViewSet(
 
         super().perform_create(serializer)
 
-    @atomic
+    @transaction.atomic
     def destroy(self, request, *args, **kwargs):
         return super().destroy(request, *args, **kwargs)
 
