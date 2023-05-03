@@ -74,7 +74,7 @@ class KeywordMatcher(object):
         keywords = []
         if labels:
             for label in labels:
-                keywords.extend(label.keywords.all())
+                keywords.extend(label.keywords.filter(deprecated=False))
             return keywords
         else:
             return None
