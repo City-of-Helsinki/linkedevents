@@ -105,10 +105,8 @@ class RegistrationViewSet(
             else:
                 return val
 
-        try:
-            registration = Registration.objects.get(id=pk)
-        except Registration.DoesNotExist:
-            raise NotFound(detail=f"Registration {pk} doesn't exist.", code=404)
+        registration = self.registration_get(pk=pk)
+
         waitlist = request.data.get("waitlist", False)
         if waitlist:
             waitlist_seats = none_to_unlim(registration.waiting_list_capacity)
@@ -153,13 +151,13 @@ class RegistrationViewSet(
     def registration_get(self, pk):
         try:
             return Registration.objects.get(pk=pk)
-        except Registration.DoesNotExist:
-            return NotFound()
+        except (ValueError, Registration.DoesNotExist):
+            raise NotFound(detail=f"Registration {pk} doesn't exist.")
 
     def registration_signup_get(self, registration, signup_pk):
         try:
             return registration.signups.get(pk=signup_pk)
-        except SignUp.DoesNotExist:
+        except (ValueError, SignUp.DoesNotExist):
             raise NotFound()
 
     def get_signup_by_code(self, request, registration, signup_pk):
@@ -174,10 +172,9 @@ class RegistrationViewSet(
             raise DRFPermissionDenied(_("Malformed UUID."))
 
         try:
-            signup = registration.signups.get(pk=signup_pk, cancellation_code=code)
+            return registration.signups.get(pk=signup_pk, cancellation_code=code)
         except SignUp.DoesNotExist:
             raise DRFPermissionDenied(_("Cancellation code did not match any signup"))
-        return signup
 
     def check_signup_get_permissions(self, request, registration):
         if isinstance(request.user, AnonymousUser):
@@ -236,7 +233,7 @@ class RegistrationViewSet(
         waitlisted = []
         if "reservation_code" not in request.data.keys():
             raise serializers.ValidationError(
-                {"registration": "Reservation code is missing"}
+                {"reservation_code": "Reservation code is missing"}
             )
 
         try:
@@ -260,7 +257,9 @@ class RegistrationViewSet(
             minutes=code_validity_duration(reservation.seats)
         )
         if datetime.now().astimezone(pytz.utc) > expiration:
-            raise serializers.ValidationError({"code": "Reservation code has expired."})
+            raise serializers.ValidationError(
+                {"reservation_code": "Reservation code has expired."}
+            )
 
         for i in request.data["signups"]:
             i["registration"] = pk
@@ -350,7 +349,6 @@ class RegistrationViewSet(
     def update_signup(self, request, pk=None, signup_pk=None, *args, **kwargs):
         user = request.user
         registration = self.registration_get(pk=pk)
-        print("TEST 1")
 
         if isinstance(user, AnonymousUser):
             self.permission_classes = [GuestPut]

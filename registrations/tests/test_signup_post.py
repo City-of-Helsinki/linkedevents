@@ -2,12 +2,11 @@ from copy import deepcopy
 from datetime import date, timedelta
 
 import pytest
-from dateutil.parser import parse
 from freezegun import freeze_time
 from rest_framework import status
 
 from events.tests.utils import versioned_reverse as reverse
-from registrations.models import MandatoryFields, SignUp
+from registrations.models import MandatoryFields, SeatReservationCode, SignUp
 from registrations.tests.test_reserve_seats_post import reserve_seats
 
 # === util methods ===
@@ -15,9 +14,6 @@ from registrations.tests.test_reserve_seats_post import reserve_seats
 
 def create_signup(api_client, registration_pk, signup_data):
     # Reserve seats
-    reservation_url = reverse(
-        "registration-reserve-seats", kwargs={"pk": registration_pk}
-    )
     seat_reservation_data = {"seats": 1, "waitlist": True}
     response = reserve_seats(api_client, registration_pk, seat_reservation_data)
     assert response.status_code == status.HTTP_201_CREATED
@@ -76,6 +72,123 @@ def test_successful_signup(api_client, languages, registration):
     assert signup.service_language.pk == "fi"
     assert signup.street_address == sign_up_data["street_address"]
     assert signup.zipcode == sign_up_data["zipcode"]
+
+
+@pytest.mark.django_db
+def test_cannot_signup_if_reservation_code_is_missing(api_client, registration):
+    signup_payload = {
+        "signups": [],
+    }
+
+    create_url = reverse(
+        "registration-signup-list",
+        kwargs={"pk": registration.id},
+    )
+    response = api_client.post(create_url, signup_payload, format="json")
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["reservation_code"] == "Reservation code is missing"
+
+
+@pytest.mark.django_db
+def test_cannot_signup_if_reservation_code_is_invalid(api_client, registration):
+    signup_payload = {
+        "reservation_code": "c5e7d3ba-e48d-447c-b24d-c779950b2acb",
+        "signups": [],
+    }
+
+    create_url = reverse(
+        "registration-signup-list",
+        kwargs={"pk": registration.id},
+    )
+    response = api_client.post(create_url, signup_payload, format="json")
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert (
+        response.data["detail"]
+        == "Reservation code c5e7d3ba-e48d-447c-b24d-c779950b2acb doesn't exist."
+    )
+
+
+@pytest.mark.django_db
+def test_cannot_signup_if_reservation_code_is_for_different_registration(
+    api_client, registration, registration2
+):
+    payload = {"seats": 2, "waitlist": True}
+    response = reserve_seats(api_client, registration2.id, payload)
+    code = response.data["code"]
+    signup_payload = {
+        "reservation_code": code,
+        "signups": [],
+    }
+
+    create_url = reverse(
+        "registration-signup-list",
+        kwargs={"pk": registration.id},
+    )
+    response = api_client.post(create_url, signup_payload, format="json")
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert (
+        response.data["reservation_code"]
+        == f"Registration code {code} doesn't match the registration {registration.id}"
+    )
+
+
+@pytest.mark.django_db
+def test_cannot_signup_if_number_of_signups_exceeds_number_reserved_seats(
+    api_client, registration
+):
+    signup_url = reverse("registration-signup-list", kwargs={"pk": registration.id})
+
+    payload = {"seats": 1, "waitlist": True}
+    response = reserve_seats(api_client, registration.id, payload)
+    sign_up_payload = {
+        "reservation_code": response.data["code"],
+        "signups": [
+            {
+                "name": "Mickey Mouse",
+                "date_of_birth": "2011-04-07",
+                "email": "test3@test.com",
+            },
+            {
+                "name": "Minney Mouse",
+                "date_of_birth": "2011-04-07",
+                "email": "test2@test.com",
+            },
+        ],
+    }
+
+    response = api_client.post(signup_url, sign_up_payload, format="json")
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert (
+        response.data["signups"]
+        == "Number of signups exceeds the number of requested seats"
+    )
+
+
+@pytest.mark.django_db
+def test_cannot_signup_if_reservation_code_is_expired(api_client, registration):
+    signup_url = reverse("registration-signup-list", kwargs={"pk": registration.id})
+
+    payload = {"seats": 1, "waitlist": True}
+    response = reserve_seats(api_client, registration.id, payload)
+    seat_reservation_code = SeatReservationCode.objects.get(code=response.data["code"])
+    seat_reservation_code.timestamp = seat_reservation_code.timestamp - timedelta(
+        days=1
+    )
+    seat_reservation_code.save()
+
+    sign_up_payload = {
+        "reservation_code": response.data["code"],
+        "signups": [
+            {
+                "name": "Mickey Mouse",
+                "date_of_birth": "2011-04-07",
+                "email": "test3@test.com",
+            },
+        ],
+    }
+    response = api_client.post(signup_url, sign_up_payload, format="json")
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["reservation_code"] == "Reservation code has expired."
 
 
 @freeze_time("2023-03-14 03:30:00+02:00")

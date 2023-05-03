@@ -36,6 +36,14 @@ def test_seat_reservation_code_request_enough_seats_no_waitlist(
 
 
 @pytest.mark.django_db
+def test_cannot_reserve_seats_with_non_existing_registration(api_client):
+    payload = {"seats": 1, "waitlist": False}
+    response = reserve_seats(api_client, "not-exist", payload)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.data["detail"] == "Registration not-exist doesn't exist."
+
+
+@pytest.mark.django_db
 def test_seat_reservation_code_request_enough_seats_with_waitlist(
     api_client, registration
 ):
