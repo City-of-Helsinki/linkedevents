@@ -3,6 +3,7 @@ version: '3.7'
 services:
 
     postgres:
+        platform: linux/amd64
         build:
             context: ./
             dockerfile: ./docker/postgres/Dockerfile
@@ -25,6 +26,7 @@ services:
         container_name: linkedevents-redis
 
     django:
+        platform: linux/amd64
         restart: unless-stopped
         build:
             context: ./
