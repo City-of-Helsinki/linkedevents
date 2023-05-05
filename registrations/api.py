@@ -341,6 +341,7 @@ class RegistrationViewSet(
                 "body": cleaned_body,
                 "cancellation_code": signup.cancellation_code,
                 "registration_id": registration.id,
+                "signup_id": signup.id,
             }
             rendered_body = render_to_string("message_to_signup.html", email_variables)
             message = (
