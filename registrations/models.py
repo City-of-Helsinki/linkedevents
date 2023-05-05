@@ -264,6 +264,7 @@ class SignUp(models.Model):
             "event": self.registration.event.name_fi,
             "cancellation_code": self.cancellation_code,
             "registration_id": self.registration.id,
+            "signup_id": self.id,
         }
 
         if self.registration.confirmation_message:
