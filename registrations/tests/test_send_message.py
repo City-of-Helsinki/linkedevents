@@ -65,7 +65,7 @@ def test_required_fields_has_to_be_filled(
 
     response = send_message(api_client, registration.id, send_message_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert str(response.data[required_field]) == "This field must be specified."
+    assert response.data[required_field][0].code == "blank"
 
 
 @pytest.mark.django_db
@@ -80,6 +80,29 @@ def test_send_message_to_selected_signups(
     }
 
     assert_send_message(api_client, registration.id, send_message_data, [signup.email])
+
+
+@pytest.mark.django_db
+def test_cannot_send_message_to_nonexistent_signups(
+    api_client, registration, signup, user
+):
+    api_client.force_authenticate(user)
+    send_message_data = {
+        "subject": "Message subject",
+        "body": "Message body",
+        "signups": ["not-exist", "not-exist2"],
+    }
+
+    response = send_message(api_client, registration.id, send_message_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert (
+        str(response.data["signups"][0][0])
+        == "Registration doesn't have signup with id not-exist."
+    )
+    assert (
+        str(response.data["signups"][1][0])
+        == "Registration doesn't have signup with id not-exist2."
+    )
 
 
 @pytest.mark.django_db

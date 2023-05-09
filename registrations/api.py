@@ -34,7 +34,11 @@ from events.permissions import (
 from linkedevents.registry import register_view
 from registrations.exceptions import ConflictException
 from registrations.models import Registration, SeatReservationCode, SignUp
-from registrations.serializers import SeatReservationCodeSerializer, SignUpSerializer
+from registrations.serializers import (
+    MassEmailSerializer,
+    SeatReservationCodeSerializer,
+    SignUpSerializer,
+)
 from registrations.utils import code_validity_duration, send_mass_html_mail
 
 logger = logging.getLogger(__name__)
@@ -205,6 +209,11 @@ class RegistrationViewSet(
 
         return registrations
 
+    def get_serializer_class(self):
+        if self.action == "send_message":
+            return MassEmailSerializer
+        return super().get_serializer_class()
+
     @action(methods=["post"], detail=True, permission_classes=[GuestPost])
     def reserve_seats(self, request, pk=None, version=None):
         def none_to_unlim(val):
@@ -268,37 +277,25 @@ class RegistrationViewSet(
     def send_message(self, request, pk=None, version=None):
         registration = self.get_object()
 
-        errors = {}
+        data = request.data
+        data["registration"] = registration
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
 
-        # Validate that required fields are filled
-        required_fields = ["subject", "body"]
-        for field in required_fields:
-            if not request.data.get(field):
-                errors[field] = _("This field must be specified.")
+        # Get validated signup_ids from serializer.validated_data
+        signup_ids = serializer.validated_data.get("signups", None)
 
-        # Send message to defined signups if signups attribute is defined and it's an array
+        # Send message to defined signups if signups attribute is defined
         # By default send message to all signups
-        if request.data.get("signups") and hasattr(
-            request.data.get("signups"), "__len__"
-        ):
-            try:
-                signups = registration.signups.filter(
-                    pk__in=[i for i in request.data.get("signups")]
-                )
-            except ValueError as error:
-                errors["signups"] = str(error)
-
+        if signup_ids:
+            signups = registration.signups.filter(pk__in=[i for i in signup_ids])
         else:
             signups = registration.signups.all()
         signups.exclude(email=None)
 
-        # Return validations errors if there is any
-        if errors:
-            raise serializers.ValidationError(errors)
-
         messages = []
-        subject = request.data["subject"]
-        body = request.data["body"]
+        body = serializer.validated_data["body"]
+        subject = serializer.validated_data["subject"]
         cleaned_body = bleach.clean(
             body.replace("\n", "<br>"), settings.BLEACH_ALLOWED_TAGS
         )

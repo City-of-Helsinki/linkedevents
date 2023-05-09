@@ -164,3 +164,28 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
 
     def get_expiration(self, obj):
         return obj.timestamp + timedelta(minutes=code_validity_duration(obj.seats))
+
+
+class MassEmailSerializer(serializers.Serializer):
+    subject = serializers.CharField()
+    body = serializers.CharField()
+    signups = serializers.ListField(
+        child=serializers.CharField(), allow_empty=False, required=False
+    )
+
+    def validate_signups(self, value):
+        registration = self.initial_data["registration"]
+        if value and self.context["request"].method == "POST":
+            signup_ids = [str(signup.id) for signup in registration.signups.all()]
+            errors = {}
+            for idx, id in enumerate(value):
+                if id not in signup_ids:
+                    errors[idx] = [
+                        _("Registration doesn't have signup with id {id}.").format(
+                            id=id
+                        )
+                    ]
+            if errors:
+                raise serializers.ValidationError(errors)
+
+        return value
