@@ -8,7 +8,6 @@ import pytz
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.gis.db import models
-from django.core.mail import EmailMultiAlternatives, get_connection
 from django.db.models import ProtectedError, Q, Sum
 from django.template.loader import render_to_string
 from django.utils.translation import gettext as _
@@ -36,7 +35,7 @@ from linkedevents.registry import register_view
 from registrations.exceptions import ConflictException
 from registrations.models import Registration, SeatReservationCode, SignUp
 from registrations.serializers import SeatReservationCodeSerializer, SignUpSerializer
-from registrations.utils import code_validity_duration
+from registrations.utils import code_validity_duration, send_mass_html_mail
 
 logger = logging.getLogger(__name__)
 
@@ -267,34 +266,6 @@ class RegistrationViewSet(
         permission_classes=[DataSourceResourceEditPermission],
     )
     def send_message(self, request, pk=None, version=None):
-        def send_mass_html_mail(
-            datatuple,
-            fail_silently=False,
-            auth_user=None,
-            auth_password=None,
-            connection=None,
-        ):
-            """
-            django.core.mail.send_mass_mail doesn't support sending html mails,
-
-            This method duplicates send_mass_mail except requires html_message for each message
-            and adds html alternative to each mail
-            """
-            connection = connection or get_connection(
-                username=auth_user,
-                password=auth_password,
-                fail_silently=fail_silently,
-            )
-            messages = []
-            for subject, message, html_message, from_email, recipient_list in datatuple:
-                mail = EmailMultiAlternatives(
-                    subject, message, from_email, recipient_list, connection=connection
-                )
-                mail.attach_alternative(html_message, "text/html")
-                messages.append(mail)
-
-            return connection.send_messages(messages)
-
         registration = self.get_object()
 
         errors = {}
@@ -357,6 +328,7 @@ class RegistrationViewSet(
             send_mass_html_mail(messages, fail_silently=False)
         except SMTPException as e:
             logger.error(e, exc_info=True)
+
             return Response(
                 str(e),
                 status=status.HTTP_409_CONFLICT,
