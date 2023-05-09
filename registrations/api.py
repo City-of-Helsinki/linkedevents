@@ -327,7 +327,7 @@ class RegistrationViewSet(
         try:
             send_mass_html_mail(messages, fail_silently=False)
         except SMTPException as e:
-            logger.error(e, exc_info=True)
+            logger.exception("Couldn't send mass HTML email.")
 
             return Response(
                 str(e),
