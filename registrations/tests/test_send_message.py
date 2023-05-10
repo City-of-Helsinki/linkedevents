@@ -84,25 +84,36 @@ def test_send_message_to_selected_signups(
 
 @pytest.mark.django_db
 def test_cannot_send_message_to_nonexistent_signups(
+    api_client, registration, registration2, signup, signup2, user
+):
+    signup2.registration = registration2
+    signup2.save()
+    api_client.force_authenticate(user)
+
+    send_message_data = {
+        "subject": "Message subject",
+        "body": "Message body",
+        "signups": [signup2.id],
+    }
+    response = send_message(api_client, registration.id, send_message_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["signups"][0].code == "does_not_exist"
+
+
+@pytest.mark.django_db
+def test_cannot_send_message_with_invalid_signup_pk_type(
     api_client, registration, signup, user
 ):
     api_client.force_authenticate(user)
     send_message_data = {
         "subject": "Message subject",
         "body": "Message body",
-        "signups": ["not-exist", "not-exist2"],
+        "signups": ["not-exist"],
     }
 
     response = send_message(api_client, registration.id, send_message_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert (
-        str(response.data["signups"][0][0])
-        == "Registration doesn't have signup with id not-exist."
-    )
-    assert (
-        str(response.data["signups"][1][0])
-        == "Registration doesn't have signup with id not-exist2."
-    )
+    assert response.data["signups"][0].code == "incorrect_type"
 
 
 @pytest.mark.django_db

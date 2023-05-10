@@ -282,16 +282,9 @@ class RegistrationViewSet(
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
 
-        # Get validated signup_ids from serializer.validated_data
-        signup_ids = serializer.validated_data.get("signups", None)
-
-        # Send message to defined signups if signups attribute is defined
-        # By default send message to all signups
-        if signup_ids:
-            signups = registration.signups.filter(pk__in=[i for i in signup_ids])
-        else:
-            signups = registration.signups.all()
-        signups.exclude(email=None)
+        signups = serializer.validated_data.get(
+            "signups", registration.signups.exclude(email=None)
+        )
 
         messages = []
         body = serializer.validated_data["body"]
