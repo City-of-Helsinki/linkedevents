@@ -20,13 +20,7 @@ from events.api import (
     UserDataSourceAndOrganizationMixin,
 )
 from events.models import Event
-from events.permissions import (
-    DataSourceResourceEditPermission,
-    GuestDelete,
-    GuestGet,
-    GuestPost,
-    GuestPut,
-)
+from events.permissions import DataSourceResourceEditPermission
 from linkedevents.registry import register_view
 from registrations.exceptions import ConflictException
 from registrations.models import Registration, SeatReservationCode, SignUp
@@ -95,7 +89,7 @@ class RegistrationViewSet(
 
         return registrations
 
-    @action(methods=["post"], detail=True, permission_classes=[GuestPost])
+    @action(methods=["post"], detail=True, permission_classes=[])
     def reserve_seats(self, request, pk=None, version=None):
         def none_to_unlim(val):
             # Null value in the waiting_list_capacity or maximum_attendee_capacity
@@ -225,9 +219,7 @@ class RegistrationViewSet(
 
     @signup_list.mapping.post
     def create_signup(self, request, pk=None, version=None):
-        registration = self.registration_get(pk=pk)
-        self.permission_classes = [GuestPost]
-        self.check_object_permissions(self.request, registration)
+        self.registration_get(pk=pk)
 
         attending = []
         waitlisted = []
@@ -300,9 +292,6 @@ class RegistrationViewSet(
 
         # Anonymous users can get signup by cancellation_code
         if isinstance(user, AnonymousUser):
-            self.permission_classes = [GuestGet]
-            self.check_object_permissions(self.request, registration)
-
             signup = self.get_signup_by_code(self.request, registration, signup_pk)
         else:
             # Only admin users are allowed to get signup details
@@ -319,9 +308,6 @@ class RegistrationViewSet(
         registration = self.registration_get(pk=pk)
         # Anonymous users can delete signup by cancellation_code
         if isinstance(user, AnonymousUser):
-            self.permission_classes = [GuestDelete]
-            self.check_object_permissions(self.request, registration)
-
             signup = self.get_signup_by_code(self.request, registration, signup_pk)
         else:
             # Only admin users are allowed to delete the signup
@@ -351,9 +337,6 @@ class RegistrationViewSet(
         registration = self.registration_get(pk=pk)
 
         if isinstance(user, AnonymousUser):
-            self.permission_classes = [GuestPut]
-            self.check_object_permissions(self.request, registration)
-
             signup = self.get_signup_by_code(self.request, registration, signup_pk)
         else:
             # Only admin users are allowed to delete the signup
