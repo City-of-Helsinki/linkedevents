@@ -28,7 +28,7 @@ def assert_send_message(
         assert mail.outbox[idx].body == send_message_data["body"]
         assert mail.outbox[idx].from_email == settings.SUPPORT_EMAIL
         assert [email] in valid_emails
-    
+
     return response
 
 
@@ -72,17 +72,19 @@ def test_required_fields_has_to_be_filled(
 
 @pytest.mark.django_db
 def test_send_message_to_selected_signups(
-    api_client, registration, signup, signup2, user
+    api_client, registration, signup, signup2, signup3, user
 ):
     api_client.force_authenticate(user)
     send_message_data = {
         "subject": "Message subject",
         "body": "Message body",
-        "signups": [signup.id],
+        "signups": [signup.id, signup3.id],
     }
 
-    response = assert_send_message(api_client, registration.id, send_message_data, [signup.email])
-    assert response.data["signups"] == [signup.id]
+    response = assert_send_message(
+        api_client, registration.id, send_message_data, [signup.email, signup3.email]
+    )
+    assert response.data["signups"] == [signup.id, signup3.id]
 
 
 @pytest.mark.django_db
