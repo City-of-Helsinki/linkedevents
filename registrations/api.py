@@ -326,9 +326,9 @@ class RegistrationViewSet(
 
         return Response(
             {
-                "emails": [su.email for su in signups],
                 "html_message": cleaned_body,
                 "message": plain_text_body,
+                "signups": [su.id for su in signups],
                 "subject": subject,
             },
             status=status.HTTP_200_OK,

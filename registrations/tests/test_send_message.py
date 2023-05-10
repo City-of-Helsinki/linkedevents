@@ -28,6 +28,8 @@ def assert_send_message(
         assert mail.outbox[idx].body == send_message_data["body"]
         assert mail.outbox[idx].from_email == settings.SUPPORT_EMAIL
         assert [email] in valid_emails
+    
+    return response
 
 
 @pytest.mark.django_db
@@ -79,7 +81,8 @@ def test_send_message_to_selected_signups(
         "signups": [signup.id],
     }
 
-    assert_send_message(api_client, registration.id, send_message_data, [signup.email])
+    response = assert_send_message(api_client, registration.id, send_message_data, [signup.email])
+    assert response.data["signups"] == [signup.id]
 
 
 @pytest.mark.django_db
