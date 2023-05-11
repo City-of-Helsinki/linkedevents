@@ -578,6 +578,14 @@ def test_event_status_filter(
     get_list_and_assert_events("event_status=eventrescheduled", [event2])
     get_list_and_assert_events("event_status=eventcancelled", [event3])
     get_list_and_assert_events("event_status=eventpostponed", [event4])
+    get_list_and_assert_events(
+        "event_status=eventscheduled,eventpostponed",
+        [event, event4],
+    )
+    get_list_and_assert_events(
+        "event_status=eventscheduled,eventrescheduled,eventcancelled,eventpostponed",
+        [event, event2, event3, event4],
+    )
 
 
 @pytest.mark.django_db
