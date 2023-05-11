@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import pytz
 from django.contrib.auth.models import AnonymousUser
@@ -181,6 +181,55 @@ class RegistrationBaseSerializer(serializers.ModelSerializer):
     class Meta:
         fields = "__all__"
         model = Registration
+
+
+class CreateSignUpsSerializer(serializers.Serializer):
+    reservation_code = serializers.CharField()
+    registration = serializers.PrimaryKeyRelatedField(
+        queryset=Registration.objects.all(),
+        many=False,
+        required=True,
+    )
+    signups = SignUpSerializer(many=True, required=True)
+
+    def validate(self, data):
+        reservation_code = data["reservation_code"]
+        registration = data["registration"]
+
+        try:
+            reservation = SeatReservationCode.objects.get(code=reservation_code)
+            data["reservation"] = reservation
+        except SeatReservationCode.DoesNotExist:
+            raise serializers.ValidationError(
+                {
+                    "reservation_code": _(
+                        "Reservation code {code} doesn't exist."
+                    ).format(code=reservation_code)
+                }
+            )
+        if reservation.registration != registration:
+            raise serializers.ValidationError(
+                {
+                    "reservation_code": _(
+                        "Registration code doesn't match the registration"
+                    )
+                }
+            )
+
+        expiration = reservation.timestamp + timedelta(
+            minutes=code_validity_duration(reservation.seats)
+        )
+        if datetime.now().astimezone(pytz.utc) > expiration:
+            raise serializers.ValidationError(
+                {"reservation_code": "Reservation code has expired."}
+            )
+
+        if len(data["signups"]) > reservation.seats:
+            raise serializers.ValidationError(
+                {"signups": "Number of signups exceeds the number of requested seats"}
+            )
+        data = super().validate(data)
+        return data
 
 
 class SeatReservationCodeSerializer(serializers.ModelSerializer):

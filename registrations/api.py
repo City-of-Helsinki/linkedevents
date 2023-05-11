@@ -24,8 +24,12 @@ from events.permissions import DataSourceResourceEditPermission
 from linkedevents.registry import register_view
 from registrations.exceptions import ConflictException
 from registrations.models import Registration, SeatReservationCode, SignUp
-from registrations.serializers import SeatReservationCodeSerializer, SignUpSerializer
-from registrations.utils import code_validity_duration
+from registrations.permissions import SignUpPermission
+from registrations.serializers import (
+    CreateSignUpsSerializer,
+    SeatReservationCodeSerializer,
+    SignUpSerializer,
+)
 
 
 class RegistrationViewSet(
@@ -148,121 +152,41 @@ class RegistrationViewSet(
         except (ValueError, Registration.DoesNotExist):
             raise NotFound(detail=f"Registration {pk} doesn't exist.")
 
-    def registration_signup_get(self, registration, signup_pk):
-        try:
-            return registration.signups.get(pk=signup_pk)
-        except (ValueError, SignUp.DoesNotExist):
-            raise NotFound()
 
-    def get_signup_by_code(self, request, registration, signup_pk):
-        code = request.GET.get("cancellation_code", None)
-        if not code:
-            raise DRFPermissionDenied(
-                _("cancellation_code parameter has to be provided")
-            )
-        try:
-            UUID(code)
-        except ValueError:
-            raise DRFPermissionDenied(_("Malformed UUID."))
+register_view(RegistrationViewSet, "registration")
 
-        try:
-            return registration.signups.get(pk=signup_pk, cancellation_code=code)
-        except SignUp.DoesNotExist:
-            raise DRFPermissionDenied(_("Cancellation code did not match any signup"))
 
-    def check_signup_get_permissions(self, request, registration):
-        if isinstance(request.user, AnonymousUser):
-            raise NotAuthenticated()
-        if not registration.can_be_edited_by(request.user):
-            raise DRFPermissionDenied()
+class SignUpViewSet(
+    UserDataSourceAndOrganizationMixin,
+    JSONAPIViewMixin,
+    mixins.RetrieveModelMixin,
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+):
+    serializer_class = SignUpSerializer
+    queryset = SignUp.objects.all()
 
-    @action(
-        methods=["get"],
-        detail=True,
-        url_path="signup",
-        permission_classes=[],
-    )
-    def signup_list(self, request, pk=None, version=None):
-        registration = self.registration_get(pk=pk)
-        self.permission_classes = [DataSourceResourceEditPermission]
-        # Only admin users are allowed to get signup list
-        self.check_signup_get_permissions(request, registration)
+    permission_classes = [
+        SignUpPermission,
+    ]
 
-        signups = registration.signups.all()
-
-        val = request.query_params.get("text", None)
-        if val:
-            signups = signups.filter(
-                Q(name__icontains=val)
-                | Q(email__icontains=val)
-                | Q(extra_info__icontains=val)
-                | Q(membership_number__icontains=val)
-                | Q(phone_number__icontains=val)
-            )
-
-        val = request.query_params.get("attendee_status", None)
-        if val:
-            vals = val.lower().split(",")
-            statuses = {k[1].lower(): k[0] for k in SignUp.ATTENDEE_STATUSES}
-
-            for v in vals:
-                if v not in statuses:
-                    raise ParseError(
-                        _(
-                            "attendee_status can take following values: {statuses}, not {val}"
-                        ).format(statuses=", ".join(statuses.keys()), val=val)
-                    )
-
-            signups = signups.filter(attendee_status__in=vals)
-
-        return Response(SignUpSerializer(signups, many=True).data)
-
-    @signup_list.mapping.post
-    def create_signup(self, request, pk=None, version=None):
-        self.registration_get(pk=pk)
+    def create(self, request, *args, **kwargs):
+        data = request.data
+        registration = data.get("registration", None)
+        if registration:
+            for i in data["signups"]:
+                i["registration"] = registration
+        serializer = CreateSignUpsSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
 
         attending = []
         waitlisted = []
-        if "reservation_code" not in request.data.keys():
-            raise serializers.ValidationError(
-                {"reservation_code": "Reservation code is missing"}
-            )
 
-        try:
-            reservation = SeatReservationCode.objects.get(
-                code=request.data["reservation_code"]
-            )
-        except SeatReservationCode.DoesNotExist:
-            msg = f"Reservation code {request.data['reservation_code']} doesn't exist."
-            raise NotFound(detail=msg, code=404)
-
-        if str(reservation.registration.id) != pk:
-            msg = f"Registration code {request.data['reservation_code']} doesn't match the registration {pk}"
-            raise serializers.ValidationError({"reservation_code": msg})
-
-        if len(request.data["signups"]) > reservation.seats:
-            raise serializers.ValidationError(
-                {"signups": "Number of signups exceeds the number of requested seats"}
-            )
-
-        expiration = reservation.timestamp + timedelta(
-            minutes=code_validity_duration(reservation.seats)
-        )
-        if datetime.now().astimezone(pytz.utc) > expiration:
-            raise serializers.ValidationError(
-                {"reservation_code": "Reservation code has expired."}
-            )
-
-        for i in request.data["signups"]:
-            i["registration"] = pk
-
-        # First check that all the signups are valid and then actually create them
-        for i in request.data["signups"]:
-            serializer = SignUpSerializer(data=i)
-            if not serializer.is_valid():
-                raise serializers.ValidationError(serializer.errors)
-
-        for i in request.data["signups"]:
+        # Create SignUps and add persons to correct list
+        for i in data["signups"]:
             signup = SignUpSerializer(data=i, many=False)
             signup.is_valid()
             signee = signup.create(validated_data=signup.validated_data)
@@ -271,85 +195,83 @@ class RegistrationViewSet(
                 attending.append(SignUpSerializer(signee, many=False).data)
             else:
                 waitlisted.append(SignUpSerializer(signee, many=False).data)
-        reservation.delete()
         data = {
             "attending": {"count": len(attending), "people": attending},
             "waitlisted": {"count": len(waitlisted), "people": waitlisted},
         }
 
+        # Delete reservation
+        reservation = serializer.validated_data["reservation"]
+        reservation.delete()
+
         return Response(data, status=status.HTTP_201_CREATED)
 
-    # Endpoint to get a single signup
-    @action(
-        methods=["get"],
-        url_path=r"signup/(?P<signup_pk>\w+)",
-        detail=True,
-        permission_classes=[],
-    )
-    def signup_detail(self, request, pk=None, signup_pk=None, *args, **kwargs):
-        user = request.user
-        registration = self.registration_get(pk=pk)
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        registration = instance.registration
 
-        # Anonymous users can get signup by cancellation_code
-        if isinstance(user, AnonymousUser):
-            signup = self.get_signup_by_code(self.request, registration, signup_pk)
-        else:
-            # Only admin users are allowed to get signup details
-            self.permission_classes = [DataSourceResourceEditPermission]
-            self.check_signup_get_permissions(request, registration)
-
-            signup = self.registration_signup_get(registration, signup_pk)
-
-        return Response(SignUpSerializer(signup).data)
-
-    @signup_detail.mapping.delete
-    def delete_signup(self, request, pk=None, signup_pk=None, *args, **kwargs):
-        user = request.user
-        registration = self.registration_get(pk=pk)
-        # Anonymous users can delete signup by cancellation_code
-        if isinstance(user, AnonymousUser):
-            signup = self.get_signup_by_code(self.request, registration, signup_pk)
-        else:
-            # Only admin users are allowed to delete the signup
-            self.permission_classes = [DataSourceResourceEditPermission]
-            self.check_object_permissions(self.request, registration)
-
-            signup = self.registration_signup_get(registration, signup_pk)
-
-        # Send notification to inform that signup is deleted and delete the signup
-        signup.send_notification("cancellation")
-        signup.delete()
+        response = super().destroy(request, *args, **kwargs)
 
         # Move first signup from waitlist to attending list
         waitlisted = registration.signups.filter(
-            registration=signup.registration,
             attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
         ).order_by("id")
         if len(waitlisted) > 0:
             first_on_list = waitlisted[0]
             first_on_list.attendee_status = SignUp.AttendeeStatus.ATTENDING
             first_on_list.save()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return response
 
-    @signup_detail.mapping.put
-    def update_signup(self, request, pk=None, signup_pk=None, *args, **kwargs):
+    def filter_queryset(self, queryset):
+        request = self.request
         user = request.user
-        registration = self.registration_get(pk=pk)
 
-        if isinstance(user, AnonymousUser):
-            signup = self.get_signup_by_code(self.request, registration, signup_pk)
-        else:
-            # Only admin users are allowed to delete the signup
-            self.permission_classes = [DataSourceResourceEditPermission]
-            self.check_object_permissions(self.request, registration)
+        if registration_param := request.query_params.get("registration", None):
+            registrations = []
+            for pk in registration_param.split(","):
+                try:
+                    registration = Registration.objects.get(pk=pk)
+                except (ValueError, Registration.DoesNotExist):
+                    raise ParseError(
+                        _("Registration with id {pk} doesn't exist.").format(pk=pk)
+                    )
 
-            signup = self.registration_signup_get(registration, signup_pk)
+            if not user.is_admin(registration.publisher):
+                raise DRFPermissionDenied(
+                    _(
+                        "Only the admins of the organization {organization} have access rights."
+                    ).format(organization=registration.publisher)
+                )
 
-        serializer = SignUpSerializer(signup, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
+            registrations.append(registration)
+            queryset = queryset.filter(registration__in=registrations)
+        elif self.action == "list":
+            raise ParseError(_("Supply registration ids with 'registration='"))
 
-        return Response(serializer.data)
+        if text_param := request.query_params.get("text", None):
+            queryset = queryset.filter(
+                Q(name__icontains=text_param)
+                | Q(email__icontains=text_param)
+                | Q(extra_info__icontains=text_param)
+                | Q(membership_number__icontains=text_param)
+                | Q(phone_number__icontains=text_param)
+            )
+
+        if status_param := request.query_params.get("attendee_status", None):
+            vals = status_param.lower().split(",")
+            statuses = {k[1].lower(): k[0] for k in SignUp.ATTENDEE_STATUSES}
+
+            for v in vals:
+                if v not in statuses:
+                    raise ParseError(
+                        _(
+                            "attendee_status can take following values: {statuses}, not {val}"
+                        ).format(statuses=", ".join(statuses.keys()), val=status_param)
+                    )
+
+            queryset = queryset.filter(attendee_status__in=vals)
+
+        return queryset
 
 
-register_view(RegistrationViewSet, "registration")
+register_view(SignUpViewSet, "signup")
