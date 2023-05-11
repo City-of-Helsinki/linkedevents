@@ -82,6 +82,8 @@ def assert_event_fields_exist(data, version="v1"):
         "minimum_attendee_capacity",
         "enrolment_end_time",
         "registration",
+        "environment",
+        "environmental_certificate",
     )
     if version == "v0.1":
         fields += (
@@ -1144,5 +1146,5 @@ def test_get_event_list_verify_registration_filter(
     event2.save()
     event3.registration = None
     event3.save()
-    get_list_and_assert_events(f"registration=true", [event, event2])
-    get_list_and_assert_events(f"registration=false", [event3])
+    get_list_and_assert_events("registration=true", [event, event2])
+    get_list_and_assert_events("registration=false", [event3])

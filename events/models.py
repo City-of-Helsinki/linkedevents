@@ -765,6 +765,34 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
         (TypeId.VOLUNTEERING, _("Volunteering")),
     )
 
+    class EventEnvironment(models.TextChoices):
+        OUTDOORS = "out", _("Outdoors")
+        INDOORS = "in", _("Indoors")
+
+    # External user fields
+    user_name = models.CharField(
+        verbose_name=_("User name"), max_length=50, blank=True, null=True
+    )
+    user_email = models.EmailField(verbose_name=_("User e-mail"), blank=True, null=True)
+    user_phone_number = models.CharField(
+        verbose_name=_("User phone number"),
+        max_length=18,
+        blank=True,
+        null=True,
+    )
+    user_organization = models.CharField(
+        verbose_name=_("User organization"),
+        help_text=_("Event organizer information."),
+        max_length=255,
+        blank=True,
+        null=True,
+    )
+    user_consent = models.BooleanField(
+        verbose_name=_("User consent"),
+        help_text=_("I consent to the processing of my personal data?"),
+        default=False,
+    )
+
     # Properties from schema.org/Thing
     info_url = models.URLField(
         verbose_name=_("Event home page"), blank=True, null=True, max_length=1000
@@ -802,6 +830,12 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
         on_delete=models.PROTECT,
         related_name="published_events",
     )
+    environmental_certificate = models.CharField(
+        verbose_name=_("Environmental certificate"),
+        max_length=255,
+        blank=True,
+        null=True,
+    )
 
     # Status of the event itself
     event_status = models.SmallIntegerField(
@@ -822,6 +856,14 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
     )
     location_extra_info = models.CharField(
         verbose_name=_("Location extra info"), max_length=400, null=True, blank=True
+    )
+    environment = models.CharField(
+        verbose_name=_("Event environment"),
+        help_text=_("Will the event be held outdoors?"),
+        max_length=3,
+        choices=EventEnvironment.choices,
+        blank=True,
+        null=True,
     )
 
     start_time = models.DateTimeField(
