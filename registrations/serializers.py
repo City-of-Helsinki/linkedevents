@@ -164,3 +164,19 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
 
     def get_expiration(self, obj):
         return obj.timestamp + timedelta(minutes=code_validity_duration(obj.seats))
+
+
+class MassEmailSignupsField(serializers.PrimaryKeyRelatedField):
+    def get_queryset(self):
+        registration = self.context["request"].data["registration"]
+
+        return registration.signups.exclude(email=None)
+
+
+class MassEmailSerializer(serializers.Serializer):
+    subject = serializers.CharField()
+    body = serializers.CharField()
+    signups = MassEmailSignupsField(
+        many=True,
+        required=False,
+    )
