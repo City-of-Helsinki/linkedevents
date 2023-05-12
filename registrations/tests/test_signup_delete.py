@@ -1,12 +1,9 @@
 import pytest
+from django.core import mail
 from rest_framework import status
 
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import SignUp
-from registrations.tests.test_registration_post import (
-    assert_create_registration,
-    get_event_url,
-)
 from registrations.tests.test_signup_post import assert_create_signup
 
 # === util methods ===
@@ -86,6 +83,17 @@ def test__admin_can_delete_signup(api_client, registration, signup, user):
     api_client.force_authenticate(user)
 
     assert_delete_signup(api_client, signup.id)
+
+
+@pytest.mark.django_db
+def test_email_sent_on_successful_signup_deletion(
+    api_client, registration, signup, user
+):
+    api_client.force_authenticate(user)
+
+    assert_delete_signup(api_client, signup.id)
+    #  assert that the email was sent
+    assert len(mail.outbox) == 1
 
 
 @pytest.mark.django_db

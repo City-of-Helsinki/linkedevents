@@ -280,6 +280,7 @@ class SignUpViewSet(
         instance = self.get_object()
         registration = instance.registration
 
+        instance.send_notification("cancellation")
         response = super().destroy(request, *args, **kwargs)
 
         # Move first signup from waitlist to attending list
