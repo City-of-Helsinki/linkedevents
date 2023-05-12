@@ -23,9 +23,9 @@ from django.contrib.gis.measure import D
 from django.contrib.postgres.search import SearchQuery, TrigramSimilarity
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
 from django.db.models import Count, F, Prefetch, Q
 from django.db.models.functions import Greatest
-from django.db.transaction import atomic
 from django.db.utils import IntegrityError
 from django.http import Http404, HttpResponsePermanentRedirect
 from django.urls import NoReverseMatch
@@ -3155,9 +3155,9 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
             queryset = queryset.exclude(offers__is_free=True)
 
     val = params.get("suitable_for", None)
-    """ Excludes all the events that have max age limit below or min age limit above the age or age range specified.
-    Suitable events with just one age boundary specified are returned, events with no age limits specified are
-    excluded. """
+    # Excludes all the events that have max age limit below or min age limit above the age or age range specified.
+    # Suitable events with just one age boundary specified are returned, events with no age limits specified are
+    # excluded.
 
     if val:
         vals = val.split(",")
@@ -3451,7 +3451,7 @@ class EventViewSet(
         # For bulk update, the editable queryset is filtered in filter_queryset
         # method
 
-        # Prevent changing existing events to a state that user doe snot have write permissions
+        # Prevent changing existing events to a state that user does not have write permissions
         for event_data in serializer.validated_data:
             _, org = self.user_data_source_and_organization
             if "publisher" in event_data:
@@ -3470,7 +3470,7 @@ class EventViewSet(
             raise DRFPermissionDenied()
         super().perform_update(serializer)
 
-    @atomic
+    @transaction.atomic
     def bulk_update(self, request, *args, **kwargs):
         if not isinstance(request.data, list):
             raise DRFPermissionDenied(
@@ -3500,7 +3500,7 @@ class EventViewSet(
         self.perform_bulk_update(serializer)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @atomic
+    @transaction.atomic
     def create(self, request, *args, **kwargs):
         context = self.get_serializer_context()
         (
@@ -3586,7 +3586,7 @@ class EventViewSet(
 
         super().perform_create(serializer)
 
-    @atomic
+    @transaction.atomic
     def destroy(self, request, *args, **kwargs):
         return super().destroy(request, *args, **kwargs)
 

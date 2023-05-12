@@ -1,11 +1,15 @@
+import logging
 from datetime import datetime, timedelta
+from smtplib import SMTPException
 from uuid import UUID
 
+import bleach
 import pytz
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.gis.db import models
 from django.db.models import ProtectedError, Q, Sum
+from django.template.loader import render_to_string
 from django.utils.translation import gettext as _
 from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action
@@ -27,9 +31,13 @@ from registrations.models import Registration, SeatReservationCode, SignUp
 from registrations.permissions import SignUpPermission
 from registrations.serializers import (
     CreateSignUpsSerializer,
+    MassEmailSerializer,
     SeatReservationCodeSerializer,
     SignUpSerializer,
 )
+from registrations.utils import send_mass_html_mail
+
+logger = logging.getLogger(__name__)
 
 
 class RegistrationViewSet(
@@ -93,6 +101,19 @@ class RegistrationViewSet(
 
         return registrations
 
+      
+    def get_serializer_class(self):
+        if self.action == "send_message":
+            return MassEmailSerializer
+        return super().get_serializer_class()
+
+    def registration_get(self, pk):
+        try:
+            return Registration.objects.get(pk=pk)
+        except (ValueError, Registration.DoesNotExist):
+            raise NotFound(detail=f"Registration {pk} doesn't exist.")
+       
+      
     @action(methods=["post"], detail=True, permission_classes=[])
     def reserve_seats(self, request, pk=None, version=None):
         def none_to_unlim(val):
@@ -146,12 +167,73 @@ class RegistrationViewSet(
 
             return Response(data, status=status.HTTP_201_CREATED)
 
-    def registration_get(self, pk):
-        try:
-            return Registration.objects.get(pk=pk)
-        except (ValueError, Registration.DoesNotExist):
-            raise NotFound(detail=f"Registration {pk} doesn't exist.")
+          
+    @action(
+        methods=["post"],
+        detail=True,
+        permission_classes=[DataSourceResourceEditPermission],
+    )
+    def send_message(self, request, pk=None, version=None):
+        registration = self.get_object()
 
+        data = request.data
+        data["registration"] = registration
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+
+        signups = serializer.validated_data.get(
+            "signups", registration.signups.exclude(email=None)
+        )
+
+        messages = []
+        body = serializer.validated_data["body"]
+        subject = serializer.validated_data["subject"]
+        cleaned_body = bleach.clean(
+            body.replace("\n", "<br>"), settings.BLEACH_ALLOWED_TAGS
+        )
+        plain_text_body = bleach.clean(body, strip=True)
+
+        # Email contains a link to a signup so make personal email for each signup
+        for signup in signups:
+            email_variables = {
+                "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
+                "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
+                "body": cleaned_body,
+                "cancellation_code": signup.cancellation_code,
+                "registration_id": registration.id,
+                "signup_id": signup.id,
+            }
+            rendered_body = render_to_string("message_to_signup.html", email_variables)
+            message = (
+                subject,
+                plain_text_body,
+                rendered_body,
+                settings.SUPPORT_EMAIL,
+                [signup.email],
+            )
+            messages.append(message)
+
+        try:
+            send_mass_html_mail(messages, fail_silently=False)
+        except SMTPException as e:
+            logger.exception("Couldn't send mass HTML email.")
+
+            return Response(
+                str(e),
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        return Response(
+            {
+                "html_message": cleaned_body,
+                "message": plain_text_body,
+                "signups": [su.id for su in signups],
+                "subject": subject,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    
 
 register_view(RegistrationViewSet, "registration")
 

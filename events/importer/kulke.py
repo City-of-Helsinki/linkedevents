@@ -322,7 +322,7 @@ class KulkeImporter(Importer):
             "user_editable_resources": True,
             "user_editable_organizations": True,
         }
-        self.system_data_source = DataSource.objects.get_or_create(
+        self.system_data_source, _ = DataSource.objects.get_or_create(
             id=settings.SYSTEM_DATA_SOURCE_ID, defaults=system_data_source_defaults
         )
         defaults = dict(

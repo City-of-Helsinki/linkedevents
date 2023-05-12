@@ -49,7 +49,7 @@ class Command(BaseCommand):
             raise CommandError('keyword "%s" does not exist' % keyword_id)
         return keyword
 
-    @transaction.atomic()
+    @transaction.atomic
     def create_helsinki_topics_keyword_set(self):
         self.stdout.write("creating Helsinki topics keyword set...")
 

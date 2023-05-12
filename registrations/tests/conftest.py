@@ -17,3 +17,11 @@ def signup2(registration):
         registration=registration,
         email="test2@test.com",
     )
+
+
+@pytest.fixture
+def signup3(registration):
+    return SignUp.objects.create(
+        registration=registration,
+        email="test3@test.com",
+    )
