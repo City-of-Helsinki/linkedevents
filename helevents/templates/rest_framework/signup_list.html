@@ -1,0 +1,28 @@
+<div class="panel panel-default">
+    <div class="panel-body">
+        <h2 id="filtering-retrieved-signups">Filtering retrieved signups</h2>
+        <p>Only admin users of the registration publisher organization can search signups.</p>
+        <p>Query parameters can be used to filter the retrieved signups by the following criteria.</p>
+
+        <h3 id="signup-registration">Registration</h3>
+        <p>To find out signups of specific registration, use the query parameter <code>registration</code>.
+        You may separate values by commas if you wish to query for several registrations.</p>
+        <p>Example:</p>
+        <pre><code>signup/?registration=1</code></pre>
+        <p><a href="?registration=1" title="json">See the result</a></p>
+
+        <h3 id="signup-text">Signup text</h3>
+        <p>To find out signups that contain a specific string in name, email, extra_info, membership_number or phone_number fields, 
+        use the query parameter <code>text</code>.</p>
+        <p>Example:</p>
+        <pre><code>signup/?text=shostakovich</code></pre>
+        <p><a href="?signup=shostakovich" title="json">See the result</a></p>
+
+        <h3 id="signup-attendee-status">Attendee status</h4>
+        <p>You may use the query parameter <code>attendee_status</code>, comma separated, to get
+        only signups with specific attendee status.
+        <p>Example:</p>
+        <pre><code>signup/?attendee_status=attending</code></pre>
+        <p><a href="?attendee_status=attending" title="json">See the result</a></p>
+    </div>
+</div>

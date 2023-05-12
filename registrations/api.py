@@ -1,19 +1,17 @@
 import logging
 from datetime import datetime, timedelta
 from smtplib import SMTPException
-from uuid import UUID
 
 import bleach
-import pytz
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.gis.db import models
 from django.db.models import ProtectedError, Q, Sum
 from django.template.loader import render_to_string
 from django.utils.translation import gettext as _
-from rest_framework import mixins, serializers, status, viewsets
+from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import NotAuthenticated, NotFound, ParseError
+from rest_framework.exceptions import NotFound, ParseError
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.response import Response
 
@@ -101,7 +99,6 @@ class RegistrationViewSet(
 
         return registrations
 
-      
     def get_serializer_class(self):
         if self.action == "send_message":
             return MassEmailSerializer
@@ -112,8 +109,7 @@ class RegistrationViewSet(
             return Registration.objects.get(pk=pk)
         except (ValueError, Registration.DoesNotExist):
             raise NotFound(detail=f"Registration {pk} doesn't exist.")
-       
-      
+
     @action(methods=["post"], detail=True, permission_classes=[])
     def reserve_seats(self, request, pk=None, version=None):
         def none_to_unlim(val):
@@ -167,7 +163,6 @@ class RegistrationViewSet(
 
             return Response(data, status=status.HTTP_201_CREATED)
 
-          
     @action(
         methods=["post"],
         detail=True,
@@ -233,20 +228,13 @@ class RegistrationViewSet(
             status=status.HTTP_200_OK,
         )
 
-    
 
 register_view(RegistrationViewSet, "registration")
 
 
 class SignUpViewSet(
     UserDataSourceAndOrganizationMixin,
-    JSONAPIViewMixin,
-    mixins.RetrieveModelMixin,
-    mixins.ListModelMixin,
-    mixins.CreateModelMixin,
-    mixins.UpdateModelMixin,
-    mixins.DestroyModelMixin,
-    viewsets.GenericViewSet,
+    viewsets.ModelViewSet,
 ):
     serializer_class = SignUpSerializer
     queryset = SignUp.objects.all()
@@ -310,6 +298,9 @@ class SignUpViewSet(
 
         if registration_param := request.query_params.get("registration", None):
             registrations = []
+            # Get admin organizations and descendants only once instead of using is_admin method
+            admin_organizations = user.get_admin_organizations_and_descendants()
+
             for pk in registration_param.split(","):
                 try:
                     registration = Registration.objects.get(pk=pk)
@@ -318,17 +309,20 @@ class SignUpViewSet(
                         _("Registration with id {pk} doesn't exist.").format(pk=pk)
                     )
 
-            if not user.is_admin(registration.publisher):
-                raise DRFPermissionDenied(
-                    _(
-                        "Only the admins of the organization {organization} have access rights."
-                    ).format(organization=registration.publisher)
-                )
+                if registration.publisher not in admin_organizations:
+                    raise DRFPermissionDenied(
+                        _(
+                            "Only the admins of the organization {organization} have access rights."
+                        ).format(organization=registration.publisher)
+                    )
 
-            registrations.append(registration)
+                registrations.append(registration)
             queryset = queryset.filter(registration__in=registrations)
         elif self.action == "list":
-            raise ParseError(_("Supply registration ids with 'registration='"))
+            # By default return only signups to which user has admin rights
+            queryset = queryset.filter(
+                registration__event__publisher__in=user.get_admin_organizations_and_descendants()
+            )
 
         if text_param := request.query_params.get("text", None):
             queryset = queryset.filter(

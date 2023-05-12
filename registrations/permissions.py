@@ -11,18 +11,18 @@ class SignUpPermission(DataSourceResourceEditPermission):
         user = request.user
 
         # All users can create SignUps
-        if request.method == "POST":
+        # Check that data exists to hide create form from signup list documentation page
+        if request.method == "POST" and request.data:
             return True
 
         # Anonymous users can modified SignUp by cancellation_code
         if isinstance(user, AnonymousUser) and (request.method in ["DELETE", "PUT"]):
             return True
 
-        # Only users with an organization can get signup list
+        # Only authenticated users can get signup list
         if request.method == "GET" and not view.kwargs.get("pk"):
-            user_data_source, user_organization = view.user_data_source_and_organization
-            if not user_organization:
-                raise PermissionDenied(_("User doesn't belong to any organization"))
+            if isinstance(user, AnonymousUser):
+                return False
 
         return super().has_permission(request, view)
 

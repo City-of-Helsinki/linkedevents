@@ -149,7 +149,7 @@ def test_admin_user_can_get_signup_list(
 @pytest.mark.django_db
 def test_anonymous_user_cannot_get_signup_list(api_client, registration, signup):
     response = get_list(api_client, "")
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.django_db
@@ -165,13 +165,18 @@ def test_regular_user_cannot_get_signup_list(
 
 
 @pytest.mark.django_db
-def test__cannot_get_signup_list_without_registration_param(
+def test__get_all_signups_to_which_user_has_admin_role(
     api_client, registration, signup, signup2, user
 ):
     api_client.force_authenticate(user)
 
-    response = get_list(api_client, "")
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    get_list_and_assert_signups(api_client, "", (signup, signup2))
+
+    user.get_default_organization().regular_users.add(user)
+    user.get_default_organization().admin_users.remove(user)
+    api_client.force_authenticate(user)
+
+    get_list_and_assert_signups(api_client, "", [])
 
 
 @pytest.mark.django_db
@@ -182,6 +187,17 @@ def test__user_from_other_organization_cannot_get_signup_list(
 
     response = get_list(api_client, f"registration={registration.id}")
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test__cannot_get_signups_of_nonexistent_registration(
+    api_client, registration, signup, signup2, user2
+):
+    api_client.force_authenticate(user2)
+
+    response = get_list(api_client, f"registration=not-exist")
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["detail"] == "Registration with id not-exist doesn't exist."
 
 
 @pytest.mark.django_db
@@ -343,23 +359,46 @@ def test_filter_signups(
     signup7 = SignUp.objects.get(pk=response.data["attending"]["people"][0]["id"])
 
     api_client.force_authenticate(user)
-    get_list_and_assert_signups(api_client, f"registration={registration.id}", [signup, signup1, signup2, signup3])
+    get_list_and_assert_signups(
+        api_client,
+        "",
+        [signup, signup1, signup2, signup3],
+    )
+    get_list_and_assert_signups(
+        api_client,
+        f"registration={registration.id}",
+        [signup, signup1, signup2, signup3],
+    )
 
     api_client.force_authenticate(user2)
-    get_list_and_assert_signups(api_client, f"registration={registration2.id}", [signup4, signup5, signup6, signup7])
-
-    #  cannot get signups without registration id
-    api_client.force_authenticate(user2)
-    response = get_list(api_client, "")
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    get_list_and_assert_signups(
+        api_client,
+        "",
+        [signup4, signup5, signup6, signup7],
+    )
+    get_list_and_assert_signups(
+        api_client,
+        f"registration={registration2.id}",
+        [signup4, signup5, signup6, signup7],
+    )
 
     #  search signups by name
-    get_list_and_assert_signups(api_client, f"registration={registration2.id}&text=mickey", [signup7])
+    get_list_and_assert_signups(
+        api_client, f"registration={registration2.id}&text=mickey", [signup7]
+    )
 
     #  search signups by membership number
-    get_list_and_assert_signups(api_client, f"registration={registration2.id}&text=34", [signup6, signup7])
-    get_list_and_assert_signups(api_client, f"registration={registration2.id}&text=3456", [signup7])
+    get_list_and_assert_signups(
+        api_client, f"registration={registration2.id}&text=34", [signup6, signup7]
+    )
+    get_list_and_assert_signups(
+        api_client, f"registration={registration2.id}&text=3456", [signup7]
+    )
 
     #  search signups by extra_info
-    get_list_and_assert_signups(api_client, f"registration={registration2.id}&text=cd", [signup4, signup5])
-    get_list_and_assert_signups(api_client, f"registration={registration2.id}&text=abcd", [signup5])
+    get_list_and_assert_signups(
+        api_client, f"registration={registration2.id}&text=cd", [signup4, signup5]
+    )
+    get_list_and_assert_signups(
+        api_client, f"registration={registration2.id}&text=abcd", [signup5]
+    )
