@@ -1906,6 +1906,23 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
 
 
 class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer):
+    view_name = "event-detail"
+    fields_needed_to_publish = (
+        "keywords",
+        "location",
+        "start_time",
+        "short_description",
+        "description",
+    )
+    # Personal information fields to exclude from the public API.
+    personal_information_fields = (
+        "user_name",
+        "user_email",
+        "user_phone_number",
+        "user_organization",
+        "user_consent",
+    )
+
     id = serializers.CharField(required=False)
     location = JSONLDRelatedField(
         serializer=PlaceSerializer,
@@ -1982,14 +1999,6 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
         required=False,
     )
 
-    view_name = "event-detail"
-    fields_needed_to_publish = (
-        "keywords",
-        "location",
-        "start_time",
-        "short_description",
-        "description",
-    )
     created_time = DateTimeField(
         default_timezone=pytz.UTC, required=False, allow_null=True
     )
@@ -2324,6 +2333,22 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
                 del ret[key]
             ret["name"] = utils.get_deleted_object_name()
             return ret
+
+        # Remove personal information fields from public API
+        user = self.context["request"].user
+        if (
+            not settings.ENABLE_EXTERNAL_USER_EVENT_CREATE
+            or not (
+                user.is_authenticated
+                and (
+                    user.is_regular_user(obj.publisher) or user.is_admin(obj.publisher)
+                )
+            )
+            and obj.created_by != user
+        ):
+            for field in self.personal_information_fields:
+                if field in ret:
+                    del ret[field]
 
         if self.context["request"].accepted_renderer.format == "docx":
             ret["end_time_obj"] = obj.end_time
