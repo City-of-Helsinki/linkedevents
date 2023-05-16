@@ -4,13 +4,13 @@ import uuid
 import pytest
 from django.test import RequestFactory, TestCase
 from django_orghierarchy.models import Organization
+from helusers.oidc import ApiTokenAuthentication
 from helusers.settings import api_token_auth_settings
 from jose import jwt
 
 from events.models import DataSource
-from helevents.tests.factories import UserFactory
 
-from ..auth import ApiKeyUser, LinkedEventsApiOidcAuthentication
+from ..auth import ApiKeyUser
 from .keys import rsa_key
 
 DEFAULT_ORGANIZATION_ID = "others"
@@ -66,7 +66,7 @@ def get_api_token_for_user_with_scopes(user_uuid, scopes: list):
 
 
 def do_authentication(user_uuid):
-    auth = LinkedEventsApiOidcAuthentication()
+    auth = ApiTokenAuthentication()
 
     auth_header = get_api_token_for_user_with_scopes(
         user_uuid, [api_token_auth_settings.API_SCOPE_PREFIX]
@@ -122,80 +122,3 @@ def test_valid_jwt_is_accepted():
     user_uuid = uuid.UUID("b7a35517-eb1f-46c9-88bf-3206fb659c3c")
     user, jwt_value = do_authentication(user_uuid)
     assert user.uuid == user_uuid
-
-
-@pytest.mark.parametrize("default_organisation", ["default", "existing"])
-@pytest.mark.django_db
-def test_authentication_adds_user_to_default_organization(
-    settings, default_organisation, organization
-):
-    """Configured default organization is set for users upon authentication."""
-    user = UserFactory()
-    settings.ENABLE_USER_DEFAULT_ORGANIZATION = True
-
-    if default_organisation == "default":
-        settings.USER_DEFAULT_ORGANIZATION_ID = DEFAULT_ORGANIZATION_ID
-        expected_org_id = DEFAULT_ORGANIZATION_ID
-    else:
-        settings.USER_DEFAULT_ORGANIZATION_ID = organization.id
-        expected_org_id = organization.id
-
-    logged_user, jwt_value = do_authentication(user.uuid)
-
-    assert logged_user.organization_memberships.count() == 1
-    set_org = logged_user.organization_memberships.first()
-    assert set_org.id == expected_org_id
-
-
-@pytest.mark.django_db
-def test_authentication_unset_default_organization(settings):
-    """Default organization is not set for users, if the setting is empty."""
-    settings.ENABLE_USER_DEFAULT_ORGANIZATION = True
-    settings.USER_DEFAULT_ORGANIZATION_ID = ""
-    user = UserFactory()
-
-    logged_user, jwt_value = do_authentication(user.uuid)
-
-    assert Organization.objects.filter(id=DEFAULT_ORGANIZATION_ID).count() == 0
-    assert logged_user.organization_memberships.count() == 0
-
-
-@pytest.mark.django_db
-def test_authentication_default_organization_not_assigned_when_user_has_organization(
-    settings, organization
-):
-    """Default organization is not set for users, which already have an organization."""
-    settings.ENABLE_USER_DEFAULT_ORGANIZATION = True
-    settings.USER_DEFAULT_ORGANIZATION_ID = DEFAULT_ORGANIZATION_ID
-    user = UserFactory()
-    user.organization_memberships.add(organization)
-
-    logged_user, jwt_value = do_authentication(user.uuid)
-
-    assert logged_user.organization_memberships.count() == 1
-    set_org = logged_user.organization_memberships.first()
-    assert set_org.id == organization.id
-
-
-@pytest.mark.parametrize("enable_default", [True, False])
-@pytest.mark.django_db
-def test_authentication_default_organization_created_if_needed(
-    enable_default, settings
-):
-    user = UserFactory()
-    settings.ENABLE_USER_DEFAULT_ORGANIZATION = enable_default
-    settings.USER_DEFAULT_ORGANIZATION_ID = DEFAULT_ORGANIZATION_ID
-
-    # Default organization doesn't exist
-    assert Organization.objects.filter(id=DEFAULT_ORGANIZATION_ID).count() == 0
-    assert user.organization_memberships.count() == 0
-
-    user, jwt_value = do_authentication(user.uuid)
-
-    if enable_default:
-        assert user.organization_memberships.count() == 1
-        set_org = user.organization_memberships.first()
-        assert set_org.id == DEFAULT_ORGANIZATION_ID
-    else:
-        assert Organization.objects.filter(id=DEFAULT_ORGANIZATION_ID).count() == 0
-        assert user.organization_memberships.count() == 0
