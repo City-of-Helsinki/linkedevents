@@ -54,7 +54,6 @@ env = environ.Env(
     DEBUG=(bool, False),
     ELASTICSEARCH_URL=(str, None),
     ENABLE_REGISTRATION_ENDPOINTS=(bool, False),
-    ENABLE_USER_DEFAULT_ORGANIZATION=(bool, False),
     EXTRA_INSTALLED_APPS=(list, []),
     INSTANCE_NAME=(str, "Linked Events"),
     INTERNAL_IPS=(list, []),
@@ -294,8 +293,6 @@ LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
 ACCOUNT_LOGOUT_ON_GET = True
 
-# User will be assigned to a default organization if user doesn't have any
-ENABLE_USER_DEFAULT_ORGANIZATION = env("ENABLE_USER_DEFAULT_ORGANIZATION")
 # Default organization to which a user will be assigned if user doesn't
 # have any organization. Default organization is created if it doesn't exist.
 USER_DEFAULT_ORGANIZATION_ID = env("USER_DEFAULT_ORGANIZATION_ID")
@@ -324,7 +321,7 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "events.auth.ApiKeyAuthentication",
-        "events.auth.LinkedEventsApiOidcAuthentication",
+        "helusers.oidc.ApiTokenAuthentication",
     ),
     "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.URLPathVersioning",
     "VIEW_NAME_FUNCTION": "linkedevents.utils.get_view_name",
