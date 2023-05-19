@@ -3,10 +3,9 @@ from unittest.mock import MagicMock
 from django.test import TestCase
 from django_orghierarchy.models import Organization
 
-from helevents.models import User
+from helevents.models import User, UserModelPermissionMixin
 
 from ..models import DataSource, Event, PublicationStatus
-from ..permissions import UserModelPermissionMixin
 
 
 class TestUserModelPermissionMixin(TestCase):
