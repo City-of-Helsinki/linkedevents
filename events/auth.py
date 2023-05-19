@@ -5,8 +5,7 @@ from django_orghierarchy.models import Organization
 from rest_framework import authentication, exceptions
 
 from events.models import DataSource
-
-from .permissions import UserModelPermissionMixin
+from helevents.models import UserModelPermissionMixin
 
 
 class ApiKeyAuthentication(authentication.BaseAuthentication):

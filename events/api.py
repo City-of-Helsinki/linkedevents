@@ -172,35 +172,7 @@ class UserDataSourceAndOrganizationMixin:
 
     @cached_property
     def user_data_source_and_organization(self):
-        request = self.request
-        # api_key takes precedence over user
-        if isinstance(request.auth, ApiKeyAuth):
-            data_source = request.auth.get_authenticated_data_source()
-            publisher = data_source.owner
-            if not publisher:
-                raise PermissionDenied(
-                    _("Data source doesn't belong to any organization")
-                )
-        else:
-            # objects *created* by api are marked coming from the system data source unless api_key is provided
-            # we must optionally create the system data source here, as the settings may have changed at any time
-            system_data_source_defaults = {
-                "user_editable_resources": True,
-                "user_editable_organizations": True,
-            }
-            data_source, created = DataSource.objects.get_or_create(
-                id=settings.SYSTEM_DATA_SOURCE_ID, defaults=system_data_source_defaults
-            )
-            # user organization is used unless api_key is provided
-            user = request.user
-            if isinstance(user, User):
-                publisher = user.get_default_organization()
-            else:
-                publisher = None
-            # no sense in doing the replacement check later, the authenticated publisher must be current to begin with
-            if publisher and publisher.replaced_by:
-                publisher = publisher.replaced_by
-        return data_source, publisher
+        return utils.get_user_data_source_and_organization_from_request(self.request)
 
 
 def get_publisher_query(publisher):
@@ -308,13 +280,6 @@ def parse_digit(val, param):
         return int(val)
     except ValueError:
         raise ParseError(f'{param} must be an integer, you passed "{val}"')
-
-
-def organization_can_be_edited_by(instance, user):
-    if instance in user.admin_organizations.all():
-        return True
-    else:
-        return False
 
 
 class JSONLDRelatedField(relations.HyperlinkedRelatedField):
@@ -1583,7 +1548,7 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
                     f"{self.request.data['parent_organization']} does not exist."
                 )
             if user:
-                if organization_can_be_edited_by(potential_parent[0], user):
+                if utils.organization_can_be_edited_by(potential_parent[0], user):
                     pass
                 else:
                     raise DRFPermissionDenied("User has no rights to this organization")
@@ -1641,7 +1606,7 @@ class OrganizationUpdateSerializer(OrganizationListSerializer):
     admin_users = serializers.SerializerMethodField()
 
     def __init__(self, instance=None, context=None, *args, **kwargs):
-        instance.can_be_edited_by = organization_can_be_edited_by
+        instance.can_be_edited_by = utils.organization_can_be_edited_by
         if not instance.can_be_edited_by(instance, context["request"].user):
             raise DRFPermissionDenied(
                 f"User {context['request'].user} can't modify {instance}"
