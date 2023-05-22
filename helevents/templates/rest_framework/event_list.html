@@ -8,11 +8,11 @@
             Combines the search on a number of description, name, and keyword fields. Locality is defined on 
             the basis of MUNIGEO_MUNI value, which is set in the settings file. In the Helsinki case all the 
             events would be retrieved that happen within Helsinki. Comes in two flavors: AND and OR. 
-            Use <code>event/?local_ongoing_AND=lapset,musiiki</code> to search for the events with both search 
-            terms in the description fields and <code>?local_ongoing_OR</code> to search for the events with at 
+            Use <code>local_ongoing_AND=lapset,musiiki</code> to search for the events with both search 
+            terms in the description fields and <code>local_ongoing_OR</code> to search for the events with at 
             least one term mentioned. In case you need to realize a more complicated logic and search for a 
             combination of search terms as in <code>(singing OR vocal) AND (workshop OR training)</code> use 
-            <code>?local_ongoing_OR_setX</code> parameter, where <code>X</code> is a number.</p>
+            <code>local_ongoing_OR_setX</code> parameter, where <code>X</code> is a number.</p>
         <p>Examples:</p>
         <pre><code>event/?local_ongoing_OR=lapsi,musiikki</code></pre>
         <p><a href="?local_ongoing_OR=lapsi,musiikki" title="json">See the result</a></p>
@@ -21,8 +21,8 @@
 
         <h3 id="internet-ongoing">Ongoing internet events</h3>
         <p>Use to quickly access internet-based events that are upcoming or have not ended yet. Usage is the 
-            same as for local ongoing events, three variations: <code>?internet_ongoing_AND</code>, 
-            <code>?internet_ongoing_OR</code>, and <code>?internet_ongoing_OR_setX</code>, Note, that 
+            same as for local ongoing events, three variations: <code>internet_ongoing_AND</code>, 
+            <code>internet_ongoing_OR</code>, and <code>internet_ongoing_OR_setX</code>, Note, that 
             <code>local_ongoing</code> and <code>internet_ongoing</code> are mutually exclusive.</p>
         <p>Example:</p>
         <pre><code>event/?internet_ongoing_AND=lapsi,musiiki</code></pre>
@@ -30,7 +30,7 @@
 
         <h3 id="all-ongoing">All ongoing events</h3>
         <p>All ongoing events, both internet and local combined. Usage is the same as for local ongoing 
-            events: <code>?all_ongoing_AND</code> and <code>?all_ongoing_OR</code></p>
+            events: <code>all_ongoing_AND</code>, <code>all_ongoing_OR</code> and <code>all_ongoing_OR_setX</code></p>
         <p>Example:</p>
         <pre><code>event/?all_ongoing_AND=lapsa,musiiki</code></pre>
         <p><a href="?all_ongoing_AND=lapsa,musiiki" title="json">See the result</a></p>
@@ -56,6 +56,14 @@
         <p><a href="?start=today&amp;end=2020-12-31" title="json">See the result</a></p>
         <pre><code>event/?start=now&amp;end=today</code></pre>
         <p><a href="?start=now&amp;end=today" title="json">See the result</a></p>
+        <p>You can also use <code>days</code> filter to restrict the date range of returned events.
+            Any events that intersect with the current time and amount of days from current time will
+            be returned.</p>
+        <p>The parameters <code>start</code> and <code>end</code> cannot be used together with the 
+            <code>days</code> parameter.</p>
+        <p>Example:</p>
+        <pre><code>event/?days=7</code></pre>
+        <p><a href="?days=7" title="json">See the result</a></p>
 
         <h3 id="event-hours">Event start/end time</h3>
         <p>Use <code>starts_after</code>, <code>starts_before</code>, <code>ends_after</code>, and 
@@ -69,6 +77,19 @@
         <p>Example:</p>
         <pre><code>event/?starts_after=16:30&amp;ends_before=21</code></pre>
         <p><a href="?starts_after=16:30&amp;ends_before=21" title="json">See the result</a></p>
+
+        <h3 id="event-duration">Event duration</h3>
+        <p>Use <code>max_duration</code> to filter for the events that last up to a specified time, or
+            <code>min_duration</code> to filter for the events that last at least a specified amount of time.</p>
+        <p>The parameters are expressed in format:</p>
+        <ul>
+            <li>86400 or 86400s (24 hours)</li>
+            <li>180m or 3h (3 hours)</li>
+            <li>3d (3 days)</li>
+        </ul>
+        <p>Example:</p>
+        <pre><code>event/?max_duration=3d</code></pre>
+        <p><a href="?max_duration=3d" title="json">See the result</a></p>
 
         <h3 id="event-location">Event location</h3>
         <h4 id="bounding-box">Bounding box</h4>
@@ -123,7 +144,12 @@
         <h3 id="event-category">Event category</h3>
         <p>To restrict the retrieved events by category, use the query parameter <code>keyword</code>, 
             separating values by commas if you wish to query for any of several keywords, or the parameter 
-            <code>keyword_AND</code>, if you require all provided values (separated by commas) to be present.</p>
+            <code>keyword_AND</code>, if you require all provided values (separated by commas) to be present. 
+            Use parameter <code>keyword!</code> if you require all provided values (separated by commas) 
+            <strong>not</strong> to be present.</p>
+        <p>In case you need to realize a more complicated logic and search for a  combination of keywords as in 
+            <code>(yso:p1235 OR yso:p1947) AND (yso:p14004 OR yso:p11185)</code> use <code>keyword_OR_setX</code> 
+            parameter, where <code>X</code> is a number.</p>
         <p>Keyword ids are found at the <code>keyword</code> endpoint, which lists the keywords in decreasing 
             number of events found. The common keywords used in all events originate from the general Finnish 
             ontology (YSO), hence the format <code>yso:p4354</code>.</p>
@@ -135,6 +161,8 @@
         <p>Example:</p>
         <pre><code>event/?keyword=yso:p4354</code></pre>
         <p><a href="?keyword=yso:p4354" title="json">See the result</a></p>
+        <pre><code>event/?keyword_OR_set1=yso:p1235,yso:p1947&keyword_OR_set2=yso:p14004,yso:p11185</code></pre>
+        <p><a href="?keyword_OR_set1=yso:p1235,yso:p1947&keyword_OR_set2=yso:p14004,yso:p11185" title="json">See the result</a></p>
 
         <h3 id="event-category">Keyword set search</h3>
         <p>Some services maintain curated keyword sets, which can also be used in search with query 
@@ -156,6 +184,13 @@
         <pre><code>event/?last_modified_since=2020-04-07&show_deleted=True</code></pre>
         <p><a href="?last_modified_since=2020-04-07&show_deleted=True" title="json">See the result</a></p>
 
+        <h3 id="event-ids">Specific ids</h3>
+        <p>To find events that have specific id use parameter <code>ids</code>, separating values by commas 
+            if you wish to query for several event ids.</p>
+        <p>Example:</p>
+        <pre><code>event/?ids=helsinki:1</code></pre>
+        <p><a href="?ids=helsinki:1" title="json">See the result</a></p>
+
         <h3 id="event-status">Event status</h3>
         <p>Events in Linkedevents (indicated by the <code>event_status</code> field) may be either 
             scheduled as planned (<code>EventScheduled</code>), rescheduled if their start time has 
@@ -167,6 +202,16 @@
         <p>Example:</p>
         <pre><code>event/?event_status=EventCancelled</code></pre>
         <p><a href="?event_status=EventCancelled" title="json">See the result</a></p>
+
+        <h3 id="event-type">Event type</h3>
+        <p>Events in Linkedevents (indicated by the <code>type_id</code> field) may be event (<code>General</code>),
+             course (<code>Course</code>) or volunteering (<code>Volunteering</code>). By default, only events
+            with General type_id are returned.</p>
+        <p>You may filter events with only the desired type with the <code>type_id</code> filter, separating values by commas 
+            if you wish to query for several types.</p>
+        <p>Example:</p>
+        <pre><code>event/?type_id=General,Course</code></pre>
+        <p><a href="?type_id=General,Course" title="json">See the result</a></p>
         
         <h3 id="event-text">Event text</h3>
         <p>To find out events that contain a specific string in any of the text fields, use the query 
@@ -174,6 +219,15 @@
         <p>Example:</p>
         <pre><code>event/?text=shostakovich</code></pre>
         <p><a href="?text=shostakovich" title="json">See the result</a></p>
+
+        <h3 id="event-combined_text">Combined text</h3>
+        <p>While the <code>text</code> search is looking for the events containg exact matches of the search 
+            string, <code>combined_text</code> filtering finds events with exact text match for event text 
+            fields but retrieves expected keywords on the basis of similarity. Filtering for keywords works 
+            similar ways as <a href="../keyword#keyword-free-text">keyword free_text filtering</a>.</p>
+        <p>Example:</p>
+        <pre><code>event/?combined_text=lapppset</code></pre>
+        <p><a href="?combined_text=lapppset" title="json">See the result</a></p>
 
         <h3 id="event-price">Event price</h3>
         <p>Events may or may not contain the <code>offers</code> field that lists event pricing. 
@@ -294,6 +348,40 @@
         <p>For example:</p>
         <pre><code>event/?enrolment_open_waitilist=true</code></pre>
         <p><a href="?enrolment_open_waitilist=true" title="json">See the result</a></p>
+
+        <h3 id="event-for-authenticated-users">Filtering for authenticated users</h3>
+        <p>By default, only public events are shown in the event list. However, certain query parameters allow 
+            customizing the listing for authenticated users</p>
+        
+        <h4 id="event-show-all">Show all events</h4>
+        <p><code>show_all</code> parameter displays all events authenticated user can edit, including drafts, 
+        and public non-editable events</p>
+        <p>Example:</p>
+        <pre><code>event/?show_all=true</code></pre>
+        <p><a href="?show_all=true" title="json">See the result</a></p>
+
+        <h4 id="event-publication-status">Publication status</h4>
+        <p>Events in Linkedevents (indicated by the <code>publication_status</code> field) may be either 
+            (<code>draft</code>) if the event is not published yet or (<code>public</code>) for published 
+            events.</p>
+        <p>You may filter events with only the desired publication status with the 
+            <code>publication_status</code> filter.</p>
+        <p>Example:</p>
+        <pre><code>event/?publication_status=draft</code></pre>
+        <p><a href="?publication_status=draft" title="json">See the result</a></p>
+
+        <h4 id="event-editable-events">Only editable events</h4>
+        <p><code>admin_user</code> parameter displays all events authenticated user can edit, including drafts, 
+            but no other  public events</p>
+        <p>Example:</p>
+        <pre><code>event/?admin_user=true</code></pre>
+        <p><a href="?admin_user=true" title="json">See the result</a></p>
+
+        <h4 id="event-created-by">Events created by the user</h4>
+        <p><code>created_by</code> parameter only displays events by the authenticated user</p>
+        <p>Example:</p>
+        <pre><code>event/?created_by=true</code></pre>
+        <p><a href="?created_by=true" title="json">See the result</a></p>
 
         <h2 id="getting-detailed-data">Getting detailed data</h2>
         <p>In the default case, keywords, locations, and other fields that refer to separate resources 
