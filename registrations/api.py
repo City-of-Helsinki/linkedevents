@@ -20,7 +20,11 @@ from events.api import (
     UserDataSourceAndOrganizationMixin,
 )
 from events.models import Event
-from events.permissions import DataSourceResourceEditPermission, GuestPost
+from events.permissions import (
+    DataSourceResourceEditPermission,
+    GuestPost,
+    OrganizationUserEditPermission,
+)
 from linkedevents.registry import register_view
 from registrations.exceptions import ConflictException
 from registrations.models import Registration, SeatReservationCode, SignUp
@@ -50,7 +54,7 @@ class RegistrationViewSet(
     queryset = Registration.objects.all()
 
     permission_classes = [
-        DataSourceResourceEditPermission,
+        DataSourceResourceEditPermission & OrganizationUserEditPermission
     ]
 
     def perform_create(self, serializer):
@@ -105,7 +109,9 @@ class RegistrationViewSet(
     @action(
         methods=["post"],
         detail=True,
-        permission_classes=[DataSourceResourceEditPermission],
+        permission_classes=[
+            DataSourceResourceEditPermission & OrganizationUserEditPermission
+        ],
     )
     def send_message(self, request, pk=None, version=None):
         registration = self.get_object()
@@ -181,7 +187,11 @@ class SignUpViewSet(
     permission_classes = [
         GuestPost
         | AuthenticateWithCancellationCode
-        | (AuthenticatedGet & DataSourceResourceEditPermission)
+        | (
+            AuthenticatedGet
+            & DataSourceResourceEditPermission
+            & OrganizationUserEditPermission
+        )
     ]
 
     def create(self, request, *args, **kwargs):

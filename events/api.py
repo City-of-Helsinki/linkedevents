@@ -98,6 +98,7 @@ from events.permissions import (
     GuestPost,
     GuestRetrieve,
     UserIsAdminInAnyOrganization,
+    OrganizationUserEditPermission,
 )
 from events.renderers import DOCXRenderer
 from events.translation import (
@@ -908,7 +909,9 @@ class KeywordViewSet(
     queryset = Keyword.objects.all()
     queryset = queryset.select_related("publisher")
     serializer_class = KeywordSerializer
-    permission_classes = (DataSourceResourceEditPermission,)
+    permission_classes = [
+        DataSourceResourceEditPermission & OrganizationUserEditPermission
+    ]
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -951,7 +954,9 @@ class KeywordListViewSet(
     filter_backends = (filters.OrderingFilter,)
     ordering_fields = ("n_events", "id", "name", "data_source")
     ordering = ("-data_source", "-n_events", "name")
-    permission_classes = (DataSourceResourceEditPermission,)
+    permission_classes = [
+        DataSourceResourceEditPermission & OrganizationUserEditPermission
+    ]
 
     def get_queryset(self):
         """
@@ -1099,7 +1104,9 @@ class KeywordSetViewSet(
 ):
     queryset = KeywordSet.objects.all()
     serializer_class = KeywordSetSerializer
-    permission_classes = (DataSourceResourceEditPermission,)
+    permission_classes = [
+        DataSourceResourceEditPermission & OrganizationUserEditPermission
+    ]
     permit_regular_user_edit = True
 
     def filter_queryset(self, queryset):
@@ -1296,7 +1303,9 @@ class PlaceRetrieveViewSet(
     queryset = Place.objects.all()
     queryset = queryset.select_related("publisher")
     serializer_class = PlaceSerializer
-    permission_classes = (DataSourceResourceEditPermission,)
+    permission_classes = [
+        DataSourceResourceEditPermission & OrganizationUserEditPermission
+    ]
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -1359,7 +1368,9 @@ class PlaceListViewSet(
         "-data_source",
         "name",
     )  # we want to display tprek before osoite etc.
-    permission_classes = (DataSourceResourceEditPermission,)
+    permission_classes = [
+        DataSourceResourceEditPermission & OrganizationUserEditPermission
+    ]
 
     def get_queryset(self):
         """
@@ -1825,7 +1836,9 @@ class ImageViewSet(
     filter_backends = (filters.OrderingFilter,)
     ordering_fields = ("last_modified_time", "id", "name")
     ordering = ("-last_modified_time",)
-    permission_classes = (DataSourceResourceEditPermission,)
+    permission_classes = [
+        DataSourceResourceEditPermission & OrganizationUserEditPermission
+    ]
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -3259,7 +3272,9 @@ class EventViewSet(
     )
     ordering = ("-last_modified_time",)
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES + [DOCXRenderer]
-    permission_classes = (DataSourceResourceEditPermission,)
+    permission_classes = [
+        OrganizationUserEditPermission & DataSourceResourceEditPermission
+    ]
     permit_regular_user_edit = True
 
     @staticmethod
