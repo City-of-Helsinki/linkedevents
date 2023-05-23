@@ -135,8 +135,6 @@ ecdsa==0.18.0
     # via python-jose
 elasticsearch==7.17.9
     # via -r requirements.in
-exceptiongroup==1.1.0
-    # via cattrs
 executing==1.2.0
     # via stack-data
 future==0.18.3
@@ -147,8 +145,6 @@ icalendar==5.0.4
     # via -r requirements.in
 idna==3.4
     # via requests
-importlib-metadata==6.0.0
-    # via markdown
 ipython==8.11.0
     # via -r requirements.in
 isodate==0.6.1
@@ -241,7 +237,7 @@ redis==4.5.4
     # via django-redis
 regex==2022.10.31
     # via -r requirements.in
-requests==2.28.2
+requests==2.31.0
     # via
     #   -r requirements.in
     #   django-anymail
@@ -312,8 +308,6 @@ webencodings==0.5.1
     # via bleach
 whitenoise==6.4.0
     # via -r requirements.in
-zipp==3.15.0
-    # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
