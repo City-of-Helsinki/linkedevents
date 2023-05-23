@@ -8,7 +8,7 @@
             Combines the search on a number of description, name, and keyword fields. Locality is defined on 
             the basis of MUNIGEO_MUNI value, which is set in the settings file. In the Helsinki case all the 
             events would be retrieved that happen within Helsinki. Comes in two flavors: AND and OR. 
-            Use <code>local_ongoing_AND=lapset,musiiki</code> to search for the events with both search 
+            Use <code>local_ongoing_AND=lapset,musiikki</code> to search for the events with both search 
             terms in the description fields and <code>local_ongoing_OR</code> to search for the events with at 
             least one term mentioned. In case you need to realize a more complicated logic and search for a 
             combination of search terms as in <code>(singing OR vocal) AND (workshop OR training)</code> use 
@@ -25,15 +25,15 @@
             <code>internet_ongoing_OR</code>, and <code>internet_ongoing_OR_setX</code>, Note, that 
             <code>local_ongoing</code> and <code>internet_ongoing</code> are mutually exclusive.</p>
         <p>Example:</p>
-        <pre><code>event/?internet_ongoing_AND=lapsi,musiiki</code></pre>
-        <p><a href="?internet_ongoing_AND=lapsi,musiiki" title="json">See the result</a></p>
+        <pre><code>event/?internet_ongoing_AND=lapsi,musiikki</code></pre>
+        <p><a href="?internet_ongoing_AND=lapsi,musiikki" title="json">See the result</a></p>
 
         <h3 id="all-ongoing">All ongoing events</h3>
         <p>All ongoing events, both internet and local combined. Usage is the same as for local ongoing 
             events: <code>all_ongoing_AND</code>, <code>all_ongoing_OR</code> and <code>all_ongoing_OR_setX</code></p>
         <p>Example:</p>
-        <pre><code>event/?all_ongoing_AND=lapsa,musiiki</code></pre>
-        <p><a href="?all_ongoing_AND=lapsa,musiiki" title="json">See the result</a></p>
+        <pre><code>event/?all_ongoing_AND=lapsi,musiikki</code></pre>
+        <p><a href="?all_ongoing_AND=lapsi,musiikki" title="json">See the result</a></p>
 
         <h3 id="internet-based">Internet based</h3>
         <p>Filter for all the events that happen in the internet, both past and upcoming.</p>
