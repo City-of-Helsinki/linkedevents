@@ -2666,6 +2666,7 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
         for keyword_set in keyword_sets:
             keywords = keyword_set.keywords.all()
             all_keywords.update(keywords)
+        queryset = queryset.filter(keywords__in=all_keywords)
 
     if "local_ongoing_OR_set" in "".join(params):
         count = 1

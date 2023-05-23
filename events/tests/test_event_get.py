@@ -986,24 +986,27 @@ def test_keywordset_search(
     keyword_set,
     keyword_set2,
 ):
-    event.keywords.add(keyword, keyword3)
+    keyword_set.keywords.set([keyword])
+    keyword_set.save()
+    keyword_set2.keywords.set([keyword2])
+    keyword_set.save()
+
+    event.keywords.set([keyword, keyword3])
     event.save()
-    event2.keywords.add(keyword2, keyword3)
+    event2.keywords.set([keyword2, keyword3])
     event2.save()
-    event3.keywords.add(keyword, keyword2)
+    event3.keywords.set([keyword, keyword2])
     event3.save()
 
+    get_list_and_assert_events(f"keyword_set_AND={keyword_set.id}", [event, event3])
+    get_list_and_assert_events(f"keyword_set_AND={keyword_set2.id}", [event2, event3])
     get_list_and_assert_events(
-        f"keyword_set_AND={keyword_set.id},{keyword_set2.id}", [event, event2]
+        f"keyword_set_AND={keyword_set.id},{keyword_set2.id}", [event3]
     )
+    get_list_and_assert_events(f"keyword_set_OR={keyword_set.id}", [event, event3])
+    get_list_and_assert_events(f"keyword_set_OR={keyword_set2.id}", [event2, event3])
     get_list_and_assert_events(
         f"keyword_set_OR={keyword_set.id},{keyword_set2.id}", [event, event2, event3]
-    )
-
-    event3.keywords.remove(keyword, keyword2)
-    event3.save()
-    get_list_and_assert_events(
-        f"keyword_set_AND={keyword_set.id},{keyword_set2.id}", [event, event2]
     )
 
 
