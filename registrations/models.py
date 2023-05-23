@@ -1,13 +1,17 @@
+from datetime import timedelta
 from smtplib import SMTPException
 from uuid import uuid4
 
+from django.utils.functional import cached_property
 from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.sites.models import Site
 from django.core.mail import send_mail
 from django.db import models
+from django.db.models import Sum
 from django.forms.fields import MultipleChoiceField
 from django.template.loader import render_to_string
+from django.utils.timezone import localtime
 from django.utils.translation import gettext_lazy as _
 
 from events.models import Event, Language
@@ -130,6 +134,18 @@ class Registration(models.Model):
     @property
     def publisher(self):
         return self.event.publisher
+
+    @cached_property
+    def reserved_seats_amount(self):
+        return (
+            self.reservations.filter(
+                timestamp__gte=localtime()
+                - timedelta(minutes=settings.SEAT_RESERVATION_DURATION)
+            ).aggregate(seats_sum=Sum("seats", output_field=models.IntegerField()))[
+                "seats_sum"
+            ]
+            or 0
+        )
 
     def can_be_edited_by(self, user):
         """Check if current registration can be edited by the given user"""
