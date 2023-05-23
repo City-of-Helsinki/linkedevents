@@ -207,11 +207,11 @@
         <p>Events in Linkedevents (indicated by the <code>type_id</code> field) may be event (<code>General</code>),
              course (<code>Course</code>) or volunteering (<code>Volunteering</code>). By default, only events
             with General type_id are returned.</p>
-        <p>You may filter events with only the desired type with the <code>type_id</code> filter, separating values by commas 
-            if you wish to query for several types.</p>
+        <p>You may filter events with only the desired type with the <code>event_type</code> filter, separating 
+            values by commas if you wish to query for several types.</p>
         <p>Example:</p>
-        <pre><code>event/?type_id=General,Course</code></pre>
-        <p><a href="?type_id=General,Course" title="json">See the result</a></p>
+        <pre><code>event/?event_type=General,Course</code></pre>
+        <p><a href="?event_type=General,Course" title="json">See the result</a></p>
         
         <h3 id="event-text">Event text</h3>
         <p>To find out events that contain a specific string in any of the text fields, use the query 
