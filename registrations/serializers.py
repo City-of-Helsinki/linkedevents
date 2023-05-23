@@ -100,6 +100,10 @@ class RegistrationBaseSerializer(serializers.ModelSerializer):
 
     current_waiting_list_count = serializers.SerializerMethodField()
 
+    remaining_attendee_capacity = serializers.SerializerMethodField()
+
+    remaining_waiting_list_capacity = serializers.SerializerMethodField()
+
     data_source = serializers.SerializerMethodField()
 
     publisher = serializers.SerializerMethodField()
@@ -142,6 +146,42 @@ class RegistrationBaseSerializer(serializers.ModelSerializer):
         return obj.signups.filter(
             attendee_status=SignUp.AttendeeStatus.WAITING_LIST
         ).count()
+
+    def get_remaining_attendee_capacity(self, obj):
+        if obj.maximum_attendee_capacity is None:
+            return None
+        
+        maximum_attendee_capacity = obj.maximum_attendee_capacity
+        attendee_count = self.get_current_attendee_count(obj)
+        reserved_seats_amount = obj.reserved_seats_amount
+
+        return max(
+            maximum_attendee_capacity - attendee_count - reserved_seats_amount, 0
+        )
+
+    def get_remaining_waiting_list_capacity(self, obj):
+        if obj.waiting_list_capacity is None:
+            return None
+
+        waiting_list_capacity = obj.waiting_list_capacity
+        waiting_list_count = self.get_current_waiting_list_count(obj)
+        reserved_seats_amount = obj.reserved_seats_amount
+
+        if obj.maximum_attendee_capacity is not None:
+            # Calculate the amount of reserved seats that are used for actual seats 
+            # and reduce it from reserved_seats_amount to get amount of reserved seats
+            # in the waiting list
+            maximum_attendee_capacity = obj.maximum_attendee_capacity
+            attendee_count = self.get_current_attendee_count(obj)
+            reserved_seats_amount = max(
+                reserved_seats_amount
+                - max(maximum_attendee_capacity - attendee_count, 0),
+                0,
+            )
+
+        return max(
+            waiting_list_capacity - waiting_list_count - reserved_seats_amount, 0
+        )
 
     def get_data_source(self, obj):
         return obj.data_source.id
