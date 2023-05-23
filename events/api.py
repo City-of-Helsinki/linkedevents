@@ -3134,7 +3134,7 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
 
     val = params.get("audience_max_age_lt", None)
     if val:
-        max_age = parse_digit(val, "audience_min_age_lt")
+        max_age = parse_digit(val, "audience_max_age_lt")
         queryset = queryset.filter(audience_max_age__lte=max_age)
 
     # Filter deleted events
