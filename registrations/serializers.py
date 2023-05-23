@@ -150,7 +150,7 @@ class RegistrationBaseSerializer(serializers.ModelSerializer):
     def get_remaining_attendee_capacity(self, obj):
         if obj.maximum_attendee_capacity is None:
             return None
-        
+
         maximum_attendee_capacity = obj.maximum_attendee_capacity
         attendee_count = self.get_current_attendee_count(obj)
         reserved_seats_amount = obj.reserved_seats_amount
@@ -168,7 +168,7 @@ class RegistrationBaseSerializer(serializers.ModelSerializer):
         reserved_seats_amount = obj.reserved_seats_amount
 
         if obj.maximum_attendee_capacity is not None:
-            # Calculate the amount of reserved seats that are used for actual seats 
+            # Calculate the amount of reserved seats that are used for actual seats
             # and reduce it from reserved_seats_amount to get amount of reserved seats
             # in the waiting list
             maximum_attendee_capacity = obj.maximum_attendee_capacity

@@ -5,6 +5,7 @@ from events.models import Event
 from events.tests.conftest import APIClient
 from events.tests.test_event_get import get_list_and_assert_events
 from events.tests.utils import versioned_reverse as reverse
+from registrations.models import SeatReservationCode
 
 # === util methods ===
 
@@ -127,6 +128,29 @@ def test_get_registration_with_event_and_in_language_included(
     )
     response_language = response.data["event"]["in_language"][0]
     assert response_language["id"] == language.id
+
+
+@pytest.mark.django_db
+def test_get_registration_with_correct_attendee_capacity(
+    api_client, registration, signup
+):
+    registration.maximum_attendee_capacity = 5
+    registration.waiting_list_capacity = 5
+    registration.save()
+
+    response = get_detail_and_assert_registration(api_client, registration.id)
+    assert response.data["remaining_attendee_capacity"] == 4
+    assert response.data["remaining_waiting_list_capacity"] == 5
+
+    SeatReservationCode.objects.create(registration=registration, seats=3)
+    response = get_detail_and_assert_registration(api_client, registration.id)
+    assert response.data["remaining_attendee_capacity"] == 1
+    assert response.data["remaining_waiting_list_capacity"] == 5
+
+    SeatReservationCode.objects.create(registration=registration, seats=3)
+    response = get_detail_and_assert_registration(api_client, registration.id)
+    assert response.data["remaining_attendee_capacity"] == 0
+    assert response.data["remaining_waiting_list_capacity"] == 3
 
 
 @pytest.mark.django_db

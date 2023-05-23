@@ -7,8 +7,7 @@ import bleach
 import pytz
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
-from django.contrib.gis.db import models
-from django.db.models import ProtectedError, Q, Sum
+from django.db.models import ProtectedError, Q
 from django.template.loader import render_to_string
 from django.utils.translation import gettext as _
 from rest_framework import mixins, serializers, status, viewsets
