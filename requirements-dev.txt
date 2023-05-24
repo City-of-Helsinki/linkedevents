@@ -132,7 +132,7 @@ pytz==2022.7.1
     # via
     #   -c requirements.txt
     #   django
-requests==2.28.2
+requests==2.31.0
     # via
     #   -c requirements.txt
     #   requests-mock
