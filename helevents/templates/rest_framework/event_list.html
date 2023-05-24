@@ -1,329 +1,411 @@
 <div class="panel panel-default">
     <div class="panel-body">
+        <h2 id="filtering-retrieved-events">Filtering retrieved events</h2>
+        <p>Query parameters can be used to filter the retrieved events by the following criteria.</p>
 
-<h2 id="filtering-retrieved-events">Filtering retrieved events</h2>
-<p>Query parameters can be used to filter the retrieved events by
-the following criteria.</p>
-<h3 id="local-ongoing">Ongoing local events</h3>
-<p>Use to quickly access local (municipality level) events that are upcoming or have not ended yet. Combines the search on a number of
-description, name, and keyword fields. Locality is defined on the basis of MUNIGEO_MUNI value, which is set in the settings file. In the Helsinki case all the events would be retrieved that happen within Helsinki. Comes in two flavors: AND and OR. Use <code>event/?local_ongoing_AND=lapset,musiiki</code> to search for the events with both search terms in the description fields and <code>?local_ongoing_OR</code> to search for the events with at least one term mentioned. In case you need to realize a more complicated logic and search for a combination of search terms as in <code>(singing OR vocal) AND (workshop OR training)</code> use <code>?local_ongoing_OR_setX</code> parameter, where <code>X</code> is a number.
-<p>Examples:</p>
-<pre><code>event/?local_ongoing_OR=lapsi,musiikki
-</code></pre>
-<p><a href="?local_ongoing_OR=lapsi,musiikki" title="json">See the result</a></p>
-<pre><code>event/?local_ongoing_OR_set1=lapsi,musiikki&local_ongoing_OR_set2=leiri,kurssi
-</code></pre>
-<p><a href="?local_ongoing_OR=lapsi,musiikki" title="json">See the result</a></p>
+        <h3 id="local-ongoing">Ongoing local events</h3>
+        <p>Use to quickly access local (municipality level) events that are upcoming or have not ended yet. 
+            Combines the search on a number of description, name, and keyword fields. Locality is defined on 
+            the basis of MUNIGEO_MUNI value, which is set in the settings file. In the Helsinki case all the 
+            events would be retrieved that happen within Helsinki. Comes in two flavors: AND and OR. 
+            Use <code>local_ongoing_AND=lapset,musiikki</code> to search for the events with both search 
+            terms in the description fields and <code>local_ongoing_OR</code> to search for the events with at 
+            least one term mentioned. In case you need to realize a more complicated logic and search for a 
+            combination of search terms as in <code>(singing OR vocal) AND (workshop OR training)</code> use 
+            <code>local_ongoing_OR_setX</code> parameter, where <code>X</code> is a number.</p>
+        <p>Examples:</p>
+        <pre><code>event/?local_ongoing_OR=lapsi,musiikki</code></pre>
+        <p><a href="?local_ongoing_OR=lapsi,musiikki" title="json">See the result</a></p>
+        <pre><code>event/?local_ongoing_OR_set1=lapsi,musiikki&local_ongoing_OR_set2=leiri,kurssi</code></pre>
+        <p><a href="?local_ongoing_OR_set1=lapsi,musiikki&local_ongoing_OR_set2=leiri,kurssi" title="json">See the result</a></p>
 
-<h3 id="internet-ongoing">Ongoing internet events</h3>
-<p>Use to quickly access internet-based events that are upcoming or have not ended yet. Usage is the same as for local ongoing events, three variations: <code>?internet_ongoing_AND</code>, <code>?internet_ongoing_OR</code>, and <code>?internet_ongoing_OR_setX</code>, Note, that <code>local_ongoing</code> and <code>internet_ongoing</code> are mutually exclusive.</p>
-<p>Example:</p>
-<pre><code>event/?internet_ongoing_AND=lapsi,musiiki
-</code></pre>
-<p><a href="?internet_ongoing_AND=lapsi,musiiki" title="json">See the result</a></p>
-<h3 id="all-ongoing">All ongoing events</h3>
-<p>All ongoing events, both internet and local combined. Usage is the same as for local ongoing events: <code>?all_ongoing_AND</code> and <code>?all_ongoing_OR</code></p>
-<p>Example:</p>
-<pre><code>event/?all_ongoing_AND=lapsa,musiiki
-</code></pre>
-<p><a href="?all_ongoing_AND=lapsa,musiiki" title="json">See the result</a></p>
-<h3 id="internet-based">Internet based</h3>
-<p>Filter for all the events that happen in the internet, both past and upcoming.</p>
-<p>Example:</p>
-<pre><code>event/?internet_based=true
-</code></pre>
-<p><a href="?internet_based=true" title="json">See the result</a></p>
-<h3 id="event-time">Event time</h3>
-<p>Use <code>start</code> and <code>end</code> to restrict the date range of returned events.
-Any events that intersect with the given date range will be returned.</p>
-<p>The parameters <code>start</code> and <code>end</code> can be given in the following formats:</p>
-<ul>
-<li>ISO 8601 (including the time of day), i.e. YYYY-MM-DDTHH:MM:SSZ</li>
-<li>yyyy-mm-dd</li>
-</ul>
-<p>In addition, <code>today</code> (for start or end of today) and <code>now</code>
-(for the exact current timestamp) can be used in either parameter to get current events.</p>
-<p>Example:</p>
-<pre><code>event/?start=today&amp;end=2020-12-31
-</code></pre>
-<p><a href="?start=today&amp;end=2020-12-31" title="json">See the result</a></p>
-<pre><code>event/?start=now&amp;end=today
-</code></pre>
-<p><a href="?start=now&amp;end=today" title="json">See the result</a></p>
-<h3 id="event-hours">Event start/end time</h3>
-<p>Use <code>starts_after</code>, <code>starts_before</code>, <code>ends_after</code>, and <code>ends_before</code>
-to filter for the events that start and end within certain hours, for example for the ones that start after 17:00 and
-end before 21:00.
-<p>The parameters can be given as:</p>
-<ul>
-<li>Hours only</li>
-<li>Hours and minutes separated by a colon</li>
-</ul>
-<p>Example:</p>
-<pre><code>event/?starts_after=16:30&amp;ends_before=21
-</code></pre>
-<p><a href="?starts_after=16:30&amp;ends_before=21" title="json">See the result</a></p>
-<h3 id="event-location">Event location</h3>
+        <h3 id="internet-ongoing">Ongoing internet events</h3>
+        <p>Use to quickly access internet-based events that are upcoming or have not ended yet. Usage is the 
+            same as for local ongoing events, three variations: <code>internet_ongoing_AND</code>, 
+            <code>internet_ongoing_OR</code>, and <code>internet_ongoing_OR_setX</code>, Note, that 
+            <code>local_ongoing</code> and <code>internet_ongoing</code> are mutually exclusive.</p>
+        <p>Example:</p>
+        <pre><code>event/?internet_ongoing_AND=lapsi,musiikki</code></pre>
+        <p><a href="?internet_ongoing_AND=lapsi,musiikki" title="json">See the result</a></p>
 
-<h4 id="bounding-box">Bounding box</h4>
-<p>To restrict the retrieved events to a geographical region, use
-the query parameter <code>bbox</code> in the format</p>
-<pre><code>bbox=west,south,east,north
-</code></pre>
-<p>Where <code>west</code> is the longitude of the rectangle's western boundary,
-<code>south</code> is the latitude of the rectangle's southern boundary,
-and so on. The default coordinate system is the trusty old EPSG:4326 known from all online
-maps, and can be overridden with <code>srid</code> parameter.</p>
-<p>Example:</p>
-<pre><code>event/?bbox=24.9348,60.1762,24.9681,60.1889
-</code></pre>
-<p><a href="?bbox=24.9348,60.1762,24.9681,60.1889" title="json">See the result</a></p>
+        <h3 id="all-ongoing">All ongoing events</h3>
+        <p>All ongoing events, both internet and local combined. Usage is the same as for local ongoing 
+            events: <code>all_ongoing_AND</code>, <code>all_ongoing_OR</code> and <code>all_ongoing_OR_setX</code></p>
+        <p>Example:</p>
+        <pre><code>event/?all_ongoing_AND=lapsi,musiikki</code></pre>
+        <p><a href="?all_ongoing_AND=lapsi,musiikki" title="json">See the result</a></p>
 
-<h4 id="specific-location">Specific location</h4>
-<p>To restrict the retrieved events to a known location(s), use
-the query parameter <code>location</code>, separating values by commas
-if you wish to query for several locations.</p>
-<p>Location ids are found at the <code>place</code> endpoint, which lists the
-locations in decreasing number of events found. Most locations
-originate from the Helsinki service point registry (tprek), hence
-the format <code>tprek:28473</code>. An easy way to locate service points is
-to browse <code>servicemap.hel.fi</code>, which uses the same location ids,
-e.g. <code>servicemap.hel.fi/unit/28473</code>.</p>
-<p>Example:</p>
-<pre><code>event/?location=tprek:28473
-</code></pre>
-<p><a href="?location=tprek:28473" title="json">See the result</a></p>
-<h4 id="district">District</h4>
-<p>To restrict the retrieved events to city district(s), use the
-query parameter <code>division</code>, separating values by commas
-if you wish to query for several divisions.</p>
-<p>City of Helsinki neighborhoods (kaupunginosa), districts (peruspiiri)
-and subdistricts (osa-alue) are supported.
-    <a href="https://kartta.hel.fi/link/8BqeiY">
-        Check the divisions on the Helsinki map service.</a>
-</p>
-<p> You may query either by specific OCD division type <code>peruspiiri:malmi</code>, or by division name
-<code>malmi</code>. The latter query checks all divisions with the name,
-regardless of division type.</p>
-<p>Example:</p>
-<pre><code>event/?division=malmi
-</code></pre>
-<p><a href="?division=malmi" title="json">See the result</a></p>
+        <h3 id="internet-based">Internet based</h3>
+        <p>Filter for all the events that happen in the internet, both past and upcoming.</p>
+        <p>Example:</p>
+        <pre><code>event/?internet_based=true</code></pre>
+        <p><a href="?internet_based=true" title="json">See the result</a></p>
 
-<h4 id="distance-filter">Within a distance (or "circle filter")</h4>
-<p>To restrict the retrieved events to a certain distance from a point,
-use the query parameters <code>dwithin_origin</code> and <code>dwithin_metres</code> in the format</p>
-<pre><code>dwithin_origin=lon,lat&dwithin_metres=distance
-</code></pre>
-<p>Where <code>lon</code> is the longitude of the origin point,
-<code>lat</code> is the latitude of the origin point,
-and <code>distance</code> is the radius in metres.
-Both parameters are required. The default coordinate system is EPSG:4326 and can be overridden with
-the <code>srid</code> parameter.</p>
-<p>Example:</p>
-<pre><code>event/?dwithin_origin=24.9348,60.1762&dwithin_metres=1000
-</code></pre>
-<p><a href="?dwithin_origin=24.9348,60.1762&dwithin_metres=1000" title="json">See the result</a></p>
+        <h3 id="event-time">Event time</h3>
+        <p>Use <code>start</code> and <code>end</code> to restrict the date range of returned events.
+            Any events that intersect with the given date range will be returned.</p>
+        <p>The parameters <code>start</code> and <code>end</code> can be given in the following formats:</p>
+        <ul>
+            <li>ISO 8601 (including the time of day), i.e. YYYY-MM-DDTHH:MM:SSZ</li>
+            <li>yyyy-mm-dd</li>
+        </ul>
+        <p>In addition, <code>today</code> (for start or end of today) and <code>now</code>
+            (for the exact current timestamp) can be used in either parameter to get current events.</p>
+        <p>Example:</p>
+        <pre><code>event/?start=today&amp;end=2020-12-31</code></pre>
+        <p><a href="?start=today&amp;end=2020-12-31" title="json">See the result</a></p>
+        <pre><code>event/?start=now&amp;end=today</code></pre>
+        <p><a href="?start=now&amp;end=today" title="json">See the result</a></p>
+        <p>You can also use <code>days</code> filter to restrict the date range of returned events.
+            Any events that intersect with the current time and amount of days from current time will
+            be returned.</p>
+        <p>The parameters <code>start</code> and <code>end</code> cannot be used together with the 
+            <code>days</code> parameter.</p>
+        <p>Example:</p>
+        <pre><code>event/?days=7</code></pre>
+        <p><a href="?days=7" title="json">See the result</a></p>
 
-<h3 id="event-category">Event category</h3>
-<p>To restrict the retrieved events by category, use the query
-parameter <code>keyword</code>, separating values by commas if you wish to
-query for any of several keywords, or the parameter <code>keyword_AND</code>, if you require all
-provided values (separated by commas) to be present.</p>
-<p>Keyword ids are found at the <code>keyword</code> endpoint, which lists the
-keywords in decreasing number of events found. The common keywords
-used in all events originate from the general Finnish ontology (YSO),
-hence the format <code>yso:p4354</code>.</p>
-<p>The most common event categories are listed in the two keyword sets
-    <a href="https://api.hel.fi/linkedevents/v1/keyword_set/helsinki:topics/">helsinki:topics</a> and
-    <a href="https://api.hel.fi/linkedevents/v1/keyword_set/helsinki:audiences/">helsinki:audiences</a>,
-which list the YSO keywords that are present in most events to specify event main topic and audience.</p>
-<p>Example:</p>
-<pre><code>event/?keyword=yso:p4354
-</code></pre>
-<p><a href="?keyword=yso:p4354" title="json">See the result</a></p>
+        <h3 id="event-hours">Event start/end time</h3>
+        <p>Use <code>starts_after</code>, <code>starts_before</code>, <code>ends_after</code>, and 
+            <code>ends_before</code> to filter for the events that start and end within certain hours, 
+            for example for the ones that start after 17:00 and end before 21:00.</p>
+        <p>The parameters can be given as:</p>
+        <ul>
+            <li>Hours only</li>
+            <li>Hours and minutes separated by a colon</li>
+        </ul>
+        <p>Example:</p>
+        <pre><code>event/?starts_after=16:30&amp;ends_before=21</code></pre>
+        <p><a href="?starts_after=16:30&amp;ends_before=21" title="json">See the result</a></p>
 
-<h3 id="event-category">Keyword set search</h3>
-<p>Some services maintain curated keyword sets, which can also be used in search with query parameters
-<code>keyword_set_AND</code> and <code>keyword_set_OR</code>. As names of the keyword sets can repeat
-between the services, ids should be supplied. Say, we have one keyword set <b>Music</b> with id "myservice:1"
-that contains keywords rock and jazz, and another keyword set <b>Workshops</b> with keywords "workshop" and "seminar"
-and id "myservice:2". Then a request <code>/event/?keyword_set_AND=myservice:1,myservice:2</code>
-would return the events matching the following expression: (rock OR jazz) AND (workshop OR seminar).</p>
+        <h3 id="event-duration">Event duration</h3>
+        <p>Use <code>max_duration</code> to filter for the events that last up to a specified time, or
+            <code>min_duration</code> to filter for the events that last at least a specified amount of time.</p>
+        <p>The parameters are expressed in format:</p>
+        <ul>
+            <li>86400 or 86400s (24 hours)</li>
+            <li>180m or 3h (3 hours)</li>
+            <li>3d (3 days)</li>
+        </ul>
+        <p>Example:</p>
+        <pre><code>event/?max_duration=3d</code></pre>
+        <p><a href="?max_duration=3d" title="json">See the result</a></p>
 
-<h3 id="event-last-modified">Event last modification time</h3>
-<p>To find events that have changed since you last polled Linkedevents API (to e.g. update your event cache),
-it is best to use the query parameter <code>last_modified_since</code>. This allows you to only return data
-that has changed after your last update. You may also include events that have been deleted in the API in
-the results by using the <code>show_deleted</code> filter. This allows you to update your cache with all added,
-modified and deleted events without having to fetch *all* future events every time.</p>
-</p>
-</p>
-<p>Example:</p>
-<pre><code>event/?last_modified_since=2020-04-07&show_deleted=True
-</code></pre>
-<p><a href="?last_modified_since=2020-04-07&show_deleted=True" title="json">See the result</a></p>
-<h3 id="event-status">Event status</h3>
-<p>Events in Linkedevents (indicated by the <code>event_status</code> field) may be either scheduled as planned
-(<code>EventScheduled</code>), rescheduled if their start time has changed after they were first published
-(<code>EventRescheduled</code>), cancelled if they were cancelled altogether after publication
-(<code>EventCancelled</code>), or postponed to the indefinite future if they could not be organized at the
-original time (<code>EventPostponed</code>). These statuses stem from <a href='https://schema.org/eventStatus'>
-schema.org</a>.</p>
-<p>You may filter events with only the desired status with the <code>event_status</code> filter.</p>
-<p>Example:</p>
-<pre><code>event/?event_status=EventCancelled
-</code></pre>
-<p><a href="?event_status=EventCancelled" title="json">See the result</a></p>
-<h3 id="event-text">Event text</h3>
-<p>To find out events that contain a specific string in any of the text
-fields, use the query parameter <code>text</code>.</p>
-<p>Example:</p>
-<pre><code>event/?text=shostakovich
-</code></pre>
-<p><a href="?text=shostakovich" title="json">See the result</a></p>
-<h3 id="event-price">Event price</h3>
-<p>Events may or may not contain the <code>offers</code> field that lists event pricing. To return only
-free or non-free events, use the query parameter<code>is_free</code>. However, note that from some
-data sources, no event pricing info is available, so this filter will only return those events which
-have pricing data available.</p>
-<p>Example:</p>
-<pre><code>event/?is_free=true
-</code></pre>
-<p><a href="?is_free=true" title="json">See the result</a></p>
-<h3 id="event-language">Event language</h3>
-<p>To find events that have a set language or event data translated into
-that language, use the query parameter <code>language</code>. If you only wish to see
-events that have a set language, use the <code>in_language</code> parameter, and if
-you only want event data translated to a set language, use the <code>translation</code> parameter.</p>
-<p>Supported languages are found at the <code>language</code> endpoint, which also lists
-which languages have translations available. Currently, translations are supported
-in <code>fi</code>, <code>sv</code>, <code>en</code>, <code>ru</code>,
-<code>zh_hans</code>, and <code>ar</code>.</p>
-<p>Example:</p>
-<pre><code>event/?language=ru
-</code></pre>
-<p><a href="?language=ru" title="json">See the result</a></p>
-<h3 id="audience-age">Event audience age boundaries.</h3>
-<p>To find events that are designed for specific age audiences use the query paramteres <code>audience_min_age_lt</code>,
-<code>audience_min_age_gt</code>, <code>audience_max_age_lt</code>, <code>audience_max_age_gt</code>.</p>
+        <h3 id="event-location">Event location</h3>
+        <h4 id="bounding-box">Bounding box</h4>
+        <p>To restrict the retrieved events to a geographical region, use the query parameter <code>bbox</code> 
+            in the format</p>
+        <pre><code>bbox=west,south,east,north</code></pre>
+        <p>Where <code>west</code> is the longitude of the rectangle's western boundary, <code>south</code> 
+            is the latitude of the rectangle's southern boundary, and so on. The default coordinate system 
+            is the trusty old EPSG:4326 known from all online maps, and can be overridden with <code>srid</code> 
+            parameter.</p>
+        <p>Example:</p>
+        <pre><code>event/?bbox=24.9348,60.1762,24.9681,60.1889</code></pre>
+        <p><a href="?bbox=24.9348,60.1762,24.9681,60.1889" title="json">See the result</a></p>
 
-<p> <code>audience_min_age_lt</code> returns the events whose minimal age is lower than or equals the specified value, <code>audience_min_age_gt</code> returns the events whose minimal age is greater than or equals the specified value. <code>max_age</code> parameteres, naturally, work the same way only for the maximum age of the event audience. Note, that the events that are not designed for the specific audiences will be omitted.</p>
+        <h4 id="specific-location">Specific location</h4>
+        <p>To restrict the retrieved events to a known location(s), use the query parameter 
+            <code>location</code>, separating values by commas if you wish to query for several locations.</p>
+        <p>Location ids are found at the <code>place</code> endpoint, which lists the locations in decreasing 
+            number of events found. Most locations originate from the Helsinki service point registry (tprek), 
+            hence the format <code>tprek:28473</code>. An easy way to locate service points is to browse 
+            <code>servicemap.hel.fi</code>, which uses the same location ids, e.g. 
+            <code>servicemap.hel.fi/unit/28473</code>.</p>
+        <p>Example:</p>
+        <pre><code>event/?location=tprek:28473</code></pre>
+        <p><a href="?location=tprek:28473" title="json">See the result</a></p>
 
-<code>audience_max_age</code> and <code>audience_min_age</code> parameters without <code>lt</code> and <code>gt</code> modifiers are left for backward compatibility only and should not be employed.
+        <h4 id="district">District</h4>
+        <p>To restrict the retrieved events to city district(s), use the query parameter <code>division</code>, 
+            separating values by commas if you wish to query for several divisions.</p>
+        <p>City of Helsinki neighborhoods (kaupunginosa), districts (peruspiiri) and subdistricts (osa-alue) 
+            are supported. 
+            <a href="https://kartta.hel.fi/link/8BqeiY">Check the divisions on the Helsinki map service.</a></p>
+        <p> You may query either by specific OCD division type <code>peruspiiri:malmi</code>, or by division 
+            name <code>malmi</code>. The latter query checks all divisions with the name, regardless of 
+            division type.</p>
+        <p>Example:</p>
+        <pre><code>event/?division=malmi</code></pre>
+        <p><a href="?division=malmi" title="json">See the result</a></p>
 
-<p>Example:</p>
-<pre><code>event/?audience_min_age_gt=10
-</code></pre>
-<p><a href="?audience_min_age_gt=10" title="json">See the result</a></p>
+        <h4 id="distance-filter">Within a distance (or "circle filter")</h4>
+        <p>To restrict the retrieved events to a certain distance from a point, use the query parameters 
+            <code>dwithin_origin</code> and <code>dwithin_metres</code> in the format</p>
+        <pre><code>dwithin_origin=lon,lat&dwithin_metres=distance</code></pre>
+        <p>Where <code>lon</code> is the longitude of the origin point, <code>lat</code> is the latitude 
+            of the origin point, and <code>distance</code> is the radius in metres.
+            Both parameters are required. The default coordinate system is EPSG:4326 and can be overridden 
+            with the <code>srid</code> parameter.</p>
+        <p>Example:</p>
+        <pre><code>event/?dwithin_origin=24.9348,60.1762&dwithin_metres=1000</code></pre>
+        <p><a href="?dwithin_origin=24.9348,60.1762&dwithin_metres=1000" title="json">See the result</a></p>
 
-<h3 id="suitable_for">Select events suitable for certain age.</h3>
-<p>To find events that are suitable for certain age  use the query paramter <code>suitable_for</code> that returns all the events that are suitable for the age or age range specified. Under the hood it excludes all the events that have max age limit below or min age limit above the age specified. Suitable events with just one age boundary specified are returned, events with no age limits specified are excluded. Query parameter can take either one or two arguments, the order of parameters when specifying the age range is not important.
+        <h3 id="event-category">Event category</h3>
+        <p>To restrict the retrieved events by category, use the query parameter <code>keyword</code>, 
+            separating values by commas if you wish to query for any of several keywords, or the parameter 
+            <code>keyword_AND</code>, if you require all provided values (separated by commas) to be present. 
+            Use parameter <code>keyword!</code> if you require all provided values (separated by commas) 
+            <strong>not</strong> to be present.</p>
+        <p>In case you need to realize a more complicated logic and search for a  combination of keywords as in 
+            <code>(yso:p1235 OR yso:p1947) AND (yso:p14004 OR yso:p11185)</code> use <code>keyword_OR_setX</code> 
+            parameter, where <code>X</code> is a number.</p>
+        <p>Keyword ids are found at the <code>keyword</code> endpoint, which lists the keywords in decreasing 
+            number of events found. The common keywords used in all events originate from the general Finnish 
+            ontology (YSO), hence the format <code>yso:p4354</code>.</p>
+        <p>The most common event categories are listed in the two keyword sets 
+            <a href="https://api.hel.fi/linkedevents/v1/keyword_set/helsinki:topics/">helsinki:topics</a> and 
+            <a href="https://api.hel.fi/linkedevents/v1/keyword_set/helsinki:audiences/">helsinki:audiences</a>, 
+            which list the YSO keywords that are present in most events to specify event main topic and 
+            audience.</p>
+        <p>Example:</p>
+        <pre><code>event/?keyword=yso:p4354</code></pre>
+        <p><a href="?keyword=yso:p4354" title="json">See the result</a></p>
+        <pre><code>event/?keyword_OR_set1=yso:p1235,yso:p1947&keyword_OR_set2=yso:p14004,yso:p11185</code></pre>
+        <p><a href="?keyword_OR_set1=yso:p1235,yso:p1947&keyword_OR_set2=yso:p14004,yso:p11185" title="json">See the result</a></p>
 
-<p>Example:</p>
-<pre><code>event/?suitable_for=12
-</code></pre>
-<p><a href="?suitable_for=12,14" title="json">See the result</a></p>
+        <h3 id="event-category">Keyword set search</h3>
+        <p>Some services maintain curated keyword sets, which can also be used in search with query 
+            parameters <code>keyword_set_AND</code> and <code>keyword_set_OR</code>. As names of the keyword 
+            sets can repeat between the services, ids should be supplied. Say, we have one keyword set 
+            <b>Music</b> with id "myservice:1" that contains keywords rock and jazz, and another keyword set 
+            <b>Workshops</b> with keywords "workshop" and "seminar" and id "myservice:2". Then a request 
+            <code>/event/?keyword_set_AND=myservice:1,myservice:2</code> would return the events matching 
+            the following expression: (rock OR jazz) AND (workshop OR seminar).</p>
 
-<h3 id="event-publisher">Event publisher</h3>
-<p>To find out events that are published by a specific organization, use the query
-parameter <code>publisher</code>, separating values by commas if you wish to query for several publishers.</p>
-<p>Existing publisher organizations are found at the <code>organization</code> endpoint. City of Helsinki
-internal publishers have ids of the form <code>ahjo:origin_id</code> as they originate from
-the Helsinki Ahjo decisionmaking system, and have a rather complex hierarchy. External publishers may have
-their own namespaces, ids and hierarchies.</p>
-<p>Also, it is possible to fetch events under a specific publisher organization hierarchy (say
-<a href='https://api.hel.fi/linkedevents/v1/organization/ahjo:00001/'>City of Helsinki</a>) by using the
-parameter <code>publisher_ancestor</code>, which returns all events published by any suborganizations
-(at any level) of the given organization.</p>
-<p>Example:</p>
-<pre><code>event/?publisher=ytj:0586977-6
-</code></pre>
-<p><a href="?publisher=ytj:0586977-6" title="json">See the result</a></p>
-<pre><code>event/?publisher_ancestor=ahjo:00001
-</code></pre>
-<p><a href="?publisher_ancestor=ahjo:00001" title="json">See the result</a></p>
-<h3 id="event-data-source">Event data source</h3>
-<p>To find out events that originate from a specific source system, use the query parameter
-<code>data_source</code>. All event ids are of the form <code>data_source:origin_id</code>, so this allows
-you to return only events coming to Linkedevents from a specific data system. <code>helsinki</code> is the
-name of our own data source, i.e. events where Linkedevents API itself is the master data.</p>
-<p>Example:</p>
-<pre><code>event/?data_source=helmet
-</code></pre>
-<p><a href="?data_source=helmet" title="json">See the result</a></p>
-<h3 id="event-hierarchy">Event hierarchy</h3>
-<p>Events in linkedevents may be either standalone events, or they may have super or sub
-events. There are two types of super events, indicated in the field
-<code>super_event_type</code> by <code>recurring</code> (repeating events, event series)
-and <code>umbrella</code> (festivals etc.).</p>
-<p><code>recurring</code> events last for a period and have <code>sub_events</code> that all
-have similar data, but different dates.</p>
-<p><code>umbrella</code> events last for a period and may have different
-<code>sub_events</code>, including <code>recurring</code> events (i.e. an
-<code>umbrella</code> festival may have a <code>recurring</code> theater play
-<code>sub_event</code>, which may have several nights as <code>sub_events</code>.)</p>
-<h4 id="super-event-type">Super event type</h4>
-<p>You may use the query parameter <code>super_event_type</code>, comma separated, to get
-only super events of specific types. You may use <code>none</code> if you want non-super
-events included.</p>
-<p>Example:</p>
-<pre><code>event/?super_event_type=umbrella,none
-</code></pre>
-<p><a href="?super_event_type=umbrella,none" title="json">See the result</a></p>
-<h4 id="super-event-type">Super event</h4>
-<p>You may use the query parameter <code>super_event</code>, comma separated, to get all
-subevents for specific superevents. You may use <code>none</code> if you want all
-events which have no superevent included.</p>
-<p>Example:</p>
-<pre><code>event/?super_event=linkedevents:agg-103
-</code></pre>
-<p><a href="?super_event=linkedevents:agg-103" title="json">See the result</a></p>
-<h2 id="getting-detailed-data">Getting detailed data</h2>
-<p>In the default case, keywords, locations, and other fields that
-refer to separate resources are only displayed as simple references.</p>
-<p>If you want to include the complete data from related resources in
-the current response, use the keyword <code>include</code>. <strong> Please note, however,
-that including all the resources inlined in *every* event will result in a huge number
-of duplicate data in the json, making the json very slow to generate and process and causing
-considerable API load and long response times when too many such requests are made. Therefore,
-if you are listing the maximum number of events (100) or updating your cache with all events,
-please consider caching the keyword and location data separately to prevent unnecessary API
-slowdown and continuous repeated work. Keyword and location data seldom change and are easily
-fetched from their own endpoints separately.
-</strong></p>
-<p>Example:</p>
-<pre><code>event/?include=location,keywords
-</code></pre>
-<p><a href="?include=location,keywords" title="json">See the result</a></p>
-<h2 id="ordering">Ordering</h2>
-<p>Default ordering is descending order by <code>-last_modified_time</code>.
-You may also order results by <code>start_time</code>, <code>end_time</code>,
-<code>name</code> and <code>duration</code>. Descending order is denoted by
-adding <code>-</code> in front of the parameter, default order is ascending.
-For example:</p>
-<pre><code>event/?sort=-end_time</code></pre>
-<p><a href="?sort=-end_time" title="json">See the result</a></p>
-<h2 id="enrolment">Open enrolment</h2>
-<p>Two endpoints show the events that have connected registrations and have places either
-    at the event itself <code>enrolment_open</code> or in the waiting lists <code>
-    enrolment_open_waitlist</code>. Note that the latter query parameter when set to <code>True</code>
-    returns also the events that have open spots at the event itself. Null values are regarded
-    as unlimited number of spots at the event or in the waiting list.
-For example:</p>
-<pre><code>event/?enrolment_open_waitilist=true</code></pre>
-<p><a href="?enrolment_open_waitilist=true" title="json">See the result</a></p>
-<h3 id="event-registration">Event with registration</h3>
-<p>To find out events with a registration, use the query parameter
-<code>registration</code>.
-<p>Example:</p>
-<pre><code>event/?registration=true</code></pre>
-<p><a href="?registration=true" title="json">See the result</a></p>
-<h3 id="event-without-registration">Event without registration</h3>
-<p>To find out events without a registration, use the query parameter
-<code>registration!</code>.
-<p>Example:</p>
-<pre><code>event/?registration!=true</code></pre>
-<p><a href="?registration!=true" title="json">See the result</a></p>
+        <h3 id="event-last-modified">Event last modification time</h3>
+        <p>To find events that have changed since you last polled Linkedevents API (to e.g. update your 
+            event cache), it is best to use the query parameter <code>last_modified_since</code>. 
+            This allows you to only return data that has changed after your last update. You may also 
+            include events that have been deleted in the API in the results by using the 
+            <code>show_deleted</code> filter. This allows you to update your cache with all added, modified 
+            and deleted events without having to fetch *all* future events every time.</p>
+        <p>Example:</p>
+        <pre><code>event/?last_modified_since=2020-04-07&show_deleted=True</code></pre>
+        <p><a href="?last_modified_since=2020-04-07&show_deleted=True" title="json">See the result</a></p>
+
+        <h3 id="event-ids">Specific ids</h3>
+        <p>To find events that have specific id use parameter <code>ids</code>, separating values by commas 
+            if you wish to query for several event ids.</p>
+        <p>Example:</p>
+        <pre><code>event/?ids=helsinki:1</code></pre>
+        <p><a href="?ids=helsinki:1" title="json">See the result</a></p>
+
+        <h3 id="event-status">Event status</h3>
+        <p>Events in Linkedevents (indicated by the <code>event_status</code> field) may be either 
+            scheduled as planned (<code>EventScheduled</code>), rescheduled if their start time has 
+            changed after they were first published (<code>EventRescheduled</code>), cancelled if they 
+            were cancelled altogether after publication (<code>EventCancelled</code>), or postponed to the 
+            indefinite future if they could not be organized at the original time (<code>EventPostponed</code>). 
+            These statuses stem from <a href='https://schema.org/eventStatus'>schema.org</a>.</p>
+        <p>You may filter events with only the desired status with the <code>event_status</code> filter.</p>
+        <p>Example:</p>
+        <pre><code>event/?event_status=EventCancelled</code></pre>
+        <p><a href="?event_status=EventCancelled" title="json">See the result</a></p>
+
+        <h3 id="event-type">Event type</h3>
+        <p>Events in Linkedevents (indicated by the <code>type_id</code> field) may be event (<code>General</code>),
+             course (<code>Course</code>) or volunteering (<code>Volunteering</code>). By default, only events
+            with General type_id are returned.</p>
+        <p>You may filter events with only the desired type with the <code>event_type</code> filter, separating 
+            values by commas if you wish to query for several types.</p>
+        <p>Example:</p>
+        <pre><code>event/?event_type=General,Course</code></pre>
+        <p><a href="?event_type=General,Course" title="json">See the result</a></p>
+        
+        <h3 id="event-text">Event text</h3>
+        <p>To find out events that contain a specific string in any of the text fields, use the query 
+            parameter <code>text</code>.</p>
+        <p>Example:</p>
+        <pre><code>event/?text=shostakovich</code></pre>
+        <p><a href="?text=shostakovich" title="json">See the result</a></p>
+
+        <h3 id="event-combined_text">Combined text</h3>
+        <p>While the <code>text</code> search is looking for the events containg exact matches of the search 
+            string, <code>combined_text</code> filtering finds events with exact text match for event text 
+            fields but retrieves expected keywords on the basis of similarity. Filtering for keywords works 
+            similar ways as <a href="../keyword#keyword-free-text">keyword free_text filtering</a>.</p>
+        <p>Example:</p>
+        <pre><code>event/?combined_text=lapppset</code></pre>
+        <p><a href="?combined_text=lapppset" title="json">See the result</a></p>
+
+        <h3 id="event-price">Event price</h3>
+        <p>Events may or may not contain the <code>offers</code> field that lists event pricing. 
+            To return only free or non-free events, use the query parameter<code>is_free</code>. However, 
+            note that from some data sources, no event pricing info is available, so this filter will only 
+            return those events which have pricing data available.</p>
+        <p>Example:</p>
+        <pre><code>event/?is_free=true</code></pre>
+        <p><a href="?is_free=true" title="json">See the result</a></p>
+
+        <h3 id="event-language">Event language</h3>
+        <p>To find events that have a set language or event data translated into that language, use the 
+            query parameter <code>language</code>. If you only wish to see events that have a set language, 
+            use the <code>in_language</code> parameter, and if you only want event data translated to a set 
+            language, use the <code>translation</code> parameter.</p>
+        <p>Supported languages are found at the <code>language</code> endpoint, which also lists which 
+            languages have translations available. Currently, translations are supported in <code>fi</code>, 
+            <code>sv</code>, <code>en</code>, <code>ru</code>, <code>zh_hans</code>, and <code>ar</code>.</p>
+        <p>Example:</p>
+        <pre><code>event/?language=ru</code></pre>
+        <p><a href="?language=ru" title="json">See the result</a></p>
+
+        <h3 id="audience-age">Event audience age boundaries.</h3>
+        <p>To find events that are designed for specific age audiences use the query paramteres 
+            <code>audience_min_age_lt</code>, <code>audience_min_age_gt</code>, <code>audience_max_age_lt</code>, 
+            <code>audience_max_age_gt</code>.</p>
+        <p> <code>audience_min_age_lt</code> returns the events whose minimal age is lower than or equals the 
+            specified value, <code>audience_min_age_gt</code> returns the events whose minimal age is greater 
+            than or equals the specified value. <code>max_age</code> parameteres, naturally, work the same way 
+            only for the maximum age of the event audience. Note, that the events that are not designed for 
+            the specific audiences will be omitted.</p>
+        <p><code>audience_max_age</code> and <code>audience_min_age</code> parameters without <code>lt</code> 
+            and <code>gt</code> modifiers are left for backward compatibility only and should not be employed.</p>
+        <p>Example:</p>
+        <pre><code>event/?audience_min_age_gt=10</code></pre>
+        <p><a href="?audience_min_age_gt=10" title="json">See the result</a></p>
+
+        <h3 id="suitable_for">Select events suitable for certain age.</h3>
+        <p>To find events that are suitable for certain age  use the query paramter <code>suitable_for</code> 
+            that returns all the events that are suitable for the age or age range specified. Under the hood 
+            it excludes all the events that have max age limit below or min age limit above the age specified. 
+            Suitable events with just one age boundary specified are returned, events with no age limits 
+            specified are excluded. Query parameter can take either one or two arguments, the order of 
+            parameters when specifying the age range is not important.</p>
+        <p>Examples:</p>
+        <pre><code>event/?suitable_for=12</code></pre>
+        <p><a href="?suitable_for=12" title="json">See the result</a></p>
+        <pre><code>event/?suitable_for=12,14</code></pre>
+        <p><a href="?suitable_for=12,14" title="json">See the result</a></p>
+
+        <h3 id="event-publisher">Event publisher</h3>
+        <p>To find out events that are published by a specific organization, use the query parameter 
+            <code>publisher</code>, separating values by commas if you wish to query for several publishers.</p>
+        <p>Existing publisher organizations are found at the <code>organization</code> endpoint. City of 
+            Helsinki internal publishers have ids of the form <code>ahjo:origin_id</code> as they originate 
+            from the Helsinki Ahjo decisionmaking system, and have a rather complex hierarchy. External 
+            publishers may have their own namespaces, ids and hierarchies.</p>
+        <p>Also, it is possible to fetch events under a specific publisher organization hierarchy (say 
+            <a href='https://api.hel.fi/linkedevents/v1/organization/ahjo:00001/'>City of Helsinki</a>) 
+            by using the parameter <code>publisher_ancestor</code>, which returns all events published 
+            by any suborganizations (at any level) of the given organization.</p>
+        <p>Example:</p>
+        <pre><code>event/?publisher=ytj:0586977-6</code></pre>
+        <p><a href="?publisher=ytj:0586977-6" title="json">See the result</a></p>
+        <pre><code>event/?publisher_ancestor=ahjo:00001</code></pre>
+        <p><a href="?publisher_ancestor=ahjo:00001" title="json">See the result</a></p>
+
+        <h3 id="event-data-source">Event data source</h3>
+        <p>To find out events that originate from a specific source system, use the query parameter 
+            <code>data_source</code>. All event ids are of the form <code>data_source:origin_id</code>, 
+            so this allows you to return only events coming to Linkedevents from a specific data system. 
+            <code>helsinki</code> is the name of our own data source, i.e. events where Linkedevents API 
+            itself is the master data.</p>
+        <p>Example:</p>
+        <pre><code>event/?data_source=helmet</code></pre>
+        <p><a href="?data_source=helmet" title="json">See the result</a></p>
+
+        <h3 id="event-hierarchy">Event hierarchy</h3>
+        <p>Events in linkedevents may be either standalone events, or they may have super or sub events. 
+            There are two types of super events, indicated in the field <code>super_event_type</code> 
+            by <code>recurring</code> (repeating events, event series) and <code>umbrella</code> 
+            (festivals etc.).</p>
+        <p><code>recurring</code> events last for a period and have <code>sub_events</code> that all have 
+            similar data, but different dates.</p>
+        <p><code>umbrella</code> events last for a period and may have different <code>sub_events</code>, 
+            including <code>recurring</code> events (i.e. an <code>umbrella</code> festival may have a 
+            <code>recurring</code> theater play <code>sub_event</code>, which may have several nights 
+            as <code>sub_events</code>.)</p>
+
+        <h4 id="super-event-type">Super event type</h4>
+        <p>You may use the query parameter <code>super_event_type</code>, comma separated, to get only 
+            super events of specific types. You may use <code>none</code> if you want non-super events 
+            included.</p>
+        <p>Example:</p>
+        <pre><code>event/?super_event_type=umbrella,none</code></pre>
+        <p><a href="?super_event_type=umbrella,none" title="json">See the result</a></p>
+
+        <h4 id="super-event-type">Super event</h4>
+        <p>You may use the query parameter <code>super_event</code>, comma separated, to get all subevents 
+            for specific superevents. You may use <code>none</code> if you want all events which have no 
+            superevent included.</p>
+        <p>Example:</p>
+        <pre><code>event/?super_event=linkedevents:agg-103</code></pre>
+        <p><a href="?super_event=linkedevents:agg-103" title="json">See the result</a></p>
+        
+        <h3 id="event-registration">Event with registration</h3>
+        <p>To find out events with or without a registration, use the query parameter<code>registration</code>.</p>
+        <p>Example:</p>
+        <pre><code>event/?registration=true</code></pre>
+        <p><a href="?registration=true" title="json">See the result</a></p>
+
+        <h3 id="enrolment">Open enrolment</h3>
+        <p>Two endpoints show the events that have connected registrations and have places either at the event 
+            itself <code>enrolment_open</code> or in the waiting lists <code>enrolment_open_waitlist</code>. 
+            Note that the latter query parameter when set to <code>True</code> returns also the events that 
+            have open spots at the event itself. Null values are regarded as unlimited number of spots at 
+            the event or in the waiting list.</p>
+        <p>For example:</p>
+        <pre><code>event/?enrolment_open_waitilist=true</code></pre>
+        <p><a href="?enrolment_open_waitilist=true" title="json">See the result</a></p>
+
+        <h3 id="event-for-authenticated-users">Filtering for authenticated users</h3>
+        <p>By default, only public events are shown in the event list. However, certain query parameters allow 
+            customizing the listing for authenticated users</p>
+        
+        <h4 id="event-show-all">Show all events</h4>
+        <p><code>show_all</code> parameter displays all events authenticated user can edit, including drafts, 
+        and public non-editable events</p>
+        <p>Example:</p>
+        <pre><code>event/?show_all=true</code></pre>
+        <p><a href="?show_all=true" title="json">See the result</a></p>
+
+        <h4 id="event-publication-status">Publication status</h4>
+        <p>Events in Linkedevents (indicated by the <code>publication_status</code> field) may be either 
+            (<code>draft</code>) if the event is not published yet or (<code>public</code>) for published 
+            events.</p>
+        <p>You may filter events with only the desired publication status with the 
+            <code>publication_status</code> filter.</p>
+        <p>Example:</p>
+        <pre><code>event/?publication_status=draft</code></pre>
+        <p><a href="?publication_status=draft" title="json">See the result</a></p>
+
+        <h4 id="event-editable-events">Only editable events</h4>
+        <p><code>admin_user</code> parameter displays all events authenticated user can edit, including drafts, 
+            but no other  public events</p>
+        <p>Example:</p>
+        <pre><code>event/?admin_user=true</code></pre>
+        <p><a href="?admin_user=true" title="json">See the result</a></p>
+
+        <h4 id="event-created-by">Events created by the user</h4>
+        <p><code>created_by</code> parameter only displays events by the authenticated user</p>
+        <p>Example:</p>
+        <pre><code>event/?created_by=true</code></pre>
+        <p><a href="?created_by=true" title="json">See the result</a></p>
+
+        <h2 id="getting-detailed-data">Getting detailed data</h2>
+        <p>In the default case, keywords, locations, and other fields that refer to separate resources 
+            are only displayed as simple references.</p>
+        <p>If you want to include the complete data from related resources in the current response, use 
+            the keyword <code>include</code>. <strong> Please note, however, that including all the resources 
+            inlined in *every* event will result in a huge number of duplicate data in the json, making 
+            the json very slow to generate and process and causing considerable API load and long response 
+            times when too many such requests are made. Therefore, if you are listing the maximum number 
+            of events (100) or updating your cache with all events, please consider caching the keyword 
+            and location data separately to prevent unnecessary API slowdown and continuous repeated work. 
+            Keyword and location data seldom change and are easily fetched from their own endpoints 
+            separately.</strong></p>
+        <p>Example:</p>
+        <pre><code>event/?include=location,keywords</code></pre>
+        <p><a href="?include=location,keywords" title="json">See the result</a></p>
+
+        <h2 id="ordering">Ordering</h2>
+        <p>Default ordering is descending order by <code>-last_modified_time</code>. You may also order 
+            results by <code>start_time</code>, <code>end_time</code>, <code>name</code> and 
+            <code>duration</code>. Descending order is denoted by adding <code>-</code> in front of the 
+            parameter, default order is ascending.</p>
+        <p>For example:</p>
+        <pre><code>event/?sort=-end_time</code></pre>
+        <p><a href="?sort=-end_time" title="json">See the result</a></p>
     </div>
 </div>
