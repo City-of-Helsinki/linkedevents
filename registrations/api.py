@@ -5,8 +5,7 @@ from smtplib import SMTPException
 import bleach
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
-from django.contrib.gis.db import models
-from django.db.models import ProtectedError, Q, Sum
+from django.db.models import ProtectedError, Q
 from django.template.loader import render_to_string
 from django.utils.translation import gettext as _
 from rest_framework import mixins, status, viewsets
@@ -133,14 +132,7 @@ class RegistrationViewSet(
         )
 
         seats_capacity = maximum_attendee_capacity + waitlist_seats
-        seats_reserved = registration.reservations.filter(
-            timestamp__gte=datetime.now()
-            - timedelta(minutes=settings.SEAT_RESERVATION_DURATION)
-        ).aggregate(seats_sum=(Sum("seats", output_field=models.FloatField())))[
-            "seats_sum"
-        ]
-        if seats_reserved is None:
-            seats_reserved = 0
+        seats_reserved = registration.reserved_seats_amount
         seats_taken = registration.signups.count()
         seats_available = seats_capacity - (seats_reserved + seats_taken)
 

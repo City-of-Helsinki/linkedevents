@@ -2666,6 +2666,7 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
         for keyword_set in keyword_sets:
             keywords = keyword_set.keywords.all()
             all_keywords.update(keywords)
+        queryset = queryset.filter(keywords__in=all_keywords)
 
     if "local_ongoing_OR_set" in "".join(params):
         count = 1
@@ -3134,7 +3135,7 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
 
     val = params.get("audience_max_age_lt", None)
     if val:
-        max_age = parse_digit(val, "audience_min_age_lt")
+        max_age = parse_digit(val, "audience_max_age_lt")
         queryset = queryset.filter(audience_max_age__lte=max_age)
 
     # Filter deleted events
