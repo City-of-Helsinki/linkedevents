@@ -22,11 +22,11 @@ from events.api import (
     UserDataSourceAndOrganizationMixin,
 )
 from events.models import Event
-from events.permissions import DataSourceResourceEditPermission
+from events.permissions import DataSourceResourceEditPermission, GuestPost
 from linkedevents.registry import register_view
 from registrations.exceptions import ConflictException
 from registrations.models import Registration, SeatReservationCode, SignUp
-from registrations.permissions import SignUpPermission
+from registrations.permissions import AuthenticatedGet, AuthenticateWithCancellationCode
 from registrations.serializers import (
     CreateSignUpsSerializer,
     MassEmailSerializer,
@@ -240,7 +240,9 @@ class SignUpViewSet(
     queryset = SignUp.objects.all()
 
     permission_classes = [
-        SignUpPermission,
+        GuestPost
+        | AuthenticateWithCancellationCode
+        | (AuthenticatedGet & DataSourceResourceEditPermission)
     ]
 
     def create(self, request, *args, **kwargs):

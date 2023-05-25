@@ -1,28 +1,50 @@
 from django.contrib.auth.models import AnonymousUser
 from django.utils.translation import gettext as _
+from rest_framework import permissions
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.request import Request
 
-from events.permissions import DataSourceResourceEditPermission
+from events.auth import ApiKeyUser
 
 
-class SignUpPermission(DataSourceResourceEditPermission):
+class AuthenticatedGet(permissions.BasePermission):
     def has_permission(self, request, view):
+        # Only authenticated users can get object
+        if request.method == "GET":
+            user = request.user
+
+            if isinstance(user, AnonymousUser):
+                return False
+
+        return super().has_permission(request, view)
+
+    def has_object_permission(self, request: Request, view, obj):
         user = request.user
 
-        # All users can create SignUps
-        # Check that data exists to hide create form from signup list documentation page
-        if request.method == "POST" and request.data:
-            return True
+        if request.method == "GET":
+            if not obj.can_be_edited_by(request.user):
+                return False
+
+            if isinstance(user, ApiKeyUser):
+                user_data_source, _ = view.user_data_source_and_organization
+                # allow updating only if the api key matches instance data source
+                if obj.data_source != user_data_source:
+                    return False
+
+        return True
+
+
+class AuthenticateWithCancellationCode(permissions.BasePermission):
+    def has_permission(self, request, view):
+        user = request.user
 
         # Anonymous users can modified SignUp by cancellation_code
         if isinstance(user, AnonymousUser) and (request.method in ["DELETE", "PUT"]):
             return True
 
-        # Only authenticated users can get signup list
+        # List view is not allowed with cancellation code
         if request.method == "GET" and not view.kwargs.get("pk"):
-            if isinstance(user, AnonymousUser):
-                return False
+            return False
 
         return super().has_permission(request, view)
 
@@ -42,7 +64,4 @@ class SignUpPermission(DataSourceResourceEditPermission):
 
             return True
 
-        if request.method == "GET":
-            return self._has_data_source_permission(request, view, obj)
-
-        return super().has_object_permission(request, view, obj)
+        return False
