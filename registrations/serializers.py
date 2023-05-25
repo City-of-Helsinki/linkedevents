@@ -2,12 +2,14 @@ from datetime import datetime, timedelta
 
 import pytz
 from django.contrib.auth.models import AnonymousUser
-from django.utils.timezone import localdate
+from django.utils.timezone import localdate, localtime
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+from rest_framework.exceptions import ErrorDetail
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.fields import DateTimeField
 
+from registrations.exceptions import ConflictException
 from registrations.models import Registration, SeatReservationCode, SignUp
 from registrations.utils import code_validity_duration
 
@@ -274,14 +276,131 @@ class CreateSignUpsSerializer(serializers.Serializer):
 
 class SeatReservationCodeSerializer(serializers.ModelSerializer):
     timestamp = DateTimeField(default_timezone=pytz.UTC, required=False)
+
     expiration = serializers.SerializerMethodField()
 
-    class Meta:
-        fields = ("seats", "code", "timestamp", "registration", "expiration")
-        model = SeatReservationCode
+    in_waitlist = serializers.SerializerMethodField()
 
     def get_expiration(self, obj):
-        return obj.timestamp + timedelta(minutes=code_validity_duration(obj.seats))
+        return obj.expiration
+
+    def get_in_waitlist(self, obj):
+        registration = obj.registration
+        maximum_attendee_capacity = registration.maximum_attendee_capacity
+
+        if maximum_attendee_capacity is not None:
+            attendee_count = registration.signups.filter(
+                attendee_status=SignUp.AttendeeStatus.ATTENDING
+            ).count()
+
+            if maximum_attendee_capacity - attendee_count <= 0:
+                return True
+
+        return False
+
+    def validate(self, data):
+        instance = self.instance
+        errors = {}
+
+        # Amount of seats is always required
+        if data.get("seats") is None:
+            errors["seats"] = ErrorDetail(
+                _("This field must be specified."), code="required"
+            )
+
+        if isinstance(instance, SeatReservationCode):
+            non_editable_fields = ["registration", "timestamp"]
+
+            # It's not allowed to change registration or timestamp values
+            for field in non_editable_fields:
+                if field in data and getattr(instance, field) != data[field]:
+                    errors[field] = _("You may not change the value.")
+
+            # The code must be defined and match instance code when updating existing seats reservation
+            if self.initial_data.get("code") is None:
+                errors["code"] = ErrorDetail(
+                    _("This field must be specified."), code="required"
+                )
+            elif str(instance.code) != self.initial_data["code"]:
+                errors["code"] = _("The value doesn't match.")
+
+        registration = data["registration"]
+        maximum_attendee_capacity = registration.maximum_attendee_capacity
+        waiting_list_capacity = registration.waiting_list_capacity
+
+        # Validate attendee capacity only if maximum_attendee_capacity is defined
+        if maximum_attendee_capacity is not None:
+            serialized_registration = RegistrationBaseSerializer(
+                data["registration"], context=self.context
+            ).data
+            attendee_count = serialized_registration["current_attendee_count"]
+            reserved_seats_amount = registration.reserved_seats_amount
+
+            if isinstance(instance, SeatReservationCode):
+                reserved_seats_amount = max(reserved_seats_amount - instance.seats, 0)
+
+            attendee_capacity_left = maximum_attendee_capacity - attendee_count
+
+            # Only allow to reserve seats to event if attendee capacity is not used
+            if attendee_capacity_left > 0:
+                # Prevent to reserve seats if all available seats are already reserved
+                if (
+                    data.get("seats", 0)
+                    > attendee_capacity_left - reserved_seats_amount
+                ):
+                    errors["seats"] = _(
+                        "Not enough seats available. Capacity left: {capacity_left}."
+                    ).format(
+                        capacity_left=max(
+                            attendee_capacity_left - reserved_seats_amount, 0
+                        )
+                    )
+            # Validate waiting list capacity only if waiting_list_capacity is defined and
+            # and all seats in the event are used
+            elif waiting_list_capacity is not None:
+                waiting_list_count = serialized_registration[
+                    "current_waiting_list_count"
+                ]
+                waiting_list_capacity_left = waiting_list_capacity - waiting_list_count
+
+                # Prevent to reserve seats to waiting ist if all available seats in waiting list
+                # are already reserved
+                if (
+                    data.get("seats", 0)
+                    > waiting_list_capacity_left - reserved_seats_amount
+                ):
+                    errors["seats"] = _(
+                        "Not enough capacity in the waiting list. Capacity left: {capacity_left}."
+                    ).format(
+                        capacity_left=max(
+                            waiting_list_capacity_left - reserved_seats_amount, 0
+                        )
+                    )
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        super().validate(data)
+        return data
+
+    def update(self, instance, validated_data):
+        if localtime() > instance.expiration:
+            raise ConflictException(_("Cannot update expired seats reservation."))
+
+        super().update(instance, validated_data)
+        return instance
+
+    class Meta:
+        fields = (
+            "id",
+            "registration",
+            "seats",
+            "in_waitlist",
+            "code",
+            "timestamp",
+            "expiration",
+        )
+        model = SeatReservationCode
 
 
 class MassEmailSignupsField(serializers.PrimaryKeyRelatedField):

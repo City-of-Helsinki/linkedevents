@@ -7,7 +7,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.contrib.sites.models import Site
 from django.core.mail import send_mail
 from django.db import models
-from django.db.models import Sum
+from django.db.models import DateTimeField, ExpressionWrapper, F, Sum
 from django.forms.fields import MultipleChoiceField
 from django.template.loader import render_to_string
 from django.utils.functional import cached_property
@@ -15,6 +15,7 @@ from django.utils.timezone import localtime
 from django.utils.translation import gettext_lazy as _
 
 from events.models import Event, Language
+from registrations.utils import code_validity_duration
 
 User = settings.AUTH_USER_MODEL
 
@@ -138,10 +139,18 @@ class Registration(models.Model):
     @cached_property
     def reserved_seats_amount(self):
         return (
-            self.reservations.filter(
-                timestamp__gte=localtime()
-                - timedelta(minutes=settings.SEAT_RESERVATION_DURATION)
-            ).aggregate(seats_sum=Sum("seats", output_field=models.IntegerField()))[
+            # Calculate expiration time for each reservation
+            self.reservations.annotate(
+                expiration=ExpressionWrapper(
+                    F("timestamp")
+                    + timedelta(minutes=1) * code_validity_duration(F("seats")),
+                    output_field=DateTimeField(),
+                )
+            )
+            # Filter to get all not expired reservations
+            .filter(expiration__gte=localtime())
+            # Sum  seats of not expired reservation
+            .aggregate(seats_sum=Sum("seats", output_field=models.IntegerField()))[
                 "seats_sum"
             ]
             or 0
@@ -353,3 +362,7 @@ class SeatReservationCode(models.Model):
     timestamp = models.DateTimeField(
         verbose_name=_("Timestamp"), auto_now_add=True, blank=True
     )
+
+    @property
+    def expiration(self):
+        return self.timestamp + timedelta(minutes=code_validity_duration(self.seats))

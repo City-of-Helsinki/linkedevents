@@ -4,6 +4,8 @@ import pytest
 from rest_framework import status
 
 from events.tests.utils import versioned_reverse as reverse
+from registrations.models import SignUp
+from registrations.tests.test_seatsreservation_post import assert_reserve_seats
 from registrations.tests.test_signup_post import create_signup
 
 
@@ -137,6 +139,91 @@ def test_event_with_open_registrations_and_places_at_the_event_or_waiting_list(
 
 
 @pytest.mark.django_db
+def test_seat_reservation_without_code():
+    pass
+
+
+@pytest.mark.django_db
+def test_seat_reservation_with_code_too_many_signups():
+    """more sign ups in the request than allocated to specific code"""
+    pass
+
+
+@pytest.mark.django_db
+def test_seat_reservation_with_code_success_event_seats_only():
+    pass
+
+
+@pytest.mark.django_db
+def test_seat_reservation_with_code_success_event_seats_and_waitlist():
+    pass
+
+
+@pytest.mark.django_db
+def test_seat_reservation_with_code_success_waitlist_only():
+    pass
+
+
+@pytest.mark.django_db
+def test_group_signup_successful_with_waitlist(api_client, registration):
+    registration.maximum_attendee_capacity = 2
+    registration.waiting_list_capacity = 2
+    registration.audience_min_age = None
+    registration.audience_max_age = None
+    registration.save()
+
+    reservation_data = {"seats": 2, "registration": registration.id}
+    reservation_response = assert_reserve_seats(api_client, reservation_data)
+
+    sign_up_payload = {
+        "reservation_code": reservation_response.data["code"],
+        "signups": [
+            {
+                "name": "User 1",
+                "email": "test1@test.com",
+            },
+            {
+                "name": "User 2",
+                "email": "test2@test.com",
+            },
+        ],
+    }
+    signup_url = reverse("registration-signup", kwargs={"pk": registration.id})
+    response = api_client.post(signup_url, sign_up_payload, format="json")
+    assert response.status_code == status.HTTP_201_CREATED
+    assert registration.signups.count() == 2
+
+    reservation_response = assert_reserve_seats(api_client, reservation_data)
+    sign_up_payload = {
+        "reservation_code": reservation_response.data["code"],
+        "signups": [
+            {
+                "name": "User 3",
+                "email": "test3@test.com",
+            },
+            {
+                "name": "User 4",
+                "email": "test4@test.com",
+            },
+        ],
+    }
+    response = api_client.post(signup_url, sign_up_payload, format="json")
+    assert response.status_code == status.HTTP_201_CREATED
+    assert registration.signups.count() == 4
+    assert (
+        registration.signups.filter(
+            attendee_status=SignUp.AttendeeStatus.ATTENDING
+        ).count()
+        == 2
+    )
+    assert (
+        registration.signups.filter(
+            attendee_status=SignUp.AttendeeStatus.WAITING_LIST
+        ).count()
+        == 2
+    )
+
+
 def test_seat_reservation_without_code():
     pass
 
