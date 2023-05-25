@@ -71,7 +71,7 @@ def test_anonymous_user_can_get_signup_by_cancellation_code(
 
 
 @pytest.mark.django_db
-def test_anonymous_user_cannot_get_signup_with_mailformed_code(
+def test_anonymous_user_cannot_get_signup_with_malformed_code(
     api_client, registration, signup
 ):
     response = get_detail(api_client, signup.id, "cancellation_code=invalid_code")
@@ -130,6 +130,18 @@ def test__api_key_with_wrong_organization_cannot_get_signup(
     data_source.owner = organization2
     data_source.save()
     api_client.credentials(apikey=data_source.api_key)
+
+    response = get_detail(api_client, signup.id)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test__api_key_from_wrong_data_source_cannot_get_signup(
+    api_client, organization, other_data_source, registration, signup
+):
+    other_data_source.owner = organization
+    other_data_source.save()
+    api_client.credentials(apikey=other_data_source.api_key)
 
     response = get_detail(api_client, signup.id)
     assert response.status_code == status.HTTP_403_FORBIDDEN

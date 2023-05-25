@@ -5,8 +5,8 @@ from events.models import Event
 from events.tests.conftest import APIClient
 from events.tests.test_event_get import get_list_and_assert_events
 from events.tests.utils import versioned_reverse as reverse
-from registrations.tests.test_signup_post import assert_create_signup
 from registrations.models import SeatReservationCode
+from registrations.tests.test_signup_post import assert_create_signup
 
 # === util methods ===
 

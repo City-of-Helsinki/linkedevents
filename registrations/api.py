@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime, timedelta
 from smtplib import SMTPException
 
 import bleach

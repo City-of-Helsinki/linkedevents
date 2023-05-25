@@ -278,7 +278,7 @@ class SignUp(models.Model):
         return self.registration.publisher
 
     def can_be_edited_by(self, user):
-        """Check if current registration can be edited by the given user"""
+        """Check if current signup can be edited by the given user"""
         if user.is_superuser:
             return True
         return user.is_admin(self.publisher)
