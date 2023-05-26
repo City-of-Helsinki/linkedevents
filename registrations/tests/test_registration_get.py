@@ -6,7 +6,7 @@ from events.tests.conftest import APIClient
 from events.tests.test_event_get import get_list_and_assert_events
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import SeatReservationCode
-from registrations.tests.test_signup_post import assert_create_signup
+from registrations.tests.test_signup_post import assert_create_signups
 
 # === util methods ===
 
@@ -177,29 +177,42 @@ def test_current_attendee_and_waitlist_count(api_client, registration, user):
     registration.waiting_list_capacity = 1
     registration.save()
 
-    sign_up_data = {
+    response = get_detail(api_client, registration.id)
+    assert response.data["current_attendee_count"] == 0
+    assert response.data["current_waiting_list_count"] == 0
+
+    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    signup_data = {
         "name": "Michael Jackson",
         "email": "test@test.com",
         "phone_number": "0441111111",
         "notifications": "sms",
     }
-    sign_up_data2 = {
+    signups_data = {
+        "registration": registration.id,
+        "reservation_code": reservation.code,
+        "signups": [signup_data],
+    }
+    assert_create_signups(api_client, signups_data)
+    response = get_detail(api_client, registration.id)
+    assert response.data["current_attendee_count"] == 1
+    assert response.data["current_waiting_list_count"] == 0
+
+    reservation2 = SeatReservationCode.objects.create(
+        registration=registration, seats=1
+    )
+    signup_data2 = {
         "name": "Michael Jackson 2",
         "email": "test2@test.com",
         "phone_number": "20441111111",
         "notifications": "sms",
     }
-
-    response = get_detail(api_client, registration.id)
-    assert response.data["current_attendee_count"] == 0
-    assert response.data["current_waiting_list_count"] == 0
-
-    assert_create_signup(api_client, registration.id, sign_up_data)
-    response = get_detail(api_client, registration.id)
-    assert response.data["current_attendee_count"] == 1
-    assert response.data["current_waiting_list_count"] == 0
-
-    assert_create_signup(api_client, registration.id, sign_up_data2)
+    signups_data2 = {
+        "registration": registration.id,
+        "reservation_code": reservation2.code,
+        "signups": [signup_data2],
+    }
+    assert_create_signups(api_client, signups_data2)
     response = get_detail(api_client, registration.id)
     assert response.data["current_attendee_count"] == 1
     assert response.data["current_waiting_list_count"] == 1

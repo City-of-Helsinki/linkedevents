@@ -239,21 +239,18 @@ class CreateSignUpsSerializer(serializers.Serializer):
         registration = data["registration"]
 
         try:
-            reservation = SeatReservationCode.objects.get(code=reservation_code)
+            reservation = SeatReservationCode.objects.get(
+                code=reservation_code, registration=registration
+            )
             data["reservation"] = reservation
         except SeatReservationCode.DoesNotExist:
             raise serializers.ValidationError(
                 {
-                    "reservation_code": _(
-                        "Reservation code {code} doesn't exist."
-                    ).format(code=reservation_code)
-                }
-            )
-        if reservation.registration != registration:
-            raise serializers.ValidationError(
-                {
-                    "reservation_code": _(
-                        "Registration code doesn't match the registration"
+                    "reservation_code": ErrorDetail(
+                        _("Reservation code doesn't exist.").format(
+                            code=reservation_code
+                        ),
+                        code="does_not_exist",
                     )
                 }
             )
