@@ -269,6 +269,23 @@ class SignUp(models.Model):
         default=None,
     )
 
+    @property
+    def data_source(self):
+        return self.registration.data_source
+
+    @property
+    def publisher(self):
+        return self.registration.publisher
+
+    def can_be_edited_by(self, user):
+        """Check if current signup can be edited by the given user"""
+        if user.is_superuser:
+            return True
+        return user.is_admin(self.publisher)
+
+    def is_user_editable_resources(self):
+        return bool(self.data_source and self.data_source.user_editable_resources)
+
     class Meta:
         unique_together = [["email", "registration"], ["phone_number", "registration"]]
 
@@ -280,6 +297,7 @@ class SignUp(models.Model):
             "event": self.registration.event.name_fi,
             "cancellation_code": self.cancellation_code,
             "registration_id": self.registration.id,
+            "signup_id": self.id,
         }
 
         if self.registration.confirmation_message:

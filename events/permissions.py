@@ -93,22 +93,6 @@ class GuestPost(BasePermission):
             return False
 
 
-class GuestDelete(BasePermission):
-    def has_permission(self, request, view):
-        if request.method == "DELETE":
-            return True
-        else:
-            return False
-
-
-class GuestGet(BasePermission):
-    def has_permission(self, request, view):
-        if request.method == "GET":
-            return True
-        else:
-            return False
-
-
 class DataSourceResourceEditPermission(IsAuthenticatedOrReadOnly):
     def has_permission(self, request, view):
         if not super().has_permission(request, view):

@@ -2,8 +2,10 @@ import pytest
 from rest_framework import status
 
 from events.tests.utils import versioned_reverse as reverse
-from registrations.tests.test_registration_admin_side import get_event_url
-from registrations.tests.test_registration_post import create_registration
+from registrations.tests.test_registration_post import (
+    create_registration,
+    get_event_url,
+)
 
 # === util methods ===
 
@@ -20,7 +22,7 @@ def update_registration(api_client, pk, registration_data, data_source=None):
 
 def assert_update_registration(api_client, pk, registration_data, data_source=None):
     response = update_registration(api_client, pk, registration_data, data_source)
-    print(response.data)
+
     assert response.status_code == status.HTTP_200_OK
     assert response.data["id"] == pk
 

@@ -6,6 +6,7 @@ from events.tests.conftest import APIClient
 from events.tests.test_event_get import get_list_and_assert_events
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import SeatReservationCode
+from registrations.tests.test_signup_post import assert_create_signup
 
 # === util methods ===
 
@@ -166,6 +167,42 @@ def test_get_registration_with_event_and_audience_included(
     response_audience = response.data["event"]["audience"][0]
     assert response_audience["id"] == keyword.id
     assert list(response_audience["name"].values())[0] == keyword.name
+
+
+@pytest.mark.django_db
+def test_current_attendee_and_waitlist_count(api_client, registration, user):
+    registration.audience_min_age = None
+    registration.audience_max_age = None
+    registration.maximum_attendee_capacity = 1
+    registration.waiting_list_capacity = 1
+    registration.save()
+
+    sign_up_data = {
+        "name": "Michael Jackson",
+        "email": "test@test.com",
+        "phone_number": "0441111111",
+        "notifications": "sms",
+    }
+    sign_up_data2 = {
+        "name": "Michael Jackson 2",
+        "email": "test2@test.com",
+        "phone_number": "20441111111",
+        "notifications": "sms",
+    }
+
+    response = get_detail(api_client, registration.id)
+    assert response.data["current_attendee_count"] == 0
+    assert response.data["current_waiting_list_count"] == 0
+
+    assert_create_signup(api_client, registration.id, sign_up_data)
+    response = get_detail(api_client, registration.id)
+    assert response.data["current_attendee_count"] == 1
+    assert response.data["current_waiting_list_count"] == 0
+
+    assert_create_signup(api_client, registration.id, sign_up_data2)
+    response = get_detail(api_client, registration.id)
+    assert response.data["current_attendee_count"] == 1
+    assert response.data["current_waiting_list_count"] == 1
 
 
 @pytest.mark.django_db

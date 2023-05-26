@@ -3,7 +3,7 @@ from freezegun import freeze_time
 from rest_framework import status
 
 from events.tests.utils import versioned_reverse as reverse
-from registrations.tests.test_registration_admin_side import sign_up
+from registrations.tests.test_signup_post import create_signup
 
 
 def delete_registration(api_client, id):
@@ -32,20 +32,8 @@ def test__unauthenticated_user_cannot_delete_registration(api_client, registrati
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test__registration_with_signups_cannot_be_deleted(
-    api_client, languages, registration, user
+    api_client, registration, signup, user
 ):
-    api_client.force_authenticate(user)
-
-    sign_up_data = {
-        "date_of_birth": "2011-04-07",
-        "email": "test@test.com",
-        "notifications": "sms",
-        "service_language": "fi",
-        "native_language": "fi",
-    }
-    response = sign_up(api_client, registration.id, sign_up_data)
-    assert response.status_code == status.HTTP_201_CREATED
-
     api_client.force_authenticate(user)
     response = delete_registration(api_client, registration.id)
 
@@ -114,7 +102,7 @@ def test__api_key_of_other_organization_cannot_delete_registration(
 
 
 @pytest.mark.django_db
-def test__api_key_from_wrong_data_source_cannot_update_registration(
+def test__api_key_from_wrong_data_source_cannot_delete_registration(
     api_client, organization, other_data_source, registration
 ):
     other_data_source.owner = organization
@@ -126,7 +114,7 @@ def test__api_key_from_wrong_data_source_cannot_update_registration(
 
 
 @pytest.mark.django_db
-def test__unknown_api_key_cannot_delete_keywordset(api_client, registration):
+def test__unknown_api_key_cannot_delete_registration(api_client, registration):
     api_client.credentials(apikey="unknown")
 
     response = delete_registration(api_client, registration.id)

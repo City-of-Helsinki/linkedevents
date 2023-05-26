@@ -2,7 +2,8 @@ import pytest
 from rest_framework import status
 
 from events.tests.utils import versioned_reverse as reverse
-from registrations.tests.test_registration_admin_side import get_event_url
+
+# === util methods ===
 
 
 def create_registration(api_client, registration_data, data_source=None):
@@ -20,6 +21,13 @@ def assert_create_registration(api_client, registration_data, data_source=None):
     assert response.data["event"] == registration_data["event"]
 
     return response
+
+
+def get_event_url(detail_pk):
+    return reverse("event-detail", kwargs={"pk": detail_pk})
+
+
+# === tests ===
 
 
 @pytest.mark.django_db
@@ -135,7 +143,7 @@ def test__api_key_with_wrong_data_source_cannot_create_registration(
 
 
 @pytest.mark.django_db
-def test__unknown_api_key_cannot_create_keywordset(api_client, event):
+def test__unknown_api_key_cannot_create_registration(api_client, event):
     api_client.credentials(apikey="unknown")
 
     registration_data = {"event": {"@id": get_event_url(event.id)}}
@@ -144,7 +152,7 @@ def test__unknown_api_key_cannot_create_keywordset(api_client, event):
 
 
 @pytest.mark.django_db
-def test__empty_api_key_cannot_create_keywordset(api_client, event):
+def test__empty_api_key_cannot_create_registration(api_client, event):
     api_client.credentials(apikey="")
 
     registration_data = {"event": {"@id": get_event_url(event.id)}}
