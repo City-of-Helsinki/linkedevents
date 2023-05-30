@@ -3026,15 +3026,19 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
         queryset = queryset.filter(publication_status=PublicationStatus.PUBLIC)
 
     # Filter by event status
-    val = params.get("event_status", None)
-    if val and val.lower() == "eventscheduled":
-        queryset = queryset.filter(event_status=Event.Status.SCHEDULED)
-    elif val and val.lower() == "eventrescheduled":
-        queryset = queryset.filter(event_status=Event.Status.RESCHEDULED)
-    elif val and val.lower() == "eventcancelled":
-        queryset = queryset.filter(event_status=Event.Status.CANCELLED)
-    elif val and val.lower() == "eventpostponed":
-        queryset = queryset.filter(event_status=Event.Status.POSTPONED)
+    if status_param := params.get("event_status"):
+        statuses = []
+        for value in (s.lower() for s in status_param.split(",")):
+            if value == "eventscheduled":
+                statuses.append(Event.Status.SCHEDULED)
+            elif value == "eventrescheduled":
+                statuses.append(Event.Status.RESCHEDULED)
+            elif value == "eventcancelled":
+                statuses.append(Event.Status.CANCELLED)
+            elif value == "eventpostponed":
+                statuses.append(Event.Status.POSTPONED)
+
+        queryset = queryset.filter(event_status__in=statuses)
 
     # Filter by language, checking both string content and in_language field
     val = params.get("language", None)

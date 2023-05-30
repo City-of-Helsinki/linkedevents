@@ -203,6 +203,11 @@
         <pre><code>event/?event_status=EventCancelled</code></pre>
         <p><a href="?event_status=EventCancelled" title="json">See the result</a></p>
 
+        <p>It is also possible to use multiple <code>event_status</code> parameters in a single query.
+            Statuses must be separated by a comma.</p>
+        <p>Example:</p>
+        <pre><code>event/?event_status=EventCancelled,EventPostponed</code></pre>
+
         <h3 id="event-type">Event type</h3>
         <p>Events in Linkedevents (indicated by the <code>type_id</code> field) may be event (<code>General</code>),
              course (<code>Course</code>) or volunteering (<code>Volunteering</code>). By default, only events
