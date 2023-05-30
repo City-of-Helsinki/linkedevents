@@ -1,4 +1,5 @@
 import base64
+import logging
 import re
 import struct
 import time
@@ -108,6 +109,7 @@ from helevents.serializers import UserSerializer
 from linkedevents.registry import register_view, viewset_classes_by_model
 from registrations.serializers import RegistrationBaseSerializer
 
+logger = logging.getLogger(__name__)
 LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
 
 
@@ -2511,6 +2513,43 @@ def _terms_to_regex(terms, operator, fuzziness=3):
     return regex.compile(expr, regex.IGNORECASE)
 
 
+def _get_queryset_from_cache(params, param, cache_name, operator, queryset):
+    val = params.get(param, None)
+    if not val:
+        return queryset
+
+    cache_values = cache.get(cache_name)
+    if not cache_values:
+        logger.error(f"Missed cache {cache_name}")
+        return queryset
+
+    rc = _terms_to_regex(val, operator)
+    ids = {k for k, v in cache_values.items() if rc.search(v, concurrent=True)}
+    queryset = queryset.filter(id__in=ids)
+
+    return queryset
+
+
+def _get_queryset_from_cache_many(params, param, cache_name, operator, queryset):
+    val = params.get(param, None)
+    if not val:
+        return queryset
+
+    cache_values = cache.get(cache_name)
+    if not cache_values:
+        logger.error(f"Missed cache {cache_name}")
+        return queryset
+
+    rc = _terms_to_regex(val, operator)
+    cached_ids = {k: v for i in cache_values.values() for k, v in i.items()}
+
+    ids = {k for k, v in cached_ids.items() if rc.search(v, concurrent=True)}
+
+    queryset = queryset.filter(id__in=ids)
+
+    return queryset
+
+
 def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
     """
     Filter events queryset by params
@@ -2578,76 +2617,35 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
             local=True,
         )
 
-    val = params.get("local_ongoing_OR", None)
-    if val:
-        rc = _terms_to_regex(val, "OR")
-        ids = {
-            k
-            for k, v in cache.get("local_ids").items()
-            if rc.search(v, concurrent=True)
-        }
-        queryset = queryset.filter(id__in=ids)
+    queryset = _get_queryset_from_cache(
+        params, "local_ongoing_OR", "local_ids", "OR", queryset
+    )
+    queryset = _get_queryset_from_cache(
+        params, "local_ongoing_AND", "local_ids", "AND", queryset
+    )
+    queryset = _get_queryset_from_cache(
+        params, "internet_ongoing_AND", "internet_ids", "AND", queryset
+    )
+    queryset = _get_queryset_from_cache(
+        params, "internet_ongoing_OR", "internet_ids", "OR", queryset
+    )
+    queryset = _get_queryset_from_cache(
+        params, "local_ongoing_OR", "local_ids", "OR", queryset
+    )
 
-    val = params.get("local_ongoing_AND", None)
-    if val:
-        rc = _terms_to_regex(val, "AND")
-        ids = {
-            k
-            for k, v in cache.get("local_ids").items()
-            if rc.search(v, concurrent=True)
-        }
-        queryset = queryset.filter(id__in=ids)
+    cache_values = cache.get_many(["internet_ids", "local_ids"])
+    if cache_values:
+        val = params.get("all_ongoing", None)
+        if val and parse_bool(val, "all_ongoing"):
+            ids = {k for i in cache_values.values() for k, v in i.items()}
+            queryset = queryset.filter(id__in=ids)
 
-    val = params.get("internet_ongoing_AND", None)
-    if val:
-        rc = _terms_to_regex(val, "AND")
-        ids = {
-            k
-            for k, v in cache.get("internet_ids").items()
-            if rc.search(v, concurrent=True)
-        }
-        queryset = queryset.filter(id__in=ids)
-
-    val = params.get("internet_ongoing_OR", None)
-    if val:
-        rc = _terms_to_regex(val, "OR")
-        ids = {
-            k
-            for k, v in cache.get("internet_ids").items()
-            if rc.search(v, concurrent=True)
-        }
-        queryset = queryset.filter(id__in=ids)
-
-    val = params.get("all_ongoing", None)
-    if val and parse_bool(val, "all_ongoing"):
-        ids = {
-            k
-            for i in cache.get_many(["internet_ids", "local_ids"]).values()
-            for k, v in i.items()
-        }
-        queryset = queryset.filter(id__in=ids)
-
-    val = params.get("all_ongoing_AND", None)
-    if val:
-        rc = _terms_to_regex(val, "AND")
-        cached_ids = {
-            k: v
-            for i in cache.get_many(["internet_ids", "local_ids"]).values()
-            for k, v in i.items()
-        }
-        ids = {k for k, v in cached_ids.items() if rc.search(v, concurrent=True)}
-        queryset = queryset.filter(id__in=ids)
-
-    val = params.get("all_ongoing_OR", None)
-    if val:
-        rc = _terms_to_regex(val, "OR")
-        cached_ids = {
-            k: v
-            for i in cache.get_many(["internet_ids", "local_ids"]).values()
-            for k, v in i.items()
-        }
-        ids = {k for k, v in cached_ids.items() if rc.search(v, concurrent=True)}
-        queryset = queryset.filter(id__in=ids)
+    queryset = _get_queryset_from_cache_many(
+        params, "all_ongoing_AND", ["internet_ids", "local_ids"], "AND", queryset
+    )
+    queryset = _get_queryset_from_cache_many(
+        params, "all_ongoing_OR", ["internet_ids", "local_ids"], "OR", queryset
+    )
 
     vals = params.get("keyword_set_AND", None)
     if vals:
