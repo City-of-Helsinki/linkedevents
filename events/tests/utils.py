@@ -75,7 +75,7 @@ def assert_data_is_equal(d1, d2, fields):
             if type(d1[key]) is list:
                 assert_lists_match(d1[key], d2[key])
             else:
-                assert d1[key] == d2[key]
+                assert d1[key] == d2[key], key
 
 
 def get(api_client, url, data=None):

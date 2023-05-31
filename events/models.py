@@ -136,7 +136,9 @@ class BaseQuerySet(models.QuerySet):
         if user.is_superuser:
             return True
         for event in self:
-            if not user.can_edit_event(event.publisher, event.publication_status):
+            if not user.can_edit_event(
+                event.publisher, event.publication_status, event.created_by
+            ):
                 return False
         return True
 

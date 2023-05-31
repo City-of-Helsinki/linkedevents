@@ -370,17 +370,6 @@ class TestEventAPI(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_random_user_create_event_denied(self):
-        url = reverse("event-list")
-        location_id = reverse("place-detail", kwargs={"pk": self.place.id})
-        data = self.make_minimal_event_dict(
-            self.system_data_source, self.org_1, location_id
-        )
-
-        self.client.force_authenticate(self.user)
-        response = self.client.post(url, data, format="json")
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
     def test_random_user_update_public_event_denied(self):
         url = reverse("event-detail", kwargs={"pk": self.event_4.id})
         location_id = reverse("place-detail", kwargs={"pk": self.place.id})
@@ -411,17 +400,6 @@ class TestEventAPI(APITestCase):
 
         self.client.force_authenticate(self.user)
         response = self.client.post(url, [data_1, data_2], format="json")
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_random_user_bulk_update(self):
-        url = reverse("event-list")
-        location_id = reverse("place-detail", kwargs={"pk": self.place.id})
-        data = self.make_complex_event_dict(
-            self.system_data_source, self.org_1, location_id, self.languages
-        )
-
-        self.client.force_authenticate(self.user)
-        response = self.client.put(url, [data], format="json")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_admin_get_own_public_event(self):

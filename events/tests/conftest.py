@@ -442,15 +442,19 @@ def make_keyword():
         ]
 
         labels = [
-            KeywordLabel.objects.create(name="%s%s" % (kw_name, lang.id), language=lang)
+            KeywordLabel.objects.get_or_create(
+                name="%s%s" % (kw_name, lang.id), language=lang
+            )[0]
             for lang in lang_objs
         ]
 
-        obj = Keyword.objects.create(
+        obj, created = Keyword.objects.get_or_create(
             id=data_source.id + ":" + kw_name,
-            name=kw_name,
-            publisher=organization,
-            data_source=data_source,
+            defaults=dict(
+                name=kw_name,
+                publisher=organization,
+                data_source=data_source,
+            ),
         )
         for label in labels:
             obj.alt_labels.add(label)
