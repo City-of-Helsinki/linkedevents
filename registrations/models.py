@@ -286,9 +286,6 @@ class SignUp(models.Model):
     def is_user_editable_resources(self):
         return bool(self.data_source and self.data_source.user_editable_resources)
 
-    class Meta:
-        unique_together = [["email", "registration"], ["phone_number", "registration"]]
-
     def send_notification(self, confirmation_type):
         email_variables = {
             "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,

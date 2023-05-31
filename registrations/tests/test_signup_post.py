@@ -188,7 +188,7 @@ def test_cannot_signup_if_reservation_code_is_expired(api_client, registration):
 
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_cannot_signup_twice_with_same_phone_or_email(api_client, registration):
+def test_can_signup_twice_with_same_phone_or_email(api_client, registration):
     sign_up_data = {
         "name": "Michael Jackson",
         "email": "test@test.com",
@@ -198,21 +198,14 @@ def test_cannot_signup_twice_with_same_phone_or_email(api_client, registration):
 
     # Create a signup
     assert_create_signup(api_client, registration.id, sign_up_data)
-
-    # Cannot signup with the same email twice
+    # Signup with the same email
     signup_data_same_email = deepcopy(sign_up_data)
     signup_data_same_email["phone_number"] = "0442222222"
-    response = create_signup(api_client, registration.id, signup_data_same_email)
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-    print(response.data["signups"][0])
-    assert response.data["signups"][0]["non_field_errors"][0].code == "unique"
-
-    # Cannot signup with the same phone twice
+    assert_create_signup(api_client, registration.id, signup_data_same_email)
+    # Cannot signup with the same phone
     signup_data_same_phone = deepcopy(sign_up_data)
     signup_data_same_phone["email"] = "another@email.com"
-    response = create_signup(api_client, registration.id, signup_data_same_phone)
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.data["signups"][0]["non_field_errors"][0].code == "unique"
+    assert_create_signup(api_client, registration.id, signup_data_same_phone)
 
 
 @pytest.mark.parametrize("min_age", [None, 0, 10])
