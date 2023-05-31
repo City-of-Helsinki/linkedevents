@@ -56,6 +56,28 @@ def user2():
 
 
 @pytest.fixture
+def external_user():
+    """A user that doesn't belong to any organization."""
+    return get_user_model().objects.create(
+        username="external_user",
+        first_name="External",
+        last_name="User",
+        email="external@user.test",
+    )
+
+
+@pytest.fixture
+def external_user_2():
+    """Another user that doesn't belong to any organization."""
+    return get_user_model().objects.create(
+        username="external_user_2",
+        first_name="External2",
+        last_name="User",
+        email="external2@user.test",
+    )
+
+
+@pytest.fixture
 def super_user():
     return get_user_model().objects.create(
         username="super_user",
@@ -104,6 +126,7 @@ def organization_class():
 @pytest.mark.django_db
 @pytest.fixture
 def organization(data_source, user):
+    """Organization with a single admin user (user)."""
     org, created = Organization.objects.get_or_create(
         id=data_source.id + ":test_organization",
         origin_id="test_organization",
@@ -118,6 +141,7 @@ def organization(data_source, user):
 @pytest.mark.django_db
 @pytest.fixture
 def organization2(other_data_source, user2):
+    """Organization with a single admin user (user2)."""
     org, created = Organization.objects.get_or_create(
         id=other_data_source.id + ":test_organization2",
         origin_id="test_organization2",
@@ -132,6 +156,7 @@ def organization2(other_data_source, user2):
 @pytest.mark.django_db
 @pytest.fixture
 def organization3(other_data_source, user2):
+    """Organization with a single admin user (user2)."""
     org, created = Organization.objects.get_or_create(
         id=other_data_source.id + ":test_organization3",
         origin_id="test_organization3",

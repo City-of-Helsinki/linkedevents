@@ -97,8 +97,8 @@ from events.permissions import (
     DataSourceResourceEditPermission,
     GuestPost,
     GuestRetrieve,
-    UserIsAdminInAnyOrganization,
     OrganizationUserEditPermission,
+    UserIsAdminInAnyOrganization,
 )
 from events.renderers import DOCXRenderer
 from events.translation import (
@@ -1977,7 +1977,9 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
         queryset=DataSource.objects.all(), required=False
     )
     publisher = serializers.PrimaryKeyRelatedField(
-        queryset=Organization.objects.all(), required=False
+        queryset=Organization.objects.all(),
+        required=False,
+        allow_null=True,
     )
     sub_events = JSONLDRelatedField(
         serializer="EventSerializer",
@@ -2032,6 +2034,15 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
     end_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
     created_by = serializers.StringRelatedField(required=False, allow_null=True)
     last_modified_by = serializers.StringRelatedField(required=False, allow_null=True)
+
+    class Meta:
+        model = Event
+        exclude = (
+            "search_vector_en",
+            "search_vector_fi",
+            "search_vector_sv",
+        )
+        list_serializer_class = BulkListSerializer
 
     def __init__(self, *args, skip_empties=False, **kwargs):
         super().__init__(*args, **kwargs)
@@ -2183,6 +2194,10 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
         offers = validated_data.pop("offers", [])
         links = validated_data.pop("external_links", [])
         videos = validated_data.pop("videos", [])
+        publisher = (
+            validated_data.get("publisher")
+            or utils.get_or_create_default_organization()
+        )
 
         validated_data.update(
             {
@@ -2190,6 +2205,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
                 "last_modified_by": user,
                 "created_time": Event.now(),  # we must specify creation time as we are setting id
                 "event_status": Event.Status.SCHEDULED,  # mark all newly created events as scheduled
+                "publisher": publisher,
             }
         )
 
@@ -2223,6 +2239,9 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
         links = validated_data.pop("external_links", None)
         videos = validated_data.pop("videos", None)
         data_source = self.context["data_source"]
+        publisher = validated_data.get("publisher") or instance.publisher
+
+        validated_data.update({"publisher": publisher})
 
         if (
             instance.end_time
@@ -2382,15 +2401,6 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
             ret["sub_events"] = undeleted_sub_events
 
         return ret
-
-    class Meta:
-        model = Event
-        exclude = (
-            "search_vector_en",
-            "search_vector_fi",
-            "search_vector_sv",
-        )
-        list_serializer_class = BulkListSerializer
 
 
 def _format_images_v0_1(data):
@@ -3272,9 +3282,7 @@ class EventViewSet(
     )
     ordering = ("-last_modified_time",)
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES + [DOCXRenderer]
-    permission_classes = [
-        OrganizationUserEditPermission & DataSourceResourceEditPermission
-    ]
+    permission_classes = [DataSourceResourceEditPermission]
     permit_regular_user_edit = True
 
     @staticmethod
@@ -3330,7 +3338,9 @@ class EventViewSet(
             event.publication_status == PublicationStatus.PUBLIC
             or self.request.user.is_authenticated
             and self.request.user.can_edit_event(
-                event.publisher, event.publication_status
+                event.publisher,
+                event.publication_status,
+                event.created_by,
             )
         ):
             if event.deleted:
@@ -3402,7 +3412,9 @@ class EventViewSet(
         _, org = self.user_data_source_and_organization
         if "publisher" in event_data:
             org = event_data["publisher"]
-        if not self.request.user.can_edit_event(org, event_data["publication_status"]):
+        if not self.request.user.can_edit_event(
+            org, event_data["publication_status"], instance.created_by
+        ):
             raise DRFPermissionDenied()
 
         serializer.save()
@@ -3422,21 +3434,20 @@ class EventViewSet(
 
         # Prevent changing existing events to a state that user does not have write permissions
         for event_data in serializer.validated_data:
+            try:
+                instance = serializer.instance.get(id=event_data["id"])
+            except Event.DoesNotExist:
+                instance = None
             _, org = self.user_data_source_and_organization
             if "publisher" in event_data:
                 org = event_data["publisher"]
             if not self.request.user.can_edit_event(
-                org, event_data["publication_status"]
+                org,
+                event_data["publication_status"],
+                instance.created_by if instance else None,
             ):
                 raise DRFPermissionDenied()
 
-        if isinstance(
-            serializer, EventSerializer
-        ) and not self.request.user.can_edit_event(
-            serializer.instance.publisher,
-            serializer.instance.publication_status,
-        ):
-            raise DRFPermissionDenied()
         super().perform_update(serializer)
 
     @transaction.atomic
@@ -3548,7 +3559,7 @@ class EventViewSet(
             _, org = self.user_data_source_and_organization
             if "publisher" in event_data:
                 org = event_data["publisher"]
-            if not self.request.user.can_edit_event(
+            if not self.request.user.can_create_event(
                 org, event_data["publication_status"]
             ):
                 raise DRFPermissionDenied()

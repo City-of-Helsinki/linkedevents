@@ -734,7 +734,7 @@ def test__correct_api_key_can_update_an_event_in_suborganization(
         complex_event_dict,
         credentials={"apikey": other_data_source.api_key},
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, response.data
     assert ApiKeyUser.objects.all().count() == 1
 
 

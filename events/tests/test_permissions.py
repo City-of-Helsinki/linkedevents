@@ -46,13 +46,16 @@ class TestUserModelPermissionMixin(TestCase):
     [
         ("admin", True, True),
         ("regular", False, True),
-        ("external", False, False),
+        ("external", False, True),
     ],
 )
 @pytest.mark.django_db
 def test_can_edit_event(membership_status, expected_public, expected_draft):
-    org = OrganizationFactory()
     instance = UserModelPermissionMixin()
+    if membership_status == "external":
+        org = None
+    else:
+        org = OrganizationFactory()
 
     with (
         patch.object(
@@ -71,8 +74,14 @@ def test_can_edit_event(membership_status, expected_public, expected_draft):
             return_value=membership_status == "external",
         ),
     ):
-        assert instance.can_edit_event(org, PublicationStatus.PUBLIC) is expected_public
-        assert instance.can_edit_event(org, PublicationStatus.DRAFT) is expected_draft
+        assert (
+            instance.can_edit_event(org, PublicationStatus.PUBLIC, instance)
+            is expected_public
+        )
+        assert (
+            instance.can_edit_event(org, PublicationStatus.DRAFT, instance)
+            is expected_draft
+        )
 
 
 @pytest.mark.parametrize(

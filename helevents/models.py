@@ -1,5 +1,6 @@
 from functools import reduce
 
+from django.conf import settings
 from django.utils.functional import cached_property
 from django_orghierarchy.models import Organization
 from helusers.models import AbstractUser
@@ -51,20 +52,42 @@ class UserModelPermissionMixin:
         """
         raise NotImplementedError()
 
-    def can_edit_event(self, publisher, publication_status):
-        """Check if current user can edit (create, change, modify)
-        event with the given publisher and publication_status"""
+    def can_create_event(self, publisher, publication_status):
+        """Check if current user can create an event with the given publisher and publication_status"""
         if self.is_admin(publisher):
             return True
-        if (
-            self.is_regular_user(publisher)
-            and publication_status == PublicationStatus.DRAFT
-        ):
+        # Non-admins can only create drafts.
+        return publication_status == PublicationStatus.DRAFT
+
+    def can_edit_event(self, publisher, publication_status, created_by=None):
+        """Check if current user can edit an event with the given publisher and publication_status"""
+        if self.is_admin(publisher):
             return True
+
+        # Non-admins can only edit drafts.
+        if publication_status == PublicationStatus.DRAFT:
+            if (
+                publisher is None
+                or publisher.id == settings.USER_DEFAULT_ORGANIZATION_ID
+            ):
+                # External users can only edit their own drafts from the default organization.
+                return self.is_external and created_by == self
+            else:
+                # Regular users can edit drafts from organizations they are members of.
+                return self.is_regular_user(publisher)
+
         return False
 
     def get_editable_events(self, queryset):
         """Get editable events queryset from given queryset for current user"""
+        if self.is_external:
+            # External users can only edit their own drafts from the default organization.
+            return queryset.filter(
+                created_by=self,
+                publisher__id=settings.USER_DEFAULT_ORGANIZATION_ID,
+                publication_status=PublicationStatus.DRAFT,
+            )
+
         # distinct is not needed here, as admin_orgs and memberships should not overlap
         return queryset.filter(
             publisher__in=self.get_admin_organizations_and_descendants()
@@ -130,7 +153,11 @@ class User(AbstractUser, UserModelPermissionMixin):
         return admin_org or regular_org
 
     def is_admin(self, publisher):
+        if publisher is None:
+            return False
         return publisher in self.get_admin_organizations_and_descendants()
 
     def is_regular_user(self, publisher):
+        if publisher is None:
+            return False
         return self.organization_memberships.filter(id=publisher.id).exists()

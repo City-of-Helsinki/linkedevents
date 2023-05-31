@@ -25,6 +25,10 @@ class EventFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Event
 
+    @factory.lazy_attribute_sequence
+    def id(self, n):
+        return f"{self.data_source.id}:{n}"
+
 
 class RegistrationFactory(factory.django.DjangoModelFactory):
     event = factory.SubFactory(EventFactory)
