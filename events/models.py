@@ -1250,7 +1250,6 @@ class EventAggregateMember(models.Model):
 
 
 class Feedback(models.Model):
-
     name = models.CharField(verbose_name=_("Name"), max_length=255, blank=True)
     email = models.EmailField(verbose_name=_("E-mail"))
     subject = models.CharField(verbose_name=_("Subject"), max_length=255, blank=True)

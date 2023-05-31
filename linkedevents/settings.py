@@ -296,7 +296,7 @@ ACCOUNT_LOGOUT_ON_GET = True
 
 
 # Enable external user event create/update/delete.
-ENABLE_EXTERNAL_USER_EVENTS = env.bool("ENABLE_EXTERNAL_USER_EVENTS")
+ENABLE_EXTERNAL_USER_EVENTS = env("ENABLE_EXTERNAL_USER_EVENTS")
 
 # Publisher used for events created by users without organization (i.e. external users)
 EXTERNAL_USER_PUBLISHER_ID = env("EXTERNAL_USER_PUBLISHER_ID")

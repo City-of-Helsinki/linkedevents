@@ -24,6 +24,11 @@ def make_event_data(make_minimal_event_dict, location_id):
         kwargs.setdefault("publication_status", "draft")
         d = make_minimal_event_dict(event.data_source, event.publisher, location_id)
         d["publisher"] = None
+        # Required fields for external user
+        d["user_email"] = "email@example.com"
+        d["user_name"] = "User name"
+        d["maximum_attendee_capacity"] = 5
+        d["user_consent"] = True
         d.update(kwargs)
         return d
 
@@ -34,6 +39,11 @@ def make_event_data(make_minimal_event_dict, location_id):
 def minimal_event(minimal_event_dict):
     minimal_event_dict["publisher"] = None
     minimal_event_dict["publication_status"] = "draft"
+    # Required fields for external user
+    minimal_event_dict["user_email"] = "email@example.com"
+    minimal_event_dict["user_name"] = "User name"
+    minimal_event_dict["maximum_attendee_capacity"] = 5
+    minimal_event_dict["user_consent"] = True
 
     return minimal_event_dict
 
