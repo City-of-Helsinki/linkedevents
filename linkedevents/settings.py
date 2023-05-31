@@ -53,6 +53,7 @@ env = environ.Env(
     DATABASE_URL=(str, "postgis:///linkedevents"),
     DEBUG=(bool, False),
     ELASTICSEARCH_URL=(str, None),
+    ENABLE_REGISTRATION_ENDPOINTS=(bool, False),
     ENABLE_USER_DEFAULT_ORGANIZATION=(bool, False),
     EXTRA_INSTALLED_APPS=(list, []),
     INSTANCE_NAME=(str, "Linked Events"),
@@ -386,9 +387,11 @@ CITYSDK_API_SETTINGS = {
 # Used in Lippupiste importer
 LIPPUPISTE_EVENT_API_URL = env("LIPPUPISTE_EVENT_API_URL")
 
+# Add registration related routes to router
+ENABLE_REGISTRATION_ENDPOINTS = env("ENABLE_REGISTRATION_ENDPOINTS")
+
 # Seat reservation duration in minutes
 SEAT_RESERVATION_DURATION = env("SEAT_RESERVATION_DURATION")
-
 
 # Urls to Linked Events UI and Linked Registration UI
 LINKED_EVENTS_UI_URL = env("LINKED_EVENTS_UI_URL")
