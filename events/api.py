@@ -3572,7 +3572,7 @@ class EventViewSet(
 
     def perform_destroy(self, instance):
         if not self.request.user.can_edit_event(
-            instance.publisher, instance.publication_status
+            instance.publisher, instance.publication_status, instance.created_by
         ):
             raise DRFPermissionDenied()
         instance.soft_delete()
