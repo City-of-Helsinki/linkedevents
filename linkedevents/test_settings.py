@@ -30,3 +30,6 @@ SOCIAL_AUTH_TUNNISTAMO_OIDC_ENDPOINT = "https://test_issuer"
 OIDC_API_TOKEN_AUTH["ISSUER"] = "https://test_issuer"
 
 SECRET_KEY = "xxx"
+
+# Enable registration related routes for pytest
+ENABLE_REGISTRATION_ENDPOINTS = True

@@ -1,5 +1,6 @@
 import copy
 
+from django.conf import settings
 from rest_framework.routers import DefaultRouter, SimpleRouter
 
 from linkedevents.registry import all_views
@@ -30,7 +31,9 @@ class LinkedEventsAPIRouter(DefaultRouter):
         # Imports run register_view for all views
         import events.api  # noqa
         import helevents.api  # noqa
-        import registrations.api  # noqa
+
+        if settings.ENABLE_REGISTRATION_ENDPOINTS:
+            import registrations.api  # noqa
 
         for view in all_views:
             self._register_view(view)
