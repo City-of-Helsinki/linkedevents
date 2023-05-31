@@ -2035,6 +2035,15 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
                     "extension_{}".format(ext.identifier)
                 ] = ext.get_extension_serializer()
 
+        user = self.context["request"].user
+
+        if not settings.ENABLE_EXTERNAL_USER_EVENTS:
+            for field in self.personal_information_fields:
+                self.fields.pop(field, None)
+        elif user.is_authenticated and user.is_external:
+            for field in ("user_name", "maximum_attendee_capacity"):
+                self.fields[field].required = True
+
     def parse_datetimes(self, data):
         # here, we also set has_start_time and has_end_time accordingly
         for field in ["date_published", "start_time", "end_time"]:
@@ -2056,6 +2065,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
 
     def validate(self, data):
         context = self.context
+        user = self.context["request"].user
         # clean all text fields, only description may contain any html
         data = clean_text_fields(data, allowed_html_fields=["description"])
 
@@ -2064,7 +2074,8 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
         if "publication_status" not in data:
             data["publication_status"] = PublicationStatus.PUBLIC
 
-        # if the event is a draft, postponed or cancelled, no further validation is performed
+        # If the event is a draft, postponed or cancelled, no further validation is performed
+        # For external users do all validations.
         if (
             data["publication_status"] == PublicationStatus.DRAFT
             or data.get("event_status", None) == Event.Status.CANCELLED
@@ -2075,12 +2086,38 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
             )
         ):
             data = self.run_extension_validations(data)
-            return data
+
+            if not (
+                settings.ENABLE_EXTERNAL_USER_EVENTS
+                and user.is_authenticated
+                and user.is_external
+            ):
+                return data
 
         # check that published events have a location, keyword and start_time
         languages = utils.get_fixed_lang_codes()
 
         errors = {}
+
+        if (
+            settings.ENABLE_EXTERNAL_USER_EVENTS
+            and user.is_authenticated
+            and user.is_external
+        ):
+            if not (data.get("user_email") or data.get("user_phone_number")):
+                # External users need to fill either email or phone number
+                error = _("You have to set either user_email or user_phone_number.")
+                errors["user_email"] = error
+                errors["user_phone_number"] = error
+
+        has_filled_personal_information = any(
+            map(lambda x: bool(data.get(x)), self.personal_information_fields)
+        )
+        if has_filled_personal_information and not data.get("user_consent"):
+            errors["user_consent"] = _(
+                "User consent is required if personal information fields are filled."
+            )
+
         lang_error_msg = _("This field must be specified before an event is published.")
         for field in self.fields_needed_to_publish:
             if field in self.translated_fields:
@@ -2337,11 +2374,12 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
         # Remove personal information fields from public API
         user = self.context["request"].user
         if (
-            not settings.ENABLE_EXTERNAL_USER_EVENT_CREATE
+            not settings.ENABLE_EXTERNAL_USER_EVENTS
             or not (
                 user.is_authenticated
                 and (
-                    user.is_regular_user(obj.publisher) or user.is_admin(obj.publisher)
+                    user.is_regular_user_of(obj.publisher)
+                    or user.is_admin_of(obj.publisher)
                 )
             )
             and obj.created_by != user
