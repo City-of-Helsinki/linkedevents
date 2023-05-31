@@ -31,12 +31,25 @@ def make_event_data(make_minimal_event_dict, location_id):
 
 
 @pytest.fixture
+def minimal_event(minimal_event_dict):
+    minimal_event_dict["publisher"] = None
+    minimal_event_dict["publication_status"] = "draft"
+
+    return minimal_event_dict
+
+
+@pytest.fixture
 def authed_api_client(api_client, external_user):
     api_client.force_authenticate(user=external_user)
     return api_client
 
 
 def create(api_client, event_data):
+    create_url = reverse("event-list")
+    return api_client.post(create_url, event_data, format="json")
+
+
+def bulk_create(api_client, event_data):
     create_url = reverse("event-list")
     return api_client.post(create_url, event_data, format="json")
 
@@ -84,6 +97,18 @@ class TestEventCreate:
 
         response = create(authed_api_client, minimal_event)
         assert response.status_code == 403
+
+
+class TestEventBulkCreate:
+    @pytest.mark.django_db
+    def test_should_be_able_to_bulk_create_draft_events(
+        self, authed_api_client, minimal_event, external_user
+    ):
+        response = bulk_create(authed_api_client, [minimal_event, minimal_event])
+
+        minimal_event["publisher"] = "others"
+        assert_event_data_is_equal(minimal_event, response.data[0])
+        assert_event_data_is_equal(minimal_event, response.data[1])
 
 
 class TestEventUpdate:
