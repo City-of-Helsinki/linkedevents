@@ -51,6 +51,11 @@ def bulk_update(api_client, event_data):
     return api_client.put(url, event_data, format="json")
 
 
+def delete(api_client, event_id):
+    url = reverse("event-detail", kwargs={"pk": event_id})
+    return api_client.delete(url)
+
+
 class TestEventCreate:
     @pytest.fixture
     def minimal_event(self, minimal_event_dict):
@@ -188,5 +193,41 @@ class TestEventBulkUpdate:
         )
 
         response = update(authed_api_client, event.id, make_event_data(event))
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND, response.data
+
+
+class TestEventDelete:
+    @pytest.mark.django_db
+    def test_should_be_able_to_delete_own_event_draft(
+        self, authed_api_client, external_user
+    ):
+        event = DefaultOrganizationEventFactory(
+            created_by=external_user, publication_status=PublicationStatus.DRAFT
+        )
+
+        response = delete(authed_api_client, event.id)
+
+        assert response.status_code == status.HTTP_204_NO_CONTENT, response.data
+
+    @pytest.mark.django_db
+    def test_should_not_be_able_to_delete_own_event_published(
+        self, authed_api_client, external_user
+    ):
+        event = DefaultOrganizationEventFactory(created_by=external_user)
+
+        response = delete(authed_api_client, event.id)
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
+
+    @pytest.mark.django_db
+    def test_should_not_be_able_to_delete_others_event_draft(
+        self, authed_api_client, external_user, external_user_2
+    ):
+        event = DefaultOrganizationEventFactory(
+            created_by=external_user_2, publication_status=PublicationStatus.DRAFT
+        )
+
+        response = delete(authed_api_client, event.id)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND, response.data
