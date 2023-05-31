@@ -1,9 +1,11 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
+import pytest
 from django.test import TestCase
 from django_orghierarchy.models import Organization
 
 from helevents.models import User, UserModelPermissionMixin
+from registrations.tests.factories import OrganizationFactory
 
 from ..models import DataSource, Event, PublicationStatus
 
@@ -38,32 +40,64 @@ class TestUserModelPermissionMixin(TestCase):
             self.org,
         )
 
-    def test_can_edit_event(self):
-        # test for admin user
-        self.instance.is_admin = MagicMock(return_value=True)
 
-        can_edit = self.instance.can_edit_event(self.org, PublicationStatus.PUBLIC)
-        self.assertTrue(can_edit)
-        can_edit = self.instance.can_edit_event(self.org, PublicationStatus.DRAFT)
-        self.assertTrue(can_edit)
+@pytest.mark.parametrize(
+    "membership_status, expected_public, expected_draft",
+    [
+        ("admin", True, True),
+        ("regular", False, True),
+        ("external", False, False),
+    ],
+)
+@pytest.mark.django_db
+def test_can_edit_event(membership_status, expected_public, expected_draft):
+    org = OrganizationFactory()
+    instance = UserModelPermissionMixin()
 
-        # test for regular user
-        self.instance.is_admin = MagicMock(return_value=False)
-        self.instance.is_regular_user = MagicMock(return_value=True)
+    with (
+        patch.object(
+            UserModelPermissionMixin,
+            "is_admin",
+            return_value=membership_status == "admin",
+        ),
+        patch.object(
+            UserModelPermissionMixin,
+            "is_regular_user",
+            return_value=membership_status == "regular",
+        ),
+        patch.object(
+            UserModelPermissionMixin,
+            "is_external",
+            return_value=membership_status == "external",
+        ),
+    ):
+        assert instance.can_edit_event(org, PublicationStatus.PUBLIC) is expected_public
+        assert instance.can_edit_event(org, PublicationStatus.DRAFT) is expected_draft
 
-        can_edit = self.instance.can_edit_event(self.org, PublicationStatus.PUBLIC)
-        self.assertFalse(can_edit)
-        can_edit = self.instance.can_edit_event(self.org, PublicationStatus.DRAFT)
-        self.assertTrue(can_edit)
 
-        # test for other users
-        self.instance.is_admin = MagicMock(return_value=False)
-        self.instance.is_regular_user = MagicMock(return_value=False)
+@pytest.mark.parametrize(
+    "is_admin,is_regular_user,expected",
+    [
+        (True, True, False),
+        (True, False, False),
+        (False, True, False),
+        (False, False, True),
+    ],
+)
+@pytest.mark.django_db
+def test_is_external_user(is_admin, is_regular_user, expected):
+    with (
+        patch.object(
+            UserModelPermissionMixin, "organization_memberships", new_callable=MagicMock
+        ) as organization_memberships,
+        patch.object(
+            UserModelPermissionMixin, "admin_organizations", new_callable=MagicMock
+        ) as admin_organizations,
+    ):
+        organization_memberships.exists.return_value = is_regular_user
+        admin_organizations.exists.return_value = is_admin
 
-        can_edit = self.instance.can_edit_event(self.org, PublicationStatus.PUBLIC)
-        self.assertFalse(can_edit)
-        can_edit = self.instance.can_edit_event(self.org, PublicationStatus.DRAFT)
-        self.assertFalse(can_edit)
+        assert UserModelPermissionMixin().is_external is expected
 
 
 class TestUserModelPermissions(TestCase):

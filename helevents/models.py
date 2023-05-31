@@ -1,5 +1,6 @@
 from functools import reduce
 
+from django.utils.functional import cached_property
 from django_orghierarchy.models import Organization
 from helusers.models import AbstractUser
 
@@ -13,6 +14,14 @@ class UserModelPermissionMixin:
     for user models.
     """
 
+    @cached_property
+    def is_external(self):
+        """Check if the user is an external user"""
+        return (
+            not self.organization_memberships.exists()
+            and not self.admin_organizations.exists()
+        )
+
     def is_admin(self, publisher):
         """Check if current user is an admin user of the publisher organization"""
         raise NotImplementedError()
@@ -23,10 +32,23 @@ class UserModelPermissionMixin:
 
     @property
     def admin_organizations(self):
+        """
+        Get a queryset of organizations that the user is an admin of.
+
+        Is replaced by django_orghierarchy.models.Organization's
+        admin_organizations relation unless implemented in a subclass.
+        """
         raise NotImplementedError()
 
     @property
     def organization_memberships(self):
+        """
+        Get a queryset of organizations that the user is a member of.
+
+        Is replaced by django_orghierarchy.models.Organization's
+        organization_memberships relation unless implemented
+        in a subclass.
+        """
         raise NotImplementedError()
 
     def can_edit_event(self, publisher, publication_status):
