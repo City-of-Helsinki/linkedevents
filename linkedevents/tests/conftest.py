@@ -3,6 +3,7 @@ import shutil
 import pytest
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.management import call_command
 from django_orghierarchy.models import Organization
 from rest_framework.test import APIClient
@@ -133,3 +134,9 @@ def organization3(other_data_source, user2):
     org.admin_users.add(user2)
     org.save()
     return org
+
+
+@pytest.fixture
+def django_cache():
+    yield cache
+    cache.clear()
