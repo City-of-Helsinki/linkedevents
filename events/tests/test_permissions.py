@@ -5,9 +5,9 @@ from django.test import TestCase
 from django_orghierarchy.models import Organization
 
 from helevents.models import User, UserModelPermissionMixin
-from registrations.tests.factories import OrganizationFactory
 
 from ..models import DataSource, Event, PublicationStatus
+from .factories import OrganizationFactory
 
 
 class TestUserModelPermissionMixin(TestCase):
