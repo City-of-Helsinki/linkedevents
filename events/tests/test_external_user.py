@@ -1,14 +1,13 @@
 import pytest
 from rest_framework import status
 
-from registrations.tests.factories import (
+from ..models import PublicationStatus
+from .factories import (
     DataSourceFactory,
+    DefaultOrganizationEventFactory,
     EventFactory,
     OrganizationFactory,
 )
-
-from ..models import PublicationStatus
-from .factories import DefaultOrganizationEventFactory
 from .utils import assert_event_data_is_equal
 from .utils import versioned_reverse as reverse
 
@@ -70,13 +69,6 @@ def delete(api_client, event_id):
 
 
 class TestEventCreate:
-    @pytest.fixture
-    def minimal_event(self, minimal_event_dict):
-        minimal_event_dict["publisher"] = None
-        minimal_event_dict["publication_status"] = "draft"
-
-        return minimal_event_dict
-
     @pytest.mark.django_db
     def test_should_be_able_to_create_event_draft(
         self, authed_api_client, minimal_event, external_user
