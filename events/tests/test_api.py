@@ -7,13 +7,10 @@ from django_orghierarchy.models import Organization
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from ..api import (
-    EventSerializer,
-    get_authenticated_data_source_and_publisher,
-    OrganizationListSerializer,
-)
+from ..api import EventSerializer, OrganizationListSerializer
 from ..auth import ApiKeyAuth
 from ..models import DataSource, Image
+from ..utils import get_user_data_source_and_organization_from_request
 from .utils import versioned_reverse as reverse
 
 
@@ -47,7 +44,7 @@ def test_get_authenticated_data_source_and_publisher(data_source):
     data_source.save()
 
     request = MagicMock(auth=ApiKeyAuth(data_source))
-    ds, publisher = get_authenticated_data_source_and_publisher(request)
+    ds, publisher = get_user_data_source_and_organization_from_request(request)
     assert ds == data_source
     assert publisher == org
 

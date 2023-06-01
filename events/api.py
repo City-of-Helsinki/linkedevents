@@ -71,7 +71,7 @@ from rest_framework_bulk import (
 
 from events import utils
 from events.api_pagination import LargeResultsSetPagination
-from events.auth import ApiKeyAuth, ApiKeyUser
+from events.auth import ApiKeyUser
 from events.custom_elasticsearch_search_backend import (
     CustomEsSearchQuerySet as SearchQuerySet,
 )
@@ -131,35 +131,6 @@ def generate_id(namespace):
     postfix = base64.b32encode(struct.pack(">Q", int(t)).lstrip(b"\x00"))
     postfix = postfix.strip(b"=").lower().decode(encoding="UTF-8")
     return "{}:{}".format(namespace, postfix)
-
-
-def get_authenticated_data_source_and_publisher(request):
-    # api_key takes precedence over user
-    if isinstance(request.auth, ApiKeyAuth):
-        data_source = request.auth.get_authenticated_data_source()
-        publisher = data_source.owner
-        if not publisher:
-            raise PermissionDenied(_("Data source doesn't belong to any organization"))
-    else:
-        # objects *created* by api are marked coming from the system data source unless api_key is provided
-        # we must optionally create the system data source here, as the settings may have changed at any time
-        system_data_source_defaults = {
-            "user_editable_resources": True,
-            "user_editable_organizations": True,
-        }
-        data_source, created = DataSource.objects.get_or_create(
-            id=settings.SYSTEM_DATA_SOURCE_ID, defaults=system_data_source_defaults
-        )
-        # user organization is used unless api_key is provided
-        user = request.user
-        if isinstance(user, User):
-            publisher = user.get_default_organization()
-        else:
-            publisher = None
-        # no sense in doing the replacement check later, the authenticated publisher must be current to begin with
-        if publisher and publisher.replaced_by:
-            publisher = publisher.replaced_by
-    return data_source, publisher
 
 
 class UserDataSourceAndOrganizationMixin:

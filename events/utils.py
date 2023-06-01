@@ -14,6 +14,7 @@ from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
 from rest_framework.exceptions import ParseError, PermissionDenied
 
+from events.auth import ApiKeyAuth
 from events.models import DataSource, Keyword, Place
 from events.sql import count_events_for_keywords, count_events_for_places
 from helevents.models import User
@@ -259,7 +260,6 @@ def get_user_data_source_and_organization_from_request(
     :param request: the request object
     :return: a tuple containing the data source and organization
     """
-    from events.auth import ApiKeyAuth
 
     # api_key takes precedence over user
     if isinstance(request.auth, ApiKeyAuth):
