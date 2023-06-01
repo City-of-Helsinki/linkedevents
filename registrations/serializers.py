@@ -169,50 +169,16 @@ class RegistrationBaseSerializer(serializers.ModelSerializer):
             return None
 
     def get_current_attendee_count(self, obj):
-        return obj.signups.filter(
-            attendee_status=SignUp.AttendeeStatus.ATTENDING
-        ).count()
+        return obj.current_attendee_count
 
     def get_current_waiting_list_count(self, obj):
-        return obj.signups.filter(
-            attendee_status=SignUp.AttendeeStatus.WAITING_LIST
-        ).count()
+        return obj.current_waiting_list_count
 
     def get_remaining_attendee_capacity(self, obj):
-        if obj.maximum_attendee_capacity is None:
-            return None
-
-        maximum_attendee_capacity = obj.maximum_attendee_capacity
-        attendee_count = self.get_current_attendee_count(obj)
-        reserved_seats_amount = obj.reserved_seats_amount
-
-        return max(
-            maximum_attendee_capacity - attendee_count - reserved_seats_amount, 0
-        )
+        return obj.remaining_attendee_capacity
 
     def get_remaining_waiting_list_capacity(self, obj):
-        if obj.waiting_list_capacity is None:
-            return None
-
-        waiting_list_capacity = obj.waiting_list_capacity
-        waiting_list_count = self.get_current_waiting_list_count(obj)
-        reserved_seats_amount = obj.reserved_seats_amount
-
-        if obj.maximum_attendee_capacity is not None:
-            # Calculate the amount of reserved seats that are used for actual seats
-            # and reduce it from reserved_seats_amount to get amount of reserved seats
-            # in the waiting list
-            maximum_attendee_capacity = obj.maximum_attendee_capacity
-            attendee_count = self.get_current_attendee_count(obj)
-            reserved_seats_amount = max(
-                reserved_seats_amount
-                - max(maximum_attendee_capacity - attendee_count, 0),
-                0,
-            )
-
-        return max(
-            waiting_list_capacity - waiting_list_count - reserved_seats_amount, 0
-        )
+        return obj.remaining_waiting_list_capacity
 
     def get_data_source(self, obj):
         return obj.data_source.id
@@ -324,10 +290,8 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
 
         # Validate attendee capacity only if maximum_attendee_capacity is defined
         if maximum_attendee_capacity is not None:
-            serialized_registration = RegistrationBaseSerializer(
-                data["registration"], context=self.context
-            ).data
-            attendee_count = serialized_registration["current_attendee_count"]
+            attendee_count = registration.current_attendee_count
+            attendee_capacity_left = maximum_attendee_capacity - attendee_count
 
             if instance:
                 reserved_seats_amount = max(
@@ -336,15 +300,10 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
             else:
                 reserved_seats_amount = registration.reserved_seats_amount
 
-            attendee_capacity_left = maximum_attendee_capacity - attendee_count
-
             # Only allow to reserve seats to event if attendee capacity is not used
             if attendee_capacity_left > 0:
                 # Prevent to reserve seats if all available seats are already reserved
-                if (
-                    data.get("seats", 0)
-                    > attendee_capacity_left - reserved_seats_amount
-                ):
+                if data["seats"] > attendee_capacity_left - reserved_seats_amount:
                     errors["seats"] = _(
                         "Not enough seats available. Capacity left: {capacity_left}."
                     ).format(
@@ -355,17 +314,12 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
             # Validate waiting list capacity only if waiting_list_capacity is defined and
             # and all seats in the event are used
             elif waiting_list_capacity is not None:
-                waiting_list_count = serialized_registration[
-                    "current_waiting_list_count"
-                ]
+                waiting_list_count = registration.current_waiting_list_count
                 waiting_list_capacity_left = waiting_list_capacity - waiting_list_count
 
                 # Prevent to reserve seats to waiting ist if all available seats in waiting list
                 # are already reserved
-                if (
-                    data.get("seats", 0)
-                    > waiting_list_capacity_left - reserved_seats_amount
-                ):
+                if data["seats"] > waiting_list_capacity_left - reserved_seats_amount:
                     errors["seats"] = _(
                         "Not enough capacity in the waiting list. Capacity left: {capacity_left}."
                     ).format(

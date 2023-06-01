@@ -156,6 +156,58 @@ class Registration(models.Model):
             or 0
         )
 
+    @cached_property
+    def current_attendee_count(self):
+        return self.signups.filter(
+            attendee_status=SignUp.AttendeeStatus.ATTENDING
+        ).count()
+
+    @cached_property
+    def current_waiting_list_count(self):
+        return self.signups.filter(
+            attendee_status=SignUp.AttendeeStatus.WAITING_LIST
+        ).count()
+
+    @property
+    def remaining_attendee_capacity(self):
+        maximum_attendee_capacity = self.maximum_attendee_capacity
+
+        if maximum_attendee_capacity is None:
+            return None
+
+        attendee_count = self.current_attendee_count
+        reserved_seats_amount = self.reserved_seats_amount
+
+        return max(
+            maximum_attendee_capacity - attendee_count - reserved_seats_amount, 0
+        )
+
+    @property
+    def remaining_waiting_list_capacity(self):
+        waiting_list_capacity = self.waiting_list_capacity
+
+        if waiting_list_capacity is None:
+            return None
+
+        waiting_list_count = self.current_waiting_list_count
+        reserved_seats_amount = self.reserved_seats_amount
+        maximum_attendee_capacity = self.maximum_attendee_capacity
+
+        if maximum_attendee_capacity is not None:
+            # Calculate the amount of reserved seats that are used for actual seats
+            # and reduce it from reserved_seats_amount to get amount of reserved seats
+            # in the waiting list
+            attendee_count = self.current_attendee_count
+            reserved_seats_amount = max(
+                reserved_seats_amount
+                - max(maximum_attendee_capacity - attendee_count, 0),
+                0,
+            )
+
+        return max(
+            waiting_list_capacity - waiting_list_count - reserved_seats_amount, 0
+        )
+
     def can_be_edited_by(self, user):
         """Check if current registration can be edited by the given user"""
         if user.is_superuser:
