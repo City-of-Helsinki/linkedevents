@@ -4,7 +4,7 @@ import pytest
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
-from django_orghierarchy.models import Organization
+from django_orghierarchy.models import Organization, OrganizationClass
 from rest_framework.test import APIClient
 
 from events.models import DataSource
@@ -91,6 +91,14 @@ def data_source(settings):
 @pytest.fixture
 def other_data_source():
     return DataSource.objects.create(id=OTHER_DATA_SOURCE_ID, api_key="test_api_key2")
+
+
+@pytest.mark.django_db
+@pytest.fixture
+def organization_class():
+    return OrganizationClass.objects.create(
+        name="test_organization_class",
+    )
 
 
 @pytest.mark.django_db
