@@ -53,44 +53,44 @@ class TestUser(TestCase):
         self.org.admin_users.add(self.user)
 
         # test for admin organization
-        is_admin = self.user.is_admin(self.org)
+        is_admin = self.user.is_admin_of(self.org)
         self.assertTrue(is_admin)
 
         # test for child organization
-        is_admin = self.user.is_admin(self.child_org)
+        is_admin = self.user.is_admin_of(self.child_org)
         self.assertTrue(is_admin)
 
         # test for affiliated organization
-        is_admin = self.user.is_admin(self.child_org)
+        is_admin = self.user.is_admin_of(self.child_org)
         self.assertTrue(is_admin)
 
         # test for some other organization
-        is_admin = self.user.is_admin(self.org_1)
+        is_admin = self.user.is_admin_of(self.org_1)
         self.assertFalse(is_admin)
 
     def test_is_regular_user(self):
         self.org.regular_users.add(self.user)
 
         # test for admin organization
-        is_admin = self.user.is_admin(self.org)
+        is_admin = self.user.is_admin_of(self.org)
         self.assertFalse(is_admin)
-        is_regular_user = self.user.is_regular_user(self.org)
+        is_regular_user = self.user.is_regular_user_of(self.org)
         self.assertTrue(is_regular_user)
 
         # test for child organization
-        is_admin = self.user.is_admin(self.child_org)
+        is_admin = self.user.is_admin_of(self.child_org)
         self.assertFalse(is_admin)
-        is_regular_user = self.user.is_regular_user(self.child_org)
+        is_regular_user = self.user.is_regular_user_of(self.child_org)
         self.assertFalse(is_regular_user)
 
         # test for affiliated organization
-        is_admin = self.user.is_admin(self.affiliated_org)
+        is_admin = self.user.is_admin_of(self.affiliated_org)
         self.assertFalse(is_admin)
-        is_regular_user = self.user.is_regular_user(self.affiliated_org)
+        is_regular_user = self.user.is_regular_user_of(self.affiliated_org)
         self.assertFalse(is_regular_user)
 
         # test for some other organization
-        is_admin = self.user.is_admin(self.org_1)
+        is_admin = self.user.is_admin_of(self.org_1)
         self.assertFalse(is_admin)
-        is_regular_user = self.user.is_regular_user(self.org_1)
+        is_regular_user = self.user.is_regular_user_of(self.org_1)
         self.assertFalse(is_regular_user)

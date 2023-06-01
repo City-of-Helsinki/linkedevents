@@ -23,11 +23,11 @@ class UserModelPermissionMixin:
             and not self.admin_organizations.exists()
         )
 
-    def is_admin(self, publisher):
+    def is_admin_of(self, publisher):
         """Check if current user is an admin user of the publisher organization"""
         raise NotImplementedError()
 
-    def is_regular_user(self, publisher):
+    def is_regular_user_of(self, publisher):
         """Check if current user is a regular user of the publisher organization"""
         raise NotImplementedError()
 
@@ -54,14 +54,14 @@ class UserModelPermissionMixin:
 
     def can_create_event(self, publisher, publication_status):
         """Check if current user can create an event with the given publisher and publication_status"""
-        if self.is_admin(publisher):
+        if self.is_admin_of(publisher):
             return True
         # Non-admins can only create drafts.
         return publication_status == PublicationStatus.DRAFT
 
     def can_edit_event(self, publisher, publication_status, created_by=None):
         """Check if current user can edit an event with the given publisher and publication_status"""
-        if self.is_admin(publisher):
+        if self.is_admin_of(publisher):
             return True
 
         # Non-admins can only edit drafts.
@@ -74,7 +74,7 @@ class UserModelPermissionMixin:
                 return self.is_external and created_by == self
             else:
                 # Regular users can edit drafts from organizations they are members of.
-                return self.is_regular_user(publisher)
+                return self.is_regular_user_of(publisher)
 
         return False
 
@@ -152,12 +152,12 @@ class User(AbstractUser, UserModelPermissionMixin):
 
         return admin_org or regular_org
 
-    def is_admin(self, publisher):
+    def is_admin_of(self, publisher):
         if publisher is None:
             return False
         return publisher in self.get_admin_organizations_and_descendants()
 
-    def is_regular_user(self, publisher):
+    def is_regular_user_of(self, publisher):
         if publisher is None:
             return False
         return self.organization_memberships.filter(id=publisher.id).exists()

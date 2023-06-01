@@ -1573,7 +1573,7 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
 
     def get_regular_users(self, obj):
         user = self.context["user"]
-        if not isinstance(user, AnonymousUser) and user.is_admin(obj):
+        if not isinstance(user, AnonymousUser) and user.is_admin_of(obj):
             return UserSerializer(
                 obj.regular_users.all(), read_only=True, many=True
             ).data
@@ -1582,7 +1582,7 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
 
     def get_admin_users(self, obj):
         user = self.context["user"]
-        if not isinstance(user, AnonymousUser) and user.is_admin(obj):
+        if not isinstance(user, AnonymousUser) and user.is_admin_of(obj):
             return UserSerializer(obj.admin_users.all(), read_only=True, many=True).data
         else:
             return []

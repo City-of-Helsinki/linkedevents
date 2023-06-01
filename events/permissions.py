@@ -56,10 +56,10 @@ class IsObjectEditableByOrganizationUser(BasePermission):
         )
         return (
             user.is_superuser
-            or user.is_admin(user_organization)
+            or user.is_admin_of(user_organization)
             or (
                 view_permits_regular_user_edit
-                and user.is_regular_user(user_organization)
+                and user.is_regular_user_of(user_organization)
             )
         )
 
