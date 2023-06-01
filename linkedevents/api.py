@@ -1,12 +1,49 @@
 import copy
+from collections import OrderedDict
 
 from django.conf import settings
-from rest_framework.routers import DefaultRouter, SimpleRouter
+from django.urls import NoReverseMatch
+from rest_framework.response import Response
+from rest_framework.reverse import reverse
+from rest_framework.routers import APIRootView, DefaultRouter, SimpleRouter
 
 from linkedevents.registry import all_views
 
 
+class CustomAPIRootView(APIRootView):
+    def get(self, request, *args, **kwargs):
+        # Return a plain {"name": "hyperlink"} response.
+        ret = OrderedDict()
+        namespace = request.resolver_match.namespace
+        for key, url_name in self.api_root_dict.items():
+            # Don't show data source, feedback and organization class routes in the api root
+            if url_name in [
+                "datasource-list",
+                "organizationclass-list",
+                "feedback-list",
+                "guest-feedback-list",
+            ]:
+                continue
+
+            if namespace:
+                url_name = namespace + ":" + url_name
+            try:
+                ret[key] = reverse(
+                    url_name,
+                    args=args,
+                    kwargs=kwargs,
+                    request=request,
+                    format=kwargs.get("format"),
+                )
+            except NoReverseMatch:
+                # Don't bail out if eg. no list routes exist, only detail routes.
+                continue
+
+        return Response(ret)
+
+
 class LinkedEventsAPIRouter(DefaultRouter):
+    APIRootView = CustomAPIRootView
     # these are from Django REST Framework bulk BulkRouter with 'delete' excluded
     routes = copy.deepcopy(SimpleRouter.routes)
     routes[0].mapping.update(
