@@ -102,13 +102,11 @@ def test_cannot_update_registration(api_client, event, registration, registratio
 
     reservation_data = {
         "seats": 1,
-        "registration": registration.id,
         "code": reservation.code,
         "registration": registration2.id,
     }
     response = update_seats_reservation(api_client, reservation.id, reservation_data)
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.data["registration"][0] == "You may not change the value."
+    assert response.data["registration"] == registration.id
 
 
 @pytest.mark.django_db
@@ -132,16 +130,19 @@ def test_cannot_update_expired_reservation(api_client, event, registration):
 @pytest.mark.django_db
 def test_cannot_update_timestamp(api_client, event, registration):
     reservation = SeatReservationCode.objects.create(seats=1, registration=registration)
+    timestamp = reservation.timestamp
 
     reservation_data = {
-        "seats": 1,
+        "seats": 2,
         "registration": registration.id,
         "code": reservation.code,
         "timestamp": localtime() + timedelta(minutes=15),
     }
-    response = update_seats_reservation(api_client, reservation.id, reservation_data)
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.data["timestamp"][0] == "You may not change the value."
+    assert_update_seats_reservation(api_client, reservation.id, reservation_data)
+
+    updated_reservation = SeatReservationCode.objects.get(id=reservation.id)
+    assert updated_reservation.seats == 2
+    assert updated_reservation.timestamp == timestamp
 
 
 @pytest.mark.django_db

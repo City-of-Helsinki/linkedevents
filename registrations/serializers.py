@@ -272,7 +272,9 @@ class CreateSignUpsSerializer(serializers.Serializer):
 
 
 class SeatReservationCodeSerializer(serializers.ModelSerializer):
-    timestamp = DateTimeField(default_timezone=pytz.UTC, required=False)
+    seats = serializers.IntegerField(required=True)
+
+    timestamp = DateTimeField(default_timezone=pytz.UTC, required=False, read_only=True)
 
     expiration = serializers.SerializerMethodField()
 
@@ -285,34 +287,25 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
         registration = obj.registration
         maximum_attendee_capacity = registration.maximum_attendee_capacity
 
-        if maximum_attendee_capacity is not None:
-            attendee_count = registration.signups.filter(
-                attendee_status=SignUp.AttendeeStatus.ATTENDING
-            ).count()
+        if maximum_attendee_capacity is None:
+            return False
 
-            if maximum_attendee_capacity - attendee_count <= 0:
-                return True
+        attendee_count = registration.signups.filter(
+            attendee_status=SignUp.AttendeeStatus.ATTENDING
+        ).count()
 
-        return False
+        return maximum_attendee_capacity - attendee_count <= 0
+
+    def to_internal_value(self, data):
+        if self.instance:
+            data["registration"] = self.instance.registration.id
+        return super().to_internal_value(data)
 
     def validate(self, data):
         instance = self.instance
         errors = {}
 
-        # Amount of seats is always required
-        if data.get("seats") is None:
-            errors["seats"] = ErrorDetail(
-                _("This field must be specified."), code="required"
-            )
-
-        if isinstance(instance, SeatReservationCode):
-            non_editable_fields = ["registration", "timestamp"]
-
-            # It's not allowed to change registration or timestamp values
-            for field in non_editable_fields:
-                if field in data and getattr(instance, field) != data[field]:
-                    errors[field] = _("You may not change the value.")
-
+        if instance:
             # The code must be defined and match instance code when updating existing seats reservation
             if self.initial_data.get("code") is None:
                 errors["code"] = ErrorDetail(
@@ -320,6 +313,10 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
                 )
             elif str(instance.code) != self.initial_data["code"]:
                 errors["code"] = _("The value doesn't match.")
+
+            # Raise validation error if reservation code doesn't match
+            if errors:
+                raise serializers.ValidationError(errors)
 
         registration = data["registration"]
         maximum_attendee_capacity = registration.maximum_attendee_capacity
@@ -331,10 +328,13 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
                 data["registration"], context=self.context
             ).data
             attendee_count = serialized_registration["current_attendee_count"]
-            reserved_seats_amount = registration.reserved_seats_amount
 
-            if isinstance(instance, SeatReservationCode):
-                reserved_seats_amount = max(reserved_seats_amount - instance.seats, 0)
+            if instance:
+                reserved_seats_amount = max(
+                    registration.reserved_seats_amount - instance.seats, 0
+                )
+            else:
+                reserved_seats_amount = registration.reserved_seats_amount
 
             attendee_capacity_left = maximum_attendee_capacity - attendee_count
 
@@ -377,15 +377,13 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
         if errors:
             raise serializers.ValidationError(errors)
 
-        super().validate(data)
-        return data
+        return super().validate(data)
 
     def update(self, instance, validated_data):
         if localtime() > instance.expiration:
             raise ConflictException(_("Cannot update expired seats reservation."))
 
-        super().update(instance, validated_data)
-        return instance
+        return super().update(instance, validated_data)
 
     class Meta:
         fields = (
