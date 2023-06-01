@@ -6,6 +6,8 @@ from rest_framework.request import Request
 
 from events import utils
 
+from .auth import ApiKeyUser
+
 
 class GuestPost(BasePermission):
     def has_permission(self, request, view):
@@ -81,11 +83,6 @@ class DataSourceResourceEditPermission(IsAuthenticatedOrReadOnly):
         if request.method != "POST":
             return True
 
-        return self._has_data_source_permission_without_obj(request, view)
-
-    def _has_data_source_permission_without_obj(self, request, view):
-        from .auth import ApiKeyUser
-
         user_data_source, __ = utils.get_user_data_source_and_organization_from_request(
             request
         )
@@ -96,8 +93,9 @@ class DataSourceResourceEditPermission(IsAuthenticatedOrReadOnly):
 
         return True
 
-    def _has_data_source_permission_with_obj(self, request, view, obj):
-        from .auth import ApiKeyUser
+    def has_object_permission(self, request: Request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
 
         user_data_source, __ = utils.get_user_data_source_and_organization_from_request(
             request
@@ -115,12 +113,6 @@ class DataSourceResourceEditPermission(IsAuthenticatedOrReadOnly):
                 raise PermissionDenied(_("Data source is not editable"))
 
         return True
-
-    def has_object_permission(self, request: Request, view, obj):
-        if request.method in permissions.SAFE_METHODS:
-            return True
-
-        return self._has_data_source_permission_with_obj(request, view, obj)
 
 
 class DataSourceOrganizationEditPermission(IsAuthenticatedOrReadOnly):
