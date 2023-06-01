@@ -102,17 +102,17 @@ class TestApiKeyUser(TestCase):
         )
 
     def test_is_admin(self):
-        is_admin = self.user.is_admin(self.org_1)
+        is_admin = self.user.is_admin_of(self.org_1)
         self.assertTrue(is_admin)
 
-        is_admin = self.user.is_admin(self.org_2)
+        is_admin = self.user.is_admin_of(self.org_2)
         self.assertFalse(is_admin)
 
     def test_is_regular_user(self):
-        is_regular_user = self.user.is_regular_user(self.org_1)
+        is_regular_user = self.user.is_regular_user_of(self.org_1)
         self.assertFalse(is_regular_user)
 
-        is_regular_user = self.user.is_regular_user(self.org_2)
+        is_regular_user = self.user.is_regular_user_of(self.org_2)
         self.assertFalse(is_regular_user)
 
 

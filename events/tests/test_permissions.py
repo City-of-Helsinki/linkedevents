@@ -29,14 +29,14 @@ class TestUserModelPermissionMixin(TestCase):
     def test_is_admin(self):
         self.assertRaises(
             NotImplementedError,
-            self.instance.is_admin,
+            self.instance.is_admin_of,
             self.org,
         )
 
     def test_is_regular_user(self):
         self.assertRaises(
             NotImplementedError,
-            self.instance.is_regular_user,
+            self.instance.is_regular_user_of,
             self.org,
         )
 
@@ -60,12 +60,12 @@ def test_can_edit_event(membership_status, expected_public, expected_draft):
     with (
         patch.object(
             UserModelPermissionMixin,
-            "is_admin",
+            "is_admin_of",
             return_value=membership_status == "admin",
         ),
         patch.object(
             UserModelPermissionMixin,
-            "is_regular_user",
+            "is_regular_user_of",
             return_value=membership_status == "regular",
         ),
         patch.object(

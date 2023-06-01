@@ -55,10 +55,10 @@ class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
     def get_default_organization(self):
         return self.data_source.owner
 
-    def is_admin(self, publisher):
+    def is_admin_of(self, publisher):
         return publisher in self.data_source.owner.get_descendants(include_self=True)
 
-    def is_regular_user(self, publisher):
+    def is_regular_user_of(self, publisher):
         return False
 
     @property

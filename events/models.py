@@ -264,15 +264,15 @@ class Image(models.Model):
 
     def can_be_edited_by(self, user):
         """Check if current image can be edited by the given user"""
-        if user.is_superuser or user.is_regular_user(self.publisher):
+        if user.is_superuser or user.is_regular_user_of(self.publisher):
             return True
-        return user.is_admin(self.publisher)
+        return user.is_admin_of(self.publisher)
 
     def can_be_deleted_by(self, user):
         """Check if current image can be deleted by the given user"""
         if user.is_superuser:
             return True
-        return user.is_admin(self.publisher)
+        return user.is_admin_of(self.publisher)
 
 
 class ImageMixin(models.Model):
@@ -489,7 +489,7 @@ class Keyword(BaseModel, ImageMixin, ReplacedByMixin):
         """Check if current keyword can be edited by the given user"""
         if user.is_superuser:
             return True
-        return user.is_admin(self.publisher)
+        return user.is_admin_of(self.publisher)
 
     class Meta:
         verbose_name = _("keyword")
@@ -533,7 +533,7 @@ class KeywordSet(BaseModel, ImageMixin):
         """Check if current keyword set can be edited by the given user"""
         if user.is_superuser:
             return True
-        return user.is_admin(self.organization)
+        return user.is_admin_of(self.organization)
 
     def save(self, *args, **kwargs):
         if any([keyword.deprecated for keyword in self.keywords.all()]):
@@ -690,7 +690,7 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin, ReplacedByMi
         """Check if current place can be edited by the given user"""
         if user.is_superuser:
             return True
-        return user.is_admin(self.publisher)
+        return user.is_admin_of(self.publisher)
 
 
 reversion.register(Place)
@@ -1031,7 +1031,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
         if user.is_superuser:
             return True
         else:
-            return user.is_admin(self.publisher)
+            return user.is_admin_of(self.publisher)
 
     def can_be_edited_by(self, user):
         """Check if current event can be edited by the given user"""

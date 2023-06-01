@@ -212,7 +212,7 @@ class Registration(models.Model):
         """Check if current registration can be edited by the given user"""
         if user.is_superuser:
             return True
-        return user.is_admin(self.event.publisher)
+        return user.is_admin_of(self.event.publisher)
 
     def is_user_editable_resources(self):
         return bool(
@@ -342,7 +342,7 @@ class SignUp(models.Model):
         """Check if current signup can be edited by the given user"""
         if user.is_superuser:
             return True
-        return user.is_admin(self.publisher)
+        return user.is_admin_of(self.publisher)
 
     def is_user_editable_resources(self):
         return bool(self.data_source and self.data_source.user_editable_resources)
