@@ -9,7 +9,7 @@ from django.template.loader import render_to_string
 from django.utils.translation import gettext as _
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import NotFound, ParseError
+from rest_framework.exceptions import ParseError
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.response import Response
 
@@ -101,58 +101,6 @@ class RegistrationViewSet(
         if self.action == "send_message":
             return MassEmailSerializer
         return super().get_serializer_class()
-
-    def registration_get(self, pk):
-        try:
-            return Registration.objects.get(pk=pk)
-        except (ValueError, Registration.DoesNotExist):
-            raise NotFound(detail=f"Registration {pk} doesn't exist.")
-
-    @action(methods=["post"], detail=True, permission_classes=[])
-    def reserve_seats(self, request, pk=None, version=None):
-        def none_to_unlim(val):
-            # Null value in the waiting_list_capacity or maximum_attendee_capacity
-            # signifies that the amount of seats is unlimited
-            if val is None:
-                return 10000
-            else:
-                return val
-
-        registration = self.registration_get(pk=pk)
-
-        waitlist = request.data.get("waitlist", False)
-        if waitlist:
-            waitlist_seats = none_to_unlim(registration.waiting_list_capacity)
-        else:
-            waitlist_seats = 0  # if waitlist is False, waiting list is not to be used
-
-        maximum_attendee_capacity = none_to_unlim(
-            registration.maximum_attendee_capacity
-        )
-
-        seats_capacity = maximum_attendee_capacity + waitlist_seats
-        seats_reserved = registration.reserved_seats_amount
-        seats_taken = registration.signups.count()
-        seats_available = seats_capacity - (seats_reserved + seats_taken)
-
-        if request.data.get("seats", 0) > seats_available:
-            return Response(
-                status=status.HTTP_409_CONFLICT, data="Not enough seats available."
-            )
-        else:
-            code = SeatReservationCode()
-            code.registration = registration
-            code.seats = request.data.get("seats")
-            free_seats = maximum_attendee_capacity - registration.signups.count()
-            code.save()
-            data = SeatReservationCodeSerializer(code).data
-            data["seats_at_event"] = (
-                min(free_seats, code.seats) if free_seats > 0 else 0
-            )
-            waitlist_spots = code.seats - data["seats_at_event"]
-            data["waitlist_spots"] = waitlist_spots if waitlist_spots else 0
-
-            return Response(data, status=status.HTTP_201_CREATED)
 
     @action(
         methods=["post"],
@@ -345,3 +293,16 @@ class SignUpViewSet(
 
 
 register_view(SignUpViewSet, "signup")
+
+
+class SeatReservationViewSet(
+    mixins.CreateModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
+    serializer_class = SeatReservationCodeSerializer
+    queryset = SeatReservationCode.objects.all()
+    permission_classes = []
+
+
+register_view(SeatReservationViewSet, "seats_reservation")

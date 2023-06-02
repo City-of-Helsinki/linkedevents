@@ -7,7 +7,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.contrib.sites.models import Site
 from django.core.mail import send_mail
 from django.db import models
-from django.db.models import Sum
+from django.db.models import DateTimeField, ExpressionWrapper, F, Sum
 from django.forms.fields import MultipleChoiceField
 from django.template.loader import render_to_string
 from django.utils.functional import cached_property
@@ -15,6 +15,7 @@ from django.utils.timezone import localtime
 from django.utils.translation import gettext_lazy as _
 
 from events.models import Event, Language
+from registrations.utils import code_validity_duration
 
 User = settings.AUTH_USER_MODEL
 
@@ -138,13 +139,73 @@ class Registration(models.Model):
     @cached_property
     def reserved_seats_amount(self):
         return (
-            self.reservations.filter(
-                timestamp__gte=localtime()
-                - timedelta(minutes=settings.SEAT_RESERVATION_DURATION)
-            ).aggregate(seats_sum=Sum("seats", output_field=models.IntegerField()))[
+            # Calculate expiration time for each reservation
+            self.reservations.annotate(
+                expiration=ExpressionWrapper(
+                    F("timestamp")
+                    + timedelta(minutes=1) * code_validity_duration(F("seats")),
+                    output_field=DateTimeField(),
+                )
+            )
+            # Filter to get all not expired reservations
+            .filter(expiration__gte=localtime())
+            # Sum  seats of not expired reservation
+            .aggregate(seats_sum=Sum("seats", output_field=models.IntegerField()))[
                 "seats_sum"
             ]
             or 0
+        )
+
+    @cached_property
+    def current_attendee_count(self):
+        return self.signups.filter(
+            attendee_status=SignUp.AttendeeStatus.ATTENDING
+        ).count()
+
+    @cached_property
+    def current_waiting_list_count(self):
+        return self.signups.filter(
+            attendee_status=SignUp.AttendeeStatus.WAITING_LIST
+        ).count()
+
+    @property
+    def remaining_attendee_capacity(self):
+        maximum_attendee_capacity = self.maximum_attendee_capacity
+
+        if maximum_attendee_capacity is None:
+            return None
+
+        attendee_count = self.current_attendee_count
+        reserved_seats_amount = self.reserved_seats_amount
+
+        return max(
+            maximum_attendee_capacity - attendee_count - reserved_seats_amount, 0
+        )
+
+    @property
+    def remaining_waiting_list_capacity(self):
+        waiting_list_capacity = self.waiting_list_capacity
+
+        if waiting_list_capacity is None:
+            return None
+
+        waiting_list_count = self.current_waiting_list_count
+        reserved_seats_amount = self.reserved_seats_amount
+        maximum_attendee_capacity = self.maximum_attendee_capacity
+
+        if maximum_attendee_capacity is not None:
+            # Calculate the amount of reserved seats that are used for actual seats
+            # and reduce it from reserved_seats_amount to get amount of reserved seats
+            # in the waiting list
+            attendee_count = self.current_attendee_count
+            reserved_seats_amount = max(
+                reserved_seats_amount
+                - max(maximum_attendee_capacity - attendee_count, 0),
+                0,
+            )
+
+        return max(
+            waiting_list_capacity - waiting_list_count - reserved_seats_amount, 0
         )
 
     def can_be_edited_by(self, user):
@@ -353,3 +414,7 @@ class SeatReservationCode(models.Model):
     timestamp = models.DateTimeField(
         verbose_name=_("Timestamp"), auto_now_add=True, blank=True
     )
+
+    @property
+    def expiration(self):
+        return self.timestamp + timedelta(minutes=code_validity_duration(self.seats))

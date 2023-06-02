@@ -3,8 +3,8 @@ from django.core import mail
 from rest_framework import status
 
 from events.tests.utils import versioned_reverse as reverse
-from registrations.models import SignUp
-from registrations.tests.test_signup_post import assert_create_signup
+from registrations.models import SeatReservationCode, SignUp
+from registrations.tests.test_signup_post import assert_create_signups
 
 # === util methods ===
 
@@ -194,36 +194,59 @@ def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
     registration.save()
 
     api_client.force_authenticate(user=None)
-    sign_up_payload = {
+
+    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    signup_data = {
         "name": "Michael Jackson1",
         "email": "test@test.com",
     }
-    response = assert_create_signup(api_client, registration.id, sign_up_payload)
+    signups_data = {
+        "registration": registration.id,
+        "reservation_code": reservation.code,
+        "signups": [signup_data],
+    }
+    response = assert_create_signups(api_client, signups_data)
     signup_id = response.data["attending"]["people"][0]["id"]
     cancellation_code = response.data["attending"]["people"][0]["cancellation_code"]
 
-    sign_up_payload2 = {
+    reservation2 = SeatReservationCode.objects.create(
+        registration=registration, seats=1
+    )
+    signup_data2 = {
         "name": "Michael Jackson2",
         "email": "test1@test.com",
     }
-    response = assert_create_signup(api_client, registration.id, sign_up_payload2)
+    signups_data2 = {
+        "registration": registration.id,
+        "reservation_code": reservation2.code,
+        "signups": [signup_data2],
+    }
+    assert_create_signups(api_client, signups_data2)
 
-    sign_up_payload3 = {
+    reservation3 = SeatReservationCode.objects.create(
+        registration=registration, seats=1
+    )
+    signup_data3 = {
         "name": "Michael Jackson3",
         "email": "test2@test.com",
     }
-    response = assert_create_signup(api_client, registration.id, sign_up_payload3)
+    signups_data3 = {
+        "registration": registration.id,
+        "reservation_code": reservation3.code,
+        "signups": [signup_data3],
+    }
+    assert_create_signups(api_client, signups_data3)
 
     assert (
-        SignUp.objects.get(email=sign_up_payload["email"]).attendee_status
+        SignUp.objects.get(email=signup_data["email"]).attendee_status
         == SignUp.AttendeeStatus.ATTENDING
     )
     assert (
-        SignUp.objects.get(email=sign_up_payload2["email"]).attendee_status
+        SignUp.objects.get(email=signup_data2["email"]).attendee_status
         == SignUp.AttendeeStatus.WAITING_LIST
     )
     assert (
-        SignUp.objects.get(email=sign_up_payload3["email"]).attendee_status
+        SignUp.objects.get(email=signup_data3["email"]).attendee_status
         == SignUp.AttendeeStatus.WAITING_LIST
     )
 
@@ -231,10 +254,10 @@ def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
         api_client, signup_id, f"cancellation_code={cancellation_code}"
     )
     assert (
-        SignUp.objects.get(email=sign_up_payload2["email"]).attendee_status
+        SignUp.objects.get(email=signup_data2["email"]).attendee_status
         == SignUp.AttendeeStatus.ATTENDING
     )
     assert (
-        SignUp.objects.get(email=sign_up_payload3["email"]).attendee_status
+        SignUp.objects.get(email=signup_data3["email"]).attendee_status
         == SignUp.AttendeeStatus.WAITING_LIST
     )

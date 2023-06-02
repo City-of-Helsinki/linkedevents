@@ -1,10 +1,9 @@
 from datetime import datetime, timedelta
 
 import pytest
-from rest_framework import status
 
 from events.tests.utils import versioned_reverse as reverse
-from registrations.tests.test_signup_post import create_signup
+from registrations.models import SignUp
 
 
 @pytest.mark.django_db
@@ -33,13 +32,12 @@ def test_event_with_open_registrations_and_places_at_the_event(
     registration2.maximum_attendee_capacity = 1
     registration2.save()
     api_client.force_authenticate(user=None)
-    sign_up_payload = {
-        "name": "Michael Jackson",
-        "email": "test@test.com",
-        "date_of_birth": (datetime.now() - timedelta(days=3650)).strftime("%Y-%m-%d"),
-    }
 
-    response = create_signup(api_client, registration2.id, sign_up_payload)
+    SignUp.objects.create(
+        registration=registration2,
+        name="Michael Jackson",
+        email="test@test.com",
+    )
     response = api_client.get(f"{event_url}?enrolment_open=true", format="json")
     assert len(response.data["data"]) == 1
     assert registration.event.id == response.data["data"][0]["id"]
@@ -50,13 +48,7 @@ def test_event_with_open_registrations_and_places_at_the_event(
     registration2.maximum_attendee_capacity = None
     registration2.save()
     api_client.force_authenticate(user=None)
-    sign_up_payload = {
-        "name": "Michael Jackson",
-        "email": "test@test.com",
-        "date_of_birth": (datetime.now() - timedelta(days=3650)).strftime("%Y-%m-%d"),
-    }
 
-    response = create_signup(api_client, registration2.id, sign_up_payload)
     response = api_client.get(f"{event_url}?enrolment_open=true", format="json")
     assert len(response.data["data"]) == 2
 
@@ -101,13 +93,12 @@ def test_event_with_open_registrations_and_places_at_the_event_or_waiting_list(
     registration2.maximum_attendee_capacity = 1
     registration2.waiting_list_capacity = 10
     registration2.save()
-    sign_up_payload = {
-        "name": "Michael Jackson",
-        "email": "test@test.com",
-        "date_of_birth": (datetime.now() - timedelta(days=3650)).strftime("%Y-%m-%d"),
-    }
-    response = create_signup(api_client, registration2.id, sign_up_payload)
-    assert response.status_code == status.HTTP_201_CREATED
+
+    SignUp.objects.create(
+        registration=registration2,
+        name="Michael Jackson",
+        email="test@test.com",
+    )
     response = api_client.get(
         f"{event_url}?enrolment_open_waitlist=true", format="json"
     )
@@ -134,29 +125,3 @@ def test_event_with_open_registrations_and_places_at_the_event_or_waiting_list(
         f"{event_url}?enrolment_open_waitlist=true", format="json"
     )
     assert len(response.data["data"]) == 2
-
-
-@pytest.mark.django_db
-def test_seat_reservation_without_code():
-    pass
-
-
-@pytest.mark.django_db
-def test_seat_reservation_with_code_too_many_signups():
-    """more sign ups in the request than allocated to specific code"""
-    pass
-
-
-@pytest.mark.django_db
-def test_seat_reservation_with_code_success_event_seats_only():
-    pass
-
-
-@pytest.mark.django_db
-def test_seat_reservation_with_code_success_event_seats_and_waitlist():
-    pass
-
-
-@pytest.mark.django_db
-def test_seat_reservation_with_code_success_waitlist_only():
-    pass

@@ -3,7 +3,6 @@ from freezegun import freeze_time
 from rest_framework import status
 
 from events.tests.utils import versioned_reverse as reverse
-from registrations.tests.test_signup_post import create_signup
 
 
 def delete_registration(api_client, id):
