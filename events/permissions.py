@@ -95,7 +95,7 @@ class GuestPost(BasePermission):
 
 class GuestRetrieve(BasePermission):
     def has_permission(self, request, view):
-        return request.method == "GET" and view.kwargs.get("pk")
+        return view.action == "retrieve"
 
 
 class DataSourceResourceEditPermission(IsAuthenticatedOrReadOnly):
