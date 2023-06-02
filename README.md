@@ -36,7 +36,7 @@ The best way to contribute is to open a new PR for discussion. We strive to be a
 ## How to setup your local development environment
 If all you want is a barebone application to work with for your own city:
 
-* Copy ./docker/django/.env.example to ./docker/django/.env and change the variable values to your liking.
+* Copy `./docker/django/.env.example` to `./docker/django/.env` and change the variable values to your liking.
 * Start django application and database server:
   ```
   docker-compose up
@@ -133,6 +133,56 @@ For further erudition, take a look at the DRF documentation on [customizing the 
 
 After this, everything but search endpoint (/search) is working. See [search](#search)
 
+
+## Development in macOS (linux/arm64)
+* Note: Processor architecture on Apple-silicon machines is ARM64, not AMD64.
+  If you have one of these extra tinkering is needed.
+  On Intel-silicon machines, this is not necessary.
+* Note 2: As AMD64 is emulated on top of ARM64 Linux, this isn't fast.
+1. Pre-build linux/AMD64-versions
+   1. PostgreSQL-container:
+       ```bash
+       podman build --platform=linux/amd64 \
+         -f docker/postgres/Dockerfile  \
+         .
+       ```
+   1. Django-container:
+       ```bash
+       podman build --platform=linux/amd64 \
+         -f docker/postgres/Dockerfile  \
+         .
+       ```
+2. Now `podman-compose` will find pre-built alternate architecture container images and will run ok:
+    ```bash
+    podman-compose up
+    ```
+3. Done, test @ http://127.0.0.1:8000/
+
+### GIS
+* Problem on macOS:
+    ```text
+    django.contrib.gis.geos.error.GEOSException: Error encountered checking Geometry returned from GEOS C function "GEOSGeom_createCollection_r".
+    ```
+  * See: https://github.com/django/django/pull/15214
+* Fix:
+  * Edit `linkedevents/settings.py`, add to end:
+    ```text
+    # macOS:
+    GDAL_LIBRARY_PATH="/opt/homebrew/opt/gdal/lib/libgdal.dylib"
+    GEOS_LIBRARY_PATH="/opt/homebrew/opt/geos/lib/libgeos_c.dylib"
+    ```
+
+### Troubleshooting
+* Problem:
+  _Error: no container with name or ID "linkedevents-backend" found: no such container_
+  * Solution:
+    You missed the part with: Copy `./docker/django/.env.example` to `./docker/django/.env`
+
+* Problem:
+  TCP-ports not available in host
+  * Solution:
+    If port forwarding from VM is flaky, native ports are visible.
+    Django should be visible in http://127.0.0.1:8080/
 
 ## Production notes
 
