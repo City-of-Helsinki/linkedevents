@@ -93,6 +93,11 @@ class GuestPost(BasePermission):
             return False
 
 
+class GuestRetrieve(BasePermission):
+    def has_permission(self, request, view):
+        return view.action == "retrieve"
+
+
 class DataSourceResourceEditPermission(IsAuthenticatedOrReadOnly):
     def has_permission(self, request, view):
         if not super().has_permission(request, view):
@@ -181,3 +186,15 @@ class DataSourceOrganizationEditPermission(IsAuthenticatedOrReadOnly):
             return True
 
         return organization_can_be_edited_by(obj, request.user)
+
+
+class UserIsAdminInAnyOrganization(BasePermission):
+    message = _("Only admins of any organization are allowed to see the content.")
+
+    def has_permission(self, request, view):
+        user = request.user
+
+        if user.is_anonymous:
+            return False
+
+        return user.admin_organizations.exists()

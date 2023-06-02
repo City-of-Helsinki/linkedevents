@@ -96,6 +96,8 @@ from events.permissions import (
     DataSourceOrganizationEditPermission,
     DataSourceResourceEditPermission,
     GuestPost,
+    GuestRetrieve,
+    UserIsAdminInAnyOrganization,
 )
 from events.renderers import DOCXRenderer
 from events.translation import (
@@ -1769,16 +1771,7 @@ class DataSourceSerializer(LinkedEventsSerializer):
 class DataSourceViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
     queryset = DataSource.objects.all()
     serializer_class = DataSourceSerializer
-
-    def list(self, request, *args, **kwargs):
-        if (
-            isinstance(request.user, AnonymousUser)
-            or request.user.get_default_organization() is None
-        ):
-            raise DRFPermissionDenied(
-                "Only admin users are allowed to see datasources."
-            )
-        return super().list(request, *args, **kwargs)
+    permission_classes = [GuestRetrieve | UserIsAdminInAnyOrganization]
 
 
 register_view(DataSourceViewSet, "data_source")
@@ -1795,16 +1788,7 @@ class OrganizationClassSerializer(LinkedEventsSerializer):
 class OrganizationClassViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
     queryset = OrganizationClass.objects.all()
     serializer_class = OrganizationClassSerializer
-
-    def list(self, request, *args, **kwargs):
-        if (
-            isinstance(request.user, AnonymousUser)
-            or request.user.get_default_organization() is None
-        ):
-            raise DRFPermissionDenied(
-                "Only admin users are allowed to see Organization Classes"
-            )
-        return super().list(request, *args, **kwargs)
+    permission_classes = [GuestRetrieve | UserIsAdminInAnyOrganization]
 
 
 register_view(OrganizationClassViewSet, "organization_class")
