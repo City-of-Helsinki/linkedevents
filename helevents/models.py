@@ -54,10 +54,7 @@ class UserModelPermissionMixin:
 
     def can_create_event(self, publisher, publication_status):
         """Check if current user can create an event with the given publisher and publication_status"""
-        if self.is_admin_of(publisher):
-            return True
-        # Non-admins can only create drafts.
-        return publication_status == PublicationStatus.DRAFT
+        return self.can_edit_event(publisher, publication_status, created_by=self)
 
     def can_edit_event(self, publisher, publication_status, created_by=None):
         """Check if current user can edit an event with the given publisher and publication_status"""
