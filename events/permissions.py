@@ -38,7 +38,16 @@ class UserBelongsToOrganization(BasePermission):
         return bool(user_organization)
 
 
-class IsObjectEditableByOrganizationUser(BasePermission):
+class IsObjectEditableByUser(BasePermission):
+    message = "User is not allowed to edit this object"
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return obj.can_be_edited_by(request.user)
+
+
+class OrganizationUserCreatePermission(BasePermission):
     message = "User is not allowed to edit this object"
 
     def has_permission(self, request, view):
@@ -65,9 +74,10 @@ class IsObjectEditableByOrganizationUser(BasePermission):
             )
         )
 
-    def has_object_permission(self, request, view, obj):
-        return obj.can_be_edited_by(request.user)
 
+IsObjectEditableByOrganizationUser = (
+    IsObjectEditableByUser & OrganizationUserCreatePermission
+)
 
 OrganizationUserEditPermission = (
     IsReadOnly | UserBelongsToOrganization & IsObjectEditableByOrganizationUser
