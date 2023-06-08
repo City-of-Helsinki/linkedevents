@@ -14,7 +14,7 @@ from .utils import versioned_reverse as reverse
 
 @pytest.fixture(autouse=True)
 def setup(settings):
-    settings.USER_DEFAULT_ORGANIZATION_ID = "others"
+    settings.EXTERNAL_USER_PUBLISHER_ID = "others"
     settings.ENABLE_EXTERNAL_USER_EVENTS = True
 
 
