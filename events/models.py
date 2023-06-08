@@ -271,9 +271,18 @@ class Image(models.Model):
 
     def can_be_edited_by(self, user):
         """Check if current image can be edited by the given user"""
-        if user.is_superuser or user.is_regular_user_of(self.publisher):
-            return True
-        return user.is_admin_of(self.publisher)
+        if user.is_anonymous:
+            return False
+        if user.is_external and (
+            self.publisher is None
+            or self.publisher.id == settings.EXTERNAL_USER_PUBLISHER_ID
+        ):
+            return self.created_by == user
+        return (
+            user.is_superuser
+            or user.is_admin_of(self.publisher)
+            or user.is_regular_user_of(self.publisher)
+        )
 
     def can_be_deleted_by(self, user):
         """Check if current image can be deleted by the given user"""
