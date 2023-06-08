@@ -226,9 +226,9 @@ def get_or_create_default_organization() -> Optional[Organization]:
     """Create (if needed) the default organization to which users can be added if they
     don't belong to any organization.
     """
-    if not settings.USER_DEFAULT_ORGANIZATION_ID:
+    if not settings.EXTERNAL_USER_PUBLISHER_ID:
         warnings.warn(
-            "USER_DEFAULT_ORGANIZATION_ID is empty, will not set or create "
+            "EXTERNAL_USER_PUBLISHER_ID is empty, will not set or create "
             "default organization."
         )
         return None
@@ -241,7 +241,7 @@ def get_or_create_default_organization() -> Optional[Organization]:
         },
     )
     organization, _ = Organization.objects.get_or_create(
-        id=settings.USER_DEFAULT_ORGANIZATION_ID,
+        id=settings.EXTERNAL_USER_PUBLISHER_ID,
         defaults={"name": "Muu", "data_source": data_source},
     )
     return organization

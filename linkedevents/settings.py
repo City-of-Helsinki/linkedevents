@@ -55,6 +55,7 @@ env = environ.Env(
     ELASTICSEARCH_URL=(str, None),
     ENABLE_EXTERNAL_USER_EVENTS=(bool, True),
     ENABLE_REGISTRATION_ENDPOINTS=(bool, False),
+    EXTERNAL_USER_PUBLISHER_ID=(str, "others"),
     EXTRA_INSTALLED_APPS=(list, []),
     INSTANCE_NAME=(str, "Linked Events"),
     INTERNAL_IPS=(list, []),
@@ -91,7 +92,6 @@ env = environ.Env(
     TOKEN_AUTH_FIELD_FOR_CONSENTS=(str, "https://api.hel.fi/auth"),
     TOKEN_AUTH_REQUIRE_SCOPE_PREFIX=(bool, True),
     TRUST_X_FORWARDED_HOST=(bool, False),
-    USER_DEFAULT_ORGANIZATION_ID=(str, "others"),
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -294,9 +294,12 @@ LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
 ACCOUNT_LOGOUT_ON_GET = True
 
-# Default organization to which a user will be assigned if user doesn't
-# have any organization. Default organization is created if it doesn't exist.
-USER_DEFAULT_ORGANIZATION_ID = env("USER_DEFAULT_ORGANIZATION_ID")
+
+# Enable external user event create/update/delete.
+ENABLE_EXTERNAL_USER_EVENTS = env.bool("ENABLE_EXTERNAL_USER_EVENTS")
+
+# Publisher used for events created by users without organization (i.e. external users)
+EXTERNAL_USER_PUBLISHER_ID = env("EXTERNAL_USER_PUBLISHER_ID")
 
 #
 # REST Framework
@@ -582,5 +585,3 @@ OIDC_API_TOKEN_AUTH = {
 }
 
 OIDC_AUTH = {"OIDC_LEEWAY": 60 * 60}
-
-ENABLE_EXTERNAL_USER_EVENTS = env.bool("ENABLE_EXTERNAL_USER_EVENTS")

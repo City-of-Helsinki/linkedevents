@@ -64,8 +64,7 @@ class UserModelPermissionMixin:
         # Non-admins can only edit drafts.
         if publication_status == PublicationStatus.DRAFT:
             if settings.ENABLE_EXTERNAL_USER_EVENTS and (
-                publisher is None
-                or publisher.id == settings.USER_DEFAULT_ORGANIZATION_ID
+                publisher is None or publisher.id == settings.EXTERNAL_USER_PUBLISHER_ID
             ):
                 # External users can only edit their own drafts from the default organization.
                 return self.is_external and created_by == self
@@ -82,7 +81,7 @@ class UserModelPermissionMixin:
                 # External users can only edit their own drafts from the default organization.
                 return queryset.filter(
                     created_by=self,
-                    publisher__id=settings.USER_DEFAULT_ORGANIZATION_ID,
+                    publisher__id=settings.EXTERNAL_USER_PUBLISHER_ID,
                     publication_status=PublicationStatus.DRAFT,
                 )
             else:
