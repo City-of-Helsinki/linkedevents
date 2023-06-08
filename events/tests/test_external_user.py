@@ -15,6 +15,7 @@ from .utils import versioned_reverse as reverse
 @pytest.fixture(autouse=True)
 def setup(settings):
     settings.USER_DEFAULT_ORGANIZATION_ID = "others"
+    settings.ENABLE_EXTERNAL_USER_EVENTS = True
 
 
 @pytest.fixture
@@ -90,6 +91,15 @@ class TestEventCreate:
         response = create(authed_api_client, minimal_event)
         assert response.status_code == 403
 
+    @pytest.mark.django_db
+    def test_should_not_be_able_to_create_event_draft_if_external_user_events_are_disabled(
+        self, authed_api_client, minimal_event, external_user, settings
+    ):
+        settings.ENABLE_EXTERNAL_USER_EVENTS = False
+        response = create(authed_api_client, minimal_event)
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN, response.data
+
 
 class TestEventBulkCreate:
     @pytest.mark.django_db
@@ -153,6 +163,19 @@ class TestEventUpdate:
             data_source=data_source,
             publication_status=PublicationStatus.DRAFT,
             publisher=organization,
+        )
+
+        response = update(authed_api_client, event.id, make_event_data(event))
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND, response.data
+
+    @pytest.mark.django_db
+    def test_should_not_be_able_to_edit_own_event_draft_if_external_user_events_are_disabled(
+        self, authed_api_client, make_event_data, external_user, settings
+    ):
+        settings.ENABLE_EXTERNAL_USER_EVENTS = False
+        event = DefaultOrganizationEventFactory(
+            created_by=external_user, publication_status=PublicationStatus.DRAFT
         )
 
         response = update(authed_api_client, event.id, make_event_data(event))
@@ -243,6 +266,19 @@ class TestEventDelete:
     ):
         event = DefaultOrganizationEventFactory(
             created_by=external_user_2, publication_status=PublicationStatus.DRAFT
+        )
+
+        response = delete(authed_api_client, event.id)
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND, response.data
+
+    @pytest.mark.django_db
+    def test_should_not_be_able_to_delete_own_event_draft_if_external_user_events_are_disabled(
+        self, authed_api_client, external_user, settings
+    ):
+        settings.ENABLE_EXTERNAL_USER_EVENTS = False
+        event = DefaultOrganizationEventFactory(
+            created_by=external_user, publication_status=PublicationStatus.DRAFT
         )
 
         response = delete(authed_api_client, event.id)

@@ -53,6 +53,7 @@ env = environ.Env(
     DATABASE_URL=(str, "postgis:///linkedevents"),
     DEBUG=(bool, False),
     ELASTICSEARCH_URL=(str, None),
+    ENABLE_EXTERNAL_USER_EVENTS=(bool, True),
     ENABLE_REGISTRATION_ENDPOINTS=(bool, False),
     EXTRA_INSTALLED_APPS=(list, []),
     INSTANCE_NAME=(str, "Linked Events"),
@@ -581,3 +582,5 @@ OIDC_API_TOKEN_AUTH = {
 }
 
 OIDC_AUTH = {"OIDC_LEEWAY": 60 * 60}
+
+ENABLE_EXTERNAL_USER_EVENTS = env.bool("ENABLE_EXTERNAL_USER_EVENTS")
