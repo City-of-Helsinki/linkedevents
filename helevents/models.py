@@ -63,7 +63,7 @@ class UserModelPermissionMixin:
 
         # Non-admins can only edit drafts.
         if publication_status == PublicationStatus.DRAFT:
-            if (
+            if settings.ENABLE_EXTERNAL_USER_EVENTS and (
                 publisher is None
                 or publisher.id == settings.USER_DEFAULT_ORGANIZATION_ID
             ):
@@ -78,12 +78,15 @@ class UserModelPermissionMixin:
     def get_editable_events(self, queryset):
         """Get editable events queryset from given queryset for current user"""
         if self.is_external:
-            # External users can only edit their own drafts from the default organization.
-            return queryset.filter(
-                created_by=self,
-                publisher__id=settings.USER_DEFAULT_ORGANIZATION_ID,
-                publication_status=PublicationStatus.DRAFT,
-            )
+            if settings.ENABLE_EXTERNAL_USER_EVENTS:
+                # External users can only edit their own drafts from the default organization.
+                return queryset.filter(
+                    created_by=self,
+                    publisher__id=settings.USER_DEFAULT_ORGANIZATION_ID,
+                    publication_status=PublicationStatus.DRAFT,
+                )
+            else:
+                return queryset.none()
 
         # distinct is not needed here, as admin_orgs and memberships should not overlap
         return queryset.filter(
