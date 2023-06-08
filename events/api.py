@@ -98,6 +98,7 @@ from events.permissions import (
     DataSourceResourceEditPermission,
     GuestPost,
     GuestRetrieve,
+    IsObjectEditableByUser,
     OrganizationUserEditPermission,
     UserIsAdminInAnyOrganization,
 )
@@ -1759,9 +1760,7 @@ class ImageViewSet(
     filter_backends = (filters.OrderingFilter,)
     ordering_fields = ("last_modified_time", "id", "name")
     ordering = ("-last_modified_time",)
-    permission_classes = [
-        DataSourceResourceEditPermission & OrganizationUserEditPermission
-    ]
+    permission_classes = [DataSourceResourceEditPermission & IsObjectEditableByUser]
 
     def get_queryset(self):
         queryset = super().get_queryset()
