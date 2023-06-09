@@ -59,6 +59,36 @@ def assert_update_organization(api_client, pk, organization_data):
 
 
 @pytest.mark.django_db
+def test_admin_user_can_see_organization_users(api_client, organization, user):
+    organization.regular_users.add(user)
+    api_client.force_authenticate(user)
+
+    response = get_organization(api_client, organization.id)
+    assert response.data["admin_users"]
+    assert response.data["regular_users"]
+
+
+@pytest.mark.django_db
+def test_anonymous_user_cannot_see_organization_users(api_client, organization, user):
+    organization.regular_users.add(user)
+
+    response = get_organization(api_client, organization.id)
+    assert response.data.get("admin_users") == None
+    assert response.data.get("regular_users") == None
+
+
+@pytest.mark.django_db
+def test_regular_user_cannot_see_organization_users(api_client, organization, user):
+    organization.regular_users.add(user)
+    organization.admin_users.remove(user)
+    api_client.force_authenticate(user)
+
+    response = get_organization(api_client, organization.id)
+    assert response.data.get("admin_users") == None
+    assert response.data.get("regular_users") == None
+
+
+@pytest.mark.django_db
 def test_admin_user_can_create_organization(
     api_client, data_source, organization, user
 ):

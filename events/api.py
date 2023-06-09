@@ -1506,21 +1506,17 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if self.instance:
+        instance = self.instance
+        user = self.context["user"]
+
+        if instance:
             self.fields["data_source"].read_only = True
             self.fields["origin_id"].read_only = True
 
-    def to_representation(self, obj):
-        ret = super().to_representation(obj)
-
-        user = self.context["user"]
-        # Show admin users and regular users only to admins
-        user_fields = set(self.user_fields)
-        if user.is_anonymous or not user.is_admin_of(obj):
-            for field in user_fields:
-                del ret[field]
-
-        return ret
+            # Show admin users and regular users only to admins
+            if user.is_anonymous or not user.is_admin_of(instance):
+                for field in self.user_fields:
+                    self.fields.pop(field, None)
 
     def validate_parent_organization(self, value):
         if value:
