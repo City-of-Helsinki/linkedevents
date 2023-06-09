@@ -1569,9 +1569,7 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
         # Prevent user to accidentally remove himself from admin
         if validated_data.get("admin_users") is not None:
             admin_users = validated_data.pop("admin_users")
-            instance.admin_users.clear()
-            instance.admin_users.add(*admin_users)
-            instance.admin_users.add(self.user)
+            instance.admin_users.set([*admin_users, self.user])
 
         return super().update(instance, validated_data)
 
