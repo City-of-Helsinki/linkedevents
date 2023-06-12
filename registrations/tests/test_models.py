@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django_orghierarchy.models import Organization
 
-from events.models import DataSource, Event
+from events.models import DataSource, Event, Language
 from registrations.models import Registration, SignUp
 
 
@@ -107,3 +107,19 @@ class TestSignUp(TestCase):
 
         can_be_edited = self.signup.can_be_edited_by(self.user)
         self.assertTrue(can_be_edited)
+
+    def test_get_service_language_pk(self):
+        sv = Language.objects.create(
+            name="Swedish",
+            pk="sv",
+        )
+        self.signup.service_language = sv
+        self.signup.save()
+
+        self.assertEqual(self.signup.get_service_language_pk(), "sv")
+
+    def test_get_default_service_language_pk(self):
+        self.signup.service_language = None
+        self.signup.save()
+
+        self.assertEqual(self.signup.get_service_language_pk(), "fi")

@@ -354,24 +354,44 @@ class SignUp(models.Model):
     def is_user_editable_resources(self):
         return bool(self.data_source and self.data_source.user_editable_resources)
 
+    def get_service_language_pk(self):
+        if self.service_language:
+            return self.service_language.pk
+        return "fi"
+
     def send_notification(self, confirmation_type):
+        service_language = self.get_service_language_pk()
+
         email_variables = {
             "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
             "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
             "username": self.name,
-            "event": self.registration.event.name_fi,
+            "event": getattr(
+                self.registration.event,
+                f"name_{service_language}",
+                self.registration.event.name,
+            ),
             "cancellation_code": self.cancellation_code,
             "registration_id": self.registration.id,
             "signup_id": self.id,
         }
 
-        if self.registration.confirmation_message:
-            email_variables[
-                "confirmation_message"
-            ] = self.registration.confirmation_message
+        confirmation_message = getattr(
+            self.registration,
+            f"confirmation_message_{service_language}",
+            self.registration.confirmation_message,
+        )
+        instructions = getattr(
+            self.registration,
+            f"instructions_{service_language}",
+            self.registration.instructions,
+        )
 
-        if self.registration.instructions:
-            email_variables["instructions"] = self.registration.instructions
+        if confirmation_message:
+            email_variables["confirmation_message"] = confirmation_message
+
+        if instructions:
+            email_variables["instructions"] = instructions
 
         event_type_name = {
             str(Event.TypeId.GENERAL): _("tapahtumaan"),
