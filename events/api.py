@@ -33,6 +33,7 @@ from django.urls import NoReverseMatch
 from django.utils import timezone, translation
 from django.utils.encoding import force_text
 from django.utils.functional import cached_property
+from django.utils.timezone import localtime
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization, OrganizationClass
 from haystack.query import AutoQuery
@@ -2580,7 +2581,7 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
     val = params.get("enrolment_open", None)
     if val:
         queryset = (
-            queryset.filter(registration__enrolment_end_time__gte=datetime.now())
+            queryset.filter(registration__enrolment_end_time__gte=localtime())
             .annotate(
                 free=(
                     F("registration__maximum_attendee_capacity")
@@ -2595,7 +2596,7 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
     val = params.get("enrolment_open_waitlist", None)
     if val:
         queryset = (
-            queryset.filter(registration__enrolment_end_time__gte=datetime.now())
+            queryset.filter(registration__enrolment_end_time__gte=localtime())
             .annotate(
                 free=(
                     (

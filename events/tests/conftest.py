@@ -5,6 +5,7 @@ from django.contrib.gis.geos import MultiPolygon, Point, Polygon
 
 # django
 from django.utils import timezone
+from django.utils.timezone import localtime
 from munigeo.models import (
     AdministrativeDivision,
     AdministrativeDivisionGeometry,
@@ -736,8 +737,8 @@ def registration(event, user):
         audience_max_age=18,
         created_by=user,
         last_modified_by=user,
-        enrolment_start_time=datetime.now(),
-        enrolment_end_time=datetime.now() + timedelta(days=10),
+        enrolment_start_time=localtime(),
+        enrolment_end_time=localtime() + timedelta(days=10),
         confirmation_message="Your registration is confirmed",
         maximum_attendee_capacity=20,
         waiting_list_capacity=20,
@@ -753,8 +754,8 @@ def registration2(event2, user2):
         audience_max_age=18,
         created_by=user2,
         last_modified_by=user2,
-        enrolment_start_time=datetime.now(),
-        enrolment_end_time=datetime.now() + timedelta(days=10),
+        enrolment_start_time=localtime(),
+        enrolment_end_time=localtime() + timedelta(days=10),
         confirmation_message="Your registration is confirmed",
         maximum_attendee_capacity=20,
         waiting_list_capacity=20,

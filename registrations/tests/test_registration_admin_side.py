@@ -1,6 +1,7 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pytest
+from django.utils.timezone import localtime
 
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import SignUp
@@ -19,16 +20,16 @@ def test_event_with_open_registrations_and_places_at_the_event(
     assert len(response.data["data"]) == 2
 
     # if registration is expired the respective event should not be returned
-    registration2.enrolment_start_time = datetime.now() - timedelta(days=10)
-    registration2.enrolment_end_time = datetime.now() - timedelta(days=5)
+    registration2.enrolment_start_time = localtime() - timedelta(days=10)
+    registration2.enrolment_end_time = localtime() - timedelta(days=5)
     registration2.save()
     response = api_client.get(f"{event_url}?enrolment_open=true", format="json")
     assert len(response.data["data"]) == 1
     assert registration.event.id == response.data["data"][0]["id"]
 
     # if there are no seats, the respective event should not be returned
-    registration2.enrolment_start_time = datetime.now()
-    registration2.enrolment_end_time = datetime.now() + timedelta(days=5)
+    registration2.enrolment_start_time = localtime()
+    registration2.enrolment_end_time = localtime() + timedelta(days=5)
     registration2.maximum_attendee_capacity = 1
     registration2.save()
     api_client.force_authenticate(user=None)
@@ -43,8 +44,8 @@ def test_event_with_open_registrations_and_places_at_the_event(
     assert registration.event.id == response.data["data"][0]["id"]
 
     # if maximum attendee capacity is None event should be returned
-    registration2.enrolment_start_time = datetime.now()
-    registration2.enrolment_end_time = datetime.now() + timedelta(days=5)
+    registration2.enrolment_start_time = localtime()
+    registration2.enrolment_end_time = localtime() + timedelta(days=5)
     registration2.maximum_attendee_capacity = None
     registration2.save()
     api_client.force_authenticate(user=None)
@@ -76,8 +77,8 @@ def test_event_with_open_registrations_and_places_at_the_event_or_waiting_list(
     assert len(response.data["data"]) == 2
 
     # if registration is expired the respective event should not be returned
-    registration2.enrolment_start_time = datetime.now() - timedelta(days=10)
-    registration2.enrolment_end_time = datetime.now() - timedelta(days=5)
+    registration2.enrolment_start_time = localtime() - timedelta(days=10)
+    registration2.enrolment_end_time = localtime() - timedelta(days=5)
     registration2.maximum_attendee_capacity = 20
     registration2.waiting_list_capacity = 10
     registration2.save()
@@ -88,8 +89,8 @@ def test_event_with_open_registrations_and_places_at_the_event_or_waiting_list(
     assert registration.event.id == response.data["data"][0]["id"]
 
     # no seats at event, places in waiting list
-    registration2.enrolment_start_time = datetime.now()
-    registration2.enrolment_end_time = datetime.now() + timedelta(days=5)
+    registration2.enrolment_start_time = localtime()
+    registration2.enrolment_end_time = localtime() + timedelta(days=5)
     registration2.maximum_attendee_capacity = 1
     registration2.waiting_list_capacity = 10
     registration2.save()
@@ -105,8 +106,8 @@ def test_event_with_open_registrations_and_places_at_the_event_or_waiting_list(
     assert len(response.data["data"]) == 2
 
     # no seats at event, no places in waiting list
-    registration2.enrolment_start_time = datetime.now()
-    registration2.enrolment_end_time = datetime.now() + timedelta(days=5)
+    registration2.enrolment_start_time = localtime()
+    registration2.enrolment_end_time = localtime() + timedelta(days=5)
     registration2.maximum_attendee_capacity = 1
     registration2.waiting_list_capacity = 0
     registration2.save()
@@ -116,8 +117,8 @@ def test_event_with_open_registrations_and_places_at_the_event_or_waiting_list(
     assert len(response.data["data"]) == 1
 
     # seats at event, waiting list capacity null
-    registration2.enrolment_start_time = datetime.now()
-    registration2.enrolment_end_time = datetime.now() + timedelta(days=5)
+    registration2.enrolment_start_time = localtime()
+    registration2.enrolment_end_time = localtime() + timedelta(days=5)
     registration2.maximum_attendee_capacity = 10
     registration2.waiting_list_capacity = None
     registration2.save()

@@ -1,7 +1,7 @@
 from admin_auto_filters.filters import AutocompleteFilter
 from django.conf import settings
 from django.contrib import admin
-from django.utils.translation import ugettext as _
+from django.utils.translation import gettext as _
 from leaflet.admin import LeafletGeoAdmin
 from modeltranslation.admin import TranslationAdmin
 from reversion.admin import VersionAdmin

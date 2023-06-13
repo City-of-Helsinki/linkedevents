@@ -31,8 +31,8 @@ class TestRegistrationAdmin(TestCase):
         request = self.factory.get("/fake-url/")
         request.user = self.admin
 
-        self.assertEquals(["id"], registration_admin.get_readonly_fields(request))
-        self.assertEquals(
+        self.assertEqual(["id"], registration_admin.get_readonly_fields(request))
+        self.assertEqual(
             ["id", "event"],
             registration_admin.get_readonly_fields(request, self.registration),
         )
@@ -55,7 +55,7 @@ class TestRegistrationAdmin(TestCase):
 
         # Test that create_by values is set to current user
         registration = Registration.objects.get(event=event2)
-        self.assertEquals(
+        self.assertEqual(
             self.admin,
             registration.created_by,
         )
@@ -73,7 +73,7 @@ class TestRegistrationAdmin(TestCase):
             change=ra.get_action("change"),
         )
         # Test that last_modified_by values is set to current user
-        self.assertEquals(
+        self.assertEqual(
             self.admin,
             self.registration.last_modified_by,
         )

@@ -1,6 +1,6 @@
 from admin_auto_filters.filters import AutocompleteFilter
 from django.contrib import admin
-from django.utils.translation import ugettext as _
+from django.utils.translation import gettext as _
 from reversion.admin import VersionAdmin
 
 from registrations.models import Registration

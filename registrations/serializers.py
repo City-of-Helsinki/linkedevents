@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pytz
 from django.contrib.auth.models import AnonymousUser
@@ -224,7 +224,7 @@ class CreateSignUpsSerializer(serializers.Serializer):
         expiration = reservation.timestamp + timedelta(
             minutes=code_validity_duration(reservation.seats)
         )
-        if datetime.now().astimezone(pytz.utc) > expiration:
+        if localtime() > expiration:
             raise serializers.ValidationError(
                 {"reservation_code": "Reservation code has expired."}
             )
