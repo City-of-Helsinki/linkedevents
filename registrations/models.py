@@ -16,6 +16,7 @@ from django.utils.timezone import localtime
 from django.utils.translation import gettext_lazy as _
 
 from events.models import Event, Language
+from registrations.exceptions import ConflictException
 from registrations.utils import code_validity_duration
 
 User = settings.AUTH_USER_MODEL
@@ -225,6 +226,14 @@ class Registration(models.Model):
         return bool(
             self.event.data_source and self.event.data_source.user_editable_resources
         )
+
+    def validate_enrolment_times(self):
+        enrolment_start_time = self.enrolment_start_time
+        enrolment_end_time = self.enrolment_end_time
+        if enrolment_start_time and localtime() < enrolment_start_time:
+            raise ConflictException(_("Enrolment is not yet open."))
+        if enrolment_end_time and localtime() > enrolment_end_time:
+            raise ConflictException(_("Enrolment is already closed."))
 
 
 class SignUp(models.Model):

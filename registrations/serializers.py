@@ -206,6 +206,10 @@ class CreateSignUpsSerializer(serializers.Serializer):
         reservation_code = data["reservation_code"]
         registration = data["registration"]
 
+        # Prevent to signup if enrolment is not open.
+        # Raises 409 error if enrolment is not open
+        registration.validate_enrolment_times()
+
         try:
             reservation = SeatReservationCode.objects.get(
                 code=reservation_code, registration=registration
@@ -300,6 +304,11 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(errors)
 
         registration = data["registration"]
+
+        # Prevent to reserve seats if enrolment is not open.
+        # Raises 409 error if enrolment is not open
+        registration.validate_enrolment_times()
+
         maximum_group_size = registration.maximum_group_size
 
         # Validate maximum group size

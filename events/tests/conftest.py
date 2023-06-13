@@ -733,8 +733,6 @@ def create_initial_licenses():
 def registration(event, user):
     return Registration.objects.create(
         event=event,
-        audience_min_age=6,
-        audience_max_age=18,
         created_by=user,
         last_modified_by=user,
         enrolment_start_time=localtime(),
@@ -750,8 +748,6 @@ def registration(event, user):
 def registration2(event2, user2):
     return Registration.objects.create(
         event=event2,
-        audience_min_age=6,
-        audience_max_age=18,
         created_by=user2,
         last_modified_by=user2,
         enrolment_start_time=localtime(),
@@ -767,8 +763,6 @@ def registration2(event2, user2):
 def registration3(event3, user):
     return Registration.objects.create(
         event=event3,
-        audience_min_age=6,
-        audience_max_age=18,
         created_by=user,
         last_modified_by=user,
         confirmation_message="Your registration is confirmed",

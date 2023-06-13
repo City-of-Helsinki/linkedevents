@@ -188,8 +188,6 @@ def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
     api_client, event, registration, user
 ):
     api_client.force_authenticate(user)
-    registration.audience_max_age = None
-    registration.audience_min_age = None
     registration.maximum_attendee_capacity = 1
     registration.save()
 

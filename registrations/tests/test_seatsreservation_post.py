@@ -1,4 +1,7 @@
+from datetime import timedelta
+
 import pytest
+from django.utils.timezone import localtime
 from rest_framework import status
 
 from events.tests.utils import versioned_reverse as reverse
@@ -64,6 +67,32 @@ def test_seats_cannot_be_greater_than_maximum_group_size(
     response = reserve_seats(api_client, reservation_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.data["seats"][0].code == "max_group_size"
+
+
+@pytest.mark.django_db
+def test_cannot_reserve_seats_if_enrolment_is_not_opened(
+    api_client, event, registration
+):
+    registration.enrolment_start_time = localtime() + timedelta(days=1)
+    registration.enrolment_end_time = localtime() + timedelta(days=2)
+    registration.save()
+
+    reservation_data = {"seats": 1, "registration": registration.id}
+    response = reserve_seats(api_client, reservation_data)
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.data["detail"] == "Enrolment is not yet open."
+
+
+@pytest.mark.django_db
+def test_cannot_reserve_seats_if_enrolment_is_closed(api_client, event, registration):
+    registration.enrolment_start_time = localtime() - timedelta(days=2)
+    registration.enrolment_end_time = localtime() - timedelta(days=1)
+    registration.save()
+
+    reservation_data = {"seats": 1, "registration": registration.id}
+    response = reserve_seats(api_client, reservation_data)
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.data["detail"] == "Enrolment is already closed."
 
 
 @pytest.mark.django_db
