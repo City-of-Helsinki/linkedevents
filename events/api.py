@@ -2500,15 +2500,21 @@ def parse_duration_string(duration):
     return int(val) * mul
 
 
-def _terms_to_regex(terms, operator, fuzziness=3):
+def _terms_to_regex(terms, operator):
     """
-    Create a  compiled regex from of the rpvided terms of the form
+    Create a compiled regex from of the provided terms of the form
     r'(\b(term1){e<2}')|(\b(term2){e<2})" This would match a string
     with terms aligned in any order allowing two edits per term.
     """
-
     vals = terms.split(",")
-    valexprs = [r"(\b" + f"({val}){{e<{fuzziness}}})" for val in vals]
+    valexprs = []
+    for val in vals:
+        if len(val) < 8:
+            e = 1
+        else:
+            e = 2
+        expr = r"(\b" + f"({val}){{e<{e}}})"
+        valexprs.extend(expr)
     if operator == "AND":
         regex_join = ""
     elif operator == "OR":
