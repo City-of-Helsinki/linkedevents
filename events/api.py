@@ -2576,12 +2576,15 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
                 f"{language} not supported. Supported options are: {' '.join(langs.values())}"
             )
 
+        val = val.replace(",", " ")
         query = SearchQuery(val, config=langs[language], search_type="plain")
         kwargs = {f"search_vector_{language}": query}
-        queryset = queryset.filter(**kwargs).filter(
-            end_time__gte=datetime.utcnow().replace(tzinfo=pytz.utc),
-            deleted=False,
-            local=True,
+        queryset = (
+            queryset.filter(**kwargs)
+            .filter(
+                end_time__gte=datetime.utcnow().replace(tzinfo=pytz.utc), deleted=False
+            )
+            .filter(Q(location__id__endswith="internet") | Q(local=True))
         )
 
     val = params.get("local_ongoing_OR", None)
