@@ -3,8 +3,8 @@ import logging
 import os
 import re
 from datetime import datetime, time, timedelta
+from posixpath import join as urljoin
 from typing import Iterator, Union
-from urllib.parse import urljoin
 
 import dateutil
 import requests
@@ -35,11 +35,12 @@ from .yso import KEYWORDS_TO_ADD_TO_AUDIENCE
 logger = logging.getLogger(__name__)
 
 
-EVENT_API_BASE_URL = os.getenv("EVENT_API_BASE_URL", "http://elis.helsinki1.hki.local/event-api/")
-if not EVENT_API_BASE_URL.endswith('/'):
-    EVENT_API_BASE_URL += '/'
-EVENTS_URL_TEMPLATE = urljoin(EVENT_API_BASE_URL, "events/?searchstarttime={begin_date}&sort=starttime&show=100&offset={offset}&language={language}")
-CATEGORY_URL = urljoin(EVENT_API_BASE_URL, "category")
+EVENTS_URL_TEMPLATE = urljoin(
+    settings.ELIS_EVENT_API_URL,
+    "events/?searchstarttime={begin_date}&sort=starttime&show=100&offset={offset}&language={language}",
+)
+CATEGORY_URL = urljoin(settings.ELIS_EVENT_API_URL, "category")
+EVENT_API_TIMEOUT = 30
 
 
 LOCATION_TPREK_MAP = {
@@ -394,7 +395,7 @@ class KulkeImporter(Importer):
             self.event_only_license = None
 
     def fetch_kulke_categories(self) -> dict[str, Union[str, int]]:
-        response = requests.get(CATEGORY_URL)
+        response = requests.get(CATEGORY_URL, timeout=EVENT_API_TIMEOUT)
         response.raise_for_status()
         root = etree.fromstring(response.content)
         categories = {}
@@ -745,8 +746,14 @@ class KulkeImporter(Importer):
             for inner_key in group:
                 inner_group = recurring_groups.get(inner_key)
                 if inner_group and inner_group != group:
-                    logger.warning("Differing groups: key: %s - inner key: %s", key, inner_key)
-                    logger.warning("Differing groups: group: %s - inner group: %s", group, inner_group)
+                    logger.warning(
+                        "Differing groups: key: %s - inner key: %s", key, inner_key
+                    )
+                    logger.warning(
+                        "Differing groups: group: %s - inner group: %s",
+                        group,
+                        inner_group,
+                    )
                     if len(inner_group) == 0:
                         logger.warning(
                             "Event self-identifies to no group, removing.", inner_key
@@ -940,16 +947,23 @@ class KulkeImporter(Importer):
         logger.info("Importing Kulke courses")
         self._import_events(importing_courses=True)
 
-    def _iter_elis_events(self, language: str, begin_date: datetime) -> Iterator[etree.Element]:
-        begin_date = begin_date.strftime('%d.%m.%Y')
+    def _iter_elis_events(
+        self, language: str, begin_date: datetime
+    ) -> Iterator[etree.Element]:
+        begin_date = begin_date.strftime("%d.%m.%Y")
         offset = 0
         parser = etree.XMLParser(recover=True)
         while True:
             logger.debug("Fetching events: %s - %d", language, offset)
-            response = requests.get(EVENTS_URL_TEMPLATE.format(begin_date=begin_date, offset=offset, language=language))
+            response = requests.get(
+                EVENTS_URL_TEMPLATE.format(
+                    begin_date=begin_date, offset=offset, language=language
+                ),
+                timeout=EVENT_API_TIMEOUT,
+            )
             response.raise_for_status()
             root = etree.fromstring(response.content, parser=parser)
-            events = root.xpath('/eventdata/event')
+            events = root.xpath("/eventdata/event")
             if not events:
                 break
             for event in events:
