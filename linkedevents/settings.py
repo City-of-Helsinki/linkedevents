@@ -260,9 +260,6 @@ USE_TZ = True
 
 LOCALE_PATHS = (os.path.join(BASE_DIR, "locale"),)
 
-# Kulke importer looks here for its input files
-IMPORT_FILE_PATH = os.path.join(BASE_DIR, "data")
-
 # Static files (CSS, JavaScript, Images)
 
 STATIC_URL = env("STATIC_URL")
