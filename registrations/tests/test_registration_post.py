@@ -75,6 +75,19 @@ def test_cannot_create_registration_with_nonexistent_event(
 
 
 @pytest.mark.django_db
+def test_maximum_group_size_cannot_be_less_than_one(user, api_client, event):
+    api_client.force_authenticate(user)
+    registration_data = {
+        "event": {"@id": get_event_url(event.id)},
+        "maximum_group_size": 0,
+    }
+
+    response = create_registration(api_client, registration_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["maximum_group_size"][0].code == "min_value"
+
+
+@pytest.mark.django_db
 def test__unauthenticated_user_cannot_create_registration(api_client, event):
     api_client.force_authenticate(None)
     registration_data = {"event": {"@id": get_event_url(event.id)}}

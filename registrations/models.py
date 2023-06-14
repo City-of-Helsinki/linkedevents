@@ -6,6 +6,7 @@ from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.sites.models import Site
 from django.core.mail import send_mail
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import DateTimeField, ExpressionWrapper, F, Sum
 from django.forms.fields import MultipleChoiceField
@@ -115,6 +116,12 @@ class Registration(models.Model):
     )
     waiting_list_capacity = models.PositiveSmallIntegerField(
         verbose_name=_("Waiting list capacity"), null=True, blank=True
+    )
+    maximum_group_size = models.PositiveSmallIntegerField(
+        verbose_name=_("Maximum group size"),
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1)],
     )
 
     mandatory_fields = ChoiceArrayField(

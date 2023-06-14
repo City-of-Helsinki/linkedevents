@@ -53,6 +53,20 @@ def test_seats_value_is_required(api_client, event, registration):
 
 
 @pytest.mark.django_db
+def test_seats_cannot_be_greater_than_maximum_group_size(
+    api_client, event, registration
+):
+    registration.maximum_attendee_capacity = None
+    registration.maximum_group_size = 5
+    registration.save()
+
+    reservation_data = {"registration": registration.id, "seats": 6}
+    response = reserve_seats(api_client, reservation_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["seats"][0].code == "max_group_size"
+
+
+@pytest.mark.django_db
 def test_cannot_reserve_seats_if_there_are_not_enough_seats_available(
     api_client, event, registration
 ):

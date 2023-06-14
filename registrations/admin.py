@@ -20,6 +20,7 @@ class RegistrationAdmin(VersionAdmin):
         "minimum_attendee_capacity",
         "maximum_attendee_capacity",
         "waiting_list_capacity",
+        "maximum_group_size",
         "instructions",
         "confirmation_message",
         "audience_min_age",

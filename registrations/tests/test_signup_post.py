@@ -81,6 +81,32 @@ def test_cannot_signup_if_reservation_code_is_missing(api_client, registration):
 
 
 @pytest.mark.django_db
+def test_amount_if_signups_cannot_be_greater_than_maximum_group_size(
+    api_client, event, registration
+):
+    registration.audience_min_age = None
+    registration.audience_max_age = None
+    registration.maximum_attendee_capacity = None
+    registration.maximum_group_size = 2
+    registration.save()
+
+    reservation = SeatReservationCode.objects.create(registration=registration, seats=3)
+    code = reservation.code
+    signup_payload = {
+        "name": "Mickey Mouse",
+        "email": "test3@test.com",
+    }
+    signups_payload = {
+        "registration": registration.id,
+        "reservation_code": code,
+        "signups": [signup_payload, signup_payload, signup_payload],
+    }
+    response = create_signups(api_client, signups_payload)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["signups"][0].code == "max_group_size"
+
+
+@pytest.mark.django_db
 def test_cannot_signup_if_reservation_code_is_invalid(api_client, registration):
     signups_payload = {
         "registration": registration.id,
@@ -97,7 +123,9 @@ def test_cannot_signup_if_reservation_code_is_invalid(api_client, registration):
 def test_cannot_signup_if_reservation_code_is_for_different_registration(
     api_client, registration, registration2
 ):
-    reservation = SeatReservationCode(registration=registration2, seats=2)
+    reservation = SeatReservationCode.objects.create(
+        registration=registration2, seats=2
+    )
     code = reservation.code
     signups_payload = {
         "registration": registration.id,
