@@ -1,18 +1,21 @@
-from typing import Tuple, Generator, Optional, Set
-from django.conf import settings
-from django.utils import timezone
-from django.core.exceptions import ObjectDoesNotExist
-from django_orghierarchy.models import Organization
-from events.models import DataSource, Event, Keyword, Place
-from events.importer.sync import ModelSyncher
-import requests
-from datetime import datetime, timedelta, date
-from dateutil.relativedelta import relativedelta
-import pytz
+import logging
 import re
+from datetime import date, datetime, timedelta
+from typing import Generator, Optional, Set, Tuple
+
+import pytz
+import requests
+from dateutil.relativedelta import relativedelta
+from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
+from django.utils import timezone
+from django_orghierarchy.models import Organization
+
+from events.importer.sync import ModelSyncher
+from events.models import DataSource, Event, Keyword, Place
+
 from .base import Importer, register_importer
 from .util import clean_text
-import logging
 
 # Per module logger
 logger = logging.getLogger(__name__)
@@ -844,7 +847,7 @@ class EnkoraImporter(Importer):
         :param output_file: (optional) Output file to write MarkDown document into.
         :return: nothing
         """
-        from snakemd import new_doc, Inline, Paragraph, MDList
+        from snakemd import Inline, MDList, new_doc, Paragraph
 
         yso_base_url = r"https://finto.fi/yso/fi/page/{}"
         tprek_base_url = r"https://palvelukartta.hel.fi/fi/unit/{}"
