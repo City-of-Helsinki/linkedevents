@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 EVENTS_URL_TEMPLATE = urljoin(
     settings.ELIS_EVENT_API_URL,
-    "events/?searchstarttime={begin_date}&sort=starttime&show=100&offset={offset}&language={language}",
+    "event?searchstarttime={begin_date}&sort=starttime&show=100&offset={offset}&language={language}",
 )
 CATEGORY_URL = urljoin(settings.ELIS_EVENT_API_URL, "category")
 EVENT_API_TIMEOUT = 30
