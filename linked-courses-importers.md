@@ -36,6 +36,10 @@ This documentation is written to help you decide what to use if you'd like to se
   * [What is it?](#what-is-it-6)
   * [What depends on it?](#what-depends-on-it-6)
   * [How to use it?](#how-to-use-it-6)
+* [enkora](#enkora)
+  * [What is it?](#what-is-it-7)
+  * [What depends on it?](#what-depends-on-it-7)
+  * [How to use it?](#how-to-use-it-7)
 
 <!-- vim-markdown-toc -->
 
@@ -252,23 +256,37 @@ Imports all courses organized by City of Helsinki cultural centers into the data
 
 This is scheduled to run `hourly` on the instance as data changes often.
 
-## harrastushaku
+## enkora
 
 ### What is it?
 
-*Harrastushaku* is an importer which imports *courses* from [Harrastushaku](https://nk.hel.fi/harrastushaku/) website.
+*Enkora* is an importer which imports *courses* from [Enkora](https://enkora.fi/fi/referenssit/helsingin-liikuntavirasto/)
+ERP used by Sports and Leisure.
+
+Please note, Enkora is not a public system and any access to it requires credentials.
+Enkora acts as a data provider for other systems, like LinkedEvents with information on activities and courses.
 
 ### What depends on it?
-If you'd like to have courses from Harrastushaku website, you need this importer.
+Activities from Enkora are published on number of websites and applications by City of Helsinki.
+
+This importer is merely a bridge to transmit and transform activity data to LinkedEvents.
 
 ### How to use it?
-First, you need to import Harrastushaku locations:
+Dependencies:
+* Credentials into Enkora API
+* YSO keywords imported to SQL
+* TPrek places imported to SQL
+
+Import Enkora courses with a single command:
   ```bash
-  python manage.py event_import harrastushaku --places
-  ```
-Then, you can import Harrastushaku courses:
-  ```bash
-  python manage.py event_import harrastushaku --courses
+  python manage.py event_import enkora --courses
   ```
 
-Imports all courses from Harrastushaku website into the database.
+Running this imports all active courses from ERP into the database.
+
+### Mapping
+* Enkora location is mapped to TPrek place
+* Enkora keyword is mapped to audience keywords
+* Enkora description is mapped to keywords and audience keywords
+
+A MarkDown-document how mapping works can be auto-generated.
