@@ -301,8 +301,6 @@ class KulkeImporter(Importer):
     languages_to_detect = []
 
     def setup(self):
-        self.eventcodes_set = set()
-        self.file = open("eventcodes.txt", "w")
         self.languages_to_detect = [
             lang[0].replace("-", "_")
             for lang in settings.LANGUAGES
@@ -493,7 +491,6 @@ class KulkeImporter(Importer):
             return clean(text(k))
 
         eid = int(event_el.attrib["id"])
-        self.eventcodes_set.add(text_content("servicecode"))
         if text_content("servicecode") != "Pelkkä ilmoitus" and not is_course:
             # Skip courses when importing events
             return False
@@ -938,10 +935,6 @@ class KulkeImporter(Importer):
     def import_events(self):
         logger.info("Importing Kulke events")
         self._import_events()
-        for i in self.eventcodes_set:
-            self.file.write(i)
-            self.file.write("\n")
-        self.file.close()
 
     def import_courses(self):
         logger.info("Importing Kulke courses")
