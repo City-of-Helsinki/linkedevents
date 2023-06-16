@@ -722,6 +722,7 @@ class EnkoraImporter(Importer):
         super().__init__(options)
 
         self.now_tz_is = timezone.now()
+        self.driver_cls = Kurssidata
 
     def setup(self):
         logger.debug("Running Enkora importer setup...")
@@ -746,13 +747,18 @@ class EnkoraImporter(Importer):
             # will not be remapped by the syncher.
             self.check_deleted = lambda x: False
 
+    @staticmethod
+    def _get_timestamps() -> Tuple:
+        return datetime.now(), timezone.now()
+
     def import_courses(self):
-        kurssi_api = Kurssidata(
+        kurssi_api = self.driver_cls(
             settings.ENKORA_API_USER, settings.ENKORA_API_PASSWORD, request_timeout=20.0
         )
 
-        now_is = datetime.now()
-        self.now_tz_is = timezone.now()
+        # now_is = datetime.now()
+        # self.now_tz_is = timezone.now()
+        now_is, self.now_tz_is = self._get_timestamps()
 
         def _is_course_expired(course: dict) -> bool:
             if "public_visibility_end" not in course:
@@ -1409,6 +1415,12 @@ class Enkora:
 
         return response
 
+    def _request_json(self, url: str, payload) -> dict:
+        response = self._request(url, payload)
+        response_json = response.json()
+
+        return response_json
+
 
 class Kurssidata(Enkora):
     """
@@ -1512,13 +1524,14 @@ class Kurssidata(Enkora):
             ),
         }
 
-        response = self._request(self.endpoint_url, payload)
-        json = response.json()
-        if json["errors"]:
-            raise RuntimeError("Response has errors: {}".format(json["errors"]))
+        json_response = self._request_json(self.endpoint_url, payload)
+        if json_response["errors"]:
+            raise RuntimeError(
+                "Response has errors: {}".format(json_response["errors"])
+            )
 
         return self._course_data_response_generator(
-            json["result"], reservation_event_groups, reservation_events
+            json_response["result"], reservation_event_groups, reservation_events
         )
 
     def get_data_for_region_and_year(
