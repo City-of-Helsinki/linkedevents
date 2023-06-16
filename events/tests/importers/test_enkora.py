@@ -1812,16 +1812,16 @@ class TestEnkoraImporter:
             'e": "2023-05-31T12:57:19.190Z", "created_by": null, "last_modified_by": null, "publisher": "ahjo:u021600'
             '", "info_url": null, "info_url_fi": null, "info_url_sv": null, "info_url_en": null, "info_url_zh_hans": '
             'null, "info_url_ru": null, "info_url_ar": null, "description": "Latokartanon liikuntapuistossa on jalkap'
-            'allo-, koripallo-, lentopallo- ja tenniskentät sekä paikka yleisurheilulle. Lisäksi Latokartanossa on Da'
-            'vid City Linen painopakkasäädettäviä ulkokuntoiluvälineitä ja eri korkuisia leuanveto- ja riipuntatankoj'
+            "allo-, koripallo-, lentopallo- ja tenniskentät sekä paikka yleisurheilulle. Lisäksi Latokartanossa on Da"
+            "vid City Linen painopakkasäädettäviä ulkokuntoiluvälineitä ja eri korkuisia leuanveto- ja riipuntatankoj"
             'a.", "description_fi": "Latokartanon liikuntapuistossa on jalkapallo-, koripallo-, lentopallo- ja tennis'
-            'kentät sekä paikka yleisurheilulle. Lisäksi Latokartanossa on David City Linen painopakkasäädettäviä ulk'
+            "kentät sekä paikka yleisurheilulle. Lisäksi Latokartanossa on David City Linen painopakkasäädettäviä ulk"
             'okuntoiluvälineitä ja eri korkuisia leuanveto- ja riipuntatankoja.", "description_sv": "I Ladugårdens id'
-            'rottspark finns fotbolls-, basket- och volleybollplaner samt tennisbanor samt en plats för friidrott. De'
-            'ssutom finns i Ladugården David City Lines viktinställbara redskap för utomhusträning och olika höga arm'
+            "rottspark finns fotbolls-, basket- och volleybollplaner samt tennisbanor samt en plats för friidrott. De"
+            "ssutom finns i Ladugården David City Lines viktinställbara redskap för utomhusträning och olika höga arm"
             'hävnings- och hängningsstänger.", "description_en": "Latokartano sports park has a football field, baske'
-            'tball, volleyball and tennis courts, and a place for athletics. In addition, Latokartano has David City '
-            'Line\'s weight-adjustable outdoor exercise equipment and pull-up and hanging bars at various heights.", '
+            "tball, volleyball and tennis courts, and a place for athletics. In addition, Latokartano has David City "
+            "Line's weight-adjustable outdoor exercise equipment and pull-up and hanging bars at various heights.\", "
             '"description_zh_hans": null, "description_ru": null, "description_ar": null, "parent": null, "position":'
             ' "SRID=3067;POINT (391216.99082858814 6678873.1775492495)", "email": null, "telephone": "+358 9 310 8775'
             '6", "telephone_fi": "+358 9 310 87756", "telephone_sv": null, "telephone_en": null, "telephone_zh_hans":'
@@ -1848,7 +1848,7 @@ class TestEnkoraImporter:
             '"2023-05-31T12:18:10.448Z", "last_modified_time": "2023-05-31T12:18:10.448Z", "created_by": null, "last_'
             'modified_by": null, "publisher": "hy:kansalliskirjasto", "aggregate": false, "deprecated": false, "has_u'
             'pcoming_events": false, "n_events": 0, "n_events_changed": true, "replaced_by": null, "alt_labels": []}}'
-            ']',
+            "]",
             '[{"model": "events.keyword", "pk": "yso:p4354", "fields": {"image": null, "data_source": "yso", "name": '
             '"lapset (ikäryhmät)", "name_fi": "lapset (ikäryhmät)", "name_sv": "barn (åldersgrupper)", "name_en": "ch'
             'ildren (age groups)", "name_zh_hans": null, "name_ru": null, "name_ar": null, "origin_id": null, "create'
@@ -1913,105 +1913,107 @@ class TestEnkoraImporter:
         self, mock_get_timestamps, mock_request, populate_referenced_data_to_db
     ):
         # Some courses
-        response_str = '{"errors": [], "result": {"course_events_count": 5, "courses_count": 3, "courses": [{"reserva' \
-                       'tion_event_group_id": "50148", "reservation_event_group_name": "EASYSPORT TENNIS, ALKEET, 7-9' \
-                       ' -vuotiaat", "created_timestamp": "2023-03-14 12:16:37", "created_user_id": "322433", "reserv' \
-                       'ation_group_id": "256", "reservation_group_name": "Tennis", "description": "Tenniskursseille ' \
-                       'voi ottaa oman mailan mukaan. Mailoja saa lainaan my\\u00f6s kurssilta.", "description_long":' \
-                       ' null, "description_form": null, "season_id": "37", "season_name": "Touko- ja kes\\u00e4toimi' \
-                       'nta 2023", "public_reservation_start": "2023-04-12 16:00:00", "public_reservation_end": "2023' \
-                       '-06-16 00:00:00", "public_visibility_start": "2023-03-27 00:00:00", "public_visibility_end": ' \
-                       '"2023-06-16 00:00:00", "instructor_visibility_start": null, "instructor_visibility_end": null' \
-                       ', "is_course": "1", "reservation_event_count": "100", "first_event_date": "2023-06-05 10:00:0' \
-                       '0", "last_event_date": "2023-06-16 10:00:00", "capacity": "8", "queue_capacity": "5", "servic' \
-                       'e_id": "99", "service_name": "Ryhm\\u00e4liikunta", "service_at_area_id": "1137", "service_at' \
-                       '_area_name": "Ryhm\\u00e4liikunta at Latokartanon liikuntapuisto", "location_id": "62", "loca' \
-                       'tion_name": "Latokartanon liikuntapuisto", "region_id": "2", "region_name": "Pohjoinen", "res' \
-                       'erved_count": "5", "queue_count": "", "reservation_events": [{"reservation_event_id": "247110' \
-                       '8", "reservation_event_name": "EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat", "time_start": "2023-' \
-                       '06-05 10:00:00", "time_end": "2023-06-05 11:00:00", "instructors": [{"account_id": "4629979",' \
-                       ' "name": "H\\u00e4pp\\u00f6l\\u00e4 Tomi"}], "quantity_attended": "0"}, {"reservation_event_i' \
-                       'd": "2471109", "reservation_event_name": "EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat", "time_sta' \
-                       'rt": "2023-06-06 10:00:00", "time_end": "2023-06-06 11:00:00", "instructors": [{"account_id":' \
-                       ' "4629979", "name": "H\\u00e4pp\\u00f6l\\u00e4 Tomi"}], "quantity_attended": "0"}, {"reservat' \
-                       'ion_event_id": "2471110", "reservation_event_name": "EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat"' \
-                       ', "time_start": "2023-06-07 10:00:00", "time_end": "2023-06-07 11:00:00", "instructors": [{"a' \
-                       'ccount_id": "4629979", "name": "H\\u00e4pp\\u00f6l\\u00e4 Tomi"}], "quantity_attended": "0"},' \
-                       ' {"reservation_event_id": "2471111", "reservation_event_name": "EASYSPORT TENNIS, ALKEET, 7-9' \
-                       ' -vuotiaat", "time_start": "2023-06-08 10:00:00", "time_end": "2023-06-08 11:00:00", "instruc' \
-                       'tors": [{"account_id": "4629979", "name": "H\\u00e4pp\\u00f6l\\u00e4 Tomi"}], "quantity_atten' \
-                       'ded": "0"}, {"reservation_event_id": "2471112", "reservation_event_name": "EASYSPORT TENNIS, ' \
-                       'ALKEET, 7-9 -vuotiaat", "time_start": "2023-06-09 10:00:00", "time_end": "2023-06-09 11:00:00' \
-                       '", "instructors": [{"account_id": "4629979", "name": "H\\u00e4pp\\u00f6l\\u00e4 Tomi"}], "qua' \
-                       'ntity_attended": "0"}, {"reservation_event_id": "2471113", "reservation_event_name": "EASYSPO' \
-                       'RT TENNIS, ALKEET, 7-9 -vuotiaat", "time_start": "2023-06-12 10:00:00", "time_end": "2023-06-' \
-                       '12 11:00:00", "instructors": [{"account_id": "4629979", "name": "H\\u00e4pp\\u00f6l\\u00e4 To' \
-                       'mi"}], "quantity_attended": "0"}, {"reservation_event_id": "2471114", "reservation_event_name' \
-                       '": "EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat", "time_start": "2023-06-13 10:00:00", "time_end"' \
-                       ': "2023-06-13 11:00:00", "instructors": [{"account_id": "4629979", "name": "H\\u00e4pp\\u00f6' \
-                       'l\\u00e4 Tomi"}], "quantity_attended": "0"}, {"reservation_event_id": "2471115", "reservation' \
-                       '_event_name": "EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat", "time_start": "2023-06-14 10:00:00",' \
-                       ' "time_end": "2023-06-14 11:00:00", "instructors": [{"account_id": "4629979", "name": "H\\u00' \
-                       'e4pp\\u00f6l\\u00e4 Tomi"}], "quantity_attended": "0"}, {"reservation_event_id": "2471116", "' \
-                       'reservation_event_name": "EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat", "time_start": "2023-06-15' \
-                       ' 10:00:00", "time_end": "2023-06-15 11:00:00", "instructors": [{"account_id": "4629979", "nam' \
-                       'e": "H\\u00e4pp\\u00f6l\\u00e4 Tomi"}], "quantity_attended": "0"}, {"reservation_event_id": "' \
-                       '2471117", "reservation_event_name": "EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat", "time_start": ' \
-                       '"2023-06-16 10:00:00", "time_end": "2023-06-16 11:00:00", "instructors": [{"account_id": "462' \
-                       '9979", "name": "H\\u00e4pp\\u00f6l\\u00e4 Tomi"}], "quantity_attended": "0"}], "reservations"' \
-                       ': [{"reservation_id": "5545077", "reservation_account_id": "2693748", "reservation_timestamp"' \
-                       ': "2023-04-12 16:02:10", "reservation_status_id": "2", "reservation_status_name": "Reserved",' \
-                       ' "reserving_user_id": "405876", "sale_event_id": "259182551"}, {"reservation_id": "5694061", ' \
-                       '"reservation_account_id": "3846275", "reservation_timestamp": "2023-05-31 12:41:31", "reserva' \
-                       'tion_status_id": "2", "reservation_status_name": "Reserved", "reserving_user_id": "470687", "' \
-                       'sale_event_id": "263503722"}, {"reservation_id": "5639160", "reservation_account_id": "454251' \
-                       '3", "reservation_timestamp": "2023-05-07 11:26:06", "reservation_status_id": "2", "reservatio' \
-                       'n_status_name": "Reserved", "reserving_user_id": "482987", "sale_event_id": "261393743"}, {"r' \
-                       'eservation_id": "5620721", "reservation_account_id": "4985312", "reservation_timestamp": "202' \
-                       '3-04-27 23:16:15", "reservation_status_id": "6", "reservation_status_name": "Cancelled", "res' \
-                       'erving_user_id": "507666", "sale_event_id": "260647231"}, {"reservation_id": "5545658", "rese' \
-                       'rvation_account_id": "5407320", "reservation_timestamp": "2023-04-12 16:03:08", "reservation_' \
-                       'status_id": "2", "reservation_status_name": "Reserved", "reserving_user_id": "4", "sale_event' \
-                       '_id": "259185798"}, {"reservation_id": "5545025", "reservation_account_id": "5407354", "reser' \
-                       'vation_timestamp": "2023-04-12 16:04:45", "reservation_status_id": "6", "reservation_status_n' \
-                       'ame": "Cancelled", "reserving_user_id": "4", "sale_event_id": "259187047"}, {"reservation_id"' \
-                       ': "5547519", "reservation_account_id": "5407752", "reservation_timestamp": "2023-04-12 16:17:' \
-                       '12", "reservation_status_id": "7", "reservation_status_name": "Unconfirmed", "reserving_user_' \
-                       'id": "507611", "sale_event_id": null}, {"reservation_id": "5548021", "reservation_account_id"' \
-                       ': "5407895", "reservation_timestamp": "2023-04-12 16:26:03", "reservation_status_id": "7", "r' \
-                       'eservation_status_name": "Unconfirmed", "reserving_user_id": "450856", "sale_event_id": null}' \
-                       ', {"reservation_id": "5670842", "reservation_account_id": "5461736", "reservation_timestamp":' \
-                       ' "2023-05-21 11:34:36", "reservation_status_id": "6", "reservation_status_name": "Cancelled",' \
-                       ' "reserving_user_id": "4", "sale_event_id": null}, {"reservation_id": "5670832", "reservation' \
-                       '_account_id": "5461740", "reservation_timestamp": "2023-05-21 09:20:41", "reservation_status_' \
-                       'id": "2", "reservation_status_name": "Reserved", "reserving_user_id": "4", "sale_event_id": "' \
-                       '262588703"}, {"reservation_id": "5721399", "reservation_account_id": "5487953", "reservation_' \
-                       'timestamp": "2023-06-12 12:43:49", "reservation_status_id": "6", "reservation_status_name": "' \
-                       'Cancelled", "reserving_user_id": "524142", "sale_event_id": null}, {"reservation_id": "572140' \
-                       '9", "reservation_account_id": "5487954", "reservation_timestamp": "2023-06-12 12:43:49", "res' \
-                       'ervation_status_id": "6", "reservation_status_name": "Cancelled", "reserving_user_id": "52414' \
-                       '2", "sale_event_id": null}, {"reservation_id": "5721419", "reservation_account_id": "5487955"' \
-                       ', "reservation_timestamp": "2023-06-12 12:43:49", "reservation_status_id": "6", "reservation_' \
-                       'status_name": "Cancelled", "reserving_user_id": "524142", "sale_event_id": null}, {"reservati' \
-                       'on_id": "5721429", "reservation_account_id": "5487959", "reservation_timestamp": "2023-06-12 ' \
-                       '12:47:07", "reservation_status_id": "6", "reservation_status_name": "Cancelled", "reserving_u' \
-                       'ser_id": "524142", "sale_event_id": null}, {"reservation_id": "5721439", "reservation_account' \
-                       '_id": "5487960", "reservation_timestamp": "2023-06-12 12:47:24", "reservation_status_id": "6"' \
-                       ', "reservation_status_name": "Cancelled", "reserving_user_id": "492408", "sale_event_id": nul' \
-                       'l}, {"reservation_id": "5721449", "reservation_account_id": "5487961", "reservation_timestamp' \
-                       '": "2023-06-12 12:48:08", "reservation_status_id": "6", "reservation_status_name": "Cancelled' \
-                       '", "reserving_user_id": "524142", "sale_event_id": null}, {"reservation_id": "5721459", "rese' \
-                       'rvation_account_id": "5487962", "reservation_timestamp": "2023-06-12 12:48:06", "reservation_' \
-                       'status_id": "6", "reservation_status_name": "Cancelled", "reserving_user_id": "492408", "sale' \
-                       '_event_id": null}, {"reservation_id": "5721469", "reservation_account_id": "5487963", "reserv' \
-                       'ation_timestamp": "2023-06-12 12:48:15", "reservation_status_id": "6", "reservation_status_na' \
-                       'me": "Cancelled", "reserving_user_id": "492408", "sale_event_id": null}, {"reservation_id": "' \
-                       '5731258", "reservation_account_id": "5492160", "reservation_timestamp": "2023-06-15 15:22:23"' \
-                       ', "reservation_status_id": "6", "reservation_status_name": "Cancelled", "reserving_user_id": ' \
-                       '"524142", "sale_event_id": null}], "fare_products": [{"fare_product_id": "3605", "fare_produc' \
-                       't_name": "Pohjoinen Ryhm\\u00e4liikunta Lapsi 7-9 -vuotiaat", "fare_product_name_customer": "' \
-                       'Ryhm\\u00e4liikunta", "price": "3000.0000", "vat_percentage": "10", "min_age": "6", "max_age"' \
-                       ': "10"}], "tags": [{"tag_id": "1", "tag_name": "Lapset, nuoret ja perheet"}]}]}}'
+        response_str = (
+            '{"errors": [], "result": {"course_events_count": 5, "courses_count": 3, "courses": [{"reserva'
+            'tion_event_group_id": "50148", "reservation_event_group_name": "EASYSPORT TENNIS, ALKEET, 7-9'
+            ' -vuotiaat", "created_timestamp": "2023-03-14 12:16:37", "created_user_id": "322433", "reserv'
+            'ation_group_id": "256", "reservation_group_name": "Tennis", "description": "Tenniskursseille '
+            'voi ottaa oman mailan mukaan. Mailoja saa lainaan my\\u00f6s kurssilta.", "description_long":'
+            ' null, "description_form": null, "season_id": "37", "season_name": "Touko- ja kes\\u00e4toimi'
+            'nta 2023", "public_reservation_start": "2023-04-12 16:00:00", "public_reservation_end": "2023'
+            '-06-16 00:00:00", "public_visibility_start": "2023-03-27 00:00:00", "public_visibility_end": '
+            '"2023-06-16 00:00:00", "instructor_visibility_start": null, "instructor_visibility_end": null'
+            ', "is_course": "1", "reservation_event_count": "100", "first_event_date": "2023-06-05 10:00:0'
+            '0", "last_event_date": "2023-06-16 10:00:00", "capacity": "8", "queue_capacity": "5", "servic'
+            'e_id": "99", "service_name": "Ryhm\\u00e4liikunta", "service_at_area_id": "1137", "service_at'
+            '_area_name": "Ryhm\\u00e4liikunta at Latokartanon liikuntapuisto", "location_id": "62", "loca'
+            'tion_name": "Latokartanon liikuntapuisto", "region_id": "2", "region_name": "Pohjoinen", "res'
+            'erved_count": "5", "queue_count": "", "reservation_events": [{"reservation_event_id": "247110'
+            '8", "reservation_event_name": "EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat", "time_start": "2023-'
+            '06-05 10:00:00", "time_end": "2023-06-05 11:00:00", "instructors": [{"account_id": "4629979",'
+            ' "name": "H\\u00e4pp\\u00f6l\\u00e4 Tomi"}], "quantity_attended": "0"}, {"reservation_event_i'
+            'd": "2471109", "reservation_event_name": "EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat", "time_sta'
+            'rt": "2023-06-06 10:00:00", "time_end": "2023-06-06 11:00:00", "instructors": [{"account_id":'
+            ' "4629979", "name": "H\\u00e4pp\\u00f6l\\u00e4 Tomi"}], "quantity_attended": "0"}, {"reservat'
+            'ion_event_id": "2471110", "reservation_event_name": "EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat"'
+            ', "time_start": "2023-06-07 10:00:00", "time_end": "2023-06-07 11:00:00", "instructors": [{"a'
+            'ccount_id": "4629979", "name": "H\\u00e4pp\\u00f6l\\u00e4 Tomi"}], "quantity_attended": "0"},'
+            ' {"reservation_event_id": "2471111", "reservation_event_name": "EASYSPORT TENNIS, ALKEET, 7-9'
+            ' -vuotiaat", "time_start": "2023-06-08 10:00:00", "time_end": "2023-06-08 11:00:00", "instruc'
+            'tors": [{"account_id": "4629979", "name": "H\\u00e4pp\\u00f6l\\u00e4 Tomi"}], "quantity_atten'
+            'ded": "0"}, {"reservation_event_id": "2471112", "reservation_event_name": "EASYSPORT TENNIS, '
+            'ALKEET, 7-9 -vuotiaat", "time_start": "2023-06-09 10:00:00", "time_end": "2023-06-09 11:00:00'
+            '", "instructors": [{"account_id": "4629979", "name": "H\\u00e4pp\\u00f6l\\u00e4 Tomi"}], "qua'
+            'ntity_attended": "0"}, {"reservation_event_id": "2471113", "reservation_event_name": "EASYSPO'
+            'RT TENNIS, ALKEET, 7-9 -vuotiaat", "time_start": "2023-06-12 10:00:00", "time_end": "2023-06-'
+            '12 11:00:00", "instructors": [{"account_id": "4629979", "name": "H\\u00e4pp\\u00f6l\\u00e4 To'
+            'mi"}], "quantity_attended": "0"}, {"reservation_event_id": "2471114", "reservation_event_name'
+            '": "EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat", "time_start": "2023-06-13 10:00:00", "time_end"'
+            ': "2023-06-13 11:00:00", "instructors": [{"account_id": "4629979", "name": "H\\u00e4pp\\u00f6'
+            'l\\u00e4 Tomi"}], "quantity_attended": "0"}, {"reservation_event_id": "2471115", "reservation'
+            '_event_name": "EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat", "time_start": "2023-06-14 10:00:00",'
+            ' "time_end": "2023-06-14 11:00:00", "instructors": [{"account_id": "4629979", "name": "H\\u00'
+            'e4pp\\u00f6l\\u00e4 Tomi"}], "quantity_attended": "0"}, {"reservation_event_id": "2471116", "'
+            'reservation_event_name": "EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat", "time_start": "2023-06-15'
+            ' 10:00:00", "time_end": "2023-06-15 11:00:00", "instructors": [{"account_id": "4629979", "nam'
+            'e": "H\\u00e4pp\\u00f6l\\u00e4 Tomi"}], "quantity_attended": "0"}, {"reservation_event_id": "'
+            '2471117", "reservation_event_name": "EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat", "time_start": '
+            '"2023-06-16 10:00:00", "time_end": "2023-06-16 11:00:00", "instructors": [{"account_id": "462'
+            '9979", "name": "H\\u00e4pp\\u00f6l\\u00e4 Tomi"}], "quantity_attended": "0"}], "reservations"'
+            ': [{"reservation_id": "5545077", "reservation_account_id": "2693748", "reservation_timestamp"'
+            ': "2023-04-12 16:02:10", "reservation_status_id": "2", "reservation_status_name": "Reserved",'
+            ' "reserving_user_id": "405876", "sale_event_id": "259182551"}, {"reservation_id": "5694061", '
+            '"reservation_account_id": "3846275", "reservation_timestamp": "2023-05-31 12:41:31", "reserva'
+            'tion_status_id": "2", "reservation_status_name": "Reserved", "reserving_user_id": "470687", "'
+            'sale_event_id": "263503722"}, {"reservation_id": "5639160", "reservation_account_id": "454251'
+            '3", "reservation_timestamp": "2023-05-07 11:26:06", "reservation_status_id": "2", "reservatio'
+            'n_status_name": "Reserved", "reserving_user_id": "482987", "sale_event_id": "261393743"}, {"r'
+            'eservation_id": "5620721", "reservation_account_id": "4985312", "reservation_timestamp": "202'
+            '3-04-27 23:16:15", "reservation_status_id": "6", "reservation_status_name": "Cancelled", "res'
+            'erving_user_id": "507666", "sale_event_id": "260647231"}, {"reservation_id": "5545658", "rese'
+            'rvation_account_id": "5407320", "reservation_timestamp": "2023-04-12 16:03:08", "reservation_'
+            'status_id": "2", "reservation_status_name": "Reserved", "reserving_user_id": "4", "sale_event'
+            '_id": "259185798"}, {"reservation_id": "5545025", "reservation_account_id": "5407354", "reser'
+            'vation_timestamp": "2023-04-12 16:04:45", "reservation_status_id": "6", "reservation_status_n'
+            'ame": "Cancelled", "reserving_user_id": "4", "sale_event_id": "259187047"}, {"reservation_id"'
+            ': "5547519", "reservation_account_id": "5407752", "reservation_timestamp": "2023-04-12 16:17:'
+            '12", "reservation_status_id": "7", "reservation_status_name": "Unconfirmed", "reserving_user_'
+            'id": "507611", "sale_event_id": null}, {"reservation_id": "5548021", "reservation_account_id"'
+            ': "5407895", "reservation_timestamp": "2023-04-12 16:26:03", "reservation_status_id": "7", "r'
+            'eservation_status_name": "Unconfirmed", "reserving_user_id": "450856", "sale_event_id": null}'
+            ', {"reservation_id": "5670842", "reservation_account_id": "5461736", "reservation_timestamp":'
+            ' "2023-05-21 11:34:36", "reservation_status_id": "6", "reservation_status_name": "Cancelled",'
+            ' "reserving_user_id": "4", "sale_event_id": null}, {"reservation_id": "5670832", "reservation'
+            '_account_id": "5461740", "reservation_timestamp": "2023-05-21 09:20:41", "reservation_status_'
+            'id": "2", "reservation_status_name": "Reserved", "reserving_user_id": "4", "sale_event_id": "'
+            '262588703"}, {"reservation_id": "5721399", "reservation_account_id": "5487953", "reservation_'
+            'timestamp": "2023-06-12 12:43:49", "reservation_status_id": "6", "reservation_status_name": "'
+            'Cancelled", "reserving_user_id": "524142", "sale_event_id": null}, {"reservation_id": "572140'
+            '9", "reservation_account_id": "5487954", "reservation_timestamp": "2023-06-12 12:43:49", "res'
+            'ervation_status_id": "6", "reservation_status_name": "Cancelled", "reserving_user_id": "52414'
+            '2", "sale_event_id": null}, {"reservation_id": "5721419", "reservation_account_id": "5487955"'
+            ', "reservation_timestamp": "2023-06-12 12:43:49", "reservation_status_id": "6", "reservation_'
+            'status_name": "Cancelled", "reserving_user_id": "524142", "sale_event_id": null}, {"reservati'
+            'on_id": "5721429", "reservation_account_id": "5487959", "reservation_timestamp": "2023-06-12 '
+            '12:47:07", "reservation_status_id": "6", "reservation_status_name": "Cancelled", "reserving_u'
+            'ser_id": "524142", "sale_event_id": null}, {"reservation_id": "5721439", "reservation_account'
+            '_id": "5487960", "reservation_timestamp": "2023-06-12 12:47:24", "reservation_status_id": "6"'
+            ', "reservation_status_name": "Cancelled", "reserving_user_id": "492408", "sale_event_id": nul'
+            'l}, {"reservation_id": "5721449", "reservation_account_id": "5487961", "reservation_timestamp'
+            '": "2023-06-12 12:48:08", "reservation_status_id": "6", "reservation_status_name": "Cancelled'
+            '", "reserving_user_id": "524142", "sale_event_id": null}, {"reservation_id": "5721459", "rese'
+            'rvation_account_id": "5487962", "reservation_timestamp": "2023-06-12 12:48:06", "reservation_'
+            'status_id": "6", "reservation_status_name": "Cancelled", "reserving_user_id": "492408", "sale'
+            '_event_id": null}, {"reservation_id": "5721469", "reservation_account_id": "5487963", "reserv'
+            'ation_timestamp": "2023-06-12 12:48:15", "reservation_status_id": "6", "reservation_status_na'
+            'me": "Cancelled", "reserving_user_id": "492408", "sale_event_id": null}, {"reservation_id": "'
+            '5731258", "reservation_account_id": "5492160", "reservation_timestamp": "2023-06-15 15:22:23"'
+            ', "reservation_status_id": "6", "reservation_status_name": "Cancelled", "reserving_user_id": '
+            '"524142", "sale_event_id": null}], "fare_products": [{"fare_product_id": "3605", "fare_produc'
+            't_name": "Pohjoinen Ryhm\\u00e4liikunta Lapsi 7-9 -vuotiaat", "fare_product_name_customer": "'
+            'Ryhm\\u00e4liikunta", "price": "3000.0000", "vat_percentage": "10", "min_age": "6", "max_age"'
+            ': "10"}], "tags": [{"tag_id": "1", "tag_name": "Lapset, nuoret ja perheet"}]}]}}'
+        )
         mock_request.return_value = json.loads(response_str)
 
         # Time
@@ -2078,7 +2080,7 @@ class TestEnkoraImporter:
             'l, "super_event_type": null, "type_id": "2", "deleted": false, "replaced_by": null, "maximum_attendee_ca'
             'pacity": 8, "minimum_attendee_capacity": null, "enrolment_start_time": "2023-04-12T13:00:00Z", "enrolmen'
             't_end_time": "2023-06-15T21:00:00Z", "local": false, "search_vector_fi": "\'-9\':5A,11C \'7\':4A,10C \'a'
-            'lk\':3A,9C \'easysport\':1A,7C \'tennis\':2A,8C \'vuotia\':6A,12C", "search_vector_en": "", "search_vect'
+            "lk':3A,9C 'easysport':1A,7C 'tennis':2A,8C 'vuotia':6A,12C\", \"search_vector_en\": \"\", \"search_vect"
             'or_sv": "", "lft": 1, "rght": 2, "tree_id": 1, "level": 0, "in_language": ["fi"], "images": [], "keyword'
             's": ["yso:p1928", "yso:p20748", "yso:p26619"], "audience": ["yso:p11617", "yso:p4354", "yso:p4363", "yso'
             ':p6914", "yso:p6915"]}}]'
