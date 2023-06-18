@@ -4,28 +4,28 @@ echo ---------------------------------
 echo "Starting hourly tasks"
 echo ---------------------------------
 
-timeout --preserve-status -s INT 2m python manage.py event_import tprek --places
+timeout --preserve-status -s INT 10m python manage.py event_import tprek --places
 if [ $? -ne 0 ]; then
     echo "tprek importer signaled failure"
 fi
 
 echo "--- Starting kulke importer ---"
 
-timeout --preserve-status -s INT 5m python manage.py event_import kulke --events
+timeout --preserve-status -s INT 30m python manage.py event_import kulke --events
 if [ $? -ne 0 ]; then
     echo "kulke importer signaled failure"
 fi
 
 echo "--- Starting lippupiste importer ---"
 
-timeout --preserve-status -s INT 5m python manage.py event_import lippupiste --events
+timeout --preserve-status -s INT 45m python manage.py event_import lippupiste --events
 if [ $? -ne 0 ]; then
     echo "lippupiste importer signaled failure"
 fi
 
 echo "--- Starting helmet importer ---"
 
-timeout --preserve-status -s INT 10m python manage.py event_import helmet --events
+timeout --preserve-status -s INT 75m python manage.py event_import helmet --events
 if [ $? -ne 0 ]; then
     echo "helmet importer signaled failure"
 fi
