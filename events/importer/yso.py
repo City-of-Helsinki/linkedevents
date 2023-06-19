@@ -86,6 +86,8 @@ def deprecate_and_replace(graph, keyword):
             new_keyword = Keyword.objects.get(id=get_yso_id(replacement_subject))
         except Keyword.DoesNotExist:
             pass
+        except ValidationError:
+            logger.exception("New keyword has invalid YSO id")
     if new_keyword:
         logger.info("Keyword %s replaced by %s" % (keyword, new_keyword))
         new_keyword.events.add(*keyword.events.all())
