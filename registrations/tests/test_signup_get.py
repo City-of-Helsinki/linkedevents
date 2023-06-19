@@ -1,4 +1,5 @@
 import pytest
+from django.utils.translation import activate
 from rest_framework import status
 
 from events.tests.conftest import APIClient
@@ -73,6 +74,8 @@ def test_anonymous_user_can_get_signup_by_cancellation_code(
 def test_anonymous_user_cannot_get_signup_with_malformed_code(
     api_client, registration, signup
 ):
+    activate("en")
+
     response = get_detail(api_client, signup.id, "cancellation_code=invalid_code")
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert response.data["detail"] == "Cancellation code did not match"
@@ -82,6 +85,8 @@ def test_anonymous_user_cannot_get_signup_with_malformed_code(
 def test_anonymous_user_cannot_get_signup_with_wrong_code(
     api_client, registration, signup, signup2
 ):
+    activate("en")
+
     response = get_detail(
         api_client,
         signup.id,
@@ -204,6 +209,8 @@ def test__user_from_other_organization_cannot_get_signup_list(
 def test__cannot_get_signups_of_nonexistent_registration(
     api_client, registration, signup, signup2, user2
 ):
+    activate("en")
+
     api_client.force_authenticate(user2)
 
     response = get_list(api_client, f"registration=not-exist")
@@ -244,6 +251,8 @@ def test__api_key_with_wrong_organization_cannot_get_signup_list(
 def test__signup_list_assert_text_filter(
     api_client, field, registration, signup, signup2, user
 ):
+    activate("en")
+
     setattr(signup, field, "field_value_1")
     signup.save()
     setattr(signup2, field, "field_value_2")

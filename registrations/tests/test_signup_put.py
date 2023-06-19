@@ -1,4 +1,5 @@
 import pytest
+from django.utils.translation import activate
 from freezegun import freeze_time
 from rest_framework import status
 
@@ -55,6 +56,8 @@ def test_anonymous_user_can_update_signup_with_cancellation_code(
 def test_anonymous_user_cannot_update_signup_if_cancellation_code_is_missing(
     api_client, registration, signup
 ):
+    activate("en")
+
     signup_data = {
         "registration": registration.id,
         "name": "Edited name",
@@ -74,6 +77,8 @@ def test_anonymous_user_cannot_update_signup_if_cancellation_code_is_missing(
 def test_cannot_update_signup_with_wrong_cancellation_code(
     api_client, registration, signup, signup2
 ):
+    activate("en")
+
     signup_data = {
         "registration": registration.id,
         "name": "Edited name",
@@ -94,6 +99,8 @@ def test_cannot_update_signup_with_wrong_cancellation_code(
 def test_cannot_update_signup_with_malformed_cancellation_code(
     api_client, registration, signup
 ):
+    activate("en")
+
     signup_data = {
         "registration": registration.id,
         "name": "Edited name",
@@ -130,6 +137,8 @@ def test__update_signup(api_client, registration, signup, user):
 def test__cannot_update_attendee_status_of_signup(
     api_client, registration, signup, user
 ):
+    activate("en")
+
     signup.attendee_status = SignUp.AttendeeStatus.ATTENDING
     signup.save()
     api_client.force_authenticate(user)
@@ -154,6 +163,8 @@ def test__cannot_update_attendee_status_of_signup(
 def test__cannot_update_registration_of_signup(
     api_client, registration, registration2, signup, user
 ):
+    activate("en")
+
     api_client.force_authenticate(user)
 
     signup_data = {

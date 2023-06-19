@@ -748,7 +748,7 @@ def test__create_event_with_image_not_exists(
     create_url = reverse("event-list")
     response = api_client.post(create_url, minimal_event_dict, format="json")
     assert response.status_code == 400, response.data
-    assert "objektia ei ole" in response.json()["images"][0], response.data
+    assert response.data["images"][0].code == "does_not_exist"
 
 
 @pytest.mark.django_db

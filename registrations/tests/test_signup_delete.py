@@ -1,5 +1,6 @@
 import pytest
 from django.core import mail
+from django.utils.translation import activate
 from rest_framework import status
 
 from events.tests.utils import versioned_reverse as reverse
@@ -45,6 +46,8 @@ def test_anonymous_user_can_delete_signup_with_cancellation_code(
 def test_anonymous_user_cannot_delete_signup_if_cancellation_code_is_missing(
     api_client, registration, signup
 ):
+    activate("en")
+
     api_client.force_authenticate(user=None)
 
     response = delete_signup(api_client, signup.id)
@@ -56,6 +59,8 @@ def test_anonymous_user_cannot_delete_signup_if_cancellation_code_is_missing(
 def test_cannot_delete_signup_with_wrong_cancellation_code(
     api_client, registration, signup, signup2
 ):
+    activate("en")
+
     api_client.force_authenticate(user=None)
 
     response = delete_signup(
@@ -71,6 +76,8 @@ def test_cannot_delete_signup_with_wrong_cancellation_code(
 def test_cannot_delete_signup_with_malformed_cancellation_code(
     api_client, registration, signup
 ):
+    activate("en")
+
     api_client.force_authenticate(user=None)
 
     response = delete_signup(api_client, signup.id, "cancellation_code=invalid_code")
