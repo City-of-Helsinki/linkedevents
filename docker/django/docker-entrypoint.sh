@@ -24,6 +24,9 @@ if [[ -n "$INSTALL_TEMPLATE" ]]; then
     ./manage.py install_templates "${INSTALL_TEMPLATE}"
 fi
 
+echo "Compile translations..."
+django-admin compilemessages -l en -l fi -l sv -v 0
+
 # Start server
 if [[ -n "$@" ]]; then
     "$@"
