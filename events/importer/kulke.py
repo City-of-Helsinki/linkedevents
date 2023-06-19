@@ -2,9 +2,12 @@ import functools
 import logging
 import os
 import re
-from datetime import time
+from datetime import datetime, time, timedelta
+from posixpath import join as urljoin
+from typing import Iterator, Union
 
 import dateutil
+import requests
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
@@ -30,6 +33,15 @@ from .yso import KEYWORDS_TO_ADD_TO_AUDIENCE
 
 # Per module logger
 logger = logging.getLogger(__name__)
+
+
+EVENTS_URL_TEMPLATE = urljoin(
+    settings.ELIS_EVENT_API_URL,
+    "event?searchstarttime={begin_date}&sort=starttime&show=100&offset={offset}&language={language}",
+)
+CATEGORY_URL = urljoin(settings.ELIS_EVENT_API_URL, "category")
+EVENT_API_TIMEOUT = 30
+
 
 LOCATION_TPREK_MAP = {
     "malmitalo": "8740",
@@ -289,8 +301,6 @@ class KulkeImporter(Importer):
     languages_to_detect = []
 
     def setup(self):
-        self.eventcodes_set = set()
-        self.file = open("eventcodes.txt", "w")
         self.languages_to_detect = [
             lang[0].replace("-", "_")
             for lang in settings.LANGUAGES
@@ -343,7 +353,7 @@ class KulkeImporter(Importer):
         self.tprek_by_id = {p.origin_id: p.id for p in place_list}
 
         logger.info("Preprocessing categories")
-        categories = self.parse_kulke_categories()
+        categories = self.fetch_kulke_categories()
 
         keyword_matcher = KeywordMatcher()
         for cid, c in list(categories.items()):
@@ -382,12 +392,11 @@ class KulkeImporter(Importer):
         except License.DoesNotExist:
             self.event_only_license = None
 
-    def parse_kulke_categories(self):
+    def fetch_kulke_categories(self) -> dict[str, Union[str, int]]:
+        response = requests.get(CATEGORY_URL, timeout=EVENT_API_TIMEOUT)
+        response.raise_for_status()
+        root = etree.fromstring(response.content)
         categories = {}
-        categories_file = os.path.join(
-            settings.IMPORT_FILE_PATH, "kulke", "category.xml"
-        )
-        root = etree.parse(categories_file)
         for ctype in root.xpath("/data/categories/category"):
             cid = int(ctype.attrib["id"])
             typeid = int(ctype.attrib["typeid"])
@@ -484,7 +493,6 @@ class KulkeImporter(Importer):
             return clean(text(k))
 
         eid = int(event_el.attrib["id"])
-        self.eventcodes_set.add(text_content("servicecode"))
         if text_content("servicecode") != "Pelkkä ilmoitus" and not is_course:
             # Skip courses when importing events
             return False
@@ -737,8 +745,14 @@ class KulkeImporter(Importer):
             for inner_key in group:
                 inner_group = recurring_groups.get(inner_key)
                 if inner_group and inner_group != group:
-                    logger.warning("Differing groups:", key, inner_key)
-                    logger.warning("Differing groups:", group, inner_group)
+                    logger.warning(
+                        "Differing groups: key: %s - inner key: %s", key, inner_key
+                    )
+                    logger.warning(
+                        "Differing groups: group: %s - inner group: %s",
+                        group,
+                        inner_group,
+                    )
                     if len(inner_group) == 0:
                         logger.warning(
                             "Event self-identifies to no group, removing.", inner_key
@@ -923,24 +937,40 @@ class KulkeImporter(Importer):
     def import_events(self):
         logger.info("Importing Kulke events")
         self._import_events()
-        for i in self.eventcodes_set:
-            self.file.write(i)
-            self.file.write("\n")
-        self.file.close()
 
     def import_courses(self):
         logger.info("Importing Kulke courses")
         self._import_events(importing_courses=True)
 
+    def _iter_elis_events(
+        self, language: str, begin_date: datetime
+    ) -> Iterator[etree.Element]:
+        begin_date = begin_date.strftime("%d.%m.%Y")
+        offset = 0
+        parser = etree.XMLParser(recover=True)
+        while True:
+            logger.debug("Fetching events: %s - %d", language, offset)
+            response = requests.get(
+                EVENTS_URL_TEMPLATE.format(
+                    begin_date=begin_date, offset=offset, language=language
+                ),
+                timeout=EVENT_API_TIMEOUT,
+            )
+            response.raise_for_status()
+            root = etree.fromstring(response.content, parser=parser)
+            events = root.xpath("/eventdata/event")
+            if not events:
+                break
+            for event in events:
+                yield event
+            offset += 100
+
     def _import_events(self, importing_courses=False):
+        begin_date = datetime.now(tz=LOCAL_TZ) - timedelta(days=60)
         events = recur_dict()
         recurring_groups = dict()
-        for lang in ["fi", "sv", "en"]:
-            events_file = os.path.join(
-                settings.IMPORT_FILE_PATH, "kulke", "events-%s.xml" % lang
-            )
-            root = etree.parse(events_file)
-            for event_el in root.xpath("/eventdata/event"):
+        for lang in self.supported_languages:
+            for event_el in self._iter_elis_events(lang, begin_date):
                 success = self._import_event(lang, event_el, events, importing_courses)
                 if success:
                     self._gather_recurring_events(
@@ -970,7 +1000,7 @@ class KulkeImporter(Importer):
 
     def import_keywords(self):
         logger.info("Importing Kulke categories as keywords")
-        categories = self.parse_kulke_categories()
+        categories = self.fetch_kulke_categories()
         for kid, value in categories.items():
             try:
                 # if the keyword exists, update the name if needed

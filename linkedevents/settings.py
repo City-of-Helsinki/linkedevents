@@ -53,6 +53,10 @@ env = environ.Env(
     DATABASE_URL=(str, "postgis:///linkedevents"),
     DEBUG=(bool, False),
     ELASTICSEARCH_URL=(str, None),
+    ELIS_EVENT_API_URL=(
+        str,
+        "http://elis.helsinki1.hki.local/event-api/",
+    ),
     ENABLE_EXTERNAL_USER_EVENTS=(bool, True),
     ENABLE_REGISTRATION_ENDPOINTS=(bool, False),
     EXTERNAL_USER_PUBLISHER_ID=(str, "others"),
@@ -260,9 +264,6 @@ USE_TZ = True
 
 LOCALE_PATHS = (os.path.join(BASE_DIR, "locale"),)
 
-# Kulke importer looks here for its input files
-IMPORT_FILE_PATH = os.path.join(BASE_DIR, "data")
-
 # Static files (CSS, JavaScript, Images)
 
 STATIC_URL = env("STATIC_URL")
@@ -397,6 +398,9 @@ SEAT_RESERVATION_DURATION = env("SEAT_RESERVATION_DURATION")
 # Urls to Linked Events UI and Linked Registration UI
 LINKED_EVENTS_UI_URL = env("LINKED_EVENTS_UI_URL")
 LINKED_REGISTRATIONS_UI_URL = env("LINKED_REGISTRATIONS_UI_URL")
+
+# Used in kulke importer
+ELIS_EVENT_API_URL = env("ELIS_EVENT_API_URL")
 
 
 def haystack_connection_for_lang(language_code):
