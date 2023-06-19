@@ -20,7 +20,7 @@ for language in [lang[0] for lang in LANGUAGES]:
 
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.dummy.DummyCache",
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
     }
 }
 
