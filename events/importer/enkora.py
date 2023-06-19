@@ -1,7 +1,7 @@
 import logging
 import re
 from datetime import date, datetime, timedelta
-from typing import Generator, Optional, Set, Tuple
+from typing import Generator, Optional
 
 import pytz
 import requests
@@ -716,7 +716,7 @@ class EnkoraImporter(Importer):
         "75 vuotiaat": {AUDIENCE_SENIORS},
     }
 
-    def __init__(self, options):
+    def __init__(self, options) -> None:
         self.data_source = None
         self.organization = None
         super().__init__(options)
@@ -724,7 +724,7 @@ class EnkoraImporter(Importer):
         self.now_tz_is = timezone.now()
         self.driver_cls = Kurssidata
 
-    def setup(self):
+    def setup(self) -> None:
         logger.debug("Running Enkora importer setup...")
         ds_defaults = dict(name="Enkora")
         self.data_source, _ = DataSource.objects.get_or_create(
@@ -748,10 +748,10 @@ class EnkoraImporter(Importer):
             self.check_deleted = lambda x: False
 
     @staticmethod
-    def _get_timestamps() -> Tuple:
+    def _get_timestamps() -> tuple[datetime.datetime, datetime.datetime]:
         return datetime.now(), timezone.now()
 
-    def import_courses(self):
+    def import_courses(self) -> bool:
         kurssi_api = self.driver_cls(
             settings.ENKORA_API_USER, settings.ENKORA_API_PASSWORD, request_timeout=20.0
         )
@@ -832,7 +832,7 @@ class EnkoraImporter(Importer):
         self.event_syncher.finish(force=True)
         logger.info("Enkora course import finished.")
 
-    def mark_deleted(self, event: Event):
+    def mark_deleted(self, event: Event) -> bool:
         if event.deleted:
             return False
         if event.end_time < self.now_tz_is:
@@ -843,11 +843,13 @@ class EnkoraImporter(Importer):
 
         return True
 
-    def check_deleted(self, event):
+    def check_deleted(self, event: Event) -> bool:
         return event.deleted
 
     @staticmethod
-    def generate_documentation_md(output_file: str = None) -> None:  # noqa: C901
+    def generate_documentation_md(
+        output_file: Optional[str] = None,
+    ) -> None:  # noqa: C901
         """
         Generate MarkDown document out of Enkora importing rules.
         :param output_file: (optional) Output file to write MarkDown document into.
@@ -1169,7 +1171,7 @@ class EnkoraImporter(Importer):
 
         return kws
 
-    def convert_location(self, course: dict) -> Tuple[dict, Optional[str]]:
+    def convert_location(self, course: dict) -> tuple[dict, Optional[str]]:
         if course["location_id"] not in EnkoraImporter.place_map:
             raise ValueError(
                 "Unknown Enkora location: {} for course {} / {}. Mapping missing!".format(
@@ -1189,7 +1191,7 @@ class EnkoraImporter(Importer):
 
     def convert_audience(
         self, course: dict, description: str
-    ) -> Tuple[str, list, list, Optional[int], Optional[int]]:
+    ) -> tuple[str, list, list, Optional[int], Optional[int]]:
         audience_kw_ids = set()
         sport_kw_ids = set()
 
@@ -1240,7 +1242,7 @@ class EnkoraImporter(Importer):
         return event_language, audience_kws, sport_kws, min_age, max_age
 
     @staticmethod
-    def _parse_description_age(description: str) -> Tuple[Optional[int], Optional[int]]:
+    def _parse_description_age(description: str) -> tuple[Optional[int], Optional[int]]:
         min_age = None
         max_age = None
 
@@ -1284,7 +1286,7 @@ class EnkoraImporter(Importer):
         return min_age, max_age
 
     @staticmethod
-    def _parse_description_keywords(description: str) -> Set[str]:
+    def _parse_description_keywords(description: str) -> set[str]:
         kws = set()
 
         # Split into words and map single words
@@ -1434,7 +1436,7 @@ class Kurssidata(Enkora):
         super().__init__(username, password, request_timeout)
         self._set_request_timeout(10.0)
 
-    def get_course_by_id(self, course_id: int) -> Tuple[dict, list, list]:
+    def get_course_by_id(self, course_id: int) -> tuple[dict, list, list]:
         payload = {
             "reservation_event_group_id": course_id,
         }
