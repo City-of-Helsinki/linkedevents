@@ -234,6 +234,8 @@ class YsoImporter(Importer):
 
     def update_keyword(self, keyword, graph, subject):
         for _, literal in graph.preferredLabel(subject):
+            if literal.language not in self.supported_languages:
+                continue
             with override(literal.language, deactivate=True):
                 if keyword.name != str(literal):
                     logger.debug(
