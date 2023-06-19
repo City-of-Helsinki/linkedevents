@@ -7,6 +7,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.db.models import ProtectedError, Q
 from django.template.loader import render_to_string
 from django.utils.translation import gettext as _
+from django.utils.translation import override
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ParseError
@@ -35,7 +36,7 @@ from registrations.serializers import (
     SeatReservationCodeSerializer,
     SignUpSerializer,
 )
-from registrations.utils import send_mass_html_mail
+from registrations.utils import get_ui_locales, send_mass_html_mail
 
 logger = logging.getLogger(__name__)
 
@@ -135,15 +136,27 @@ class RegistrationViewSet(
 
         # Email contains a link to a signup so make personal email for each signup
         for signup in signups:
+            service_language = signup.service_language
+            [linked_events_ui_locale, linked_registrations_ui_locale] = get_ui_locales(
+                service_language
+            )
+
             email_variables = {
-                "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
-                "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
                 "body": cleaned_body,
                 "cancellation_code": signup.cancellation_code,
+                "linked_events_ui_locale": linked_events_ui_locale,
+                "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
+                "linked_registrations_ui_locale": linked_registrations_ui_locale,
+                "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
                 "registration_id": registration.id,
                 "signup_id": signup.id,
             }
-            rendered_body = render_to_string("message_to_signup.html", email_variables)
+
+            with override(linked_registrations_ui_locale, deactivate=True):
+                rendered_body = render_to_string(
+                    "message_to_signup.html", email_variables
+                )
+
             message = (
                 subject,
                 plain_text_body,
