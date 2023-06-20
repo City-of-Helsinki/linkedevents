@@ -3,6 +3,7 @@ from django.conf import settings
 from django.core import mail
 from rest_framework import status
 
+from events.models import Language
 from events.tests.utils import versioned_reverse as reverse
 
 
@@ -42,6 +43,41 @@ def test_admin_user_can_send_message_to_all_signups(
     assert_send_message(
         api_client, registration.id, send_message_data, [signup.email, signup2.email]
     )
+    # Default language for the email is Finnish
+    assert "Tarkastele ilmoittautumistasi täällä" in str(mail.outbox[0].alternatives[0])
+
+
+@pytest.mark.parametrize(
+    "language_pk,expect_cta_button_text",
+    [
+        ("en", "Check your registration here"),
+        ("fi", "Tarkastele ilmoittautumistasi täällä"),
+        ("sv", "Kontrollera din registrering här"),
+    ],
+)
+@pytest.mark.django_db
+def test_email_is_sent_in_signup_service_language(
+    api_client,
+    expect_cta_button_text,
+    languages,
+    language_pk,
+    registration,
+    signup,
+    user,
+):
+    service_language = Language.objects.get(pk=language_pk)
+    signup.service_language = service_language
+    signup.save()
+
+    api_client.force_authenticate(user)
+    send_message_data = {
+        "subject": "Message subject",
+        "body": "Message body",
+        "signups": [signup.id],
+    }
+
+    assert_send_message(api_client, registration.id, send_message_data, [signup.email])
+    assert expect_cta_button_text in str(mail.outbox[0].alternatives[0])
 
 
 @pytest.mark.parametrize(

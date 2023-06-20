@@ -487,13 +487,24 @@ def test_group_signup_successful_with_waitlist(api_client, registration):
     )
 
 
+@pytest.mark.parametrize(
+    "service_language,expect_subject",
+    [
+        ("en", "Registration confirmation"),
+        ("fi", "Vahvistus ilmoittautumisesta"),
+        ("sv", "Bekräftelse av registrering"),
+    ],
+)
 @pytest.mark.django_db
-def test_email_sent_on_successful_signup(api_client, registration):
+def test_email_sent_on_successful_signup(
+    api_client, expect_subject, languages, registration, service_language
+):
     reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
     signup_data = {
         "name": "Michael Jackson",
         "date_of_birth": "2011-04-07",
         "email": "test@test.com",
+        "service_language": service_language,
     }
     signups_data = {
         "registration": registration.id,
@@ -503,6 +514,7 @@ def test_email_sent_on_successful_signup(api_client, registration):
     response = assert_create_signups(api_client, signups_data)
     assert signup_data["name"] in response.data["attending"]["people"][0]["name"]
     #  assert that the email was sent
+    assert mail.outbox[0].subject.startswith(expect_subject)
     assert len(mail.outbox) == 1
 
 
