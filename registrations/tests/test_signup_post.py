@@ -321,6 +321,33 @@ def test_signup_mandatory_fields_has_to_be_filled(
     )
 
 
+@freeze_time("2023-03-14 03:30:00+02:00")
+@pytest.mark.django_db
+def test_cannot_signup_with_not_allowed_service_language(
+    api_client, languages, registration
+):
+    languages[0].service_language = False
+    languages[0].save()
+
+    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    signups_data = {
+        "registration": registration.id,
+        "reservation_code": reservation.code,
+        "signups": [
+            {
+                "name": "Michael Jackson",
+                "date_of_birth": "2011-04-07",
+                "email": "test@test.com",
+                "service_language": languages[0].pk,
+            }
+        ],
+    }
+
+    response = create_signups(api_client, signups_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["signups"][0]["service_language"][0].code == "does_not_exist"
+
+
 @pytest.mark.django_db
 def test_group_signup_successful_with_waitlist(api_client, registration):
     registration.maximum_attendee_capacity = 2

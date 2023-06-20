@@ -9,6 +9,7 @@ from rest_framework.exceptions import ErrorDetail
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.fields import DateTimeField
 
+from events.models import Language
 from registrations.exceptions import ConflictException
 from registrations.models import Registration, SeatReservationCode, SignUp
 from registrations.utils import code_validity_duration
@@ -16,6 +17,11 @@ from registrations.utils import code_validity_duration
 
 class SignUpSerializer(serializers.ModelSerializer):
     view_name = "signup"
+    service_language = serializers.PrimaryKeyRelatedField(
+        queryset=Language.objects.filter(service_language=True),
+        many=False,
+        required=False,
+    )
 
     def create(self, validated_data):
         registration = validated_data["registration"]

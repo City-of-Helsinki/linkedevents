@@ -256,7 +256,7 @@ admin.site.register(DataSource, DataSourceAdmin)
 
 
 class LanguageAdmin(BaseAdmin, TranslationAdmin, VersionAdmin):
-    fields = ("id", "name")
+    fields = ("id", "name", "service_language")
 
     def get_readonly_fields(self, request, obj=None):
         if obj:
