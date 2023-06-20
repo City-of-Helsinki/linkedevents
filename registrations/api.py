@@ -300,14 +300,14 @@ class SignUpViewSet(
 
         if status_param := request.query_params.get("attendee_status", None):
             vals = status_param.lower().split(",")
-            statuses = {k[1].lower(): k[0] for k in SignUp.ATTENDEE_STATUSES}
+            statuses = [k[0] for k in SignUp.ATTENDEE_STATUSES]
 
             for v in vals:
                 if v not in statuses:
                     raise ParseError(
                         _(
                             "attendee_status can take following values: {statuses}, not {val}"
-                        ).format(statuses=", ".join(statuses.keys()), val=status_param)
+                        ).format(statuses=", ".join(statuses), val=status_param)
                     )
 
             queryset = queryset.filter(attendee_status__in=vals)

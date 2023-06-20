@@ -125,11 +125,11 @@ msgstr "Obligatoriska fält"
 
 #: registrations/models.py:229
 msgid "Waitlisted"
-msgstr "Waitlisted"
+msgstr "I kö"
 
 #: registrations/models.py:230
 msgid "Attending"
-msgstr "Attending"
+msgstr "Deltar"
 
 #: registrations/models.py:240
 msgid "No Notification"

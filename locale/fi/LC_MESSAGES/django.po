@@ -276,11 +276,11 @@ msgstr "Pakolliset kentät"
 
 #: registrations/models.py:229
 msgid "Waitlisted"
-msgstr "Waitlisted"
+msgstr "Varasijalla"
 
 #: registrations/models.py:230
 msgid "Attending"
-msgstr "Attending"
+msgstr "Osallistuu"
 
 #: registrations/models.py:240
 msgid "No Notification"
