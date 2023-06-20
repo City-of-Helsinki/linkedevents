@@ -6,6 +6,11 @@ on: [push]
 env:
   AWS_REGION: eu-west-1
   ECR_REGISTRY: 307238562370.dkr.ecr.eu-west-1.amazonaws.com
+  AWS_ROLE: arn:aws:iam::307238562370:role/global/voltti/federation/voltti-ci-sst-espooevents
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   lint-shell:
@@ -107,11 +112,8 @@ jobs:
         with:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_ROLE_TO_ASSUME: ${{ secrets.REGISTRY_ROLE }}
+          AWS_ROLE_TO_ASSUME: ${{ env.AWS_ROLE }}
           AWS_REGION: ${{ env.AWS_REGION }}
-          AWS_CONFIG: ${{ secrets.AWS_CONFIG }}
           registry: ${{ env.ECR_REGISTRY }}
           name: espooevents/service
           target: dist
@@ -142,11 +144,8 @@ jobs:
         with:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_ROLE_TO_ASSUME: ${{ secrets.REGISTRY_ROLE }}
+          AWS_ROLE_TO_ASSUME: ${{ env.AWS_ROLE }}
           AWS_REGION: ${{ env.AWS_REGION }}
-          AWS_CONFIG: ${{ secrets.AWS_CONFIG }}
           registry: ${{ env.ECR_REGISTRY }}
           name: espooevents/service-importer
           dockerfile: Dockerfile.dist
