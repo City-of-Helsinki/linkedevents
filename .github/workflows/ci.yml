@@ -2,9 +2,9 @@ name: linkedevents-ci
 
 on:
   push:
-    branches: [ master, develop ]
+    branches: [master, develop]
   pull_request:
-    branches: [ master, develop ]
+    branches: [master, develop]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: [ 3.9 ]
+        python: [3.9]
     services:
       postgres:
         image: helsinkitest/postgis:9.6-2.5-alpine
@@ -73,6 +73,10 @@ jobs:
       - name: Apply migrations
         run: |
           python manage.py migrate
+
+      - name: Compile translations
+        run: |
+          django-admin compilemessages -l en -l fi -l sv
 
       - name: Check black
         run: |
