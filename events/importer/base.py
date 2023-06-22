@@ -313,6 +313,35 @@ class Importer(object):
                 continue
             self._set_field(obj, field_name, info[field_name])
 
+    def _replace_deprecated_keywords(self, obj, attr):
+        """Check the keywords in the given attribute and replace or delete
+        deprecated ones.
+        """
+        changed = False
+        logger.debug(
+            f"Checking for deprecated keywords in attribute '{attr}' for event {obj}"
+        )
+
+        for keyword in getattr(obj, attr).filter(deprecated=True):
+            getattr(obj, attr).remove(keyword)
+            replacement_keyword = keyword.get_replacement()
+            if replacement_keyword and not replacement_keyword.deprecated:
+                getattr(obj, attr).add(replacement_keyword)
+                logger.warning(
+                    f"Replacing deprecated keyword {keyword.pk} with "
+                    f"{replacement_keyword.pk} from attribute '{attr}' for event {obj}."
+                )
+            else:
+                logger.warning(
+                    f"Removing deprecated keyword {keyword.pk} from attribute '{attr}' "
+                    f"for event {obj}. Couldn't find a replacement."
+                )
+            changed = True
+
+        if changed and attr not in obj._changed_fields:
+            obj._changed = True
+            obj._changed_fields.append(attr)
+
     @transaction.atomic
     def save_event(self, info):  # noqa: C901
         info = info.copy()
@@ -401,6 +430,7 @@ class Importer(object):
                 obj.keywords.set(new_keywords)
                 obj._changed = True
             obj._changed_fields.append("keywords")
+        self._replace_deprecated_keywords(obj, "keywords")
         audience = info.get("audience", [])
         new_audience = set([kw.id for kw in audience])
         old_audience = set(obj.audience.values_list("id", flat=True))
@@ -414,6 +444,7 @@ class Importer(object):
                 obj.audience.set(new_audience)
                 obj._changed = True
             obj._changed_fields.append("audience")
+        self._replace_deprecated_keywords(obj, "audience")
         in_language = info.get("in_language", [])
         new_languages = set([lang.id for lang in in_language])
         old_languages = set(obj.in_language.values_list("id", flat=True))
