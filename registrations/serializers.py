@@ -215,9 +215,7 @@ class CreateSignUpsSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {
                     "reservation_code": ErrorDetail(
-                        _("Reservation code doesn't exist.").format(
-                            code=reservation_code
-                        ),
+                        _("Reservation code doesn't exist."),
                         code="does_not_exist",
                     )
                 }
@@ -229,6 +227,21 @@ class CreateSignUpsSerializer(serializers.Serializer):
         if datetime.now().astimezone(pytz.utc) > expiration:
             raise serializers.ValidationError(
                 {"reservation_code": "Reservation code has expired."}
+            )
+
+        maximum_group_size = registration.maximum_group_size
+
+        # Validate maximum group size
+        if maximum_group_size is not None and len(data["signups"]) > maximum_group_size:
+            raise serializers.ValidationError(
+                {
+                    "signups": ErrorDetail(
+                        _(
+                            "Amount of signups is greater than maximum group size: {max_group_size}."
+                        ).format(max_group_size=maximum_group_size),
+                        code="max_group_size",
+                    )
+                }
             )
 
         if len(data["signups"]) > reservation.seats:
@@ -287,6 +300,17 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(errors)
 
         registration = data["registration"]
+        maximum_group_size = registration.maximum_group_size
+
+        # Validate maximum group size
+        if maximum_group_size is not None and data["seats"] > maximum_group_size:
+            errors["seats"] = ErrorDetail(
+                _(
+                    "Amount of seats is greater than maximum group size: {max_group_size}."
+                ).format(max_group_size=maximum_group_size),
+                code="max_group_size",
+            )
+
         maximum_attendee_capacity = registration.maximum_attendee_capacity
         waiting_list_capacity = registration.waiting_list_capacity
 
