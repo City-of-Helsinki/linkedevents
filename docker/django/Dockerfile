@@ -27,7 +27,6 @@ RUN apt-install.sh \
     && pip install --no-cache-dir -r /app/requirements-prod.txt \
     && apt-cleanup.sh build-essential
 
-
 COPY --chown=appuser:appuser ./docker/django/docker-entrypoint.sh /entrypoint/docker-entrypoint.sh
 ENTRYPOINT ["/entrypoint/docker-entrypoint.sh"]
 
@@ -41,6 +40,9 @@ RUN pip install --no-cache-dir -r /app/requirements-dev.txt
 ENV DEV_SERVER=true
 
 COPY --chown=appuser:appuser . /app/
+
+# This is required by osoite importer (by underlying munigeo importers)
+RUN mkdir -p /app/data && chgrp -R 0 /app/data && chmod g+w -R /app/data
 
 RUN django-admin compilemessages
 
@@ -64,6 +66,9 @@ COPY --from=staticbuilder --chown=appuser:appuser /app/static /app/static
 COPY --chown=appuser:appuser . /app/
 
 RUN chgrp -R 0 /app/templates/rest_framework/ && chmod g+w -R /app/templates/rest_framework/
+
+# This is required by osoite importer (by underlying munigeo importers)
+RUN mkdir -p /app/data && chgrp -R 0 /app/data && chmod g+w -R /app/data
 
 USER appuser
 
