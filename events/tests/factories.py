@@ -1,7 +1,7 @@
 import factory
 
 from events import utils
-from events.models import DataSource, Event
+from events.models import DataSource, Event, Keyword
 
 
 class DataSourceFactory(factory.django.DjangoModelFactory):
@@ -40,3 +40,15 @@ class DefaultOrganizationEventFactory(EventFactory):
     @factory.lazy_attribute
     def data_source(self):
         return self.publisher.data_source
+
+
+class KeywordFactory(factory.django.DjangoModelFactory):
+    data_source = factory.SubFactory(DataSourceFactory)
+    publisher = factory.SubFactory(OrganizationFactory)
+
+    class Meta:
+        model = Keyword
+
+    @factory.lazy_attribute_sequence
+    def id(self, n):
+        return f"{self.data_source.id}:{n}"

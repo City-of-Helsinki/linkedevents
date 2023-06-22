@@ -158,6 +158,10 @@ class ReplacedByMixin:
 
     def get_replacement(self):
         replacement = self.replaced_by
+
+        if replacement is None:
+            return None
+
         while replacement.replaced_by is not None:
             replacement = replacement.replaced_by
         return replacement

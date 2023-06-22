@@ -1,11 +1,14 @@
 import pytest
+from rest_framework.exceptions import ValidationError
+
+from events.tests.factories import KeywordFactory
 
 
 @pytest.mark.django_db
 def test_keyword_cannot_replace_itself(keyword):
     keyword.replaced_by = keyword
     keyword.deprecated = True
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         keyword.save()
 
 
@@ -16,7 +19,7 @@ def test_prevent_circular_keyword_replacement(keyword, keyword2, keyword3):
     keyword2.replaced_by = keyword3
     keyword2.save()
     keyword3.replaced_by = keyword
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         keyword.save()
 
 
@@ -59,3 +62,27 @@ def test_keyword_remap_event_on_replace(keyword, keyword2, event):
     event.refresh_from_db()
     assert set(event.keywords.all()) == set()
     assert set(event.audience.all()) == set([keyword2])
+
+
+@pytest.mark.django_db
+def test_keyword_get_replacement_is_none():
+    keyword = KeywordFactory(deprecated=True)
+
+    assert keyword.get_replacement() is None
+
+
+@pytest.mark.django_db
+def test_keyword_get_replacement_single_level():
+    new_keyword = KeywordFactory()
+    old_keyword = KeywordFactory(deprecated=True, replaced_by=new_keyword)
+
+    assert old_keyword.get_replacement().pk == new_keyword.pk
+
+
+@pytest.mark.django_db
+def test_keyword_get_replacement_multi_level():
+    new_keyword = KeywordFactory()
+    old_keyword_1 = KeywordFactory(deprecated=True, replaced_by=new_keyword)
+    old_keyword_2 = KeywordFactory(deprecated=True, replaced_by=old_keyword_1)
+
+    assert old_keyword_2.get_replacement().pk == new_keyword.pk
