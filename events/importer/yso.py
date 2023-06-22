@@ -173,6 +173,7 @@ class YsoImporter(Importer):
             try:
                 old_keyword = Keyword.objects.get(id=old_id)
                 new_keyword = Keyword.objects.get(id=new_id)
+                old_keyword.replace(new_keyword)
             except ObjectDoesNotExist:
                 continue
             logger.info(
