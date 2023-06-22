@@ -14,6 +14,17 @@ from registrations.models import Registration, SeatReservationCode, SignUp
 from registrations.utils import code_validity_duration
 
 
+def validate_registration_enrolment_times(registration):
+    enrolment_start_time = registration.enrolment_start_time
+    enrolment_end_time = registration.enrolment_end_time
+    current_time = localtime()
+
+    if enrolment_start_time and current_time < enrolment_start_time:
+        raise ConflictException(_("Enrolment is not yet open."))
+    if enrolment_end_time and current_time > enrolment_end_time:
+        raise ConflictException(_("Enrolment is already closed."))
+
+
 class SignUpSerializer(serializers.ModelSerializer):
     view_name = "signup"
 
@@ -208,7 +219,7 @@ class CreateSignUpsSerializer(serializers.Serializer):
 
         # Prevent to signup if enrolment is not open.
         # Raises 409 error if enrolment is not open
-        registration.validate_enrolment_times()
+        validate_registration_enrolment_times(registration)
 
         try:
             reservation = SeatReservationCode.objects.get(
@@ -307,7 +318,7 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
 
         # Prevent to reserve seats if enrolment is not open.
         # Raises 409 error if enrolment is not open
-        registration.validate_enrolment_times()
+        validate_registration_enrolment_times(registration)
 
         maximum_group_size = registration.maximum_group_size
 
