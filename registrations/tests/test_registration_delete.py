@@ -1,5 +1,4 @@
 import pytest
-from django.utils.translation import activate
 from freezegun import freeze_time
 from rest_framework import status
 
@@ -34,7 +33,6 @@ def test__unauthenticated_user_cannot_delete_registration(api_client, registrati
 def test__registration_with_signups_cannot_be_deleted(
     api_client, registration, signup, user
 ):
-    activate("en")
     api_client.force_authenticate(user)
     response = delete_registration(api_client, registration.id)
 

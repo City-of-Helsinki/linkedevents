@@ -4,7 +4,6 @@ from datetime import date, timedelta
 import pytest
 from django.core import mail
 from django.utils.timezone import localtime
-from django.utils.translation import activate
 from freezegun import freeze_time
 from rest_framework import status
 
@@ -153,8 +152,6 @@ def test_amount_if_signups_cannot_be_greater_than_maximum_group_size(
 
 @pytest.mark.django_db
 def test_cannot_signup_if_reservation_code_is_invalid(api_client, registration):
-    activate("en")
-
     signups_payload = {
         "registration": registration.id,
         "reservation_code": "c5e7d3ba-e48d-447c-b24d-c779950b2acb",
@@ -170,8 +167,6 @@ def test_cannot_signup_if_reservation_code_is_invalid(api_client, registration):
 def test_cannot_signup_if_reservation_code_is_for_different_registration(
     api_client, registration, registration2
 ):
-    activate("en")
-
     reservation = SeatReservationCode.objects.create(
         registration=registration2, seats=2
     )
@@ -268,8 +263,6 @@ def test_can_signup_twice_with_same_phone_or_email(api_client, registration):
 def test_date_of_birth_is_mandatory_if_audience_min_or_max_age_specified(
     api_client, date_of_birth, min_age, max_age, registration, user
 ):
-    activate("en")
-
     falsy_values = ("", None)
 
     # Update registration
@@ -329,8 +322,6 @@ def test_date_of_birth_is_mandatory_if_audience_min_or_max_age_specified(
 def test_signup_age_has_to_match_the_audience_min_max_age(
     api_client, date_of_birth, expected_error, expected_status, registration
 ):
-    activate("en")
-
     registration.audience_max_age = 40
     registration.audience_min_age = 20
     registration.enrolment_start_time = localtime()
@@ -373,8 +364,6 @@ def test_signup_age_has_to_match_the_audience_min_max_age(
 def test_signup_mandatory_fields_has_to_be_filled(
     api_client, mandatory_field_id, registration
 ):
-    activate("en")
-
     registration.mandatory_fields = [mandatory_field_id]
     registration.save()
 

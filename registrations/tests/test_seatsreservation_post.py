@@ -1,8 +1,8 @@
 from datetime import timedelta
 
 import pytest
+
 from django.utils.timezone import localtime
-from django.utils.translation import activate
 from rest_framework import status
 
 from events.tests.utils import versioned_reverse as reverse
@@ -100,8 +100,6 @@ def test_cannot_reserve_seats_if_enrolment_is_closed(api_client, event, registra
 def test_cannot_reserve_seats_if_there_are_not_enough_seats_available(
     api_client, event, registration
 ):
-    activate("en")
-
     registration.maximum_attendee_capacity = 2
     registration.save()
 
@@ -150,8 +148,6 @@ def test_waiting_list_seats_amount_has_not_limit_if_waiting_list_capacity_is_non
 def test_cannot_reserve_seats_waiting_list_if_there_are_not_enough_seats_available(
     api_client, event, registration, signup, signup2
 ):
-    activate("en")
-
     registration.maximum_attendee_capacity = 2
     registration.waiting_list_capacity = 2
     registration.save()
