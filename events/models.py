@@ -466,18 +466,18 @@ class Keyword(BaseModel, ImageMixin, ReplacedByMixin):
         old_replaced_by = None
         if self.id:
             try:
-                old_replaced_by = Keyword.objects.get(id=self.id).replaced_by
+                old_replaced_by = Keyword.objects.get(id=self.id).get_replacement()
             except Keyword.DoesNotExist:
                 pass
 
         super().save(*args, **kwargs)
 
-        if not old_replaced_by == self.replaced_by:
+        if not old_replaced_by == self.get_replacement():
             # Remap keyword sets
             qs = KeywordSet.objects.filter(keywords__id__exact=self.id)
             for kw_set in qs:
                 kw_set.keywords.remove(self)
-                kw_set.keywords.add(self.replaced_by)
+                kw_set.keywords.add(self.get_replacement())
                 kw_set.save()
 
             # Remap events
@@ -487,10 +487,10 @@ class Keyword(BaseModel, ImageMixin, ReplacedByMixin):
             for event in qs:
                 if self in event.keywords.all():
                     event.keywords.remove(self)
-                    event.keywords.add(self.replaced_by)
+                    event.keywords.add(self.get_replacement())
                 if self in event.audience.all():
                     event.audience.remove(self)
-                    event.audience.add(self.replaced_by)
+                    event.audience.add(self.get_replacement())
 
     def can_be_edited_by(self, user):
         """Check if current keyword can be edited by the given user"""

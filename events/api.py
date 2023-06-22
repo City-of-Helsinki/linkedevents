@@ -897,10 +897,13 @@ class KeywordViewSet(
             keyword = Keyword.objects.get(pk=kwargs["pk"])
         except Keyword.DoesNotExist:
             raise Http404()
-        if keyword.replaced_by:
-            keyword = keyword.get_replacement()
+        if replacement_keyword := keyword.get_replacement():
             return HttpResponsePermanentRedirect(
-                reverse("keyword-detail", kwargs={"pk": keyword.pk}, request=request)
+                reverse(
+                    "keyword-detail",
+                    kwargs={"pk": replacement_keyword.pk},
+                    request=request,
+                )
             )
         if keyword.deprecated:
             raise KeywordDeprecatedException()
