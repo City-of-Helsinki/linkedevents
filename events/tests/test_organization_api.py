@@ -293,7 +293,7 @@ def test_admin_user_can_update_organization(api_client, organization, user):
 
 
 @pytest.mark.django_db
-def test_anonymous_user_can_update_organization(api_client, organization):
+def test_anonymous_user_cannot_update_organization(api_client, organization):
     payload = {
         "id": organization.id,
         "name": "new name",
