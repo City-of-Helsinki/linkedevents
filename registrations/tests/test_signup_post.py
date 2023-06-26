@@ -3,6 +3,7 @@ from datetime import date, timedelta
 
 import pytest
 from django.core import mail
+from django.utils.timezone import localtime
 from freezegun import freeze_time
 from rest_framework import status
 
@@ -30,7 +31,6 @@ def assert_create_signups(api_client, signups_data):
 # === tests ===
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_successful_signup(api_client, languages, registration):
     reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
@@ -66,6 +66,50 @@ def test_successful_signup(api_client, languages, registration):
     assert signup.service_language.pk == "fi"
     assert signup.street_address == signups_data["signups"][0]["street_address"]
     assert signup.zipcode == signups_data["signups"][0]["zipcode"]
+
+
+@pytest.mark.django_db
+def test_cannot_signup_if_enrolment_is_not_opened(api_client, event, registration):
+    registration.enrolment_start_time = localtime() + timedelta(days=1)
+    registration.enrolment_end_time = localtime() + timedelta(days=2)
+    registration.save()
+
+    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    signup_data = {
+        "name": "Michael Jackson",
+        "email": "test@test.com",
+        "phone_number": "0441111111",
+    }
+    signups_data = {
+        "registration": registration.id,
+        "reservation_code": reservation.code,
+        "signups": [signup_data],
+    }
+    response = create_signups(api_client, signups_data)
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.data["detail"] == "Enrolment is not yet open."
+
+
+@pytest.mark.django_db
+def test_cannot_signup_if_enrolment_is_closed(api_client, event, registration):
+    registration.enrolment_start_time = localtime() - timedelta(days=2)
+    registration.enrolment_end_time = localtime() - timedelta(days=1)
+    registration.save()
+
+    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    signup_data = {
+        "name": "Michael Jackson",
+        "email": "test@test.com",
+        "phone_number": "0441111111",
+    }
+    signups_data = {
+        "registration": registration.id,
+        "reservation_code": reservation.code,
+        "signups": [signup_data],
+    }
+    response = create_signups(api_client, signups_data)
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.data["detail"] == "Enrolment is already closed."
 
 
 @pytest.mark.django_db
@@ -142,10 +186,6 @@ def test_cannot_signup_if_reservation_code_is_for_different_registration(
 def test_cannot_signup_if_number_of_signups_exceeds_number_reserved_seats(
     api_client, registration
 ):
-    registration.audience_min_age = None
-    registration.audience_max_age = None
-    registration.save()
-
     reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
 
     signups_data = {
@@ -192,7 +232,6 @@ def test_cannot_signup_if_reservation_code_is_expired(api_client, registration):
     assert response.data["reservation_code"][0] == "Reservation code has expired."
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_can_signup_twice_with_same_phone_or_email(api_client, registration):
     reservation = SeatReservationCode.objects.create(registration=registration, seats=3)
@@ -230,6 +269,8 @@ def test_date_of_birth_is_mandatory_if_audience_min_or_max_age_specified(
     registration.maximum_attendee_capacity = 1
     registration.audience_min_age = None
     registration.audience_max_age = None
+    registration.enrolment_start_time = localtime()
+    registration.enrolment_end_time = localtime() + timedelta(days=10)
 
     if min_age not in falsy_values:
         registration.audience_min_age = min_age
@@ -283,6 +324,8 @@ def test_signup_age_has_to_match_the_audience_min_max_age(
 ):
     registration.audience_max_age = 40
     registration.audience_min_age = 20
+    registration.enrolment_start_time = localtime()
+    registration.enrolment_end_time = localtime() + timedelta(days=10)
     registration.maximum_attendee_capacity = 1
     registration.save()
 
@@ -353,8 +396,6 @@ def test_signup_mandatory_fields_has_to_be_filled(
 def test_group_signup_successful_with_waitlist(api_client, registration):
     registration.maximum_attendee_capacity = 2
     registration.waiting_list_capacity = 2
-    registration.audience_min_age = None
-    registration.audience_max_age = None
     registration.save()
 
     reservation = SeatReservationCode.objects.create(registration=registration, seats=2)

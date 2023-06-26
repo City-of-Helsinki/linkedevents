@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pytz
 from django.contrib.auth.models import AnonymousUser
@@ -12,6 +12,17 @@ from rest_framework.fields import DateTimeField
 from registrations.exceptions import ConflictException
 from registrations.models import Registration, SeatReservationCode, SignUp
 from registrations.utils import code_validity_duration
+
+
+def validate_registration_enrolment_times(registration):
+    enrolment_start_time = registration.enrolment_start_time
+    enrolment_end_time = registration.enrolment_end_time
+    current_time = localtime()
+
+    if enrolment_start_time and current_time < enrolment_start_time:
+        raise ConflictException(_("Enrolment is not yet open."))
+    if enrolment_end_time and current_time > enrolment_end_time:
+        raise ConflictException(_("Enrolment is already closed."))
 
 
 class SignUpSerializer(serializers.ModelSerializer):
@@ -206,6 +217,10 @@ class CreateSignUpsSerializer(serializers.Serializer):
         reservation_code = data["reservation_code"]
         registration = data["registration"]
 
+        # Prevent to signup if enrolment is not open.
+        # Raises 409 error if enrolment is not open
+        validate_registration_enrolment_times(registration)
+
         try:
             reservation = SeatReservationCode.objects.get(
                 code=reservation_code, registration=registration
@@ -224,7 +239,7 @@ class CreateSignUpsSerializer(serializers.Serializer):
         expiration = reservation.timestamp + timedelta(
             minutes=code_validity_duration(reservation.seats)
         )
-        if datetime.now().astimezone(pytz.utc) > expiration:
+        if localtime() > expiration:
             raise serializers.ValidationError(
                 {"reservation_code": "Reservation code has expired."}
             )
@@ -300,6 +315,11 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(errors)
 
         registration = data["registration"]
+
+        # Prevent to reserve seats if enrolment is not open.
+        # Raises 409 error if enrolment is not open
+        validate_registration_enrolment_times(registration)
+
         maximum_group_size = registration.maximum_group_size
 
         # Validate maximum group size

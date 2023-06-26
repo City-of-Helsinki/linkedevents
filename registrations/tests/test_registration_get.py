@@ -171,8 +171,6 @@ def test_get_registration_with_event_and_audience_included(
 
 @pytest.mark.django_db
 def test_current_attendee_and_waitlist_count(api_client, registration, user):
-    registration.audience_min_age = None
-    registration.audience_max_age = None
     registration.maximum_attendee_capacity = 1
     registration.waiting_list_capacity = 1
     registration.save()
