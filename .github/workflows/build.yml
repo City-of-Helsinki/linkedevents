@@ -193,7 +193,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - environment: test
           - environment: staging
           - environment: prod
     environment:
