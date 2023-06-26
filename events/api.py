@@ -1416,17 +1416,7 @@ class LanguageSerializer(LinkedEventsSerializer):
 class LanguageViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
     queryset = Language.objects.all()
     serializer_class = LanguageSerializer
-
-    def filter_queryset(self, queryset):
-        query_params = self.request.query_params
-
-        val = query_params.get("service_language", None)
-        if val is not None:
-            queryset = queryset.filter(
-                service_language=parse_bool(val, "service_language")
-            )
-
-        return queryset
+    filterset_fields = ("service_language",)
 
 
 register_view(LanguageViewSet, "language")
