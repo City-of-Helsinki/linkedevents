@@ -8,6 +8,7 @@ class RegistrationTranslationOptions(TranslationOptions):
         "confirmation_message",
         "instructions",
     )
+    fallback_languages = {"default": ("fi", "sv", "en")}
 
 
 translator.register(Registration, RegistrationTranslationOptions)

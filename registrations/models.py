@@ -11,6 +11,7 @@ from django.db import models
 from django.db.models import DateTimeField, ExpressionWrapper, F, Sum
 from django.forms.fields import MultipleChoiceField
 from django.template.loader import render_to_string
+from django.utils import translation
 from django.utils.functional import cached_property
 from django.utils.timezone import localtime
 from django.utils.translation import gettext_lazy as _
@@ -362,30 +363,19 @@ class SignUp(models.Model):
     def send_notification(self, confirmation_type):
         service_language = self.get_service_language_pk()
 
-        email_variables = {
-            "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
-            "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
-            "username": self.name,
-            "event": getattr(
-                self.registration.event,
-                f"name_{service_language}",
-                self.registration.event.name,
-            ),
-            "cancellation_code": self.cancellation_code,
-            "registration_id": self.registration.id,
-            "signup_id": self.id,
-        }
+        with translation.override(service_language):
+            email_variables = {
+                "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
+                "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
+                "username": self.name,
+                "event": self.registration.event,
+                "cancellation_code": self.cancellation_code,
+                "registration_id": self.registration.id,
+                "signup_id": self.id,
+            }
 
-        confirmation_message = getattr(
-            self.registration,
-            f"confirmation_message_{service_language}",
-            self.registration.confirmation_message,
-        )
-        instructions = getattr(
-            self.registration,
-            f"instructions_{service_language}",
-            self.registration.instructions,
-        )
+            confirmation_message = self.registration.confirmation_message
+            instructions = self.registration.instructions
 
         if confirmation_message:
             email_variables["confirmation_message"] = confirmation_message
