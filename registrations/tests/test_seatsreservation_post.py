@@ -1,7 +1,6 @@
 from datetime import timedelta
 
 import pytest
-
 from django.utils.timezone import localtime
 from rest_framework import status
 

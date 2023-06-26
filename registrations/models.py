@@ -394,13 +394,12 @@ class SignUp(models.Model):
         }
 
         with override(linked_registrations_ui_locale, deactivate=True):
-            event_type_name = {
-                str(Event.TypeId.GENERAL): _("tapahtumaan"),
-                str(Event.TypeId.COURSE): _("kurssille"),
-                str(Event.TypeId.VOLUNTEERING): _("vapaaehtoistehtävään"),
+            to_event_types = {
+                str(Event.TypeId.GENERAL): _("to event"),
+                str(Event.TypeId.COURSE): _("to course"),
+                str(Event.TypeId.VOLUNTEERING): _("to volunteering"),
             }
-
-            email_variables["event_type"] = event_type_name[
+            email_variables["to_event_type"] = to_event_types[
                 self.registration.event.type_id
             ]
 
@@ -409,9 +408,9 @@ class SignUp(models.Model):
             )
 
             confirmation_subjects = {
-                "confirmation": _("Vahvistus ilmoittautumisesta - %(event_name)s")
+                "confirmation": _("Registration confirmation - %(event_name)s")
                 % {"event_name": self.registration.event.name},
-                "cancellation": _("Ilmoittautuminen peruttu - %(event_name)s")
+                "cancellation": _("Registration cancelled - %(event_name)s")
                 % {"event_name": self.registration.event.name},
             }
 

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-06-19 12:05+0300\n"
+"POT-Creation-Date: 2023-06-26 10:19+0300\n"
 "PO-Revision-Date: 2023-06-19 12:05+0300\n"
 "Last-Translator: <jori@3d.fi>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -21,48 +21,74 @@ msgstr ""
 #: events/models.py:77 events/models.py:168 events/models.py:185
 #: events/models.py:299 events/models.py:348 events/models.py:359
 #: events/models.py:1187 events/models.py:1203 events/models.py:1253
-#: registrations/models.py:27 registrations/models.py:250
+#: registrations/models.py:29 registrations/models.py:258
 #: venv/lib/python3.9/site-packages/munigeo/models.py:83
 #: venv/lib/python3.9/site-packages/munigeo/models.py:112
 #: venv/lib/python3.9/site-packages/munigeo/models.py:141
 msgid "Name"
 msgstr "Namn"
 
-#: events/models.py:566 events/models.py:1254 registrations/models.py:267
+#: events/models.py:566 events/models.py:1254 registrations/models.py:275
 msgid "E-mail"
 msgstr "E-post"
 
-#: events/models.py:574 registrations/models.py:29 registrations/models.py:319
+#: events/models.py:574 registrations/models.py:31 registrations/models.py:327
 msgid "Street address"
 msgstr "Gatuadress"
 
-#: events/models.py:879 registrations/models.py:70
+#: events/models.py:879 registrations/models.py:72
 msgid "Minimum recommended age"
 msgstr "Rekommenderad lägsta ålder"
 
-#: events/models.py:882 registrations/models.py:73
+#: events/models.py:882 registrations/models.py:75
 msgid "Maximum recommended age"
 msgstr "Högsta rekommenderade ålder"
+
+#: events/models.py:928
+msgid "maximum attendee capacity"
+msgstr "Maximal deltagarekapacitet"
+
+#: events/models.py:934
+msgid "minimum attendee capacity"
+msgstr "Minsta deltagarekapacitet"
+
+#: events/models.py:937
+msgid "enrolment start time"
+msgstr "Starttid för anmälan"
+
+#: events/models.py:940
+msgid "enrolment end time"
+msgstr "Sluttid för anmälan"
+
+#: events/models.py:956
+msgid "event"
+msgstr "evenemang"
+
+#: events/models.py:957
+msgid "events"
+msgstr "evenemang"
 
 #: registrations/admin.py:10
 msgid "Event"
 msgstr "Evenemang"
 
-#: registrations/api.py:78
+#: registrations/api.py:79
 msgid "Registration with signups cannot be deleted"
 msgstr "Registrering med registreringar kan inte raderas"
 
-#: registrations/api.py:261
+#: registrations/api.py:274
 #, python-brace-format
 msgid "Registration with id {pk} doesn't exist."
 msgstr "Registrering med id {pk} finns inte."
 
-#: registrations/api.py:267
+#: registrations/api.py:280
 #, python-brace-format
 msgid "Only the admins of the organization {organization} have access rights."
-msgstr "Endast administratörerna för organisationen {organization} har åtkomsträttigheter."
+msgstr ""
+"Endast administratörerna för organisationen {organization} har "
+"åtkomsträttigheter."
 
-#: registrations/api.py:296
+#: registrations/api.py:309
 #, python-brace-format
 msgid "attendee_status can take following values: {statuses}, not {val}"
 msgstr "attendee_status kan ha följande värden: {statuses}, inte {val}"
@@ -71,137 +97,141 @@ msgstr "attendee_status kan ha följande värden: {statuses}, inte {val}"
 msgid "Request conflict with the current state of the target resource"
 msgstr "Begärkonflikt med målresursens aktuella tillstånd"
 
-#: registrations/models.py:26 registrations/models.py:260
+#: registrations/models.py:28 registrations/models.py:268
 msgid "City"
 msgstr "Stad"
 
-#: registrations/models.py:28 registrations/models.py:283
+#: registrations/models.py:30 registrations/models.py:291
 msgid "Phone number"
 msgstr "Telefonnummer"
 
-#: registrations/models.py:30 registrations/models.py:326
+#: registrations/models.py:32 registrations/models.py:334
 msgid "ZIP code"
 msgstr "Postnummer"
 
-#: registrations/models.py:76
+#: registrations/models.py:78
 msgid "Created at"
 msgstr "Skapad kl"
 
-#: registrations/models.py:78
+#: registrations/models.py:80
 msgid "Modified at"
 msgstr "Ändrad kl"
 
-#: registrations/models.py:97
+#: registrations/models.py:99
 msgid "Enrollment start time"
 msgstr "Starttid för anmälan"
 
-#: registrations/models.py:100
+#: registrations/models.py:102
 msgid "Enrollment end time"
 msgstr "Sluttid för anmälan"
 
-#: registrations/models.py:104
+#: registrations/models.py:106
 msgid "Confirmation message"
 msgstr "Bekräftelsemeddelande"
 
-#: registrations/models.py:107
+#: registrations/models.py:109
 msgid "Instructions"
 msgstr "Instruktioner"
 
-#: registrations/models.py:111
+#: registrations/models.py:113
 msgid "Maximum attendee capacity"
 msgstr "Maximal deltagarekapacitet"
 
-#: registrations/models.py:114
+#: registrations/models.py:116
 msgid "Minimum attendee capacity"
 msgstr "Minsta deltagarekapacitet"
 
-#: registrations/models.py:117
+#: registrations/models.py:119
 msgid "Waiting list capacity"
 msgstr "Väntelistans kapacitet"
 
-#: registrations/models.py:128
+#: registrations/models.py:122
+msgid "Maximum group size"
+msgstr "Maximal gruppstorlek"
+
+#: registrations/models.py:136
 msgid "Mandatory fields"
 msgstr "Obligatoriska fält"
 
-#: registrations/models.py:229
+#: registrations/models.py:237
 msgid "Waitlisted"
 msgstr "I kö"
 
-#: registrations/models.py:230
+#: registrations/models.py:238
 msgid "Attending"
 msgstr "Deltar"
 
-#: registrations/models.py:240
+#: registrations/models.py:248
 msgid "No Notification"
 msgstr "Ingen anmälan"
 
-#: registrations/models.py:241
+#: registrations/models.py:249
 msgid "SMS"
 msgstr "SMS"
 
-#: registrations/models.py:242
+#: registrations/models.py:250
 msgid "E-Mail"
 msgstr "E-post"
 
-#: registrations/models.py:243
+#: registrations/models.py:251
 msgid "Both SMS and email."
 msgstr "Både SMS och e-post."
 
-#: registrations/models.py:257
+#: registrations/models.py:265
 msgid "Date of birth"
 msgstr "Födelsedatum"
 
-#: registrations/models.py:270
+#: registrations/models.py:278
 msgid "Extra info"
 msgstr "Ytterligare info"
 
-#: registrations/models.py:276
+#: registrations/models.py:284
 msgid "Membership number"
 msgstr "Medlemsnummer"
 
-#: registrations/models.py:290
+#: registrations/models.py:298
 msgid "Notification type"
 msgstr "Aviseringstyp"
 
-#: registrations/models.py:296
+#: registrations/models.py:304
 msgid "Cancellation code"
 msgstr "Avbokningskod"
 
-#: registrations/models.py:299
+#: registrations/models.py:307
 msgid "Attendee status"
 msgstr "Deltagarstatus"
 
-#: registrations/models.py:370
-msgid "tapahtumaan"
-msgstr "evenemanget"
+#: registrations/models.py:391
+msgid "to event"
+msgstr "för evenemanget"
 
-#: registrations/models.py:371
-msgid "kurssille"
-msgstr "kursen"
+#: registrations/models.py:392
+msgid "to course"
+msgstr "för kursen"
 
-#: registrations/models.py:372
-msgid "vapaaehtoistehtävään"
-msgstr "volontäruppdraget"
+#: registrations/models.py:393
+msgid "to volunteering"
+msgstr "för volontäruppdraget"
 
-#: registrations/models.py:386
+#: registrations/models.py:404
 #, python-format
-msgid "Vahvistus ilmoittautumisesta - %(event_name)s"
+msgid "Registration confirmation - %(event_name)s"
 msgstr "Bekräftelse av registrering - %(event_name)s"
 
-#: registrations/models.py:388
+#: registrations/models.py:406
 #, python-format
-msgid "Ilmoittautuminen peruttu - %(event_name)s"
+msgid "Registration cancelled - %(event_name)s"
 msgstr "Registreringen avbruten - %(event_name)s"
 
-#: registrations/models.py:406
+#: registrations/models.py:424
 msgid "Number of seats"
 msgstr "Antal platser"
 
-#: registrations/models.py:412
+#: registrations/models.py:430
 msgid "Seat reservation code"
 msgstr "Platsreservationskod"
 
-#: registrations/models.py:415
+#: registrations/models.py:433
 msgid "Timestamp"
 msgstr "Tidsstämpel"
 
@@ -226,7 +256,7 @@ msgid "You may not change the registration of an existing object."
 msgstr "Du får inte ändra registration för ett befintligt objekt."
 
 #: registrations/serializers.py:82 registrations/serializers.py:89
-#: registrations/serializers.py:280
+#: registrations/serializers.py:293
 msgid "This field must be specified."
 msgstr "Detta fält måste anges."
 
@@ -240,82 +270,106 @@ msgstr "Deltagaren är för gammal."
 
 #: registrations/serializers.py:168
 #, python-brace-format
-msgid "Only the admins of the organization that published the event {event_id} have access rights."
-msgstr "Endast administratörerna för organisationen som publicerade händelsen {event_id} har åtkomsträttigheter."
+msgid ""
+"Only the admins of the organization that published the event {event_id} have "
+"access rights."
+msgstr ""
+"Endast administratörerna för organisationen som publicerade händelsen "
+"{event_id} har åtkomsträttigheter."
 
 #: registrations/serializers.py:218
 msgid "Reservation code doesn't exist."
 msgstr "Bokningskoden finns inte."
 
-#: registrations/serializers.py:283
+#: registrations/serializers.py:240
+#, python-brace-format
+msgid "Amount of signups is greater than maximum group size: {max_group_size}."
+msgstr ""
+"Antalet registreringar är större än den maximala gruppstorleken: "
+"{max_group_size}."
+
+#: registrations/serializers.py:296
 msgid "The value doesn't match."
 msgstr "Värdet stämmer inte överens."
 
-#: registrations/serializers.py:310
+#: registrations/serializers.py:309
+#, python-brace-format
+msgid "Amount of seats is greater than maximum group size: {max_group_size}."
+msgstr "Antalet platser är större än maximal gruppstorlek: {max_group_size}."
+
+#: registrations/serializers.py:334
 #, python-brace-format
 msgid "Not enough seats available. Capacity left: {capacity_left}."
-msgstr "Inte tillräckligt med platser tillgängliga. Kapacitet kvar: {capacity_left}."
+msgstr ""
+"Inte tillräckligt med platser tillgängliga. Kapacitet kvar: {capacity_left}."
 
-#: registrations/serializers.py:326
+#: registrations/serializers.py:350
 #, python-brace-format
-msgid "Not enough capacity in the waiting list. Capacity left: {capacity_left}."
-msgstr "Inte tillräckligt med kapacitet på väntelistan. Kapacitet kvar: {capacity_left}."
+msgid ""
+"Not enough capacity in the waiting list. Capacity left: {capacity_left}."
+msgstr ""
+"Inte tillräckligt med kapacitet på väntelistan. Kapacitet kvar: "
+"{capacity_left}."
 
-#: registrations/serializers.py:340
+#: registrations/serializers.py:364
 msgid "Cannot update expired seats reservation."
 msgstr "Kan inte uppdatera utgångna platsreservationer."
 
 #: registrations/templates/base_email.html:293
-msgid "Ota yhteyttä"
+msgid "Contact us"
 msgstr "Ta kontakt"
 
 #: registrations/templates/base_email.html:294
-msgid "Anna palautetta"
+msgid "Give feedback"
 msgstr "Ge feedback"
 
 #: registrations/templates/base_email.html:299
-msgid "Helsingin kaupunki 2023"
+msgid "City of Helsinki 2023"
 msgstr "Helsingfors stad 2023"
 
 #: registrations/templates/base_email.html:301
-msgid "Kaikki oikeudet pidätetään."
+msgid "All rights reserved."
 msgstr "Alla rättigheter förbehållna."
 
 #: registrations/templates/cancellation_confirmation.html:8
-msgid "Ilmoittautuminen peruttu"
+msgid "Registration cancelled"
 msgstr "Registreringen avbruten"
 
 #: registrations/templates/cancellation_confirmation.html:9
 #, python-format
-msgid "Ilmoittautuminen %(event_type)s %(event)s on peruttu."
-msgstr "Registreringen för %(event_type)s %(event)s har avbrutits."
+msgid "Registration %(to_event_type)s %(event)s has been cancelled."
+msgstr "Registreringen för %(to_event_type)s %(event)s har avbrutits."
 
 #: registrations/templates/cancellation_confirmation.html:12
 #, python-format
-msgid "Olet onnistuneesti peruttanut ilmoittautumisesi %(event_type)s %(event)s."
-msgstr "Du har avslutat prenumerationen på %(event_type)s %(event)s."
+msgid ""
+"You have successfully canceled your registration %(to_event_type)s %(event)s."
+msgstr "Du har avslutat prenumerationen %(to_event_type)s %(event)s."
 
 #: registrations/templates/cancellation_confirmation.html:15
-msgid "Lisätietoja asiakaspalvelustamme"
+msgid "More information from our customer service"
 msgstr "Mer information om vår kundtjänst"
 
 #: registrations/templates/message_to_signup.html:13
 #: registrations/templates/signup_confirmation.html:17
-msgid "Tarkastele ilmoittautumistasi täällä"
+msgid "Check your registration here"
 msgstr "Kontrollera din registrering här"
 
 #: registrations/templates/signup_confirmation.html:8
 #, python-format
-msgid "Tervetuloa %(username)s"
+msgid "Welcome %(username)s"
 msgstr "Välkommen %(username)s"
 
 #: registrations/templates/signup_confirmation.html:9
-#, python-format
-msgid "Ilmoittautuminen %(event_type)s %(event)s tallennettu."
+#, fuzzy, python-format
+msgid "Registration %(to_event_type)s %(event)s saved."
 msgstr "Registreringen %(event_type)s %(event)s sparad."
 
 #: registrations/templates/signup_confirmation.html:12
 #, python-format
-msgid "Onnittelut! Olet onnistuneesti ilmoittautunut %(event_type)s %(event)s."
-msgstr "Klapp på ryggen! Du har framgångsrikt registrerat dig för %(event_type)s %(event)s."
-
+msgid ""
+"Congratulations! You have successfully registered %(to_event_type)s "
+"%(event)s."
+msgstr ""
+"Klapp på ryggen! Du har framgångsrikt registrerat dig %(to_event_type)s "
+"%(event)s."
