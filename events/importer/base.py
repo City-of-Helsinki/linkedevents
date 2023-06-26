@@ -9,6 +9,7 @@ import pytz
 from django.conf import settings
 from django.contrib.gis.gdal import CoordTransform, SpatialReference
 from django.contrib.gis.geos import Point, Polygon
+from django.db import transaction
 from modeltranslation.translator import translator
 from rest_framework.exceptions import ValidationError
 
@@ -308,6 +309,7 @@ class Importer(object):
                 continue
             self._set_field(obj, field_name, info[field_name])
 
+    @transaction.atomic
     def save_event(self, info):  # noqa: C901
         info = info.copy()
 
@@ -438,8 +440,7 @@ class Importer(object):
                 or len(set(map(val, offers))) >= obj.offers.count()
             ):
                 obj.offers.all().delete()
-                for o in offers:
-                    o.save()
+                Offer.objects.bulk_create(offers)
                 obj._changed = True
                 obj._changed_fields.append("offers")
 
@@ -467,19 +468,22 @@ class Importer(object):
             old_links = list_obj_links(obj)
             if not obj.is_user_edited() and new_links != old_links:
                 obj.external_links.all().delete()
+                new_link_objects = []
                 for link in new_links:
                     if len(link.url) > 200:
                         logger.error(
                             f"{obj} required external link of length {len(link.url)}, current limit 200"
                         )
                         continue
-                    link_obj = EventLink(
-                        event=obj,
-                        language_id=link.language,
-                        name=link.name,
-                        link=link.url,
+                    new_link_objects.append(
+                        EventLink(
+                            event=obj,
+                            language_id=link.language,
+                            name=link.name,
+                            link=link.url,
+                        )
                     )
-                    link_obj.save()
+                EventLink.objects.bulk_create(new_link_objects)
                 obj._changed = True
                 obj._changed_fields.append("links")
 
@@ -537,6 +541,7 @@ class Importer(object):
 
         return obj
 
+    @transaction.atomic
     def save_place(self, info):
         args = dict(data_source=info["data_source"], origin_id=info["origin_id"])
         obj_id = "%s:%s" % (info["data_source"].id, info["origin_id"])

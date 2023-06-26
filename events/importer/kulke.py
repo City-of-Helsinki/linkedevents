@@ -10,7 +10,7 @@ import dateutil
 import requests
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import IntegrityError
+from django.db import transaction
 from django_orghierarchy.models import Organization
 from lxml import etree
 from pytz import timezone
@@ -132,6 +132,11 @@ CATEGORIES_TO_IGNORE = [
     55,
 ]
 
+CATEGORY_TYPES_TO_IGNORE = [
+    2,
+    3,
+]
+
 # Events having one of these categories are courses - they are excluded when importing events
 # and only they are included when importing courses.
 COURSE_CATEGORIES = {
@@ -229,6 +234,9 @@ COURSE_KEYWORDS = ("p9270",)
 # retain the above for simplicity, even if kulke importer internally requires full keyword ids
 KEYWORDS_TO_ADD_TO_AUDIENCE = ["yso:{}".format(i) for i in KEYWORDS_TO_ADD_TO_AUDIENCE]
 
+# category text replacements for keyword determination
+CATEGORY_TEXT_REPLACEMENTS = [("jumppa", "voimistelu"), ("Stoan", "Stoa")]
+
 LOCAL_TZ = timezone("Europe/Helsinki")
 
 
@@ -308,7 +316,10 @@ class KulkeImporter(Importer):
         ]
         ds_args = dict(id=self.name)
         defaults = dict(name="Kulttuurikeskus")
-        self.tprek_data_source = DataSource.objects.get(id="tprek")
+
+        self.tprek_data_source, _ = DataSource.objects.get_or_create(
+            id="tprek", defaults=dict(name="Toimipisterekisteri")
+        )
         self.data_source, _ = DataSource.objects.get_or_create(
             defaults=defaults, **ds_args
         )
@@ -365,7 +376,7 @@ class KulkeImporter(Importer):
             # These are ignored for now, could be used for
             # target group extraction or for other info
             # were they actually used in the data:
-            if cid in CATEGORIES_TO_IGNORE or c["type"] == 2 or c["type"] == 3:
+            if cid in CATEGORIES_TO_IGNORE or c["type"] in CATEGORY_TYPES_TO_IGNORE:
                 continue
 
             manual = MANUAL_CATEGORIES.get(cid)
@@ -377,8 +388,7 @@ class KulkeImporter(Importer):
                 except Keyword.DoesNotExist:
                     pass
             else:
-                replacements = [("jumppa", "voimistelu"), ("Stoan", "Stoa")]
-                for src, dest in replacements:
+                for src, dest in CATEGORY_TEXT_REPLACEMENTS:
                     ctext = re.sub(src, dest, ctext, flags=re.IGNORECASE)
                     c["yso_keywords"] = keyword_matcher.match(ctext)
 
@@ -759,12 +769,18 @@ class KulkeImporter(Importer):
                         )
                         group.remove(inner_key)
 
-    def _update_super_event(self, super_event):
-        events = super_event.get_children()
-        first_event = events.order_by("start_time").first()
+    def _update_super_event(
+        self, super_event: Event, member_events: list[Event]
+    ) -> None:
+        first_event = sorted(
+            member_events, key=lambda x: (x.start_time is None, x.start_time)
+        )[0]
+        last_event = sorted(
+            member_events, key=lambda x: (x.end_time is not None, x.end_time)
+        )[-1]
+
         super_event.start_time = first_event.start_time
         super_event.has_start_time = first_event.has_start_time
-        last_event = events.order_by("-end_time").first()
         super_event.end_time = last_event.end_time
         super_event.has_end_time = last_event.has_end_time
 
@@ -801,14 +817,14 @@ class KulkeImporter(Importer):
                 set(
                     map(
                         value_mappers.get(f, lambda x: x),
-                        (getattr(event, f) for event in events.all()),
+                        (getattr(event, f) for event in member_events),
                     )
                 )
             )
         )
 
         for fieldname in common_fields:
-            value = getattr(events.first(), fieldname)
+            value = getattr(first_event, fieldname)
             if hasattr(value, "all"):
                 manager = getattr(super_event, fieldname)
                 simple = False
@@ -827,16 +843,20 @@ class KulkeImporter(Importer):
 
         # The name may vary within a recurring event; hence, take the common part
         if expand_model_fields(super_event, ["headline"])[0] not in common_fields:
-            words = events.first().headline.split(" ")
+            words = first_event.headline.split(" ")
             name = ""
             while words and all(
                 headline.startswith(name + words[0])
-                for headline in [event.name for event in events]
+                for headline in [event.name for event in member_events]
             ):
                 name += words.pop(0) + " "
                 logger.warning(words)
                 logger.warning(name)
-            super_event.name = name
+            if name:
+                super_event.name = name
+            else:
+                # If a common part was not found, default to the first event's name
+                super_event.name = first_event.name
 
         for lang in self.languages.keys():
             headline = getattr(super_event, "headline_{}".format(lang))
@@ -851,88 +871,82 @@ class KulkeImporter(Importer):
 
         # Gather common keywords present in *all* subevents
         common_keywords = functools.reduce(
-            lambda x, y: x & y, (set(event.keywords.all()) for event in events.all())
+            lambda x, y: x & y, (set(event.keywords.all()) for event in member_events)
         )
         super_event.keywords.clear()
         for k in common_keywords:
             super_event.keywords.add(k)
 
         common_audience = functools.reduce(
-            lambda x, y: x & y, (set(event.audience.all()) for event in events.all())
+            lambda x, y: x & y, (set(event.audience.all()) for event in member_events)
         )
         super_event.audience.clear()
         for k in common_audience:
             super_event.audience.add(k)
 
-        super_event.save()
+    @transaction.atomic
+    def _save_recurring_superevent(self, recurring_group):
+        kulke_ids = set(make_kulke_id(event) for event in recurring_group)
+        superevent_aggregates = EventAggregate.objects.filter(
+            members__event__id__in=kulke_ids
+        ).distinct()
+        n_super_events = superevent_aggregates.count()
 
-    def _save_recurring_superevents(self, recurring_groups):
-        groups = map(frozenset, recurring_groups.values())
-        aggregates = set()
-        for group in groups:
-            kulke_ids = set(map(make_kulke_id, group))
-            superevent_aggregates = EventAggregate.objects.filter(
-                members__event__id__in=kulke_ids
-            ).distinct()
-            cnt = superevent_aggregates.count()
-
-            if cnt > 1:
-                logger.error("Error: the superevent has an ambiguous aggregate group.")
-                logger.error(
-                    "Aggregate ids: {}, group: {}".format(
-                        superevent_aggregates.values_list("id", flat=True), group
-                    )
+        if n_super_events > 1:
+            logger.error(
+                "Error: the superevent has an ambiguous aggregate group.\nAggregate ids: {}, group: {}".format(
+                    superevent_aggregates.values_list("id", flat=True), recurring_group
                 )
-                continue
+            )
+            return False
 
-            events = Event.objects.filter(id__in=kulke_ids)
-            if events.count() < 2:
-                continue
+        events = list(Event.objects.filter(id__in=kulke_ids))
+        if len(events) != len(recurring_group):
+            logger.warning(
+                "Not all events referenced in the group were found in the database. Group: %s - Events: %s",
+                recurring_group,
+                set(e.id for e in events),
+            )
 
-            aggregate = None
-            if cnt == 0:
-                if len(group) == 1:
-                    # Do not create aggregates of only one.
-                    continue
-                aggregate = EventAggregate()
-                aggregate.save()
-                super_event = Event(
-                    publisher=self.organization,
-                    super_event_type=Event.SuperEventType.RECURRING,
-                    data_source=DataSource.objects.get(pk="kulke"),  # TODO
-                    id="linkedevents:agg-{}".format(aggregate.id),
-                )
-                super_event.save()
-                aggregate.super_event = super_event
-                aggregate.save()
+        if n_super_events == 0:
+            # Don't create a super event if there is only one event in the database
+            if len(events) < 2:
+                return False
+
+            aggregate = EventAggregate.objects.create()
+            super_event = Event(
+                publisher=self.organization,
+                super_event_type=Event.SuperEventType.RECURRING,
+                data_source=self.data_source,
+                id="linkedevents:agg-{}".format(aggregate.id),
+            )
+            self._update_super_event(super_event, events)
+            super_event.save()
+            aggregate.super_event = super_event
+            aggregate.save()
+            event_aggregates = [
+                EventAggregateMember(event=event, event_aggregate=aggregate)
+                for event in events
+            ]
+            EventAggregateMember.objects.bulk_create(event_aggregates)
+        else:
+            aggregate = superevent_aggregates.first()
+            if len(events) < 2:
+                # The imported event is not part of an aggregate but one was found it in the db.
+                # Remove the super event. This is the only case when an event is removed from
+                # a recurring aggregate.
+                aggregate.super_event.delete()
+                return False
+            else:
                 for event in events:
-                    EventAggregateMember.objects.create(
+                    EventAggregateMember.objects.get_or_create(
                         event=event, event_aggregate=aggregate
                     )
-            elif cnt == 1:
-                aggregate = superevent_aggregates.first()
-                if len(group) == 1:
-                    events = Event.objects.get(pk=make_kulke_id(group.pop()))
-                    # The imported event is not part of an aggregate
-                    # but one was found it in the db. Remove the event
-                    # from the aggregate. This is the only case when
-                    # an event is removed from a recurring aggregate.
-                    aggregate.members.remove(events)
-                else:
-                    for event in events:
-                        try:
-                            EventAggregateMember.objects.create(
-                                event=event, event_aggregate=aggregate
-                            )
-                        except IntegrityError:
-                            # Ignore unique violations. They
-                            # ensure that no duplicate members are added.
-                            pass
-            for event in events:
-                event.super_event = aggregate.super_event
-                event.save()
-            aggregates.add(aggregate)
-        return aggregates
+        for event in events:
+            event.super_event = aggregate.super_event
+        Event.objects.bulk_update(events, ("super_event",))
+
+        return True
 
     def import_events(self):
         logger.info("Importing Kulke events")
@@ -987,16 +1001,16 @@ class KulkeImporter(Importer):
         )
 
         for event in events.values():
-            if (
-                any(kw.id in course_keywords for kw in event["keywords"])
-                == importing_courses
-            ):
+            contains_course_keywords = any(
+                kw.id in course_keywords for kw in event["keywords"]
+            )
+            if contains_course_keywords == importing_courses:
                 self.save_event(event)
 
         self._verify_recurs(recurring_groups)
-        aggregates = self._save_recurring_superevents(recurring_groups)
-        for agg in aggregates:
-            self._update_super_event(agg.super_event)
+        for group in recurring_groups.values():
+            if group:
+                self._save_recurring_superevent(group)
 
     def import_keywords(self):
         logger.info("Importing Kulke categories as keywords")
