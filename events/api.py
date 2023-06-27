@@ -2650,12 +2650,15 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
         params, "local_ongoing_OR", "local_ids", "OR", queryset
     )
 
-    cache_values = cache.get_many(["internet_ids", "local_ids"])
-    if cache_values:
-        val = params.get("all_ongoing", None)
-        if val and parse_bool(val, "all_ongoing"):
+    val = params.get("all_ongoing")
+    if val and parse_bool(val, "all_ongoing"):
+        cache_name = ["internet_ids", "local_ids"]
+        cache_values = cache.get_many(cache_name)
+        if cache_values:
             ids = {k for i in cache_values.values() for k, v in i.items()}
             queryset = queryset.filter(id__in=ids)
+        else:
+            logger.error(f"Missed cache {cache_name}")
 
     queryset = _get_queryset_from_cache_many(
         params, "all_ongoing_AND", ["internet_ids", "local_ids"], "AND", queryset
