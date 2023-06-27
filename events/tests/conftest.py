@@ -574,6 +574,10 @@ def languages():
     lang_objs = [
         Language.objects.get_or_create(id=lang)[0] for lang in ["fi", "sv", "en"]
     ]
+    for lang in lang_objs:
+        lang.service_language = True
+        lang.save()
+
     return lang_objs
 
 

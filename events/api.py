@@ -1417,6 +1417,7 @@ class LanguageSerializer(LinkedEventsSerializer):
 class LanguageViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
     queryset = Language.objects.all()
     serializer_class = LanguageSerializer
+    filterset_fields = ("service_language",)
 
 
 register_view(LanguageViewSet, "language")

@@ -346,6 +346,9 @@ class BaseModel(models.Model):
 class Language(models.Model):
     id = models.CharField(max_length=10, primary_key=True)
     name = models.CharField(verbose_name=_("Name"), max_length=20)
+    service_language = models.BooleanField(
+        default=False, verbose_name=_("Can be used as registration service language")
+    )
 
     def __str__(self):
         return self.name
