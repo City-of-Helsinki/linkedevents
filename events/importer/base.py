@@ -67,6 +67,10 @@ class Importer(object):
             self.bounding_box = None
         self.gps_to_target_ct = CoordTransform(gps_srs, target_srs)
 
+        # Don't run setup when generating documentation
+        if self.options.get("generate_docs"):
+            return
+
         self.setup()
 
         # this has to be run after setup, as it relies on organization and data source being set

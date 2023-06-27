@@ -1,10 +1,12 @@
 import functools
+import itertools
 import logging
 import os
 import re
 from datetime import datetime, time, timedelta
 from posixpath import join as urljoin
-from typing import Iterator, Union
+from textwrap import dedent
+from typing import Iterator, Optional, Union
 
 import dateutil
 import requests
@@ -89,8 +91,6 @@ CATEGORIES_TO_IGNORE = [
     596,
     614,
     307,
-    632,
-    645,
     675,
     231,
     364,
@@ -98,7 +98,6 @@ CATEGORIES_TO_IGNORE = [
     324,
     319,
     646,
-    640,
     641,
     642,
     643,
@@ -122,7 +121,6 @@ CATEGORIES_TO_IGNORE = [
     358,
     728,
     729,
-    730,
     735,
     736,
     # The categories below are languages, ignore as categories
@@ -132,6 +130,7 @@ CATEGORIES_TO_IGNORE = [
     55,
 ]
 
+# If you update this, please be sure to update generate_documentation_md too
 CATEGORY_TYPES_TO_IGNORE = [
     2,
     3,
@@ -155,10 +154,8 @@ COURSE_CATEGORIES = {
     87,
     316,
     629,
-    632,
     728,
     729,
-    730,
     735,
 }
 
@@ -390,7 +387,7 @@ class KulkeImporter(Importer):
             else:
                 for src, dest in CATEGORY_TEXT_REPLACEMENTS:
                     ctext = re.sub(src, dest, ctext, flags=re.IGNORECASE)
-                    c["yso_keywords"] = keyword_matcher.match(ctext)
+                c["yso_keywords"] = keyword_matcher.match(ctext)
 
         self.categories = categories
 
@@ -601,7 +598,7 @@ class KulkeImporter(Importer):
                                 }
                             ]
                         else:
-                            print(
+                            logger.error(
                                 'Cannot create an image, "event_only" License missing.'
                             )
                     break
@@ -1033,3 +1030,328 @@ class KulkeImporter(Importer):
                     data_source=self.data_source,
                     publisher=self.organization,
                 )
+
+    @staticmethod
+    def generate_documentation_md(
+        output_file: Optional[str] = None,
+    ) -> None:  # noqa: C901
+        """
+        Generate MarkDown document covering Kulke importer logic and mappings.
+        :param output_file: (optional) Output file to write MarkDown document into.
+                            Writes to stdout if not given
+        :return: nothing
+        """
+
+        from snakemd import new_doc
+
+        doc = new_doc()
+
+        doc.add_heading("Kulke Importer")
+        doc.add_paragraph(
+            "When importing data from Elis to Linked Events, some mappings and transformations are "
+            "applied, and there is some special logic regarding the creation of super events. "
+            "This document covers these aspects of the importer with the target audience being someone "
+            "who creates events and needs to understand how the event will be represented in LE."
+        )
+
+        # Section about field mapping
+        KulkeImporter._md_doc_fields(doc)
+
+        # Section about event locations.
+        KulkeImporter._md_doc_location(doc)
+
+        # Section about categories, with subsections about ignored categories,
+        # course categories, and YSO keywords.
+        doc.add_heading("Categories", level=2)
+        KulkeImporter.md_doc_ignored_categories(doc)
+        KulkeImporter._md_doc_courses(doc)
+        KulkeImporter._md_doc_keywords(doc)
+
+        # Section about super events
+        KulkeImporter._md_doc_super_events(doc)
+
+        # Finally:
+        if output_file:
+            # Write MD to a file
+            with open(output_file, "wt") as out:
+                out.write(str(doc))
+        else:
+            # Print MD
+            print(doc)
+
+    @staticmethod
+    def _md_doc_fields(doc):
+        doc.add_heading("Fields", level=2)
+        doc.add_raw(
+            dedent(
+                """
+            Some of the fields in Linked Events are different from Elis, so some mapping needs to be performed
+            when importing events from Elis. The following is a non-exhaustive list of these mappings.
+            """
+            )
+        )
+        doc.add_table(
+            header=("Field in LE", "Source (field in Elis or other)"),
+            data=[
+                ("`headline`", "Elis: `title`"),
+                ("`secondary_headline`", "Elis: `subtitle`"),
+                ("`audience_{min/max}_age`", "Parsed from `subtitle` if possible"),
+                ("`{start/end}_time`", "Elis: `{start/end}time`"),
+                ("`data_source`", "Always `Kulttuurikeskus`"),
+                ("`publisher`", "Always `Yleiset kulttuuripalvelut`"),
+                ("`short_description`", "Elis: `caption`"),
+                ("`description`", "Elis: `caption` and `bodytext`"),
+                ("`info_url`", "Elis: `www`"),
+                ("`offer`: `is_free`", "Elis: `price`"),
+                ("`offer`: `info_url`", "Elis: `ticketlink`"),
+            ],
+        )
+
+    @staticmethod
+    def _md_doc_super_events(doc):
+        doc.add_heading("Super Events", level=2)
+        doc.add_heading("Event References", level=3)
+        doc.add_raw(
+            dedent(
+                """
+        Events in Elis can contain references to other events. In LE, super events are constructed from such events.
+        A super event is constructed for each group of events that has at least two events in it.
+        Before constructing the super event,the importer collects all such events and references and checks
+        their validity. Super events can be constructed in two valid ways:
+
+        1. One event containing references to the rest. E.g. the first event A contains references to B and C, but B
+        and C don't contain any references.
+        2. All events refer to each other. E.g. A refers to B & C, B refers to A & C, and C refers to A & B.
+
+        If there are inconsistent references, e.g. A refers to B and C, but B only refers to A, a warning will be logged
+        and the super event construction may be unsuccessful.
+        """
+            )
+        )
+
+        doc.add_heading("Metadata", level=3)
+        doc.add_raw(
+            dedent(
+                """
+        The super event's metadata is constructed using its member events. Some fields are shared between all member
+        events, and they are used as is. The following fields are copied as-is IF they are the same for each member
+        event. The list shows the name in LE first, and the name in Elis in parentheses if applicable.
+
+        - `info_url`
+        - `description`
+        - `short_description`
+        - `headline`
+        - `secondary_headline`
+        - `provider`
+        - `publisher`
+        - `location`
+        - `location_extra_info`
+        - `data_source`
+        - `images`
+        - `offers`
+        - `external_links`
+
+        If the member events don't have a common value for the field, then the field is typically left empty. There are
+        some exceptions to this logic, and some fields have custom logic.
+        Headlines (event names), try to find the common part of the name. For example, if there is a recurring event
+        with three occurrences, and each event has suffixes like 1/3, 2/3, and 3/3, then the super event name will be
+        the common part without this suffix. If a common part cannot be found, the super event will use the name of the
+        first event, as determined by start time.
+
+        The subset of keywords and audiences that are common to all member events will be attached to the super event.
+        """
+            )
+        )
+
+    @staticmethod
+    def _md_doc_location(doc):
+        doc.add_raw(
+            dedent(
+                """\
+        ## Location
+        The following table shows the mapping of location names to Tprek IDs.
+        """
+            )
+        )
+        tprek_id_to_name = {
+            id: name
+            for id, name in Place.objects.filter(
+                data_source=DataSource.objects.get(id="tprek"),
+                origin_id__in=list(LOCATION_TPREK_MAP.values()),
+            ).values_list("id", "name")
+        }
+        doc.add_table(
+            header=("Name", "Tprek ID", "Tprek Name (in Finnish)"),
+            data=[
+                [name, tprek_id, tprek_id_to_name.get(f"tprek:{tprek_id}", "(missing)")]
+                for name, tprek_id in LOCATION_TPREK_MAP.items()
+            ],
+        )
+
+        doc.add_raw(
+            dedent(
+                """\
+        If an exact match is not found, the importer tries to check if there is a partial match,
+        i.e. whether the event's location name starts with one of the location names in the above mapping.
+        The mapping, like all mappings described here, is case-insensitive.
+        Additionally, remote participation (category 751, "Etäosallistuminen") is mapped to the online only
+        ("tapahtuma vain internetissä") location.
+        If the place is not found using the location name, finding the location using the address is attempted,
+        in both Finnish and Swedish. These addresses are mapped to the following cultural centers, which in
+        turn are mapped to the Tprek IDs shown above.
+        """
+            )
+        )
+
+        doc.add_table(header=("Address", "Name"), data=ADDRESS_TPREK_MAP.items())
+
+    @staticmethod
+    def md_doc_ignored_categories(doc):
+        doc.add_raw(
+            dedent(
+                """\
+        ### Ignored Categories
+        All of the following categories from Elis will be ignored.
+        They will not appear in the event in LE or have any effect on it.
+        """
+            )
+        )
+
+        id_to_name = {
+            kw_id: name
+            for kw_id, name in Keyword.objects.filter(
+                id__in=[make_kulke_id(c) for c in CATEGORIES_TO_IGNORE]
+            ).values_list("id", "name")
+        }
+        doc.add_table(
+            header=("Category ID", "Name"),
+            data=[
+                (c, id_to_name.get(make_kulke_id(c), "(name not available)"))
+                for c in CATEGORIES_TO_IGNORE
+            ],
+        )
+
+        doc.add_paragraph(
+            "In addition, any categories with the following category types are ignored."
+        )
+        doc.add_table(
+            header=("Category Type ID", "Category Type Name"),
+            data=([(2, "Nostokategoria"), (3, "Kohde")]),
+        )
+
+    @staticmethod
+    def _md_doc_courses(doc):
+        doc.add_heading("Courses", level=3)
+        doc.add_paragraph(
+            "Any event that has at least one of these categories is considered to be a course."
+        )
+        id_to_name = {
+            kw_id: name
+            for kw_id, name in Keyword.objects.filter(
+                id__in=[make_kulke_id(c) for c in COURSE_CATEGORIES]
+            ).values_list("id", "name")
+        }
+        doc.add_table(
+            header=("Category ID", "Name"),
+            data=[
+                (c, id_to_name.get(make_kulke_id(c), "(name not available)"))
+                for c in COURSE_CATEGORIES
+            ],
+        )
+
+    @staticmethod
+    def _md_doc_keywords(doc):
+        doc.add_raw(
+            dedent(
+                """\
+        ### Keyword Mapping
+
+
+        The importer will try to determine relevant YSO keywords when importing events and courses.
+        For some categories, this is done using a manual mapping, but for the remaining categories,
+        the importer will attempt to perform a keyword match to determine the keywords.
+        The mapping, both manual and automatic, is shown in the table below.
+        """
+            )
+        )
+
+        # At doc generation time we don't have access to the category type info, so this is
+        # a dirty workaround to filter categories with these types out of the table
+        categories_of_ignored_type = [36, 37, 39, 40, 41, 42, 44, 45, 46, 47, 48, 49]
+
+        keyword_matcher = KeywordMatcher()
+        keyword_mapping_data = []
+        for category in Keyword.objects.filter(
+            data_source=DataSource.objects.get(id="kulke")
+        ).exclude(
+            id__in=[
+                make_kulke_id(c)
+                for c in CATEGORIES_TO_IGNORE
+                + categories_of_ignored_type
+                + list(MANUAL_CATEGORIES)
+            ]
+        ):
+            category_text = category.name
+            for src, dest in CATEGORY_TEXT_REPLACEMENTS:
+                category_text = re.sub(src, dest, category_text, flags=re.IGNORECASE)
+            yso_keywords = keyword_matcher.match(category_text)
+            if yso_keywords:
+                yso_keywords = ", ".join(
+                    f"{kw.id.split(':')[-1]} - {kw.name}" for kw in yso_keywords
+                )
+            else:
+                yso_keywords = "None"
+
+            keyword_mapping_data.append(
+                (
+                    int(category.id.split(":")[-1]),
+                    category_text,
+                    yso_keywords,
+                    "Match",
+                )
+            )
+
+        id_to_name = {
+            kw_id: name
+            for kw_id, name in Keyword.objects.filter(
+                id__in=[make_kulke_id(c) for c in MANUAL_CATEGORIES]
+                + [
+                    f"yso:{c}"
+                    for c in list(itertools.chain(*MANUAL_CATEGORIES.values()))
+                    + KEYWORDS_TO_ADD_TO_AUDIENCE
+                ]
+            ).values_list("id", "name")
+        }
+
+        for kulke_id, yso_ids in MANUAL_CATEGORIES.items():
+            kulke_name = id_to_name.get(make_kulke_id(kulke_id), "(name not available)")
+            yso_categories = [
+                f"{c} - " + id_to_name.get(f"yso:{c}", "(name not available)")
+                for c in yso_ids
+            ]
+
+            keyword_mapping_data.append(
+                (kulke_id, kulke_name, ", ".join(yso_categories), "Manual")
+            )
+
+        doc.add_table(
+            header=("Category ID", "Category Name", "YSO Keywords", "Method"),
+            data=sorted(keyword_mapping_data, key=lambda x: x[0]),
+        )
+
+        doc.add_paragraph(
+            "Additionally, the keyword p9270 (courses) is added to every course."
+        )
+
+        doc.add_paragraph(
+            "If the event or course contains any of the following YSO keywords, "
+            "these keywords will be added to the event's audience."
+        )
+
+        doc.add_table(
+            header=("YSO Keyword ID", "Keyword Name"),
+            data=[
+                (kw.strip("yso:"), id_to_name.get(kw, "(name not available)"))
+                for kw in KEYWORDS_TO_ADD_TO_AUDIENCE
+            ],
+        )
