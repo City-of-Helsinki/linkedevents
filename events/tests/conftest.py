@@ -737,7 +737,6 @@ def registration(event, user):
         last_modified_by=user,
         enrolment_start_time=localtime(),
         enrolment_end_time=localtime() + timedelta(days=10),
-        confirmation_message="Your registration is confirmed",
         maximum_attendee_capacity=20,
         waiting_list_capacity=20,
     )
@@ -752,7 +751,6 @@ def registration2(event2, user2):
         last_modified_by=user2,
         enrolment_start_time=localtime(),
         enrolment_end_time=localtime() + timedelta(days=10),
-        confirmation_message="Your registration is confirmed",
         maximum_attendee_capacity=20,
         waiting_list_capacity=20,
     )
@@ -765,7 +763,6 @@ def registration3(event3, user):
         event=event3,
         created_by=user,
         last_modified_by=user,
-        confirmation_message="Your registration is confirmed",
         waiting_list_capacity=20,
     )
 
@@ -779,6 +776,5 @@ def registration4(event4, user):
         audience_max_age=18,
         created_by=user,
         last_modified_by=user,
-        confirmation_message="Your registration is confirmed",
         waiting_list_capacity=20,
     )

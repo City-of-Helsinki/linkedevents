@@ -11,6 +11,7 @@ from django.db import models
 from django.db.models import DateTimeField, ExpressionWrapper, F, Sum
 from django.forms.fields import MultipleChoiceField
 from django.template.loader import render_to_string
+from django.utils import translation
 from django.utils.functional import cached_property
 from django.utils.timezone import localtime
 from django.utils.translation import gettext_lazy as _
@@ -354,24 +355,33 @@ class SignUp(models.Model):
     def is_user_editable_resources(self):
         return bool(self.data_source and self.data_source.user_editable_resources)
 
+    def get_service_language_pk(self):
+        if self.service_language:
+            return self.service_language.pk
+        return "fi"
+
     def send_notification(self, confirmation_type):
-        email_variables = {
-            "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
-            "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
-            "username": self.name,
-            "event": self.registration.event.name_fi,
-            "cancellation_code": self.cancellation_code,
-            "registration_id": self.registration.id,
-            "signup_id": self.id,
-        }
+        service_language = self.get_service_language_pk()
 
-        if self.registration.confirmation_message:
-            email_variables[
-                "confirmation_message"
-            ] = self.registration.confirmation_message
+        with translation.override(service_language):
+            email_variables = {
+                "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
+                "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
+                "username": self.name,
+                "event": self.registration.event,
+                "cancellation_code": self.cancellation_code,
+                "registration_id": self.registration.id,
+                "signup_id": self.id,
+            }
 
-        if self.registration.instructions:
-            email_variables["instructions"] = self.registration.instructions
+            confirmation_message = self.registration.confirmation_message
+            instructions = self.registration.instructions
+
+        if confirmation_message:
+            email_variables["confirmation_message"] = confirmation_message
+
+        if instructions:
+            email_variables["instructions"] = instructions
 
         event_type_name = {
             str(Event.TypeId.GENERAL): _("tapahtumaan"),

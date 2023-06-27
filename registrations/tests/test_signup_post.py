@@ -7,6 +7,7 @@ from django.utils.timezone import localtime
 from freezegun import freeze_time
 from rest_framework import status
 
+from events.models import Language
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import MandatoryFields, SeatReservationCode, SignUp
 from registrations.tests.test_seatsreservation_post import assert_reserve_seats
@@ -466,3 +467,46 @@ def test_email_sent_on_successful_signup(api_client, registration):
     assert signup_data["name"] in response.data["attending"]["people"][0]["name"]
     #  assert that the email was sent
     assert len(mail.outbox) == 1
+
+
+@pytest.mark.parametrize(
+    "service_language,confirmation_message",
+    [
+        ("en", "Confirmation message"),
+        ("fi", "Vahvistusviesti"),
+        ("sv", "Bekräftelsemeddelande"),
+        # Use default language if confirmation message is not defined to service language
+        ("ru", "Vahvistusviesti"),
+    ],
+)
+@pytest.mark.django_db
+def test_confirmation_message_is_shown_in_service_language(
+    api_client,
+    confirmation_message,
+    languages,
+    registration,
+    service_language,
+):
+    Language.objects.get_or_create(
+        id=service_language, defaults={"name": service_language}
+    )
+    registration.confirmation_message_en = "Confirmation message"
+    registration.confirmation_message_fi = "Vahvistusviesti"
+    registration.confirmation_message_sv = "Bekräftelsemeddelande"
+    registration.save()
+
+    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    signup_data = {
+        "name": "Michael Jackson",
+        "date_of_birth": "2011-04-07",
+        "email": "test@test.com",
+        "service_language": service_language,
+    }
+    signups_data = {
+        "registration": registration.id,
+        "reservation_code": reservation.code,
+        "signups": [signup_data],
+    }
+
+    assert_create_signups(api_client, signups_data)
+    assert confirmation_message in str(mail.outbox[0].alternatives[0])
