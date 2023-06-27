@@ -6,6 +6,22 @@ def code_validity_duration(seats):
     return settings.SEAT_RESERVATION_DURATION + seats
 
 
+def get_language_pk_or_default(language, supported_languages):
+    if language is not None and language.pk in supported_languages:
+        return language.pk
+    else:
+        return "fi"
+
+
+def get_ui_locales(language):
+    linked_events_ui_locale = get_language_pk_or_default(language, ["fi", "en"])
+    linked_registrations_ui_locale = get_language_pk_or_default(
+        language, ["fi", "sv", "en"]
+    )
+
+    return [linked_events_ui_locale, linked_registrations_ui_locale]
+
+
 def send_mass_html_mail(
     datatuple,
     fail_silently=False,

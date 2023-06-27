@@ -42,6 +42,8 @@ ENV DEV_SERVER=true
 
 COPY --chown=appuser:appuser . /app/
 
+RUN django-admin compilemessages
+
 USER appuser
 
 EXPOSE 8000/tcp

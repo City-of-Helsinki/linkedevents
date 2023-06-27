@@ -2824,8 +2824,8 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
             if v not in event_types:
                 raise ParseError(
                     _(
-                        f'Event type can be of the following values:{" ".join(event_types.keys())}'
-                    )
+                        "Event type can be of the following values: {event_types}"
+                    ).format(event_types=" ".join(event_types.keys()))
                 )
             search_vals.append(event_types[v])
 

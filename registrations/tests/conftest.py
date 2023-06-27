@@ -1,6 +1,14 @@
+from django.utils import translation
+
 from events.tests.conftest import *  # noqa
 from linkedevents.tests.conftest import *  # noqa
 from registrations.models import SignUp
+
+
+@pytest.fixture(autouse=True)
+def use_english():
+    with translation.override("en"):
+        yield
 
 
 @pytest.fixture

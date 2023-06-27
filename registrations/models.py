@@ -15,9 +15,10 @@ from django.utils import translation
 from django.utils.functional import cached_property
 from django.utils.timezone import localtime
 from django.utils.translation import gettext_lazy as _
+from django.utils.translation import override
 
 from events.models import Event, Language
-from registrations.utils import code_validity_duration
+from registrations.utils import code_validity_duration, get_ui_locales
 
 User = settings.AUTH_USER_MODEL
 
@@ -361,17 +362,21 @@ class SignUp(models.Model):
         return "fi"
 
     def send_notification(self, confirmation_type):
-        service_language = self.get_service_language_pk()
+        [linked_events_ui_locale, linked_registrations_ui_locale] = get_ui_locales(
+            self.service_language
+        )
 
-        with translation.override(service_language):
+        with translation.override(self.get_service_language_pk()):
             email_variables = {
-                "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
-                "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
-                "username": self.name,
-                "event": self.registration.event,
                 "cancellation_code": self.cancellation_code,
+                "event": self.registration.event,
+                "linked_events_ui_locale": linked_events_ui_locale,
+                "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
+                "linked_registrations_ui_locale": linked_registrations_ui_locale,
+                "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
                 "registration_id": self.registration.id,
                 "signup_id": self.id,
+                "username": self.name,
             }
 
             confirmation_message = self.registration.confirmation_message
@@ -383,28 +388,31 @@ class SignUp(models.Model):
         if instructions:
             email_variables["instructions"] = instructions
 
-        event_type_name = {
-            str(Event.TypeId.GENERAL): _("tapahtumaan"),
-            str(Event.TypeId.COURSE): _("kurssille"),
-            str(Event.TypeId.VOLUNTEERING): _("vapaaehtoistehtävään"),
-        }
-
-        email_variables["event_type"] = event_type_name[self.registration.event.type_id]
-
         confirmation_types = {
             "confirmation": "signup_confirmation.html",
             "cancellation": "cancellation_confirmation.html",
         }
-        rendered_body = render_to_string(
-            confirmation_types[confirmation_type], email_variables
-        )
 
-        confirmation_subjects = {
-            "confirmation": _("Vahvistus ilmoittautumisesta - %(event_name)s")
-            % {"event_name": self.registration.event.name},
-            "cancellation": _("Ilmoittautuminen peruttu - %(event_name)s")
-            % {"event_name": self.registration.event.name},
-        }
+        with override(linked_registrations_ui_locale, deactivate=True):
+            to_event_types = {
+                str(Event.TypeId.GENERAL): _("to event"),
+                str(Event.TypeId.COURSE): _("to course"),
+                str(Event.TypeId.VOLUNTEERING): _("to volunteering"),
+            }
+            email_variables["to_event_type"] = to_event_types[
+                self.registration.event.type_id
+            ]
+
+            rendered_body = render_to_string(
+                confirmation_types[confirmation_type], email_variables
+            )
+
+            confirmation_subjects = {
+                "confirmation": _("Registration confirmation - %(event_name)s")
+                % {"event_name": self.registration.event.name},
+                "cancellation": _("Registration cancelled - %(event_name)s")
+                % {"event_name": self.registration.event.name},
+            }
 
         try:
             send_mail(
