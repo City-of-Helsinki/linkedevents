@@ -431,7 +431,7 @@ msgstr "Arvo ei täsmää."
 #: registrations/serializers.py:309
 #, python-brace-format
 msgid "Amount of seats is greater than maximum group size: {max_group_size}."
-msgstr ""
+msgstr "Paikkojen lukumäärä on suurempi kuin ryhmän enimmäiskoko: {max_group_size}."
 
 #: registrations/serializers.py:334
 #, python-brace-format
@@ -449,7 +449,7 @@ msgstr ""
 
 #: registrations/serializers.py:364
 msgid "Cannot update expired seats reservation."
-msgstr "Vanhentunutta paikkavarauksta ei voi päivittää."
+msgstr "Vanhentunutta paikkavarausta ei voi päivittää."
 
 #: registrations/templates/base_email.html:293
 msgid "Contact us"
@@ -481,7 +481,7 @@ msgstr "Ilmoittautuminen %(to_event_type)s %(event)s on peruttu."
 msgid ""
 "You have successfully canceled your registration %(to_event_type)s %(event)s."
 msgstr ""
-"Olet onnistuneesti peruttanut ilmoittautumisesi %(to_event_type)s %(event)s."
+"Olet onnistuneesti peruuttanut ilmoittautumisesi %(to_event_type)s %(event)s."
 
 #: registrations/templates/cancellation_confirmation.html:15
 msgid "More information from our customer service"
