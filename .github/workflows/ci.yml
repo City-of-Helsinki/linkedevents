@@ -76,7 +76,7 @@ jobs:
 
       - name: Compile translations
         run: |
-          django-admin compilemessages -l en -l fi -l sv
+          django-admin compilemessages
 
       - name: Check black
         run: |
