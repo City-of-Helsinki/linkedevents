@@ -60,6 +60,8 @@ env = environ.Env(
     ENABLE_EXTERNAL_USER_EVENTS=(bool, True),
     ENABLE_REGISTRATION_ENDPOINTS=(bool, False),
     EXTERNAL_USER_PUBLISHER_ID=(str, "others"),
+    ENKORA_API_USER=(str, "JoeEnkora"),
+    ENKORA_API_PASSWORD=(str, None),
     EXTRA_INSTALLED_APPS=(list, []),
     INSTANCE_NAME=(str, "Linked Events"),
     INTERNAL_IPS=(list, []),
@@ -589,3 +591,7 @@ OIDC_API_TOKEN_AUTH = {
 }
 
 OIDC_AUTH = {"OIDC_LEEWAY": 60 * 60}
+
+# Enkora course importer
+ENKORA_API_USER = env("ENKORA_API_USER")
+ENKORA_API_PASSWORD = env("ENKORA_API_PASSWORD")
