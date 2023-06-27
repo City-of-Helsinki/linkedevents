@@ -512,9 +512,8 @@ def test_email_sent_on_successful_signup(
     [
         ("en", "Confirmation message"),
         ("fi", "Vahvistusviesti"),
-        ("sv", "Bekräftelsemeddelande"),
         # Use default language if confirmation message is not defined to service language
-        ("ru", "Vahvistusviesti"),
+        ("sv", "Vahvistusviesti"),
     ],
 )
 @pytest.mark.django_db
@@ -530,7 +529,6 @@ def test_confirmation_message_is_shown_in_service_language(
     )
     registration.confirmation_message_en = "Confirmation message"
     registration.confirmation_message_fi = "Vahvistusviesti"
-    registration.confirmation_message_sv = "Bekräftelsemeddelande"
     registration.save()
 
     reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
