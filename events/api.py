@@ -2549,7 +2549,7 @@ def _get_queryset_from_cache_many(params, param, cache_name, operator, queryset)
     if not val:
         return queryset
 
-    cache_values = cache.get(cache_name)
+    cache_values = cache.get_many(cache_name)
     if not cache_values:
         logger.error(f"Missed cache {cache_name}")
         return queryset
