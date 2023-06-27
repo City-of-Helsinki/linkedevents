@@ -748,7 +748,7 @@ class EnkoraImporter(Importer):
             self.check_deleted = lambda x: False
 
     @staticmethod
-    def _get_timestamps() -> tuple[datetime.datetime, datetime.datetime]:
+    def _get_timestamps() -> tuple[datetime, datetime]:
         return datetime.now(), timezone.now()
 
     def import_courses(self) -> bool:
