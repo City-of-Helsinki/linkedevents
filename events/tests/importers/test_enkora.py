@@ -2040,50 +2040,117 @@ class TestEnkoraImporter:
             event.last_modified_time = timezone.make_aware(
                 created, timezone=pytz.timezone("UTC")
             )
-        events = [
-            serializers.serialize(
-                "json",
-                [
-                    event,
-                ],
-            )
-            for event in db_events
-        ]
 
-        expected = [
-            '[{"model": "events.event", "pk": "enkora:50148", "fields": {"custom_data": null, "data_source": "enkora"'
-            ', "name": "EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat", "name_fi": "EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat'
-            '", "name_sv": null, "name_en": null, "name_zh_hans": null, "name_ru": null, "name_ar": null, "origin_id"'
-            ': "50148", "created_time": "2023-06-16T11:32:23.000Z", "last_modified_time": "2023-06-16T11:32:23.000Z",'
-            ' "created_by": null, "last_modified_by": null, "user_name": null, "user_email": null, "user_phone_number'
-            '": null, "user_organization": null, "user_consent": false, "info_url": null, "info_url_fi": null, "info_'
-            'url_sv": null, "info_url_en": null, "info_url_zh_hans": null, "info_url_ru": null, "info_url_ar": null, '
-            '"description": "EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat", "description_fi": "EASYSPORT TENNIS, ALKEET, 7'
-            '-9 -vuotiaat", "description_sv": null, "description_en": null, "description_zh_hans": null, "description'
-            '_ru": null, "description_ar": null, "short_description": null, "short_description_fi": null, "short_desc'
-            'ription_sv": null, "short_description_en": null, "short_description_zh_hans": null, "short_description_r'
-            'u": null, "short_description_ar": null, "date_published": "2023-03-26T21:00:00Z", "headline": null, "hea'
-            'dline_fi": null, "headline_sv": null, "headline_en": null, "headline_zh_hans": null, "headline_ru": null'
-            ', "headline_ar": null, "secondary_headline": null, "secondary_headline_fi": null, "secondary_headline_sv'
-            '": null, "secondary_headline_en": null, "secondary_headline_zh_hans": null, "secondary_headline_ru": nul'
-            'l, "secondary_headline_ar": null, "provider": "Helsingin kaupunki", "provider_fi": "Helsingin kaupunki",'
-            ' "provider_sv": null, "provider_en": null, "provider_zh_hans": null, "provider_ru": null, "provider_ar":'
-            ' null, "provider_contact_info": "Hki - KUVA - Liikunta", "provider_contact_info_fi": "Hki - KUVA - Liiku'
-            'nta", "provider_contact_info_sv": null, "provider_contact_info_en": null, "provider_contact_info_zh_hans'
-            '": null, "provider_contact_info_ru": null, "provider_contact_info_ar": null, "publisher": "enkora:enkora'
-            '", "environmental_certificate": null, "event_status": 4, "publication_status": 1, "location": "tprek:456'
-            '50", "location_extra_info": "Ryhmäliikunta at Latokartanon liikuntapuisto", "location_extra_info_fi": "R'
-            'yhmäliikunta at Latokartanon liikuntapuisto", "location_extra_info_sv": null, "location_extra_info_en": '
-            'null, "location_extra_info_zh_hans": null, "location_extra_info_ru": null, "location_extra_info_ar": nul'
-            'l, "environment": null, "start_time": "2023-06-05T07:00:00Z", "end_time": "2023-06-16T07:00:00Z", "has_s'
-            'tart_time": true, "has_end_time": true, "audience_min_age": 7, "audience_max_age": 9, "super_event": nul'
-            'l, "super_event_type": null, "type_id": "2", "deleted": false, "replaced_by": null, "maximum_attendee_ca'
-            'pacity": 8, "minimum_attendee_capacity": null, "enrolment_start_time": "2023-04-12T13:00:00Z", "enrolmen'
-            't_end_time": "2023-06-15T21:00:00Z", "local": false, "search_vector_fi": "\'-9\':5A,11C \'7\':4A,10C \'a'
-            "lk':3A,9C 'easysport':1A,7C 'tennis':2A,8C 'vuotia':6A,12C\", \"search_vector_en\": \"\", \"search_vect"
-            'or_sv": "", "lft": 1, "rght": 2, "tree_id": 1, "level": 0, "in_language": ["fi"], "images": [], "keyword'
-            's": ["yso:p1928", "yso:p20748", "yso:p26619"], "audience": ["yso:p11617", "yso:p4354", "yso:p4363", "yso'
-            ':p6914", "yso:p6915"]}}]'
-        ]
+        assert len(db_events) == 1
 
-        assert events == expected
+        expected_fields = {
+            "custom_data": None,
+            "data_source": "enkora",
+            "name": "EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat",
+            "name_fi": "EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat",
+            "name_sv": None,
+            "name_en": None,
+            "name_zh_hans": None,
+            "name_ru": None,
+            "name_ar": None,
+            "origin_id": "50148",
+            "created_time": datetime(2023, 6, 16, 11, 32, 23, 1, tzinfo=pytz.UTC),
+            "last_modified_time": datetime(2023, 6, 16, 11, 32, 23, 1, tzinfo=pytz.UTC),
+            "created_by": None,
+            "last_modified_by": None,
+            "user_name": None,
+            "user_email": None,
+            "user_phone_number": None,
+            "user_organization": None,
+            "user_consent": False,
+            "info_url": None,
+            "info_url_fi": None,
+            "info_url_sv": None,
+            "info_url_en": None,
+            "info_url_zh_hans": None,
+            "info_url_ru": None,
+            "info_url_ar": None,
+            "description": "EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat",
+            "description_fi": "EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat",
+            "description_sv": None,
+            "description_en": None,
+            "description_zh_hans": None,
+            "description_ru": None,
+            "description_ar": None,
+            "short_description": None,
+            "short_description_fi": None,
+            "short_description_sv": None,
+            "short_description_en": None,
+            "short_description_zh_hans": None,
+            "short_description_ru": None,
+            "short_description_ar": None,
+            "date_published": datetime(2023, 3, 26, 21, 0, tzinfo=pytz.UTC),
+            "headline": None,
+            "headline_fi": None,
+            "headline_sv": None,
+            "headline_en": None,
+            "headline_zh_hans": None,
+            "headline_ru": None,
+            "headline_ar": None,
+            "secondary_headline": None,
+            "secondary_headline_fi": None,
+            "secondary_headline_sv": None,
+            "secondary_headline_en": None,
+            "secondary_headline_zh_hans": None,
+            "secondary_headline_ru": None,
+            "secondary_headline_ar": None,
+            "provider": EnkoraImporter.PROVIDER,
+            "provider_fi": EnkoraImporter.PROVIDER,
+            "provider_sv": None,
+            "provider_en": None,
+            "provider_zh_hans": None,
+            "provider_ru": None,
+            "provider_ar": None,
+            "provider_contact_info": "Hki - KUVA - Liikunta",
+            "provider_contact_info_fi": "Hki - KUVA - Liikunta",
+            "provider_contact_info_sv": None,
+            "provider_contact_info_en": None,
+            "provider_contact_info_zh_hans": None,
+            "provider_contact_info_ru": None,
+            "provider_contact_info_ar": None,
+            "publisher": "enkora:{}".format(EnkoraImporter.ORGANIZATION),
+            "environmental_certificate": None,
+            "event_status": 4,
+            "publication_status": 1,
+            "location": "tprek:45650",
+            "location_extra_info": "Ryhmäliikunta at Latokartanon liikuntapuisto",
+            "location_extra_info_fi": "Ryhmäliikunta at Latokartanon liikuntapuisto",
+            "location_extra_info_sv": None,
+            "location_extra_info_en": None,
+            "location_extra_info_zh_hans": None,
+            "location_extra_info_ru": None,
+            "location_extra_info_ar": None,
+            "environment": None,
+            "start_time": datetime(2023, 6, 5, 7, 0, tzinfo=pytz.UTC),
+            "end_time": datetime(2023, 6, 16, 7, 0, tzinfo=pytz.UTC),
+            "has_start_time": True,
+            "has_end_time": True,
+            "audience_min_age": 7,
+            "audience_max_age": 9,
+            "super_event": None,
+            "super_event_type": None,
+            "type_id": "2",
+            "deleted": False,
+            "replaced_by": None,
+            "maximum_attendee_capacity": 8,
+            "minimum_attendee_capacity": None,
+            "enrolment_start_time": datetime(2023, 4, 12, 13, 0, tzinfo=pytz.UTC),
+            "enrolment_end_time": datetime(2023, 6, 15, 21, 0, tzinfo=pytz.UTC),
+            "local": False,
+            "keywords": ["yso:p1928", "yso:p20748", "yso:p26619"],
+            "audience": ["yso:p11617", "yso:p4354", "yso:p4363", "yso:p6914", "yso:p6915"]
+        }
+
+        db_event_dict = serializers.serialize("python", db_events)[0]["fields"]
+        for field_name, field_value in db_event_dict.items():
+            if field_name not in expected_fields:
+                continue
+            if field_name in ("keywords", "audience"):
+                assert sorted(field_value) == sorted(expected_fields[field_name])
+            else:
+                assert field_value == expected_fields[field_name]

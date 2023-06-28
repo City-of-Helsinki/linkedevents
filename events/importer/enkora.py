@@ -83,6 +83,9 @@ class EnkoraImporter(Importer):
         AUDIENCE_PSYCHIATRIC_REHAB,
     }
 
+    PROVIDER = "Helsingin kaupungin liikuntapalvelut"
+    ORGANIZATION = "ahjo:u48040020"
+
     service_map = {
         99: {
             "enkora-name": "Ryhmäliikunta",
@@ -735,7 +738,7 @@ class EnkoraImporter(Importer):
             defaults={"name": "Enkora Oy"}, id="enkora"
         )
 
-        org_args = dict(origin_id="enkora", data_source=enkora_ds)
+        org_args = dict(origin_id=self.ORGANIZATION, data_source=enkora_ds)
         defaults = dict(name="Enkora")
         self.organization, _ = Organization.objects.get_or_create(
             defaults=defaults, **org_args
@@ -1112,7 +1115,7 @@ class EnkoraImporter(Importer):
             "end_time": dates["last_event_date"],
             "date_published": dates["public_visibility_start"],
             "external_links": {"fi": {"registration": "https://www.hel.fi/fi"}},
-            "provider": {"fi": "Helsingin kaupunki"},
+            "provider": {"fi": self.PROVIDER},
             "provider_contact_info": {"fi": "Hki - KUVA - Liikunta"},
             "enrolment_start_time": dates["public_reservation_start"],
             "enrolment_end_time": dates["public_reservation_end"],
