@@ -2143,7 +2143,13 @@ class TestEnkoraImporter:
             "enrolment_end_time": datetime(2023, 6, 15, 21, 0, tzinfo=pytz.UTC),
             "local": False,
             "keywords": ["yso:p1928", "yso:p20748", "yso:p26619"],
-            "audience": ["yso:p11617", "yso:p4354", "yso:p4363", "yso:p6914", "yso:p6915"]
+            "audience": [
+                "yso:p11617",
+                "yso:p4354",
+                "yso:p4363",
+                "yso:p6914",
+                "yso:p6915",
+            ],
         }
 
         db_event_dict = serializers.serialize("python", db_events)[0]["fields"]
