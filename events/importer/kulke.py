@@ -6,7 +6,7 @@ import re
 from datetime import datetime, time, timedelta
 from posixpath import join as urljoin
 from textwrap import dedent
-from typing import Iterator, Optional, Union
+from typing import Iterator, Union
 
 import dateutil
 import requests
@@ -1032,14 +1032,10 @@ class KulkeImporter(Importer):
                 )
 
     @staticmethod
-    def generate_documentation_md(
-        output_file: Optional[str] = None,
-    ) -> None:  # noqa: C901
+    def generate_documentation_md() -> str:
         """
         Generate MarkDown document covering Kulke importer logic and mappings.
-        :param output_file: (optional) Output file to write MarkDown document into.
-                            Writes to stdout if not given
-        :return: nothing
+        :return: documentation string
         """
 
         from snakemd import new_doc
@@ -1057,11 +1053,11 @@ class KulkeImporter(Importer):
         # Section about field mapping
         KulkeImporter._md_doc_fields(doc)
 
-        # Section about event locations.
+        # Section about event locations
         KulkeImporter._md_doc_location(doc)
 
         # Section about categories, with subsections about ignored categories,
-        # course categories, and YSO keywords.
+        # course categories, and YSO keywords
         doc.add_heading("Categories", level=2)
         KulkeImporter.md_doc_ignored_categories(doc)
         KulkeImporter._md_doc_courses(doc)
@@ -1070,14 +1066,7 @@ class KulkeImporter(Importer):
         # Section about super events
         KulkeImporter._md_doc_super_events(doc)
 
-        # Finally:
-        if output_file:
-            # Write MD to a file
-            with open(output_file, "wt") as out:
-                out.write(str(doc))
-        else:
-            # Print MD
-            print(doc)
+        return str(doc)
 
     @staticmethod
     def _md_doc_fields(doc):

@@ -1,8 +1,9 @@
 import os
+from pathlib import Path
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
-from django.utils.translation import activate
+from django.utils import translation
 
 from events.importer.base import get_importers
 
@@ -49,17 +50,19 @@ class Command(BaseCommand):
             }
         )
 
-        # Activate the default language
-        # to make sure translated fields are populated correctly.
-        activate(settings.LANGUAGES[0][0])
-
-        name = "generate_documentation_md"
-        method = getattr(importer, name, None)
-        if not method:
+        method_name = "generate_documentation_md"
+        if not (doc_gen_method := getattr(importer, method_name, None)):
             raise CommandError(
                 "Importer {} does not support documentation generation".format(
                     importer.name
                 )
             )
 
-        method(options["output_file"])
+        # Ensure translated fields are populated correctly.
+        with translation.override(settings.LANGUAGES[0][0]):
+            doc_str = doc_gen_method()
+
+        if output_path := options["output_file"]:
+            Path(output_path).write_text(doc_str)
+        else:
+            print(doc_str)

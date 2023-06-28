@@ -850,13 +850,10 @@ class EnkoraImporter(Importer):
         return event.deleted
 
     @staticmethod
-    def generate_documentation_md(
-        output_file: Optional[str] = None,
-    ) -> None:  # noqa: C901
+    def generate_documentation_md() -> str:  # noqa: C901
         """
         Generate MarkDown document out of Enkora importing rules.
-        :param output_file: (optional) Output file to write MarkDown document into.
-        :return: nothing
+        :return: documentation string
         """
         from snakemd import Inline, MDList, new_doc, Paragraph
 
@@ -994,16 +991,8 @@ class EnkoraImporter(Importer):
 
         doc.add_block(MDList(ul))
 
-        # Finally:
-        if output_file:
-            # Write MD to a file
-            with open(output_file, "wt") as out:
-                out.write(str(doc))
-        else:
-            # Print MD
-            print(doc)
-
         # Done!
+        return str(doc)
 
     def _handle_course(self, course: dict) -> dict:
         """
