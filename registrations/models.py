@@ -23,6 +23,13 @@ from registrations.utils import code_validity_duration, get_ui_locales
 User = settings.AUTH_USER_MODEL
 
 
+class SignUpNotificationType:
+    CANCELLATION = "cancellation"
+    CONFIRMATION = "confirmation"
+    CONFIRMATION_TO_WAITING_LIST = "confirmation_to_waiting_list"
+    TRANSFERRED_AS_PARTICIPANT = "transferred_as_participant"
+
+
 class MandatoryFields(models.TextChoices):
     """Choices for mandatory fields on SignUp model."""
 
@@ -361,15 +368,19 @@ class SignUp(models.Model):
             return self.service_language.pk
         return "fi"
 
-    def send_notification(self, confirmation_type):
+    def send_notification(self, notification_type):
         [linked_events_ui_locale, linked_registrations_ui_locale] = get_ui_locales(
             self.service_language
         )
 
         with translation.override(self.get_service_language_pk()):
+            event_name = self.registration.event.name
+            event_type_id = self.registration.event.type_id
+
             email_variables = {
                 "cancellation_code": self.cancellation_code,
-                "event": self.registration.event,
+                "event": event_name,
+                "event_type_id": event_type_id,
                 "linked_events_ui_locale": linked_events_ui_locale,
                 "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
                 "linked_registrations_ui_locale": linked_registrations_ui_locale,
@@ -388,35 +399,41 @@ class SignUp(models.Model):
         if instructions:
             email_variables["instructions"] = instructions
 
-        confirmation_types = {
-            "confirmation": "signup_confirmation.html",
-            "cancellation": "cancellation_confirmation.html",
+        notification_templates = {
+            SignUpNotificationType.CANCELLATION: "cancellation_confirmation.html",
+            SignUpNotificationType.CONFIRMATION: "signup_confirmation.html",
+            SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST: "signup_confirmation_to_waiting_list.html",
+            SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT: "signup_transferred_as_participant.html",
         }
 
         with override(linked_registrations_ui_locale, deactivate=True):
-            to_event_types = {
-                str(Event.TypeId.GENERAL): _("to event"),
-                str(Event.TypeId.COURSE): _("to course"),
-                str(Event.TypeId.VOLUNTEERING): _("to volunteering"),
+            event_type_id = self.registration.event.type_id
+            notification_subjects = {
+                SignUpNotificationType.CANCELLATION: _(
+                    "Registration cancelled - %(event_name)s"
+                )
+                % {"event_name": event_name},
+                SignUpNotificationType.CONFIRMATION: _(
+                    "Registration confirmation - %(event_name)s"
+                )
+                % {"event_name": event_name},
+                SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST: _(
+                    "Waiting list seat reserved - %(event_name)s"
+                )
+                % {"event_name": self.registration.event.name},
+                SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT: _(
+                    "Registration confirmation - %(event_name)s"
+                )
+                % {"event_name": event_name},
             }
-            email_variables["to_event_type"] = to_event_types[
-                self.registration.event.type_id
-            ]
 
             rendered_body = render_to_string(
-                confirmation_types[confirmation_type], email_variables
+                notification_templates[notification_type], email_variables
             )
-
-            confirmation_subjects = {
-                "confirmation": _("Registration confirmation - %(event_name)s")
-                % {"event_name": self.registration.event.name},
-                "cancellation": _("Registration cancelled - %(event_name)s")
-                % {"event_name": self.registration.event.name},
-            }
 
         try:
             send_mail(
-                confirmation_subjects[confirmation_type],
+                notification_subjects[notification_type],
                 rendered_body,
                 f"letest@{Site.objects.get_current().domain}",
                 [self.email],

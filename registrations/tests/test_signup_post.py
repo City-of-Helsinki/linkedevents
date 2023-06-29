@@ -3,11 +3,12 @@ from datetime import date, timedelta
 
 import pytest
 from django.core import mail
+from django.utils import translation
 from django.utils.timezone import localtime
 from freezegun import freeze_time
 from rest_framework import status
 
-from events.models import Language
+from events.models import Event, Language
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import MandatoryFields, SeatReservationCode, SignUp
 
@@ -477,23 +478,97 @@ def test_group_signup_successful_with_waitlist(api_client, registration):
 
 
 @pytest.mark.parametrize(
-    "service_language,expect_subject",
+    "service_language,expected_subject,expected_heading,expected_text",
     [
-        ("en", "Registration confirmation"),
-        ("fi", "Vahvistus ilmoittautumisesta"),
-        ("sv", "Bekräftelse av registrering"),
+        (
+            "en",
+            "Registration confirmation",
+            "Registration to the event Foo has been saved.",
+            "Congratulations! You have successfully registered to the event <strong>Foo</strong>.",
+        ),
+        (
+            "fi",
+            "Vahvistus ilmoittautumisesta",
+            "Ilmoittautuminen tapahtuman Foo jonotuslistaan on tallennettu.",
+            "Onnittelut! Olet onnistuneesti ilmoittautunut tapahtumaan <strong>Foo</strong>.",
+        ),
+        (
+            "sv",
+            "Bekräftelse av registrering",
+            "Anmälan till evenemanget Foo väntelista har sparats.",
+            "Grattis! Du har framgångsrikt registrerat dig till evenemanget <strong>Foo</strong>.",
+        ),
     ],
 )
 @pytest.mark.django_db
 def test_email_sent_on_successful_signup(
-    api_client, expect_subject, languages, registration, service_language
+    api_client,
+    expected_heading,
+    expected_subject,
+    expected_text,
+    languages,
+    registration,
+    service_language,
 ):
+    with translation.override(service_language):
+        registration.event.type_id = Event.TypeId.GENERAL
+        registration.event.name = "Foo"
+        registration.event.save()
+
+        reservation = SeatReservationCode.objects.create(
+            registration=registration, seats=1
+        )
+        signup_data = {
+            "name": "Michael Jackson",
+            "date_of_birth": "2011-04-07",
+            "email": "test@test.com",
+            "service_language": service_language,
+        }
+        signups_data = {
+            "registration": registration.id,
+            "reservation_code": reservation.code,
+            "signups": [signup_data],
+        }
+        response = assert_create_signups(api_client, signups_data)
+        assert signup_data["name"] in response.data["attending"]["people"][0]["name"]
+        #  assert that the email was sent
+        assert mail.outbox[0].subject.startswith(expected_subject)
+        assert expected_heading in str(mail.outbox[0].alternatives[0])
+        assert expected_text in str(mail.outbox[0].alternatives[0])
+
+
+@pytest.mark.parametrize(
+    "event_type,expected_heading,expected_text",
+    [
+        (
+            Event.TypeId.GENERAL,
+            "Registration to the event Foo has been saved.",
+            "Congratulations! You have successfully registered to the event <strong>Foo</strong>.",
+        ),
+        (
+            Event.TypeId.COURSE,
+            "Registration to the course Foo has been saved.",
+            "Congratulations! You have successfully registered to the course <strong>Foo</strong>.",
+        ),
+        (
+            Event.TypeId.VOLUNTEERING,
+            "Registration to the volunteering Foo has been saved.",
+            "Congratulations! You have successfully registered to the volunteering <strong>Foo</strong>.",
+        ),
+    ],
+)
+@pytest.mark.django_db
+def test_confirmation_template_has_correct_text_per_event_type(
+    api_client, event_type, expected_heading, expected_text, languages, registration
+):
+    registration.event.type_id = event_type
+    registration.event.name = "Foo"
+    registration.event.save()
     reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
     signup_data = {
         "name": "Michael Jackson",
-        "date_of_birth": "2011-04-07",
         "email": "test@test.com",
-        "service_language": service_language,
+        "service_language": "en",
     }
     signups_data = {
         "registration": registration.id,
@@ -503,8 +578,8 @@ def test_email_sent_on_successful_signup(
     response = assert_create_signups(api_client, signups_data)
     assert signup_data["name"] in response.data["attending"]["people"][0]["name"]
     #  assert that the email was sent
-    assert mail.outbox[0].subject.startswith(expect_subject)
-    assert len(mail.outbox) == 1
+    assert expected_heading in str(mail.outbox[0].alternatives[0])
+    assert expected_text in str(mail.outbox[0].alternatives[0])
 
 
 @pytest.mark.parametrize(
@@ -534,7 +609,6 @@ def test_confirmation_message_is_shown_in_service_language(
     reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
     signup_data = {
         "name": "Michael Jackson",
-        "date_of_birth": "2011-04-07",
         "email": "test@test.com",
         "service_language": service_language,
     }
@@ -546,3 +620,117 @@ def test_confirmation_message_is_shown_in_service_language(
 
     assert_create_signups(api_client, signups_data)
     assert confirmation_message in str(mail.outbox[0].alternatives[0])
+
+
+@pytest.mark.parametrize(
+    "service_language,expected_subject,expected_heading,expected_text",
+    [
+        (
+            "en",
+            "Waiting list seat reserved",
+            "Registration for the event Foo waiting list has been saved.",
+            "You have successfully registered for the event <strong>Foo</strong> waiting list.",
+        ),
+        (
+            "fi",
+            "Paikka jonotuslistalla varattu",
+            "Ilmoittautuminen tapahtuman Foo jonotuslistaan on tallennettu.",
+            "Olet onnistuneesti ilmoittautunut tapahtuman <strong>Foo</strong> jonotuslistalle.",
+        ),
+        (
+            "sv",
+            "Väntelista plats reserverad",
+            "Anmälan till evenemanget Foo väntelista har sparats.",
+            "Du har framgångsrikt registrerat dig för evenemangets <strong>Foo</strong> väntelista.",
+        ),
+    ],
+)
+@pytest.mark.django_db
+def test_different_email_sent_if_user_is_added_to_waiting_list(
+    api_client,
+    expected_heading,
+    expected_subject,
+    expected_text,
+    languages,
+    registration,
+    service_language,
+    signup,
+):
+    with translation.override(service_language):
+        registration.event.type_id = Event.TypeId.GENERAL
+        registration.event.name = "Foo"
+        registration.event.save()
+        registration.maximum_attendee_capacity = 1
+        registration.save()
+        reservation = SeatReservationCode.objects.create(
+            registration=registration, seats=1
+        )
+        signup_data = {
+            "name": "Michael Jackson",
+            "email": "test@test.com",
+            "service_language": service_language,
+        }
+        signups_data = {
+            "registration": registration.id,
+            "reservation_code": reservation.code,
+            "signups": [signup_data],
+        }
+        response = assert_create_signups(api_client, signups_data)
+        assert signup_data["name"] in response.data["waitlisted"]["people"][0]["name"]
+        #  assert that the email was sent
+        assert mail.outbox[0].subject.startswith(expected_subject)
+        assert expected_heading in str(mail.outbox[0].alternatives[0])
+        assert expected_text in str(mail.outbox[0].alternatives[0])
+
+
+@pytest.mark.parametrize(
+    "event_type,expected_heading,expected_text",
+    [
+        (
+            Event.TypeId.GENERAL,
+            "Registration for the event Foo waiting list has been saved.",
+            "You have successfully registered for the event <strong>Foo</strong> waiting list.",
+        ),
+        (
+            Event.TypeId.COURSE,
+            "Registration for the course Foo waiting list has been saved.",
+            "You have successfully registered for the course <strong>Foo</strong> waiting list.",
+        ),
+        (
+            Event.TypeId.VOLUNTEERING,
+            "Registration for the volunteering Foo waiting list has been saved.",
+            "You have successfully registered for the volunteering <strong>Foo</strong> waiting list.",
+        ),
+    ],
+)
+@pytest.mark.django_db
+def test_confirmation_to_waiting_list_template_has_correct_text_per_event_type(
+    api_client,
+    event_type,
+    expected_heading,
+    expected_text,
+    languages,
+    registration,
+    signup,
+):
+    registration.event.type_id = event_type
+    registration.event.name = "Foo"
+    registration.event.save()
+    registration.maximum_attendee_capacity = 1
+    registration.save()
+    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    signup_data = {
+        "name": "Michael Jackson",
+        "email": "test@test.com",
+        "service_language": "en",
+    }
+    signups_data = {
+        "registration": registration.id,
+        "reservation_code": reservation.code,
+        "signups": [signup_data],
+    }
+    response = assert_create_signups(api_client, signups_data)
+    assert signup_data["name"] in response.data["waitlisted"]["people"][0]["name"]
+    #  assert that the email was sent
+    assert expected_heading in str(mail.outbox[0].alternatives[0])
+    assert expected_text in str(mail.outbox[0].alternatives[0])

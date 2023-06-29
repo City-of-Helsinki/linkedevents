@@ -763,9 +763,9 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
         VOLUNTEERING = 3
 
     TYPE_IDS = (
-        (TypeId.GENERAL, _("General")),
-        (TypeId.COURSE, _("Course")),
-        (TypeId.VOLUNTEERING, _("Volunteering")),
+        (TypeId.GENERAL, "General"),
+        (TypeId.COURSE, "Course"),
+        (TypeId.VOLUNTEERING, "Volunteering"),
     )
 
     class EventEnvironment(models.TextChoices):

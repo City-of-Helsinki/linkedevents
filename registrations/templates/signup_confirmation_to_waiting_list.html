@@ -5,19 +5,16 @@
   <tr>
     <td class="content-cell" style="padding:0;margin:0;text-align:left;">
       <div class="content-container" style="padding:0 16px;">
-        <h1 style="color:#1a1a1a;font-size:36px;line-height:43px;font-weight:700;margin:0 0 12px;">
-          {% blocktranslate %}Welcome {{username}}{% endblocktranslate %}
-        </h1>
         <h2 style="color:#1a1a1a;font-size:24px;font-weight:700;line-height:29px;margin:0;">
           <!-- Event -->
           {% if event_type_id == "1" %}
-          {% blocktranslate %}Registration to the event {{event}} has been saved.{% endblocktranslate %}
+          {% blocktranslate %}Registration for the event {{event}} waiting list has been saved.{% endblocktranslate %}
           <!-- Course -->
           {% elif event_type_id == "2" %}
-          {% blocktranslate %}Registration to the course {{event}} has been saved.{% endblocktranslate %}
+          {% blocktranslate %}Registration for the course {{event}} waiting list has been saved.{% endblocktranslate %}
           <!-- Volunteering -->
           {% elif event_type_id == "3" %}
-          {% blocktranslate %}Registration to the volunteering {{event}} has been saved.{% endblocktranslate %}
+          {% blocktranslate %}Registration for the volunteering {{event}} waiting list has been saved.{% endblocktranslate %}
           {% endif %}
         </h2>
         <div class="divider" style="background:#0000bf;border-radius:0px;height:3px;width:100%;margin:24px 0;"></div>
@@ -25,20 +22,18 @@
           <p style="color:#1a1a1a;font-size:16px;font-weight:normal;line-height:24px;margin:0px;">
             <!-- Event -->
             {% if event_type_id == "1" %}
-            {% blocktranslate %}Congratulations! You have successfully registered to the event <strong>{{event}}</strong>.{% endblocktranslate %}
+            {% blocktranslate %}You have successfully registered for the event <strong>{{event}}</strong> waiting list.{% endblocktranslate %}
             <!-- Course -->
             {% elif event_type_id == "2" %}
-            {% blocktranslate %}Congratulations! You have successfully registered to the course <strong>{{event}}</strong>.{% endblocktranslate %}
+            {% blocktranslate %}You have successfully registered for the course <strong>{{event}}</strong> waiting list.{% endblocktranslate %}
             <!-- Volunteering -->
             {% elif event_type_id == "3" %}
-            {% blocktranslate %}Congratulations! You have successfully registered to the volunteering <strong>{{event}}</strong>.{% endblocktranslate %}
+            {% blocktranslate %}You have successfully registered for the volunteering <strong>{{event}}</strong> waiting list.{% endblocktranslate %}
             {% endif %}
           </p>
-          {% if confirmation_message %}
-            <p style="color:#1a1a1a;font-size:16px;font-weight:normal;line-height:24px;margin:0px;">
-              {{confirmation_message}}
-            </p>
-          {% endif %}
+          <p style="color:#1a1a1a;font-size:16px;font-weight:normal;line-height:24px;margin:0px;">
+            {% blocktranslate %}You will be transferred as a participant automatically when a seat becomes available.{% endblocktranslate %}
+          </p>
         </div>
         <div class="cta-button-wrapper" style="margin: 0px 0px 40px">
           <a href="{{linked_registrations_ui_url}}/{{linked_registrations_ui_locale}}/registration/{{registration_id}}/enrolment/{{signup_id}}/{{cancellation_code}}/edit" target="_blank" rel="noopener" class="cta-button" style="background:#0000bf;border-radius:0px;border:none;height:56px;text-align:center;text-decoration:none;vertical-align:middle;padding:16px 24px;box-sizing:border-box;display:inline-block;">

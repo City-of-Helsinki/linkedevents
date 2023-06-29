@@ -11,7 +11,12 @@ from rest_framework.fields import DateTimeField
 
 from events.models import Language
 from registrations.exceptions import ConflictException
-from registrations.models import Registration, SeatReservationCode, SignUp
+from registrations.models import (
+    Registration,
+    SeatReservationCode,
+    SignUp,
+    SignUpNotificationType,
+)
 from registrations.utils import code_validity_duration
 
 
@@ -48,7 +53,7 @@ class SignUpSerializer(serializers.ModelSerializer):
 
         if (attendee_capacity is None) or (already_attending < attendee_capacity):
             signup = super().create(validated_data)
-            signup.send_notification("confirmation")
+            signup.send_notification(SignUpNotificationType.CONFIRMATION)
             return signup
         elif (waiting_list_capacity is None) or (
             already_waitlisted < waiting_list_capacity
@@ -56,6 +61,9 @@ class SignUpSerializer(serializers.ModelSerializer):
             signup = super().create(validated_data)
             signup.attendee_status = SignUp.AttendeeStatus.WAITING_LIST
             signup.save()
+            signup.send_notification(
+                SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST
+            )
             return signup
         else:
             raise DRFPermissionDenied(_("The waiting list is already full"))
