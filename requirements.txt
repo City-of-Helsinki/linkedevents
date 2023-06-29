@@ -101,7 +101,7 @@ django-mptt==0.14.0
     #   -r requirements.in
     #   django-munigeo
     #   django-orghierarchy
-django-munigeo==0.3.8
+django-munigeo @ git+https://github.com/City-of-Helsinki/django-munigeo@47fd86444fcb095d868911056e344a4fc06578b7
     # via -r requirements.in
 django-orghierarchy==0.3.0
     # via -r requirements.in

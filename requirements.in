@@ -14,7 +14,8 @@ django-jinja==2.10.2
 django-leaflet
 django-modeltranslation>=0.18.4
 django-mptt>=0.10.0
-django-munigeo>=0.3.8
+# TODO switch to a PyPi version when one that contains this commit is available
+django-munigeo @ git+https://github.com/City-of-Helsinki/django-munigeo@47fd86444fcb095d868911056e344a4fc06578b7
 django-orghierarchy
 django-redis
 django-reversion
