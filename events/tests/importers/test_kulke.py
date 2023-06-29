@@ -1,10 +1,14 @@
 import os
-from datetime import time
+from datetime import time, timedelta
+from unittest.mock import patch
 
 import pytest
 from django.test import TestCase
+from django.utils import timezone
 
 from events.importer.kulke import KulkeImporter, parse_age_range, parse_course_time
+from events.models import Event, EventAggregate, EventAggregateMember
+from events.tests.factories import EventFactory
 
 
 @pytest.mark.django_db
@@ -59,6 +63,29 @@ def test_parse_course_time_returns_correct_result(test_input, expected):
 
 
 class TestKulkeImporter(TestCase):
+    def setUp(self) -> None:
+        with patch.object(KulkeImporter, "fetch_kulke_categories", return_value={}):
+            self.importer = KulkeImporter(options={})
+        self.data_source = self.importer.data_source
+
+    def _create_super_event(self, events: list[Event]) -> Event:
+        aggregate = EventAggregate.objects.create()
+        super_event = EventFactory(
+            super_event_type=Event.SuperEventType.RECURRING,
+            data_source=self.data_source,
+            id="linkedevents:agg-{}".format(aggregate.id),
+        )
+        super_event.save()
+        aggregate.super_event = super_event
+        aggregate.save()
+        event_aggregates = [
+            EventAggregateMember(event=event, event_aggregate=aggregate)
+            for event in events
+        ]
+        EventAggregateMember.objects.bulk_create(event_aggregates)
+        return super_event
+
+    @pytest.mark.django_db
     def test_html_format(self):
         text = (
             "Lorem ipsum dolor sit amet, consectetur adipiscing elit.{0}"
@@ -79,3 +106,156 @@ class TestKulkeImporter(TestCase):
             "<p>Vestibulum lacinia interdum nisi eu vehicula.</p>"
         )
         self.assertEqual(html_text, expected_text)
+
+    @pytest.mark.django_db
+    def test__update_super_event(self):
+        now = timezone.now()
+        event_1 = EventFactory(
+            name="Toistuva tapahtuma 1",
+            name_en="Recurring Event 1",
+            start_time=now - timedelta(hours=24),
+            end_time=now - timedelta(hours=23),
+            data_source=self.data_source,
+        )
+        event_2 = EventFactory(
+            name="Toistuva tapahtuma 2",
+            name_en="Recurring Event 2",
+            start_time=now,
+            end_time=now + timedelta(hours=1),
+            data_source=self.data_source,
+        )
+        super_event = self._create_super_event([event_1, event_2])
+
+        self.importer._update_super_event(super_event, [event_1, event_2])
+        # The super event should have the common part for the name
+        self.assertEqual(super_event.name, "Toistuva tapahtuma")
+        self.assertEqual(super_event.name_en, "Recurring Event")
+        # The start/end time should be the start/end time of the first/last event
+        self.assertEqual(super_event.start_time, event_1.start_time)
+        self.assertEqual(super_event.end_time, event_2.end_time)
+
+    @pytest.mark.django_db
+    def test__update_super_event_default_name(self):
+        now = timezone.now()
+        event_1 = EventFactory(
+            name="Joku tapahtuma",
+            name_en="Some Event",
+            start_time=now - timedelta(hours=24),
+            end_time=now - timedelta(hours=23),
+            data_source=self.data_source,
+        )
+        event_2 = EventFactory(
+            name="Ei yhteistä osaa nimessä",
+            name_en="No common part in the name",
+            start_time=now,
+            end_time=now + timedelta(hours=1),
+            data_source=self.data_source,
+        )
+        super_event = self._create_super_event([event_1, event_2])
+
+        self.importer._update_super_event(super_event, [event_1, event_2])
+        # If the name does not have a common part, default to the first event's name
+        self.assertEqual(super_event.name, "Joku tapahtuma")
+        self.assertEqual(super_event.name_en, "Some Event")
+
+    @pytest.mark.django_db
+    def test__save_super_event(self):
+        event_1 = EventFactory(id="kulke:1", data_source=self.data_source, origin_id=1)
+        event_2 = EventFactory(id="kulke:2", data_source=self.data_source, origin_id=2)
+        event_3 = EventFactory(id="kulke:3", data_source=self.data_source, origin_id=3)
+
+        # Create a super event with all three events
+        self.importer._save_super_event(
+            {event_1.origin_id, event_2.origin_id, event_3.origin_id}
+        )
+
+        event_1.refresh_from_db()
+        super_event = event_1.super_event
+        self.assertEqual(
+            set(member.event_id for member in super_event.aggregate.members.all()),
+            {event_1.id, event_2.id, event_3.id},
+        )
+
+        # Simulate a situation where one of the events is no longer associated with the super event in Elis
+        self.importer._save_super_event({event_1.origin_id, event_2.origin_id})
+
+        event_1.refresh_from_db()
+        super_event = event_1.super_event
+        self.assertEqual(
+            set(member.event_id for member in super_event.aggregate.members.all()),
+            {event_1.id, event_2.id},
+        )
+        self.assertTrue(Event.objects.filter(id=event_3.id).exists())
+
+        # If there is only one event left in the super event, the super event should be deleted
+        # Deleting the event itself is not the responsibility of `_save_super_event`
+        self.importer._save_super_event({event_1.origin_id})
+        event_1.refresh_from_db()
+        self.assertIsNone(event_1.super_event)
+        self.assertTrue(Event.objects.filter(id=event_2.id).exists())
+        self.assertTrue(Event.objects.filter(id=event_3.id).exists())
+
+    @pytest.mark.django_db
+    def test__handle_removed_events(self):
+        """Test that removing"""
+        now = timezone.now()
+        # Event that exists in the DB but not in  Elis -- will be removed
+        event_1 = EventFactory(
+            data_source=self.data_source, origin_id=1, start_time=now
+        )
+        # Event that exists in Elis -- won't be removed
+        event_2 = EventFactory(
+            data_source=self.data_source, origin_id=2, start_time=now
+        )
+        # Old event, outside of the date range of the Elis search -- won't be removed
+        event_3 = EventFactory(
+            data_source=self.data_source,
+            origin_id=3,
+            start_time=now - timedelta(days=90),
+        )
+
+        self.importer._handle_removed_events(
+            elis_event_ids=[event_2.origin_id],
+            begin_date=now - timedelta(days=60),
+        )
+
+        self.assertFalse(Event.objects.filter(id=event_1.id).exists())
+        self.assertTrue(Event.objects.filter(id=event_2.id).exists())
+        self.assertTrue(Event.objects.filter(id=event_3.id).exists())
+
+    @pytest.mark.django_db
+    def test__handle_removed_events_superevent(self):
+        now = timezone.now()
+        # This super event is not in Elis. The super event with all its member events should be removed.
+        super_1_event_1 = EventFactory(
+            data_source=self.data_source, origin_id=1, start_time=now
+        )
+        super_1_event_2 = EventFactory(
+            data_source=self.data_source, origin_id=2, start_time=now
+        )
+        super_1 = self._create_super_event([super_1_event_1, super_1_event_2])
+
+        # This super event is in Elis. It should not be removed.
+        super_2_event_1 = EventFactory(
+            data_source=self.data_source, origin_id=3, start_time=now
+        )
+        super_2_event_2 = EventFactory(
+            data_source=self.data_source, origin_id=4, start_time=now
+        )
+        super_2 = self._create_super_event([super_2_event_1, super_2_event_2])
+
+        # This super event is empty to begin with -- it should be removed
+        super_3 = self._create_super_event([])
+
+        self.importer._handle_removed_events(
+            elis_event_ids=[super_2_event_1.origin_id, super_2_event_2.origin_id],
+            begin_date=now - timedelta(days=60),
+        )
+
+        self.assertFalse(Event.objects.filter(id=super_1_event_1.id).exists())
+        self.assertFalse(Event.objects.filter(id=super_1_event_2.id).exists())
+        self.assertFalse(Event.objects.filter(id=super_1.id).exists())
+        self.assertTrue(Event.objects.filter(id=super_2_event_1.id).exists())
+        self.assertTrue(Event.objects.filter(id=super_2_event_2.id).exists())
+        self.assertTrue(Event.objects.filter(id=super_2.id).exists())
+        self.assertFalse(Event.objects.filter(id=super_3.id).exists())
