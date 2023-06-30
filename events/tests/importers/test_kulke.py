@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from events.importer.kulke import KulkeImporter, parse_age_range, parse_course_time
 from events.models import Event, EventAggregate, EventAggregateMember
-from events.tests.factories import EventFactory
+from events.tests.factories import EventFactory, KeywordFactory
 
 
 @pytest.mark.django_db
@@ -110,20 +110,29 @@ class TestKulkeImporter(TestCase):
     @pytest.mark.django_db
     def test__update_super_event(self):
         now = timezone.now()
+        kw1, kw2, kw3 = KeywordFactory.create_batch(3, data_source=self.data_source)
         event_1 = EventFactory(
             name="Toistuva tapahtuma 1",
             name_en="Recurring Event 1",
+            description="Long description",
+            short_description="Short description",
             start_time=now - timedelta(hours=24),
             end_time=now - timedelta(hours=23),
             data_source=self.data_source,
         )
+        event_1.keywords.add(kw1, kw2)
+        event_1.save()
         event_2 = EventFactory(
             name="Toistuva tapahtuma 2",
             name_en="Recurring Event 2",
+            description=event_1.description,
+            short_description="A different short description",
             start_time=now,
             end_time=now + timedelta(hours=1),
             data_source=self.data_source,
         )
+        event_2.keywords.add(kw2, kw3)
+        event_2.save()
         super_event = self._create_super_event([event_1, event_2])
 
         self.importer._update_super_event(super_event, [event_1, event_2])
@@ -133,6 +142,14 @@ class TestKulkeImporter(TestCase):
         # The start/end time should be the start/end time of the first/last event
         self.assertEqual(super_event.start_time, event_1.start_time)
         self.assertEqual(super_event.end_time, event_2.end_time)
+        # The super event should have the common subset of keywords
+        self.assertEqual(
+            set(super_event.keywords.all().values_list("id", flat=True)), {str(kw2.id)}
+        )
+        # A field that's the same for all member events should be populated in the super event
+        self.assertEqual(super_event.description, event_1.description)
+        # No common value => field should be empty in the super event
+        self.assertIsNone(super_event.short_description)
 
     @pytest.mark.django_db
     def test__update_super_event_default_name(self):

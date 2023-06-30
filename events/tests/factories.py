@@ -43,6 +43,8 @@ class DefaultOrganizationEventFactory(EventFactory):
 
 
 class KeywordFactory(factory.django.DjangoModelFactory):
+    name = factory.Faker("bs")
+
     data_source = factory.SubFactory(DataSourceFactory)
     publisher = factory.SubFactory(OrganizationFactory)
 
