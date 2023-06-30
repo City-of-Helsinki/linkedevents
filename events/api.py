@@ -18,7 +18,6 @@ import django_filters
 import pytz
 import regex
 from django.conf import settings
-from django.contrib.auth.models import AnonymousUser
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
 from django.contrib.postgres.search import SearchQuery, TrigramSimilarity
@@ -1487,18 +1486,54 @@ class OrganizationListSerializer(OrganizationBaseSerializer):
         return obj.regular_users.count() > 0
 
 
+class OrganizationUserField(serializers.SlugRelatedField):
+    def __init__(self, **kwargs):
+        super().__init__(queryset=User.objects.all(), slug_field="username", **kwargs)
+
+    def to_representation(self, obj):
+        return UserSerializer(obj).data
+
+
 class OrganizationDetailSerializer(OrganizationListSerializer):
-    regular_users = serializers.SerializerMethodField()
-    admin_users = serializers.SerializerMethodField()
+    user_fields = ["admin_users", "regular_users"]
 
-    def validate(self, data):
-        if Organization.objects.filter(id=str(self.request.data["id"])):
-            raise DRFPermissionDenied(
-                f"Organization with id {self.request.data['id']} already exists."
-            )
-        return super().validate(data)
+    admin_users = OrganizationUserField(
+        many=True,
+        required=False,
+    )
 
-    def connected_organizations(self, connected_orgs, created_org):
+    regular_users = OrganizationUserField(
+        many=True,
+        required=False,
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        instance = self.instance
+        user = self.context["user"]
+
+        if instance:
+            self.fields["data_source"].read_only = True
+            self.fields["origin_id"].read_only = True
+
+            # Show admin users and regular users only to admins
+            if user.is_anonymous or not user.is_admin_of(instance):
+                for field in self.user_fields:
+                    self.fields.pop(field, None)
+
+    def validate_parent_organization(self, value):
+        if value:
+            user = self.request.user
+
+            if user.is_anonymous or not utils.organization_can_be_edited_by(
+                value, user
+            ):
+                raise DRFPermissionDenied(_("User has no rights to this organization"))
+
+        return value
+
+    def connect_organizations(self, connected_orgs, created_org):
         internal_types = {
             "sub_organizations": Organization.NORMAL,
             "affiliated_organizations": Organization.AFFILIATED,
@@ -1510,6 +1545,13 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
             created_org.children.add(*conn_org)
 
     def create(self, validated_data):
+        # Add current user to admin users
+        if "admin_users" not in validated_data:
+            validated_data["admin_users"] = []
+
+        if self.user not in validated_data["admin_users"]:
+            validated_data["admin_users"].append(self.user)
+
         connected_organizations = ["sub_organizations", "affiliated_organizations"]
         conn_orgs_in_request = {}
         for org_type in connected_organizations:
@@ -1523,44 +1565,19 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
                     raise ParseError(
                         f"{org_type} should be a list, you provided {type(self.request.data[org_type])}"
                     )
-        if "parent_organization" in self.request.data.keys():
-            user = self.request.user
-            parent_id = (
-                self.request.data["parent_organization"].rstrip("/").split("/")[-1]
-            )
-            potential_parent = Organization.objects.filter(id=parent_id)
-            if potential_parent.count() == 0:
-                raise ParseError(
-                    f"{self.request.data['parent_organization']} does not exist."
-                )
-            if user:
-                if utils.organization_can_be_edited_by(potential_parent[0], user):
-                    pass
-                else:
-                    raise DRFPermissionDenied("User has no rights to this organization")
-            else:
-                raise DRFPermissionDenied(
-                    "User must be logged in to create organizations."
-                )
+
         org = super().create(validated_data)
-        self.connected_organizations(conn_orgs_in_request, org)
+        self.connect_organizations(conn_orgs_in_request, org)
+
         return org
 
-    def get_regular_users(self, obj):
-        user = self.context["user"]
-        if not isinstance(user, AnonymousUser) and user.is_admin_of(obj):
-            return UserSerializer(
-                obj.regular_users.all(), read_only=True, many=True
-            ).data
-        else:
-            return []
+    def update(self, instance, validated_data):
+        # Prevent user to accidentally remove himself from admin
+        if validated_data.get("admin_users") is not None:
+            admin_users = validated_data.pop("admin_users")
+            instance.admin_users.set([*admin_users, self.user])
 
-    def get_admin_users(self, obj):
-        user = self.context["user"]
-        if not isinstance(user, AnonymousUser) and user.is_admin_of(obj):
-            return UserSerializer(obj.admin_users.all(), read_only=True, many=True).data
-        else:
-            return []
+        return super().update(instance, validated_data)
 
     class Meta:
         model = Organization
@@ -1587,89 +1604,17 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
         )
 
 
-class OrganizationUpdateSerializer(OrganizationListSerializer):
-    regular_users = serializers.SerializerMethodField()
-    admin_users = serializers.SerializerMethodField()
-
-    def __init__(self, instance=None, context=None, *args, **kwargs):
-        instance.can_be_edited_by = utils.organization_can_be_edited_by
-        if not instance.can_be_edited_by(instance, context["request"].user):
-            raise DRFPermissionDenied(
-                f"User {context['request'].user} can't modify {instance}"
-            )
-        self.method = "PUT"
-        self.hide_ld_context = True
-        self.skip_fields = ""
-        self.user = context["request"].user
-        if "data_source" not in context["request"].data.keys():
-            context["request"].data["data_source"] = instance.data_source
-        if "origin_id" not in context["request"].data.keys():
-            context["request"].data["origin_id"] = instance.origin_id
-        if "name" not in context["request"].data.keys():
-            context["request"].data["name"] = instance.name
-        super(LinkedEventsSerializer, self).__init__(
-            instance=instance, context=context, **kwargs
-        )
-        self.admin_users = context["request"].data.pop("admin_users", {"username": ""})
-        self.regular_users = context["request"].data.pop(
-            "regular_users", {"username": ""}
-        )
-
-    def update(self, instance, validated_data):
-        if isinstance(self.admin_users, dict) and isinstance(self.regular_users, dict):
-            pass
-        else:
-            raise ParseError("Dictionaries expected for admin and regular_users.")
-        if ("username" not in self.admin_users.keys()) or (
-            "username" not in self.regular_users.keys()
-        ):
-            raise ParseError(
-                "Username field should be used to pass admin_users and regular_users"
-            )
-
-        admin_users = User.objects.filter(username__in=self.admin_users["username"])
-        regular_users = User.objects.filter(username__in=self.regular_users["username"])
-        instance.admin_users.clear()
-        instance.admin_users.add(*admin_users)
-        instance.admin_users.add(
-            self.user
-        )  # so that the user does not accidentally remove himself from admin
-        instance.regular_users.clear()
-        instance.regular_users.add(*regular_users)
-        super().update(instance, validated_data)
-        return instance
-
-    def get_regular_users(self, obj):
-        return UserSerializer(obj.regular_users.all(), read_only=True, many=True).data
-
-    def get_admin_users(self, obj):
-        return UserSerializer(obj.admin_users.all(), read_only=True, many=True).data
-
-    class Meta:
-        model = Organization
-        fields = "__all__"
-
-
 class OrganizationViewSet(
     UserDataSourceAndOrganizationMixin,
     JSONAPIViewMixin,
-    mixins.RetrieveModelMixin,
-    mixins.UpdateModelMixin,
-    mixins.DestroyModelMixin,
-    mixins.ListModelMixin,
-    mixins.CreateModelMixin,
-    viewsets.GenericViewSet,
+    viewsets.ModelViewSet,
 ):
     queryset = Organization.objects.all()
     permission_classes = (DataSourceOrganizationEditPermission,)
 
     def get_serializer_class(self, *args, **kwargs):
-        if self.action == "retrieve":
+        if self.action in ["create", "retrieve", "update"]:
             return OrganizationDetailSerializer
-        elif self.action == "create":
-            return OrganizationDetailSerializer
-        elif self.action == "update":
-            return OrganizationUpdateSerializer
         else:
             return OrganizationListSerializer
 
