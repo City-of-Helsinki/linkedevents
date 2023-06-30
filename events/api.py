@@ -1544,7 +1544,7 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
         # Add current user to admin users
         if "admin_users" not in validated_data:
             validated_data["admin_users"] = []
-        
+
         if self.user not in validated_data["admin_users"]:
             validated_data["admin_users"].append(self.user)
 

@@ -8,6 +8,7 @@ from events.tests.utils import versioned_reverse as reverse
 organization_name = "test org"
 edited_organization_name = "new name"
 
+
 def organization_id(pk):
     obj_id = reverse(OrganizationDetailSerializer.view_name, kwargs={"pk": pk})
     return obj_id
@@ -79,7 +80,9 @@ def test_anonymous_user_cannot_see_organization_users(api_client, organization, 
 
 
 @pytest.mark.django_db
-def test_regular_user_cannot_see_organization_users(organization, user, user_api_client):
+def test_regular_user_cannot_see_organization_users(
+    organization, user, user_api_client
+):
     organization.regular_users.add(user)
     organization.admin_users.remove(user)
 
@@ -89,9 +92,7 @@ def test_regular_user_cannot_see_organization_users(organization, user, user_api
 
 
 @pytest.mark.django_db
-def test_admin_user_can_create_organization(
-    data_source, organization, user_api_client
-):
+def test_admin_user_can_create_organization(data_source, organization, user_api_client):
     origin_id = "test_organization2"
     payload = {
         "data_source": data_source.id,
@@ -105,9 +106,7 @@ def test_admin_user_can_create_organization(
 
 
 @pytest.mark.django_db
-def test_cannot_create_organization_with_existing_id(
-    organization, user_api_client
-):
+def test_cannot_create_organization_with_existing_id(organization, user_api_client):
     payload = {
         "data_source": organization.data_source.id,
         "origin_id": organization.origin_id,
@@ -229,7 +228,9 @@ def test_create_organization_with_affiliated_organizations(
 
 
 @pytest.mark.django_db
-def test_user_is_automatically_added_to_admins_users(data_source, user, user_api_client):
+def test_user_is_automatically_added_to_admins_users(
+    data_source, user, user_api_client
+):
     origin_id = "test_organization2"
     payload = {
         "data_source": data_source.id,
@@ -243,7 +244,9 @@ def test_user_is_automatically_added_to_admins_users(data_source, user, user_api
 
 
 @pytest.mark.django_db
-def test_admin_user_add_users_to_new_organization(data_source, user, user2, user_api_client):
+def test_admin_user_add_users_to_new_organization(
+    data_source, user, user2, user_api_client
+):
     origin_id = "test_organization2"
     payload = {
         "data_source": data_source.id,
@@ -289,7 +292,7 @@ def test_anonymous_user_cannot_update_organization(api_client, organization):
 def test_regular_user_cannot_update_organization(organization, user, user_api_client):
     user.get_default_organization().regular_users.add(user)
     user.get_default_organization().admin_users.remove(user)
-    
+
     payload = {
         "id": organization.id,
         "name": edited_organization_name,
@@ -315,7 +318,9 @@ def test_admin_user_from_other_organization_cannot_update_organization(
 
 
 @pytest.mark.django_db
-def test_admin_user_can_edit_users(organization, super_user, user, user2, user_api_client):
+def test_admin_user_can_edit_users(
+    organization, super_user, user, user2, user_api_client
+):
     organization.admin_users.add(super_user)
 
     payload = {
