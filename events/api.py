@@ -1482,7 +1482,7 @@ class OrganizationListSerializer(OrganizationBaseSerializer):
         return obj.regular_users.count() > 0
 
 
-class OrganizationUsersField(serializers.SlugRelatedField):
+class OrganizationUserField(serializers.SlugRelatedField):
     def __init__(self, **kwargs):
         super().__init__(queryset=User.objects.all(), slug_field="username", **kwargs)
 
@@ -1493,12 +1493,12 @@ class OrganizationUsersField(serializers.SlugRelatedField):
 class OrganizationDetailSerializer(OrganizationListSerializer):
     user_fields = ["admin_users", "regular_users"]
 
-    admin_users = OrganizationUsersField(
+    admin_users = OrganizationUserField(
         many=True,
         required=False,
     )
 
-    regular_users = OrganizationUsersField(
+    regular_users = OrganizationUserField(
         many=True,
         required=False,
     )
