@@ -207,7 +207,7 @@ pycparser==2.21
     # via cffi
 pycryptodomex==3.17
     # via pyjwkest
-pygments==2.14.0
+pygments==2.15.0
     # via ipython
 pyjwkest==1.4.2
     # via drf-oidc-auth
