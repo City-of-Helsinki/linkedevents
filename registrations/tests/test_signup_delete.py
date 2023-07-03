@@ -325,17 +325,17 @@ def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
         (
             "en",
             "Registration confirmation",
-            "Congratulations! You have been moved from the waiting list of the event <strong>Foo</strong> to a participant.",
+            "You have been moved from the waiting list of the event <strong>Foo</strong> to a participant.",
         ),
         (
             "fi",
             "Vahvistus ilmoittautumisesta",
-            "Onnittelut! Sinut on siirretty tapahtuman <strong>Foo</strong> jonotuslistalta osallistujaksi.",
+            "Sinut on siirretty tapahtuman <strong>Foo</strong> jonotuslistalta osallistujaksi.",
         ),
         (
             "sv",
             "Bekräftelse av registrering",
-            "Grattis! Du har flyttats från väntelistan för evenemanget <strong>Foo</strong> till en deltagare.",
+            "Du har flyttats från väntelistan för evenemanget <strong>Foo</strong> till en deltagare.",
         ),
     ],
 )
@@ -386,17 +386,17 @@ def test_send_email_when_moving_participant_from_waitlist(
         (
             Event.TypeId.GENERAL,
             "Registration confirmation",
-            "Congratulations! You have been moved from the waiting list of the event <strong>Foo</strong> to a participant.",
+            "You have been moved from the waiting list of the event <strong>Foo</strong> to a participant.",
         ),
         (
             Event.TypeId.COURSE,
             "Registration confirmation",
-            "Congratulations! You have been moved from the waiting list of the course <strong>Foo</strong> to a participant.",
+            "You have been moved from the waiting list of the course <strong>Foo</strong> to a participant.",
         ),
         (
             Event.TypeId.VOLUNTEERING,
             "Registration confirmation",
-            "Congratulations! You have been moved from the waiting list of the volunteering <strong>Foo</strong> to a participant.",
+            "You have been moved from the waiting list of the volunteering <strong>Foo</strong> to a participant.",
         ),
     ],
 )

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-06-30 11:31+0300\n"
+"POT-Creation-Date: 2023-07-03 12:43+0300\n"
 "PO-Revision-Date: 2015-04-29 12:26+0140\n"
 "Last-Translator: <jori@3d.fi>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -749,7 +749,7 @@ msgstr "Lisätietoja asiakaspalvelustamme"
 
 #: registrations/templates/message_to_signup.html:13
 #: registrations/templates/signup_confirmation.html:46
-#: registrations/templates/signup_confirmation_to_waiting_list.html:41
+#: registrations/templates/signup_confirmation_to_waiting_list.html:28
 #: registrations/templates/signup_transferred_as_participant.html:34
 msgid "Check your registration here"
 msgstr "Tarkastele ilmoittautumistasi täällä"
@@ -803,24 +803,7 @@ msgstr ""
 "Onnittelut! Olet onnistuneesti ilmoittautunut vapaaehtoistehtävään "
 "<strong>%(event)s</strong>."
 
-#: registrations/templates/signup_confirmation_to_waiting_list.html:11
-#, python-format
-msgid "Registration for the event %(event)s waiting list has been saved."
-msgstr "Ilmoittautuminen tapahtuman %(event)s jonotuslistaan on tallennettu."
-
-#: registrations/templates/signup_confirmation_to_waiting_list.html:14
-#, python-format
-msgid "Registration for the course %(event)s waiting list has been saved."
-msgstr "Ilmoittautuminen kurssin %(event)s jonotuslistaan on tallennettu."
-
-#: registrations/templates/signup_confirmation_to_waiting_list.html:17
-#, python-format
-msgid ""
-"Registration for the volunteering %(event)s waiting list has been saved."
-msgstr ""
-"Ilmoittautuminen vapaaehtoistehtävän %(event)s jonotuslistaan on tallennettu."
-
-#: registrations/templates/signup_confirmation_to_waiting_list.html:25
+#: registrations/templates/signup_confirmation_to_waiting_list.html:12
 #, python-format
 msgid ""
 "You have successfully registered for the event <strong>%(event)s</strong> "
@@ -829,7 +812,7 @@ msgstr ""
 "Olet onnistuneesti ilmoittautunut tapahtuman <strong>%(event)s</strong> "
 "jonotuslistalle."
 
-#: registrations/templates/signup_confirmation_to_waiting_list.html:28
+#: registrations/templates/signup_confirmation_to_waiting_list.html:15
 #, python-format
 msgid ""
 "You have successfully registered for the course <strong>%(event)s</strong> "
@@ -838,7 +821,7 @@ msgstr ""
 "Olet onnistuneesti ilmoittautunut kurssin <strong>%(event)s</strong> "
 "jonotuslistalle."
 
-#: registrations/templates/signup_confirmation_to_waiting_list.html:31
+#: registrations/templates/signup_confirmation_to_waiting_list.html:18
 #, python-format
 msgid ""
 "You have successfully registered for the volunteering <strong>%(event)s</"
@@ -847,7 +830,7 @@ msgstr ""
 "Olet onnistuneesti ilmoittautunut vapaaehtoistehtävän <strong>%(event)s</"
 "strong> jonotuslistalle."
 
-#: registrations/templates/signup_confirmation_to_waiting_list.html:35
+#: registrations/templates/signup_confirmation_to_waiting_list.html:22
 msgid ""
 "You will be transferred as a participant automatically when a seat becomes "
 "available."
@@ -856,29 +839,29 @@ msgstr "Sinut siirretään automaattisesti osallistujaksi paikan vapauduttua."
 #: registrations/templates/signup_transferred_as_participant.html:16
 #, python-format
 msgid ""
-"Congratulations! You have been moved from the waiting list of the event "
-"<strong>%(event)s</strong> to a participant."
+"You have been moved from the waiting list of the event <strong>%(event)s</"
+"strong> to a participant."
 msgstr ""
-"Onnittelut! Sinut on siirretty tapahtuman <strong>%(event)s</strong> "
-"jonotuslistalta osallistujaksi."
+"Sinut on siirretty tapahtuman <strong>%(event)s</strong> jonotuslistalta "
+"osallistujaksi."
 
 #: registrations/templates/signup_transferred_as_participant.html:19
 #, python-format
 msgid ""
-"Congratulations! You have been moved from the waiting list of the course "
-"<strong>%(event)s</strong> to a participant."
+"You have been moved from the waiting list of the course <strong>%(event)s</"
+"strong> to a participant."
 msgstr ""
-"Onnittelut! Sinut on siirretty kurssin <strong>%(event)s</strong> "
-"jonotuslistalta osallistujaksi."
+"Sinut on siirretty kurssin <strong>%(event)s</strong> jonotuslistalta "
+"osallistujaksi."
 
 #: registrations/templates/signup_transferred_as_participant.html:22
 #, python-format
 msgid ""
-"Congratulations! You have been moved from the waiting list of the "
-"volunteering <strong>%(event)s</strong> to a participant."
+"You have been moved from the waiting list of the volunteering "
+"<strong>%(event)s</strong> to a participant."
 msgstr ""
-"Onnittelut! Sinut on siirretty vapaaehtoistehtävän <strong>%(event)s</"
-"strong> jonotuslistalta osallistujaksi."
+"Sinut on siirretty vapaaehtoistehtävän <strong>%(event)s</strong> "
+"jonotuslistalta osallistujaksi."
 
 #~ msgid "Admins"
 #~ msgstr "Ylläpitäjät"

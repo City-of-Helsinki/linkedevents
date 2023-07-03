@@ -623,24 +623,21 @@ def test_confirmation_message_is_shown_in_service_language(
 
 
 @pytest.mark.parametrize(
-    "service_language,expected_subject,expected_heading,expected_text",
+    "service_language,expected_subject,expected_text",
     [
         (
             "en",
             "Waiting list seat reserved",
-            "Registration for the event Foo waiting list has been saved.",
             "You have successfully registered for the event <strong>Foo</strong> waiting list.",
         ),
         (
             "fi",
             "Paikka jonotuslistalla varattu",
-            "Ilmoittautuminen tapahtuman Foo jonotuslistaan on tallennettu.",
             "Olet onnistuneesti ilmoittautunut tapahtuman <strong>Foo</strong> jonotuslistalle.",
         ),
         (
             "sv",
             "Väntelista plats reserverad",
-            "Anmälan till evenemanget Foo väntelista har sparats.",
             "Du har framgångsrikt registrerat dig för evenemangets <strong>Foo</strong> väntelista.",
         ),
     ],
@@ -648,7 +645,6 @@ def test_confirmation_message_is_shown_in_service_language(
 @pytest.mark.django_db
 def test_different_email_sent_if_user_is_added_to_waiting_list(
     api_client,
-    expected_heading,
     expected_subject,
     expected_text,
     languages,
@@ -679,26 +675,22 @@ def test_different_email_sent_if_user_is_added_to_waiting_list(
         assert signup_data["name"] in response.data["waitlisted"]["people"][0]["name"]
         #  assert that the email was sent
         assert mail.outbox[0].subject.startswith(expected_subject)
-        assert expected_heading in str(mail.outbox[0].alternatives[0])
         assert expected_text in str(mail.outbox[0].alternatives[0])
 
 
 @pytest.mark.parametrize(
-    "event_type,expected_heading,expected_text",
+    "event_type,expected_text",
     [
         (
             Event.TypeId.GENERAL,
-            "Registration for the event Foo waiting list has been saved.",
             "You have successfully registered for the event <strong>Foo</strong> waiting list.",
         ),
         (
             Event.TypeId.COURSE,
-            "Registration for the course Foo waiting list has been saved.",
             "You have successfully registered for the course <strong>Foo</strong> waiting list.",
         ),
         (
             Event.TypeId.VOLUNTEERING,
-            "Registration for the volunteering Foo waiting list has been saved.",
             "You have successfully registered for the volunteering <strong>Foo</strong> waiting list.",
         ),
     ],
@@ -707,7 +699,6 @@ def test_different_email_sent_if_user_is_added_to_waiting_list(
 def test_confirmation_to_waiting_list_template_has_correct_text_per_event_type(
     api_client,
     event_type,
-    expected_heading,
     expected_text,
     languages,
     registration,
@@ -732,5 +723,4 @@ def test_confirmation_to_waiting_list_template_has_correct_text_per_event_type(
     response = assert_create_signups(api_client, signups_data)
     assert signup_data["name"] in response.data["waitlisted"]["people"][0]["name"]
     #  assert that the email was sent
-    assert expected_heading in str(mail.outbox[0].alternatives[0])
     assert expected_text in str(mail.outbox[0].alternatives[0])
