@@ -107,6 +107,7 @@ from events.translation import EventTranslationOptions, PlaceTranslationOptions
 from helevents.models import User
 from helevents.serializers import UserSerializer
 from linkedevents.registry import register_view, viewset_classes_by_model
+from registrations.models import RegistrationUser
 from registrations.serializers import RegistrationBaseSerializer
 
 logger = logging.getLogger(__name__)
@@ -1830,8 +1831,9 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
     )
 
     def create(self, validated_data):
+        registration_users = validated_data.pop("registration_users", [])
         try:
-            instance = super().create(validated_data)
+            registration = super().create(validated_data)
         except IntegrityError as error:
             if "duplicate key value violates unique constraint" in str(error):
                 raise serializers.ValidationError(
@@ -1839,6 +1841,36 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
                 )
             else:
                 raise
+
+        # Create registration users
+        for registration_user in registration_users:
+            [user_instance, created] = RegistrationUser.objects.get_or_create(
+                registration=registration, **registration_user
+            )
+            if created:
+                user_instance.send_invitation()
+
+        return registration
+
+    def update(self, instance, validated_data):
+        registration_users = validated_data.pop("registration_users", None)
+
+        # update validated fields
+        super().update(instance, validated_data)
+
+        # update registration users
+        if isinstance(registration_users, list):
+            emails = [u["email"] for u in registration_users]
+            # Delete registration user which are not included in the payload
+            instance.registration_users.exclude(email__in=emails).delete()
+
+            for registration_user in registration_users:
+                [user_instance, created] = RegistrationUser.objects.get_or_create(
+                    registration=instance, **registration_user
+                )
+                if created:
+                    user_instance.send_invitation()
+
         return instance
 
     # LinkedEventsSerializer validates name which doesn't exist in Registration model

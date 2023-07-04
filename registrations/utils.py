@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.contrib.sites.models import Site
 from django.core.mail import EmailMultiAlternatives, get_connection
 
 
@@ -49,3 +50,7 @@ def send_mass_html_mail(
         messages.append(mail)
 
     return connection.send_messages(messages)
+
+
+def get_email_noreply_address():
+    return "noreply@%s" % Site.objects.get_current().domain

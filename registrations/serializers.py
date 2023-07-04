@@ -13,6 +13,7 @@ from events.models import Language
 from registrations.exceptions import ConflictException
 from registrations.models import (
     Registration,
+    RegistrationUser,
     SeatReservationCode,
     SignUp,
     SignUpNotificationType,
@@ -166,6 +167,12 @@ class SignUpSerializer(serializers.ModelSerializer):
         model = SignUp
 
 
+class RegistrationUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RegistrationUser
+        fields = ["id", "email"]
+
+
 # Don't use this serializer directly but use events.api.RegistrationSerializer instead.
 # Implement methods to mutate and validate Registration in events.api.RegistrationSerializer
 class RegistrationBaseSerializer(serializers.ModelSerializer):
@@ -184,6 +191,8 @@ class RegistrationBaseSerializer(serializers.ModelSerializer):
     data_source = serializers.SerializerMethodField()
 
     publisher = serializers.SerializerMethodField()
+
+    registration_users = RegistrationUserSerializer(many=True, required=False)
 
     created_time = DateTimeField(
         default_timezone=pytz.UTC, required=False, allow_null=True

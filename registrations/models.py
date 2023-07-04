@@ -4,7 +4,6 @@ from uuid import uuid4
 
 from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
-from django.contrib.sites.models import Site
 from django.core.mail import send_mail
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -18,7 +17,11 @@ from django.utils.translation import gettext_lazy as _
 from django.utils.translation import override
 
 from events.models import Event, Language
-from registrations.utils import code_validity_duration, get_ui_locales
+from registrations.utils import (
+    code_validity_duration,
+    get_email_noreply_address,
+    get_ui_locales,
+)
 
 User = settings.AUTH_USER_MODEL
 
@@ -250,6 +253,53 @@ class Registration(CreatedModifiedBaseModel):
         )
 
 
+class RegistrationUser(models.Model):
+    email = models.EmailField(verbose_name=_("E-mail"), null=True, blank=True)
+
+    registration = models.ForeignKey(
+        Registration, on_delete=models.CASCADE, related_name="registration_users"
+    )
+
+    def send_invitation(self):
+        locale = "fi"
+
+        with translation.override(locale):
+            event_name = self.registration.event.name
+            event_type_id = self.registration.event.type_id
+
+            email_variables = {
+                "email": self.email,
+                "event": event_name,
+                "event_type_id": event_type_id,
+                "linked_events_ui_locale": locale,
+                "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
+                "linked_registrations_ui_locale": locale,
+                "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
+                "registration_id": self.registration.id,
+            }
+
+            invitation_template = "signup_list_rights_granted.html"
+            invitation_subject = _(
+                "Rights granted to the participant list - %(event_name)s"
+            ) % {"event_name": event_name}
+
+            rendered_body = render_to_string(invitation_template, email_variables)
+
+        try:
+            send_mail(
+                invitation_subject,
+                rendered_body,
+                get_email_noreply_address(),
+                [self.email],
+                html_message=rendered_body,
+            )
+        except SMTPException:
+            pass
+
+    class Meta:
+        unique_together = ("email", "registration")
+
+
 class SignUp(CreatedModifiedBaseModel):
     class AttendeeStatus:
         WAITING_LIST = "waitlisted"
@@ -470,7 +520,7 @@ class SignUp(CreatedModifiedBaseModel):
             send_mail(
                 notification_subjects[notification_type],
                 rendered_body,
-                f"letest@{Site.objects.get_current().domain}",
+                get_email_noreply_address(),
                 [self.email],
                 html_message=rendered_body,
             )
