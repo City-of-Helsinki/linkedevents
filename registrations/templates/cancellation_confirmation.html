@@ -5,14 +5,41 @@
   <tr>
     <td class="content-cell" style="padding:0;margin:0;text-align:left;">
       <div class="content-container" style="padding:0 16px;">
-        <h1 style="color:#1a1a1a;font-size:36px;line-height:43px;font-weight:700;margin:0 0 12px;">{% blocktranslate %}Registration cancelled{% endblocktranslate %}</h1>
-        <h2 style="color:#1a1a1a;font-size:24px;font-weight:700;line-height:29px;margin:0;">{% blocktranslate %}Registration {{to_event_type}} {{event}} has been cancelled.{% endblocktranslate %}</h2>
+        <h1 style="color:#1a1a1a;font-size:36px;line-height:43px;font-weight:700;margin:0 0 12px;">
+          {% blocktranslate %}Registration cancelled{% endblocktranslate %}
+        </h1>
+        <h2 style="color:#1a1a1a;font-size:24px;font-weight:700;line-height:29px;margin:0;">
+          <!-- Event -->
+          {% if event_type_id == "1" %}
+          {% blocktranslate %}Registration to the event {{event}} has been cancelled.{% endblocktranslate %}
+          <!-- Course -->
+          {% elif event_type_id == "2" %}
+          {% blocktranslate %}Registration to the course {{event}} has been cancelled.{% endblocktranslate %}
+          <!-- Volunteering -->
+          {% elif event_type_id == "3" %}
+          {% blocktranslate %}Registration to the volunteering {{event}} has been cancelled.{% endblocktranslate %}
+          {% endif %}
+        </h2>
         <div class="divider" style="background:#0000bf;border-radius:0px;height:3px;width:100%;margin:24px 0;"></div>
         <div style="margin: 56px 0px 24px">
-          <p style="color:#1a1a1a;font-size:16px;font-weight:normal;line-height:24px;margin:0px;">{% blocktranslate %}You have successfully canceled your registration {{to_event_type}} {{event}}.{% endblocktranslate %}</p>
+          <p style="color:#1a1a1a;font-size:16px;font-weight:normal;line-height:24px;margin:0px;">
+            <!-- Event -->
+            {% if event_type_id == "1" %}
+            {% blocktranslate %}You have successfully cancelled your registration to the event <strong>{{event}}</strong>.{% endblocktranslate %}
+            <!-- Course -->
+            {% elif event_type_id == "2" %}
+            {% blocktranslate %}You have successfully cancelled your registration to the course <strong>{{event}}</strong>.{% endblocktranslate %}
+            <!-- Volunteering -->
+            {% elif event_type_id == "3" %}
+            {% blocktranslate %}You have successfully cancelled your registration to the volunteering <strong>{{event}}</strong>.{% endblocktranslate %}
+            {% endif %}
+          </p>
         </div>
         <div style="margin: 24px 0px 40px">
-          <p style="color:#1a1a1a;font-size:16px;font-weight:normal;line-height:24px;margin:0px;">{% blocktranslate %}More information from our customer service{% endblocktranslate %} <a href="mailto:linkedevents@hel.fi" class="link" style="color:#0000bf;font-size:16px;font-weight:500;">linkedevents@hel.fi</a></p>
+          <p style="color:#1a1a1a;font-size:16px;font-weight:normal;line-height:24px;margin:0px;">
+            {% blocktranslate %}More information from our customer service{% endblocktranslate %} 
+            <a href="mailto:linkedevents@hel.fi" class="link" style="color:#0000bf;font-size:16px;font-weight:500;">linkedevents@hel.fi</a>
+          </p>
         </div>
       </div>
     </td>

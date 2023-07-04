@@ -28,7 +28,12 @@ from events.permissions import (
 )
 from linkedevents.registry import register_view
 from registrations.exceptions import ConflictException
-from registrations.models import Registration, SeatReservationCode, SignUp
+from registrations.models import (
+    Registration,
+    SeatReservationCode,
+    SignUp,
+    SignUpNotificationType,
+)
 from registrations.permissions import AuthenticatedGet, AuthenticateWithCancellationCode
 from registrations.serializers import (
     CreateSignUpsSerializer,
@@ -244,7 +249,7 @@ class SignUpViewSet(
         instance = self.get_object()
         registration = instance.registration
 
-        instance.send_notification("cancellation")
+        instance.send_notification(SignUpNotificationType.CANCELLATION)
         response = super().destroy(request, *args, **kwargs)
 
         # Move first signup from waitlist to attending list
@@ -255,6 +260,9 @@ class SignUpViewSet(
             first_on_list = waitlisted[0]
             first_on_list.attendee_status = SignUp.AttendeeStatus.ATTENDING
             first_on_list.save()
+            first_on_list.send_notification(
+                SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT
+            )
         return response
 
     def filter_queryset(self, queryset):
