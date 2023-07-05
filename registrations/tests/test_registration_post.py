@@ -1,6 +1,9 @@
 import pytest
+from django.core import mail
+from django.utils import translation
 from rest_framework import status
 
+from events.models import Event
 from events.tests.utils import versioned_reverse as reverse
 
 # === util methods ===
@@ -198,3 +201,28 @@ def test__user_editable_resources_can_create_registration(
 
     registration_data = {"event": {"@id": get_event_url(event.id)}}
     assert_create_registration(api_client, registration_data, data_source)
+
+
+@pytest.mark.django_db
+def test_send_email_to_registration_user(event, user_api_client):
+    email = "user@email.com"
+
+    with translation.override("fi"):
+        event.type_id = Event.TypeId.GENERAL
+        event.name = "Foo"
+        event.save()
+
+        registration_data = {
+            "event": {"@id": get_event_url(event.id)},
+            "registration_users": [{"email": email}],
+        }
+        assert_create_registration(user_api_client, registration_data)
+        #  assert that the email was sent
+        assert mail.outbox[0].to[0] == email
+        assert mail.outbox[0].subject.startswith(
+            "Oikeudet myönnetty osallistujalistaan"
+        )
+        assert (
+            "Sähköpostiosoitteelle <strong>user@email.com</strong> on myönnetty oikeudet lukea tapahtuman <strong>Foo</strong> osallistujalista."
+            in str(mail.outbox[0].alternatives[0])
+        )

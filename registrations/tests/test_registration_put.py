@@ -1,7 +1,11 @@
 import pytest
+from django.core import mail
+from django.utils import translation
 from rest_framework import status
 
+from events.models import Event
 from events.tests.utils import versioned_reverse as reverse
+from registrations.models import RegistrationUser
 from registrations.tests.test_registration_post import (
     create_registration,
     get_event_url,
@@ -184,3 +188,64 @@ def test__admin_cannot_update_registrations_event(
     }
     response = update_registration(api_client, registration.id, registration_data)
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_send_email_to_registration_user(registration, user_api_client):
+    email = "user@email.com"
+
+    with translation.override("fi"):
+        registration.event.type_id = Event.TypeId.GENERAL
+        registration.event.name = "Foo"
+        registration.event.save()
+
+        RegistrationUser.objects.create(
+            registration=registration, email="delete1@email.com"
+        )
+        RegistrationUser.objects.create(
+            registration=registration, email="delete2@email.com"
+        )
+        assert len(registration.registration_users.all()) == 2
+
+        registration_data = {
+            "event": {"@id": get_event_url(registration.event.id)},
+            "registration_users": [{"email": email}],
+        }
+        assert_update_registration(user_api_client, registration.id, registration_data)
+        #  assert that the email was sent
+        registration_users = registration.registration_users.all()
+        assert len(registration_users) == 1
+        assert registration_users[0].email == email
+        assert mail.outbox[0].to[0] == email
+        assert mail.outbox[0].subject.startswith(
+            "Oikeudet myönnetty osallistujalistaan"
+        )
+        assert (
+            "Sähköpostiosoitteelle <strong>user@email.com</strong> on myönnetty oikeudet lukea tapahtuman <strong>Foo</strong> osallistujalista."
+            in str(mail.outbox[0].alternatives[0])
+        )
+
+
+@pytest.mark.django_db
+def test_invitation_email_is_not_sent_to_existing_registration_user(
+    registration, user_api_client
+):
+    email = "user@email.com"
+
+    registration_user = RegistrationUser.objects.create(
+        registration=registration, email=email
+    )
+
+    registration_data = {
+        "event": {"@id": get_event_url(registration.event.id)},
+        "registration_users": [{"email": email}],
+    }
+    assert_update_registration(user_api_client, registration.id, registration_data)
+
+    # Assert that registration user is not changed
+    registration_users = registration.registration_users.all()
+    assert len(registration_users) == 1
+    assert registration_user.id == registration_users[0].id
+    assert registration_users[0].email == email
+    #  assert that the email is not sent
+    assert len(mail.outbox) == 0
