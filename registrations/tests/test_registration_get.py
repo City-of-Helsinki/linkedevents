@@ -77,6 +77,34 @@ def test_get_registration(api_client, event, event_type, registration):
 
 
 @pytest.mark.django_db
+def test_admin_user_can_see_registration_users(registration, user_api_client):
+    RegistrationUser.objects.create(registration=registration)
+    response = get_detail_and_assert_registration(user_api_client, registration.id)
+    response_registration_users = response.data["registration_users"]
+    assert len(response_registration_users) == 1
+
+
+@pytest.mark.django_db
+def test_regular_user_cannot_see_registration_users(
+    registration, user, user_api_client
+):
+    user.get_default_organization().regular_users.add(user)
+    user.get_default_organization().admin_users.remove(user)
+    RegistrationUser.objects.create(registration=registration, email=user.email)
+    response = get_detail_and_assert_registration(user_api_client, registration.id)
+
+    assert response.data.get("registration_users") == None
+
+
+@pytest.mark.django_db
+def test_anonymous_user_cannot_see_registration_users(api_client, registration):
+    RegistrationUser.objects.create(registration=registration)
+    response = get_detail_and_assert_registration(api_client, registration.id)
+
+    assert response.data.get("registration_users") == None
+
+
+@pytest.mark.django_db
 def test_get_registration_with_event_included(api_client, event, registration):
     response = get_detail_and_assert_registration(
         api_client, registration.id, "include=event"

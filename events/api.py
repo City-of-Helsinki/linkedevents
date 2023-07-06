@@ -1830,6 +1830,8 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
         queryset=Event.objects.all(),
     )
 
+    only_admin_visible_fields = ("created_by", "last_modified_by", "registration_users")
+
     def create(self, validated_data):
         registration_users = validated_data.pop("registration_users", [])
         try:
