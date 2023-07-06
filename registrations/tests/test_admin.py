@@ -1,11 +1,15 @@
 from django.contrib import admin
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth import get_user_model
+from django.core import mail
 from django.test import RequestFactory, TestCase
 
 from registrations.admin import RegistrationAdmin
-from registrations.models import Event, Registration
+from registrations.models import Event, Registration, RegistrationUser
 from registrations.tests.factories import RegistrationFactory
+from registrations.tests.test_registration_user_invitation import (
+    assert_invitation_email_is_sent,
+)
 
 
 def make_admin(username="testadmin", is_superuser=True):
@@ -50,7 +54,12 @@ class TestRegistrationAdmin(TestCase):
         # Create new registration
         self.client.post(
             "/admin/registrations/registration/add/",
-            {"event": event2.id, "_save": "Save"},
+            {
+                "event": event2.id,
+                "registration_users-TOTAL_FORMS": 1,
+                "registration_users-INITIAL_FORMS": 0,
+                "_save": "Save",
+            },
         )
 
         # Test that create_by values is set to current user
@@ -59,6 +68,33 @@ class TestRegistrationAdmin(TestCase):
             self.admin,
             registration.created_by,
         )
+
+    def test_send_invitation_email_when_adding_registration_user(self):
+        email = "user@email.com"
+        event_name = "Foo"
+        self.client.force_login(self.admin)
+
+        # Create event for new registration
+        data_source = self.registration.event.data_source
+        publisher = self.registration.event.publisher
+        event2 = Event.objects.create(
+            id="event-2", data_source=data_source, name=event_name, publisher=publisher
+        )
+
+        # Create new registration
+        self.client.post(
+            "/admin/registrations/registration/add/",
+            {
+                "event": event2.id,
+                "registration_users-TOTAL_FORMS": 1,
+                "registration_users-INITIAL_FORMS": 0,
+                "registration_users-0-email": email,
+                "_save": "Save",
+            },
+        )
+
+        # Assert that invitation is sent to registration user
+        assert_invitation_email_is_sent(email, event_name)
 
     def test_change_last_modified_by_when_updating_registration(self):
         ra = RegistrationAdmin(Registration, self.site)
@@ -77,3 +113,32 @@ class TestRegistrationAdmin(TestCase):
             self.admin,
             self.registration.last_modified_by,
         )
+
+    def test_send_invitation_email_when_registration_user_is_updated(self):
+        email = "user@email.com"
+        edited_email = "user_edited@email.com"
+        event_name = "Foo"
+        self.client.force_login(self.admin)
+
+        registration_user = RegistrationUser.objects.create(
+            registration=self.registration, email=email
+        )
+        self.registration.event.name = event_name
+        self.registration.event.save()
+
+        # Update registration
+        self.client.post(
+            f"/admin/registrations/registration/{self.registration.id}/change/",
+            {
+                "event": self.registration.event.id,
+                "registration_users-TOTAL_FORMS": 2,
+                "registration_users-INITIAL_FORMS": 1,
+                "registration_users-0-email": edited_email,
+                "registration_users-0-id": registration_user.id,
+                "registration_users-0-registration": self.registration.id,
+                "_save": "Save",
+            },
+        )
+
+        # Assert that invitation is sent to updated email
+        assert_invitation_email_is_sent(edited_email, event_name)

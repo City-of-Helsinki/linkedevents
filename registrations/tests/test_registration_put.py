@@ -10,6 +10,9 @@ from registrations.tests.test_registration_post import (
     create_registration,
     get_event_url,
 )
+from registrations.tests.test_registration_user_invitation import (
+    assert_invitation_email_is_sent,
+)
 
 # === util methods ===
 
@@ -193,6 +196,7 @@ def test__admin_cannot_update_registrations_event(
 @pytest.mark.django_db
 def test_send_email_to_registration_user(registration, user_api_client):
     email = "user@email.com"
+    event_name = "Foo"
 
     with translation.override("fi"):
         registration.event.type_id = Event.TypeId.GENERAL
@@ -216,14 +220,7 @@ def test_send_email_to_registration_user(registration, user_api_client):
         registration_users = registration.registration_users.all()
         assert len(registration_users) == 1
         assert registration_users[0].email == email
-        assert mail.outbox[0].to[0] == email
-        assert mail.outbox[0].subject.startswith(
-            "Oikeudet myönnetty osallistujalistaan"
-        )
-        assert (
-            "Sähköpostiosoitteelle <strong>user@email.com</strong> on myönnetty oikeudet lukea tapahtuman <strong>Foo</strong> osallistujalista."
-            in str(mail.outbox[0].alternatives[0])
-        )
+        assert_invitation_email_is_sent(email, event_name)
 
 
 @pytest.mark.django_db

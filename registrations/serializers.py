@@ -1,7 +1,6 @@
 from datetime import timedelta
 
 import pytz
-from django.contrib.auth.models import AnonymousUser
 from django.utils.timezone import localdate, localtime
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers

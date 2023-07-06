@@ -5,6 +5,9 @@ from rest_framework import status
 
 from events.models import Event
 from events.tests.utils import versioned_reverse as reverse
+from registrations.tests.test_registration_user_invitation import (
+    assert_invitation_email_is_sent,
+)
 
 # === util methods ===
 
@@ -206,10 +209,11 @@ def test__user_editable_resources_can_create_registration(
 @pytest.mark.django_db
 def test_send_email_to_registration_user(event, user_api_client):
     email = "user@email.com"
+    event_name = "Foo"
 
     with translation.override("fi"):
         event.type_id = Event.TypeId.GENERAL
-        event.name = "Foo"
+        event.name = event_name
         event.save()
 
         registration_data = {
@@ -218,11 +222,4 @@ def test_send_email_to_registration_user(event, user_api_client):
         }
         assert_create_registration(user_api_client, registration_data)
         #  assert that the email was sent
-        assert mail.outbox[0].to[0] == email
-        assert mail.outbox[0].subject.startswith(
-            "Oikeudet myönnetty osallistujalistaan"
-        )
-        assert (
-            "Sähköpostiosoitteelle <strong>user@email.com</strong> on myönnetty oikeudet lukea tapahtuman <strong>Foo</strong> osallistujalista."
-            in str(mail.outbox[0].alternatives[0])
-        )
+        assert_invitation_email_is_sent(email, event_name)

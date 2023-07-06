@@ -3,12 +3,19 @@ from django.contrib import admin
 from django.utils.translation import gettext as _
 from reversion.admin import VersionAdmin
 
-from registrations.models import Registration
+from registrations.models import Registration, RegistrationUser
 
 
 class EventFilter(AutocompleteFilter):
     title = _("Event")
     field_name = "event"
+
+
+class RegistrationUserInline(admin.TabularInline):
+    model = RegistrationUser
+    extra = 1
+    verbose_name = _("Participant list user")
+    verbose_name_plural = _("Participant list users")
 
 
 class RegistrationAdmin(VersionAdmin):
@@ -35,6 +42,7 @@ class RegistrationAdmin(VersionAdmin):
     )
     list_filter = (EventFilter,)
     autocomplete_fields = ("event",)
+    inlines = (RegistrationUserInline,)
 
     def save_model(self, request, obj, form, change):
         if obj.pk is None:
@@ -42,6 +50,25 @@ class RegistrationAdmin(VersionAdmin):
         else:
             obj.last_modified_by = request.user
         obj.save()
+
+    def save_related(self, request, form, formsets, change):
+        for formset in formsets:
+            if formset.model == RegistrationUser:
+                formset.save(commit=False)
+
+                for added_registration_user in formset.new_objects:
+                    # Send invitation email if new registration user is added
+                    added_registration_user.send_invitation()
+
+                for [
+                    changed_registration_user,
+                    changed_fields,
+                ] in formset.changed_objects:
+                    # Send invitation email if email address is changed
+                    if "email" in changed_fields:
+                        changed_registration_user.send_invitation()
+
+        super(RegistrationAdmin, self).save_related(request, form, formsets, change)
 
     def get_readonly_fields(self, request, obj=None):
         if obj:

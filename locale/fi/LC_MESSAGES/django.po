@@ -437,7 +437,15 @@ msgstr "Ilmoituspohjat"
 msgid "Event"
 msgstr "Tapahtuma"
 
-#: registrations/api.py:84
+#: registrations/admin.py:17
+msgid "Participant list user"
+msgstr "Osallistujalista-käyttäjä"
+
+#: registrations/admin.py:18
+msgid "Participant list users"
+msgstr "Osallistujalista-käyttäjät"
+
+#: registrations/api.py:90
 msgid "Registration with signups cannot be deleted"
 msgstr "Ilmoittautumista, jolla on osallistujia ei voi poistaa"
 

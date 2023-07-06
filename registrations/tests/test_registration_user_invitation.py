@@ -7,6 +7,9 @@ from events.models import Event
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import RegistrationUser
 
+email = "user@email.com"
+event_name = "Foo"
+
 # === util methods ===
 
 
@@ -26,6 +29,15 @@ def assert_send_invitation(api_client, pk):
     assert response.status_code == status.HTTP_200_OK
 
 
+def assert_invitation_email_is_sent(email, event_name):
+    assert mail.outbox[0].to[0] == email
+    assert mail.outbox[0].subject.startswith("Oikeudet myönnetty osallistujalistaan")
+    assert (
+        f"Sähköpostiosoitteelle <strong>{email}</strong> on myönnetty oikeudet lukea tapahtuman <strong>{event_name}</strong> osallistujalista."
+        in str(mail.outbox[0].alternatives[0])
+    )
+
+
 # === tests ===
 
 
@@ -33,32 +45,22 @@ def assert_send_invitation(api_client, pk):
 def test_admin_user_can_send_invitation_to_registration_user(
     registration, user_api_client
 ):
-    email = "user@email.com"
-
     with translation.override("fi"):
         registration.event.type_id = Event.TypeId.GENERAL
-        registration.event.name = "Foo"
+        registration.event.name = event_name
         registration.event.save()
         registration_user = RegistrationUser.objects.create(
             registration=registration, email=email
         )
 
         assert_send_invitation(user_api_client, registration_user.pk)
-        assert mail.outbox[0].to[0] == email
-        assert mail.outbox[0].subject.startswith(
-            "Oikeudet myönnetty osallistujalistaan"
-        )
-        assert (
-            "Sähköpostiosoitteelle <strong>user@email.com</strong> on myönnetty oikeudet lukea tapahtuman <strong>Foo</strong> osallistujalista."
-            in str(mail.outbox[0].alternatives[0])
-        )
+        assert_invitation_email_is_sent(email, event_name)
 
 
 @pytest.mark.django_db
 def test_anonymous_user_cannot_send_invitation_to_registration_user(
     api_client, registration
 ):
-    email = "user@email.com"
     registration_user = RegistrationUser.objects.create(
         registration=registration, email=email
     )
@@ -74,7 +76,6 @@ def test_regular_user_cannot_send_invitation_to_registration_user(
     user.get_default_organization().regular_users.add(user)
     user.get_default_organization().admin_users.remove(user)
 
-    email = "user@email.com"
     registration_user = RegistrationUser.objects.create(
         registration=registration, email=email
     )
