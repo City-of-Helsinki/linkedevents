@@ -260,6 +260,12 @@ class RegistrationUser(models.Model):
         Registration, on_delete=models.CASCADE, related_name="registration_users"
     )
 
+    def can_be_edited_by(self, user):
+        """Check if current registration user can be edited by the given user"""
+        if user.is_superuser:
+            return True
+        return user.is_admin_of(self.registration.event.publisher)
+
     def send_invitation(self):
         locale = "fi"
 
