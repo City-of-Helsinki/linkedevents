@@ -34,7 +34,7 @@ from registrations.models import (
     SignUp,
     SignUpNotificationType,
 )
-from registrations.permissions import CanCreateEditDeleteSignup
+from registrations.permissions import CanCreateEditDeleteSignup, RegistrationUserRetrievePermission
 from registrations.serializers import (
     CreateSignUpsSerializer,
     MassEmailSerializer,
@@ -201,7 +201,7 @@ class SignUpViewSet(
     serializer_class = SignUpSerializer
     queryset = SignUp.objects.all()
 
-    permission_classes = [CanCreateEditDeleteSignup & DataSourceResourceEditPermission]
+    permission_classes = [(CanCreateEditDeleteSignup & DataSourceResourceEditPermission) | RegistrationUserRetrievePermission]
 
     def create(self, request, *args, **kwargs):
         context = super().get_serializer_context()
@@ -274,7 +274,14 @@ class SignUpViewSet(
                         _("Registration with id {pk} doesn't exist.").format(pk=pk)
                     )
 
-                if registration.publisher not in admin_organizations:
+                registration_user_emails = [
+                    u.email for u in registration.registration_users.all()
+                ]
+
+                if user.is_anonymous or not (
+                    user.email in registration_user_emails
+                    or registration.publisher in admin_organizations
+                ):
                     raise DRFPermissionDenied(
                         _(
                             "Only the admins of the organization {organization} have access rights."
@@ -284,10 +291,16 @@ class SignUpViewSet(
                 registrations.append(registration)
             queryset = queryset.filter(registration__in=registrations)
         elif self.action == "list":
-            # By default return only signups to which user has admin rights
-            queryset = queryset.filter(
-                registration__event__publisher__in=user.get_admin_organizations_and_descendants()
-            )
+            # By default return only signups of registrations to which user has admin rights or is registration user
+            if user.is_anonymous:
+                return queryset.none()
+            else:
+                queryset = queryset.filter(
+                    Q(registration__registration_users__email=user.email)
+                    | Q(
+                        registration__event__publisher__in=user.get_admin_organizations_and_descendants()
+                    )
+                )
 
         if text_param := request.query_params.get("text", None):
             queryset = queryset.annotate(

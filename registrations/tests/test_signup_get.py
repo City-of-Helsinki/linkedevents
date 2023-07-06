@@ -3,7 +3,7 @@ from rest_framework import status
 
 from events.tests.conftest import APIClient
 from events.tests.utils import versioned_reverse as reverse
-from registrations.models import SignUp
+from registrations.models import RegistrationUser, SignUp
 
 # === util methods ===
 
@@ -47,12 +47,22 @@ def assert_get_detail(api_client: APIClient, signup_pk: str, query: str = None):
     response = get_detail(api_client, signup_pk, query)
     assert response.status_code == status.HTTP_200_OK
 
+    return response
+
 
 # === tests ===
 
 
 @pytest.mark.django_db
-def test_admin_user_can_get_signup(user_api_client, registration, signup):
+def test_admin_user_can_get_signup(registration, signup, user_api_client):
+    assert_get_detail(user_api_client, signup.id)
+
+
+@pytest.mark.django_db
+def test_registration_user_can_get_signup(registration, signup, user, user_api_client):
+    user.get_default_organization().admin_users.remove(user)
+    RegistrationUser.objects.create(registration=registration, email=user.email)
+
     assert_get_detail(user_api_client, signup.id)
 
 
@@ -127,9 +137,21 @@ def test__api_key_from_wrong_data_source_cannot_get_signup(
 
 
 @pytest.mark.django_db
-def test_admin_user_can_get_signup_list(user_api_client, registration, signup, signup2):
+def test_admin_user_can_get_signup_list(registration, signup, signup2, user_api_client):
     get_list_and_assert_signups(
-        user_api_client, f"registration={registration.id}", (signup, signup2)
+        user_api_client, f"registration={registration.id}", [signup, signup2]
+    )
+
+
+@pytest.mark.django_db
+def test_registration_user_can_get_signup_list(
+    registration, signup, signup2, user, user_api_client
+):
+    user.get_default_organization().admin_users.remove(user)
+
+    RegistrationUser.objects.create(registration=registration, email=user.email)
+    get_list_and_assert_signups(
+        user_api_client, f"registration={registration.id}", [signup, signup2]
     )
 
 
@@ -141,29 +163,30 @@ def test_anonymous_user_cannot_get_signup_list(api_client, registration, signup)
 
 @pytest.mark.django_db
 def test_regular_user_cannot_get_signup_list(
-    api_client, registration, signup, signup2, user
+    registration, signup, signup2, user, user_api_client
 ):
     user.get_default_organization().regular_users.add(user)
     user.get_default_organization().admin_users.remove(user)
-    api_client.force_authenticate(user)
 
-    response = get_list(api_client, f"registration={registration.id}")
+    response = get_list(user_api_client, f"registration={registration.id}")
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db
 def test__get_all_signups_to_which_user_has_admin_role(
-    api_client, registration, signup, signup2, user
+    registration, signup, signup2, user, user_api_client
 ):
-    api_client.force_authenticate(user)
+    # Admin user is allowed to see signups
+    get_list_and_assert_signups(user_api_client, "", [signup, signup2])
 
-    get_list_and_assert_signups(api_client, "", (signup, signup2))
-
+    # Regular user is not allowed to see signups
     user.get_default_organization().regular_users.add(user)
     user.get_default_organization().admin_users.remove(user)
-    api_client.force_authenticate(user)
+    get_list_and_assert_signups(user_api_client, "", [])
 
-    get_list_and_assert_signups(api_client, "", [])
+    # Registration user is allowed to see signups
+    RegistrationUser.objects.create(registration=registration, email=user.email)
+    get_list_and_assert_signups(user_api_client, "", [signup, signup2])
 
 
 @pytest.mark.django_db
@@ -196,7 +219,7 @@ def test__api_key_with_organization_can_get_signup_list(
     api_client.credentials(apikey=data_source.api_key)
 
     get_list_and_assert_signups(
-        api_client, f"registration={registration.id}", (signup, signup2)
+        api_client, f"registration={registration.id}", [signup, signup2]
     )
 
 
@@ -218,52 +241,48 @@ def test__api_key_with_wrong_organization_cannot_get_signup_list(
 )
 @pytest.mark.django_db
 def test__signup_list_assert_text_filter(
-    api_client, field, registration, signup, signup2, user
+    field, registration, signup, signup2, user_api_client
 ):
     setattr(signup, field, "field_value_1")
     signup.save()
     setattr(signup2, field, "field_value_2")
     signup2.save()
 
-    api_client.force_authenticate(user)
     get_list_and_assert_signups(
-        api_client, f"registration={registration.id}&text=field_value_1", [signup]
+        user_api_client, f"registration={registration.id}&text=field_value_1", [signup]
     )
 
 
 @pytest.mark.django_db
-def test__signup_list_assert_status_filter(
-    api_client, registration, signup, signup2, user
+def test__signup_list_assert_text_filter(
+    registration, signup, signup2, user_api_client
 ):
     signup.attendee_status = SignUp.AttendeeStatus.ATTENDING
     signup.save()
     signup2.attendee_status = SignUp.AttendeeStatus.WAITING_LIST
     signup2.save()
 
-    api_client.force_authenticate(user)
-
     get_list_and_assert_signups(
-        api_client,
+        user_api_client,
         f"registration={registration.id}&attendee_status={SignUp.AttendeeStatus.ATTENDING}",
-        (signup,),
+        [signup],
     )
     get_list_and_assert_signups(
-        api_client,
+        user_api_client,
         f"registration={registration.id}&attendee_status={SignUp.AttendeeStatus.WAITING_LIST}",
-        (signup2,),
+        [signup2],
     )
     get_list_and_assert_signups(
-        api_client,
-        f"registration={registration.id}"
-        f"&attendee_status={SignUp.AttendeeStatus.ATTENDING},{SignUp.AttendeeStatus.WAITING_LIST}",
-        (
+        user_api_client,
+        f"registration={registration.id}&attendee_status={SignUp.AttendeeStatus.ATTENDING},{SignUp.AttendeeStatus.WAITING_LIST}",
+        [
             signup,
             signup2,
-        ),
+        ],
     )
 
     response = get_list(
-        api_client, f"registration={registration.id}&attendee_status=invalid-value"
+        user_api_client, f"registration={registration.id}&attendee_status=invalid-value"
     )
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -274,8 +293,9 @@ def test__signup_list_assert_status_filter(
 
 
 @pytest.mark.django_db
-def test_filter_signups(api_client, registration, registration2, user, user2):
-    api_client.force_authenticate(user=None)
+def test_filter_signups(
+    api_client, registration, registration2, user, user2, event, event2
+):
     signup = SignUp.objects.create(
         registration=registration,
         first_name="Michael",

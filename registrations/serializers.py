@@ -212,16 +212,16 @@ class RegistrationBaseSerializer(serializers.ModelSerializer):
         if "signups" in params.get("include", "").split(","):
             #  only the organization admins should be able to access the signup information
             user = self.context["user"]
-            event = obj.event
-            if not isinstance(user, AnonymousUser) and user.is_admin_of(
-                event.publisher
+            registration_user_emails = [u.email for u in obj.registration_users.all()]
+
+            if not user.is_anonymous and (
+                user.is_admin_of(obj.event.publisher)
+                or user.email in registration_user_emails
             ):
-                queryset = SignUp.objects.filter(registration__id=obj.id)
-                return SignUpSerializer(queryset, many=True, read_only=True).data
+                signups = obj.signups.all()
+                return SignUpSerializer(signups, many=True, read_only=True).data
             else:
-                return _(
-                    "Only the admins of the organization that published the event {event_id} have access rights."
-                ).format(event_id=event.id)
+                return None
         else:
             return None
 
