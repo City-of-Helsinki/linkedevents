@@ -295,12 +295,8 @@ class SignUpViewSet(
                         _("Registration with id {pk} doesn't exist.").format(pk=pk)
                     )
 
-                registration_user_emails = [
-                    u.email for u in registration.registration_users.all()
-                ]
-
                 if not (
-                    user.email in registration_user_emails
+                    len(registration.registration_users.filter(email=user.email))
                     or registration.publisher in admin_organizations
                 ):
                     raise DRFPermissionDenied(
