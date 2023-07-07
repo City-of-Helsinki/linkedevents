@@ -1832,6 +1832,14 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
 
     only_admin_visible_fields = ("created_by", "last_modified_by", "registration_users")
 
+    def _create_registration_users(self, registration, registration_users):
+        for registration_user in registration_users:
+            [user_instance, created] = RegistrationUser.objects.get_or_create(
+                registration=registration, **registration_user
+            )
+            if created:
+                user_instance.send_invitation()
+
     def create(self, validated_data):
         registration_users = validated_data.pop("registration_users", [])
         try:
@@ -1844,13 +1852,8 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
             else:
                 raise
 
-        # Create registration users
-        for registration_user in registration_users:
-            [user_instance, created] = RegistrationUser.objects.get_or_create(
-                registration=registration, **registration_user
-            )
-            if created:
-                user_instance.send_invitation()
+        # Create registration users and send invitation email to them
+        self._create_registration_users(registration, registration_users)
 
         return registration
 
@@ -1866,12 +1869,8 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
             # Delete registration user which are not included in the payload
             instance.registration_users.exclude(email__in=emails).delete()
 
-            for registration_user in registration_users:
-                [user_instance, created] = RegistrationUser.objects.get_or_create(
-                    registration=instance, **registration_user
-                )
-                if created:
-                    user_instance.send_invitation()
+            # Create registration users and send invitation email to them
+            self._create_registration_users(instance, registration_users)
 
         return instance
 
