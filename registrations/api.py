@@ -299,7 +299,7 @@ class SignUpViewSet(
                     u.email for u in registration.registration_users.all()
                 ]
 
-                if user.is_anonymous or not (
+                if not (
                     user.email in registration_user_emails
                     or registration.publisher in admin_organizations
                 ):
@@ -313,15 +313,12 @@ class SignUpViewSet(
             queryset = queryset.filter(registration__in=registrations)
         elif self.action == "list":
             # By default return only signups of registrations to which user has admin rights or is registration user
-            if user.is_anonymous:
-                return queryset.none()
-            else:
-                queryset = queryset.filter(
-                    Q(registration__registration_users__email=user.email)
-                    | Q(
-                        registration__event__publisher__in=user.get_admin_organizations_and_descendants()
-                    )
+            queryset = queryset.filter(
+                Q(registration__registration_users__email=user.email)
+                | Q(
+                    registration__event__publisher__in=user.get_admin_organizations_and_descendants()
                 )
+            )
 
         if text_param := request.query_params.get("text", None):
             queryset = queryset.annotate(
