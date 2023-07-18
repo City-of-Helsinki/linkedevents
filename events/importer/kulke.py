@@ -837,30 +837,27 @@ class KulkeImporter(Importer):
         for lang in self.languages:
             name_attr = f"name_{lang}"
             first_name = getattr(first_event, name_attr)
-            words = first_name.split(" ") if first_name else None
+            words = first_name.split(" ") if first_name else []
 
             if name_attr not in common_fields:
                 name = ""
                 member_event_names = [
                     getattr(event, name_attr) for event in member_events
                 ]
-                while words and all(
-                    member_event_name.startswith(name + words[0])
-                    if member_event_name
-                    else False
-                    for member_event_name in member_event_names
-                ):
-                    name += words.pop(0) + " "
 
-                if name:
-                    setattr(super_event, name_attr, name.rstrip())
-                else:
-                    # If a common part was not found, default to the first event's name
-                    setattr(
-                        super_event,
-                        name_attr,
-                        getattr(first_event, name_attr),
-                    )
+                # Try to find the common part of the names
+                for word in words:
+                    if all(
+                        member_event_name and member_event_name.startswith(name + word)
+                        for member_event_name in member_event_names
+                    ):
+                        name += word + " "
+                    else:
+                        name = name.rstrip()
+                        break
+
+                # If a common part was not found, default to the first event's name
+                setattr(super_event, name_attr, name or getattr(first_event, name_attr))
 
         # Gather common keywords present in *all* subevents
         common_keywords = functools.reduce(
