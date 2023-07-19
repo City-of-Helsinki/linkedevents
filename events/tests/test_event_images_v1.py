@@ -218,6 +218,75 @@ def test__upload_an_image_with_api_key(
 
 
 @pytest.mark.django_db
+def test__image_edit_as_superuser(
+    api_client, list_url, image_data, user, organization, organization2, user2
+):
+    organization.admin_users.add(user)
+    api_client.force_authenticate(user)
+
+    response = api_client.post(list_url, image_data)
+
+    user2.is_superuser = True
+    organization2.admin_users.add(user2)
+    api_client.force_authenticate(user2)
+    detail_url = reverse("image-detail", kwargs={"pk": response.data["id"]})
+    response2 = api_client.put(detail_url, {"name": "this is needed"})
+    assert response2.status_code == 200
+
+
+@pytest.mark.django_db
+def test__image_edit_as_external(api_client, external_user):
+    uploaded_image = create_uploaded_image()
+    image = Image.objects.create(image=uploaded_image, created_by=external_user)
+
+    api_client.force_authenticate(external_user)
+
+    detail_url = reverse("image-detail", kwargs={"pk": image.id})
+    response2 = api_client.put(detail_url, {"name": "this is needed"})
+    assert response2.status_code == 200
+
+
+@pytest.mark.django_db
+def test__image_edit_as_admin(
+    api_client, list_url, image_data, user, organization, user2
+):
+    organization.admin_users.add(user)
+    api_client.force_authenticate(user)
+
+    response = api_client.post(list_url, image_data)
+
+    organization.admin_users.add(user2)
+    api_client.force_authenticate(user2)
+
+    image = Image.objects.get(pk=response.data["id"])
+    assert user2.is_admin_of(image.publisher) == True
+
+    detail_url = reverse("image-detail", kwargs={"pk": response.data["id"]})
+    response2 = api_client.put(detail_url, {"name": "this is needed"})
+    assert response2.status_code == 200
+
+
+@pytest.mark.django_db
+def test__image_edit_as_regular_user(
+    api_client, list_url, image_data, user, organization, user2
+):
+    organization.regular_users.add(user)
+    api_client.force_authenticate(user)
+
+    response = api_client.post(list_url, image_data)
+
+    organization.regular_users.add(user2)
+    api_client.force_authenticate(user2)
+
+    image = Image.objects.get(pk=response.data["id"])
+    assert user2.is_regular_user_of(image.publisher) == True
+
+    detail_url = reverse("image-detail", kwargs={"pk": response.data["id"]})
+    response2 = api_client.put(detail_url, {"name": "this is needed"})
+    assert response2.status_code == 200
+
+
+@pytest.mark.django_db
 def test__image_cannot_be_edited_outside_organization(
     api_client, settings, list_url, image_data, user, organization, organization2, user2
 ):

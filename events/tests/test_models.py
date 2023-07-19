@@ -2,6 +2,8 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django_orghierarchy.models import Organization
 
+from helevents.tests.factories import UserFactory
+
 from ..models import DataSource, Event, Image, KeywordSet, PublicationStatus
 
 
@@ -73,6 +75,34 @@ class TestImage(TestCase):
 
         can_be_deleted = self.image.can_be_deleted_by(self.user)
         self.assertTrue(can_be_deleted)
+
+
+class TestImageExternal(TestCase):
+    def setUp(self):
+        self.user = UserFactory()
+        self.user2 = UserFactory()
+
+        self.data_source = DataSource.objects.create(
+            id="ds",
+            name="data-source",
+            api_key="test_api_key",
+            user_editable_resources=True,
+        )
+        self.image = Image.objects.create(
+            name="image",
+            data_source=self.data_source,
+            publisher=None,
+            created_by=self.user,
+            url="http://fake.url/image/",
+        )
+
+    def test_can_be_edited_by_external_user(self):
+        can_be_edited = self.image.can_be_edited_by(self.user)
+        self.assertTrue(can_be_edited)
+
+    def test_cannot_be_edited_by_other_external_users(self):
+        can_be_edited = self.image.can_be_edited_by(self.user2)
+        self.assertFalse(can_be_edited)
 
 
 class TestEvent(TestCase):
