@@ -28,7 +28,7 @@ fi
 if [[ -n "$@" ]]; then
     "$@"
 elif [[ "$DEV_SERVER" = "true" ]]; then
-    python ./manage.py runserver_plus 0.0.0.0:8000
+    python -Wd ./manage.py runserver_plus 0.0.0.0:8000
 else
     uwsgi \
     --ini .prod/uwsgi_configuration.ini \
