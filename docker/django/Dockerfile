@@ -44,8 +44,6 @@ COPY --chown=appuser:appuser . /app/
 # This is required by osoite importer (by underlying munigeo importers)
 RUN mkdir -p /app/data && chgrp -R 0 /app/data && chmod g+w -R /app/data
 
-RUN django-admin compilemessages
-
 USER appuser
 
 EXPOSE 8000/tcp
@@ -65,6 +63,9 @@ FROM appbase AS production
 COPY --from=staticbuilder --chown=appuser:appuser /app/static /app/static
 COPY --chown=appuser:appuser . /app/
 
+RUN django-admin compilemessages
+
+# This is needed to install preferred templates here.
 RUN chgrp -R 0 /app/templates/rest_framework/ && chmod g+w -R /app/templates/rest_framework/
 
 # This is required by osoite importer (by underlying munigeo importers)
