@@ -13,7 +13,7 @@ import requests
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Q
 from django_orghierarchy.models import Organization
 from lxml import etree
 from pytz import timezone
@@ -925,7 +925,8 @@ class KulkeImporter(Importer):
                 # The imported event is not part of an aggregate but one was found it in the db.
                 # Remove the super event. This is the only case when an event is removed from
                 # a recurring aggregate.
-                aggregate.super_event.delete()
+                aggregate.super_event.soft_delete()
+                aggregate.super_event.sub_events.all().update(super_event=None)
                 return False
             else:
                 for event in events:
@@ -946,30 +947,34 @@ class KulkeImporter(Importer):
         self, elis_event_ids: Sequence[int], begin_date: datetime
     ) -> None:
         # Find Kulke events that are not referenced in the latest data from Elis and delete them.
-        count, deleted = (
-            Event.objects.filter(
-                data_source=self.data_source,
-                start_time__gte=begin_date,
-                super_event_type__isnull=True,
-            )
-            .exclude(origin_id__in=elis_event_ids)
-            .delete()
-        )
+        unreferenced_events = Event.objects.filter(
+            data_source=self.data_source,
+            start_time__gte=begin_date,
+            super_event_type__isnull=True,
+            deleted=False,
+        ).exclude(origin_id__in=elis_event_ids)
+        unreferenced_events.update(super_event=None)
+        count = unreferenced_events.soft_delete()
+
         if count:
-            logger.debug("Deleted %d events and associated objects: %s", count, deleted)
+            logger.debug("Deleted %d events", count)
 
         # Find super events that no longer contain at least two events and delete them
-        count, deleted = (
+        count = (
             Event.objects.exclude(super_event_type__isnull=True)
-            .annotate(aggregate_member_count=Count("aggregate__members"))
-            .filter(aggregate_member_count__lt=2)
-            .delete()
+            .annotate(
+                aggregate_member_count=Count(
+                    "aggregate__members",
+                    filter=Q(aggregate__members__event__deleted=False),
+                )
+            )
+            .filter(aggregate_member_count__lt=2, deleted=False)
+            .soft_delete()
         )
         if count:
             logger.debug(
-                "Deleted %d empty super events and associated objects: %s",
+                "Deleted %d empty super events",
                 count,
-                deleted,
             )
 
     def import_events(self):

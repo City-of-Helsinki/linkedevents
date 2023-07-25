@@ -144,7 +144,10 @@ class BaseQuerySet(models.QuerySet):
 
 
 class BaseTreeQuerySet(TreeQuerySet, BaseQuerySet):
-    pass
+    def soft_delete(self):
+        return self.update(deleted=True)
+
+    soft_delete.alters_data = True
 
 
 class ReplacedByMixin:

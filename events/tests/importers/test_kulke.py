@@ -224,7 +224,7 @@ class TestKulkeImporter(TestCase):
         event_2 = EventFactory(
             data_source=self.data_source, origin_id=2, start_time=now
         )
-        # Old event, outside of the date range of the Elis search -- won't be removed
+        # Old event, outside the date range of the Elis search -- won't be removed
         event_3 = EventFactory(
             data_source=self.data_source,
             origin_id=3,
@@ -236,9 +236,9 @@ class TestKulkeImporter(TestCase):
             begin_date=now - timedelta(days=60),
         )
 
-        self.assertFalse(Event.objects.filter(id=event_1.id).exists())
-        self.assertTrue(Event.objects.filter(id=event_2.id).exists())
-        self.assertTrue(Event.objects.filter(id=event_3.id).exists())
+        self.assertFalse(Event.objects.filter(id=event_1.id, deleted=False).exists())
+        self.assertTrue(Event.objects.filter(id=event_2.id, deleted=False).exists())
+        self.assertTrue(Event.objects.filter(id=event_3.id, deleted=False).exists())
 
     @pytest.mark.django_db
     def test__handle_removed_events_superevent(self):
@@ -269,10 +269,18 @@ class TestKulkeImporter(TestCase):
             begin_date=now - timedelta(days=60),
         )
 
-        self.assertFalse(Event.objects.filter(id=super_1_event_1.id).exists())
-        self.assertFalse(Event.objects.filter(id=super_1_event_2.id).exists())
-        self.assertFalse(Event.objects.filter(id=super_1.id).exists())
-        self.assertTrue(Event.objects.filter(id=super_2_event_1.id).exists())
-        self.assertTrue(Event.objects.filter(id=super_2_event_2.id).exists())
-        self.assertTrue(Event.objects.filter(id=super_2.id).exists())
-        self.assertFalse(Event.objects.filter(id=super_3.id).exists())
+        self.assertFalse(
+            Event.objects.filter(id=super_1_event_1.id, deleted=False).exists()
+        )
+        self.assertFalse(
+            Event.objects.filter(id=super_1_event_2.id, deleted=False).exists()
+        )
+        self.assertFalse(Event.objects.filter(id=super_1.id, deleted=False).exists())
+        self.assertTrue(
+            Event.objects.filter(id=super_2_event_1.id, deleted=False).exists()
+        )
+        self.assertTrue(
+            Event.objects.filter(id=super_2_event_2.id, deleted=False).exists()
+        )
+        self.assertTrue(Event.objects.filter(id=super_2.id, deleted=False).exists())
+        self.assertFalse(Event.objects.filter(id=super_3.id, deleted=False).exists())
