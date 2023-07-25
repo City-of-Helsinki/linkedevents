@@ -149,6 +149,8 @@ six==1.16.0
     #   freezegun
     #   python-dateutil
     #   requests-mock
+snakemd==2.1.0
+    # via -r requirements-dev.in
 sqlparse==0.4.4
     # via
     #   -c requirements.txt
