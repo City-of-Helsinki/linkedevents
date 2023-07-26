@@ -85,6 +85,21 @@ class TestKulkeImporter(TestCase):
         EventAggregateMember.objects.bulk_create(event_aggregates)
         return super_event
 
+    def assert_event_soft_deleted(self, event_id: str, deleted: bool):
+        """
+        Assert that the event with the given ID has the given deleted status,
+        i.e. it has been soft-deleted if `deleted` is True, and it has not been
+        soft-deleted if `deleted` is False.
+
+        If the event does not exist (e.g. due to being actually deleted), the
+        test fails.
+        """
+        try:
+            event = Event.objects.get(id=event_id)
+        except Event.DoesNotExist:
+            self.fail(f"Event with ID {event_id} does not exist")
+        self.assertEqual(event.deleted, deleted)
+
     @pytest.mark.django_db
     def test_html_format(self):
         text = (
@@ -236,9 +251,9 @@ class TestKulkeImporter(TestCase):
             begin_date=now - timedelta(days=60),
         )
 
-        self.assertFalse(Event.objects.filter(id=event_1.id, deleted=False).exists())
-        self.assertTrue(Event.objects.filter(id=event_2.id, deleted=False).exists())
-        self.assertTrue(Event.objects.filter(id=event_3.id, deleted=False).exists())
+        self.assert_event_soft_deleted(event_1.id, True)
+        self.assert_event_soft_deleted(event_2.id, False)
+        self.assert_event_soft_deleted(event_3.id, False)
 
     @pytest.mark.django_db
     def test__handle_removed_events_superevent(self):
@@ -269,18 +284,10 @@ class TestKulkeImporter(TestCase):
             begin_date=now - timedelta(days=60),
         )
 
-        self.assertFalse(
-            Event.objects.filter(id=super_1_event_1.id, deleted=False).exists()
-        )
-        self.assertFalse(
-            Event.objects.filter(id=super_1_event_2.id, deleted=False).exists()
-        )
-        self.assertFalse(Event.objects.filter(id=super_1.id, deleted=False).exists())
-        self.assertTrue(
-            Event.objects.filter(id=super_2_event_1.id, deleted=False).exists()
-        )
-        self.assertTrue(
-            Event.objects.filter(id=super_2_event_2.id, deleted=False).exists()
-        )
-        self.assertTrue(Event.objects.filter(id=super_2.id, deleted=False).exists())
-        self.assertFalse(Event.objects.filter(id=super_3.id, deleted=False).exists())
+        self.assert_event_soft_deleted(super_1_event_1.id, True)
+        self.assert_event_soft_deleted(super_1_event_2.id, True)
+        self.assert_event_soft_deleted(super_1.id, True)
+        self.assert_event_soft_deleted(super_2_event_1.id, False)
+        self.assert_event_soft_deleted(super_2_event_2.id, False)
+        self.assert_event_soft_deleted(super_2.id, False)
+        self.assert_event_soft_deleted(super_3.id, True)
