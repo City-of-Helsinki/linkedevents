@@ -704,7 +704,7 @@ class KulkeImporter(Importer):
                     kulke_keyword = Keyword.objects.get(pk=kulke_id)
                     event_keywords.add(kulke_keyword)
                 except Keyword.DoesNotExist:
-                    logger.error("Could not find {}".format(kulke_id))
+                    logger.exception("Could not find {}".format(kulke_id))
 
             if is_course:
                 event_keywords.update(self.course_keywords)
