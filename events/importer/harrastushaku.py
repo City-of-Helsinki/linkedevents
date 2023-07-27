@@ -1,5 +1,4 @@
 import logging
-import traceback
 from collections import namedtuple
 from copy import deepcopy
 from datetime import datetime, timedelta
@@ -98,14 +97,11 @@ class HarrastushakuImporter(Importer):
         for location in locations:
             try:
                 self.handle_location(location)
+            except HarrastushakuException as e:
+                logger.exception(f"Error handling location {location.get('id')}: {e}")
             except Exception as e:  # noqa
-                message = (
-                    e
-                    if isinstance(e, HarrastushakuException)
-                    else traceback.format_exc()
-                )
-                logger.error(
-                    "Error handling location {}: {}".format(location.get("id"), message)
+                logger.exception(
+                    f"An unexpected error occurred while handling location {location.get('id')}: {e}"
                 )
 
     def map_harrastushaku_location_ids_to_tprek_ids(self, harrastushaku_locations):
@@ -235,14 +231,11 @@ class HarrastushakuImporter(Importer):
         for i, activity in enumerate(activities, 1):
             try:
                 self.handle_activity(activity)
+            except HarrastushakuException as e:
+                logger.exception(f"Error handling activity {activity.get('id')}: {e}")
             except Exception as e:  # noqa
-                message = (
-                    e
-                    if isinstance(e, HarrastushakuException)
-                    else traceback.format_exc()
-                )
-                logger.error(
-                    "Error handling activity {}: {}".format(activity.get("id"), message)
+                logger.exception(
+                    f"An unexpected error occurred while handling activity {activity.get('id')}: {e}"
                 )
 
             if not i % 10:
