@@ -28,5 +28,6 @@ class UserSerializer(serializers.ModelSerializer):
             "department_name",
             "is_staff",
             "display_name",
+            "is_external",
         ]
         model = get_user_model()
