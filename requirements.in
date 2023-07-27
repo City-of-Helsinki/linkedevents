@@ -6,14 +6,14 @@ django-anymail
 django-cleanup
 django-cors-headers
 django-environ
-django-filter>=2.1.0
+django-filter
 django-haystack
 django-helusers
 django-image-cropping
-django-jinja==2.10.2
+django-jinja
 django-leaflet
-django-modeltranslation>=0.18.4
-django-mptt>=0.10.0
+django-modeltranslation
+django-mptt
 # TODO switch to a PyPi version when one that contains this commit is available
 django-munigeo @ git+https://github.com/City-of-Helsinki/django-munigeo@47fd86444fcb095d868911056e344a4fc06578b7
 django-orghierarchy
@@ -43,7 +43,7 @@ pytz
 rdflib==6.1.1
 regex
 requests-cache
-requests>=2.20.0
+requests
 sentry-sdk
 social-auth-app-django
 social-auth-core
