@@ -77,6 +77,8 @@ env = environ.Env(
     MAILGUN_API_KEY=(str, ""),
     MEDIA_ROOT=(environ.Path(), root("media")),
     MEDIA_URL=(str, "/media/"),
+    # "helsinkiazuread" = Tunnistamo auth_backends.helsinki_azure_ad.HelsinkiAzureADTenantOAuth2
+    NON_EXTERNAL_AUTHENTICATION_METHODS=(list, ["helsinkiazuread"]),
     REDIS_SENTINELS=(list, []),
     REDIS_URL=(str, None),
     REDIS_PASSWORD=(str, None),
@@ -304,6 +306,9 @@ ENABLE_EXTERNAL_USER_EVENTS = env("ENABLE_EXTERNAL_USER_EVENTS")
 # Publisher used for events created by users without organization (i.e. external users)
 EXTERNAL_USER_PUBLISHER_ID = env("EXTERNAL_USER_PUBLISHER_ID")
 
+# Which OIDC authentication methods are never considered as external users
+NON_EXTERNAL_AUTHENTICATION_METHODS = env("NON_EXTERNAL_AUTHENTICATION_METHODS")
+
 #
 # REST Framework
 #
@@ -328,7 +333,7 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "events.auth.ApiKeyAuthentication",
-        "helusers.oidc.ApiTokenAuthentication",
+        "events.auth.ApiTokenAuthentication",
     ),
     "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.URLPathVersioning",
     "VIEW_NAME_FUNCTION": "linkedevents.utils.get_view_name",

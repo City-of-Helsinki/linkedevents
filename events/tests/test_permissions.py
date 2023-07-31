@@ -94,7 +94,9 @@ def test_can_edit_event(membership_status, expected_public, expected_draft):
     ],
 )
 @pytest.mark.django_db
-def test_is_external_user(is_admin, is_regular_user, expected):
+def test_user_is_external_based_on_group_membership(
+    is_admin, is_regular_user, expected
+):
     with (
         patch.object(
             UserModelPermissionMixin, "organization_memberships", new_callable=MagicMock

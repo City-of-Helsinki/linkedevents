@@ -7,11 +7,14 @@ from django_orghierarchy.models import Organization
 from helusers.oidc import ApiTokenAuthentication
 from helusers.settings import api_token_auth_settings
 from jose import jwt
+from rest_framework import status
 
 from events.models import DataSource
+from helevents.tests.factories import UserFactory
 
 from ..auth import ApiKeyUser
 from .keys import rsa_key
+from .utils import versioned_reverse
 
 DEFAULT_ORGANIZATION_ID = "others"
 
@@ -27,7 +30,7 @@ def global_requests_mock(requests_mock):
     req_mock = None
 
 
-def get_api_token_for_user_with_scopes(user_uuid, scopes: list):
+def get_api_token_for_user_with_scopes(user_uuid, scopes: list, amr: str = None):
     """Build a proper auth token with desired scopes."""
     audience = api_token_auth_settings.AUDIENCE
     issuer = api_token_auth_settings.ISSUER
@@ -51,6 +54,7 @@ def get_api_token_for_user_with_scopes(user_uuid, scopes: list):
         "sub": str(user_uuid),
         "iat": int(now.timestamp()),
         "exp": int(expire.timestamp()),
+        "amr": amr if amr else "github",
         auth_field: scopes,
     }
     encoded_jwt = jwt.encode(
@@ -122,3 +126,26 @@ def test_valid_jwt_is_accepted():
     user_uuid = uuid.UUID("b7a35517-eb1f-46c9-88bf-3206fb659c3c")
     user, jwt_value = do_authentication(user_uuid)
     assert user.uuid == user_uuid
+
+
+@pytest.mark.parametrize("login_using_ad", [True, False])
+@pytest.mark.django_db
+def test_user_is_external_based_on_login_method(api_client, settings, login_using_ad):
+    """Using AD authentication forces the User.is_external to False."""
+    user = UserFactory()
+    detail_url = versioned_reverse("user-detail", kwargs={"pk": user.uuid})
+    ad_method = "helsinkiazuread"
+    settings.NON_EXTERNAL_AUTHENTICATION_METHODS = [ad_method]
+    if login_using_ad:
+        auth_method = ad_method
+    else:
+        auth_method = "non-ad_method"
+    auth_header = get_api_token_for_user_with_scopes(
+        user.uuid, [api_token_auth_settings.API_SCOPE_PREFIX], amr=auth_method
+    )
+    api_client.credentials(HTTP_AUTHORIZATION=auth_header)
+
+    response = api_client.get(detail_url, format="json")
+
+    assert response.status_code == status.HTTP_200_OK, str(response.content)
+    assert response.data["is_external"] != login_using_ad
