@@ -1,3 +1,4 @@
+import logging
 from functools import reduce
 
 from django.conf import settings
@@ -7,6 +8,8 @@ from helusers.models import AbstractUser
 
 from events.models import PublicationStatus
 
+logger = logging.getLogger(__name__)
+
 
 class UserModelPermissionMixin:
     """Permission mixin for user models
@@ -15,9 +18,29 @@ class UserModelPermissionMixin:
     for user models.
     """
 
+    @property
+    def token_amr_claim(self) -> str:
+        claim = getattr(self, "_token_amr_claim", None)
+        if claim is None:
+            logger.warning(
+                "User.token_amr_claim used without a request or authentication.",
+                stack_info=True,
+                stacklevel=2,
+            )
+
+        return claim
+
+    @token_amr_claim.setter
+    def token_amr_claim(self, value: str):
+        self._token_amr_claim = value
+
     @cached_property
     def is_external(self):
         """Check if the user is an external user"""
+
+        if self.token_amr_claim in settings.NON_EXTERNAL_AUTHENTICATION_METHODS:
+            return False
+
         return (
             not self.organization_memberships.exists()
             and not self.admin_organizations.exists()

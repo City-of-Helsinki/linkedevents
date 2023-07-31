@@ -2,10 +2,26 @@ from django.contrib.auth import get_user_model
 from django.contrib.gis.db import models
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
+from helusers.oidc import ApiTokenAuthentication as HelApiTokenAuthentication
 from rest_framework import authentication, exceptions
 
 from events.models import DataSource
 from helevents.models import UserModelPermissionMixin
+
+
+class ApiTokenAuthentication(HelApiTokenAuthentication):
+    def authenticate(self, request):
+        """Extract the AMR claim from the authentication payload."""
+        auth_data = super().authenticate(request)
+        if not auth_data:
+            return auth_data
+
+        user, auth = auth_data
+
+        if amr_claim := auth.data.get("amr"):
+            user.token_amr_claim = amr_claim
+
+        return user, auth
 
 
 class ApiKeyAuthentication(authentication.BaseAuthentication):
