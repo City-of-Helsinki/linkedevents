@@ -273,9 +273,13 @@ class Image(models.Model):
         """Check if current image can be edited by the given user"""
         if user.is_anonymous:
             return False
-        if user.is_external and (
-            self.publisher is None
-            or self.publisher.id == settings.EXTERNAL_USER_PUBLISHER_ID
+        if (
+            user.is_external
+            and settings.ENABLE_EXTERNAL_USER_EVENTS
+            and (
+                self.publisher is None
+                or self.publisher.id == settings.EXTERNAL_USER_PUBLISHER_ID
+            )
         ):
             return self.created_by == user
         return (
