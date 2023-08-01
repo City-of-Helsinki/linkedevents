@@ -3248,14 +3248,15 @@ class EventViewSet(
         Event.objects.all()
         .select_related("location", "publisher")
         .prefetch_related(
-            "offers",
-            "keywords",
             "audience",
+            "external_links",
+            "keywords",
             "images",
             "images__publisher",
-            "external_links",
-            "sub_events",
             "in_language",
+            "offers",
+            "registration",
+            "sub_events",
             "videos",
         )
     )
@@ -3311,14 +3312,19 @@ class EventViewSet(
             if "include" in context:
                 for included in context["include"]:
                     if included == "location":
-                        queryset = queryset.prefetch_related(
+                        queryset = queryset.select_related(
+                            "location__publisher"
+                        ).prefetch_related(
                             "location__divisions",
                             "location__divisions__type",
                             "location__divisions__municipality",
                         )
                     if included == "keywords":
                         queryset = queryset.prefetch_related(
-                            "keywords__alt_labels", "audience__alt_labels"
+                            "audience__alt_labels",
+                            "audience__publisher",
+                            "keywords__alt_labels",
+                            "keywords__publisher",
                         )
             return apply_select_and_prefetch(
                 queryset=queryset, extensions=get_extensions_from_request(self.request)
