@@ -27,14 +27,34 @@ class IsReadOnly(BasePermission):
         return request.method in permissions.SAFE_METHODS
 
 
-class UserBelongsToOrganization(BasePermission):
+class UserDataFromRequestMixin:
+    """
+    Cache utils.get_user_data_source_and_organization_from_request
+    as the permission check may get called multiple times during a single
+    request.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__cached = None
+
+    def user_data_source_and_organization_from_request(self, request):
+        if self.__cached:
+            return self.__cached
+        self.__cached = utils.get_user_data_source_and_organization_from_request(
+            request
+        )
+        return self.__cached
+
+
+class UserBelongsToOrganization(UserDataFromRequestMixin, BasePermission):
     message = "User doesn't belong to any organization"
 
     def has_permission(self, request, view):
         (
             __,
             user_organization,
-        ) = utils.get_user_data_source_and_organization_from_request(request)
+        ) = self.user_data_source_and_organization_from_request(request)
         return bool(user_organization)
 
 
@@ -47,7 +67,7 @@ class IsObjectEditableByUser(BasePermission):
         return obj.can_be_edited_by(request.user)
 
 
-class OrganizationUserCreatePermission(BasePermission):
+class OrganizationUserCreatePermission(UserDataFromRequestMixin, BasePermission):
     message = "User is not allowed to edit this object"
 
     def has_permission(self, request, view):
@@ -61,7 +81,7 @@ class OrganizationUserCreatePermission(BasePermission):
         (
             __,
             user_organization,
-        ) = utils.get_user_data_source_and_organization_from_request(request)
+        ) = self.user_data_source_and_organization_from_request(request)
         view_permits_regular_user_edit = getattr(
             view, "permit_regular_user_edit", False
         )
@@ -84,7 +104,9 @@ OrganizationUserEditPermission = (
 )
 
 
-class DataSourceResourceEditPermission(IsAuthenticatedOrReadOnly):
+class DataSourceResourceEditPermission(
+    UserDataFromRequestMixin, IsAuthenticatedOrReadOnly
+):
     def has_permission(self, request, view):
         if not super().has_permission(request, view):
             return False
@@ -93,7 +115,7 @@ class DataSourceResourceEditPermission(IsAuthenticatedOrReadOnly):
         if request.method != "POST":
             return True
 
-        user_data_source, __ = utils.get_user_data_source_and_organization_from_request(
+        user_data_source, __ = self.user_data_source_and_organization_from_request(
             request
         )
 
@@ -107,7 +129,7 @@ class DataSourceResourceEditPermission(IsAuthenticatedOrReadOnly):
         if request.method in permissions.SAFE_METHODS:
             return True
 
-        user_data_source, __ = utils.get_user_data_source_and_organization_from_request(
+        user_data_source, __ = self.user_data_source_and_organization_from_request(
             request
         )
 

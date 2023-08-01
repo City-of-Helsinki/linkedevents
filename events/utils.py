@@ -2,7 +2,6 @@ import collections
 import re
 import warnings
 from datetime import datetime, timedelta
-from functools import cache
 from typing import Optional
 
 import pytz
@@ -251,7 +250,6 @@ def organization_can_be_edited_by(organization: Organization, user):
     return organization in user.admin_organizations.all()
 
 
-@cache
 def get_user_data_source_and_organization_from_request(
     request,
 ) -> tuple[DataSource, Organization]:
