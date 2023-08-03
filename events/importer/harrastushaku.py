@@ -646,7 +646,13 @@ def get_datetime_from_data(data, field):
     value = data.get(field)
     if value in (None, False, ""):
         return None
-    return datetime.fromtimestamp(int(value)).astimezone(pytz.timezone("UTC"))
+    # NOTE: The timestamps from Harrastushaku are in UTC, but they need to be
+    # converted to Europe/Helsinki timezone to keep the dates correct.
+    # E.g. an activity might have a start time of 2022-12-31T22:00:00Z,
+    # but in reality, it should start the next day, i.e. 2023-01-01T00:00:00+02:00.
+    return datetime.fromtimestamp(int(value)).astimezone(
+        pytz.timezone("Europe/Helsinki")
+    )
 
 
 def bind_data_getters(data):
