@@ -844,7 +844,10 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
     )
     provider = models.CharField(verbose_name=_("Provider"), max_length=512, null=True)
     provider_contact_info = models.CharField(
-        verbose_name=_("Provider's contact info"), max_length=255, null=True, blank=True
+        verbose_name=_("Provider's contact info"),
+        max_length=10000,
+        null=True,
+        blank=True,
     )
     publisher = models.ForeignKey(
         "django_orghierarchy.Organization",
