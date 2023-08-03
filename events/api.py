@@ -24,7 +24,7 @@ from django.contrib.postgres.search import SearchQuery, TrigramSimilarity
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.db.models import Count, F, Prefetch, Q
+from django.db.models import Count, Exists, F, OuterRef, Prefetch, Q, QuerySet
 from django.db.models.functions import Greatest
 from django.db.utils import IntegrityError
 from django.http import Http404, HttpResponsePermanentRedirect
@@ -2511,15 +2511,47 @@ def _get_queryset_from_cache_many(params, param, cache_name, operator, queryset)
     return queryset
 
 
+def _find_keyword_replacements(keyword_ids: list[str]) -> tuple[list[Keyword], bool]:
+    """
+    Convert a list of keyword ids into keyword objects with
+    replacements applied.
+
+    :return: a pair containing a list of keywords and a boolean indicating
+             whether all keywords were found
+    """
+    keywords = Keyword.objects.filter(id__in=keyword_ids).select_related("replaced_by")
+    found_all_keywords = len(keyword_ids) == len(keywords)
+    replaced_keywords = [keyword.get_replacement() or keyword for keyword in keywords]
+    return list(set(replaced_keywords)), found_all_keywords
+
+
+def _filter_events_keyword_or(queryset: QuerySet, keyword_ids: list[str]) -> QuerySet:
+    """
+    Given an Event queryset, apply OR filter on keyword ids
+    """
+    keywords, __ = _find_keyword_replacements(keyword_ids)
+    keyword_ids = [keyword.pk for keyword in keywords]
+
+    kw_qs = Event.keywords.through.objects.filter(
+        event=OuterRef("pk"), keyword__in=keyword_ids
+    )
+    audience_qs = Event.audience.through.objects.filter(
+        event=OuterRef("pk"), keyword__in=keyword_ids
+    )
+    return queryset.filter(Exists(kw_qs) | Exists(audience_qs))
+
+
 def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
     """
     Filter events queryset by params
     (e.g. self.request.query_params ingit EventViewSet)
     """
-    # Filter by string (case insensitive). This searches from all fields
-    # which are marked translatable in translation.py
+    # Please keep in mind that .distinct() will absolutely kill
+    # performance of event queries. To avoid duplicate rows in filters
+    # consider using Exists instead.
+    # Filtering against the through table can also provide
+    # benefits (see _filter_events_keyword_or)
 
-    # filter to get events with or without a registration.
     val = params.get("registration", None)
     if val and parse_bool(val, "registration"):
         queryset = queryset.exclude(registration=None)
@@ -2617,21 +2649,29 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
     vals = params.get("keyword_set_AND", None)
     if vals:
         vals = vals.split(",")
-        keyword_sets = KeywordSet.objects.filter(id__in=vals)
-        for keyword_set in keyword_sets:
-            keywords = keyword_set.keywords.all()
-            qset = Q(keywords__in=keywords)
-            queryset = queryset.filter(qset)
+        kw_sets = KeywordSet.objects.filter(id__in=vals).prefetch_related(
+            Prefetch("keywords", Keyword.objects.all().only("id"))
+        )
+        for kw_set in kw_sets:
+            kw_ids = [kw.id for kw in kw_set.keywords.all()]
+            subqs = Event.objects.filter(id=OuterRef("pk"), keywords__in=kw_ids)
+            queryset = queryset.filter(Exists(subqs))
 
     vals = params.get("keyword_set_OR", None)
     if vals:
         vals = vals.split(",")
-        keyword_sets = KeywordSet.objects.filter(id__in=vals)
+        keyword_sets = KeywordSet.objects.filter(id__in=vals).prefetch_related(
+            Prefetch("keywords", Keyword.objects.all().only("id"))
+        )
         all_keywords = set()
         for keyword_set in keyword_sets:
             keywords = keyword_set.keywords.all()
             all_keywords.update(keywords)
-        queryset = queryset.filter(keywords__in=all_keywords)
+
+        kw_qs = Event.keywords.through.objects.filter(
+            event=OuterRef("pk"), keyword__in=all_keywords
+        )
+        queryset = queryset.filter(Exists(kw_qs))
 
     if "local_ongoing_OR_set" in "".join(params):
         count = 1
@@ -2694,8 +2734,11 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
         for i in all_sets:
             val = params.get(i, None)
             if val:
-                val = val.split(",")
-                queryset = queryset.filter(keywords__pk__in=val)
+                vals = val.split(",")
+                kw_qs = Event.keywords.through.objects.filter(
+                    event=OuterRef("pk"), keyword__in=vals
+                )
+                queryset = queryset.filter(Exists(kw_qs))
 
     val = params.get("internet_based", None)
     if val and parse_bool(val, "internet_based"):
@@ -2707,22 +2750,23 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
     val = params.get("combined_text", None)
     if val:
         val = val.lower()
-        qset = Q()
         vals = val.split(",")
-        qsets = []
+
+        combined_q = Q()
         for val in vals:
+            val_q = Q()
             # Free string search from all translated event fields
             event_fields = EventTranslationOptions.fields
             for field in event_fields:
                 # check all languages for each field
-                qset |= _text_qset_by_translated_field(field, val)
+                val_q |= _text_qset_by_translated_field(field, val)
 
             # Free string search from all translated place fields
             place_fields = PlaceTranslationOptions.fields
             for field in place_fields:
                 location_field = "location__" + field
                 # check all languages for each field
-                qset |= _text_qset_by_translated_field(location_field, val)
+                val_q |= _text_qset_by_translated_field(location_field, val)
 
             langs = (
                 ["fi", "sv"]
@@ -2730,16 +2774,20 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
                 else ["fi", "sv", "en"]
             )
             tri = [TrigramSimilarity(f"name_{i}", val) for i in langs]
-            keywords = (
+            keywords = list(
                 Keyword.objects.annotate(simile=Greatest(*tri))
                 .filter(simile__gt=0.2)
                 .order_by("-simile")[:3]
             )
-            if keywords:
-                qset |= Q(keywords__in=keywords)
-            qsets.append(qset)
-            qset = Q()
-        queryset = queryset.filter(*qsets)
+
+            val_q |= Q(keywords__in=keywords)
+
+            combined_q &= val_q
+
+        # FYI: Biggest slowdown in this filter is the ordering of keywords simile
+        queryset = queryset.filter(
+            Exists(Event.objects.filter(combined_q, id=OuterRef("pk")).only("id"))
+        )
 
     val = params.get("text", None)
     if val:
@@ -2866,75 +2914,46 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
         val = val.split(",")
         queryset = queryset.filter(location_id__in=val)
 
-    # Filter by keyword id, multiple ids separated by comma
-    val = params.get("keyword", None)
-    if val:
-        val = val.split(",")
-        try:
-            # replaced keywords are looked up for backwards compatibility
-            val = [
-                getattr(Keyword.objects.get(id=kid).replaced_by, "id", None) or kid
-                for kid in val
-            ]
-        except Keyword.DoesNotExist:
-            # the user asked for an unknown keyword
-            queryset = queryset.none()
-        queryset = queryset.filter(
-            Q(keywords__pk__in=val) | Q(audience__pk__in=val)
-        ).distinct()
+    if val := params.get("keyword", None):
+        queryset = _filter_events_keyword_or(queryset, val.split(","))
 
     # 'keyword_OR' behaves the same way as 'keyword'
-    val = params.get("keyword_OR", None)
-    if val:
-        val = val.split(",")
-        try:
-            # replaced keywords are looked up for backwards compatibility
-            val = [
-                getattr(Keyword.objects.get(id=kid).replaced_by, "id", None) or kid
-                for kid in val
-            ]
-        except Keyword.DoesNotExist:
-            # the user asked for an unknown keyword
-            queryset = queryset.none()
-        queryset = queryset.filter(
-            Q(keywords__pk__in=val) | Q(audience__pk__in=val)
-        ).distinct()
+    if val := params.get("keyword_OR", None):
+        queryset = _filter_events_keyword_or(queryset, val.split(","))
 
     # Filter by keyword ids requiring all keywords to be present in event
     val = params.get("keyword_AND", None)
     if val:
-        val = val.split(",")
-        for keyword_id in val:
-            try:
-                # replaced keywords are looked up for backwards compatibility
-                val = (
-                    getattr(Keyword.objects.get(id=keyword_id).replaced_by, "id", None)
-                    or keyword_id
-                )
-            except Keyword.DoesNotExist:
-                # the user asked for an unknown keyword
-                queryset = queryset.none()
-            queryset = queryset.filter(
-                Q(keywords__pk=keyword_id) | Q(audience__pk=keyword_id)
+        keywords, found_all_keywords = _find_keyword_replacements(val.split(","))
+
+        # If some keywords were not found, AND can not match
+        if not found_all_keywords:
+            return queryset.none()
+
+        q = Q()
+        for keyword in keywords:
+            q &= Q(keywords__pk=keyword.pk) | Q(audience__pk=keyword.pk)
+
+        for keyword in keywords:
+            kw_qs = Event.keywords.through.objects.filter(
+                event=OuterRef("pk"), keyword=keyword
             )
-        queryset = queryset.distinct()
+            audience_qs = Event.audience.through.objects.filter(
+                event=OuterRef("pk"), keyword=keyword
+            )
+            queryset = queryset.filter(Exists(kw_qs) | Exists(audience_qs))
 
     # Negative filter for keyword ids
     val = params.get("keyword!", None)
     if val:
-        val = val.split(",")
-        try:
-            # replaced keywords are looked up for backwards compatibility
-            val = [
-                getattr(Keyword.objects.get(id=kid).replaced_by, "id", None) or kid
-                for kid in val
-            ]
-        except Keyword.DoesNotExist:
-            # the user asked for an unknown keyword
-            pass
+        keywords, __ = _find_keyword_replacements(val.split(","))
+        keyword_ids = [keyword.pk for keyword in keywords]
+
+        # This yields an AND NOT ((EXISTS.. keywords )) clause in SQL
+        # No distinct needed!
         queryset = queryset.exclude(
-            Q(keywords__pk__in=val) | Q(audience__pk__in=val)
-        ).distinct()
+            Q(keywords__pk__in=keyword_ids) | Q(audience__pk__in=keyword_ids)
+        )
 
     # filter only super or non-super events. to be deprecated?
     val = params.get("recurring", None)
@@ -3018,14 +3037,23 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
                 short_desc_arg = {"short_description_" + lang + "__isnull": False}
                 q = (
                     q
-                    | Q(in_language__id=lang)
+                    | Exists(
+                        Event.in_language.through.objects.filter(
+                            event=OuterRef("pk"), language=lang
+                        )
+                    )
                     | Q(**name_arg)
                     | Q(**desc_arg)
                     | Q(**short_desc_arg)
                 )
             else:
-                q = q | Q(in_language__id=lang)
-        queryset = queryset.filter(q).distinct()
+                q = q | Exists(
+                    Event.in_language.through.objects.filter(
+                        event=OuterRef("pk"), language=lang
+                    )
+                )
+
+        queryset = queryset.filter(q)
 
     # Filter by in_language field only
     val = params.get("in_language", None)
@@ -3033,7 +3061,12 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
         val = val.split(",")
         q = Q()
         for lang in val:
-            q = q | Q(in_language__id=lang)
+            q = q | Exists(
+                Event.in_language.through.objects.filter(
+                    event=OuterRef("pk"), language=lang
+                )
+            )
+
         queryset = queryset.filter(q)
 
     val = params.get("starts_after", None)
@@ -3119,8 +3152,12 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
     # Filter by free offer
     val = params.get("is_free", None)
     if val and val.lower() in ["true", "false"]:
+        # Include events that have at least one free offer
         if val.lower() == "true":
-            queryset = queryset.filter(offers__is_free=True)
+            queryset = queryset.filter(
+                Exists(Offer.objects.filter(event=OuterRef("pk"), is_free=True))
+            )
+        # Include events that have no free offers
         elif val.lower() == "false":
             queryset = queryset.exclude(offers__is_free=True)
 
@@ -3146,7 +3183,7 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
             | Q(audience_max_age__lt=upper_boundary)
             | Q(Q(audience_min_age=None) & Q(audience_max_age=None))
         )
-    return queryset.distinct()
+    return queryset
 
 
 class EventExtensionFilterBackend(BaseFilterBackend):
