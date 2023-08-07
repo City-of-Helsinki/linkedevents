@@ -42,6 +42,9 @@ jobs:
           # Required by Sonar
           fetch-depth: 0
 
+      - name: Update apt
+        run: sudo apt-get update
+
       - name: psycopg2 prerequisites
         run: sudo apt-get install libpq-dev
 
