@@ -496,21 +496,28 @@ def test_language_filter(api_client, event, event2, event3):
 
     # Finnish should be the default language
     get_list_and_assert_events("language=fi", [event, event2, event3])
+    # in_language is explicit filter on the in_language field, so no results for fi
+    get_list_and_assert_events("in_language=fi", [])
 
     # Swedish should have two events (matches in_language and name_sv)
     get_list_and_assert_events("language=sv", [event, event2])
+    get_list_and_assert_events("in_language=sv", [event2])
 
     # English should have one event (matches in_language)
     get_list_and_assert_events("language=en", [event2])
+    get_list_and_assert_events("in_language=en", [event2])
 
     # Russian should have one event (matches name_ru)
     get_list_and_assert_events("language=ru", [event3])
+    get_list_and_assert_events("in_language=ru", [])
 
     # Chinese should have no events
     get_list_and_assert_events("language=zh_hans", [])
+    get_list_and_assert_events("in_language=zh_hans", [])
 
     # Estonian should have one event (matches in_language), even without translations available
     get_list_and_assert_events("language=et", [event3])
+    get_list_and_assert_events("in_language=et", [event3])
 
 
 @pytest.mark.django_db

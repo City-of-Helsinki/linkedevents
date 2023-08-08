@@ -1,6 +1,7 @@
 import pytest
 from rest_framework.exceptions import ValidationError
 
+from events.api import _find_keyword_replacements
 from events.tests.factories import KeywordFactory
 
 
@@ -86,3 +87,22 @@ def test_keyword_get_replacement_multi_level():
     old_keyword_2 = KeywordFactory(deprecated=True, replaced_by=old_keyword_1)
 
     assert old_keyword_2.get_replacement().pk == new_keyword.pk
+
+
+@pytest.mark.django_db
+def test_find_keyword_replacements():
+    new_keyword = KeywordFactory()
+    replaced_keyword = KeywordFactory(deprecated=True, replaced_by=new_keyword)
+    other_keyword = KeywordFactory()
+    unknown_keyword_id = "keyword:doesnotexist"
+
+    assert _find_keyword_replacements([replaced_keyword.pk]) == ([new_keyword], True)
+    assert _find_keyword_replacements([new_keyword.pk]) == ([new_keyword], True)
+    assert _find_keyword_replacements([new_keyword.pk, replaced_keyword.pk]) == (
+        [new_keyword],
+        True,
+    )
+    assert _find_keyword_replacements([other_keyword.pk, unknown_keyword_id]) == (
+        [other_keyword],
+        False,
+    )
