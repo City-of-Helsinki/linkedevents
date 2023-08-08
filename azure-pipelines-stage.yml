@@ -6,9 +6,10 @@ parameters:
   - name: buildenv
     displayName: Build environment
     type: string
-    default: "-prod"
+    default: "-staging"
     values:
       - "-prod"
+      - "-staging"
       - "-dev"
 
 
