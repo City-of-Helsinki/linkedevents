@@ -30,7 +30,6 @@ parameters:
     default: "-prod"
     values:
       - "-prod"
-      - "-dev"
 
 
 # Image tag name for Fuse projects
