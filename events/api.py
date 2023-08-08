@@ -1834,7 +1834,7 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
 
     def _create_registration_users(self, registration, registration_users):
         for registration_user in registration_users:
-            [user_instance, created] = RegistrationUser.objects.get_or_create(
+            user_instance, created = RegistrationUser.objects.get_or_create(
                 registration=registration, **registration_user
             )
             if created:
