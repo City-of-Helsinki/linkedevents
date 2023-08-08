@@ -254,7 +254,7 @@ class Registration(CreatedModifiedBaseModel):
 
 
 class RegistrationUser(models.Model):
-    email = models.EmailField(verbose_name=_("E-mail"), null=True, blank=True)
+    email = models.EmailField(verbose_name=_("E-mail"))
 
     registration = models.ForeignKey(
         Registration, on_delete=models.CASCADE, related_name="registration_users"
