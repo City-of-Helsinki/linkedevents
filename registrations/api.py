@@ -23,7 +23,6 @@ from events.api import (
 from events.models import Event
 from events.permissions import (
     DataSourceResourceEditPermission,
-    GuestPost,
     OrganizationUserEditPermission,
 )
 from linkedevents.registry import register_view
@@ -34,7 +33,7 @@ from registrations.models import (
     SignUp,
     SignUpNotificationType,
 )
-from registrations.permissions import AuthenticatedGet, AuthenticateWithCancellationCode
+from registrations.permissions import CanCreateSignUp, CanReadUpdateDeleteSignup
 from registrations.serializers import (
     CreateSignUpsSerializer,
     MassEmailSerializer,
@@ -148,7 +147,6 @@ class RegistrationViewSet(
 
             email_variables = {
                 "body": cleaned_body,
-                "cancellation_code": signup.cancellation_code,
                 "linked_events_ui_locale": linked_events_ui_locale,
                 "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
                 "linked_registrations_ui_locale": linked_registrations_ui_locale,
@@ -203,13 +201,7 @@ class SignUpViewSet(
     queryset = SignUp.objects.all()
 
     permission_classes = [
-        GuestPost
-        | AuthenticateWithCancellationCode
-        | (
-            AuthenticatedGet
-            & DataSourceResourceEditPermission
-            & OrganizationUserEditPermission
-        )
+        (CanCreateSignUp | CanReadUpdateDeleteSignup) & DataSourceResourceEditPermission
     ]
 
     def create(self, request, *args, **kwargs):

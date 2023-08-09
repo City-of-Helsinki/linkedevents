@@ -1,54 +1,31 @@
 from django.utils.translation import gettext as _
 from rest_framework import permissions
-from rest_framework.exceptions import PermissionDenied
 from rest_framework.request import Request
+from rest_framework.views import APIView
 
-from events.auth import ApiKeyUser
+from registrations.models import SignUp
 
 
-class AuthenticatedGet(permissions.BasePermission):
-    def has_permission(self, request, view):
-        # Only authenticated users can get object
-        return request.method != "GET" or request.user.is_authenticated
+class CanCreateSignUp(permissions.BasePermission):
+    message: str = _("Only authenticated users are allowed to create sign-ups")
 
-    def has_object_permission(self, request: Request, view, obj):
-        user = request.user
+    def has_permission(self, request: Request, view: APIView) -> bool:
+        return request.method == "POST" and request.user.is_authenticated
 
-        if request.method != "GET":
-            return True
 
-        if isinstance(user, ApiKeyUser):
-            user_data_source, _ = view.user_data_source_and_organization
-            # allow to view data only if the api key matches instance data source
-            if obj.data_source != user_data_source:
-                return False
+class CanReadUpdateDeleteSignup(permissions.BasePermission):
+    message: str = _(
+        "Only authenticated users that are admins in the publishing organization or"
+        "that have created the sign-up are allowed to view and edit it"
+    )
 
+    def has_permission(self, request: Request, view: APIView) -> bool:
+        return (
+            request.method in ("GET", "PUT", "PATCH", "DELETE")
+            and request.user.is_authenticated
+        )
+
+    def has_object_permission(
+        self, request: Request, view: APIView, obj: SignUp
+    ) -> bool:
         return obj.can_be_edited_by(request.user)
-
-
-class AuthenticateWithCancellationCode(permissions.BasePermission):
-    def has_permission(self, request, view):
-        user = request.user
-
-        # Anonymous users can modified SignUp by cancellation_code
-        if user.is_anonymous and request.method in ["DELETE", "PUT"]:
-            return True
-
-        # List view is not allowed with cancellation code
-        if request.method == "GET" and not view.kwargs.get("pk"):
-            return False
-
-        return super().has_permission(request, view)
-
-    def has_object_permission(self, request: Request, view, obj):
-        user = request.user
-
-        if not user.is_anonymous:
-            return False
-
-        code = request.GET.get("cancellation_code", None)
-        if not code:
-            raise PermissionDenied(_("cancellation_code parameter has to be provided"))
-        if code != str(obj.cancellation_code):
-            raise PermissionDenied(_("Cancellation code did not match"))
-        return True
