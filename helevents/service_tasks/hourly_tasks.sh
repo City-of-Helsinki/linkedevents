@@ -11,9 +11,14 @@ fi
 
 echo "--- Starting kulke importer ---"
 
+timeout --preserve-status -s INT 30m python manage.py event_import kulke --keywords
+if [ $? -ne 0 ]; then
+    echo "kulke importer keyword import signaled failure"
+fi
+
 timeout --preserve-status -s INT 30m python manage.py event_import kulke --events
 if [ $? -ne 0 ]; then
-    echo "kulke importer signaled failure"
+    echo "kulke importer event import signaled failure"
 fi
 
 echo "--- Starting lippupiste importer ---"

@@ -9,9 +9,14 @@ if [ $? -ne 0 ]; then
     echo "YSO update signaled failure"
 fi
 
+timeout --preserve-status -s INT 60m python manage.py event_import harrastushaku --places
+if [ $? -ne 0 ]; then
+    echo "Harrastushaku places update signaled failure"
+fi
+
 timeout --preserve-status -s INT 60m python manage.py event_import harrastushaku --courses
 if [ $? -ne 0 ]; then
-    echo "Harrastushaku update signaled failure"
+    echo "Harrastushaku courses update signaled failure"
 fi
 
 
