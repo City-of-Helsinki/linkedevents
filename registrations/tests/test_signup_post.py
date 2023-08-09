@@ -396,7 +396,8 @@ def test_signup_age_has_to_match_the_audience_min_max_age(
     "mandatory_field_id",
     [
         MandatoryFields.CITY,
-        MandatoryFields.NAME,
+        MandatoryFields.FIRST_NAME,
+        MandatoryFields.LAST_NAME,
         MandatoryFields.PHONE_NUMBER,
         MandatoryFields.STREET_ADDRESS,
         MandatoryFields.ZIPCODE,

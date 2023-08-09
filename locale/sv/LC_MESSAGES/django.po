@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-08-09 14:41+0300\n"
+"POT-Creation-Date: 2023-08-09 14:53+0300\n"
 "PO-Revision-Date: 2023-06-19 12:05+0300\n"
 "Last-Translator: <jori@3d.fi>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -25,7 +25,6 @@ msgstr "Kontaktinformation"
 #: events/models.py:77 events/models.py:175 events/models.py:192
 #: events/models.py:319 events/models.py:368 events/models.py:382
 #: events/models.py:1213 events/models.py:1229 events/models.py:1279
-#: registrations/models.py:37
 #: venv/lib/python3.9/site-packages/munigeo/models.py:83
 #: venv/lib/python3.9/site-packages/munigeo/models.py:112
 #: venv/lib/python3.9/site-packages/munigeo/models.py:141
@@ -147,7 +146,7 @@ msgstr "Placera hemsida"
 msgid "Description"
 msgstr "Beskrivning"
 
-#: events/models.py:589 events/models.py:1280 registrations/models.py:290
+#: events/models.py:589 events/models.py:1280 registrations/models.py:291
 msgid "E-mail"
 msgstr "E-post"
 
@@ -159,7 +158,7 @@ msgstr "Telefon"
 msgid "Contact type"
 msgstr "Kontakt typ"
 
-#: events/models.py:597 registrations/models.py:39 registrations/models.py:342
+#: events/models.py:597 registrations/models.py:40 registrations/models.py:343
 msgid "Street address"
 msgstr "Gatuadress"
 
@@ -313,11 +312,11 @@ msgstr "Starttid"
 msgid "End time"
 msgstr "Sluttid"
 
-#: events/models.py:905 registrations/models.py:80
+#: events/models.py:905 registrations/models.py:81
 msgid "Minimum recommended age"
 msgstr "Rekommenderad lägsta ålder"
 
-#: events/models.py:908 registrations/models.py:83
+#: events/models.py:908 registrations/models.py:84
 msgid "Maximum recommended age"
 msgstr "Högsta rekommenderade ålder"
 
@@ -462,142 +461,142 @@ msgstr "attendee_status kan ha följande värden: {statuses}, inte {val}"
 msgid "Request conflict with the current state of the target resource"
 msgstr "Begärkonflikt med målresursens aktuella tillstånd"
 
-#: registrations/models.py:36 registrations/models.py:283
+#: registrations/models.py:36 registrations/models.py:284
 msgid "City"
 msgstr "Stad"
 
-#: registrations/models.py:38 registrations/models.py:306
-msgid "Phone number"
-msgstr "Telefonnummer"
-
-#: registrations/models.py:40 registrations/models.py:349
-msgid "ZIP code"
-msgstr "Postnummer"
-
-#: registrations/models.py:86
-msgid "Created at"
-msgstr "Skapad kl"
-
-#: registrations/models.py:88
-msgid "Modified at"
-msgstr "Ändrad kl"
-
-#: registrations/models.py:107
-msgid "Enrollment start time"
-msgstr "Starttid för anmälan"
-
-#: registrations/models.py:110
-msgid "Enrollment end time"
-msgstr "Sluttid för anmälan"
-
-#: registrations/models.py:114
-msgid "Confirmation message"
-msgstr "Bekräftelsemeddelande"
-
-#: registrations/models.py:117
-msgid "Instructions"
-msgstr "Instruktioner"
-
-#: registrations/models.py:121
-msgid "Maximum attendee capacity"
-msgstr "Maximal deltagarekapacitet"
-
-#: registrations/models.py:124
-msgid "Minimum attendee capacity"
-msgstr "Minsta deltagarekapacitet"
-
-#: registrations/models.py:127
-msgid "Waiting list capacity"
-msgstr "Väntelistans kapacitet"
-
-#: registrations/models.py:130
-msgid "Maximum group size"
-msgstr "Maximal gruppstorlek"
-
-#: registrations/models.py:144
-msgid "Mandatory fields"
-msgstr "Obligatoriska fält"
-
-#: registrations/models.py:245
-msgid "Waitlisted"
-msgstr "I kö"
-
-#: registrations/models.py:246
-msgid "Attending"
-msgstr "Deltar"
-
-#: registrations/models.py:256
-msgid "No Notification"
-msgstr "Ingen anmälan"
-
-#: registrations/models.py:257
-msgid "SMS"
-msgstr "SMS"
-
-#: registrations/models.py:258
-msgid "E-Mail"
-msgstr "E-post"
-
-#: registrations/models.py:259
-msgid "Both SMS and email."
-msgstr "Både SMS och e-post."
-
-#: registrations/models.py:266
+#: registrations/models.py:37 registrations/models.py:267
 msgid "First name"
 msgstr "Förnamn"
 
-#: registrations/models.py:273
+#: registrations/models.py:38 registrations/models.py:274
 msgid "Last name"
 msgstr "Efternamn"
 
-#: registrations/models.py:280
+#: registrations/models.py:39 registrations/models.py:307
+msgid "Phone number"
+msgstr "Telefonnummer"
+
+#: registrations/models.py:41 registrations/models.py:350
+msgid "ZIP code"
+msgstr "Postnummer"
+
+#: registrations/models.py:87
+msgid "Created at"
+msgstr "Skapad kl"
+
+#: registrations/models.py:89
+msgid "Modified at"
+msgstr "Ändrad kl"
+
+#: registrations/models.py:108
+msgid "Enrollment start time"
+msgstr "Starttid för anmälan"
+
+#: registrations/models.py:111
+msgid "Enrollment end time"
+msgstr "Sluttid för anmälan"
+
+#: registrations/models.py:115
+msgid "Confirmation message"
+msgstr "Bekräftelsemeddelande"
+
+#: registrations/models.py:118
+msgid "Instructions"
+msgstr "Instruktioner"
+
+#: registrations/models.py:122
+msgid "Maximum attendee capacity"
+msgstr "Maximal deltagarekapacitet"
+
+#: registrations/models.py:125
+msgid "Minimum attendee capacity"
+msgstr "Minsta deltagarekapacitet"
+
+#: registrations/models.py:128
+msgid "Waiting list capacity"
+msgstr "Väntelistans kapacitet"
+
+#: registrations/models.py:131
+msgid "Maximum group size"
+msgstr "Maximal gruppstorlek"
+
+#: registrations/models.py:145
+msgid "Mandatory fields"
+msgstr "Obligatoriska fält"
+
+#: registrations/models.py:246
+msgid "Waitlisted"
+msgstr "I kö"
+
+#: registrations/models.py:247
+msgid "Attending"
+msgstr "Deltar"
+
+#: registrations/models.py:257
+msgid "No Notification"
+msgstr "Ingen anmälan"
+
+#: registrations/models.py:258
+msgid "SMS"
+msgstr "SMS"
+
+#: registrations/models.py:259
+msgid "E-Mail"
+msgstr "E-post"
+
+#: registrations/models.py:260
+msgid "Both SMS and email."
+msgstr "Både SMS och e-post."
+
+#: registrations/models.py:281
 msgid "Date of birth"
 msgstr "Födelsedatum"
 
-#: registrations/models.py:293
+#: registrations/models.py:294
 msgid "Extra info"
 msgstr "Ytterligare info"
 
-#: registrations/models.py:299
+#: registrations/models.py:300
 msgid "Membership number"
 msgstr "Medlemsnummer"
 
-#: registrations/models.py:313
+#: registrations/models.py:314
 msgid "Notification type"
 msgstr "Aviseringstyp"
 
-#: registrations/models.py:319
+#: registrations/models.py:320
 msgid "Cancellation code"
 msgstr "Avbokningskod"
 
-#: registrations/models.py:322
+#: registrations/models.py:323
 msgid "Attendee status"
 msgstr "Deltagarstatus"
 
-#: registrations/models.py:420
+#: registrations/models.py:421
 #, python-format
 msgid "Registration cancelled - %(event_name)s"
 msgstr "Registreringen avbruten - %(event_name)s"
 
-#: registrations/models.py:424 registrations/models.py:432
+#: registrations/models.py:425 registrations/models.py:433
 #, python-format
 msgid "Registration confirmation - %(event_name)s"
 msgstr "Bekräftelse av registrering - %(event_name)s"
 
-#: registrations/models.py:428
+#: registrations/models.py:429
 #, python-format
 msgid "Waiting list seat reserved - %(event_name)s"
 msgstr "Väntelista plats reserverad - %(event_name)s"
 
-#: registrations/models.py:455
+#: registrations/models.py:456
 msgid "Number of seats"
 msgstr "Antal platser"
 
-#: registrations/models.py:461
+#: registrations/models.py:462
 msgid "Seat reservation code"
 msgstr "Platsreservationskod"
 
-#: registrations/models.py:464
+#: registrations/models.py:465
 msgid "Timestamp"
 msgstr "Tidsstämpel"
 

@@ -34,7 +34,8 @@ class MandatoryFields(models.TextChoices):
     """Choices for mandatory fields on SignUp model."""
 
     CITY = "city", _("City")
-    NAME = "name", _("Name")
+    FIRST_NAME = "first_name", _("First name")
+    LAST_NAME = "last_name", _("Last name")
     PHONE_NUMBER = "phone_number", _("Phone number")
     STREET_ADDRESS = "street_address", _("Street address")
     ZIPCODE = "zipcode", _("ZIP code")
