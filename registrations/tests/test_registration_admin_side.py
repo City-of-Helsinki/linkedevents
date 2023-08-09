@@ -36,7 +36,8 @@ def test_event_with_open_registrations_and_places_at_the_event(
 
     SignUp.objects.create(
         registration=registration2,
-        name="Michael Jackson",
+        first_name="Michael",
+        last_name="Jackson",
         email="test@test.com",
     )
     response = api_client.get(f"{event_url}?enrolment_open=true", format="json")
@@ -97,7 +98,8 @@ def test_event_with_open_registrations_and_places_at_the_event_or_waiting_list(
 
     SignUp.objects.create(
         registration=registration2,
-        name="Michael Jackson",
+        first_name="Michael",
+        last_name="Jackson",
         email="test@test.com",
     )
     response = api_client.get(

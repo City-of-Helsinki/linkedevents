@@ -183,7 +183,8 @@ def test_current_attendee_and_waitlist_count(api_client, registration, user):
 
     reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
     signup_data = {
-        "name": "Michael Jackson",
+        "first_name": "Michael",
+        "last_name": "Jackson",
         "email": "test@test.com",
         "phone_number": "0441111111",
         "notifications": "sms",
@@ -202,7 +203,8 @@ def test_current_attendee_and_waitlist_count(api_client, registration, user):
         registration=registration, seats=1
     )
     signup_data2 = {
-        "name": "Michael Jackson 2",
+        "first_name": "Michael",
+        "last_name": "Jackson 2",
         "email": "test2@test.com",
         "phone_number": "20441111111",
         "notifications": "sms",

@@ -275,8 +275,15 @@ class SignUp(CreatedModifiedBaseModel):
     registration = models.ForeignKey(
         Registration, on_delete=models.PROTECT, related_name="signups"
     )
-    name = models.CharField(
-        verbose_name=_("Name"),
+    first_name = models.CharField(
+        verbose_name=_("First name"),
+        max_length=50,
+        blank=True,
+        null=True,
+        default=None,
+    )
+    last_name = models.CharField(
+        verbose_name=_("Last name"),
         max_length=50,
         blank=True,
         null=True,
@@ -398,7 +405,7 @@ class SignUp(CreatedModifiedBaseModel):
                 "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
                 "registration_id": self.registration.id,
                 "signup_id": self.id,
-                "username": self.name,
+                "username": self.first_name,
             }
 
             confirmation_message = self.registration.confirmation_message

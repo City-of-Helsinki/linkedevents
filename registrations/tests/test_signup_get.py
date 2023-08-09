@@ -277,38 +277,54 @@ def test__signup_list_assert_status_filter(
 def test_filter_signups(api_client, registration, registration2, user, user2):
     api_client.force_authenticate(user=None)
     signup = SignUp.objects.create(
-        registration=registration, name="Michael Jackson", email="test@test.com"
+        registration=registration,
+        first_name="Michael",
+        last_name="Jackson",
+        email="test@test.com",
     )
     signup2 = SignUp.objects.create(
-        registration=registration, name="Michael Jackson2", email="test2@test.com"
+        registration=registration,
+        first_name="Michael",
+        last_name="Jackson2",
+        email="test2@test.com",
     )
     signup3 = SignUp.objects.create(
-        registration=registration, name="Michael Jackson3", email="test3@test.com"
+        registration=registration,
+        first_name="Michael",
+        last_name="Jackson3",
+        email="test3@test.com",
     )
     signup4 = SignUp.objects.create(
-        registration=registration, name="Michael Jackson4", email="test4@test.com"
+        registration=registration,
+        first_name="Michael",
+        last_name="Jackson4",
+        email="test4@test.com",
     )
     signup5 = SignUp.objects.create(
         registration=registration2,
-        name="Joe Biden",
+        first_name="Joe",
+        last_name="Biden",
         email="test@test.com",
         extra_info="cdef",
     )
     signup6 = SignUp.objects.create(
         registration=registration2,
-        name="Hillary Clinton",
+        first_name="Hillary",
+        last_name="Clinton",
         email="test2@test.com",
         extra_info="abcd",
     )
     signup7 = SignUp.objects.create(
         registration=registration2,
-        name="Donald Duck",
+        first_name="Donald",
+        last_name="Duck",
         email="test3@test.com",
         membership_number="1234",
     )
     signup8 = SignUp.objects.create(
         registration=registration2,
-        name="Mickey Mouse",
+        first_name="Mickey",
+        last_name="Mouse",
         email="test4@test.com",
         membership_number="3456",
     )
