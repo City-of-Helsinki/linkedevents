@@ -35,15 +35,23 @@ def assert_update_signup(api_client, signup_pk, signup_data, query_string=None):
 
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test__update_signup(user_api_client, registration, signup):
+def test__update_signup(user_api_client, registration, signup, user):
+    new_signup_name = "Edited name"
+
+    db_signup = SignUp.objects.get(pk=signup.id)
+    assert db_signup.name != new_signup_name
+    assert db_signup.last_modified_by_id is None
+
     signup_data = {
         "registration": registration.id,
-        "name": "Edited name",
+        "name": new_signup_name,
         "date_of_birth": "2015-01-01",
     }
 
-    response = assert_update_signup(user_api_client, signup.id, signup_data)
-    response.data["name"] = "Edited name"
+    assert_update_signup(user_api_client, signup.id, signup_data)
+    db_signup = SignUp.objects.get(pk=signup.id)
+    assert db_signup.name == new_signup_name
+    assert db_signup.last_modified_by_id == user.id
 
 
 @freeze_time("2023-03-14 03:30:00+02:00")
