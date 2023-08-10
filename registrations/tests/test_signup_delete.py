@@ -144,6 +144,35 @@ def test__non_admin_cannot_delete_signup(signup, user, user_api_client):
 
 
 @pytest.mark.django_db
+def test__created_authenticated_user_can_delete_signup(signup, user, user_api_client):
+    signup.created_by = user
+    signup.save(update_fields=["created_by"])
+
+    user_api_client.force_authenticate(user)
+
+    user.get_default_organization().regular_users.add(user)
+    user.get_default_organization().admin_users.remove(user)
+
+    assert_delete_signup(user_api_client, signup.id)
+
+
+@pytest.mark.django_db
+def test__created_not_authenticated_user_cannot_delete_signup(
+    signup, user, user_api_client
+):
+    signup.created_by = user
+    signup.save(update_fields=["created_by"])
+
+    user_api_client.logout()
+
+    user.get_default_organization().regular_users.add(user)
+    user.get_default_organization().admin_users.remove(user)
+
+    response = delete_signup(user_api_client, signup.id)
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+@pytest.mark.django_db
 def test__api_key_with_organization_can_delete_signup(
     api_client, data_source, organization, signup
 ):
@@ -211,8 +240,10 @@ def test__non_user_editable_resources_cannot_delete_signup(
 
 @pytest.mark.django_db
 def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
-    api_client, registration
+    api_client, registration, user
 ):
+    api_client.force_authenticate(user)
+
     registration.maximum_attendee_capacity = 1
     registration.save()
 
@@ -311,7 +342,10 @@ def test_send_email_when_moving_participant_from_waitlist(
     service_language,
     signup,
     signup2,
+    user,
 ):
+    api_client.force_authenticate(user)
+
     with translation.override(service_language):
         registration.event.type_id = Event.TypeId.GENERAL
         registration.event.name = "Foo"
@@ -365,11 +399,14 @@ def test_transferred_as_participant_template_has_correct_text_per_event_type(
     event_type,
     expected_subject,
     expected_text,
-    _languages,
+    languages,
     registration,
     signup,
     signup2,
+    user,
 ):
+    api_client.force_authenticate(user)
+
     registration.event.type_id = event_type
     registration.event.name = "Foo"
     registration.event.save()

@@ -52,20 +52,33 @@ def assert_get_detail(api_client: APIClient, signup_pk: str, query: str = None):
 
 
 @pytest.mark.django_db
-def test_admin_user_can_get_signup(api_client, registration, signup, user):
-    api_client.force_authenticate(user)
-
-    assert_get_detail(api_client, signup.id)
+def test_admin_user_can_get_signup(user_api_client, registration, signup):
+    assert_get_detail(user_api_client, signup.id)
 
 
 @pytest.mark.django_db
-def test_regular_user_cannot_get_signup(api_client, registration, signup, user):
+def test_regular_non_created_user_cannot_get_signup(
+    api_client, registration, signup, user
+):
     user.get_default_organization().regular_users.add(user)
     user.get_default_organization().admin_users.remove(user)
     api_client.force_authenticate(user)
 
     response = get_detail(api_client, signup.id)
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_regular_created_user_can_get_signup(api_client, registration, signup, user):
+    signup.created_by = user
+    signup.save(update_fields=["created_by"])
+
+    user.get_default_organization().regular_users.add(user)
+    user.get_default_organization().admin_users.remove(user)
+    api_client.force_authenticate(user)
+
+    response = get_detail(api_client, signup.id)
+    assert response.status_code == status.HTTP_200_OK
 
 
 @pytest.mark.django_db
@@ -114,13 +127,9 @@ def test__api_key_from_wrong_data_source_cannot_get_signup(
 
 
 @pytest.mark.django_db
-def test_admin_user_can_get_signup_list(
-    api_client, registration, signup, signup2, user
-):
-    api_client.force_authenticate(user)
-
+def test_admin_user_can_get_signup_list(user_api_client, registration, signup, signup2):
     get_list_and_assert_signups(
-        api_client, f"registration={registration.id}", (signup, signup2)
+        user_api_client, f"registration={registration.id}", (signup, signup2)
     )
 
 
@@ -265,9 +274,7 @@ def test__signup_list_assert_status_filter(
 
 
 @pytest.mark.django_db
-def test_filter_signups(
-    api_client, registration, registration2, user, user2, event, event2
-):
+def test_filter_signups(api_client, registration, registration2, user, user2):
     api_client.force_authenticate(user=None)
     signup = SignUp.objects.create(
         registration=registration, name="Michael Jackson", email="test@test.com"

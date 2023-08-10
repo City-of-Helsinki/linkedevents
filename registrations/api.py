@@ -205,12 +205,13 @@ class SignUpViewSet(
     ]
 
     def create(self, request, *args, **kwargs):
+        context = super().get_serializer_context()
         data = request.data
         registration = data.get("registration", None)
         if registration:
             for i in data["signups"]:
                 i["registration"] = registration
-        serializer = CreateSignUpsSerializer(data=data)
+        serializer = CreateSignUpsSerializer(data=data, context=context)
         serializer.is_valid(raise_exception=True)
 
         attending = []
@@ -218,14 +219,18 @@ class SignUpViewSet(
 
         # Create SignUps and add persons to correct list
         for i in data["signups"]:
-            signup = SignUpSerializer(data=i, many=False)
+            signup = SignUpSerializer(data=i, many=False, context=context)
             signup.is_valid()
             signee = signup.create(validated_data=signup.validated_data)
 
             if signee.attendee_status == SignUp.AttendeeStatus.ATTENDING:
-                attending.append(SignUpSerializer(signee, many=False).data)
+                attending.append(
+                    SignUpSerializer(signee, many=False, context=context).data
+                )
             else:
-                waitlisted.append(SignUpSerializer(signee, many=False).data)
+                waitlisted.append(
+                    SignUpSerializer(signee, many=False, context=context).data
+                )
         data = {
             "attending": {"count": len(attending), "people": attending},
             "waitlisted": {"count": len(waitlisted), "people": waitlisted},

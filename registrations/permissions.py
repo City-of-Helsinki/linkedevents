@@ -3,6 +3,7 @@ from rest_framework import permissions
 from rest_framework.request import Request
 from rest_framework.views import APIView
 
+from events.auth import ApiKeyUser
 from registrations.models import SignUp
 
 
@@ -28,4 +29,10 @@ class CanReadUpdateDeleteSignup(permissions.BasePermission):
     def has_object_permission(
         self, request: Request, view: APIView, obj: SignUp
     ) -> bool:
+        if isinstance(request.user, ApiKeyUser):
+            user_data_source, _ = view.user_data_source_and_organization
+            # allow only if the api key matches instance data source
+            if obj.data_source != user_data_source:
+                return False
+
         return obj.can_be_edited_by(request.user)

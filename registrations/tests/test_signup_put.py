@@ -35,27 +35,24 @@ def assert_update_signup(api_client, signup_pk, signup_data, query_string=None):
 
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test__update_signup(api_client, registration, signup, user):
-    api_client.force_authenticate(user)
-
+def test__update_signup(user_api_client, registration, signup):
     signup_data = {
         "registration": registration.id,
         "name": "Edited name",
         "date_of_birth": "2015-01-01",
     }
 
-    response = assert_update_signup(api_client, signup.id, signup_data)
+    response = assert_update_signup(user_api_client, signup.id, signup_data)
     response.data["name"] = "Edited name"
 
 
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test__cannot_update_attendee_status_of_signup(
-    api_client, registration, signup, user
+    user_api_client, registration, signup
 ):
     signup.attendee_status = SignUp.AttendeeStatus.ATTENDING
     signup.save()
-    api_client.force_authenticate(user)
 
     signup_data = {
         "registration": registration.id,
@@ -64,7 +61,7 @@ def test__cannot_update_attendee_status_of_signup(
         "attendee_status": SignUp.AttendeeStatus.WAITING_LIST,
     }
 
-    response = update_signup(api_client, signup.id, signup_data)
+    response = update_signup(user_api_client, signup.id, signup_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert (
         response.data["attendee_status"]
@@ -75,17 +72,15 @@ def test__cannot_update_attendee_status_of_signup(
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test__cannot_update_registration_of_signup(
-    api_client, registration, registration2, signup, user
+    user_api_client, registration, registration2, signup
 ):
-    api_client.force_authenticate(user)
-
     signup_data = {
         "name": "Edited name",
         "date_of_birth": "2015-01-01",
         "registration": registration2.id,
     }
 
-    response = update_signup(api_client, signup.id, signup_data)
+    response = update_signup(user_api_client, signup.id, signup_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert (
         response.data["registration"]
@@ -175,34 +170,32 @@ def test__unknown_api_key_cannot_update_signup(api_client, registration, signup)
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test__user_editable_resources_can_update_signup(
-    api_client, data_source, organization, registration, signup, user
+    user_api_client, data_source, organization, registration, signup
 ):
     data_source.owner = organization
     data_source.user_editable_resources = True
     data_source.save()
-    api_client.force_authenticate(user)
 
     signup_data = {
         "registration": registration.id,
         "name": "Edited name",
         "date_of_birth": "2015-01-01",
     }
-    assert_update_signup(api_client, signup.id, signup_data)
+    assert_update_signup(user_api_client, signup.id, signup_data)
 
 
 @pytest.mark.django_db
 def test__non_user_editable_resources_cannot_delete_signup(
-    api_client, data_source, organization, registration, signup, user
+    user_api_client, data_source, organization, registration, signup
 ):
     data_source.owner = organization
     data_source.user_editable_resources = False
     data_source.save()
-    api_client.force_authenticate(user)
 
     signup_data = {
         "registration": registration.id,
         "name": "Edited name",
         "date_of_birth": "2015-01-01",
     }
-    response = update_signup(api_client, signup.id, signup_data)
+    response = update_signup(user_api_client, signup.id, signup_data)
     assert response.status_code == status.HTTP_403_FORBIDDEN
