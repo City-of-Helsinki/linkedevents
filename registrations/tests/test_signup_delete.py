@@ -144,11 +144,9 @@ def test__non_admin_cannot_delete_signup(signup, user, user_api_client):
 
 
 @pytest.mark.django_db
-def test__created_authenticated_user_can_delete_signup(signup, user, user_api_client):
+def test__created_authenticated_user_can_delete_signup(user_api_client, signup, user):
     signup.created_by = user
     signup.save(update_fields=["created_by"])
-
-    user_api_client.force_authenticate(user)
 
     user.get_default_organization().regular_users.add(user)
     user.get_default_organization().admin_users.remove(user)
@@ -158,7 +156,7 @@ def test__created_authenticated_user_can_delete_signup(signup, user, user_api_cl
 
 @pytest.mark.django_db
 def test__created_not_authenticated_user_cannot_delete_signup(
-    signup, user, user_api_client
+    user_api_client, signup, user
 ):
     signup.created_by = user
     signup.save(update_fields=["created_by"])
@@ -240,10 +238,8 @@ def test__non_user_editable_resources_cannot_delete_signup(
 
 @pytest.mark.django_db
 def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
-    api_client, registration, user
+    user_api_client, registration
 ):
-    api_client.force_authenticate(user)
-
     registration.maximum_attendee_capacity = 1
     registration.save()
 
@@ -257,7 +253,7 @@ def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
         "reservation_code": reservation.code,
         "signups": [signup_data],
     }
-    response = assert_create_signups(api_client, signups_data)
+    response = assert_create_signups(user_api_client, signups_data)
     signup_id = response.data["attending"]["people"][0]["id"]
 
     reservation2 = SeatReservationCode.objects.create(
@@ -272,7 +268,7 @@ def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
         "reservation_code": reservation2.code,
         "signups": [signup_data2],
     }
-    assert_create_signups(api_client, signups_data2)
+    assert_create_signups(user_api_client, signups_data2)
 
     reservation3 = SeatReservationCode.objects.create(
         registration=registration, seats=1
@@ -286,7 +282,7 @@ def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
         "reservation_code": reservation3.code,
         "signups": [signup_data3],
     }
-    assert_create_signups(api_client, signups_data3)
+    assert_create_signups(user_api_client, signups_data3)
 
     assert (
         SignUp.objects.get(email=signup_data["email"]).attendee_status
@@ -301,7 +297,7 @@ def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
         == SignUp.AttendeeStatus.WAITING_LIST
     )
 
-    assert_delete_signup(api_client, signup_id)
+    assert_delete_signup(user_api_client, signup_id)
     assert (
         SignUp.objects.get(email=signup_data2["email"]).attendee_status
         == SignUp.AttendeeStatus.ATTENDING
@@ -334,7 +330,7 @@ def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
 )
 @pytest.mark.django_db
 def test_send_email_when_moving_participant_from_waitlist(
-    api_client,
+    user_api_client,
     expected_subject,
     expected_text,
     languages,
@@ -342,10 +338,7 @@ def test_send_email_when_moving_participant_from_waitlist(
     service_language,
     signup,
     signup2,
-    user,
 ):
-    api_client.force_authenticate(user)
-
     with translation.override(service_language):
         registration.event.type_id = Event.TypeId.GENERAL
         registration.event.name = "Foo"
@@ -361,7 +354,7 @@ def test_send_email_when_moving_participant_from_waitlist(
         signup2.save()
 
         signup_id = signup.id
-        assert_delete_signup(api_client, signup_id)
+        assert_delete_signup(user_api_client, signup_id)
 
         # Signup 2 status should be changed
         assert (
@@ -395,7 +388,7 @@ def test_send_email_when_moving_participant_from_waitlist(
 )
 @pytest.mark.django_db
 def test_transferred_as_participant_template_has_correct_text_per_event_type(
-    api_client,
+    user_api_client,
     event_type,
     expected_subject,
     expected_text,
@@ -403,10 +396,7 @@ def test_transferred_as_participant_template_has_correct_text_per_event_type(
     registration,
     signup,
     signup2,
-    user,
 ):
-    api_client.force_authenticate(user)
-
     registration.event.type_id = event_type
     registration.event.name = "Foo"
     registration.event.save()
@@ -421,7 +411,7 @@ def test_transferred_as_participant_template_has_correct_text_per_event_type(
     signup2.save()
 
     signup_id = signup.id
-    assert_delete_signup(api_client, signup_id)
+    assert_delete_signup(user_api_client, signup_id)
 
     # Signup 2 status should be changed
     assert (
