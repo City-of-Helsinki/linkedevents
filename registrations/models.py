@@ -273,6 +273,15 @@ class SignUp(CreatedModifiedBaseModel):
         (NotificationType.SMS_EMAIL, _("Both SMS and email.")),
     )
 
+    class PresenceStatus:
+        NOT_PRESENT = "not_present"
+        PRESENT = "present"
+
+    PRESENCE_STATUSES = (
+        (PresenceStatus.NOT_PRESENT, _("Not present")),
+        (PresenceStatus.PRESENT, _("Present")),
+    )
+
     registration = models.ForeignKey(
         Registration, on_delete=models.PROTECT, related_name="signups"
     )
@@ -362,6 +371,13 @@ class SignUp(CreatedModifiedBaseModel):
         blank=True,
         null=True,
         default=None,
+    )
+
+    presence_status = models.CharField(
+        verbose_name=_("Presence status"),
+        max_length=25,
+        choices=PRESENCE_STATUSES,
+        default=PresenceStatus.NOT_PRESENT,
     )
 
     @property
