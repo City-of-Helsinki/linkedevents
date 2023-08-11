@@ -291,9 +291,11 @@ class SignUpViewSet(
 
         if text_param := request.query_params.get("text", None):
             queryset = queryset.annotate(
-                full_name=Concat("first_name", Value(" "), "last_name")
+                first_last_name=Concat("first_name", Value(" "), "last_name"),
+                last_first_name=Concat("last_name", Value(" "), "first_name"),
             ).filter(
-                Q(full_name__icontains=text_param)
+                Q(first_last_name__icontains=text_param)
+                | Q(last_first_name__icontains=text_param)
                 | Q(email__icontains=text_param)
                 | Q(extra_info__icontains=text_param)
                 | Q(membership_number__icontains=text_param)
