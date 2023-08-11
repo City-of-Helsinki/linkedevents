@@ -22,7 +22,7 @@ class CanReadUpdateDeleteSignup(permissions.BasePermission):
 
     def has_permission(self, request: Request, view: APIView) -> bool:
         return (
-            request.method in ("GET", "PUT", "PATCH", "DELETE")
+            request.method in permissions.SAFE_METHODS + ("PUT", "PATCH", "DELETE")
             and request.user.is_authenticated
         )
 
