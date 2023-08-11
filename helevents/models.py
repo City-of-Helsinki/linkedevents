@@ -2,6 +2,7 @@ import logging
 from functools import reduce
 
 from django.conf import settings
+from django.db import models
 from django.utils.functional import cached_property
 from django_orghierarchy.models import Organization
 from helusers.models import AbstractUser
@@ -149,6 +150,10 @@ class UserModelPermissionMixin:
 
 
 class User(AbstractUser, UserModelPermissionMixin):
+    registration_organizations = models.ManyToManyField(
+        Organization, blank=True, related_name="registration_admins"
+    )
+
     def __str__(self):
         return " - ".join([self.get_display_name(), self.email])
 
