@@ -86,13 +86,6 @@ msgstr "Fotografens namn"
 msgid "Alt text"
 msgstr "Alt text"
 
-#: events/models.py:257
-msgid "You must provide either image or url."
-msgstr ""
-
-#: events/models.py:259
-msgid "You can only provide image or url, not both."
-msgstr ""
 
 #: events/models.py:322
 msgid "Origin ID"
