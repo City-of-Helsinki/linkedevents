@@ -353,9 +353,13 @@ def test_filter_signups(api_client, registration, registration2, user, user2):
         [signup5, signup6, signup7, signup8],
     )
 
-    #  search signups by name
+    #  search signups by name (first name - last name)
     get_list_and_assert_signups(
-        api_client, f"registration={registration2.id}&text=mickey", [signup8]
+        api_client, f"registration={registration2.id}&text=mickey m", [signup8]
+    )
+    #  search signups by name (last name - first name)
+    get_list_and_assert_signups(
+        api_client, f"registration={registration2.id}&text=mouse m", [signup8]
     )
 
     #  search signups by membership number
