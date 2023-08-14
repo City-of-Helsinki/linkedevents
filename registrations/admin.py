@@ -36,6 +36,15 @@ class RegistrationAdmin(VersionAdmin):
     list_filter = (EventFilter,)
     autocomplete_fields = ("event",)
 
+    def has_add_permission(self, request):
+        return super().has_add_permission()
+
+    def has_change_permission(self, request, obj=None):
+        return super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        return super().has_delete_permission(request, obj)
+
     def save_model(self, request, obj, form, change):
         if obj.pk is None:
             obj.created_by = request.user

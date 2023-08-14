@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name="user",
-            name="registration_organizations",
+            name="registration_admin_organizations",
             field=models.ManyToManyField(
                 blank=True,
                 related_name="registration_admins",

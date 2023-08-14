@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django_orghierarchy.admin import OrganizationAdmin
 from django_orghierarchy.models import Organization
 
-from .admin_forms import LocalOrganizationForm
+from .forms import LocalOrganizationForm
 from .models import User
 
 

@@ -51,6 +51,9 @@ class UserModelPermissionMixin:
         """Check if current user is an admin user of the publisher organization"""
         raise NotImplementedError()
 
+    def is_registration_admin_of(self, publisher):
+        raise NotImplementedError()
+
     def is_regular_user_of(self, publisher):
         """Check if current user is a regular user of the publisher organization"""
         raise NotImplementedError()
@@ -62,6 +65,16 @@ class UserModelPermissionMixin:
 
         Is replaced by django_orghierarchy.models.Organization's
         admin_organizations relation unless implemented in a subclass.
+        """
+        raise NotImplementedError()
+
+    @property
+    def registration_admin_organizations(self):
+        """
+        Get a queryset of organizations that the user is a registration admin of.
+
+        Is replaced by django_orghierarchy.models.Organization's
+        registration_admin_organizations relation unless implemented in a subclass.
         """
         raise NotImplementedError()
 
@@ -132,13 +145,12 @@ class UserModelPermissionMixin:
             value["replaced_by__tree_id"] for value in admin_replaced_tree_ids
         )
 
-    def get_admin_organizations_and_descendants(self):
-        # returns admin organizations and their descendants
-        if not self.admin_organizations.all():
+    def _get_admin_organizations_and_descendants(self, relation_name: str):
+        admin_rel = getattr(self, relation_name, None)
+        if not admin_rel or not admin_rel.all():
             return Organization.objects.none()
-        # regular admins have rights to all organizations below their level
         admin_orgs = []
-        for admin_org in self.admin_organizations.all():
+        for admin_org in admin_rel.all():
             admin_orgs.append(admin_org.get_descendants(include_self=True))
             if admin_org.replaced_by:
                 # admins of replaced organizations have these rights, too!
@@ -148,9 +160,19 @@ class UserModelPermissionMixin:
         # for multiple admin_orgs, we have to combine the querysets and filter distinct
         return reduce(lambda a, b: a | b, admin_orgs).distinct()
 
+    def get_admin_organizations_and_descendants(self):
+        # returns admin organizations and their descendants
+        return self._get_admin_organizations_and_descendants("admin_organizations")
+
+    def get_registration_admin_organizations_and_descendants(self):
+        # returns registration admin organizations and their descendants
+        return self._get_admin_organizations_and_descendants(
+            "registration_admin_organizations"
+        )
+
 
 class User(AbstractUser, UserModelPermissionMixin):
-    registration_organizations = models.ManyToManyField(
+    registration_admin_organizations = models.ManyToManyField(
         Organization, blank=True, related_name="registration_admins"
     )
 
@@ -183,6 +205,11 @@ class User(AbstractUser, UserModelPermissionMixin):
         if publisher is None:
             return False
         return publisher in self.get_admin_organizations_and_descendants()
+
+    def is_registration_admin_of(self, publisher):
+        if publisher is None:
+            return False
+        return publisher in self.get_registration_admin_organizations_and_descendants()
 
     def is_regular_user_of(self, publisher):
         if publisher is None:

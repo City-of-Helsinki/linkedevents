@@ -356,9 +356,7 @@ class SignUp(models.Model):
 
     def can_be_edited_by(self, user):
         """Check if current signup can be edited by the given user"""
-        if user.is_superuser:
-            return True
-        return user.is_admin_of(self.publisher)
+        return user.is_superuser or user.is_registration_admin_of(self.publisher)
 
     def is_user_editable_resources(self):
         return bool(self.data_source and self.data_source.user_editable_resources)

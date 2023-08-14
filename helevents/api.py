@@ -11,7 +11,7 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
         if user.is_superuser:
             return self.queryset
         else:
-            return self.queryset.filter(pk=user.pk)
+            return self.queryset.filter(pk=user.id)
 
     def get_object(self):
         username = self.kwargs.get("username", None)

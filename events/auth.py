@@ -74,6 +74,11 @@ class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
     def is_admin_of(self, publisher):
         return publisher in self.data_source.owner.get_descendants(include_self=True)
 
+    def is_registration_admin_of(self, publisher):
+        return (
+            self.is_admin_of(publisher) and self.data_source.user_editable_registrations
+        )
+
     def is_regular_user_of(self, publisher):
         return False
 
