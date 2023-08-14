@@ -413,10 +413,7 @@ class HarrastushakuImporter(Importer):
         self.event_syncher.mark(event)
 
     def get_event_keywords(self, activity_data):
-        keywords = self.get_event_keywords_from_main_categories(
-            activity_data
-        ) | self.get_event_keywords_from_search_words(activity_data)
-        return keywords
+        return self.get_event_keywords_from_main_categories(activity_data)
 
     def get_event_keywords_from_main_categories(self, activity_data):
         main_category_ids = {
@@ -430,20 +427,6 @@ class HarrastushakuImporter(Importer):
         return {
             self.keywords.get(kw_id) for kw_id in keyword_ids if kw_id in self.keywords
         }
-
-    def get_event_keywords_from_search_words(self, activity_data):
-        keywords = set()
-        search_words = activity_data.get("searchwords", [])
-
-        cleaned_search_words = [
-            s.strip().lower() for s in search_words.split(",") if s.strip()
-        ]
-        for kw in cleaned_search_words:
-            matches = self.match_keyword(kw)
-            if matches:
-                keywords |= set(matches)
-
-        return keywords
 
     def get_event_languages(self, activity_data):
         language_text = activity_data.get("languages", "").lower()
