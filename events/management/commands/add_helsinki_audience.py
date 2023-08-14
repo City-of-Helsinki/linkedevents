@@ -33,6 +33,11 @@ YSO_SOTE_KEYWORD_IDS = [
     "yso:p23886",  # päihdekeskuskuntoutujat
 ]
 
+EXTRA_AUDIENCE_KEYWORD_IDS = [
+    "yso:p16596",  # matkailijat
+]
+
+
 NEW_SOTE_KEYWORDS_DATA = [
     {
         "id": "helsinki:aflfbatkwe",
@@ -103,6 +108,7 @@ class Command(BaseCommand):
         keyword_ids = (
             yso_keyword_ids
             + YSO_SOTE_KEYWORD_IDS
+            + EXTRA_AUDIENCE_KEYWORD_IDS
             + [kw["id"] for kw in NEW_SOTE_KEYWORDS_DATA]
         )
 
