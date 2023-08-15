@@ -3,7 +3,7 @@ from freezegun import freeze_time
 from rest_framework import status
 
 from events.tests.utils import versioned_reverse as reverse
-from registrations.models import SignUp
+from registrations.models import MandatoryFields, SignUp
 
 # === util methods ===
 
@@ -52,6 +52,30 @@ def test__update_signup(user_api_client, registration, signup, user):
     db_signup = SignUp.objects.get(pk=signup.id)
     assert db_signup.first_name == new_signup_name
     assert db_signup.last_modified_by_id == user.id
+
+
+@freeze_time("2023-03-14 03:30:00+02:00")
+@pytest.mark.django_db
+def test__update_presence_status_of_signup(api_client, registration, signup, user):
+    registration.audience_min_age = 10
+    registration.mandatory_fields = [
+        MandatoryFields.PHONE_NUMBER,
+        MandatoryFields.STREET_ADDRESS,
+    ]
+    registration.save()
+    signup.date_of_birth = "2011-01-01"
+    signup.phone_number = "0441234567"
+    signup.street_address = "Street address"
+    signup.save()
+    api_client.force_authenticate(user)
+
+    signup_data = {
+        "registration": registration.id,
+        "presence_status": SignUp.PresenceStatus.PRESENT,
+    }
+
+    response = assert_update_signup(api_client, signup.id, signup_data)
+    assert response.data["presence_status"] == SignUp.PresenceStatus.PRESENT
 
 
 @freeze_time("2023-03-14 03:30:00+02:00")

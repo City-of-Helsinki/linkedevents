@@ -6,13 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registrations', '0016_multilingual_confirmation_message_and_instructions'),
+        ("registrations", "0016_multilingual_confirmation_message_and_instructions"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='signup',
-            name='presence_status',
-            field=models.CharField(choices=[('not_present', 'Not present'), ('present', 'Present')], default='not_present', max_length=25, verbose_name='Presence status'),
+            model_name="signup",
+            name="presence_status",
+            field=models.CharField(
+                choices=[("not_present", "Not present"), ("present", "Present")],
+                default="not_present",
+                max_length=25,
+                verbose_name="Presence status",
+            ),
         ),
     ]
