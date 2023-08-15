@@ -37,13 +37,24 @@ class RegistrationAdmin(VersionAdmin):
     autocomplete_fields = ("event",)
 
     def has_add_permission(self, request):
-        return super().has_add_permission()
+        has_default_perms = super().has_add_permission(request)
+        is_registration_admin = request.user.registration_organizations.exists()
+        return has_default_perms and is_registration_admin
 
     def has_change_permission(self, request, obj=None):
-        return super().has_change_permission(request, obj)
+        has_default_perms = super().has_change_permission(request, obj)
+        is_registration_admin = request.user.is_registration_admin_of(obj.publisher)
+        return has_default_perms and is_registration_admin
 
     def has_delete_permission(self, request, obj=None):
-        return super().has_delete_permission(request, obj)
+        has_default_perms = super().has_delete_permission(request, obj)
+        is_registration_admin = request.user.is_registration_admin_of(obj.publisher)
+        return has_default_perms and is_registration_admin
+
+    def has_view_permission(self, request, obj=None):
+        has_default_perms = super().has_view_permission(request, obj)
+        is_registration_admin = request.user.is_registration_admin_of(obj.publisher)
+        return has_default_perms and is_registration_admin
 
     def save_model(self, request, obj, form, change):
         if obj.pk is None:
