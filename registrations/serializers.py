@@ -132,7 +132,7 @@ class SignUpSerializer(serializers.ModelSerializer):
         ):
             if self.instance and "date_of_birth" not in data.keys():
                 # Use existing value if date_of_birth is missing in the payload
-                date_of_birth = getattr(self.instance, "date_of_birth")
+                date_of_birth = self.instance.date_of_birth
 
             else:
                 date_of_birth = data.get("date_of_birth")
