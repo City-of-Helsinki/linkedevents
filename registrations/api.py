@@ -23,7 +23,6 @@ from events.api import (
 from events.models import Event
 from events.permissions import (
     DataSourceResourceEditPermission,
-    GuestPost,
     OrganizationUserEditPermission,
 )
 from linkedevents.registry import register_view
@@ -34,7 +33,7 @@ from registrations.models import (
     SignUp,
     SignUpNotificationType,
 )
-from registrations.permissions import AuthenticatedGet, AuthenticateWithCancellationCode
+from registrations.permissions import CanCreateEditDeleteSignup
 from registrations.serializers import (
     CreateSignUpsSerializer,
     MassEmailSerializer,
@@ -148,7 +147,6 @@ class RegistrationViewSet(
 
             email_variables = {
                 "body": cleaned_body,
-                "cancellation_code": signup.cancellation_code,
                 "linked_events_ui_locale": linked_events_ui_locale,
                 "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
                 "linked_registrations_ui_locale": linked_registrations_ui_locale,
@@ -202,23 +200,16 @@ class SignUpViewSet(
     serializer_class = SignUpSerializer
     queryset = SignUp.objects.all()
 
-    permission_classes = [
-        GuestPost
-        | AuthenticateWithCancellationCode
-        | (
-            AuthenticatedGet
-            & DataSourceResourceEditPermission
-            & OrganizationUserEditPermission
-        )
-    ]
+    permission_classes = [CanCreateEditDeleteSignup & DataSourceResourceEditPermission]
 
     def create(self, request, *args, **kwargs):
+        context = super().get_serializer_context()
         data = request.data
         registration = data.get("registration", None)
         if registration:
             for i in data["signups"]:
                 i["registration"] = registration
-        serializer = CreateSignUpsSerializer(data=data)
+        serializer = CreateSignUpsSerializer(data=data, context=context)
         serializer.is_valid(raise_exception=True)
 
         attending = []
@@ -226,14 +217,14 @@ class SignUpViewSet(
 
         # Create SignUps and add persons to correct list
         for i in data["signups"]:
-            signup = SignUpSerializer(data=i, many=False)
+            signup = SignUpSerializer(data=i, context=context)
             signup.is_valid()
             signee = signup.create(validated_data=signup.validated_data)
 
             if signee.attendee_status == SignUp.AttendeeStatus.ATTENDING:
-                attending.append(SignUpSerializer(signee, many=False).data)
+                attending.append(SignUpSerializer(signee, context=context).data)
             else:
-                waitlisted.append(SignUpSerializer(signee, many=False).data)
+                waitlisted.append(SignUpSerializer(signee, context=context).data)
         data = {
             "attending": {"count": len(attending), "people": attending},
             "waitlisted": {"count": len(waitlisted), "people": waitlisted},

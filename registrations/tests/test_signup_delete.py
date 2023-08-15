@@ -31,41 +31,6 @@ def assert_delete_signup(api_client, signup_pk, query_string=None):
 
 
 @pytest.mark.django_db
-def test_anonymous_user_can_delete_signup_with_cancellation_code(api_client, signup):
-    api_client.force_authenticate(user=None)
-
-    assert_delete_signup(
-        api_client,
-        signup.id,
-        f"cancellation_code={signup.cancellation_code}",
-    )
-
-
-@pytest.mark.django_db
-def test_anonymous_user_cannot_delete_signup_if_cancellation_code_is_missing(
-    api_client, signup
-):
-    api_client.force_authenticate(user=None)
-
-    response = delete_signup(api_client, signup.id)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-    assert response.data["detail"] == "cancellation_code parameter has to be provided"
-
-
-@pytest.mark.django_db
-def test_cannot_delete_signup_with_wrong_cancellation_code(api_client, signup, signup2):
-    api_client.force_authenticate(user=None)
-
-    response = delete_signup(
-        api_client,
-        signup.id,
-        f"cancellation_code={signup2.cancellation_code}",
-    )
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-    assert response.data["detail"] == "Cancellation code did not match"
-
-
-@pytest.mark.django_db
 def test_admin_can_delete_signup(signup, user_api_client):
     assert_delete_signup(user_api_client, signup.id)
 
@@ -179,6 +144,33 @@ def test__non_admin_cannot_delete_signup(signup, user, user_api_client):
 
 
 @pytest.mark.django_db
+def test__created_authenticated_user_can_delete_signup(user_api_client, signup, user):
+    signup.created_by = user
+    signup.save(update_fields=["created_by"])
+
+    user.get_default_organization().regular_users.add(user)
+    user.get_default_organization().admin_users.remove(user)
+
+    assert_delete_signup(user_api_client, signup.id)
+
+
+@pytest.mark.django_db
+def test__created_not_authenticated_user_cannot_delete_signup(
+    user_api_client, signup, user
+):
+    signup.created_by = user
+    signup.save(update_fields=["created_by"])
+
+    user_api_client.logout()
+
+    user.get_default_organization().regular_users.add(user)
+    user.get_default_organization().admin_users.remove(user)
+
+    response = delete_signup(user_api_client, signup.id)
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+@pytest.mark.django_db
 def test__api_key_with_organization_can_delete_signup(
     api_client, data_source, organization, signup
 ):
@@ -246,7 +238,7 @@ def test__non_user_editable_resources_cannot_delete_signup(
 
 @pytest.mark.django_db
 def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
-    api_client, registration
+    user_api_client, registration
 ):
     registration.maximum_attendee_capacity = 1
     registration.save()
@@ -261,9 +253,8 @@ def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
         "reservation_code": reservation.code,
         "signups": [signup_data],
     }
-    response = assert_create_signups(api_client, signups_data)
+    response = assert_create_signups(user_api_client, signups_data)
     signup_id = response.data["attending"]["people"][0]["id"]
-    cancellation_code = response.data["attending"]["people"][0]["cancellation_code"]
 
     reservation2 = SeatReservationCode.objects.create(
         registration=registration, seats=1
@@ -277,7 +268,7 @@ def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
         "reservation_code": reservation2.code,
         "signups": [signup_data2],
     }
-    assert_create_signups(api_client, signups_data2)
+    assert_create_signups(user_api_client, signups_data2)
 
     reservation3 = SeatReservationCode.objects.create(
         registration=registration, seats=1
@@ -291,7 +282,7 @@ def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
         "reservation_code": reservation3.code,
         "signups": [signup_data3],
     }
-    assert_create_signups(api_client, signups_data3)
+    assert_create_signups(user_api_client, signups_data3)
 
     assert (
         SignUp.objects.get(email=signup_data["email"]).attendee_status
@@ -306,9 +297,7 @@ def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
         == SignUp.AttendeeStatus.WAITING_LIST
     )
 
-    assert_delete_signup(
-        api_client, signup_id, f"cancellation_code={cancellation_code}"
-    )
+    assert_delete_signup(user_api_client, signup_id)
     assert (
         SignUp.objects.get(email=signup_data2["email"]).attendee_status
         == SignUp.AttendeeStatus.ATTENDING
@@ -341,7 +330,7 @@ def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
 )
 @pytest.mark.django_db
 def test_send_email_when_moving_participant_from_waitlist(
-    api_client,
+    user_api_client,
     expected_subject,
     expected_text,
     languages,
@@ -365,10 +354,7 @@ def test_send_email_when_moving_participant_from_waitlist(
         signup2.save()
 
         signup_id = signup.id
-        cancellation_code = signup.cancellation_code
-        assert_delete_signup(
-            api_client, signup_id, f"cancellation_code={cancellation_code}"
-        )
+        assert_delete_signup(user_api_client, signup_id)
 
         # Signup 2 status should be changed
         assert (
@@ -402,7 +388,7 @@ def test_send_email_when_moving_participant_from_waitlist(
 )
 @pytest.mark.django_db
 def test_transferred_as_participant_template_has_correct_text_per_event_type(
-    api_client,
+    user_api_client,
     event_type,
     expected_subject,
     expected_text,
@@ -425,10 +411,7 @@ def test_transferred_as_participant_template_has_correct_text_per_event_type(
     signup2.save()
 
     signup_id = signup.id
-    cancellation_code = signup.cancellation_code
-    assert_delete_signup(
-        api_client, signup_id, f"cancellation_code={cancellation_code}"
-    )
+    assert_delete_signup(user_api_client, signup_id)
 
     # Signup 2 status should be changed
     assert (
