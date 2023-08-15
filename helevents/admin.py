@@ -46,15 +46,25 @@ class UserAdmin(DjangoUserAdmin):
                     "department_name",
                     "uuid",
                     "admin_in_organizations",
+                    "registration_admin_in_organizations",
                     "regular_user_in_organizations",
                 )
             },
         ),
     )
-    readonly_fields = ("admin_in_organizations", "regular_user_in_organizations")
+    readonly_fields = (
+        "admin_in_organizations",
+        "registration_admin_in_organizations",
+        "regular_user_in_organizations",
+    )
 
     def admin_in_organizations(self, obj):
         return ", ".join([org.name for org in obj.admin_organizations.all()])
+
+    def registration_admin_in_organizations(self, obj):
+        return ", ".join(
+            [org.name for org in obj.registration_admin_organizations.all()]
+        )
 
     def regular_user_in_organizations(self, obj):
         return ", ".join([org.name for org in obj.organization_memberships.all()])
