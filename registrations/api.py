@@ -33,7 +33,7 @@ from registrations.models import (
     SignUp,
     SignUpNotificationType,
 )
-from registrations.permissions import CanCreateSignUp, CanReadUpdateDeleteSignup
+from registrations.permissions import CanCreateEditDeleteSignup
 from registrations.serializers import (
     CreateSignUpsSerializer,
     MassEmailSerializer,
@@ -200,9 +200,7 @@ class SignUpViewSet(
     serializer_class = SignUpSerializer
     queryset = SignUp.objects.all()
 
-    permission_classes = [
-        (CanCreateSignUp | CanReadUpdateDeleteSignup) & DataSourceResourceEditPermission
-    ]
+    permission_classes = [CanCreateEditDeleteSignup & DataSourceResourceEditPermission]
 
     def create(self, request, *args, **kwargs):
         context = super().get_serializer_context()

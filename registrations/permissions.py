@@ -7,22 +7,17 @@ from events.auth import ApiKeyUser
 from registrations.models import SignUp
 
 
-class CanCreateSignUp(permissions.BasePermission):
-    message: str = _("Only authenticated users are allowed to create sign-ups")
-
-    def has_permission(self, request: Request, view: APIView) -> bool:
-        return request.method == "POST" and request.user.is_authenticated
-
-
-class CanReadUpdateDeleteSignup(permissions.BasePermission):
+class CanCreateEditDeleteSignup(permissions.BasePermission):
     message: str = _(
-        "Only authenticated users that are admins in the publishing organization or"
-        "that have created the sign-up are allowed to view and edit it"
+        "Only authenticated users are able to access sign-ups. Viewing, editing and deleting are"
+        "allowed only for admins of the publishing organization and for users that have created "
+        "the sign-up."
     )
 
     def has_permission(self, request: Request, view: APIView) -> bool:
         return (
-            request.method in permissions.SAFE_METHODS + ("PUT", "PATCH", "DELETE")
+            request.method
+            in permissions.SAFE_METHODS + ("POST", "PUT", "PATCH", "DELETE")
             and request.user.is_authenticated
         )
 
