@@ -39,7 +39,20 @@ class SignUpSerializer(serializers.ModelSerializer):
         required=False,
     )
 
+    created_at = DateTimeField(
+        default_timezone=pytz.UTC, required=False, allow_null=True
+    )
+    last_modified_at = DateTimeField(
+        default_timezone=pytz.UTC, required=False, allow_null=True
+    )
+
+    created_by = serializers.StringRelatedField(required=False, allow_null=True)
+    last_modified_by = serializers.StringRelatedField(required=False, allow_null=True)
+
     def create(self, validated_data):
+        validated_data["created_by"] = self.context["request"].user
+        validated_data["last_modified_by"] = self.context["request"].user
+
         registration = validated_data["registration"]
         already_attending = SignUp.objects.filter(
             registration=registration, attendee_status=SignUp.AttendeeStatus.ATTENDING
@@ -89,6 +102,7 @@ class SignUpSerializer(serializers.ModelSerializer):
         if errors:
             raise serializers.ValidationError(errors)
 
+        validated_data["last_modified_by"] = self.context["request"].user
         super().update(instance, validated_data)
         return instance
 
@@ -226,6 +240,12 @@ class CreateSignUpsSerializer(serializers.Serializer):
         required=True,
     )
     signups = SignUpSerializer(many=True, required=True)
+
+    def create(self, validated_data):
+        validated_data["created_by"] = self.context["request"].user
+        validated_data["last_modified_by"] = self.context["request"].user
+        instance = super().create(validated_data)
+        return instance
 
     def validate(self, data):
         reservation_code = data["reservation_code"]

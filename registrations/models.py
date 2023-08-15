@@ -67,7 +67,40 @@ class ChoiceArrayField(ArrayField):
         )
 
 
-class Registration(models.Model):
+class CreatedModifiedBaseModel(models.Model):
+    created_at = models.DateTimeField(
+        verbose_name=_("Created at"),
+        null=False,
+        blank=True,
+        auto_now_add=True,
+    )
+    last_modified_at = models.DateTimeField(
+        verbose_name=_("Modified at"),
+        null=False,
+        blank=True,
+        auto_now=True,
+    )
+
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="%(class)s_created_by",
+    )
+    last_modified_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="%(class)s_last_modified_by",
+    )
+
+    class Meta:
+        abstract = True
+
+
+class Registration(CreatedModifiedBaseModel):
     event = models.OneToOneField(
         Event,
         on_delete=models.CASCADE,
@@ -81,26 +114,6 @@ class Registration(models.Model):
     )
     audience_max_age = models.PositiveSmallIntegerField(
         verbose_name=_("Maximum recommended age"), blank=True, null=True, db_index=True
-    )
-
-    created_at = models.DateTimeField(verbose_name=_("Created at"), auto_now_add=True)
-    last_modified_at = models.DateTimeField(
-        verbose_name=_("Modified at"), null=True, blank=True, auto_now=True
-    )
-
-    created_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="registration_created_by",
-    )
-    last_modified_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="registration_last_modified_by",
     )
 
     enrolment_start_time = models.DateTimeField(
@@ -236,7 +249,7 @@ class Registration(models.Model):
         )
 
 
-class SignUp(models.Model):
+class SignUp(CreatedModifiedBaseModel):
     class AttendeeStatus:
         WAITING_LIST = "waitlisted"
         ATTENDING = "attending"
@@ -308,9 +321,6 @@ class SignUp(models.Model):
         choices=NOTIFICATION_TYPES,
         default=NotificationType.NO_NOTIFICATION,
     )
-    cancellation_code = models.UUIDField(
-        verbose_name=_("Cancellation code"), default=uuid4, editable=False
-    )
     attendee_status = models.CharField(
         verbose_name=_("Attendee status"),
         max_length=25,
@@ -356,7 +366,11 @@ class SignUp(models.Model):
 
     def can_be_edited_by(self, user):
         """Check if current signup can be edited by the given user"""
-        return user.is_superuser or user.is_registration_admin_of(self.publisher)
+        return (
+            user.is_superuser
+            or user.is_registration_admin_of(self.publisher)
+            or user.id == self.created_by_id
+        )
 
     def is_user_editable_resources(self):
         return bool(self.data_source and self.data_source.user_editable_resources)
@@ -376,7 +390,6 @@ class SignUp(models.Model):
             event_type_id = self.registration.event.type_id
 
             email_variables = {
-                "cancellation_code": self.cancellation_code,
                 "event": event_name,
                 "event_type_id": event_type_id,
                 "linked_events_ui_locale": linked_events_ui_locale,
