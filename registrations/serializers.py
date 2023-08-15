@@ -117,17 +117,29 @@ class SignUpSerializer(serializers.ModelSerializer):
         falsy_values = ("", None)
 
         for field in registration.mandatory_fields:
-            if data.get(field) in falsy_values:
+            if self.instance and field not in data.keys():
+                # Use existing value if field is missing in the payload
+                val = getattr(self.instance, field)
+            else:
+                val = data.get(field)
+
+            if val in falsy_values:
                 errors[field] = _("This field must be specified.")
 
         if (
             registration.audience_min_age not in falsy_values
             or registration.audience_max_age not in falsy_values
         ):
-            if "date_of_birth" not in data.keys():
+            if self.instance and "date_of_birth" not in data.keys():
+                # Use existing value if date_of_birth is missing in the payload
+                date_of_birth = getattr(self.instance, "date_of_birth")
+
+            else:
+                date_of_birth = data.get("date_of_birth")
+
+            if date_of_birth in falsy_values:
                 errors["date_of_birth"] = _("This field must be specified.")
             else:
-                date_of_birth = data["date_of_birth"]
                 today = localdate()
                 current_age = (
                     today.year
