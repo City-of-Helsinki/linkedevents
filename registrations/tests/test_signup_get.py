@@ -52,7 +52,19 @@ def assert_get_detail(api_client: APIClient, signup_pk: str, query: str = None):
 
 
 @pytest.mark.django_db
-def test_admin_user_can_get_signup(user_api_client, registration, signup):
+def test_admin_user_cannot_get_signup(user_api_client, registration, signup):
+    response = get_detail(user_api_client, signup.id)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_registration_admin_user_can_get_signup(
+    user_api_client, registration, signup, user
+):
+    user.get_default_organization().regular_users.add(user)
+    user.get_default_organization().admin_users.remove(user)
+    user.get_default_organization().registration_admin_users.add(user)
+
     assert_get_detail(user_api_client, signup.id)
 
 
@@ -92,14 +104,27 @@ def test__user_from_other_organization_cannot_get_signup(
 
 
 @pytest.mark.django_db
-def test__api_key_with_organization_can_get_signup(
+def test__api_key_with_organization_and_registration_permission_can_get_signup(
     api_client, data_source, organization, registration, signup
 ):
     data_source.owner = organization
-    data_source.save()
+    data_source.user_editable_registrations = True
+    data_source.save(update_fields=["owner", "user_editable_registrations"])
     api_client.credentials(apikey=data_source.api_key)
 
     assert_get_detail(api_client, signup.id)
+
+
+@pytest.mark.django_db
+def test__api_key_with_organization_without_registration_permission_cannot_get_signup(
+    api_client, data_source, organization, registration, signup
+):
+    data_source.owner = organization
+    data_source.save(update_fields=["owner"])
+    api_client.credentials(apikey=data_source.api_key)
+
+    response = get_detail(api_client, signup.id)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db

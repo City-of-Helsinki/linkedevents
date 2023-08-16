@@ -55,6 +55,12 @@ class TestRegistration(TestCase):
         can_be_edited = self.registration.can_be_edited_by(self.user)
         self.assertTrue(can_be_edited)
 
+    def test_can_be_edited_by_registration_admin_user(self):
+        self.org.registration_admin_users.add(self.user)
+
+        can_be_edited = self.registration.can_be_edited_by(self.user)
+        self.assertTrue(can_be_edited)
+
 
 class TestSignUp(TestCase):
     def setUp(self):
@@ -102,8 +108,14 @@ class TestSignUp(TestCase):
         can_be_edited = self.signup.can_be_edited_by(self.user)
         self.assertFalse(can_be_edited)
 
-    def test_can_be_edited_by_admin_user(self):
+    def test_cannot_be_edited_by_admin_user(self):
         self.org.admin_users.add(self.user)
+
+        can_be_edited = self.signup.can_be_edited_by(self.user)
+        self.assertFalse(can_be_edited)
+
+    def test_can_be_edited_by_registration_admin_user(self):
+        self.org.registration_admin_users.add(self.user)
 
         can_be_edited = self.signup.can_be_edited_by(self.user)
         self.assertTrue(can_be_edited)

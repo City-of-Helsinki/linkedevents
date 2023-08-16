@@ -35,6 +35,15 @@ def test_admin_can_delete_signup(signup, user_api_client):
     assert_delete_signup(user_api_client, signup.id)
 
 
+@pytest.mark.django_db
+def test__registration_admin_can_delete_signup(signup, user, user_api_client):
+    user.get_default_organization().regular_users.add(user)
+    user.get_default_organization().admin_users.remove(user)
+    user.get_default_organization().registration_admin_users.add(user)
+
+    assert_delete_signup(user_api_client, signup.id)
+
+
 @pytest.mark.parametrize(
     "service_language,expected_subject,expected_heading,expected_text",
     [
@@ -144,14 +153,17 @@ def test__non_admin_cannot_delete_signup(signup, user, user_api_client):
 
 
 @pytest.mark.django_db
-def test__created_authenticated_user_can_delete_signup(user_api_client, signup, user):
+def test__created_authenticated_user_cannot_delete_signup(
+    user_api_client, signup, user
+):
     signup.created_by = user
     signup.save(update_fields=["created_by"])
 
     user.get_default_organization().regular_users.add(user)
     user.get_default_organization().admin_users.remove(user)
 
-    assert_delete_signup(user_api_client, signup.id)
+    response = delete_signup(user_api_client, signup.id)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db
