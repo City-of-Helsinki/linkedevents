@@ -170,14 +170,14 @@ def test_get_registration_with_event_and_audience_included(
 
 
 @pytest.mark.django_db
-def test_current_attendee_and_waitlist_count(api_client, registration, user):
-    api_client.force_authenticate(user)
+def test_current_attendee_and_waitlist_count(user_api_client, registration, user):
+    user.get_default_organization().registration_admin_users.add(user)
 
     registration.maximum_attendee_capacity = 1
     registration.waiting_list_capacity = 1
     registration.save()
 
-    response = get_detail(api_client, registration.id)
+    response = get_detail(user_api_client, registration.id)
     assert response.data["current_attendee_count"] == 0
     assert response.data["current_waiting_list_count"] == 0
 
@@ -193,8 +193,8 @@ def test_current_attendee_and_waitlist_count(api_client, registration, user):
         "reservation_code": reservation.code,
         "signups": [signup_data],
     }
-    assert_create_signups(api_client, signups_data)
-    response = get_detail(api_client, registration.id)
+    assert_create_signups(user_api_client, signups_data)
+    response = get_detail(user_api_client, registration.id)
     assert response.data["current_attendee_count"] == 1
     assert response.data["current_waiting_list_count"] == 0
 
@@ -212,8 +212,8 @@ def test_current_attendee_and_waitlist_count(api_client, registration, user):
         "reservation_code": reservation2.code,
         "signups": [signup_data2],
     }
-    assert_create_signups(api_client, signups_data2)
-    response = get_detail(api_client, registration.id)
+    assert_create_signups(user_api_client, signups_data2)
+    response = get_detail(user_api_client, registration.id)
     assert response.data["current_attendee_count"] == 1
     assert response.data["current_waiting_list_count"] == 1
 

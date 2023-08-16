@@ -250,8 +250,10 @@ def test__non_user_editable_resources_cannot_delete_signup(
 
 @pytest.mark.django_db
 def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
-    user_api_client, registration
+    user_api_client, registration, user
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     registration.maximum_attendee_capacity = 1
     registration.save()
 
