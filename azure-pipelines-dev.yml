@@ -1,55 +1,62 @@
-# Continuous integration (CI) triggers cause a pipeline to run whenever you push
-# an update to the specified branches or you push specified tags.
-# trigger:
-#   batch: true
-#   branches:
-#     include:
-#     - master
-#   paths:
-#     exclude:
-#     - README.md
+# Dev environment deploy pipeline
+# Triggers automatically after a build of develop branch
+
 trigger: none
-# Pull request (PR) triggers cause a pipeline to run whenever a pull request is
-# opened with one of the specified target branches, or when updates are made to
-# such a pull request.
-#
-# GitHub creates a new ref when a pull request is created. The ref points to a
-# merge commit, which is the merged code between the source and target branches
-# of the pull request.
-#
-# Opt out of pull request validation
-pr: none
-
-# By default, use self-hosted agents
 pool: Default
+pr:
+  branches:
+    include:
+      - develop
 
-# Image tag name for Fuse projects
-#parameters:
-#- name: imagetag
-#  displayName: Image tag to be built and/or deployed
-#  type: string
-#  default: latest
 
+parameters:
+  - name: buildenv
+    displayName: Build environment
+    type: string
+    default: "-dev"
+    values:
+      - "-prod"
+      - "-staging"
+      - "-dev"
+
+# Check out multiple repositories in your pipeline
 resources:
   repositories:
-    # Azure DevOps repository
-    - repository: linkedevents-pipelines
+    # Azure Repos
+    - repository: templates
       type: git
-      # Azure DevOps project/repository
+      ref: refs/heads/dev
+      name: devops-toolchain/pipeline-templates
+    # Azure Repos
+    - repository: pipelines
+      type: git
+      name: linkedevents-pipelines
+    - repository: linkedevents-pipelines-ref
+      type: git
       name: linkedevents/linkedevents-pipelines
-  pipelines:
-    - pipeline: build-linkedevents-api
-      source: build-linkedevents-api
-      trigger:
-        branches:
-          include:
-            - refs/heads/develop
 
-extends:
-  # Filename in Azure DevOps Repository (note possible -ui or -api)
-  # Django example: azure-pipelines-linkedevents-api-master.yml
-  # Drupal example: azure-pipelines-drupal-master.yml
-  template: azure-pipelines-deploy-linkedevents-api-dev.yml@linkedevents-pipelines
-  # Image tag name for Fuse projects
-  #parameters:
-  #imagetag: ${{ parameters.imagetag }}
+
+# Variables specified at the pipeline level
+variables:
+  location: westeurope
+
+# By default, use self-hosted agents
+# pool: Default
+
+stages:
+  - template: stage-templates/build-pipeline.yml@templates
+    parameters:
+      environment: development
+      openShiftServiceConnection: kerrokantasi-dev
+      azServConn: hki-platta-kerrokantasi-devtest
+      app: kerrokantasi-api
+      project: kerrokantasi
+      buildenv: -doesnotexist
+  - template: pipeline-templates/deploy-pipeline-linkedevents-api.yml@linkedevents-pipelines-ref
+    parameters:
+      environment: staging
+      openShiftServiceConnection: linkedevents-staging
+      azServConn: hki-platta-linkedevents-staging
+      additionalFilesForce:
+        - devops/linkedevents-elasticsearch-config.yml
+      buildenv: -prod
