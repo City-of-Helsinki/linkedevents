@@ -52,11 +52,11 @@ stages:
       app: kerrokantasi-api
       project: kerrokantasi
       buildenv: -doesnotexist
-  - template: pipeline-templates/deploy-pipeline-linkedevents-api.yml@linkedevents-pipelines-ref
-    parameters:
-      environment: staging
-      openShiftServiceConnection: linkedevents-staging
-      azServConn: hki-platta-linkedevents-staging
-      additionalFilesForce:
-        - devops/linkedevents-elasticsearch-config.yml
-      buildenv: -prod
+  #- template: pipeline-templates/deploy-pipeline-linkedevents-api.yml@linkedevents-pipelines-ref
+  #  parameters:
+  #    environment: staging
+  #    openShiftServiceConnection: linkedevents-staging
+  #    azServConn: hki-platta-linkedevents-staging
+  #    additionalFilesForce:
+  #      - devops/linkedevents-elasticsearch-config.yml
+  #    buildenv: -prod
