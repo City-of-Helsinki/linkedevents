@@ -173,7 +173,7 @@ class UserModelPermissionMixin:
 
 class User(AbstractUser, UserModelPermissionMixin):
     registration_admin_organizations = models.ManyToManyField(
-        Organization, blank=True, related_name="registration_admins"
+        Organization, blank=True, related_name="registration_admin_users"
     )
 
     def __str__(self):

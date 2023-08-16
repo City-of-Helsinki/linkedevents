@@ -1499,14 +1499,14 @@ class OrganizationUserField(serializers.SlugRelatedField):
 
 
 class OrganizationDetailSerializer(OrganizationListSerializer):
-    user_fields = ["admin_users", "registration_admins", "regular_users"]
+    user_fields = ["admin_users", "registration_admin_users", "regular_users"]
 
     admin_users = OrganizationUserField(
         many=True,
         required=False,
     )
 
-    registration_admins = OrganizationUserField(
+    registration_admin_users = OrganizationUserField(
         many=True,
         required=False,
     )
@@ -1609,7 +1609,7 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
             "replaced_by",
             "has_regular_users",
             "regular_users",
-            "registration_admins",
+            "registration_admin_users",
             "admin_users",
         )
 
@@ -1630,7 +1630,7 @@ class OrganizationViewSet(
 
     def get_queryset(self):
         queryset = Organization.objects.prefetch_related(
-            "regular_users", "registration_admins", "admin_users"
+            "regular_users", "registration_admin_users", "admin_users"
         ).prefetch_related(
             Prefetch(
                 "children",

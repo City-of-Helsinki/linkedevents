@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
             name="registration_admin_organizations",
             field=models.ManyToManyField(
                 blank=True,
-                related_name="registration_admins",
+                related_name="registration_admin_users",
                 to="django_orghierarchy.Organization",
             ),
         ),

@@ -9,33 +9,31 @@ from django_orghierarchy.forms import OrganizationForm
 from helevents.models import User
 
 
-class LocalOrganizationForm(OrganizationForm):
-    registration_admins = forms.ModelMultipleChoiceField(
-        User.objects.none(), required=False
+class LocalOrganizationAdminForm(OrganizationForm):
+    registration_admin_users = forms.ModelMultipleChoiceField(
+        User.objects.all(),
+        required=False,
+        help_text=_(
+            "Hold down “Control”, or “Command” on a Mac, to select more than one."
+        ),
+        widget=FilteredSelectMultiple(
+            verbose_name=_("registration admins"), is_stacked=False
+        ),
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.fields["registration_admins"] = forms.ModelMultipleChoiceField(
-            User.objects.all(),
-            required=False,
-            help_text=_(
-                "Hold down “Control”, or “Command” on a Mac, to select more than one."
-            ),
-            widget=RelatedFieldWidgetWrapper(
-                FilteredSelectMultiple(
-                    verbose_name=_("registration admins"), is_stacked=False
-                ),
-                rel=User.admin_organizations.rel,
-                admin_site=self.user_admin_site,
-                **self.wrapper_kwargs,
-            ),
+        self.fields["registration_admin_users"].widget = RelatedFieldWidgetWrapper(
+            self.fields["registration_admin_users"].widget,
+            rel=User.admin_organizations.rel,
+            admin_site=self.user_admin_site,
+            **self.wrapper_kwargs,
         )
         if self.instance.pk:
             self.initial[
-                "registration_admins"
-            ] = self.instance.registration_admins.all()
+                "registration_admin_users"
+            ] = self.instance.registration_admin_users.all()
 
     class Meta(OrganizationForm.Meta):
         fields = (
@@ -48,7 +46,7 @@ class LocalOrganizationForm(OrganizationForm):
             "internal_type",
             "parent",
             "admin_users",
-            "registration_admins",
+            "registration_admin_users",
             "regular_users",
             "replaced_by",
         )

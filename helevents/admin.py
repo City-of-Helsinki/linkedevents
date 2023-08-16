@@ -3,13 +3,13 @@ from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django_orghierarchy.admin import OrganizationAdmin
 from django_orghierarchy.models import Organization
 
-from .forms import LocalOrganizationForm
+from .forms import LocalOrganizationAdminForm
 from .models import User
 
 
 class LocalOrganizationAdmin(OrganizationAdmin):
-    filter_horizontal = ("admin_users", "registration_admins", "regular_users")
-    form = LocalOrganizationForm
+    filter_horizontal = ("admin_users", "registration_admin_users", "regular_users")
+    form = LocalOrganizationAdminForm
 
     def get_form(self, request, obj=None, change=False, **kwargs):
         form = super().get_form(request, obj, change, **kwargs)
@@ -30,10 +30,10 @@ class LocalOrganizationAdmin(OrganizationAdmin):
         return form
 
     def save_model(self, request, obj, form, change):
-        registration_admins = form.cleaned_data.get("registration_admins")
-        obj.registration_admins.clear()
-        if registration_admins:
-            obj.registration_admins.add(*registration_admins)
+        registration_admin_users = form.cleaned_data.get("registration_admin_users")
+        obj.registration_admin_users.clear()
+        if registration_admin_users:
+            obj.registration_admin_users.set(registration_admin_users)
         super().save_model(request, obj, form, change)
 
 

@@ -36,63 +36,6 @@ class RegistrationAdmin(VersionAdmin):
     list_filter = (EventFilter,)
     autocomplete_fields = ("event",)
 
-    def has_add_permission(self, request):
-        has_default_perms = super().has_add_permission(request)
-
-        if request.user.is_superuser:
-            return has_default_perms
-
-        is_registration_admin = request.user.registration_admin_organizations.exists()
-
-        return has_default_perms and is_registration_admin
-
-    def has_change_permission(self, request, obj=None):
-        has_default_perms = super().has_change_permission(request, obj)
-
-        if request.user.is_superuser:
-            return has_default_perms
-
-        if obj:
-            is_registration_admin = obj.can_be_edited_by(request.user)
-        else:
-            is_registration_admin = (
-                request.user.registration_admin_organizations.exists()
-            )
-
-        return has_default_perms and is_registration_admin
-
-    def has_delete_permission(self, request, obj=None):
-        has_default_perms = super().has_delete_permission(request, obj)
-
-        if request.user.is_superuser:
-            return has_default_perms
-
-        if obj:
-            is_registration_admin = obj.can_be_edited_by(request.user)
-        else:
-            is_registration_admin = (
-                request.user.registration_admin_organizations.exists()
-            )
-
-        return has_default_perms and is_registration_admin
-
-    def has_view_permission(self, request, obj=None):
-        has_default_perms = super().has_view_permission(request, obj)
-        if request.user.is_superuser:
-            return has_default_perms
-
-        if obj:
-            is_registration_admin = (
-                obj.can_be_edited_by(request.user)
-                or obj.created_by_id == request.user.id
-            )
-        else:
-            is_registration_admin = (
-                request.user.registration_admin_organizations.exists()
-            )
-
-        return has_default_perms and is_registration_admin
-
     def save_model(self, request, obj, form, change):
         if obj.pk is None:
             obj.created_by = request.user

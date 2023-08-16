@@ -23,10 +23,13 @@ class CanAccessRegistration(permissions.BasePermission):
             if obj.data_source != user_data_source:
                 return False
 
-        conditions = [obj.can_be_edited_by(request.user)]
         if request.method == "GET":
-            conditions.append(obj.created_by_id == request.user.id)
-        return any(conditions)
+            return (
+                obj.can_be_edited_by(request.user)
+                or obj.created_by_id == request.user.id
+            )
+
+        return obj.can_be_edited_by(request.user)
 
 
 class CanAccessSignup(permissions.BasePermission):
