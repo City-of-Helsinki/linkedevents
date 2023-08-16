@@ -49,9 +49,9 @@ stages:
       environment: development
       openShiftServiceConnection: kerrokantasi-dev
       azServConn: hki-platta-kerrokantasi-devtest
-      app: kerrokantasi-api
-      project: kerrokantasi
-      buildenv: -doesnotexist
+      app: linkedevents-api
+      project: linkedevents
+      buildenv: -dev
   #- template: pipeline-templates/deploy-pipeline-linkedevents-api.yml@linkedevents-pipelines-ref
   #  parameters:
   #    environment: staging
