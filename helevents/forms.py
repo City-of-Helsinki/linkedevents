@@ -27,8 +27,8 @@ class LocalOrganizationAdminForm(OrganizationForm):
         self.fields["registration_admin_users"].widget = RelatedFieldWidgetWrapper(
             self.fields["registration_admin_users"].widget,
             rel=User.admin_organizations.rel,
-            admin_site=self.user_admin_site,
-            **self.wrapper_kwargs,
+            admin_site=getattr(self, "user_admin_site", None),
+            **getattr(self, "wrapper_kwargs", {}),
         )
         if self.instance.pk:
             self.initial[

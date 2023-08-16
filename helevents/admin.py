@@ -23,8 +23,7 @@ class LocalOrganizationAdmin(OrganizationAdmin):
                 can_delete_related=user_modeladmin.has_delete_permission(request),
                 can_view_related=user_modeladmin.has_view_permission(request),
             )
-
-        form.user_admin_site = user_modeladmin.admin_site
+            form.user_admin_site = user_modeladmin.admin_site
         form.wrapper_kwargs = wrapper_kwargs
 
         return form
