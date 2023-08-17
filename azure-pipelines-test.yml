@@ -9,11 +9,10 @@ parameters:
   - name: buildenv
     displayName: Build environment
     type: string
-    default: "-test"
+    default: "-dev"
     values:
-      - "-prod"
-      - "-staging"
       - "-dev"
+      - "-prod"
 
 resources:
   repositories:

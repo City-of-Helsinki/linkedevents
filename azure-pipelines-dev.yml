@@ -12,7 +12,6 @@ parameters:
     default: "-dev"
     values:
       - "-prod"
-      - "-staging"
       - "-dev"
 
 resources:
@@ -26,7 +25,7 @@ resources:
       trigger:
         branches:
           include:
-            - refs/heads/develop
+            - refs/heads/main
 
 extends:
   template: azure-pipelines-deploy-linkedevents-api-dev.yml@linkedevents-pipelines
