@@ -75,8 +75,8 @@ def test_anonymous_user_cannot_see_organization_users(api_client, organization, 
     organization.regular_users.add(user)
 
     response = get_organization(api_client, organization.id)
-    assert response.data.get("admin_users") == None
-    assert response.data.get("regular_users") == None
+    assert response.data.get("admin_users") is None
+    assert response.data.get("regular_users") is None
 
 
 @pytest.mark.django_db
@@ -87,8 +87,8 @@ def test_regular_user_cannot_see_organization_users(
     organization.admin_users.remove(user)
 
     response = get_organization(user_api_client, organization.id)
-    assert response.data.get("admin_users") == None
-    assert response.data.get("regular_users") == None
+    assert response.data.get("admin_users") is None
+    assert response.data.get("regular_users") is None
 
 
 @pytest.mark.django_db
@@ -267,6 +267,29 @@ def test_admin_user_add_users_to_new_organization(
 
 
 @pytest.mark.django_db
+def test_admin_user_add_registration_admin_users_to_new_organization(
+    data_source, user, user2, user_api_client
+):
+    origin_id = "test_organization2"
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+        "admin_users": [user.username, user2.username],
+        "registration_admin_users": [user2.username],
+    }
+
+    response = assert_create_organization(user_api_client, payload)
+    assert set(payload["admin_users"]) == set(
+        [i["username"] for i in response.data["admin_users"]]
+    )
+    assert set(payload["registration_admin_users"]) == set(
+        [i["username"] for i in response.data["registration_admin_users"]]
+    )
+
+
+@pytest.mark.django_db
 def test_admin_user_can_update_organization(organization, user_api_client):
     payload = {
         "id": organization.id,
@@ -275,6 +298,27 @@ def test_admin_user_can_update_organization(organization, user_api_client):
 
     response = assert_update_organization(user_api_client, organization.id, payload)
     assert response.data["name"] == payload["name"]
+
+
+@pytest.mark.django_db
+def test_admin_user_update_organization_registration_admin_users(
+    organization, user2, user_api_client
+):
+    assert organization.registration_admin_users.count() == 0
+
+    payload = {
+        "id": organization.id,
+        "name": organization_name,
+        "registration_admin_users": [user2.username],
+    }
+
+    response = assert_update_organization(user_api_client, organization.id, payload)
+    assert set(payload["registration_admin_users"]) == set(
+        [i["username"] for i in response.data["registration_admin_users"]]
+    )
+
+    organization.refresh_from_db()
+    assert organization.registration_admin_users.count() == 1
 
 
 @pytest.mark.django_db
