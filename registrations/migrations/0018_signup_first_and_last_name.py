@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("registrations", "0016_multilingual_confirmation_message_and_instructions"),
+        ("registrations", "0017_created_modified_info_to_signup"),
     ]
 
     operations = [

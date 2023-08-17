@@ -23,7 +23,7 @@ def migrate_mandatory_fields_field(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("registrations", "0017_signup_first_and_last_name"),
+        ("registrations", "0018_signup_first_and_last_name"),
     ]
 
     operations = [
