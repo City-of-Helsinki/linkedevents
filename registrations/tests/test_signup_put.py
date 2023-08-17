@@ -39,18 +39,18 @@ def test__update_signup(user_api_client, registration, signup, user):
     new_signup_name = "Edited name"
 
     db_signup = SignUp.objects.get(pk=signup.id)
-    assert db_signup.name != new_signup_name
+    assert db_signup.first_name != new_signup_name
     assert db_signup.last_modified_by_id is None
 
     signup_data = {
         "registration": registration.id,
-        "name": new_signup_name,
+        "first_name": new_signup_name,
         "date_of_birth": "2015-01-01",
     }
 
     assert_update_signup(user_api_client, signup.id, signup_data)
     db_signup = SignUp.objects.get(pk=signup.id)
-    assert db_signup.name == new_signup_name
+    assert db_signup.first_name == new_signup_name
     assert db_signup.last_modified_by_id == user.id
 
 
@@ -68,18 +68,18 @@ def test__created_regular_user_can_update_signup(
     new_signup_name = "Edited name"
 
     db_signup = SignUp.objects.get(pk=signup.id)
-    assert db_signup.name != new_signup_name
+    assert db_signup.first_name != new_signup_name
     assert db_signup.last_modified_by_id is None
 
     signup_data = {
         "registration": registration.id,
-        "name": new_signup_name,
+        "first_name": new_signup_name,
         "date_of_birth": "2015-01-01",
     }
 
     assert_update_signup(user_api_client, signup.id, signup_data)
     db_signup = SignUp.objects.get(pk=signup.id)
-    assert db_signup.name == new_signup_name
+    assert db_signup.first_name == new_signup_name
     assert db_signup.last_modified_by_id == user.id
 
 
@@ -94,19 +94,19 @@ def test__non_created_regular_user_cannot_update_signup(
     new_signup_name = "Edited name"
 
     db_signup = SignUp.objects.get(pk=signup.id)
-    assert db_signup.name != new_signup_name
+    assert db_signup.first_name != new_signup_name
     assert db_signup.last_modified_by_id is None
 
     signup_data = {
         "registration": registration.id,
-        "name": new_signup_name,
+        "first_name": new_signup_name,
         "date_of_birth": "2015-01-01",
     }
 
     response = update_signup(user_api_client, signup.id, signup_data)
     assert response.status_code == status.HTTP_403_FORBIDDEN
     db_signup = SignUp.objects.get(pk=signup.id)
-    assert db_signup.name != new_signup_name
+    assert db_signup.first_name != new_signup_name
     assert db_signup.last_modified_by_id is None
 
 
