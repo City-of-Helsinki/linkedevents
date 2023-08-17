@@ -5,8 +5,7 @@ trigger:
   batch: true
   branches:
     include:
-      - develop
-      - refs/tags/staging-*
+      - main
       - refs/tags/release-*
   paths:
     exclude:
@@ -27,7 +26,5 @@ extends:
   parameters:
     ${{ if startsWith(variables['Build.SourceBranch'], 'refs/tags/release-') }}:
       buildenv: -prod
-    ${{ elseif startsWith(variables['Build.SourceBranch'], 'refs/tags/staging-') }}:
-      buildenv: -staging
     ${{ else }}:
       buildenv: -dev
