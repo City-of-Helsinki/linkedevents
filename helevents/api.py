@@ -11,6 +11,7 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
         if user.is_superuser:
             return self.queryset
         else:
+            # id is used because pk seems to give a string for ApiKeyUser
             return self.queryset.filter(pk=user.id)
 
     def get_object(self):
