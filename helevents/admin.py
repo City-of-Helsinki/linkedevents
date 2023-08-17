@@ -8,7 +8,7 @@ from .models import User
 
 
 class LocalOrganizationAdmin(OrganizationAdmin):
-    filter_horizontal = ("admin_users", "registration_admin_users", "regular_users")
+    filter_horizontal = ("admin_users", "regular_users")
     form = LocalOrganizationAdminForm
 
     def get_form(self, request, obj=None, change=False, **kwargs):
