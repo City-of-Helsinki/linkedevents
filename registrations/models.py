@@ -34,7 +34,8 @@ class MandatoryFields(models.TextChoices):
     """Choices for mandatory fields on SignUp model."""
 
     CITY = "city", _("City")
-    NAME = "name", _("Name")
+    FIRST_NAME = "first_name", _("First name")
+    LAST_NAME = "last_name", _("Last name")
     PHONE_NUMBER = "phone_number", _("Phone number")
     STREET_ADDRESS = "street_address", _("Street address")
     ZIPCODE = "zipcode", _("ZIP code")
@@ -275,8 +276,15 @@ class SignUp(CreatedModifiedBaseModel):
     registration = models.ForeignKey(
         Registration, on_delete=models.PROTECT, related_name="signups"
     )
-    name = models.CharField(
-        verbose_name=_("Name"),
+    first_name = models.CharField(
+        verbose_name=_("First name"),
+        max_length=50,
+        blank=True,
+        null=True,
+        default=None,
+    )
+    last_name = models.CharField(
+        verbose_name=_("Last name"),
         max_length=50,
         blank=True,
         null=True,
@@ -398,7 +406,7 @@ class SignUp(CreatedModifiedBaseModel):
                 "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
                 "registration_id": self.registration.id,
                 "signup_id": self.id,
-                "username": self.name,
+                "username": self.first_name,
             }
 
             confirmation_message = self.registration.confirmation_message

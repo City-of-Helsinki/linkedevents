@@ -4,7 +4,8 @@ from smtplib import SMTPException
 import bleach
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
-from django.db.models import ProtectedError, Q
+from django.db.models import ProtectedError, Q, Value
+from django.db.models.functions import Concat
 from django.template.loader import render_to_string
 from django.utils.translation import gettext as _
 from django.utils.translation import override
@@ -289,8 +290,12 @@ class SignUpViewSet(
             )
 
         if text_param := request.query_params.get("text", None):
-            queryset = queryset.filter(
-                Q(name__icontains=text_param)
+            queryset = queryset.annotate(
+                first_last_name=Concat("first_name", Value(" "), "last_name"),
+                last_first_name=Concat("last_name", Value(" "), "first_name"),
+            ).filter(
+                Q(first_last_name__icontains=text_param)
+                | Q(last_first_name__icontains=text_param)
                 | Q(email__icontains=text_param)
                 | Q(extra_info__icontains=text_param)
                 | Q(membership_number__icontains=text_param)

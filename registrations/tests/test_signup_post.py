@@ -40,7 +40,8 @@ def test_successful_signup(user_api_client, languages, registration, user):
         "reservation_code": reservation.code,
         "signups": [
             {
-                "name": "Michael Jackson",
+                "first_name": "Michael",
+                "last_name": "Jackson",
                 "date_of_birth": "2011-04-07",
                 "email": "test@test.com",
                 "phone_number": "0441111111",
@@ -58,7 +59,8 @@ def test_successful_signup(user_api_client, languages, registration, user):
 
     signup = SignUp.objects.first()
     assert signup.attendee_status == SignUp.AttendeeStatus.ATTENDING
-    assert signup.name == signups_data["signups"][0]["name"]
+    assert signup.first_name == signups_data["signups"][0]["first_name"]
+    assert signup.last_name == signups_data["signups"][0]["last_name"]
     assert signup.date_of_birth == date(2011, 4, 7)
     assert signup.email == signups_data["signups"][0]["email"]
     assert signup.phone_number == signups_data["signups"][0]["phone_number"]
@@ -107,7 +109,8 @@ def test_cannot_signup_if_enrolment_is_not_opened(user_api_client, event, regist
 
     reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
     signup_data = {
-        "name": "Michael Jackson",
+        "first_name": "Michael",
+        "last_name": "Jackson",
         "email": "test@test.com",
         "phone_number": "0441111111",
     }
@@ -129,7 +132,8 @@ def test_cannot_signup_if_enrolment_is_closed(user_api_client, event, registrati
 
     reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
     signup_data = {
-        "name": "Michael Jackson",
+        "first_name": "Michael",
+        "last_name": "Jackson",
         "email": "test@test.com",
         "phone_number": "0441111111",
     }
@@ -168,7 +172,8 @@ def test_amount_if_signups_cannot_be_greater_than_maximum_group_size(
     reservation = SeatReservationCode.objects.create(registration=registration, seats=3)
     code = reservation.code
     signup_payload = {
-        "name": "Mickey Mouse",
+        "first_name": "Mickey",
+        "last_name": "Mouse",
         "email": "test3@test.com",
     }
     signups_payload = {
@@ -224,11 +229,13 @@ def test_cannot_signup_if_number_of_signups_exceeds_number_reserved_seats(
         "reservation_code": reservation.code,
         "signups": [
             {
-                "name": "Mickey Mouse",
+                "first_name": "Mickey",
+                "last_name": "Mouse",
                 "email": "test3@test.com",
             },
             {
-                "name": "Minney Mouse",
+                "first_name": "Minney",
+                "last_name": "Mouse",
                 "email": "test2@test.com",
             },
         ],
@@ -252,7 +259,8 @@ def test_cannot_signup_if_reservation_code_is_expired(user_api_client, registrat
         "reservation_code": reservation.code,
         "signups": [
             {
-                "name": "Mickey Mouse",
+                "first_name": "Mickey",
+                "last_name": "Mouse",
                 "date_of_birth": "2011-04-07",
                 "email": "test3@test.com",
             },
@@ -267,7 +275,8 @@ def test_cannot_signup_if_reservation_code_is_expired(user_api_client, registrat
 def test_can_signup_twice_with_same_phone_or_email(user_api_client, registration):
     reservation = SeatReservationCode.objects.create(registration=registration, seats=3)
     signup_data = {
-        "name": "Michael Jackson",
+        "first_name": "Michael",
+        "last_name": "Jackson",
         "email": "test@test.com",
         "phone_number": "0441111111",
         "date_of_birth": "2011-04-07",
@@ -319,7 +328,8 @@ def test_date_of_birth_is_mandatory_if_audience_min_or_max_age_specified(
         expected_error = None
 
     signup_data = {
-        "name": "Michael Jackson",
+        "first_name": "Michael",
+        "last_name": "Jackson",
         "email": "test@test.com",
         "phone_number": "0441111111",
         "notifications": "sms",
@@ -361,7 +371,8 @@ def test_signup_age_has_to_match_the_audience_min_max_age(
     registration.save()
 
     signup_data = {
-        "name": "Michael Jackson",
+        "first_name": "Michael",
+        "last_name": "Jackson",
         "email": "test@test.com",
         "phone_number": "0441111111",
         "notifications": "sms",
@@ -385,7 +396,8 @@ def test_signup_age_has_to_match_the_audience_min_max_age(
     "mandatory_field_id",
     [
         MandatoryFields.CITY,
-        MandatoryFields.NAME,
+        MandatoryFields.FIRST_NAME,
+        MandatoryFields.LAST_NAME,
         MandatoryFields.PHONE_NUMBER,
         MandatoryFields.STREET_ADDRESS,
         MandatoryFields.ZIPCODE,
@@ -399,7 +411,8 @@ def test_signup_mandatory_fields_has_to_be_filled(
     registration.save()
 
     signup_data = {
-        "name": "Michael Jackson",
+        "first_name": "Michael",
+        "last_name": "Jackson",
         "email": "test@test.com",
         "phone_number": "0441111111",
         "street_address": "Street address",
@@ -437,7 +450,8 @@ def test_cannot_signup_with_not_allowed_service_language(
         "reservation_code": reservation.code,
         "signups": [
             {
-                "name": "Michael Jackson",
+                "first_name": "Michael",
+                "last_name": "Jackson",
                 "date_of_birth": "2011-04-07",
                 "email": "test@test.com",
                 "service_language": languages[0].pk,
@@ -462,11 +476,13 @@ def test_group_signup_successful_with_waitlist(user_api_client, registration):
         "reservation_code": reservation.code,
         "signups": [
             {
-                "name": "User 1",
+                "first_name": "User",
+                "last_name": "1",
                 "email": "test1@test.com",
             },
             {
-                "name": "User 2",
+                "first_name": "User",
+                "last_name": "2",
                 "email": "test2@test.com",
             },
         ],
@@ -482,11 +498,13 @@ def test_group_signup_successful_with_waitlist(user_api_client, registration):
         "reservation_code": reservation2.code,
         "signups": [
             {
-                "name": "User 3",
+                "first_name": "User",
+                "last_name": "3",
                 "email": "test3@test.com",
             },
             {
-                "name": "User 4",
+                "first_name": "User",
+                "last_name": "4",
                 "email": "test4@test.com",
             },
         ],
@@ -549,7 +567,8 @@ def test_email_sent_on_successful_signup(
             registration=registration, seats=1
         )
         signup_data = {
-            "name": "Michael Jackson",
+            "first_name": "Michael",
+            "last_name": "Jackson",
             "date_of_birth": "2011-04-07",
             "email": "test@test.com",
             "service_language": service_language,
@@ -559,8 +578,13 @@ def test_email_sent_on_successful_signup(
             "reservation_code": reservation.code,
             "signups": [signup_data],
         }
+
         response = assert_create_signups(user_api_client, signups_data)
-        assert signup_data["name"] in response.data["attending"]["people"][0]["name"]
+        assert (
+            signup_data["first_name"]
+            in response.data["attending"]["people"][0]["first_name"]
+        )
+
         #  assert that the email was sent
         assert mail.outbox[0].subject.startswith(expected_subject)
         assert expected_heading in str(mail.outbox[0].alternatives[0])
@@ -601,7 +625,8 @@ def test_confirmation_template_has_correct_text_per_event_type(
     registration.event.save()
     reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
     signup_data = {
-        "name": "Michael Jackson",
+        "first_name": "Michael",
+        "last_name": "Jackson",
         "email": "test@test.com",
         "service_language": "en",
     }
@@ -610,8 +635,13 @@ def test_confirmation_template_has_correct_text_per_event_type(
         "reservation_code": reservation.code,
         "signups": [signup_data],
     }
+
     response = assert_create_signups(user_api_client, signups_data)
-    assert signup_data["name"] in response.data["attending"]["people"][0]["name"]
+    assert (
+        signup_data["first_name"]
+        in response.data["attending"]["people"][0]["first_name"]
+    )
+
     #  assert that the email was sent
     assert expected_heading in str(mail.outbox[0].alternatives[0])
     assert expected_text in str(mail.outbox[0].alternatives[0])
@@ -643,7 +673,8 @@ def test_confirmation_message_is_shown_in_service_language(
 
     reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
     signup_data = {
-        "name": "Michael Jackson",
+        "first_name": "Michael",
+        "last_name": "Jackson",
         "email": "test@test.com",
         "service_language": service_language,
     }
@@ -697,7 +728,8 @@ def test_different_email_sent_if_user_is_added_to_waiting_list(
             registration=registration, seats=1
         )
         signup_data = {
-            "name": "Michael Jackson",
+            "first_name": "Michael",
+            "last_name": "Jackson",
             "email": "test@test.com",
             "service_language": service_language,
         }
@@ -706,8 +738,13 @@ def test_different_email_sent_if_user_is_added_to_waiting_list(
             "reservation_code": reservation.code,
             "signups": [signup_data],
         }
+
         response = assert_create_signups(user_api_client, signups_data)
-        assert signup_data["name"] in response.data["waitlisted"]["people"][0]["name"]
+        assert (
+            signup_data["first_name"]
+            in response.data["waitlisted"]["people"][0]["first_name"]
+        )
+
         #  assert that the email was sent
         assert mail.outbox[0].subject.startswith(expected_subject)
         assert expected_text in str(mail.outbox[0].alternatives[0])
@@ -746,7 +783,8 @@ def test_confirmation_to_waiting_list_template_has_correct_text_per_event_type(
     registration.save()
     reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
     signup_data = {
-        "name": "Michael Jackson",
+        "first_name": "Michael",
+        "last_name": "Jackson",
         "email": "test@test.com",
         "service_language": "en",
     }
@@ -755,7 +793,11 @@ def test_confirmation_to_waiting_list_template_has_correct_text_per_event_type(
         "reservation_code": reservation.code,
         "signups": [signup_data],
     }
+
     response = assert_create_signups(user_api_client, signups_data)
-    assert signup_data["name"] in response.data["waitlisted"]["people"][0]["name"]
+    assert (
+        signup_data["first_name"]
+        in response.data["waitlisted"]["people"][0]["first_name"]
+    )
     #  assert that the email was sent
     assert expected_text in str(mail.outbox[0].alternatives[0])
