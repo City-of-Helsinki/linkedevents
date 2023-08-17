@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
             name="user_editable_registrations",
             field=models.BooleanField(
                 default=False,
-                verbose_name="Owning organization's registrations may be edited by users",
+                verbose_name="Owner organization's registrations may be edited by users",
             ),
         ),
     ]

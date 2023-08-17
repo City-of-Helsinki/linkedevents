@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django_orghierarchy.admin import OrganizationAdmin
 from django_orghierarchy.models import Organization
@@ -14,7 +15,8 @@ class LocalOrganizationAdmin(OrganizationAdmin):
     def get_form(self, request, obj=None, change=False, **kwargs):
         form = super().get_form(request, obj, change, **kwargs)
 
-        user_modeladmin = self.admin_site._registry.get(User)
+        user_model = get_user_model()
+        user_modeladmin = self.admin_site._registry.get(user_model)
         wrapper_kwargs = {}
         if user_modeladmin:
             wrapper_kwargs.update(
