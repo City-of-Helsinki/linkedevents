@@ -3,15 +3,14 @@ from django.contrib.admin.widgets import (
     FilteredSelectMultiple,
     RelatedFieldWidgetWrapper,
 )
+from django.contrib.auth import get_user_model
 from django.utils.translation import gettext as _
 from django_orghierarchy.forms import OrganizationForm
-
-from helevents.models import User
 
 
 class LocalOrganizationAdminForm(OrganizationForm):
     registration_admin_users = forms.ModelMultipleChoiceField(
-        User.objects.all(),
+        get_user_model().objects.all(),
         required=False,
         help_text=_(
             "Hold down “Control”, or “Command” on a Mac, to select more than one."
@@ -24,9 +23,13 @@ class LocalOrganizationAdminForm(OrganizationForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # This relation is used so that RelatedFieldWidgetWrapper
+        # will get the model User from the "rel".
+        rel_with_user_model = get_user_model().admin_organizations.rel
+
         self.fields["registration_admin_users"].widget = RelatedFieldWidgetWrapper(
             self.fields["registration_admin_users"].widget,
-            rel=User.admin_organizations.rel,
+            rel=rel_with_user_model,
             admin_site=getattr(self, "user_admin_site", None),
             **getattr(self, "wrapper_kwargs", {}),
         )
