@@ -260,14 +260,27 @@ class RegistrationUser(models.Model):
         Registration, on_delete=models.CASCADE, related_name="registration_users"
     )
 
+    language = models.ForeignKey(
+        Language,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="registration_user_language",
+    )
+
     def can_be_edited_by(self, user):
         """Check if current registration user can be edited by the given user"""
         if user.is_superuser:
             return True
         return user.is_admin_of(self.registration.event.publisher)
 
+    def _get_language_pk(self):
+        if self.language:
+            return self.language.pk
+        return "fi"
+
     def send_invitation(self):
-        locale = "fi"
+        locale = self._get_language_pk()
 
         with translation.override(locale):
             event_name = self.registration.event.name

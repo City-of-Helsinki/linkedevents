@@ -167,9 +167,15 @@ class SignUpSerializer(serializers.ModelSerializer):
 
 
 class RegistrationUserSerializer(serializers.ModelSerializer):
+    language = serializers.PrimaryKeyRelatedField(
+        queryset=Language.objects.filter(service_language=True),
+        many=False,
+        required=False,
+    )
+
     class Meta:
         model = RegistrationUser
-        fields = ["id", "email"]
+        fields = ["id", "email", "language"]
 
 
 # Don't use this serializer directly but use events.api.RegistrationSerializer instead.

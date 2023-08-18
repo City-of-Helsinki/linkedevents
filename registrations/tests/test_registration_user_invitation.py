@@ -3,7 +3,7 @@ from django.core import mail
 from django.utils import translation
 from rest_framework import status
 
-from events.models import Event
+from events.models import Event, Language
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import RegistrationUser
 
@@ -82,3 +82,48 @@ def test_regular_user_cannot_send_invitation_to_registration_user(
 
     response = send_invitation(user_api_client, registration_user.pk)
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.parametrize(
+    "language_pk,expect_subject,expect_content",
+    [
+        (
+            "en",
+            "Rights granted to the participant list",
+            f"The e-mail address <strong>{email}</strong> has been granted the rights to read the participant list of the event <strong>{event_name}</strong>.",
+        ),
+        (
+            "fi",
+            "Oikeudet myönnetty osallistujalistaan",
+            f"Sähköpostiosoitteelle <strong>{email}</strong> on myönnetty oikeudet lukea tapahtuman <strong>{event_name}</strong> osallistujalista.",
+        ),
+        (
+            "sv",
+            "Rättigheter tilldelade deltagarlistan",
+            f"E-postadressen <strong>{email}</strong> har beviljats rättigheter att läsa deltagarlistan för evenemanget <strong>{event_name}</strong>.",
+        ),
+    ],
+)
+@pytest.mark.django_db
+def test_invitation_to_send_in_selected_language(
+    expect_content,
+    expect_subject,
+    language_pk,
+    languages,
+    registration,
+    user_api_client,
+):
+    with translation.override(language_pk):
+        registration.event.type_id = Event.TypeId.GENERAL
+        registration.event.name = event_name
+        registration.event.save()
+
+        language = Language.objects.get(pk=language_pk)
+        registration_user = RegistrationUser.objects.create(
+            registration=registration, email=email, language=language
+        )
+
+        assert_send_invitation(user_api_client, registration_user.pk)
+        assert mail.outbox[0].to[0] == email
+        assert mail.outbox[0].subject.startswith(expect_subject)
+        assert expect_content in str(mail.outbox[0].alternatives[0])

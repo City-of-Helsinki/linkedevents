@@ -3,6 +3,7 @@ from django.contrib import admin
 from django.utils.translation import gettext as _
 from reversion.admin import VersionAdmin
 
+from events.models import Language
 from registrations.models import Registration, RegistrationUser
 
 
@@ -16,6 +17,14 @@ class RegistrationUserInline(admin.TabularInline):
     extra = 1
     verbose_name = _("Participant list user")
     verbose_name_plural = _("Participant list users")
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        # Allow to select only language which has service_language set to true
+        if db_field.name == "language":
+            kwargs["queryset"] = Language.objects.filter(service_language=True)
+        return super(RegistrationUserInline, self).formfield_for_foreignkey(
+            db_field, request, **kwargs
+        )
 
 
 class RegistrationAdmin(VersionAdmin):
