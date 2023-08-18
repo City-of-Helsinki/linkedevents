@@ -7,7 +7,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("registrations", "0016_multilingual_confirmation_message_and_instructions"),
+        ("registrations", "0019_alter_registration_mandatory_fields"),
     ]
 
     operations = [
