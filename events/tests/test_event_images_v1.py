@@ -449,6 +449,26 @@ def test__upload_an_url(api_client, settings, list_url, image_url, user, organiz
 
 
 @pytest.mark.django_db
+def test_upload_an_url_with_alt_text(
+    api_client, settings, list_url, image_url, user, organization
+):
+    organization.admin_users.add(user)
+    api_client.force_authenticate(user)
+
+    image_url = image_url.copy()
+    image_url["alt_text"] = "Lorem"
+
+    response = api_client.post(list_url, image_url)
+    assert response.status_code == 201
+    assert Image.objects.all().count() == 1
+
+    image = Image.objects.get(pk=response.data["id"])
+    assert image.created_by == user
+    assert image.last_modified_by == user
+    assert image.alt_text == "Lorem"
+
+
+@pytest.mark.django_db
 def test__upload_an_url_with_api_key(
     api_client, settings, list_url, image_url, data_source, organization
 ):
