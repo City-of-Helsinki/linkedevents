@@ -103,11 +103,7 @@ from events.permissions import (
     UserIsAdminInAnyOrganization,
 )
 from events.renderers import DOCXRenderer
-from events.translation import (
-    EventTranslationOptions,
-    ImageTranslationOptions,
-    PlaceTranslationOptions,
-)
+from events.translation import EventTranslationOptions, PlaceTranslationOptions
 from helevents.models import User
 from helevents.serializers import UserSerializer
 from linkedevents.registry import register_view, viewset_classes_by_model
@@ -1786,15 +1782,9 @@ class ImageViewSet(
         val = self.request.query_params.get("text")
         if val:
             val = val.lower()
-            qset = Q(name__icontains=val)
+            filter_query = Q(name__icontains=val) | Q(alt_text__icontains=val)
 
-            # Free string search from all translated event fields
-            image_fields = ImageTranslationOptions.fields
-            for field in image_fields:
-                # check all languages for each field
-                qset |= _text_qset_by_translated_field(field, val)
-
-            queryset = queryset.filter(qset)
+            queryset = queryset.filter(filter_query)
         return queryset
 
     def perform_destroy(self, instance):

@@ -233,6 +233,7 @@ class TestImageAPI(APITestCase):
             data_source=self.data_source,
             publisher=self.org_1,
             url="http://fake.url/image-1/",
+            alt_text="Lorem",
         )
         self.image_2 = Image.objects.create(
             name="image-2",
@@ -265,3 +266,22 @@ class TestImageAPI(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["data"]), 1)
+
+    def test_get_image_alt_text(self):
+        url = reverse("image-detail", kwargs={"pk": self.image_1.id})
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        alt_text = response.data["alt_text"]
+        self.assertEqual(alt_text, "Lorem")
+
+    def test_text_search_by_image_alt_text(self):
+        url = "{0}?text=lorem".format(reverse("image-list"))
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["data"]), 1)
+
+        alt_text = response.data["data"][0]["alt_text"]
+        self.assertEqual(alt_text, "Lorem")
