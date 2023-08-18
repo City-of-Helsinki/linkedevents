@@ -454,23 +454,23 @@ msgstr "Deltagarlista användare"
 msgid "Participant list users"
 msgstr "Deltagarlista användare"
 
-#: registrations/api.py:90
+#: registrations/api.py:86
 msgid "Registration with signups cannot be deleted"
 msgstr "Registrering med registreringar kan inte raderas"
 
-#: registrations/api.py:274
+#: registrations/api.py:295
 #, python-brace-format
 msgid "Registration with id {pk} doesn't exist."
 msgstr "Registrering med id {pk} finns inte."
 
-#: registrations/api.py:280
+#: registrations/api.py:304
 #, python-brace-format
 msgid "Only the admins of the organization {organization} have access rights."
 msgstr ""
 "Endast administratörerna för organisationen {organization} har "
 "åtkomsträttigheter."
 
-#: registrations/api.py:313
+#: registrations/api.py:340
 #, python-brace-format
 msgid "attendee_status can take following values: {statuses}, not {val}"
 msgstr "attendee_status kan ha följande värden: {statuses}, inte {val}"
@@ -548,27 +548,27 @@ msgstr "Obligatoriska fält"
 msgid "Rights granted to the participant list - %(event_name)s"
 msgstr "Rättigheter tilldelade deltagarlistan - %(event_name)s"
 
-#: registrations/models.py:309
+#: registrations/models.py:315
 msgid "Waitlisted"
 msgstr "I kö"
 
-#: registrations/models.py:310
+#: registrations/models.py:316
 msgid "Attending"
 msgstr "Deltar"
 
-#: registrations/models.py:320
+#: registrations/models.py:326
 msgid "No Notification"
 msgstr "Ingen anmälan"
 
-#: registrations/models.py:321
+#: registrations/models.py:327
 msgid "SMS"
 msgstr "SMS"
 
-#: registrations/models.py:322
+#: registrations/models.py:328
 msgid "E-Mail"
 msgstr "E-post"
 
-#: registrations/models.py:323
+#: registrations/models.py:329
 msgid "Both SMS and email."
 msgstr "Både SMS och e-post."
 
@@ -631,23 +631,23 @@ msgstr "Platsreservationskod"
 msgid "Timestamp"
 msgstr "Tidsstämpel"
 
-#: registrations/serializers.py:30
+#: registrations/serializers.py:29
 msgid "Enrolment is not yet open."
 msgstr "Anmälan är ännu inte öppen."
 
-#: registrations/serializers.py:32
+#: registrations/serializers.py:31
 msgid "Enrolment is already closed."
 msgstr "Anmälan är redan stängd"
 
-#: registrations/serializers.py:83
+#: registrations/serializers.py:82
 msgid "The waiting list is already full"
 msgstr "Väntelistan är redan full"
 
-#: registrations/serializers.py:93
+#: registrations/serializers.py:92
 msgid "You may not change the attendee_status of an existing object."
 msgstr "Du får inte ändra attendee_status för ett befintligt objekt."
 
-#: registrations/serializers.py:100
+#: registrations/serializers.py:99
 msgid "You may not change the registration of an existing object."
 msgstr "Du får inte ändra registration för ett befintligt objekt."
 
