@@ -169,7 +169,7 @@ def test__registration_user_cannot_update_signup(
 
 
 @pytest.mark.django_db
-def test__regular_admin_cannot_update_signup(
+def test__regular_user_cannot_update_signup(
     registration, signup, user, user_api_client
 ):
     user.get_default_organization().regular_users.add(user)
