@@ -43,4 +43,4 @@ class RegistrationUserRetrievePermission(permissions.BasePermission):
         if view.action != "retrieve":
             return False
 
-        return len(obj.registration.registration_users.filter(email=user.email))
+        return obj.registration.registration_users.filter(email=user.email).exists()
