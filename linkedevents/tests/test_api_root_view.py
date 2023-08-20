@@ -27,10 +27,10 @@ def test_return_correct_routes(api_client):
     )
     assert response.data["signup"] == "http://testserver/v1/signup/"
     assert len(response.data) == 12
-    assert response.data.get("data_source") == None
-    assert response.data.get("organization_class") == None
-    assert response.data.get("feedback") == None
-    assert response.data.get("guest-feedback") == None
+    assert response.data.get("data_source") is None
+    assert response.data.get("organization_class") is None
+    assert response.data.get("feedback") is None
+    assert response.data.get("guest-feedback") is None
 
 
 def test_has_correct_name(api_client):
