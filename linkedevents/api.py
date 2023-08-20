@@ -11,6 +11,8 @@ from linkedevents.registry import all_views
 
 
 class CustomAPIRootView(APIRootView):
+    name = "Linked Events"
+
     def get(self, request, *args, **kwargs):
         # Return a plain {"name": "hyperlink"} response.
         ret = OrderedDict()
