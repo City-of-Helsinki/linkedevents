@@ -40,7 +40,5 @@ class RegistrationUserRetrievePermission(permissions.BasePermission):
 
     def has_object_permission(self, request: Request, view, obj):
         user = request.user
-        if view.action != "retrieve":
-            return False
 
         return obj.registration.registration_users.filter(email=user.email).exists()
