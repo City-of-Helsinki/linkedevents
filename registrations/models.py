@@ -259,7 +259,6 @@ class RegistrationUser(models.Model):
     registration = models.ForeignKey(
         Registration, on_delete=models.CASCADE, related_name="registration_users"
     )
-
     language = models.ForeignKey(
         Language,
         on_delete=models.SET_NULL,
