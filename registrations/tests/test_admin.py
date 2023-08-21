@@ -1,8 +1,8 @@
 from django.contrib import admin
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth import get_user_model
-from django.core import mail
 from django.test import RequestFactory, TestCase
+from django.utils import translation
 
 from registrations.admin import RegistrationAdmin
 from registrations.models import Event, Registration, RegistrationUser
@@ -10,6 +10,10 @@ from registrations.tests.factories import RegistrationFactory
 from registrations.tests.test_registration_user_invitation import (
     assert_invitation_email_is_sent,
 )
+
+email = "user@email.com"
+edited_email = "user_edited@email.com"
+event_name = "Foo"
 
 
 def make_admin(username="testadmin", is_superuser=True):
@@ -69,9 +73,35 @@ class TestRegistrationAdmin(TestCase):
             registration.created_by,
         )
 
+    def test_registration_users_cannot_have_duplicate_emails(self):
+        with translation.override("en"):
+            self.client.force_login(self.admin)
+
+            # Create event for new registration
+            data_source = self.registration.event.data_source
+            publisher = self.registration.event.publisher
+            event2 = Event.objects.create(
+                id="event-2", data_source=data_source, publisher=publisher
+            )
+
+            # Create new registration
+            response = self.client.post(
+                "/admin/registrations/registration/add/",
+                {
+                    "event": event2.id,
+                    "registration_users-TOTAL_FORMS": 2,
+                    "registration_users-INITIAL_FORMS": 0,
+                    "registration_users-0-email": email,
+                    "registration_users-1-email": email,
+                    "_save": "Save",
+                },
+            )
+
+            self.assertContains(
+                response, "Please correct the duplicate data for email.", html=True
+            )
+
     def test_send_invitation_email_when_adding_registration_user(self):
-        email = "user@email.com"
-        event_name = "Foo"
         self.client.force_login(self.admin)
 
         # Create event for new registration
@@ -115,9 +145,6 @@ class TestRegistrationAdmin(TestCase):
         )
 
     def test_send_invitation_email_when_registration_user_is_updated(self):
-        email = "user@email.com"
-        edited_email = "user_edited@email.com"
-        event_name = "Foo"
         self.client.force_login(self.admin)
 
         registration_user = RegistrationUser.objects.create(

@@ -166,11 +166,19 @@ class SignUpSerializer(serializers.ModelSerializer):
         model = SignUp
 
 
+class RegistrationUserIdField(serializers.PrimaryKeyRelatedField):
+    def get_queryset(self):
+        registration_id = self.context["request"].parser_context["kwargs"]["pk"]
+        return RegistrationUser.objects.filter(registration__pk=registration_id)
+
+
 class RegistrationUserSerializer(serializers.ModelSerializer):
+    id = RegistrationUserIdField(required=False, allow_null=True)
+
     language = serializers.PrimaryKeyRelatedField(
         queryset=Language.objects.filter(service_language=True),
-        many=False,
         required=False,
+        allow_null=True,
     )
 
     class Meta:
