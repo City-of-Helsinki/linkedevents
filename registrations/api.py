@@ -302,7 +302,7 @@ class SignUpViewSet(
                     )
 
                 if not (
-                    len(registration.registration_users.filter(email=user.email))
+                    registration.registration_users.filter(email=user.email).exists()
                     or registration.publisher in admin_organizations
                 ):
                     raise DRFPermissionDenied(
