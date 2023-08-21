@@ -199,9 +199,7 @@ class RegistrationViewSet(
 register_view(RegistrationViewSet, "registration")
 
 
-class RegistrationUserViewSet(
-    UserDataSourceAndOrganizationMixin, viewsets.GenericViewSet
-):
+class RegistrationUserViewSet(viewsets.GenericViewSet):
     queryset = RegistrationUser.objects.all()
     serializer_class = RegistrationUserSerializer
     permission_classes = [OrganizationUserEditPermission]
