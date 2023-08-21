@@ -231,8 +231,10 @@ def test_create_organization_with_affiliated_organizations(
 
 @pytest.mark.django_db
 def test_user_is_automatically_added_to_admins_users(
-    data_source, user, user_api_client
+    api_client, organization, data_source, user, user_api_client
 ):
+    organization.admin_users.add(user)
+    api_client.force_authenticate(user)
     origin_id = "test_organization2"
     payload = {
         "data_source": data_source.id,
@@ -247,8 +249,10 @@ def test_user_is_automatically_added_to_admins_users(
 
 @pytest.mark.django_db
 def test_admin_user_add_users_to_new_organization(
-    data_source, user, user2, user_api_client
+    api_client, organization, data_source, user, user2, user_api_client
 ):
+    organization.admin_users.add(user)
+    api_client.force_authenticate(user)
     origin_id = "test_organization2"
     payload = {
         "data_source": data_source.id,
