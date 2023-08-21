@@ -1918,10 +1918,11 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
     def validate_registration_users(self, value):
         errors = []
         emails = []
+        raise_errors = False
 
         for data in value:
             email = data["email"]
-            if emails.__contains__(email):
+            if email in emails:
                 errors.append(
                     {
                         "email": [
@@ -1929,17 +1930,18 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
                                 _(
                                     "Registration user with email %(email)s already exists."
                                 )
-                                % {"email": data["email"]},
+                                % {"email": email},
                                 code="unique",
                             )
                         ]
                     }
                 )
+                raise_errors = True
             else:
                 emails.append(email)
                 errors.append({})
 
-        if len([e for e in errors if e != {}]):
+        if raise_errors:
             raise serializers.ValidationError(errors)
 
         return value
