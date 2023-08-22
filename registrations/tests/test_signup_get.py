@@ -139,6 +139,16 @@ def test__api_key_from_wrong_data_source_cannot_get_signup(
 
 
 @pytest.mark.django_db
+def test_super_user_can_get_signup_list(
+    api_client, registration, signup, signup2, super_user
+):
+    api_client.force_authenticate(super_user)
+    get_list_and_assert_signups(
+        api_client, f"registration={registration.id}", [signup, signup2]
+    )
+
+
+@pytest.mark.django_db
 def test_admin_user_can_get_signup_list(registration, signup, signup2, user_api_client):
     get_list_and_assert_signups(
         user_api_client, f"registration={registration.id}", [signup, signup2]
@@ -176,8 +186,23 @@ def test_regular_user_cannot_get_signup_list(
 
 @pytest.mark.django_db
 def test__get_all_signups_to_which_user_has_admin_role(
-    registration, signup, signup2, user, user_api_client
+    api_client,
+    registration,
+    registration2,
+    signup,
+    signup2,
+    signup3,
+    super_user,
+    user,
+    user_api_client,
 ):
+    signup3.registration = registration2
+    signup3.save()
+    api_client.force_authenticate(super_user)
+
+    # Super user is allowed to see all signups
+    get_list_and_assert_signups(api_client, "", [signup, signup2, signup3])
+
     # Admin user is allowed to see signups
     get_list_and_assert_signups(user_api_client, "", [signup, signup2])
 

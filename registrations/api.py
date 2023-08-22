@@ -300,7 +300,8 @@ class SignUpViewSet(
                     )
 
                 if not (
-                    registration.registration_user_accesses.filter(
+                    user.is_superuser
+                    or registration.registration_user_accesses.filter(
                         email=user.email
                     ).exists()
                     or registration.publisher in admin_organizations
@@ -313,7 +314,7 @@ class SignUpViewSet(
 
                 registrations.append(registration)
             queryset = queryset.filter(registration__in=registrations)
-        elif self.action == "list":
+        elif self.action == "list" and not user.is_superuser:
             # By default return only signups of registrations to which user has admin rights or is registration user
             queryset = queryset.filter(
                 Q(registration__registration_user_accesses__email=user.email)
