@@ -4,7 +4,7 @@ from django.utils.translation import gettext as _
 from reversion.admin import VersionAdmin
 
 from events.models import Language
-from registrations.models import Registration, RegistrationUser
+from registrations.models import Registration, RegistrationUserAccess
 
 
 class EventFilter(AutocompleteFilter):
@@ -12,8 +12,8 @@ class EventFilter(AutocompleteFilter):
     field_name = "event"
 
 
-class RegistrationUserInline(admin.TabularInline):
-    model = RegistrationUser
+class RegistrationUserAccessInline(admin.TabularInline):
+    model = RegistrationUserAccess
     extra = 1
     verbose_name = _("Participant list user")
     verbose_name_plural = _("Participant list users")
@@ -22,7 +22,7 @@ class RegistrationUserInline(admin.TabularInline):
         # Allow to select only language which has service_language set to true
         if db_field.name == "language":
             kwargs["queryset"] = Language.objects.filter(service_language=True)
-        return super(RegistrationUserInline, self).formfield_for_foreignkey(
+        return super(RegistrationUserAccessInline, self).formfield_for_foreignkey(
             db_field, request, **kwargs
         )
 
@@ -51,7 +51,7 @@ class RegistrationAdmin(VersionAdmin):
     )
     list_filter = (EventFilter,)
     autocomplete_fields = ("event",)
-    inlines = (RegistrationUserInline,)
+    inlines = (RegistrationUserAccessInline,)
 
     def save_model(self, request, obj, form, change):
         if obj.pk is None:
@@ -62,20 +62,20 @@ class RegistrationAdmin(VersionAdmin):
 
     def save_related(self, request, form, formsets, change):
         for formset in formsets:
-            if formset.model == RegistrationUser:
+            if formset.model == RegistrationUserAccess:
                 formset.save(commit=False)
 
-                for added_registration_user in formset.new_objects:
-                    # Send invitation email if new registration user is added
-                    added_registration_user.send_invitation()
+                for added_registration_user_accesses in formset.new_objects:
+                    # Send invitation email if new registration user accesses is added
+                    added_registration_user_accesses.send_invitation()
 
                 for [
-                    changed_registration_user,
+                    changed_registration_user_access,
                     changed_fields,
                 ] in formset.changed_objects:
                     # Send invitation email if email address is changed
                     if "email" in changed_fields:
-                        changed_registration_user.send_invitation()
+                        changed_registration_user_access.send_invitation()
 
         super(RegistrationAdmin, self).save_related(request, form, formsets, change)
 

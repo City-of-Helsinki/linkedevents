@@ -3,7 +3,7 @@ from rest_framework import status
 
 from events.tests.conftest import APIClient
 from events.tests.utils import versioned_reverse as reverse
-from registrations.models import RegistrationUser, SignUp
+from registrations.models import RegistrationUserAccess, SignUp
 
 # === util methods ===
 
@@ -59,9 +59,11 @@ def test_admin_user_can_get_signup(registration, signup, user_api_client):
 
 
 @pytest.mark.django_db
-def test_registration_user_can_get_signup(registration, signup, user, user_api_client):
+def test_registration_user_access_can_get_signup(
+    registration, signup, user, user_api_client
+):
     user.get_default_organization().admin_users.remove(user)
-    RegistrationUser.objects.create(registration=registration, email=user.email)
+    RegistrationUserAccess.objects.create(registration=registration, email=user.email)
 
     assert_get_detail(user_api_client, signup.id)
 
@@ -144,12 +146,12 @@ def test_admin_user_can_get_signup_list(registration, signup, signup2, user_api_
 
 
 @pytest.mark.django_db
-def test_registration_user_can_get_signup_list(
+def test_registration_user_access_can_get_signup_list(
     registration, signup, signup2, user, user_api_client
 ):
     user.get_default_organization().admin_users.remove(user)
 
-    RegistrationUser.objects.create(registration=registration, email=user.email)
+    RegistrationUserAccess.objects.create(registration=registration, email=user.email)
     get_list_and_assert_signups(
         user_api_client, f"registration={registration.id}", [signup, signup2]
     )
@@ -185,7 +187,7 @@ def test__get_all_signups_to_which_user_has_admin_role(
     get_list_and_assert_signups(user_api_client, "", [])
 
     # Registration user is allowed to see signups
-    RegistrationUser.objects.create(registration=registration, email=user.email)
+    RegistrationUserAccess.objects.create(registration=registration, email=user.email)
     get_list_and_assert_signups(user_api_client, "", [signup, signup2])
 
 

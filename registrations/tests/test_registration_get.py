@@ -5,7 +5,7 @@ from events.models import Event
 from events.tests.conftest import APIClient
 from events.tests.test_event_get import get_list_and_assert_events
 from events.tests.utils import versioned_reverse as reverse
-from registrations.models import RegistrationUser, SeatReservationCode
+from registrations.models import RegistrationUserAccess, SeatReservationCode
 from registrations.tests.test_signup_post import assert_create_signups
 
 include_signups_query = "include=signups"
@@ -77,31 +77,34 @@ def test_get_registration(api_client, event, event_type, registration):
 
 
 @pytest.mark.django_db
-def test_admin_user_can_see_registration_users(registration, user_api_client):
-    RegistrationUser.objects.create(registration=registration)
+def test_admin_user_can_see_registration_user_accesses(registration, user_api_client):
+    RegistrationUserAccess.objects.create(registration=registration)
     response = get_detail_and_assert_registration(user_api_client, registration.id)
-    response_registration_users = response.data["registration_users"]
-    assert len(response_registration_users) == 1
+    response_registration_user_accesses = response.data["registration_user_accesses"]
+    assert len(response_registration_user_accesses) == 1
 
 
 @pytest.mark.django_db
-def test_regular_user_cannot_see_registration_users(
+def test_regular_user_cannot_see_registration_user_accesses(
     registration, user, user_api_client
 ):
     user.get_default_organization().regular_users.add(user)
     user.get_default_organization().admin_users.remove(user)
-    RegistrationUser.objects.create(registration=registration, email=user.email)
+    RegistrationUserAccess.objects.create(registration=registration, email=user.email)
     response = get_detail_and_assert_registration(user_api_client, registration.id)
 
-    assert response.data.get("registration_users") == None
+    assert (
+        response.data.get("test_regular_user_cannot_see_registration_user_accesses")
+        == None
+    )
 
 
 @pytest.mark.django_db
-def test_anonymous_user_cannot_see_registration_users(api_client, registration):
-    RegistrationUser.objects.create(registration=registration)
+def test_anonymous_user_cannot_see_registration_user_accesses(api_client, registration):
+    RegistrationUserAccess.objects.create(registration=registration)
     response = get_detail_and_assert_registration(api_client, registration.id)
 
-    assert response.data.get("registration_users") == None
+    assert response.data.get("registration_user_accesses") == None
 
 
 @pytest.mark.django_db
@@ -209,11 +212,11 @@ def test_admin_user_can_include_signups(registration, signup, signup2, user_api_
 
 
 @pytest.mark.django_db
-def test_registration_user_can_include_signups(
+def test_registration_user_access_can_include_signups(
     registration, signup, signup2, user, user_api_client
 ):
     user.get_default_organization().admin_users.remove(user)
-    RegistrationUser.objects.create(registration=registration, email=user.email)
+    RegistrationUserAccess.objects.create(registration=registration, email=user.email)
     response = get_detail_and_assert_registration(
         user_api_client, registration.id, include_signups_query
     )

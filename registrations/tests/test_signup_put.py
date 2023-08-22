@@ -3,7 +3,7 @@ from freezegun import freeze_time
 from rest_framework import status
 
 from events.tests.utils import versioned_reverse as reverse
-from registrations.models import RegistrationUser, SignUp
+from registrations.models import RegistrationUserAccess, SignUp
 
 # === util methods ===
 
@@ -153,11 +153,11 @@ def test__cannot_update_registration_of_signup(
 
 
 @pytest.mark.django_db
-def test__registration_user_cannot_update_signup(
+def test__registration_user_access_cannot_update_signup(
     registration, signup, user, user_api_client
 ):
     user.get_default_organization().admin_users.remove(user)
-    RegistrationUser.objects.create(registration=registration, email=user.email)
+    RegistrationUserAccess.objects.create(registration=registration, email=user.email)
 
     signup_data = {
         "registration": registration.id,

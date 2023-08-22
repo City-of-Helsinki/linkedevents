@@ -12,7 +12,7 @@ from events.models import Language
 from registrations.exceptions import ConflictException
 from registrations.models import (
     Registration,
-    RegistrationUser,
+    RegistrationUserAccess,
     SeatReservationCode,
     SignUp,
     SignUpNotificationType,
@@ -166,14 +166,14 @@ class SignUpSerializer(serializers.ModelSerializer):
         model = SignUp
 
 
-class RegistrationUserIdField(serializers.PrimaryKeyRelatedField):
+class RegistrationUserAccessIdField(serializers.PrimaryKeyRelatedField):
     def get_queryset(self):
         registration_id = self.context["request"].parser_context["kwargs"]["pk"]
-        return RegistrationUser.objects.filter(registration__pk=registration_id)
+        return RegistrationUserAccess.objects.filter(registration__pk=registration_id)
 
 
-class RegistrationUserSerializer(serializers.ModelSerializer):
-    id = RegistrationUserIdField(required=False, allow_null=True)
+class RegistrationUserAccessSerializer(serializers.ModelSerializer):
+    id = RegistrationUserAccessIdField(required=False, allow_null=True)
 
     language = serializers.PrimaryKeyRelatedField(
         queryset=Language.objects.filter(service_language=True),
@@ -182,7 +182,7 @@ class RegistrationUserSerializer(serializers.ModelSerializer):
     )
 
     class Meta:
-        model = RegistrationUser
+        model = RegistrationUserAccess
         fields = ["id", "email", "language"]
 
 
@@ -205,7 +205,9 @@ class RegistrationBaseSerializer(serializers.ModelSerializer):
 
     publisher = serializers.SerializerMethodField()
 
-    registration_users = RegistrationUserSerializer(many=True, required=False)
+    registration_user_accesses = RegistrationUserAccessSerializer(
+        many=True, required=False
+    )
 
     created_time = DateTimeField(
         default_timezone=pytz.UTC, required=False, allow_null=True
@@ -227,7 +229,7 @@ class RegistrationBaseSerializer(serializers.ModelSerializer):
             user = self.context["user"]
             if not user.is_anonymous and (
                 user.is_admin_of(obj.event.publisher)
-                or obj.registration_users.filter(email=user.email).exists()
+                or obj.registration_user_accesses.filter(email=user.email).exists()
             ):
                 signups = obj.signups.all()
                 return SignUpSerializer(signups, many=True, read_only=True).data

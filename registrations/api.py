@@ -30,19 +30,19 @@ from linkedevents.registry import register_view
 from registrations.exceptions import ConflictException
 from registrations.models import (
     Registration,
-    RegistrationUser,
+    RegistrationUserAccess,
     SeatReservationCode,
     SignUp,
     SignUpNotificationType,
 )
 from registrations.permissions import (
     CanCreateEditDeleteSignup,
-    RegistrationUserRetrievePermission,
+    RegistrationUserAccessRetrievePermission,
 )
 from registrations.serializers import (
     CreateSignUpsSerializer,
     MassEmailSerializer,
-    RegistrationUserSerializer,
+    RegistrationUserAccessSerializer,
     SeatReservationCodeSerializer,
     SignUpSerializer,
 )
@@ -199,21 +199,21 @@ class RegistrationViewSet(
 register_view(RegistrationViewSet, "registration")
 
 
-class RegistrationUserViewSet(viewsets.GenericViewSet):
-    queryset = RegistrationUser.objects.all()
-    serializer_class = RegistrationUserSerializer
+class RegistrationUserAccessViewSet(viewsets.GenericViewSet):
+    queryset = RegistrationUserAccess.objects.all()
+    serializer_class = RegistrationUserAccessSerializer
     permission_classes = [OrganizationUserEditPermission]
 
     @action(detail=True, methods=["post"])
     def send_invitation(self, request, pk=None, version=None):
-        registration_user = self.get_object()
-        registration_user.send_invitation()
+        registration_user_access = self.get_object()
+        registration_user_access.send_invitation()
         return Response(
             status=status.HTTP_200_OK,
         )
 
 
-register_view(RegistrationUserViewSet, "registration_user")
+register_view(RegistrationUserAccessViewSet, "registration_user_access")
 
 
 class SignUpViewSet(
@@ -225,7 +225,7 @@ class SignUpViewSet(
 
     permission_classes = [
         (CanCreateEditDeleteSignup & DataSourceResourceEditPermission)
-        | RegistrationUserRetrievePermission
+        | RegistrationUserAccessRetrievePermission
     ]
 
     def create(self, request, *args, **kwargs):
@@ -300,7 +300,9 @@ class SignUpViewSet(
                     )
 
                 if not (
-                    registration.registration_users.filter(email=user.email).exists()
+                    registration.registration_user_accesses.filter(
+                        email=user.email
+                    ).exists()
                     or registration.publisher in admin_organizations
                 ):
                     raise DRFPermissionDenied(
@@ -314,7 +316,7 @@ class SignUpViewSet(
         elif self.action == "list":
             # By default return only signups of registrations to which user has admin rights or is registration user
             queryset = queryset.filter(
-                Q(registration__registration_users__email=user.email)
+                Q(registration__registration_user_accesses__email=user.email)
                 | Q(
                     registration__event__publisher__in=user.get_admin_organizations_and_descendants()
                 )

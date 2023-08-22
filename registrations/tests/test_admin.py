@@ -5,9 +5,9 @@ from django.test import RequestFactory, TestCase
 from django.utils import translation
 
 from registrations.admin import RegistrationAdmin
-from registrations.models import Event, Registration, RegistrationUser
+from registrations.models import Event, Registration, RegistrationUserAccess
 from registrations.tests.factories import RegistrationFactory
-from registrations.tests.test_registration_user_invitation import (
+from registrations.tests.test_registration_user_access_invitation import (
     assert_invitation_email_is_sent,
 )
 
@@ -60,8 +60,8 @@ class TestRegistrationAdmin(TestCase):
             "/admin/registrations/registration/add/",
             {
                 "event": event2.id,
-                "registration_users-TOTAL_FORMS": 1,
-                "registration_users-INITIAL_FORMS": 0,
+                "registration_user_accesses-TOTAL_FORMS": 1,
+                "registration_user_accesses-INITIAL_FORMS": 0,
                 "_save": "Save",
             },
         )
@@ -73,7 +73,7 @@ class TestRegistrationAdmin(TestCase):
             registration.created_by,
         )
 
-    def test_registration_users_cannot_have_duplicate_emails(self):
+    def test_registration_user_accesses_cannot_have_duplicate_emails(self):
         with translation.override("en"):
             self.client.force_login(self.admin)
 
@@ -89,10 +89,10 @@ class TestRegistrationAdmin(TestCase):
                 "/admin/registrations/registration/add/",
                 {
                     "event": event2.id,
-                    "registration_users-TOTAL_FORMS": 2,
-                    "registration_users-INITIAL_FORMS": 0,
-                    "registration_users-0-email": email,
-                    "registration_users-1-email": email,
+                    "registration_user_accesses-TOTAL_FORMS": 2,
+                    "registration_user_accesses-INITIAL_FORMS": 0,
+                    "registration_user_accesses-0-email": email,
+                    "registration_user_accesses-1-email": email,
                     "_save": "Save",
                 },
             )
@@ -101,7 +101,7 @@ class TestRegistrationAdmin(TestCase):
                 response, "Please correct the duplicate data for email.", html=True
             )
 
-    def test_send_invitation_email_when_adding_registration_user(self):
+    def test_send_invitation_email_when_adding_registration_user_access(self):
         self.client.force_login(self.admin)
 
         # Create event for new registration
@@ -116,9 +116,9 @@ class TestRegistrationAdmin(TestCase):
             "/admin/registrations/registration/add/",
             {
                 "event": event2.id,
-                "registration_users-TOTAL_FORMS": 1,
-                "registration_users-INITIAL_FORMS": 0,
-                "registration_users-0-email": email,
+                "registration_user_accesses-TOTAL_FORMS": 1,
+                "registration_user_accesses-INITIAL_FORMS": 0,
+                "registration_user_accesses-0-email": email,
                 "_save": "Save",
             },
         )
@@ -144,10 +144,10 @@ class TestRegistrationAdmin(TestCase):
             self.registration.last_modified_by,
         )
 
-    def test_send_invitation_email_when_registration_user_is_updated(self):
+    def test_send_invitation_email_when_registration_user_access_is_updated(self):
         self.client.force_login(self.admin)
 
-        registration_user = RegistrationUser.objects.create(
+        registration_user_access = RegistrationUserAccess.objects.create(
             registration=self.registration, email=email
         )
         self.registration.event.name = event_name
@@ -158,11 +158,11 @@ class TestRegistrationAdmin(TestCase):
             f"/admin/registrations/registration/{self.registration.id}/change/",
             {
                 "event": self.registration.event.id,
-                "registration_users-TOTAL_FORMS": 2,
-                "registration_users-INITIAL_FORMS": 1,
-                "registration_users-0-email": edited_email,
-                "registration_users-0-id": registration_user.id,
-                "registration_users-0-registration": self.registration.id,
+                "registration_user_accesses-TOTAL_FORMS": 2,
+                "registration_user_accesses-INITIAL_FORMS": 1,
+                "registration_user_accesses-0-email": edited_email,
+                "registration_user_accesses-0-id": registration_user_access.id,
+                "registration_user_accesses-0-registration": self.registration.id,
                 "_save": "Save",
             },
         )

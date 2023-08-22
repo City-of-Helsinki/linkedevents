@@ -5,12 +5,12 @@ from rest_framework import status
 
 from events.models import Event
 from events.tests.utils import versioned_reverse as reverse
-from registrations.models import RegistrationUser
+from registrations.models import RegistrationUserAccess
 from registrations.tests.test_registration_post import (
     create_registration,
     get_event_url,
 )
-from registrations.tests.test_registration_user_invitation import (
+from registrations.tests.test_registration_user_access_invitation import (
     assert_invitation_email_is_sent,
 )
 
@@ -199,60 +199,62 @@ def test__admin_cannot_update_registrations_event(
 
 
 @pytest.mark.django_db
-def test__send_email_to_new_registration_user(registration, user_api_client):
+def test__send_email_to_new_registration_user_access(registration, user_api_client):
     with translation.override("fi"):
         registration.event.type_id = Event.TypeId.GENERAL
         registration.event.name = event_name
         registration.event.save()
 
-        RegistrationUser.objects.create(
+        RegistrationUserAccess.objects.create(
             registration=registration, email="delete1@email.com"
         )
-        RegistrationUser.objects.create(
+        RegistrationUserAccess.objects.create(
             registration=registration, email="delete2@email.com"
         )
-        assert len(registration.registration_users.all()) == 2
+        assert len(registration.registration_user_accesses.all()) == 2
 
         registration_data = {
             "event": {"@id": get_event_url(registration.event.id)},
-            "registration_users": [{"email": email}],
+            "registration_user_accesses": [{"email": email}],
         }
         response = assert_update_registration(
             user_api_client, registration.id, registration_data
         )
         #  assert that registration user was created
-        registration_users = response.data["registration_users"]
-        assert len(registration_users) == 1
-        assert registration_users[0]["email"] == email
+        registration_user_accesses = response.data["registration_user_accesses"]
+        assert len(registration_user_accesses) == 1
+        assert registration_user_accesses[0]["email"] == email
         #  assert that the email was sent
         assert_invitation_email_is_sent(email, event_name)
 
 
 @pytest.mark.django_db
-def test__email_is_not_sent_if_registration_user_email_is_not_updated(
+def test__email_is_not_sent_if_registration_user_access_email_is_not_updated(
     registration, user_api_client
 ):
-    registration_user = RegistrationUser.objects.create(
+    registration_user_access = RegistrationUserAccess.objects.create(
         registration=registration, email=email
     )
 
     registration_data = {
         "event": {"@id": get_event_url(registration.event.id)},
-        "registration_users": [{"id": registration_user.id, "email": email}],
+        "registration_user_accesses": [
+            {"id": registration_user_access.id, "email": email}
+        ],
     }
     assert_update_registration(user_api_client, registration.id, registration_data)
 
     # Assert that registration user is not changed
-    registration_users = registration.registration_users.all()
-    assert len(registration_users) == 1
-    assert registration_user.id == registration_users[0].id
-    assert registration_users[0].email == email
+    registration_user_accesses = registration.registration_user_accesses.all()
+    assert len(registration_user_accesses) == 1
+    assert registration_user_access.id == registration_user_accesses[0].id
+    assert registration_user_accesses[0].email == email
     #  assert that the email is not sent
     assert len(mail.outbox) == 0
 
 
 @pytest.mark.django_db
-def test__email_is_sent_if_registration_user_email_is_updated(
+def test__email_is_sent_if_registration_user_access_email_is_updated(
     registration, user_api_client
 ):
     with translation.override("fi"):
@@ -260,13 +262,15 @@ def test__email_is_sent_if_registration_user_email_is_updated(
         registration.event.name = event_name
         registration.event.save()
 
-        registration_user = RegistrationUser.objects.create(
+        registration_user_access = RegistrationUserAccess.objects.create(
             registration=registration, email=email
         )
 
         registration_data = {
             "event": {"@id": get_event_url(registration.event.id)},
-            "registration_users": [{"id": registration_user.id, "email": edited_email}],
+            "registration_user_accesses": [
+                {"id": registration_user_access.id, "email": edited_email}
+            ],
         }
         assert_update_registration(user_api_client, registration.id, registration_data)
         #  assert that the email was sent
@@ -274,7 +278,7 @@ def test__email_is_sent_if_registration_user_email_is_updated(
 
 
 @pytest.mark.django_db
-def test__cannot_update_registration_user_with_invalid_id(
+def test__cannot_update_registration_user_access_with_invalid_id(
     registration, user_api_client
 ):
     with translation.override("fi"):
@@ -282,21 +286,24 @@ def test__cannot_update_registration_user_with_invalid_id(
         registration.event.name = event_name
         registration.event.save()
 
-        RegistrationUser.objects.create(registration=registration, email=email)
+        RegistrationUserAccess.objects.create(registration=registration, email=email)
 
         registration_data = {
             "event": {"@id": get_event_url(registration.event.id)},
-            "registration_users": [{"id": "invalid", "email": edited_email}],
+            "registration_user_accesses": [{"id": "invalid", "email": edited_email}],
         }
         response = update_registration(
             user_api_client, registration.id, registration_data
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data["registration_users"][0]["id"][0].code == "incorrect_type"
+        assert (
+            response.data["registration_user_accesses"][0]["id"][0].code
+            == "incorrect_type"
+        )
 
 
 @pytest.mark.django_db
-def test__cannot_update_registration_user_with_unexisting_id(
+def test__cannot_update_registration_user_access_with_unexisting_id(
     registration, user_api_client
 ):
     with translation.override("fi"):
@@ -304,21 +311,24 @@ def test__cannot_update_registration_user_with_unexisting_id(
         registration.event.name = event_name
         registration.event.save()
 
-        RegistrationUser.objects.create(registration=registration, email=email)
+        RegistrationUserAccess.objects.create(registration=registration, email=email)
 
         registration_data = {
             "event": {"@id": get_event_url(registration.event.id)},
-            "registration_users": [{"id": 1234567, "email": edited_email}],
+            "registration_user_accesses": [{"id": 1234567, "email": edited_email}],
         }
         response = update_registration(
             user_api_client, registration.id, registration_data
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data["registration_users"][0]["id"][0].code == "does_not_exist"
+        assert (
+            response.data["registration_user_accesses"][0]["id"][0].code
+            == "does_not_exist"
+        )
 
 
 @pytest.mark.django_db
-def test__cannot_update_registration_user_with_duplicate_email(
+def test__cannot_update_registration_user_access_with_duplicate_email(
     registration, user_api_client
 ):
     email1 = "email1@test.fi"
@@ -329,18 +339,18 @@ def test__cannot_update_registration_user_with_duplicate_email(
         registration.event.name = event_name
         registration.event.save()
 
-        registration_user1 = RegistrationUser.objects.create(
+        registration_user_access1 = RegistrationUserAccess.objects.create(
             registration=registration, email=email1
         )
-        registration_user2 = RegistrationUser.objects.create(
+        registration_user_access2 = RegistrationUserAccess.objects.create(
             registration=registration, email=email2
         )
 
         registration_data = {
             "event": {"@id": get_event_url(registration.event.id)},
-            "registration_users": [
-                {"id": registration_user1.id, "email": email2},
-                {"id": registration_user2.id, "email": email1},
+            "registration_user_accesses": [
+                {"id": registration_user_access1.id, "email": email2},
+                {"id": registration_user_access2.id, "email": email1},
             ],
         }
 
@@ -349,4 +359,4 @@ def test__cannot_update_registration_user_with_duplicate_email(
         )
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data["registration_users"][0].code == "unique"
+        assert response.data["registration_user_accesses"][0].code == "unique"

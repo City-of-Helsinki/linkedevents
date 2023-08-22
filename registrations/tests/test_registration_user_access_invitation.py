@@ -5,7 +5,7 @@ from rest_framework import status
 
 from events.models import Event, Language
 from events.tests.utils import versioned_reverse as reverse
-from registrations.models import RegistrationUser
+from registrations.models import RegistrationUserAccess
 
 email = "user@email.com"
 event_name = "Foo"
@@ -15,7 +15,7 @@ event_name = "Foo"
 
 def send_invitation(api_client, pk):
     send_invitation_url = reverse(
-        "registrationuser-send-invitation",
+        "registrationuseraccess-send-invitation",
         kwargs={"pk": pk},
     )
     response = api_client.post(send_invitation_url)
@@ -42,45 +42,45 @@ def assert_invitation_email_is_sent(email, event_name):
 
 
 @pytest.mark.django_db
-def test_admin_user_can_send_invitation_to_registration_user(
+def test_admin_user_can_send_invitation_to_registration_user_access(
     registration, user_api_client
 ):
     with translation.override("fi"):
         registration.event.type_id = Event.TypeId.GENERAL
         registration.event.name = event_name
         registration.event.save()
-        registration_user = RegistrationUser.objects.create(
+        registration_user_access = RegistrationUserAccess.objects.create(
             registration=registration, email=email
         )
 
-        assert_send_invitation(user_api_client, registration_user.pk)
+        assert_send_invitation(user_api_client, registration_user_access.pk)
         assert_invitation_email_is_sent(email, event_name)
 
 
 @pytest.mark.django_db
-def test_anonymous_user_cannot_send_invitation_to_registration_user(
+def test_anonymous_user_cannot_send_invitation_to_registration_user_access(
     api_client, registration
 ):
-    registration_user = RegistrationUser.objects.create(
+    registration_user_access = RegistrationUserAccess.objects.create(
         registration=registration, email=email
     )
 
-    response = send_invitation(api_client, registration_user.pk)
+    response = send_invitation(api_client, registration_user_access.pk)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.django_db
-def test_regular_user_cannot_send_invitation_to_registration_user(
+def test_regular_user_cannot_send_invitation_to_registration_user_access(
     registration, user, user_api_client
 ):
     user.get_default_organization().regular_users.add(user)
     user.get_default_organization().admin_users.remove(user)
 
-    registration_user = RegistrationUser.objects.create(
+    registration_user_access = RegistrationUserAccess.objects.create(
         registration=registration, email=email
     )
 
-    response = send_invitation(user_api_client, registration_user.pk)
+    response = send_invitation(user_api_client, registration_user_access.pk)
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
@@ -119,11 +119,11 @@ def test_invitation_to_send_in_selected_language(
         registration.event.save()
 
         language = Language.objects.get(pk=language_pk)
-        registration_user = RegistrationUser.objects.create(
+        registration_user_access = RegistrationUserAccess.objects.create(
             registration=registration, email=email, language=language
         )
 
-        assert_send_invitation(user_api_client, registration_user.pk)
+        assert_send_invitation(user_api_client, registration_user_access.pk)
         assert mail.outbox[0].to[0] == email
         assert mail.outbox[0].subject.startswith(expect_subject)
         assert expect_content in str(mail.outbox[0].alternatives[0])

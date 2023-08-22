@@ -253,18 +253,20 @@ class Registration(CreatedModifiedBaseModel):
         )
 
 
-class RegistrationUser(models.Model):
+class RegistrationUserAccess(models.Model):
     email = models.EmailField(verbose_name=_("E-mail"))
 
     registration = models.ForeignKey(
-        Registration, on_delete=models.CASCADE, related_name="registration_users"
+        Registration,
+        on_delete=models.CASCADE,
+        related_name="registration_user_accesses",
     )
     language = models.ForeignKey(
         Language,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="registration_user_language",
+        related_name="registration_user_access_language",
     )
 
     def can_be_edited_by(self, user):

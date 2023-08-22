@@ -33,7 +33,7 @@ class CanCreateEditDeleteSignup(permissions.BasePermission):
         return obj.can_be_edited_by(request.user)
 
 
-class RegistrationUserRetrievePermission(permissions.BasePermission):
+class RegistrationUserAccessRetrievePermission(permissions.BasePermission):
     def has_permission(self, request, view):
         # Only authenticated users can get object
         return view.action == "retrieve" and request.user.is_authenticated
@@ -41,4 +41,6 @@ class RegistrationUserRetrievePermission(permissions.BasePermission):
     def has_object_permission(self, request: Request, view, obj):
         user = request.user
 
-        return obj.registration.registration_users.filter(email=user.email).exists()
+        return obj.registration.registration_user_accesses.filter(
+            email=user.email
+        ).exists()

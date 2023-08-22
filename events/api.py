@@ -107,7 +107,7 @@ from events.translation import EventTranslationOptions, PlaceTranslationOptions
 from helevents.models import User
 from helevents.serializers import UserSerializer
 from linkedevents.registry import register_view, viewset_classes_by_model
-from registrations.models import RegistrationUser
+from registrations.models import RegistrationUserAccess
 from registrations.serializers import RegistrationBaseSerializer
 
 logger = logging.getLogger(__name__)
@@ -1830,12 +1830,18 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
         queryset=Event.objects.all(),
     )
 
-    only_admin_visible_fields = ("created_by", "last_modified_by", "registration_users")
+    only_admin_visible_fields = (
+        "created_by",
+        "last_modified_by",
+        "registration_user_accesses",
+    )
 
-    def _create_or_update_registration_users(self, registration, registration_users):
+    def _create_or_update_registration_user_accesses(
+        self, registration, registration_user_accesses
+    ):
         users_to_send_invitations = []
 
-        for data in registration_users:
+        for data in registration_user_accesses:
             if current_obj := data.pop("id", None):
                 current_id = current_obj.id
                 current_email = current_obj.email
@@ -1844,7 +1850,10 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
                 current_email = None
 
             try:
-                user_instance, created = RegistrationUser.objects.update_or_create(
+                (
+                    user_instance,
+                    created,
+                ) = RegistrationUserAccess.objects.update_or_create(
                     id=current_id,
                     registration=registration,
                     defaults=data,
@@ -1854,10 +1863,10 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
                 if "duplicate key value violates unique constraint" in str(error):
                     raise serializers.ValidationError(
                         {
-                            "registration_users": [
+                            "registration_user_accesses": [
                                 ErrorDetail(
                                     _(
-                                        "Registration user with email %(email)s already exists."
+                                        "Registration user access with email %(email)s already exists."
                                     )
                                     % {"email": data["email"]},
                                     code="unique",
@@ -1880,7 +1889,9 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
 
     @transaction.atomic
     def create(self, validated_data):
-        registration_users = validated_data.pop("registration_users", [])
+        registration_user_accesses = validated_data.pop(
+            "registration_user_accesses", []
+        )
         try:
             registration = super().create(validated_data)
         except IntegrityError as error:
@@ -1891,31 +1902,41 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
             else:
                 raise
 
-        # Create registration users and send invitation email to them
-        self._create_or_update_registration_users(registration, registration_users)
+        # Create registration user accesses and send invitation email to them
+        self._create_or_update_registration_user_accesses(
+            registration, registration_user_accesses
+        )
 
         return registration
 
     @transaction.atomic
     def update(self, instance, validated_data):
-        registration_users = validated_data.pop("registration_users", None)
+        registration_user_accesses = validated_data.pop(
+            "registration_user_accesses", None
+        )
 
         # update validated fields
         super().update(instance, validated_data)
 
         # update registration users
-        if isinstance(registration_users, list):
-            ids = [u["id"].id for u in registration_users if u.get("id") is not None]
+        if isinstance(registration_user_accesses, list):
+            ids = [
+                u["id"].id
+                for u in registration_user_accesses
+                if u.get("id") is not None
+            ]
 
-            # Delete registration user which are not included in the payload
-            instance.registration_users.exclude(pk__in=ids).delete()
+            # Delete registration user access which are not included in the payload
+            instance.registration_user_accesses.exclude(pk__in=ids).delete()
 
-            # Update or create registration users and send invitation email to them
-            self._create_or_update_registration_users(instance, registration_users)
+            # Update or create registration user accesses and send invitation email to them
+            self._create_or_update_registration_user_accesses(
+                instance, registration_user_accesses
+            )
 
         return instance
 
-    def validate_registration_users(self, value):
+    def validate_registration_user_accesses(self, value):
         errors = []
         emails = []
         raise_errors = False
@@ -1928,7 +1949,7 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
                         "email": [
                             ErrorDetail(
                                 _(
-                                    "Registration user with email %(email)s already exists."
+                                    "Registration user access with email %(email)s already exists."
                                 )
                                 % {"email": email},
                                 code="unique",

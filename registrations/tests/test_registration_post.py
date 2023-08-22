@@ -4,7 +4,7 @@ from rest_framework import status
 
 from events.models import Event
 from events.tests.utils import versioned_reverse as reverse
-from registrations.tests.test_registration_user_invitation import (
+from registrations.tests.test_registration_user_access_invitation import (
     assert_invitation_email_is_sent,
 )
 
@@ -209,7 +209,7 @@ def test__user_editable_resources_can_create_registration(
 
 
 @pytest.mark.django_db
-def test__send_email_to_registration_user(event, user_api_client):
+def test__send_email_to_registration_user_access(event, user_api_client):
     with translation.override("fi"):
         event.type_id = Event.TypeId.GENERAL
         event.name = event_name
@@ -217,7 +217,7 @@ def test__send_email_to_registration_user(event, user_api_client):
 
         registration_data = {
             "event": {"@id": get_event_url(event.id)},
-            "registration_users": [{"email": email}],
+            "registration_user_accesses": [{"email": email}],
         }
         assert_create_registration(user_api_client, registration_data)
         #  assert that the email was sent
@@ -225,7 +225,7 @@ def test__send_email_to_registration_user(event, user_api_client):
 
 
 @pytest.mark.django_db
-def test__cannot_create_registration_users_with_duplicate_emails(
+def test__cannot_create_registration_user_accesses_with_duplicate_emails(
     event, user_api_client
 ):
     with translation.override("fi"):
@@ -235,8 +235,10 @@ def test__cannot_create_registration_users_with_duplicate_emails(
 
         registration_data = {
             "event": {"@id": get_event_url(event.id)},
-            "registration_users": [{"email": email}, {"email": email}],
+            "registration_user_accesses": [{"email": email}, {"email": email}],
         }
         response = create_registration(user_api_client, registration_data)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data["registration_users"][1]["email"][0].code == "unique"
+        assert (
+            response.data["registration_user_accesses"][1]["email"][0].code == "unique"
+        )
