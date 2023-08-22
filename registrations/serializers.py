@@ -116,18 +116,25 @@ class SignUpSerializer(serializers.ModelSerializer):
 
         falsy_values = ("", None)
 
+        # Validate mandatory fields
         for field in registration.mandatory_fields:
-            if data.get(field) in falsy_values:
+            # Don't validate field if request method is PATCH and field is missing from the payload
+            if self.partial and field not in data.keys():
+                continue
+            elif data.get(field) in falsy_values:
                 errors[field] = _("This field must be specified.")
 
+        # Validate date_of_birth if audience_min_age or registration.audience_max_age is defined
+        # Don't validate date_of_birth if request method is PATCH and field is missing from the payload
         if (
             registration.audience_min_age not in falsy_values
             or registration.audience_max_age not in falsy_values
-        ):
-            if "date_of_birth" not in data.keys():
+        ) and not (self.partial and "date_of_birth" not in data.keys()):
+            date_of_birth = data.get("date_of_birth")
+
+            if date_of_birth in falsy_values:
                 errors["date_of_birth"] = _("This field must be specified.")
             else:
-                date_of_birth = data["date_of_birth"]
                 today = localdate()
                 current_age = (
                     today.year
