@@ -56,7 +56,19 @@ def assert_get_detail(api_client: APIClient, signup_pk: str, query: str = None):
 
 
 @pytest.mark.django_db
-def test_admin_user_can_get_signup(registration, signup, user_api_client):
+def test_admin_user_cannot_get_signup(registration, signup, user_api_client):
+    response = get_detail(user_api_client, signup.id)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_registration_admin_user_can_get_signup(
+    user_api_client, registration, signup, user
+):
+    default_organization = user.get_default_organization()
+    default_organization.admin_users.remove(user)
+    default_organization.registration_admin_users.add(user)
+
     assert_get_detail(user_api_client, signup.id)
 
 
@@ -129,14 +141,27 @@ def test__user_from_other_organization_cannot_get_signup(
 
 
 @pytest.mark.django_db
-def test__api_key_with_organization_can_get_signup(
+def test__api_key_with_organization_and_registration_permission_can_get_signup(
     api_client, data_source, organization, registration, signup
 ):
     data_source.owner = organization
-    data_source.save()
+    data_source.user_editable_registrations = True
+    data_source.save(update_fields=["owner", "user_editable_registrations"])
     api_client.credentials(apikey=data_source.api_key)
 
     assert_get_detail(api_client, signup.id)
+
+
+@pytest.mark.django_db
+def test__api_key_with_organization_without_registration_permission_cannot_get_signup(
+    api_client, data_source, organization, registration, signup
+):
+    data_source.owner = organization
+    data_source.save(update_fields=["owner"])
+    api_client.credentials(apikey=data_source.api_key)
+
+    response = get_detail(api_client, signup.id)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db
@@ -164,7 +189,7 @@ def test__api_key_from_wrong_data_source_cannot_get_signup(
 
 
 @pytest.mark.django_db
-def test_super_user_can_get_signup_list(
+def test_superuser_can_get_signup_list(
     api_client, registration, signup, signup2, super_user
 ):
     api_client.force_authenticate(super_user)
@@ -174,9 +199,23 @@ def test_super_user_can_get_signup_list(
 
 
 @pytest.mark.django_db
-def test_admin_user_can_get_signup_list(registration, signup, signup2, user_api_client):
+def test_admin_user_cannot_get_signup_list(
+    registration, signup, signup2, user_api_client
+):
+    response = get_list(user_api_client, f"registration={registration.id}")
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_registration_admin_user_can_get_signup_list(
+    registration, signup, signup2, user_api_client, user
+):
+    default_organization = user.get_default_organization()
+    default_organization.admin_users.remove(user)
+    default_organization.registration_admin_users.add(user)
+
     get_list_and_assert_signups(
-        user_api_client, f"registration={registration.id}", [signup, signup2]
+        user_api_client, f"registration={registration.id}", (signup, signup2)
     )
 
 
@@ -244,19 +283,24 @@ def test__get_all_signups_to_which_user_has_admin_role(
     user,
     user_api_client,
 ):
+    default_organization = user.get_default_organization()
+
+    # Admin user is not allowed to see signups
+    get_list_and_assert_signups(user_api_client, "", [])
+
+    # Registration admin user is allowed to see signups
+    default_organization.admin_users.remove(user)
+    default_organization.registration_admin_users.add(user)
+
+    # Superuser is allowed to see all signups
     signup3.registration = registration2
     signup3.save()
     api_client.force_authenticate(super_user)
-
-    # Super user is allowed to see all signups
     get_list_and_assert_signups(api_client, "", [signup, signup2, signup3])
 
-    # Admin user is allowed to see signups
-    get_list_and_assert_signups(user_api_client, "", [signup, signup2])
-
     # Regular user is not allowed to see signups
-    user.get_default_organization().regular_users.add(user)
-    user.get_default_organization().admin_users.remove(user)
+    default_organization.regular_users.add(user)
+    default_organization.registration_admin_users.remove(user)
     get_list_and_assert_signups(user_api_client, "", [])
 
     # Registration user is not allowed to see signups if they are not strongly identified
@@ -305,7 +349,8 @@ def test__api_key_with_organization_can_get_signup_list(
     api_client, data_source, organization, registration, signup, signup2
 ):
     data_source.owner = organization
-    data_source.save()
+    data_source.user_editable_registrations = True
+    data_source.save(update_fields=["owner", "user_editable_registrations"])
     api_client.credentials(apikey=data_source.api_key)
 
     get_list_and_assert_signups(
@@ -331,8 +376,10 @@ def test__api_key_with_wrong_organization_cannot_get_signup_list(
 )
 @pytest.mark.django_db
 def test__signup_list_assert_text_filter(
-    field, registration, signup, signup2, user_api_client
+    field, registration, signup, signup2, user_api_client, user
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     setattr(signup, field, "field_value_1")
     signup.save()
     setattr(signup2, field, "field_value_2")
@@ -345,8 +392,10 @@ def test__signup_list_assert_text_filter(
 
 @pytest.mark.django_db
 def test__signup_list_assert_attendee_status_filter(
-    registration, signup, signup2, user_api_client
+    registration, signup, signup2, user_api_client, user
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     signup.attendee_status = SignUp.AttendeeStatus.ATTENDING
     signup.save()
     signup2.attendee_status = SignUp.AttendeeStatus.WAITING_LIST
@@ -387,6 +436,9 @@ def test__signup_list_assert_attendee_status_filter(
 def test_filter_signups(
     api_client, registration, registration2, user, user2, event, event2
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+    user2.get_default_organization().registration_admin_users.add(user2)
+
     signup = SignUp.objects.create(
         registration=registration,
         first_name="Michael",

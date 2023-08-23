@@ -35,7 +35,11 @@ def assert_update_signup(api_client, signup_pk, signup_data, query_string=None):
 
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test__update_signup(user_api_client, registration, signup, user):
+def test__registration_admin_can_update_signup(
+    user_api_client, registration, signup, user
+):
+    user.get_default_organization().registration_admin_users.add(user)
+
     new_signup_name = "Edited name"
 
     db_signup = SignUp.objects.get(pk=signup.id)
@@ -52,6 +56,29 @@ def test__update_signup(user_api_client, registration, signup, user):
     db_signup = SignUp.objects.get(pk=signup.id)
     assert db_signup.first_name == new_signup_name
     assert db_signup.last_modified_by_id == user.id
+
+
+@freeze_time("2023-03-14 03:30:00+02:00")
+@pytest.mark.django_db
+def test__regular_admin_cannot_update_signup(user_api_client, registration, signup):
+    new_signup_name = "Edited name"
+
+    db_signup = SignUp.objects.get(pk=signup.id)
+    assert db_signup.first_name != new_signup_name
+    assert db_signup.first_name == signup.first_name
+    assert db_signup.last_modified_by_id is None
+
+    signup_data = {
+        "registration": registration.id,
+        "first_name": new_signup_name,
+        "date_of_birth": "2015-01-01",
+    }
+
+    response = update_signup(user_api_client, signup.id, signup_data)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    db_signup = SignUp.objects.get(pk=signup.id)
+    assert db_signup.first_name == signup.first_name
+    assert db_signup.last_modified_by_id is None
 
 
 @freeze_time("2023-03-14 03:30:00+02:00")
@@ -113,8 +140,10 @@ def test__non_created_regular_user_cannot_update_signup(
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test__cannot_update_attendee_status_of_signup(
-    registration, signup, user_api_client
+    registration, signup, user_api_client, user
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     signup.attendee_status = SignUp.AttendeeStatus.ATTENDING
     signup.save()
 
@@ -136,8 +165,10 @@ def test__cannot_update_attendee_status_of_signup(
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test__cannot_update_registration_of_signup(
-    registration, registration2, signup, user_api_client
+    registration, registration2, signup, user_api_client, user
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     signup_data = {
         "name": "Edited name",
         "date_of_birth": "2015-01-01",
@@ -186,11 +217,12 @@ def test__regular_user_cannot_update_signup(
 
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test__api_key_with_organization_can_update_signup(
+def test__api_key_with_organization_and_registration_permission_can_update_signup(
     api_client, data_source, organization, registration, signup
 ):
+    data_source.user_editable_registrations = True
     data_source.owner = organization
-    data_source.save()
+    data_source.save(update_fields=["user_editable_registrations", "owner"])
     api_client.credentials(apikey=data_source.api_key)
 
     signup_data = {
@@ -199,6 +231,24 @@ def test__api_key_with_organization_can_update_signup(
         "date_of_birth": "2015-01-01",
     }
     assert_update_signup(api_client, signup.id, signup_data)
+
+
+@freeze_time("2023-03-14 03:30:00+02:00")
+@pytest.mark.django_db
+def test__api_key_with_organization_without_registration_permission_cannot_update_signup(
+    api_client, data_source, organization, registration, signup
+):
+    data_source.owner = organization
+    data_source.save(update_fields=["owner"])
+    api_client.credentials(apikey=data_source.api_key)
+
+    signup_data = {
+        "registration": registration.id,
+        "name": "Edited name",
+        "date_of_birth": "2015-01-01",
+    }
+    response = update_signup(api_client, signup.id, signup_data)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db
@@ -251,11 +301,13 @@ def test__unknown_api_key_cannot_update_signup(api_client, registration, signup)
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test__user_editable_resources_can_update_signup(
-    data_source, organization, registration, signup, user_api_client
+    data_source, organization, registration, signup, user_api_client, user
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     data_source.owner = organization
     data_source.user_editable_resources = True
-    data_source.save()
+    data_source.save(update_fields=["owner", "user_editable_resources"])
 
     signup_data = {
         "registration": registration.id,
@@ -267,11 +319,13 @@ def test__user_editable_resources_can_update_signup(
 
 @pytest.mark.django_db
 def test__non_user_editable_resources_cannot_delete_signup(
-    data_source, organization, registration, signup, user_api_client
+    data_source, organization, registration, signup, user_api_client, user
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     data_source.owner = organization
     data_source.user_editable_resources = False
-    data_source.save()
+    data_source.save(update_fields=["owner", "user_editable_resources"])
 
     signup_data = {
         "registration": registration.id,

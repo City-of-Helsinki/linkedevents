@@ -46,7 +46,11 @@ def assert_signup_group_fields_exist(data):
 
 
 @pytest.mark.django_db
-def test_admin_user_can_get_signup_group_with_signups(user_api_client, registration):
+def test_registration_admin_user_can_get_signup_group(
+    user_api_client, registration, organization, user
+):
+    organization.registration_admin_users.add(user)
+
     signup_group = SignUpGroupFactory(registration=registration)
     SignUpFactory(registration=registration, signup_group=signup_group)
     SignUpFactory(registration=registration, signup_group=signup_group)
@@ -135,7 +139,7 @@ def test_user_from_other_organization_cannot_get_signup_group(
 
 
 @pytest.mark.django_db
-def test_api_key_with_organization_can_get_signup(
+def test_api_key_with_organization_and_registration_permissions_can_get_signup_group(
     api_client, data_source, organization
 ):
     signup_group = SignUpGroupFactory(
@@ -146,7 +150,8 @@ def test_api_key_with_organization_can_get_signup(
     SignUpFactory(registration=signup_group.registration, signup_group=signup_group)
 
     data_source.owner = organization
-    data_source.save()
+    data_source.user_editable_registrations = True
+    data_source.save(update_fields=["owner", "user_editable_registrations"])
     api_client.credentials(apikey=data_source.api_key)
 
     response = assert_get_detail(api_client, signup_group.id)

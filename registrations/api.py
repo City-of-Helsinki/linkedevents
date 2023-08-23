@@ -34,10 +34,7 @@ from registrations.models import (
     SignUp,
     SignUpGroup,
 )
-from registrations.permissions import (
-    CanCreateEditDeleteSignup,
-    RegistrationUserAccessRetrievePermission,
-)
+from registrations.permissions import CanAccessRegistration, CanAccessSignup
 from registrations.serializers import (
     CreateSignUpsSerializer,
     MassEmailSerializer,
@@ -65,9 +62,7 @@ class RegistrationViewSet(
     serializer_class = RegistrationSerializer
     queryset = Registration.objects.all()
 
-    permission_classes = [
-        DataSourceResourceEditPermission & OrganizationUserEditPermission
-    ]
+    permission_classes = [CanAccessRegistration & DataSourceResourceEditPermission]
 
     def perform_create(self, serializer):
         # Check object level permissions for event which has the relevant data_source.
@@ -121,9 +116,7 @@ class RegistrationViewSet(
     @action(
         methods=["post"],
         detail=True,
-        permission_classes=[
-            DataSourceResourceEditPermission & OrganizationUserEditPermission
-        ],
+        permission_classes=[CanAccessRegistration & DataSourceResourceEditPermission],
     )
     def send_message(self, request, pk=None, version=None):
         registration = self.get_object()
@@ -210,11 +203,7 @@ class SignUpViewSet(
 ):
     serializer_class = SignUpSerializer
     queryset = SignUp.objects.all()
-
-    permission_classes = [
-        (CanCreateEditDeleteSignup & DataSourceResourceEditPermission)
-        | RegistrationUserAccessRetrievePermission
-    ]
+    permission_classes = [CanAccessSignup & DataSourceResourceEditPermission]
 
     def create(self, request, *args, **kwargs):
         context = super().get_serializer_context()
@@ -261,8 +250,11 @@ class SignUpViewSet(
 
         if registration_param := request.query_params.get("registration", None):
             registrations = []
-            # Get admin organizations and descendants only once instead of using is_admin method
-            admin_organizations = user.get_admin_organizations_and_descendants()
+            # Get registration admin organizations and descendants only
+            # once instead of using is_registration_admin_of method.
+            registration_admin_orgs = (
+                user.get_registration_admin_organizations_and_descendants()
+            )
 
             for pk in registration_param.split(","):
                 try:
@@ -278,7 +270,7 @@ class SignUpViewSet(
                     and registration.registration_user_accesses.filter(
                         email=user.email
                     ).exists()
-                    or registration.publisher in admin_organizations
+                    or registration.publisher in registration_admin_orgs
                 ):
                     raise DRFPermissionDenied(
                         _(
@@ -293,7 +285,7 @@ class SignUpViewSet(
             # user has admin rights or is registration user that is
             # strongly identified.
             list_filter = Q(
-                registration__event__publisher__in=user.get_admin_organizations_and_descendants()
+                registration__event__publisher__in=user.get_registration_admin_organizations_and_descendants()
             )
             if user.is_strongly_identificated:
                 list_filter |= Q(
@@ -343,10 +335,7 @@ class SignUpGroupViewSet(
 ):
     serializer_class = SignUpGroupSerializer
     queryset = SignUpGroup.objects.all()
-    permission_classes = [
-        (CanCreateEditDeleteSignup & DataSourceResourceEditPermission)
-        | RegistrationUserAccessRetrievePermission
-    ]
+    permission_classes = [CanAccessSignup & DataSourceResourceEditPermission]
 
     def get_serializer_class(self):
         if self.action == "create":

@@ -71,11 +71,11 @@ def get_detail_and_assert_registration(
     [Event.TypeId.GENERAL, Event.TypeId.COURSE, Event.TypeId.VOLUNTEERING],
 )
 @pytest.mark.django_db
-def test_get_registration(api_client, event, event_type, registration):
+def test_get_registration(user_api_client, event, event_type, registration):
     event.type_id = event_type
     event.save()
 
-    get_detail_and_assert_registration(api_client, registration.id)
+    get_detail_and_assert_registration(user_api_client, registration.id)
 
 
 @pytest.mark.django_db
@@ -92,6 +92,7 @@ def test_regular_user_cannot_see_registration_user_accesses(
 ):
     user.get_default_organization().regular_users.add(user)
     user.get_default_organization().admin_users.remove(user)
+
     RegistrationUserAccess.objects.create(registration=registration, email=user.email)
     response = get_detail_and_assert_registration(user_api_client, registration.id)
 
@@ -99,17 +100,17 @@ def test_regular_user_cannot_see_registration_user_accesses(
 
 
 @pytest.mark.django_db
-def test_anonymous_user_cannot_see_registration_user_accesses(api_client, registration):
+def test_anonymous_user_cannot_see_registration(api_client, registration):
     RegistrationUserAccess.objects.create(registration=registration)
-    response = get_detail_and_assert_registration(api_client, registration.id)
 
-    assert response.data.get("registration_user_accesses") is None
+    response = get_detail(api_client, registration.id)
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.django_db
-def test_get_registration_with_event_included(api_client, event, registration):
+def test_get_registration_with_event_included(user_api_client, event, registration):
     response = get_detail_and_assert_registration(
-        api_client, registration.id, "include=event"
+        user_api_client, registration.id, "include=event"
     )
     response_event = response.data["event"]
     assert response_event["id"] == event.id
@@ -120,13 +121,13 @@ def test_get_registration_with_event_included(api_client, event, registration):
 
 @pytest.mark.django_db
 def test_get_registration_with_event_and_location_included(
-    api_client, event, place, registration
+    user_api_client, event, place, registration
 ):
     event.location = place
     event.save()
 
     response = get_detail_and_assert_registration(
-        api_client, registration.id, "include=event,location"
+        user_api_client, registration.id, "include=event,location"
     )
     response_location = response.data["event"]["location"]
     assert response_location["id"] == place.id
@@ -135,13 +136,13 @@ def test_get_registration_with_event_and_location_included(
 
 @pytest.mark.django_db
 def test_get_registration_with_event_and_keywords_included(
-    api_client, event, keyword, registration
+    user_api_client, event, keyword, registration
 ):
     event.keywords.add(keyword)
     event.save()
 
     response = get_detail_and_assert_registration(
-        api_client, registration.id, "include=event,keywords"
+        user_api_client, registration.id, "include=event,keywords"
     )
     response_keyword = response.data["event"]["keywords"][0]
     assert response_keyword["id"] == keyword.id
@@ -150,14 +151,14 @@ def test_get_registration_with_event_and_keywords_included(
 
 @pytest.mark.django_db
 def test_get_registration_with_event_and_in_language_included(
-    api_client, event, languages, registration
+    user_api_client, event, languages, registration
 ):
     language = languages[0]
     event.in_language.add(language)
     event.save()
 
     response = get_detail_and_assert_registration(
-        api_client, registration.id, "include=event,in_language"
+        user_api_client, registration.id, "include=event,in_language"
     )
     response_language = response.data["event"]["in_language"][0]
     assert response_language["id"] == language.id
@@ -165,36 +166,36 @@ def test_get_registration_with_event_and_in_language_included(
 
 @pytest.mark.django_db
 def test_get_registration_with_correct_attendee_capacity(
-    api_client, registration, signup
+    user_api_client, registration, signup
 ):
     registration.maximum_attendee_capacity = 5
     registration.waiting_list_capacity = 5
     registration.save()
 
-    response = get_detail_and_assert_registration(api_client, registration.id)
+    response = get_detail_and_assert_registration(user_api_client, registration.id)
     assert response.data["remaining_attendee_capacity"] == 4
     assert response.data["remaining_waiting_list_capacity"] == 5
 
     SeatReservationCode.objects.create(registration=registration, seats=3)
-    response = get_detail_and_assert_registration(api_client, registration.id)
+    response = get_detail_and_assert_registration(user_api_client, registration.id)
     assert response.data["remaining_attendee_capacity"] == 1
     assert response.data["remaining_waiting_list_capacity"] == 5
 
     SeatReservationCode.objects.create(registration=registration, seats=3)
-    response = get_detail_and_assert_registration(api_client, registration.id)
+    response = get_detail_and_assert_registration(user_api_client, registration.id)
     assert response.data["remaining_attendee_capacity"] == 0
     assert response.data["remaining_waiting_list_capacity"] == 3
 
 
 @pytest.mark.django_db
 def test_get_registration_with_event_and_audience_included(
-    api_client, event, keyword, registration
+    user_api_client, event, keyword, registration
 ):
     event.audience.add(keyword)
     event.save()
 
     response = get_detail_and_assert_registration(
-        api_client, registration.id, "include=event,audience"
+        user_api_client, registration.id, "include=event,audience"
     )
     response_audience = response.data["event"]["audience"][0]
     assert response_audience["id"] == keyword.id
@@ -202,12 +203,13 @@ def test_get_registration_with_event_and_audience_included(
 
 
 @pytest.mark.django_db
-def test_admin_user_can_include_signups(registration, signup, signup2, user_api_client):
+def test_admin_user_cannot_include_signups(
+    registration, signup, signup2, user_api_client
+):
     response = get_detail_and_assert_registration(
         user_api_client, registration.id, include_signups_query
     )
-    response_signups = response.data["signups"]
-    assert len(response_signups) == 2
+    assert response.data["signups"] is None
 
 
 @pytest.mark.django_db
@@ -264,25 +266,14 @@ def test_regular_user_cannot_include_signups(
 
 
 @pytest.mark.django_db
-def test_anonymous_user_cannot_include_signups(
-    api_client, registration, signup, signup2
-):
-    response = get_detail_and_assert_registration(
-        api_client, registration.id, include_signups_query
-    )
-    response_signups = response.data["signups"]
-    assert response_signups is None
-
-
-@pytest.mark.django_db
-def test_current_attendee_and_waitlist_count(api_client, registration, user):
-    api_client.force_authenticate(user)
+def test_current_attendee_and_waitlist_count(user_api_client, registration, user):
+    user.get_default_organization().registration_admin_users.add(user)
 
     registration.maximum_attendee_capacity = 1
     registration.waiting_list_capacity = 1
     registration.save()
 
-    response = get_detail(api_client, registration.id)
+    response = get_detail(user_api_client, registration.id)
     assert response.data["current_attendee_count"] == 0
     assert response.data["current_waiting_list_count"] == 0
 
@@ -299,8 +290,8 @@ def test_current_attendee_and_waitlist_count(api_client, registration, user):
         "reservation_code": reservation.code,
         "signups": [signup_data],
     }
-    assert_create_signups(api_client, signups_data)
-    response = get_detail(api_client, registration.id)
+    assert_create_signups(user_api_client, signups_data)
+    response = get_detail(user_api_client, registration.id)
     assert response.data["current_attendee_count"] == 1
     assert response.data["current_waiting_list_count"] == 0
 
@@ -319,18 +310,18 @@ def test_current_attendee_and_waitlist_count(api_client, registration, user):
         "reservation_code": reservation2.code,
         "signups": [signup_data2],
     }
-    assert_create_signups(api_client, signups_data2)
-    response = get_detail(api_client, registration.id)
+    assert_create_signups(user_api_client, signups_data2)
+    response = get_detail(user_api_client, registration.id)
     assert response.data["current_attendee_count"] == 1
     assert response.data["current_waiting_list_count"] == 1
 
 
 @pytest.mark.django_db
 def test_registration_list(
-    api_client, registration, registration2, registration3, registration4
+    user_api_client, registration, registration2, registration3, registration4
 ):
     get_list_and_assert_registrations(
-        api_client, "", [registration, registration2, registration3, registration4]
+        user_api_client, "", [registration, registration2, registration3, registration4]
     )
 
 
@@ -348,7 +339,7 @@ def test_registration_list_admin_user_filter(
 
 @pytest.mark.django_db
 def test_registration_list_event_type_filter(
-    api_client, event, event2, event3, registration, registration2, registration3
+    user_api_client, event, event2, event3, registration, registration2, registration3
 ):
     event.type_id = Event.TypeId.GENERAL
     event.save()
@@ -358,12 +349,16 @@ def test_registration_list_event_type_filter(
     event3.save()
 
     get_list_and_assert_registrations(
-        api_client, "", [registration, registration2, registration3]
+        user_api_client, "", [registration, registration2, registration3]
     )
-    get_list_and_assert_registrations(api_client, "event_type=general", [registration])
-    get_list_and_assert_registrations(api_client, "event_type=course", [registration2])
     get_list_and_assert_registrations(
-        api_client, "event_type=volunteering", [registration3]
+        user_api_client, "event_type=general", [registration]
+    )
+    get_list_and_assert_registrations(
+        user_api_client, "event_type=course", [registration2]
+    )
+    get_list_and_assert_registrations(
+        user_api_client, "event_type=volunteering", [registration3]
     )
 
 

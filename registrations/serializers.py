@@ -227,19 +227,19 @@ class RegistrationBaseSerializer(serializers.ModelSerializer):
         params = self.context["request"].query_params
 
         if "signups" in params.get("include", "").split(","):
-            #  only the organization admins should be able to access the signup information
+            # Only organization registration admins or the registration user
+            # should be able to access the signup information.
             user = self.context["user"]
-            if not user.is_anonymous and (
-                user.is_admin_of(obj.event.publisher)
+            if user.is_authenticated and (
+                user.is_superuser
+                or user.is_registration_admin_of(obj.event.publisher)
                 or user.is_strongly_identificated
                 and obj.registration_user_accesses.filter(email=user.email).exists()
             ):
                 signups = obj.signups.all()
                 return SignUpSerializer(signups, many=True, read_only=True).data
-            else:
-                return None
-        else:
-            return None
+
+        return None
 
     def get_current_attendee_count(self, obj):
         return obj.current_attendee_count

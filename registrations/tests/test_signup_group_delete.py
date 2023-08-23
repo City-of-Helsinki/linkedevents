@@ -36,7 +36,13 @@ def assert_delete_signup_group(api_client, signup_group_pk, query_string=None):
 
 
 @pytest.mark.django_db
-def test_admin_can_delete_signup_group(user_api_client, registration):
+def test_registration_admin_can_delete_signup_group(
+    user_api_client, registration, user
+):
+    default_organization = user.get_default_organization()
+    default_organization.admin_users.remove(user)
+    default_organization.registration_admin_users.add(user)
+
     signup_group = SignUpGroupFactory(registration=registration)
     SignUpFactory(signup_group=signup_group, registration=registration)
     SignUpFactory(signup_group=signup_group, registration=registration)
@@ -48,6 +54,63 @@ def test_admin_can_delete_signup_group(user_api_client, registration):
 
     assert SignUpGroup.objects.count() == 0
     assert SignUp.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_admin_cannot_delete_signup_group(user_api_client, registration, user):
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(signup_group=signup_group, registration=registration)
+    SignUpFactory(signup_group=signup_group, registration=registration)
+
+    assert SignUpGroup.objects.count() == 1
+    assert SignUp.objects.count() == 2
+
+    response = delete_signup_group(user_api_client, signup_group.id)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    assert SignUpGroup.objects.count() == 1
+    assert SignUp.objects.count() == 2
+
+
+@pytest.mark.django_db
+def test_regular_user_cannot_delete_signup_group(user_api_client, registration, user):
+    default_organization = user.get_default_organization()
+    default_organization.admin_users.remove(user)
+    default_organization.regular_users.add(user)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(signup_group=signup_group, registration=registration)
+    SignUpFactory(signup_group=signup_group, registration=registration)
+
+    assert SignUpGroup.objects.count() == 1
+    assert SignUp.objects.count() == 2
+
+    response = delete_signup_group(user_api_client, signup_group.id)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    assert SignUpGroup.objects.count() == 1
+    assert SignUp.objects.count() == 2
+
+
+@pytest.mark.django_db
+def test_registration_user_access_cannot_delete_signup_group(
+    user_api_client, registration, user
+):
+    user.get_default_organization().admin_users.remove(user)
+    RegistrationUserAccessFactory(registration=registration, email=user.email)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(signup_group=signup_group, registration=registration)
+    SignUpFactory(signup_group=signup_group, registration=registration)
+
+    assert SignUpGroup.objects.count() == 1
+    assert SignUp.objects.count() == 2
+
+    response = delete_signup_group(user_api_client, signup_group.id)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    assert SignUpGroup.objects.count() == 1
+    assert SignUp.objects.count() == 2
 
 
 @pytest.mark.parametrize(
@@ -81,7 +144,10 @@ def test_email_sent_on_successful_signup_group_deletion(
     registration,
     service_language,
     user_api_client,
+    user,
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     service_lang = LanguageFactory(id=service_language, service_language=True)
 
     signup_group = SignUpGroupFactory(registration=registration)
@@ -132,7 +198,10 @@ def test_signup_group_cancellation_confirmation_template_has_correct_text_per_ev
     expected_text,
     registration,
     user_api_client,
+    user,
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     service_lang = LanguageFactory(pk="en", service_language=True)
 
     signup_group = SignUpGroupFactory(registration=registration)
@@ -162,7 +231,11 @@ def test_signup_group_cancellation_confirmation_template_has_correct_text_per_ev
 
 
 @pytest.mark.django_db
-def test_cannot_delete_already_deleted_signup_group(user_api_client, registration):
+def test_cannot_delete_already_deleted_signup_group(
+    user_api_client, registration, user
+):
+    user.get_default_organization().registration_admin_users.add(user)
+
     signup_group = SignUpGroupFactory(registration=registration)
 
     assert_delete_signup_group(user_api_client, signup_group.id)
@@ -171,32 +244,7 @@ def test_cannot_delete_already_deleted_signup_group(user_api_client, registratio
 
 
 @pytest.mark.django_db
-def test_non_admin_cannot_delete_signup(user, user_api_client, registration):
-    signup_group = SignUpGroupFactory(registration=registration)
-
-    default_org = user.get_default_organization()
-    default_org.regular_users.add(user)
-    default_org.admin_users.remove(user)
-
-    response = delete_signup_group(user_api_client, signup_group.id)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
-
-@pytest.mark.django_db
-def test__registration_user_access_cannot_delete_signup_group(
-    registration, user, user_api_client
-):
-    signup_group = SignUpGroupFactory(registration=registration)
-
-    user.get_default_organization().admin_users.remove(user)
-    RegistrationUserAccessFactory(registration=registration, email=user.email)
-
-    response = delete_signup_group(user_api_client, signup_group.id)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
-
-@pytest.mark.django_db
-def test_created_authenticated_user_can_delete_signup(
+def test_created_authenticated_user_can_delete_signup_group(
     user_api_client, user, registration
 ):
     signup_group = SignUpGroupFactory(registration=registration, created_by=user)
@@ -209,7 +257,7 @@ def test_created_authenticated_user_can_delete_signup(
 
 
 @pytest.mark.django_db
-def test_created_not_authenticated_user_cannot_delete_signup(
+def test_created_not_authenticated_user_cannot_delete_signup_group(
     user_api_client, user, organization
 ):
     signup_group = SignUpGroupFactory(
@@ -227,7 +275,7 @@ def test_created_not_authenticated_user_cannot_delete_signup(
 
 
 @pytest.mark.django_db
-def test_api_key_with_organization_can_delete_signup(
+def test_api_key_with_organization_and_user_editable_registrations_can_delete_signup_group(
     api_client,
     data_source,
     organization,
@@ -238,14 +286,15 @@ def test_api_key_with_organization_can_delete_signup(
     )
 
     data_source.owner = organization
-    data_source.save(update_fields=["owner"])
+    data_source.user_editable_registrations = True
+    data_source.save(update_fields=["owner", "user_editable_registrations"])
     api_client.credentials(apikey=data_source.api_key)
 
     assert_delete_signup_group(api_client, signup_group.id)
 
 
 @pytest.mark.django_db
-def test_api_key_of_other_organization_cannot_delete_signup(
+def test_api_key_of_other_organization_and_user_editable_registrations_cannot_delete_signup_group(
     api_client, data_source, organization2, organization
 ):
     signup_group = SignUpGroupFactory(
@@ -254,7 +303,8 @@ def test_api_key_of_other_organization_cannot_delete_signup(
     )
 
     data_source.owner = organization2
-    data_source.save(update_fields=["owner"])
+    data_source.user_editable_registrations = True
+    data_source.save(update_fields=["owner", "user_editable_registrations"])
     api_client.credentials(apikey=data_source.api_key)
 
     response = delete_signup_group(api_client, signup_group.id)
@@ -262,7 +312,7 @@ def test_api_key_of_other_organization_cannot_delete_signup(
 
 
 @pytest.mark.django_db
-def test_api_key_from_wrong_data_source_cannot_delete_signup(
+def test_api_key_from_wrong_data_source_cannot_delete_signup_group(
     api_client, organization, other_data_source
 ):
     signup_group = SignUpGroupFactory(
@@ -271,7 +321,8 @@ def test_api_key_from_wrong_data_source_cannot_delete_signup(
     )
 
     other_data_source.owner = organization
-    other_data_source.save(update_fields=["owner"])
+    other_data_source.user_editable_registrations = True
+    other_data_source.save(update_fields=["owner", "user_editable_registrations"])
     api_client.credentials(apikey=other_data_source.api_key)
 
     response = delete_signup_group(api_client, signup_group.id)
@@ -279,7 +330,7 @@ def test_api_key_from_wrong_data_source_cannot_delete_signup(
 
 
 @pytest.mark.django_db
-def test_unknown_api_key_cannot_delete_signup(api_client, organization):
+def test_unknown_api_key_cannot_delete_signup_group(api_client, organization):
     signup_group = SignUpGroupFactory(registration__event__publisher=organization)
 
     api_client.credentials(apikey="unknown")
@@ -292,6 +343,8 @@ def test_unknown_api_key_cannot_delete_signup(api_client, organization):
 def test_user_editable_resources_can_delete_signup_group(
     data_source, organization, user, user_api_client
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     signup_group = SignUpGroupFactory(
         registration__event__publisher=organization,
         registration__event__data_source=data_source,
@@ -306,8 +359,10 @@ def test_user_editable_resources_can_delete_signup_group(
 
 @pytest.mark.django_db
 def test_non_user_editable_resources_cannot_delete_signup_group(
-    data_source, organization, user_api_client
+    data_source, organization, user, user_api_client
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     signup_group = SignUpGroupFactory(
         registration__event__publisher=organization,
         registration__event__data_source=data_source,
@@ -323,8 +378,10 @@ def test_non_user_editable_resources_cannot_delete_signup_group(
 
 @pytest.mark.django_db
 def test_signup_group_deletion_leads_to_changing_status_of_first_waitlisted_user(
-    user_api_client, registration
+    user_api_client, registration, user
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     registration.maximum_attendee_capacity = 1
     registration.save(update_fields=["maximum_attendee_capacity"])
 
@@ -387,7 +444,10 @@ def test_signup_group_send_email_when_moving_participant_from_waitlist(
     expected_text,
     registration,
     service_language,
+    user,
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     service_lang = LanguageFactory(pk=service_language, service_language=True)
 
     with translation.override(service_language):
@@ -451,7 +511,10 @@ def test_signup_group_transferred_as_participant_template_has_correct_text_per_e
     expected_subject,
     expected_text,
     registration,
+    user,
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     service_lang = LanguageFactory(pk="en", service_language=True)
 
     registration.event.type_id = event_type
