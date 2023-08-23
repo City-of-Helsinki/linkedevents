@@ -250,6 +250,27 @@ class Registration(CreatedModifiedBaseModel):
         )
 
 
+class SignUpGroup(CreatedModifiedBaseModel):
+    @cached_property
+    def data_source(self):
+        return self.signups.first().registration.data_source
+
+    @cached_property
+    def publisher(self):
+        return self.signups.first().registration.publisher
+
+    def can_be_edited_by(self, user):
+        """Check if the current signup group can be edited by the given user"""
+        return (
+            user.is_superuser
+            or user.is_admin_of(self.publisher)
+            or user.id == self.created_by_id
+        )
+
+    def is_user_editable_resources(self):
+        return bool(self.data_source and self.data_source.user_editable_resources)
+
+
 class SignUp(CreatedModifiedBaseModel):
     class AttendeeStatus:
         WAITING_LIST = "waitlisted"
@@ -285,6 +306,16 @@ class SignUp(CreatedModifiedBaseModel):
     registration = models.ForeignKey(
         Registration, on_delete=models.PROTECT, related_name="signups"
     )
+
+    signup_group = models.ForeignKey(
+        SignUpGroup,
+        on_delete=models.CASCADE,
+        related_name="signups",
+        blank=True,
+        null=True,
+    )
+    responsible_for_group = models.BooleanField(default=False)
+
     first_name = models.CharField(
         verbose_name=_("First name"),
         max_length=50,
