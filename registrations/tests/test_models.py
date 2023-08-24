@@ -162,7 +162,7 @@ class TestSignUp(TestCase):
         self.assertTrue(can_be_edited)
 
     def test_get_service_language_pk(self):
-        sv = Language(
+        sv = Language.objects.create(
             name="Swedish",
             pk="sv",
         )
