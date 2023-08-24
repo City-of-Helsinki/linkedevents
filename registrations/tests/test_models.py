@@ -86,7 +86,7 @@ class TestSignUpGroup(TestCase):
             event=cls.event,
         )
 
-        cls.signup_group = SignUpGroup.objects.create()
+        cls.signup_group = SignUpGroup.objects.create(registration=cls.registration)
         SignUp.objects.create(
             registration=cls.registration,
             signup_group=cls.signup_group,

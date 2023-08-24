@@ -250,17 +250,17 @@ class Registration(CreatedModifiedBaseModel):
         )
 
 
-class SignUpGroup(CreatedModifiedBaseModel):
-    @cached_property
+class SignUpMixin:
+    @property
     def data_source(self):
-        return self.signups.first().registration.data_source
+        return self.registration.data_source
 
-    @cached_property
+    @property
     def publisher(self):
-        return self.signups.first().registration.publisher
+        return self.registration.publisher
 
     def can_be_edited_by(self, user):
-        """Check if the current signup group can be edited by the given user"""
+        """Check if the current signup can be edited by the given user"""
         return (
             user.is_superuser
             or user.is_admin_of(self.publisher)
@@ -271,7 +271,13 @@ class SignUpGroup(CreatedModifiedBaseModel):
         return bool(self.data_source and self.data_source.user_editable_resources)
 
 
-class SignUp(CreatedModifiedBaseModel):
+class SignUpGroup(CreatedModifiedBaseModel, SignUpMixin):
+    registration = models.ForeignKey(
+        Registration, on_delete=models.PROTECT, related_name="signup_groups"
+    )
+
+
+class SignUp(CreatedModifiedBaseModel, SignUpMixin):
     class AttendeeStatus:
         WAITING_LIST = "waitlisted"
         ATTENDING = "attending"
@@ -410,25 +416,6 @@ class SignUp(CreatedModifiedBaseModel):
         choices=PRESENCE_STATUSES,
         default=PresenceStatus.NOT_PRESENT,
     )
-
-    @property
-    def data_source(self):
-        return self.registration.data_source
-
-    @property
-    def publisher(self):
-        return self.registration.publisher
-
-    def can_be_edited_by(self, user):
-        """Check if current signup can be edited by the given user"""
-        return (
-            user.is_superuser
-            or user.is_admin_of(self.publisher)
-            or user.id == self.created_by_id
-        )
-
-    def is_user_editable_resources(self):
-        return bool(self.data_source and self.data_source.user_editable_resources)
 
     def get_service_language_pk(self):
         if self.service_language:
