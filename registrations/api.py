@@ -42,7 +42,6 @@ from registrations.serializers import (
     SignUpGroupCreateSerializer,
     SignUpGroupSerializer,
     SignUpSerializer,
-    SignUpSerializerForRegistrationUser,
 )
 from registrations.utils import send_mass_html_mail
 
@@ -381,15 +380,6 @@ class SignUpViewSet(
     filter_backends = [SignUpFilterBackend]
     filterset_class = SignUpFilter
     permission_classes = [CanAccessSignup]
-
-    def get_serializer_class(self):
-        if (
-            self.action in ("update", "partial_update")
-            and self.request.user.id == self.get_object().created_by_id
-        ):
-            # Allow the "registration user" to only update some of the signup data.
-            return SignUpSerializerForRegistrationUser
-        return super().get_serializer_class()
 
     def create(self, request, *args, **kwargs):
         context = super().get_serializer_context()

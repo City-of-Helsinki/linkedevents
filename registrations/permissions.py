@@ -66,4 +66,18 @@ class CanAccessSignup(UserDataFromRequestMixin, permissions.BasePermission):
         if request.method == "DELETE":
             return obj.can_be_deleted_by(request.user)
 
+        if request.method in ("PUT", "PATCH"):
+            if obj.registration.registration_user_accesses.filter(
+                email=request.user.email
+            ).exists():
+                data_keys = request.data.keys()
+                data_keys_length = len(data_keys)
+                return data_keys_length == 1 and "presence_status" in data_keys
+            elif (
+                obj.created_by_id == request.user.id
+                and not request.user.is_superuser
+                and not request.user.is_registration_admin_of(obj.publisher)
+            ):
+                return "presence_status" not in request.data.keys()
+
         return obj.can_be_edited_by(request.user)
