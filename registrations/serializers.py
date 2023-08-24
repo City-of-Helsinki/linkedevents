@@ -15,6 +15,7 @@ from registrations.models import (
     Registration,
     SeatReservationCode,
     SignUp,
+    SignUpGroup,
     SignUpNotificationType,
 )
 from registrations.utils import code_validity_duration
@@ -50,6 +51,7 @@ class SignUpSerializer(serializers.ModelSerializer):
     last_modified_by = serializers.StringRelatedField(required=False, allow_null=True)
 
     def create(self, validated_data):
+        print("SignUpSerializer.create called!")
         validated_data["created_by"] = self.context["request"].user
         validated_data["last_modified_by"] = self.context["request"].user
 
@@ -306,6 +308,66 @@ class CreateSignUpsSerializer(serializers.Serializer):
             )
         data = super().validate(data)
         return data
+
+
+class SignUpGroupCreateSerializer(serializers.ModelSerializer, CreateSignUpsSerializer):
+    reservation_code = serializers.CharField(write_only=True)
+    attending = serializers.SerializerMethodField(read_only=True)
+    waitlisted = serializers.SerializerMethodField(read_only=True)
+
+    def get_attending(self, obj):
+        attending = obj.signups.filter(attendee_status=SignUp.AttendeeStatus.ATTENDING)
+        return {
+            "count": attending.count(),
+            "people": SignUpSerializer(attending, many=True).data,
+        }
+
+    def get_waitlisted(self, obj):
+        waitlisted = obj.signups.filter(
+            attendee_status=SignUp.AttendeeStatus.WAITING_LIST
+        )
+        return {
+            "count": waitlisted.count(),
+            "people": SignUpSerializer(waitlisted, many=True).data,
+        }
+
+    def create(self, validated_data):
+        validated_data["created_by"] = self.context["request"].user
+        validated_data["last_modified_by"] = self.context["request"].user
+
+        validated_data.pop("reservation_code")
+        reservation = validated_data.pop("reservation")
+        signups_data = validated_data.pop("signups")
+        instance = super().create(validated_data)
+
+        signups = []
+        for signup_data in signups_data:
+            signup_data["signup_group"] = instance
+            signups.append(SignUp(**signup_data))
+        SignUp.objects.bulk_create(signups)
+
+        reservation.delete()
+
+        return instance
+
+    class Meta:
+        fields = (
+            "id",
+            "registration",
+            "signups",
+            "reservation_code",
+            "attending",
+            "waitlisted",
+        )
+        model = SignUpGroup
+
+
+class SignUpGroupSerializer(serializers.ModelSerializer):
+    signups = SignUpSerializer(many=True)
+
+    class Meta:
+        fields = "__all__"
+        model = SignUpGroup
 
 
 class SeatReservationCodeSerializer(serializers.ModelSerializer):

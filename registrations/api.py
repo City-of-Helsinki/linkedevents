@@ -32,6 +32,7 @@ from registrations.models import (
     Registration,
     SeatReservationCode,
     SignUp,
+    SignUpGroup,
     SignUpNotificationType,
 )
 from registrations.permissions import CanCreateEditDeleteSignup
@@ -39,6 +40,8 @@ from registrations.serializers import (
     CreateSignUpsSerializer,
     MassEmailSerializer,
     SeatReservationCodeSerializer,
+    SignUpGroupCreateSerializer,
+    SignUpGroupSerializer,
     SignUpSerializer,
 )
 from registrations.utils import get_ui_locales, send_mass_html_mail
@@ -200,7 +203,6 @@ class SignUpViewSet(
 ):
     serializer_class = SignUpSerializer
     queryset = SignUp.objects.all()
-
     permission_classes = [CanCreateEditDeleteSignup & DataSourceResourceEditPermission]
 
     def create(self, request, *args, **kwargs):
@@ -320,6 +322,20 @@ class SignUpViewSet(
 
 
 register_view(SignUpViewSet, "signup")
+
+
+class SignUpGroupViewSet(UserDataSourceAndOrganizationMixin, viewsets.ModelViewSet):
+    serializer_class = SignUpGroupSerializer
+    queryset = SignUpGroup.objects.all()
+    permission_classes = [CanCreateEditDeleteSignup & DataSourceResourceEditPermission]
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return SignUpGroupCreateSerializer
+        return super().get_serializer_class()
+
+
+register_view(SignUpGroupViewSet, "signup_group")
 
 
 class SeatReservationViewSet(
