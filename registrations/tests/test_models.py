@@ -1,35 +1,36 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
-from django_orghierarchy.models import Organization
 
-from events.models import DataSource, Event, Language
-from registrations.models import Registration, SignUp, SignUpGroup
+from events.models import Language
+from events.tests.factories import DataSourceFactory, OrganizationFactory
+from registrations.tests.factories import (
+    RegistrationFactory,
+    SignUpFactory,
+    SignUpGroupFactory,
+)
 
 
 class TestRegistration(TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpTestData(cls):
         user_model = get_user_model()
-        self.user = user_model.objects.create(username="testuser")
+        cls.user = user_model.objects.create(username="testuser")
 
-        self.data_source = DataSource.objects.create(
+        cls.data_source = DataSourceFactory(
             id="ds",
             name="data-source",
             api_key="test_api_key",
             user_editable_resources=True,
         )
-        self.org = Organization.objects.create(
+        cls.org = OrganizationFactory(
             name="org",
             origin_id="org",
-            data_source=self.data_source,
+            data_source=cls.data_source,
         )
-        self.event = Event.objects.create(
-            id="ds:event",
-            name="event",
-            data_source=self.data_source,
-            publisher=self.org,
-        )
-        self.registration = Registration.objects.create(
-            event=self.event,
+
+        cls.registration = RegistrationFactory(
+            event__publisher=cls.org,
+            event__data_source=cls.data_source,
         )
 
     def test_can_be_edited_by_super_user(self):
@@ -62,34 +63,22 @@ class TestSignUpGroup(TestCase):
         user_model = get_user_model()
         cls.user = user_model.objects.create(username="testuser")
 
-        cls.data_source = DataSource.objects.create(
+        cls.data_source = DataSourceFactory(
             id="ds",
             name="data-source",
             api_key="test_api_key",
             user_editable_resources=True,
         )
 
-        cls.org = Organization.objects.create(
+        cls.org = OrganizationFactory(
             name="org",
             origin_id="org",
             data_source=cls.data_source,
         )
 
-        cls.event = Event.objects.create(
-            id="ds:event",
-            name="event",
-            data_source=cls.data_source,
-            publisher=cls.org,
-        )
-
-        cls.registration = Registration.objects.create(
-            event=cls.event,
-        )
-
-        cls.signup_group = SignUpGroup.objects.create(registration=cls.registration)
-        SignUp.objects.create(
-            registration=cls.registration,
-            signup_group=cls.signup_group,
+        cls.signup_group = SignUpGroupFactory(
+            registration__event__publisher=cls.org,
+            registration__event__data_source=cls.data_source,
         )
 
     def test_can_be_edited_by_super_user(self):
@@ -127,32 +116,26 @@ class TestSignUpGroup(TestCase):
 
 
 class TestSignUp(TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpTestData(cls):
         user_model = get_user_model()
-        self.user = user_model.objects.create(username="testuser")
+        cls.user = user_model.objects.create(username="testuser")
 
-        self.data_source = DataSource.objects.create(
+        cls.data_source = DataSourceFactory(
             id="ds",
             name="data-source",
             api_key="test_api_key",
             user_editable_resources=True,
         )
-        self.org = Organization.objects.create(
+        cls.org = OrganizationFactory(
             name="org",
             origin_id="org",
-            data_source=self.data_source,
+            data_source=cls.data_source,
         )
-        self.event = Event.objects.create(
-            id="ds:event",
-            name="event",
-            data_source=self.data_source,
-            publisher=self.org,
-        )
-        self.registration = Registration.objects.create(
-            event=self.event,
-        )
-        self.signup = SignUp.objects.create(
-            registration=self.registration,
+
+        cls.signup = SignUpFactory(
+            registration__event__publisher=cls.org,
+            registration__event__data_source=cls.data_source,
         )
 
     def test_can_be_edited_by_super_user(self):
@@ -179,7 +162,7 @@ class TestSignUp(TestCase):
         self.assertTrue(can_be_edited)
 
     def test_get_service_language_pk(self):
-        sv = Language.objects.create(
+        sv = Language(
             name="Swedish",
             pk="sv",
         )
