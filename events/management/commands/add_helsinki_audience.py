@@ -34,6 +34,7 @@ YSO_SOTE_KEYWORD_IDS = [
 ]
 
 EXTRA_AUDIENCE_KEYWORD_IDS = [
+    "yso:p7708",  # työttömät
     "yso:p16596",  # matkailijat
 ]
 
