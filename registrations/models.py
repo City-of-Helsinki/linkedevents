@@ -275,6 +275,12 @@ class SignUpGroup(CreatedModifiedBaseModel, SignUpMixin):
     registration = models.ForeignKey(
         Registration, on_delete=models.PROTECT, related_name="signup_groups"
     )
+    extra_info = models.TextField(
+        verbose_name=_("Extra info"),
+        blank=True,
+        null=True,
+        default=None,
+    )
 
 
 class SignUp(CreatedModifiedBaseModel, SignUpMixin):
