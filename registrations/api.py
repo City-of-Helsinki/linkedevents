@@ -4,6 +4,7 @@ from smtplib import SMTPException
 import bleach
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
+from django.db import transaction
 from django.db.models import ProtectedError, Q, Value
 from django.db.models.functions import Concat
 from django.template.loader import render_to_string
@@ -324,7 +325,12 @@ class SignUpViewSet(
 register_view(SignUpViewSet, "signup")
 
 
-class SignUpGroupViewSet(UserDataSourceAndOrganizationMixin, viewsets.ModelViewSet):
+class SignUpGroupViewSet(
+    UserDataSourceAndOrganizationMixin,
+    mixins.CreateModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet,
+):
     serializer_class = SignUpGroupSerializer
     queryset = SignUpGroup.objects.all()
     permission_classes = [CanCreateEditDeleteSignup & DataSourceResourceEditPermission]
@@ -333,6 +339,15 @@ class SignUpGroupViewSet(UserDataSourceAndOrganizationMixin, viewsets.ModelViewS
         if self.action == "create":
             return SignUpGroupCreateSerializer
         return super().get_serializer_class()
+
+    @transaction.atomic
+    def create(self, request, *args, **kwargs):
+        data = request.data
+        registration = data.get("registration")
+        if registration and data.get("signups"):
+            for signup_data in data["signups"]:
+                signup_data["registration"] = registration
+        return super().create(request, *args, **kwargs)
 
 
 register_view(SignUpGroupViewSet, "signup_group")

@@ -51,7 +51,6 @@ class SignUpSerializer(serializers.ModelSerializer):
     last_modified_by = serializers.StringRelatedField(required=False, allow_null=True)
 
     def create(self, validated_data):
-        print("SignUpSerializer.create called!")
         validated_data["created_by"] = self.context["request"].user
         validated_data["last_modified_by"] = self.context["request"].user
 
@@ -73,9 +72,8 @@ class SignUpSerializer(serializers.ModelSerializer):
         elif (waiting_list_capacity is None) or (
             already_waitlisted < waiting_list_capacity
         ):
+            validated_data["attendee_status"] = SignUp.AttendeeStatus.WAITING_LIST
             signup = super().create(validated_data)
-            signup.attendee_status = SignUp.AttendeeStatus.WAITING_LIST
-            signup.save()
             signup.send_notification(
                 SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST
             )
@@ -338,13 +336,13 @@ class SignUpGroupCreateSerializer(serializers.ModelSerializer, CreateSignUpsSeri
         validated_data.pop("reservation_code")
         reservation = validated_data.pop("reservation")
         signups_data = validated_data.pop("signups")
+
         instance = super().create(validated_data)
 
-        signups = []
         for signup_data in signups_data:
             signup_data["signup_group"] = instance
-            signups.append(SignUp(**signup_data))
-        SignUp.objects.bulk_create(signups)
+            signup_serializer = SignUpSerializer(data=signup_data, context=self.context)
+            signup_serializer.create(signup_data)
 
         reservation.delete()
 
@@ -356,6 +354,7 @@ class SignUpGroupCreateSerializer(serializers.ModelSerializer, CreateSignUpsSeri
             "registration",
             "signups",
             "reservation_code",
+            "extra_info",
             "attending",
             "waitlisted",
         )
@@ -363,6 +362,7 @@ class SignUpGroupCreateSerializer(serializers.ModelSerializer, CreateSignUpsSeri
 
 
 class SignUpGroupSerializer(serializers.ModelSerializer):
+    view_name = "signupgroup-detail"
     signups = SignUpSerializer(many=True)
 
     class Meta:
