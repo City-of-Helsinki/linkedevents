@@ -31,3 +31,16 @@ class CanCreateEditDeleteSignup(permissions.BasePermission):
                 return False
 
         return obj.can_be_edited_by(request.user)
+
+
+class RegistrationUserAccessRetrievePermission(permissions.BasePermission):
+    def has_permission(self, request, view):
+        # Only authenticated users can get object
+        return view.action == "retrieve" and request.user.is_authenticated
+
+    def has_object_permission(self, request: Request, view, obj):
+        user = request.user
+
+        return obj.registration.registration_user_accesses.filter(
+            email=user.email
+        ).exists()

@@ -5,7 +5,7 @@ from rest_framework import status
 
 from events.models import Event, Language
 from events.tests.utils import versioned_reverse as reverse
-from registrations.models import SeatReservationCode, SignUp
+from registrations.models import RegistrationUserAccess, SeatReservationCode, SignUp
 from registrations.tests.test_signup_post import assert_create_signups
 
 # === util methods ===
@@ -135,7 +135,18 @@ def test__cannot_delete_already_deleted_signup(signup, user_api_client):
 
 
 @pytest.mark.django_db
-def test__non_admin_cannot_delete_signup(signup, user, user_api_client):
+def test__registration_user_access_cannot_delete_signup(
+    registration, signup, user, user_api_client
+):
+    user.get_default_organization().admin_users.remove(user)
+    RegistrationUserAccess.objects.create(registration=registration, email=user.email)
+
+    response = delete_signup(user_api_client, signup.id)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test__regular_user_cannot_delete_signup(signup, user, user_api_client):
     user.get_default_organization().regular_users.add(user)
     user.get_default_organization().admin_users.remove(user)
 

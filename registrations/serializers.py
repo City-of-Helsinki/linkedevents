@@ -1,7 +1,6 @@
 from datetime import timedelta
 
 import pytz
-from django.contrib.auth.models import AnonymousUser
 from django.utils.timezone import localdate, localtime
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
@@ -13,6 +12,7 @@ from events.models import Language
 from registrations.exceptions import ConflictException
 from registrations.models import (
     Registration,
+    RegistrationUserAccess,
     SeatReservationCode,
     SignUp,
     SignUpNotificationType,
@@ -166,6 +166,26 @@ class SignUpSerializer(serializers.ModelSerializer):
         model = SignUp
 
 
+class RegistrationUserAccessIdField(serializers.PrimaryKeyRelatedField):
+    def get_queryset(self):
+        registration_id = self.context["request"].parser_context["kwargs"]["pk"]
+        return RegistrationUserAccess.objects.filter(registration__pk=registration_id)
+
+
+class RegistrationUserAccessSerializer(serializers.ModelSerializer):
+    id = RegistrationUserAccessIdField(required=False, allow_null=True)
+
+    language = serializers.PrimaryKeyRelatedField(
+        queryset=Language.objects.filter(service_language=True),
+        required=False,
+        allow_null=True,
+    )
+
+    class Meta:
+        model = RegistrationUserAccess
+        fields = ["id", "email", "language"]
+
+
 # Don't use this serializer directly but use events.api.RegistrationSerializer instead.
 # Implement methods to mutate and validate Registration in events.api.RegistrationSerializer
 class RegistrationBaseSerializer(serializers.ModelSerializer):
@@ -185,6 +205,10 @@ class RegistrationBaseSerializer(serializers.ModelSerializer):
 
     publisher = serializers.SerializerMethodField()
 
+    registration_user_accesses = RegistrationUserAccessSerializer(
+        many=True, required=False
+    )
+
     created_time = DateTimeField(
         default_timezone=pytz.UTC, required=False, allow_null=True
     )
@@ -203,16 +227,14 @@ class RegistrationBaseSerializer(serializers.ModelSerializer):
         if "signups" in params.get("include", "").split(","):
             #  only the organization admins should be able to access the signup information
             user = self.context["user"]
-            event = obj.event
-            if not isinstance(user, AnonymousUser) and user.is_admin_of(
-                event.publisher
+            if not user.is_anonymous and (
+                user.is_admin_of(obj.event.publisher)
+                or obj.registration_user_accesses.filter(email=user.email).exists()
             ):
-                queryset = SignUp.objects.filter(registration__id=obj.id)
-                return SignUpSerializer(queryset, many=True, read_only=True).data
+                signups = obj.signups.all()
+                return SignUpSerializer(signups, many=True, read_only=True).data
             else:
-                return _(
-                    "Only the admins of the organization that published the event {event_id} have access rights."
-                ).format(event_id=event.id)
+                return None
         else:
             return None
 
