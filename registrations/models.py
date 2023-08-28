@@ -241,6 +241,22 @@ class Registration(CreatedModifiedBaseModel):
             waiting_list_capacity - waiting_list_count - reserved_seats_amount, 0
         )
 
+    def move_first_waitlisted_to_attending(self):
+        waitlisted = (
+            self.signups.filter(
+                attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
+            )
+            .select_for_update()
+            .order_by("id")
+        )
+        if waitlisted.count() > 0:
+            first_on_list = waitlisted[0]
+            first_on_list.attendee_status = SignUp.AttendeeStatus.ATTENDING
+            first_on_list.save(update_fields=["attendee_status"])
+            first_on_list.send_notification(
+                SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT
+            )
+
     def can_be_edited_by(self, user):
         """Check if current registration can be edited by the given user"""
         if user.is_superuser:
@@ -284,6 +300,15 @@ class SignUpGroup(CreatedModifiedBaseModel, SignUpMixin):
         null=True,
         default=None,
     )
+
+    @cached_property
+    def responsible_signups(self):
+        return self.signups.filter(responsible_for_group=True)
+
+    def send_notification(self, notification_type):
+        signups = self.responsible_signups or self.signups.all()
+        for signup in signups:
+            signup.send_notification(notification_type)
 
 
 class RegistrationUserAccess(models.Model):
