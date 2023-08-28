@@ -791,17 +791,17 @@ msgstr "Välkommen %(username)s"
 #: registrations/templates/signup_confirmation.html:14
 #, python-format
 msgid "Registration to the event %(event)s has been saved."
-msgstr "Anmälan till evenemanget %(event)s väntelista har sparats."
+msgstr "Anmälan till evenemanget %(event)s har sparats."
 
 #: registrations/templates/signup_confirmation.html:17
 #, python-format
 msgid "Registration to the course %(event)s has been saved."
-msgstr "Anmälan till kursen %(event)s väntelista har sparats."
+msgstr "Anmälan till kursen %(event)s har sparats."
 
 #: registrations/templates/signup_confirmation.html:20
 #, python-format
 msgid "Registration to the volunteering %(event)s has been saved."
-msgstr "Anmälan till volontärarbetet %(event)s väntelista har sparats."
+msgstr "Anmälan till volontärarbetet %(event)s har sparats."
 
 #: registrations/templates/signup_confirmation.html:28
 #, python-format

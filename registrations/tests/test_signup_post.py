@@ -537,13 +537,13 @@ def test_group_signup_successful_with_waitlist(user_api_client, registration):
         (
             "fi",
             "Vahvistus ilmoittautumisesta",
-            "Ilmoittautuminen tapahtuman Foo jonotuslistaan on tallennettu.",
+            "Ilmoittautuminen tapahtumaan Foo on tallennettu.",
             "Onnittelut! Olet onnistuneesti ilmoittautunut tapahtumaan <strong>Foo</strong>.",
         ),
         (
             "sv",
             "Bekräftelse av registrering",
-            "Anmälan till evenemanget Foo väntelista har sparats.",
+            "Anmälan till evenemanget Foo har sparats.",
             "Grattis! Du har framgångsrikt registrerat dig till evenemanget <strong>Foo</strong>.",
         ),
     ],
