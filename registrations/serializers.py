@@ -248,12 +248,6 @@ class CreateSignUpsSerializer(serializers.Serializer):
     )
     signups = SignUpSerializer(many=True, required=True)
 
-    def create(self, validated_data):
-        validated_data["created_by"] = self.context["request"].user
-        validated_data["last_modified_by"] = self.context["request"].user
-        instance = super().create(validated_data)
-        return instance
-
     def validate(self, data):
         reservation_code = data["reservation_code"]
         registration = data["registration"]
