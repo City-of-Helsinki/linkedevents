@@ -331,6 +331,7 @@ class SignUpGroupViewSet(
     mixins.CreateModelMixin,
     mixins.RetrieveModelMixin,
     mixins.DestroyModelMixin,
+    mixins.UpdateModelMixin,
     viewsets.GenericViewSet,
 ):
     serializer_class = SignUpGroupSerializer
@@ -342,14 +343,34 @@ class SignUpGroupViewSet(
             return SignUpGroupCreateSerializer
         return super().get_serializer_class()
 
+    def _ensure_shared_request_data(self, data):
+        if self.action == "partial_update":
+            registration_id = data.get(
+                "registration", self.get_object().registration_id
+            )
+        else:
+            registration_id = data.get("registration")
+
+        if not registration_id or not data.get("signups"):
+            return
+
+        for signup_data in data["signups"]:
+            signup_data["registration"] = registration_id
+
     @transaction.atomic
     def create(self, request, *args, **kwargs):
-        data = request.data
-        registration = data.get("registration")
-        if registration and data.get("signups"):
-            for signup_data in data["signups"]:
-                signup_data["registration"] = registration
+        self._ensure_shared_request_data(request.data)
         return super().create(request, *args, **kwargs)
+
+    @transaction.atomic
+    def update(self, request, *args, **kwargs):
+        self._ensure_shared_request_data(request.data)
+        return super().update(request, *args, **kwargs)
+
+    @transaction.atomic
+    def partial_update(self, request, *args, **kwargs):
+        self._ensure_shared_request_data(request.data)
+        return super().partial_update(request, *args, **kwargs)
 
     @transaction.atomic
     def destroy(self, request, *args, **kwargs):

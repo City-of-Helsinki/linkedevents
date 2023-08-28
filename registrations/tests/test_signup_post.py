@@ -11,6 +11,11 @@ from rest_framework import status
 from events.models import Event, Language
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import MandatoryFields, SeatReservationCode, SignUp
+from registrations.tests.factories import (
+    SeatReservationCodeFactory,
+    SignUpFactory,
+    SignUpGroupFactory,
+)
 
 # === util methods ===
 
@@ -78,8 +83,72 @@ def test_successful_signup(user_api_client, languages, registration, user):
 
 
 @pytest.mark.django_db
+def test_add_signups_to_group(user_api_client, languages, registration, user):
+    user.get_default_organization().registration_admin_users.add(user)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(signup_group=signup_group, registration=registration)
+
+    assert signup_group.signups.count() == 1
+
+    reservation = SeatReservationCodeFactory(registration=registration, seats=2)
+    signups_data = {
+        "registration": registration.id,
+        "reservation_code": reservation.code,
+        "signups": [
+            {
+                "signup_group": signup_group.id,
+                "first_name": "Michael",
+                "last_name": "Jackson",
+                "date_of_birth": "2011-04-07",
+                "email": "michael@test.com",
+                "phone_number": "0441111111",
+                "notifications": "sms",
+                "service_language": "fi",
+                "native_language": "fi",
+                "street_address": "my street",
+                "zipcode": "myzip1",
+            },
+            {
+                "signup_group": signup_group.id,
+                "first_name": "Mickey",
+                "last_name": "Mouse",
+                "date_of_birth": "1928-05-15",
+                "email": "mickey@test.com",
+                "phone_number": "0441111111",
+                "notifications": "sms",
+                "service_language": "en",
+                "native_language": "en",
+                "street_address": "my street",
+                "zipcode": "myzip1",
+            },
+        ],
+    }
+
+    assert_create_signups(user_api_client, signups_data)
+
+    signup_group.refresh_from_db()
+    assert signup_group.signups.count() == 3
+
+    new_signup0 = signup_group.signups.filter(email="michael@test.com").first()
+    assert new_signup0.registration_id == registration.id
+    assert new_signup0.created_by_id == user.id
+    assert new_signup0.last_modified_by_id == user.id
+    assert new_signup0.created_at is not None
+    assert new_signup0.last_modified_at is not None
+
+    new_signup1 = signup_group.signups.filter(email="mickey@test.com").first()
+    assert new_signup1.registration_id == registration.id
+    assert new_signup1.created_by_id == user.id
+    assert new_signup1.last_modified_by_id == user.id
+    assert new_signup1.created_at is not None
+    assert new_signup1.last_modified_at is not None
+
+
+@pytest.mark.django_db
 def test_cannot_signup_if_not_registration_admin(user_api_client, event, registration):
     reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+
     signups_data = {
         "registration": registration.id,
         "reservation_code": reservation.code,
