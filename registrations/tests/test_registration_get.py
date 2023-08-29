@@ -1,3 +1,5 @@
+from unittest.mock import patch, PropertyMock
+
 import pytest
 from rest_framework import status
 
@@ -93,10 +95,7 @@ def test_regular_user_cannot_see_registration_user_accesses(
     RegistrationUserAccess.objects.create(registration=registration, email=user.email)
     response = get_detail_and_assert_registration(user_api_client, registration.id)
 
-    assert (
-        response.data.get("test_regular_user_cannot_see_registration_user_accesses")
-        == None
-    )
+    assert response.data.get("registration_user_accesses") is None
 
 
 @pytest.mark.django_db
@@ -104,7 +103,7 @@ def test_anonymous_user_cannot_see_registration_user_accesses(api_client, regist
     RegistrationUserAccess.objects.create(registration=registration)
     response = get_detail_and_assert_registration(api_client, registration.id)
 
-    assert response.data.get("registration_user_accesses") == None
+    assert response.data.get("registration_user_accesses") is None
 
 
 @pytest.mark.django_db
@@ -212,16 +211,43 @@ def test_admin_user_can_include_signups(registration, signup, signup2, user_api_
 
 
 @pytest.mark.django_db
-def test_registration_user_access_can_include_signups(
+def test_registration_user_access_can_include_signups_when_strongly_identified(
     registration, signup, signup2, user, user_api_client
 ):
     user.get_default_organization().admin_users.remove(user)
     RegistrationUserAccess.objects.create(registration=registration, email=user.email)
-    response = get_detail_and_assert_registration(
-        user_api_client, registration.id, include_signups_query
-    )
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value="heltunnistussuomifi",
+    ) as mocked:
+        response = get_detail_and_assert_registration(
+            user_api_client, registration.id, include_signups_query
+        )
+        assert mocked.called is True
     response_signups = response.data["signups"]
     assert len(response_signups) == 2
+
+
+@pytest.mark.django_db
+def test_registration_user_access_cannot_include_signups_when_not_strongly_identified(
+    registration, signup, signup2, user, user_api_client
+):
+    user.get_default_organization().admin_users.remove(user)
+    RegistrationUserAccess.objects.create(registration=registration, email=user.email)
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value=None,
+    ) as mocked:
+        response = get_detail_and_assert_registration(
+            user_api_client, registration.id, include_signups_query
+        )
+        assert mocked.called is True
+    response_signups = response.data["signups"]
+    assert response_signups is None
 
 
 @pytest.mark.django_db
@@ -234,7 +260,7 @@ def test_regular_user_cannot_include_signups(
         user_api_client, registration.id, include_signups_query
     )
     response_signups = response.data["signups"]
-    assert response_signups == None
+    assert response_signups is None
 
 
 @pytest.mark.django_db
@@ -245,7 +271,7 @@ def test_anonymous_user_cannot_include_signups(
         api_client, registration.id, include_signups_query
     )
     response_signups = response.data["signups"]
-    assert response_signups == None
+    assert response_signups is None
 
 
 @pytest.mark.django_db

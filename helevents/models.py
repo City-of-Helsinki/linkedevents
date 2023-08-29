@@ -34,6 +34,14 @@ class UserModelPermissionMixin:
     def token_amr_claim(self, value: str):
         self._token_amr_claim = value
 
+    @property
+    def is_strongly_identificated(self):
+        """Check if the user is strongly identificated"""
+        return (
+            self.token_amr_claim
+            in settings.STRONG_IDENTIFICATION_AUTHENTICATION_METHODS
+        )
+
     @cached_property
     def is_external(self):
         """Check if the user is an external user"""

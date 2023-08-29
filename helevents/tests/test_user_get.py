@@ -33,6 +33,7 @@ def assert_user_fields_exist(data, version="v1"):
         "admin_organizations",
         "organization_memberships",
         "is_external",
+        "is_strongly_identificated",
     )
     assert_fields_exist(data, fields)
 

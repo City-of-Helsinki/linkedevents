@@ -41,6 +41,9 @@ class RegistrationUserAccessRetrievePermission(permissions.BasePermission):
     def has_object_permission(self, request: Request, view, obj):
         user = request.user
 
-        return obj.registration.registration_user_accesses.filter(
-            email=user.email
-        ).exists()
+        return (
+            user.is_strongly_identificated
+            and obj.registration.registration_user_accesses.filter(
+                email=user.email
+            ).exists()
+        )
