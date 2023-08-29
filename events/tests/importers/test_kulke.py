@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from events.importer.kulke import KulkeImporter, parse_age_range, parse_course_time
 from events.models import Event, EventAggregate, EventAggregateMember
-from events.tests.factories import EventFactory, KeywordFactory
+from events.tests.factories import DataSourceFactory, EventFactory, KeywordFactory
 
 
 @pytest.mark.django_db
@@ -68,11 +68,12 @@ class TestKulkeImporter(TestCase):
             self.importer = KulkeImporter(options={})
         self.data_source = self.importer.data_source
 
-    def _create_super_event(self, events: list[Event]) -> Event:
+    def _create_super_event(self, events: list[Event], data_source=None) -> Event:
+        data_source = data_source or self.data_source
         aggregate = EventAggregate.objects.create()
         super_event = EventFactory(
             super_event_type=Event.SuperEventType.RECURRING,
-            data_source=self.data_source,
+            data_source=data_source,
             id="linkedevents:agg-{}".format(aggregate.id),
         )
         super_event.save()
@@ -229,7 +230,7 @@ class TestKulkeImporter(TestCase):
 
     @pytest.mark.django_db
     def test__handle_removed_events(self):
-        """Test that removing"""
+        """Test that removing events works as expected"""
         now = timezone.now()
         # Event that exists in the DB but not in  Elis -- will be removed
         event_1 = EventFactory(
@@ -254,6 +255,28 @@ class TestKulkeImporter(TestCase):
         self.assert_event_soft_deleted(event_1.id, True)
         self.assert_event_soft_deleted(event_2.id, False)
         self.assert_event_soft_deleted(event_3.id, False)
+
+    @pytest.mark.django_db
+    def test__handle_removed_events_only_kulke_data_source(self):
+        """Test that removing events only removes events created by kulke importer."""
+        now = timezone.now()
+        other_data_source = DataSourceFactory(id="dontremove")
+        # Event not created by kulke importer, shouldn't be removed.
+        event_1 = EventFactory(
+            data_source=other_data_source, origin_id=1, start_time=now
+        )
+        # Event that exists in Elis -- won't be removed
+        event_2 = EventFactory(
+            data_source=self.data_source, origin_id=2, start_time=now
+        )
+
+        self.importer._handle_removed_events(
+            elis_event_ids=[event_2.origin_id],
+            begin_date=now - timedelta(days=60),
+        )
+
+        self.assert_event_soft_deleted(event_1.id, False)
+        self.assert_event_soft_deleted(event_2.id, False)
 
     @pytest.mark.django_db
     def test__handle_removed_events_superevent(self):
@@ -291,3 +314,44 @@ class TestKulkeImporter(TestCase):
         self.assert_event_soft_deleted(super_2_event_2.id, False)
         self.assert_event_soft_deleted(super_2.id, False)
         self.assert_event_soft_deleted(super_3.id, True)
+
+    @pytest.mark.django_db
+    def test__handle_removed_events_superevent_only_kulke_data_source(self):
+        """Test that removing superevents only removes events created by kulke importer."""
+        now = timezone.now()
+        # This is not kulke super event. It should not be removed.
+        other_data_source = DataSourceFactory(id="dontremove")
+        super_1_event_1 = EventFactory(
+            data_source=other_data_source, origin_id=1, start_time=now
+        )
+        super_1_event_2 = EventFactory(
+            data_source=other_data_source, origin_id=2, start_time=now
+        )
+        super_1 = self._create_super_event(
+            [super_1_event_1, super_1_event_2], other_data_source
+        )
+
+        # This super event is in Elis. It should not be removed.
+        super_2_event_1 = EventFactory(
+            data_source=self.data_source, origin_id=3, start_time=now
+        )
+        super_2_event_2 = EventFactory(
+            data_source=self.data_source, origin_id=4, start_time=now
+        )
+        super_2 = self._create_super_event([super_2_event_1, super_2_event_2])
+
+        # This super event is empty, but it's also not kulke event. It shouldn't be removed.
+        super_3 = self._create_super_event([], other_data_source)
+
+        self.importer._handle_removed_events(
+            elis_event_ids=[super_2_event_1.origin_id, super_2_event_2.origin_id],
+            begin_date=now - timedelta(days=60),
+        )
+
+        self.assert_event_soft_deleted(super_1_event_1.id, False)
+        self.assert_event_soft_deleted(super_1_event_2.id, False)
+        self.assert_event_soft_deleted(super_1.id, False)
+        self.assert_event_soft_deleted(super_2_event_1.id, False)
+        self.assert_event_soft_deleted(super_2_event_2.id, False)
+        self.assert_event_soft_deleted(super_2.id, False)
+        self.assert_event_soft_deleted(super_3.id, False)
