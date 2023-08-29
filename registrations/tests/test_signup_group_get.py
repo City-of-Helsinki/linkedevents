@@ -5,6 +5,7 @@ from rest_framework import status
 
 from events.tests.utils import assert_fields_exist
 from events.tests.utils import versioned_reverse as reverse
+from registrations.models import SignUp
 from registrations.tests.factories import (
     RegistrationUserAccessFactory,
     SignUpFactory,
@@ -26,6 +27,15 @@ def get_detail(api_client, signup_pk, query=None):
     return api_client.get(detail_url)
 
 
+def get_list(api_client, query_string=None):
+    url = reverse("signupgroup-list")
+
+    if query_string:
+        url = "%s?%s" % (url, query_string)
+
+    return api_client.get(url)
+
+
 def assert_get_detail(api_client, signup_pk, query=None):
     response = get_detail(api_client, signup_pk, query)
     assert response.status_code == status.HTTP_200_OK
@@ -40,6 +50,20 @@ def assert_signup_group_fields_exist(data):
         "extra_info",
     )
     assert_fields_exist(data, fields)
+
+
+def assert_signup_groups_in_response(signups, response, query=""):
+    response_signup_ids = {signup["id"] for signup in response.data["data"]}
+    expected_signup_ids = {signup.id for signup in signups}
+    if query:
+        assert response_signup_ids == expected_signup_ids, f"\nquery: {query}"
+    else:
+        assert response_signup_ids == expected_signup_ids
+
+
+def get_list_and_assert_signup_groups(api_client, query, signup_groups):
+    response = get_list(api_client, query_string=query)
+    assert_signup_groups_in_response(signup_groups, response, query)
 
 
 # === tests ===
@@ -191,3 +215,363 @@ def test_api_key_from_wrong_data_source_cannot_get_signup(
 
     response = get_detail(api_client, signup_group.id)
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_admin_user_can_get_signup_group_list(user_api_client, registration):
+    signup_group0 = SignUpGroupFactory(registration=registration)
+    signup_group1 = SignUpGroupFactory(registration=registration)
+
+    get_list_and_assert_signup_groups(
+        user_api_client,
+        f"registration={registration.id}",
+        (signup_group0, signup_group1),
+    )
+
+
+@pytest.mark.django_db
+def test_registration_user_access_can_get_signup_group_list_when_strongly_identified(
+    registration, user, user_api_client
+):
+    signup_group0 = SignUpGroupFactory(registration=registration)
+    signup_group1 = SignUpGroupFactory(registration=registration)
+
+    user.get_default_organization().admin_users.remove(user)
+    RegistrationUserAccessFactory(registration=registration, email=user.email)
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value="heltunnistussuomifi",
+    ) as mocked:
+        get_list_and_assert_signup_groups(
+            user_api_client,
+            f"registration={registration.id}",
+            [signup_group0, signup_group1],
+        )
+        assert mocked.called is True
+
+
+@pytest.mark.django_db
+def test_registration_user_access_cannot_get_signup_group_list_when_not_strongly_identified(
+    registration, user, user_api_client
+):
+    SignUpGroupFactory(registration=registration)
+    SignUpGroupFactory(registration=registration)
+
+    user.get_default_organization().admin_users.remove(user)
+    RegistrationUserAccessFactory(registration=registration, email=user.email)
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value=None,
+    ) as mocked:
+        response = get_list(user_api_client, f"registration={registration.id}")
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert mocked.called is True
+
+
+@pytest.mark.django_db
+def test_anonymous_user_cannot_get_signup_group_list(api_client, registration):
+    SignUpGroupFactory(registration=registration)
+    SignUpGroupFactory(registration=registration)
+
+    response = get_list(api_client, "")
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+@pytest.mark.django_db
+def test_regular_user_cannot_get_signup_group_list(api_client, registration, user):
+    SignUpGroupFactory(registration=registration)
+    SignUpGroupFactory(registration=registration)
+
+    default_org = user.get_default_organization()
+    default_org.regular_users.add(user)
+    default_org.admin_users.remove(user)
+
+    api_client.force_authenticate(user)
+
+    response = get_list(api_client, f"registration={registration.id}")
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_get_all_signup_groups_to_which_user_has_admin_role(
+    api_client, registration, user
+):
+    signup_group0 = SignUpGroupFactory(registration=registration)
+    signup_group1 = SignUpGroupFactory(registration=registration)
+
+    api_client.force_authenticate(user)
+
+    get_list_and_assert_signup_groups(api_client, "", (signup_group0, signup_group1))
+
+    default_org = user.get_default_organization()
+    default_org.regular_users.add(user)
+    default_org.admin_users.remove(user)
+
+    api_client.force_authenticate(user)
+
+    get_list_and_assert_signup_groups(api_client, "", [])
+
+
+@pytest.mark.django_db
+def test_user_from_other_organization_cannot_get_signup_group_list(
+    api_client, registration, user2
+):
+    SignUpGroupFactory(registration=registration)
+    SignUpGroupFactory(registration=registration)
+
+    api_client.force_authenticate(user2)
+
+    response = get_list(api_client, f"registration={registration.id}")
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_cannot_get_signup_groups_of_nonexistent_registration(
+    api_client, registration, user2
+):
+    SignUpGroupFactory(registration=registration)
+    SignUpGroupFactory(registration=registration)
+
+    api_client.force_authenticate(user2)
+
+    response = get_list(api_client, "registration=not-exist")
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["detail"] == "Registration with id not-exist doesn't exist."
+
+
+@pytest.mark.django_db
+def test_api_key_with_organization_can_get_signup_group_list(
+    api_client, data_source, organization, registration
+):
+    signup_group0 = SignUpGroupFactory(registration=registration)
+    signup_group1 = SignUpGroupFactory(registration=registration)
+
+    data_source.owner = organization
+    data_source.save(update_fields=["owner"])
+
+    api_client.credentials(apikey=data_source.api_key)
+
+    get_list_and_assert_signup_groups(
+        api_client, f"registration={registration.id}", (signup_group0, signup_group1)
+    )
+
+
+@pytest.mark.django_db
+def test_api_key_with_wrong_organization_cannot_get_signup_group_list(
+    api_client, data_source, organization2, registration
+):
+    SignUpGroupFactory(registration=registration)
+    SignUpGroupFactory(registration=registration)
+
+    data_source.owner = organization2
+    data_source.save(update_fields=["owner"])
+
+    api_client.credentials(apikey=data_source.api_key)
+
+    response = get_list(api_client, f"registration={registration.id}")
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["first_name", "email", "extra_info", "membership_number", "phone_number"],
+)
+@pytest.mark.django_db
+def test_signup_group_list_assert_text_filter(api_client, field, registration, user):
+    signup_group0 = SignUpGroupFactory(registration=registration)
+    signup0_kwargs = {
+        "signup_group": signup_group0,
+        "registration": registration,
+        **{field: "field_value_2"},
+    }
+    SignUpFactory(**signup0_kwargs)
+
+    signup_group1 = SignUpGroupFactory(registration=registration)
+    signup1_kwargs = {
+        "signup_group": signup_group1,
+        "registration": registration,
+        **{field: "field_value_1"},
+    }
+    SignUpFactory(**signup1_kwargs)
+
+    api_client.force_authenticate(user)
+    get_list_and_assert_signup_groups(
+        api_client,
+        f"registration={registration.id}&text=field_value_1",
+        [signup_group1],
+    )
+
+
+@pytest.mark.django_db
+def test_signup_group_list_assert_status_filter(api_client, registration, user):
+    signup_group0 = SignUpGroupFactory(registration=registration)
+    SignUpFactory(
+        signup_group=signup_group0,
+        registration=registration,
+        attendee_status=SignUp.AttendeeStatus.ATTENDING,
+    )
+
+    signup_group1 = SignUpGroupFactory(registration=registration)
+    SignUpFactory(
+        signup_group=signup_group1,
+        registration=registration,
+        attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
+    )
+
+    api_client.force_authenticate(user)
+
+    get_list_and_assert_signup_groups(
+        api_client,
+        f"registration={registration.id}&attendee_status={SignUp.AttendeeStatus.ATTENDING}",
+        (signup_group0,),
+    )
+    get_list_and_assert_signup_groups(
+        api_client,
+        f"registration={registration.id}&attendee_status={SignUp.AttendeeStatus.WAITING_LIST}",
+        (signup_group1,),
+    )
+    get_list_and_assert_signup_groups(
+        api_client,
+        f"registration={registration.id}"
+        f"&attendee_status={SignUp.AttendeeStatus.ATTENDING},{SignUp.AttendeeStatus.WAITING_LIST}",
+        (
+            signup_group0,
+            signup_group1,
+        ),
+    )
+
+    response = get_list(
+        api_client, f"registration={registration.id}&attendee_status=invalid-value"
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert (
+        response.data["detail"]
+        == "attendee_status can take following values: waitlisted, attending, not invalid-value"
+    )
+
+
+@pytest.mark.django_db
+def test_filter_signup_groups(api_client, registration, registration2, user, user2):
+    api_client.force_authenticate(user=None)
+
+    signup_group0 = SignUpGroupFactory(registration=registration)
+    SignUpFactory(
+        signup_group=signup_group0,
+        registration=registration,
+        first_name="Michael",
+        last_name="Jackson",
+        email="test@test.com",
+    )
+    SignUpFactory(
+        signup_group=signup_group0,
+        registration=registration,
+        first_name="Michael",
+        last_name="Jackson2",
+        email="test2@test.com",
+    )
+
+    signup_group1 = SignUpGroupFactory(registration=registration)
+    SignUpFactory(
+        signup_group=signup_group1,
+        registration=registration,
+        first_name="Michael",
+        last_name="Jackson3",
+        email="test3@test.com",
+    )
+    SignUpFactory(
+        signup_group=signup_group1,
+        registration=registration,
+        first_name="Michael",
+        last_name="Jackson4",
+        email="test4@test.com",
+    )
+
+    signup_group2 = SignUpGroupFactory(registration=registration2)
+    SignUpFactory(
+        signup_group=signup_group2,
+        registration=registration2,
+        first_name="Joe",
+        last_name="Biden",
+        email="test@test.com",
+        extra_info="cdef",
+    )
+    SignUpFactory(
+        signup_group=signup_group2,
+        registration=registration2,
+        first_name="Hillary",
+        last_name="Clinton",
+        email="test2@test.com",
+        extra_info="abcd",
+    )
+
+    signup_group3 = SignUpGroupFactory(registration=registration2)
+    SignUpFactory(
+        signup_group=signup_group3,
+        registration=registration2,
+        first_name="Donald",
+        last_name="Duck",
+        email="test3@test.com",
+        membership_number="1234",
+    )
+    SignUpFactory(
+        signup_group=signup_group3,
+        registration=registration2,
+        first_name="Mickey",
+        last_name="Mouse",
+        email="test4@test.com",
+        membership_number="3456",
+    )
+
+    api_client.force_authenticate(user)
+    get_list_and_assert_signup_groups(
+        api_client,
+        "",
+        [signup_group0, signup_group1],
+    )
+    get_list_and_assert_signup_groups(
+        api_client,
+        f"registration={registration.id}",
+        [signup_group0, signup_group1],
+    )
+
+    api_client.force_authenticate(user2)
+    get_list_and_assert_signup_groups(
+        api_client,
+        "",
+        [signup_group2, signup_group3],
+    )
+    get_list_and_assert_signup_groups(
+        api_client,
+        f"registration={registration2.id}",
+        [signup_group2, signup_group3],
+    )
+
+    #  search signups by name (first name - last name)
+    get_list_and_assert_signup_groups(
+        api_client, f"registration={registration2.id}&text=mickey m", [signup_group3]
+    )
+    #  search signups by name (last name - first name)
+    get_list_and_assert_signup_groups(
+        api_client, f"registration={registration2.id}&text=mouse m", [signup_group3]
+    )
+
+    #  search signups by membership number
+    get_list_and_assert_signup_groups(
+        api_client, f"registration={registration2.id}&text=34", [signup_group3]
+    )
+    get_list_and_assert_signup_groups(
+        api_client, f"registration={registration2.id}&text=3456", [signup_group3]
+    )
+
+    #  search signups by extra_info
+    get_list_and_assert_signup_groups(
+        api_client, f"registration={registration2.id}&text=cd", [signup_group2]
+    )
+    get_list_and_assert_signup_groups(
+        api_client, f"registration={registration2.id}&text=abcd", [signup_group2]
+    )
