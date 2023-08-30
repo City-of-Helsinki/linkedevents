@@ -52,6 +52,7 @@ env = environ.Env(
     COOKIE_PREFIX=(str, "linkedevents"),
     DATABASE_URL=(str, "postgis:///linkedevents"),
     DEBUG=(bool, False),
+    DEFAULT_FROM_EMAIL=(str, "noreply@linkedevents.hel.fi"),
     ELASTICSEARCH_URL=(str, None),
     ELIS_EVENT_API_URL=(
         str,
@@ -591,6 +592,9 @@ FULLTEXT_SEARCH_LANGUAGES = {"fi": "finnish", "sv": "swedish", "en": "english"}
 
 # Email address used to send feedback forms
 SUPPORT_EMAIL = env("SUPPORT_EMAIL")
+
+# Email address used as default "from" email
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
 
 SESSION_SERIALIZER = "django.contrib.sessions.serializers.PickleSerializer"
 

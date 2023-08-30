@@ -2,7 +2,6 @@ import logging
 from smtplib import SMTPException
 
 from django.contrib.auth import get_user_model
-from django.contrib.sites.models import Site
 from django.core.mail import send_mail
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -12,6 +11,7 @@ from notifications.models import (
     NotificationType,
     render_notification_template,
 )
+from registrations.utils import get_email_noreply_address
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ def user_created_notification(sender, instance, created, **kwargs):
             send_mail(
                 rendered_notification["subject"],
                 rendered_notification["body"],
-                "noreply@%s" % Site.objects.get_current().domain,
+                get_email_noreply_address(),
                 recipient_list,
                 html_message=rendered_notification["html_body"],
             )

@@ -65,4 +65,6 @@ def send_mass_html_mail(
 
 
 def get_email_noreply_address():
-    return "noreply@%s" % Site.objects.get_current().domain
+    return (
+        settings.DEFAULT_FROM_EMAIL or "noreply@%s" % Site.objects.get_current().domain
+    )

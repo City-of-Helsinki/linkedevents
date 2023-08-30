@@ -28,7 +28,6 @@ from django.contrib.gis.db import models
 from django.contrib.postgres.fields import HStoreField
 from django.contrib.postgres.indexes import Index
 from django.contrib.postgres.search import SearchVectorField
-from django.contrib.sites.models import Site
 from django.core.mail import send_mail
 from django.db import transaction
 from django.db.models import Q
@@ -48,6 +47,7 @@ from notifications.models import (
     NotificationType,
     render_notification_template,
 )
+from registrations.utils import get_email_noreply_address
 
 logger = logging.getLogger(__name__)
 
@@ -1142,7 +1142,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
             send_mail(
                 rendered_notification["subject"],
                 rendered_notification["body"],
-                "noreply@%s" % Site.objects.get_current().domain,
+                get_email_noreply_address(),
                 recipient_list,
                 html_message=rendered_notification["html_body"],
             )
