@@ -100,6 +100,7 @@ env = environ.Env(
     TOKEN_AUTH_FIELD_FOR_CONSENTS=(str, "https://api.hel.fi/auth"),
     TOKEN_AUTH_REQUIRE_SCOPE_PREFIX=(bool, True),
     TRUST_X_FORWARDED_HOST=(bool, False),
+    WHITENOISE_STATIC_PREFIX=(str, "/static/"),
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -274,6 +275,7 @@ STATIC_URL = env("STATIC_URL")
 MEDIA_URL = env("MEDIA_URL")
 STATIC_ROOT = env("STATIC_ROOT")
 MEDIA_ROOT = env("MEDIA_ROOT")
+WHITENOISE_STATIC_PREFIX = env("WHITENOISE_STATIC_PREFIX")
 
 # Do not try to chmod when uploading images.
 # Our environments use persistent storage for media and operation will not be permitted.
