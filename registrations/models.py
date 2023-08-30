@@ -523,6 +523,32 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin):
             return self.service_language.pk
         return "fi"
 
+    def get_registration_message(self, subject, cleaned_body, plain_text_body):
+        [linked_events_ui_locale, linked_registrations_ui_locale] = get_ui_locales(
+            self.service_language
+        )
+
+        email_variables = {
+            "body": cleaned_body,
+            "linked_events_ui_locale": linked_events_ui_locale,
+            "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
+            "linked_registrations_ui_locale": linked_registrations_ui_locale,
+            "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
+            "registration_id": self.registration_id,
+            "signup": self,
+        }
+
+        with override(linked_registrations_ui_locale, deactivate=True):
+            rendered_body = render_to_string("message_to_signup.html", email_variables)
+
+        return (
+            subject,
+            plain_text_body,
+            rendered_body,
+            settings.SUPPORT_EMAIL,
+            [self.email],
+        )
+
     def send_notification(self, notification_type):
         [linked_events_ui_locale, linked_registrations_ui_locale] = get_ui_locales(
             self.service_language
@@ -540,7 +566,7 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin):
                 "linked_registrations_ui_locale": linked_registrations_ui_locale,
                 "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
                 "registration_id": self.registration.id,
-                "signup_id": self.id,
+                "signup": self,
                 "username": self.first_name,
             }
 
