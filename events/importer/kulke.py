@@ -968,7 +968,11 @@ class KulkeImporter(Importer):
                     filter=Q(aggregate__members__event__deleted=False),
                 )
             )
-            .filter(aggregate_member_count__lt=2, deleted=False)
+            .filter(
+                data_source=self.data_source,
+                aggregate_member_count__lt=2,
+                deleted=False,
+            )
             .soft_delete()
         )
         if count:

@@ -3,7 +3,9 @@ from django_orghierarchy.models import Organization
 from rest_framework import status
 
 from events.api import OrganizationDetailSerializer
+from events.tests.factories import OrganizationFactory
 from events.tests.utils import versioned_reverse as reverse
+from helevents.tests.factories import UserFactory
 
 organization_name = "test org"
 edited_organization_name = "new name"
@@ -229,8 +231,10 @@ def test_create_organization_with_affiliated_organizations(
 
 @pytest.mark.django_db
 def test_user_is_automatically_added_to_admins_users(
-    data_source, user, user_api_client
+    api_client, organization, data_source, user, user_api_client
 ):
+    organization.admin_users.add(user)
+    api_client.force_authenticate(user)
     origin_id = "test_organization2"
     payload = {
         "data_source": data_source.id,
@@ -245,8 +249,10 @@ def test_user_is_automatically_added_to_admins_users(
 
 @pytest.mark.django_db
 def test_admin_user_add_users_to_new_organization(
-    data_source, user, user2, user_api_client
+    api_client, organization, data_source, user, user2, user_api_client
 ):
+    organization.admin_users.add(user)
+    api_client.force_authenticate(user)
     origin_id = "test_organization2"
     payload = {
         "data_source": data_source.id,
@@ -377,3 +383,112 @@ def test_admin_user_from_other_organization_cannot_delete_organization(
 
     response = delete_organization(api_client, organization.id)
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.fixture
+def user2_with_user_type(organization, user2, request):
+    user_type = request.param
+    if user_type == "org_regular":
+        organization.regular_users.add(user2)
+
+    elif user_type == "org_admin":
+        organization.admin_users.add(user2)
+
+    elif user_type == "staff":
+        user2.is_staff = True
+        user2.save()
+
+    elif user_type == "admin":
+        user2.is_staff = True
+        user2.is_admin = True
+        user2.save()
+
+    elif user_type == "superuser":
+        user2.is_staff = True
+        user2.is_admin = True
+        user2.is_superuser = True
+        user2.save()
+
+    elif user_type is None:
+        pass
+
+    else:
+        raise ValueError("user_type was not handled in test")
+
+    return user2
+
+
+@pytest.mark.parametrize(
+    "user2_with_user_type, expected_status",
+    [
+        (None, status.HTTP_403_FORBIDDEN),
+        ("org_regular", status.HTTP_403_FORBIDDEN),
+        ("org_admin", status.HTTP_201_CREATED),
+        ("staff", status.HTTP_403_FORBIDDEN),
+        ("admin", status.HTTP_403_FORBIDDEN),
+        ("superuser", status.HTTP_403_FORBIDDEN),
+    ],
+    indirect=["user2_with_user_type"],
+)
+@pytest.mark.django_db
+def test_permissions_create_organization(
+    api_client, data_source, user2_with_user_type, expected_status
+):
+    api_client.force_authenticate(user2_with_user_type)
+
+    origin_id = "test_organization2"
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+    }
+    response = create_organization(api_client, payload)
+    assert response.status_code == expected_status
+
+
+@pytest.mark.parametrize(
+    "user2_with_user_type, expected_status",
+    [
+        (None, status.HTTP_403_FORBIDDEN),
+        ("org_regular", status.HTTP_403_FORBIDDEN),
+        ("org_admin", status.HTTP_200_OK),
+        ("staff", status.HTTP_403_FORBIDDEN),
+        ("admin", status.HTTP_403_FORBIDDEN),
+        ("superuser", status.HTTP_403_FORBIDDEN),
+    ],
+    indirect=["user2_with_user_type"],
+)
+@pytest.mark.django_db
+def test_permissions_update_organization(
+    api_client, organization, user2_with_user_type, expected_status
+):
+    api_client.force_authenticate(user2_with_user_type)
+
+    payload = {
+        "data_source": organization.data_source.pk,
+        "name": "New name",
+    }
+    response = update_organization(api_client, organization.pk, payload)
+    assert response.status_code == expected_status
+
+
+@pytest.mark.parametrize(
+    "user2_with_user_type, expected_status",
+    [
+        (None, status.HTTP_403_FORBIDDEN),
+        ("org_regular", status.HTTP_403_FORBIDDEN),
+        ("org_admin", status.HTTP_204_NO_CONTENT),
+        ("staff", status.HTTP_403_FORBIDDEN),
+        ("admin", status.HTTP_403_FORBIDDEN),
+        ("superuser", status.HTTP_403_FORBIDDEN),
+    ],
+    indirect=["user2_with_user_type"],
+)
+@pytest.mark.django_db
+def test_permissions_destroy_organization(
+    api_client, organization, user2_with_user_type, expected_status
+):
+    api_client.force_authenticate(user2_with_user_type)
+    response = delete_organization(api_client, organization.pk)
+    assert response.status_code == expected_status

@@ -8,6 +8,9 @@ RUN mkdir /entrypoint
 
 ENV PYTHONDONTWRITEBYTECODE=true
 ENV PYTHONUNBUFFERED=true
+# Default for URL prefix, handled by uwsgi, ignored by devserver
+# Works like this: "/example" -> http://hostname.domain.name/example
+ENV DJANGO_URL_PREFIX=/
 
 ## Setting the permissions beforehand makes the mounted volume inherit the permission
 ## in docker compose. Useful for development with non-root user and named volume.

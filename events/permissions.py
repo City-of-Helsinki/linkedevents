@@ -1,3 +1,5 @@
+import logging
+
 from django.utils.translation import gettext as _
 from rest_framework import permissions
 from rest_framework.exceptions import PermissionDenied
@@ -7,6 +9,8 @@ from rest_framework.request import Request
 from events import utils
 
 from .auth import ApiKeyUser
+
+logger = logging.getLogger(__name__)
 
 
 class GuestPost(BasePermission):
@@ -147,7 +151,17 @@ class DataSourceResourceEditPermission(
         return True
 
 
-class DataSourceOrganizationEditPermission(IsAuthenticatedOrReadOnly):
+class DataSourceOrganizationEditPermission(DataSourceResourceEditPermission):
+    def has_permission(self, request, view):
+        if request.method == "POST":
+            if request.user.admin_organizations.exists():
+                return super().has_permission(request, view)
+
+            logging.info("User must be an admin to create an organization")
+            return False
+
+        return super().has_permission(request, view)
+
     def has_object_permission(self, request: Request, view, obj):
         if request.method in permissions.SAFE_METHODS:
             return True
