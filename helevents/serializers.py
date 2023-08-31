@@ -11,6 +11,9 @@ class UserSerializer(serializers.ModelSerializer):
         if default_org:
             rep["organization"] = default_org.id
         rep["admin_organizations"] = [org.id for org in obj.admin_organizations.all()]
+        rep["registration_admin_organizations"] = [
+            org.id for org in obj.registration_admin_organizations.all()
+        ]
         rep["organization_memberships"] = [
             org.id for org in obj.organization_memberships.all()
         ]

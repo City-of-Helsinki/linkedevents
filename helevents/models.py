@@ -2,6 +2,7 @@ import logging
 from functools import reduce
 
 from django.conf import settings
+from django.db import models
 from django.utils.functional import cached_property
 from django_orghierarchy.models import Organization
 from helusers.models import AbstractUser
@@ -58,6 +59,10 @@ class UserModelPermissionMixin:
         """Check if current user is an admin user of the publisher organization"""
         raise NotImplementedError()
 
+    def is_registration_admin_of(self, publisher):
+        """Check if current user is a registration admin user of the publisher organization"""
+        raise NotImplementedError()
+
     def is_regular_user_of(self, publisher):
         """Check if current user is a regular user of the publisher organization"""
         raise NotImplementedError()
@@ -69,6 +74,15 @@ class UserModelPermissionMixin:
 
         Is replaced by django_orghierarchy.models.Organization's
         admin_organizations relation unless implemented in a subclass.
+        """
+        raise NotImplementedError()
+
+    @property
+    def registration_admin_organizations(self):
+        """
+        Get a queryset of organizations that the user is a registration admin of.
+        Is replaced by django_orghierarchy.models.Organization's
+        registration_admin_organizations relation unless implemented in a subclass.
         """
         raise NotImplementedError()
 
@@ -139,13 +153,14 @@ class UserModelPermissionMixin:
             value["replaced_by__tree_id"] for value in admin_replaced_tree_ids
         )
 
-    def get_admin_organizations_and_descendants(self):
+    def _get_admin_organizations_and_descendants(self, relation_name: str):
         # returns admin organizations and their descendants
-        if not self.admin_organizations.all():
+        admin_rel = getattr(self, relation_name, None)
+        if not admin_rel or not admin_rel.all():
             return Organization.objects.none()
         # regular admins have rights to all organizations below their level
         admin_orgs = []
-        for admin_org in self.admin_organizations.all():
+        for admin_org in admin_rel.all():
             admin_orgs.append(admin_org.get_descendants(include_self=True))
             if admin_org.replaced_by:
                 # admins of replaced organizations have these rights, too!
@@ -155,8 +170,22 @@ class UserModelPermissionMixin:
         # for multiple admin_orgs, we have to combine the querysets and filter distinct
         return reduce(lambda a, b: a | b, admin_orgs).distinct()
 
+    def get_admin_organizations_and_descendants(self):
+        # returns admin organizations and their descendants
+        return self._get_admin_organizations_and_descendants("admin_organizations")
+
+    def get_registration_admin_organizations_and_descendants(self):
+        # returns registration admin organizations and their descendants
+        return self._get_admin_organizations_and_descendants(
+            "registration_admin_organizations"
+        )
+
 
 class User(AbstractUser, UserModelPermissionMixin):
+    registration_admin_organizations = models.ManyToManyField(
+        Organization, blank=True, related_name="registration_admin_users"
+    )
+
     def __str__(self):
         return " - ".join([self.get_display_name(), self.email])
 
@@ -172,6 +201,14 @@ class User(AbstractUser, UserModelPermissionMixin):
             .first()
         )
 
+        registration_admin_org = (
+            self.registration_admin_organizations.filter(
+                replaced_by__isnull=True,
+            )
+            .order_by("created_time")
+            .first()
+        )
+
         regular_org = (
             self.organization_memberships.filter(
                 replaced_by__isnull=True,
@@ -180,12 +217,17 @@ class User(AbstractUser, UserModelPermissionMixin):
             .first()
         )
 
-        return admin_org or regular_org
+        return admin_org or registration_admin_org or regular_org
 
     def is_admin_of(self, publisher):
         if publisher is None:
             return False
         return publisher in self.get_admin_organizations_and_descendants()
+
+    def is_registration_admin_of(self, publisher):
+        if publisher is None:
+            return False
+        return publisher in self.get_registration_admin_organizations_and_descendants()
 
     def is_regular_user_of(self, publisher):
         if publisher is None:

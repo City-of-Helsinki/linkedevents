@@ -72,7 +72,14 @@ class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
         return self.data_source.owner
 
     def is_admin_of(self, publisher):
+        if not self.data_source.owner_id:
+            return False
         return publisher in self.data_source.owner.get_descendants(include_self=True)
+
+    def is_registration_admin_of(self, publisher):
+        return (
+            self.is_admin_of(publisher) and self.data_source.user_editable_registrations
+        )
 
     def is_regular_user_of(self, publisher):
         return False
@@ -86,6 +93,20 @@ class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
     @property
     def organization_memberships(self):
         return Organization.objects.none()
+
+    @property
+    def apikey_registration_admin_organizations(self):
+        if not (
+            self.data_source.owner and self.data_source.user_editable_registrations
+        ):
+            return Organization.objects.none()
+        return Organization.objects.filter(id=self.data_source.owner.id)
+
+    def get_registration_admin_organizations_and_descendants(self):
+        # returns registration admin organizations and their descendants
+        return self._get_admin_organizations_and_descendants(
+            "apikey_registration_admin_organizations"
+        )
 
 
 class ApiKeyAuth(object):
