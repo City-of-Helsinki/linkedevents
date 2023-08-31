@@ -1155,3 +1155,179 @@ def test_get_event_list_verify_registration_filter(
     event3.save()
     get_list_and_assert_events("registration=true", [event, event2])
     get_list_and_assert_events("registration=false", [event3])
+
+
+@pytest.mark.django_db
+def test_get_event_list_max_attendee_capacity_filter_gte(
+    api_client,
+    event,
+    event2,
+    event3,
+):
+    event.maximum_attendee_capacity = 10
+    event.save()
+    event2.maximum_attendee_capacity = 9
+    event2.save()
+    event3.maximum_attendee_capacity = 8
+    event3.save()
+
+    get_list_and_assert_events("max_attendee_capacity_gte=9", [event, event2])
+
+
+@pytest.mark.django_db
+def test_get_event_list_max_attendee_capacity_filter_gte_when_equal(
+    api_client,
+    event,
+    event2,
+    event3,
+):
+    event.maximum_attendee_capacity = 10
+    event.save()
+    event2.maximum_attendee_capacity = 9
+    event2.save()
+    event3.maximum_attendee_capacity = 8
+    event3.save()
+
+    get_list_and_assert_events("max_attendee_capacity_gte=10", [event])
+
+
+@pytest.mark.django_db
+def test_get_event_list_max_attendee_capacity_filter_lte(
+    api_client,
+    event,
+    event2,
+    event3,
+):
+    event.maximum_attendee_capacity = 10
+    event.save()
+    event2.maximum_attendee_capacity = 9
+    event2.save()
+    event3.maximum_attendee_capacity = 8
+    event3.save()
+
+    get_list_and_assert_events("max_attendee_capacity_lte=9", [event2, event3])
+
+
+@pytest.mark.django_db
+def test_get_event_list_max_attendee_capacity_filter_lte_when_equal(
+    api_client,
+    event,
+    event2,
+    event3,
+):
+    event.maximum_attendee_capacity = 10
+    event.save()
+    event2.maximum_attendee_capacity = 9
+    event2.save()
+    event3.maximum_attendee_capacity = 8
+    event3.save()
+
+    get_list_and_assert_events("max_attendee_capacity_lte=8", [event3])
+
+
+@pytest.mark.django_db
+def test_get_event_list_min_attendee_capacity_filter_gte(
+    api_client,
+    event,
+    event2,
+    event3,
+):
+    event.minimum_attendee_capacity = 10
+    event.save()
+    event2.minimum_attendee_capacity = 9
+    event2.save()
+    event3.minimum_attendee_capacity = 8
+    event3.save()
+
+    get_list_and_assert_events("min_attendee_capacity_gte=9", [event, event2])
+
+
+@pytest.mark.django_db
+def test_get_event_list_min_attendee_capacity_filter_gte_when_equal(
+    api_client,
+    event,
+    event2,
+    event3,
+):
+    event.minimum_attendee_capacity = 10
+    event.save()
+    event2.minimum_attendee_capacity = 9
+    event2.save()
+    event3.minimum_attendee_capacity = 8
+    event3.save()
+
+    get_list_and_assert_events("min_attendee_capacity_gte=10", [event])
+
+
+@pytest.mark.django_db
+def test_get_event_list_min_attendee_capacity_filter_lte(
+    api_client,
+    event,
+    event2,
+    event3,
+):
+    event.minimum_attendee_capacity = 10
+    event.save()
+    event2.minimum_attendee_capacity = 9
+    event2.save()
+    event3.minimum_attendee_capacity = 8
+    event3.save()
+
+    get_list_and_assert_events("min_attendee_capacity_lte=9", [event2, event3])
+
+
+@pytest.mark.django_db
+def test_get_event_list_min_attendee_capacity_filter_lte_when_equal(
+    api_client,
+    event,
+    event2,
+    event3,
+):
+    event.minimum_attendee_capacity = 10
+    event.save()
+    event2.minimum_attendee_capacity = 9
+    event2.save()
+    event3.minimum_attendee_capacity = 8
+    event3.save()
+
+    get_list_and_assert_events("min_attendee_capacity_lte=8", [event3])
+
+
+@pytest.mark.django_db
+def test_sort_events_by_maximum_attendee_capacity(api_client, event, event2, event3):
+    event.maximum_attendee_capacity = 10
+    event.save()
+    event2.maximum_attendee_capacity = 9
+    event2.save()
+    event3.maximum_attendee_capacity = 8
+    event3.save()
+
+    response = get_list(
+        api_client=api_client, query_string="sort=-maximum_attendee_capacity"
+    )
+
+    results = response.data["data"]
+    assert len(results) == 3
+    assert results[0]["id"] == event.id
+    assert results[1]["id"] == event2.id
+    assert results[2]["id"] == event3.id
+
+
+@pytest.mark.django_db
+def test_sort_events_by_minimum_attendee_capacity(api_client, event, event2, event3):
+    event.minimum_attendee_capacity = 10
+    event.save()
+    event2.minimum_attendee_capacity = 9
+    event2.save()
+    event3.minimum_attendee_capacity = 8
+    event3.save()
+
+    response = get_list(
+        api_client=api_client, query_string="sort=minimum_attendee_capacity"
+    )
+
+    results = response.data["data"]
+    assert len(results) == 3
+    assert results[0]["id"] == event3.id
+    assert results[1]["id"] == event2.id
+    assert results[2]["id"] == event.id

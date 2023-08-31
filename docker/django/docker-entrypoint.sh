@@ -29,14 +29,14 @@ if [[ "$COMPILE_TRANSLATIONS" = "true" ]]; then
     django-admin compilemessages
 fi
 
-# Start server
+# Allow running arbitrary commands instead of the servers
 if [[ -n "$@" ]]; then
     "$@"
 elif [[ "$DEV_SERVER" = "true" ]]; then
-    python -Wd ./manage.py runserver_plus 0.0.0.0:8000
+    exec python -Wd ./manage.py runserver_plus 0.0.0.0:8000
 else
-    uwsgi \
-    --ini .prod/uwsgi_configuration.ini \
-    --processes ${UWSGI_PROCESSES-2} \
-    --threads ${UWSGI_THREADS-2}
+    exec uwsgi \
+         --ini .prod/uwsgi_configuration.ini \
+         --processes ${UWSGI_PROCESSES-2} \
+         --threads ${UWSGI_THREADS-2}
 fi

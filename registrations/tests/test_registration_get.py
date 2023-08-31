@@ -5,8 +5,10 @@ from events.models import Event
 from events.tests.conftest import APIClient
 from events.tests.test_event_get import get_list_and_assert_events
 from events.tests.utils import versioned_reverse as reverse
-from registrations.models import SeatReservationCode
+from registrations.models import RegistrationUserAccess, SeatReservationCode
 from registrations.tests.test_signup_post import assert_create_signups
+
+include_signups_query = "include=signups"
 
 # === util methods ===
 
@@ -72,6 +74,37 @@ def test_get_registration(api_client, event, event_type, registration):
     event.save()
 
     get_detail_and_assert_registration(api_client, registration.id)
+
+
+@pytest.mark.django_db
+def test_admin_user_can_see_registration_user_accesses(registration, user_api_client):
+    RegistrationUserAccess.objects.create(registration=registration)
+    response = get_detail_and_assert_registration(user_api_client, registration.id)
+    response_registration_user_accesses = response.data["registration_user_accesses"]
+    assert len(response_registration_user_accesses) == 1
+
+
+@pytest.mark.django_db
+def test_regular_user_cannot_see_registration_user_accesses(
+    registration, user, user_api_client
+):
+    user.get_default_organization().regular_users.add(user)
+    user.get_default_organization().admin_users.remove(user)
+    RegistrationUserAccess.objects.create(registration=registration, email=user.email)
+    response = get_detail_and_assert_registration(user_api_client, registration.id)
+
+    assert (
+        response.data.get("test_regular_user_cannot_see_registration_user_accesses")
+        == None
+    )
+
+
+@pytest.mark.django_db
+def test_anonymous_user_cannot_see_registration_user_accesses(api_client, registration):
+    RegistrationUserAccess.objects.create(registration=registration)
+    response = get_detail_and_assert_registration(api_client, registration.id)
+
+    assert response.data.get("registration_user_accesses") == None
 
 
 @pytest.mark.django_db
@@ -170,6 +203,52 @@ def test_get_registration_with_event_and_audience_included(
 
 
 @pytest.mark.django_db
+def test_admin_user_can_include_signups(registration, signup, signup2, user_api_client):
+    response = get_detail_and_assert_registration(
+        user_api_client, registration.id, include_signups_query
+    )
+    response_signups = response.data["signups"]
+    assert len(response_signups) == 2
+
+
+@pytest.mark.django_db
+def test_registration_user_access_can_include_signups(
+    registration, signup, signup2, user, user_api_client
+):
+    user.get_default_organization().admin_users.remove(user)
+    RegistrationUserAccess.objects.create(registration=registration, email=user.email)
+    response = get_detail_and_assert_registration(
+        user_api_client, registration.id, include_signups_query
+    )
+    response_signups = response.data["signups"]
+    assert len(response_signups) == 2
+
+
+@pytest.mark.django_db
+def test_regular_user_cannot_include_signups(
+    registration, signup, signup2, user, user_api_client
+):
+    user.get_default_organization().regular_users.add(user)
+    user.get_default_organization().admin_users.remove(user)
+    response = get_detail_and_assert_registration(
+        user_api_client, registration.id, include_signups_query
+    )
+    response_signups = response.data["signups"]
+    assert response_signups == None
+
+
+@pytest.mark.django_db
+def test_anonymous_user_cannot_include_signups(
+    api_client, registration, signup, signup2
+):
+    response = get_detail_and_assert_registration(
+        api_client, registration.id, include_signups_query
+    )
+    response_signups = response.data["signups"]
+    assert response_signups == None
+
+
+@pytest.mark.django_db
 def test_current_attendee_and_waitlist_count(api_client, registration, user):
     api_client.force_authenticate(user)
 
@@ -225,21 +304,19 @@ def test_registration_list(
     api_client, registration, registration2, registration3, registration4
 ):
     get_list_and_assert_registrations(
-        api_client, "", (registration, registration2, registration3, registration4)
+        api_client, "", [registration, registration2, registration3, registration4]
     )
 
 
 @pytest.mark.django_db
 def test_registration_list_admin_user_filter(
-    api_client, registration, registration2, registration3, user
+    registration, registration2, registration3, user_api_client
 ):
-    api_client.force_authenticate(user)
-
     get_list_and_assert_registrations(
-        api_client, "", (registration, registration2, registration3)
+        user_api_client, "", [registration, registration2, registration3]
     )
     get_list_and_assert_registrations(
-        api_client, "admin_user=true", (registration, registration3)
+        user_api_client, "admin_user=true", [registration, registration3]
     )
 
 
@@ -255,12 +332,12 @@ def test_registration_list_event_type_filter(
     event3.save()
 
     get_list_and_assert_registrations(
-        api_client, "", (registration, registration2, registration3)
+        api_client, "", [registration, registration2, registration3]
     )
-    get_list_and_assert_registrations(api_client, "event_type=general", (registration,))
-    get_list_and_assert_registrations(api_client, "event_type=course", (registration2,))
+    get_list_and_assert_registrations(api_client, "event_type=general", [registration])
+    get_list_and_assert_registrations(api_client, "event_type=course", [registration2])
     get_list_and_assert_registrations(
-        api_client, "event_type=volunteering", (registration3,)
+        api_client, "event_type=volunteering", [registration3]
     )
 
 
