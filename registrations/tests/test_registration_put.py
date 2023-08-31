@@ -10,9 +10,7 @@ from registrations.tests.test_registration_post import (
     create_registration,
     get_event_url,
 )
-from registrations.tests.test_registration_user_access_invitation import (
-    assert_invitation_email_is_sent,
-)
+from registrations.tests.utils import assert_invitation_email_is_sent
 
 email = "user@email.com"
 edited_email = "edited@email.com"

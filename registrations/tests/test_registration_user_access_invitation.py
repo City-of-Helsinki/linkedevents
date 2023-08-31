@@ -6,6 +6,7 @@ from rest_framework import status
 from events.models import Event, Language
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import RegistrationUserAccess
+from registrations.tests.utils import assert_invitation_email_is_sent
 
 email = "user@email.com"
 event_name = "Foo"
@@ -27,15 +28,6 @@ def assert_send_invitation(api_client, pk):
     response = send_invitation(api_client, pk)
 
     assert response.status_code == status.HTTP_200_OK
-
-
-def assert_invitation_email_is_sent(email, event_name):
-    assert mail.outbox[0].to[0] == email
-    assert mail.outbox[0].subject.startswith("Oikeudet myönnetty osallistujalistaan")
-    assert (
-        f"Sähköpostiosoitteelle <strong>{email}</strong> on myönnetty oikeudet lukea tapahtuman <strong>{event_name}</strong> osallistujalista."
-        in str(mail.outbox[0].alternatives[0])
-    )
 
 
 # === tests ===
@@ -90,17 +82,20 @@ def test_regular_user_cannot_send_invitation_to_registration_user_access(
         (
             "en",
             "Rights granted to the participant list",
-            f"The e-mail address <strong>{email}</strong> has been granted the rights to read the participant list of the event <strong>{event_name}</strong>.",
+            f"The e-mail address <strong>{email}</strong> has been granted the rights "
+            f"to read the participant list of the event <strong>{event_name}</strong>.",
         ),
         (
             "fi",
             "Oikeudet myönnetty osallistujalistaan",
-            f"Sähköpostiosoitteelle <strong>{email}</strong> on myönnetty oikeudet lukea tapahtuman <strong>{event_name}</strong> osallistujalista.",
+            f"Sähköpostiosoitteelle <strong>{email}</strong> on myönnetty oikeudet "
+            f"lukea tapahtuman <strong>{event_name}</strong> osallistujalista.",
         ),
         (
             "sv",
             "Rättigheter tilldelade deltagarlistan",
-            f"E-postadressen <strong>{email}</strong> har beviljats rättigheter att läsa deltagarlistan för evenemanget <strong>{event_name}</strong>.",
+            f"E-postadressen <strong>{email}</strong> har beviljats rättigheter att "
+            f"läsa deltagarlistan för evenemanget <strong>{event_name}</strong>.",
         ),
     ],
 )
