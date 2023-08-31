@@ -40,10 +40,10 @@ def user_created_notification(sender, instance, created, **kwargs):
     if created:
         user_model = get_user_model()
         recipient_list = [
-            item[0]
-            for item in user_model.objects.filter(is_superuser=True).values_list(
-                "email"
-            )
+            item
+            for item in user_model.objects.filter(is_superuser=True)
+            .exclude(email__exact="")
+            .values_list("email", flat=True)
         ]
         notification_type = NotificationType.USER_CREATED
         context = {"user": instance}
