@@ -100,11 +100,6 @@ def test_authenticated_user_can_create_signup_group(user_api_client, languages, 
 
     response = create_signup_group(user_api_client, signup_group_data)
     assert response.status_code == status.HTTP_201_CREATED
-    resp_json = response.json()
-    assert resp_json["waitlisted"]["count"] == 1
-    assert resp_json["waitlisted"]["people"][0]["email"] == "test@test.com"
-    assert resp_json["attending"]["count"] == 1
-    assert resp_json["attending"]["people"][0]["email"] == "mickey@test.com"
 
     assert SignUpGroup.objects.count() == 1
     signup_group = SignUpGroup.objects.first()
@@ -660,6 +655,8 @@ def test_email_sent_on_successful_signup_group(
     registration,
     service_language,
 ):
+    assert SignUp.objects.count() == 0
+
     with translation.override(service_language):
         registration.event.type_id = Event.TypeId.GENERAL
         registration.event.name = "Foo"
@@ -679,11 +676,9 @@ def test_email_sent_on_successful_signup_group(
             "signups": [signup_data],
         }
 
-        response = assert_create_signup_group(user_api_client, signup_group_data)
-        assert (
-            signup_data["first_name"]
-            in response.data["attending"]["people"][0]["first_name"]
-        )
+        assert_create_signup_group(user_api_client, signup_group_data)
+        assert SignUp.objects.count() == 1
+        assert SignUp.objects.first().attendee_status == SignUp.AttendeeStatus.ATTENDING
 
         #  assert that the email was sent
         assert mail.outbox[0].subject.startswith(expected_subject)
@@ -720,6 +715,8 @@ def test_signup_group_confirmation_template_has_correct_text_per_event_type(
     languages,
     registration,
 ):
+    assert SignUp.objects.count() == 0
+
     registration.event.type_id = event_type
     registration.event.name = "Foo"
     registration.event.save()
@@ -738,11 +735,9 @@ def test_signup_group_confirmation_template_has_correct_text_per_event_type(
         "signups": [signup_data],
     }
 
-    response = assert_create_signup_group(user_api_client, signup_groups_data)
-    assert (
-        signup_data["first_name"]
-        in response.data["attending"]["people"][0]["first_name"]
-    )
+    assert_create_signup_group(user_api_client, signup_groups_data)
+    assert SignUp.objects.count() == 1
+    assert SignUp.objects.first().attendee_status == SignUp.AttendeeStatus.ATTENDING
 
     #  assert that the email was sent
     assert expected_heading in str(mail.outbox[0].alternatives[0])
@@ -819,6 +814,8 @@ def test_confirmation_template_has_correct_text_per_event_type(
     languages,
     registration,
 ):
+    assert SignUp.objects.count() == 0
+
     registration.event.type_id = event_type
     registration.event.name = "Foo"
     registration.event.save()
@@ -837,11 +834,9 @@ def test_confirmation_template_has_correct_text_per_event_type(
         "signups": [signup_data],
     }
 
-    response = assert_create_signup_group(user_api_client, signup_group_data)
-    assert (
-        signup_data["first_name"]
-        in response.data["attending"]["people"][0]["first_name"]
-    )
+    assert_create_signup_group(user_api_client, signup_group_data)
+    assert SignUp.objects.count() == 1
+    assert SignUp.objects.first().attendee_status == SignUp.AttendeeStatus.ATTENDING
 
     #  assert that the email was sent
     assert expected_heading in str(mail.outbox[0].alternatives[0])
@@ -919,6 +914,8 @@ def test_signup_group_different_email_sent_if_user_is_added_to_waiting_list(
     service_language,
     signup,
 ):
+    assert SignUp.objects.count() == 1
+
     with translation.override(service_language):
         registration.event.type_id = Event.TypeId.GENERAL
         registration.event.name = "Foo"
@@ -931,7 +928,7 @@ def test_signup_group_different_email_sent_if_user_is_added_to_waiting_list(
         signup_data = {
             "first_name": "Michael",
             "last_name": "Jackson",
-            "email": "test@test.com",
+            "email": "michael@test.com",
             "service_language": service_language,
         }
         signup_group_data = {
@@ -940,10 +937,11 @@ def test_signup_group_different_email_sent_if_user_is_added_to_waiting_list(
             "signups": [signup_data],
         }
 
-        response = assert_create_signup_group(user_api_client, signup_group_data)
+        assert_create_signup_group(user_api_client, signup_group_data)
+        assert SignUp.objects.count() == 2
         assert (
-            signup_data["first_name"]
-            in response.data["waitlisted"]["people"][0]["first_name"]
+            SignUp.objects.filter(email=signup_data["email"]).first().attendee_status
+            == SignUp.AttendeeStatus.WAITING_LIST
         )
 
         #  assert that the email was sent
@@ -977,6 +975,8 @@ def test_signup_group_confirmation_to_waiting_list_template_has_correct_text_per
     registration,
     signup,
 ):
+    assert SignUp.objects.count() == 1
+
     registration.event.type_id = event_type
     registration.event.name = "Foo"
     registration.event.save()
@@ -989,7 +989,7 @@ def test_signup_group_confirmation_to_waiting_list_template_has_correct_text_per
     signup_data = {
         "first_name": "Michael",
         "last_name": "Jackson",
-        "email": "test@test.com",
+        "email": "michael@test.com",
         "service_language": "en",
     }
     signup_group_data = {
@@ -998,10 +998,11 @@ def test_signup_group_confirmation_to_waiting_list_template_has_correct_text_per
         "signups": [signup_data],
     }
 
-    response = assert_create_signup_group(user_api_client, signup_group_data)
+    assert_create_signup_group(user_api_client, signup_group_data)
+    assert SignUp.objects.count() == 2
     assert (
-        signup_data["first_name"]
-        in response.data["waitlisted"]["people"][0]["first_name"]
+        SignUp.objects.filter(email=signup_data["email"]).first().attendee_status
+        == SignUp.AttendeeStatus.WAITING_LIST
     )
 
     #  assert that the email was sent

@@ -326,24 +326,6 @@ class CreateSignUpsSerializer(serializers.Serializer):
 
 class SignUpGroupCreateSerializer(serializers.ModelSerializer, CreateSignUpsSerializer):
     reservation_code = serializers.CharField(write_only=True)
-    attending = serializers.SerializerMethodField(read_only=True)
-    waitlisted = serializers.SerializerMethodField(read_only=True)
-
-    def get_attending(self, obj):
-        attending = obj.signups.filter(attendee_status=SignUp.AttendeeStatus.ATTENDING)
-        return {
-            "count": attending.count(),
-            "people": SignUpSerializer(attending, many=True).data,
-        }
-
-    def get_waitlisted(self, obj):
-        waitlisted = obj.signups.filter(
-            attendee_status=SignUp.AttendeeStatus.WAITING_LIST
-        )
-        return {
-            "count": waitlisted.count(),
-            "people": SignUpSerializer(waitlisted, many=True).data,
-        }
 
     def create(self, validated_data):
         validated_data["created_by"] = self.context["request"].user
@@ -371,8 +353,6 @@ class SignUpGroupCreateSerializer(serializers.ModelSerializer, CreateSignUpsSeri
             "signups",
             "reservation_code",
             "extra_info",
-            "attending",
-            "waitlisted",
         )
         model = SignUpGroup
 
