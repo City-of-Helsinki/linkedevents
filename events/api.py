@@ -3355,6 +3355,22 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         method="filter_dwithin", widget=DistanceWithinWidget()
     )
 
+    max_attendee_capacity_gte = django_filters.NumberFilter(
+        field_name="maximum_attendee_capacity", lookup_expr="gte"
+    )
+
+    min_attendee_capacity_gte = django_filters.NumberFilter(
+        field_name="minimum_attendee_capacity", lookup_expr="gte"
+    )
+
+    max_attendee_capacity_lte = django_filters.NumberFilter(
+        field_name="maximum_attendee_capacity", lookup_expr="lte"
+    )
+
+    min_attendee_capacity_lte = django_filters.NumberFilter(
+        field_name="minimum_attendee_capacity", lookup_expr="lte"
+    )
+
     class Meta:
         model = Event
         fields = ("division", "super_event_type", "super_event")
@@ -3426,6 +3442,8 @@ class EventViewSet(
         "duration",
         "last_modified_time",
         "name",
+        "maximum_attendee_capacity",
+        "minimum_attendee_capacity",
     )
     ordering = ("-last_modified_time",)
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES + [DOCXRenderer]
