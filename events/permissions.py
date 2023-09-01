@@ -157,7 +157,10 @@ class DataSourceResourceEditPermission(
 class DataSourceOrganizationEditPermission(BasePermission):
     def has_permission(self, request, view):
         if request.method == "POST":
-            if request.user.admin_organizations.exists():
+            if (
+                request.user.is_authenticated
+                and request.user.admin_organizations.exists()
+            ):
                 return True
 
             logging.info("User must be an admin to create an organization")

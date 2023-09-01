@@ -492,3 +492,10 @@ def test_permissions_destroy_organization(
     api_client.force_authenticate(user2_with_user_type)
     response = delete_organization(api_client, organization.pk)
     assert response.status_code == expected_status
+
+
+@pytest.mark.django_db
+def test_get_organization_list_html_renders(api_client, event):
+    url = reverse("organization-list", version="v1")
+    response = api_client.get(url, data=None, HTTP_ACCEPT="text/html")
+    assert response.status_code == status.HTTP_200_OK, str(response.content)
