@@ -354,6 +354,39 @@
         <pre><code>event/?enrolment_open_waitilist=true</code></pre>
         <p><a href="?enrolment_open_waitilist=true" title="json">See the result</a></p>
 
+        <h3 id="attendee-capacity">Attendee capacity</h3>
+        <p>Filters for filtering by event maximum_attendee_capacity and minimum_attendee_capacity:</p>
+
+        <h4 id="">Filtering for maximum_attendee_capacity</h4>
+        <p>It is possible to filter by maximum_attendee_capacity using gte (>) or lte (<) filters.</p>
+
+        <p><code>maximum_attendee_capacity_gte</code> parameter displays events with maximum attendee capacity greater than
+            or equal the applied parameter (integer value)</p>
+        <p>Example:</p>
+        <pre><code>event/?maximum_attendee_capacity_gte=10</code></pre>
+        <p><a href="?maximum_attendee_capacity_gte=10" title="json">See the result</a></p>
+
+        <p><code>maximum_attendee_capacity_lte</code> parameter displays events with maximum attendee capacity less than
+            or equal the applied parameter (integer value)</p>
+        <p>Example:</p>
+        <pre><code>event/?maximum_attendee_capacity_lte=10</code></pre>
+        <p><a href="?maximum_attendee_capacity_lte=10" title="json">See the result</a></p>
+
+        <h4 id="">Filtering for minimum_attendee_capacity</h4>
+        <p>It is possible to filter by minimum_attendee_capacity using gte (>) or lte (<) filters.</p>
+
+        <p><code>minimum_attendee_capacity_gte</code> parameter displays events with minimum attendee capacity greater than
+            or equal the applied parameter (integer value)</p>
+        <p>Example:</p>
+        <pre><code>event/?minimum_attendee_capacity_gte=10</code></pre>
+        <p><a href="?minimum_attendee_capacity_gte=10" title="json">See the result</a></p>
+
+        <p><code>minimum_attendee_capacity_lte</code> parameter displays events with minimum attendee capacity less than
+            or equal the applied parameter (integer value)</p>
+        <p>Example:</p>
+        <pre><code>event/?minimum_attendee_capacity_lte=10</code></pre>
+        <p><a href="?minimum_attendee_capacity_lte=10" title="json">See the result</a></p>
+
         <h3 id="event-for-authenticated-users">Filtering for authenticated users</h3>
         <p>By default, only public events are shown in the event list. However, certain query parameters allow 
             customizing the listing for authenticated users</p>
