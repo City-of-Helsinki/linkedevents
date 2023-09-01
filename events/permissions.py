@@ -145,22 +145,25 @@ class DataSourceResourceEditPermission(
                 )
         else:
             # without api key, the user will have to be admin
-            if not obj.is_user_editable_resources():
+            if (
+                hasattr(obj, "is_user_editable_resources")
+                and not obj.is_user_editable_resources()
+            ):
                 raise PermissionDenied(_("Data source is not editable"))
 
         return True
 
 
-class DataSourceOrganizationEditPermission(DataSourceResourceEditPermission):
+class DataSourceOrganizationEditPermission(BasePermission):
     def has_permission(self, request, view):
         if request.method == "POST":
             if request.user.admin_organizations.exists():
-                return super().has_permission(request, view)
+                return True
 
             logging.info("User must be an admin to create an organization")
             return False
 
-        return super().has_permission(request, view)
+        return True
 
     def has_object_permission(self, request: Request, view, obj):
         if request.method in permissions.SAFE_METHODS:

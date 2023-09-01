@@ -1611,7 +1611,9 @@ class OrganizationViewSet(
     viewsets.ModelViewSet,
 ):
     queryset = Organization.objects.all()
-    permission_classes = (DataSourceOrganizationEditPermission,)
+    permission_classes = [
+        DataSourceResourceEditPermission & DataSourceOrganizationEditPermission
+    ]
 
     def get_serializer_class(self, *args, **kwargs):
         if self.action in ["create", "retrieve", "update"]:
