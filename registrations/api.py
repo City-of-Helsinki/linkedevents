@@ -113,6 +113,39 @@ class RegistrationViewSet(
             return MassEmailSerializer
         return super().get_serializer_class()
 
+    @staticmethod
+    def _get_messages(subject, cleaned_body, plain_text_body, signups, signup_groups):
+        messages = []
+
+        if not (signups or signup_groups):
+            return messages
+
+        already_included_signups = set()
+
+        # Make personal email for each signup groups' responsible signups
+        for signup_group in signup_groups:
+            responsible_signups = (
+                signup_group.responsible_signups or signup_group.signups.all()
+            )
+            for signup in responsible_signups:
+                message = signup.get_registration_message(
+                    subject, cleaned_body, plain_text_body
+                )
+                messages.append(message)
+                already_included_signups.add(signup.pk)
+
+        # Make personal email for each individual signup that
+        # was not already processed as part of a group.
+        for signup in signups:
+            if signup.pk in already_included_signups:
+                continue
+            message = signup.get_registration_message(
+                subject, cleaned_body, plain_text_body
+            )
+            messages.append(message)
+
+        return messages
+
     @action(
         methods=["post"],
         detail=True,
@@ -126,11 +159,6 @@ class RegistrationViewSet(
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
 
-        signups = serializer.validated_data.get(
-            "signups", registration.signups.exclude(email=None)
-        )
-
-        messages = []
         body = serializer.validated_data["body"]
         subject = serializer.validated_data["subject"]
         cleaned_body = bleach.clean(
@@ -138,24 +166,18 @@ class RegistrationViewSet(
         )
         plain_text_body = bleach.clean(body, strip=True)
 
-        # Make personal email for each signup that:
-        # - is responsible for a group
-        # - belongs to a group with no responsible signups
-        # - does not belong to a group
-        for signup in signups:
-            if (
-                signup.signup_group_id
-                and (
-                    signup.responsible_for_group
-                    or not signup.signup_group.responsible_signups
-                )
-                or not signup.signup_group_id
-            ):
-                message = signup.get_registration_message(
-                    subject, cleaned_body, plain_text_body
-                )
-                messages.append(message)
-
+        signup_groups = serializer.validated_data.get("signup_groups", [])
+        signups = serializer.validated_data.get("signups", [])
+        if not (signup_groups or signups):
+            signup_groups = registration.signup_groups.exclude(signups__email=None)
+            signups = registration.signups.exclude(email=None)
+        messages = self._get_messages(
+            subject,
+            cleaned_body,
+            plain_text_body,
+            signups,
+            signup_groups,
+        )
         try:
             send_mass_html_mail(messages, fail_silently=False)
         except SMTPException as e:

@@ -500,6 +500,13 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
         model = SeatReservationCode
 
 
+class MassEmailSignupGroupsField(serializers.PrimaryKeyRelatedField):
+    def get_queryset(self):
+        registration = self.context["request"].data["registration"]
+
+        return registration.signup_groups.exclude(signups__email=None)
+
+
 class MassEmailSignupsField(serializers.PrimaryKeyRelatedField):
     def get_queryset(self):
         registration = self.context["request"].data["registration"]
@@ -510,6 +517,10 @@ class MassEmailSignupsField(serializers.PrimaryKeyRelatedField):
 class MassEmailSerializer(serializers.Serializer):
     subject = serializers.CharField()
     body = serializers.CharField()
+    signup_groups = MassEmailSignupGroupsField(
+        many=True,
+        required=False,
+    )
     signups = MassEmailSignupsField(
         many=True,
         required=False,

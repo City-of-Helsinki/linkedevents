@@ -49,9 +49,12 @@ def test_admin_user_can_send_message_to_all_signups(
 
 
 @pytest.mark.django_db
-def test_email_is_sent_to_responsible_signups(api_client, registration, user):
+def test_email_is_sent_to_all_if_no_groups_or_signups_given(
+    api_client, registration, user
+):
+    # Group
     signup_group = SignUpGroupFactory(registration=registration)
-    SignUpFactory(
+    first_signup = SignUpFactory(
         signup_group=signup_group, registration=registration, email="test@test.com"
     )
     second_signup = SignUpFactory(
@@ -60,68 +63,10 @@ def test_email_is_sent_to_responsible_signups(api_client, registration, user):
         responsible_for_group=True,
         email="test2@test.com",
     )
-    SignUpFactory(
-        signup_group=signup_group, registration=registration, email="test3@test.com"
-    )
 
-    api_client.force_authenticate(user)
-    send_message_data = {"subject": "Message subject", "body": "Message body"}
-
-    assert_send_message(
-        api_client, registration.id, send_message_data, [second_signup.email]
-    )
-    # Default language for the email is Finnish
-    assert "Tarkastele ilmoittautumistasi täällä" in str(mail.outbox[0].alternatives[0])
-
-
-@pytest.mark.django_db
-def test_email_is_sent_to_group_signups_without_responsible_signups(
-    api_client, registration, user
-):
-    signup_group = SignUpGroupFactory(registration=registration)
-    first_signup = SignUpFactory(
-        signup_group=signup_group, registration=registration, email="test@test.com"
-    )
-    second_signup = SignUpFactory(
-        signup_group=signup_group, registration=registration, email="test2@test.com"
-    )
-    third_signup = SignUpFactory(
-        signup_group=signup_group, registration=registration, email="test3@test.com"
-    )
-
-    api_client.force_authenticate(user)
-    send_message_data = {"subject": "Message subject", "body": "Message body"}
-
-    assert_send_message(
-        api_client,
-        registration.id,
-        send_message_data,
-        [first_signup.email, second_signup.email, third_signup.email],
-    )
-    # Default language for the email is Finnish
-    assert "Tarkastele ilmoittautumistasi täällä" in str(mail.outbox[0].alternatives[0])
-
-
-@pytest.mark.django_db
-def test_email_is_sent_to_mixed_signups(api_client, registration, user):
-    signup_group = SignUpGroupFactory(registration=registration)
-    first_signup = SignUpFactory(
-        signup_group=signup_group,
-        registration=registration,
-        email="test@test.com",
-        responsible_for_group=True,
-    )
-    SignUpFactory(
-        signup_group=signup_group, registration=registration, email="test2@test.com"
-    )
+    # Individual
     third_signup = SignUpFactory(registration=registration, email="test3@test.com")
-
-    second_signup_group = SignUpGroupFactory(registration=registration)
-    fourth_signup = SignUpFactory(
-        signup_group=second_signup_group,
-        registration=registration,
-        email="test4@test.com",
-    )
+    fourth_signup = SignUpFactory(registration=registration, email="test3@test.com")
 
     api_client.force_authenticate(user)
     send_message_data = {"subject": "Message subject", "body": "Message body"}
@@ -130,7 +75,102 @@ def test_email_is_sent_to_mixed_signups(api_client, registration, user):
         api_client,
         registration.id,
         send_message_data,
-        [first_signup.email, third_signup.email, fourth_signup.email],
+        [
+            first_signup.email,
+            second_signup.email,
+            third_signup.email,
+            fourth_signup.email,
+        ],
+    )
+    # Default language for the email is Finnish
+    assert "Tarkastele ilmoittautumistasi täällä" in str(mail.outbox[0].alternatives[0])
+
+
+@pytest.mark.django_db
+def test_email_is_sent_to_selected_signup_groups_only(api_client, registration, user):
+    signup_group0 = SignUpGroupFactory(registration=registration)
+    SignUpFactory(
+        signup_group=signup_group0, registration=registration, email="test@test.com"
+    )
+    SignUpFactory(
+        signup_group=signup_group0,
+        registration=registration,
+        responsible_for_group=True,
+        email="test2@test.com",
+    )
+
+    signup_group1 = SignUpGroupFactory(registration=registration)
+    third_signup = SignUpFactory(
+        signup_group=signup_group1,
+        registration=registration,
+        responsible_for_group=True,
+        email="test3@test.com",
+    )
+    SignUpFactory(
+        signup_group=signup_group1, registration=registration, email="test4@test.com"
+    )
+
+    api_client.force_authenticate(user)
+    send_message_data = {
+        "subject": "Message subject",
+        "body": "Message body",
+        "signup_groups": [signup_group1.pk],
+    }
+
+    assert_send_message(
+        api_client, registration.id, send_message_data, [third_signup.email]
+    )
+    # Default language for the email is Finnish
+    assert "Tarkastele ilmoittautumistasi täällä" in str(mail.outbox[0].alternatives[0])
+
+
+@pytest.mark.django_db
+def test_email_is_sent_to_selected_signups_only(api_client, registration, user):
+    signup_group0 = SignUpGroupFactory(registration=registration)
+    SignUpFactory(
+        signup_group=signup_group0, registration=registration, email="test@test.com"
+    )
+    responsible_signup = SignUpFactory(
+        signup_group=signup_group0,
+        registration=registration,
+        responsible_for_group=True,
+        email="test2@test.com",
+    )
+
+    signup_group1 = SignUpGroupFactory(registration=registration)
+    SignUpFactory(
+        signup_group=signup_group1,
+        registration=registration,
+        responsible_for_group=True,
+        email="test3@test.com",
+    )
+    non_responsible_signup = SignUpFactory(
+        signup_group=signup_group1, registration=registration, email="test4@test.com"
+    )
+
+    individual_signup = SignUpFactory(registration=registration, email="test5@test.com")
+    SignUpFactory(registration=registration, email="test6@test.com")
+
+    api_client.force_authenticate(user)
+    send_message_data = {
+        "subject": "Message subject",
+        "body": "Message body",
+        "signups": [
+            responsible_signup.pk,
+            non_responsible_signup.pk,
+            individual_signup.pk,
+        ],
+    }
+
+    assert_send_message(
+        api_client,
+        registration.id,
+        send_message_data,
+        [
+            responsible_signup.email,
+            non_responsible_signup.email,
+            individual_signup.email,
+        ],
     )
     # Default language for the email is Finnish
     assert "Tarkastele ilmoittautumistasi täällä" in str(mail.outbox[0].alternatives[0])
@@ -244,6 +284,22 @@ def test_cannot_send_message_with_invalid_signup_pk_type(
     response = send_message(api_client, registration.id, send_message_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.data["signups"][0].code == "incorrect_type"
+
+
+@pytest.mark.django_db
+def test_cannot_send_message_with_invalid_signup_group_pk_type(
+    api_client, registration, signup, user
+):
+    api_client.force_authenticate(user)
+    send_message_data = {
+        "subject": "Message subject",
+        "body": "Message body",
+        "signup_groups": ["not-exist"],
+    }
+
+    response = send_message(api_client, registration.id, send_message_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["signup_groups"][0].code == "incorrect_type"
 
 
 @pytest.mark.django_db
