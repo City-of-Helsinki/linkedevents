@@ -362,7 +362,7 @@ class SignUpGroupSerializer(serializers.ModelSerializer):
     signups = SignUpSerializer(many=True)
 
     class Meta:
-        fields = "__all__"
+        fields = ("id", "registration", "signups", "extra_info")
         model = SignUpGroup
 
 

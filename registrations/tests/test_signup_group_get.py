@@ -1,6 +1,7 @@
 import pytest
 from rest_framework import status
 
+from events.tests.utils import assert_fields_exist
 from events.tests.utils import versioned_reverse as reverse
 from registrations.tests.factories import SignUpFactory, SignUpGroupFactory
 
@@ -25,15 +26,17 @@ def assert_get_detail(api_client, signup_pk, query=None):
     return response
 
 
+def assert_signup_group_fields_exist(data):
+    fields = (
+        "id",
+        "registration",
+        "signups",
+        "extra_info",
+    )
+    assert_fields_exist(data, fields)
+
+
 # === tests ===
-
-
-@pytest.mark.django_db
-def test_admin_user_can_get_signup_group_without_signups(user_api_client, organization):
-    signup_group = SignUpGroupFactory(registration__event__publisher=organization)
-
-    response = assert_get_detail(user_api_client, signup_group.id)
-    assert len(response.json()["signups"]) == 0
 
 
 @pytest.mark.django_db
@@ -44,6 +47,7 @@ def test_admin_user_can_get_signup_group_with_signups(user_api_client, organizat
 
     response = assert_get_detail(user_api_client, signup_group.id)
     assert len(response.json()["signups"]) == 2
+    assert_signup_group_fields_exist(response.data)
 
 
 @pytest.mark.django_db
@@ -64,12 +68,15 @@ def test_regular_created_user_can_get_signup_group(user_api_client, user, organi
     signup_group = SignUpGroupFactory(
         registration__event__publisher=organization, created_by=user
     )
+    SignUpFactory(registration=signup_group.registration, signup_group=signup_group)
+    SignUpFactory(registration=signup_group.registration, signup_group=signup_group)
 
     organization.regular_users.add(user)
     organization.admin_users.remove(user)
 
-    response = get_detail(user_api_client, signup_group.id)
-    assert response.status_code == status.HTTP_200_OK
+    response = assert_get_detail(user_api_client, signup_group.id)
+    assert len(response.json()["signups"]) == 2
+    assert_signup_group_fields_exist(response.data)
 
 
 @pytest.mark.django_db
@@ -92,12 +99,16 @@ def test_api_key_with_organization_can_get_signup(
         registration__event__publisher=organization,
         registration__event__data_source=data_source,
     )
+    SignUpFactory(registration=signup_group.registration, signup_group=signup_group)
+    SignUpFactory(registration=signup_group.registration, signup_group=signup_group)
 
     data_source.owner = organization
     data_source.save()
     api_client.credentials(apikey=data_source.api_key)
 
-    assert_get_detail(api_client, signup_group.id)
+    response = assert_get_detail(api_client, signup_group.id)
+    assert len(response.json()["signups"]) == 2
+    assert_signup_group_fields_exist(response.data)
 
 
 @pytest.mark.django_db
