@@ -4,9 +4,7 @@ from rest_framework import status
 
 from events.models import Event
 from events.tests.utils import versioned_reverse as reverse
-from registrations.tests.test_registration_user_access_invitation import (
-    assert_invitation_email_is_sent,
-)
+from registrations.tests.utils import assert_invitation_email_is_sent
 
 email = "user@email.com"
 event_name = "Foo"
