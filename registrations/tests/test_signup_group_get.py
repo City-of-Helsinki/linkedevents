@@ -73,7 +73,7 @@ def test_regular_created_user_can_get_signup_group(user_api_client, user, organi
 
 
 @pytest.mark.django_db
-def test__user_from_other_organization_cannot_get_signup_group(
+def test_user_from_other_organization_cannot_get_signup_group(
     api_client, user2, organization
 ):
     signup_group = SignUpGroupFactory(registration__event__publisher=organization)
@@ -85,7 +85,7 @@ def test__user_from_other_organization_cannot_get_signup_group(
 
 
 @pytest.mark.django_db
-def test__api_key_with_organization_can_get_signup(
+def test_api_key_with_organization_can_get_signup(
     api_client, data_source, organization
 ):
     signup_group = SignUpGroupFactory(
@@ -101,7 +101,7 @@ def test__api_key_with_organization_can_get_signup(
 
 
 @pytest.mark.django_db
-def test__api_key_with_wrong_organization_cannot_get_signup(
+def test_api_key_with_wrong_organization_cannot_get_signup(
     api_client, data_source, organization, organization2
 ):
     signup_group = SignUpGroupFactory(
@@ -118,7 +118,7 @@ def test__api_key_with_wrong_organization_cannot_get_signup(
 
 
 @pytest.mark.django_db
-def test__api_key_from_wrong_data_source_cannot_get_signup(
+def test_api_key_from_wrong_data_source_cannot_get_signup(
     api_client, organization, data_source, other_data_source
 ):
     signup_group = SignUpGroupFactory(
