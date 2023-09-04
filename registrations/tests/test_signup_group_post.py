@@ -634,13 +634,13 @@ def test_signup_group_successful_with_waitlist(user_api_client, registration):
         (
             "fi",
             "Vahvistus ilmoittautumisesta",
-            "Ilmoittautuminen tapahtuman Foo jonotuslistaan on tallennettu.",
+            "Ilmoittautuminen tapahtumaan Foo on tallennettu.",
             "Onnittelut! Olet onnistuneesti ilmoittautunut tapahtumaan <strong>Foo</strong>.",
         ),
         (
             "sv",
             "Bekräftelse av registrering",
-            "Anmälan till evenemanget Foo väntelista har sparats.",
+            "Anmälan till evenemanget Foo har sparats.",
             "Grattis! Du har framgångsrikt registrerat dig till evenemanget <strong>Foo</strong>.",
         ),
     ],
@@ -651,10 +651,10 @@ def test_email_sent_on_successful_signup_group(
     expected_heading,
     expected_subject,
     expected_text,
-    languages,
     registration,
     service_language,
 ):
+    LanguageFactory(id=service_language, name=service_language, service_language=True)
     assert SignUp.objects.count() == 0
 
     with translation.override(service_language):
