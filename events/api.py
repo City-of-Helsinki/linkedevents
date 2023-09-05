@@ -1183,9 +1183,9 @@ def filter_division(queryset, name: str, value: Iterable[str]):
         query = Q(**{name + "__ocd_id__in": ocd_ids}) | Q(
             **{name + "__translations__name__in": names}
         )
-        return (
-            queryset.filter(query).prefetch_related(name + "__translations").distinct()
-        )
+        return queryset.filter(
+            Exists(queryset.model.objects.filter(query, pk=OuterRef("pk")))
+        ).prefetch_related(name + "__translations")
     else:
         # Haystack SearchQuerySet does not support distinct, so we only support one type of search at a time:
         if ocd_ids:
