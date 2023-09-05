@@ -25,9 +25,11 @@ RUN apt-install.sh \
     gdal-bin \
     gettext \
     postgresql-client \
+    libcurl4-openssl-dev \
     && pip install --upgrade pip \
     && pip install --no-cache-dir -r /app/requirements.txt \
     && pip install --no-cache-dir -r /app/requirements-prod.txt \
+    && uwsgi --build-plugin https://github.com/City-of-Helsinki/uwsgi-sentry \
     && apt-cleanup.sh build-essential
 
 COPY --chown=appuser:appuser ./docker/django/docker-entrypoint.sh /entrypoint/docker-entrypoint.sh
