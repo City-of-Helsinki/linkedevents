@@ -23,6 +23,7 @@ YSO_DEPRECATED_MAPS = {
     "yso:p12262": "yso:p4354",  # lapset (kooste) -> lapset (ikään liittyvä rooli), missing YSO replacement
     "yso:p21160": "yso:p8113",  # kirjallisuus (erikoisala) -> kirjallisuus (taidelajit), wrong YSO replacement
     "yso:p27158": "yso:p508707",  # Suvilahti -> Suvilahti (Helsinki), missing YSO replacement
+    "yso:p21315": "yso:p508301",  # Marskenttä -> Campus Martius, missing YSO replacement
 }
 
 # yso keywords for the importers to automatically include in the audience field as well
