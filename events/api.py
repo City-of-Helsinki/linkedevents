@@ -3357,19 +3357,19 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         method="filter_dwithin", widget=DistanceWithinWidget()
     )
 
-    max_attendee_capacity_gte = django_filters.NumberFilter(
+    maximum_attendee_capacity_gte = django_filters.NumberFilter(
         field_name="maximum_attendee_capacity", lookup_expr="gte"
     )
 
-    min_attendee_capacity_gte = django_filters.NumberFilter(
+    minimum_attendee_capacity_gte = django_filters.NumberFilter(
         field_name="minimum_attendee_capacity", lookup_expr="gte"
     )
 
-    max_attendee_capacity_lte = django_filters.NumberFilter(
+    maximum_attendee_capacity_lte = django_filters.NumberFilter(
         field_name="maximum_attendee_capacity", lookup_expr="lte"
     )
 
-    min_attendee_capacity_lte = django_filters.NumberFilter(
+    minimum_attendee_capacity_lte = django_filters.NumberFilter(
         field_name="minimum_attendee_capacity", lookup_expr="lte"
     )
 
