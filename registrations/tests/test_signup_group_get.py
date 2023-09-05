@@ -3,7 +3,11 @@ from rest_framework import status
 
 from events.tests.utils import assert_fields_exist
 from events.tests.utils import versioned_reverse as reverse
-from registrations.tests.factories import SignUpFactory, SignUpGroupFactory
+from registrations.tests.factories import (
+    RegistrationUserAccessFactory,
+    SignUpFactory,
+    SignUpGroupFactory,
+)
 
 # === util methods ===
 
@@ -40,14 +44,26 @@ def assert_signup_group_fields_exist(data):
 
 
 @pytest.mark.django_db
-def test_admin_user_can_get_signup_group_with_signups(user_api_client, organization):
-    signup_group = SignUpGroupFactory(registration__event__publisher=organization)
-    SignUpFactory(registration=signup_group.registration, signup_group=signup_group)
-    SignUpFactory(registration=signup_group.registration, signup_group=signup_group)
+def test_admin_user_can_get_signup_group_with_signups(user_api_client, registration):
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(registration=registration, signup_group=signup_group)
+    SignUpFactory(registration=registration, signup_group=signup_group)
 
     response = assert_get_detail(user_api_client, signup_group.id)
     assert len(response.json()["signups"]) == 2
     assert_signup_group_fields_exist(response.data)
+
+
+@pytest.mark.django_db
+def test_registration_user_access_can_get_signup_group(
+    registration, user, user_api_client
+):
+    signup_group = SignUpGroupFactory(registration=registration)
+
+    user.get_default_organization().admin_users.remove(user)
+    RegistrationUserAccessFactory(registration=registration, email=user.email)
+
+    assert_get_detail(user_api_client, signup_group.id)
 
 
 @pytest.mark.django_db

@@ -368,7 +368,10 @@ class SignUpGroupViewSet(
 ):
     serializer_class = SignUpGroupSerializer
     queryset = SignUpGroup.objects.all()
-    permission_classes = [CanCreateEditDeleteSignup & DataSourceResourceEditPermission]
+    permission_classes = [
+        (CanCreateEditDeleteSignup & DataSourceResourceEditPermission)
+        | RegistrationUserAccessRetrievePermission
+    ]
 
     def get_serializer_class(self):
         if self.action == "create":
