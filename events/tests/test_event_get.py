@@ -1158,7 +1158,7 @@ def test_get_event_list_verify_registration_filter(
 
 
 @pytest.mark.django_db
-def test_get_event_list_max_attendee_capacity_filter_gte(
+def test_get_event_list_maximum_attendee_capacity_filter_gte(
     api_client,
     event,
     event2,
@@ -1171,11 +1171,11 @@ def test_get_event_list_max_attendee_capacity_filter_gte(
     event3.maximum_attendee_capacity = 8
     event3.save()
 
-    get_list_and_assert_events("max_attendee_capacity_gte=9", [event, event2])
+    get_list_and_assert_events("maximum_attendee_capacity_gte=9", [event, event2])
 
 
 @pytest.mark.django_db
-def test_get_event_list_max_attendee_capacity_filter_gte_when_equal(
+def test_get_event_list_maximum_attendee_capacity_filter_gte_when_equal(
     api_client,
     event,
     event2,
@@ -1188,11 +1188,11 @@ def test_get_event_list_max_attendee_capacity_filter_gte_when_equal(
     event3.maximum_attendee_capacity = 8
     event3.save()
 
-    get_list_and_assert_events("max_attendee_capacity_gte=10", [event])
+    get_list_and_assert_events("maximum_attendee_capacity_gte=10", [event])
 
 
 @pytest.mark.django_db
-def test_get_event_list_max_attendee_capacity_filter_lte(
+def test_get_event_list_maximum_attendee_capacity_filter_lte(
     api_client,
     event,
     event2,
@@ -1205,11 +1205,11 @@ def test_get_event_list_max_attendee_capacity_filter_lte(
     event3.maximum_attendee_capacity = 8
     event3.save()
 
-    get_list_and_assert_events("max_attendee_capacity_lte=9", [event2, event3])
+    get_list_and_assert_events("maximum_attendee_capacity_lte=9", [event2, event3])
 
 
 @pytest.mark.django_db
-def test_get_event_list_max_attendee_capacity_filter_lte_when_equal(
+def test_get_event_list_maximum_attendee_capacity_filter_lte_when_equal(
     api_client,
     event,
     event2,
@@ -1222,11 +1222,11 @@ def test_get_event_list_max_attendee_capacity_filter_lte_when_equal(
     event3.maximum_attendee_capacity = 8
     event3.save()
 
-    get_list_and_assert_events("max_attendee_capacity_lte=8", [event3])
+    get_list_and_assert_events("maximum_attendee_capacity_lte=8", [event3])
 
 
 @pytest.mark.django_db
-def test_get_event_list_min_attendee_capacity_filter_gte(
+def test_get_event_list_minimum_attendee_capacity_filter_gte(
     api_client,
     event,
     event2,
@@ -1239,11 +1239,11 @@ def test_get_event_list_min_attendee_capacity_filter_gte(
     event3.minimum_attendee_capacity = 8
     event3.save()
 
-    get_list_and_assert_events("min_attendee_capacity_gte=9", [event, event2])
+    get_list_and_assert_events("minimum_attendee_capacity_gte=9", [event, event2])
 
 
 @pytest.mark.django_db
-def test_get_event_list_min_attendee_capacity_filter_gte_when_equal(
+def test_get_event_list_minimum_attendee_capacity_filter_gte_when_equal(
     api_client,
     event,
     event2,
@@ -1256,11 +1256,11 @@ def test_get_event_list_min_attendee_capacity_filter_gte_when_equal(
     event3.minimum_attendee_capacity = 8
     event3.save()
 
-    get_list_and_assert_events("min_attendee_capacity_gte=10", [event])
+    get_list_and_assert_events("minimum_attendee_capacity_gte=10", [event])
 
 
 @pytest.mark.django_db
-def test_get_event_list_min_attendee_capacity_filter_lte(
+def test_get_event_list_minimum_attendee_capacity_filter_lte(
     api_client,
     event,
     event2,
@@ -1273,11 +1273,11 @@ def test_get_event_list_min_attendee_capacity_filter_lte(
     event3.minimum_attendee_capacity = 8
     event3.save()
 
-    get_list_and_assert_events("min_attendee_capacity_lte=9", [event2, event3])
+    get_list_and_assert_events("minimum_attendee_capacity_lte=9", [event2, event3])
 
 
 @pytest.mark.django_db
-def test_get_event_list_min_attendee_capacity_filter_lte_when_equal(
+def test_get_event_list_minimum_attendee_capacity_filter_lte_when_equal(
     api_client,
     event,
     event2,
@@ -1290,7 +1290,7 @@ def test_get_event_list_min_attendee_capacity_filter_lte_when_equal(
     event3.minimum_attendee_capacity = 8
     event3.save()
 
-    get_list_and_assert_events("min_attendee_capacity_lte=8", [event3])
+    get_list_and_assert_events("minimum_attendee_capacity_lte=8", [event3])
 
 
 @pytest.mark.django_db
