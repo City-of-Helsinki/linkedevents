@@ -1361,14 +1361,22 @@ class PlaceListViewSet(
         show_deleted (deleted places are included)
         """
         queryset = Place.objects.select_related(
-            "image",
-            "data_source",
+            "data_source",  # Select related to support ordering
+        ).prefetch_related(
+            "publisher",  # Performs much better as a prefetch
+            Prefetch(
+                "divisions",
+                AdministrativeDivision.objects.all()
+                .select_related("type", "municipality")
+                .prefetch_related("municipality__translations", "translations"),
+            ),
+            # Fields below are mostly null -> prefetch faster than select
             "created_by",
             "last_modified_by",
-            "publisher",
+            "image",
             "parent",
             "replaced_by",
-        ).prefetch_related("divisions", "divisions__type", "divisions__municipality")
+        )
         data_source = self.request.query_params.get("data_source")
         # Filter by data source, multiple sources separated by comma
         if data_source:
