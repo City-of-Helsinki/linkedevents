@@ -4,6 +4,7 @@ from smtplib import SMTPException
 import bleach
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
+from django.db import transaction
 from django.db.models import ProtectedError, Q, Value
 from django.db.models.functions import Concat
 from django.template.loader import render_to_string
@@ -33,6 +34,7 @@ from registrations.models import (
     RegistrationUserAccess,
     SeatReservationCode,
     SignUp,
+    SignUpGroup,
     SignUpNotificationType,
 )
 from registrations.permissions import (
@@ -44,6 +46,8 @@ from registrations.serializers import (
     MassEmailSerializer,
     RegistrationUserAccessSerializer,
     SeatReservationCodeSerializer,
+    SignUpGroupCreateSerializer,
+    SignUpGroupSerializer,
     SignUpSerializer,
 )
 from registrations.utils import get_ui_locales, send_mass_html_mail
@@ -359,6 +363,37 @@ class SignUpViewSet(
 
 
 register_view(SignUpViewSet, "signup")
+
+
+class SignUpGroupViewSet(
+    UserDataSourceAndOrganizationMixin,
+    mixins.CreateModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet,
+):
+    serializer_class = SignUpGroupSerializer
+    queryset = SignUpGroup.objects.all()
+    permission_classes = [
+        (CanCreateEditDeleteSignup & DataSourceResourceEditPermission)
+        | RegistrationUserAccessRetrievePermission
+    ]
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return SignUpGroupCreateSerializer
+        return super().get_serializer_class()
+
+    @transaction.atomic
+    def create(self, request, *args, **kwargs):
+        data = request.data
+        registration = data.get("registration")
+        if registration and data.get("signups"):
+            for signup_data in data["signups"]:
+                signup_data["registration"] = registration
+        return super().create(request, *args, **kwargs)
+
+
+register_view(SignUpGroupViewSet, "signup_group")
 
 
 class SeatReservationViewSet(

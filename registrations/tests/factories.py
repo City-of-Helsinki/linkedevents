@@ -4,6 +4,7 @@ from events.tests.factories import EventFactory
 from registrations.models import (
     Registration,
     RegistrationUserAccess,
+    SeatReservationCode,
     SignUp,
     SignUpGroup,
 )
@@ -35,3 +36,10 @@ class SignUpFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = SignUp
+
+
+class SeatReservationCodeFactory(factory.django.DjangoModelFactory):
+    registration = factory.SubFactory(RegistrationFactory)
+
+    class Meta:
+        model = SeatReservationCode

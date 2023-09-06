@@ -26,7 +26,8 @@ def test_return_correct_routes(api_client):
         response.data["seats_reservation"] == "http://testserver/v1/seats_reservation/"
     )
     assert response.data["signup"] == "http://testserver/v1/signup/"
-    assert len(response.data) == 12
+    assert response.data["signup_group"] == "http://testserver/v1/signup_group/"
+    assert len(response.data) == 13
     assert response.data.get("data_source") is None
     assert response.data.get("organization_class") is None
     assert response.data.get("feedback") is None

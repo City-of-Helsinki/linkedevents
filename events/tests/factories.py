@@ -1,7 +1,7 @@
 import factory
 
 from events import utils
-from events.models import DataSource, Event, Keyword
+from events.models import DataSource, Event, Keyword, Language
 
 
 class DataSourceFactory(factory.django.DjangoModelFactory):
@@ -54,3 +54,11 @@ class KeywordFactory(factory.django.DjangoModelFactory):
     @factory.lazy_attribute_sequence
     def id(self, n):
         return f"{self.data_source.id}:{n}"
+
+
+class LanguageFactory(factory.django.DjangoModelFactory):
+    id = "fi"
+    name = "Finnish"
+
+    class Meta:
+        model = Language
