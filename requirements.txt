@@ -211,7 +211,7 @@ pygments==2.15.1
     # via ipython
 pyjwkest==1.4.2
     # via drf-oidc-auth
-pyjwt==1.7.1
+pyjwt==2.8.0
     # via social-auth-core
 pyparsing==3.0.9
     # via rdflib
@@ -274,11 +274,10 @@ six==1.16.0
     #   pyjwkest
     #   python-dateutil
     #   social-auth-app-django
-    #   social-auth-core
     #   url-normalize
 social-auth-app-django==4.0.0
     # via -r requirements.in
-social-auth-core==4.0.2
+social-auth-core==4.0.3
     # via
     #   -r requirements.in
     #   social-auth-app-django
