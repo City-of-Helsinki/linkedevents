@@ -229,7 +229,8 @@ class RegistrationBaseSerializer(serializers.ModelSerializer):
             user = self.context["user"]
             if not user.is_anonymous and (
                 user.is_admin_of(obj.event.publisher)
-                or obj.registration_user_accesses.filter(email=user.email).exists()
+                or user.is_strongly_identificated
+                and obj.registration_user_accesses.filter(email=user.email).exists()
             ):
                 signups = obj.signups.all()
                 return SignUpSerializer(signups, many=True, read_only=True).data

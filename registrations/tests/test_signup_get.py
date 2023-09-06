@@ -1,3 +1,5 @@
+from unittest.mock import patch, PropertyMock
+
 import pytest
 from rest_framework import status
 
@@ -59,13 +61,36 @@ def test_admin_user_can_get_signup(registration, signup, user_api_client):
 
 
 @pytest.mark.django_db
-def test_registration_user_access_can_get_signup(
+def test_registration_user_access_can_get_signup_when_strongly_identified(
     registration, signup, user, user_api_client
 ):
     user.get_default_organization().admin_users.remove(user)
     RegistrationUserAccess.objects.create(registration=registration, email=user.email)
 
-    assert_get_detail(user_api_client, signup.id)
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value="heltunnistussuomifi",
+    ) as mocked:
+        assert_get_detail(user_api_client, signup.id)
+        assert mocked.called is True
+
+
+@pytest.mark.django_db
+def test_registration_user_access_cannot_get_signup_when_not_strongly_identified(
+    registration, signup, user, user_api_client
+):
+    user.get_default_organization().admin_users.remove(user)
+    RegistrationUserAccess.objects.create(registration=registration, email=user.email)
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value=None,
+    ) as mocked:
+        response = get_detail(user_api_client, signup.id)
+        assert mocked.called is True
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db
@@ -156,15 +181,38 @@ def test_admin_user_can_get_signup_list(registration, signup, signup2, user_api_
 
 
 @pytest.mark.django_db
-def test_registration_user_access_can_get_signup_list(
+def test_registration_user_access_can_get_signup_list_when_strongly_identified(
     registration, signup, signup2, user, user_api_client
 ):
     user.get_default_organization().admin_users.remove(user)
-
     RegistrationUserAccess.objects.create(registration=registration, email=user.email)
-    get_list_and_assert_signups(
-        user_api_client, f"registration={registration.id}", [signup, signup2]
-    )
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value="heltunnistussuomifi",
+    ) as mocked:
+        get_list_and_assert_signups(
+            user_api_client, f"registration={registration.id}", [signup, signup2]
+        )
+        assert mocked.called is True
+
+
+@pytest.mark.django_db
+def test_registration_user_access_cannot_get_signup_list_when_not_strongly_identified(
+    registration, signup, signup2, user, user_api_client
+):
+    user.get_default_organization().admin_users.remove(user)
+    RegistrationUserAccess.objects.create(registration=registration, email=user.email)
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value=None,
+    ) as mocked:
+        response = get_list(user_api_client, f"registration={registration.id}")
+        assert mocked.called is True
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db
@@ -211,9 +259,24 @@ def test__get_all_signups_to_which_user_has_admin_role(
     user.get_default_organization().admin_users.remove(user)
     get_list_and_assert_signups(user_api_client, "", [])
 
-    # Registration user is allowed to see signups
+    # Registration user is not allowed to see signups if they are not strongly identified
     RegistrationUserAccess.objects.create(registration=registration, email=user.email)
-    get_list_and_assert_signups(user_api_client, "", [signup, signup2])
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value=None,
+    ) as mocked:
+        get_list_and_assert_signups(user_api_client, "", [])
+        assert mocked.called is True
+
+    # Registration user is allowed to see signups if they are strongly identified
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value="heltunnistussuomifi",
+    ) as mocked:
+        get_list_and_assert_signups(user_api_client, "", [signup, signup2])
+        assert mocked.called is True
 
 
 @pytest.mark.django_db
@@ -281,7 +344,7 @@ def test__signup_list_assert_text_filter(
 
 
 @pytest.mark.django_db
-def test__signup_list_assert_text_filter(
+def test__signup_list_assert_attendee_status_filter(
     registration, signup, signup2, user_api_client
 ):
     signup.attendee_status = SignUp.AttendeeStatus.ATTENDING
@@ -301,7 +364,8 @@ def test__signup_list_assert_text_filter(
     )
     get_list_and_assert_signups(
         user_api_client,
-        f"registration={registration.id}&attendee_status={SignUp.AttendeeStatus.ATTENDING},{SignUp.AttendeeStatus.WAITING_LIST}",
+        f"registration={registration.id}&attendee_status={SignUp.AttendeeStatus.ATTENDING},"
+        f"{SignUp.AttendeeStatus.WAITING_LIST}",
         [
             signup,
             signup2,

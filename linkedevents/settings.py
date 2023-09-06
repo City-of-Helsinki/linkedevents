@@ -79,6 +79,7 @@ env = environ.Env(
     MEDIA_URL=(str, "/media/"),
     # "helsinkiazuread" = Tunnistamo auth_backends.helsinki_azure_ad.HelsinkiAzureADTenantOAuth2
     NON_EXTERNAL_AUTHENTICATION_METHODS=(list, ["helsinkiazuread"]),
+    STRONG_IDENTIFICATION_AUTHENTICATION_METHODS=(list, ["heltunnistussuomifi"]),
     REDIS_SENTINELS=(list, []),
     REDIS_URL=(str, None),
     REDIS_PASSWORD=(str, None),
@@ -310,6 +311,11 @@ EXTERNAL_USER_PUBLISHER_ID = env("EXTERNAL_USER_PUBLISHER_ID")
 
 # Which OIDC authentication methods are never considered as external users
 NON_EXTERNAL_AUTHENTICATION_METHODS = env("NON_EXTERNAL_AUTHENTICATION_METHODS")
+
+# Which OIDC authentication methods are considered as strong identification methods
+STRONG_IDENTIFICATION_AUTHENTICATION_METHODS = env(
+    "STRONG_IDENTIFICATION_AUTHENTICATION_METHODS"
+)
 
 #
 # REST Framework
