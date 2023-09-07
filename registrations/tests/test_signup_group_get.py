@@ -1,3 +1,5 @@
+from unittest.mock import patch, PropertyMock
+
 import pytest
 from rest_framework import status
 
@@ -63,7 +65,13 @@ def test_registration_user_access_can_get_signup_group(
     user.get_default_organization().admin_users.remove(user)
     RegistrationUserAccessFactory(registration=registration, email=user.email)
 
-    assert_get_detail(user_api_client, signup_group.id)
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value="heltunnistussuomifi",
+    ) as mocked:
+        assert_get_detail(user_api_client, signup_group.id)
+        assert mocked.called is True
 
 
 @pytest.mark.django_db
