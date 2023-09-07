@@ -922,8 +922,8 @@ class KeywordListViewSet(
     mixins.CreateModelMixin,
     viewsets.GenericViewSet,
 ):
-    queryset = Keyword.objects.all()
-    queryset = queryset.select_related("publisher").prefetch_related("alt_labels__name")
+    # publisher relation performs better with prefetch than selected
+    queryset = Keyword.objects.all().prefetch_related("publisher", "alt_labels")
     serializer_class = KeywordSerializer
     filter_backends = (filters.OrderingFilter,)
     ordering_fields = ("n_events", "id", "name", "data_source")
@@ -946,7 +946,8 @@ class KeywordListViewSet(
         show_all_keywords (keywords without events are included)
         show_deprecated (deprecated keywords are included)
         """
-        queryset = Keyword.objects.all()
+
+        queryset = self.queryset
         data_source = self.request.query_params.get("data_source")
         # Filter by data source, multiple sources separated by comma
         if data_source:
@@ -1361,14 +1362,22 @@ class PlaceListViewSet(
         show_deleted (deleted places are included)
         """
         queryset = Place.objects.select_related(
-            "image",
-            "data_source",
+            "data_source",  # Select related to support ordering
+        ).prefetch_related(
+            "publisher",  # Performs much better as a prefetch
+            Prefetch(
+                "divisions",
+                AdministrativeDivision.objects.all()
+                .select_related("type", "municipality")
+                .prefetch_related("municipality__translations", "translations"),
+            ),
+            # Fields below are mostly null -> prefetch faster than select
             "created_by",
             "last_modified_by",
-            "publisher",
+            "image",
             "parent",
             "replaced_by",
-        ).prefetch_related("divisions", "divisions__type", "divisions__municipality")
+        )
         data_source = self.request.query_params.get("data_source")
         # Filter by data source, multiple sources separated by comma
         if data_source:
