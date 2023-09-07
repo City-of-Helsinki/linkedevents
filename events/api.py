@@ -922,8 +922,8 @@ class KeywordListViewSet(
     mixins.CreateModelMixin,
     viewsets.GenericViewSet,
 ):
-    queryset = Keyword.objects.all()
-    queryset = queryset.select_related("publisher").prefetch_related("alt_labels__name")
+    # publisher relation performs better with prefetch than selected
+    queryset = Keyword.objects.all().prefetch_related("publisher", "alt_labels")
     serializer_class = KeywordSerializer
     filter_backends = (filters.OrderingFilter,)
     ordering_fields = ("n_events", "id", "name", "data_source")
@@ -946,7 +946,8 @@ class KeywordListViewSet(
         show_all_keywords (keywords without events are included)
         show_deprecated (deprecated keywords are included)
         """
-        queryset = Keyword.objects.all()
+
+        queryset = self.queryset
         data_source = self.request.query_params.get("data_source")
         # Filter by data source, multiple sources separated by comma
         if data_source:
