@@ -3,7 +3,7 @@
 
 trigger: none
 pr: none
-pool: Default
+pool: Production
 
 parameters:
   - name: buildenv
