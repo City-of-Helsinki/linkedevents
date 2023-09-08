@@ -25,6 +25,15 @@ services:
             - "127.0.0.1:6379:6379"
         container_name: linkedevents-redis
 
+    cache:
+        build:
+            context: ./
+            dockerfile: docker/nginx-cache/Dockerfile
+        container_name: linkedevents-cache
+        restart: unless-stopped
+        ports:
+            - "127.0.0.1:8088:8080"
+
     django:
         platform: linux/amd64
         restart: unless-stopped
