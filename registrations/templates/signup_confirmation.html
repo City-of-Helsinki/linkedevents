@@ -41,12 +41,7 @@
           {% endif %}
         </div>
         <div class="cta-button-wrapper" style="margin: 0px 0px 40px">
-        {% if signup.signup_group_id %}
-          <a href="{{linked_registrations_ui_url}}/{{linked_registrations_ui_locale}}/registration/{{registration_id}}/signup-group/{{signup.signup_group_id}}/edit"
-        {% else %}
-          <a href="{{linked_registrations_ui_url}}/{{linked_registrations_ui_locale}}/registration/{{registration_id}}/signup/{{signup.id}}/edit"
-        {% endif %}
-             target="_blank" rel="noopener" class="cta-button" style="background:#0000bf;border-radius:0px;border:none;height:56px;text-align:center;text-decoration:none;vertical-align:middle;padding:16px 24px;box-sizing:border-box;display:inline-block;">
+          <a href="{{signup_edit_url}}" target="_blank" rel="noopener" class="cta-button" style="background:#0000bf;border-radius:0px;border:none;height:56px;text-align:center;text-decoration:none;vertical-align:middle;padding:16px 24px;box-sizing:border-box;display:inline-block;">
             <span style="color:#ffffff;font-size:16px;font-weight:500;line-height:24px;">
               {% blocktranslate %}Check your registration here{% endblocktranslate %}
             </span>

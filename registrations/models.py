@@ -20,6 +20,7 @@ from events.models import Event, Language
 from registrations.utils import (
     code_validity_duration,
     get_email_noreply_address,
+    get_signup_edit_url,
     get_ui_locales,
 )
 
@@ -553,8 +554,9 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin):
         [linked_events_ui_locale, linked_registrations_ui_locale] = get_ui_locales(
             self.service_language
         )
+        signup_edit_url = get_signup_edit_url(self, linked_registrations_ui_locale)
 
-        with translation.override(self.get_service_language_pk()):
+        with (translation.override(self.get_service_language_pk())):
             event_name = self.registration.event.name
             event_type_id = self.registration.event.type_id
 
@@ -566,7 +568,7 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin):
                 "linked_registrations_ui_locale": linked_registrations_ui_locale,
                 "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
                 "registration_id": self.registration.id,
-                "signup": self,
+                "signup_edit_url": signup_edit_url,
                 "username": self.first_name,
             }
 

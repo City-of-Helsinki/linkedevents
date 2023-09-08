@@ -23,6 +23,18 @@ def get_ui_locales(language):
     return [linked_events_ui_locale, linked_registrations_ui_locale]
 
 
+def get_signup_edit_url(signup, linked_registrations_ui_locale):
+    signup_edit_url = (
+        f"{settings.LINKED_REGISTRATIONS_UI_URL}/{linked_registrations_ui_locale}"
+        f"/registration/{signup.registration_id}/"
+    )
+    if signup.signup_group_id:
+        signup_edit_url += f"signup-group/{signup.signup_group_id}/edit"
+    else:
+        signup_edit_url += f"signup/{signup.id}/edit"
+    return signup_edit_url
+
+
 def send_mass_html_mail(
     datatuple,
     fail_silently=False,
