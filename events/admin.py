@@ -240,6 +240,7 @@ class DataSourceAdmin(BaseAdmin, VersionAdmin):
         "owner",
         "user_editable_resources",
         "user_editable_organizations",
+        "user_editable_registrations",
         "create_past_events",
         "edit_past_events",
     )

@@ -61,12 +61,31 @@ class TestUser(TestCase):
         self.assertTrue(is_admin)
 
         # test for affiliated organization
-        is_admin = self.user.is_admin_of(self.child_org)
+        is_admin = self.user.is_admin_of(self.affiliated_org)
         self.assertTrue(is_admin)
 
         # test for some other organization
         is_admin = self.user.is_admin_of(self.org_1)
         self.assertFalse(is_admin)
+
+    def test_is_registration_admin(self):
+        self.org.registration_admin_users.add(self.user)
+
+        # test for admin organization
+        is_registration_admin = self.user.is_registration_admin_of(self.org)
+        self.assertTrue(is_registration_admin)
+
+        # test for child organization
+        is_registration_admin = self.user.is_registration_admin_of(self.child_org)
+        self.assertTrue(is_registration_admin)
+
+        # test for affiliated organization
+        is_registration_admin = self.user.is_registration_admin_of(self.affiliated_org)
+        self.assertTrue(is_registration_admin)
+
+        # test for some other organization
+        is_registration_admin = self.user.is_registration_admin_of(self.org_1)
+        self.assertFalse(is_registration_admin)
 
     def test_is_regular_user(self):
         self.org.regular_users.add(self.user)
