@@ -53,6 +53,10 @@ class HarrastushakuException(Exception):
     pass
 
 
+class HarrastushakuWarning(Exception):
+    pass
+
+
 @register_importer
 class HarrastushakuImporter(Importer):
     name = "harrastushaku"
@@ -233,6 +237,11 @@ class HarrastushakuImporter(Importer):
                 self.handle_activity(activity)
             except HarrastushakuException as e:
                 logger.exception(f"Error handling activity {activity.get('id')}: {e}")
+            except HarrastushakuWarning as e:
+                logger.warning(
+                    f"Warning while handling activity {activity.get('id')}: {e}",
+                    exc_info=True,
+                )
             except Exception as e:  # noqa
                 logger.exception(
                     f"An unexpected error occurred while handling activity {activity.get('id')}: {e}"
@@ -393,7 +402,7 @@ class HarrastushakuImporter(Importer):
             raise HarrastushakuException("No end time")
 
         if end_date - start_date > timedelta(days=MAX_RECURRING_EVENT_LENGTH):
-            raise HarrastushakuException("Too long recurring activity")
+            raise HarrastushakuWarning("Too long recurring activity")
 
         sub_event_time_ranges = self.build_sub_event_time_ranges(
             start_date, end_date, time_tables
