@@ -266,13 +266,9 @@ class SignUpViewSet(
         return Response(data, status=status.HTTP_201_CREATED)
 
     @transaction.atomic
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-
+    def perform_destroy(self, instance):
         instance._individually_deleted = True
-        self.perform_destroy(instance)
-
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        instance.delete()
 
     def filter_queryset(self, queryset):
         request = self.request
