@@ -587,7 +587,6 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin):
         }
 
         with override(linked_registrations_ui_locale, deactivate=True):
-            event_type_id = self.registration.event.type_id
             notification_subjects = {
                 SignUpNotificationType.CANCELLATION: _(
                     "Registration cancelled - %(event_name)s"
