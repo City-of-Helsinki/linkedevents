@@ -35,7 +35,6 @@ from registrations.models import (
     SeatReservationCode,
     SignUp,
     SignUpGroup,
-    SignUpNotificationType,
 )
 from registrations.permissions import (
     CanCreateEditDeleteSignup,
@@ -266,25 +265,10 @@ class SignUpViewSet(
 
         return Response(data, status=status.HTTP_201_CREATED)
 
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        registration = instance.registration
-
-        instance.send_notification(SignUpNotificationType.CANCELLATION)
-        response = super().destroy(request, *args, **kwargs)
-
-        # Move first signup from waitlist to attending list
-        waitlisted = registration.signups.filter(
-            attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
-        ).order_by("id")
-        if len(waitlisted) > 0:
-            first_on_list = waitlisted[0]
-            first_on_list.attendee_status = SignUp.AttendeeStatus.ATTENDING
-            first_on_list.save()
-            first_on_list.send_notification(
-                SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT
-            )
-        return response
+    @transaction.atomic
+    def perform_destroy(self, instance):
+        instance._individually_deleted = True
+        instance.delete()
 
     def filter_queryset(self, queryset):
         request = self.request
@@ -369,6 +353,7 @@ class SignUpGroupViewSet(
     UserDataSourceAndOrganizationMixin,
     mixins.CreateModelMixin,
     mixins.RetrieveModelMixin,
+    mixins.DestroyModelMixin,
     viewsets.GenericViewSet,
 ):
     serializer_class = SignUpGroupSerializer
@@ -391,6 +376,10 @@ class SignUpGroupViewSet(
             for signup_data in data["signups"]:
                 signup_data["registration"] = registration
         return super().create(request, *args, **kwargs)
+
+    @transaction.atomic
+    def destroy(self, request, *args, **kwargs):
+        return super().destroy(request, *args, **kwargs)
 
 
 register_view(SignUpGroupViewSet, "signup_group")

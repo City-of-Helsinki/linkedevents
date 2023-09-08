@@ -57,7 +57,7 @@ def test_admin_user_can_get_signup_group_with_signups(user_api_client, registrat
 
 
 @pytest.mark.django_db
-def test_registration_user_access_can_get_signup_group(
+def test_registration_user_access_can_get_signup_group_when_strongly_identified(
     registration, user, user_api_client
 ):
     signup_group = SignUpGroupFactory(registration=registration)
@@ -71,6 +71,25 @@ def test_registration_user_access_can_get_signup_group(
         return_value="heltunnistussuomifi",
     ) as mocked:
         assert_get_detail(user_api_client, signup_group.id)
+        assert mocked.called is True
+
+
+@pytest.mark.django_db
+def test_registration_user_access_cannot_get_signup_group_when_not_strongly_identified(
+    registration, user, user_api_client
+):
+    signup_group = SignUpGroupFactory(registration=registration)
+
+    user.get_default_organization().admin_users.remove(user)
+    RegistrationUserAccessFactory(registration=registration, email=user.email)
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value=None,
+    ) as mocked:
+        response = get_detail(user_api_client, signup_group.id)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
         assert mocked.called is True
 
 
