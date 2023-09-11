@@ -7,9 +7,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.db import transaction
 from django.db.models import ProtectedError, Q, Value
 from django.db.models.functions import Concat
-from django.template.loader import render_to_string
 from django.utils.translation import gettext as _
-from django.utils.translation import override
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ParseError
@@ -49,7 +47,7 @@ from registrations.serializers import (
     SignUpGroupSerializer,
     SignUpSerializer,
 )
-from registrations.utils import get_ui_locales, send_mass_html_mail
+from registrations.utils import send_mass_html_mail
 
 logger = logging.getLogger(__name__)
 
@@ -147,36 +145,23 @@ class RegistrationViewSet(
         )
         plain_text_body = bleach.clean(body, strip=True)
 
-        # Email contains a link to a signup so make personal email for each signup
+        # Make personal email for each signup that:
+        # - is responsible for a group
+        # - belongs to a group with no responsible signups
+        # - does not belong to a group
         for signup in signups:
-            service_language = signup.service_language
-            [linked_events_ui_locale, linked_registrations_ui_locale] = get_ui_locales(
-                service_language
-            )
-
-            email_variables = {
-                "body": cleaned_body,
-                "linked_events_ui_locale": linked_events_ui_locale,
-                "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
-                "linked_registrations_ui_locale": linked_registrations_ui_locale,
-                "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
-                "registration_id": registration.id,
-                "signup_id": signup.id,
-            }
-
-            with override(linked_registrations_ui_locale, deactivate=True):
-                rendered_body = render_to_string(
-                    "message_to_signup.html", email_variables
+            if (
+                signup.signup_group_id
+                and (
+                    signup.responsible_for_group
+                    or not signup.signup_group.responsible_signups
                 )
-
-            message = (
-                subject,
-                plain_text_body,
-                rendered_body,
-                settings.SUPPORT_EMAIL,
-                [signup.email],
-            )
-            messages.append(message)
+                or not signup.signup_group_id
+            ):
+                message = signup.get_registration_message(
+                    subject, cleaned_body, plain_text_body
+                )
+                messages.append(message)
 
         try:
             send_mass_html_mail(messages, fail_silently=False)

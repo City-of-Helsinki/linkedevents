@@ -669,6 +669,7 @@ def test_email_sent_on_successful_signup_group(
             "date_of_birth": "2011-04-07",
             "email": "test@test.com",
             "service_language": service_language,
+            "responsible_for_group": True,
         }
         signup_group_data = {
             "registration": registration.id,
@@ -728,6 +729,7 @@ def test_signup_group_confirmation_template_has_correct_text_per_event_type(
         "last_name": "Jackson",
         "email": "test@test.com",
         "service_language": "en",
+        "responsible_for_group": True,
     }
     signup_groups_data = {
         "registration": registration.id,
@@ -774,6 +776,7 @@ def test_signup_group_confirmation_message_is_shown_in_service_language(
         "last_name": "Jackson",
         "email": "test@test.com",
         "service_language": service_language,
+        "responsible_for_group": True,
     }
     signup_group_data = {
         "registration": registration.id,
@@ -827,6 +830,7 @@ def test_confirmation_template_has_correct_text_per_event_type(
         "last_name": "Jackson",
         "email": "test@test.com",
         "service_language": "en",
+        "responsible_for_group": True,
     }
     signup_group_data = {
         "registration": registration.id,
@@ -873,6 +877,7 @@ def test_confirmation_message_is_shown_in_service_language(
         "last_name": "Jackson",
         "email": "test@test.com",
         "service_language": service_language,
+        "responsible_for_group": True,
     }
     signup_group_data = {
         "registration": registration.id,
@@ -930,6 +935,7 @@ def test_signup_group_different_email_sent_if_user_is_added_to_waiting_list(
             "last_name": "Jackson",
             "email": "michael@test.com",
             "service_language": service_language,
+            "responsible_for_group": True,
         }
         signup_group_data = {
             "registration": registration.id,
@@ -991,6 +997,7 @@ def test_signup_group_confirmation_to_waiting_list_template_has_correct_text_per
         "last_name": "Jackson",
         "email": "michael@test.com",
         "service_language": "en",
+        "responsible_for_group": True,
     }
     signup_group_data = {
         "registration": registration.id,

@@ -20,6 +20,7 @@ from events.models import Event, Language
 from registrations.utils import (
     code_validity_duration,
     get_email_noreply_address,
+    get_signup_edit_url,
     get_ui_locales,
 )
 
@@ -523,12 +524,39 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin):
             return self.service_language.pk
         return "fi"
 
-    def send_notification(self, notification_type):
+    def get_registration_message(self, subject, cleaned_body, plain_text_body):
         [linked_events_ui_locale, linked_registrations_ui_locale] = get_ui_locales(
             self.service_language
         )
 
-        with translation.override(self.get_service_language_pk()):
+        email_variables = {
+            "body": cleaned_body,
+            "linked_events_ui_locale": linked_events_ui_locale,
+            "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
+            "linked_registrations_ui_locale": linked_registrations_ui_locale,
+            "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
+            "registration_id": self.registration_id,
+            "signup": self,
+        }
+
+        with override(linked_registrations_ui_locale, deactivate=True):
+            rendered_body = render_to_string("message_to_signup.html", email_variables)
+
+        return (
+            subject,
+            plain_text_body,
+            rendered_body,
+            settings.SUPPORT_EMAIL,
+            [self.email],
+        )
+
+    def send_notification(self, notification_type):
+        [linked_events_ui_locale, linked_registrations_ui_locale] = get_ui_locales(
+            self.service_language
+        )
+        signup_edit_url = get_signup_edit_url(self, linked_registrations_ui_locale)
+
+        with (translation.override(self.get_service_language_pk())):
             event_name = self.registration.event.name
             event_type_id = self.registration.event.type_id
 
@@ -540,7 +568,7 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin):
                 "linked_registrations_ui_locale": linked_registrations_ui_locale,
                 "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
                 "registration_id": self.registration.id,
-                "signup_id": self.id,
+                "signup_edit_url": signup_edit_url,
                 "username": self.first_name,
             }
 
@@ -561,7 +589,6 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin):
         }
 
         with override(linked_registrations_ui_locale, deactivate=True):
-            event_type_id = self.registration.event.type_id
             notification_subjects = {
                 SignUpNotificationType.CANCELLATION: _(
                     "Registration cancelled - %(event_name)s"

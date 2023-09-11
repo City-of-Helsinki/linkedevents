@@ -67,16 +67,18 @@ class SignUpSerializer(serializers.ModelSerializer):
 
         if (attendee_capacity is None) or (already_attending < attendee_capacity):
             signup = super().create(validated_data)
-            signup.send_notification(SignUpNotificationType.CONFIRMATION)
+            if signup.responsible_for_group or not signup.signup_group_id:
+                signup.send_notification(SignUpNotificationType.CONFIRMATION)
             return signup
         elif (waiting_list_capacity is None) or (
             already_waitlisted < waiting_list_capacity
         ):
             validated_data["attendee_status"] = SignUp.AttendeeStatus.WAITING_LIST
             signup = super().create(validated_data)
-            signup.send_notification(
-                SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST
-            )
+            if signup.responsible_for_group or not signup.signup_group_id:
+                signup.send_notification(
+                    SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST
+                )
             return signup
         else:
             raise DRFPermissionDenied(_("The waiting list is already full"))
