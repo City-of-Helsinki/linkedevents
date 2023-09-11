@@ -6,7 +6,9 @@ from rest_framework import status
 from events.tests.conftest import APIClient
 from events.tests.utils import assert_fields_exist
 from events.tests.utils import versioned_reverse as reverse
+from helevents.tests.factories import UserFactory
 from registrations.models import RegistrationUserAccess, SignUp
+from registrations.tests.factories import SignUpFactory
 
 # === util methods ===
 
@@ -424,28 +426,31 @@ def test__signup_list_assert_text_filter(
 
 
 @pytest.mark.django_db
-def test__signup_list_assert_attendee_status_filter(
-    registration, signup, signup2, user_api_client, user
-):
-    user.get_default_organization().registration_admin_users.add(user)
+def test_signup_list_assert_attendee_status_filter(api_client, registration):
+    user = UserFactory()
+    user.registration_admin_organizations.add(registration.publisher)
 
-    signup.attendee_status = SignUp.AttendeeStatus.ATTENDING
-    signup.save()
-    signup2.attendee_status = SignUp.AttendeeStatus.WAITING_LIST
-    signup2.save()
+    signup = SignUpFactory(
+        registration=registration, attendee_status=SignUp.AttendeeStatus.ATTENDING
+    )
+    signup2 = SignUpFactory(
+        registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
+    )
+
+    api_client.force_authenticate(user)
 
     get_list_and_assert_signups(
-        user_api_client,
+        api_client,
         f"registration={registration.id}&attendee_status={SignUp.AttendeeStatus.ATTENDING}",
         [signup],
     )
     get_list_and_assert_signups(
-        user_api_client,
+        api_client,
         f"registration={registration.id}&attendee_status={SignUp.AttendeeStatus.WAITING_LIST}",
         [signup2],
     )
     get_list_and_assert_signups(
-        user_api_client,
+        api_client,
         f"registration={registration.id}&attendee_status={SignUp.AttendeeStatus.ATTENDING},"
         f"{SignUp.AttendeeStatus.WAITING_LIST}",
         [
@@ -455,14 +460,10 @@ def test__signup_list_assert_attendee_status_filter(
     )
 
     response = get_list(
-        user_api_client, f"registration={registration.id}&attendee_status=invalid-value"
+        api_client, f"registration={registration.id}&attendee_status=invalid-value"
     )
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert (
-        response.data["detail"]
-        == "attendee_status can take following values: waitlisted, attending, not invalid-value"
-    )
 
 
 @pytest.mark.django_db

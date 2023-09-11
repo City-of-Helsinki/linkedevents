@@ -5,6 +5,7 @@ from rest_framework import status
 
 from events.tests.utils import assert_fields_exist
 from events.tests.utils import versioned_reverse as reverse
+from helevents.tests.factories import UserFactory
 from registrations.models import SignUp
 from registrations.tests.factories import (
     RegistrationUserAccessFactory,
@@ -218,15 +219,34 @@ def test_api_key_from_wrong_data_source_cannot_get_signup(
 
 
 @pytest.mark.django_db
-def test_admin_user_can_get_signup_group_list(user_api_client, registration):
-    signup_group0 = SignUpGroupFactory(registration=registration)
-    signup_group1 = SignUpGroupFactory(registration=registration)
+def test_registration_admin_user_can_get_signup_group_list(api_client, registration):
+    user = UserFactory()
+    user.registration_admin_organizations.add(registration.publisher)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    signup_group2 = SignUpGroupFactory(registration=registration)
+
+    api_client.force_authenticate(user)
 
     get_list_and_assert_signup_groups(
-        user_api_client,
+        api_client,
         f"registration={registration.id}",
-        (signup_group0, signup_group1),
+        (signup_group, signup_group2),
     )
+
+
+@pytest.mark.django_db
+def test_admin_user_cannot_get_signup_group_list(api_client, registration):
+    user = UserFactory()
+    user.admin_organizations.add(registration.publisher)
+
+    SignUpGroupFactory(registration=registration)
+    SignUpGroupFactory(registration=registration)
+
+    api_client.force_authenticate(user)
+
+    response = get_list(api_client, f"registration={registration.id}")
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db
@@ -297,19 +317,19 @@ def test_regular_user_cannot_get_signup_group_list(api_client, registration, use
 
 
 @pytest.mark.django_db
-def test_get_all_signup_groups_to_which_user_has_admin_role(
-    api_client, registration, user
-):
-    signup_group0 = SignUpGroupFactory(registration=registration)
-    signup_group1 = SignUpGroupFactory(registration=registration)
+def test_get_all_signup_groups_to_which_user_has_admin_role(api_client, registration):
+    user = UserFactory()
+    user.registration_admin_organizations.add(registration.publisher)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    signup_group2 = SignUpGroupFactory(registration=registration)
 
     api_client.force_authenticate(user)
 
-    get_list_and_assert_signup_groups(api_client, "", (signup_group0, signup_group1))
+    get_list_and_assert_signup_groups(api_client, "", (signup_group, signup_group2))
 
-    default_org = user.get_default_organization()
-    default_org.regular_users.add(user)
-    default_org.admin_users.remove(user)
+    user.registration_admin_organizations.clear()
+    user.admin_organizations.add(registration.publisher)
 
     api_client.force_authenticate(user)
 
@@ -344,20 +364,37 @@ def test_cannot_get_signup_groups_of_nonexistent_registration(
 
 
 @pytest.mark.django_db
-def test_api_key_with_organization_can_get_signup_group_list(
+def test_api_key_with_organization_and_user_editable_registrations_can_get_signup_group_list(
     api_client, data_source, organization, registration
 ):
-    signup_group0 = SignUpGroupFactory(registration=registration)
-    signup_group1 = SignUpGroupFactory(registration=registration)
+    signup_group = SignUpGroupFactory(registration=registration)
+    signup_group2 = SignUpGroupFactory(registration=registration)
+
+    data_source.owner = organization
+    data_source.user_editable_registrations = True
+    data_source.save(update_fields=["owner", "user_editable_registrations"])
+
+    api_client.credentials(apikey=data_source.api_key)
+
+    get_list_and_assert_signup_groups(
+        api_client, f"registration={registration.id}", (signup_group, signup_group2)
+    )
+
+
+@pytest.mark.django_db
+def test_api_key_with_organization_without_user_editable_registrations_cannot_get_signup_group_list(
+    api_client, data_source, organization, registration
+):
+    SignUpGroupFactory(registration=registration)
+    SignUpGroupFactory(registration=registration)
 
     data_source.owner = organization
     data_source.save(update_fields=["owner"])
 
     api_client.credentials(apikey=data_source.api_key)
 
-    get_list_and_assert_signup_groups(
-        api_client, f"registration={registration.id}", (signup_group0, signup_group1)
-    )
+    response = get_list(api_client, f"registration={registration.id}")
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db
@@ -381,43 +418,50 @@ def test_api_key_with_wrong_organization_cannot_get_signup_group_list(
     ["first_name", "email", "extra_info", "membership_number", "phone_number"],
 )
 @pytest.mark.django_db
-def test_signup_group_list_assert_text_filter(api_client, field, registration, user):
-    signup_group0 = SignUpGroupFactory(registration=registration)
-    signup0_kwargs = {
-        "signup_group": signup_group0,
+def test_signup_group_list_assert_text_filter(api_client, registration, field):
+    user = UserFactory()
+    user.registration_admin_organizations.add(registration.publisher)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    signup_kwargs = {
+        "signup_group": signup_group,
         "registration": registration,
         **{field: "field_value_2"},
     }
-    SignUpFactory(**signup0_kwargs)
+    SignUpFactory(**signup_kwargs)
 
-    signup_group1 = SignUpGroupFactory(registration=registration)
-    signup1_kwargs = {
-        "signup_group": signup_group1,
+    signup_group2 = SignUpGroupFactory(registration=registration)
+    signup2_kwargs = {
+        "signup_group": signup_group2,
         "registration": registration,
         **{field: "field_value_1"},
     }
-    SignUpFactory(**signup1_kwargs)
+    SignUpFactory(**signup2_kwargs)
 
     api_client.force_authenticate(user)
+
     get_list_and_assert_signup_groups(
         api_client,
         f"registration={registration.id}&text=field_value_1",
-        [signup_group1],
+        [signup_group2],
     )
 
 
 @pytest.mark.django_db
-def test_signup_group_list_assert_status_filter(api_client, registration, user):
-    signup_group0 = SignUpGroupFactory(registration=registration)
+def test_signup_group_list_assert_status_filter(api_client, registration):
+    user = UserFactory()
+    user.registration_admin_organizations.add(registration.publisher)
+
+    signup_group = SignUpGroupFactory(registration=registration)
     SignUpFactory(
-        signup_group=signup_group0,
+        signup_group=signup_group,
         registration=registration,
         attendee_status=SignUp.AttendeeStatus.ATTENDING,
     )
 
-    signup_group1 = SignUpGroupFactory(registration=registration)
+    signup_group2 = SignUpGroupFactory(registration=registration)
     SignUpFactory(
-        signup_group=signup_group1,
+        signup_group=signup_group2,
         registration=registration,
         attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
     )
@@ -427,20 +471,20 @@ def test_signup_group_list_assert_status_filter(api_client, registration, user):
     get_list_and_assert_signup_groups(
         api_client,
         f"registration={registration.id}&attendee_status={SignUp.AttendeeStatus.ATTENDING}",
-        (signup_group0,),
+        (signup_group,),
     )
     get_list_and_assert_signup_groups(
         api_client,
         f"registration={registration.id}&attendee_status={SignUp.AttendeeStatus.WAITING_LIST}",
-        (signup_group1,),
+        (signup_group2,),
     )
     get_list_and_assert_signup_groups(
         api_client,
         f"registration={registration.id}"
         f"&attendee_status={SignUp.AttendeeStatus.ATTENDING},{SignUp.AttendeeStatus.WAITING_LIST}",
         (
-            signup_group0,
-            signup_group1,
+            signup_group,
+            signup_group2,
         ),
     )
 
@@ -449,15 +493,15 @@ def test_signup_group_list_assert_status_filter(api_client, registration, user):
     )
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert (
-        response.data["detail"]
-        == "attendee_status can take following values: waitlisted, attending, not invalid-value"
-    )
 
 
 @pytest.mark.django_db
-def test_filter_signup_groups(api_client, registration, registration2, user, user2):
-    api_client.force_authenticate(user=None)
+def test_filter_signup_groups(api_client, registration, registration2):
+    user = UserFactory()
+    user.registration_admin_organizations.add(registration.publisher)
+
+    user2 = UserFactory()
+    user2.registration_admin_organizations.add(registration2.publisher)
 
     signup_group0 = SignUpGroupFactory(registration=registration)
     SignUpFactory(

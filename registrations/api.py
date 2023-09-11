@@ -2,12 +2,12 @@ import logging
 from smtplib import SMTPException
 
 import bleach
+import django_filters
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.db import transaction
 from django.db.models import ProtectedError, Q, Value
 from django.db.models.functions import Concat
-from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
@@ -221,37 +221,60 @@ class RegistrationUserAccessViewSet(viewsets.GenericViewSet):
 register_view(RegistrationUserAccessViewSet, "registration_user_access")
 
 
-class SignUpListMixin:
-    @cached_property
-    def _list_filter_relation_name(self):
-        relation_name = getattr(self, "list_filter_relation_name", None)
-        return f"{relation_name}__" if relation_name else ""
+class SignUpFilterBackend(django_filters.rest_framework.DjangoFilterBackend):
+    def get_filterset_kwargs(self, request, queryset, view):
+        kwargs = super().get_filterset_kwargs(request, queryset, view)
+        kwargs["action"] = view.action
+
+        return kwargs
+
+
+class SignUpBaseFilter(django_filters.rest_framework.FilterSet):
+    registration = django_filters.Filter(
+        widget=django_filters.widgets.CSVWidget(),
+        method="filter_registration",
+    )
+
+    attendee_status = django_filters.MultipleChoiceFilter(
+        choices=SignUp.ATTENDEE_STATUSES,
+        widget=django_filters.widgets.CSVWidget(),
+    )
+
+    text = django_filters.CharFilter(method="filter_text")
+
+    def __init__(self, *args, **kwargs):
+        self.action = kwargs.pop("action", None)
+        super().__init__(*args, **kwargs)
 
     def filter_queryset(self, queryset):
-        request = self.request
+        queryset = super().filter_queryset(queryset)
 
-        if registration_param := request.query_params.get("registration", None):
-            queryset = self.filter_by_registration(queryset, registration_param)
-        elif self.action == "list" and not request.user.is_superuser:
-            queryset = self.filter_by_user(queryset, request.user)
+        user = self.request.user
 
-        if text_param := request.query_params.get("text", None):
-            queryset = self.filter_by_text(queryset, text_param)
+        if self.action and self.action != "list" or user.is_superuser:
+            return queryset
 
-        if status_param := request.query_params.get("attendee_status", None):
-            queryset = self.filter_by_attendee_status(queryset, status_param)
+        # By default, return only signups of registrations to which
+        # user has admin rights or is registration user who is
+        # strongly identified.
+        q_filter = Q(
+            registration__event__publisher__in=user.get_registration_admin_organizations_and_descendants()
+        )
+        if user.is_strongly_identificated:
+            q_filter |= Q(registration__registration_user_accesses__email=user.email)
 
-        return queryset
+        return queryset.filter(q_filter)
 
-    def filter_by_registration(self, queryset, registration_param):
-        # Get registration admin organizations and descendants only
-        # once instead of using is_registration_admin_of method.
-        registration_admin_orgs = (
-            self.request.user.get_registration_admin_organizations_and_descendants()
+    def filter_registration(self, queryset, name, value: list[str]):
+        user = self.request.user
+
+        # Get admin organizations and descendants only once instead of using is_admin method
+        registration_admin_organizations = (
+            user.get_registration_admin_organizations_and_descendants()
         )
 
         registrations = []
-        for pk in registration_param.split(","):
+        for pk in value:
             try:
                 registration = Registration.objects.select_related(
                     "event__publisher"
@@ -262,12 +285,12 @@ class SignUpListMixin:
                 )
 
             if not (
-                self.request.user.is_superuser
-                or self.request.user.is_strongly_identificated
+                user.is_superuser
+                or user.is_strongly_identificated
                 and registration.registration_user_accesses.filter(
-                    email=self.request.user.email
+                    email=user.email
                 ).exists()
-                or registration.publisher in registration_admin_orgs
+                or registration.publisher in registration_admin_organizations
             ):
                 raise DRFPermissionDenied(
                     _(
@@ -277,39 +300,32 @@ class SignUpListMixin:
 
             registrations.append(registration)
 
-        return queryset.filter(registration__in=registrations)
+        return queryset.filter(**{f"{name}__in": registrations})
 
-    def filter_by_user(self, queryset, user):
-        # By default, return only signups of registrations to which
-        # user has admin rights or is registration user that is
-        # strongly identified.
-        q_filter = Q(
-            registration__event__publisher__in=user.get_registration_admin_organizations_and_descendants()
-        )
-        if user.is_strongly_identificated:
-            q_filter |= Q(registration__registration_user_accesses__email=user.email)
-        return queryset.filter(q_filter)
-
-    def _build_text_annotations(self):
-        relation = self._list_filter_relation_name
+    @staticmethod
+    def _build_text_annotations(relation_accessor=""):
         return {
-            f"{relation}first_last_name": Concat(
-                f"{relation}first_name", Value(" "), f"{relation}last_name"
+            f"{relation_accessor}first_last_name": Concat(
+                f"{relation_accessor}first_name",
+                Value(" "),
+                f"{relation_accessor}last_name",
             ),
-            f"{relation}last_first_name": Concat(
-                f"{relation}last_name", Value(" "), f"{relation}first_name"
+            f"{relation_accessor}last_first_name": Concat(
+                f"{relation_accessor}last_name",
+                Value(" "),
+                f"{relation_accessor}first_name",
             ),
         }
 
-    def _build_text_filter(self, text_param):
-        relation = self._list_filter_relation_name
+    @staticmethod
+    def _build_text_filter(text_param, relation_accessor=""):
         filters = {
-            f"{relation}first_last_name__icontains": text_param,
-            f"{relation}last_first_name__icontains": text_param,
-            f"{relation}email__icontains": text_param,
-            f"{relation}extra_info__icontains": text_param,
-            f"{relation}membership_number__icontains": text_param,
-            f"{relation}phone_number__icontains": text_param,
+            f"{relation_accessor}first_last_name__icontains": text_param,
+            f"{relation_accessor}last_first_name__icontains": text_param,
+            f"{relation_accessor}email__icontains": text_param,
+            f"{relation_accessor}extra_info__icontains": text_param,
+            f"{relation_accessor}membership_number__icontains": text_param,
+            f"{relation_accessor}phone_number__icontains": text_param,
         }
 
         q_set = Q()
@@ -318,39 +334,43 @@ class SignUpListMixin:
 
         return q_set
 
-    def filter_by_text(self, queryset, text_param):
+    def filter_text(self, queryset, name, value):
         return queryset.annotate(**self._build_text_annotations()).filter(
-            self._build_text_filter(text_param)
+            self._build_text_filter(value)
         )
 
-    def _build_attendee_status_filter(self, vals):
-        relation = self._list_filter_relation_name
-        filters = {f"{relation}attendee_status__in": vals}
 
-        return Q(**filters)
+class SignUpFilter(SignUpBaseFilter):
+    class Meta:
+        model = SignUp
+        fields = ("registration", "attendee_status")
 
-    def filter_by_attendee_status(self, queryset, status_param):
-        vals = status_param.lower().split(",")
-        statuses = [k[0] for k in SignUp.ATTENDEE_STATUSES]
 
-        for v in vals:
-            if v not in statuses:
-                raise ParseError(
-                    _(
-                        "attendee_status can take following values: {statuses}, not {val}"
-                    ).format(statuses=", ".join(statuses), val=status_param)
-                )
+class SignUpGroupFilter(SignUpBaseFilter):
+    attendee_status = django_filters.MultipleChoiceFilter(
+        field_name="signups__attendee_status",
+        choices=SignUp.ATTENDEE_STATUSES,
+        widget=django_filters.widgets.CSVWidget(),
+    )
 
-        return queryset.filter(self._build_attendee_status_filter(vals))
+    def filter_text(self, queryset, name, value):
+        return queryset.annotate(
+            **self._build_text_annotations(relation_accessor="signups__")
+        ).filter(self._build_text_filter(value, relation_accessor="signups__"))
+
+    class Meta:
+        model = SignUpGroup
+        fields = ("registration",)
 
 
 class SignUpViewSet(
     UserDataSourceAndOrganizationMixin,
-    SignUpListMixin,
     viewsets.ModelViewSet,
 ):
     serializer_class = SignUpSerializer
     queryset = SignUp.objects.all()
+    filter_backends = [SignUpFilterBackend]
+    filterset_class = SignUpFilter
     permission_classes = [CanAccessSignup & DataSourceResourceEditPermission]
 
     def create(self, request, *args, **kwargs):
@@ -398,17 +418,12 @@ register_view(SignUpViewSet, "signup")
 
 class SignUpGroupViewSet(
     UserDataSourceAndOrganizationMixin,
-    SignUpListMixin,
-    mixins.CreateModelMixin,
-    mixins.RetrieveModelMixin,
-    mixins.DestroyModelMixin,
-    mixins.UpdateModelMixin,
-    mixins.ListModelMixin,
-    viewsets.GenericViewSet,
+    viewsets.ModelViewSet,
 ):
-    list_filter_relation_name = "signups"
     serializer_class = SignUpGroupSerializer
     queryset = SignUpGroup.objects.all()
+    filter_backends = [SignUpFilterBackend]
+    filterset_class = SignUpGroupFilter
     permission_classes = [CanAccessSignup & DataSourceResourceEditPermission]
 
     def get_serializer_class(self):
