@@ -1079,7 +1079,11 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
             old_deleted is False and self.deleted is True
         ):
             self.send_deleted_notification()
-        if created and self.publication_status == PublicationStatus.DRAFT:
+        if (
+            created
+            and self.publication_status == PublicationStatus.DRAFT
+            and not self.is_created_with_apikey
+        ):
             self.send_draft_posted_notification()
 
     def __str__(self):
@@ -1170,6 +1174,17 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
             if admin.email:
                 recipient_list.append(admin.email)
         self._send_notification(NotificationType.DRAFT_POSTED, recipient_list, request)
+
+    @property
+    def is_created_with_apikey(self) -> bool:
+        from events.auth import ApiKeyUser
+
+        try:
+            if self.created_by and self.created_by.apikeyuser:
+                return True
+        except ApiKeyUser.DoesNotExist:
+            pass
+        return False
 
 
 reversion.register(Event)

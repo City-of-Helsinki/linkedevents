@@ -1,7 +1,9 @@
 import factory
 
 from events import utils
+from events.auth import ApiKeyUser
 from events.models import DataSource, Event, Keyword, Language
+from helevents.tests.factories import UserFactory
 
 
 class DataSourceFactory(factory.django.DjangoModelFactory):
@@ -9,6 +11,13 @@ class DataSourceFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = DataSource
+
+
+class ApiKeyUserFactory(UserFactory):
+    data_source = factory.SubFactory(DataSourceFactory)
+
+    class Meta:
+        model = ApiKeyUser
 
 
 class OrganizationFactory(factory.django.DjangoModelFactory):

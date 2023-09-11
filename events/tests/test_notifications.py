@@ -2,10 +2,12 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.core import mail
 
+from helevents.tests.factories import UserFactory
 from notifications.models import NotificationTemplate, NotificationType
 from notifications.tests.utils import check_received_mail_exists
 
 from ..models import PublicationStatus
+from .factories import ApiKeyUserFactory, EventFactory
 
 
 @pytest.fixture
@@ -128,6 +130,35 @@ def test_draft_posted(draft_posted_notification_template, user, draft_event):
         strings,
         html_body=html_body,
     )
+
+
+@pytest.mark.parametrize(
+    "uses_api_key, expect_email",
+    [
+        (True, False),
+        (False, True),  # Sanity check for the test
+    ],
+)
+@pytest.mark.django_db
+def test_draft_notification_is_not_sent_when_using_api_key(
+    uses_api_key, expect_email, organization
+):
+    if uses_api_key:
+        user = ApiKeyUserFactory()
+        data_source = user.data_source
+    else:
+        user = UserFactory()
+        data_source = organization.data_source
+    mail.outbox = []
+
+    EventFactory(
+        data_source=data_source,
+        publisher=organization,
+        publication_status=PublicationStatus.DRAFT,
+        created_by=user,
+    )
+
+    assert bool(mail.outbox) == expect_email
 
 
 @pytest.mark.django_db
