@@ -34,6 +34,8 @@ def assert_create_signups(api_client, signups_data):
 
 @pytest.mark.django_db
 def test_successful_signup(user_api_client, languages, registration, user):
+    user.get_default_organization().registration_admin_users.add(user)
+
     reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
     signups_data = {
         "registration": registration.id,
@@ -76,6 +78,31 @@ def test_successful_signup(user_api_client, languages, registration, user):
 
 
 @pytest.mark.django_db
+def test_cannot_signup_if_not_registration_admin(user_api_client, event, registration):
+    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    signups_data = {
+        "registration": registration.id,
+        "reservation_code": reservation.code,
+        "signups": [
+            {
+                "name": "Michael Jackson",
+                "date_of_birth": "2011-04-07",
+                "email": "test@test.com",
+                "phone_number": "0441111111",
+                "notifications": "sms",
+                "service_language": "fi",
+                "native_language": "fi",
+                "street_address": "my street",
+                "zipcode": "myzip1",
+            }
+        ],
+    }
+
+    response = create_signups(user_api_client, signups_data)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
 def test_cannot_signup_if_not_authenticated(api_client, event, registration, user):
     reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
     signups_data = {
@@ -101,7 +128,10 @@ def test_cannot_signup_if_not_authenticated(api_client, event, registration, use
 
 
 @pytest.mark.django_db
-def test_cannot_signup_if_enrolment_is_not_opened(user_api_client, event, registration):
+def test_cannot_signup_if_enrolment_is_not_opened(
+    user_api_client, event, registration, user
+):
+    user.get_default_organization().registration_admin_users.add(user)
 
     registration.enrolment_start_time = localtime() + timedelta(days=1)
     registration.enrolment_end_time = localtime() + timedelta(days=2)
@@ -125,7 +155,11 @@ def test_cannot_signup_if_enrolment_is_not_opened(user_api_client, event, regist
 
 
 @pytest.mark.django_db
-def test_cannot_signup_if_enrolment_is_closed(user_api_client, event, registration):
+def test_cannot_signup_if_enrolment_is_closed(
+    user_api_client, event, registration, user
+):
+    user.get_default_organization().registration_admin_users.add(user)
+
     registration.enrolment_start_time = localtime() - timedelta(days=2)
     registration.enrolment_end_time = localtime() - timedelta(days=1)
     registration.save()
@@ -148,7 +182,11 @@ def test_cannot_signup_if_enrolment_is_closed(user_api_client, event, registrati
 
 
 @pytest.mark.django_db
-def test_cannot_signup_if_reservation_code_is_missing(user_api_client, registration):
+def test_cannot_signup_if_reservation_code_is_missing(
+    user_api_client, registration, user
+):
+    user.get_default_organization().registration_admin_users.add(user)
+
     signups_payload = {
         "registration": registration.id,
         "signups": [],
@@ -161,8 +199,10 @@ def test_cannot_signup_if_reservation_code_is_missing(user_api_client, registrat
 
 @pytest.mark.django_db
 def test_amount_if_signups_cannot_be_greater_than_maximum_group_size(
-    user_api_client, event, registration
+    user_api_client, event, registration, user
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     registration.audience_min_age = None
     registration.audience_max_age = None
     registration.maximum_attendee_capacity = None
@@ -187,7 +227,11 @@ def test_amount_if_signups_cannot_be_greater_than_maximum_group_size(
 
 
 @pytest.mark.django_db
-def test_cannot_signup_if_reservation_code_is_invalid(user_api_client, registration):
+def test_cannot_signup_if_reservation_code_is_invalid(
+    user_api_client, registration, user
+):
+    user.get_default_organization().registration_admin_users.add(user)
+
     signups_payload = {
         "registration": registration.id,
         "reservation_code": "c5e7d3ba-e48d-447c-b24d-c779950b2acb",
@@ -201,8 +245,10 @@ def test_cannot_signup_if_reservation_code_is_invalid(user_api_client, registrat
 
 @pytest.mark.django_db
 def test_cannot_signup_if_reservation_code_is_for_different_registration(
-    user_api_client, registration, registration2
+    user_api_client, registration, registration2, user
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     reservation = SeatReservationCode.objects.create(
         registration=registration2, seats=2
     )
@@ -220,8 +266,10 @@ def test_cannot_signup_if_reservation_code_is_for_different_registration(
 
 @pytest.mark.django_db
 def test_cannot_signup_if_number_of_signups_exceeds_number_reserved_seats(
-    user_api_client, registration
+    user_api_client, registration, user
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
 
     signups_data = {
@@ -249,7 +297,11 @@ def test_cannot_signup_if_number_of_signups_exceeds_number_reserved_seats(
 
 
 @pytest.mark.django_db
-def test_cannot_signup_if_reservation_code_is_expired(user_api_client, registration):
+def test_cannot_signup_if_reservation_code_is_expired(
+    user_api_client, registration, user
+):
+    user.get_default_organization().registration_admin_users.add(user)
+
     reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
     reservation.timestamp = reservation.timestamp - timedelta(days=1)
     reservation.save()
@@ -272,7 +324,9 @@ def test_cannot_signup_if_reservation_code_is_expired(user_api_client, registrat
 
 
 @pytest.mark.django_db
-def test_can_signup_twice_with_same_phone_or_email(user_api_client, registration):
+def test_can_signup_twice_with_same_phone_or_email(user_api_client, registration, user):
+    user.get_default_organization().registration_admin_users.add(user)
+
     reservation = SeatReservationCode.objects.create(registration=registration, seats=3)
     signup_data = {
         "first_name": "Michael",
@@ -301,8 +355,10 @@ def test_can_signup_twice_with_same_phone_or_email(user_api_client, registration
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_date_of_birth_is_mandatory_if_audience_min_or_max_age_specified(
-    user_api_client, date_of_birth, min_age, max_age, registration
+    user_api_client, date_of_birth, min_age, max_age, registration, user
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     falsy_values = ("", None)
 
     # Update registration
@@ -361,8 +417,10 @@ def test_date_of_birth_is_mandatory_if_audience_min_or_max_age_specified(
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_signup_age_has_to_match_the_audience_min_max_age(
-    user_api_client, date_of_birth, expected_error, expected_status, registration
+    user_api_client, date_of_birth, expected_error, expected_status, registration, user
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     registration.audience_max_age = 40
     registration.audience_min_age = 20
     registration.enrolment_start_time = localtime()
@@ -405,8 +463,10 @@ def test_signup_age_has_to_match_the_audience_min_max_age(
 )
 @pytest.mark.django_db
 def test_signup_mandatory_fields_has_to_be_filled(
-    user_api_client, mandatory_field_id, registration
+    user_api_client, mandatory_field_id, registration, user
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     registration.mandatory_fields = [mandatory_field_id]
     registration.save()
 
@@ -419,8 +479,8 @@ def test_signup_mandatory_fields_has_to_be_filled(
         "city": "Helsinki",
         "zipcode": "00100",
         "notifications": "sms",
+        mandatory_field_id: "",
     }
-    signup_data[mandatory_field_id] = ""
     reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
     signups_data = {
         "registration": registration.id,
@@ -439,8 +499,10 @@ def test_signup_mandatory_fields_has_to_be_filled(
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_cannot_signup_with_not_allowed_service_language(
-    user_api_client, languages, registration
+    user_api_client, languages, registration, user
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     languages[0].service_language = False
     languages[0].save()
 
@@ -465,7 +527,9 @@ def test_cannot_signup_with_not_allowed_service_language(
 
 
 @pytest.mark.django_db
-def test_group_signup_successful_with_waitlist(user_api_client, registration):
+def test_group_signup_successful_with_waitlist(user_api_client, registration, user):
+    user.get_default_organization().registration_admin_users.add(user)
+
     registration.maximum_attendee_capacity = 2
     registration.waiting_list_capacity = 2
     registration.save()
@@ -557,7 +621,10 @@ def test_email_sent_on_successful_signup(
     languages,
     registration,
     service_language,
+    user,
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     with translation.override(service_language):
         registration.event.type_id = Event.TypeId.GENERAL
         registration.event.name = "Foo"
@@ -619,10 +686,14 @@ def test_confirmation_template_has_correct_text_per_event_type(
     expected_text,
     languages,
     registration,
+    user,
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     registration.event.type_id = event_type
     registration.event.name = "Foo"
     registration.event.save()
+
     reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
     signup_data = {
         "first_name": "Michael",
@@ -663,10 +734,14 @@ def test_confirmation_message_is_shown_in_service_language(
     languages,
     registration,
     service_language,
+    user,
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     Language.objects.get_or_create(
         id=service_language, defaults={"name": service_language}
     )
+
     registration.confirmation_message_en = "Confirmation message"
     registration.confirmation_message_fi = "Vahvistusviesti"
     registration.save()
@@ -717,7 +792,10 @@ def test_different_email_sent_if_user_is_added_to_waiting_list(
     registration,
     service_language,
     signup,
+    user,
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     with translation.override(service_language):
         registration.event.type_id = Event.TypeId.GENERAL
         registration.event.name = "Foo"
@@ -775,12 +853,16 @@ def test_confirmation_to_waiting_list_template_has_correct_text_per_event_type(
     languages,
     registration,
     signup,
+    user,
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     registration.event.type_id = event_type
     registration.event.name = "Foo"
     registration.event.save()
     registration.maximum_attendee_capacity = 1
     registration.save()
+
     reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
     signup_data = {
         "first_name": "Michael",

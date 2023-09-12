@@ -30,6 +30,8 @@ def assert_patch_signup(api_client, signup_pk, signup_data):
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test__patch_presence_status_of_signup(api_client, registration, signup, user):
+    user.get_default_organization().registration_admin_users.add(user)
+
     registration.audience_min_age = 10
     registration.mandatory_fields = [
         MandatoryFields.PHONE_NUMBER,

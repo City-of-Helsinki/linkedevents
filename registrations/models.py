@@ -260,9 +260,11 @@ class Registration(CreatedModifiedBaseModel):
 
     def can_be_edited_by(self, user):
         """Check if current registration can be edited by the given user"""
-        if user.is_superuser:
-            return True
-        return user.is_admin_of(self.event.publisher)
+        return (
+            user.is_superuser
+            or user.is_admin_of(self.event.publisher)
+            or user.is_registration_admin_of(self.event.publisher)
+        )
 
     def is_user_editable_resources(self):
         return bool(
@@ -283,7 +285,19 @@ class SignUpMixin:
         """Check if the current signup can be edited by the given user"""
         return (
             user.is_superuser
-            or user.is_admin_of(self.publisher)
+            or user.is_registration_admin_of(self.publisher)
+            or user.is_strongly_identificated
+            and self.registration.registration_user_accesses.filter(
+                email=user.email
+            ).exists()
+            or user.id == self.created_by_id
+        )
+
+    def can_be_deleted_by(self, user):
+        """Check if current signup can be deleted by the given user"""
+        return (
+            user.is_superuser
+            or user.is_registration_admin_of(self.publisher)
             or user.id == self.created_by_id
         )
 

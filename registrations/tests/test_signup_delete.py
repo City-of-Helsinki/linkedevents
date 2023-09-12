@@ -31,7 +31,17 @@ def assert_delete_signup(api_client, signup_pk, query_string=None):
 
 
 @pytest.mark.django_db
-def test_admin_can_delete_signup(signup, user_api_client):
+def test_admin_cannot_delete_signup(signup, user_api_client):
+    response = delete_signup(user_api_client, signup.id)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_registration_admin_can_delete_signup(signup, user, user_api_client):
+    default_organization = user.get_default_organization()
+    default_organization.admin_users.remove(user)
+    default_organization.registration_admin_users.add(user)
+
     assert_delete_signup(user_api_client, signup.id)
 
 
@@ -68,7 +78,10 @@ def test_email_sent_on_successful_signup_deletion(
     service_language,
     signup,
     user_api_client,
+    user,
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     signup.service_language = Language.objects.get(pk=service_language)
     signup.save()
 
@@ -113,9 +126,13 @@ def test_cancellation_confirmation_template_has_correct_text_per_event_type(
     registration,
     signup,
     user_api_client,
+    user,
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     signup.service_language = Language.objects.get(pk="en")
     signup.save()
+
     registration.event.type_id = event_type
     registration.event.name = "Foo"
     registration.event.save()
@@ -128,7 +145,9 @@ def test_cancellation_confirmation_template_has_correct_text_per_event_type(
 
 
 @pytest.mark.django_db
-def test__cannot_delete_already_deleted_signup(signup, user_api_client):
+def test__cannot_delete_already_deleted_signup(signup, user_api_client, user):
+    user.get_default_organization().registration_admin_users.add(user)
+
     assert_delete_signup(user_api_client, signup.id)
     response = delete_signup(user_api_client, signup.id)
     assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -146,7 +165,7 @@ def test__registration_user_access_cannot_delete_signup(
 
 
 @pytest.mark.django_db
-def test__regular_user_cannot_delete_signup(signup, user, user_api_client):
+def test__regular_not_created_user_cannot_delete_signup(signup, user, user_api_client):
     user.get_default_organization().regular_users.add(user)
     user.get_default_organization().admin_users.remove(user)
 
@@ -185,8 +204,9 @@ def test__created_not_authenticated_user_cannot_delete_signup(
 def test__api_key_with_organization_can_delete_signup(
     api_client, data_source, organization, signup
 ):
+    data_source.user_editable_registrations = True
     data_source.owner = organization
-    data_source.save()
+    data_source.save(update_fields=["user_editable_registrations", "owner"])
     api_client.credentials(apikey=data_source.api_key)
 
     assert_delete_signup(api_client, signup.id)
@@ -228,20 +248,24 @@ def test__unknown_api_key_cannot_delete_signup(api_client, signup):
 def test__user_editable_resources_can_delete_signup(
     data_source, organization, signup, user, user_api_client
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     data_source.owner = organization
     data_source.user_editable_resources = True
-    data_source.save()
+    data_source.save(update_fields=["owner", "user_editable_resources"])
 
     assert_delete_signup(user_api_client, signup.id)
 
 
 @pytest.mark.django_db
 def test__non_user_editable_resources_cannot_delete_signup(
-    data_source, organization, signup, user_api_client
+    data_source, organization, signup, user, user_api_client
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     data_source.owner = organization
     data_source.user_editable_resources = False
-    data_source.save()
+    data_source.save(update_fields=["owner", "user_editable_resources"])
 
     response = delete_signup(user_api_client, signup.id)
     assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -249,8 +273,10 @@ def test__non_user_editable_resources_cannot_delete_signup(
 
 @pytest.mark.django_db
 def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
-    user_api_client, registration
+    user_api_client, registration, user
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     registration.maximum_attendee_capacity = 1
     registration.save()
 
@@ -349,7 +375,10 @@ def test_send_email_when_moving_participant_from_waitlist(
     service_language,
     signup,
     signup2,
+    user,
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     with translation.override(service_language):
         registration.event.type_id = Event.TypeId.GENERAL
         registration.event.name = "Foo"
@@ -407,10 +436,14 @@ def test_transferred_as_participant_template_has_correct_text_per_event_type(
     registration,
     signup,
     signup2,
+    user,
 ):
+    user.get_default_organization().registration_admin_users.add(user)
+
     registration.event.type_id = event_type
     registration.event.name = "Foo"
     registration.event.save()
+
     registration.maximum_attendee_capacity = 1
     registration.save()
 
