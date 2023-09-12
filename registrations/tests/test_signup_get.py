@@ -4,6 +4,7 @@ import pytest
 from rest_framework import status
 
 from events.tests.conftest import APIClient
+from events.tests.utils import assert_fields_exist
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import RegistrationUserAccess, SignUp
 
@@ -52,6 +53,35 @@ def assert_get_detail(api_client: APIClient, signup_pk: str, query: str = None):
     return response
 
 
+def assert_signup_fields_exist(data):
+    fields = (
+        "id",
+        "service_language",
+        "created_at",
+        "last_modified_at",
+        "created_by",
+        "last_modified_by",
+        "responsible_for_group",
+        "first_name",
+        "last_name",
+        "date_of_birth",
+        "city",
+        "email",
+        "extra_info",
+        "membership_number",
+        "phone_number",
+        "notifications",
+        "attendee_status",
+        "street_address",
+        "zipcode",
+        "presence_status",
+        "registration",
+        "signup_group",
+        "native_language",
+    )
+    assert_fields_exist(data, fields)
+
+
 # === tests ===
 
 
@@ -84,8 +114,9 @@ def test_registration_user_access_can_get_signup_when_strongly_identified(
         new_callable=PropertyMock,
         return_value="heltunnistussuomifi",
     ) as mocked:
-        assert_get_detail(user_api_client, signup.id)
+        response = assert_get_detail(user_api_client, signup.id)
         assert mocked.called is True
+    assert_signup_fields_exist(response.data)
 
 
 @pytest.mark.django_db
@@ -128,6 +159,7 @@ def test_regular_created_user_can_get_signup(
 
     response = get_detail(user_api_client, signup.id)
     assert response.status_code == status.HTTP_200_OK
+    assert_signup_fields_exist(response.data)
 
 
 @pytest.mark.django_db
@@ -149,7 +181,8 @@ def test__api_key_with_organization_and_registration_permission_can_get_signup(
     data_source.save(update_fields=["owner", "user_editable_registrations"])
     api_client.credentials(apikey=data_source.api_key)
 
-    assert_get_detail(api_client, signup.id)
+    response = assert_get_detail(api_client, signup.id)
+    assert_signup_fields_exist(response.data)
 
 
 @pytest.mark.django_db

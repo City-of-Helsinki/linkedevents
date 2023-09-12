@@ -165,7 +165,31 @@ class SignUpSerializer(serializers.ModelSerializer):
         return data
 
     class Meta:
-        fields = "__all__"
+        fields = (
+            "id",
+            "service_language",
+            "created_at",
+            "last_modified_at",
+            "created_by",
+            "last_modified_by",
+            "responsible_for_group",
+            "first_name",
+            "last_name",
+            "date_of_birth",
+            "city",
+            "email",
+            "extra_info",
+            "membership_number",
+            "phone_number",
+            "notifications",
+            "attendee_status",
+            "street_address",
+            "zipcode",
+            "presence_status",
+            "registration",
+            "signup_group",
+            "native_language",
+        )
         model = SignUp
 
 
@@ -261,7 +285,36 @@ class RegistrationBaseSerializer(serializers.ModelSerializer):
         return obj.publisher.id
 
     class Meta:
-        fields = "__all__"
+        fields = (
+            "id",
+            "signups",
+            "current_attendee_count",
+            "current_waiting_list_count",
+            "remaining_attendee_capacity",
+            "remaining_waiting_list_capacity",
+            "data_source",
+            "publisher",
+            "registration_user_accesses",
+            "created_time",
+            "last_modified_time",
+            "created_by",
+            "last_modified_by",
+            "event",
+            "created_at",
+            "last_modified_at",
+            "attendee_registration",
+            "audience_min_age",
+            "audience_max_age",
+            "enrolment_start_time",
+            "enrolment_end_time",
+            "maximum_attendee_capacity",
+            "minimum_attendee_capacity",
+            "waiting_list_capacity",
+            "maximum_group_size",
+            "mandatory_fields",
+            "confirmation_message",
+            "instructions",
+        )
         model = Registration
 
 

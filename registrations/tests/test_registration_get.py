@@ -7,6 +7,7 @@ from events.models import Event
 from events.tests.conftest import APIClient
 from events.tests.factories import EventFactory
 from events.tests.test_event_get import get_list_and_assert_events
+from events.tests.utils import assert_fields_exist
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import RegistrationUserAccess, SeatReservationCode
 from registrations.tests.factories import RegistrationFactory
@@ -65,6 +66,46 @@ def get_detail_and_assert_registration(
     return response
 
 
+def assert_registration_fields_exist(data, is_admin_user=False):
+    fields = (
+        "id",
+        "signups",
+        "current_attendee_count",
+        "current_waiting_list_count",
+        "remaining_attendee_capacity",
+        "remaining_waiting_list_capacity",
+        "data_source",
+        "publisher",
+        "created_time",
+        "last_modified_time",
+        "event",
+        "created_at",
+        "last_modified_at",
+        "attendee_registration",
+        "audience_min_age",
+        "audience_max_age",
+        "enrolment_start_time",
+        "enrolment_end_time",
+        "maximum_attendee_capacity",
+        "minimum_attendee_capacity",
+        "waiting_list_capacity",
+        "maximum_group_size",
+        "mandatory_fields",
+        "confirmation_message",
+        "instructions",
+        "@id",
+        "@context",
+        "@type",
+    )
+    if is_admin_user:
+        fields += (
+            "created_by",
+            "last_modified_by",
+            "registration_user_accesses",
+        )
+    assert_fields_exist(data, fields)
+
+
 # === tests ===
 
 
@@ -97,7 +138,8 @@ def test_admin_can_get_registration_not_created_by_self(
 
     assert registration.created_by_id != user.id
 
-    get_detail_and_assert_registration(user_api_client, registration.id)
+    response = get_detail_and_assert_registration(user_api_client, registration.id)
+    assert_registration_fields_exist(response.data)
 
 
 @pytest.mark.django_db
@@ -106,6 +148,7 @@ def test_admin_user_can_see_registration_user_accesses(registration, user_api_cl
     response = get_detail_and_assert_registration(user_api_client, registration.id)
     response_registration_user_accesses = response.data["registration_user_accesses"]
     assert len(response_registration_user_accesses) == 1
+    assert_registration_fields_exist(response.data, is_admin_user=True)
 
 
 @pytest.mark.django_db
