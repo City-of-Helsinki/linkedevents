@@ -44,7 +44,7 @@ class CanAccessRegistration(UserDataFromRequestMixin, permissions.BasePermission
         if request.method == "GET":
             return (
                 obj.can_be_edited_by(request.user)
-                and obj.registration_user_accesses.filter(
+                or obj.registration_user_accesses.filter(
                     email=request.user.email
                 ).exists()
                 or obj.created_by_id == request.user.id
