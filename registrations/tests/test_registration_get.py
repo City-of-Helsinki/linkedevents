@@ -5,9 +5,11 @@ from rest_framework import status
 
 from events.models import Event
 from events.tests.conftest import APIClient
+from events.tests.factories import EventFactory
 from events.tests.test_event_get import get_list_and_assert_events
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import RegistrationUserAccess, SeatReservationCode
+from registrations.tests.factories import RegistrationFactory
 from registrations.tests.test_signup_post import assert_create_signups
 
 include_signups_query = "include=signups"
@@ -71,9 +73,29 @@ def get_detail_and_assert_registration(
     [Event.TypeId.GENERAL, Event.TypeId.COURSE, Event.TypeId.VOLUNTEERING],
 )
 @pytest.mark.django_db
-def test_get_registration(user_api_client, event, event_type, registration):
-    event.type_id = event_type
-    event.save()
+def test_admin_can_get_registration_created_by_self(
+    user_api_client, organization, user, event_type
+):
+    event = EventFactory(type_id=event_type, publisher=organization)
+    registration = RegistrationFactory(event=event, created_by=user)
+
+    assert registration.created_by_id == user.id
+
+    get_detail_and_assert_registration(user_api_client, registration.id)
+
+
+@pytest.mark.parametrize(
+    "event_type",
+    [Event.TypeId.GENERAL, Event.TypeId.COURSE, Event.TypeId.VOLUNTEERING],
+)
+@pytest.mark.django_db
+def test_admin_can_get_registration_not_created_by_self(
+    user_api_client, organization, user, user2, event_type
+):
+    event = EventFactory(type_id=event_type, publisher=organization)
+    registration = RegistrationFactory(event=event, created_by=user2)
+
+    assert registration.created_by_id != user.id
 
     get_detail_and_assert_registration(user_api_client, registration.id)
 
