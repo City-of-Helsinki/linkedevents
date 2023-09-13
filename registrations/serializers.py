@@ -34,6 +34,7 @@ def validate_registration_enrolment_times(registration):
 
 class SignUpSerializer(serializers.ModelSerializer):
     view_name = "signup"
+    id = serializers.IntegerField(required=False)
     service_language = serializers.PrimaryKeyRelatedField(
         queryset=Language.objects.filter(service_language=True),
         many=False,
@@ -330,6 +331,12 @@ class CreateSignUpsSerializer(serializers.Serializer):
 class SignUpGroupCreateSerializer(serializers.ModelSerializer, CreateSignUpsSerializer):
     reservation_code = serializers.CharField(write_only=True)
 
+    def _create_signups(self, instance, validated_signups_data):
+        for signup_data in validated_signups_data:
+            signup_data["signup_group"] = instance
+            signup_serializer = SignUpSerializer(data=signup_data, context=self.context)
+            signup_serializer.create(signup_data)
+
     def create(self, validated_data):
         validated_data["created_by"] = self.context["request"].user
         validated_data["last_modified_by"] = self.context["request"].user
@@ -339,11 +346,7 @@ class SignUpGroupCreateSerializer(serializers.ModelSerializer, CreateSignUpsSeri
         signups_data = validated_data.pop("signups")
 
         instance = super().create(validated_data)
-
-        for signup_data in signups_data:
-            signup_data["signup_group"] = instance
-            signup_serializer = SignUpSerializer(data=signup_data, context=self.context)
-            signup_serializer.create(signup_data)
+        self._create_signups(instance, signups_data)
 
         reservation.delete()
 
@@ -362,7 +365,58 @@ class SignUpGroupCreateSerializer(serializers.ModelSerializer, CreateSignUpsSeri
 
 class SignUpGroupSerializer(serializers.ModelSerializer):
     view_name = "signupgroup-detail"
-    signups = SignUpSerializer(many=True)
+
+    def get_fields(self):
+        fields = super().get_fields()
+        fields["signups"] = SignUpSerializer(
+            many=True, required=False, partial=self.partial
+        )
+        return fields
+
+    def validate(self, data):
+        validated_data = super().validate(data)
+
+        errors = {}
+
+        if (
+            "registration" in validated_data
+            and self.instance
+            and self.instance.registration != validated_data["registration"]
+        ):
+            errors["registration"] = _(
+                "You may not change the registration of an existing object."
+            )
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return validated_data
+
+    def _update_signups(self, instance, validated_signups_data):
+        for signup_data in validated_signups_data:
+            if not signup_data.get("id"):
+                continue
+
+            if not self.partial:
+                signup_data["signup_group"] = instance
+
+            signup = SignUp.objects.get(pk=signup_data["id"])
+            signup_serializer = SignUpSerializer(
+                instance=signup,
+                data=signup_data,
+                context=self.context,
+                partial=self.partial,
+            )
+            signup_serializer.update(signup_serializer.instance, signup_data)
+
+    def update(self, instance, validated_data):
+        signups_data = validated_data.pop("signups", [])
+        validated_data["last_modified_by"] = self.context["request"].user
+
+        super().update(instance, validated_data)
+        self._update_signups(instance, signups_data)
+
+        return instance
 
     class Meta:
         fields = ("id", "registration", "signups", "extra_info")
