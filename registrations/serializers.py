@@ -504,7 +504,7 @@ class MassEmailSignupGroupsField(serializers.PrimaryKeyRelatedField):
     def get_queryset(self):
         registration = self.context["request"].data["registration"]
 
-        return registration.signup_groups.exclude(signups__email=None)
+        return registration.signup_groups.all()
 
 
 class MassEmailSignupsField(serializers.PrimaryKeyRelatedField):
