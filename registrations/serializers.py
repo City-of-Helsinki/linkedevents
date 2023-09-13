@@ -57,12 +57,6 @@ class CreatedModifiedBaseSerializer(serializers.ModelSerializer):
         return instance
 
 
-class SignUpSerializerForRegistrationUser(serializers.ModelSerializer):
-    class Meta:
-        fields = (("presence_status",),)
-        model = SignUp
-
-
 class SignUpSerializer(CreatedModifiedBaseSerializer):
     view_name = "signup"
     id = serializers.IntegerField(required=False)

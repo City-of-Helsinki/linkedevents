@@ -1,10 +1,18 @@
+from unittest.mock import patch, PropertyMock
+
 import pytest
 from freezegun import freeze_time
 from rest_framework import status
 
 from events.tests.utils import versioned_reverse as reverse
+from helevents.tests.factories import UserFactory
 from registrations.models import SignUp
-from registrations.tests.factories import SignUpFactory, SignUpGroupFactory
+from registrations.tests.factories import (
+    RegistrationFactory,
+    RegistrationUserAccessFactory,
+    SignUpFactory,
+    SignUpGroupFactory,
+)
 
 # === util methods ===
 
@@ -31,204 +39,258 @@ def assert_patch_signup_group(api_client, signup_group_pk, signup_group_data):
 # === tests ===
 
 
+@pytest.mark.parametrize(
+    "user_role,allowed_to_patch",
+    [
+        ("admin", False),
+        ("registration_admin", True),
+        ("regular", False),
+        ("superuser", True),
+    ],
+)
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_registration_admin_can_patch_signup_group_extra_info(
-    user_api_client, registration, user
+def test_patch_signup_group_extra_info_based_on_user_role(
+    api_client, event, user_role, allowed_to_patch
 ):
-    user.get_default_organization().registration_admin_users.add(user)
+    user = UserFactory(is_superuser=True if user_role == "superuser" else False)
+    other_user = UserFactory()
 
-    signup_group = SignUpGroupFactory(registration=registration)
-    signup0 = SignUpFactory(
-        signup_group=signup_group,
-        registration=registration,
-        extra_info="signup0 extra info",
-    )
-    signup1 = SignUpFactory(
+    user_role_mapping = {
+        "admin": lambda usr: usr.admin_organizations.add(event.publisher),
+        "registration_admin": lambda usr: usr.registration_admin_organizations.add(
+            event.publisher
+        ),
+        "regular": lambda usr: usr.organization_memberships.add(event.publisher),
+        "superuser": lambda usr: None,
+    }
+    user_role_mapping[user_role](user)
+
+    registration = RegistrationFactory(event=event)
+
+    signup_group = SignUpGroupFactory(registration=registration, created_by=other_user)
+    first_signup = SignUpFactory(
         signup_group=signup_group,
         registration=registration,
         extra_info="signup1 extra info",
+    )
+    second_signup = SignUpFactory(
+        signup_group=signup_group,
+        registration=registration,
+        extra_info="signup2 extra info",
     )
 
     signup_group_data = {"extra_info": "signup group extra info"}
 
     assert signup_group.extra_info is None
-    assert signup0.extra_info == "signup0 extra info"
-    assert signup1.extra_info == "signup1 extra info"
+    assert first_signup.extra_info == "signup1 extra info"
+    assert second_signup.extra_info == "signup2 extra info"
 
-    response = assert_patch_signup_group(
-        user_api_client, signup_group.id, signup_group_data
-    )
-    assert response.data["extra_info"] == signup_group_data["extra_info"]
+    api_client.force_authenticate(user)
 
-    signup_group.refresh_from_db()
-    signup0.refresh_from_db()
-    signup1.refresh_from_db()
-    assert signup_group.extra_info == signup_group_data["extra_info"]
-    assert signup0.extra_info == "signup0 extra info"
-    assert signup1.extra_info == "signup1 extra info"
-
-
-@freeze_time("2023-03-14 03:30:00+02:00")
-@pytest.mark.django_db
-def test_admin_cannot_patch_signup_group_extra_info(user_api_client, registration):
-    signup_group = SignUpGroupFactory(registration=registration)
-    signup0 = SignUpFactory(
-        signup_group=signup_group,
-        registration=registration,
-        extra_info="signup0 extra info",
-    )
-    signup1 = SignUpFactory(
-        signup_group=signup_group,
-        registration=registration,
-        extra_info="signup1 extra info",
-    )
-
-    signup_group_data = {"extra_info": "signup group extra info"}
-
-    assert signup_group.extra_info is None
-    assert signup0.extra_info == "signup0 extra info"
-    assert signup1.extra_info == "signup1 extra info"
-
-    response = patch_signup_group(user_api_client, signup_group.id, signup_group_data)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    response = patch_signup_group(api_client, signup_group.id, signup_group_data)
 
     signup_group.refresh_from_db()
-    signup0.refresh_from_db()
-    signup1.refresh_from_db()
-    assert signup_group.extra_info is None
-    assert signup0.extra_info == "signup0 extra info"
-    assert signup1.extra_info == "signup1 extra info"
+    first_signup.refresh_from_db()
+    second_signup.refresh_from_db()
+
+    if allowed_to_patch:
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["extra_info"] == signup_group_data["extra_info"]
+        assert signup_group.extra_info == signup_group_data["extra_info"]
+    else:
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert signup_group.extra_info is None
+
+    assert first_signup.extra_info == "signup1 extra info"
+    assert second_signup.extra_info == "signup2 extra info"
 
 
+@pytest.mark.parametrize("admin_type", ["superuser", "registration_admin"])
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_regular_user_cannot_patch_signup_group_extra_info(
-    user_api_client, registration, user
+def test_registration_user_who_is_superuser_or_registration_admin_can_patch_signups_data(
+    api_client, registration, admin_type
 ):
-    default_org = user.get_default_organization()
-    default_org.regular_users.add(user)
-    default_org.admin_users.remove(user)
+    user = UserFactory(is_superuser=True if admin_type == "superuser" else False)
+    if admin_type == "registration_admin":
+        user.registration_admin_organizations.add(registration.publisher)
+
+    RegistrationUserAccessFactory(registration=registration, email=user.email)
 
     signup_group = SignUpGroupFactory(registration=registration)
-    signup0 = SignUpFactory(
-        signup_group=signup_group,
-        registration=registration,
-        extra_info="signup0 extra info",
-    )
-    signup1 = SignUpFactory(
-        signup_group=signup_group,
-        registration=registration,
-        extra_info="signup1 extra info",
-    )
+    first_signup = SignUpFactory(signup_group=signup_group, registration=registration)
+    second_signup = SignUpFactory(signup_group=signup_group, registration=registration)
 
-    signup_group_data = {"extra_info": "signup group extra info"}
+    signup_group_data = {
+        "signups": [
+            {"id": first_signup.pk, "presence_status": SignUp.PresenceStatus.PRESENT},
+            {"id": second_signup.pk, "extra_info": "signup2 extra info"},
+        ]
+    }
 
-    assert signup_group.extra_info is None
-    assert signup0.extra_info == "signup0 extra info"
-    assert signup1.extra_info == "signup1 extra info"
+    assert first_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+    assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+    assert first_signup.extra_info is None
+    assert second_signup.extra_info is None
 
-    response = patch_signup_group(user_api_client, signup_group.id, signup_group_data)
+    api_client.force_authenticate(user)
+
+    assert_patch_signup_group(api_client, signup_group.id, signup_group_data)
+
+    first_signup.refresh_from_db()
+    second_signup.refresh_from_db()
+    assert first_signup.presence_status == SignUp.PresenceStatus.PRESENT
+    assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+    assert first_signup.extra_info is None
+    assert second_signup.extra_info == "signup2 extra info"
+
+
+@pytest.mark.parametrize(
+    "user_role",
+    [
+        "admin",
+        "regular",
+    ],
+)
+@freeze_time("2023-03-14 03:30:00+02:00")
+@pytest.mark.django_db
+def test_admin_or_regular_user_cannot_patch_signups_data(
+    api_client, registration, user_role
+):
+    user = UserFactory()
+
+    if user_role == "admin":
+        user.admin_organizations.add(registration.publisher)
+    else:
+        user.organization_memberships.add(registration.publisher)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    first_signup = SignUpFactory(signup_group=signup_group, registration=registration)
+    second_signup = SignUpFactory(signup_group=signup_group, registration=registration)
+
+    signup_group_data = {
+        "signups": [
+            {"id": first_signup.pk, "presence_status": SignUp.PresenceStatus.PRESENT},
+            {"id": second_signup.pk, "extra_info": "signup2 extra info"},
+        ]
+    }
+
+    assert first_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+    assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+    assert first_signup.extra_info is None
+    assert second_signup.extra_info is None
+
+    api_client.force_authenticate(user)
+
+    response = patch_signup_group(api_client, signup_group.id, signup_group_data)
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    signup_group.refresh_from_db()
-    signup0.refresh_from_db()
-    signup1.refresh_from_db()
-    assert signup_group.extra_info is None
-    assert signup0.extra_info == "signup0 extra info"
-    assert signup1.extra_info == "signup1 extra info"
+    first_signup.refresh_from_db()
+    second_signup.refresh_from_db()
+    assert first_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+    assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+    assert first_signup.extra_info is None
+    assert second_signup.extra_info is None
 
 
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_registration_admin_can_patch_signups_data(user_api_client, registration, user):
-    user.get_default_organization().registration_admin_users.add(user)
-
+def test_registration_user_can_patch_signups_presence_status_if_strongly_identified(
+    api_client, registration, user
+):
     signup_group = SignUpGroupFactory(registration=registration)
-    signup0 = SignUpFactory(signup_group=signup_group, registration=registration)
-    signup1 = SignUpFactory(signup_group=signup_group, registration=registration)
+    first_signup = SignUpFactory(signup_group=signup_group, registration=registration)
+    second_signup = SignUpFactory(signup_group=signup_group, registration=registration)
+
+    RegistrationUserAccessFactory(registration=registration, email=user.email)
+
+    assert first_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+    assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+
+    api_client.force_authenticate(user)
 
     signup_group_data = {
         "signups": [
-            {"id": signup0.pk, "presence_status": SignUp.PresenceStatus.PRESENT},
-            {"id": signup1.pk, "extra_info": "signup1 extra info"},
+            {"id": first_signup.pk, "presence_status": SignUp.PresenceStatus.PRESENT},
         ]
     }
 
-    assert signup0.presence_status == SignUp.PresenceStatus.NOT_PRESENT
-    assert signup1.presence_status == SignUp.PresenceStatus.NOT_PRESENT
-    assert signup0.extra_info is None
-    assert signup1.extra_info is None
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value="heltunnistussuomifi",
+    ) as mocked:
+        assert_patch_signup_group(api_client, signup_group.id, signup_group_data)
+        assert mocked.called is True
 
-    assert_patch_signup_group(user_api_client, signup_group.id, signup_group_data)
-
-    signup0.refresh_from_db()
-    signup1.refresh_from_db()
-    assert signup0.presence_status == SignUp.PresenceStatus.PRESENT
-    assert signup1.presence_status == SignUp.PresenceStatus.NOT_PRESENT
-    assert signup0.extra_info is None
-    assert signup1.extra_info == "signup1 extra info"
+    first_signup.refresh_from_db()
+    second_signup.refresh_from_db()
+    assert first_signup.presence_status == SignUp.PresenceStatus.PRESENT
+    assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
 
 
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_admin_cannot_patch_signups_data(user_api_client, registration):
+def test_registration_user_cannot_patch_signups_presence_status_if_not_strongly_identified(
+    api_client, registration, user
+):
     signup_group = SignUpGroupFactory(registration=registration)
-    signup0 = SignUpFactory(signup_group=signup_group, registration=registration)
-    signup1 = SignUpFactory(signup_group=signup_group, registration=registration)
+    first_signup = SignUpFactory(signup_group=signup_group, registration=registration)
+    second_signup = SignUpFactory(signup_group=signup_group, registration=registration)
+
+    RegistrationUserAccessFactory(registration=registration, email=user.email)
+
+    assert first_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+    assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+
+    api_client.force_authenticate(user)
 
     signup_group_data = {
         "signups": [
-            {"id": signup0.pk, "presence_status": SignUp.PresenceStatus.PRESENT},
-            {"id": signup1.pk, "extra_info": "signup1 extra info"},
+            {"id": first_signup.pk, "presence_status": SignUp.PresenceStatus.PRESENT},
         ]
     }
 
-    assert signup0.presence_status == SignUp.PresenceStatus.NOT_PRESENT
-    assert signup1.presence_status == SignUp.PresenceStatus.NOT_PRESENT
-    assert signup0.extra_info is None
-    assert signup1.extra_info is None
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value=None,
+    ) as mocked:
+        response = patch_signup_group(api_client, signup_group.id, signup_group_data)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert mocked.called is True
 
-    response = patch_signup_group(user_api_client, signup_group.id, signup_group_data)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
-    signup0.refresh_from_db()
-    signup1.refresh_from_db()
-    assert signup0.presence_status == SignUp.PresenceStatus.NOT_PRESENT
-    assert signup1.presence_status == SignUp.PresenceStatus.NOT_PRESENT
-    assert signup0.extra_info is None
-    assert signup1.extra_info is None
+    first_signup.refresh_from_db()
+    second_signup.refresh_from_db()
+    assert first_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+    assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
 
 
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_regular_user_cannot_patch_signups_data(user_api_client, registration, user):
-    default_org = user.get_default_organization()
-    default_org.regular_users.add(user)
-    default_org.admin_users.remove(user)
+def test_created_user_cannot_patch_presence_status_of_signups(
+    api_client, registration, user
+):
+    signup_group = SignUpGroupFactory(registration=registration, created_by=user)
+    first_signup = SignUpFactory(signup_group=signup_group, registration=registration)
+    second_signup = SignUpFactory(signup_group=signup_group, registration=registration)
 
-    signup_group = SignUpGroupFactory(registration=registration)
-    signup0 = SignUpFactory(signup_group=signup_group, registration=registration)
-    signup1 = SignUpFactory(signup_group=signup_group, registration=registration)
+    assert first_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+    assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+
+    api_client.force_authenticate(user)
 
     signup_group_data = {
         "signups": [
-            {"id": signup0.pk, "presence_status": SignUp.PresenceStatus.PRESENT},
-            {"id": signup1.pk, "extra_info": "signup1 extra info"},
+            {"id": first_signup.pk, "presence_status": SignUp.PresenceStatus.PRESENT},
         ]
     }
 
-    assert signup0.presence_status == SignUp.PresenceStatus.NOT_PRESENT
-    assert signup1.presence_status == SignUp.PresenceStatus.NOT_PRESENT
-    assert signup0.extra_info is None
-    assert signup1.extra_info is None
-
-    response = patch_signup_group(user_api_client, signup_group.id, signup_group_data)
+    response = patch_signup_group(api_client, signup_group.id, signup_group_data)
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    signup0.refresh_from_db()
-    signup1.refresh_from_db()
-    assert signup0.presence_status == SignUp.PresenceStatus.NOT_PRESENT
-    assert signup1.presence_status == SignUp.PresenceStatus.NOT_PRESENT
-    assert signup0.extra_info is None
-    assert signup1.extra_info is None
+    first_signup.refresh_from_db()
+    second_signup.refresh_from_db()
+    assert first_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+    assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
