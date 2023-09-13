@@ -339,9 +339,10 @@ def test_unknown_api_key_cannot_delete_signup_group(api_client, organization):
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
+@pytest.mark.parametrize("user_editable_resources", [False, True])
 @pytest.mark.django_db
-def test_user_editable_resources_can_delete_signup_group(
-    data_source, organization, user, user_api_client
+def test_registration_admin_can_delete_signup_group_regardless_of_non_user_editable_resources(
+    data_source, organization, user, user_api_client, user_editable_resources
 ):
     user.get_default_organization().registration_admin_users.add(user)
 
@@ -351,29 +352,10 @@ def test_user_editable_resources_can_delete_signup_group(
     )
 
     data_source.owner = organization
-    data_source.user_editable_resources = True
+    data_source.user_editable_resources = user_editable_resources
     data_source.save(update_fields=["owner", "user_editable_resources"])
 
     assert_delete_signup_group(user_api_client, signup_group.id)
-
-
-@pytest.mark.django_db
-def test_non_user_editable_resources_cannot_delete_signup_group(
-    data_source, organization, user, user_api_client
-):
-    user.get_default_organization().registration_admin_users.add(user)
-
-    signup_group = SignUpGroupFactory(
-        registration__event__publisher=organization,
-        registration__event__data_source=data_source,
-    )
-
-    data_source.owner = organization
-    data_source.user_editable_resources = False
-    data_source.save(update_fields=["owner", "user_editable_resources"])
-
-    response = delete_signup_group(user_api_client, signup_group.id)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db

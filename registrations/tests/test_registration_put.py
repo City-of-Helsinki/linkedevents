@@ -146,21 +146,49 @@ def test__unknown_api_key_cannot_update_registration(api_client, event, registra
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
+@pytest.mark.parametrize("user_editable_resources", [False, True])
 @pytest.mark.django_db
-def test__non_user_editable_resources_cannot_update_registration(
-    api_client, data_source, event, organization, registration, user
+def test_admin_can_update_registration_regardless_of_non_user_editable_resources(
+    user_api_client,
+    data_source,
+    event,
+    organization,
+    registration,
+    user_editable_resources,
 ):
     data_source.owner = organization
-    data_source.user_editable_resources = False
-    data_source.save()
-    api_client.force_authenticate(user)
+    data_source.user_editable_resources = user_editable_resources
+    data_source.save(update_fields=["owner", "user_editable_resources"])
 
     registration_data = {
         "event": {"@id": get_event_url(event.id)},
         "audience_max_age": 10,
     }
-    response = update_registration(api_client, registration.id, registration_data)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert_update_registration(user_api_client, registration.id, registration_data)
+
+
+@pytest.mark.parametrize("user_editable_resources", [False, True])
+@pytest.mark.django_db
+def test_registration_admin_can_update_registration_regardless_of_non_user_editable_resources(
+    user_api_client,
+    data_source,
+    event,
+    organization,
+    registration,
+    user,
+    user_editable_resources,
+):
+    user.get_default_organization().registration_admin_users.add(user)
+
+    data_source.owner = organization
+    data_source.user_editable_resources = user_editable_resources
+    data_source.save(update_fields=["owner", "user_editable_resources"])
+
+    registration_data = {
+        "event": {"@id": get_event_url(event.id)},
+        "audience_max_age": 10,
+    }
+    assert_update_registration(user_api_client, registration.id, registration_data)
 
 
 @pytest.mark.django_db

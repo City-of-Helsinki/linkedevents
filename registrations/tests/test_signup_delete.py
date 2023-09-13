@@ -244,31 +244,18 @@ def test__unknown_api_key_cannot_delete_signup(api_client, signup):
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
+@pytest.mark.parametrize("user_editable_resources", [False, True])
 @pytest.mark.django_db
-def test__user_editable_resources_can_delete_signup(
-    data_source, organization, signup, user, user_api_client
+def test_registration_admin_can_delete_signup_regardless_of_non_user_editable_resources(
+    data_source, organization, signup, user, user_api_client, user_editable_resources
 ):
     user.get_default_organization().registration_admin_users.add(user)
 
     data_source.owner = organization
-    data_source.user_editable_resources = True
+    data_source.user_editable_resources = user_editable_resources
     data_source.save(update_fields=["owner", "user_editable_resources"])
 
     assert_delete_signup(user_api_client, signup.id)
-
-
-@pytest.mark.django_db
-def test__non_user_editable_resources_cannot_delete_signup(
-    data_source, organization, signup, user, user_api_client
-):
-    user.get_default_organization().registration_admin_users.add(user)
-
-    data_source.owner = organization
-    data_source.user_editable_resources = False
-    data_source.save(update_fields=["owner", "user_editable_resources"])
-
-    response = delete_signup(user_api_client, signup.id)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db
