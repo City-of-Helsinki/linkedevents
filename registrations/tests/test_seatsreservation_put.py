@@ -5,6 +5,7 @@ from django.utils.timezone import localtime
 from rest_framework import status
 
 from events.tests.utils import versioned_reverse as reverse
+from helevents.tests.factories import UserFactory
 from registrations.tests.factories import SeatReservationCodeFactory
 from registrations.tests.test_seatsreservation_post import assert_reserve_seats
 
@@ -27,7 +28,7 @@ def assert_update_seats_reservation(api_client, pk, reservation_data):
 
 @pytest.mark.django_db
 def test_authenticated_admin_user_can_update_seats_reservation(
-    user_api_client, event, registration
+    user_api_client, registration
 ):
     registration.maximum_attendee_capacity = 2
     registration.save(update_fields=["maximum_attendee_capacity"])
@@ -43,27 +44,28 @@ def test_authenticated_admin_user_can_update_seats_reservation(
 
 @pytest.mark.django_db
 def test_authenticated_regular_user_can_update_seats_reservation(
-    user_api_client, event, registration, user
+    api_client, registration
 ):
-    user.get_default_organization().regular_users.add(user)
-    user.get_default_organization().admin_users.remove(user)
+    user = UserFactory()
+    user.organization_memberships.add(registration.publisher)
 
     registration.maximum_attendee_capacity = 2
     registration.save(update_fields=["maximum_attendee_capacity"])
 
     reservation = SeatReservationCodeFactory(seats=1, registration=registration)
+
+    api_client.force_authenticate(user)
+
     reservation_data = {
         "seats": 2,
         "registration": registration.id,
         "code": reservation.code,
     }
-    assert_update_seats_reservation(user_api_client, reservation.id, reservation_data)
+    assert_update_seats_reservation(api_client, reservation.id, reservation_data)
 
 
 @pytest.mark.django_db
-def test_anonymous_user_cannot_update_seats_reservation(
-    api_client, event, registration
-):
+def test_anonymous_user_cannot_update_seats_reservation(api_client, registration):
     registration.maximum_attendee_capacity = 2
     registration.save(update_fields=["maximum_attendee_capacity"])
 
@@ -79,7 +81,7 @@ def test_anonymous_user_cannot_update_seats_reservation(
 
 @pytest.mark.django_db
 def test_seats_amount_has_not_limit_if_maximum_attendee_capacity_is_none(
-    user_api_client, event, registration
+    user_api_client, registration
 ):
     registration.maximum_attendee_capacity = None
     registration.save(update_fields=["maximum_attendee_capacity"])
@@ -95,7 +97,7 @@ def test_seats_amount_has_not_limit_if_maximum_attendee_capacity_is_none(
 
 
 @pytest.mark.django_db
-def test_seats_value_is_required(user_api_client, event, registration):
+def test_seats_value_is_required(user_api_client, registration):
     reservation = SeatReservationCodeFactory(seats=1, registration=registration)
 
     reservation_data = {
@@ -110,7 +112,7 @@ def test_seats_value_is_required(user_api_client, event, registration):
 
 
 @pytest.mark.django_db
-def test_code_value_is_required(user_api_client, event, registration):
+def test_code_value_is_required(user_api_client, registration):
     reservation = SeatReservationCodeFactory(seats=1, registration=registration)
 
     reservation_data = {
@@ -125,7 +127,7 @@ def test_code_value_is_required(user_api_client, event, registration):
 
 
 @pytest.mark.django_db
-def test_code_value_must_match(user_api_client, event, registration):
+def test_code_value_must_match(user_api_client, registration):
     reservation = SeatReservationCodeFactory(seats=1, registration=registration)
 
     reservation_data = {
@@ -141,9 +143,7 @@ def test_code_value_must_match(user_api_client, event, registration):
 
 
 @pytest.mark.django_db
-def test_cannot_update_registration(
-    user_api_client, event, registration, registration2
-):
+def test_cannot_update_registration(user_api_client, registration, registration2):
     reservation = SeatReservationCodeFactory(seats=1, registration=registration)
 
     reservation_data = {
@@ -158,7 +158,7 @@ def test_cannot_update_registration(
 
 
 @pytest.mark.django_db
-def test_cannot_update_expired_reservation(user_api_client, event, registration):
+def test_cannot_update_expired_reservation(user_api_client, registration):
     reservation = SeatReservationCodeFactory(seats=1, registration=registration)
     reservation.timestamp = localtime() - timedelta(days=1)
     reservation.save(update_fields=["timestamp"])
@@ -178,7 +178,7 @@ def test_cannot_update_expired_reservation(user_api_client, event, registration)
 
 
 @pytest.mark.django_db
-def test_cannot_update_timestamp(user_api_client, event, registration):
+def test_cannot_update_timestamp(user_api_client, registration):
     reservation = SeatReservationCodeFactory(seats=1, registration=registration)
     timestamp = reservation.timestamp
 
@@ -197,7 +197,7 @@ def test_cannot_update_timestamp(user_api_client, event, registration):
 
 @pytest.mark.django_db
 def test_cannot_reserve_seats_if_there_are_not_enough_seats_available(
-    user_api_client, event, registration
+    user_api_client, registration
 ):
     registration.maximum_attendee_capacity = 2
     registration.save(update_fields=["maximum_attendee_capacity"])
@@ -218,7 +218,7 @@ def test_cannot_reserve_seats_if_there_are_not_enough_seats_available(
 
 @pytest.mark.django_db
 def test_update_seats_reservation_in_waiting_list(
-    user_api_client, event, registration, signup, signup2
+    user_api_client, registration, signup, signup2
 ):
     registration.maximum_attendee_capacity = 2
     registration.waiting_list_capacity = 2
@@ -240,7 +240,7 @@ def test_update_seats_reservation_in_waiting_list(
 
 @pytest.mark.django_db
 def test_waiting_list_seats_amount_has_not_limit_if_waiting_list_capacity_is_none(
-    user_api_client, event, registration, signup, signup2
+    user_api_client, registration, signup, signup2
 ):
     registration.maximum_attendee_capacity = 2
     registration.waiting_list_capacity = None
@@ -262,7 +262,7 @@ def test_waiting_list_seats_amount_has_not_limit_if_waiting_list_capacity_is_non
 
 @pytest.mark.django_db
 def test_cannot_reserve_seats_waiting_list_if_there_are_not_enough_seats_available(
-    user_api_client, event, registration, signup, signup2
+    user_api_client, registration, signup, signup2
 ):
     registration.maximum_attendee_capacity = 2
     registration.waiting_list_capacity = 2
