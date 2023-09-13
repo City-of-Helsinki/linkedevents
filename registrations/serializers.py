@@ -380,6 +380,7 @@ class SignUpGroupSerializer(serializers.ModelSerializer):
 
         if (
             "registration" in validated_data
+            and self.instance
             and self.instance.registration != validated_data["registration"]
         ):
             errors["registration"] = _(
