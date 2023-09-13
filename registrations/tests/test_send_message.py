@@ -66,7 +66,7 @@ def test_email_is_sent_to_all_if_no_groups_or_signups_given(
 
     # Individual
     third_signup = SignUpFactory(registration=registration, email="test3@test.com")
-    fourth_signup = SignUpFactory(registration=registration, email="test3@test.com")
+    fourth_signup = SignUpFactory(registration=registration, email="test4@test.com")
 
     api_client.force_authenticate(user)
     send_message_data = {"subject": "Message subject", "body": "Message body"}
@@ -88,33 +88,37 @@ def test_email_is_sent_to_all_if_no_groups_or_signups_given(
 
 @pytest.mark.django_db
 def test_email_is_sent_to_selected_signup_groups_only(api_client, registration, user):
-    signup_group0 = SignUpGroupFactory(registration=registration)
+    first_signup_group = SignUpGroupFactory(registration=registration)
     SignUpFactory(
-        signup_group=signup_group0, registration=registration, email="test@test.com"
+        signup_group=first_signup_group,
+        registration=registration,
+        email="test@test.com",
     )
     SignUpFactory(
-        signup_group=signup_group0,
+        signup_group=first_signup_group,
         registration=registration,
         responsible_for_group=True,
         email="test2@test.com",
     )
 
-    signup_group1 = SignUpGroupFactory(registration=registration)
+    second_signup_group = SignUpGroupFactory(registration=registration)
     third_signup = SignUpFactory(
-        signup_group=signup_group1,
+        signup_group=second_signup_group,
         registration=registration,
         responsible_for_group=True,
         email="test3@test.com",
     )
     SignUpFactory(
-        signup_group=signup_group1, registration=registration, email="test4@test.com"
+        signup_group=second_signup_group,
+        registration=registration,
+        email="test4@test.com",
     )
 
     api_client.force_authenticate(user)
     send_message_data = {
         "subject": "Message subject",
         "body": "Message body",
-        "signup_groups": [signup_group1.pk],
+        "signup_groups": [second_signup_group.pk],
     }
 
     assert_send_message(
@@ -126,26 +130,30 @@ def test_email_is_sent_to_selected_signup_groups_only(api_client, registration, 
 
 @pytest.mark.django_db
 def test_email_is_sent_to_selected_signups_only(api_client, registration, user):
-    signup_group0 = SignUpGroupFactory(registration=registration)
+    first_signup_group = SignUpGroupFactory(registration=registration)
     SignUpFactory(
-        signup_group=signup_group0, registration=registration, email="test@test.com"
+        signup_group=first_signup_group,
+        registration=registration,
+        email="test@test.com",
     )
     responsible_signup = SignUpFactory(
-        signup_group=signup_group0,
+        signup_group=first_signup_group,
         registration=registration,
         responsible_for_group=True,
         email="test2@test.com",
     )
 
-    signup_group1 = SignUpGroupFactory(registration=registration)
+    second_signup_group = SignUpGroupFactory(registration=registration)
     SignUpFactory(
-        signup_group=signup_group1,
+        signup_group=second_signup_group,
         registration=registration,
         responsible_for_group=True,
         email="test3@test.com",
     )
     non_responsible_signup = SignUpFactory(
-        signup_group=signup_group1, registration=registration, email="test4@test.com"
+        signup_group=second_signup_group,
+        registration=registration,
+        email="test4@test.com",
     )
 
     individual_signup = SignUpFactory(registration=registration, email="test5@test.com")
