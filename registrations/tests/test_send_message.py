@@ -87,7 +87,9 @@ def test_email_is_sent_to_all_if_no_groups_or_signups_given(
 
 
 @pytest.mark.django_db
-def test_email_is_sent_to_selected_signup_groups_only(api_client, registration, user):
+def test_email_is_sent_to_selected_signup_groups_responsible_signup_only(
+    api_client, registration, user
+):
     first_signup_group = SignUpGroupFactory(registration=registration)
     SignUpFactory(
         signup_group=first_signup_group,
