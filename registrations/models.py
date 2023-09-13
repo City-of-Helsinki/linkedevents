@@ -1,3 +1,4 @@
+import logging
 from datetime import timedelta
 from smtplib import SMTPException
 from uuid import uuid4
@@ -25,6 +26,8 @@ from registrations.utils import (
 )
 
 User = settings.AUTH_USER_MODEL
+
+logger = logging.getLogger(__name__)
 
 
 class SignUpNotificationType:
@@ -387,7 +390,7 @@ class RegistrationUserAccess(models.Model):
                 html_message=rendered_body,
             )
         except SMTPException:
-            pass
+            logger.exception("Couldn't send registration user access invitation email.")
 
     class Meta:
         unique_together = ("email", "registration")
@@ -635,7 +638,7 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin):
                 html_message=rendered_body,
             )
         except SMTPException:
-            pass
+            logger.exception("Couldn't send signup notification email.")
 
 
 class SeatReservationCode(models.Model):
