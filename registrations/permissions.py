@@ -70,14 +70,22 @@ class CanAccessSignup(UserDataFromRequestMixin, permissions.BasePermission):
             if obj.registration.registration_user_accesses.filter(
                 email=request.user.email
             ).exists():
+                # Registration user can only change presence_status and nothing else,
+                # and they need to be strongly identified.
                 data_keys = request.data.keys()
                 data_keys_length = len(data_keys)
-                return data_keys_length == 1 and "presence_status" in data_keys
+                return (
+                    request.user.is_strongly_identificated
+                    and data_keys_length == 1
+                    and "presence_status" in data_keys
+                )
             elif (
                 obj.created_by_id == request.user.id
                 and not request.user.is_superuser
                 and not request.user.is_registration_admin_of(obj.publisher)
             ):
+                # User who created the signup, and is not one of the signup admins,
+                # is allowed to change all other data except presence_status.
                 return "presence_status" not in request.data.keys()
 
         return obj.can_be_edited_by(request.user)
