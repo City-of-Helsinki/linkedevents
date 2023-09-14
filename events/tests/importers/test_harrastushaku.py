@@ -148,3 +148,24 @@ def test_build_sub_event_time_ranges(
 
     assert len(result) == len(expected_subtime_ranges)
     assert result == expected_subtime_ranges
+
+
+@pytest.mark.django_db
+def test_get_event_offers__translated_fields(importer):
+    """Test get_event_offers returns translated fields as expected."""
+    activity_data = {
+        "prices": [
+            {
+                "id": "123",
+                "activity_id": "1234",
+                "price": "50",
+                "description": "Kuvaus",
+            }
+        ],
+    }
+
+    data = importer.get_event_offers(activity_data)
+
+    assert data[0]["is_free"] is False
+    assert data[0]["price"] == {"fi": "50"}
+    assert data[0]["description"] == {"fi": "Kuvaus"}

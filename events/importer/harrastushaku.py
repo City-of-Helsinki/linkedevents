@@ -568,9 +568,9 @@ class HarrastushakuImporter(Importer):
         for price_data in activity_data.get("prices", ()):
             get_string = bind_data_getters(price_data)[0]
 
-            price = get_string("price", localized=False)
+            price = get_string("price", localized=True)
             description = get_string("description", localized=True)
-            is_free = price is not None and price == "0"
+            is_free = price is not None and price["fi"] == "0"
 
             if not description and len(activity_data["prices"]) == 1:
                 description = get_string("pricedetails", localized=True)
