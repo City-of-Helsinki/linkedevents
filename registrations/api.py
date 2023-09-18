@@ -12,6 +12,7 @@ from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ParseError
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from events.api import (
@@ -409,7 +410,7 @@ class SeatReservationViewSet(
 ):
     serializer_class = SeatReservationCodeSerializer
     queryset = SeatReservationCode.objects.all()
-    permission_classes = []
+    permission_classes = [IsAuthenticated]
 
 
 register_view(SeatReservationViewSet, "seats_reservation")
