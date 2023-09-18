@@ -122,22 +122,30 @@ class HarrastushakuImporter(Importer):
         for harrastushaku_location in harrastushaku_locations:
             harrastushaku_location_id = harrastushaku_location["id"]
 
+            exact_id_filters = {
+                "id": f"{self.tprek_data_source.pk}:{harrastushaku_location['tpr_id']}",
+            }
             strict_filters = {
                 "id__startswith": self.tprek_data_source,
-                "name": harrastushaku_location["name"],
-                "address_locality": harrastushaku_location["city"],
+                "name__iexact": harrastushaku_location["name"],
+                "address_locality__iexact": harrastushaku_location["city"],
                 "postal_code": harrastushaku_location["zip"],
-                "street_address": harrastushaku_location["address"],
+                "street_address__iexact": harrastushaku_location["address"],
             }
             flexible_filters = {
                 "id__startswith": self.tprek_data_source,
-                "address_locality": harrastushaku_location["city"],
+                "address_locality__iexact": harrastushaku_location["city"],
                 "postal_code": harrastushaku_location["zip"],
-                "street_address": harrastushaku_location["address"],
+                "street_address__iexact": harrastushaku_location["address"],
             }
 
             tprek_place = (
-                Place.objects.filter(**strict_filters).first()
+                (
+                    Place.objects.filter(**exact_id_filters).first()
+                    if harrastushaku_location["tpr_id"]
+                    else None
+                )
+                or Place.objects.filter(**strict_filters).first()
                 or Place.objects.filter(**flexible_filters).first()
             )
 

@@ -2,7 +2,7 @@ import factory
 
 from events import utils
 from events.auth import ApiKeyUser
-from events.models import DataSource, Event, Keyword, Language
+from events.models import DataSource, Event, Keyword, Language, Place
 from helevents.tests.factories import UserFactory
 
 
@@ -71,3 +71,16 @@ class LanguageFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = Language
+
+
+class PlaceFactory(factory.django.DjangoModelFactory):
+    name = factory.Faker("bs")
+    publisher = factory.SubFactory(OrganizationFactory)
+    data_source = factory.SubFactory(DataSourceFactory)
+
+    class Meta:
+        model = Place
+
+    @factory.lazy_attribute_sequence
+    def id(self, n):
+        return f"{self.data_source.id}:{n}"

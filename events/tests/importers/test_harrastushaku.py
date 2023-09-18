@@ -6,6 +6,7 @@ from django.utils.timezone import activate
 from events.importer import harrastushaku
 from events.importer.harrastushaku import HarrastushakuImporter, SubEventTimeRange
 from events.models import DataSource
+from events.tests.factories import PlaceFactory
 
 
 def make_timetable(
@@ -169,3 +170,52 @@ def test_get_event_offers__translated_fields(importer):
     assert data[0]["is_free"] is False
     assert data[0]["price"] == {"fi": "50"}
     assert data[0]["description"] == {"fi": "Kuvaus"}
+
+
+@pytest.mark.django_db
+def test_map_harrastushaku_location_ids_to_tprek_ids(importer):
+    """Check that different Place matching criteria works as expected."""
+    location_data_defaults = {
+        "id": "",
+        "name": "place name",
+        "city": "helsinki",
+        "zip": "00100",
+        "address": "teststreet 1",
+        "tpr_id": "",
+    }
+    location_data = [
+        # Matches with tpr id
+        {**location_data_defaults, "id": "1", "tpr_id": "1234"},
+        # Matches name-address-zip-city combination
+        {**location_data_defaults, "id": "2"},
+        # Matches address-zip-city combination
+        {**location_data_defaults, "id": "3", "address": "teststreet 2"},
+        # Doesn't match with tprek places. Produces internal harrastushaku identifier
+        {**location_data_defaults, "id": "4", "city": "Vantaa", "zip": "01200"},
+    ]
+    exact_tpr_place = PlaceFactory(
+        data_source=importer.tprek_data_source,
+        id=f"{importer.tprek_data_source.pk}:{1234}",
+    )
+    strict_tpr_place = PlaceFactory(
+        data_source=importer.tprek_data_source,
+        name=location_data[1]["name"].upper(),
+        street_address=location_data[1]["address"].upper(),
+        postal_code=location_data[1]["zip"],
+        address_locality=location_data[1]["city"].upper(),
+    )
+    flexible_tpr_place = PlaceFactory(
+        data_source=importer.tprek_data_source,
+        name=location_data[2]["name"].upper(),
+        street_address=location_data[2]["address"].upper(),
+        postal_code=location_data[2]["zip"],
+        address_locality=location_data[2]["city"].upper(),
+    )
+
+    mapping = importer.map_harrastushaku_location_ids_to_tprek_ids(location_data)
+
+    assert len(mapping) == 4
+    assert mapping["1"] == exact_tpr_place.id
+    assert mapping["2"] == strict_tpr_place.id
+    assert mapping["3"] == flexible_tpr_place.id
+    assert mapping["4"] == "harrastushaku:4"
