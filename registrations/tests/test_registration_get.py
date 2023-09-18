@@ -139,7 +139,7 @@ def test_admin_can_get_registration_not_created_by_self(
     assert registration.created_by_id != user.id
 
     response = get_detail_and_assert_registration(user_api_client, registration.id)
-    assert_registration_fields_exist(response.data)
+    assert_registration_fields_exist(response.data, is_admin_user=True)
 
 
 @pytest.mark.django_db
