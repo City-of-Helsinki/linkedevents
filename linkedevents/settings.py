@@ -70,6 +70,18 @@ env = environ.Env(
     ),
     ENABLE_EXTERNAL_USER_EVENTS=(bool, True),
     ENABLE_REGISTRATION_ENDPOINTS=(bool, False),
+    ESPOO_API_URL=(str, "https://api.espoo.fi/events/"),
+    ESPOO_API_EVENT_QUERY_PARAMS=(
+        dict,
+        {
+            "publisher": "espoo:sito,espoo:tyt,espoo:koha,espoo:others,espoo:koto",
+            "keyword": "yso:p2787",
+        },
+    ),
+    ESPOO_MAX_PAGES=(int, 100),
+    ESPOO_MAX_RETRIES=(int, 3),
+    ESPOO_TIMEOUT=(int, 60),
+    ESPOO_WAIT_BETWEEN=(float, 1.0),
     EXTERNAL_USER_PUBLISHER_ID=(str, "others"),
     ENKORA_API_USER=(str, "JoeEnkora"),
     ENKORA_API_PASSWORD=(str, None),
@@ -640,3 +652,10 @@ GDPR_API_DELETE_SCOPE = env("GDPR_API_DELETE_SCOPE")
 
 # A list of hex-encoded 32 byte keys used for encrypting sensitive data
 FIELD_ENCRYPTION_KEYS = env("FIELD_ENCRYPTION_KEYS")
+
+ESPOO_API_URL = env("ESPOO_API_URL")
+ESPOO_API_EVENT_QUERY_PARAMS = env("ESPOO_API_EVENT_QUERY_PARAMS")
+ESPOO_MAX_PAGES = env("ESPOO_MAX_PAGES")
+ESPOO_MAX_RETRIES = env("ESPOO_MAX_RETRIES")
+ESPOO_TIMEOUT = env("ESPOO_TIMEOUT")
+ESPOO_WAIT_BETWEEN = env("ESPOO_WAIT_BETWEEN")
