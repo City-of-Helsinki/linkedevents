@@ -64,6 +64,7 @@ django==3.2.20
     #   django-parler-rest
     #   django-redis
     #   django-reversion
+    #   django-searchable-encrypted-fields
     #   djangorestframework
     #   djangorestframework-bulk
     #   drf-oidc-auth
@@ -117,6 +118,8 @@ django-parler-rest==2.2
 django-redis==5.2.0
     # via -r requirements.in
 django-reversion==5.0.4
+    # via -r requirements.in
+django-searchable-encrypted-fields==0.2.1
     # via -r requirements.in
 djangorestframework==3.14.0
     # via
@@ -213,6 +216,8 @@ pyasn1==0.4.8
     #   rsa
 pycparser==2.21
     # via cffi
+pycryptodome==3.19.0
+    # via django-searchable-encrypted-fields
 pycryptodomex==3.17
     # via pyjwkest
 pygments==2.15.1

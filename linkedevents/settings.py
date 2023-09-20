@@ -64,6 +64,7 @@ env = environ.Env(
     ENKORA_API_USER=(str, "JoeEnkora"),
     ENKORA_API_PASSWORD=(str, None),
     EXTRA_INSTALLED_APPS=(list, []),
+    FIELD_ENCRYPTION_KEYS=(list, []),
     GDPR_API_QUERY_SCOPE=(str, ""),
     GDPR_API_DELETE_SCOPE=(str, ""),
     INSTANCE_NAME=(str, "Linked Events"),
@@ -199,6 +200,7 @@ INSTALLED_APPS = [
     "leaflet",
     "django_orghierarchy",
     "admin_auto_filters",
+    "encrypted_fields",
     # Local apps
     "linkedevents",
     "helevents",
@@ -624,3 +626,6 @@ GDPR_API_USER_PROVIDER = "helevents.utils.get_user_for_gdpr_api"
 GDPR_API_DELETER = "helevents.utils.delete_user_and_gdpr_data"
 GDPR_API_QUERY_SCOPE = env("GDPR_API_QUERY_SCOPE")
 GDPR_API_DELETE_SCOPE = env("GDPR_API_DELETE_SCOPE")
+
+# A list of hex-encoded 32 byte keys used for encrypting sensitive data
+FIELD_ENCRYPTION_KEYS = env("FIELD_ENCRYPTION_KEYS")
