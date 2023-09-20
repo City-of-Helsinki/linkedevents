@@ -149,3 +149,35 @@ def test_user_is_external_based_on_login_method(api_client, settings, login_usin
 
     assert response.status_code == status.HTTP_200_OK, str(response.content)
     assert response.data["is_external"] != login_using_ad
+
+
+@pytest.mark.parametrize("authenticated", [True, False])
+@pytest.mark.django_db
+def test_authenticated_requests_add_no_cache_headers(api_client, authenticated):
+    """Authenticated requests should indicate that responses shouldn't be cached."""
+    if authenticated:
+        user = UserFactory()
+        auth_header = get_api_token_for_user_with_scopes(
+            user.uuid,
+            [api_token_auth_settings.API_SCOPE_PREFIX],
+        )
+        api_client.credentials(HTTP_AUTHORIZATION=auth_header)
+    detail_url = versioned_reverse("event-list")
+
+    response = api_client.get(detail_url, format="json")
+
+    assert response.status_code == status.HTTP_200_OK
+    cache_controls = {
+        v.lower().strip() for v in response.get("Cache-Control", "").split(",")
+    }
+    if authenticated:
+        assert cache_controls == {
+            "max-age=0",
+            "no-cache",
+            "no-store",
+            "must-revalidate",
+            "private",
+        }
+    else:
+        # Sanity check for the opposite case
+        assert cache_controls == {""}
