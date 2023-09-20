@@ -79,8 +79,6 @@ def assert_registration_fields_exist(data, is_admin_user=False):
         "created_time",
         "last_modified_time",
         "event",
-        "created_at",
-        "last_modified_at",
         "attendee_registration",
         "audience_min_age",
         "audience_max_age",

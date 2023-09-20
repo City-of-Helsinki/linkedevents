@@ -57,8 +57,8 @@ def assert_signup_fields_exist(data):
     fields = (
         "id",
         "service_language",
-        "created_at",
-        "last_modified_at",
+        "created_time",
+        "last_modified_time",
         "created_by",
         "last_modified_by",
         "responsible_for_group",

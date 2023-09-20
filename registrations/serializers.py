@@ -41,10 +41,10 @@ class SignUpSerializer(serializers.ModelSerializer):
         required=False,
     )
 
-    created_at = DateTimeField(
+    created_time = DateTimeField(
         default_timezone=pytz.UTC, required=False, allow_null=True
     )
-    last_modified_at = DateTimeField(
+    last_modified_time = DateTimeField(
         default_timezone=pytz.UTC, required=False, allow_null=True
     )
 
@@ -168,8 +168,8 @@ class SignUpSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "service_language",
-            "created_at",
-            "last_modified_at",
+            "created_time",
+            "last_modified_time",
             "created_by",
             "last_modified_by",
             "responsible_for_group",
@@ -300,8 +300,8 @@ class RegistrationBaseSerializer(serializers.ModelSerializer):
             "created_by",
             "last_modified_by",
             "event",
-            "created_at",
-            "last_modified_at",
+            "created_time",
+            "last_modified_time",
             "attendee_registration",
             "audience_min_age",
             "audience_max_age",

@@ -76,13 +76,13 @@ class ChoiceArrayField(ArrayField):
 
 
 class CreatedModifiedBaseModel(models.Model):
-    created_at = models.DateTimeField(
+    created_time = models.DateTimeField(
         verbose_name=_("Created at"),
         null=False,
         blank=True,
         auto_now_add=True,
     )
-    last_modified_at = models.DateTimeField(
+    last_modified_time = models.DateTimeField(
         verbose_name=_("Modified at"),
         null=False,
         blank=True,
