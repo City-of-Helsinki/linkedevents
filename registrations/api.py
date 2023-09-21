@@ -66,6 +66,18 @@ class RegistrationViewSet(
 
     permission_classes = [CanAccessRegistration & DataSourceResourceEditPermission]
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        # user registration admin ids must be injected to the context for nested serializers, to avoid duplicating work
+        user = context["request"].user
+        registration_admin_tree_ids = set()
+
+        if user and user.is_authenticated:
+            registration_admin_tree_ids = user.get_registration_admin_tree_ids()
+
+        context["registration_admin_tree_ids"] = registration_admin_tree_ids
+        return context
+
     def perform_create(self, serializer):
         # Check object level permissions for event which has the relevant data_source.
         event = serializer.validated_data.get("event")
@@ -286,10 +298,9 @@ class SignUpBaseFilter(django_filters.rest_framework.FilterSet):
 
             if not (
                 user.is_superuser
-                or user.is_strongly_identificated
-                and registration.registration_user_accesses.filter(
-                    email=user.email
-                ).exists()
+                or user.is_registration_user_access_user_of(
+                    registration.registration_user_accesses
+                )
                 or registration.publisher in registration_admin_organizations
             ):
                 raise DRFPermissionDenied(

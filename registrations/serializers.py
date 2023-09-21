@@ -243,9 +243,19 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
 
     publisher = serializers.SerializerMethodField()
 
+    has_registration_user_access = serializers.SerializerMethodField()
+
     registration_user_accesses = RegistrationUserAccessSerializer(
         many=True, required=False
     )
+
+    def get_has_registration_user_access(self, obj):
+        user = self.user
+        return (
+            user.is_authenticated
+            and user.is_strongly_identificated
+            and obj.registration_user_accesses.filter(email=user.email).exists()
+        )
 
     def get_signups(self, obj):
         params = self.context["request"].query_params
@@ -257,8 +267,9 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
             if user.is_authenticated and (
                 user.is_superuser
                 or user.is_registration_admin_of(obj.event.publisher)
-                or user.is_strongly_identificated
-                and obj.registration_user_accesses.filter(email=user.email).exists()
+                or user.is_registration_user_access_user_of(
+                    obj.registration_user_accesses
+                )
             ):
                 signups = obj.signups.all()
                 return SignUpSerializer(signups, many=True, read_only=True).data
@@ -294,6 +305,7 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
             "data_source",
             "publisher",
             "registration_user_accesses",
+            "has_registration_user_access",
             "created_time",
             "last_modified_time",
             "created_by",

@@ -289,10 +289,9 @@ class SignUpMixin:
         return (
             user.is_superuser
             or user.is_registration_admin_of(self.publisher)
-            or user.is_strongly_identificated
-            and self.registration.registration_user_accesses.filter(
-                email=user.email
-            ).exists()
+            or user.is_registration_user_access_user_of(
+                self.registration.registration_user_accesses
+            )
             or user.id == self.created_by_id
         )
 

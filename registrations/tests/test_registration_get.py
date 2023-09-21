@@ -16,6 +16,7 @@ from registrations.tests.test_signup_post import assert_create_signups
 include_signups_query = "include=signups"
 
 # === util methods ===
+test_email = "test@email.com"
 
 
 def get_list(api_client: APIClient, query_string: str = None):
@@ -76,6 +77,7 @@ def assert_registration_fields_exist(data, is_admin_user=False):
         "remaining_waiting_list_capacity",
         "data_source",
         "publisher",
+        "has_registration_user_access",
         "created_time",
         "last_modified_time",
         "event",
@@ -143,10 +145,51 @@ def test_admin_can_get_registration_not_created_by_self(
 @pytest.mark.django_db
 def test_admin_user_can_see_registration_user_accesses(registration, user_api_client):
     RegistrationUserAccess.objects.create(registration=registration)
+    RegistrationUserAccess.objects.create(registration=registration, email=test_email)
+
     response = get_detail_and_assert_registration(user_api_client, registration.id)
     response_registration_user_accesses = response.data["registration_user_accesses"]
-    assert len(response_registration_user_accesses) == 1
+    assert len(response_registration_user_accesses) == 2
     assert_registration_fields_exist(response.data, is_admin_user=True)
+
+
+@pytest.mark.django_db
+def test_registration_admin_user_can_see_registration_user_accesses(
+    registration, user, user_api_client
+):
+    user.get_default_organization().registration_admin_users.add(user)
+    user.get_default_organization().admin_users.remove(user)
+
+    RegistrationUserAccess.objects.create(registration=registration)
+    RegistrationUserAccess.objects.create(registration=registration, email=test_email)
+
+    response = get_detail_and_assert_registration(user_api_client, registration.id)
+    response_registration_user_accesses = response.data["registration_user_accesses"]
+    assert len(response_registration_user_accesses) == 2
+    assert_registration_fields_exist(response.data, is_admin_user=True)
+
+
+@pytest.mark.django_db
+def test_registration_user_access_user_can_see_if_he_has_access(
+    registration, user, user_api_client
+):
+    user.get_default_organization().admin_users.remove(user)
+
+    RegistrationUserAccess.objects.create(registration=registration, email=user.email)
+    RegistrationUserAccess.objects.create(
+        registration=registration, email="test@email.com"
+    )
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value="heltunnistussuomifi",
+    ) as mocked:
+        response = get_detail_and_assert_registration(user_api_client, registration.id)
+        assert mocked.called is True
+    has_registration_user_access = response.data["has_registration_user_access"]
+    assert has_registration_user_access == True
+    assert_registration_fields_exist(response.data, is_admin_user=False)
 
 
 @pytest.mark.django_db

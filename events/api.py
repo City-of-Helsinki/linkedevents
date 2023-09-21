@@ -1847,11 +1847,43 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
         queryset=Event.objects.all(),
     )
 
-    only_admin_visible_fields = (
-        "created_by",
-        "last_modified_by",
-        "registration_user_accesses",
-    )
+    # LinkedEventsSerializer removes created_by and last_modified_by default, so set this
+    # to empty array and have custom logic to hide admin fields in to_representation
+    only_admin_visible_fields = []
+
+    def __init__(
+        self,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        context = self.context
+
+        if "registration_admin_tree_ids" in context:
+            self.registration_admin_tree_ids = context["registration_admin_tree_ids"]
+
+    def to_representation(self, obj):
+        # These fields are visible only if user is admin, registration admin or registration user access user
+        admin_visible_fields = (
+            "created_by",
+            "last_modified_by",
+            "registration_user_accesses",
+        )
+
+        ret = super().to_representation(obj)
+        user = self.user
+
+        show_admin_fields = not user.is_anonymous and (
+            obj.publisher.tree_id in self.admin_tree_ids
+            or obj.publisher.tree_id in self.registration_admin_tree_ids
+        )
+
+        if not show_admin_fields:
+            for field_name in admin_visible_fields:
+                if field_name in ret:
+                    del ret[field_name]
+
+        return ret
 
     def _create_or_update_registration_user_accesses(
         self, registration, registration_user_accesses
