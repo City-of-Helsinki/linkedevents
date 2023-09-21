@@ -707,31 +707,6 @@ def all_api_get_list(request, event, api_client):
     return f
 
 
-# These initial licenses are created by a migration, but because of a feature
-# related to Django testing, objects created in datamigrations aren't available
-# in all testcases, so we need to create those here too to be sure they exist.
-@pytest.fixture(autouse=True)
-def create_initial_licenses():
-    License.objects.get_or_create(
-        id="event_only",
-        defaults={
-            "name_fi": "Vain tapahtuman markkinointiin",
-            "name_sv": "Endast för marknadsföring av evenemanget",
-            "name_en": "For event marketing only",
-            "url": "",
-        },
-    )
-    License.objects.get_or_create(
-        id="cc_by",
-        defaults={
-            "name_fi": "Nimeä 4.0 Kansainvälinen (CC BY 4.0)",
-            "name_sv": "Erkännande 4.0 Internationell (CC BY 4.0)",
-            "name_en": "Attribution 4.0 International (CC BY 4.0)",
-            "url": "https://creativecommons.org/licenses/by/4.0/",
-        },
-    )
-
-
 @pytest.mark.django_db
 @pytest.fixture
 def registration(event, user):
