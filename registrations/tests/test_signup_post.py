@@ -78,8 +78,8 @@ def test_successful_signup(user_api_client, languages, registration, user):
     assert signup.zipcode == signups_data["signups"][0]["zipcode"]
     assert signup.created_by_id == user.id
     assert signup.last_modified_by_id == user.id
-    assert signup.created_at is not None
-    assert signup.last_modified_at is not None
+    assert signup.created_time is not None
+    assert signup.last_modified_time is not None
 
 
 @pytest.mark.django_db
@@ -134,15 +134,15 @@ def test_add_signups_to_group(user_api_client, languages, registration, user):
     assert new_signup0.registration_id == registration.id
     assert new_signup0.created_by_id == user.id
     assert new_signup0.last_modified_by_id == user.id
-    assert new_signup0.created_at is not None
-    assert new_signup0.last_modified_at is not None
+    assert new_signup0.created_time is not None
+    assert new_signup0.last_modified_time is not None
 
     new_signup1 = signup_group.signups.filter(email="mickey@test.com").first()
     assert new_signup1.registration_id == registration.id
     assert new_signup1.created_by_id == user.id
     assert new_signup1.last_modified_by_id == user.id
-    assert new_signup1.created_at is not None
-    assert new_signup1.last_modified_at is not None
+    assert new_signup1.created_time is not None
+    assert new_signup1.last_modified_time is not None
 
 
 @pytest.mark.django_db

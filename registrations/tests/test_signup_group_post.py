@@ -47,8 +47,8 @@ def assert_signup_data(signup, signup_data, user):
     assert signup.zipcode == signup_data["zipcode"]
     assert signup.created_by_id == user.id
     assert signup.last_modified_by_id == user.id
-    assert signup.created_at is not None
-    assert signup.last_modified_at is not None
+    assert signup.created_time is not None
+    assert signup.last_modified_time is not None
     assert signup.responsible_for_group is signup_data.get(
         "responsible_for_group", False
     )

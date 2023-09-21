@@ -38,6 +38,10 @@ def assert_signup_group_fields_exist(data):
         "registration",
         "signups",
         "extra_info",
+        "created_time",
+        "last_modified_time",
+        "created_by",
+        "last_modified_by",
     )
     assert_fields_exist(data, fields)
 

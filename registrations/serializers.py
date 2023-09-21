@@ -32,20 +32,13 @@ def validate_registration_enrolment_times(registration):
         raise ConflictException(_("Enrolment is already closed."))
 
 
-class SignUpSerializer(serializers.ModelSerializer):
-    view_name = "signup"
-    id = serializers.IntegerField(required=False)
-    service_language = serializers.PrimaryKeyRelatedField(
-        queryset=Language.objects.filter(service_language=True),
-        many=False,
-        required=False,
+class CreatedModifiedBaseSerializer(serializers.ModelSerializer):
+    created_time = DateTimeField(
+        default_timezone=pytz.UTC, required=False, allow_null=True, read_only=True
     )
 
-    created_at = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
-    )
-    last_modified_at = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
+    last_modified_time = DateTimeField(
+        default_timezone=pytz.UTC, required=False, allow_null=True, read_only=True
     )
 
     created_by = serializers.StringRelatedField(required=False, allow_null=True)
@@ -55,6 +48,25 @@ class SignUpSerializer(serializers.ModelSerializer):
         validated_data["created_by"] = self.context["request"].user
         validated_data["last_modified_by"] = self.context["request"].user
 
+        instance = super().create(validated_data)
+        return instance
+
+    def update(self, instance, validated_data):
+        validated_data["last_modified_by"] = self.context["request"].user
+        super().update(instance, validated_data)
+        return instance
+
+
+class SignUpSerializer(CreatedModifiedBaseSerializer):
+    view_name = "signup"
+    id = serializers.IntegerField(required=False)
+    service_language = serializers.PrimaryKeyRelatedField(
+        queryset=Language.objects.filter(service_language=True),
+        many=False,
+        required=False,
+    )
+
+    def create(self, validated_data):
         registration = validated_data["registration"]
         already_attending = SignUp.objects.filter(
             registration=registration, attendee_status=SignUp.AttendeeStatus.ATTENDING
@@ -105,7 +117,6 @@ class SignUpSerializer(serializers.ModelSerializer):
         if errors:
             raise serializers.ValidationError(errors)
 
-        validated_data["last_modified_by"] = self.context["request"].user
         super().update(instance, validated_data)
         return instance
 
@@ -168,8 +179,8 @@ class SignUpSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "service_language",
-            "created_at",
-            "last_modified_at",
+            "created_time",
+            "last_modified_time",
             "created_by",
             "last_modified_by",
             "responsible_for_group",
@@ -215,7 +226,7 @@ class RegistrationUserAccessSerializer(serializers.ModelSerializer):
 
 # Don't use this serializer directly but use events.api.RegistrationSerializer instead.
 # Implement methods to mutate and validate Registration in events.api.RegistrationSerializer
-class RegistrationBaseSerializer(serializers.ModelSerializer):
+class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
     view_name = "registration-detail"
 
     signups = serializers.SerializerMethodField()
@@ -235,18 +246,6 @@ class RegistrationBaseSerializer(serializers.ModelSerializer):
     registration_user_accesses = RegistrationUserAccessSerializer(
         many=True, required=False
     )
-
-    created_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
-    )
-
-    last_modified_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
-    )
-
-    created_by = serializers.StringRelatedField(required=False, allow_null=True)
-
-    last_modified_by = serializers.StringRelatedField(required=False, allow_null=True)
 
     def get_signups(self, obj):
         params = self.context["request"].query_params
@@ -300,8 +299,8 @@ class RegistrationBaseSerializer(serializers.ModelSerializer):
             "created_by",
             "last_modified_by",
             "event",
-            "created_at",
-            "last_modified_at",
+            "created_time",
+            "last_modified_time",
             "attendee_registration",
             "audience_min_age",
             "audience_max_age",
@@ -381,7 +380,9 @@ class CreateSignUpsSerializer(serializers.Serializer):
         return data
 
 
-class SignUpGroupCreateSerializer(serializers.ModelSerializer, CreateSignUpsSerializer):
+class SignUpGroupCreateSerializer(
+    CreatedModifiedBaseSerializer, CreateSignUpsSerializer
+):
     reservation_code = serializers.CharField(write_only=True)
 
     def _create_signups(self, instance, validated_signups_data):
@@ -391,9 +392,6 @@ class SignUpGroupCreateSerializer(serializers.ModelSerializer, CreateSignUpsSeri
             signup_serializer.create(signup_data)
 
     def create(self, validated_data):
-        validated_data["created_by"] = self.context["request"].user
-        validated_data["last_modified_by"] = self.context["request"].user
-
         validated_data.pop("reservation_code")
         reservation = validated_data.pop("reservation")
         signups_data = validated_data.pop("signups")
@@ -412,11 +410,15 @@ class SignUpGroupCreateSerializer(serializers.ModelSerializer, CreateSignUpsSeri
             "signups",
             "reservation_code",
             "extra_info",
+            "created_time",
+            "last_modified_time",
+            "created_by",
+            "last_modified_by",
         )
         model = SignUpGroup
 
 
-class SignUpGroupSerializer(serializers.ModelSerializer):
+class SignUpGroupSerializer(CreatedModifiedBaseSerializer):
     view_name = "signupgroup-detail"
 
     def get_fields(self):
@@ -472,7 +474,16 @@ class SignUpGroupSerializer(serializers.ModelSerializer):
         return instance
 
     class Meta:
-        fields = ("id", "registration", "signups", "extra_info")
+        fields = (
+            "id",
+            "registration",
+            "signups",
+            "extra_info",
+            "created_time",
+            "last_modified_time",
+            "created_by",
+            "last_modified_by",
+        )
         model = SignUpGroup
 
 
