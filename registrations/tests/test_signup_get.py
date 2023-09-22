@@ -427,7 +427,7 @@ def test_api_key_with_wrong_organization_cannot_get_signup_list(
 
 @pytest.mark.parametrize(
     "field",
-    ["first_name", "email", "extra_info", "membership_number", "phone_number"],
+    ["first_name", "email", "membership_number", "phone_number"],
 )
 @pytest.mark.django_db
 def test_signup_list_assert_text_filter(
@@ -522,14 +522,12 @@ def test_filter_signups(
         first_name="Joe",
         last_name="Biden",
         email="test@test.com",
-        extra_info="cdef",
     )
     signup6 = SignUpFactory(
         registration=registration2,
         first_name="Hillary",
         last_name="Clinton",
         email="test2@test.com",
-        extra_info="abcd",
     )
     signup7 = SignUpFactory(
         registration=registration2,
@@ -585,12 +583,4 @@ def test_filter_signups(
     )
     get_list_and_assert_signups(
         api_client, f"registration={registration2.id}&text=3456", [signup8]
-    )
-
-    #  search signups by extra_info
-    get_list_and_assert_signups(
-        api_client, f"registration={registration2.id}&text=cd", [signup5, signup6]
-    )
-    get_list_and_assert_signups(
-        api_client, f"registration={registration2.id}&text=abcd", [signup6]
     )

@@ -16,6 +16,7 @@ from django.utils.functional import cached_property
 from django.utils.timezone import localtime
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation import override
+from encrypted_fields import fields
 from helsinki_gdpr.models import SerializableMixin
 
 from events.models import Event, Language
@@ -312,12 +313,6 @@ class SignUpGroup(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
     registration = models.ForeignKey(
         Registration, on_delete=models.PROTECT, related_name="signup_groups"
     )
-    extra_info = models.TextField(
-        verbose_name=_("Extra info"),
-        blank=True,
-        null=True,
-        default=None,
-    )
 
     serialize_fields = (
         {"name": "id"},
@@ -338,6 +333,32 @@ class SignUpGroup(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         signups = self.responsible_signups or self.signups.all()
         for signup in signups:
             signup.send_notification(notification_type)
+
+
+class SignUpProtectedDataBaseModel(models.Model):
+    registration = models.ForeignKey(
+        Registration, on_delete=models.PROTECT, related_name="%(class)s"
+    )
+
+    extra_info = fields.EncryptedTextField(
+        verbose_name=_("Extra info"),
+        blank=True,
+        null=True,
+        default=None,
+    )
+
+    class Meta:
+        abstract = True
+
+
+class SignUpGroupProtectedData(SignUpProtectedDataBaseModel):
+    signup_group = models.OneToOneField(
+        SignUpGroup,
+        related_name="protected_data",
+        null=True,
+        default=None,
+        on_delete=models.SET_NULL,
+    )
 
 
 class RegistrationUserAccess(models.Model):
@@ -466,9 +487,6 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         null=True,
         default=None,
     )
-    date_of_birth = models.DateField(
-        verbose_name=_("Date of birth"), blank=True, null=True
-    )
     city = models.CharField(
         verbose_name=_("City"),
         max_length=50,
@@ -478,12 +496,6 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
     )
     email = models.EmailField(
         verbose_name=_("E-mail"), blank=True, null=True, default=None
-    )
-    extra_info = models.TextField(
-        verbose_name=_("Extra info"),
-        blank=True,
-        null=True,
-        default=None,
     )
     membership_number = models.CharField(
         verbose_name=_("Membership number"),
@@ -686,6 +698,20 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
             )
         except SMTPException:
             logger.exception("Couldn't send signup notification email.")
+
+
+class SignUpProtectedData(SignUpProtectedDataBaseModel):
+    date_of_birth = fields.EncryptedDateField(
+        verbose_name=_("Date of birth"), blank=True, null=True
+    )
+
+    signup = models.OneToOneField(
+        SignUp,
+        related_name="protected_data",
+        null=True,
+        default=None,
+        on_delete=models.SET_NULL,
+    )
 
 
 class SeatReservationCode(models.Model):
