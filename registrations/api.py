@@ -2,6 +2,7 @@ import logging
 from smtplib import SMTPException
 
 import bleach
+import django_filters
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.db import transaction
@@ -220,12 +221,156 @@ class RegistrationUserAccessViewSet(viewsets.GenericViewSet):
 register_view(RegistrationUserAccessViewSet, "registration_user_access")
 
 
+class SignUpFilterBackend(django_filters.rest_framework.DjangoFilterBackend):
+    def get_filterset_kwargs(self, request, queryset, view):
+        kwargs = super().get_filterset_kwargs(request, queryset, view)
+        kwargs["action"] = view.action
+
+        return kwargs
+
+
+class SignUpBaseFilter(django_filters.rest_framework.FilterSet):
+    registration = django_filters.Filter(
+        widget=django_filters.widgets.CSVWidget(),
+        method="filter_registration",
+    )
+
+    attendee_status = django_filters.MultipleChoiceFilter(
+        choices=SignUp.ATTENDEE_STATUSES,
+        widget=django_filters.widgets.CSVWidget(),
+    )
+
+    text = django_filters.CharFilter(method="filter_text")
+
+    def __init__(self, *args, **kwargs):
+        self.action = kwargs.pop("action", None)
+        super().__init__(*args, **kwargs)
+
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+
+        user = self.request.user
+
+        if self.action and self.action != "list" or user.is_superuser:
+            return queryset
+
+        # By default, return only signups of registrations to which
+        # user has admin rights or is registration user who is
+        # strongly identified.
+        q_filter = Q(
+            registration__event__publisher__in=user.get_registration_admin_organizations_and_descendants()
+        )
+        if user.is_strongly_identificated:
+            q_filter |= Q(registration__registration_user_accesses__email=user.email)
+
+        return queryset.filter(q_filter)
+
+    def filter_registration(self, queryset, name, value: list[str]):
+        user = self.request.user
+
+        # Get admin organizations and descendants only once instead of using is_admin method
+        registration_admin_organizations = (
+            user.get_registration_admin_organizations_and_descendants()
+        )
+
+        registrations = []
+        for pk in value:
+            try:
+                registration = Registration.objects.select_related(
+                    "event__publisher"
+                ).get(pk=pk)
+            except (ValueError, Registration.DoesNotExist):
+                raise ParseError(
+                    _("Registration with id {pk} doesn't exist.").format(pk=pk)
+                )
+
+            if not (
+                user.is_superuser
+                or user.is_strongly_identificated
+                and registration.registration_user_accesses.filter(
+                    email=user.email
+                ).exists()
+                or registration.publisher in registration_admin_organizations
+            ):
+                raise DRFPermissionDenied(
+                    _(
+                        "Only the admins of the organization {organization} have access rights."
+                    ).format(organization=registration.publisher)
+                )
+
+            registrations.append(registration)
+
+        return queryset.filter(**{f"{name}__in": registrations})
+
+    @staticmethod
+    def _build_text_annotations(relation_accessor=""):
+        return {
+            f"{relation_accessor}first_last_name": Concat(
+                f"{relation_accessor}first_name",
+                Value(" "),
+                f"{relation_accessor}last_name",
+            ),
+            f"{relation_accessor}last_first_name": Concat(
+                f"{relation_accessor}last_name",
+                Value(" "),
+                f"{relation_accessor}first_name",
+            ),
+        }
+
+    @staticmethod
+    def _build_text_filter(text_param, relation_accessor=""):
+        filters = {
+            f"{relation_accessor}first_last_name__icontains": text_param,
+            f"{relation_accessor}last_first_name__icontains": text_param,
+            f"{relation_accessor}email__icontains": text_param,
+            f"{relation_accessor}extra_info__icontains": text_param,
+            f"{relation_accessor}membership_number__icontains": text_param,
+            f"{relation_accessor}phone_number__icontains": text_param,
+        }
+
+        q_set = Q()
+        for item in filters.items():
+            q_set |= Q(item)
+
+        return q_set
+
+    def filter_text(self, queryset, name, value):
+        return queryset.annotate(**self._build_text_annotations()).filter(
+            self._build_text_filter(value)
+        )
+
+
+class SignUpFilter(SignUpBaseFilter):
+    class Meta:
+        model = SignUp
+        fields = ("registration", "attendee_status")
+
+
+class SignUpGroupFilter(SignUpBaseFilter):
+    attendee_status = django_filters.MultipleChoiceFilter(
+        field_name="signups__attendee_status",
+        choices=SignUp.ATTENDEE_STATUSES,
+        widget=django_filters.widgets.CSVWidget(),
+    )
+
+    def filter_text(self, queryset, name, value):
+        return queryset.annotate(
+            **self._build_text_annotations(relation_accessor="signups__")
+        ).filter(self._build_text_filter(value, relation_accessor="signups__"))
+
+    class Meta:
+        model = SignUpGroup
+        fields = ("registration",)
+
+
 class SignUpViewSet(
     UserDataSourceAndOrganizationMixin,
     viewsets.ModelViewSet,
 ):
     serializer_class = SignUpSerializer
     queryset = SignUp.objects.all()
+    filter_backends = [SignUpFilterBackend]
+    filterset_class = SignUpFilter
     permission_classes = [CanAccessSignup & DataSourceResourceEditPermission]
 
     def create(self, request, *args, **kwargs):
@@ -267,98 +412,18 @@ class SignUpViewSet(
         instance._individually_deleted = True
         instance.delete()
 
-    def filter_queryset(self, queryset):
-        request = self.request
-        user = request.user
-
-        if registration_param := request.query_params.get("registration", None):
-            registrations = []
-            # Get registration admin organizations and descendants only
-            # once instead of using is_registration_admin_of method.
-            registration_admin_orgs = (
-                user.get_registration_admin_organizations_and_descendants()
-            )
-
-            for pk in registration_param.split(","):
-                try:
-                    registration = Registration.objects.get(pk=pk)
-                except (ValueError, Registration.DoesNotExist):
-                    raise ParseError(
-                        _("Registration with id {pk} doesn't exist.").format(pk=pk)
-                    )
-
-                if not (
-                    user.is_superuser
-                    or user.is_strongly_identificated
-                    and registration.registration_user_accesses.filter(
-                        email=user.email
-                    ).exists()
-                    or registration.publisher in registration_admin_orgs
-                ):
-                    raise DRFPermissionDenied(
-                        _(
-                            "Only the admins of the organization {organization} have access rights."
-                        ).format(organization=registration.publisher)
-                    )
-
-                registrations.append(registration)
-            queryset = queryset.filter(registration__in=registrations)
-        elif self.action == "list" and not user.is_superuser:
-            # By default, return only signups of registrations to which
-            # user has admin rights or is registration user that is
-            # strongly identified.
-            list_filter = Q(
-                registration__event__publisher__in=user.get_registration_admin_organizations_and_descendants()
-            )
-            if user.is_strongly_identificated:
-                list_filter |= Q(
-                    registration__registration_user_accesses__email=user.email
-                )
-            queryset = queryset.filter(list_filter)
-
-        if text_param := request.query_params.get("text", None):
-            queryset = queryset.annotate(
-                first_last_name=Concat("first_name", Value(" "), "last_name"),
-                last_first_name=Concat("last_name", Value(" "), "first_name"),
-            ).filter(
-                Q(first_last_name__icontains=text_param)
-                | Q(last_first_name__icontains=text_param)
-                | Q(email__icontains=text_param)
-                | Q(extra_info__icontains=text_param)
-                | Q(membership_number__icontains=text_param)
-                | Q(phone_number__icontains=text_param)
-            )
-
-        if status_param := request.query_params.get("attendee_status", None):
-            vals = status_param.lower().split(",")
-            statuses = [k[0] for k in SignUp.ATTENDEE_STATUSES]
-
-            for v in vals:
-                if v not in statuses:
-                    raise ParseError(
-                        _(
-                            "attendee_status can take following values: {statuses}, not {val}"
-                        ).format(statuses=", ".join(statuses), val=status_param)
-                    )
-
-            queryset = queryset.filter(attendee_status__in=vals)
-
-        return queryset
-
 
 register_view(SignUpViewSet, "signup")
 
 
 class SignUpGroupViewSet(
     UserDataSourceAndOrganizationMixin,
-    mixins.CreateModelMixin,
-    mixins.RetrieveModelMixin,
-    mixins.DestroyModelMixin,
-    mixins.UpdateModelMixin,
-    viewsets.GenericViewSet,
+    viewsets.ModelViewSet,
 ):
     serializer_class = SignUpGroupSerializer
     queryset = SignUpGroup.objects.all()
+    filter_backends = [SignUpFilterBackend]
+    filterset_class = SignUpGroupFilter
     permission_classes = [CanAccessSignup & DataSourceResourceEditPermission]
 
     def get_serializer_class(self):
