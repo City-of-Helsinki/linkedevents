@@ -1,3 +1,4 @@
+from typing import Optional
 from uuid import UUID
 
 import pytest
@@ -20,6 +21,21 @@ from registrations.tests.factories import (
 )
 
 # === util methods ===
+
+
+def _get_signup_group_profile_data(signup_group: Optional[SignUpGroup]) -> dict:
+    if not signup_group:
+        return {"key": "SIGNUP_GROUP", "value": None}
+
+    return {
+        "key": "SIGNUPGROUP",
+        "children": [
+            {"key": "ID", "value": signup_group.id},
+            {"key": "REGISTRATION_ID", "value": signup_group.registration_id},
+            {"key": "EXTRA_INFO", "value": signup_group.extra_info},
+            {"key": "SIGNUPS_COUNT", "value": signup_group.signups.count()},
+        ],
+    }
 
 
 def _get_signup_profile_data(signup: SignUp) -> dict:
@@ -48,7 +64,7 @@ def _get_signup_profile_data(signup: SignUp) -> dict:
                 "value": str(signup.service_language),
             },
             {"key": "REGISTRATION_ID", "value": signup.registration_id},
-            {"key": "SIGNUP_GROUP_ID", "value": signup.signup_group_id},
+            _get_signup_group_profile_data(signup.signup_group),
             {
                 "key": "RESPONSIBLE_FOR_GROUP",
                 "value": signup.responsible_for_group,
@@ -84,29 +100,6 @@ def _get_signups_profile_data(signups_qs: QuerySet[SignUp]) -> list[dict]:
     return signup_datas
 
 
-def _get_signup_groups_profile_data(
-    signup_groups_qs: QuerySet[SignUpGroup],
-) -> list[dict]:
-    group_datas = []
-
-    for signup_group in signup_groups_qs:
-        group_data = {
-            "key": "SIGNUPGROUP",
-            "children": [
-                {"key": "ID", "value": signup_group.id},
-                {"key": "REGISTRATION_ID", "value": signup_group.registration_id},
-                {"key": "EXTRA_INFO", "value": signup_group.extra_info},
-                {
-                    "key": "SIGNUPS",
-                    "children": _get_signups_profile_data(signup_group.signups.all()),
-                },
-            ],
-        }
-        group_datas.append(group_data)
-
-    return group_datas
-
-
 def _get_user_data(user: User) -> list[dict]:
     return [
         {"key": "ID", "value": user.id},
@@ -114,14 +107,10 @@ def _get_user_data(user: User) -> list[dict]:
         {"key": "LAST_NAME", "value": user.last_name},
         {"key": "EMAIL", "value": user.email},
         {
-            "key": "SIGNUPGROUP_CREATED_BY",
-            "children": _get_signup_groups_profile_data(
-                user.signupgroup_created_by.prefetch_related("signups").all()
-            ),
-        },
-        {
             "key": "SIGNUP_CREATED_BY",
-            "children": _get_signups_profile_data(user.signup_created_by.all()),
+            "children": _get_signups_profile_data(
+                user.signup_created_by.select_related("signup_group").all()
+            ),
         },
     ]
 
@@ -133,7 +122,6 @@ def _get_gdpr_data(api_client: APIClient, user_uuid: UUID):
 
 def _assert_profile_data_in_response(response, user: User):
     profile_data = {"key": "USER", "children": _get_user_data(user)}
-
     assert response.json() == profile_data
 
 

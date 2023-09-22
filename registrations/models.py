@@ -324,8 +324,12 @@ class SignUpGroup(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         {"name": "id"},
         {"name": "registration_id"},
         {"name": "extra_info"},
-        {"name": "signups"},
+        {"name": "signups_count"},
     )
+
+    @cached_property
+    def signups_count(self):
+        return self.signups.count()
 
     @cached_property
     def responsible_signups(self):
@@ -556,7 +560,7 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         {"name": "native_language", "accessor": lambda value: str(value)},
         {"name": "service_language", "accessor": lambda value: str(value)},
         {"name": "registration_id"},
-        {"name": "signup_group_id"},
+        {"name": "signup_group"},
         {"name": "responsible_for_group"},
         {"name": "extra_info"},
         {"name": "membership_number"},

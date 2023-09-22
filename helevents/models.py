@@ -192,7 +192,6 @@ class User(AbstractUser, UserModelPermissionMixin, SerializableMixin):
         {"name": "first_name"},
         {"name": "last_name"},
         {"name": "email"},
-        {"name": "signupgroup_created_by"},
         {"name": "signup_created_by"},
     )
 
