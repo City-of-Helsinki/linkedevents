@@ -9,6 +9,7 @@ from freezegun import freeze_time
 from rest_framework import status
 
 from events.models import Event, Language
+from events.tests.factories import LanguageFactory
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
 from registrations.models import MandatoryFields, SignUp
@@ -25,6 +26,7 @@ default_signups_data = {
         {
             "first_name": "Michael",
             "last_name": "Jackson",
+            "extra_info": "Extra info",
             "date_of_birth": "2011-04-07",
             "email": test_email1,
             "phone_number": "0441111111",
@@ -49,6 +51,7 @@ def create_signups(api_client, signups_data):
 
 def assert_create_signups(api_client, signups_data):
     response = create_signups(api_client, signups_data)
+    print(response.json())
     assert response.status_code == status.HTTP_201_CREATED
 
     return response
@@ -61,7 +64,16 @@ def assert_default_signup_created(signups_data, user):
     assert signup.attendee_status == SignUp.AttendeeStatus.ATTENDING
     assert signup.first_name == signups_data["signups"][0]["first_name"]
     assert signup.last_name == signups_data["signups"][0]["last_name"]
-    assert signup.date_of_birth == date(2011, 4, 7)
+    if signups_data["signups"][0].get("date_of_birth"):
+        assert signup.protected_data.date_of_birth == date(2011, 4, 7)
+    else:
+        assert signup.protected_data.date_of_birth is None
+    if signups_data["signups"][0].get("extra_info"):
+        assert (
+            signup.protected_data.extra_info == signups_data["signups"][0]["extra_info"]
+        )
+    else:
+        assert signup.protected_data.extra_info in [None, ""]
     assert signup.email == signups_data["signups"][0]["email"]
     assert signup.phone_number == signups_data["signups"][0]["phone_number"]
     assert signup.notifications == SignUp.NotificationType.SMS
@@ -138,6 +150,25 @@ def test_user_without_organization_can_create_signups(api_client, languages):
     signups_data["reservation_code"] = reservation.code
 
     assert_create_signups(api_client, signups_data)
+    assert_default_signup_created(signups_data, user)
+
+
+@pytest.mark.django_db
+def test_can_create_signups_with_empty_extra_info_and_date_of_birth(
+    user, user_api_client
+):
+    LanguageFactory(id="fi", service_language=True)
+
+    assert SignUp.objects.count() == 0
+    reservation = SeatReservationCodeFactory(seats=1)
+
+    signups_data = default_signups_data
+    signups_data["registration"] = reservation.registration.id
+    signups_data["reservation_code"] = reservation.code
+    signups_data["signups"][0]["extra_info"] = ""
+    signups_data["signups"][0]["date_of_birth"] = None
+
+    assert_create_signups(user_api_client, signups_data)
     assert_default_signup_created(signups_data, user)
 
 

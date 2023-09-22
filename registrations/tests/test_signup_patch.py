@@ -6,11 +6,11 @@ from rest_framework import status
 
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
-from registrations.models import MandatoryFields, SignUp
+from registrations.models import SignUp
 from registrations.tests.factories import (
-    RegistrationFactory,
     RegistrationUserAccessFactory,
     SignUpFactory,
+    SignUpProtectedDataFactory,
 )
 
 # === util methods ===
@@ -40,15 +40,9 @@ def assert_patch_signup(api_client, signup_pk, signup_data):
 
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_registration_admin_can_patch_presence_status_of_signup(api_client, event):
+def test_registration_admin_can_patch_presence_status_of_signup(api_client, registration):
     user = UserFactory()
-    user.registration_admin_organizations.add(event.publisher)
-
-    registration = RegistrationFactory(
-        event=event,
-        audience_min_age=10,
-        mandatory_fields=[MandatoryFields.PHONE_NUMBER, MandatoryFields.STREET_ADDRESS],
-    )
+    user.registration_admin_organizations.add(registration.publisher)
 
     signup = SignUpFactory(
         registration=registration,
@@ -64,7 +58,8 @@ def test_registration_admin_can_patch_presence_status_of_signup(api_client, even
         "presence_status": SignUp.PresenceStatus.PRESENT,
     }
 
-    assert_patch_signup(api_client, signup.id, signup_data)
+    response = assert_patch_signup(api_client, signup.id, signup_data)
+    assert response.data["presence_status"] == SignUp.PresenceStatus.PRESENT
 
     signup.refresh_from_db()
     assert signup.presence_status == SignUp.PresenceStatus.PRESENT
@@ -74,17 +69,11 @@ def test_registration_admin_can_patch_presence_status_of_signup(api_client, even
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_registration_user_who_is_superuser_or_registration_admin_can_patch_signup_presence_status(
-    api_client, event, admin_type
+    api_client, registration, admin_type
 ):
     user = UserFactory(is_superuser=True if admin_type == "superuser" else False)
     if admin_type == "registration_admin":
-        user.registration_admin_organizations.add(event.publisher)
-
-    registration = RegistrationFactory(
-        event=event,
-        audience_min_age=10,
-        mandatory_fields=[MandatoryFields.PHONE_NUMBER, MandatoryFields.STREET_ADDRESS],
-    )
+        user.registration_admin_organizations.add(registration.publisher)
 
     RegistrationUserAccessFactory(registration=registration, email=user.email)
 
@@ -110,15 +99,34 @@ def test_registration_user_who_is_superuser_or_registration_admin_can_patch_sign
 
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_registration_user_can_patch_signup_presence_status_if_strongly_identified(
-    api_client, event, user
-):
-    registration = RegistrationFactory(
-        event=event,
-        audience_min_age=10,
-        mandatory_fields=[MandatoryFields.PHONE_NUMBER, MandatoryFields.STREET_ADDRESS],
-    )
+def test_patch_extra_info_of_signup_with_empty_data(api_client, registration, signup):
+    user = UserFactory()
+    user.registration_admin_organizations.add(registration.publisher)
 
+    signup = SignUpFactory(registration=registration)
+    SignUpProtectedDataFactory(
+        signup=signup, registration=registration, extra_info="Extra info"
+    )
+    assert signup.extra_info == "Extra info"
+
+    api_client.force_authenticate(user)
+
+    signup_data = {
+        "extra_info": "",
+    }
+
+    assert_patch_signup(api_client, signup.id, signup_data)
+
+    signup.refresh_from_db()
+    del signup.extra_info
+    assert signup.extra_info == ""
+
+
+@freeze_time("2023-03-14 03:30:00+02:00")
+@pytest.mark.django_db
+def test_registration_user_can_patch_signup_presence_status_if_strongly_identified(
+    api_client, registration, user
+):
     RegistrationUserAccessFactory(registration=registration, email=user.email)
 
     signup = SignUpFactory(
@@ -150,14 +158,8 @@ def test_registration_user_can_patch_signup_presence_status_if_strongly_identifi
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_registration_user_cannot_patch_signup_presence_status_if_not_strongly_identified(
-    api_client, event, user
+    api_client, registration, user
 ):
-    registration = RegistrationFactory(
-        event=event,
-        audience_min_age=10,
-        mandatory_fields=[MandatoryFields.PHONE_NUMBER, MandatoryFields.STREET_ADDRESS],
-    )
-
     RegistrationUserAccessFactory(registration=registration, email=user.email)
 
     signup = SignUpFactory(
@@ -189,13 +191,7 @@ def test_registration_user_cannot_patch_signup_presence_status_if_not_strongly_i
 
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_admin_cannot_patch_presence_status_of_signup(user_api_client, event):
-    registration = RegistrationFactory(
-        event=event,
-        audience_min_age=10,
-        mandatory_fields=[MandatoryFields.PHONE_NUMBER, MandatoryFields.STREET_ADDRESS],
-    )
-
+def test_admin_cannot_patch_presence_status_of_signup(user_api_client, registration):
     signup = SignUpFactory(
         registration=registration,
         date_of_birth="2011-01-01",
@@ -217,13 +213,7 @@ def test_admin_cannot_patch_presence_status_of_signup(user_api_client, event):
 
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_created_user_cannot_patch_presence_status_of_signup(api_client, event, user):
-    registration = RegistrationFactory(
-        event=event,
-        audience_min_age=10,
-        mandatory_fields=[MandatoryFields.PHONE_NUMBER, MandatoryFields.STREET_ADDRESS],
-    )
-
+def test_created_user_cannot_patch_presence_status_of_signup(api_client, registration, user):
     signup = SignUpFactory(
         registration=registration,
         date_of_birth="2011-01-01",

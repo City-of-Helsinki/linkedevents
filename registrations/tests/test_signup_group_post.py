@@ -12,7 +12,12 @@ from events.models import Event
 from events.tests.factories import LanguageFactory
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
-from registrations.models import MandatoryFields, SignUp, SignUpGroup
+from registrations.models import (
+    MandatoryFields,
+    SignUp,
+    SignUpGroup,
+    SignUpGroupProtectedData,
+)
 from registrations.tests.factories import SeatReservationCodeFactory
 
 test_email1 = "test@test.com"
@@ -72,7 +77,7 @@ def assert_signup_data(signup, signup_data, user):
     assert signup.first_name == signup_data["first_name"]
     assert signup.last_name == signup_data["last_name"]
     assert (
-        signup.date_of_birth
+        signup.protected_data.date_of_birth
         == datetime.strptime(signup_data["date_of_birth"], "%Y-%m-%d").date()
     )
     assert signup.phone_number == signup_data["phone_number"]
@@ -94,7 +99,13 @@ def assert_default_signup_group_created(reservation, signup_group_data, user):
     assert SignUpGroup.objects.count() == 1
     signup_group = SignUpGroup.objects.first()
     assert signup_group.registration_id == reservation.registration_id
-    assert signup_group.extra_info == "Extra info for group"
+
+    assert SignUpGroupProtectedData.objects.count() == 1
+    signup_group_protected_data = SignUpGroupProtectedData.objects.first()
+    if signup_group_data["extra_info"] is None:
+        assert signup_group_protected_data.extra_info is None
+    else:
+        assert signup_group_protected_data.extra_info == signup_group_data["extra_info"]
 
     assert SignUp.objects.count() == 2
     assert (
@@ -130,6 +141,32 @@ def test_registration_admin_can_create_signup_group(
     signup_group_data["reservation_code"] = reservation.code
 
     assert_create_signup_group(user_api_client, signup_group_data)
+    assert_default_signup_group_created(reservation, signup_group_data, user)
+
+
+@pytest.mark.django_db
+def test_registration_admin_can_create_signup_group_with_empty_extra_info_or_date_of_birth(
+    api_client, registration
+):
+    LanguageFactory(id="fi", service_language=True)
+    LanguageFactory(id="en", service_language=True)
+
+    user = UserFactory()
+    user.registration_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    assert SignUpGroup.objects.count() == 0
+    assert SignUp.objects.count() == 0
+    assert SignUpGroupProtectedData.objects.count() == 0
+
+    reservation = SeatReservationCodeFactory(seats=2)
+    signup_group_data = default_signup_group_data
+    signup_group_data["registration"] = reservation.registration_id
+    signup_group_data["reservation_code"] = reservation.code
+    signup_group_data["extra_info"] = ""
+    signup_group_data["date_of_birth"] = None
+
+    assert_create_signup_group(api_client, signup_group_data)
     assert_default_signup_group_created(reservation, signup_group_data, user)
 
 
