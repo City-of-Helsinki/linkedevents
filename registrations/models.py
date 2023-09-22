@@ -16,6 +16,7 @@ from django.utils.functional import cached_property
 from django.utils.timezone import localtime
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation import override
+from helsinki_gdpr.models import SerializableMixin
 
 from events.models import Event, Language
 from registrations.utils import (
@@ -308,7 +309,7 @@ class SignUpMixin:
         return bool(self.data_source and self.data_source.user_editable_resources)
 
 
-class SignUpGroup(CreatedModifiedBaseModel, SignUpMixin):
+class SignUpGroup(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
     registration = models.ForeignKey(
         Registration, on_delete=models.PROTECT, related_name="signup_groups"
     )
@@ -317,6 +318,13 @@ class SignUpGroup(CreatedModifiedBaseModel, SignUpMixin):
         blank=True,
         null=True,
         default=None,
+    )
+
+    serialize_fields = (
+        {"name": "id"},
+        {"name": "registration_id"},
+        {"name": "extra_info"},
+        {"name": "signups"},
     )
 
     @cached_property
@@ -396,7 +404,7 @@ class RegistrationUserAccess(models.Model):
         unique_together = ("email", "registration")
 
 
-class SignUp(CreatedModifiedBaseModel, SignUpMixin):
+class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
     class AttendeeStatus:
         WAITING_LIST = "waitlisted"
         ATTENDING = "attending"
@@ -534,6 +542,36 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin):
         max_length=25,
         choices=PRESENCE_STATUSES,
         default=PresenceStatus.NOT_PRESENT,
+    )
+
+    serialize_fields = (
+        {"name": "first_name"},
+        {"name": "last_name"},
+        {"name": "date_of_birth"},
+        {"name": "city"},
+        {"name": "street_address"},
+        {"name": "zipcode"},
+        {"name": "email"},
+        {"name": "phone_number"},
+        {"name": "native_language", "accessor": lambda value: str(value)},
+        {"name": "service_language", "accessor": lambda value: str(value)},
+        {"name": "registration_id"},
+        {"name": "signup_group_id"},
+        {"name": "responsible_for_group"},
+        {"name": "extra_info"},
+        {"name": "membership_number"},
+        {
+            "name": "notifications",
+            "accessor": lambda value: dict(SignUp.NOTIFICATION_TYPES).get(value, value),
+        },
+        {
+            "name": "attendee_status",
+            "accessor": lambda value: dict(SignUp.ATTENDEE_STATUSES).get(value, value),
+        },
+        {
+            "name": "presence_status",
+            "accessor": lambda value: dict(SignUp.PRESENCE_STATUSES).get(value, value),
+        },
     )
 
     def get_service_language_pk(self):

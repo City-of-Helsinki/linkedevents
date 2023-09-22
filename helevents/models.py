@@ -5,6 +5,7 @@ from django.conf import settings
 from django.db import models
 from django.utils.functional import cached_property
 from django_orghierarchy.models import Organization
+from helsinki_gdpr.models import SerializableMixin
 from helusers.models import AbstractUser
 
 from events.models import PublicationStatus
@@ -181,9 +182,18 @@ class UserModelPermissionMixin:
         )
 
 
-class User(AbstractUser, UserModelPermissionMixin):
+class User(AbstractUser, UserModelPermissionMixin, SerializableMixin):
     registration_admin_organizations = models.ManyToManyField(
         Organization, blank=True, related_name="registration_admin_users"
+    )
+
+    serialize_fields = (
+        {"name": "id"},
+        {"name": "first_name"},
+        {"name": "last_name"},
+        {"name": "email"},
+        {"name": "signupgroup_created_by"},
+        {"name": "signup_created_by"},
     )
 
     def __str__(self):
