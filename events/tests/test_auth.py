@@ -1,4 +1,3 @@
-import datetime
 import uuid
 
 import pytest
@@ -6,14 +5,13 @@ from django.test import RequestFactory, TestCase
 from django_orghierarchy.models import Organization
 from helusers.oidc import ApiTokenAuthentication
 from helusers.settings import api_token_auth_settings
-from jose import jwt
 from rest_framework import status
 
 from events.models import DataSource
+from helevents.tests.conftest import get_api_token_for_user_with_scopes
 from helevents.tests.factories import UserFactory
 
 from ..auth import ApiKeyUser
-from .keys import rsa_key
 from .utils import versioned_reverse
 
 DEFAULT_ORGANIZATION_ID = "others"
@@ -30,50 +28,11 @@ def global_requests_mock(requests_mock):
     req_mock = None
 
 
-def get_api_token_for_user_with_scopes(user_uuid, scopes: list, amr: str = None):
-    """Build a proper auth token with desired scopes."""
-    audience = api_token_auth_settings.AUDIENCE
-    issuer = api_token_auth_settings.ISSUER
-    auth_field = api_token_auth_settings.API_AUTHORIZATION_FIELD
-    config_url = f"{issuer}/.well-known/openid-configuration"
-    jwks_url = f"{issuer}/jwks"
-
-    configuration = {
-        "issuer": issuer,
-        "jwks_uri": jwks_url,
-    }
-
-    keys = {"keys": [rsa_key.public_key_jwk]}
-
-    now = datetime.datetime.now()
-    expire = now + datetime.timedelta(days=14)
-
-    jwt_data = {
-        "iss": issuer,
-        "aud": audience,
-        "sub": str(user_uuid),
-        "iat": int(now.timestamp()),
-        "exp": int(expire.timestamp()),
-        "amr": amr if amr else "github",
-        auth_field: scopes,
-    }
-    encoded_jwt = jwt.encode(
-        jwt_data, key=rsa_key.private_key_pem, algorithm=rsa_key.jose_algorithm
-    )
-
-    req_mock.get(config_url, json=configuration)
-    req_mock.get(jwks_url, json=keys)
-
-    auth_header = f"{api_token_auth_settings.AUTH_SCHEME} {encoded_jwt}"
-
-    return auth_header
-
-
 def do_authentication(user_uuid):
     auth = ApiTokenAuthentication()
 
     auth_header = get_api_token_for_user_with_scopes(
-        user_uuid, [api_token_auth_settings.API_SCOPE_PREFIX]
+        user_uuid, [api_token_auth_settings.API_SCOPE_PREFIX], req_mock
     )
 
     rf = RequestFactory()
@@ -141,7 +100,7 @@ def test_user_is_external_based_on_login_method(api_client, settings, login_usin
     else:
         auth_method = "non-ad_method"
     auth_header = get_api_token_for_user_with_scopes(
-        user.uuid, [api_token_auth_settings.API_SCOPE_PREFIX], amr=auth_method
+        user.uuid, [api_token_auth_settings.API_SCOPE_PREFIX], req_mock, amr=auth_method
     )
     api_client.credentials(HTTP_AUTHORIZATION=auth_header)
 
@@ -158,8 +117,7 @@ def test_authenticated_requests_add_no_cache_headers(api_client, authenticated):
     if authenticated:
         user = UserFactory()
         auth_header = get_api_token_for_user_with_scopes(
-            user.uuid,
-            [api_token_auth_settings.API_SCOPE_PREFIX],
+            user.uuid, [api_token_auth_settings.API_SCOPE_PREFIX], req_mock
         )
         api_client.credentials(HTTP_AUTHORIZATION=auth_header)
     detail_url = versioned_reverse("event-list")
