@@ -22,7 +22,7 @@ def delete_user_and_gdpr_data(user: get_user_model(), dry_run: bool) -> None:
     :param dry_run: a boolean telling if this is a dry run of the function or not
     """
 
-    for signup in user.signup_created_by.all():
+    for signup in user.signup_created_by.filter(signup_group_id__isnull=True):
         signup._individually_deleted = (
             True  # post_delete signal function will check this
         )
