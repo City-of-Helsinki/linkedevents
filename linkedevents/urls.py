@@ -21,6 +21,7 @@ urlpatterns = [
     url(r"^admin/", admin.site.urls),
     url(r"^pysocial/", include("social_django.urls", namespace="social")),
     url(r"^helauth/", include("helusers.urls")),
+    url(r"^gdpr-api/", include("helsinki_gdpr.urls")),
     url(r"^$", RedirectToAPIRootView.as_view()),
 ]
 
