@@ -14,6 +14,7 @@ env:
   POSTGRES_USER: postgres
   POSTGRES_PASSWORD: postgres
   DATABASE_URL: "postgis://postgres:postgres@localhost/test_linkedevents"
+  FIELD_ENCRYPTION_KEYS: c87a6669a1ded2834f1dfd0830d86ef6cdd20372ac83e8c7c23feffe87e6a051
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
