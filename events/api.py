@@ -1859,8 +1859,9 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
         super().__init__(*args, **kwargs)
         context = self.context
 
-        if "registration_admin_tree_ids" in context:
-            self.registration_admin_tree_ids = context["registration_admin_tree_ids"]
+        self.registration_admin_tree_ids = context.get(
+            "registration_admin_tree_ids", set()
+        )
 
     def to_representation(self, obj):
         # These fields are visible only if user is admin, registration admin or registration user access user
