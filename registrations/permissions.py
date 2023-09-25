@@ -9,6 +9,9 @@ from registrations.models import Registration, SignUp
 
 class CanAccessRegistration(UserDataFromRequestMixin, permissions.BasePermission):
     def has_permission(self, request: Request, view: APIView) -> bool:
+        if view.action == "retrieve":
+            return True
+
         if not request.user.is_authenticated:
             return False
 
@@ -35,20 +38,14 @@ class CanAccessRegistration(UserDataFromRequestMixin, permissions.BasePermission
     def has_object_permission(
         self, request: Request, view: APIView, obj: Registration
     ) -> bool:
+        if view.action == "retrieve":
+            return True
+
         if isinstance(request.user, ApiKeyUser):
             user_data_source, _ = view.user_data_source_and_organization
             # allow only if the api key matches instance data source
             if obj.data_source != user_data_source:
                 return False
-
-        if request.method == "GET":
-            return (
-                obj.can_be_edited_by(request.user)
-                or obj.registration_user_accesses.filter(
-                    email=request.user.email
-                ).exists()
-                or obj.created_by_id == request.user.id
-            )
 
         return obj.can_be_edited_by(request.user)
 

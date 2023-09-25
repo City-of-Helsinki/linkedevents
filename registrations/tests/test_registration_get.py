@@ -163,11 +163,12 @@ def test_regular_user_cannot_see_registration_user_accesses(
 
 
 @pytest.mark.django_db
-def test_anonymous_user_cannot_see_registration(api_client, registration):
+def test_anonymous_user_can_see_registration(api_client, registration):
     RegistrationUserAccess.objects.create(registration=registration)
 
     response = get_detail(api_client, registration.id)
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.status_code == status.HTTP_200_OK
+    assert_registration_fields_exist(response.data, is_admin_user=False)
 
 
 @pytest.mark.django_db
