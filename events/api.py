@@ -533,6 +533,8 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         if skip_fields is None:
             skip_fields = set()
 
+        self.skip_fields = skip_fields
+
         if "request" in context:
             self.request = context["request"]
 
@@ -541,9 +543,6 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
             self.user = context["user"]
         if "admin_tree_ids" in context:
             self.admin_tree_ids = context["admin_tree_ids"]
-
-        # by default, admin fields are skipped
-        self.skip_fields = skip_fields | set(self.only_admin_visible_fields)
 
         # query allows non-skipped fields to be expanded
         include_fields = context.get("include", [])
@@ -560,6 +559,14 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         self.skip_fields |= context.get("skip_fields", set())
 
         self.hide_ld_context = hide_ld_context
+
+    def are_only_admin_visible_fields_allowed(self, obj):
+        return (
+            self.user
+            and hasattr(obj, "publisher")
+            and obj.publisher
+            and obj.publisher.tree_id in self.admin_tree_ids
+        )
 
     def to_internal_value(self, data):
         for field in self.system_generated_fields:
@@ -609,14 +616,9 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         # display non-public fields if 1) obj has publisher org and 2) user belongs to the same org tree
         # never modify self.skip_fields, as it survives multiple calls in the serializer across objects
         obj_skip_fields = set(self.skip_fields)
-        if (
-            self.user
-            and hasattr(obj, "publisher")
-            and obj.publisher
-            and obj.publisher.tree_id in self.admin_tree_ids
-        ):
-            for field in self.only_admin_visible_fields:
-                obj_skip_fields.remove(field)
+        if not self.are_only_admin_visible_fields_allowed(obj):
+            obj_skip_fields |= set(self.only_admin_visible_fields)
+
         for field in obj_skip_fields:
             if field in ret:
                 del ret[field]
@@ -1847,9 +1849,11 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
         queryset=Event.objects.all(),
     )
 
-    # LinkedEventsSerializer removes created_by and last_modified_by default, so set this
-    # to empty array and have custom logic to hide admin fields in to_representation
-    only_admin_visible_fields = []
+    only_admin_visible_fields = (
+        "created_by",
+        "last_modified_by",
+        "registration_user_accesses",
+    )
 
     def __init__(
         self,
@@ -1863,28 +1867,15 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
             "registration_admin_tree_ids", set()
         )
 
-    def to_representation(self, obj):
-        # These fields are visible only if user is admin, registration admin or registration user access user
-        admin_visible_fields = (
-            "created_by",
-            "last_modified_by",
-            "registration_user_accesses",
-        )
-
-        ret = super().to_representation(obj)
+    # Override this method to allow only_admin_visible_fields also to
+    # registration admin users
+    def are_only_admin_visible_fields_allowed(self, obj):
         user = self.user
 
-        show_admin_fields = not user.is_anonymous and (
+        return not user.is_anonymous and (
             obj.publisher.tree_id in self.admin_tree_ids
             or obj.publisher.tree_id in self.registration_admin_tree_ids
         )
-
-        if not show_admin_fields:
-            for field_name in admin_visible_fields:
-                if field_name in ret:
-                    del ret[field_name]
-
-        return ret
 
     def _create_or_update_registration_user_accesses(
         self, registration, registration_user_accesses
