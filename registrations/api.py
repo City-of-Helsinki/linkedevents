@@ -272,7 +272,7 @@ class SignUpBaseFilter(django_filters.rest_framework.FilterSet):
         q_filter = Q(
             registration__event__publisher__in=user.get_registration_admin_organizations_and_descendants()
         )
-        if user.is_strongly_identificated:
+        if user.is_strongly_identified:
             q_filter |= Q(registration__registration_user_accesses__email=user.email)
 
         return queryset.filter(q_filter)

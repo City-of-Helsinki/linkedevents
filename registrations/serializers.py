@@ -253,7 +253,7 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
         user = self.user
         return (
             user.is_authenticated
-            and user.is_strongly_identificated
+            and user.is_strongly_identified
             and obj.registration_user_accesses.filter(email=user.email).exists()
         )
 

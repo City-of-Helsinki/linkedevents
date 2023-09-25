@@ -36,8 +36,8 @@ class UserModelPermissionMixin:
         self._token_amr_claim = value
 
     @property
-    def is_strongly_identificated(self):
-        """Check if the user is strongly identificated"""
+    def is_strongly_identified(self):
+        """Check if the user is strongly identified"""
         return (
             self.token_amr_claim
             in settings.STRONG_IDENTIFICATION_AUTHENTICATION_METHODS
@@ -252,6 +252,6 @@ class User(AbstractUser, UserModelPermissionMixin):
     def is_registration_user_access_user_of(self, registration_user_accesses):
         """Check if current user can be found in registration user accesses"""
         return (
-            self.is_strongly_identificated
+            self.is_strongly_identified
             and registration_user_accesses.filter(email=self.email).exists()
         )
