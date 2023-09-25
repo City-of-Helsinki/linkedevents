@@ -298,15 +298,21 @@ def test__unknown_api_key_cannot_update_signup(api_client, registration, signup)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
+@pytest.mark.parametrize("user_editable_resources", [False, True])
 @pytest.mark.django_db
-def test__user_editable_resources_can_update_signup(
-    data_source, organization, registration, signup, user_api_client, user
+def test_registration_admin_can_update_signup_regardless_of_non_user_editable_resources(
+    data_source,
+    organization,
+    registration,
+    signup,
+    user_api_client,
+    user,
+    user_editable_resources,
 ):
     user.get_default_organization().registration_admin_users.add(user)
 
     data_source.owner = organization
-    data_source.user_editable_resources = True
+    data_source.user_editable_resources = user_editable_resources
     data_source.save(update_fields=["owner", "user_editable_resources"])
 
     signup_data = {
@@ -315,22 +321,3 @@ def test__user_editable_resources_can_update_signup(
         "date_of_birth": "2015-01-01",
     }
     assert_update_signup(user_api_client, signup.id, signup_data)
-
-
-@pytest.mark.django_db
-def test__non_user_editable_resources_cannot_delete_signup(
-    data_source, organization, registration, signup, user_api_client, user
-):
-    user.get_default_organization().registration_admin_users.add(user)
-
-    data_source.owner = organization
-    data_source.user_editable_resources = False
-    data_source.save(update_fields=["owner", "user_editable_resources"])
-
-    signup_data = {
-        "registration": registration.id,
-        "name": "Edited name",
-        "date_of_birth": "2015-01-01",
-    }
-    response = update_signup(user_api_client, signup.id, signup_data)
-    assert response.status_code == status.HTTP_403_FORBIDDEN

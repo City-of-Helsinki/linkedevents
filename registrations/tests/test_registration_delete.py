@@ -50,29 +50,36 @@ def test__non_admin_cannot_delete_registration(api_client, registration, user):
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
+@pytest.mark.parametrize("user_editable_resources", [False, True])
 @pytest.mark.django_db
-def test__non_user_editable_resources_cannot_delete_registration(
-    api_client, data_source, organization, registration, user
+def test_admin_can_delete_registration_regardless_of_non_user_editable_resources(
+    user_api_client, data_source, organization, registration, user_editable_resources
 ):
     data_source.owner = organization
-    data_source.user_editable_resources = False
-    data_source.save()
-    api_client.force_authenticate(user)
+    data_source.user_editable_resources = user_editable_resources
+    data_source.save(update_fields=["owner", "user_editable_resources"])
 
-    response = delete_registration(api_client, registration.id)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    response = delete_registration(user_api_client, registration.id)
+    assert response.status_code == status.HTTP_204_NO_CONTENT
 
 
+@pytest.mark.parametrize("user_editable_resources", [False, True])
 @pytest.mark.django_db
-def test__user_editable_resources_can_delete_registration(
-    api_client, data_source, organization, registration, user
+def test_registration_admin_can_delete_registration_regardless_of_non_user_editable_resources(
+    user_api_client,
+    data_source,
+    organization,
+    registration,
+    user,
+    user_editable_resources,
 ):
-    data_source.owner = organization
-    data_source.user_editable_resources = True
-    data_source.save()
-    api_client.force_authenticate(user)
+    user.get_default_organization().registration_admin_users.add(user)
 
-    response = delete_registration(api_client, registration.id)
+    data_source.owner = organization
+    data_source.user_editable_resources = user_editable_resources
+    data_source.save(update_fields=["owner", "user_editable_resources"])
+
+    response = delete_registration(user_api_client, registration.id)
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
 

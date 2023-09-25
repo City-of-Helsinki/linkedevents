@@ -360,17 +360,33 @@ def test__user_from_other_organization_cannot_send_message(
 
 
 @pytest.mark.django_db
-def test_cannot_send_message_if_missing_datasource_permission(
-    api_client, other_data_source, registration, user
+def test_admin_can_send_message_with_missing_datasource_permission(
+    user_api_client, other_data_source, registration, signup
 ):
     registration.event.data_source = other_data_source
     registration.event.save()
-    api_client.force_authenticate(user)
 
     send_message_data = {"subject": "Message subject", "body": "Message body"}
 
-    response = send_message(api_client, registration.id, send_message_data)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert_send_message(
+        user_api_client, registration.id, send_message_data, [signup.email]
+    )
+
+
+@pytest.mark.django_db
+def test_registration_admin_can_send_message_with_missing_datasource_permission(
+    user_api_client, other_data_source, registration, signup, user
+):
+    user.get_default_organization().registration_admin_users.add(user)
+
+    registration.event.data_source = other_data_source
+    registration.event.save()
+
+    send_message_data = {"subject": "Message subject", "body": "Message body"}
+
+    assert_send_message(
+        user_api_client, registration.id, send_message_data, [signup.email]
+    )
 
 
 @pytest.mark.django_db
@@ -423,32 +439,46 @@ def test__empty_api_key_cannot_send_message(api_client, registration):
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
+@pytest.mark.parametrize("user_editable_resources", [False, True])
 @pytest.mark.django_db
-def test__non_user_editable_resources_cannot_send_message(
-    api_client, data_source, organization, registration, user
+def test_admin_can_send_message_regardless_of_non_user_editable_resources(
+    user_api_client,
+    data_source,
+    organization,
+    registration,
+    signup,
+    user_editable_resources,
 ):
     data_source.owner = organization
-    data_source.user_editable_resources = False
-    data_source.save()
-    api_client.force_authenticate(user)
-
-    send_message_data = {"subject": "Message subject", "body": "Message body"}
-
-    response = send_message(api_client, registration.id, send_message_data)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
-
-@pytest.mark.django_db
-def test__user_editable_resources_can_create_registration(
-    api_client, data_source, organization, registration, signup, signup2, user
-):
-    data_source.owner = organization
-    data_source.user_editable_resources = True
-    data_source.save()
-    api_client.force_authenticate(user=user)
+    data_source.user_editable_resources = user_editable_resources
+    data_source.save(update_fields=["owner", "user_editable_resources"])
 
     send_message_data = {"subject": "Message subject", "body": "Message body"}
 
     assert_send_message(
-        api_client, registration.id, send_message_data, [signup.email, signup2.email]
+        user_api_client, registration.id, send_message_data, [signup.email]
+    )
+
+
+@pytest.mark.parametrize("user_editable_resources", [False, True])
+@pytest.mark.django_db
+def test_registration_admin_can_send_message_regardless_of_non_user_editable_resources(
+    user_api_client,
+    data_source,
+    organization,
+    registration,
+    signup,
+    user,
+    user_editable_resources,
+):
+    user.get_default_organization().registration_admin_users.add(user)
+
+    data_source.owner = organization
+    data_source.user_editable_resources = user_editable_resources
+    data_source.save(update_fields=["owner", "user_editable_resources"])
+
+    send_message_data = {"subject": "Message subject", "body": "Message body"}
+
+    assert_send_message(
+        user_api_client, registration.id, send_message_data, [signup.email]
     )

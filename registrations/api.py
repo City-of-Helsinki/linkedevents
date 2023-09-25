@@ -23,10 +23,7 @@ from events.api import (
     UserDataSourceAndOrganizationMixin,
 )
 from events.models import Event
-from events.permissions import (
-    DataSourceResourceEditPermission,
-    OrganizationUserEditPermission,
-)
+from events.permissions import OrganizationUserEditPermission
 from linkedevents.registry import register_view
 from registrations.exceptions import ConflictException
 from registrations.models import (
@@ -64,7 +61,7 @@ class RegistrationViewSet(
     serializer_class = RegistrationSerializer
     queryset = Registration.objects.all()
 
-    permission_classes = [CanAccessRegistration & DataSourceResourceEditPermission]
+    permission_classes = [CanAccessRegistration]
 
     def perform_create(self, serializer):
         # Check object level permissions for event which has the relevant data_source.
@@ -151,7 +148,7 @@ class RegistrationViewSet(
     @action(
         methods=["post"],
         detail=True,
-        permission_classes=[CanAccessRegistration & DataSourceResourceEditPermission],
+        permission_classes=[CanAccessRegistration],
     )
     def send_message(self, request, pk=None, version=None):
         registration = self.get_object()
@@ -371,7 +368,7 @@ class SignUpViewSet(
     queryset = SignUp.objects.all()
     filter_backends = [SignUpFilterBackend]
     filterset_class = SignUpFilter
-    permission_classes = [CanAccessSignup & DataSourceResourceEditPermission]
+    permission_classes = [CanAccessSignup]
 
     def create(self, request, *args, **kwargs):
         context = super().get_serializer_context()
@@ -424,7 +421,7 @@ class SignUpGroupViewSet(
     queryset = SignUpGroup.objects.all()
     filter_backends = [SignUpFilterBackend]
     filterset_class = SignUpGroupFilter
-    permission_classes = [CanAccessSignup & DataSourceResourceEditPermission]
+    permission_classes = [CanAccessSignup]
 
     def get_serializer_class(self):
         if self.action == "create":
