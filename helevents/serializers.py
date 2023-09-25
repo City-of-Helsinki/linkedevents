@@ -32,6 +32,6 @@ class UserSerializer(serializers.ModelSerializer):
             "is_staff",
             "display_name",
             "is_external",
-            "is_strongly_identificated",
+            "is_strongly_identified",
         ]
         model = get_user_model()

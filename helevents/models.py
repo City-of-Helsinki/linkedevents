@@ -37,8 +37,8 @@ class UserModelPermissionMixin:
         self._token_amr_claim = value
 
     @property
-    def is_strongly_identificated(self):
-        """Check if the user is strongly identificated"""
+    def is_strongly_identified(self):
+        """Check if the user is strongly identified"""
         return (
             self.token_amr_claim
             in settings.STRONG_IDENTIFICATION_AUTHENTICATION_METHODS
@@ -66,6 +66,10 @@ class UserModelPermissionMixin:
 
     def is_regular_user_of(self, publisher):
         """Check if current user is a regular user of the publisher organization"""
+        raise NotImplementedError()
+
+    def is_registration_user_access_user_of(self, registration_user_accesses):
+        """Check if current user can be found in registration user accesses"""
         raise NotImplementedError()
 
     @property
@@ -141,11 +145,8 @@ class UserModelPermissionMixin:
             publisher__in=self.organization_memberships.all(),
         )
 
-    def get_admin_tree_ids(self):
-        # returns tree ids for all normal admin organizations and their replacements
-        admin_queryset = self.admin_organizations.filter(
-            internal_type="normal"
-        ).select_related("replaced_by")
+    def _get_admin_tree_ids(self, admin_queryset):
+        # returns tree ids for all admin organizations and their replacements
         admin_tree_ids = admin_queryset.values("tree_id")
         admin_replaced_tree_ids = admin_queryset.filter(
             replaced_by__isnull=False
@@ -153,6 +154,20 @@ class UserModelPermissionMixin:
         return set(value["tree_id"] for value in admin_tree_ids) | set(
             value["replaced_by__tree_id"] for value in admin_replaced_tree_ids
         )
+
+    def get_admin_tree_ids(self):
+        # returns tree ids for all normal admin organizations and their replacements
+        admin_queryset = self.admin_organizations.filter(
+            internal_type="normal"
+        ).select_related("replaced_by")
+        return self._get_admin_tree_ids(admin_queryset)
+
+    def get_registration_admin_tree_ids(self):
+        # returns tree ids for all normal registration admin organizations and their replacements
+        admin_queryset = self.registration_admin_organizations.filter(
+            internal_type="normal"
+        ).select_related("replaced_by")
+        return self._get_admin_tree_ids(admin_queryset)
 
     def _get_admin_organizations_and_descendants(self, relation_name: str):
         # returns admin organizations and their descendants
@@ -242,3 +257,10 @@ class User(AbstractUser, UserModelPermissionMixin, SerializableMixin):
         if publisher is None:
             return False
         return self.organization_memberships.filter(id=publisher.id).exists()
+
+    def is_registration_user_access_user_of(self, registration_user_accesses):
+        """Check if current user can be found in registration user accesses"""
+        return (
+            self.is_strongly_identified
+            and registration_user_accesses.filter(email=self.email).exists()
+        )

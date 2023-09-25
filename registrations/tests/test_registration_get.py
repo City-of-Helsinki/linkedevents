@@ -9,11 +9,16 @@ from events.tests.factories import EventFactory
 from events.tests.test_event_get import get_list_and_assert_events
 from events.tests.utils import assert_fields_exist
 from events.tests.utils import versioned_reverse as reverse
-from registrations.models import RegistrationUserAccess, SeatReservationCode
-from registrations.tests.factories import RegistrationFactory
+from registrations.tests.factories import (
+    RegistrationFactory,
+    RegistrationUserAccessFactory,
+    SeatReservationCodeFactory,
+)
 from registrations.tests.test_signup_post import assert_create_signups
 
 include_signups_query = "include=signups"
+test_email = "test@email.com"
+
 
 # === util methods ===
 
@@ -76,6 +81,7 @@ def assert_registration_fields_exist(data, is_admin_user=False):
         "remaining_waiting_list_capacity",
         "data_source",
         "publisher",
+        "has_registration_user_access",
         "created_time",
         "last_modified_time",
         "event",
@@ -142,11 +148,50 @@ def test_admin_can_get_registration_not_created_by_self(
 
 @pytest.mark.django_db
 def test_admin_user_can_see_registration_user_accesses(registration, user_api_client):
-    RegistrationUserAccess.objects.create(registration=registration)
+    RegistrationUserAccessFactory(registration=registration)
+    RegistrationUserAccessFactory(registration=registration, email=test_email)
+
     response = get_detail_and_assert_registration(user_api_client, registration.id)
     response_registration_user_accesses = response.data["registration_user_accesses"]
-    assert len(response_registration_user_accesses) == 1
+    assert len(response_registration_user_accesses) == 2
     assert_registration_fields_exist(response.data, is_admin_user=True)
+
+
+@pytest.mark.django_db
+def test_registration_admin_user_can_see_registration_user_accesses(
+    registration, user, user_api_client
+):
+    user.get_default_organization().registration_admin_users.add(user)
+    user.get_default_organization().admin_users.remove(user)
+
+    RegistrationUserAccessFactory(registration=registration)
+    RegistrationUserAccessFactory(registration=registration, email=test_email)
+
+    response = get_detail_and_assert_registration(user_api_client, registration.id)
+    response_registration_user_accesses = response.data["registration_user_accesses"]
+    assert len(response_registration_user_accesses) == 2
+    assert_registration_fields_exist(response.data, is_admin_user=True)
+
+
+@pytest.mark.django_db
+def test_registration_user_access_user_can_see_if_he_has_access(
+    registration, user, user_api_client
+):
+    user.get_default_organization().admin_users.remove(user)
+
+    RegistrationUserAccessFactory(registration=registration, email=user.email)
+    RegistrationUserAccessFactory(registration=registration, email=test_email)
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value="heltunnistussuomifi",
+    ) as mocked:
+        response = get_detail_and_assert_registration(user_api_client, registration.id)
+        assert mocked.called is True
+    has_registration_user_access = response.data["has_registration_user_access"]
+    assert has_registration_user_access == True
+    assert_registration_fields_exist(response.data, is_admin_user=False)
 
 
 @pytest.mark.django_db
@@ -156,7 +201,7 @@ def test_regular_user_cannot_see_registration_user_accesses(
     user.get_default_organization().regular_users.add(user)
     user.get_default_organization().admin_users.remove(user)
 
-    RegistrationUserAccess.objects.create(registration=registration, email=user.email)
+    RegistrationUserAccessFactory(registration=registration, email=user.email)
     response = get_detail_and_assert_registration(user_api_client, registration.id)
 
     assert response.data.get("registration_user_accesses") is None
@@ -164,7 +209,7 @@ def test_regular_user_cannot_see_registration_user_accesses(
 
 @pytest.mark.django_db
 def test_anonymous_user_can_see_registration(api_client, registration):
-    RegistrationUserAccess.objects.create(registration=registration)
+    RegistrationUserAccessFactory(registration=registration)
 
     response = get_detail(api_client, registration.id)
     assert response.status_code == status.HTTP_200_OK
@@ -240,12 +285,12 @@ def test_get_registration_with_correct_attendee_capacity(
     assert response.data["remaining_attendee_capacity"] == 4
     assert response.data["remaining_waiting_list_capacity"] == 5
 
-    SeatReservationCode.objects.create(registration=registration, seats=3)
+    SeatReservationCodeFactory(registration=registration, seats=3)
     response = get_detail_and_assert_registration(user_api_client, registration.id)
     assert response.data["remaining_attendee_capacity"] == 1
     assert response.data["remaining_waiting_list_capacity"] == 5
 
-    SeatReservationCode.objects.create(registration=registration, seats=3)
+    SeatReservationCodeFactory(registration=registration, seats=3)
     response = get_detail_and_assert_registration(user_api_client, registration.id)
     assert response.data["remaining_attendee_capacity"] == 0
     assert response.data["remaining_waiting_list_capacity"] == 3
@@ -281,7 +326,7 @@ def test_registration_user_access_can_include_signups_when_strongly_identified(
     registration, signup, signup2, user, user_api_client
 ):
     user.get_default_organization().admin_users.remove(user)
-    RegistrationUserAccess.objects.create(registration=registration, email=user.email)
+    RegistrationUserAccessFactory(registration=registration, email=user.email)
 
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
@@ -301,7 +346,7 @@ def test_registration_user_access_cannot_include_signups_when_not_strongly_ident
     registration, signup, signup2, user, user_api_client
 ):
     user.get_default_organization().admin_users.remove(user)
-    RegistrationUserAccess.objects.create(registration=registration, email=user.email)
+    RegistrationUserAccessFactory(registration=registration, email=user.email)
 
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
@@ -341,7 +386,7 @@ def test_current_attendee_and_waitlist_count(user_api_client, registration, user
     assert response.data["current_attendee_count"] == 0
     assert response.data["current_waiting_list_count"] == 0
 
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signup_data = {
         "first_name": "Michael",
         "last_name": "Jackson",
@@ -359,9 +404,7 @@ def test_current_attendee_and_waitlist_count(user_api_client, registration, user
     assert response.data["current_attendee_count"] == 1
     assert response.data["current_waiting_list_count"] == 0
 
-    reservation2 = SeatReservationCode.objects.create(
-        registration=registration, seats=1
-    )
+    reservation2 = SeatReservationCodeFactory(registration=registration, seats=1)
     signup_data2 = {
         "first_name": "Michael",
         "last_name": "Jackson 2",
