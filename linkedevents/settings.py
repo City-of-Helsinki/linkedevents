@@ -64,6 +64,8 @@ env = environ.Env(
     ENKORA_API_USER=(str, "JoeEnkora"),
     ENKORA_API_PASSWORD=(str, None),
     EXTRA_INSTALLED_APPS=(list, []),
+    GDPR_API_QUERY_SCOPE=(str, ""),
+    GDPR_API_DELETE_SCOPE=(str, ""),
     INSTANCE_NAME=(str, "Linked Events"),
     INTERNAL_IPS=(list, []),
     LANGUAGES=(list, ["fi", "sv", "en", "zh-hans", "ru", "ar"]),
@@ -613,3 +615,12 @@ OIDC_AUTH = {"OIDC_LEEWAY": 60 * 60}
 # Enkora course importer
 ENKORA_API_USER = env("ENKORA_API_USER")
 ENKORA_API_PASSWORD = env("ENKORA_API_PASSWORD")
+
+# GDPR API settings
+GDPR_API_MODEL = "helevents.User"
+GDPR_API_MODEL_LOOKUP = "uuid"
+GDPR_API_URL_PATTERN = "v1/user/<uuid:uuid>"
+GDPR_API_USER_PROVIDER = "helevents.utils.get_user_for_gdpr_api"
+GDPR_API_DELETER = "helevents.utils.delete_user_and_gdpr_data"
+GDPR_API_QUERY_SCOPE = env("GDPR_API_QUERY_SCOPE")
+GDPR_API_DELETE_SCOPE = env("GDPR_API_DELETE_SCOPE")

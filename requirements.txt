@@ -68,6 +68,7 @@ django==3.2.20
     #   djangorestframework-bulk
     #   drf-oidc-auth
     #   easy-thumbnails
+    #   helsinki-profile-gdpr-api
 django-admin-autocomplete-filter==0.7.1
     # via -r requirements.in
 django-anymail==9.0
@@ -85,7 +86,9 @@ django-filter==22.1
 django-haystack==3.2.1
     # via -r requirements.in
 django-helusers==0.7.1
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   helsinki-profile-gdpr-api
 django-image-cropping==1.7
     # via -r requirements.in
 django-jinja==2.10.2
@@ -123,12 +126,15 @@ djangorestframework==3.14.0
     #   djangorestframework-bulk
     #   djangorestframework-gis
     #   drf-oidc-auth
+    #   helsinki-profile-gdpr-api
 djangorestframework-bulk==0.2.1
     # via -r requirements.in
 djangorestframework-gis==1.0
     # via -r requirements.in
 drf-oidc-auth==0.10.0
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   helsinki-profile-gdpr-api
 easy-thumbnails==2.8.5
     # via -r requirements.in
 ecdsa==0.18.0
@@ -141,6 +147,8 @@ executing==1.2.0
     # via stack-data
 future==0.18.3
     # via pyjwkest
+helsinki-profile-gdpr-api==0.2.0
+    # via -r requirements.in
 httmock==1.4.0
     # via -r requirements.in
 icalendar==5.0.4

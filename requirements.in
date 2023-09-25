@@ -25,6 +25,7 @@ djangorestframework-gis
 drf-oidc-auth==0.10.0
 easy_thumbnails
 elasticsearch<8
+helsinki-profile-gdpr-api
 httmock
 icalendar
 ipython
