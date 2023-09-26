@@ -211,15 +211,6 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
         super().validate(data)
         return data
 
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-
-        protected_data = getattr(instance, "protected_data", None)
-        representation["extra_info"] = getattr(protected_data, "extra_info", None)
-        representation["date_of_birth"] = getattr(protected_data, "date_of_birth", None)
-
-        return representation
-
     class Meta:
         fields = (
             "id",
@@ -474,14 +465,6 @@ class SignUpGroupCreateSerializer(
 
         return instance
 
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-
-        protected_data = getattr(instance, "protected_data", None)
-        representation["extra_info"] = getattr(protected_data, "extra_info", None)
-
-        return representation
-
     class Meta:
         fields = (
             "id",
@@ -566,14 +549,6 @@ class SignUpGroupSerializer(CreatedModifiedBaseSerializer):
         self._update_signups(instance, signups_data)
 
         return instance
-
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-
-        protected_data = getattr(instance, "protected_data", None)
-        representation["extra_info"] = getattr(protected_data, "extra_info", None)
-
-        return representation
 
     class Meta:
         fields = (

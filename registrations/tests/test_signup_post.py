@@ -65,15 +65,13 @@ def assert_default_signup_created(signups_data, user):
     assert signup.first_name == signups_data["signups"][0]["first_name"]
     assert signup.last_name == signups_data["signups"][0]["last_name"]
     if signups_data["signups"][0].get("date_of_birth"):
-        assert signup.protected_data.date_of_birth == date(2011, 4, 7)
+        assert signup.date_of_birth == date(2011, 4, 7)
     else:
-        assert signup.protected_data.date_of_birth is None
+        assert signup.date_of_birth is None
     if signups_data["signups"][0].get("extra_info"):
-        assert (
-            signup.protected_data.extra_info == signups_data["signups"][0]["extra_info"]
-        )
+        assert signup.extra_info == signups_data["signups"][0]["extra_info"]
     else:
-        assert signup.protected_data.extra_info in [None, ""]
+        assert signup.extra_info in [None, ""]
     assert signup.email == signups_data["signups"][0]["email"]
     assert signup.phone_number == signups_data["signups"][0]["phone_number"]
     assert signup.notifications == SignUp.NotificationType.SMS

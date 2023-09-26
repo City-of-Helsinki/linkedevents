@@ -98,8 +98,8 @@ def test_can_update_signup_with_empty_extra_info_and_date_of_birth(
         extra_info="Old extra info",
         date_of_birth="2023-10-03",
     )
-    assert signup.protected_data.extra_info == "Old extra info"
-    assert signup.protected_data.date_of_birth == "2023-10-03"
+    assert signup.extra_info == "Old extra info"
+    assert signup.date_of_birth == "2023-10-03"
     assert signup.last_modified_by_id is None
 
     signup_data = {
@@ -109,9 +109,13 @@ def test_can_update_signup_with_empty_extra_info_and_date_of_birth(
     }
 
     assert_update_signup(user_api_client, signup.id, signup_data)
+
     signup.refresh_from_db()
-    assert signup.protected_data.extra_info == ""
-    assert signup.protected_data.date_of_birth is None
+    del signup.extra_info
+    del signup.date_of_birth
+
+    assert signup.extra_info == ""
+    assert signup.date_of_birth is None
     assert signup.last_modified_by_id == user.id
 
 

@@ -54,6 +54,8 @@ def test_patch_signup_group_extra_info_based_on_user_role(
     api_client, event, user_role, allowed_to_patch
 ):
     user = UserFactory(is_superuser=True if user_role == "superuser" else False)
+    api_client.force_authenticate(user)
+
     other_user = UserFactory()
 
     user_role_mapping = {
@@ -72,13 +74,10 @@ def test_patch_signup_group_extra_info_based_on_user_role(
     assert signup_group.extra_info is None
 
     signup_group_data = {"extra_info": "signup group extra info"}
-
-    api_client.force_authenticate(user)
-
     response = patch_signup_group(api_client, signup_group.id, signup_group_data)
 
     signup_group.refresh_from_db()
-    del signup_group.extra_info
+    del signup_group.extra_info  # refresh cached_property
 
     if allowed_to_patch:
         assert response.status_code == status.HTTP_200_OK
@@ -215,9 +214,6 @@ def test_registration_user_can_patch_signups_presence_status_if_strongly_identif
 
     first_signup.refresh_from_db()
     second_signup.refresh_from_db()
-    del first_signup.extra_info
-    del second_signup.extra_info
-
     assert first_signup.presence_status == SignUp.PresenceStatus.PRESENT
     assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
 
