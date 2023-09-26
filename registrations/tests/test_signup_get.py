@@ -7,8 +7,8 @@ from events.tests.conftest import APIClient
 from events.tests.utils import assert_fields_exist
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
-from registrations.models import RegistrationUserAccess, SignUp
-from registrations.tests.factories import SignUpFactory
+from registrations.models import SignUp
+from registrations.tests.factories import RegistrationUserAccessFactory, SignUpFactory
 
 # === util methods ===
 
@@ -109,7 +109,7 @@ def test_registration_user_access_can_get_signup_when_strongly_identified(
     registration, signup, user, user_api_client
 ):
     user.get_default_organization().admin_users.remove(user)
-    RegistrationUserAccess.objects.create(registration=registration, email=user.email)
+    RegistrationUserAccessFactory(registration=registration, email=user.email)
 
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
@@ -126,7 +126,7 @@ def test_registration_user_access_cannot_get_signup_when_not_strongly_identified
     registration, signup, user, user_api_client
 ):
     user.get_default_organization().admin_users.remove(user)
-    RegistrationUserAccess.objects.create(registration=registration, email=user.email)
+    RegistrationUserAccessFactory(registration=registration, email=user.email)
 
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
@@ -159,13 +159,35 @@ def test_regular_created_user_can_get_signup(
     user.get_default_organization().regular_users.add(user)
     user.get_default_organization().admin_users.remove(user)
 
-    response = get_detail(user_api_client, signup.id)
-    assert response.status_code == status.HTTP_200_OK
+    response = assert_get_detail(user_api_client, signup.id)
     assert_signup_fields_exist(response.data)
 
 
 @pytest.mark.django_db
-def test__user_from_other_organization_cannot_get_signup(
+def test_non_created_user_without_organization_cannot_get_signup(
+    user_api_client, registration, signup, user
+):
+    user.get_default_organization().admin_users.remove(user)
+
+    response = get_detail(user_api_client, signup.id)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_created_user_without_organization_can_get_signup(
+    user_api_client, registration, signup, user
+):
+    signup.created_by = user
+    signup.save(update_fields=["created_by"])
+
+    user.get_default_organization().admin_users.remove(user)
+
+    response = assert_get_detail(user_api_client, signup.id)
+    assert_signup_fields_exist(response.data)
+
+
+@pytest.mark.django_db
+def test_user_from_other_organization_cannot_get_signup(
     api_client, registration, signup, user2
 ):
     api_client.force_authenticate(user2)
@@ -175,7 +197,7 @@ def test__user_from_other_organization_cannot_get_signup(
 
 
 @pytest.mark.django_db
-def test__api_key_with_organization_and_registration_permission_can_get_signup(
+def test_api_key_with_organization_and_registration_permission_can_get_signup(
     api_client, data_source, organization, registration, signup
 ):
     data_source.owner = organization
@@ -188,7 +210,7 @@ def test__api_key_with_organization_and_registration_permission_can_get_signup(
 
 
 @pytest.mark.django_db
-def test__api_key_with_organization_without_registration_permission_cannot_get_signup(
+def test_api_key_with_organization_without_registration_permission_cannot_get_signup(
     api_client, data_source, organization, registration, signup
 ):
     data_source.owner = organization
@@ -200,7 +222,7 @@ def test__api_key_with_organization_without_registration_permission_cannot_get_s
 
 
 @pytest.mark.django_db
-def test__api_key_with_wrong_organization_cannot_get_signup(
+def test_api_key_with_wrong_organization_cannot_get_signup(
     api_client, data_source, organization2, registration, signup
 ):
     data_source.owner = organization2
@@ -212,7 +234,7 @@ def test__api_key_with_wrong_organization_cannot_get_signup(
 
 
 @pytest.mark.django_db
-def test__api_key_from_wrong_data_source_cannot_get_signup(
+def test_api_key_from_wrong_data_source_cannot_get_signup(
     api_client, organization, other_data_source, registration, signup
 ):
     other_data_source.owner = organization
@@ -259,7 +281,7 @@ def test_registration_user_access_can_get_signup_list_when_strongly_identified(
     registration, signup, signup2, user, user_api_client
 ):
     user.get_default_organization().admin_users.remove(user)
-    RegistrationUserAccess.objects.create(registration=registration, email=user.email)
+    RegistrationUserAccessFactory(registration=registration, email=user.email)
 
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
@@ -277,7 +299,7 @@ def test_registration_user_access_cannot_get_signup_list_when_not_strongly_ident
     registration, signup, signup2, user, user_api_client
 ):
     user.get_default_organization().admin_users.remove(user)
-    RegistrationUserAccess.objects.create(registration=registration, email=user.email)
+    RegistrationUserAccessFactory(registration=registration, email=user.email)
 
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
@@ -307,7 +329,7 @@ def test_regular_user_cannot_get_signup_list(
 
 
 @pytest.mark.django_db
-def test__get_all_signups_to_which_user_has_admin_role(
+def test_get_all_signups_to_which_user_has_admin_role(
     api_client,
     registration,
     registration2,
@@ -339,7 +361,7 @@ def test__get_all_signups_to_which_user_has_admin_role(
     get_list_and_assert_signups(user_api_client, "", [])
 
     # Registration user is not allowed to see signups if they are not strongly identified
-    RegistrationUserAccess.objects.create(registration=registration, email=user.email)
+    RegistrationUserAccessFactory(registration=registration, email=user.email)
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
         new_callable=PropertyMock,
@@ -359,7 +381,7 @@ def test__get_all_signups_to_which_user_has_admin_role(
 
 
 @pytest.mark.django_db
-def test__user_from_other_organization_cannot_get_signup_list(
+def test_user_from_other_organization_cannot_get_signup_list(
     api_client, registration, signup, signup2, user2
 ):
     api_client.force_authenticate(user2)
@@ -369,7 +391,7 @@ def test__user_from_other_organization_cannot_get_signup_list(
 
 
 @pytest.mark.django_db
-def test__cannot_get_signups_of_nonexistent_registration(
+def test_cannot_get_signups_of_nonexistent_registration(
     api_client, registration, signup, signup2, user2
 ):
     api_client.force_authenticate(user2)
@@ -380,7 +402,7 @@ def test__cannot_get_signups_of_nonexistent_registration(
 
 
 @pytest.mark.django_db
-def test__api_key_with_organization_can_get_signup_list(
+def test_api_key_with_organization_can_get_signup_list(
     api_client, data_source, organization, registration, signup, signup2
 ):
     data_source.owner = organization
@@ -394,7 +416,7 @@ def test__api_key_with_organization_can_get_signup_list(
 
 
 @pytest.mark.django_db
-def test__api_key_with_wrong_organization_cannot_get_signup_list(
+def test_api_key_with_wrong_organization_cannot_get_signup_list(
     api_client, data_source, organization2, registration, signup, signup2
 ):
     data_source.owner = organization2
@@ -410,7 +432,7 @@ def test__api_key_with_wrong_organization_cannot_get_signup_list(
     ["first_name", "email", "extra_info", "membership_number", "phone_number"],
 )
 @pytest.mark.django_db
-def test__signup_list_assert_text_filter(
+def test_signup_list_assert_text_filter(
     field, registration, signup, signup2, user_api_client, user
 ):
     user.get_default_organization().registration_admin_users.add(user)
@@ -473,52 +495,52 @@ def test_filter_signups(
     user.get_default_organization().registration_admin_users.add(user)
     user2.get_default_organization().registration_admin_users.add(user2)
 
-    signup = SignUp.objects.create(
+    signup = SignUpFactory(
         registration=registration,
         first_name="Michael",
         last_name="Jackson",
         email="test@test.com",
     )
-    signup2 = SignUp.objects.create(
+    signup2 = SignUpFactory(
         registration=registration,
         first_name="Michael",
         last_name="Jackson2",
         email="test2@test.com",
     )
-    signup3 = SignUp.objects.create(
+    signup3 = SignUpFactory(
         registration=registration,
         first_name="Michael",
         last_name="Jackson3",
         email="test3@test.com",
     )
-    signup4 = SignUp.objects.create(
+    signup4 = SignUpFactory(
         registration=registration,
         first_name="Michael",
         last_name="Jackson4",
         email="test4@test.com",
     )
-    signup5 = SignUp.objects.create(
+    signup5 = SignUpFactory(
         registration=registration2,
         first_name="Joe",
         last_name="Biden",
         email="test@test.com",
         extra_info="cdef",
     )
-    signup6 = SignUp.objects.create(
+    signup6 = SignUpFactory(
         registration=registration2,
         first_name="Hillary",
         last_name="Clinton",
         email="test2@test.com",
         extra_info="abcd",
     )
-    signup7 = SignUp.objects.create(
+    signup7 = SignUpFactory(
         registration=registration2,
         first_name="Donald",
         last_name="Duck",
         email="test3@test.com",
         membership_number="1234",
     )
-    signup8 = SignUp.objects.create(
+    signup8 = SignUpFactory(
         registration=registration2,
         first_name="Mickey",
         last_name="Mouse",

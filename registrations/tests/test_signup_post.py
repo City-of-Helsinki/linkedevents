@@ -10,7 +10,7 @@ from rest_framework import status
 
 from events.models import Event, Language
 from events.tests.utils import versioned_reverse as reverse
-from registrations.models import MandatoryFields, SeatReservationCode, SignUp
+from registrations.models import MandatoryFields, SignUp
 from registrations.tests.factories import (
     SeatReservationCodeFactory,
     SignUpFactory,
@@ -225,7 +225,7 @@ def test_cannot_signup_if_enrolment_is_not_opened(
     registration.enrolment_end_time = localtime() + timedelta(days=2)
     registration.save()
 
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signup_data = {
         "first_name": "Michael",
         "last_name": "Jackson",
@@ -252,7 +252,7 @@ def test_cannot_signup_if_enrolment_is_closed(
     registration.enrolment_end_time = localtime() - timedelta(days=1)
     registration.save()
 
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signup_data = {
         "first_name": "Michael",
         "last_name": "Jackson",
@@ -297,7 +297,7 @@ def test_amount_if_signups_cannot_be_greater_than_maximum_group_size(
     registration.maximum_group_size = 2
     registration.save()
 
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=3)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=3)
     code = reservation.code
     signup_payload = {
         "first_name": "Mickey",
@@ -337,9 +337,7 @@ def test_cannot_signup_if_reservation_code_is_for_different_registration(
 ):
     user.get_default_organization().registration_admin_users.add(user)
 
-    reservation = SeatReservationCode.objects.create(
-        registration=registration2, seats=2
-    )
+    reservation = SeatReservationCodeFactory(registration=registration2, seats=2)
     code = reservation.code
     signups_payload = {
         "registration": registration.id,
@@ -358,7 +356,7 @@ def test_cannot_signup_if_number_of_signups_exceeds_number_reserved_seats(
 ):
     user.get_default_organization().registration_admin_users.add(user)
 
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
 
     signups_data = {
         "registration": registration.id,
@@ -390,7 +388,7 @@ def test_cannot_signup_if_reservation_code_is_expired(
 ):
     user.get_default_organization().registration_admin_users.add(user)
 
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     reservation.timestamp = reservation.timestamp - timedelta(days=1)
     reservation.save()
 
@@ -415,7 +413,7 @@ def test_cannot_signup_if_reservation_code_is_expired(
 def test_can_signup_twice_with_same_phone_or_email(user_api_client, registration, user):
     user.get_default_organization().registration_admin_users.add(user)
 
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=3)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=3)
     signup_data = {
         "first_name": "Michael",
         "last_name": "Jackson",
@@ -481,7 +479,7 @@ def test_date_of_birth_is_mandatory_if_audience_min_or_max_age_specified(
     if date_of_birth:
         signup_data["date_of_birth"] = date_of_birth
 
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signups_data = {
         "registration": registration.id,
         "reservation_code": reservation.code,
@@ -524,7 +522,7 @@ def test_signup_age_has_to_match_the_audience_min_max_age(
         "notifications": "sms",
         "date_of_birth": date_of_birth,
     }
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signups_data = {
         "registration": registration.id,
         "reservation_code": reservation.code,
@@ -569,7 +567,7 @@ def test_signup_mandatory_fields_has_to_be_filled(
         "notifications": "sms",
         mandatory_field_id: "",
     }
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signups_data = {
         "registration": registration.id,
         "reservation_code": reservation.code,
@@ -594,7 +592,7 @@ def test_cannot_signup_with_not_allowed_service_language(
     languages[0].service_language = False
     languages[0].save()
 
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signups_data = {
         "registration": registration.id,
         "reservation_code": reservation.code,
@@ -622,7 +620,7 @@ def test_group_signup_successful_with_waitlist(user_api_client, registration, us
     registration.waiting_list_capacity = 2
     registration.save()
 
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=2)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=2)
     signups_payload = {
         "registration": registration.id,
         "reservation_code": reservation.code,
@@ -642,9 +640,7 @@ def test_group_signup_successful_with_waitlist(user_api_client, registration, us
     assert_create_signups(user_api_client, signups_payload)
     assert registration.signups.count() == 2
 
-    reservation2 = SeatReservationCode.objects.create(
-        registration=registration, seats=2
-    )
+    reservation2 = SeatReservationCodeFactory(registration=registration, seats=2)
     signups_payload = {
         "registration": registration.id,
         "reservation_code": reservation2.code,
@@ -718,9 +714,7 @@ def test_email_sent_on_successful_signup(
         registration.event.name = "Foo"
         registration.event.save()
 
-        reservation = SeatReservationCode.objects.create(
-            registration=registration, seats=1
-        )
+        reservation = SeatReservationCodeFactory(registration=registration, seats=1)
         signup_data = {
             "first_name": "Michael",
             "last_name": "Jackson",
@@ -782,7 +776,7 @@ def test_confirmation_template_has_correct_text_per_event_type(
     registration.event.name = "Foo"
     registration.event.save()
 
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signup_data = {
         "first_name": "Michael",
         "last_name": "Jackson",
@@ -834,7 +828,7 @@ def test_confirmation_message_is_shown_in_service_language(
     registration.confirmation_message_fi = "Vahvistusviesti"
     registration.save()
 
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signup_data = {
         "first_name": "Michael",
         "last_name": "Jackson",
@@ -890,9 +884,7 @@ def test_different_email_sent_if_user_is_added_to_waiting_list(
         registration.event.save()
         registration.maximum_attendee_capacity = 1
         registration.save()
-        reservation = SeatReservationCode.objects.create(
-            registration=registration, seats=1
-        )
+        reservation = SeatReservationCodeFactory(registration=registration, seats=1)
         signup_data = {
             "first_name": "Michael",
             "last_name": "Jackson",
@@ -951,7 +943,7 @@ def test_confirmation_to_waiting_list_template_has_correct_text_per_event_type(
     registration.maximum_attendee_capacity = 1
     registration.save()
 
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signup_data = {
         "first_name": "Michael",
         "last_name": "Jackson",
