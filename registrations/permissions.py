@@ -56,13 +56,7 @@ class CanAccessSignup(UserDataFromRequestMixin, permissions.BasePermission):
             return False
 
         if request.method == "POST":
-            (
-                __,
-                user_organization,
-            ) = self.user_data_source_and_organization_from_request(request)
-            return request.user.is_superuser or request.user.is_registration_admin_of(
-                user_organization
-            )
+            return True
 
         if request.method in ("PATCH", "PUT", "DELETE"):
             (
