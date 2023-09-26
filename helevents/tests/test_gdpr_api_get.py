@@ -18,6 +18,7 @@ from registrations.tests.factories import (
     RegistrationFactory,
     SignUpFactory,
     SignUpGroupFactory,
+    SignUpProtectedDataFactory,
 )
 
 # === util methods ===
@@ -141,46 +142,54 @@ def test_authenticated_user_can_get_own_data(api_client, settings):
 
     signup_group = SignUpGroupFactory(registration=registration, created_by=user)
 
-    SignUpFactory(
+    first_signup = SignUpFactory(
         registration=registration,
         signup_group=signup_group,
         responsible_for_group=True,
         first_name="Mickey",
         last_name="Mouse",
         email="test@test.com",
-        date_of_birth="1928-05-15",
         city="Test City",
         street_address="Test Street 1",
         zipcode="12345",
         phone_number="+123123456789",
         native_language=language_en,
         service_language=language_fi,
-        extra_info="Test extra info #1",
         membership_number="00000",
         notifications=SignUp.NotificationType.EMAIL,
         attendee_status=SignUp.AttendeeStatus.ATTENDING,
         presence_status=SignUp.PresenceStatus.PRESENT,
         created_by=user,
     )
+    SignUpProtectedDataFactory(
+        registration=registration,
+        signup=first_signup,
+        date_of_birth="1928-05-15",
+        extra_info="Test extra info #1",
+    )
 
-    SignUpFactory(
+    second_signup = SignUpFactory(
         registration=registration,
         first_name="James",
         last_name="Bond",
         email="test007@test.com",
-        date_of_birth="1920-11-11",
         city="Test City #2",
         street_address="Test Street 2",
         zipcode="12121",
         phone_number="+123000111222",
         native_language=language_en,
         service_language=language_en,
-        extra_info="Test extra info #2",
         membership_number="00001",
         notifications=SignUp.NotificationType.SMS,
         attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
         presence_status=SignUp.PresenceStatus.NOT_PRESENT,
         created_by=user,
+    )
+    SignUpProtectedDataFactory(
+        registration=registration,
+        signup=second_signup,
+        date_of_birth="1920-11-11",
+        extra_info="Test extra info #2",
     )
 
     with requests_mock.Mocker() as req_mock:

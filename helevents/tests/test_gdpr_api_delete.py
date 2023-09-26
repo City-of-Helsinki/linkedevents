@@ -11,11 +11,18 @@ from events.tests.conftest import APIClient
 from helevents.models import User
 from helevents.tests.conftest import get_api_token_for_user_with_scopes
 from helevents.tests.factories import UserFactory
-from registrations.models import SignUp, SignUpGroup
+from registrations.models import (
+    SignUp,
+    SignUpGroup,
+    SignUpGroupProtectedData,
+    SignUpProtectedData,
+)
 from registrations.tests.factories import (
     RegistrationFactory,
     SignUpFactory,
     SignUpGroupFactory,
+    SignUpGroupProtectedDataFactory,
+    SignUpProtectedDataFactory,
 )
 
 # === util methods ===
@@ -38,12 +45,23 @@ def test_authenticated_user_can_delete_own_data(api_client, settings):
     registration = RegistrationFactory()
 
     signup_group = SignUpGroupFactory(registration=registration, created_by=user)
-    SignUpFactory(signup_group=signup_group, registration=registration, created_by=user)
-    SignUpFactory(registration=registration, created_by=user)
+    first_signup = SignUpFactory(
+        signup_group=signup_group, registration=registration, created_by=user
+    )
+    second_signup = SignUpFactory(registration=registration, created_by=user)
+
+    SignUpGroupProtectedDataFactory(
+        signup_group=signup_group, registration=registration
+    )
+    SignUpProtectedDataFactory(signup=first_signup, registration=registration)
+    SignUpProtectedDataFactory(signup=second_signup, registration=registration)
 
     assert User.objects.count() == 1
     assert SignUpGroup.objects.count() == 1
     assert SignUp.objects.count() == 2
+
+    assert SignUpGroupProtectedData.objects.count() == 1
+    assert SignUpProtectedData.objects.count() == 2
 
     with (
         requests_mock.Mocker() as req_mock,
@@ -65,6 +83,9 @@ def test_authenticated_user_can_delete_own_data(api_client, settings):
     assert SignUpGroup.objects.count() == 0
     assert SignUp.objects.count() == 0
 
+    assert SignUpGroupProtectedData.objects.count() == 1
+    assert SignUpProtectedData.objects.count() == 2
+
 
 @pytest.mark.django_db
 def test_authenticated_user_cannot_delete_other_users_data(api_client, settings):
@@ -76,14 +97,23 @@ def test_authenticated_user_cannot_delete_other_users_data(api_client, settings)
     registration = RegistrationFactory()
 
     signup_group = SignUpGroupFactory(registration=registration, created_by=other_user)
-    SignUpFactory(
+    first_signup = SignUpFactory(
         registration=registration, signup_group=signup_group, created_by=other_user
     )
-    SignUpFactory(registration=registration, created_by=other_user)
+    second_signup = SignUpFactory(registration=registration, created_by=other_user)
+
+    SignUpGroupProtectedDataFactory(
+        signup_group=signup_group, registration=registration
+    )
+    SignUpProtectedDataFactory(signup=first_signup, registration=registration)
+    SignUpProtectedDataFactory(signup=second_signup, registration=registration)
 
     assert User.objects.count() == 2
     assert SignUpGroup.objects.count() == 1
     assert SignUp.objects.count() == 2
+
+    assert SignUpGroupProtectedData.objects.count() == 1
+    assert SignUpProtectedData.objects.count() == 2
 
     with requests_mock.Mocker() as req_mock:
         auth_header = get_api_token_for_user_with_scopes(
@@ -98,6 +128,9 @@ def test_authenticated_user_cannot_delete_other_users_data(api_client, settings)
     assert SignUpGroup.objects.count() == 1
     assert SignUp.objects.count() == 2
 
+    assert SignUpGroupProtectedData.objects.count() == 1
+    assert SignUpProtectedData.objects.count() == 2
+
 
 @pytest.mark.django_db
 def test_non_authenticated_user_cannot_delete_any_data(api_client, settings):
@@ -108,12 +141,23 @@ def test_non_authenticated_user_cannot_delete_any_data(api_client, settings):
     registration = RegistrationFactory()
 
     signup_group = SignUpGroupFactory(registration=registration, created_by=user)
-    SignUpFactory(registration=registration, signup_group=signup_group, created_by=user)
-    SignUpFactory(registration=registration, created_by=user)
+    first_signup = SignUpFactory(
+        registration=registration, signup_group=signup_group, created_by=user
+    )
+    second_signup = SignUpFactory(registration=registration, created_by=user)
+
+    SignUpGroupProtectedDataFactory(
+        signup_group=signup_group, registration=registration
+    )
+    SignUpProtectedDataFactory(signup=first_signup, registration=registration)
+    SignUpProtectedDataFactory(signup=second_signup, registration=registration)
 
     assert User.objects.count() == 1
     assert SignUpGroup.objects.count() == 1
     assert SignUp.objects.count() == 2
+
+    assert SignUpGroupProtectedData.objects.count() == 1
+    assert SignUpProtectedData.objects.count() == 2
 
     response = _delete_gdpr_data(api_client, user.uuid)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -121,3 +165,6 @@ def test_non_authenticated_user_cannot_delete_any_data(api_client, settings):
     assert User.objects.count() == 1
     assert SignUpGroup.objects.count() == 1
     assert SignUp.objects.count() == 2
+
+    assert SignUpGroupProtectedData.objects.count() == 1
+    assert SignUpProtectedData.objects.count() == 2

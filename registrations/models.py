@@ -278,6 +278,11 @@ class Registration(CreatedModifiedBaseModel):
 
 
 class SignUpMixin:
+    @cached_property
+    def extra_info(self):
+        protected_data = getattr(self, "protected_data", None)
+        return getattr(protected_data, "extra_info", None)
+
     @property
     def data_source(self):
         return self.registration.data_source
@@ -588,6 +593,11 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
             "accessor": lambda value: dict(SignUp.PRESENCE_STATUSES).get(value, value),
         },
     )
+
+    @cached_property
+    def date_of_birth(self):
+        protected_data = getattr(self, "protected_data", None)
+        return getattr(protected_data, "date_of_birth", None)
 
     def get_service_language_pk(self):
         if self.service_language:
