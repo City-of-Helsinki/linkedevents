@@ -7,8 +7,9 @@ from django.test import TestCase
 from django.utils import timezone
 
 from events.importer.kulke import KulkeImporter, parse_age_range, parse_course_time
-from events.models import Event, EventAggregate, EventAggregateMember
+from events.models import Event
 from events.tests.factories import DataSourceFactory, EventFactory, KeywordFactory
+from events.tests.utils import create_super_event
 
 
 @pytest.mark.django_db
@@ -67,24 +68,6 @@ class TestKulkeImporter(TestCase):
         with patch.object(KulkeImporter, "fetch_kulke_categories", return_value={}):
             self.importer = KulkeImporter(options={})
         self.data_source = self.importer.data_source
-
-    def _create_super_event(self, events: list[Event], data_source=None) -> Event:
-        data_source = data_source or self.data_source
-        aggregate = EventAggregate.objects.create()
-        super_event = EventFactory(
-            super_event_type=Event.SuperEventType.RECURRING,
-            data_source=data_source,
-            id="linkedevents:agg-{}".format(aggregate.id),
-        )
-        super_event.save()
-        aggregate.super_event = super_event
-        aggregate.save()
-        event_aggregates = [
-            EventAggregateMember(event=event, event_aggregate=aggregate)
-            for event in events
-        ]
-        EventAggregateMember.objects.bulk_create(event_aggregates)
-        return super_event
 
     def assert_event_soft_deleted(self, event_id: str, deleted: bool):
         """
@@ -149,7 +132,7 @@ class TestKulkeImporter(TestCase):
         )
         event_2.keywords.add(kw2, kw3)
         event_2.save()
-        super_event = self._create_super_event([event_1, event_2])
+        super_event = create_super_event([event_1, event_2], self.data_source)
 
         self.importer._update_super_event(super_event, [event_1, event_2])
         # The super event should have the common part for the name
@@ -184,7 +167,7 @@ class TestKulkeImporter(TestCase):
             end_time=now + timedelta(hours=1),
             data_source=self.data_source,
         )
-        super_event = self._create_super_event([event_1, event_2])
+        super_event = create_super_event([event_1, event_2], self.data_source)
 
         self.importer._update_super_event(super_event, [event_1, event_2])
         # If the name does not have a common part, default to the first event's name
@@ -288,7 +271,9 @@ class TestKulkeImporter(TestCase):
         super_1_event_2 = EventFactory(
             data_source=self.data_source, origin_id=2, start_time=now
         )
-        super_1 = self._create_super_event([super_1_event_1, super_1_event_2])
+        super_1 = create_super_event(
+            [super_1_event_1, super_1_event_2], self.data_source
+        )
 
         # This super event is in Elis. It should not be removed.
         super_2_event_1 = EventFactory(
@@ -297,10 +282,12 @@ class TestKulkeImporter(TestCase):
         super_2_event_2 = EventFactory(
             data_source=self.data_source, origin_id=4, start_time=now
         )
-        super_2 = self._create_super_event([super_2_event_1, super_2_event_2])
+        super_2 = create_super_event(
+            [super_2_event_1, super_2_event_2], self.data_source
+        )
 
         # This super event is empty to begin with -- it should be removed
-        super_3 = self._create_super_event([])
+        super_3 = create_super_event([], self.data_source)
 
         self.importer._handle_removed_events(
             elis_event_ids=[super_2_event_1.origin_id, super_2_event_2.origin_id],
@@ -327,7 +314,7 @@ class TestKulkeImporter(TestCase):
         super_1_event_2 = EventFactory(
             data_source=other_data_source, origin_id=2, start_time=now
         )
-        super_1 = self._create_super_event(
+        super_1 = create_super_event(
             [super_1_event_1, super_1_event_2], other_data_source
         )
 
@@ -338,10 +325,12 @@ class TestKulkeImporter(TestCase):
         super_2_event_2 = EventFactory(
             data_source=self.data_source, origin_id=4, start_time=now
         )
-        super_2 = self._create_super_event([super_2_event_1, super_2_event_2])
+        super_2 = create_super_event(
+            [super_2_event_1, super_2_event_2], self.data_source
+        )
 
         # This super event is empty, but it's also not kulke event. It shouldn't be removed.
-        super_3 = self._create_super_event([], other_data_source)
+        super_3 = create_super_event([], other_data_source)
 
         self.importer._handle_removed_events(
             elis_event_ids=[super_2_event_1.origin_id, super_2_event_2.origin_id],
