@@ -985,9 +985,12 @@ class KulkeImporter(Importer):
         logger.info("Importing Kulke events")
         self._import_events()
 
-    def import_courses(self):
-        logger.info("Importing Kulke courses")
-        self._import_events(importing_courses=True)
+    # FIXME: Commented out to avoid any unfortunate accidents.
+    #        Not quite sure if course import works or not.
+    #        Uncomment to enable course import.
+    # def import_courses(self):
+    #     logger.info("Importing Kulke courses")
+    #     self._import_events(importing_courses=True)
 
     def _iter_elis_events(
         self, language: str, begin_date: datetime
