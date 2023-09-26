@@ -3371,21 +3371,20 @@ class EventFilter(django_filters.rest_framework.FilterSet):
     dwithin = django_filters.Filter(
         method="filter_dwithin", widget=DistanceWithinWidget()
     )
-
     maximum_attendee_capacity_gte = django_filters.NumberFilter(
         field_name="maximum_attendee_capacity", lookup_expr="gte"
     )
-
     minimum_attendee_capacity_gte = django_filters.NumberFilter(
         field_name="minimum_attendee_capacity", lookup_expr="gte"
     )
-
     maximum_attendee_capacity_lte = django_filters.NumberFilter(
         field_name="maximum_attendee_capacity", lookup_expr="lte"
     )
-
     minimum_attendee_capacity_lte = django_filters.NumberFilter(
         field_name="minimum_attendee_capacity", lookup_expr="lte"
+    )
+    hide_recurring_children = django_filters.BooleanFilter(
+        method="filter_hide_recurring_children"
     )
 
     class Meta:
@@ -3416,6 +3415,18 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         )
 
         return queryset.filter(location__in=places)
+
+    def filter_hide_recurring_children(self, queryset, name, value: Optional[bool]):
+        if not value:
+            return queryset
+
+        # There are two different structures that can define a super event
+        # for recurring events.
+        return queryset.exclude(
+            super_event__super_event_type=Event.SuperEventType.RECURRING
+        ).exclude(
+            eventaggregatemember__event_aggregate__super_event__super_event_type=Event.SuperEventType.RECURRING
+        )
 
 
 class EventDeletedException(APIException):

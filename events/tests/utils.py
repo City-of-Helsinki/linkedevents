@@ -6,6 +6,9 @@ from rest_framework.reverse import reverse
 from rest_framework.settings import api_settings
 from rest_framework.test import APIRequestFactory
 
+from events.models import Event, EventAggregate, EventAggregateMember
+from events.tests.factories import EventFactory
+
 
 def assert_event_data_is_equal(d1, d2, version="v1"):
     # TODO: start using version parameter
@@ -155,3 +158,23 @@ def datetime_zone_aware(year, month, day, hour, minute):
     return datetime(year, month, day, hour, minute).astimezone(
         pytz.timezone(settings.TIME_ZONE)
     )
+
+
+def create_super_event(events: list[Event], data_source) -> Event:
+    """Create super event for the given set of events."""
+    aggregate = EventAggregate.objects.create()
+    super_event = EventFactory(
+        super_event_type=Event.SuperEventType.RECURRING,
+        data_source=data_source,
+        id="linkedevents:agg-{}".format(aggregate.id),
+    )
+    aggregate.super_event = super_event
+    aggregate.save()
+    event_aggregates = [
+        EventAggregateMember(event=event, event_aggregate=aggregate) for event in events
+    ]
+    EventAggregateMember.objects.bulk_create(event_aggregates)
+    for event in events:
+        event.super_event = aggregate.super_event
+    Event.objects.bulk_update(events, ("super_event",))
+    return super_event
