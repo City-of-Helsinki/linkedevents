@@ -52,26 +52,7 @@ class CanAccessRegistration(UserDataFromRequestMixin, permissions.BasePermission
 
 class CanAccessSignup(UserDataFromRequestMixin, permissions.BasePermission):
     def has_permission(self, request: Request, view: APIView) -> bool:
-        if not request.user.is_authenticated:
-            return False
-
-        if request.method == "POST":
-            (
-                __,
-                user_organization,
-            ) = self.user_data_source_and_organization_from_request(request)
-            return request.user.is_superuser or request.user.is_registration_admin_of(
-                user_organization
-            )
-
-        if request.method in ("PATCH", "PUT", "DELETE"):
-            (
-                __,
-                user_organization,
-            ) = self.user_data_source_and_organization_from_request(request)
-            return bool(user_organization)
-
-        return request.method in permissions.SAFE_METHODS
+        return request.user.is_authenticated
 
     def has_object_permission(
         self, request: Request, view: APIView, obj: SignUp

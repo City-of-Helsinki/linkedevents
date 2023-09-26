@@ -156,6 +156,35 @@ def test_regular_created_user_can_get_signup_group(user_api_client, user, organi
 
 
 @pytest.mark.django_db
+def test_non_created_user_without_organization_cannot_get_signup_group(
+    api_client, organization
+):
+    user = UserFactory()
+    api_client.force_authenticate(user)
+    signup_group = SignUpGroupFactory(registration__event__publisher=organization)
+
+    response = get_detail(api_client, signup_group.id)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_created_user_without_organization_can_get_signup_group(
+    api_client, organization
+):
+    user = UserFactory()
+    api_client.force_authenticate(user)
+    signup_group = SignUpGroupFactory(
+        registration__event__publisher=organization, created_by=user
+    )
+    SignUpFactory(registration=signup_group.registration, signup_group=signup_group)
+    SignUpFactory(registration=signup_group.registration, signup_group=signup_group)
+
+    response = assert_get_detail(api_client, signup_group.id)
+    assert len(response.json()["signups"]) == 2
+    assert_signup_group_fields_exist(response.data)
+
+
+@pytest.mark.django_db
 def test_user_from_other_organization_cannot_get_signup_group(
     api_client, user2, organization
 ):

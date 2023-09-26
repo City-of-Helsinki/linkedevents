@@ -5,7 +5,12 @@ from rest_framework import status
 
 from events.models import Event, Language
 from events.tests.utils import versioned_reverse as reverse
-from registrations.models import RegistrationUserAccess, SeatReservationCode, SignUp
+from helevents.tests.factories import UserFactory
+from registrations.models import SignUp
+from registrations.tests.factories import (
+    RegistrationUserAccessFactory,
+    SeatReservationCodeFactory,
+)
 from registrations.tests.test_signup_post import assert_create_signups
 
 # === util methods ===
@@ -145,7 +150,7 @@ def test_cancellation_confirmation_template_has_correct_text_per_event_type(
 
 
 @pytest.mark.django_db
-def test__cannot_delete_already_deleted_signup(signup, user_api_client, user):
+def test_cannot_delete_already_deleted_signup(signup, user_api_client, user):
     user.get_default_organization().registration_admin_users.add(user)
 
     assert_delete_signup(user_api_client, signup.id)
@@ -154,18 +159,18 @@ def test__cannot_delete_already_deleted_signup(signup, user_api_client, user):
 
 
 @pytest.mark.django_db
-def test__registration_user_access_cannot_delete_signup(
+def test_registration_user_access_cannot_delete_signup(
     registration, signup, user, user_api_client
 ):
     user.get_default_organization().admin_users.remove(user)
-    RegistrationUserAccess.objects.create(registration=registration, email=user.email)
+    RegistrationUserAccessFactory(registration=registration, email=user.email)
 
     response = delete_signup(user_api_client, signup.id)
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db
-def test__regular_not_created_user_cannot_delete_signup(signup, user, user_api_client):
+def test_regular_not_created_user_cannot_delete_signup(signup, user, user_api_client):
     user.get_default_organization().regular_users.add(user)
     user.get_default_organization().admin_users.remove(user)
 
@@ -174,18 +179,28 @@ def test__regular_not_created_user_cannot_delete_signup(signup, user, user_api_c
 
 
 @pytest.mark.django_db
-def test__created_authenticated_user_can_delete_signup(user_api_client, signup, user):
+def test_created_user_without_organization_can_delete_signup(
+    user_api_client, signup, user
+):
     signup.created_by = user
     signup.save(update_fields=["created_by"])
 
-    user.get_default_organization().regular_users.add(user)
     user.get_default_organization().admin_users.remove(user)
 
     assert_delete_signup(user_api_client, signup.id)
 
 
 @pytest.mark.django_db
-def test__created_not_authenticated_user_cannot_delete_signup(
+def test_not_created_user_without_organization_cannot_delete_signup(api_client, signup):
+    user = UserFactory()
+    api_client.force_authenticate(user)
+
+    response = delete_signup(api_client, signup.id)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_created_not_authenticated_user_cannot_delete_signup(
     user_api_client, signup, user
 ):
     signup.created_by = user
@@ -201,7 +216,7 @@ def test__created_not_authenticated_user_cannot_delete_signup(
 
 
 @pytest.mark.django_db
-def test__api_key_with_organization_can_delete_signup(
+def test_api_key_with_organization_can_delete_signup(
     api_client, data_source, organization, signup
 ):
     data_source.user_editable_registrations = True
@@ -213,7 +228,7 @@ def test__api_key_with_organization_can_delete_signup(
 
 
 @pytest.mark.django_db
-def test__api_key_of_other_organization_cannot_delete_signup(
+def test_api_key_of_other_organization_cannot_delete_signup(
     api_client, data_source, organization2, signup
 ):
     data_source.owner = organization2
@@ -225,7 +240,7 @@ def test__api_key_of_other_organization_cannot_delete_signup(
 
 
 @pytest.mark.django_db
-def test__api_key_from_wrong_data_source_cannot_delete_signup(
+def test_api_key_from_wrong_data_source_cannot_delete_signup(
     api_client, organization, other_data_source, signup
 ):
     other_data_source.owner = organization
@@ -237,7 +252,7 @@ def test__api_key_from_wrong_data_source_cannot_delete_signup(
 
 
 @pytest.mark.django_db
-def test__unknown_api_key_cannot_delete_signup(api_client, signup):
+def test_unknown_api_key_cannot_delete_signup(api_client, signup):
     api_client.credentials(apikey="unknown")
 
     response = delete_signup(api_client, signup.id)
@@ -267,7 +282,7 @@ def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
     registration.maximum_attendee_capacity = 1
     registration.save()
 
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signup_data = {
         "name": "Michael Jackson1",
         "email": "test@test.com",
@@ -280,9 +295,7 @@ def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
     response = assert_create_signups(user_api_client, signups_data)
     signup_id = response.data["attending"]["people"][0]["id"]
 
-    reservation2 = SeatReservationCode.objects.create(
-        registration=registration, seats=1
-    )
+    reservation2 = SeatReservationCodeFactory(registration=registration, seats=1)
     signup_data2 = {
         "name": "Michael Jackson2",
         "email": "test1@test.com",
@@ -294,9 +307,7 @@ def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
     }
     assert_create_signups(user_api_client, signups_data2)
 
-    reservation3 = SeatReservationCode.objects.create(
-        registration=registration, seats=1
-    )
+    reservation3 = SeatReservationCodeFactory(registration=registration, seats=1)
     signup_data3 = {
         "name": "Michael Jackson3",
         "email": "test2@test.com",

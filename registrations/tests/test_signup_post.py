@@ -10,12 +10,32 @@ from rest_framework import status
 
 from events.models import Event, Language
 from events.tests.utils import versioned_reverse as reverse
-from registrations.models import MandatoryFields, SeatReservationCode, SignUp
+from helevents.tests.factories import UserFactory
+from registrations.models import MandatoryFields, SignUp
 from registrations.tests.factories import (
     SeatReservationCodeFactory,
     SignUpFactory,
     SignUpGroupFactory,
 )
+
+test_email1 = "test@email.com"
+test_street_address = "my street"
+default_signups_data = {
+    "signups": [
+        {
+            "first_name": "Michael",
+            "last_name": "Jackson",
+            "date_of_birth": "2011-04-07",
+            "email": test_email1,
+            "phone_number": "0441111111",
+            "notifications": "sms",
+            "service_language": "fi",
+            "native_language": "fi",
+            "street_address": test_street_address,
+            "zipcode": "myzip1",
+        }
+    ],
+}
 
 # === util methods ===
 
@@ -34,34 +54,7 @@ def assert_create_signups(api_client, signups_data):
     return response
 
 
-# === tests ===
-
-
-@pytest.mark.django_db
-def test_successful_signup(user_api_client, languages, registration, user):
-    user.get_default_organization().registration_admin_users.add(user)
-
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
-    signups_data = {
-        "registration": registration.id,
-        "reservation_code": reservation.code,
-        "signups": [
-            {
-                "first_name": "Michael",
-                "last_name": "Jackson",
-                "date_of_birth": "2011-04-07",
-                "email": "test@test.com",
-                "phone_number": "0441111111",
-                "notifications": "sms",
-                "service_language": "fi",
-                "native_language": "fi",
-                "street_address": "my street",
-                "zipcode": "myzip1",
-            }
-        ],
-    }
-
-    assert_create_signups(user_api_client, signups_data)
+def assert_default_signup_created(signups_data, user):
     assert SignUp.objects.count() == 1
 
     signup = SignUp.objects.first()
@@ -80,6 +73,83 @@ def test_successful_signup(user_api_client, languages, registration, user):
     assert signup.last_modified_by_id == user.id
     assert signup.created_time is not None
     assert signup.last_modified_time is not None
+
+
+# === tests ===
+
+
+@pytest.mark.django_db
+def test_registration_admin_can_create_signups(
+    languages, organization, user, user_api_client
+):
+    user.get_default_organization().registration_admin_users.add(user)
+    user.get_default_organization().admin_users.remove(user)
+
+    assert SignUp.objects.count() == 0
+    reservation = SeatReservationCodeFactory(seats=1)
+    signups_data = default_signups_data
+    signups_data["registration"] = reservation.registration.id
+    signups_data["reservation_code"] = reservation.code
+
+    assert_create_signups(user_api_client, signups_data)
+    assert_default_signup_created(signups_data, user)
+
+
+@pytest.mark.django_db
+def test_organization_admin_can_create_signups(
+    languages, organization, user, user_api_client
+):
+    assert SignUp.objects.count() == 0
+    reservation = SeatReservationCodeFactory(seats=1)
+    signups_data = default_signups_data
+    signups_data["registration"] = reservation.registration.id
+    signups_data["reservation_code"] = reservation.code
+
+    assert_create_signups(user_api_client, signups_data)
+    assert_default_signup_created(signups_data, user)
+
+
+@pytest.mark.django_db
+def test_regular_user_can_create_signups(
+    languages, organization, registration, user, user_api_client
+):
+    user.get_default_organization().regular_users.add(user)
+    user.get_default_organization().admin_users.remove(user)
+
+    assert SignUp.objects.count() == 0
+    reservation = SeatReservationCodeFactory(seats=1)
+    signups_data = default_signups_data
+    signups_data["registration"] = reservation.registration.id
+    signups_data["reservation_code"] = reservation.code
+
+    assert_create_signups(user_api_client, signups_data)
+    assert_default_signup_created(signups_data, user)
+
+
+@pytest.mark.django_db
+def test_user_without_organization_can_create_signups(api_client, languages):
+    user = UserFactory()
+    api_client.force_authenticate(user)
+
+    assert SignUp.objects.count() == 0
+    reservation = SeatReservationCodeFactory(seats=1)
+    signups_data = default_signups_data
+    signups_data["registration"] = reservation.registration.id
+    signups_data["reservation_code"] = reservation.code
+
+    assert_create_signups(api_client, signups_data)
+    assert_default_signup_created(signups_data, user)
+
+
+@pytest.mark.django_db
+def test_non_authenticated_user_cannot_create_signups(api_client, languages):
+    reservation = SeatReservationCodeFactory(seats=1)
+    signups_data = default_signups_data
+    signups_data["registration"] = reservation.registration.id
+    signups_data["reservation_code"] = reservation.code
+
+    response = create_signups(api_client, signups_data)
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.django_db
@@ -106,7 +176,7 @@ def test_add_signups_to_group(user_api_client, languages, registration, user):
                 "notifications": "sms",
                 "service_language": "fi",
                 "native_language": "fi",
-                "street_address": "my street",
+                "street_address": test_street_address,
                 "zipcode": "myzip1",
             },
             {
@@ -119,7 +189,7 @@ def test_add_signups_to_group(user_api_client, languages, registration, user):
                 "notifications": "sms",
                 "service_language": "en",
                 "native_language": "en",
-                "street_address": "my street",
+                "street_address": test_street_address,
                 "zipcode": "myzip1",
             },
         ],
@@ -146,57 +216,6 @@ def test_add_signups_to_group(user_api_client, languages, registration, user):
 
 
 @pytest.mark.django_db
-def test_cannot_signup_if_not_registration_admin(user_api_client, event, registration):
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
-
-    signups_data = {
-        "registration": registration.id,
-        "reservation_code": reservation.code,
-        "signups": [
-            {
-                "name": "Michael Jackson",
-                "date_of_birth": "2011-04-07",
-                "email": "test@test.com",
-                "phone_number": "0441111111",
-                "notifications": "sms",
-                "service_language": "fi",
-                "native_language": "fi",
-                "street_address": "my street",
-                "zipcode": "myzip1",
-            }
-        ],
-    }
-
-    response = create_signups(user_api_client, signups_data)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
-
-@pytest.mark.django_db
-def test_cannot_signup_if_not_authenticated(api_client, event, registration, user):
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
-    signups_data = {
-        "registration": registration.id,
-        "reservation_code": reservation.code,
-        "signups": [
-            {
-                "name": "Michael Jackson",
-                "date_of_birth": "2011-04-07",
-                "email": "test@test.com",
-                "phone_number": "0441111111",
-                "notifications": "sms",
-                "service_language": "fi",
-                "native_language": "fi",
-                "street_address": "my street",
-                "zipcode": "myzip1",
-            }
-        ],
-    }
-
-    response = create_signups(api_client, signups_data)
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-
-
-@pytest.mark.django_db
 def test_cannot_signup_if_enrolment_is_not_opened(
     user_api_client, event, registration, user
 ):
@@ -206,11 +225,11 @@ def test_cannot_signup_if_enrolment_is_not_opened(
     registration.enrolment_end_time = localtime() + timedelta(days=2)
     registration.save()
 
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signup_data = {
         "first_name": "Michael",
         "last_name": "Jackson",
-        "email": "test@test.com",
+        "email": test_email1,
         "phone_number": "0441111111",
     }
     signups_data = {
@@ -233,11 +252,11 @@ def test_cannot_signup_if_enrolment_is_closed(
     registration.enrolment_end_time = localtime() - timedelta(days=1)
     registration.save()
 
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signup_data = {
         "first_name": "Michael",
         "last_name": "Jackson",
-        "email": "test@test.com",
+        "email": test_email1,
         "phone_number": "0441111111",
     }
     signups_data = {
@@ -278,7 +297,7 @@ def test_amount_if_signups_cannot_be_greater_than_maximum_group_size(
     registration.maximum_group_size = 2
     registration.save()
 
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=3)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=3)
     code = reservation.code
     signup_payload = {
         "first_name": "Mickey",
@@ -318,9 +337,7 @@ def test_cannot_signup_if_reservation_code_is_for_different_registration(
 ):
     user.get_default_organization().registration_admin_users.add(user)
 
-    reservation = SeatReservationCode.objects.create(
-        registration=registration2, seats=2
-    )
+    reservation = SeatReservationCodeFactory(registration=registration2, seats=2)
     code = reservation.code
     signups_payload = {
         "registration": registration.id,
@@ -339,7 +356,7 @@ def test_cannot_signup_if_number_of_signups_exceeds_number_reserved_seats(
 ):
     user.get_default_organization().registration_admin_users.add(user)
 
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
 
     signups_data = {
         "registration": registration.id,
@@ -371,7 +388,7 @@ def test_cannot_signup_if_reservation_code_is_expired(
 ):
     user.get_default_organization().registration_admin_users.add(user)
 
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     reservation.timestamp = reservation.timestamp - timedelta(days=1)
     reservation.save()
 
@@ -396,11 +413,11 @@ def test_cannot_signup_if_reservation_code_is_expired(
 def test_can_signup_twice_with_same_phone_or_email(user_api_client, registration, user):
     user.get_default_organization().registration_admin_users.add(user)
 
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=3)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=3)
     signup_data = {
         "first_name": "Michael",
         "last_name": "Jackson",
-        "email": "test@test.com",
+        "email": test_email1,
         "phone_number": "0441111111",
         "date_of_birth": "2011-04-07",
     }
@@ -455,14 +472,14 @@ def test_date_of_birth_is_mandatory_if_audience_min_or_max_age_specified(
     signup_data = {
         "first_name": "Michael",
         "last_name": "Jackson",
-        "email": "test@test.com",
+        "email": test_email1,
         "phone_number": "0441111111",
         "notifications": "sms",
     }
     if date_of_birth:
         signup_data["date_of_birth"] = date_of_birth
 
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signups_data = {
         "registration": registration.id,
         "reservation_code": reservation.code,
@@ -500,12 +517,12 @@ def test_signup_age_has_to_match_the_audience_min_max_age(
     signup_data = {
         "first_name": "Michael",
         "last_name": "Jackson",
-        "email": "test@test.com",
+        "email": test_email1,
         "phone_number": "0441111111",
         "notifications": "sms",
         "date_of_birth": date_of_birth,
     }
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signups_data = {
         "registration": registration.id,
         "reservation_code": reservation.code,
@@ -542,7 +559,7 @@ def test_signup_mandatory_fields_has_to_be_filled(
     signup_data = {
         "first_name": "Michael",
         "last_name": "Jackson",
-        "email": "test@test.com",
+        "email": test_email1,
         "phone_number": "0441111111",
         "street_address": "Street address",
         "city": "Helsinki",
@@ -550,7 +567,7 @@ def test_signup_mandatory_fields_has_to_be_filled(
         "notifications": "sms",
         mandatory_field_id: "",
     }
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signups_data = {
         "registration": registration.id,
         "reservation_code": reservation.code,
@@ -575,7 +592,7 @@ def test_cannot_signup_with_not_allowed_service_language(
     languages[0].service_language = False
     languages[0].save()
 
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signups_data = {
         "registration": registration.id,
         "reservation_code": reservation.code,
@@ -584,7 +601,7 @@ def test_cannot_signup_with_not_allowed_service_language(
                 "first_name": "Michael",
                 "last_name": "Jackson",
                 "date_of_birth": "2011-04-07",
-                "email": "test@test.com",
+                "email": test_email1,
                 "service_language": languages[0].pk,
             }
         ],
@@ -603,7 +620,7 @@ def test_group_signup_successful_with_waitlist(user_api_client, registration, us
     registration.waiting_list_capacity = 2
     registration.save()
 
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=2)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=2)
     signups_payload = {
         "registration": registration.id,
         "reservation_code": reservation.code,
@@ -623,9 +640,7 @@ def test_group_signup_successful_with_waitlist(user_api_client, registration, us
     assert_create_signups(user_api_client, signups_payload)
     assert registration.signups.count() == 2
 
-    reservation2 = SeatReservationCode.objects.create(
-        registration=registration, seats=2
-    )
+    reservation2 = SeatReservationCodeFactory(registration=registration, seats=2)
     signups_payload = {
         "registration": registration.id,
         "reservation_code": reservation2.code,
@@ -699,14 +714,12 @@ def test_email_sent_on_successful_signup(
         registration.event.name = "Foo"
         registration.event.save()
 
-        reservation = SeatReservationCode.objects.create(
-            registration=registration, seats=1
-        )
+        reservation = SeatReservationCodeFactory(registration=registration, seats=1)
         signup_data = {
             "first_name": "Michael",
             "last_name": "Jackson",
             "date_of_birth": "2011-04-07",
-            "email": "test@test.com",
+            "email": test_email1,
             "service_language": service_language,
         }
         signups_data = {
@@ -763,11 +776,11 @@ def test_confirmation_template_has_correct_text_per_event_type(
     registration.event.name = "Foo"
     registration.event.save()
 
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signup_data = {
         "first_name": "Michael",
         "last_name": "Jackson",
-        "email": "test@test.com",
+        "email": test_email1,
         "service_language": "en",
     }
     signups_data = {
@@ -815,11 +828,11 @@ def test_confirmation_message_is_shown_in_service_language(
     registration.confirmation_message_fi = "Vahvistusviesti"
     registration.save()
 
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signup_data = {
         "first_name": "Michael",
         "last_name": "Jackson",
-        "email": "test@test.com",
+        "email": test_email1,
         "service_language": service_language,
     }
     signups_data = {
@@ -871,13 +884,11 @@ def test_different_email_sent_if_user_is_added_to_waiting_list(
         registration.event.save()
         registration.maximum_attendee_capacity = 1
         registration.save()
-        reservation = SeatReservationCode.objects.create(
-            registration=registration, seats=1
-        )
+        reservation = SeatReservationCodeFactory(registration=registration, seats=1)
         signup_data = {
             "first_name": "Michael",
             "last_name": "Jackson",
-            "email": "test@test.com",
+            "email": test_email1,
             "service_language": service_language,
         }
         signups_data = {
@@ -932,11 +943,11 @@ def test_confirmation_to_waiting_list_template_has_correct_text_per_event_type(
     registration.maximum_attendee_capacity = 1
     registration.save()
 
-    reservation = SeatReservationCode.objects.create(registration=registration, seats=1)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signup_data = {
         "first_name": "Michael",
         "last_name": "Jackson",
-        "email": "test@test.com",
+        "email": test_email1,
         "service_language": "en",
     }
     signups_data = {

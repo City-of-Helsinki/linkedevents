@@ -6,12 +6,15 @@ from rest_framework import status
 from events.models import Event
 from events.tests.factories import LanguageFactory
 from events.tests.utils import versioned_reverse as reverse
+from helevents.tests.factories import UserFactory
 from registrations.models import SignUp, SignUpGroup
 from registrations.tests.factories import (
     RegistrationUserAccessFactory,
     SignUpFactory,
     SignUpGroupFactory,
 )
+
+test_email1 = "test@test.com"
 
 # === util methods ===
 
@@ -155,7 +158,7 @@ def test_email_sent_on_successful_signup_group_deletion(
         signup_group=signup_group,
         registration=registration,
         service_language=service_lang,
-        email="test@test.com",
+        email=test_email1,
     )
 
     with translation.override(service_language):
@@ -209,7 +212,7 @@ def test_signup_group_cancellation_confirmation_template_has_correct_text_per_ev
         signup_group=signup_group,
         registration=registration,
         service_language=service_lang,
-        email="test@test.com",
+        email=test_email1,
     )
     SignUpFactory(
         signup_group=signup_group,
@@ -244,16 +247,26 @@ def test_cannot_delete_already_deleted_signup_group(
 
 
 @pytest.mark.django_db
-def test_created_authenticated_user_can_delete_signup_group(
+def test_created_user_without_organization_can_delete_signup_group(
     user_api_client, user, registration
 ):
     signup_group = SignUpGroupFactory(registration=registration, created_by=user)
 
-    default_org = user.get_default_organization()
-    default_org.regular_users.add(user)
-    default_org.admin_users.remove(user)
+    user.get_default_organization().admin_users.remove(user)
 
     assert_delete_signup_group(user_api_client, signup_group.id)
+
+
+@pytest.mark.django_db
+def test_not_created_user_without_organization_cannot_delete_signup_group(
+    api_client, registration
+):
+    user = UserFactory()
+    api_client.force_authenticate(user)
+    signup_group = SignUpGroupFactory(registration=registration)
+
+    response = delete_signup_group(api_client, signup_group.id)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db
@@ -445,7 +458,7 @@ def test_signup_group_send_email_when_moving_participant_from_waitlist(
             signup_group=signup_group,
             attendee_status=SignUp.AttendeeStatus.ATTENDING,
             registration=registration,
-            email="test@test.com",
+            email=test_email1,
         )
         signup1 = SignUpFactory(
             attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
@@ -517,7 +530,7 @@ def test_signup_group_transferred_as_participant_template_has_correct_text_per_e
         attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
         registration=registration,
         service_language=service_lang,
-        email="test@test.com",
+        email=test_email1,
     )
 
     assert signup1.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
