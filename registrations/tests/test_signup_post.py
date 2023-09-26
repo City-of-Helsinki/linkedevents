@@ -10,6 +10,7 @@ from rest_framework import status
 
 from events.models import Event, Language
 from events.tests.utils import versioned_reverse as reverse
+from helevents.tests.factories import UserFactory
 from registrations.models import MandatoryFields, SignUp
 from registrations.tests.factories import (
     SeatReservationCodeFactory,
@@ -126,10 +127,9 @@ def test_regular_user_can_create_signups(
 
 
 @pytest.mark.django_db
-def test_user_without_organization_can_create_signups(
-    languages, organization, user, user_api_client
-):
-    user.get_default_organization().admin_users.remove(user)
+def test_user_without_organization_can_create_signups(api_client, languages):
+    user = UserFactory()
+    api_client.force_authenticate(user)
 
     assert SignUp.objects.count() == 0
     reservation = SeatReservationCodeFactory(seats=1)
@@ -137,7 +137,7 @@ def test_user_without_organization_can_create_signups(
     signups_data["registration"] = reservation.registration.id
     signups_data["reservation_code"] = reservation.code
 
-    assert_create_signups(user_api_client, signups_data)
+    assert_create_signups(api_client, signups_data)
     assert_default_signup_created(signups_data, user)
 
 

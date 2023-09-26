@@ -3,6 +3,7 @@ from freezegun import freeze_time
 from rest_framework import status
 
 from events.tests.utils import versioned_reverse as reverse
+from helevents.tests.factories import UserFactory
 from registrations.models import SignUp, SignUpGroup
 from registrations.tests.factories import (
     RegistrationUserAccessFactory,
@@ -106,9 +107,8 @@ def test_registration_admin_can_update_signup_group(
 def test_created_admin_can_update_signup_group(registration, user, user_api_client):
     signup_group = SignUpGroupFactory(registration=registration, created_by=user)
 
-    db_signup_group = SignUpGroup.objects.get(pk=signup_group.id)
-    assert db_signup_group.extra_info != new_signup_group_extra_info
-    assert db_signup_group.last_modified_by_id is None
+    assert signup_group.extra_info != new_signup_group_extra_info
+    assert signup_group.last_modified_by_id is None
 
     signup_group_data = {
         "registration": registration.id,
@@ -117,9 +117,9 @@ def test_created_admin_can_update_signup_group(registration, user, user_api_clie
 
     assert_update_signup_group(user_api_client, signup_group.id, signup_group_data)
 
-    db_signup_group.refresh_from_db()
-    assert db_signup_group.extra_info == new_signup_group_extra_info
-    assert db_signup_group.last_modified_by_id == user.id
+    signup_group.refresh_from_db()
+    assert signup_group.extra_info == new_signup_group_extra_info
+    assert signup_group.last_modified_by_id == user.id
 
 
 @freeze_time("2023-03-14 03:30:00+02:00")
@@ -129,9 +129,8 @@ def test_non_created_admin_cannot_update_signup_group(
 ):
     signup_group = SignUpGroupFactory(registration=registration)
 
-    db_signup_group = SignUpGroup.objects.get(pk=signup_group.id)
-    assert db_signup_group.extra_info != new_signup_group_extra_info
-    assert db_signup_group.last_modified_by_id is None
+    assert signup_group.extra_info != new_signup_group_extra_info
+    assert signup_group.last_modified_by_id is None
 
     signup_group_data = {
         "registration": registration.id,
@@ -141,9 +140,9 @@ def test_non_created_admin_cannot_update_signup_group(
     response = update_signup_group(user_api_client, signup_group.id, signup_group_data)
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    db_signup_group.refresh_from_db()
-    assert db_signup_group.extra_info != new_signup_group_extra_info
-    assert db_signup_group.last_modified_by_id is None
+    signup_group.refresh_from_db()
+    assert signup_group.extra_info != new_signup_group_extra_info
+    assert signup_group.last_modified_by_id is None
 
 
 @freeze_time("2023-03-14 03:30:00+02:00")
@@ -157,9 +156,8 @@ def test_created_regular_user_can_update_signup_group(
     default_org.regular_users.add(user)
     default_org.admin_users.remove(user)
 
-    db_signup_group = SignUpGroup.objects.get(pk=signup_group.id)
-    assert db_signup_group.extra_info != new_signup_group_extra_info
-    assert db_signup_group.last_modified_by_id is None
+    assert signup_group.extra_info != new_signup_group_extra_info
+    assert signup_group.last_modified_by_id is None
 
     signup_group_data = {
         "registration": registration.id,
@@ -168,9 +166,9 @@ def test_created_regular_user_can_update_signup_group(
 
     assert_update_signup_group(user_api_client, signup_group.id, signup_group_data)
 
-    db_signup_group.refresh_from_db()
-    assert db_signup_group.extra_info == new_signup_group_extra_info
-    assert db_signup_group.last_modified_by_id == user.id
+    signup_group.refresh_from_db()
+    assert signup_group.extra_info == new_signup_group_extra_info
+    assert signup_group.last_modified_by_id == user.id
 
 
 @freeze_time("2023-03-14 03:30:00+02:00")
@@ -184,9 +182,8 @@ def test_non_created_regular_user_cannot_update_signup_group(
     default_org.regular_users.add(user)
     default_org.admin_users.remove(user)
 
-    db_signup_group = SignUpGroup.objects.get(pk=signup_group.id)
-    assert db_signup_group.extra_info != new_signup_group_extra_info
-    assert db_signup_group.last_modified_by_id is None
+    assert signup_group.extra_info != new_signup_group_extra_info
+    assert signup_group.last_modified_by_id is None
 
     signup_group_data = {
         "registration": registration.id,
@@ -196,60 +193,58 @@ def test_non_created_regular_user_cannot_update_signup_group(
     response = update_signup_group(user_api_client, signup_group.id, signup_group_data)
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    db_signup_group.refresh_from_db()
-    assert db_signup_group.extra_info != new_signup_group_extra_info
-    assert db_signup_group.last_modified_by_id is None
+    signup_group.refresh_from_db()
+    assert signup_group.extra_info != new_signup_group_extra_info
+    assert signup_group.last_modified_by_id is None
 
 
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_created_user_without_organization_can_update_signup_group(
-    organization, registration, user, user_api_client
+    api_client, registration
 ):
-    user.get_default_organization().admin_users.remove(user)
-
+    user = UserFactory()
+    api_client.force_authenticate(user)
     signup_group = SignUpGroupFactory(registration=registration, created_by=user)
 
-    db_signup_group = SignUpGroup.objects.get(pk=signup_group.id)
-    assert db_signup_group.extra_info != new_signup_group_extra_info
-    assert db_signup_group.last_modified_by_id is None
+    assert signup_group.extra_info != new_signup_group_extra_info
+    assert signup_group.last_modified_by_id is None
 
     signup_group_data = {
         "registration": registration.id,
         "extra_info": new_signup_group_extra_info,
     }
 
-    assert_update_signup_group(user_api_client, signup_group.id, signup_group_data)
+    assert_update_signup_group(api_client, signup_group.id, signup_group_data)
 
-    db_signup_group.refresh_from_db()
-    assert db_signup_group.extra_info == new_signup_group_extra_info
-    assert db_signup_group.last_modified_by_id == user.id
+    signup_group.refresh_from_db()
+    assert signup_group.extra_info == new_signup_group_extra_info
+    assert signup_group.last_modified_by_id == user.id
 
 
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_non_created_user_without_organization_cannot_update_signup_group(
-    organization, registration, user, user_api_client
+    api_client, registration
 ):
-    user.get_default_organization().admin_users.remove(user)
-
+    user = UserFactory()
+    api_client.force_authenticate(user)
     signup_group = SignUpGroupFactory(registration=registration)
 
-    db_signup_group = SignUpGroup.objects.get(pk=signup_group.id)
-    assert db_signup_group.extra_info != new_signup_group_extra_info
-    assert db_signup_group.last_modified_by_id is None
+    assert signup_group.extra_info != new_signup_group_extra_info
+    assert signup_group.last_modified_by_id is None
 
     signup_group_data = {
         "registration": registration.id,
         "extra_info": new_signup_group_extra_info,
     }
 
-    response = update_signup_group(user_api_client, signup_group.id, signup_group_data)
+    response = update_signup_group(api_client, signup_group.id, signup_group_data)
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    db_signup_group.refresh_from_db()
-    assert db_signup_group.extra_info != new_signup_group_extra_info
-    assert db_signup_group.last_modified_by_id is None
+    signup_group.refresh_from_db()
+    assert signup_group.extra_info != new_signup_group_extra_info
+    assert signup_group.last_modified_by_id is None
 
 
 @pytest.mark.django_db

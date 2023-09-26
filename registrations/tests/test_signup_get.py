@@ -165,24 +165,22 @@ def test_regular_created_user_can_get_signup(
 
 @pytest.mark.django_db
 def test_non_created_user_without_organization_cannot_get_signup(
-    user_api_client, registration, signup, user
+    api_client, registration, signup
 ):
-    user.get_default_organization().admin_users.remove(user)
+    user = UserFactory()
+    api_client.force_authenticate(user)
 
-    response = get_detail(user_api_client, signup.id)
+    response = get_detail(api_client, signup.id)
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db
-def test_created_user_without_organization_can_get_signup(
-    user_api_client, registration, signup, user
-):
-    signup.created_by = user
-    signup.save(update_fields=["created_by"])
+def test_created_user_without_organization_can_get_signup(api_client, registration):
+    user = UserFactory()
+    api_client.force_authenticate(user)
+    signup = SignUpFactory(created_by=user)
 
-    user.get_default_organization().admin_users.remove(user)
-
-    response = assert_get_detail(user_api_client, signup.id)
+    response = assert_get_detail(api_client, signup.id)
     assert_signup_fields_exist(response.data)
 
 

@@ -6,6 +6,7 @@ from rest_framework import status
 from events.models import Event
 from events.tests.factories import LanguageFactory
 from events.tests.utils import versioned_reverse as reverse
+from helevents.tests.factories import UserFactory
 from registrations.models import SignUp, SignUpGroup
 from registrations.tests.factories import (
     RegistrationUserAccessFactory,
@@ -258,13 +259,13 @@ def test_created_user_without_organization_can_delete_signup_group(
 
 @pytest.mark.django_db
 def test_not_created_user_without_organization_cannot_delete_signup_group(
-    user_api_client, user, registration
+    api_client, registration
 ):
+    user = UserFactory()
+    api_client.force_authenticate(user)
     signup_group = SignUpGroupFactory(registration=registration)
 
-    user.get_default_organization().admin_users.remove(user)
-
-    response = delete_signup_group(user_api_client, signup_group.id)
+    response = delete_signup_group(api_client, signup_group.id)
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
