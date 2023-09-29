@@ -123,11 +123,13 @@ def test_email_is_sent_to_selected_signup_groups_responsible_signup_only(
         "signup_groups": [second_signup_group.pk],
     }
 
-    assert_send_message(
+    response = assert_send_message(
         api_client, registration.id, send_message_data, [third_signup.email]
     )
     # Default language for the email is Finnish
     assert "Tarkastele ilmoittautumistasi täällä" in str(mail.outbox[0].alternatives[0])
+    # signups should include signup who is responsible for the group
+    assert response.data["signups"] == [third_signup.id]
 
 
 @pytest.mark.django_db

@@ -125,11 +125,11 @@ class RegistrationViewSet(
         return super().get_serializer_class()
 
     @staticmethod
-    def _get_messages(subject, cleaned_body, plain_text_body, signups, signup_groups):
-        messages = []
+    def _get_message_signups(signups, signup_groups):
+        message_signups = []
 
         if not (signups or signup_groups):
-            return messages
+            return message_signups
 
         already_included_signups = set()
 
@@ -139,17 +139,22 @@ class RegistrationViewSet(
                 signup_group.responsible_signups or signup_group.signups.all()
             )
             for signup in responsible_signups.exclude(email=None):
-                message = signup.get_registration_message(
-                    subject, cleaned_body, plain_text_body
-                )
-                messages.append(message)
+                message_signups.append(signup)
                 already_included_signups.add(signup.pk)
 
         # Make personal email for each individual signup that
         # was not already processed as part of a group.
         for signup in signups:
-            if signup.pk in already_included_signups:
-                continue
+            if signup.pk not in already_included_signups:
+                message_signups.append(signup)
+
+        return message_signups
+
+    @staticmethod
+    def _get_messages(subject, cleaned_body, plain_text_body, signups):
+        messages = []
+
+        for signup in signups:
             message = signup.get_registration_message(
                 subject, cleaned_body, plain_text_body
             )
@@ -182,13 +187,12 @@ class RegistrationViewSet(
         if not (signup_groups or signups):
             signup_groups = registration.signup_groups.all()
             signups = registration.signups.exclude(email=None)
+
+        message_signups = self._get_message_signups(signups, signup_groups)
         messages = self._get_messages(
-            subject,
-            cleaned_body,
-            plain_text_body,
-            signups,
-            signup_groups,
+            subject, cleaned_body, plain_text_body, message_signups
         )
+
         try:
             send_mass_html_mail(messages, fail_silently=False)
         except SMTPException as e:
@@ -203,7 +207,7 @@ class RegistrationViewSet(
             {
                 "html_message": cleaned_body,
                 "message": plain_text_body,
-                "signups": [su.id for su in signups],
+                "signups": [su.id for su in message_signups],
                 "subject": subject,
             },
             status=status.HTTP_200_OK,
