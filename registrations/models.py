@@ -587,17 +587,21 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
             self.service_language
         )
 
-        email_variables = {
-            "body": cleaned_body,
-            "linked_events_ui_locale": linked_events_ui_locale,
-            "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
-            "linked_registrations_ui_locale": linked_registrations_ui_locale,
-            "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
-            "registration_id": self.registration_id,
-            "signup": self,
-        }
-
         with override(linked_registrations_ui_locale, deactivate=True):
+            event_name = self.registration.event.name
+            event_type_id = self.registration.event.type_id
+
+            email_variables = {
+                "body": cleaned_body,
+                "event": event_name,
+                "event_type_id": event_type_id,
+                "linked_events_ui_locale": linked_events_ui_locale,
+                "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
+                "linked_registrations_ui_locale": linked_registrations_ui_locale,
+                "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
+                "registration_id": self.registration_id,
+                "signup": self,
+            }
             rendered_body = render_to_string("message_to_signup.html", email_variables)
 
         return (

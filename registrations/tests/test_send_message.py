@@ -1,6 +1,7 @@
 import pytest
 from django.conf import settings
 from django.core import mail
+from django.utils import translation
 from rest_framework import status
 
 from events.models import Language
@@ -189,36 +190,55 @@ def test_email_is_sent_to_selected_signups_only(api_client, registration, user):
 
 
 @pytest.mark.parametrize(
-    "language_pk,expect_cta_button_text",
+    "language_pk, expected_heading, expected_cta_button_text",
     [
-        ("en", "Check your registration here"),
-        ("fi", "Tarkastele ilmoittautumistasi täällä"),
-        ("sv", "Kontrollera din registrering här"),
+        (
+            "en",
+            "The organizer of the event Foo has sent you a message.",
+            "Check your registration here",
+        ),
+        (
+            "fi",
+            "Tapahtuman Foo järjestäjä on lähettänyt sinulle viestin.",
+            "Tarkastele ilmoittautumistasi täällä",
+        ),
+        (
+            "sv",
+            "Arrangören av evenemanget Foo har skickat ett meddelande till dig.",
+            "Kontrollera din registrering här",
+        ),
     ],
 )
 @pytest.mark.django_db
 def test_email_is_sent_in_signup_service_language(
     api_client,
-    expect_cta_button_text,
+    expected_heading,
+    expected_cta_button_text,
     languages,
     language_pk,
     registration,
     signup,
     user,
 ):
-    service_language = Language.objects.get(pk=language_pk)
-    signup.service_language = service_language
-    signup.save()
+    with translation.override(language_pk):
+        registration.event.name = "Foo"
+        registration.event.save()
+        service_language = Language.objects.get(pk=language_pk)
+        signup.service_language = service_language
+        signup.save()
 
-    api_client.force_authenticate(user)
-    send_message_data = {
-        "subject": "Message subject",
-        "body": "Message body",
-        "signups": [signup.id],
-    }
+        api_client.force_authenticate(user)
+        send_message_data = {
+            "subject": "Message subject",
+            "body": "Message body",
+            "signups": [signup.id],
+        }
 
-    assert_send_message(api_client, registration.id, send_message_data, [signup.email])
-    assert expect_cta_button_text in str(mail.outbox[0].alternatives[0])
+        assert_send_message(
+            api_client, registration.id, send_message_data, [signup.email]
+        )
+        assert expected_heading in str(mail.outbox[0].alternatives[0])
+        assert expected_cta_button_text in str(mail.outbox[0].alternatives[0])
 
 
 @pytest.mark.parametrize(
