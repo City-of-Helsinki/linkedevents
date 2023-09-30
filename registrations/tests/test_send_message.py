@@ -19,18 +19,28 @@ def send_message(api_client, registration_id, send_message_data):
 
 
 def assert_send_message(
-    api_client, registration_id, send_message_data, expected_emails
+    api_client, registration_id, send_message_data, expected_signups
 ):
     response = send_message(api_client, registration_id, send_message_data)
 
     assert response.status_code == status.HTTP_200_OK
-    assert len(mail.outbox) == len(expected_emails)
-    valid_emails = [mail.to for mail in mail.outbox]
-    for idx, email in enumerate(expected_emails):
-        assert mail.outbox[idx].subject == send_message_data["subject"]
-        assert mail.outbox[idx].body == send_message_data["body"]
-        assert mail.outbox[idx].from_email == settings.SUPPORT_EMAIL
-        assert [email] in valid_emails
+    assert len(mail.outbox) == len(expected_signups)
+    for signup in expected_signups:
+        # Find possible mails by the edit link. At the we make sure that edit link exists in the mail
+        signup_edit_url = f"/registration/{registration_id}/"
+        if signup.signup_group_id:
+            signup_edit_url += f"signup-group/{signup.signup_group_id}/edit"
+        else:
+            signup_edit_url += f"signup/{signup.id}/edit"
+        mails = [x for x in mail.outbox if signup_edit_url in str(x.alternatives[0])]
+
+        assert len(mails)
+        assert mails[0].subject == send_message_data["subject"]
+        assert mails[0].body == send_message_data["body"]
+        assert mails[0].from_email == settings.SUPPORT_EMAIL
+        # signup-group can be same for multiple signups to check
+        # that any of those mails has match
+        assert next(x for x in mails if signup.email in x.to) is not None
 
     return response
 
@@ -43,7 +53,7 @@ def test_admin_user_can_send_message_to_all_signups(
     send_message_data = {"subject": "Message subject", "body": "Message body"}
 
     assert_send_message(
-        api_client, registration.id, send_message_data, [signup.email, signup2.email]
+        api_client, registration.id, send_message_data, [signup, signup2]
     )
     # Default language for the email is Finnish
     assert "Tarkastele ilmoittautumistasi täällä" in str(mail.outbox[0].alternatives[0])
@@ -77,10 +87,10 @@ def test_email_is_sent_to_all_if_no_groups_or_signups_given(
         registration.id,
         send_message_data,
         [
-            first_signup.email,
-            second_signup.email,
-            third_signup.email,
-            fourth_signup.email,
+            first_signup,
+            second_signup,
+            third_signup,
+            fourth_signup,
         ],
     )
     # Default language for the email is Finnish
@@ -124,9 +134,7 @@ def test_email_is_sent_to_selected_signup_groups_responsible_signup_only(
         "signup_groups": [second_signup_group.pk],
     }
 
-    response = assert_send_message(
-        api_client, registration.id, send_message_data, [third_signup.email]
-    )
+    response = assert_send_message(api_client, registration.id, send_message_data, [third_signup])
     # Default language for the email is Finnish
     assert "Tarkastele ilmoittautumistasi täällä" in str(mail.outbox[0].alternatives[0])
     # signups should include signup who is responsible for the group
@@ -180,9 +188,9 @@ def test_email_is_sent_to_selected_signups_only(api_client, registration, user):
         registration.id,
         send_message_data,
         [
-            responsible_signup.email,
-            non_responsible_signup.email,
-            individual_signup.email,
+            responsible_signup,
+            non_responsible_signup,
+            individual_signup,
         ],
     )
     # Default language for the email is Finnish
@@ -234,9 +242,7 @@ def test_email_is_sent_in_signup_service_language(
             "signups": [signup.id],
         }
 
-        assert_send_message(
-            api_client, registration.id, send_message_data, [signup.email]
-        )
+        assert_send_message(api_client, registration.id, send_message_data, [signup])
         assert expected_heading in str(mail.outbox[0].alternatives[0])
         assert expected_cta_button_text in str(mail.outbox[0].alternatives[0])
 
@@ -257,7 +263,7 @@ def test_required_fields_has_to_be_filled(
     send_message_data = {"subject": "Message subject", "body": "Message body"}
 
     assert_send_message(
-        api_client, registration.id, send_message_data, [signup.email, signup2.email]
+        api_client, registration.id, send_message_data, [signup, signup2]
     )
 
     send_message_data[required_field] = ""
@@ -279,7 +285,7 @@ def test_send_message_to_selected_signups(
     }
 
     response = assert_send_message(
-        api_client, registration.id, send_message_data, [signup.email, signup3.email]
+        api_client, registration.id, send_message_data, [signup, signup3]
     )
     assert response.data["signups"] == [signup.id, signup3.id]
 
@@ -390,9 +396,7 @@ def test_admin_can_send_message_with_missing_datasource_permission(
 
     send_message_data = {"subject": "Message subject", "body": "Message body"}
 
-    assert_send_message(
-        user_api_client, registration.id, send_message_data, [signup.email]
-    )
+    assert_send_message(user_api_client, registration.id, send_message_data, [signup])
 
 
 @pytest.mark.django_db
@@ -406,9 +410,7 @@ def test_registration_admin_can_send_message_with_missing_datasource_permission(
 
     send_message_data = {"subject": "Message subject", "body": "Message body"}
 
-    assert_send_message(
-        user_api_client, registration.id, send_message_data, [signup.email]
-    )
+    assert_send_message(user_api_client, registration.id, send_message_data, [signup])
 
 
 @pytest.mark.django_db
@@ -422,7 +424,7 @@ def test__api_key_with_organization_can_send_message(
     send_message_data = {"subject": "Message subject", "body": "Message body"}
 
     assert_send_message(
-        api_client, registration.id, send_message_data, [signup.email, signup2.email]
+        api_client, registration.id, send_message_data, [signup, signup2]
     )
 
 
@@ -477,9 +479,7 @@ def test_admin_can_send_message_regardless_of_non_user_editable_resources(
 
     send_message_data = {"subject": "Message subject", "body": "Message body"}
 
-    assert_send_message(
-        user_api_client, registration.id, send_message_data, [signup.email]
-    )
+    assert_send_message(user_api_client, registration.id, send_message_data, [signup])
 
 
 @pytest.mark.parametrize("user_editable_resources", [False, True])
@@ -501,6 +501,4 @@ def test_registration_admin_can_send_message_regardless_of_non_user_editable_res
 
     send_message_data = {"subject": "Message subject", "body": "Message body"}
 
-    assert_send_message(
-        user_api_client, registration.id, send_message_data, [signup.email]
-    )
+    assert_send_message(user_api_client, registration.id, send_message_data, [signup])
