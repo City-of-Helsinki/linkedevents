@@ -33,7 +33,11 @@ from registrations.models import (
     SignUp,
     SignUpGroup,
 )
-from registrations.permissions import CanAccessRegistration, CanAccessSignup
+from registrations.permissions import (
+    CanAccessRegistration,
+    CanAccessSignup,
+    CanAccessSignupGroup,
+)
 from registrations.serializers import (
     CreateSignUpsSerializer,
     MassEmailSerializer,
@@ -436,7 +440,7 @@ class SignUpGroupViewSet(
     queryset = SignUpGroup.objects.all()
     filter_backends = [SignUpFilterBackend]
     filterset_class = SignUpGroupFilter
-    permission_classes = [CanAccessSignup]
+    permission_classes = [CanAccessSignupGroup]
 
     def get_serializer_class(self):
         if self.action == "create":

@@ -4,6 +4,7 @@ from rest_framework import status
 
 from events.models import Event
 from events.tests.utils import versioned_reverse as reverse
+from helevents.tests.factories import UserFactory
 from registrations.tests.utils import assert_invitation_email_is_sent
 
 email = "user@email.com"
@@ -41,6 +42,15 @@ def test_create_registration(user, api_client, event):
     api_client.force_authenticate(user)
     registration_data = {"event": {"@id": get_event_url(event.id)}}
 
+    assert_create_registration(api_client, registration_data)
+
+
+@pytest.mark.django_db
+def test_superuser_can_create_registration(api_client, event):
+    user = UserFactory(is_superuser=True)
+    api_client.force_authenticate(user)
+
+    registration_data = {"event": {"@id": get_event_url(event.id)}}
     assert_create_registration(api_client, registration_data)
 
 
