@@ -38,63 +38,62 @@ def assert_patch_signup(api_client, signup_pk, signup_data):
 # === tests ===
 
 
+@pytest.mark.parametrize(
+    "user_role,allowed_to_patch",
+    [
+        ("admin", False),
+        ("registration_admin", True),
+        ("registration_user_superuser", True),
+        ("registration_user_admin", True),
+        ("created_user", False),
+    ],
+)
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_registration_admin_can_patch_presence_status_of_signup(api_client, registration):
-    user = UserFactory()
-    user.registration_admin_organizations.add(registration.publisher)
-
-    signup = SignUpFactory(
-        registration=registration,
-        date_of_birth="2011-01-01",
-        phone_number="0441234567",
-        street_address="Street address",
-    )
-    assert signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
-
-    api_client.force_authenticate(user)
-
-    signup_data = {
-        "presence_status": SignUp.PresenceStatus.PRESENT,
-    }
-
-    response = assert_patch_signup(api_client, signup.id, signup_data)
-    assert response.data["presence_status"] == SignUp.PresenceStatus.PRESENT
-
-    signup.refresh_from_db()
-    assert signup.presence_status == SignUp.PresenceStatus.PRESENT
-
-
-@pytest.mark.parametrize("admin_type", ["superuser", "registration_admin"])
-@freeze_time("2023-03-14 03:30:00+02:00")
-@pytest.mark.django_db
-def test_registration_user_who_is_superuser_or_registration_admin_can_patch_signup_presence_status(
-    api_client, registration, admin_type
+def test_can_patch_presence_status_of_signup_based_on_role(
+    api_client, registration, user_role, allowed_to_patch
 ):
-    user = UserFactory(is_superuser=True if admin_type == "superuser" else False)
-    if admin_type == "registration_admin":
-        user.registration_admin_organizations.add(registration.publisher)
+    user = UserFactory(is_superuser=user_role == "registration_user_superuser")
 
-    RegistrationUserAccessFactory(registration=registration, email=user.email)
+    if user_role in ("registration_user_superuser", "registration_user_admin"):
+        RegistrationUserAccessFactory(registration=registration, email=user.email)
+
+    user_role_mapping = {
+        "admin": lambda usr: usr.admin_organizations.add(registration.publisher),
+        "registration_admin": lambda usr: usr.registration_admin_organizations.add(
+            registration.publisher
+        ),
+        "registration_user_admin": lambda usr: usr.registration_admin_organizations.add(
+            registration.publisher
+        ),
+        "registration_user_superuser": lambda usr: None,
+        "created_user": lambda usr: None,
+    }
+    user_role_mapping[user_role](user)
+
+    api_client.force_authenticate(user)
 
     signup = SignUpFactory(
         registration=registration,
-        date_of_birth="2011-01-01",
-        phone_number="0441234567",
-        street_address="Street address",
+        created_by=user if user_role == "created_user" else None,
     )
     assert signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
-
-    api_client.force_authenticate(user)
 
     signup_data = {
         "presence_status": SignUp.PresenceStatus.PRESENT,
     }
 
-    assert_patch_signup(api_client, signup.id, signup_data)
+    response = patch_signup(api_client, signup.id, signup_data)
 
     signup.refresh_from_db()
-    assert signup.presence_status == SignUp.PresenceStatus.PRESENT
+
+    if allowed_to_patch:
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["presence_status"] == SignUp.PresenceStatus.PRESENT
+        assert signup.presence_status == SignUp.PresenceStatus.PRESENT
+    else:
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
 
 
 @freeze_time("2023-03-14 03:30:00+02:00")
@@ -122,19 +121,15 @@ def test_patch_extra_info_of_signup_with_empty_data(api_client, registration, si
     assert signup.extra_info == ""
 
 
+@pytest.mark.parametrize("identification_method", ["heltunnistussuomifi", None])
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_registration_user_can_patch_signup_presence_status_if_strongly_identified(
-    api_client, registration, user
+def test_registration_user_can_patch_signup_presence_status_based_on_identification_method(
+    api_client, registration, user, identification_method
 ):
     RegistrationUserAccessFactory(registration=registration, email=user.email)
 
-    signup = SignUpFactory(
-        registration=registration,
-        date_of_birth="2011-01-01",
-        phone_number="0441234567",
-        street_address="Street address",
-    )
+    signup = SignUpFactory(registration=registration)
     assert signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
 
     api_client.force_authenticate(user)
@@ -146,91 +141,16 @@ def test_registration_user_can_patch_signup_presence_status_if_strongly_identifi
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
         new_callable=PropertyMock,
-        return_value="heltunnistussuomifi",
-    ) as mocked:
-        assert_patch_signup(api_client, signup.id, signup_data)
-        assert mocked.called is True
-
-    signup.refresh_from_db()
-    assert signup.presence_status == SignUp.PresenceStatus.PRESENT
-
-
-@freeze_time("2023-03-14 03:30:00+02:00")
-@pytest.mark.django_db
-def test_registration_user_cannot_patch_signup_presence_status_if_not_strongly_identified(
-    api_client, registration, user
-):
-    RegistrationUserAccessFactory(registration=registration, email=user.email)
-
-    signup = SignUpFactory(
-        registration=registration,
-        date_of_birth="2011-01-01",
-        phone_number="0441234567",
-        street_address="Street address",
-    )
-    assert signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
-
-    api_client.force_authenticate(user)
-
-    signup_data = {
-        "presence_status": SignUp.PresenceStatus.PRESENT,
-    }
-
-    with patch(
-        "helevents.models.UserModelPermissionMixin.token_amr_claim",
-        new_callable=PropertyMock,
-        return_value=None,
+        return_value=identification_method,
     ) as mocked:
         response = patch_signup(api_client, signup.id, signup_data)
-        assert response.status_code == status.HTTP_403_FORBIDDEN
         assert mocked.called is True
 
     signup.refresh_from_db()
-    assert signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
 
-
-@freeze_time("2023-03-14 03:30:00+02:00")
-@pytest.mark.django_db
-def test_admin_cannot_patch_presence_status_of_signup(user_api_client, registration):
-    signup = SignUpFactory(
-        registration=registration,
-        date_of_birth="2011-01-01",
-        phone_number="0441234567",
-        street_address="Street address",
-    )
-    assert signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
-
-    signup_data = {
-        "presence_status": SignUp.PresenceStatus.PRESENT,
-    }
-
-    response = patch_signup(user_api_client, signup.id, signup_data)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
-    signup.refresh_from_db()
-    assert signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
-
-
-@freeze_time("2023-03-14 03:30:00+02:00")
-@pytest.mark.django_db
-def test_created_user_cannot_patch_presence_status_of_signup(api_client, registration, user):
-    signup = SignUpFactory(
-        registration=registration,
-        date_of_birth="2011-01-01",
-        phone_number="0441234567",
-        street_address="Street address",
-        created_by=user,
-    )
-    assert signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
-
-    api_client.force_authenticate(user)
-
-    signup_data = {
-        "presence_status": SignUp.PresenceStatus.PRESENT,
-    }
-
-    response = patch_signup(api_client, signup.id, signup_data)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
-    signup.refresh_from_db()
-    assert signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+    if identification_method is None:
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+    else:
+        assert response.status_code == status.HTTP_200_OK
+        assert signup.presence_status == SignUp.PresenceStatus.PRESENT
