@@ -774,7 +774,7 @@ msgstr "Kurssin %(event)s järjestäjä on lähettänyt sinulle viestin."
 #, python-format
 msgid "The organizer of the volunteering %(event)s has sent you a message."
 msgstr ""
-"vapaaehtoistehtävän %(event)s järjestäjä on lähettänyt sinulle viestin."
+"Vapaaehtoistehtävän %(event)s järjestäjä on lähettänyt sinulle viestin."
 
 #: registrations/templates/message_to_signup.html:25
 #: registrations/templates/signup_confirmation.html:46
