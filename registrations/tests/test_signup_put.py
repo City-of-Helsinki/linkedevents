@@ -368,6 +368,7 @@ def test_registration_user_access_who_is_superuser_or_registration_admin_can_upd
     assert_update_signup(api_client, signup.id, signup_data)
 
     signup.refresh_from_db()
+    del signup.date_of_birth
     assert signup.first_name == signup_data["first_name"]
     assert signup.date_of_birth.strftime("%Y-%m-%d") == signup_data["date_of_birth"]
 
