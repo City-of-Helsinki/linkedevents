@@ -5,6 +5,18 @@
   <tr>
     <td class="content-cell" style="padding:0;margin:0;text-align:left;">
       <div class="content-container" style="padding:0 16px;">
+        <h2 style="color:#1a1a1a;font-size:24px;font-weight:700;line-height:29px;margin:0;">
+          <!-- Event -->
+          {% if event_type_id == "1" %}
+          {% blocktranslate %}The organizer of the event {{event_name}} has sent you a message.{% endblocktranslate %}
+          <!-- Course -->
+          {% elif event_type_id == "2" %}
+          {% blocktranslate %}The organizer of the course {{event_name}} has sent you a message.{% endblocktranslate %}
+          <!-- Volunteering -->
+          {% elif event_type_id == "3" %}
+          {% blocktranslate %}The organizer of the volunteering {{event_name}} has sent you a message.{% endblocktranslate %}
+          {% endif %}
+        </h2>
         <div style="margin: 0px 0px 40px">
           <p style="color:#1a1a1a;font-size:16px;font-weight:normal;line-height:24px;margin:0px;">{{body |safe}}</p>
         </div>
