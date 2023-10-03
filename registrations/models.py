@@ -376,7 +376,7 @@ class RegistrationUserAccess(models.Model):
 
             email_variables = {
                 "email": self.email,
-                "event": event_name,
+                "event_name": event_name,
                 "event_type_id": event_type_id,
                 "linked_events_ui_locale": locale,
                 "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
@@ -594,7 +594,7 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
 
             email_variables = {
                 "body": cleaned_body,
-                "event": event_name,
+                "event_name": event_name,
                 "event_type_id": event_type_id,
                 "linked_events_ui_locale": linked_events_ui_locale,
                 "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
@@ -625,7 +625,7 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
             event_type_id = self.registration.event.type_id
 
             email_variables = {
-                "event": event_name,
+                "event_name": event_name,
                 "event_type_id": event_type_id,
                 "linked_events_ui_locale": linked_events_ui_locale,
                 "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,

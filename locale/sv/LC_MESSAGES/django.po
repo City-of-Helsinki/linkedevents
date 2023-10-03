@@ -719,42 +719,42 @@ msgstr "Registreringen avbruten"
 
 #: registrations/templates/cancellation_confirmation.html:14
 #, python-format
-msgid "Registration to the event %(event)s has been cancelled."
-msgstr "Anmälan till evenemanget %(event)s har ställts in."
+msgid "Registration to the event %(event_name)s has been cancelled."
+msgstr "Anmälan till evenemanget %(event_name)s har ställts in."
 
 #: registrations/templates/cancellation_confirmation.html:17
 #, python-format
-msgid "Registration to the course %(event)s has been cancelled."
-msgstr "Anmälan till kursen %(event)s har ställts in."
+msgid "Registration to the course %(event_name)s has been cancelled."
+msgstr "Anmälan till kursen %(event_name)s har ställts in."
 
 #: registrations/templates/cancellation_confirmation.html:20
 #, python-format
-msgid "Registration to the volunteering %(event)s has been cancelled."
-msgstr "Anmälan till volontärarbetet %(event)s har ställts in."
+msgid "Registration to the volunteering %(event_name)s has been cancelled."
+msgstr "Anmälan till volontärarbetet %(event_name)s har ställts in."
 
 #: registrations/templates/cancellation_confirmation.html:28
 #, python-format
 msgid ""
 "You have successfully cancelled your registration to the event "
-"<strong>%(event)s</strong>."
+"<strong>%(event_name)s</strong>."
 msgstr ""
-"Du har avbrutit din registrering till evenemanget <strong>%(event)s</strong>."
+"Du har avbrutit din registrering till evenemanget <strong>%(event_name)s</strong>."
 
 #: registrations/templates/cancellation_confirmation.html:31
 #, python-format
 msgid ""
 "You have successfully cancelled your registration to the course "
-"<strong>%(event)s</strong>."
+"<strong>%(event_name)s</strong>."
 msgstr ""
-"Du har avbrutit din registrering till kursen <strong>%(event)s</strong>."
+"Du har avbrutit din registrering till kursen <strong>%(event_name)s</strong>."
 
 #: registrations/templates/cancellation_confirmation.html:34
 #, python-format
 msgid ""
 "You have successfully cancelled your registration to the volunteering "
-"<strong>%(event)s</strong>."
+"<strong>%(event_name)s</strong>."
 msgstr ""
-"Du har avbrutit din registrering till volontärarbetet <strong>%(event)s</"
+"Du har avbrutit din registrering till volontärarbetet <strong>%(event_name)s</"
 "strong>."
 
 #: registrations/templates/cancellation_confirmation.html:40
@@ -763,20 +763,20 @@ msgstr "Mer information om vår kundtjänst"
 
 #: registrations/templates/message_to_signup.html:11
 #, python-format
-msgid "The organizer of the event %(event)s has sent you a message."
+msgid "The organizer of the event %(event_name)s has sent you a message."
 msgstr ""
-"Arrangören av evenemanget %(event)s har skickat ett meddelande till dig."
+"Arrangören av evenemanget %(event_name)s har skickat ett meddelande till dig."
 
 #: registrations/templates/message_to_signup.html:14
 #, python-format
-msgid "The organizer of the course %(event)s has sent you a message."
-msgstr "Arrangören av kursen %(event)s har skickat ett meddelande till dig."
+msgid "The organizer of the course %(event_name)s has sent you a message."
+msgstr "Arrangören av kursen %(event_name)s har skickat ett meddelande till dig."
 
 #: registrations/templates/message_to_signup.html:17
 #, python-format
-msgid "The organizer of the volunteering %(event)s has sent you a message."
+msgid "The organizer of the volunteering %(event_name)s has sent you a message."
 msgstr ""
-"Arrangören av volontärarbetet %(event)s har skickat ett meddelande till dig."
+"Arrangören av volontärarbetet %(event_name)s har skickat ett meddelande till dig."
 
 #: registrations/templates/message_to_signup.html:25
 #: registrations/templates/signup_confirmation.html:46
@@ -793,71 +793,71 @@ msgstr "Välkommen %(username)s"
 
 #: registrations/templates/signup_confirmation.html:14
 #, python-format
-msgid "Registration to the event %(event)s has been saved."
-msgstr "Anmälan till evenemanget %(event)s har sparats."
+msgid "Registration to the event %(event_name)s has been saved."
+msgstr "Anmälan till evenemanget %(event_name)s har sparats."
 
 #: registrations/templates/signup_confirmation.html:17
 #, python-format
-msgid "Registration to the course %(event)s has been saved."
-msgstr "Anmälan till kursen %(event)s har sparats."
+msgid "Registration to the course %(event_name)s has been saved."
+msgstr "Anmälan till kursen %(event_name)s har sparats."
 
 #: registrations/templates/signup_confirmation.html:20
 #, python-format
-msgid "Registration to the volunteering %(event)s has been saved."
-msgstr "Anmälan till volontärarbetet %(event)s har sparats."
+msgid "Registration to the volunteering %(event_name)s has been saved."
+msgstr "Anmälan till volontärarbetet %(event_name)s har sparats."
 
 #: registrations/templates/signup_confirmation.html:28
 #, python-format
 msgid ""
 "Congratulations! You have successfully registered to the event "
-"<strong>%(event)s</strong>."
+"<strong>%(event_name)s</strong>."
 msgstr ""
 "Grattis! Du har framgångsrikt registrerat dig till evenemanget "
-"<strong>%(event)s</strong>."
+"<strong>%(event_name)s</strong>."
 
 #: registrations/templates/signup_confirmation.html:31
 #, python-format
 msgid ""
 "Congratulations! You have successfully registered to the course "
-"<strong>%(event)s</strong>."
+"<strong>%(event_name)s</strong>."
 msgstr ""
-"Grattis! Du har framgångsrikt registrerat dig till kursen <strong>%(event)s</"
+"Grattis! Du har framgångsrikt registrerat dig till kursen <strong>%(event_name)s</"
 "strong>."
 
 #: registrations/templates/signup_confirmation.html:34
 #, python-format
 msgid ""
 "Congratulations! You have successfully registered to the volunteering "
-"<strong>%(event)s</strong>."
+"<strong>%(event_name)s</strong>."
 msgstr ""
 "Grattis! Du har framgångsrikt registrerat dig till volontärarbetet "
-"<strong>%(event)s</strong>."
+"<strong>%(event_name)s</strong>."
 
 #: registrations/templates/signup_confirmation_to_waiting_list.html:12
 #, python-format
 msgid ""
-"You have successfully registered for the event <strong>%(event)s</strong> "
+"You have successfully registered for the event <strong>%(event_name)s</strong> "
 "waiting list."
 msgstr ""
-"Du har framgångsrikt registrerat dig för evenemangets <strong>%(event)s</"
+"Du har framgångsrikt registrerat dig för evenemangets <strong>%(event_name)s</"
 "strong> väntelista."
 
 #: registrations/templates/signup_confirmation_to_waiting_list.html:15
 #, python-format
 msgid ""
-"You have successfully registered for the course <strong>%(event)s</strong> "
+"You have successfully registered for the course <strong>%(event_name)s</strong> "
 "waiting list."
 msgstr ""
-"Du har framgångsrikt registrerat dig för kursen <strong>%(event)s</strong> "
+"Du har framgångsrikt registrerat dig för kursen <strong>%(event_name)s</strong> "
 "väntelista."
 
 #: registrations/templates/signup_confirmation_to_waiting_list.html:18
 #, python-format
 msgid ""
-"You have successfully registered for the volunteering <strong>%(event)s</"
+"You have successfully registered for the volunteering <strong>%(event_name)s</"
 "strong> waiting list."
 msgstr ""
-"Du har framgångsrikt registrerat dig för volontärarbetets <strong>%(event)s</"
+"Du har framgångsrikt registrerat dig för volontärarbetets <strong>%(event_name)s</"
 "strong> väntelista."
 
 #: registrations/templates/signup_confirmation_to_waiting_list.html:22
@@ -870,28 +870,28 @@ msgstr "Du överförs automatiskt som deltagare när en plats blir ledig."
 #, python-format
 msgid ""
 "The e-mail address <strong>%(email)s</strong> has been granted the rights to "
-"read the participant list of the event <strong>%(event)s</strong>."
+"read the participant list of the event <strong>%(event_name)s</strong>."
 msgstr ""
 "E-postadressen <strong>%(email)s</strong> har beviljats rättigheter att läsa "
-"deltagarlistan för evenemanget <strong>%(event)s</strong>."
+"deltagarlistan för evenemanget <strong>%(event_name)s</strong>."
 
 #: registrations/templates/signup_list_rights_granted.html:16
 #, python-format
 msgid ""
 "The e-mail address <strong>%(email)s</strong> has been granted the rights to "
-"read the participant list of the course <strong>%(event)s</strong>."
+"read the participant list of the course <strong>%(event_name)s</strong>."
 msgstr ""
 "E-postadressen <strong>%(email)s</strong> har beviljats rättigheter att läsa "
-"deltagarlistan för kursen <strong>%(event)s</strong>."
+"deltagarlistan för kursen <strong>%(event_name)s</strong>."
 
 #: registrations/templates/signup_list_rights_granted.html:19
 #, python-format
 msgid ""
 "The e-mail address <strong>%(email)s</strong> has been granted the rights to "
-"read the participant list of the volunteering <strong>%(event)s</strong>."
+"read the participant list of the volunteering <strong>%(event_name)s</strong>."
 msgstr ""
 "E-postadressen <strong>%(email)s</strong> har beviljats rättigheter att läsa "
-"deltagarlistan för volontärarbetet <strong>%(event)s</strong>."
+"deltagarlistan för volontärarbetet <strong>%(event_name)s</strong>."
 
 #: registrations/templates/signup_list_rights_granted.html:26
 msgid "View the participants"
@@ -900,26 +900,26 @@ msgstr "Se deltagarna"
 #: registrations/templates/signup_transferred_as_participant.html:16
 #, python-format
 msgid ""
-"You have been moved from the waiting list of the event <strong>%(event)s</"
+"You have been moved from the waiting list of the event <strong>%(event_name)s</"
 "strong> to a participant."
 msgstr ""
-"Du har flyttats från väntelistan för evenemanget <strong>%(event)s</strong> "
+"Du har flyttats från väntelistan för evenemanget <strong>%(event_name)s</strong> "
 "till en deltagare."
 
 #: registrations/templates/signup_transferred_as_participant.html:19
 #, python-format
 msgid ""
-"You have been moved from the waiting list of the course <strong>%(event)s</"
+"You have been moved from the waiting list of the course <strong>%(event_name)s</"
 "strong> to a participant."
 msgstr ""
-"Du har flyttats från väntelistan för kursen <strong>%(event)s</strong> till "
+"Du har flyttats från väntelistan för kursen <strong>%(event_name)s</strong> till "
 "en deltagare."
 
 #: registrations/templates/signup_transferred_as_participant.html:22
 #, python-format
 msgid ""
 "You have been moved from the waiting list of the volunteering "
-"<strong>%(event)s</strong> to a participant."
+"<strong>%(event_name)s</strong> to a participant."
 msgstr ""
-"Du har flyttats från väntelistan för volontärarbetet <strong>%(event)s</"
+"Du har flyttats från väntelistan för volontärarbetet <strong>%(event_name)s</"
 "strong> till en deltagare."

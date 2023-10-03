@@ -716,45 +716,45 @@ msgstr "Ilmoittautuminen peruttu"
 
 #: registrations/templates/cancellation_confirmation.html:14
 #, python-format
-msgid "Registration to the event %(event)s has been cancelled."
-msgstr "Ilmoittautuminen tapahtumaan %(event)s on peruttu."
+msgid "Registration to the event %(event_name)s has been cancelled."
+msgstr "Ilmoittautuminen tapahtumaan %(event_name)s on peruttu."
 
 #: registrations/templates/cancellation_confirmation.html:17
 #, python-format
-msgid "Registration to the course %(event)s has been cancelled."
-msgstr "Ilmoittautuminen kurssille %(event)s on peruttu."
+msgid "Registration to the course %(event_name)s has been cancelled."
+msgstr "Ilmoittautuminen kurssille %(event_name)s on peruttu."
 
 #: registrations/templates/cancellation_confirmation.html:20
 #, python-format
-msgid "Registration to the volunteering %(event)s has been cancelled."
-msgstr "Ilmoittautuminen vapaaehtoistehtävään %(event)s on peruttu."
+msgid "Registration to the volunteering %(event_name)s has been cancelled."
+msgstr "Ilmoittautuminen vapaaehtoistehtävään %(event_name)s on peruttu."
 
 #: registrations/templates/cancellation_confirmation.html:28
 #, python-format
 msgid ""
 "You have successfully cancelled your registration to the event "
-"<strong>%(event)s</strong>."
+"<strong>%(event_name)s</strong>."
 msgstr ""
 "Olet onnistuneesti peruuttanut ilmoittautumisesi tapahtumaan "
-"<strong>%(event)s</strong>."
+"<strong>%(event_name)s</strong>."
 
 #: registrations/templates/cancellation_confirmation.html:31
 #, python-format
 msgid ""
 "You have successfully cancelled your registration to the course "
-"<strong>%(event)s</strong>."
+"<strong>%(event_name)s</strong>."
 msgstr ""
 "Olet onnistuneesti peruuttanut ilmoittautumisesi kurssille "
-"<strong>%(event)s</strong>."
+"<strong>%(event_name)s</strong>."
 
 #: registrations/templates/cancellation_confirmation.html:34
 #, python-format
 msgid ""
 "You have successfully cancelled your registration to the volunteering "
-"<strong>%(event)s</strong>."
+"<strong>%(event_name)s</strong>."
 msgstr ""
 "Olet onnistuneesti peruuttanut ilmoittautumisesi vapaaehtoistehtävään "
-"<strong>%(event)s</strong>."
+"<strong>%(event_name)s</strong>."
 
 #: registrations/templates/cancellation_confirmation.html:40
 msgid "More information from our customer service"
@@ -762,19 +762,19 @@ msgstr "Lisätietoja asiakaspalvelustamme"
 
 #: registrations/templates/message_to_signup.html:11
 #, python-format
-msgid "The organizer of the event %(event)s has sent you a message."
-msgstr "Tapahtuman %(event)s järjestäjä on lähettänyt sinulle viestin."
+msgid "The organizer of the event %(event_name)s has sent you a message."
+msgstr "Tapahtuman %(event_name)s järjestäjä on lähettänyt sinulle viestin."
 
 #: registrations/templates/message_to_signup.html:14
 #, python-format
-msgid "The organizer of the course %(event)s has sent you a message."
-msgstr "Kurssin %(event)s järjestäjä on lähettänyt sinulle viestin."
+msgid "The organizer of the course %(event_name)s has sent you a message."
+msgstr "Kurssin %(event_name)s järjestäjä on lähettänyt sinulle viestin."
 
 #: registrations/templates/message_to_signup.html:17
 #, python-format
-msgid "The organizer of the volunteering %(event)s has sent you a message."
+msgid "The organizer of the volunteering %(event_name)s has sent you a message."
 msgstr ""
-"Vapaaehtoistehtävän %(event)s järjestäjä on lähettänyt sinulle viestin."
+"Vapaaehtoistehtävän %(event_name)s järjestäjä on lähettänyt sinulle viestin."
 
 #: registrations/templates/message_to_signup.html:25
 #: registrations/templates/signup_confirmation.html:46
@@ -791,71 +791,71 @@ msgstr "Tervetuloa %(username)s"
 
 #: registrations/templates/signup_confirmation.html:14
 #, python-format
-msgid "Registration to the event %(event)s has been saved."
-msgstr "Ilmoittautuminen tapahtumaan %(event)s on tallennettu."
+msgid "Registration to the event %(event_name)s has been saved."
+msgstr "Ilmoittautuminen tapahtumaan %(event_name)s on tallennettu."
 
 #: registrations/templates/signup_confirmation.html:17
 #, python-format
-msgid "Registration to the course %(event)s has been saved."
-msgstr "Ilmoittautuminen kurssille %(event)s on tallennettu."
+msgid "Registration to the course %(event_name)s has been saved."
+msgstr "Ilmoittautuminen kurssille %(event_name)s on tallennettu."
 
 #: registrations/templates/signup_confirmation.html:20
 #, python-format
-msgid "Registration to the volunteering %(event)s has been saved."
-msgstr "Ilmoittautuminen vapaaehtoistehtävään %(event)s on tallennettu."
+msgid "Registration to the volunteering %(event_name)s has been saved."
+msgstr "Ilmoittautuminen vapaaehtoistehtävään %(event_name)s on tallennettu."
 
 #: registrations/templates/signup_confirmation.html:28
 #, python-format
 msgid ""
 "Congratulations! You have successfully registered to the event "
-"<strong>%(event)s</strong>."
+"<strong>%(event_name)s</strong>."
 msgstr ""
-"Onnittelut! Olet onnistuneesti ilmoittautunut tapahtumaan <strong>%(event)s</"
+"Onnittelut! Olet onnistuneesti ilmoittautunut tapahtumaan <strong>%(event_name)s</"
 "strong>."
 
 #: registrations/templates/signup_confirmation.html:31
 #, python-format
 msgid ""
 "Congratulations! You have successfully registered to the course "
-"<strong>%(event)s</strong>."
+"<strong>%(event_name)s</strong>."
 msgstr ""
-"Onnittelut! Olet onnistuneesti ilmoittautunut kurssille <strong>%(event)s</"
+"Onnittelut! Olet onnistuneesti ilmoittautunut kurssille <strong>%(event_name)s</"
 "strong>."
 
 #: registrations/templates/signup_confirmation.html:34
 #, python-format
 msgid ""
 "Congratulations! You have successfully registered to the volunteering "
-"<strong>%(event)s</strong>."
+"<strong>%(event_name)s</strong>."
 msgstr ""
 "Onnittelut! Olet onnistuneesti ilmoittautunut vapaaehtoistehtävään "
-"<strong>%(event)s</strong>."
+"<strong>%(event_name)s</strong>."
 
 #: registrations/templates/signup_confirmation_to_waiting_list.html:12
 #, python-format
 msgid ""
-"You have successfully registered for the event <strong>%(event)s</strong> "
+"You have successfully registered for the event <strong>%(event_name)s</strong> "
 "waiting list."
 msgstr ""
-"Olet onnistuneesti ilmoittautunut tapahtuman <strong>%(event)s</strong> "
+"Olet onnistuneesti ilmoittautunut tapahtuman <strong>%(event_name)s</strong> "
 "jonotuslistalle."
 
 #: registrations/templates/signup_confirmation_to_waiting_list.html:15
 #, python-format
 msgid ""
-"You have successfully registered for the course <strong>%(event)s</strong> "
+"You have successfully registered for the course <strong>%(event_name)s</strong> "
 "waiting list."
 msgstr ""
-"Olet onnistuneesti ilmoittautunut kurssin <strong>%(event)s</strong> "
+"Olet onnistuneesti ilmoittautunut kurssin <strong>%(event_name)s</strong> "
 "jonotuslistalle."
 
 #: registrations/templates/signup_confirmation_to_waiting_list.html:18
 #, python-format
 msgid ""
-"You have successfully registered for the volunteering <strong>%(event)s</"
+"You have successfully registered for the volunteering <strong>%(event_name)s</"
 "strong> waiting list."
 msgstr ""
-"Olet onnistuneesti ilmoittautunut vapaaehtoistehtävän <strong>%(event)s</"
+"Olet onnistuneesti ilmoittautunut vapaaehtoistehtävän <strong>%(event_name)s</"
 "strong> jonotuslistalle."
 
 #: registrations/templates/signup_confirmation_to_waiting_list.html:22
@@ -868,28 +868,28 @@ msgstr "Sinut siirretään automaattisesti osallistujaksi paikan vapauduttua."
 #, python-format
 msgid ""
 "The e-mail address <strong>%(email)s</strong> has been granted the rights to "
-"read the participant list of the event <strong>%(event)s</strong>."
+"read the participant list of the event <strong>%(event_name)s</strong>."
 msgstr ""
 "Sähköpostiosoitteelle <strong>%(email)s</strong> on myönnetty oikeudet lukea "
-"tapahtuman <strong>%(event)s</strong> osallistujalista."
+"tapahtuman <strong>%(event_name)s</strong> osallistujalista."
 
 #: registrations/templates/signup_list_rights_granted.html:16
 #, python-format
 msgid ""
 "The e-mail address <strong>%(email)s</strong> has been granted the rights to "
-"read the participant list of the course <strong>%(event)s</strong>."
+"read the participant list of the course <strong>%(event_name)s</strong>."
 msgstr ""
 "Sähköpostiosoitteelle <strong>%(email)s</strong> on myönnetty oikeudet lukea "
-"kurssin <strong>%(event)s</strong> osallistujalista."
+"kurssin <strong>%(event_name)s</strong> osallistujalista."
 
 #: registrations/templates/signup_list_rights_granted.html:19
 #, python-format
 msgid ""
 "The e-mail address <strong>%(email)s</strong> has been granted the rights to "
-"read the participant list of the volunteering <strong>%(event)s</strong>."
+"read the participant list of the volunteering <strong>%(event_name)s</strong>."
 msgstr ""
 "Sähköpostiosoitteelle <strong>%(email)s</strong> on myönnetty oikeudet lukea "
-"vapaaehtoistehtävän <strong>%(event)s</strong> osallistujalista."
+"vapaaehtoistehtävän <strong>%(event_name)s</strong> osallistujalista."
 
 #: registrations/templates/signup_list_rights_granted.html:26
 msgid "View the participants"
@@ -898,28 +898,28 @@ msgstr "Katso osallistujat"
 #: registrations/templates/signup_transferred_as_participant.html:16
 #, python-format
 msgid ""
-"You have been moved from the waiting list of the event <strong>%(event)s</"
+"You have been moved from the waiting list of the event <strong>%(event_name)s</"
 "strong> to a participant."
 msgstr ""
-"Sinut on siirretty tapahtuman <strong>%(event)s</strong> jonotuslistalta "
+"Sinut on siirretty tapahtuman <strong>%(event_name)s</strong> jonotuslistalta "
 "osallistujaksi."
 
 #: registrations/templates/signup_transferred_as_participant.html:19
 #, python-format
 msgid ""
-"You have been moved from the waiting list of the course <strong>%(event)s</"
+"You have been moved from the waiting list of the course <strong>%(event_name)s</"
 "strong> to a participant."
 msgstr ""
-"Sinut on siirretty kurssin <strong>%(event)s</strong> jonotuslistalta "
+"Sinut on siirretty kurssin <strong>%(event_name)s</strong> jonotuslistalta "
 "osallistujaksi."
 
 #: registrations/templates/signup_transferred_as_participant.html:22
 #, python-format
 msgid ""
 "You have been moved from the waiting list of the volunteering "
-"<strong>%(event)s</strong> to a participant."
+"<strong>%(event_name)s</strong> to a participant."
 msgstr ""
-"Sinut on siirretty vapaaehtoistehtävän <strong>%(event)s</strong> "
+"Sinut on siirretty vapaaehtoistehtävän <strong>%(event_name)s</strong> "
 "jonotuslistalta osallistujaksi."
 
 #~ msgid "Admins"

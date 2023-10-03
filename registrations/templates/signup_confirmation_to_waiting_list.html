@@ -9,13 +9,13 @@
           <p style="color:#1a1a1a;font-size:16px;font-weight:normal;line-height:24px;margin:0px;">
             <!-- Event -->
             {% if event_type_id == "1" %}
-            {% blocktranslate %}You have successfully registered for the event <strong>{{event}}</strong> waiting list.{% endblocktranslate %}
+            {% blocktranslate %}You have successfully registered for the event <strong>{{event_name}}</strong> waiting list.{% endblocktranslate %}
             <!-- Course -->
             {% elif event_type_id == "2" %}
-            {% blocktranslate %}You have successfully registered for the course <strong>{{event}}</strong> waiting list.{% endblocktranslate %}
+            {% blocktranslate %}You have successfully registered for the course <strong>{{event_name}}</strong> waiting list.{% endblocktranslate %}
             <!-- Volunteering -->
             {% elif event_type_id == "3" %}
-            {% blocktranslate %}You have successfully registered for the volunteering <strong>{{event}}</strong> waiting list.{% endblocktranslate %}
+            {% blocktranslate %}You have successfully registered for the volunteering <strong>{{event_name}}</strong> waiting list.{% endblocktranslate %}
             {% endif %}
           </p>
           <p style="color:#1a1a1a;font-size:16px;font-weight:normal;line-height:24px;margin:0px;">

@@ -8,13 +8,13 @@
         <h2 style="color:#1a1a1a;font-size:24px;font-weight:700;line-height:29px;margin:0;">
           <!-- Event -->
           {% if event_type_id == "1" %}
-          {% blocktranslate %}The organizer of the event {{event}} has sent you a message.{% endblocktranslate %}
+          {% blocktranslate %}The organizer of the event {{event_name}} has sent you a message.{% endblocktranslate %}
           <!-- Course -->
           {% elif event_type_id == "2" %}
-          {% blocktranslate %}The organizer of the course {{event}} has sent you a message.{% endblocktranslate %}
+          {% blocktranslate %}The organizer of the course {{event_name}} has sent you a message.{% endblocktranslate %}
           <!-- Volunteering -->
           {% elif event_type_id == "3" %}
-          {% blocktranslate %}The organizer of the volunteering {{event}} has sent you a message.{% endblocktranslate %}
+          {% blocktranslate %}The organizer of the volunteering {{event_name}} has sent you a message.{% endblocktranslate %}
           {% endif %}
         </h2>
         <div style="margin: 0px 0px 40px">
