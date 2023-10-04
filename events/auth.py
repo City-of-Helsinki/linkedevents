@@ -111,6 +111,10 @@ class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
             "apikey_registration_admin_organizations"
         )
 
+    @property
+    def is_external(self):
+        return False
+
 
 class ApiKeyAuth(object):
     def __init__(self, data_source):

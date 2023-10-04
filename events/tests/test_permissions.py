@@ -99,16 +99,16 @@ def test_user_is_external_based_on_group_membership(
 ):
     with (
         patch.object(
-            UserModelPermissionMixin, "organization_memberships", new_callable=MagicMock
+            User, "organization_memberships", new_callable=MagicMock
         ) as organization_memberships,
         patch.object(
-            UserModelPermissionMixin, "admin_organizations", new_callable=MagicMock
+            User, "admin_organizations", new_callable=MagicMock
         ) as admin_organizations,
     ):
         organization_memberships.exists.return_value = is_regular_user
         admin_organizations.exists.return_value = is_admin
 
-        assert UserModelPermissionMixin().is_external is expected
+        assert User().is_external is expected
 
 
 class TestUserModelPermissions(TestCase):

@@ -44,17 +44,10 @@ class UserModelPermissionMixin:
             in settings.STRONG_IDENTIFICATION_AUTHENTICATION_METHODS
         )
 
-    @cached_property
+    @property
     def is_external(self):
         """Check if the user is an external user"""
-
-        if self.token_amr_claim in settings.NON_EXTERNAL_AUTHENTICATION_METHODS:
-            return False
-
-        return (
-            not self.organization_memberships.exists()
-            and not self.admin_organizations.exists()
-        )
+        raise NotImplementedError()
 
     def is_admin_of(self, publisher):
         """Check if current user is an admin user of the publisher organization"""
@@ -263,4 +256,14 @@ class User(AbstractUser, UserModelPermissionMixin, SerializableMixin):
         return (
             self.is_strongly_identified
             and registration_user_accesses.filter(email=self.email).exists()
+        )
+
+    @cached_property
+    def is_external(self):
+        if self.token_amr_claim in settings.NON_EXTERNAL_AUTHENTICATION_METHODS:
+            return False
+
+        return (
+            not self.organization_memberships.exists()
+            and not self.admin_organizations.exists()
         )
