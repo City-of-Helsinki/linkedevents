@@ -2319,10 +2319,6 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
         offers = validated_data.pop("offers", [])
         links = validated_data.pop("external_links", [])
         videos = validated_data.pop("videos", [])
-        publisher = (
-            validated_data.get("publisher")
-            or utils.get_or_create_default_organization()
-        )
 
         validated_data.update(
             {
@@ -2330,9 +2326,14 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
                 "last_modified_by": user,
                 "created_time": Event.now(),  # we must specify creation time as we are setting id
                 "event_status": Event.Status.SCHEDULED,  # mark all newly created events as scheduled
-                "publisher": publisher,
             }
         )
+
+        if settings.ENABLE_EXTERNAL_USER_EVENTS and user.is_external:
+            validated_data["publisher"] = (
+                validated_data.get("publisher")
+                or utils.get_or_create_default_organization()
+            )
 
         # pop out extension related fields because create() cannot stand them
         original_validated_data = deepcopy(validated_data)
