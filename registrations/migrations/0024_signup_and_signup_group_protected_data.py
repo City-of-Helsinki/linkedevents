@@ -43,6 +43,24 @@ def forwards_func(apps, schema_editor):
     signup_protected_model.objects.bulk_create(signup_protected_datas)
 
 
+def backwards_func(apps, schema_editor):
+    signup_group_model = apps.get_model("registrations", "SignUpGroup")
+    signup_model = apps.get_model("registrations", "SignUp")
+
+    for signup_group in signup_group_model.objects.filter(
+        protected_data__isnull=False
+    ).select_related("protected_data"):
+        signup_group.extra_info = signup_group.protected_data.extra_info
+        signup_group.save(update_fields=["extra_info"])
+
+    for signup in signup_model.objects.filter(
+        protected_data__isnull=False
+    ).select_related("protected_data"):
+        signup.extra_info = signup.protected_data.extra_info
+        signup.date_of_birth = signup.protected_data.date_of_birth
+        signup.save(update_fields=["extra_info", "date_of_birth"])
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -138,7 +156,7 @@ class Migration(migrations.Migration):
                 "abstract": False,
             },
         ),
-        migrations.RunPython(forwards_func, migrations.RunPython.noop),
+        migrations.RunPython(forwards_func, backwards_func),
         migrations.RemoveField(
             model_name="signup",
             name="extra_info",

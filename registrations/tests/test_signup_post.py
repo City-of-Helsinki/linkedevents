@@ -51,7 +51,6 @@ def create_signups(api_client, signups_data):
 
 def assert_create_signups(api_client, signups_data):
     response = create_signups(api_client, signups_data)
-    print(response.json())
     assert response.status_code == status.HTTP_201_CREATED
 
     return response
