@@ -78,6 +78,10 @@ class TestApiKeyUser(TestCase):
         is_regular_user = self.user.is_regular_user_of(self.org_2)
         self.assertFalse(is_regular_user)
 
+    def test_is_external(self):
+        is_external = self.user.is_external
+        self.assertFalse(is_external)
+
 
 @pytest.mark.django_db
 def test_valid_jwt_is_accepted():
