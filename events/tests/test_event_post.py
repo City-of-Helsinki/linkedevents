@@ -91,6 +91,21 @@ def test__api_key_with_organization_can_create_an_event(
 
 
 @pytest.mark.django_db
+def test__api_key_with_organization_event_create_sets_correct_publisher(
+    api_client, minimal_event_dict, data_source, organization
+):
+    """Empty publisher in data should set the data source owner as the publisher."""
+    del minimal_event_dict["publisher"]
+    data_source.owner = organization
+    data_source.save()
+
+    response = create_with_post(api_client, minimal_event_dict, data_source)
+
+    minimal_event_dict["publisher"] = organization.id
+    assert_event_data_is_equal(minimal_event_dict, response.data)
+
+
+@pytest.mark.django_db
 def test__api_key_with_organization_can_create_a_suborganization_event(
     api_client, minimal_event_dict, data_source, organization, organization2
 ):
