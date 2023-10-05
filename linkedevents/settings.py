@@ -9,10 +9,12 @@ import bleach
 import environ
 import sentry_sdk
 from django.conf.global_settings import LANGUAGES as GLOBAL_LANGUAGES
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured
 from django_jinja.builtins import DEFAULT_EXTENSIONS
 from easy_thumbnails.conf import Settings as thumbnail_settings  # noqa: N813
 from sentry_sdk.integrations.django import DjangoIntegration
+from sentry_sdk.serializer import add_global_repr_processor
 
 CONFIG_FILE_NAME = "config_dev.toml"
 
@@ -42,6 +44,14 @@ def get_git_revision_hash() -> str:
         # Ditto
         git_hash = "no_repository"
     return git_hash.rstrip()
+
+
+@add_global_repr_processor
+def sentry_anonymize_user_repr(obj, hint):
+    if isinstance(obj, get_user_model()):
+        return f"<{obj.__class__.__name__}: {obj.username}>"
+
+    return NotImplemented
 
 
 root = environ.Path(__file__) - 2  # two levels back in hierarchy
