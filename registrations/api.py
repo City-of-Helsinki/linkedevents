@@ -52,15 +52,15 @@ from registrations.utils import send_mass_html_mail
 logger = logging.getLogger(__name__)
 
 
+class RegistrationsAllowedMethodsMixin:
+    http_method_names = ["post", "put", "patch", "get", "delete", "options"]
+
+
 class RegistrationViewSet(
     UserDataSourceAndOrganizationMixin,
     JSONAPIViewMixin,
-    mixins.RetrieveModelMixin,
-    mixins.UpdateModelMixin,
-    mixins.DestroyModelMixin,
-    mixins.ListModelMixin,
-    mixins.CreateModelMixin,
-    viewsets.GenericViewSet,
+    RegistrationsAllowedMethodsMixin,
+    viewsets.ModelViewSet,
 ):
     serializer_class = RegistrationSerializer
     queryset = Registration.objects.all()
@@ -381,6 +381,7 @@ class SignUpGroupFilter(SignUpBaseFilter):
 
 class SignUpViewSet(
     UserDataSourceAndOrganizationMixin,
+    RegistrationsAllowedMethodsMixin,
     viewsets.ModelViewSet,
 ):
     serializer_class = SignUpSerializer
@@ -434,6 +435,7 @@ register_view(SignUpViewSet, "signup")
 
 class SignUpGroupViewSet(
     UserDataSourceAndOrganizationMixin,
+    RegistrationsAllowedMethodsMixin,
     viewsets.ModelViewSet,
 ):
     serializer_class = SignUpGroupSerializer
@@ -491,6 +493,7 @@ class SeatReservationViewSet(
 ):
     serializer_class = SeatReservationCodeSerializer
     queryset = SeatReservationCode.objects.all()
+    http_method_names = ["post", "put", "options"]
     permission_classes = [IsAuthenticated]
 
 
