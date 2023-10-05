@@ -8,6 +8,7 @@ from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
 from registrations.models import SignUp
 from registrations.tests.factories import (
+    RegistrationFactory,
     RegistrationUserAccessFactory,
     SignUpFactory,
     SignUpProtectedDataFactory,
@@ -119,6 +120,81 @@ def test_patch_extra_info_of_signup_with_empty_data(api_client, registration, si
     signup.refresh_from_db()
     del signup.extra_info
     assert signup.extra_info == ""
+
+
+@pytest.mark.django_db
+def test_registration_user_who_created_signup_can_patch_presence_status(
+    api_client, event
+):
+    user = UserFactory()
+
+    registration = RegistrationFactory(event=event)
+
+    RegistrationUserAccessFactory(registration=registration, email=user.email)
+
+    signup = SignUpFactory(
+        registration=registration,
+        date_of_birth="2011-01-01",
+        phone_number="0441234567",
+        street_address="Street address",
+        created_by=user,
+    )
+    assert signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+
+    api_client.force_authenticate(user)
+
+    signup_data = {
+        "presence_status": SignUp.PresenceStatus.PRESENT,
+    }
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value="heltunnistussuomifi",
+    ) as mocked:
+        assert_patch_signup(api_client, signup.id, signup_data)
+        assert mocked.called is True
+
+    signup.refresh_from_db()
+    assert signup.presence_status == SignUp.PresenceStatus.PRESENT
+
+
+@pytest.mark.django_db
+def test_registration_user_who_created_signup_can_patch_presence_status(
+    api_client, event
+):
+    user = UserFactory()
+
+    registration = RegistrationFactory(
+        event=event,
+    )
+
+    RegistrationUserAccessFactory(registration=registration, email=user.email)
+
+    signup = SignUpFactory(
+        registration=registration,
+        phone_number="0441234567",
+        street_address="Street address",
+        created_by=user,
+    )
+    assert signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+
+    api_client.force_authenticate(user)
+
+    signup_data = {
+        "presence_status": SignUp.PresenceStatus.PRESENT,
+    }
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value="heltunnistussuomifi",
+    ) as mocked:
+        assert_patch_signup(api_client, signup.id, signup_data)
+        assert mocked.called is True
+
+    signup.refresh_from_db()
+    assert signup.presence_status == SignUp.PresenceStatus.PRESENT
 
 
 @pytest.mark.parametrize("identification_method", ["heltunnistussuomifi", None])

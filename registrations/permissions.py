@@ -62,14 +62,15 @@ class CanAccessSignup(UserDataFromRequestMixin, permissions.BasePermission):
         ):
             return True
 
-        if obj.registration.registration_user_accesses.filter(
-            email=request.user.email
-        ).exists():
-            # Registration user can only change presence_status and nothing else,
-            # and they need to be strongly identified.
+        if request.user.is_registration_user_access_user_of(
+            obj.registration.registration_user_accesses
+        ):
+            # Strongly identified registration user can only change presence_status
+            # and nothing else.
             data_keys = set(request.data.keys())
-            return request.user.is_strongly_identified and (
-                data_keys == {"id", "presence_status"}
+            return (
+                obj.created_by_id == request.user.id
+                or data_keys == {"id", "presence_status"}
                 or data_keys == {"presence_status"}
             )
         elif obj.created_by_id == request.user.id:
@@ -100,9 +101,6 @@ class CanAccessSignup(UserDataFromRequestMixin, permissions.BasePermission):
 class CanAccessSignupGroup(CanAccessSignup):
     @staticmethod
     def _has_object_update_permission(request: Request, obj: SignUpGroup) -> bool:
-        if not request.data.get("signups"):
-            return obj.can_be_edited_by(request.user)
-
         if request.user.is_superuser or request.user.is_registration_admin_of(
             obj.publisher
         ):
@@ -114,14 +112,20 @@ class CanAccessSignupGroup(CanAccessSignup):
                 keys |= set(signup.keys())
             return keys
 
-        if obj.registration.registration_user_accesses.filter(
-            email=request.user.email
-        ).exists():
-            # Registration user can only change presence_status and nothing else,
-            # and they need to be strongly identified.
+        if request.user.is_registration_user_access_user_of(
+            obj.registration.registration_user_accesses
+        ):
+            # Strongly identified registration user can only change presence_status
+            # and nothing else.
             data_keys = get_signups_keys()
-            return request.user.is_strongly_identified and (
-                data_keys == {"id", "registration", "presence_status"}
+            return (
+                obj.created_by_id == request.user.id
+                or data_keys
+                == {
+                    "id",
+                    "registration",
+                    "presence_status",
+                }
                 or data_keys == {"id", "presence_status"}
             )
         elif obj.created_by_id == request.user.id:

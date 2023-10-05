@@ -131,6 +131,55 @@ def test_registration_user_who_is_superuser_or_registration_admin_can_patch_sign
     assert second_signup.extra_info == "signup2 extra info"
 
 
+@freeze_time("2023-03-14 03:30:00+02:00")
+@pytest.mark.django_db
+def test_registration_user_who_created_signup_group_can_patch_signups_data(
+    api_client, registration
+):
+    user = UserFactory()
+    RegistrationUserAccessFactory(registration=registration, email=user.email)
+
+    signup_group = SignUpGroupFactory(registration=registration, created_by=user)
+    first_signup = SignUpFactory(
+        signup_group=signup_group, registration=registration, created_by=user
+    )
+    second_signup = SignUpFactory(
+        signup_group=signup_group, registration=registration, created_by=user
+    )
+
+    signup_group_data = {
+        "signups": [
+            {"id": first_signup.pk, "presence_status": SignUp.PresenceStatus.PRESENT},
+            {"id": second_signup.pk, "extra_info": "signup2 extra info"},
+        ]
+    }
+
+    assert first_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+    assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+    assert first_signup.extra_info is None
+    assert second_signup.extra_info is None
+
+    api_client.force_authenticate(user)
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value="heltunnistussuomifi",
+    ) as mocked:
+        assert_patch_signup_group(api_client, signup_group.id, signup_group_data)
+        assert mocked.called is True
+
+    first_signup.refresh_from_db()
+    second_signup.refresh_from_db()
+    del first_signup.extra_info  # refresh cached_property
+    del second_signup.extra_info  # refresh cached_property
+
+    assert first_signup.presence_status == SignUp.PresenceStatus.PRESENT
+    assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+    assert first_signup.extra_info is None
+    assert second_signup.extra_info == "signup2 extra info"
+
+
 @pytest.mark.parametrize(
     "user_role",
     [

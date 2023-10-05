@@ -1,3 +1,5 @@
+from unittest.mock import patch, PropertyMock
+
 import pytest
 from freezegun import freeze_time
 from rest_framework import status
@@ -211,6 +213,52 @@ def test_can_update_signup_group_based_on_role_and_created_by(
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert signup_group.extra_info is None
         assert signup_group.last_modified_by_id is None
+
+
+@pytest.mark.django_db
+def test_registration_user_access_cannot_update_signup_group(api_client, registration):
+    user = UserFactory()
+    api_client.force_authenticate(user)
+    signup_group = SignUpGroupFactory(registration=registration)
+
+    RegistrationUserAccessFactory(registration=registration, email=user.email)
+
+    signup_group_data = {
+        "registration": registration.id,
+        "extra_info": new_signup_group_extra_info,
+    }
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value="heltunnistussuomifi",
+    ) as mocked:
+        response = update_signup_group(api_client, signup_group.id, signup_group_data)
+        assert mocked.called is True
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_registration_user_who_created_signup_group_can_update_signup_group(
+    api_client, registration
+):
+    user = UserFactory()
+    api_client.force_authenticate(user)
+    signup_group = SignUpGroupFactory(registration=registration, created_by=user)
+
+    RegistrationUserAccessFactory(registration=registration, email=user.email)
+
+    signup_group_data = {
+        "registration": registration.id,
+        "extra_info": new_signup_group_extra_info,
+    }
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value="heltunnistussuomifi",
+    ) as mocked:
+        assert_update_signup_group(api_client, signup_group.id, signup_group_data)
+        assert mocked.called is True
 
 
 @freeze_time("2023-03-14 03:30:00+02:00")
