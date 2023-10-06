@@ -50,7 +50,7 @@ def user_created_notification(sender, instance, created, **kwargs):
         if len(recipient_list) == 0:
             logger.warning(
                 "No recipients for notification type '%s'" % notification_type,
-                extra={"event": instance},
+                extra={"user": instance.username},
             )
             return
         try:
@@ -69,4 +69,4 @@ def user_created_notification(sender, instance, created, **kwargs):
                 html_message=rendered_notification["html_body"],
             )
         except SMTPException as e:
-            logger.error(e, exc_info=True, extra={"user": instance})
+            logger.error(e, exc_info=True, extra={"user": instance.username})
