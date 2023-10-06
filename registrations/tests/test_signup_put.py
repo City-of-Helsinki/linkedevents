@@ -5,7 +5,11 @@ from rest_framework import status
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
 from registrations.models import SignUp
-from registrations.tests.factories import RegistrationUserAccessFactory, SignUpFactory
+from registrations.tests.factories import (
+    RegistrationUserAccessFactory,
+    SignUpFactory,
+    SignUpProtectedDataFactory,
+)
 
 new_signup_name = "Edited name"
 new_date_of_birth = "2015-01-01"
@@ -77,6 +81,41 @@ def test_created_admin_can_update_signup(registration, user, user_api_client):
     assert_update_signup(user_api_client, signup.id, signup_data)
     signup.refresh_from_db()
     assert signup.first_name == new_signup_name
+    assert signup.last_modified_by_id == user.id
+
+
+@pytest.mark.django_db
+def test_can_update_signup_with_empty_extra_info_and_date_of_birth(
+    user, user_api_client, registration
+):
+    signup = SignUpFactory(
+        registration=registration,
+        created_by=user,
+    )
+    SignUpProtectedDataFactory(
+        signup=signup,
+        registration=registration,
+        extra_info="Old extra info",
+        date_of_birth="2023-10-03",
+    )
+    assert signup.extra_info == "Old extra info"
+    assert signup.date_of_birth == "2023-10-03"
+    assert signup.last_modified_by_id is None
+
+    signup_data = {
+        "registration": registration.id,
+        "extra_info": "",
+        "date_of_birth": None,
+    }
+
+    assert_update_signup(user_api_client, signup.id, signup_data)
+
+    signup.refresh_from_db()
+    del signup.extra_info
+    del signup.date_of_birth
+
+    assert signup.extra_info == ""
+    assert signup.date_of_birth is None
     assert signup.last_modified_by_id == user.id
 
 
@@ -329,6 +368,7 @@ def test_registration_user_access_who_is_superuser_or_registration_admin_can_upd
     assert_update_signup(api_client, signup.id, signup_data)
 
     signup.refresh_from_db()
+    del signup.date_of_birth
     assert signup.first_name == signup_data["first_name"]
     assert signup.date_of_birth.strftime("%Y-%m-%d") == signup_data["date_of_birth"]
 

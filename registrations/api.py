@@ -339,7 +339,6 @@ class SignUpBaseFilter(django_filters.rest_framework.FilterSet):
             f"{relation_accessor}first_last_name__icontains": text_param,
             f"{relation_accessor}last_first_name__icontains": text_param,
             f"{relation_accessor}email__icontains": text_param,
-            f"{relation_accessor}extra_info__icontains": text_param,
             f"{relation_accessor}membership_number__icontains": text_param,
             f"{relation_accessor}phone_number__icontains": text_param,
         }

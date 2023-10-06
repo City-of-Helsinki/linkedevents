@@ -16,12 +16,14 @@ from registrations.models import (
     SeatReservationCode,
     SignUp,
     SignUpGroup,
+    SignUpGroupProtectedData,
     SignUpNotificationType,
+    SignUpProtectedData,
 )
 from registrations.utils import code_validity_duration
 
 
-def validate_registration_enrolment_times(registration):
+def _validate_registration_enrolment_times(registration: Registration) -> None:
     enrolment_start_time = registration.enrolment_start_time
     enrolment_end_time = registration.enrolment_end_time
     current_time = localtime()
@@ -30,6 +32,10 @@ def validate_registration_enrolment_times(registration):
         raise ConflictException(_("Enrolment is not yet open."))
     if enrolment_end_time and current_time > enrolment_end_time:
         raise ConflictException(_("Enrolment is already closed."))
+
+
+def _get_protected_data(validated_data: dict, keys: list[str]) -> dict:
+    return {key: validated_data.pop(key) for key in keys if key in validated_data}
 
 
 class CreatedModifiedBaseSerializer(serializers.ModelSerializer):
@@ -65,9 +71,26 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
         many=False,
         required=False,
     )
+    extra_info = serializers.CharField(required=False, allow_blank=True)
+    date_of_birth = serializers.DateField(required=False, allow_null=True)
+
+    @staticmethod
+    def _update_or_create_protected_data(signup, **protected_data):
+        if not protected_data:
+            return
+
+        SignUpProtectedData.objects.update_or_create(
+            registration_id=signup.registration_id,
+            signup=signup,
+            defaults=protected_data,
+        )
 
     def create(self, validated_data):
         registration = validated_data["registration"]
+        protected_data = _get_protected_data(
+            validated_data, ["extra_info", "date_of_birth"]
+        )
+
         already_attending = SignUp.objects.filter(
             registration=registration, attendee_status=SignUp.AttendeeStatus.ATTENDING
         ).count()
@@ -80,21 +103,28 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
 
         if (attendee_capacity is None) or (already_attending < attendee_capacity):
             signup = super().create(validated_data)
+            self._update_or_create_protected_data(signup, **protected_data)
+
             if signup.responsible_for_group or not signup.signup_group_id:
                 signup.send_notification(SignUpNotificationType.CONFIRMATION)
+
             return signup
         elif (waiting_list_capacity is None) or (
             already_waitlisted < waiting_list_capacity
         ):
             validated_data["attendee_status"] = SignUp.AttendeeStatus.WAITING_LIST
+
             signup = super().create(validated_data)
+            self._update_or_create_protected_data(signup, **protected_data)
+
             if signup.responsible_for_group or not signup.signup_group_id:
                 signup.send_notification(
                     SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST
                 )
+
             return signup
-        else:
-            raise DRFPermissionDenied(_("The waiting list is already full"))
+
+        raise DRFPermissionDenied(_("The waiting list is already full"))
 
     def update(self, instance, validated_data):
         errors = {}
@@ -117,7 +147,13 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
         if errors:
             raise serializers.ValidationError(errors)
 
+        protected_data = _get_protected_data(
+            validated_data, ["extra_info", "date_of_birth"]
+        )
+
         super().update(instance, validated_data)
+        self._update_or_create_protected_data(instance, **protected_data)
+
         return instance
 
     def validate(self, data):
@@ -344,7 +380,7 @@ class CreateSignUpsSerializer(serializers.Serializer):
 
         # Prevent to signup if enrolment is not open.
         # Raises 409 error if enrolment is not open
-        validate_registration_enrolment_times(registration)
+        _validate_registration_enrolment_times(registration)
 
         try:
             reservation = SeatReservationCode.objects.get(
@@ -396,6 +432,18 @@ class SignUpGroupCreateSerializer(
     CreatedModifiedBaseSerializer, CreateSignUpsSerializer
 ):
     reservation_code = serializers.CharField(write_only=True)
+    extra_info = serializers.CharField(required=False, allow_blank=True)
+
+    @staticmethod
+    def _create_protected_data(signup_group, **protected_data):
+        if not protected_data:
+            return
+
+        SignUpGroupProtectedData.objects.create(
+            registration_id=signup_group.registration_id,
+            signup_group=signup_group,
+            **protected_data,
+        )
 
     def _create_signups(self, instance, validated_signups_data):
         for signup_data in validated_signups_data:
@@ -407,9 +455,11 @@ class SignUpGroupCreateSerializer(
         validated_data.pop("reservation_code")
         reservation = validated_data.pop("reservation")
         signups_data = validated_data.pop("signups")
+        protected_data = _get_protected_data(validated_data, ["extra_info"])
 
         instance = super().create(validated_data)
         self._create_signups(instance, signups_data)
+        self._create_protected_data(instance, **protected_data)
 
         reservation.delete()
 
@@ -432,6 +482,18 @@ class SignUpGroupCreateSerializer(
 
 class SignUpGroupSerializer(CreatedModifiedBaseSerializer):
     view_name = "signupgroup-detail"
+    extra_info = serializers.CharField(required=False, allow_blank=True)
+
+    @staticmethod
+    def _update_protected_data(signup_group, **protected_data):
+        if not protected_data:
+            return
+
+        SignUpGroupProtectedData.objects.update_or_create(
+            registration_id=signup_group.registration_id,
+            signup_group=signup_group,
+            defaults=protected_data,
+        )
 
     def get_fields(self):
         fields = super().get_fields()
@@ -478,9 +540,12 @@ class SignUpGroupSerializer(CreatedModifiedBaseSerializer):
 
     def update(self, instance, validated_data):
         signups_data = validated_data.pop("signups", [])
+        protected_data = _get_protected_data(validated_data, ["extra_info"])
+
         validated_data["last_modified_by"] = self.context["request"].user
 
         super().update(instance, validated_data)
+        self._update_protected_data(instance, **protected_data)
         self._update_signups(instance, signups_data)
 
         return instance
@@ -550,7 +615,7 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
 
         # Prevent to reserve seats if enrolment is not open.
         # Raises 409 error if enrolment is not open
-        validate_registration_enrolment_times(registration)
+        _validate_registration_enrolment_times(registration)
 
         maximum_group_size = registration.maximum_group_size
 

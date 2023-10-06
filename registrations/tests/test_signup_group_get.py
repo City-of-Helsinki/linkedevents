@@ -448,7 +448,7 @@ def test_api_key_with_wrong_organization_cannot_get_signup_group_list(
 
 @pytest.mark.parametrize(
     "field",
-    ["first_name", "email", "extra_info", "membership_number", "phone_number"],
+    ["first_name", "email", "membership_number", "phone_number"],
 )
 @pytest.mark.django_db
 def test_signup_group_list_assert_text_filter(api_client, registration, field):
@@ -575,7 +575,6 @@ def test_filter_signup_groups(api_client, registration, registration2):
         first_name="Joe",
         last_name="Biden",
         email="test@test.com",
-        extra_info="cdef",
     )
     SignUpFactory(
         signup_group=signup_group2,
@@ -583,7 +582,6 @@ def test_filter_signup_groups(api_client, registration, registration2):
         first_name="Hillary",
         last_name="Clinton",
         email="test2@test.com",
-        extra_info="abcd",
     )
 
     signup_group3 = SignUpGroupFactory(registration=registration2)
@@ -643,12 +641,4 @@ def test_filter_signup_groups(api_client, registration, registration2):
     )
     get_list_and_assert_signup_groups(
         api_client, f"registration={registration2.id}&text=3456", [signup_group3]
-    )
-
-    #  search signups by extra_info
-    get_list_and_assert_signup_groups(
-        api_client, f"registration={registration2.id}&text=cd", [signup_group2]
-    )
-    get_list_and_assert_signup_groups(
-        api_client, f"registration={registration2.id}&text=abcd", [signup_group2]
     )

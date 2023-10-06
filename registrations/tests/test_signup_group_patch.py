@@ -54,6 +54,8 @@ def test_patch_signup_group_extra_info_based_on_user_role(
     api_client, event, user_role, allowed_to_patch
 ):
     user = UserFactory(is_superuser=True if user_role == "superuser" else False)
+    api_client.force_authenticate(user)
+
     other_user = UserFactory()
 
     user_role_mapping = {
@@ -69,30 +71,13 @@ def test_patch_signup_group_extra_info_based_on_user_role(
     registration = RegistrationFactory(event=event)
 
     signup_group = SignUpGroupFactory(registration=registration, created_by=other_user)
-    first_signup = SignUpFactory(
-        signup_group=signup_group,
-        registration=registration,
-        extra_info="signup1 extra info",
-    )
-    second_signup = SignUpFactory(
-        signup_group=signup_group,
-        registration=registration,
-        extra_info="signup2 extra info",
-    )
+    assert signup_group.extra_info is None
 
     signup_group_data = {"extra_info": "signup group extra info"}
-
-    assert signup_group.extra_info is None
-    assert first_signup.extra_info == "signup1 extra info"
-    assert second_signup.extra_info == "signup2 extra info"
-
-    api_client.force_authenticate(user)
-
     response = patch_signup_group(api_client, signup_group.id, signup_group_data)
 
     signup_group.refresh_from_db()
-    first_signup.refresh_from_db()
-    second_signup.refresh_from_db()
+    del signup_group.extra_info  # refresh cached_property
 
     if allowed_to_patch:
         assert response.status_code == status.HTTP_200_OK
@@ -101,9 +86,6 @@ def test_patch_signup_group_extra_info_based_on_user_role(
     else:
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert signup_group.extra_info is None
-
-    assert first_signup.extra_info == "signup1 extra info"
-    assert second_signup.extra_info == "signup2 extra info"
 
 
 @pytest.mark.parametrize("admin_type", ["superuser", "registration_admin"])
@@ -140,6 +122,9 @@ def test_registration_user_who_is_superuser_or_registration_admin_can_patch_sign
 
     first_signup.refresh_from_db()
     second_signup.refresh_from_db()
+    del first_signup.extra_info
+    del second_signup.extra_info
+
     assert first_signup.presence_status == SignUp.PresenceStatus.PRESENT
     assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
     assert first_signup.extra_info is None
@@ -188,6 +173,9 @@ def test_admin_or_regular_user_cannot_patch_signups_data(
 
     first_signup.refresh_from_db()
     second_signup.refresh_from_db()
+    del first_signup.extra_info
+    del second_signup.extra_info
+
     assert first_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
     assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
     assert first_signup.extra_info is None
