@@ -33,3 +33,7 @@ SECRET_KEY = "xxx"
 
 # Enable registration related routes for pytest
 ENABLE_REGISTRATION_ENDPOINTS = True
+
+FIELD_ENCRYPTION_KEYS = (
+    "c87a6669a1ded2834f1dfd0830d86ef6cdd20372ac83e8c7c23feffe87e6a051",
+)
