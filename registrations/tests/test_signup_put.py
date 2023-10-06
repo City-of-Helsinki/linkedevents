@@ -1,3 +1,5 @@
+from unittest.mock import patch, PropertyMock
+
 import pytest
 from freezegun import freeze_time
 from rest_framework import status
@@ -289,7 +291,7 @@ def test_cannot_update_attendee_status_of_signup(
 
     signup_data = {
         "registration": registration.id,
-        "name": new_signup_name,
+        "first_name": new_signup_name,
         "date_of_birth": new_date_of_birth,
         "attendee_status": SignUp.AttendeeStatus.WAITING_LIST,
     }
@@ -310,7 +312,7 @@ def test_cannot_update_registration_of_signup(
     user.get_default_organization().registration_admin_users.add(user)
 
     signup_data = {
-        "name": new_signup_name,
+        "first_name": new_signup_name,
         "date_of_birth": new_date_of_birth,
         "registration": registration2.id,
     }
@@ -333,14 +335,51 @@ def test_registration_user_access_cannot_update_signup(
 
     signup_data = {
         "registration": registration.id,
-        "name": new_signup_name,
+        "first_name": new_signup_name,
         "date_of_birth": new_date_of_birth,
     }
 
     api_client.force_authenticate(user)
 
-    response = update_signup(api_client, signup.id, signup_data)
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value="heltunnistussuomifi",
+    ) as mocked:
+        response = update_signup(api_client, signup.id, signup_data)
+        assert mocked.called is True
+
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_registration_user_access_who_created_signup_can_update(
+    registration, api_client
+):
+    user = UserFactory()
+
+    RegistrationUserAccessFactory(registration=registration, email=user.email)
+    signup = SignUpFactory(
+        registration=registration,
+        first_name="Name",
+        created_by=user,
+    )
+
+    signup_data = {
+        "registration": registration.id,
+        "first_name": new_signup_name,
+        "date_of_birth": new_date_of_birth,
+    }
+
+    api_client.force_authenticate(user)
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value="heltunnistussuomifi",
+    ) as mocked:
+        assert_update_signup(api_client, signup.id, signup_data)
+        assert mocked.called is True
 
 
 @pytest.mark.parametrize("admin_type", ["superuser", "registration_admin"])
@@ -380,7 +419,7 @@ def test_regular_user_cannot_update_signup(registration, signup, user, user_api_
 
     signup_data = {
         "registration": registration.id,
-        "name": new_signup_name,
+        "first_name": new_signup_name,
         "date_of_birth": new_date_of_birth,
     }
     response = update_signup(user_api_client, signup.id, signup_data)
@@ -399,7 +438,7 @@ def test_api_key_with_organization_and_registration_permission_can_update_signup
 
     signup_data = {
         "registration": registration.id,
-        "name": new_signup_name,
+        "first_name": new_signup_name,
         "date_of_birth": new_date_of_birth,
     }
     assert_update_signup(api_client, signup.id, signup_data)
@@ -416,7 +455,7 @@ def test_api_key_with_organization_without_registration_permission_cannot_update
 
     signup_data = {
         "registration": registration.id,
-        "name": new_signup_name,
+        "first_name": new_signup_name,
         "date_of_birth": new_date_of_birth,
     }
     response = update_signup(api_client, signup.id, signup_data)
@@ -433,7 +472,7 @@ def test_api_key_of_other_organization_cannot_update_signup(
 
     signup_data = {
         "registration": registration.id,
-        "name": new_signup_name,
+        "first_name": new_signup_name,
         "date_of_birth": new_date_of_birth,
     }
     response = update_signup(api_client, signup.id, signup_data)
@@ -450,7 +489,7 @@ def test_api_key_from_wrong_data_source_cannot_update_signup(
 
     signup_data = {
         "registration": registration.id,
-        "name": new_signup_name,
+        "first_name": new_signup_name,
         "date_of_birth": new_date_of_birth,
     }
     response = update_signup(api_client, signup.id, signup_data)
@@ -463,7 +502,7 @@ def test_unknown_api_key_cannot_update_signup(api_client, registration, signup):
 
     signup_data = {
         "registration": registration.id,
-        "name": new_signup_name,
+        "first_name": new_signup_name,
         "date_of_birth": new_date_of_birth,
     }
     response = update_signup(api_client, signup.id, signup_data)
@@ -489,7 +528,7 @@ def test_registration_admin_can_update_signup_regardless_of_non_user_editable_re
 
     signup_data = {
         "registration": registration.id,
-        "name": new_signup_name,
+        "first_name": new_signup_name,
         "date_of_birth": new_date_of_birth,
     }
     assert_update_signup(user_api_client, signup.id, signup_data)
