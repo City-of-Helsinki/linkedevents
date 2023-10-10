@@ -1064,6 +1064,11 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
             created
             and self.publication_status == PublicationStatus.DRAFT
             and not self.is_created_with_apikey
+            # Only send super event notification to avoid spamming from child events when recurring event.
+            and not (
+                self.super_event
+                and self.super_event.super_event_type == Event.SuperEventType.RECURRING
+            )
         ):
             self.send_draft_posted_notification()
 

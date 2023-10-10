@@ -119,7 +119,9 @@ def test_event_published(event_published_notification_template, user, draft_even
 
 
 @pytest.mark.django_db
-def test_draft_posted(draft_posted_notification_template, user, draft_event):
+def test_draft_posted_as_super_event_sends(
+    draft_posted_notification_template, user, draft_event
+):
     strings = [
         "draft posted body, event name: %s!" % draft_event.name,
     ]
@@ -130,6 +132,33 @@ def test_draft_posted(draft_posted_notification_template, user, draft_event):
         strings,
         html_body=html_body,
     )
+
+
+@pytest.mark.django_db
+def test_recurring_child_event_saved_does_not_send(user, event):
+    event.super_event_type = event.SuperEventType.RECURRING
+    EventFactory(
+        name="testeventzor",
+        data_source=event.data_source,
+        publisher=event.publisher,
+        publication_status=PublicationStatus.DRAFT,
+        created_by=user,
+        super_event=event,
+    )
+    assert len(mail.outbox) == 0
+
+
+@pytest.mark.django_db
+def test_other_than_recurring_child_event_saved_does_send(user, event):
+    EventFactory(
+        name="testeventzor",
+        data_source=event.data_source,
+        publisher=event.publisher,
+        publication_status=PublicationStatus.DRAFT,
+        created_by=user,
+        super_event=event,
+    )
+    assert len(mail.outbox) == 1
 
 
 @pytest.mark.parametrize(
