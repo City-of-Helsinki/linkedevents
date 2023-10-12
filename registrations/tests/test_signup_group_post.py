@@ -1183,3 +1183,48 @@ def test_signup_group_confirmation_to_waiting_list_template_has_correct_text_per
 
     #  assert that the email was sent
     assert expected_text in str(mail.outbox[0].alternatives[0])
+
+
+@pytest.mark.django_db
+def test_signup_group_text_fields_are_sanitized(
+    languages, organization, user, user_api_client
+):
+    user.get_default_organization().registration_admin_users.add(user)
+
+    reservation = SeatReservationCodeFactory(seats=1)
+    signup_group_data = {
+        "extra_info": "Extra info for group <p>Html</p>",
+        "signups": [
+            {
+                "first_name": "Michael <p>Html</p>",
+                "last_name": "Jackson <p>Html</p>",
+                "extra_info": "Extra info <p>Html</p>",
+                "phone_number": "<p>0441111111</p>",
+                "street_address": "Street address <p>Html</p>",
+                "zipcode": "<p>zip</p>",
+                "responsible_for_group": True,
+            }
+        ],
+    }
+    signup_group_data["registration"] = reservation.registration_id
+    signup_group_data["reservation_code"] = reservation.code
+
+    response = assert_create_signup_group(user_api_client, signup_group_data)
+    response_signup = response.data["signups"][0]
+    assert response.data["extra_info"] == "Extra info for group Html"
+    assert response_signup["first_name"] == "Michael Html"
+    assert response_signup["last_name"] == "Jackson Html"
+    assert response_signup["extra_info"] == "Extra info Html"
+    assert response_signup["phone_number"] == "0441111111"
+    assert response_signup["street_address"] == "Street address Html"
+    assert response_signup["zipcode"] == "zip"
+
+    signup_group = SignUpGroup.objects.get(pk=response.data["id"])
+    assert signup_group.extra_info == "Extra info for group Html"
+    signup = SignUp.objects.get(pk=response_signup["id"])
+    assert signup.first_name == "Michael Html"
+    assert signup.last_name == "Jackson Html"
+    assert signup.extra_info == "Extra info Html"
+    assert signup.phone_number == "0441111111"
+    assert signup.street_address == "Street address Html"
+    assert signup.zipcode == "zip"

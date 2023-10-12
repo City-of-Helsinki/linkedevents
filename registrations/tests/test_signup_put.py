@@ -532,3 +532,30 @@ def test_registration_admin_can_update_signup_regardless_of_non_user_editable_re
         "date_of_birth": new_date_of_birth,
     }
     assert_update_signup(user_api_client, signup.id, signup_data)
+
+
+@freeze_time("2023-03-14 03:30:00+02:00")
+@pytest.mark.django_db
+def test_signup_text_fields_are_sanitized(user_api_client, registration, user):
+    user.get_default_organization().registration_admin_users.add(user)
+
+    signup = SignUpFactory(registration=registration)
+    signup_data = {
+        "registration": registration.id,
+        "first_name": "Michael <p>Html</p>",
+        "last_name": "Jackson <p>Html</p>",
+        "extra_info": "Extra info <p>Html</p>",
+        "phone_number": "<p>0441111111</p>",
+        "street_address": "Edited street address <p>Html</p>",
+        "zipcode": "<p>zip</p>",
+    }
+
+    assert_update_signup(user_api_client, signup.id, signup_data)
+    signup.refresh_from_db()
+    assert signup.last_modified_by_id == user.id
+    assert signup.first_name == "Michael Html"
+    assert signup.last_name == "Jackson Html"
+    assert signup.extra_info == "Extra info Html"
+    assert signup.phone_number == "0441111111"
+    assert signup.street_address == "Edited street address Html"
+    assert signup.zipcode == "zip"

@@ -421,3 +421,40 @@ def test_non_user_editable_resources_cannot_update_signup_group(
 
     response = update_signup_group(user_api_client, signup_group.id, signup_group_data)
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@freeze_time("2023-03-14 03:30:00+02:00")
+@pytest.mark.django_db
+def test_signup_group_text_fields_are_sanitized(registration, user, user_api_client):
+    user.get_default_organization().registration_admin_users.add(user)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    signup = SignUpFactory(signup_group=signup_group, registration=registration)
+
+    signup_group_data = {
+        "extra_info": "Extra info for group <p>Html</p>",
+        "registration": registration.id,
+        "signups": [
+            {
+                "id": signup.id,
+                "first_name": "Michael <p>Html</p>",
+                "last_name": "Jackson <p>Html</p>",
+                "extra_info": "Extra info <p>Html</p>",
+                "phone_number": "<p>0441111111</p>",
+                "street_address": "Street address <p>Html</p>",
+                "zipcode": "<p>zip</p>",
+            }
+        ],
+    }
+
+    assert_update_signup_group(user_api_client, signup_group.id, signup_group_data)
+    signup_group.refresh_from_db()
+    assert signup_group.extra_info == "Extra info for group Html"
+
+    signup.refresh_from_db()
+    assert signup.first_name == "Michael Html"
+    assert signup.last_name == "Jackson Html"
+    assert signup.extra_info == "Extra info Html"
+    assert signup.phone_number == "0441111111"
+    assert signup.street_address == "Street address Html"
+    assert signup.zipcode == "zip"

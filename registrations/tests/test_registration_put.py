@@ -6,6 +6,7 @@ from rest_framework import status
 from events.models import Event
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import RegistrationUserAccess
+from registrations.tests.factories import RegistrationFactory
 from registrations.tests.test_registration_post import (
     create_registration,
     get_event_url,
@@ -386,3 +387,35 @@ def test__cannot_update_registration_user_access_with_duplicate_email(
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data["registration_user_accesses"][0].code == "unique"
+
+
+@pytest.mark.django_db
+def test_registration_text_fields_are_sanitized(event, registration, user_api_client):
+    allowed_confirmation_message = "Confirmation message: <p>Allowed tag</p>"
+    cleaned_confirmation_message = "Confirmation message: Not allowed tag"
+    allowed_instructions = "Instructions: <p>Allowed tag</p>"
+    cleaned_instructions = "Instructions: Not allowed tag"
+
+    registration_data = {
+        "event": {"@id": get_event_url(event.id)},
+        "confirmation_message": {
+            "fi": allowed_confirmation_message,
+            "sv": "Confirmation message: <h6>Not allowed tag</h6>",
+        },
+        "instructions": {
+            "fi": allowed_instructions,
+            "sv": "Instructions: <h6>Not allowed tag</h6>",
+        },
+    }
+
+    response = update_registration(user_api_client, registration.id, registration_data)
+    assert response.data["confirmation_message"]["fi"] == allowed_confirmation_message
+    assert response.data["confirmation_message"]["sv"] == cleaned_confirmation_message
+    assert response.data["instructions"]["fi"] == allowed_instructions
+    assert response.data["instructions"]["sv"] == cleaned_instructions
+
+    registration.refresh_from_db()
+    assert registration.confirmation_message_fi == allowed_confirmation_message
+    assert registration.confirmation_message_sv == cleaned_confirmation_message
+    assert registration.instructions_fi == allowed_instructions
+    assert registration.instructions_sv == cleaned_instructions

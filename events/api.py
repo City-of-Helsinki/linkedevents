@@ -12,7 +12,6 @@ from functools import partial, reduce
 from operator import or_
 from typing import Iterable, Optional
 
-import bleach
 import django.forms
 import django_filters
 import pytz
@@ -104,6 +103,7 @@ from events.permissions import (
 )
 from events.renderers import DOCXRenderer
 from events.translation import EventTranslationOptions, PlaceTranslationOptions
+from events.utils import clean_text_fields
 from helevents.models import User
 from helevents.serializers import UserSerializer
 from linkedevents.registry import register_view, viewset_classes_by_model
@@ -185,25 +185,6 @@ def get_publisher_query(publisher):
         )
 
     return q
-
-
-def clean_text_fields(data, allowed_html_fields: Optional[Iterable[str]] = None):
-    if allowed_html_fields is None:
-        allowed_html_fields = []
-
-    for k, v in data.items():
-        if isinstance(v, str) and any(c in v for c in "<>&"):
-            # only specified fields may contain allowed tags
-            for field_name in allowed_html_fields:
-                # check all languages and the default translation field too
-                if k.startswith(field_name):
-                    data[k] = bleach.clean(v, settings.BLEACH_ALLOWED_TAGS)
-                    break
-            else:
-                data[k] = bleach.clean(v)
-                # for non-html data, ampersands should be bare
-                data[k] = data[k].replace("&amp;", "&")
-    return data
 
 
 def parse_hours(val, param):
@@ -2010,6 +1991,10 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
 
     # LinkedEventsSerializer validates name which doesn't exist in Registration model
     def validate(self, data):
+        # Clean html tags from the text fields
+        data = clean_text_fields(
+            data, ["confirmation_message", "instructions"], strip=True
+        )
         return data
 
 

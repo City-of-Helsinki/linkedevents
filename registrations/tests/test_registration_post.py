@@ -266,3 +266,29 @@ def test__cannot_create_registration_user_accesses_with_duplicate_emails(
         assert (
             response.data["registration_user_accesses"][1]["email"][0].code == "unique"
         )
+
+
+@pytest.mark.django_db
+def test_registration_text_fields_are_sanitized(event, user_api_client):
+    allowed_confirmation_message = "Confirmation message: <p>Allowed tag</p>"
+    cleaned_confirmation_message = "Confirmation message: Not allowed tag"
+    allowed_instructions = "Instructions: <p>Allowed tag</p>"
+    cleaned_instructions = "Instructions: Not allowed tag"
+
+    registration_data = {
+        "event": {"@id": get_event_url(event.id)},
+        "confirmation_message": {
+            "fi": allowed_confirmation_message,
+            "sv": "Confirmation message: <h6>Not allowed tag</h6>",
+        },
+        "instructions": {
+            "fi": allowed_instructions,
+            "sv": "Instructions: <h6>Not allowed tag</h6>",
+        },
+    }
+
+    response = assert_create_registration(user_api_client, registration_data)
+    assert response.data["confirmation_message"]["fi"] == allowed_confirmation_message
+    assert response.data["confirmation_message"]["sv"] == cleaned_confirmation_message
+    assert response.data["instructions"]["fi"] == allowed_instructions
+    assert response.data["instructions"]["sv"] == cleaned_instructions

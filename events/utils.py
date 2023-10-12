@@ -2,8 +2,9 @@ import collections
 import re
 import warnings
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Iterable, Optional
 
+import bleach
 import pytz
 from dateutil.parser import parse as dateutil_parse
 from django.conf import settings
@@ -285,3 +286,26 @@ def get_user_data_source_and_organization_from_request(
         if publisher and publisher.replaced_by:
             publisher = publisher.replaced_by
     return data_source, publisher
+
+
+def clean_text_fields(
+    data,
+    allowed_html_fields: Optional[Iterable[str]] = None,
+    strip: bool = False,
+):
+    if allowed_html_fields is None:
+        allowed_html_fields = []
+
+    for k, v in data.items():
+        if isinstance(v, str) and any(c in v for c in "<>&"):
+            # only specified fields may contain allowed tags
+            for field_name in allowed_html_fields:
+                # check all languages and the default translation field too
+                if k.startswith(field_name):
+                    data[k] = bleach.clean(v, settings.BLEACH_ALLOWED_TAGS, strip=strip)
+                    break
+            else:
+                data[k] = bleach.clean(v, strip=strip)
+                # for non-html data, ampersands should be bare
+                data[k] = data[k].replace("&amp;", "&")
+    return data

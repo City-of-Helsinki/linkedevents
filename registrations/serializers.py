@@ -9,6 +9,7 @@ from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.fields import DateTimeField
 
 from events.models import Language
+from events.utils import clean_text_fields
 from registrations.exceptions import ConflictException
 from registrations.models import (
     Registration,
@@ -157,6 +158,8 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
         return instance
 
     def validate(self, data):
+        # Clean html tags from the text fields
+        data = clean_text_fields(data, strip=True)
         errors = {}
 
         if isinstance(self.instance, SignUp):
@@ -377,6 +380,8 @@ class CreateSignUpsSerializer(serializers.Serializer):
     def validate(self, data):
         reservation_code = data["reservation_code"]
         registration = data["registration"]
+        # Clean html tags from the text fields
+        data = clean_text_fields(data, strip=True)
 
         # Prevent to signup if enrolment is not open.
         # Raises 409 error if enrolment is not open
@@ -435,6 +440,8 @@ class SignUpGroupCreateSerializer(
     extra_info = serializers.CharField(required=False, allow_blank=True)
 
     def validate(self, data):
+        # Clean html tags from the text fields
+        data = clean_text_fields(data, strip=True)
         validated_data = super().validate(data)
 
         errors = {}
@@ -519,6 +526,8 @@ class SignUpGroupSerializer(CreatedModifiedBaseSerializer):
         return fields
 
     def validate(self, data):
+        # Clean html tags from the text fields
+        data = clean_text_fields(data, strip=True)
         validated_data = super().validate(data)
 
         errors = {}
