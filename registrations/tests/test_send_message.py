@@ -8,6 +8,16 @@ from events.models import Language
 from events.tests.utils import versioned_reverse as reverse
 from registrations.tests.factories import SignUpFactory, SignUpGroupFactory
 
+# === util methods ===
+
+
+def head_message(api_client, registration_id):
+    send_message_url = reverse(
+        "registration-send-message", kwargs={"pk": registration_id}
+    )
+
+    return api_client.head(send_message_url)
+
 
 def send_message(api_client, registration_id, send_message_data):
     send_message_url = reverse(
@@ -43,6 +53,15 @@ def assert_send_message(
         assert next(x for x in mails if signup.email in x.to) is not None
 
     return response
+
+
+# === tests ===
+
+
+@pytest.mark.django_db
+def test_head_method_not_allowed(user_api_client, registration):
+    response = head_message(user_api_client, registration.id)
+    assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
 
 
 @pytest.mark.django_db
