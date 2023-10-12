@@ -38,5 +38,7 @@ else
     exec uwsgi \
          --ini .prod/uwsgi_configuration.ini \
          --processes ${UWSGI_PROCESSES-2} \
-         --threads ${UWSGI_THREADS-2}
+         --threads ${UWSGI_THREADS-2} \
+         --stats /tmp/statsock \
+         -m
 fi
