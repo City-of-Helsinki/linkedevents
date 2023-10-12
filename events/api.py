@@ -2171,6 +2171,17 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
         data = super().to_internal_value(data)
         return data
 
+    def validate_keywords(self, keywords):
+        for kw in keywords:
+            if kw.deprecated:
+                raise serializers.ValidationError(
+                    _("Deprecated keyword not allowed ({})").format(kw.pk)
+                )
+        return keywords
+
+    def validate_audience(self, audiences):
+        return self.validate_keywords(audiences)
+
     def validate(self, data):
         context = self.context
         user = self.context["request"].user
