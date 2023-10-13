@@ -1037,25 +1037,6 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
                     }
                 )
 
-        if (
-            self.keywords.filter(deprecated=True)
-            or self.audience.filter(deprecated=True)
-        ) and (not self.deleted):
-            raise ValidationError(
-                {
-                    "keywords": _(
-                        "Trying to save event with deprecated keywords "
-                        + str(self.keywords.filter(deprecated=True).values("id"))
-                        + " or "
-                        + str(self.audience.filter(deprecated=True).values("id"))
-                        + ". Please use up-to-date keywords."
-                    )
-                }
-            )
-
-        # if self.location__divisions__ocd_id__endswith == MUNIGEO_MUNI:
-        #     self.local = True
-
         super().save(*args, **kwargs)
 
         # needed to cache location event numbers
