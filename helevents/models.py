@@ -266,4 +266,5 @@ class User(AbstractUser, UserModelPermissionMixin, SerializableMixin):
         return (
             not self.organization_memberships.exists()
             and not self.admin_organizations.exists()
+            and not self.registration_admin_organizations.exists()
         )
