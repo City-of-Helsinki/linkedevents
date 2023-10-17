@@ -35,6 +35,13 @@ def get_signup_edit_url(signup, linked_registrations_ui_locale):
     return signup_edit_url
 
 
+def get_signup_confirmation_template(signup):
+    if signup.signup_group_id:
+        return "signup_group_confirmation.html"
+    else:
+        return "signup_confirmation.html"
+
+
 def send_mass_html_mail(
     datatuple,
     fail_silently=False,

@@ -23,6 +23,7 @@ from events.models import Event, Language
 from registrations.utils import (
     code_validity_duration,
     get_email_noreply_address,
+    get_signup_confirmation_template,
     get_signup_edit_url,
     get_ui_locales,
 )
@@ -669,7 +670,7 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
 
         notification_templates = {
             SignUpNotificationType.CANCELLATION: "cancellation_confirmation.html",
-            SignUpNotificationType.CONFIRMATION: "signup_confirmation.html",
+            SignUpNotificationType.CONFIRMATION: get_signup_confirmation_template(self),
             SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST: "signup_confirmation_to_waiting_list.html",
             SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT: "signup_transferred_as_participant.html",
         }

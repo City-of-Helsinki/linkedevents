@@ -708,19 +708,19 @@ def test_group_signup_successful_with_waitlist(user_api_client, registration, us
             "en",
             "Registration confirmation",
             "Registration to the event Foo has been saved.",
-            "Congratulations! You have successfully registered to the event <strong>Foo</strong>.",
+            "Congratulations! Your registration has been confirmed for the event <strong>Foo</strong>.",
         ),
         (
             "fi",
             "Vahvistus ilmoittautumisesta",
             "Ilmoittautuminen tapahtumaan Foo on tallennettu.",
-            "Onnittelut! Olet onnistuneesti ilmoittautunut tapahtumaan <strong>Foo</strong>.",
+            "Onnittelut! Ilmoittautumisesi on vahvistettu tapahtumaan <strong>Foo</strong>.",
         ),
         (
             "sv",
             "Bekräftelse av registrering",
             "Anmälan till evenemanget Foo har sparats.",
-            "Grattis! Du har framgångsrikt registrerat dig till evenemanget <strong>Foo</strong>.",
+            "Grattis! Din registrering har bekräftats för evenemanget <strong>Foo</strong>.",
         ),
     ],
 )
@@ -774,17 +774,17 @@ def test_email_sent_on_successful_signup(
         (
             Event.TypeId.GENERAL,
             "Registration to the event Foo has been saved.",
-            "Congratulations! You have successfully registered to the event <strong>Foo</strong>.",
+            "Congratulations! Your registration has been confirmed for the event <strong>Foo</strong>.",
         ),
         (
             Event.TypeId.COURSE,
             "Registration to the course Foo has been saved.",
-            "Congratulations! You have successfully registered to the course <strong>Foo</strong>.",
+            "Congratulations! Your registration has been confirmed for the course <strong>Foo</strong>.",
         ),
         (
             Event.TypeId.VOLUNTEERING,
             "Registration to the volunteering Foo has been saved.",
-            "Congratulations! You have successfully registered to the volunteering <strong>Foo</strong>.",
+            "Congratulations! Your registration has been confirmed for the volunteering <strong>Foo</strong>.",
         ),
     ],
 )

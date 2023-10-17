@@ -735,20 +735,20 @@ def test_signup_group_successful_with_waitlist(user_api_client, registration, us
         (
             "en",
             "Registration confirmation",
-            "Registration to the event Foo has been saved.",
-            "Congratulations! You have successfully registered to the event <strong>Foo</strong>.",
+            "Group registration to the event Foo has been saved.",
+            "Congratulations! Your registration has been confirmed for the event <strong>Foo</strong>.",
         ),
         (
             "fi",
             "Vahvistus ilmoittautumisesta",
-            "Ilmoittautuminen tapahtumaan Foo on tallennettu.",
-            "Onnittelut! Olet onnistuneesti ilmoittautunut tapahtumaan <strong>Foo</strong>.",
+            "Ryhmäilmoittautuminen tapahtumaan Foo on tallennettu.",
+            "Onnittelut! Ilmoittautumisesi on vahvistettu tapahtumaan <strong>Foo</strong>.",
         ),
         (
             "sv",
             "Bekräftelse av registrering",
-            "Anmälan till evenemanget Foo har sparats.",
-            "Grattis! Du har framgångsrikt registrerat dig till evenemanget <strong>Foo</strong>.",
+            "Gruppregistrering till evenemanget Foo har sparats.",
+            "Grattis! Din registrering har bekräftats för evenemanget <strong>Foo</strong>.",
         ),
     ],
 )
@@ -802,18 +802,18 @@ def test_email_sent_on_successful_signup_group(
     [
         (
             Event.TypeId.GENERAL,
-            "Registration to the event Foo has been saved.",
-            "Congratulations! You have successfully registered to the event <strong>Foo</strong>.",
+            "Group registration to the event Foo has been saved.",
+            "Congratulations! Your registration has been confirmed for the event <strong>Foo</strong>.",
         ),
         (
             Event.TypeId.COURSE,
-            "Registration to the course Foo has been saved.",
-            "Congratulations! You have successfully registered to the course <strong>Foo</strong>.",
+            "Group registration to the course Foo has been saved.",
+            "Congratulations! Your registration has been confirmed for the course <strong>Foo</strong>.",
         ),
         (
             Event.TypeId.VOLUNTEERING,
-            "Registration to the volunteering Foo has been saved.",
-            "Congratulations! You have successfully registered to the volunteering <strong>Foo</strong>.",
+            "Group registration to the volunteering Foo has been saved.",
+            "Congratulations! Your registration has been confirmed for the volunteering <strong>Foo</strong>.",
         ),
     ],
 )
@@ -902,68 +902,6 @@ def test_signup_group_confirmation_message_is_shown_in_service_language(
 
     assert_create_signup_group(user_api_client, signup_group_data)
     assert confirmation_message in str(mail.outbox[0].alternatives[0])
-
-
-@pytest.mark.parametrize(
-    "event_type,expected_heading,expected_text",
-    [
-        (
-            Event.TypeId.GENERAL,
-            "Registration to the event Foo has been saved.",
-            "Congratulations! You have successfully registered to the event <strong>Foo</strong>.",
-        ),
-        (
-            Event.TypeId.COURSE,
-            "Registration to the course Foo has been saved.",
-            "Congratulations! You have successfully registered to the course <strong>Foo</strong>.",
-        ),
-        (
-            Event.TypeId.VOLUNTEERING,
-            "Registration to the volunteering Foo has been saved.",
-            "Congratulations! You have successfully registered to the volunteering <strong>Foo</strong>.",
-        ),
-    ],
-)
-@pytest.mark.django_db
-def test_confirmation_template_has_correct_text_per_event_type(
-    user_api_client,
-    event_type,
-    expected_heading,
-    expected_text,
-    languages,
-    registration,
-    user,
-):
-    user.get_default_organization().registration_admin_users.add(user)
-
-    assert SignUp.objects.count() == 0
-
-    registration.event.type_id = event_type
-    registration.event.name = "Foo"
-    registration.event.save()
-
-    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
-
-    signup_data = {
-        "first_name": "Michael",
-        "last_name": "Jackson",
-        "email": test_email1,
-        "service_language": "en",
-        "responsible_for_group": True,
-    }
-    signup_group_data = {
-        "registration": registration.id,
-        "reservation_code": reservation.code,
-        "signups": [signup_data],
-    }
-
-    assert_create_signup_group(user_api_client, signup_group_data)
-    assert SignUp.objects.count() == 1
-    assert SignUp.objects.first().attendee_status == SignUp.AttendeeStatus.ATTENDING
-
-    #  assert that the email was sent
-    assert expected_heading in str(mail.outbox[0].alternatives[0])
-    assert expected_text in str(mail.outbox[0].alternatives[0])
 
 
 @pytest.mark.parametrize(
