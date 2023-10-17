@@ -43,7 +43,6 @@ EVENTS_URL_TEMPLATE = urljoin(
     "event?searchstarttime={begin_date}&sort=starttime&show=100&offset={offset}&language={language}",
 )
 CATEGORY_URL = urljoin(settings.ELIS_EVENT_API_URL, "category")
-EVENT_API_TIMEOUT = 30
 
 
 LOCATION_TPREK_MAP = {
@@ -396,7 +395,7 @@ class KulkeImporter(Importer):
             self.event_only_license = None
 
     def fetch_kulke_categories(self) -> dict[str, Union[str, int]]:
-        response = requests.get(CATEGORY_URL, timeout=EVENT_API_TIMEOUT)
+        response = requests.get(CATEGORY_URL, timeout=self.default_timeout)
         response.raise_for_status()
         root = etree.fromstring(response.content)
         categories = {}
@@ -1004,7 +1003,7 @@ class KulkeImporter(Importer):
                 EVENTS_URL_TEMPLATE.format(
                     begin_date=begin_date, offset=offset, language=language
                 ),
-                timeout=EVENT_API_TIMEOUT,
+                timeout=self.default_timeout,
             )
             response.raise_for_status()
             root = etree.fromstring(response.content, parser=parser)

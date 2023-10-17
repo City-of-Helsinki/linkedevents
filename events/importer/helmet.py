@@ -494,7 +494,7 @@ class HelmetImporter(Importer):
     def _recur_fetch_paginated_url(self, url, lang, events):
         max_tries = 5
         for try_number in range(0, max_tries):
-            response = requests.get(url)
+            response = requests.get(url, timeout=self.default_timeout)
             if response.status_code != 200:
                 logger.warning("HelMet API reported HTTP %d" % response.status_code)
                 time.sleep(2)

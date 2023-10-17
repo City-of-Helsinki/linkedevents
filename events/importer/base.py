@@ -40,6 +40,8 @@ def recur_dict():
 
 
 class Importer(object):
+    default_timeout = 30
+
     def __init__(self, options):
         super().__init__()
         self.options = options
