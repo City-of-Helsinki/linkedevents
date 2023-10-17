@@ -1,6 +1,7 @@
 import pytest
 
 
+@pytest.mark.no_use_audit_log
 @pytest.mark.django_db
 def test_deleted_event_can_have_deprecated_keyword(event, keyword):
     keyword.deprecated = True
@@ -14,6 +15,7 @@ def test_deleted_event_can_have_deprecated_keyword(event, keyword):
     event.save()
 
 
+@pytest.mark.no_use_audit_log
 @pytest.mark.django_db
 def test_event_cannot_replace_itself(event):
     event.replaced_by = event
@@ -22,6 +24,7 @@ def test_event_cannot_replace_itself(event):
         event.save()
 
 
+@pytest.mark.no_use_audit_log
 @pytest.mark.django_db
 def test_prevent_circular_event_replacement(event, event2, event3):
     event.replaced_by = event2

@@ -14,6 +14,7 @@ from munigeo.models import (
 )
 from parler.utils.context import switch_language
 
+from audit_log.tests.conftest import *  # noqa
 from events.api import KeywordSerializer, LanguageSerializer, PlaceSerializer
 
 # events
