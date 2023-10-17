@@ -72,6 +72,7 @@ def user_created_notification_template():
     return template
 
 
+@pytest.mark.no_use_audit_log
 @pytest.mark.django_db
 def test_draft_event_deleted(event_deleted_notification_template, user, event):
     event.created_by = user
@@ -91,6 +92,7 @@ def test_draft_event_deleted(event_deleted_notification_template, user, event):
     )
 
 
+@pytest.mark.no_use_audit_log
 @pytest.mark.django_db
 def test_public_event_deleted_doesnt_trigger_notification(
     event_deleted_notification_template, user, event
@@ -101,6 +103,7 @@ def test_public_event_deleted_doesnt_trigger_notification(
     assert len(mail.outbox) == 0
 
 
+@pytest.mark.no_use_audit_log
 @pytest.mark.django_db
 def test_event_published(event_published_notification_template, user, draft_event):
     draft_event.created_by = user
@@ -118,6 +121,7 @@ def test_event_published(event_published_notification_template, user, draft_even
     )
 
 
+@pytest.mark.no_use_audit_log
 @pytest.mark.django_db
 def test_draft_posted(draft_posted_notification_template, user, draft_event):
     strings = [
@@ -132,6 +136,7 @@ def test_draft_posted(draft_posted_notification_template, user, draft_event):
     )
 
 
+@pytest.mark.no_use_audit_log
 @pytest.mark.parametrize(
     "uses_api_key, expect_email",
     [
@@ -161,6 +166,7 @@ def test_draft_notification_is_not_sent_when_using_api_key(
     assert bool(mail.outbox) == expect_email
 
 
+@pytest.mark.no_use_audit_log
 @pytest.mark.django_db
 def test_user_created(user_created_notification_template, super_user):
     user = get_user_model().objects.create(

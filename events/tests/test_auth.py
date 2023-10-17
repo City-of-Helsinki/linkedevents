@@ -41,6 +41,7 @@ def do_authentication(user_uuid):
     return auth.authenticate(request)
 
 
+@pytest.mark.no_use_audit_log
 class TestApiKeyUser(TestCase):
     def setUp(self):
         self.data_source = DataSource.objects.create(
@@ -83,6 +84,7 @@ class TestApiKeyUser(TestCase):
         self.assertFalse(is_external)
 
 
+@pytest.mark.no_use_audit_log
 @pytest.mark.django_db
 def test_valid_jwt_is_accepted():
     """JWT generated in tests has a valid signature and is accepted."""

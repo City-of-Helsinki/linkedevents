@@ -12,6 +12,7 @@ def create_remap_file(tmp_path: Path, data: dict[str, str]) -> Path:
     return path
 
 
+@pytest.mark.no_use_audit_log
 @pytest.mark.django_db
 def test_remap_events_with_apply(tmp_path, place, place2, event):
     remap_path = create_remap_file(tmp_path, {place.id: place2.id})
@@ -29,6 +30,7 @@ def test_remap_events_with_apply(tmp_path, place, place2, event):
     assert "Done" in out.getvalue()
 
 
+@pytest.mark.no_use_audit_log
 @pytest.mark.django_db
 def test_remap_events_without_apply(tmp_path, place, place2, event):
     remap_path = create_remap_file(tmp_path, {place.id: place2.id})
@@ -46,6 +48,7 @@ def test_remap_events_without_apply(tmp_path, place, place2, event):
     assert "no changes applied" in out.getvalue()
 
 
+@pytest.mark.no_use_audit_log
 @pytest.mark.django_db
 def test_remap_events_target_does_not_exist(tmp_path, place, event):
     remap_path = create_remap_file(tmp_path, {place.id: "does_not_exist:1234"})

@@ -1,3 +1,4 @@
+import pytest
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django_orghierarchy.models import Organization
@@ -5,6 +6,7 @@ from django_orghierarchy.models import Organization
 from ..models import DataSource
 
 
+@pytest.mark.no_use_audit_log
 class TestOrganizationPostSave(TestCase):
     def setUp(self):
         user_model = get_user_model()

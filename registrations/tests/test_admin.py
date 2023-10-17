@@ -1,3 +1,4 @@
+import pytest
 from django.contrib import admin
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth import get_user_model
@@ -22,6 +23,7 @@ def make_admin(username="testadmin", is_superuser=True):
     )
 
 
+@pytest.mark.no_use_audit_log
 class TestRegistrationAdmin(TestCase):
     def setUp(self):
         self.admin = make_admin()

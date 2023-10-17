@@ -1,6 +1,7 @@
 import datetime
 
 import haystack
+import pytest
 from django.conf import settings
 from django.test import TestCase
 from pytz import timezone
@@ -17,6 +18,8 @@ for _key, val in settings.HAYSTACK_CONNECTIONS.items():
         val["INDEX_NAME"] = "test_%s" % val["INDEX_NAME"]
 
 
+@pytest.mark.no_use_audit_log
+@pytest.mark.usefixtures("use_audit_log_class")
 class EventSearchTests(TestCase, TestDataMixin):
     def setUp(self):
         self.client = APIClient()

@@ -5,6 +5,7 @@ from events.api import _find_keyword_replacements
 from events.tests.factories import KeywordFactory
 
 
+@pytest.mark.no_use_audit_log
 @pytest.mark.django_db
 def test_keyword_cannot_replace_itself(keyword):
     keyword.replaced_by = keyword
@@ -13,6 +14,7 @@ def test_keyword_cannot_replace_itself(keyword):
         keyword.save()
 
 
+@pytest.mark.no_use_audit_log
 @pytest.mark.django_db
 def test_prevent_circular_keyword_replacement(keyword, keyword2, keyword3):
     keyword.replaced_by = keyword2
@@ -24,6 +26,7 @@ def test_prevent_circular_keyword_replacement(keyword, keyword2, keyword3):
         keyword.save()
 
 
+@pytest.mark.no_use_audit_log
 @pytest.mark.django_db
 def test_keyword_is_automatically_deprecated_on_replace(keyword, keyword2):
     keyword.replaced_by = keyword2
@@ -31,6 +34,7 @@ def test_keyword_is_automatically_deprecated_on_replace(keyword, keyword2):
     assert keyword.deprecated
 
 
+@pytest.mark.no_use_audit_log
 @pytest.mark.django_db
 def test_keyword_remap_keyword_set_on_replace(keyword, keyword2, keyword3, keyword_set):
     keyword.replaced_by = keyword3
@@ -40,6 +44,7 @@ def test_keyword_remap_keyword_set_on_replace(keyword, keyword2, keyword3, keywo
     assert set(keyword_set.keywords.all()) == set([keyword2, keyword3])
 
 
+@pytest.mark.no_use_audit_log
 @pytest.mark.django_db
 def test_keyword_remap_event_on_replace(keyword, keyword2, event):
     event.keywords.set([keyword])
@@ -65,6 +70,7 @@ def test_keyword_remap_event_on_replace(keyword, keyword2, event):
     assert set(event.audience.all()) == set([keyword2])
 
 
+@pytest.mark.no_use_audit_log
 @pytest.mark.django_db
 def test_keyword_get_replacement_is_none():
     keyword = KeywordFactory(deprecated=True)
@@ -72,6 +78,7 @@ def test_keyword_get_replacement_is_none():
     assert keyword.get_replacement() is None
 
 
+@pytest.mark.no_use_audit_log
 @pytest.mark.django_db
 def test_keyword_get_replacement_single_level():
     new_keyword = KeywordFactory()
@@ -80,6 +87,7 @@ def test_keyword_get_replacement_single_level():
     assert old_keyword.get_replacement().pk == new_keyword.pk
 
 
+@pytest.mark.no_use_audit_log
 @pytest.mark.django_db
 def test_keyword_get_replacement_multi_level():
     new_keyword = KeywordFactory()
@@ -89,6 +97,7 @@ def test_keyword_get_replacement_multi_level():
     assert old_keyword_2.get_replacement().pk == new_keyword.pk
 
 
+@pytest.mark.no_use_audit_log
 @pytest.mark.django_db
 def test_find_keyword_replacements():
     new_keyword = KeywordFactory()
