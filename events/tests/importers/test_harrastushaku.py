@@ -67,19 +67,26 @@ def test_get_datetime_from_data_falsey(val):
         ("2023-01-02", "2023-01-02", [], []),
         # Start date > end date
         ("2023-01-03", "2023-01-02", [make_timetable()], []),
-        # Start time > end time
+        # Start time > end time means end time is on next day
         (
             "2023-01-02",
             "2023-01-02",
             [make_timetable(starttime="13:01", endtime="13:00")],
-            [],
+            [("2023-01-02T13:01:00+02:00", "2023-01-03T13:00:00+02:00")],
         ),
-        # Start time == end time
+        # Start time == end time means end time is on next day.
         (
             "2023-01-02",
             "2023-01-02",
             [make_timetable(starttime="13:00", endtime="13:00")],
-            [],
+            [("2023-01-02T13:00:00+02:00", "2023-01-03T13:00:00+02:00")],
+        ),
+        # Corners of the DST switch has to be checked.
+        (
+            "2023-03-25",
+            "2023-03-25",
+            [make_timetable(starttime="15:00", endtime="15:00", weekday="6")],
+            [("2023-03-25T15:00:00+02:00", "2023-03-26T15:00:00+03:00")],
         ),
         # One day event on Monday, timetable on Tuesday
         ("2023-01-02", "2023-01-02", [make_timetable(weekday="2")], []),
