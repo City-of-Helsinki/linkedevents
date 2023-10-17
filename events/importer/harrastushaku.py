@@ -256,7 +256,7 @@ class HarrastushakuImporter(Importer):
         logger.debug("Fetching locations...")
         try:
             url = "{}location/".format(HARRASTUSHAKU_API_BASE_URL)
-            response = requests.get(url, verify=False)
+            response = requests.get(url, verify=False, timeout=self.default_timeout)
             response.raise_for_status()
             return response.json()
         except requests.RequestException as e:
@@ -267,7 +267,7 @@ class HarrastushakuImporter(Importer):
         logger.debug("Fetching courses...")
         try:
             url = "{}activity/".format(HARRASTUSHAKU_API_BASE_URL)
-            response = requests.get(url, verify=False)
+            response = requests.get(url, verify=False, timeout=self.default_timeout)
             response.raise_for_status()
             return response.json()["data"]
         except requests.RequestException as e:
@@ -570,7 +570,6 @@ class HarrastushakuImporter(Importer):
         return {"id": self.location_id_to_place_id.get(location_id)}
 
     def get_event_offers(self, activity_data):
-
         offers = []
 
         for price_data in activity_data.get("prices", ()):

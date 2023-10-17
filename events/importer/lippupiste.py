@@ -263,7 +263,7 @@ class LippupisteImporter(Importer):
 
     def _fetch_event_source_data(self, url):
         # stream=True allows lazy iteration
-        response = requests.get(url, stream=True)
+        response = requests.get(url, stream=True, timeout=self.default_timeout)
         response_iter = response.iter_lines()
         # CSV reader wants str instead of byte, let's decode
         decoded_response_iter = codecs.iterdecode(response_iter, "utf-8")

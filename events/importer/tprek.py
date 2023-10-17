@@ -53,7 +53,7 @@ class TprekImporter(Importer):
         if res_id is not None:
             url = "%s%s/" % (url, res_id)
         logger.info("Fetching URL %s" % url)
-        resp = requests.get(url)
+        resp = requests.get(url, timeout=self.default_timeout)
         assert resp.status_code == 200
         return resp.json()
 

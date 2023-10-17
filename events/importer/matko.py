@@ -443,7 +443,7 @@ class MatkoImporter(Importer):
         return places
 
     def items_from_url(self, url):
-        resp = requests.get(url)
+        resp = requests.get(url, timeout=self.default_timeout)
         assert resp.status_code == 200
         root = etree.fromstring(resp.content)
         return root.xpath("channel/item")

@@ -139,7 +139,7 @@ class YsoImporter(Importer):
 
     def load_graph_into_memory(self, url):
         logger.debug("Fetching %s" % url)
-        resp = requests.get(url)
+        resp = requests.get(url, timeout=self.default_timeout)
         assert resp.status_code == 200
         resp.encoding = "UTF-8"
         graph = rdflib.Graph()
