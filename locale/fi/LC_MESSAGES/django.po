@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-17 20:44+0300\n"
+"POT-Creation-Date: 2023-10-17 21:26+0300\n"
 "PO-Revision-Date: 2015-04-29 12:26+0140\n"
 "Last-Translator: <jori@3d.fi>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -591,34 +591,34 @@ msgstr "Osallistujan tila"
 msgid "Presence status"
 msgstr "Läsnäolotila"
 
-#: registrations/models.py:682
+#: registrations/models.py:684
 #, python-format
 msgid "Registration cancelled - %(event_name)s"
 msgstr "Ilmoittautuminen peruttu - %(event_name)s"
 
-#: registrations/models.py:686 registrations/models.py:694
+#: registrations/models.py:688 registrations/models.py:696
 #, python-format
 msgid "Registration confirmation - %(event_name)s"
 msgstr "Vahvistus ilmoittautumisesta - %(event_name)s"
 
-#: registrations/models.py:690
+#: registrations/models.py:692
 #, python-format
 msgid "Waiting list seat reserved - %(event_name)s"
 msgstr "Paikka jonotuslistalla varattu - %(event_name)s"
 
-#: registrations/models.py:717
+#: registrations/models.py:719
 msgid "Date of birth"
 msgstr "Syntymäaika"
 
-#: registrations/models.py:731
+#: registrations/models.py:733
 msgid "Number of seats"
 msgstr "Paikkojen lukumäärä"
 
-#: registrations/models.py:737
+#: registrations/models.py:739
 msgid "Seat reservation code"
 msgstr "Paikkavarauskoodi"
 
-#: registrations/models.py:740
+#: registrations/models.py:742
 msgid "Timestamp"
 msgstr "Aikaleima"
 
@@ -716,18 +716,24 @@ msgstr "Ilmoittautuminen peruttu"
 
 #: registrations/templates/cancellation_confirmation.html:14
 #, python-format
-msgid "Registration to the event %(event_name)s has been cancelled."
-msgstr "Ilmoittautuminen tapahtumaan %(event_name)s on peruttu."
+msgid ""
+"%(username)s, registration to the event %(event_name)s has been "
+"cancelled."
+msgstr "%(username)s, ilmoittautuminen tapahtumaan %(event_name)s on peruttu."
 
 #: registrations/templates/cancellation_confirmation.html:17
 #, python-format
-msgid "Registration to the course %(event_name)s has been cancelled."
-msgstr "Ilmoittautuminen kurssille %(event_name)s on peruttu."
+msgid ""
+"%(username)s, registration to the course %(event_name)s has been "
+"cancelled."
+msgstr "%(username)s, ilmoittautuminen kurssille %(event_name)s on peruttu."
 
 #: registrations/templates/cancellation_confirmation.html:20
 #, python-format
-msgid "Registration to the volunteering %(event_name)s has been cancelled."
-msgstr "Ilmoittautuminen vapaaehtoistehtävään %(event_name)s on peruttu."
+msgid ""
+"%(username)s, registration to the volunteering %(event_name)s has been "
+"cancelled."
+msgstr "%(username)s, ilmoittautuminen vapaaehtoistehtävään %(event_name)s on peruttu."
 
 #: registrations/templates/cancellation_confirmation.html:28
 #, python-format

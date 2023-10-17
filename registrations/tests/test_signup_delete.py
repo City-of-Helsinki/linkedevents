@@ -56,19 +56,19 @@ def test_registration_admin_can_delete_signup(signup, user, user_api_client):
         (
             "en",
             "Registration cancelled",
-            "Registration to the event Foo has been cancelled.",
+            "Username, registration to the event Foo has been cancelled.",
             "You have successfully cancelled your registration to the event <strong>Foo</strong>.",
         ),
         (
             "fi",
             "Ilmoittautuminen peruttu",
-            "Ilmoittautuminen tapahtumaan Foo on peruttu.",
+            "Username, ilmoittautuminen tapahtumaan Foo on peruttu.",
             "Olet onnistuneesti peruuttanut ilmoittautumisesi tapahtumaan <strong>Foo</strong>.",
         ),
         (
             "sv",
             "Registreringen avbruten",
-            "Anmälan till evenemanget Foo har ställts in.",
+            "Username, anmälan till evenemanget Foo har ställts in.",
             "Du har avbrutit din registrering till evenemanget <strong>Foo</strong>.",
         ),
     ],
@@ -85,8 +85,10 @@ def test_email_sent_on_successful_signup_deletion(
     user_api_client,
     user,
 ):
+
     user.get_default_organization().registration_admin_users.add(user)
 
+    signup.first_name = "Username"
     signup.service_language = Language.objects.get(pk=service_language)
     signup.save()
 
@@ -107,17 +109,17 @@ def test_email_sent_on_successful_signup_deletion(
     [
         (
             Event.TypeId.GENERAL,
-            "Registration to the event Foo has been cancelled.",
+            "Username, registration to the event Foo has been cancelled.",
             "You have successfully cancelled your registration to the event <strong>Foo</strong>.",
         ),
         (
             Event.TypeId.COURSE,
-            "Registration to the course Foo has been cancelled.",
+            "Username, registration to the course Foo has been cancelled.",
             "You have successfully cancelled your registration to the course <strong>Foo</strong>.",
         ),
         (
             Event.TypeId.VOLUNTEERING,
-            "Registration to the volunteering Foo has been cancelled.",
+            "Username, registration to the volunteering Foo has been cancelled.",
             "You have successfully cancelled your registration to the volunteering <strong>Foo</strong>.",
         ),
     ],
@@ -135,6 +137,7 @@ def test_cancellation_confirmation_template_has_correct_text_per_event_type(
 ):
     user.get_default_organization().registration_admin_users.add(user)
 
+    signup.first_name = "Username"
     signup.service_language = Language.objects.get(pk="en")
     signup.save()
 

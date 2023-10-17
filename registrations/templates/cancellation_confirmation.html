@@ -11,13 +11,13 @@
         <h2 style="color:#1a1a1a;font-size:24px;font-weight:700;line-height:29px;margin:0;">
           <!-- Event -->
           {% if event_type_id == "1" %}
-          {% blocktranslate %}Registration to the event {{event_name}} has been cancelled.{% endblocktranslate %}
+          {% blocktranslate %}{{username}}, registration to the event {{event_name}} has been cancelled.{% endblocktranslate %}
           <!-- Course -->
           {% elif event_type_id == "2" %}
-          {% blocktranslate %}Registration to the course {{event_name}} has been cancelled.{% endblocktranslate %}
+          {% blocktranslate %}{{username}}, registration to the course {{event_name}} has been cancelled.{% endblocktranslate %}
           <!-- Volunteering -->
           {% elif event_type_id == "3" %}
-          {% blocktranslate %}Registration to the volunteering {{event_name}} has been cancelled.{% endblocktranslate %}
+          {% blocktranslate %}{{username}}, registration to the volunteering {{event_name}} has been cancelled.{% endblocktranslate %}
           {% endif %}
         </h2>
         <div class="divider" style="background:#0000bf;border-radius:0px;height:3px;width:100%;margin:24px 0;"></div>
