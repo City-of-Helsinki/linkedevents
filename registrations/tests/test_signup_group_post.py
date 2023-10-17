@@ -950,22 +950,25 @@ def test_confirmation_message_is_shown_in_service_language(
 
 
 @pytest.mark.parametrize(
-    "service_language,expected_subject,expected_text",
+    "service_language,expected_subject,expected_heading,expected_text",
     [
         (
             "en",
             "Waiting list seat reserved",
-            "You have successfully registered for the event <strong>Foo</strong> waiting list.",
+            "The registration for the event <strong>Foo</strong> waiting list was successful.",
+            "You will be automatically transferred from the waiting list to become a participant in the event if a place becomes available.",
         ),
         (
             "fi",
             "Paikka jonotuslistalla varattu",
-            "Olet onnistuneesti ilmoittautunut tapahtuman <strong>Foo</strong> jonotuslistalle.",
+            "Ilmoittautuminen tapahtuman <strong>Foo</strong> jonotuslistalle onnistui.",
+            "Jonotuslistalta siirretään automaattisesti tapahtuman osallistujaksi mikäli paikka vapautuu.",
         ),
         (
             "sv",
             "Väntelista plats reserverad",
-            "Du har framgångsrikt registrerat dig för evenemangets <strong>Foo</strong> väntelista.",
+            "Registreringen till väntelistan för <strong>Foo</strong>-evenemanget lyckades.",
+            "Du flyttas automatiskt över från väntelistan för att bli deltagare i evenemanget om en plats blir ledig.",
         ),
     ],
 )
@@ -973,6 +976,7 @@ def test_confirmation_message_is_shown_in_service_language(
 def test_signup_group_different_email_sent_if_user_is_added_to_waiting_list(
     user_api_client,
     expected_subject,
+    expected_heading,
     expected_text,
     languages,
     registration,
@@ -1015,23 +1019,28 @@ def test_signup_group_different_email_sent_if_user_is_added_to_waiting_list(
 
         #  assert that the email was sent
         assert mail.outbox[0].subject.startswith(expected_subject)
+        print(str(mail.outbox[0].alternatives[0]))
+        assert expected_heading in str(mail.outbox[0].alternatives[0])
         assert expected_text in str(mail.outbox[0].alternatives[0])
 
 
 @pytest.mark.parametrize(
-    "event_type,expected_text",
+    "event_type,expected_heading,expected_text",
     [
         (
             Event.TypeId.GENERAL,
-            "You have successfully registered for the event <strong>Foo</strong> waiting list.",
+            "The registration for the event <strong>Foo</strong> waiting list was successful.",
+            "You will be automatically transferred from the waiting list to become a participant in the event if a place becomes available.",
         ),
         (
             Event.TypeId.COURSE,
-            "You have successfully registered for the course <strong>Foo</strong> waiting list.",
+            "The registration for the course <strong>Foo</strong> waiting list was successful.",
+            "You will be automatically transferred from the waiting list to become a participant in the course if a place becomes available.",
         ),
         (
             Event.TypeId.VOLUNTEERING,
-            "You have successfully registered for the volunteering <strong>Foo</strong> waiting list.",
+            "The registration for the volunteering <strong>Foo</strong> waiting list was successful.",
+            "You will be automatically transferred from the waiting list to become a participant in the volunteering if a place becomes available.",
         ),
     ],
 )
@@ -1039,6 +1048,7 @@ def test_signup_group_different_email_sent_if_user_is_added_to_waiting_list(
 def test_signup_group_confirmation_to_waiting_list_template_has_correct_text_per_event_type(
     user_api_client,
     event_type,
+    expected_heading,
     expected_text,
     languages,
     registration,
@@ -1079,4 +1089,5 @@ def test_signup_group_confirmation_to_waiting_list_template_has_correct_text_per
     )
 
     #  assert that the email was sent
+    assert expected_heading in str(mail.outbox[0].alternatives[0])
     assert expected_text in str(mail.outbox[0].alternatives[0])

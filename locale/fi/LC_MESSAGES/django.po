@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-17 19:19+0300\n"
+"POT-Creation-Date: 2023-10-17 20:44+0300\n"
 "PO-Revision-Date: 2015-04-29 12:26+0140\n"
 "Last-Translator: <jori@3d.fi>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -141,8 +141,8 @@ msgstr "Paikan kotisivu"
 msgid "Description"
 msgstr "Kuvaus"
 
-#: events/models.py:593 events/models.py:1299 registrations/models.py:371
-#: registrations/models.py:504
+#: events/models.py:593 events/models.py:1299 registrations/models.py:372
+#: registrations/models.py:505
 msgid "E-mail"
 msgstr "Sähköposti"
 
@@ -154,7 +154,7 @@ msgstr "Puhelinnumero"
 msgid "Contact type"
 msgstr "Yhteydtiedon tyyppi"
 
-#: events/models.py:601 registrations/models.py:50 registrations/models.py:547
+#: events/models.py:601 registrations/models.py:51 registrations/models.py:548
 msgid "Street address"
 msgstr "Katuosoite"
 
@@ -308,11 +308,11 @@ msgstr "Alkuaika"
 msgid "End time"
 msgstr "Loppuaika"
 
-#: events/models.py:909 registrations/models.py:124
+#: events/models.py:909 registrations/models.py:125
 msgid "Minimum recommended age"
 msgstr "Suositeltu vähimmäisikä"
 
-#: events/models.py:912 registrations/models.py:127
+#: events/models.py:912 registrations/models.py:128
 msgid "Maximum recommended age"
 msgstr "Suurin suositeltu ikä"
 
@@ -470,155 +470,155 @@ msgstr "Vain organisaation {organization} admin-käyttäjillä on oikeudet."
 msgid "Request conflict with the current state of the target resource"
 msgstr "Pyyntö on ristiriidassa kohderesurssin nykyisen tilan kanssa"
 
-#: registrations/models.py:46 registrations/models.py:497
+#: registrations/models.py:47 registrations/models.py:498
 msgid "City"
 msgstr "Kaupunki"
 
-#: registrations/models.py:47 registrations/models.py:483
+#: registrations/models.py:48 registrations/models.py:484
 msgid "First name"
 msgstr "Etunimi"
 
-#: registrations/models.py:48 registrations/models.py:490
+#: registrations/models.py:49 registrations/models.py:491
 msgid "Last name"
 msgstr "Sukunimi"
 
-#: registrations/models.py:49 registrations/models.py:514
+#: registrations/models.py:50 registrations/models.py:515
 msgid "Phone number"
 msgstr "Puhelinnumero"
 
-#: registrations/models.py:51 registrations/models.py:554
+#: registrations/models.py:52 registrations/models.py:555
 msgid "ZIP code"
 msgstr "Postinumero"
 
-#: registrations/models.py:83
+#: registrations/models.py:84
 msgid "Created at"
 msgstr "Luotu klo"
 
-#: registrations/models.py:89
+#: registrations/models.py:90
 msgid "Modified at"
 msgstr "Muokattu klo"
 
-#: registrations/models.py:131
+#: registrations/models.py:132
 msgid "Enrollment start time"
 msgstr "Ilmoittautumisen alkamisaika"
 
-#: registrations/models.py:134
+#: registrations/models.py:135
 msgid "Enrollment end time"
 msgstr "Ilmoittautumisen päättymisaika"
 
-#: registrations/models.py:138
+#: registrations/models.py:139
 msgid "Confirmation message"
 msgstr "Vahvistusviesti"
 
-#: registrations/models.py:141
+#: registrations/models.py:142
 msgid "Instructions"
 msgstr "Ohjeet"
 
-#: registrations/models.py:145
+#: registrations/models.py:146
 msgid "Maximum attendee capacity"
 msgstr "Paikkojen enimmäismäärä"
 
-#: registrations/models.py:148
+#: registrations/models.py:149
 msgid "Minimum attendee capacity"
 msgstr "Paikkojen vähimmäismäärä"
 
-#: registrations/models.py:151
+#: registrations/models.py:152
 msgid "Waiting list capacity"
 msgstr "Varasijapaikkojen lukumäärä"
 
-#: registrations/models.py:154
+#: registrations/models.py:155
 msgid "Maximum group size"
 msgstr "Ryhmän enimmäiskoko"
 
-#: registrations/models.py:168
+#: registrations/models.py:169
 msgid "Mandatory fields"
 msgstr "Pakolliset kentät"
 
-#: registrations/models.py:350
+#: registrations/models.py:351
 msgid "Extra info"
 msgstr "Lisätiedot"
 
-#: registrations/models.py:417
+#: registrations/models.py:418
 #, python-format
 msgid "Rights granted to the participant list - %(event_name)s"
 msgstr "Oikeudet myönnetty osallistujalistaan  - %(event_name)s"
 
-#: registrations/models.py:443
+#: registrations/models.py:444
 msgid "Waitlisted"
 msgstr "Varasijalla"
 
-#: registrations/models.py:444
+#: registrations/models.py:445
 msgid "Attending"
 msgstr "Osallistuu"
 
-#: registrations/models.py:454
+#: registrations/models.py:455
 msgid "No Notification"
 msgstr "Ei ilmoituksia"
 
-#: registrations/models.py:455
+#: registrations/models.py:456
 msgid "SMS"
 msgstr "Teksiviesti"
 
-#: registrations/models.py:456
+#: registrations/models.py:457
 msgid "E-Mail"
 msgstr "Sähköposti"
 
-#: registrations/models.py:457
+#: registrations/models.py:458
 msgid "Both SMS and email."
 msgstr "Tekstiviesti ja sähköposti"
 
-#: registrations/models.py:465
+#: registrations/models.py:466
 msgid "Not present"
 msgstr "Ei paikalla"
 
-#: registrations/models.py:466
+#: registrations/models.py:467
 msgid "Present"
 msgstr "Paikalla"
 
-#: registrations/models.py:507
+#: registrations/models.py:508
 msgid "Membership number"
 msgstr "Jäsennumero"
 
-#: registrations/models.py:521
+#: registrations/models.py:522
 msgid "Notification type"
 msgstr "Ilmoitusten tyyppi"
 
-#: registrations/models.py:527
+#: registrations/models.py:528
 msgid "Attendee status"
 msgstr "Osallistujan tila"
 
-#: registrations/models.py:562
+#: registrations/models.py:563
 msgid "Presence status"
 msgstr "Läsnäolotila"
 
-#: registrations/models.py:681
+#: registrations/models.py:682
 #, python-format
 msgid "Registration cancelled - %(event_name)s"
 msgstr "Ilmoittautuminen peruttu - %(event_name)s"
 
-#: registrations/models.py:685 registrations/models.py:693
+#: registrations/models.py:686 registrations/models.py:694
 #, python-format
 msgid "Registration confirmation - %(event_name)s"
 msgstr "Vahvistus ilmoittautumisesta - %(event_name)s"
 
-#: registrations/models.py:689
+#: registrations/models.py:690
 #, python-format
 msgid "Waiting list seat reserved - %(event_name)s"
 msgstr "Paikka jonotuslistalla varattu - %(event_name)s"
 
-#: registrations/models.py:716
+#: registrations/models.py:717
 msgid "Date of birth"
 msgstr "Syntymäaika"
 
-#: registrations/models.py:730
+#: registrations/models.py:731
 msgid "Number of seats"
 msgstr "Paikkojen lukumäärä"
 
-#: registrations/models.py:736
+#: registrations/models.py:737
 msgid "Seat reservation code"
 msgstr "Paikkavarauskoodi"
 
-#: registrations/models.py:739
+#: registrations/models.py:740
 msgid "Timestamp"
 msgstr "Aikaleima"
 
@@ -779,8 +779,9 @@ msgstr ""
 
 #: registrations/templates/message_to_signup.html:25
 #: registrations/templates/signup_confirmation.html:46
-#: registrations/templates/signup_confirmation_to_waiting_list.html:28
+#: registrations/templates/signup_confirmation_to_waiting_list.html:41
 #: registrations/templates/signup_group_confirmation.html:46
+#: registrations/templates/signup_group_confirmation_to_waiting_list.html:41
 #: registrations/templates/signup_transferred_as_participant.html:34
 msgid "Check your registration here"
 msgstr "Tarkastele ilmoittautumistasi täällä"
@@ -836,7 +837,12 @@ msgstr ""
 "Onnittelut! Ilmoittautumisesi on vahvistettu vapaaehtoistehtävään "
 "<strong>%(event_name)s</strong>."
 
-#: registrations/templates/signup_confirmation_to_waiting_list.html:12
+#: registrations/templates/signup_confirmation_to_waiting_list.html:9
+#: registrations/templates/signup_group_confirmation_to_waiting_list.html:9
+msgid "Thank you for signing up for the waiting list"
+msgstr "Kiitos ilmoittautumisesta jonoon"
+
+#: registrations/templates/signup_confirmation_to_waiting_list.html:16
 #, python-format
 msgid ""
 "You have successfully registered for the event <strong>%(event_name)s</"
@@ -845,7 +851,7 @@ msgstr ""
 "Olet onnistuneesti ilmoittautunut tapahtuman <strong>%(event_name)s</strong> "
 "jonotuslistalle."
 
-#: registrations/templates/signup_confirmation_to_waiting_list.html:15
+#: registrations/templates/signup_confirmation_to_waiting_list.html:19
 #, python-format
 msgid ""
 "You have successfully registered for the course <strong>%(event_name)s</"
@@ -854,7 +860,7 @@ msgstr ""
 "Olet onnistuneesti ilmoittautunut kurssin <strong>%(event_name)s</strong> "
 "jonotuslistalle."
 
-#: registrations/templates/signup_confirmation_to_waiting_list.html:18
+#: registrations/templates/signup_confirmation_to_waiting_list.html:22
 #, python-format
 msgid ""
 "You have successfully registered for the volunteering "
@@ -863,11 +869,29 @@ msgstr ""
 "Olet onnistuneesti ilmoittautunut vapaaehtoistehtävän "
 "<strong>%(event_name)s</strong> jonotuslistalle."
 
-#: registrations/templates/signup_confirmation_to_waiting_list.html:22
+#: registrations/templates/signup_confirmation_to_waiting_list.html:28
 msgid ""
-"You will be transferred as a participant automatically when a seat becomes "
-"available."
-msgstr "Sinut siirretään automaattisesti osallistujaksi paikan vapauduttua."
+"You will be automatically transferred as a event participant if a seat "
+"becomes available."
+msgstr ""
+"Sinut siirretään automaattisesti tapahtuman osallistujaksi mikäli paikka "
+"vapautuu."
+
+#: registrations/templates/signup_confirmation_to_waiting_list.html:31
+msgid ""
+"You will be automatically transferred as a course participant if a seat "
+"becomes available."
+msgstr ""
+"Sinut siirretään automaattisesti kurssin osallistujaksi mikäli paikka "
+"vapautuu."
+
+#: registrations/templates/signup_confirmation_to_waiting_list.html:34
+msgid ""
+"You will be automatically transferred as a volunteering participant if a "
+"seat becomes available."
+msgstr ""
+"Sinut siirretään automaattisesti vapaaehtoistehtävän osallistujaksi mikäli "
+"paikka vapautuu."
 
 #: registrations/templates/signup_group_confirmation.html:9
 msgid "Welcome"
@@ -886,7 +910,59 @@ msgstr "Ryhmäilmoittautuminen kurssille %(event_name)s on tallennettu."
 #: registrations/templates/signup_group_confirmation.html:20
 #, fuzzy, python-format
 msgid "Group registration to the volunteering %(event_name)s has been saved."
-msgstr "Ryhmäilmoittautuminen vapaaehtoistehtävään %(event_name)s on tallennettu."
+msgstr ""
+"Ryhmäilmoittautuminen vapaaehtoistehtävään %(event_name)s on tallennettu."
+
+#: registrations/templates/signup_group_confirmation_to_waiting_list.html:16
+#, python-format
+msgid ""
+"The registration for the event <strong>%(event_name)s</strong> waiting list "
+"was successful."
+msgstr ""
+"Ilmoittautuminen tapahtuman <strong>%(event_name)s</strong> jonotuslistalle "
+"onnistui."
+
+#: registrations/templates/signup_group_confirmation_to_waiting_list.html:19
+#, python-format
+msgid ""
+"The registration for the course <strong>%(event_name)s</strong> waiting list "
+"was successful."
+msgstr ""
+"Ilmoittautuminen kurssin <strong>%(event_name)s</strong> jonotuslistalle "
+"onnistui."
+
+#: registrations/templates/signup_group_confirmation_to_waiting_list.html:22
+#, python-format
+msgid ""
+"The registration for the volunteering <strong>%(event_name)s</strong> "
+"waiting list was successful."
+msgstr ""
+"Ilmoittautuminen vapaaehtoistehtävän <strong>%(event_name)s</strong> "
+"jonotuslistalle onnistui."
+
+#: registrations/templates/signup_group_confirmation_to_waiting_list.html:28
+msgid ""
+"You will be automatically transferred from the waiting list to become a "
+"participant in the event if a place becomes available."
+msgstr ""
+"Jonotuslistalta siirretään automaattisesti tapahtuman osallistujaksi mikäli "
+"paikka vapautuu."
+
+#: registrations/templates/signup_group_confirmation_to_waiting_list.html:31
+msgid ""
+"You will be automatically transferred from the waiting list to become a "
+"participant in the course if a place becomes available."
+msgstr ""
+"Jonotuslistalta siirretään automaattisesti kurssin osallistujaksi mikäli "
+"paikka vapautuu."
+
+#: registrations/templates/signup_group_confirmation_to_waiting_list.html:34
+msgid ""
+"You will be automatically transferred from the waiting list to become a "
+"participant in the volunteering if a place becomes available."
+msgstr ""
+"Jonotuslistalta siirretään automaattisesti vapaaehtoistehtävän "
+"osallistujaksi mikäli paikka vapautuu."
 
 #: registrations/templates/signup_list_rights_granted.html:13
 #, python-format
