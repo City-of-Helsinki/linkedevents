@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-17 21:26+0300\n"
+"POT-Creation-Date: 2023-10-17 22:19+0300\n"
 "PO-Revision-Date: 2015-04-29 12:26+0140\n"
 "Last-Translator: <jori@3d.fi>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -717,15 +717,13 @@ msgstr "Ilmoittautuminen peruttu"
 #: registrations/templates/cancellation_confirmation.html:14
 #, python-format
 msgid ""
-"%(username)s, registration to the event %(event_name)s has been "
-"cancelled."
+"%(username)s, registration to the event %(event_name)s has been cancelled."
 msgstr "%(username)s, ilmoittautuminen tapahtumaan %(event_name)s on peruttu."
 
 #: registrations/templates/cancellation_confirmation.html:17
 #, python-format
 msgid ""
-"%(username)s, registration to the course %(event_name)s has been "
-"cancelled."
+"%(username)s, registration to the course %(event_name)s has been cancelled."
 msgstr "%(username)s, ilmoittautuminen kurssille %(event_name)s on peruttu."
 
 #: registrations/templates/cancellation_confirmation.html:20
@@ -733,7 +731,9 @@ msgstr "%(username)s, ilmoittautuminen kurssille %(event_name)s on peruttu."
 msgid ""
 "%(username)s, registration to the volunteering %(event_name)s has been "
 "cancelled."
-msgstr "%(username)s, ilmoittautuminen vapaaehtoistehtävään %(event_name)s on peruttu."
+msgstr ""
+"%(username)s, ilmoittautuminen vapaaehtoistehtävään %(event_name)s on "
+"peruttu."
 
 #: registrations/templates/cancellation_confirmation.html:28
 #, python-format
@@ -768,20 +768,18 @@ msgstr "Lisätietoja asiakaspalvelustamme"
 
 #: registrations/templates/message_to_signup.html:11
 #, python-format
-msgid "The organizer of the event %(event_name)s has sent you a message."
-msgstr "Tapahtuman %(event_name)s järjestäjä on lähettänyt sinulle viestin."
+msgid "A message about the event %(event_name)s."
+msgstr "Viesti tapahtumasta %(event_name)s."
 
 #: registrations/templates/message_to_signup.html:14
 #, python-format
-msgid "The organizer of the course %(event_name)s has sent you a message."
-msgstr "Kurssin %(event_name)s järjestäjä on lähettänyt sinulle viestin."
+msgid "A message about the course %(event_name)s."
+msgstr "Viesti kurssista %(event_name)s."
 
 #: registrations/templates/message_to_signup.html:17
 #, python-format
-msgid ""
-"The organizer of the volunteering %(event_name)s has sent you a message."
-msgstr ""
-"Vapaaehtoistehtävän %(event_name)s järjestäjä on lähettänyt sinulle viestin."
+msgid "A message about the volunteering %(event_name)s."
+msgstr "Viesti vapaaehtoistehtävästä %(event_name)s."
 
 #: registrations/templates/message_to_signup.html:25
 #: registrations/templates/signup_confirmation.html:46
