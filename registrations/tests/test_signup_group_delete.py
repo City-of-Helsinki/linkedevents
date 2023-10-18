@@ -371,11 +371,20 @@ def test_registration_admin_can_delete_signup_group_regardless_of_non_user_edita
     assert_delete_signup_group(user_api_client, signup_group.id)
 
 
+@pytest.mark.parametrize(
+    "attendee_status",
+    [
+        SignUp.AttendeeStatus.ATTENDING,
+        SignUp.AttendeeStatus.WAITING_LIST,
+    ],
+)
 @pytest.mark.django_db
 def test_signup_group_deletion_leads_to_changing_status_of_first_waitlisted_user(
-    user_api_client, registration, user
+    api_client, registration, attendee_status
 ):
-    user.get_default_organization().registration_admin_users.add(user)
+    user = UserFactory()
+    user.registration_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
 
     registration.maximum_attendee_capacity = 1
     registration.save(update_fields=["maximum_attendee_capacity"])
@@ -384,7 +393,7 @@ def test_signup_group_deletion_leads_to_changing_status_of_first_waitlisted_user
     SignUpFactory(
         signup_group=signup_group0,
         registration=registration,
-        attendee_status=SignUp.AttendeeStatus.ATTENDING,
+        attendee_status=attendee_status,
     )
 
     signup_group1 = SignUpGroupFactory(registration=registration)
@@ -404,11 +413,13 @@ def test_signup_group_deletion_leads_to_changing_status_of_first_waitlisted_user
     assert signup1.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
     assert signup2.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
 
-    assert_delete_signup_group(user_api_client, signup_group0.pk)
+    assert_delete_signup_group(api_client, signup_group0.pk)
 
     signup1.refresh_from_db()
     signup2.refresh_from_db()
-    assert signup1.attendee_status == SignUp.AttendeeStatus.ATTENDING
+
+    # signup1.attendee_status will be WAITING_LIST if the deleted signup also was on waiting list
+    assert signup1.attendee_status == attendee_status
     assert signup2.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
 
 

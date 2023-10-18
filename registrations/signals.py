@@ -8,7 +8,11 @@ from registrations.models import SignUp, SignUpGroup, SignUpNotificationType
 
 def _signup_or_group_post_delete(instance: Union[SignUp, SignUpGroup]) -> None:
     instance.send_notification(SignUpNotificationType.CANCELLATION)
-    instance.registration.move_first_waitlisted_to_attending()
+
+    attendee_status = getattr(instance, "attendee_status", "")
+    attending_signups = getattr(instance, "attending_signups", None)
+    if attendee_status == SignUp.AttendeeStatus.ATTENDING or attending_signups:
+        instance.registration.move_first_waitlisted_to_attending()
 
 
 @receiver(
