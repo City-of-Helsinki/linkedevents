@@ -9,10 +9,12 @@ from django.core.management import call_command
 from django.utils import timezone, translation
 from django.utils.encoding import force_text
 
+from events.api import KeywordSerializer
 from events.auth import ApiKeyUser
 from events.models import Event, Keyword, Place
 from events.tests.utils import assert_event_data_is_equal
 
+from .factories import KeywordFactory
 from .utils import versioned_reverse as reverse
 
 
@@ -783,3 +785,39 @@ def test__create_event_with_image_without_id(
     response = api_client.post(create_url, minimal_event_dict, format="json")
     assert response.status_code == 400, response.data
     assert "@id field missing" in response.json()["images"][0], response.data
+
+
+@pytest.mark.django_db
+def test__deprecated_keyword(api_client, minimal_event_dict, user):
+    api_client.force_authenticate(user=user)
+    deprecated_kw = KeywordFactory(deprecated=True)
+    minimal_event_dict["keywords"] = [
+        {"@id": reverse(KeywordSerializer.view_name, kwargs={"pk": deprecated_kw.id})}
+    ]
+    create_url = reverse("event-list")
+    response = api_client.post(create_url, minimal_event_dict, format="json")
+    assert response.status_code == 400, response.data
+    assert "keywords" in response.data
+    assert len(response.data["keywords"]) == 1
+    assert (
+        str(response.data["keywords"][0])
+        == f"Deprecated keyword not allowed ({deprecated_kw.pk})"
+    )
+
+
+@pytest.mark.django_db
+def test__deprecated_audience(api_client, minimal_event_dict, user):
+    api_client.force_authenticate(user=user)
+    deprecated_kw = KeywordFactory(deprecated=True)
+    minimal_event_dict["audience"] = [
+        {"@id": reverse(KeywordSerializer.view_name, kwargs={"pk": deprecated_kw.id})}
+    ]
+    create_url = reverse("event-list")
+    response = api_client.post(create_url, minimal_event_dict, format="json")
+    assert response.status_code == 400, response.data
+    assert "audience" in response.data
+    assert len(response.data["audience"]) == 1
+    assert (
+        str(response.data["audience"][0])
+        == f"Deprecated keyword not allowed ({deprecated_kw.pk})"
+    )

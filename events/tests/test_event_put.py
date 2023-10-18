@@ -14,6 +14,7 @@ from events.tests.test_event_post import create_with_post
 from events.tests.utils import assert_event_data_is_equal
 
 from ..api import ImageSerializer
+from .factories import KeywordFactory
 from .utils import versioned_reverse as reverse
 
 # === util methods ===
@@ -1017,3 +1018,18 @@ def test_update_draft_with_image_from_different_datasource(
     response = update_with_put(api_client, event_id, response_data)
 
     assert response.status_code == 200, str(response.content)
+
+
+@pytest.mark.django_db
+def test_can_remove_deprecated_keyword(api_client, event, minimal_event_dict, user):
+    api_client.force_authenticate(user)
+    deprecated_kw = KeywordFactory(deprecated=True)
+    event.keywords.add(deprecated_kw)
+
+    response = api_client.put(
+        reverse("event-detail", kwargs={"pk": event.id}),
+        minimal_event_dict,
+        format="json",
+    )
+    assert response.status_code == 200
+    assert deprecated_kw not in event.keywords.all()
