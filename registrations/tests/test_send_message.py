@@ -6,6 +6,7 @@ from rest_framework import status
 
 from events.models import Language
 from events.tests.utils import versioned_reverse as reverse
+from registrations.models import SignUp
 from registrations.tests.factories import SignUpFactory, SignUpGroupFactory
 
 # === util methods ===
@@ -79,13 +80,16 @@ def test_admin_user_can_send_message_to_all_signups(
 
 
 @pytest.mark.django_db
-def test_email_is_sent_to_all_if_no_groups_or_signups_given(
+def test_email_is_sent_to_all_with_attending_status_if_no_groups_or_signups_given(
     api_client, registration, user
 ):
     # Group
     signup_group = SignUpGroupFactory(registration=registration)
-    first_signup = SignUpFactory(
-        signup_group=signup_group, registration=registration, email="test@test.com"
+    SignUpFactory(
+        signup_group=signup_group,
+        registration=registration,
+        email="test@test.com",
+        attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
     )
     second_signup = SignUpFactory(
         signup_group=signup_group,
@@ -96,7 +100,11 @@ def test_email_is_sent_to_all_if_no_groups_or_signups_given(
 
     # Individual
     third_signup = SignUpFactory(registration=registration, email="test3@test.com")
-    fourth_signup = SignUpFactory(registration=registration, email="test4@test.com")
+    SignUpFactory(
+        registration=registration,
+        email="test4@test.com",
+        attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
+    )
 
     api_client.force_authenticate(user)
     send_message_data = {"subject": "Message subject", "body": "Message body"}
@@ -106,10 +114,8 @@ def test_email_is_sent_to_all_if_no_groups_or_signups_given(
         registration.id,
         send_message_data,
         [
-            first_signup,
             second_signup,
             third_signup,
-            fourth_signup,
         ],
     )
     # Default language for the email is Finnish
