@@ -414,8 +414,30 @@ class EspooImporter(Importer):
             defaults=ds_defaults, **ds_args
         )
 
-        # We don't need a default organization as we'll import from
-        # Espoo as necessary
+        org_data_source, _ = DataSource.objects.get_or_create(
+            id="espoo", defaults={"name": "Espoo"}
+        )
+
+        espoo_kaupunki, _ = Organization.objects.get_or_create(
+            id="espoo:kaupunki",
+            defaults={
+                "name": "Espoon kaupunki",
+                "data_source": org_data_source,
+                "origin_id": "espoo_kaupunki",
+            },
+        )
+        for org_id, org_name in settings.ESPOO_API_PUBLISHERS:
+            Organization.objects.get_or_create(
+                id=org_id,
+                defaults={
+                    "data_source": org_data_source,
+                    "name": org_name,
+                    "parent": espoo_kaupunki,
+                    "origin_id": org_id,
+                },
+            )
+
+        # No default organization
         self.organization = None
 
     @transaction.atomic
