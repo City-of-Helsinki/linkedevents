@@ -30,7 +30,9 @@ def test_middleware_audit_log_setting(settings, audit_log_enabled):
     ],
 )
 @pytest.mark.django_db
-def test_middleware_audit_logged_paths(path, expected_called):
+def test_middleware_audit_logged_paths(settings, path, expected_called):
+    settings.AUDIT_LOG_ENABLED = True
+
     with patch("audit_log.middleware.commit_to_audit_log") as mocked:
         middleware = AuditLogMiddleware(Mock())
         middleware(Mock(path=path))
