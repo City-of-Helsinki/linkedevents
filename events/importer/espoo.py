@@ -91,12 +91,16 @@ def _get_data(url: str, params: Optional[dict] = None) -> dict:
 
 def _list_data(url: str, params: Optional[dict] = None) -> list[dict]:
     results = []
+    request_params = params
     for _ in range(settings.ESPOO_MAX_PAGES):
-        response_data = _get_data(url, params)
+        response_data = _get_data(url, request_params)
         results += response_data["data"]
         url = response_data["meta"]["next"]
         if url is None:
             return results
+
+        # Params are included in the response next url
+        request_params = None
         time.sleep(settings.ESPOO_WAIT_BETWEEN)
 
     raise EspooImporterError("Exceeded ESPOO_MAX_PAGES")
