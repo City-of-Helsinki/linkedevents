@@ -18,9 +18,9 @@ from registrations.models import (
     SignUp,
     SignUpGroup,
     SignUpGroupProtectedData,
-    SignUpNotificationType,
     SignUpProtectedData,
 )
+from registrations.notifications import SignUpNotificationType
 from registrations.utils import code_validity_duration
 
 

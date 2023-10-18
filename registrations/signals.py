@@ -3,7 +3,8 @@ from typing import Union
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
 
-from registrations.models import SignUp, SignUpGroup, SignUpNotificationType
+from registrations.models import SignUp, SignUpGroup
+from registrations.notifications import SignUpNotificationType
 
 
 def _signup_or_group_post_delete(instance: Union[SignUp, SignUpGroup]) -> None:

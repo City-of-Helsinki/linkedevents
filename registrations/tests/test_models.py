@@ -3,11 +3,14 @@ from django.test import TestCase
 
 from events.models import Language
 from events.tests.factories import DataSourceFactory, OrganizationFactory
+from helevents.tests.factories import UserFactory
 from registrations.tests.factories import (
     RegistrationFactory,
     RegistrationUserAccessFactory,
     SignUpFactory,
     SignUpGroupFactory,
+    SignUpGroupProtectedDataFactory,
+    SignUpProtectedDataFactory,
 )
 
 
@@ -162,6 +165,65 @@ class TestSignUpGroup(TestCase):
     def test_get_data_source(self):
         self.assertEqual(self.signup_group.data_source.id, self.data_source.id)
 
+    def test_signup_group_data_is_pseudonymised(self):
+        registration = RegistrationFactory()
+        user = UserFactory()
+        signup_group = SignUpGroupFactory(
+            registration=registration,
+            created_by=user,
+            last_modified_by=user,
+        )
+        SignUpGroupProtectedDataFactory(
+            signup_group=signup_group,
+            registration=registration,
+            extra_info="Group extra info",
+        )
+        signup = SignUpFactory(
+            registration=registration,
+            created_by=user,
+            last_modified_by=user,
+            email="test@email.com",
+            membership_number="xxx",
+            phone_number="044 1234567",
+            street_address="Street address 12",
+            first_name="First name",
+            last_name="Last name",
+            signup_group=signup_group,
+        )
+        SignUpProtectedDataFactory(
+            signup=signup,
+            registration=registration,
+            extra_info="Extra info",
+            date_of_birth="2012-12-12",
+        )
+
+        assert signup_group.pseudonymization_time is None
+        assert signup_group.created_by == user
+        assert signup_group.last_modified_by == user
+        assert signup.pseudonymization_time is None
+        assert signup.created_by == user
+        assert signup.last_modified_by == user
+
+        signup_group.pseudonymize()
+
+        assert signup_group.extra_info == "c162ac0d09c95f4a"
+        assert signup_group.pseudonymization_time is not None
+        assert signup_group.created_by is None
+        assert signup_group.last_modified_by is None
+
+        signup.refresh_from_db()
+        assert signup.email == "5970@709281.fi"
+        assert signup.membership_number == "095"
+        assert signup.phone_number == "0712923071"
+        assert signup.street_address == "Ee327f2d263567 97"
+        assert signup.first_name == "F8b44f018d"
+        assert signup.last_name == "0dd585045"
+        assert signup.extra_info == "5592136a3c"
+        assert str(signup.date_of_birth) == "6530-12-24"
+        assert signup.pseudonymization_time is not None
+        assert signup.created_by is None
+        assert signup.last_modified_by is None
+
 
 class TestSignUp(TestCase):
     @classmethod
@@ -230,3 +292,40 @@ class TestSignUp(TestCase):
         self.signup.save()
 
         self.assertEqual(self.signup.get_service_language_pk(), "fi")
+
+    def test_signup_data_is_pseudonymised(self):
+        user = UserFactory()
+        signup = SignUpFactory(
+            created_by=user,
+            last_modified_by=user,
+            email="test@email.com",
+            membership_number="xxx",
+            phone_number="044 1234567",
+            street_address="Street address 12",
+            first_name="First name",
+            last_name="Last name",
+        )
+        SignUpProtectedDataFactory(
+            signup=signup,
+            registration=signup.registration,
+            extra_info="Extra info",
+            date_of_birth="2012-12-12",
+        )
+
+        assert signup.pseudonymization_time is None
+        assert signup.created_by == user
+        assert signup.last_modified_by == user
+
+        signup.pseudonymize()
+
+        assert signup.email == "5970@709281.fi"
+        assert signup.membership_number == "095"
+        assert signup.phone_number == "0712923071"
+        assert signup.street_address == "Ee327f2d263567 97"
+        assert signup.first_name == "F8b44f018d"
+        assert signup.last_name == "0dd585045"
+        assert signup.extra_info == "5592136a3c"
+        assert signup.date_of_birth == "6530-12-24"
+        assert signup.pseudonymization_time is not None
+        assert signup.created_by is None
+        assert signup.last_modified_by is None

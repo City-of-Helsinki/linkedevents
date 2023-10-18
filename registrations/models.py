@@ -7,7 +7,7 @@ from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
 from django.core.mail import send_mail
 from django.core.validators import MinValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.db.models import DateTimeField, ExpressionWrapper, F, Sum
 from django.forms.fields import MultipleChoiceField
 from django.template.loader import render_to_string
@@ -26,6 +26,7 @@ from registrations.notifications import (
     get_signup_notification_variables,
     SignUpNotificationType,
 )
+from registrations import pseudonymize
 from registrations.utils import (
     code_validity_duration,
     get_email_noreply_address,
@@ -317,6 +318,11 @@ class SignUpGroup(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         Registration, on_delete=models.PROTECT, related_name="signup_groups"
     )
 
+    pseudonymization_time = models.DateTimeField(
+        verbose_name=_("Pseudonymization time"),
+        null=True,
+    )
+
     serialize_fields = (
         {"name": "id"},
         {"name": "registration_id"},
@@ -340,6 +346,31 @@ class SignUpGroup(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         signups = self.responsible_signups or self.signups.all()
         for signup in signups:
             signup.send_notification(notification_type)
+
+    @transaction.atomic
+    def pseudonymize(self):
+        secret = settings.PSEUDONYMIZATION_SECRET
+
+        # Allow to pseudonymize signup group only once
+        if self.pseudonymization_time is None:
+            protected_data = getattr(self, "protected_data", None)
+
+            if protected_data:
+                protected_data.extra_info = pseudonymize.text(
+                    protected_data.extra_info, secret
+                )
+                protected_data.save()
+
+            self.pseudonymization_time = localtime()
+            self.created_by = None
+            self.last_modified_by = None
+            self.save()
+
+        # Pseudonymize all the signups of the group
+        signups = self.signups.all()
+
+        for signup in signups:
+            signup.pseudonymize()
 
 
 class SignUpProtectedDataBaseModel(models.Model):
@@ -571,6 +602,11 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         default=False,
     )
 
+    pseudonymization_time = models.DateTimeField(
+        verbose_name=_("Pseudonymization time"),
+        null=True,
+    )
+
     serialize_fields = (
         {"name": "first_name"},
         {"name": "last_name"},
@@ -659,6 +695,35 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
             )
         except SMTPException:
             logger.exception("Couldn't send signup notification email.")
+
+    @transaction.atomic
+    def pseudonymize(self):
+        secret = settings.PSEUDONYMIZATION_SECRET
+
+        # Allow to pseudonymize signup only once
+        if self.pseudonymization_time is None:
+            self.email = pseudonymize.email(self.email, secret)
+            self.membership_number = pseudonymize.text(self.membership_number, secret)
+            self.phone_number = pseudonymize.phone(self.phone_number, secret)
+            self.street_address = pseudonymize.street(self.street_address, secret)
+            self.first_name = pseudonymize.name(self.first_name, secret)
+            self.last_name = pseudonymize.name(self.last_name, secret)
+            self.pseudonymization_time = localtime()
+            self.created_by = None
+            self.last_modified_by = None
+            self.save()
+
+            protected_data = getattr(self, "protected_data", None)
+
+            if protected_data:
+                date_of_birth = protected_data.date_of_birth
+                protected_data.date_of_birth = pseudonymize.datestring(
+                    str(date_of_birth) if date_of_birth else date_of_birth, secret
+                )
+                protected_data.extra_info = pseudonymize.text(
+                    protected_data.extra_info, secret
+                )
+                protected_data.save()
 
 
 class SignUpProtectedData(SignUpProtectedDataBaseModel):
