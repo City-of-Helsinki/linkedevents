@@ -20,7 +20,6 @@ from .sync import ModelSyncher
 from .util import clean_text
 from .yso import KEYWORDS_TO_ADD_TO_AUDIENCE
 
-# Per module logger
 logger = logging.getLogger(__name__)
 
 YSO_BASE_URL = "http://www.yso.fi/onto/yso/"

@@ -14,7 +14,6 @@ from events.models import DataSource, Place
 from .base import Importer, register_importer
 from .sync import ModelSyncher
 
-# Per module logger
 logger = logging.getLogger(__name__)
 
 URL_BASE = "http://www.hel.fi/palvelukarttaws/rest/v4/"

@@ -20,7 +20,6 @@ from .base import Importer, recur_dict, register_importer
 from .sync import ModelSyncher
 from .util import clean_text, clean_url
 
-# Per module logger
 logger = logging.getLogger(__name__)
 
 YSO_KEYWORD_MAPS = {

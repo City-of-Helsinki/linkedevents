@@ -19,7 +19,6 @@ from events.models import Event, EventLink, Image, Language, Offer, Place
 from .. import utils
 from .util import clean_text, separate_scripts
 
-# Per module logger
 logger = logging.getLogger(__name__)
 
 EXTENSION_COURSE_FIELDS = (

@@ -16,7 +16,6 @@ from events.models import DataSource, Event, Place
 from .base import Importer, recur_dict, register_importer
 from .util import clean_text, replace_location, unicodetext
 
-# Per module logger
 logger = logging.getLogger(__name__)
 
 MATKO_URLS = {

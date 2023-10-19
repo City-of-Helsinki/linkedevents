@@ -8,7 +8,6 @@ from langdetect.lang_detect_exception import LangDetectException
 
 from events.models import Place
 
-# Per module logger
 logger = logging.getLogger(__name__)
 
 

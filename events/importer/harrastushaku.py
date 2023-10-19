@@ -19,7 +19,6 @@ from events.models import DataSource, Event, Keyword, Place
 
 from .base import Importer, register_importer
 
-# Per module logger
 logger = logging.getLogger(__name__)
 
 HARRASTUSHAKU_API_BASE_URL = "http://www.harrastushaku.fi/api/"

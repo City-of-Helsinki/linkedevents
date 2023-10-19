@@ -34,7 +34,6 @@ from .base import Importer, recur_dict, register_importer
 from .util import clean_url, unicodetext
 from .yso import KEYWORDS_TO_ADD_TO_AUDIENCE
 
-# Per module logger
 logger = logging.getLogger(__name__)
 
 
