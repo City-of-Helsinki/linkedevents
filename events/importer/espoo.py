@@ -22,7 +22,6 @@ from ..api import generate_id
 from .base import Importer, register_importer
 from .sync import ModelSyncher
 
-# Per module logger
 logger = logging.getLogger(__name__)
 
 M = TypeVar("M", bound=Model)

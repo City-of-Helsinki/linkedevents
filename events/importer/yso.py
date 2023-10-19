@@ -13,7 +13,6 @@ from events.models import BaseModel, DataSource, Keyword, KeywordLabel, Language
 from .base import Importer, register_importer
 from .sync import ModelSyncher
 
-# Per module logger
 logger = logging.getLogger(__name__)
 
 yso = rdflib.Namespace("http://www.yso.fi/onto/yso/")
