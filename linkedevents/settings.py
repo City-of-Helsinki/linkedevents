@@ -58,6 +58,7 @@ root = environ.Path(__file__) - 2  # two levels back in hierarchy
 env = environ.Env(
     ADMINS=(list, []),
     ALLOWED_HOSTS=(list, []),
+    AUDIT_LOG_ENABLED=(bool, True),
     AUTO_ENABLED_EXTENSIONS=(list, []),
     COOKIE_PREFIX=(str, "linkedevents"),
     DATABASE_URL=(str, "postgis:///linkedevents"),
@@ -230,6 +231,7 @@ INSTALLED_APPS = [
     "notifications",
     "events",
     "registrations",
+    "audit_log",
 ] + env("EXTRA_INSTALLED_APPS")
 
 # django-extensions is a set of developer friendly tools
@@ -659,3 +661,7 @@ ESPOO_MAX_PAGES = env("ESPOO_MAX_PAGES")
 ESPOO_MAX_RETRIES = env("ESPOO_MAX_RETRIES")
 ESPOO_TIMEOUT = env("ESPOO_TIMEOUT")
 ESPOO_WAIT_BETWEEN = env("ESPOO_WAIT_BETWEEN")
+
+# Audit log
+AUDIT_LOG_ORIGIN = "linkedevents"
+AUDIT_LOG_ENABLED = env("AUDIT_LOG_ENABLED")
