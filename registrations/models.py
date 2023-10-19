@@ -568,6 +568,11 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         default=PresenceStatus.NOT_PRESENT,
     )
 
+    user_consent = models.BooleanField(
+        verbose_name=_("User consent"),
+        default=False,
+    )
+
     serialize_fields = (
         {"name": "first_name"},
         {"name": "last_name"},
@@ -596,6 +601,7 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
             "name": "presence_status",
             "accessor": lambda value: dict(SignUp.PRESENCE_STATUSES).get(value, value),
         },
+        {"name": "user_consent"},
     )
 
     @cached_property
