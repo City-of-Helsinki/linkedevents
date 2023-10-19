@@ -145,7 +145,9 @@ def datestring(value, secret, format="YYYY-MM-DD"):
         return value
 
     for part, length, func in (("D", 2, day), ("M", 2, month), ("Y", 4, year)):
-        assert format.count(part) == length
+        if format.count(part) != length:
+            raise ValueError
+
         start_pos = format.find(part)
         end_pos = start_pos + length
         val = value[start_pos:end_pos]

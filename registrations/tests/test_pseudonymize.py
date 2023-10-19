@@ -155,5 +155,5 @@ def test_datestring_returns_zero_parts_as_zero():
 
 
 def test_datestring_raises_exception_on_invalid_format():
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         datestring("000020", test_secret, format="DDMMYY")
