@@ -14,6 +14,7 @@ from .sync import ModelSyncher
 logger = logging.getLogger(__name__)
 
 GK25_SRID = 3879
+CHUNK_SIZE = 10000
 
 
 @register_importer
@@ -180,7 +181,8 @@ class OsoiteImporter(Importer):
         else:
             logger.info("Loading addresses...")
             obj_list = self.pk_get("Address")
-            logger.info("%s addresses loaded" % len(obj_list))
+            logger.info(f"{obj_list.count()} addresses loaded")
+            obj_list = obj_list.iterator(chunk_size=CHUNK_SIZE)
         syncher = ModelSyncher(
             queryset,
             lambda obj: obj.origin_id,
@@ -189,7 +191,7 @@ class OsoiteImporter(Importer):
         )
         for idx, obj in enumerate(obj_list):
             if idx and (idx % 1000) == 0:
-                logger.info("%s addresses processed" % idx)
+                logger.info(f"{idx} addresses processed")
             self._import_address(syncher, obj)
 
         syncher.finish(self.options.get("remap", False))

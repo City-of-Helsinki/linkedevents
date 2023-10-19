@@ -1,5 +1,7 @@
 import logging
 
+CHUNK_SIZE = 10000
+
 logger = logging.getLogger(__name__)
 
 
@@ -18,7 +20,7 @@ class ModelSyncher(object):
         self.check_deleted_func = check_deleted_func
         self.allow_deleting_func = allow_deleting_func
         # Generate a list of all objects
-        for obj in queryset:
+        for obj in queryset.iterator(chunk_size=CHUNK_SIZE):
             d[generate_obj_id(obj)] = obj
             # this only resets the initial queryset, objects outside it may still have _found or _changed True
             obj._found = False
