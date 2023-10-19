@@ -255,7 +255,7 @@ class Registration(CreatedModifiedBaseModel):
             .select_for_update()
             .order_by("id")
         )
-        if waitlisted.count() > 0:
+        if waitlisted.exists():
             first_on_list = waitlisted[0]
             first_on_list.attendee_status = SignUp.AttendeeStatus.ATTENDING
             first_on_list.save(update_fields=["attendee_status"])
@@ -333,6 +333,10 @@ class SignUpGroup(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
     @cached_property
     def responsible_signups(self):
         return self.signups.filter(responsible_for_group=True)
+
+    @cached_property
+    def attending_signups(self):
+        return self.signups.filter(attendee_status=SignUp.AttendeeStatus.ATTENDING)
 
     def send_notification(self, notification_type):
         signups = self.responsible_signups or self.signups.all()

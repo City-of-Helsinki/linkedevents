@@ -273,55 +273,67 @@ def test_registration_admin_can_delete_signup_regardless_of_non_user_editable_re
     assert_delete_signup(user_api_client, signup.id)
 
 
+@pytest.mark.parametrize(
+    "attendee_status",
+    [
+        SignUp.AttendeeStatus.ATTENDING,
+        SignUp.AttendeeStatus.WAITING_LIST,
+    ],
+)
 @pytest.mark.django_db
 def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
-    user_api_client, registration, user
+    api_client, registration, attendee_status
 ):
-    user.get_default_organization().registration_admin_users.add(user)
+    user = UserFactory()
+    user.registration_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
 
     registration.maximum_attendee_capacity = 1
-    registration.save()
+    registration.save(update_fields=["maximum_attendee_capacity"])
 
     reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signup_data = {
         "name": "Michael Jackson1",
         "email": "test@test.com",
+        "attendee_status": attendee_status,
     }
     signups_data = {
         "registration": registration.id,
         "reservation_code": reservation.code,
         "signups": [signup_data],
     }
-    response = assert_create_signups(user_api_client, signups_data)
-    signup_id = response.data["attending"]["people"][0]["id"]
+    response = assert_create_signups(api_client, signups_data)
+    signup_id = response.data[attendee_status]["people"][0]["id"]
 
     reservation2 = SeatReservationCodeFactory(registration=registration, seats=1)
     signup_data2 = {
         "name": "Michael Jackson2",
         "email": "test1@test.com",
+        "attendee_status": SignUp.AttendeeStatus.WAITING_LIST,
     }
     signups_data2 = {
         "registration": registration.id,
         "reservation_code": reservation2.code,
         "signups": [signup_data2],
     }
-    assert_create_signups(user_api_client, signups_data2)
+    assert_create_signups(api_client, signups_data2)
 
     reservation3 = SeatReservationCodeFactory(registration=registration, seats=1)
     signup_data3 = {
         "name": "Michael Jackson3",
         "email": "test2@test.com",
+        "attendee_status": SignUp.AttendeeStatus.WAITING_LIST,
     }
     signups_data3 = {
         "registration": registration.id,
         "reservation_code": reservation3.code,
         "signups": [signup_data3],
     }
-    assert_create_signups(user_api_client, signups_data3)
+    assert_create_signups(api_client, signups_data3)
 
     assert (
         SignUp.objects.get(email=signup_data["email"]).attendee_status
-        == SignUp.AttendeeStatus.ATTENDING
+        == attendee_status
     )
     assert (
         SignUp.objects.get(email=signup_data2["email"]).attendee_status
@@ -332,10 +344,10 @@ def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
         == SignUp.AttendeeStatus.WAITING_LIST
     )
 
-    assert_delete_signup(user_api_client, signup_id)
+    assert_delete_signup(api_client, signup_id)
     assert (
         SignUp.objects.get(email=signup_data2["email"]).attendee_status
-        == SignUp.AttendeeStatus.ATTENDING
+        == attendee_status
     )
     assert (
         SignUp.objects.get(email=signup_data3["email"]).attendee_status
