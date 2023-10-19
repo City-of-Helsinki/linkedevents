@@ -22,37 +22,38 @@ from registrations.tests.factories import SeatReservationCodeFactory
 
 test_email1 = "test@test.com"
 test_email2 = "mickey@test.com"
+default_signups_data = [
+    {
+        "first_name": "Michael",
+        "last_name": "Jackson",
+        "date_of_birth": "2011-04-07",
+        "email": test_email1,
+        "phone_number": "0441111111",
+        "notifications": "sms",
+        "service_language": "fi",
+        "native_language": "fi",
+        "street_address": "my street",
+        "zipcode": "myzip1",
+        "attendee_status": SignUp.AttendeeStatus.WAITING_LIST,
+    },
+    {
+        "first_name": "Mickey",
+        "last_name": "Mouse",
+        "date_of_birth": "1928-05-15",
+        "email": test_email2,
+        "phone_number": "0441111111",
+        "notifications": "sms",
+        "service_language": "en",
+        "native_language": "en",
+        "street_address": "my street",
+        "zipcode": "myzip1",
+        "responsible_for_group": True,
+        "attendee_status": SignUp.AttendeeStatus.ATTENDING,
+    },
+]
 default_signup_group_data = {
     "extra_info": "Extra info for group",
-    "signups": [
-        {
-            "first_name": "Michael",
-            "last_name": "Jackson",
-            "date_of_birth": "2011-04-07",
-            "email": test_email1,
-            "phone_number": "0441111111",
-            "notifications": "sms",
-            "service_language": "fi",
-            "native_language": "fi",
-            "street_address": "my street",
-            "zipcode": "myzip1",
-            "attendee_status": SignUp.AttendeeStatus.WAITING_LIST,
-        },
-        {
-            "first_name": "Mickey",
-            "last_name": "Mouse",
-            "date_of_birth": "1928-05-15",
-            "email": test_email2,
-            "phone_number": "0441111111",
-            "notifications": "sms",
-            "service_language": "en",
-            "native_language": "en",
-            "street_address": "my street",
-            "zipcode": "myzip1",
-            "responsible_for_group": True,
-            "attendee_status": SignUp.AttendeeStatus.ATTENDING,
-        },
-    ],
+    "signups": default_signups_data,
 }
 
 # === util methods ===
@@ -125,22 +126,57 @@ def assert_default_signup_group_created(reservation, signup_group_data, user):
 
 
 @pytest.mark.django_db
-def test_registration_admin_can_create_signup_group(
-    languages, organization, user, user_api_client
-):
-    user.get_default_organization().registration_admin_users.add(user)
-    user.get_default_organization().admin_users.remove(user)
+def test_registration_admin_can_create_signup_group(api_client, organization):
+    user = UserFactory()
+    user.registration_admin_organizations.add(organization)
+    api_client.force_authenticate(user)
+
+    reservation = SeatReservationCodeFactory(seats=2)
+
+    LanguageFactory(pk="fi", service_language=True)
+    LanguageFactory(pk="en", service_language=True)
 
     assert SignUpGroup.objects.count() == 0
     assert SignUp.objects.count() == 0
 
-    reservation = SeatReservationCodeFactory(seats=2)
     signup_group_data = default_signup_group_data
     signup_group_data["registration"] = reservation.registration_id
     signup_group_data["reservation_code"] = reservation.code
 
-    assert_create_signup_group(user_api_client, signup_group_data)
+    assert_create_signup_group(api_client, signup_group_data)
     assert_default_signup_group_created(reservation, signup_group_data, user)
+
+
+@pytest.mark.parametrize(
+    "signups_state", ["none", "empty", "without_responsible_person"]
+)
+@pytest.mark.django_db
+def test_cannot_create_group_without_signups_or_responsible_person(
+    api_client, organization, signups_state
+):
+    user = UserFactory()
+    user.registration_admin_organizations.add(organization)
+    api_client.force_authenticate(user)
+
+    reservation = SeatReservationCodeFactory(seats=2)
+
+    LanguageFactory(pk="fi", service_language=True)
+    LanguageFactory(pk="en", service_language=True)
+
+    signup_group_data = {
+        "extra_info": "Extra info for group",
+        "registration": reservation.registration_id,
+        "reservation_code": reservation.code,
+    }
+
+    if signups_state == "empty":
+        signup_group_data["signups"] = []
+    elif signups_state == "without_responsible_person":
+        signup_group_data["signups"] = deepcopy(default_signups_data)
+        signup_group_data["signups"][1]["responsible_for_group"] = False
+
+    response = create_signup_group(api_client, signup_group_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
 @pytest.mark.django_db
@@ -468,6 +504,7 @@ def test_can_group_signup_twice_with_same_phone_or_email(
         "email": test_email1,
         "phone_number": "0441111111",
         "date_of_birth": "2011-04-07",
+        "responsible_for_group": True,
     }
 
     signup_data_same_email = deepcopy(signup_data)
@@ -525,6 +562,7 @@ def test_signup_group_date_of_birth_is_mandatory_if_audience_min_or_max_age_spec
         "email": test_email1,
         "phone_number": "0441111111",
         "notifications": "sms",
+        "responsible_for_group": True,
     }
     if date_of_birth:
         signup_data["date_of_birth"] = date_of_birth
@@ -571,6 +609,7 @@ def test_signup_group_age_has_to_match_the_audience_min_max_age(
         "phone_number": "0441111111",
         "notifications": "sms",
         "date_of_birth": date_of_birth,
+        "responsible_for_group": True,
     }
     reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signup_group_data = {
@@ -683,6 +722,7 @@ def test_signup_group_successful_with_waitlist(user_api_client, registration, us
                 "first_name": "User",
                 "last_name": "1",
                 "email": "test1@test.com",
+                "responsible_for_group": True,
             },
             {
                 "first_name": "User",
@@ -709,6 +749,7 @@ def test_signup_group_successful_with_waitlist(user_api_client, registration, us
                 "first_name": "User",
                 "last_name": "4",
                 "email": "test4@test.com",
+                "responsible_for_group": True,
             },
         ],
     }
