@@ -1019,7 +1019,6 @@ def test_signup_group_different_email_sent_if_user_is_added_to_waiting_list(
 
         #  assert that the email was sent
         assert mail.outbox[0].subject.startswith(expected_subject)
-        print(str(mail.outbox[0].alternatives[0]))
         assert expected_heading in str(mail.outbox[0].alternatives[0])
         assert expected_text in str(mail.outbox[0].alternatives[0])
 
