@@ -142,7 +142,9 @@ class RegistrationViewSet(
             responsible_signups = (
                 signup_group.responsible_signups or signup_group.signups.all()
             )
-            for signup in responsible_signups.exclude(email=None):
+            for signup in responsible_signups.exclude(email=None).filter(
+                attendee_status=SignUp.AttendeeStatus.ATTENDING
+            ):
                 message_signups.append(signup)
                 already_included_signups.add(signup.pk)
 
@@ -190,7 +192,9 @@ class RegistrationViewSet(
         signups = serializer.validated_data.get("signups", [])
         if not (signup_groups or signups):
             signup_groups = registration.signup_groups.all()
-            signups = registration.signups.exclude(email=None)
+            signups = registration.signups.exclude(email=None).filter(
+                attendee_status=SignUp.AttendeeStatus.ATTENDING
+            )
 
         message_signups = self._get_message_signups(signups, signup_groups)
         messages = self._get_messages(

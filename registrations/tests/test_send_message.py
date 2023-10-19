@@ -6,6 +6,7 @@ from rest_framework import status
 
 from events.models import Language
 from events.tests.utils import versioned_reverse as reverse
+from registrations.models import SignUp
 from registrations.tests.factories import SignUpFactory, SignUpGroupFactory
 
 # === util methods ===
@@ -79,13 +80,16 @@ def test_admin_user_can_send_message_to_all_signups(
 
 
 @pytest.mark.django_db
-def test_email_is_sent_to_all_if_no_groups_or_signups_given(
+def test_email_is_sent_to_all_with_attending_status_if_no_groups_or_signups_given(
     api_client, registration, user
 ):
     # Group
     signup_group = SignUpGroupFactory(registration=registration)
-    first_signup = SignUpFactory(
-        signup_group=signup_group, registration=registration, email="test@test.com"
+    SignUpFactory(
+        signup_group=signup_group,
+        registration=registration,
+        email="test@test.com",
+        attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
     )
     second_signup = SignUpFactory(
         signup_group=signup_group,
@@ -96,7 +100,11 @@ def test_email_is_sent_to_all_if_no_groups_or_signups_given(
 
     # Individual
     third_signup = SignUpFactory(registration=registration, email="test3@test.com")
-    fourth_signup = SignUpFactory(registration=registration, email="test4@test.com")
+    SignUpFactory(
+        registration=registration,
+        email="test4@test.com",
+        attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
+    )
 
     api_client.force_authenticate(user)
     send_message_data = {"subject": "Message subject", "body": "Message body"}
@@ -106,10 +114,8 @@ def test_email_is_sent_to_all_if_no_groups_or_signups_given(
         registration.id,
         send_message_data,
         [
-            first_signup,
             second_signup,
             third_signup,
-            fourth_signup,
         ],
     )
     # Default language for the email is Finnish
@@ -375,7 +381,7 @@ def test_cannot_send_message_with_nonexistent_registration_id(
 
 
 @pytest.mark.django_db
-def test__unauthenticated_user_cannot_send_message(api_client, registration):
+def test_unauthenticated_user_cannot_send_message(api_client, registration):
     api_client.force_authenticate(None)
 
     send_message_data = {"subject": "Message subject", "body": "Message body"}
@@ -385,7 +391,7 @@ def test__unauthenticated_user_cannot_send_message(api_client, registration):
 
 
 @pytest.mark.django_db
-def test__non_admin_cannot_send_message(api_client, registration, user):
+def test_non_admin_cannot_send_message(api_client, registration, user):
     user.get_default_organization().regular_users.add(user)
     user.get_default_organization().admin_users.remove(user)
     api_client.force_authenticate(user)
@@ -397,7 +403,7 @@ def test__non_admin_cannot_send_message(api_client, registration, user):
 
 
 @pytest.mark.django_db
-def test__user_from_other_organization_cannot_send_message(
+def test_user_from_other_organization_cannot_send_message(
     api_client, registration, user2
 ):
     api_client.force_authenticate(user2)
@@ -435,7 +441,7 @@ def test_registration_admin_can_send_message_with_missing_datasource_permission(
 
 
 @pytest.mark.django_db
-def test__api_key_with_organization_can_send_message(
+def test_api_key_with_organization_can_send_message(
     api_client, data_source, organization, registration, signup, signup2
 ):
     data_source.owner = organization
@@ -450,7 +456,7 @@ def test__api_key_with_organization_can_send_message(
 
 
 @pytest.mark.django_db
-def test__api_key_with_wrong_data_source_cannot_send_message(
+def test_api_key_with_wrong_data_source_cannot_send_message(
     api_client, organization, other_data_source, registration
 ):
     other_data_source.owner = organization
@@ -465,7 +471,7 @@ def test__api_key_with_wrong_data_source_cannot_send_message(
 
 
 @pytest.mark.django_db
-def test__unknown_api_key_cannot_send_message(api_client, registration):
+def test_unknown_api_key_cannot_send_message(api_client, registration):
     api_client.credentials(apikey="unknown")
 
     send_message_data = {"subject": "Message subject", "body": "Message body"}
@@ -475,7 +481,7 @@ def test__unknown_api_key_cannot_send_message(api_client, registration):
 
 
 @pytest.mark.django_db
-def test__empty_api_key_cannot_send_message(api_client, registration):
+def test_empty_api_key_cannot_send_message(api_client, registration):
     api_client.credentials(apikey="")
 
     send_message_data = {"subject": "Message subject", "body": "Message body"}
