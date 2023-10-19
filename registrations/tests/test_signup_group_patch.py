@@ -107,7 +107,11 @@ def test_registration_user_who_is_superuser_or_registration_admin_can_patch_sign
     signup_group_data = {
         "signups": [
             {"id": first_signup.pk, "presence_status": SignUp.PresenceStatus.PRESENT},
-            {"id": second_signup.pk, "extra_info": "signup2 extra info"},
+            {
+                "id": second_signup.pk,
+                "extra_info": "signup2 extra info",
+                "user_consent": True,
+            },
         ]
     }
 
@@ -115,6 +119,7 @@ def test_registration_user_who_is_superuser_or_registration_admin_can_patch_sign
     assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
     assert first_signup.extra_info is None
     assert second_signup.extra_info is None
+    assert second_signup.user_consent is False
 
     api_client.force_authenticate(user)
 
@@ -129,6 +134,7 @@ def test_registration_user_who_is_superuser_or_registration_admin_can_patch_sign
     assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
     assert first_signup.extra_info is None
     assert second_signup.extra_info == "signup2 extra info"
+    assert second_signup.user_consent is True
 
 
 @freeze_time("2023-03-14 03:30:00+02:00")
@@ -150,7 +156,11 @@ def test_registration_user_who_created_signup_group_can_patch_signups_data(
     signup_group_data = {
         "signups": [
             {"id": first_signup.pk, "presence_status": SignUp.PresenceStatus.PRESENT},
-            {"id": second_signup.pk, "extra_info": "signup2 extra info"},
+            {
+                "id": second_signup.pk,
+                "extra_info": "signup2 extra info",
+                "user_consent": True,
+            },
         ]
     }
 
@@ -158,6 +168,7 @@ def test_registration_user_who_created_signup_group_can_patch_signups_data(
     assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
     assert first_signup.extra_info is None
     assert second_signup.extra_info is None
+    assert second_signup.user_consent is False
 
     api_client.force_authenticate(user)
 
@@ -178,6 +189,7 @@ def test_registration_user_who_created_signup_group_can_patch_signups_data(
     assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
     assert first_signup.extra_info is None
     assert second_signup.extra_info == "signup2 extra info"
+    assert second_signup.user_consent is True
 
 
 @pytest.mark.parametrize(

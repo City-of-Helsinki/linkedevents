@@ -46,44 +46,51 @@ def assert_update_signup(api_client, signup_pk, signup_data, query_string=None):
 
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_registration_admin_can_update_signup(
-    user_api_client, registration, signup, user
-):
-    user.get_default_organization().registration_admin_users.add(user)
+def test_registration_admin_can_update_signup(api_client, signup):
+    user = UserFactory()
+    user.registration_admin_organizations.add(signup.publisher)
+    api_client.force_authenticate(user)
 
-    db_signup = SignUp.objects.get(pk=signup.id)
-    assert db_signup.first_name != new_signup_name
-    assert db_signup.last_modified_by_id is None
+    assert signup.first_name != new_signup_name
+    assert signup.last_modified_by_id is None
+    assert signup.user_consent is False
 
     signup_data = {
-        "registration": registration.id,
+        "registration": signup.registration_id,
         "first_name": new_signup_name,
         "date_of_birth": new_date_of_birth,
+        "user_consent": True,
     }
 
-    assert_update_signup(user_api_client, signup.id, signup_data)
-    db_signup.refresh_from_db()
-    assert db_signup.first_name == new_signup_name
-    assert db_signup.last_modified_by_id == user.id
+    assert_update_signup(api_client, signup.id, signup_data)
+
+    signup.refresh_from_db()
+    assert signup.first_name == new_signup_name
+    assert signup.last_modified_by_id == user.id
+    assert signup.user_consent is True
 
 
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_created_admin_can_update_signup(registration, user, user_api_client):
     signup = SignUpFactory(registration=registration, created_by=user)
+
     assert signup.first_name != new_signup_name
     assert signup.last_modified_by_id is None
+    assert signup.user_consent is False
 
     signup_data = {
         "registration": registration.id,
         "first_name": new_signup_name,
         "date_of_birth": new_date_of_birth,
+        "user_consent": True,
     }
 
     assert_update_signup(user_api_client, signup.id, signup_data)
     signup.refresh_from_db()
     assert signup.first_name == new_signup_name
     assert signup.last_modified_by_id == user.id
+    assert signup.user_consent is True
 
 
 @pytest.mark.django_db

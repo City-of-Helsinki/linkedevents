@@ -80,6 +80,7 @@ def assert_signup_fields_exist(data):
         "registration",
         "signup_group",
         "native_language",
+        "user_consent",
     )
     assert_fields_exist(data, fields)
 

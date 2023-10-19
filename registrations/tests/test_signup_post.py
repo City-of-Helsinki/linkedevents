@@ -35,6 +35,7 @@ default_signups_data = {
             "native_language": "fi",
             "street_address": test_street_address,
             "zipcode": "myzip1",
+            "user_consent": True,
         }
     ],
 }
@@ -82,6 +83,7 @@ def assert_default_signup_created(signups_data, user):
     assert signup.last_modified_by_id == user.id
     assert signup.created_time is not None
     assert signup.last_modified_time is not None
+    assert signup.user_consent is signups_data["signups"][0]["user_consent"]
 
 
 # === tests ===
@@ -219,6 +221,7 @@ def test_add_signups_to_group(user_api_client, languages, registration, user):
                 "native_language": "en",
                 "street_address": test_street_address,
                 "zipcode": "myzip1",
+                "user_consent": True,
             },
         ],
     }
@@ -234,6 +237,7 @@ def test_add_signups_to_group(user_api_client, languages, registration, user):
     assert new_signup0.last_modified_by_id == user.id
     assert new_signup0.created_time is not None
     assert new_signup0.last_modified_time is not None
+    assert new_signup0.user_consent is False
 
     new_signup1 = signup_group.signups.filter(email="mickey@test.com").first()
     assert new_signup1.registration_id == registration.id
@@ -241,6 +245,7 @@ def test_add_signups_to_group(user_api_client, languages, registration, user):
     assert new_signup1.last_modified_by_id == user.id
     assert new_signup1.created_time is not None
     assert new_signup1.last_modified_time is not None
+    assert new_signup1.user_consent is True
 
 
 @pytest.mark.django_db
