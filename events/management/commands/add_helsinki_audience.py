@@ -43,11 +43,15 @@ NEW_SOTE_KEYWORDS_DATA = [
     {
         "id": "helsinki:aflfbatkwe",
         "name_fi": "omaishoitoperheet",
+        "name_en": "informal care families",
+        "name_sv": "närståendevård familjer",
         "data_source_id": "helsinki",
     },
     {
         "id": "helsinki:aflfbat76e",
         "name_fi": "palvelukeskuskortti",
+        "name_en": "service centre card",
+        "name_sv": "närståendevård kort",
         "data_source_id": "helsinki",
     },
 ]
