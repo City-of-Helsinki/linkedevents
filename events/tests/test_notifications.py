@@ -135,7 +135,22 @@ def test_draft_posted_as_super_event_sends(
 
 
 @pytest.mark.django_db
-def test_recurring_child_event_saved_does_not_send(user, event):
+def test_draft_posted_created_by_admin_user_does_not_send(data_source, organization):
+    admin = UserFactory()
+    organization.admin_users.add(admin)
+    EventFactory(
+        name="testeventzor",
+        data_source=data_source,
+        publisher=organization,
+        publication_status=PublicationStatus.DRAFT,
+        created_by=admin,
+    )
+    assert len(mail.outbox) == 0
+
+
+@pytest.mark.django_db
+def test_recurring_child_event_saved_does_not_send(event):
+    user = UserFactory()
     event.super_event_type = event.SuperEventType.RECURRING
     EventFactory(
         name="testeventzor",
@@ -149,7 +164,8 @@ def test_recurring_child_event_saved_does_not_send(user, event):
 
 
 @pytest.mark.django_db
-def test_other_than_recurring_child_event_saved_does_send(user, event):
+def test_other_than_recurring_child_event_saved_does_send(event):
+    user = UserFactory()
     EventFactory(
         name="testeventzor",
         data_source=event.data_source,

@@ -1069,6 +1069,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
                 self.super_event
                 and self.super_event.super_event_type == Event.SuperEventType.RECURRING
             )
+            # Do not send draft emails from events created by admins.
+            and not self.publisher.admin_users.filter(id=self.created_by_id).exists()
         ):
             self.send_draft_posted_notification()
 
