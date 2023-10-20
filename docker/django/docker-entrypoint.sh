@@ -13,6 +13,8 @@ if [[ "$APPLY_MIGRATIONS" = "true" ]]; then
     ./manage.py migrate --noinput
     echo "Applying sync_translation_fields migrations..."
     ./manage.py sync_translation_fields --noinput
+    echo "Create language objects..."
+    ./manage.py create_languages
 fi
 
 
