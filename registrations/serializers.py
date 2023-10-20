@@ -434,6 +434,22 @@ class SignUpGroupCreateSerializer(
     reservation_code = serializers.CharField(write_only=True)
     extra_info = serializers.CharField(required=False, allow_blank=True)
 
+    def validate(self, data):
+        validated_data = super().validate(data)
+
+        errors = {}
+
+        signups_data = validated_data.get("signups")
+        if not any(signup.get("responsible_for_group") for signup in signups_data):
+            errors["signups"] = _(
+                "A group must have at least one participant who is responsible for the group"
+            )
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return validated_data
+
     @staticmethod
     def _create_protected_data(signup_group, **protected_data):
         if not protected_data:
