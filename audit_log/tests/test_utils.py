@@ -1,13 +1,19 @@
 from datetime import datetime, timezone
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 from django.contrib.auth.models import AnonymousUser
+from elasticsearch import Elasticsearch, TransportError
 from freezegun import freeze_time
 
 from audit_log.enums import Operation, Role, Status
 from audit_log.models import AuditLogEntry
-from audit_log.utils import _get_remote_address, commit_to_audit_log
+from audit_log.tests.factories import AuditLogEntryFactory
+from audit_log.utils import (
+    _get_remote_address,
+    commit_to_audit_log,
+    send_audit_log_entries_to_elasticsearch,
+)
 from events.tests.factories import ApiKeyUserFactory, OrganizationFactory
 from helevents.tests.factories import UserFactory
 
@@ -196,3 +202,99 @@ def test_get_remote_address(remote_address, expected, x_forwarded_for):
         META={"REMOTE_ADDR": remote_address} if not x_forwarded_for else {},
     )
     assert _get_remote_address(req_mock) == expected
+
+
+@pytest.mark.parametrize(
+    "has_unsent_entries,has_sent_entries",
+    [
+        (True, False),
+        (True, True),
+        (False, False),
+    ],
+)
+@pytest.mark.no_use_audit_log
+@pytest.mark.django_db
+def test_send_audit_log_entries_to_elasticsearch(has_unsent_entries, has_sent_entries):
+    if has_unsent_entries:
+        AuditLogEntryFactory()
+        AuditLogEntryFactory()
+
+    if has_sent_entries:
+        AuditLogEntryFactory(is_sent=True)
+        AuditLogEntryFactory(is_sent=True)
+
+    assert AuditLogEntry.objects.filter(is_sent=False).count() == (
+        2 if has_unsent_entries else 0
+    )
+    assert AuditLogEntry.objects.filter(is_sent=True).count() == (
+        2 if has_sent_entries else 0
+    )
+
+    es_client = Elasticsearch(
+        [
+            {
+                "host": "http://testserver",
+                "port": 1234,
+            }
+        ],
+    )
+
+    with patch("elasticsearch.Elasticsearch.index") as mocked_es_index:
+        mocked_es_index.return_value = {"result": "created"}
+
+        sent_entries, total_entries = send_audit_log_entries_to_elasticsearch(es_client)
+
+        assert mocked_es_index.called is has_unsent_entries
+
+    assert sent_entries == (2 if has_unsent_entries else 0)
+    assert total_entries == (2 if has_unsent_entries else 0)
+
+    assert AuditLogEntry.objects.filter(is_sent=False).count() == 0
+
+
+@pytest.mark.parametrize(
+    "es_return_value",
+    [
+        {"result": "something-else-than-created"},
+        TransportError("ElasticSearch Transport Error"),
+    ],
+)
+@pytest.mark.no_use_audit_log
+@pytest.mark.django_db
+def test_send_audit_log_entries_to_elasticsearch_failure(es_return_value):
+    AuditLogEntryFactory()
+    AuditLogEntryFactory()
+
+    assert AuditLogEntry.objects.filter(is_sent=False).count() == 2
+
+    es_client = Elasticsearch(
+        [
+            {
+                "host": "http://testserver",
+                "port": 1234,
+            }
+        ],
+    )
+
+    def raise_exception(*args, **kwargs):
+        raise es_return_value
+
+    with patch("elasticsearch.Elasticsearch.index") as mocked_es_index:
+        if isinstance(es_return_value, Exception):
+            mocked_es_index.side_effect = raise_exception
+
+            with pytest.raises(es_return_value.__class__):
+                send_audit_log_entries_to_elasticsearch(es_client)
+        else:
+            mocked_es_index.return_value = es_return_value
+
+            sent_entries, total_entries = send_audit_log_entries_to_elasticsearch(
+                es_client
+            )
+
+            assert sent_entries == 0
+            assert total_entries == 2
+
+        assert mocked_es_index.called is True
+
+    assert AuditLogEntry.objects.filter(is_sent=False).count() == 2

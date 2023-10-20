@@ -64,13 +64,19 @@ env = environ.Env(
     DATABASE_URL=(str, "postgis:///linkedevents"),
     DEBUG=(bool, False),
     DEFAULT_FROM_EMAIL=(str, "noreply@linkedevents.hel.fi"),
+    ELASTICSEARCH_APP_AUDIT_LOG_INDEX=(str, "linkedevents_app_audit_log"),
+    ELASTICSEARCH_HOST=(str, ""),
+    ELASTICSEARCH_PASSWORD=(str, ""),
+    ELASTICSEARCH_PORT=(int, 0),
     ELASTICSEARCH_URL=(str, None),
+    ELASTICSEARCH_USERNAME=(str, ""),
     ELIS_EVENT_API_URL=(
         str,
         "http://elis.helsinki1.hki.local/event-api/",
     ),
     ENABLE_EXTERNAL_USER_EVENTS=(bool, True),
     ENABLE_REGISTRATION_ENDPOINTS=(bool, False),
+    ENABLE_SEND_AUDIT_LOG=(bool, False),
     ESPOO_API_URL=(str, "https://api.espoo.fi/events/"),
     ESPOO_API_EVENT_QUERY_PARAMS=(
         dict,
@@ -677,3 +683,9 @@ ESPOO_WAIT_BETWEEN = env("ESPOO_WAIT_BETWEEN")
 # Audit log
 AUDIT_LOG_ORIGIN = "linkedevents"
 AUDIT_LOG_ENABLED = env("AUDIT_LOG_ENABLED")
+ENABLE_SEND_AUDIT_LOG = env("ENABLE_SEND_AUDIT_LOG")
+ELASTICSEARCH_APP_AUDIT_LOG_INDEX = env("ELASTICSEARCH_APP_AUDIT_LOG_INDEX")
+ELASTICSEARCH_HOST = env("ELASTICSEARCH_HOST")
+ELASTICSEARCH_PORT = env("ELASTICSEARCH_PORT")
+ELASTICSEARCH_USERNAME = env("ELASTICSEARCH_USERNAME")
+ELASTICSEARCH_PASSWORD = env("ELASTICSEARCH_PASSWORD")
