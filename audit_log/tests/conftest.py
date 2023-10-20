@@ -1,3 +1,5 @@
+from functools import wraps
+
 import pytest
 from django.conf import settings
 
@@ -24,11 +26,20 @@ def use_audit_log(request):
 @pytest.fixture
 def use_audit_log_class(request):
     if settings.AUDIT_LOG_ENABLED:
-        assert AuditLogEntry.objects.exists() is False
 
-    def tearDown(instance):
-        if settings.AUDIT_LOG_ENABLED:
-            assert AuditLogEntry.objects.exists() is True
-        super(request.cls, instance).tearDown()
+        def audit_log_test_wrapper(test_function):
+            @wraps(test_function)
+            def wrapper(*args, **kwargs):
+                assert AuditLogEntry.objects.exists() is False
 
-    request.cls.tearDown = tearDown
+                test_function()
+
+                assert AuditLogEntry.objects.exists() is True
+
+            return wrapper
+
+        setattr(
+            request.cls,
+            request.function.__name__,
+            audit_log_test_wrapper(request.function),
+        )
