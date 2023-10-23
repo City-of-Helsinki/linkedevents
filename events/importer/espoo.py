@@ -251,6 +251,35 @@ def _post_recreate_external_links(
     )
 
 
+def _import_origin_obj(obj_data, model, data_source, copy_fields, pre_field_mappers):
+    obj_data = deepcopy(obj_data)
+    origin_id = obj_data.pop("id")
+    obj_data.pop("data_source")
+
+    data = {k: v for k, v in obj_data.items() if k in copy_fields}
+    for field_name, mapper in pre_field_mappers.items():
+        data = mapper(field_name, obj_data.get(field_name), data)
+
+    qs = model.objects.filter(origin_id=origin_id, data_source=data_source)
+    qs_count = qs.count()
+    if qs_count == 0:
+        instance = model.objects.create(
+            id=generate_id(data_source),
+            origin_id=origin_id,
+            data_source=data_source,
+            **data,
+        )
+    elif qs_count == 1:
+        qs.update(**data)
+        instance = qs[0]
+    else:
+        raise EspooImporterError(
+            f"Data integrity is broken "
+            f"(origin_id={origin_id}, data_source={data_source.pk})"
+        )
+    return instance
+
+
 def _import_origin_objs(
     model: Type[M],
     data_source: DataSource,
@@ -285,31 +314,9 @@ def _import_origin_objs(
     instances = []
     instance_data_map = {}
     for obj_data in origin_objs:
-        obj_data = deepcopy(obj_data)
-        origin_id = obj_data.pop("id")
-        obj_data.pop("data_source")
-
-        data = {k: v for k, v in obj_data.items() if k in copy_fields}
-        for field_name, mapper in pre_field_mappers.items():
-            data = mapper(field_name, obj_data.get(field_name), data)
-
-        qs = model.objects.filter(origin_id=origin_id, data_source=data_source)
-        qs_count = qs.count()
-        if qs_count == 0:
-            instance = model.objects.create(
-                id=generate_id(data_source),
-                origin_id=origin_id,
-                data_source=data_source,
-                **data,
-            )
-        elif qs_count == 1:
-            qs.update(**data)
-            instance = qs[0]
-        else:
-            raise EspooImporterError(
-                f"Data integrity is broken "
-                f"(origin_id={origin_id}, data_source={data_source.pk})"
-            )
+        instance = _import_origin_obj(
+            obj_data, model, data_source, copy_fields, pre_field_mappers
+        )
 
         instances.append(instance)
         instance_data_map[instance] = obj_data
