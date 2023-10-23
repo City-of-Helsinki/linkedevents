@@ -138,7 +138,9 @@ def test_get_keyword_free_search(api_client, keyword, keyword2, keyword3):
     keyword2.save()
     keyword3.save()
 
-    response = get_list(api_client, data={"free_text": "cheeese"})
+    response = get_list(
+        api_client, data={"free_text": "cheeese", "show_all_keywords": True}
+    )
     ids = [entry["id"] for entry in response.data["data"]]
     assert ids == [keyword.id, keyword2.id, keyword3.id]
 
