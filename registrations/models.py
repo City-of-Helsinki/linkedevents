@@ -20,13 +20,13 @@ from encrypted_fields import fields
 from helsinki_gdpr.models import SerializableMixin
 
 from events.models import Event, Language
+from registrations import pseudonymize
 from registrations.notifications import (
     get_signup_notification_subject,
     get_signup_notification_texts,
     get_signup_notification_variables,
     SignUpNotificationType,
 )
-from registrations import pseudonymize
 from registrations.utils import (
     code_validity_duration,
     get_email_noreply_address,
