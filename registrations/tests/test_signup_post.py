@@ -991,3 +991,37 @@ def test_confirmation_to_waiting_list_template_has_correct_text_per_event_type(
     )
     #  assert that the email was sent
     assert expected_text in str(mail.outbox[0].alternatives[0])
+
+
+@pytest.mark.django_db
+def test_signup_text_fields_are_sanitized(
+    languages, organization, user, user_api_client
+):
+    user.get_default_organization().registration_admin_users.add(user)
+
+    reservation = SeatReservationCodeFactory(seats=1)
+    default_signups_data = {
+        "signups": [
+            {
+                "first_name": "Michael <p>Html</p>",
+                "last_name": "Jackson <p>Html</p>",
+                "extra_info": "Extra info <p>Html</p>",
+                "phone_number": "<p>0441111111</p>",
+                "street_address": f"{test_street_address} <p>Html</p>",
+                "zipcode": "<p>zip</p>",
+            }
+        ],
+    }
+
+    signups_data = default_signups_data
+    signups_data["registration"] = reservation.registration.id
+    signups_data["reservation_code"] = reservation.code
+
+    response = assert_create_signups(user_api_client, signups_data)
+    response_signup = response.data["attending"]["people"][0]
+    assert response_signup["first_name"] == "Michael Html"
+    assert response_signup["last_name"] == "Jackson Html"
+    assert response_signup["extra_info"] == "Extra info Html"
+    assert response_signup["phone_number"] == "0441111111"
+    assert response_signup["street_address"] == f"{test_street_address} Html"
+    assert response_signup["zipcode"] == "zip"
