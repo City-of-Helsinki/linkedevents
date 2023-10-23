@@ -239,6 +239,7 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
             "registration",
             "signup_group",
             "native_language",
+            "user_consent",
         )
         model = SignUp
 

@@ -122,41 +122,23 @@ def test_patch_extra_info_of_signup_with_empty_data(api_client, registration, si
     assert signup.extra_info == ""
 
 
+@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_registration_user_who_created_signup_can_patch_presence_status(
-    api_client, event
-):
+def test_patch_user_consent(api_client, registration, signup):
     user = UserFactory()
-
-    registration = RegistrationFactory(event=event)
-
-    RegistrationUserAccessFactory(registration=registration, email=user.email)
-
-    signup = SignUpFactory(
-        registration=registration,
-        date_of_birth="2011-01-01",
-        phone_number="0441234567",
-        street_address="Street address",
-        created_by=user,
-    )
-    assert signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
-
+    user.registration_admin_organizations.add(registration.publisher)
     api_client.force_authenticate(user)
 
-    signup_data = {
-        "presence_status": SignUp.PresenceStatus.PRESENT,
-    }
+    signup = SignUpFactory(registration=registration)
+    assert signup.user_consent is False
 
-    with patch(
-        "helevents.models.UserModelPermissionMixin.token_amr_claim",
-        new_callable=PropertyMock,
-        return_value="heltunnistussuomifi",
-    ) as mocked:
-        assert_patch_signup(api_client, signup.id, signup_data)
-        assert mocked.called is True
+    signup_data = {
+        "user_consent": True,
+    }
+    assert_patch_signup(api_client, signup.id, signup_data)
 
     signup.refresh_from_db()
-    assert signup.presence_status == SignUp.PresenceStatus.PRESENT
+    assert signup.user_consent is True
 
 
 @pytest.mark.django_db

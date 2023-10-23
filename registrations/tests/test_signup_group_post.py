@@ -35,6 +35,7 @@ default_signups_data = [
         "street_address": "my street",
         "zipcode": "myzip1",
         "attendee_status": SignUp.AttendeeStatus.WAITING_LIST,
+        "user_content": False,
     },
     {
         "first_name": "Mickey",
@@ -49,6 +50,7 @@ default_signups_data = [
         "zipcode": "myzip1",
         "responsible_for_group": True,
         "attendee_status": SignUp.AttendeeStatus.ATTENDING,
+        "user_content": True,
     },
 ]
 default_signup_group_data = {
@@ -94,6 +96,7 @@ def assert_signup_data(signup, signup_data, user):
     assert signup.responsible_for_group is signup_data.get(
         "responsible_for_group", False
     )
+    assert signup.user_consent is signup_data.get("user_consent", False)
 
 
 def assert_default_signup_group_created(reservation, signup_group_data, user):

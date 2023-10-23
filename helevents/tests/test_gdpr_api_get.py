@@ -87,6 +87,7 @@ def _get_signup_profile_data(signup: SignUp) -> dict:
                 "key": "PRESENCE_STATUS",
                 "value": dict(SignUp.PRESENCE_STATUSES)[signup.presence_status],
             },
+            {"key": "USER_CONSENT", "value": signup.user_consent},
         ],
     }
 
@@ -183,6 +184,7 @@ def test_authenticated_user_can_get_own_data(api_client, settings):
         notifications=SignUp.NotificationType.SMS,
         attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
         presence_status=SignUp.PresenceStatus.NOT_PRESENT,
+        user_consent=True,
         created_by=user,
     )
     SignUpProtectedDataFactory(

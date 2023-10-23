@@ -71,6 +71,7 @@ def test_registration_admin_can_update_signup_group(
 
     assert signup0.first_name != new_signup_name
     assert signup0.last_modified_by_id is None
+    assert signup0.user_consent is False
 
     assert signup1.first_name != new_signup_name
     assert signup1.last_modified_by_id is None
@@ -79,7 +80,7 @@ def test_registration_admin_can_update_signup_group(
         "registration": registration.id,
         "extra_info": new_signup_group_extra_info,
         "signups": [
-            {"id": signup0.id, "first_name": new_signup_name},
+            {"id": signup0.id, "first_name": new_signup_name, "user_consent": True},
             {"extra_info": "This sign-up does not exist"},
         ],
     }
@@ -97,6 +98,7 @@ def test_registration_admin_can_update_signup_group(
     signup0.refresh_from_db()
     assert signup0.first_name == new_signup_name
     assert signup0.last_modified_by_id == user.id
+    assert signup0.user_consent is True
 
     signup1.refresh_from_db()
     assert signup1.first_name != new_signup_name
