@@ -90,12 +90,16 @@ def _get_data(url: str, params: Optional[dict] = None) -> dict:
 
 def _list_data(url: str, params: Optional[dict] = None) -> list[dict]:
     results = []
+    request_params = params
     for _ in range(settings.ESPOO_MAX_PAGES):
-        response_data = _get_data(url, params)
+        response_data = _get_data(url, request_params)
         results += response_data["data"]
         url = response_data["meta"]["next"]
         if url is None:
             return results
+
+        # Params are included in the response next url
+        request_params = None
         time.sleep(settings.ESPOO_WAIT_BETWEEN)
 
     raise EspooImporterError("Exceeded ESPOO_MAX_PAGES")
@@ -246,6 +250,35 @@ def _post_recreate_external_links(
     )
 
 
+def _import_origin_obj(obj_data, model, data_source, copy_fields, pre_field_mappers):
+    obj_data = deepcopy(obj_data)
+    origin_id = obj_data.pop("id")
+    obj_data.pop("data_source")
+
+    data = {k: v for k, v in obj_data.items() if k in copy_fields}
+    for field_name, mapper in pre_field_mappers.items():
+        data = mapper(field_name, obj_data.get(field_name), data)
+
+    qs = model.objects.filter(origin_id=origin_id, data_source=data_source)
+    qs_count = qs.count()
+    if qs_count == 0:
+        instance = model.objects.create(
+            id=generate_id(data_source),
+            origin_id=origin_id,
+            data_source=data_source,
+            **data,
+        )
+    elif qs_count == 1:
+        qs.update(**data)
+        instance = qs[0]
+    else:
+        raise EspooImporterError(
+            f"Data integrity is broken "
+            f"(origin_id={origin_id}, data_source={data_source.pk})"
+        )
+    return instance
+
+
 def _import_origin_objs(
     model: Type[M],
     data_source: DataSource,
@@ -280,31 +313,9 @@ def _import_origin_objs(
     instances = []
     instance_data_map = {}
     for obj_data in origin_objs:
-        obj_data = deepcopy(obj_data)
-        origin_id = obj_data.pop("id")
-        obj_data.pop("data_source")
-
-        data = {k: v for k, v in obj_data.items() if k in copy_fields}
-        for field_name, mapper in pre_field_mappers.items():
-            data = mapper(field_name, obj_data.get(field_name), data)
-
-        qs = model.objects.filter(origin_id=origin_id, data_source=data_source)
-        qs_count = qs.count()
-        if qs_count == 0:
-            instance = model.objects.create(
-                id=generate_id(data_source),
-                origin_id=origin_id,
-                data_source=data_source,
-                **data,
-            )
-        elif qs_count == 1:
-            qs.update(**data)
-            instance = qs[0]
-        else:
-            raise EspooImporterError(
-                f"Data integrity is broken "
-                f"(origin_id={origin_id}, data_source={data_source.pk})"
-            )
+        instance = _import_origin_obj(
+            obj_data, model, data_source, copy_fields, pre_field_mappers
+        )
 
         instances.append(instance)
         instance_data_map[instance] = obj_data
@@ -409,8 +420,30 @@ class EspooImporter(Importer):
             defaults=ds_defaults, **ds_args
         )
 
-        # We don't need a default organization as we'll import from
-        # Espoo as necessary
+        org_data_source, _ = DataSource.objects.get_or_create(
+            id="espoo", defaults={"name": "Espoo"}
+        )
+
+        espoo_kaupunki, _ = Organization.objects.get_or_create(
+            id="espoo:kaupunki",
+            defaults={
+                "name": "Espoon kaupunki",
+                "data_source": org_data_source,
+                "origin_id": "espoo_kaupunki",
+            },
+        )
+        for org_id, org_name in settings.ESPOO_API_PUBLISHERS:
+            Organization.objects.get_or_create(
+                id=org_id,
+                defaults={
+                    "data_source": org_data_source,
+                    "name": org_name,
+                    "parent": espoo_kaupunki,
+                    "origin_id": org_id,
+                },
+            )
+
+        # No default organization
         self.organization = None
 
     @transaction.atomic
