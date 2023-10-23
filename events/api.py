@@ -959,6 +959,12 @@ class KeywordListViewSet(
             self.request.query_params.get("has_upcoming_events"), "has_upcoming_events"
         ):
             queryset = queryset.filter(has_upcoming_events=True)
+        else:
+            if not self.request.query_params.get("show_all_keywords"):
+                queryset = queryset.filter(n_events__gt=0)
+            if not self.request.query_params.get("show_deprecated"):
+                queryset = queryset.filter(deprecated=False)
+
         if self.request.query_params.get("free_text"):
             val = self.request.query_params.get("free_text")
             # no need to search English if there are accented letters
@@ -971,11 +977,6 @@ class KeywordListViewSet(
             queryset = queryset.annotate(simile=Greatest(*tri)).filter(simile__gt=0.2)
             self.ordering_fields = ("simile", *self.ordering_fields)
             self.ordering = ("-simile", *self.ordering)
-        else:
-            if not self.request.query_params.get("show_all_keywords"):
-                queryset = queryset.filter(n_events__gt=0)
-            if not self.request.query_params.get("show_deprecated"):
-                queryset = queryset.filter(deprecated=False)
 
         # Optionally filter keywords by filter parameter,
         # can be used e.g. with typeahead.js
