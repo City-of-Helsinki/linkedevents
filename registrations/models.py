@@ -20,23 +20,21 @@ from encrypted_fields import fields
 from helsinki_gdpr.models import SerializableMixin
 
 from events.models import Event, Language
+from registrations.notifications import (
+    get_signup_notification_subject,
+    get_signup_notification_texts,
+    get_signup_notification_variables,
+    SignUpNotificationType,
+)
 from registrations.utils import (
     code_validity_duration,
     get_email_noreply_address,
-    get_signup_edit_url,
     get_ui_locales,
 )
 
 User = settings.AUTH_USER_MODEL
 
 logger = logging.getLogger(__name__)
-
-
-class SignUpNotificationType:
-    CANCELLATION = "cancellation"
-    CONFIRMATION = "confirmation"
-    CONFIRMATION_TO_WAITING_LIST = "confirmation_to_waiting_list"
-    TRANSFERRED_AS_PARTICIPANT = "transferred_as_participant"
 
 
 class MandatoryFields(models.TextChoices):
@@ -615,27 +613,13 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         return "fi"
 
     def get_registration_message(self, subject, cleaned_body, plain_text_body):
-        [linked_events_ui_locale, linked_registrations_ui_locale] = get_ui_locales(
-            self.service_language
-        )
+        [_, linked_registrations_ui_locale] = get_ui_locales(self.service_language)
 
-        with override(linked_registrations_ui_locale, deactivate=True):
-            event_name = self.registration.event.name
-            event_type_id = self.registration.event.type_id
-            signup_edit_url = get_signup_edit_url(self, linked_registrations_ui_locale)
+        with override(linked_registrations_ui_locale):
+            email_variables = get_signup_notification_variables(self)
+            email_variables["body"] = cleaned_body
+            email_variables["signup"] = self
 
-            email_variables = {
-                "body": cleaned_body,
-                "event_name": event_name,
-                "event_type_id": event_type_id,
-                "linked_events_ui_locale": linked_events_ui_locale,
-                "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
-                "linked_registrations_ui_locale": linked_registrations_ui_locale,
-                "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
-                "registration_id": self.registration_id,
-                "signup_edit_url": signup_edit_url,
-                "signup": self,
-            }
             rendered_body = render_to_string("message_to_signup.html", email_variables)
 
         return (
@@ -647,70 +631,27 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         )
 
     def send_notification(self, notification_type):
-        [linked_events_ui_locale, linked_registrations_ui_locale] = get_ui_locales(
-            self.service_language
-        )
-        signup_edit_url = get_signup_edit_url(self, linked_registrations_ui_locale)
-
-        with (translation.override(self.get_service_language_pk())):
-            event_name = self.registration.event.name
-            event_type_id = self.registration.event.type_id
-
-            email_variables = {
-                "event_name": event_name,
-                "event_type_id": event_type_id,
-                "linked_events_ui_locale": linked_events_ui_locale,
-                "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
-                "linked_registrations_ui_locale": linked_registrations_ui_locale,
-                "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
-                "registration_id": self.registration.id,
-                "signup_edit_url": signup_edit_url,
-                "username": self.first_name,
-            }
-
-            confirmation_message = self.registration.confirmation_message
-            instructions = self.registration.instructions
-
-        if confirmation_message:
-            email_variables["confirmation_message"] = confirmation_message
-
-        if instructions:
-            email_variables["instructions"] = instructions
-
-        notification_templates = {
-            SignUpNotificationType.CANCELLATION: "cancellation_confirmation.html",
-            SignUpNotificationType.CONFIRMATION: "signup_confirmation.html",
-            SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST: "signup_confirmation_to_waiting_list.html",
-            SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT: "signup_transferred_as_participant.html",
-        }
+        [_, linked_registrations_ui_locale] = get_ui_locales(self.service_language)
 
         with override(linked_registrations_ui_locale, deactivate=True):
-            notification_subjects = {
-                SignUpNotificationType.CANCELLATION: _(
-                    "Registration cancelled - %(event_name)s"
-                )
-                % {"event_name": event_name},
-                SignUpNotificationType.CONFIRMATION: _(
-                    "Registration confirmation - %(event_name)s"
-                )
-                % {"event_name": event_name},
-                SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST: _(
-                    "Waiting list seat reserved - %(event_name)s"
-                )
-                % {"event_name": self.registration.event.name},
-                SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT: _(
-                    "Registration confirmation - %(event_name)s"
-                )
-                % {"event_name": event_name},
-            }
+            email_variables = get_signup_notification_variables(self)
+            email_variables["texts"] = get_signup_notification_texts(
+                self, notification_type
+            )
+            email_template = (
+                "cancellation_confirmation.html"
+                if notification_type == SignUpNotificationType.CANCELLATION
+                else "common_signup_confirmation.html",
+            )
 
             rendered_body = render_to_string(
-                notification_templates[notification_type], email_variables
+                email_template,
+                email_variables,
             )
 
         try:
             send_mail(
-                notification_subjects[notification_type],
+                get_signup_notification_subject(self, notification_type),
                 rendered_body,
                 get_email_noreply_address(),
                 [self.email],

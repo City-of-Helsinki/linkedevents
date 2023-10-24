@@ -229,17 +229,17 @@ def test_email_is_sent_to_selected_signups_only(api_client, registration, user):
     [
         (
             "en",
-            "The organizer of the event Foo has sent you a message.",
+            "A message about the event Foo.",
             "Check your registration here",
         ),
         (
             "fi",
-            "Tapahtuman Foo järjestäjä on lähettänyt sinulle viestin.",
+            "Viesti tapahtumasta Foo.",
             "Tarkastele ilmoittautumistasi täällä",
         ),
         (
             "sv",
-            "Arrangören av evenemanget Foo har skickat ett meddelande till dig.",
+            "Ett meddelande om evenemanget Foo.",
             "Kontrollera din registrering här",
         ),
     ],
