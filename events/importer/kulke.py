@@ -957,6 +957,8 @@ class KulkeImporter(Importer):
         if count:
             logger.debug("Deleted %d events", count)
 
+        self._handle_referenced_deleted_events(elis_event_ids, begin_date)
+
         # Find super events that no longer contain at least two events and delete them
         count = (
             Event.objects.exclude(super_event_type__isnull=True)
@@ -976,6 +978,22 @@ class KulkeImporter(Importer):
         if count:
             logger.debug(
                 "Deleted %d empty super events",
+                count,
+            )
+
+    def _handle_referenced_deleted_events(
+        self, elis_event_ids: Sequence[int], begin_date: datetime
+    ) -> None:
+        count = Event.objects.filter(
+            data_source=self.data_source,
+            start_time__gte=begin_date,
+            deleted=True,
+            origin_id__in=elis_event_ids,
+        ).undelete()
+
+        if count:
+            logger.debug(
+                "Restored %d events",
                 count,
             )
 
