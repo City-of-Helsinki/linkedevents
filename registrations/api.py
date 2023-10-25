@@ -8,6 +8,8 @@ from django.contrib.auth.models import AnonymousUser
 from django.db import transaction
 from django.db.models import ProtectedError, Q, Value
 from django.db.models.functions import Concat
+from django.http import HttpResponse
+from django.utils import translation
 from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
 from rest_framework import mixins, status, viewsets
@@ -28,6 +30,7 @@ from events.models import Event
 from events.permissions import OrganizationUserEditPermission
 from linkedevents.registry import register_view
 from registrations.exceptions import ConflictException
+from registrations.exports import RegistrationSignUpsExportXLSX
 from registrations.models import (
     Registration,
     RegistrationUserAccess,
@@ -37,12 +40,14 @@ from registrations.models import (
 )
 from registrations.permissions import (
     CanAccessRegistration,
+    CanAccessRegistrationSignups,
     CanAccessSignup,
     CanAccessSignupGroup,
 )
 from registrations.serializers import (
     CreateSignUpsSerializer,
     MassEmailSerializer,
+    RegistrationSignupsExportSerializer,
     RegistrationUserAccessSerializer,
     SeatReservationCodeSerializer,
     SignUpGroupCreateSerializer,
@@ -117,6 +122,8 @@ class RegistrationViewSet(
     def get_serializer_class(self):
         if self.action == "send_message":
             return MassEmailSerializer
+        elif self.action == "signups_export":
+            return RegistrationSignupsExportSerializer
         return super().get_serializer_class()
 
     @staticmethod
@@ -192,8 +199,6 @@ class RegistrationViewSet(
             subject, cleaned_body, plain_text_body, message_signups
         )
 
-        self._add_audit_logged_object_ids(message_signups)
-
         try:
             send_mass_html_mail(messages, fail_silently=False)
         except SMTPException as e:
@@ -204,6 +209,8 @@ class RegistrationViewSet(
                 status=status.HTTP_409_CONFLICT,
             )
 
+        self._add_audit_logged_object_ids(message_signups)
+
         return Response(
             {
                 "html_message": cleaned_body,
@@ -213,6 +220,35 @@ class RegistrationViewSet(
             },
             status=status.HTTP_200_OK,
         )
+
+    @action(
+        methods=["get"],
+        detail=True,
+        permission_classes=[CanAccessRegistrationSignups],
+        url_path=r"signups/export/(?P<file_format>xlsx)",
+    )
+    def signups_export(self, request, file_format=None, pk=None, version=None):
+        serializer = self.get_serializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+
+        ui_language = serializer.validated_data["ui_language"]
+        registration = self.get_object(skip_log_ids=True)
+
+        with translation.override(ui_language):
+            xlsx_export = RegistrationSignUpsExportXLSX(registration)
+            xlsx = xlsx_export.get_xlsx()
+
+        response = HttpResponse(
+            xlsx,
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={
+                "Content-Disposition": 'attachment; filename="registered_persons.xlsx"'
+            },
+        )
+
+        self._add_audit_logged_object_ids(registration.signups.all().only("pk"))
+
+        return response
 
 
 register_view(RegistrationViewSet, "registration")

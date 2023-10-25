@@ -21,6 +21,7 @@ from registrations.models import (
     SignUpNotificationType,
     SignUpProtectedData,
 )
+from registrations.permissions import CanAccessRegistrationSignups
 from registrations.utils import code_validity_duration
 
 
@@ -321,13 +322,11 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
         if "signups" in params.get("include", "").split(","):
             # Only organization registration admins or the registration user
             # should be able to access the signup information.
-            user = self.context["user"]
-            if user.is_authenticated and (
-                user.is_superuser
-                or user.is_registration_admin_of(obj.event.publisher)
-                or user.is_registration_user_access_user_of(
-                    obj.registration_user_accesses
-                )
+            permission = CanAccessRegistrationSignups()
+            if permission.has_permission(
+                self.context["request"], self.context["view"]
+            ) and permission.has_object_permission(
+                self.context["request"], self.context["view"], obj
             ):
                 signups = obj.signups.all()
                 return SignUpSerializer(signups, many=True, read_only=True).data
@@ -765,4 +764,11 @@ class MassEmailSerializer(serializers.Serializer):
     signups = MassEmailSignupsField(
         many=True,
         required=False,
+    )
+
+
+class RegistrationSignupsExportSerializer(serializers.Serializer):
+    ui_language = serializers.ChoiceField(
+        choices=["en", "sv", "fi"],
+        default="fi",
     )
