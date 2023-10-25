@@ -51,6 +51,30 @@ class CanAccessRegistration(UserDataFromRequestMixin, permissions.BasePermission
         return obj.can_be_edited_by(request.user)
 
 
+class CanAccessRegistrationSignups(
+    UserDataFromRequestMixin, permissions.BasePermission
+):
+    def has_permission(self, request: Request, view: APIView) -> bool:
+        return request.method == "GET" and request.user.is_authenticated
+
+    def has_object_permission(
+        self, request: Request, view: APIView, obj: Registration
+    ) -> bool:
+        user = request.user
+
+        if isinstance(user, ApiKeyUser):
+            user_data_source, _ = view.user_data_source_and_organization
+            # allow only if the api key matches instance data source
+            if obj.data_source != user_data_source:
+                return False
+
+        return (
+            user.is_superuser
+            or user.is_registration_admin_of(obj.publisher)
+            or user.is_registration_user_access_user_of(obj.registration_user_accesses)
+        )
+
+
 class CanAccessSignup(UserDataFromRequestMixin, permissions.BasePermission):
     def has_permission(self, request: Request, view: APIView) -> bool:
         return request.user.is_authenticated

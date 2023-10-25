@@ -230,3 +230,25 @@ class TestSignUp(TestCase):
         self.signup.save()
 
         self.assertEqual(self.signup.get_service_language_pk(), "fi")
+
+    def test_full_name(self):
+        for first_name, last_name, expected in (
+            ("Firstname", "Lastname", "Firstname Lastname"),
+            ("", "", ""),
+            (" ", " ", ""),
+            (None, None, ""),
+            ("Firstname", "", "Firstname"),
+            ("Firstname", None, "Firstname"),
+            ("Firstname", " ", "Firstname"),
+            ("", "Lastname", "Lastname"),
+            (None, "Lastname", "Lastname"),
+            (" ", "Lastname", "Lastname"),
+        ):
+            with self.subTest():
+                self.signup.first_name = first_name
+                self.signup.last_name = last_name
+                self.signup.save(update_fields=["first_name", "last_name"])
+
+                self.signup.refresh_from_db()
+
+                self.assertEqual(self.signup.full_name, expected)
