@@ -44,10 +44,6 @@ ecdsa==0.18.0
     # via
     #   -c requirements.txt
     #   python-jose
-exceptiongroup==1.1.0
-    # via
-    #   -c requirements.txt
-    #   pytest
 factory-boy==3.2.1
     # via
     #   -r requirements-dev.in
@@ -158,24 +154,15 @@ sqlparse==0.4.4
     #   -c requirements.txt
     #   django
     #   django-debug-toolbar
-tomli==2.0.1
-    # via
-    #   black
-    #   build
-    #   coverage
-    #   pip-tools
-    #   pyproject-hooks
-    #   pytest
 typing-extensions==4.5.0
     # via
     #   -c requirements.txt
-    #   black
     #   pytest-factoryboy
 urllib3==1.26.14
     # via
     #   -c requirements.txt
     #   requests
-werkzeug==2.2.3
+werkzeug==3.0.1
     # via -r requirements-dev.in
 wheel==0.40.0
     # via pip-tools
