@@ -16,7 +16,7 @@ from easy_thumbnails.conf import Settings as thumbnail_settings  # noqa: N813
 from sentry_sdk.integrations.django import DjangoIntegration
 from sentry_sdk.serializer import add_global_repr_processor
 
-CONFIG_FILE_NAME = "config_dev.toml"
+CONFIG_FILE_NAME = "config_dev.env"
 
 DEBUG_TOOLBAR_AVAILABLE = importlib.util.find_spec("debug_toolbar") is not None
 DJANGO_EXTENSIONS_AVAILABLE = importlib.util.find_spec("django_extensions") is not None

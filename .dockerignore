@@ -23,7 +23,7 @@
 #################################################
 # Whitelisted files
 #################################################
-!config_dev.toml
+!config_dev.env
 !local_settings.py
 !manage.py
 !pyproject.toml

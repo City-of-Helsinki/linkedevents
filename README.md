@@ -308,7 +308,7 @@ Linkedevents uses Elasticsearch for generating results on the /search-endpoint. 
 
 3. Configure the thing
 
-    Set the `ELASTICSEARCH_URL` environment variable (or variable in `config_dev.toml`, if you are running in development mode) to your elasticsearch instance. The default value is `http://localhost:9200/`.
+    Set the `ELASTICSEARCH_URL` environment variable (or variable in `config_dev.env`, if you are running in development mode) to your elasticsearch instance. The default value is `http://localhost:9200/`.
 
     Haystack configuration for all Linkedevents languages happens automatically if `ELASTICSEARCH_URL` is set, but you may customize it manually using `local_settings.py` if you know Haystack and wish to do so.
 
