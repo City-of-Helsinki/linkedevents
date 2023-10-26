@@ -474,21 +474,28 @@ class HarrastushakuImporter(Importer):
             weekday = int(time_table.get("weekday"))
             start_time = parse_time(time_table.get("starttime"))
             end_time = parse_time(time_table.get("endtime"))
+            end_time_on_next_day = start_time >= end_time
             repetition = int(time_table.get("repetition"))
             if repetition == 0:
                 repetition = 7  # assume repetition 0 and 7 mean the same thing
 
-            if not (weekday and repetition) or start_time >= end_time:
+            if not (weekday and repetition):
                 continue
 
             while current_date.isoweekday() != weekday:
                 current_date += timedelta(days=1)
 
             while current_date <= end_date:
+                ending_date = (
+                    current_date + timedelta(days=1)
+                    if end_time_on_next_day
+                    else current_date
+                )
+
                 sub_event_time_ranges.append(
                     SubEventTimeRange(
                         datetime.combine(current_date, start_time).astimezone(TIMEZONE),
-                        datetime.combine(current_date, end_time).astimezone(TIMEZONE),
+                        datetime.combine(ending_date, end_time).astimezone(TIMEZONE),
                     )
                 )
                 current_date += timedelta(days=repetition)
