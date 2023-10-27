@@ -316,6 +316,7 @@ def test__create_a_complex_event_with_post(api_client, complex_event_dict, user)
     assert_event_data_is_equal(complex_event_dict, response.data)
 
 
+@pytest.mark.freeze_time("2023-01-01")
 @pytest.mark.django_db
 def test__autopopulated_fields_at_create(
     api_client,
