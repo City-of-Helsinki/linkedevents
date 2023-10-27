@@ -214,6 +214,37 @@ def test__update_minimal_event_with_autopopulated_fields_with_put(
     assert event.has_end_time is False
 
 
+@pytest.mark.xfail(reason="potential DST shenanigans")
+@pytest.mark.freeze_time("2023-10-27")
+@pytest.mark.django_db
+def test__update_minimal_event_with_autopopulated_fields_with_put_dst(
+    api_client, minimal_event_dict, user, organization
+):
+
+    # create an event
+    api_client.force_authenticate(user=user)
+    response = create_with_post(api_client, minimal_event_dict)
+    data = response.data
+
+    assert_event_data_is_equal(minimal_event_dict, data)
+    event_id = data["@id"]
+
+    response2 = update_with_put(api_client, event_id, minimal_event_dict)
+    assert_event_data_is_equal(data, response2.data)
+    event = Event.objects.get(id=data["id"])
+    assert event.created_by == user
+    assert event.last_modified_by == user
+    assert event.created_time is not None
+    assert event.last_modified_time is not None
+    assert event.data_source.id == settings.SYSTEM_DATA_SOURCE_ID
+    assert event.publisher == organization
+    # events are automatically marked as ending at midnight, local time
+    assert event.end_time == timezone.localtime(
+        timezone.now() + timedelta(days=2)
+    ).replace(hour=0, minute=0, second=0, microsecond=0).astimezone(pytz.utc)
+    assert event.has_end_time is False
+
+
 @pytest.mark.django_db
 def test__update_an_event_complex_dict(api_client, complex_event_dict, user):
 
