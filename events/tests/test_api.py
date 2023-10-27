@@ -7,7 +7,7 @@ from django_orghierarchy.models import Organization
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from ..api import EventSerializer, OrganizationListSerializer
+from ..api import _terms_to_regex, EventSerializer, OrganizationListSerializer
 from ..auth import ApiKeyAuth
 from ..models import DataSource, Image
 from ..utils import get_user_data_source_and_organization_from_request
@@ -285,3 +285,28 @@ class TestImageAPI(APITestCase):
 
         alt_text = response.data["data"][0]["alt_text"]
         self.assertEqual(alt_text, "Lorem")
+
+
+@pytest.mark.parametrize(
+    "val,operator,expected_regex",
+    [
+        ("1234567", "AND", r"(\b(1234567){e<1})"),
+        pytest.param("1234567", "OR", r"(\b(1234567){e<1})", marks=pytest.mark.xfail),
+        # >=8 chars
+        ("12345678", "AND", r"(\b(12345678){e<2})"),
+        pytest.param("12345678", "OR", r"(\b(12345678){e<2})", marks=pytest.mark.xfail),
+        # Multiple terms, different lengths
+        ("1234567,12345678", "AND", r"(\b(1234567){e<1})(\b(12345678){e<2})"),
+        pytest.param(
+            "1234567,12345678",
+            "OR",
+            r"(\b(1234567){e<1})|(\b(12345678){e<2})",
+            marks=pytest.mark.xfail,
+        ),
+        # Sanitization
+        ("(foo", "AND", r"(\b(\(foo){e<1})"),
+        ("(.*)", "AND", r"(\b(\(\.\*\)){e<1})"),
+    ],
+)
+def test__terms_to_regex(val, operator, expected_regex):
+    assert _terms_to_regex(val, operator).pattern == expected_regex
