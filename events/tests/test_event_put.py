@@ -184,6 +184,7 @@ def test__location_n_events_updated(
     assert Place.objects.get(id=other_data_source.id + ":test_location_2").n_events == 1
 
 
+@pytest.mark.freeze_time("2023-01-01")
 @pytest.mark.django_db
 def test__update_minimal_event_with_autopopulated_fields_with_put(
     api_client, minimal_event_dict, user, organization
