@@ -524,7 +524,7 @@ msgstr "Paikkojen vähimmäismäärä"
 
 #: registrations/models.py:148
 msgid "Waiting list capacity"
-msgstr "Varasijapaikkojen lukumäärä"
+msgstr "Jonopaikkojen lukumäärä"
 
 #: registrations/models.py:151
 msgid "Maximum group size"
@@ -545,7 +545,7 @@ msgstr "Oikeudet myönnetty osallistujalistaan  - %(event_name)s"
 
 #: registrations/models.py:440
 msgid "Waitlisted"
-msgstr "Varasijalla"
+msgstr "Jonossa"
 
 #: registrations/models.py:441
 msgid "Attending"
