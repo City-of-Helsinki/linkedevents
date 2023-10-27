@@ -346,6 +346,37 @@ def test__autopopulated_fields_at_create(
     assert event.has_end_time is False
 
 
+@pytest.mark.xfail(reason="potential DST shenanigans")
+@pytest.mark.freeze_time("2023-01-01")
+@pytest.mark.django_db
+def test__autopopulated_fields_at_create_dst(
+    api_client,
+    minimal_event_dict,
+    user,
+    user2,
+    other_data_source,
+    organization,
+    organization2,
+):
+
+    # create an event
+    api_client.force_authenticate(user=user)
+    response = create_with_post(api_client, minimal_event_dict)
+
+    event = Event.objects.get(id=response.data["id"])
+    assert event.created_by == user
+    assert event.last_modified_by == user
+    assert event.created_time is not None
+    assert event.last_modified_time is not None
+    assert event.data_source.id == settings.SYSTEM_DATA_SOURCE_ID
+    assert event.publisher == organization
+    # events are automatically marked as ending at midnight, local time
+    assert event.end_time == timezone.localtime(
+        timezone.now() + timedelta(days=2)
+    ).replace(hour=0, minute=0, second=0, microsecond=0).astimezone(pytz.utc)
+    assert event.has_end_time is False
+
+
 # the following values may not be posted
 @pytest.mark.django_db
 @pytest.mark.parametrize(
