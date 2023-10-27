@@ -2619,7 +2619,8 @@ def _terms_to_regex(terms, operator):
             e = 1
         else:
             e = 2
-        expr = r"(\b" + f"({val}){{e<{e}}})"
+        escaped_val = regex.escape(val)
+        expr = r"(\b" + f"({escaped_val}){{e<{e}}})"
         valexprs.extend(expr)
     if operator == "AND":
         regex_join = ""
