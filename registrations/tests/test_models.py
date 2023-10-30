@@ -1,11 +1,13 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from rest_framework.exceptions import ValidationError
 
 from events.models import Language
 from events.tests.factories import DataSourceFactory, OrganizationFactory
 from registrations.tests.factories import (
     RegistrationFactory,
     RegistrationUserAccessFactory,
+    SignUpContactPersonFactory,
     SignUpFactory,
     SignUpGroupFactory,
 )
@@ -215,37 +217,6 @@ class TestSignUp(TestCase):
         can_be_edited = self.signup.can_be_edited_by(self.user)
         self.assertTrue(can_be_edited)
 
-    def test_get_service_language_pk(self):
-        sv = Language.objects.create(
-            name="Swedish",
-            pk="sv",
-        )
-        self.signup.service_language = sv
-        self.signup.save()
-
-        self.assertEqual(self.signup.get_service_language_pk(), "sv")
-
-    def test_get_default_service_language_pk(self):
-        self.signup.service_language = None
-        self.signup.save()
-
-        self.assertEqual(self.signup.get_service_language_pk(), "fi")
-
-    def test_is_only_responsible_signup(self):
-        group = SignUpGroupFactory(registration=self.signup.registration)
-        SignUpFactory(signup_group=group, registration=self.signup.registration)
-
-        self.signup.signup_group = group
-        self.signup.save(update_fields=["signup_group"])
-
-        self.assertFalse(self.signup.is_only_responsible_signup)
-
-        self.signup.responsible_for_group = True
-        self.signup.save(update_fields=["responsible_for_group"])
-
-        del self.signup.is_only_responsible_signup
-        self.assertTrue(self.signup.is_only_responsible_signup)
-
     def test_full_name(self):
         for first_name, last_name, expected in (
             ("Firstname", "Lastname", "Firstname Lastname"),
@@ -267,3 +238,70 @@ class TestSignUp(TestCase):
                 self.signup.refresh_from_db()
 
                 self.assertEqual(self.signup.full_name, expected)
+
+    def test_actual_contact_person_with_group(self):
+        signup_group = SignUpGroupFactory(registration=self.signup.registration)
+        contact_person = SignUpContactPersonFactory(signup_group=signup_group)
+        self.signup.signup_group = signup_group
+        self.signup.save(update_fields=["signup_group"])
+
+        self.signup.refresh_from_db()
+
+        assert self.signup.actual_contact_person.pk == contact_person.pk
+
+    def test_actual_contact_person_without_group(self):
+        contact_person = SignUpContactPersonFactory(signup=self.signup)
+
+        self.signup.refresh_from_db()
+
+        assert self.signup.actual_contact_person.pk == contact_person.pk
+
+
+class TestSignUpContactPerson(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.contact_person = SignUpContactPersonFactory(signup=SignUpFactory())
+
+    def test_cannot_save_without_signup_or_signup_group(self):
+        self.contact_person.signup = None
+
+        with self.assertRaises(ValidationError):
+            self.contact_person.save()
+
+    def test_cannot_save_with_both_signup_and_signup_group(self):
+        self.contact_person.signup_group = SignUpGroupFactory()
+
+        with self.assertRaises(ValidationError):
+            self.contact_person.save()
+
+    def test_get_service_language_pk(self):
+        sv = Language.objects.create(
+            name="Swedish",
+            pk="sv",
+        )
+        self.contact_person.service_language = sv
+        self.contact_person.save(update_fields=["service_language"])
+
+        self.assertEqual(self.contact_person.get_service_language_pk(), "sv")
+
+    def test_get_default_service_language_pk(self):
+        self.contact_person.service_language = None
+        self.contact_person.save(update_fields=["service_language"])
+
+        self.assertEqual(self.contact_person.get_service_language_pk(), "fi")
+
+    def test_signup_registration(self):
+        self.assertEqual(
+            self.contact_person.registration.pk,
+            self.contact_person.signup.registration_id,
+        )
+
+    def test_signup_group_registration(self):
+        self.contact_person.signup = None
+        self.contact_person.signup_group = SignUpGroupFactory()
+        self.contact_person.save(update_fields=["signup", "signup_group"])
+
+        self.assertEqual(
+            self.contact_person.registration.pk,
+            self.contact_person.signup_group.registration_id,
+        )

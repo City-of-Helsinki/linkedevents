@@ -13,8 +13,16 @@ class RegistrationSignUpsExportXLSX:
             event_name=registration.event.name,
             registered_persons=_("Registered persons"),
         )
-        self.signups = registration.signups.all().only(
-            "first_name", "last_name", "email", "phone_number", "attendee_status"
+        self.signups = (
+            registration.signups.all()
+            .select_related("contact_person", "signup_group__contact_person")
+            .only(
+                "first_name",
+                "last_name",
+                "attendee_status",
+                "contact_person",
+                "signup_group",
+            )
         )
         self.columns = self._get_columns()
         self.formats = {}
@@ -23,8 +31,18 @@ class RegistrationSignUpsExportXLSX:
     def _get_columns() -> list[dict]:
         return [
             {"header": _("Name"), "accessor": "full_name"},
-            {"header": _("E-mail"), "accessor": "email"},
-            {"header": _("Phone number"), "accessor": "phone_number"},
+            {
+                "header": _("E-mail"),
+                "accessor": lambda signup: signup.actual_contact_person.email
+                if signup.actual_contact_person
+                else None,
+            },
+            {
+                "header": _("Phone number"),
+                "accessor": lambda signup: signup.actual_contact_person.phone_number
+                if signup.actual_contact_person
+                else None,
+            },
             {
                 "header": "Status",  # In the UI, this same word is used for all three languages
                 "accessor": lambda signup: str(signup.get_attendee_status_display()),

@@ -7,9 +7,10 @@ from rest_framework import status
 from audit_log.models import AuditLogEntry
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
-from registrations.models import SignUp
+from registrations.models import SignUp, SignUpContactPerson
 from registrations.tests.factories import (
     RegistrationUserAccessFactory,
+    SignUpContactPersonFactory,
     SignUpFactory,
     SignUpGroupFactory,
     SignUpProtectedDataFactory,
@@ -549,55 +550,96 @@ def test_signup_text_fields_are_sanitized(user_api_client, registration, user):
     user.get_default_organization().registration_admin_users.add(user)
 
     signup = SignUpFactory(registration=registration)
+    contact_person = SignUpContactPersonFactory(signup=signup)
+
     signup_data = {
         "registration": registration.id,
         "first_name": "Michael <p>Html</p>",
         "last_name": "Jackson <p>Html</p>",
+        "contact_person": {
+            "phone_number": "<p>0441111111</p>",
+        },
         "extra_info": "Extra info <p>Html</p>",
-        "phone_number": "<p>0441111111</p>",
         "street_address": "Edited street address <p>Html</p>",
         "zipcode": "<p>zip</p>",
     }
 
     assert_update_signup(user_api_client, signup.id, signup_data)
+
     signup.refresh_from_db()
     assert signup.last_modified_by_id == user.id
     assert signup.first_name == "Michael Html"
     assert signup.last_name == "Jackson Html"
     assert signup.extra_info == "Extra info Html"
-    assert signup.phone_number == "0441111111"
     assert signup.street_address == "Edited street address Html"
     assert signup.zipcode == "zip"
 
+    contact_person.refresh_from_db()
+    assert contact_person.phone_number == "0441111111"
 
+
+@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_cannot_remove_only_responsible_person_from_group(api_client, registration):
+def test_contact_person_deleted_when_signup_linked_to_group_in_update(
+    api_client, registration
+):
     user = UserFactory()
     user.registration_admin_organizations.add(registration.publisher)
     api_client.force_authenticate(user)
 
     signup_group = SignUpGroupFactory(registration=registration)
-    SignUpFactory(registration=registration, signup_group=signup_group)
-    responsible_signup = SignUpFactory(
-        registration=registration, signup_group=signup_group, responsible_for_group=True
-    )
+    group_contact_person = SignUpContactPersonFactory(signup_group=signup_group)
+
+    signup = SignUpFactory(registration=registration)
+    signup_contact_person = SignUpContactPersonFactory(signup=signup)
+
+    assert SignUpContactPerson.objects.count() == 2
+    assert signup_group.contact_person.pk == group_contact_person.pk
+    assert signup.contact_person.pk == signup_contact_person.pk
 
     signup_data = {
         "registration": registration.id,
-        "first_name": "Michael",
-        "last_name": "Jackson",
-        "extra_info": "Extra info",
-        "phone_number": "0441111111",
-        "street_address": "Edited street address",
-        "zipcode": "zip",
-        "responsible_for_group": False,
+        "signup_group": signup_group.id,
+        "contact_person": {
+            "phone_number": "<p>0441111111</p>",
+        },
     }
 
-    response = update_signup(api_client, responsible_signup.id, signup_data)
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.data["responsible_for_group"][0] == (
-        "Cannot set responsible_for_group to False for the only responsible person of a group"
-    )
+    assert_update_signup(api_client, signup.id, signup_data)
+
+    signup_group.refresh_from_db()
+    signup.refresh_from_db()
+
+    assert SignUpContactPerson.objects.count() == 1
+    assert signup_group.contact_person.pk == group_contact_person.pk
+    assert getattr(signup, "contact_person", None) is None
+
+
+@freeze_time("2023-03-14 03:30:00+02:00")
+@pytest.mark.django_db
+def test_contact_person_can_be_null_on_signup_update(api_client, registration):
+    user = UserFactory()
+    user.registration_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup = SignUpFactory(registration=registration)
+    contact_person = SignUpContactPersonFactory(signup=signup)
+
+    assert SignUpContactPerson.objects.count() == 1
+    assert signup.contact_person.pk == contact_person.pk
+
+    signup_data = {
+        "registration": registration.id,
+        "extra_info": "Updated extra info",
+        "contact_person": None,
+    }
+
+    assert_update_signup(api_client, signup.id, signup_data)
+
+    signup.refresh_from_db()
+
+    assert SignUpContactPerson.objects.count() == 1
+    assert signup.contact_person.pk == contact_person.pk
 
 
 @pytest.mark.django_db

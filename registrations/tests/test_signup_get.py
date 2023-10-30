@@ -10,7 +10,11 @@ from events.tests.utils import assert_fields_exist
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
 from registrations.models import SignUp
-from registrations.tests.factories import RegistrationUserAccessFactory, SignUpFactory
+from registrations.tests.factories import (
+    RegistrationUserAccessFactory,
+    SignUpContactPersonFactory,
+    SignUpFactory,
+)
 
 # === util methods ===
 
@@ -57,35 +61,45 @@ def assert_get_detail(api_client: APIClient, signup_pk: str, query: str = None):
     return response
 
 
+def assert_contact_person_fields_exist(data):
+    fields = (
+        "id",
+        "first_name",
+        "last_name",
+        "service_language",
+        "native_language",
+        "membership_number",
+        "email",
+        "phone_number",
+        "notifications",
+    )
+    assert_fields_exist(data, fields)
+
+
 def assert_signup_fields_exist(data):
     fields = (
         "id",
-        "service_language",
         "created_time",
         "last_modified_time",
         "created_by",
         "last_modified_by",
-        "responsible_for_group",
         "first_name",
         "last_name",
         "date_of_birth",
         "city",
-        "email",
         "extra_info",
-        "membership_number",
-        "phone_number",
-        "notifications",
         "attendee_status",
         "street_address",
         "zipcode",
         "presence_status",
         "registration",
         "signup_group",
-        "native_language",
         "user_consent",
         "is_created_by_current_user",
+        "contact_person",
     )
     assert_fields_exist(data, fields)
+    assert_contact_person_fields_exist(data["contact_person"])
 
 
 # === tests ===
@@ -186,6 +200,7 @@ def test_created_user_without_organization_can_get_signup(api_client, registrati
     user = UserFactory()
     api_client.force_authenticate(user)
     signup = SignUpFactory(created_by=user)
+    SignUpContactPersonFactory(signup=signup)
 
     response = assert_get_detail(api_client, signup.id)
     assert_signup_fields_exist(response.data)
@@ -435,19 +450,31 @@ def test_api_key_with_wrong_organization_cannot_get_signup_list(
 
 
 @pytest.mark.parametrize(
-    "field",
-    ["first_name", "email", "membership_number", "phone_number"],
+    "field,contact_person_field",
+    [
+        ("first_name", False),
+        ("last_name", False),
+        ("email", True),
+        ("membership_number", True),
+        ("phone_number", True),
+    ],
 )
 @pytest.mark.django_db
 def test_signup_list_assert_text_filter(
-    field, registration, signup, signup2, user_api_client, user
+    field, contact_person_field, registration, signup, signup2, user_api_client, user
 ):
     user.get_default_organization().registration_admin_users.add(user)
 
-    setattr(signup, field, "field_value_1")
-    signup.save()
-    setattr(signup2, field, "field_value_2")
-    signup2.save()
+    if contact_person_field:
+        setattr(signup.contact_person, field, "field_value_1")
+        signup.contact_person.save(update_fields=[field])
+        setattr(signup2.contact_person, field, "field_value_2")
+        signup2.contact_person.save(update_fields=[field])
+    else:
+        setattr(signup, field, "field_value_1")
+        signup.save()
+        setattr(signup2, field, "field_value_2")
+        signup2.save()
 
     get_list_and_assert_signups(
         user_api_client, f"registration={registration.id}&text=field_value_1", [signup]
@@ -506,51 +533,60 @@ def test_filter_signups(
         registration=registration,
         first_name="Michael",
         last_name="Jackson",
-        email="test@test.com",
     )
+    SignUpContactPersonFactory(signup=signup, email="test@test.com")
+
     signup2 = SignUpFactory(
         registration=registration,
         first_name="Michael",
         last_name="Jackson2",
-        email="test2@test.com",
     )
+    SignUpContactPersonFactory(signup=signup2, email="test2@test.com")
+
     signup3 = SignUpFactory(
         registration=registration,
         first_name="Michael",
         last_name="Jackson3",
-        email="test3@test.com",
     )
+    SignUpContactPersonFactory(signup=signup3, email="test3@test.com")
+
     signup4 = SignUpFactory(
         registration=registration,
         first_name="Michael",
         last_name="Jackson4",
-        email="test4@test.com",
     )
+    SignUpContactPersonFactory(signup=signup4, email="test4@test.com")
+
     signup5 = SignUpFactory(
         registration=registration2,
         first_name="Joe",
         last_name="Biden",
-        email="test@test.com",
     )
+    SignUpContactPersonFactory(signup=signup5, email="test@test.com")
+
     signup6 = SignUpFactory(
         registration=registration2,
         first_name="Hillary",
         last_name="Clinton",
-        email="test2@test.com",
     )
+    SignUpContactPersonFactory(signup=signup6, email="test2@test.com")
+
     signup7 = SignUpFactory(
         registration=registration2,
         first_name="Donald",
         last_name="Duck",
-        email="test3@test.com",
-        membership_number="1234",
     )
+    SignUpContactPersonFactory(
+        signup=signup7, email="test3@test.com", membership_number="1234"
+    )
+
     signup8 = SignUpFactory(
         registration=registration2,
         first_name="Mickey",
         last_name="Mouse",
-        email="test4@test.com",
-        membership_number="3456",
+    )
+    SignUpContactPersonFactory(
+        signup=signup8, email="test4@test.com", membership_number="3456"
     )
 
     api_client.force_authenticate(user)

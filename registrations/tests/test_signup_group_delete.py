@@ -8,9 +8,10 @@ from events.models import Event
 from events.tests.factories import LanguageFactory
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
-from registrations.models import SignUp, SignUpGroup
+from registrations.models import SignUp, SignUpContactPerson, SignUpGroup
 from registrations.tests.factories import (
     RegistrationUserAccessFactory,
+    SignUpContactPersonFactory,
     SignUpFactory,
     SignUpGroupFactory,
 )
@@ -36,6 +37,26 @@ def assert_delete_signup_group(api_client, signup_group_pk, query_string=None):
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
 
+def assert_delete_signup_group_failed(
+    api_client,
+    signup_group_pk,
+    status_code=status.HTTP_403_FORBIDDEN,
+    group_count=1,
+    signup_count=2,
+    contact_person_count=1,
+):
+    assert SignUpGroup.objects.count() == group_count
+    assert SignUp.objects.count() == signup_count
+    assert SignUpContactPerson.objects.count() == contact_person_count
+
+    response = delete_signup_group(api_client, signup_group_pk)
+    assert response.status_code == status_code
+
+    assert SignUpGroup.objects.count() == group_count
+    assert SignUp.objects.count() == signup_count
+    assert SignUpContactPerson.objects.count() == contact_person_count
+
+
 # === tests ===
 
 
@@ -50,14 +71,17 @@ def test_registration_admin_can_delete_signup_group(
     signup_group = SignUpGroupFactory(registration=registration)
     SignUpFactory(signup_group=signup_group, registration=registration)
     SignUpFactory(signup_group=signup_group, registration=registration)
+    SignUpContactPersonFactory(signup_group=signup_group)
 
     assert SignUpGroup.objects.count() == 1
     assert SignUp.objects.count() == 2
+    assert SignUpContactPerson.objects.count() == 1
 
     assert_delete_signup_group(user_api_client, signup_group.id)
 
     assert SignUpGroup.objects.count() == 0
     assert SignUp.objects.count() == 0
+    assert SignUpContactPerson.objects.count() == 0
 
 
 @pytest.mark.django_db
@@ -65,15 +89,9 @@ def test_admin_cannot_delete_signup_group(user_api_client, registration, user):
     signup_group = SignUpGroupFactory(registration=registration)
     SignUpFactory(signup_group=signup_group, registration=registration)
     SignUpFactory(signup_group=signup_group, registration=registration)
+    SignUpContactPersonFactory(signup_group=signup_group)
 
-    assert SignUpGroup.objects.count() == 1
-    assert SignUp.objects.count() == 2
-
-    response = delete_signup_group(user_api_client, signup_group.id)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
-    assert SignUpGroup.objects.count() == 1
-    assert SignUp.objects.count() == 2
+    assert_delete_signup_group_failed(user_api_client, signup_group.pk)
 
 
 @pytest.mark.django_db
@@ -85,15 +103,9 @@ def test_regular_user_cannot_delete_signup_group(user_api_client, registration, 
     signup_group = SignUpGroupFactory(registration=registration)
     SignUpFactory(signup_group=signup_group, registration=registration)
     SignUpFactory(signup_group=signup_group, registration=registration)
+    SignUpContactPersonFactory(signup_group=signup_group)
 
-    assert SignUpGroup.objects.count() == 1
-    assert SignUp.objects.count() == 2
-
-    response = delete_signup_group(user_api_client, signup_group.id)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
-    assert SignUpGroup.objects.count() == 1
-    assert SignUp.objects.count() == 2
+    assert_delete_signup_group_failed(user_api_client, signup_group.pk)
 
 
 @pytest.mark.django_db
@@ -106,15 +118,9 @@ def test_registration_user_access_cannot_delete_signup_group(
     signup_group = SignUpGroupFactory(registration=registration)
     SignUpFactory(signup_group=signup_group, registration=registration)
     SignUpFactory(signup_group=signup_group, registration=registration)
+    SignUpContactPersonFactory(signup_group=signup_group)
 
-    assert SignUpGroup.objects.count() == 1
-    assert SignUp.objects.count() == 2
-
-    response = delete_signup_group(user_api_client, signup_group.id)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
-    assert SignUpGroup.objects.count() == 1
-    assert SignUp.objects.count() == 2
+    assert_delete_signup_group_failed(user_api_client, signup_group.pk)
 
 
 @pytest.mark.parametrize(
@@ -158,9 +164,12 @@ def test_email_sent_on_successful_signup_group_deletion(
     SignUpFactory(
         signup_group=signup_group,
         registration=registration,
+    )
+    SignUpContactPersonFactory(
+        signup_group=signup_group,
+        first_name="Username",
         service_language=service_lang,
         email=test_email1,
-        first_name="Username",
     )
 
     with translation.override(service_language):
@@ -213,16 +222,18 @@ def test_signup_group_cancellation_confirmation_template_has_correct_text_per_ev
     SignUpFactory(
         signup_group=signup_group,
         registration=registration,
-        service_language=service_lang,
-        email=test_email1,
         first_name="Username",
     )
     SignUpFactory(
         signup_group=signup_group,
         registration=registration,
-        service_language=service_lang,
-        email="test2@test.com",
         first_name="Username",
+    )
+    SignUpContactPersonFactory(
+        signup_group=signup_group,
+        first_name="Username",
+        service_language=service_lang,
+        email=test_email1,
     )
 
     registration.event.type_id = event_type
@@ -231,8 +242,8 @@ def test_signup_group_cancellation_confirmation_template_has_correct_text_per_ev
 
     assert_delete_signup_group(user_api_client, signup_group.id)
 
-    #  assert that the emails were sent to both sign-up emails
-    assert len(mail.outbox) == 2
+    # Assert that the email was sent to the group's contact_person.
+    assert len(mail.outbox) == 1
     assert expected_heading in str(mail.outbox[0].alternatives[0])
     assert expected_text in str(mail.outbox[0].alternatives[0])
 
@@ -269,8 +280,9 @@ def test_not_created_user_without_organization_cannot_delete_signup_group(
     api_client.force_authenticate(user)
     signup_group = SignUpGroupFactory(registration=registration)
 
-    response = delete_signup_group(api_client, signup_group.id)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert_delete_signup_group_failed(
+        api_client, signup_group.pk, signup_count=0, contact_person_count=0
+    )
 
 
 @pytest.mark.django_db
@@ -473,11 +485,18 @@ def test_signup_group_send_email_when_moving_participant_from_waitlist(
             signup_group=signup_group,
             attendee_status=SignUp.AttendeeStatus.ATTENDING,
             registration=registration,
+        )
+        SignUpContactPersonFactory(
+            signup_group=signup_group,
             email=test_email1,
         )
+
         signup1 = SignUpFactory(
             attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
             registration=registration,
+        )
+        SignUpContactPersonFactory(
+            signup=signup1,
             service_language=service_lang,
             email="test@test2.com",
         )
@@ -490,8 +509,8 @@ def test_signup_group_send_email_when_moving_participant_from_waitlist(
         signup1.refresh_from_db()
         assert signup1.attendee_status == SignUp.AttendeeStatus.ATTENDING
         # Send email to signup who is transferred as participant
-        assert mail.outbox[1].subject.startswith(expected_subject)
-        assert expected_text in str(mail.outbox[1].alternatives[0])
+        assert mail.outbox[0].subject.startswith(expected_subject)
+        assert expected_text in str(mail.outbox[0].alternatives[0])
 
 
 @pytest.mark.parametrize(
@@ -539,13 +558,20 @@ def test_signup_group_transferred_as_participant_template_has_correct_text_per_e
         signup_group=signup_group,
         attendee_status=SignUp.AttendeeStatus.ATTENDING,
         registration=registration,
-        email="test@test0.com",
     )
+    SignUpContactPersonFactory(
+        signup_group=signup_group,
+        email="test@test.com",
+    )
+
     signup1 = SignUpFactory(
         attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
         registration=registration,
+    )
+    SignUpContactPersonFactory(
+        signup=signup1,
+        email="test2@test.com",
         service_language=service_lang,
-        email=test_email1,
     )
 
     assert signup1.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
@@ -556,8 +582,8 @@ def test_signup_group_transferred_as_participant_template_has_correct_text_per_e
     signup1.refresh_from_db()
     assert signup1.attendee_status == SignUp.AttendeeStatus.ATTENDING
     # Send email to signup who is transferred as participant
-    assert mail.outbox[1].subject.startswith(expected_subject)
-    assert expected_text in str(mail.outbox[1].alternatives[0])
+    assert mail.outbox[0].subject.startswith(expected_subject)
+    assert expected_text in str(mail.outbox[0].alternatives[0])
 
 
 @pytest.mark.django_db

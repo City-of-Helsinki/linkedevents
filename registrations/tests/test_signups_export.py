@@ -14,6 +14,7 @@ from registrations.models import SignUp
 from registrations.tests.factories import (
     RegistrationFactory,
     RegistrationUserAccessFactory,
+    SignUpContactPersonFactory,
     SignUpFactory,
     SignUpGroupFactory,
 )
@@ -69,9 +70,13 @@ def _assert_get_signups_export(
 def _create_default_signups_data(registration):
     signup_group = SignUpGroupFactory(registration=registration)
     SignUpFactory(registration=registration, signup_group=signup_group)
+    SignUpContactPersonFactory(signup_group=signup_group, email="test@test.com")
 
-    SignUpFactory(registration=registration)
-    SignUpFactory(registration=registration)
+    signup = SignUpFactory(registration=registration)
+    SignUpContactPersonFactory(signup=signup, phone_number="+3580123456")
+
+    signup2 = SignUpFactory(registration=registration)
+    SignUpContactPersonFactory(signup=signup2, membership_number="1234-abcd")
 
 
 # === tests ===

@@ -8,9 +8,11 @@ from audit_log.models import AuditLogEntry
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
 from registrations.models import SignUp
+from registrations.notifications import NotificationType
 from registrations.tests.factories import (
     RegistrationFactory,
     RegistrationUserAccessFactory,
+    SignUpContactPersonFactory,
     SignUpFactory,
     SignUpGroupFactory,
 )
@@ -346,13 +348,70 @@ def test_created_user_cannot_patch_presence_status_of_signups(
     assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
 
 
+@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_signup_group_id_is_audit_logged_on_patch(api_client, registration):
-    signup_group = SignUpGroupFactory(registration=registration)
-
+def test_can_patch_signup_group_contact_person(api_client, registration):
     user = UserFactory()
     user.registration_admin_organizations.add(registration.publisher)
     api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(registration=registration, created_by=user)
+    SignUpFactory(signup_group=signup_group, registration=registration)
+    contact_person = SignUpContactPersonFactory(signup_group=signup_group)
+
+    assert contact_person.notifications == NotificationType.NO_NOTIFICATION
+    assert contact_person.membership_number is None
+
+    signup_group_data = {
+        "contact_person": {
+            "notifications": NotificationType.EMAIL,
+            "membership_number": "1234",
+        },
+    }
+
+    assert_patch_signup_group(api_client, signup_group.id, signup_group_data)
+
+    contact_person.refresh_from_db()
+    assert contact_person.notifications == NotificationType.EMAIL
+    assert contact_person.membership_number == "1234"
+
+
+@freeze_time("2023-03-14 03:30:00+02:00")
+@pytest.mark.django_db
+def test_missing_contact_person_created_on_patch(api_client, registration):
+    user = UserFactory()
+    user.registration_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(registration=registration, created_by=user)
+    signup = SignUpFactory(signup_group=signup_group, registration=registration)
+
+    assert getattr(signup_group, "contact_person", None) is None
+    assert getattr(signup, "contact_person", None) is None
+
+    signup_group_data = {
+        "contact_person": {
+            "notifications": NotificationType.EMAIL,
+            "membership_number": "1234",
+        },
+    }
+
+    assert_patch_signup_group(api_client, signup_group.id, signup_group_data)
+
+    signup_group.refresh_from_db()
+    signup.refresh_from_db()
+    assert signup_group.contact_person.notifications == NotificationType.EMAIL
+    assert signup_group.contact_person.membership_number == "1234"
+    assert getattr(signup, "contact_person", None) is None
+
+
+@pytest.mark.django_db
+def test_signup_group_id_is_audit_logged_on_patch(api_client, registration):
+    user = UserFactory()
+    user.registration_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(registration=registration)
 
     signup_group_data = {"extra_info": "test test"}
 

@@ -1,4 +1,6 @@
 from collections import Counter
+from smtplib import SMTPException
+from unittest.mock import patch
 
 import pytest
 from django.conf import settings
@@ -7,10 +9,14 @@ from django.utils import translation
 from rest_framework import status
 
 from audit_log.models import AuditLogEntry
-from events.models import Language
+from events.tests.factories import LanguageFactory
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import SignUp
-from registrations.tests.factories import SignUpFactory, SignUpGroupFactory
+from registrations.tests.factories import (
+    SignUpContactPersonFactory,
+    SignUpFactory,
+    SignUpGroupFactory,
+)
 
 # === util methods ===
 
@@ -33,19 +39,36 @@ def send_message(api_client, registration_id, send_message_data):
 
 
 def assert_send_message(
-    api_client, registration_id, send_message_data, expected_signups
+    api_client, registration_id, send_message_data, expected_contact_persons
 ):
     response = send_message(api_client, registration_id, send_message_data)
 
     assert response.status_code == status.HTTP_200_OK
-    assert len(mail.outbox) == len(expected_signups)
-    for signup in expected_signups:
+
+    assert Counter(response.data["signups"]) == Counter(
+        [
+            contact_person.signup_id
+            for contact_person in expected_contact_persons
+            if contact_person.signup_id
+        ]
+    )
+    assert Counter(response.data["signup_groups"]) == Counter(
+        [
+            contact_person.signup_group_id
+            for contact_person in expected_contact_persons
+            if contact_person.signup_group_id
+        ]
+    )
+
+    assert len(mail.outbox) == len(expected_contact_persons)
+
+    for contact_person in expected_contact_persons:
         # Find possible mails by the edit link. At the we make sure that edit link exists in the mail
         signup_edit_url = f"/registration/{registration_id}/"
-        if signup.signup_group_id:
-            signup_edit_url += f"signup-group/{signup.signup_group_id}/edit"
+        if contact_person.signup_group_id:
+            signup_edit_url += f"signup-group/{contact_person.signup_group_id}/edit"
         else:
-            signup_edit_url += f"signup/{signup.id}/edit"
+            signup_edit_url += f"signup/{contact_person.signup_id}/edit"
         mails = [x for x in mail.outbox if signup_edit_url in str(x.alternatives[0])]
 
         assert len(mails)
@@ -54,7 +77,7 @@ def assert_send_message(
         assert mails[0].from_email == settings.SUPPORT_EMAIL
         # signup-group can be same for multiple signups to check
         # that any of those mails has match
-        assert next(x for x in mails if signup.email in x.to) is not None
+        assert next(x for x in mails if contact_person.email in x.to) is not None
 
     return response
 
@@ -76,7 +99,10 @@ def test_admin_user_can_send_message_to_all_signups(
     send_message_data = {"subject": "Message subject", "body": "Message body"}
 
     assert_send_message(
-        api_client, registration.id, send_message_data, [signup, signup2]
+        api_client,
+        registration.id,
+        send_message_data,
+        [signup.contact_person, signup2.contact_person],
     )
     # Default language for the email is Finnish
     assert "Tarkastele ilmoittautumistasi täällä" in str(mail.outbox[0].alternatives[0])
@@ -91,23 +117,23 @@ def test_email_is_sent_to_all_with_attending_status_if_no_groups_or_signups_give
     SignUpFactory(
         signup_group=signup_group,
         registration=registration,
-        email="test@test.com",
         attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
     )
-    second_signup = SignUpFactory(
+    SignUpFactory(
         signup_group=signup_group,
         registration=registration,
-        responsible_for_group=True,
-        email="test2@test.com",
     )
+    SignUpContactPersonFactory(signup_group=signup_group, email="test2@test.com")
 
     # Individual
-    third_signup = SignUpFactory(registration=registration, email="test3@test.com")
-    SignUpFactory(
+    third_signup = SignUpFactory(registration=registration)
+    SignUpContactPersonFactory(signup=third_signup, email="test3@test.com")
+
+    fourth_signup = SignUpFactory(
         registration=registration,
-        email="test4@test.com",
         attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
     )
+    SignUpContactPersonFactory(signup=fourth_signup, email="test4@test.com")
 
     api_client.force_authenticate(user)
     send_message_data = {"subject": "Message subject", "body": "Message body"}
@@ -117,58 +143,12 @@ def test_email_is_sent_to_all_with_attending_status_if_no_groups_or_signups_give
         registration.id,
         send_message_data,
         [
-            second_signup,
-            third_signup,
+            signup_group.contact_person,
+            third_signup.contact_person,
         ],
     )
     # Default language for the email is Finnish
     assert "Tarkastele ilmoittautumistasi täällä" in str(mail.outbox[0].alternatives[0])
-
-
-@pytest.mark.django_db
-def test_email_is_sent_to_selected_signup_groups_responsible_signup_only(
-    api_client, registration, user
-):
-    first_signup_group = SignUpGroupFactory(registration=registration)
-    SignUpFactory(
-        signup_group=first_signup_group,
-        registration=registration,
-        email="test@test.com",
-    )
-    SignUpFactory(
-        signup_group=first_signup_group,
-        registration=registration,
-        responsible_for_group=True,
-        email="test2@test.com",
-    )
-
-    second_signup_group = SignUpGroupFactory(registration=registration)
-    third_signup = SignUpFactory(
-        signup_group=second_signup_group,
-        registration=registration,
-        responsible_for_group=True,
-        email="test3@test.com",
-    )
-    SignUpFactory(
-        signup_group=second_signup_group,
-        registration=registration,
-        email="test4@test.com",
-    )
-
-    api_client.force_authenticate(user)
-    send_message_data = {
-        "subject": "Message subject",
-        "body": "Message body",
-        "signup_groups": [second_signup_group.pk],
-    }
-
-    response = assert_send_message(
-        api_client, registration.id, send_message_data, [third_signup]
-    )
-    # Default language for the email is Finnish
-    assert "Tarkastele ilmoittautumistasi täällä" in str(mail.outbox[0].alternatives[0])
-    # signups should include signup who is responsible for the group
-    assert response.data["signups"] == [third_signup.id]
 
 
 @pytest.mark.django_db
@@ -177,51 +157,43 @@ def test_email_is_sent_to_selected_signups_only(api_client, registration, user):
     SignUpFactory(
         signup_group=first_signup_group,
         registration=registration,
-        email="test@test.com",
     )
-    responsible_signup = SignUpFactory(
+    SignUpFactory(
         signup_group=first_signup_group,
         registration=registration,
-        responsible_for_group=True,
-        email="test2@test.com",
     )
+    SignUpContactPersonFactory(signup_group=first_signup_group, email="test@test.com")
 
     second_signup_group = SignUpGroupFactory(registration=registration)
     SignUpFactory(
         signup_group=second_signup_group,
         registration=registration,
-        responsible_for_group=True,
-        email="test3@test.com",
     )
-    non_responsible_signup = SignUpFactory(
+    SignUpFactory(
         signup_group=second_signup_group,
         registration=registration,
-        email="test4@test.com",
     )
+    SignUpContactPersonFactory(signup_group=second_signup_group, email="test2@test.com")
 
-    individual_signup = SignUpFactory(registration=registration, email="test5@test.com")
-    SignUpFactory(registration=registration, email="test6@test.com")
+    second_signup = SignUpFactory(registration=registration)
+    SignUpContactPersonFactory(signup=second_signup, email="test3@test.com")
+
+    third_signup = SignUpFactory(registration=registration)
+    SignUpContactPersonFactory(signup=third_signup, email="test4@test.com")
 
     api_client.force_authenticate(user)
     send_message_data = {
         "subject": "Message subject",
         "body": "Message body",
-        "signups": [
-            responsible_signup.pk,
-            non_responsible_signup.pk,
-            individual_signup.pk,
-        ],
+        "signups": [second_signup.pk],
+        "signup_groups": [first_signup_group.pk],
     }
 
     assert_send_message(
         api_client,
         registration.id,
         send_message_data,
-        [
-            responsible_signup,
-            non_responsible_signup,
-            individual_signup,
-        ],
+        [second_signup.contact_person, first_signup_group.contact_person],
     )
     # Default language for the email is Finnish
     assert "Tarkastele ilmoittautumistasi täällä" in str(mail.outbox[0].alternatives[0])
@@ -252,18 +224,18 @@ def test_email_is_sent_in_signup_service_language(
     api_client,
     expected_heading,
     expected_cta_button_text,
-    languages,
     language_pk,
     registration,
     signup,
     user,
 ):
+    LanguageFactory(pk=language_pk, service_language=True)
+
     with translation.override(language_pk):
         registration.event.name = "Foo"
         registration.event.save()
-        service_language = Language.objects.get(pk=language_pk)
-        signup.service_language = service_language
-        signup.save()
+        signup.contact_person.service_language_id = language_pk
+        signup.contact_person.save(update_fields=["service_language_id"])
 
         api_client.force_authenticate(user)
         send_message_data = {
@@ -272,7 +244,9 @@ def test_email_is_sent_in_signup_service_language(
             "signups": [signup.id],
         }
 
-        assert_send_message(api_client, registration.id, send_message_data, [signup])
+        assert_send_message(
+            api_client, registration.id, send_message_data, [signup.contact_person]
+        )
         assert expected_heading in str(mail.outbox[0].alternatives[0])
         assert expected_cta_button_text in str(mail.outbox[0].alternatives[0])
 
@@ -293,7 +267,10 @@ def test_required_fields_has_to_be_filled(
     send_message_data = {"subject": "Message subject", "body": "Message body"}
 
     assert_send_message(
-        api_client, registration.id, send_message_data, [signup, signup2]
+        api_client,
+        registration.id,
+        send_message_data,
+        [signup.contact_person, signup2.contact_person],
     )
 
     send_message_data[required_field] = ""
@@ -315,7 +292,10 @@ def test_send_message_to_selected_signups(
     }
 
     response = assert_send_message(
-        api_client, registration.id, send_message_data, [signup, signup3]
+        api_client,
+        registration.id,
+        send_message_data,
+        [signup.contact_person, signup3.contact_person],
     )
     assert response.data["signups"] == [signup.id, signup3.id]
 
@@ -426,7 +406,9 @@ def test_admin_can_send_message_with_missing_datasource_permission(
 
     send_message_data = {"subject": "Message subject", "body": "Message body"}
 
-    assert_send_message(user_api_client, registration.id, send_message_data, [signup])
+    assert_send_message(
+        user_api_client, registration.id, send_message_data, [signup.contact_person]
+    )
 
 
 @pytest.mark.django_db
@@ -440,7 +422,9 @@ def test_registration_admin_can_send_message_with_missing_datasource_permission(
 
     send_message_data = {"subject": "Message subject", "body": "Message body"}
 
-    assert_send_message(user_api_client, registration.id, send_message_data, [signup])
+    assert_send_message(
+        user_api_client, registration.id, send_message_data, [signup.contact_person]
+    )
 
 
 @pytest.mark.django_db
@@ -454,7 +438,10 @@ def test_api_key_with_organization_can_send_message(
     send_message_data = {"subject": "Message subject", "body": "Message body"}
 
     assert_send_message(
-        api_client, registration.id, send_message_data, [signup, signup2]
+        api_client,
+        registration.id,
+        send_message_data,
+        [signup.contact_person, signup2.contact_person],
     )
 
 
@@ -509,7 +496,9 @@ def test_admin_can_send_message_regardless_of_non_user_editable_resources(
 
     send_message_data = {"subject": "Message subject", "body": "Message body"}
 
-    assert_send_message(user_api_client, registration.id, send_message_data, [signup])
+    assert_send_message(
+        user_api_client, registration.id, send_message_data, [signup.contact_person]
+    )
 
 
 @pytest.mark.parametrize("user_editable_resources", [False, True])
@@ -531,7 +520,41 @@ def test_registration_admin_can_send_message_regardless_of_non_user_editable_res
 
     send_message_data = {"subject": "Message subject", "body": "Message body"}
 
-    assert_send_message(user_api_client, registration.id, send_message_data, [signup])
+    assert_send_message(
+        user_api_client, registration.id, send_message_data, [signup.contact_person]
+    )
+
+
+@pytest.mark.django_db
+def test_send_message_no_contact_persons_found(user_api_client, registration):
+    first_signup_group = SignUpGroupFactory(registration=registration)
+    SignUpContactPersonFactory(signup_group=first_signup_group, email=None)
+
+    second_signup_group = SignUpGroupFactory(registration=registration)
+    SignUpContactPersonFactory(signup_group=second_signup_group, email="")
+
+    first_signup = SignUpFactory(registration=registration)
+    SignUpContactPersonFactory(signup=first_signup, email=None)
+
+    second_signup = SignUpFactory(registration=registration)
+    SignUpContactPersonFactory(signup=second_signup, email="")
+
+    send_message_data = {"subject": "Message subject", "body": "Message body"}
+
+    response = send_message(user_api_client, registration.id, send_message_data)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.django_db
+def test_send_message_exception(user_api_client, registration):
+    signup = SignUpFactory(registration=registration)
+    SignUpContactPersonFactory(signup=signup, email="test@test.com")
+
+    send_message_data = {"subject": "Message subject", "body": "Message body"}
+
+    with patch("registrations.api.send_mass_html_mail", side_effect=SMTPException):
+        response = send_message(user_api_client, registration.id, send_message_data)
+    assert response.status_code == status.HTTP_409_CONFLICT
 
 
 @pytest.mark.django_db
@@ -541,10 +564,13 @@ def test_signup_ids_are_audit_logged_on_send_message(
     send_message_data = {"subject": "Message subject", "body": "Message body"}
 
     assert_send_message(
-        user_api_client, registration.id, send_message_data, [signup, signup2]
+        user_api_client,
+        registration.id,
+        send_message_data,
+        [signup.contact_person, signup2.contact_person],
     )
 
     audit_log_entry = AuditLogEntry.objects.first()
     assert Counter(
         audit_log_entry.message["audit_event"]["target"]["object_ids"]
-    ) == Counter([signup.pk, signup2.pk])
+    ) == Counter([signup.contact_person.pk, signup2.contact_person.pk])

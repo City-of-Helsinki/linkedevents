@@ -18,12 +18,15 @@ from django.utils.translation import gettext_lazy as _
 from django.utils.translation import override
 from encrypted_fields import fields
 from helsinki_gdpr.models import SerializableMixin
+from rest_framework.exceptions import ValidationError
 
 from events.models import Event, Language
 from registrations.notifications import (
     get_signup_notification_subject,
     get_signup_notification_texts,
     get_signup_notification_variables,
+    NOTIFICATION_TYPES,
+    NotificationType,
     SignUpNotificationType,
 )
 from registrations.utils import (
@@ -253,11 +256,17 @@ class Registration(CreatedModifiedBaseModel):
             .select_for_update()
             .order_by("id")
         )
-        if waitlisted.exists():
-            first_on_list = waitlisted[0]
-            first_on_list.attendee_status = SignUp.AttendeeStatus.ATTENDING
-            first_on_list.save(update_fields=["attendee_status"])
-            first_on_list.send_notification(
+
+        if not waitlisted.exists():
+            return
+
+        first_on_list = waitlisted[0]
+        first_on_list.attendee_status = SignUp.AttendeeStatus.ATTENDING
+        first_on_list.save(update_fields=["attendee_status"])
+
+        contact_person = first_on_list.actual_contact_person
+        if contact_person:
+            contact_person.send_notification(
                 SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT
             )
 
@@ -317,6 +326,7 @@ class SignUpGroup(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         {"name": "registration_id"},
         {"name": "extra_info"},
         {"name": "signups_count"},
+        {"name": "contact_person"},
     )
 
     @cached_property
@@ -324,17 +334,8 @@ class SignUpGroup(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         return self.signups.count()
 
     @cached_property
-    def responsible_signups(self):
-        return self.signups.filter(responsible_for_group=True)
-
-    @cached_property
     def attending_signups(self):
         return self.signups.filter(attendee_status=SignUp.AttendeeStatus.ATTENDING)
-
-    def send_notification(self, notification_type):
-        signups = self.responsible_signups or self.signups.all()
-        for signup in signups:
-            signup.send_notification(notification_type)
 
 
 class SignUpProtectedDataBaseModel(models.Model):
@@ -440,19 +441,6 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         (AttendeeStatus.ATTENDING, _("Attending")),
     )
 
-    class NotificationType:
-        NO_NOTIFICATION = "none"
-        SMS = "sms"
-        EMAIL = "email"
-        SMS_EMAIL = "sms and email"
-
-    NOTIFICATION_TYPES = (
-        (NotificationType.NO_NOTIFICATION, _("No Notification")),
-        (NotificationType.SMS, _("SMS")),
-        (NotificationType.EMAIL, _("E-Mail")),
-        (NotificationType.SMS_EMAIL, _("Both SMS and email.")),
-    )
-
     class PresenceStatus:
         NOT_PRESENT = "not_present"
         PRESENT = "present"
@@ -473,7 +461,6 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         blank=True,
         null=True,
     )
-    responsible_for_group = models.BooleanField(default=False)
 
     first_name = models.CharField(
         verbose_name=_("First name"),
@@ -496,49 +483,12 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         null=True,
         default=None,
     )
-    email = models.EmailField(
-        verbose_name=_("E-mail"), blank=True, null=True, default=None
-    )
-    membership_number = models.CharField(
-        verbose_name=_("Membership number"),
-        max_length=50,
-        blank=True,
-        null=True,
-        default=None,
-    )
-    phone_number = models.CharField(
-        verbose_name=_("Phone number"),
-        max_length=18,
-        blank=True,
-        null=True,
-        default=None,
-    )
-    notifications = models.CharField(
-        verbose_name=_("Notification type"),
-        max_length=25,
-        choices=NOTIFICATION_TYPES,
-        default=NotificationType.NO_NOTIFICATION,
-    )
     attendee_status = models.CharField(
         verbose_name=_("Attendee status"),
         max_length=25,
         choices=ATTENDEE_STATUSES,
         default=AttendeeStatus.ATTENDING,
         db_index=True,
-    )
-    native_language = models.ForeignKey(
-        Language,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="signup_native_language",
-    )
-    service_language = models.ForeignKey(
-        Language,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="signup_service_language",
     )
     street_address = models.CharField(
         verbose_name=_("Street address"),
@@ -574,19 +524,9 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         {"name": "city"},
         {"name": "street_address"},
         {"name": "zipcode"},
-        {"name": "email"},
-        {"name": "phone_number"},
-        {"name": "native_language", "accessor": lambda value: str(value)},
-        {"name": "service_language", "accessor": lambda value: str(value)},
         {"name": "registration_id"},
         {"name": "signup_group"},
-        {"name": "responsible_for_group"},
         {"name": "extra_info"},
-        {"name": "membership_number"},
-        {
-            "name": "notifications",
-            "accessor": lambda value: dict(SignUp.NOTIFICATION_TYPES).get(value, value),
-        },
         {
             "name": "attendee_status",
             "accessor": lambda value: dict(SignUp.ATTENDEE_STATUSES).get(value, value),
@@ -596,6 +536,7 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
             "accessor": lambda value: dict(SignUp.PRESENCE_STATUSES).get(value, value),
         },
         {"name": "user_consent"},
+        {"name": "contact_person"},
     )
 
     @property
@@ -603,19 +544,128 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         return f"{self.first_name or ''} {self.last_name or ''}".strip()
 
     @cached_property
-    def is_only_responsible_signup(self):
-        return (
-            self.signup_group_id
-            and self.responsible_for_group
-            and not self.signup_group.signups.exclude(pk=self.pk)
-            .filter(responsible_for_group=True)
-            .exists()
-        )
-
-    @cached_property
     def date_of_birth(self):
         protected_data = getattr(self, "protected_data", None)
         return getattr(protected_data, "date_of_birth", None)
+
+    @cached_property
+    def actual_contact_person(self):
+        if self.signup_group_id:
+            return getattr(self.signup_group, "contact_person", None)
+
+        return getattr(self, "contact_person", None)
+
+
+class SignUpProtectedData(SignUpProtectedDataBaseModel):
+    date_of_birth = fields.EncryptedDateField(
+        verbose_name=_("Date of birth"), blank=True, null=True
+    )
+
+    signup = models.OneToOneField(
+        SignUp,
+        related_name="protected_data",
+        null=True,
+        default=None,
+        on_delete=models.SET_NULL,
+    )
+
+
+class SignUpContactPerson(SerializableMixin):
+    # For signups that belong to a group.
+    signup_group = models.OneToOneField(
+        SignUpGroup,
+        on_delete=models.CASCADE,
+        related_name="contact_person",
+        null=True,
+        default=None,
+    )
+
+    # For signups that do not belong to a group.
+    signup = models.OneToOneField(
+        SignUp,
+        on_delete=models.CASCADE,
+        related_name="contact_person",
+        null=True,
+        default=None,
+    )
+
+    first_name = models.CharField(
+        verbose_name=_("First name"),
+        max_length=50,
+        blank=True,
+        null=True,
+        default=None,
+    )
+    last_name = models.CharField(
+        verbose_name=_("Last name"),
+        max_length=50,
+        blank=True,
+        null=True,
+        default=None,
+    )
+
+    email = models.EmailField(
+        verbose_name=_("E-mail"), blank=True, null=True, default=None
+    )
+
+    phone_number = models.CharField(
+        verbose_name=_("Phone number"),
+        max_length=18,
+        blank=True,
+        null=True,
+        default=None,
+    )
+
+    native_language = models.ForeignKey(
+        Language,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="signup_contact_person_native_language",
+    )
+    service_language = models.ForeignKey(
+        Language,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="signup_contact_person_service_language",
+    )
+
+    membership_number = models.CharField(
+        verbose_name=_("Membership number"),
+        max_length=50,
+        blank=True,
+        null=True,
+        default=None,
+    )
+
+    notifications = models.CharField(
+        verbose_name=_("Notification type"),
+        max_length=25,
+        choices=NOTIFICATION_TYPES,
+        default=NotificationType.NO_NOTIFICATION,
+    )
+
+    serialize_fields = (
+        {"name": "id"},
+        {"name": "first_name"},
+        {"name": "last_name"},
+        {"name": "email"},
+        {"name": "phone_number"},
+        {"name": "native_language", "accessor": lambda value: str(value)},
+        {"name": "service_language", "accessor": lambda value: str(value)},
+        {"name": "membership_number"},
+        {
+            "name": "notifications",
+            "accessor": lambda value: dict(NOTIFICATION_TYPES).get(value, value),
+        },
+    )
+
+    @cached_property
+    def registration(self):
+        if self.signup_group_id:
+            return self.signup_group.registration
+        return self.signup.registration
 
     def get_service_language_pk(self):
         if self.service_language:
@@ -628,7 +678,6 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         with override(linked_registrations_ui_locale):
             email_variables = get_signup_notification_variables(self)
             email_variables["body"] = cleaned_body
-            email_variables["signup"] = self
 
             rendered_body = render_to_string("message_to_signup.html", email_variables)
 
@@ -670,19 +719,16 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         except SMTPException:
             logger.exception("Couldn't send signup notification email.")
 
+    def save(self, *args, **kwargs):
+        if not (self.signup_group_id or self.signup_id):
+            raise ValidationError(_("You must provide either signup_group or signup."))
 
-class SignUpProtectedData(SignUpProtectedDataBaseModel):
-    date_of_birth = fields.EncryptedDateField(
-        verbose_name=_("Date of birth"), blank=True, null=True
-    )
+        if self.signup_group_id and self.signup_id:
+            raise ValidationError(
+                _("You can only provide signup_group or signup, not both.")
+            )
 
-    signup = models.OneToOneField(
-        SignUp,
-        related_name="protected_data",
-        null=True,
-        default=None,
-        on_delete=models.SET_NULL,
-    )
+        super().save(*args, **kwargs)
 
 
 class SeatReservationCode(models.Model):
