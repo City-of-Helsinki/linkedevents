@@ -98,6 +98,7 @@ env = environ.Env(
     ENKORA_API_PASSWORD=(str, None),
     EXTRA_INSTALLED_APPS=(list, []),
     FIELD_ENCRYPTION_KEYS=(list, []),
+    FULL_TEXT_WEIGHT_OVERRIDES=(dict, {}),
     GDPR_API_QUERY_SCOPE=(str, ""),
     GDPR_API_DELETE_SCOPE=(str, ""),
     INSTANCE_NAME=(str, "Linked Events"),
@@ -677,3 +678,5 @@ ESPOO_WAIT_BETWEEN = env("ESPOO_WAIT_BETWEEN")
 # Audit log
 AUDIT_LOG_ORIGIN = "linkedevents"
 AUDIT_LOG_ENABLED = env("AUDIT_LOG_ENABLED")
+
+FULL_TEXT_WEIGHT_OVERRIDES = env("FULL_TEXT_WEIGHT_OVERRIDES")

@@ -25,7 +25,7 @@ jobs:
         python: [3.9]
     services:
       postgres:
-        image: helsinkitest/postgis:9.6-2.5-alpine
+        image: helsinkitest/postgis:11-2.5-alpine
         env:
           # Note: not redundant, parent env is not applied to service
           POSTGRES_USER: postgres
