@@ -438,6 +438,7 @@ def test_registration_list_admin_user_filter(
 ):
     registration3.event.publisher = organization3
     registration3.event.save()
+
     get_list_and_assert_registrations(
         user_api_client, "", [registration, registration2, registration3]
     )
