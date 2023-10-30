@@ -25,6 +25,11 @@ if [ $? -ne 0 ]; then
     echo "PKS osoiteluettelo update signaled failure"
 fi
 
+timeout --preserve-status -s INT 60m python manage.py anonymize_past_signups
+if [ $? -ne 0 ]; then
+    echo "Past signups anonymization failure"
+fi
+
 echo "---------------------------------"
 echo "Daily import finished"
 echo "---------------------------------"

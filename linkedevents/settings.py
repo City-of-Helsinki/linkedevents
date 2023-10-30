@@ -117,6 +117,7 @@ env = environ.Env(
     # "helsinki_adfs" = Tunnistamo auth_backends.adfs.helsinki.HelsinkiADFS
     # "helsinkiazuread" = Tunnistamo auth_backends.helsinki_azure_ad.HelsinkiAzureADTenantOAuth2
     NON_EXTERNAL_AUTHENTICATION_METHODS=(list, ["helsinki_adfs", "helsinkiazuread"]),
+    ANONYMIZATION_THRESHOLD_DAYS=(int, 30),
     STRONG_IDENTIFICATION_AUTHENTICATION_METHODS=(list, ["heltunnistussuomifi"]),
     REDIS_SENTINELS=(list, []),
     REDIS_URL=(str, None),
@@ -658,7 +659,8 @@ GDPR_API_DELETE_SCOPE = env("GDPR_API_DELETE_SCOPE")
 
 # A list of hex-encoded 32 byte keys used for encrypting sensitive data
 FIELD_ENCRYPTION_KEYS = env("FIELD_ENCRYPTION_KEYS")
-
+# Specify the number of days after which signup and signup groups will be anonymized
+ANONYMIZATION_THRESHOLD_DAYS = env("ANONYMIZATION_THRESHOLD_DAYS")
 ESPOO_API_URL = env("ESPOO_API_URL")
 ESPOO_API_EVENT_QUERY_PARAMS = env("ESPOO_API_EVENT_QUERY_PARAMS")
 ESPOO_API_PUBLISHERS = [e.split(";", 1) for e in env("ESPOO_API_PUBLISHERS")]

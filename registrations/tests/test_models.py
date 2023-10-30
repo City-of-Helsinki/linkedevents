@@ -4,13 +4,38 @@ from rest_framework.exceptions import ValidationError
 
 from events.models import Language
 from events.tests.factories import DataSourceFactory, OrganizationFactory
+from helevents.tests.factories import UserFactory
 from registrations.tests.factories import (
     RegistrationFactory,
     RegistrationUserAccessFactory,
     SignUpContactPersonFactory,
     SignUpFactory,
     SignUpGroupFactory,
+    SignUpGroupProtectedDataFactory,
+    SignUpProtectedDataFactory,
 )
+
+contact_person_data = {
+    "email": "test@email.com",
+    "first_name": "Contact first name",
+    "last_name": "Contact last name",
+    "membership_number": "xxx",
+    "phone_number": "044 1234567",
+}
+
+signup_group_data = {"protected_data": {"extra_info": "Group extra info"}}
+
+signup_data = {
+    "city": "City",
+    "first_name": "First name",
+    "last_name": "Last name",
+    "street_address": "Street address 12",
+    "zipcode": "12345",
+    "protected_data": {
+        "date_of_birth": "2012-12-12",
+        "extra_info": "Extra info",
+    },
+}
 
 
 class TestRegistration(TestCase):
@@ -164,6 +189,90 @@ class TestSignUpGroup(TestCase):
     def test_get_data_source(self):
         self.assertEqual(self.signup_group.data_source.id, self.data_source.id)
 
+    def test_signup_group_data_is_anonymized(self):
+        registration = RegistrationFactory()
+        user = UserFactory()
+        signup_group = SignUpGroupFactory(
+            registration=registration,
+            created_by=user,
+            last_modified_by=user,
+        )
+        signup_group_protected_data = SignUpGroupProtectedDataFactory(
+            signup_group=signup_group,
+            registration=registration,
+            extra_info=signup_group_data["protected_data"]["extra_info"],
+        )
+        contact_person = SignUpContactPersonFactory(
+            signup_group=signup_group,
+            email=contact_person_data["email"],
+            first_name=contact_person_data["first_name"],
+            last_name=contact_person_data["last_name"],
+            membership_number=contact_person_data["membership_number"],
+            phone_number=contact_person_data["phone_number"],
+        )
+        signup = SignUpFactory(
+            created_by=user,
+            last_modified_by=user,
+            street_address=signup_data["street_address"],
+            city=signup_data["city"],
+            zipcode=signup_data["zipcode"],
+            first_name=signup_data["first_name"],
+            last_name=signup_data["last_name"],
+            registration=registration,
+            signup_group=signup_group,
+        )
+        signup_protected_data = SignUpProtectedDataFactory(
+            signup=signup,
+            registration=signup.registration,
+            date_of_birth=signup_data["protected_data"]["date_of_birth"],
+            extra_info=signup_data["protected_data"]["extra_info"],
+        )
+
+        assert signup_group.anonymization_time is None
+        assert signup_group.created_by == user
+        assert signup_group.last_modified_by == user
+        assert signup.anonymization_time is None
+        assert signup.created_by == user
+        assert signup.last_modified_by == user
+
+        signup_group.anonymize()
+
+        # Signup group should be anonymized
+        assert (
+            signup_group_protected_data.extra_info
+            != signup_group_data["protected_data"]["extra_info"]
+        )
+        assert contact_person.email != contact_person_data["email"]
+        assert contact_person.first_name != contact_person_data["first_name"]
+        assert contact_person.last_name != contact_person_data["last_name"]
+        assert (
+            contact_person.membership_number != contact_person_data["membership_number"]
+        )
+        assert contact_person.phone_number != contact_person_data["phone_number"]
+        assert signup_group.anonymization_time is not None
+        assert signup_group.created_by is None
+        assert signup_group.last_modified_by is None
+
+        # Signup should be anonymized
+        signup.refresh_from_db()
+        signup_protected_data.refresh_from_db()
+        assert signup.city != signup_data["city"]
+        assert signup.first_name != signup_data["first_name"]
+        assert signup.last_name != signup_data["last_name"]
+        assert signup.street_address != signup_data["street_address"]
+        assert signup.zipcode != signup_data["zipcode"]
+        assert (
+            signup_protected_data.date_of_birth
+            != signup_data["protected_data"]["date_of_birth"]
+        )
+        assert (
+            signup_protected_data.extra_info
+            != signup_data["protected_data"]["extra_info"]
+        )
+        assert signup.anonymization_time is not None
+        assert signup.created_by is None
+        assert signup.last_modified_by is None
+
 
 class TestSignUp(TestCase):
     @classmethod
@@ -255,6 +364,59 @@ class TestSignUp(TestCase):
         self.signup.refresh_from_db()
 
         assert self.signup.actual_contact_person.pk == contact_person.pk
+
+    def test_signup_data_is_anonymisized(self):
+        user = UserFactory()
+        signup = SignUpFactory(
+            created_by=user,
+            last_modified_by=user,
+            street_address=signup_data["street_address"],
+            city=signup_data["city"],
+            zipcode=signup_data["zipcode"],
+            first_name=signup_data["first_name"],
+            last_name=signup_data["last_name"],
+        )
+        contact_person = SignUpContactPersonFactory(
+            signup=signup,
+            email=contact_person_data["email"],
+            first_name=contact_person_data["first_name"],
+            last_name=contact_person_data["last_name"],
+            membership_number=contact_person_data["membership_number"],
+            phone_number=contact_person_data["phone_number"],
+        )
+        protected_data = SignUpProtectedDataFactory(
+            signup=signup,
+            registration=signup.registration,
+            date_of_birth=signup_data["protected_data"]["date_of_birth"],
+            extra_info=signup_data["protected_data"]["extra_info"],
+        )
+
+        assert signup.anonymization_time is None
+        assert signup.created_by == user
+        assert signup.last_modified_by == user
+
+        signup.anonymize()
+
+        assert signup.city != signup_data["city"]
+        assert signup.first_name != signup_data["first_name"]
+        assert signup.last_name != signup_data["last_name"]
+        assert signup.street_address != signup_data["street_address"]
+        assert signup.zipcode != signup_data["zipcode"]
+        assert contact_person.email != contact_person_data["email"]
+        assert contact_person.first_name != contact_person_data["first_name"]
+        assert contact_person.last_name != contact_person_data["last_name"]
+        assert (
+            contact_person.membership_number != contact_person_data["membership_number"]
+        )
+        assert contact_person.phone_number != contact_person_data["phone_number"]
+        assert (
+            protected_data.date_of_birth
+            != signup_data["protected_data"]["date_of_birth"]
+        )
+        assert protected_data.extra_info != signup_data["protected_data"]["extra_info"]
+        assert signup.anonymization_time is not None
+        assert signup.created_by is None
+        assert signup.last_modified_by is None
 
 
 class TestSignUpContactPerson(TestCase):

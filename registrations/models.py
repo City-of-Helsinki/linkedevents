@@ -7,7 +7,7 @@ from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
 from django.core.mail import send_mail
 from django.core.validators import MinValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.db.models import DateTimeField, ExpressionWrapper, F, Sum, UniqueConstraint
 from django.forms.fields import MultipleChoiceField
 from django.template.loader import render_to_string
@@ -17,6 +17,7 @@ from django.utils.timezone import localtime
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation import override
 from encrypted_fields import fields
+from faker import Faker
 from helsinki_gdpr.models import SerializableMixin
 from rest_framework.exceptions import ValidationError
 
@@ -328,6 +329,10 @@ class SignUpGroup(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
     registration = models.ForeignKey(
         Registration, on_delete=models.PROTECT, related_name="signup_groups"
     )
+    anonymization_time = models.DateTimeField(
+        verbose_name=_("Anonymization time"),
+        null=True,
+    )
 
     serialize_fields = (
         {"name": "id"},
@@ -344,6 +349,30 @@ class SignUpGroup(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
     @cached_property
     def attending_signups(self):
         return self.signups.filter(attendee_status=SignUp.AttendeeStatus.ATTENDING)
+
+    @transaction.atomic
+    def anonymize(self):
+        faker = Faker("fi_FI")
+
+        # Allow to anonymize signup only once
+        if self.anonymization_time is None:
+            if contact_person := getattr(self, "contact_person", None):
+                contact_person.anonymize()
+
+            if protected_data := getattr(self, "protected_data", None):
+                protected_data.extra_info = faker.paragraph(nb_sentences=1)
+                protected_data.save()
+
+            # Anonymize all the signups of the group
+            signups = self.signups.all()
+
+            for signup in signups:
+                signup.anonymize()
+
+            self.anonymization_time = localtime()
+            self.created_by = None
+            self.last_modified_by = None
+            self.save()
 
 
 class SignUpProtectedDataBaseModel(models.Model):
@@ -525,6 +554,11 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         default=False,
     )
 
+    anonymization_time = models.DateTimeField(
+        verbose_name=_("Anonymization time"),
+        null=True,
+    )
+
     serialize_fields = (
         {"name": "first_name"},
         {"name": "last_name"},
@@ -562,6 +596,30 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
             return getattr(self.signup_group, "contact_person", None)
 
         return getattr(self, "contact_person", None)
+
+    @transaction.atomic
+    def anonymize(self):
+        faker = Faker("fi_FI")
+
+        # Allow to anonymize signup only once
+        if self.anonymization_time is None:
+            if contact_person := getattr(self, "contact_person", None):
+                contact_person.anonymize()
+
+            if protected_data := getattr(self, "protected_data", None):
+                protected_data.date_of_birth = faker.date()
+                protected_data.extra_info = faker.paragraph(nb_sentences=1)
+                protected_data.save()
+
+            self.first_name = faker.first_name()
+            self.last_name = faker.last_name()
+            self.street_address = faker.address()
+            self.zipcode = faker.postcode()
+            self.city = faker.city()
+            self.anonymization_time = localtime()
+            self.created_by = None
+            self.last_modified_by = None
+            self.save()
 
 
 class SignUpProtectedData(SignUpProtectedDataBaseModel):
@@ -737,6 +795,16 @@ class SignUpContactPerson(SerializableMixin):
             )
 
         super().save(*args, **kwargs)
+
+    def anonymize(self):
+        faker = Faker("fi_FI")
+
+        self.email = faker.email()
+        self.phone_number = faker.phone_number()
+        self.first_name = faker.first_name()
+        self.last_name = faker.last_name()
+        self.membership_number = faker.uuid4()
+        self.save()
 
 
 class SeatReservationCode(models.Model):
