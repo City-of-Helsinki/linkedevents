@@ -26,7 +26,7 @@ RUN apt-install.sh \
     gettext \
     postgresql-client \
     libcurl4-openssl-dev \
-    && pip install --upgrade pip \
+    && pip install --upgrade pip setuptools wheel \
     && pip install --no-cache-dir -r /app/requirements.txt \
     && pip install --no-cache-dir -r /app/requirements-prod.txt \
     && uwsgi --build-plugin https://github.com/City-of-Helsinki/uwsgi-sentry \
