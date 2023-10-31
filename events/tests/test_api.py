@@ -294,6 +294,7 @@ class TestImageAPI(APITestCase):
         self.assertEqual(alt_text, "Lorem")
 
 
+@pytest.mark.no_use_audit_log
 @pytest.mark.parametrize(
     "val,operator,expected_regex",
     [
