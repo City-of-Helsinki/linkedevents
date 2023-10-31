@@ -1,6 +1,5 @@
-from datetime import datetime, timezone
-
 from django.conf import settings
+from django.utils import timezone
 
 from audit_log.enums import Operation, Role, Status
 from audit_log.models import AuditLogEntry
@@ -86,15 +85,15 @@ def _get_actor_data(request):
 
 
 def commit_to_audit_log(request, response):
-    current_time = datetime.now(tz=timezone.utc)
-    iso_8601_date = f"{current_time.replace(tzinfo=None).isoformat(sep='T', timespec='milliseconds')}Z"
+    current_time = timezone.now()
+    iso_8601_datetime = f"{current_time.replace(tzinfo=None).isoformat(sep='T', timespec='milliseconds')}Z"
 
     message = {
         "audit_event": {
             "origin": settings.AUDIT_LOG_ORIGIN,
             "status": _get_response_status(response),
             "date_time_epoch": int(current_time.timestamp() * 1000),
-            "date_time": iso_8601_date,
+            "date_time": iso_8601_datetime,
             "actor": _get_actor_data(request),
             "operation": _get_operation_name(request),
             "target": request.path,
