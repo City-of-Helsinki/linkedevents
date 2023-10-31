@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
 
 from django.conf import settings
-from django.contrib.auth.models import AnonymousUser
 
 from audit_log.enums import Operation, Role, Status
 from audit_log.models import AuditLogEntry
@@ -57,7 +56,7 @@ def _get_user_role(user):
     if user is None:
         return Role.SYSTEM.value
 
-    if isinstance(user, AnonymousUser):
+    if not user.is_authenticated:
         return Role.ANONYMOUS.value
 
     if (
