@@ -3,12 +3,13 @@ from collections import namedtuple
 from copy import deepcopy
 from datetime import datetime, timedelta
 from functools import lru_cache, partial
+from typing import Mapping
 
 import pytz
 import requests
 from django.db import transaction
+from django.utils import timezone
 from django.utils.dateparse import parse_time
-from django.utils.timezone import now
 from django_orghierarchy.models import Organization
 
 from events.importer.sync import ModelSyncher
@@ -25,7 +26,7 @@ HARRASTUSHAKU_API_BASE_URL = "http://www.harrastushaku.fi/api/"
 
 TIMEZONE = pytz.timezone("Europe/Helsinki")
 
-MAX_RECURRING_EVENT_LENGTH = 366  # days
+MAX_RECURRING_EVENT_LENGTH = timedelta(days=366)
 
 MAIN_CATEGORY_KEYWORDS = {
     "1": {"yso:p3466"},
@@ -58,6 +59,7 @@ class HarrastushakuImporter(Importer):
     supported_languages = ["fi"]
 
     def setup(self):
+        self.now = timezone.now()
         logger.debug("Running Harrastushaku importer setup...")
         self.data_source, _ = DataSource.objects.get_or_create(
             id=self.name, defaults={"name": "Harrastushaku"}
@@ -220,7 +222,7 @@ class HarrastushakuImporter(Importer):
             return
 
         def event_delete(event):
-            if event.end_time < now():
+            if event.end_time < self.now:
                 return
             event.soft_delete()
             for sub_event in event.sub_events.all():
@@ -393,14 +395,12 @@ class HarrastushakuImporter(Importer):
         }
 
     def handle_recurring_event(self, event_data, time_tables):
+        self.crop_end_date(event_data)
         start_date, end_date = self.get_event_start_and_end_dates(event_data)
         if not start_date:
             raise HarrastushakuException("No start time")
         if not end_date:
             raise HarrastushakuException("No end time")
-
-        if end_date - start_date > timedelta(days=MAX_RECURRING_EVENT_LENGTH):
-            raise HarrastushakuException("Too long recurring activity")
 
         sub_event_time_ranges = self.build_sub_event_time_ranges(
             start_date, end_date, time_tables
@@ -418,6 +418,44 @@ class HarrastushakuImporter(Importer):
         event_data["has_end_time"] = False
         event = self.save_event(event_data)
         self.event_syncher.mark(event)
+
+    def crop_end_date(self, event_data):
+        """End date of a recurring event should be cropped if the event end
+        is too far in the future. The time part of the end time should be kept
+        the same, so just changing the dates.
+
+        End date maximum is:
+        - One year from the start date if the start date is in the future.
+        - One year from now if the start date in the past.
+        """
+        start_time = event_data.get("start_time")
+        end_time = event_data.get("end_time")
+        if (
+            not (start_time and end_time)
+            or end_time - start_time <= MAX_RECURRING_EVENT_LENGTH
+        ):
+            return
+
+        if start_time > self.now:
+            end_date_max = start_time + MAX_RECURRING_EVENT_LENGTH
+        else:
+            end_date_max = self.now + MAX_RECURRING_EVENT_LENGTH
+
+        new_end_time = min(
+            end_time,
+            end_time.replace(
+                year=end_date_max.year,
+                month=end_date_max.month,
+                day=end_date_max.day,
+            ),
+        )
+
+        if end_time != new_end_time:
+            event_data["end_time"] = new_end_time
+            logger.debug(
+                f"Too long recurring activity {event_data['origin_id']}: "
+                f"cropping the end date to {new_end_time}."
+            )
 
     def get_event_keywords(self, activity_data):
         return self.get_event_keywords_from_main_categories(activity_data)
@@ -532,6 +570,10 @@ class HarrastushakuImporter(Importer):
             sub_event_data["origin_id"] = event_data[
                 "origin_id"
             ] + self.create_sub_event_origin_id_suffix(sub_event_time_range)
+
+            if self.should_skip_sub_event(sub_event_syncher, sub_event_data):
+                continue
+
             sub_event = self.save_event(sub_event_data)
 
             if sub_event._changed:
@@ -553,6 +595,22 @@ class HarrastushakuImporter(Importer):
         date = start.date().strftime("%Y%m%d")
         times = "{}{}".format(*(time.time().strftime("%H%M") for time in (start, end)))
         return "_{}{}".format(date, times)
+
+    def should_skip_sub_event(
+        self, sub_event_syncher: ModelSyncher, event_data: Mapping[str, str]
+    ) -> bool:
+        """If a sub event for a recurring event is in the past and doesn't
+        already exist in the database, skip it.
+        """
+        obj_id = f"{self.data_source.id}:{event_data['origin_id']}"
+
+        if not sub_event_syncher.get(obj_id) and event_data["end_time"] < self.now:
+            logger.debug(
+                f"New sub event {event_data['origin_id']} would be created to the "
+                f"past, skipping."
+            )
+            return True
+        return False
 
     def get_event_images(self, activity_data):
         image_data = activity_data.get("images")

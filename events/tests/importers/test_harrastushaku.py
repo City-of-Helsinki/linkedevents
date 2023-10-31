@@ -1,12 +1,14 @@
 import datetime
 
 import pytest
-from django.utils.timezone import activate
+from django.utils.timezone import override
 
 from events.importer import harrastushaku
 from events.importer.harrastushaku import HarrastushakuImporter, SubEventTimeRange
+from events.importer.sync import ModelSyncher
 from events.models import DataSource
-from events.tests.factories import PlaceFactory
+from events.tests.factories import EventFactory, PlaceFactory
+from events.tests.utils import create_super_event
 
 
 def make_timetable(
@@ -145,20 +147,22 @@ def test_get_datetime_from_data_falsey(val):
 def test_build_sub_event_time_ranges(
     start_date, end_date, timetables, expected, importer
 ):
-    activate("Europe/Helsinki")
-    # Convert ISO datetimes from expected to SubEventTimeRange objects
-    expected_subtime_ranges = [
-        SubEventTimeRange(*(datetime.datetime.fromisoformat(dt_str) for dt_str in d))
-        for d in expected
-    ]
-    # Convert ISO dates to datetime.date objects
-    start_date = datetime.date.fromisoformat(start_date)
-    end_date = datetime.date.fromisoformat(end_date)
+    with override("Europe/Helsinki"):
+        # Convert ISO datetimes from expected to SubEventTimeRange objects
+        expected_subtime_ranges = [
+            SubEventTimeRange(
+                *(datetime.datetime.fromisoformat(dt_str) for dt_str in d)
+            )
+            for d in expected
+        ]
+        # Convert ISO dates to datetime.date objects
+        start_date = datetime.date.fromisoformat(start_date)
+        end_date = datetime.date.fromisoformat(end_date)
 
-    result = importer.build_sub_event_time_ranges(start_date, end_date, timetables)
+        result = importer.build_sub_event_time_ranges(start_date, end_date, timetables)
 
-    assert len(result) == len(expected_subtime_ranges)
-    assert result == expected_subtime_ranges
+        assert len(result) == len(expected_subtime_ranges)
+        assert result == expected_subtime_ranges
 
 
 @pytest.mark.no_test_audit_log
@@ -231,3 +235,96 @@ def test_map_harrastushaku_location_ids_to_tprek_ids(importer):
     assert mapping["2"] == strict_tpr_place.id
     assert mapping["3"] == flexible_tpr_place.id
     assert mapping["4"] == "harrastushaku:4"
+
+
+@pytest.mark.no_test_audit_log
+@pytest.mark.freeze_time("2023-02-01 12:00:00+02:00")
+@pytest.mark.parametrize(
+    "start_time,end_time,expected_end_time",
+    [
+        # Start and end date in the past, no change.
+        (
+            datetime.datetime(1995, 5, 7, 10),
+            datetime.datetime(2011, 5, 15, 14),
+            datetime.datetime(2011, 5, 15, 14),
+        ),
+        # Start date in the past, no change.
+        (
+            datetime.datetime(2023, 1, 1, 10),
+            datetime.datetime(2023, 11, 1, 14),
+            datetime.datetime(2023, 11, 1, 14),
+        ),
+        # Start date in the past, crop.
+        (
+            datetime.datetime(2023, 1, 1, 10),
+            datetime.datetime(2030, 11, 1, 14),
+            datetime.datetime(2024, 2, 2, 14),
+        ),
+        # Start date in the future, no change
+        (
+            datetime.datetime(2023, 3, 1, 10),
+            datetime.datetime(2023, 10, 1, 14),
+            datetime.datetime(2023, 10, 1, 14),
+        ),
+        # Start date in the future, crop
+        (
+            datetime.datetime(2023, 3, 1, 10),
+            datetime.datetime(2030, 1, 1, 14),
+            datetime.datetime(2024, 3, 1, 14),
+        ),
+    ],
+)
+@pytest.mark.django_db
+def test_crop_recurring_events_to_one_year(
+    start_time, end_time, expected_end_time, importer
+):
+    with override("Europe/Helsinki"):
+        start_time = start_time.astimezone()
+        end_time = end_time.astimezone()
+        expected_end_time = expected_end_time.astimezone()
+
+    event_data = {"start_time": start_time, "end_time": end_time, "origin_id": "1"}
+    importer.crop_end_date(event_data)
+
+    assert event_data["end_time"] == expected_end_time
+
+
+@pytest.mark.no_test_audit_log
+@pytest.mark.freeze_time("2023-02-01 12:00:00+02:00")
+@pytest.mark.parametrize(
+    "end_time,sub_event_exists,expected",
+    [
+        (datetime.datetime(2023, 1, 15), True, False),
+        (datetime.datetime(2023, 1, 15), False, True),
+        (datetime.datetime(2023, 2, 15), False, False),
+        (datetime.datetime(2023, 2, 15), True, False),
+    ],
+)
+@pytest.mark.django_db
+def test_skip_past_nonexisting_recurring_sub_events(
+    end_time, sub_event_exists, expected, importer
+):
+    with override("Europe/Helsinki"):
+        start_time = datetime.datetime(2023, 1, 1).astimezone()
+        end_time = end_time.astimezone()
+    event_data = {"start_time": start_time, "end_time": end_time, "origin_id": "1"}
+    sub_event = None
+    if sub_event_exists:
+        sub_event = EventFactory(
+            id=f"{importer.data_source.id}:{event_data['origin_id']}",
+            data_source=importer.data_source,
+            origin_id=event_data["origin_id"],
+            publisher=importer.organization,
+            start_time=event_data["start_time"],
+            end_time=event_data["end_time"],
+        )
+    super_event = create_super_event(
+        [sub_event] if sub_event else [], importer.data_source
+    )
+
+    sub_event_syncher = ModelSyncher(
+        super_event.sub_events.filter(deleted=False),
+        lambda o: o.id,
+    )
+
+    assert importer.should_skip_sub_event(sub_event_syncher, event_data) == expected
