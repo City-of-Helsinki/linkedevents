@@ -37,10 +37,10 @@ def _get_operation_name(request):
 
 
 def _get_remote_address(request):
-    if not request.headers.get("x-forwarded-for"):
+    if not (x_forwarded_for := request.headers.get("x-forwarded-for")):
         return request.META.get("REMOTE_ADDR")
 
-    remote_addr = request.headers.get("x-forwarded-for", "").split(",")[0]
+    remote_addr = x_forwarded_for.split(",")[0]
 
     # Remove port number from remote_addr
     if "." in remote_addr and ":" in remote_addr:
