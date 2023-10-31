@@ -90,6 +90,7 @@ def test_can_edit_event(membership_status, expected_public, expected_draft):
 @pytest.mark.parametrize(
     "is_admin,is_registration_admin,is_regular_user,expected",
     [
+        (True, True, True, False),
         (True, False, True, False),
         (True, False, False, False),
         (False, False, True, False),
