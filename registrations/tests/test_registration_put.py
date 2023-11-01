@@ -42,7 +42,7 @@ def assert_update_registration(api_client, pk, registration_data, data_source=No
 
 
 @pytest.mark.django_db
-def test__update_registration(api_client, event, user):
+def test_update_registration(api_client, event, user):
     api_client.force_authenticate(user)
 
     registration_data = {"event": {"@id": get_event_url(event.id)}}
@@ -57,7 +57,7 @@ def test__update_registration(api_client, event, user):
 
 
 @pytest.mark.django_db
-def test__non_admin_cannot_update_registration(api_client, event, registration, user):
+def test_non_admin_cannot_update_registration(api_client, event, registration, user):
     event.publisher.admin_users.remove(user)
     api_client.force_authenticate(user)
 
@@ -70,7 +70,7 @@ def test__non_admin_cannot_update_registration(api_client, event, registration, 
 
 
 @pytest.mark.django_db
-def test__admin_can_update_registration_from_another_data_source(
+def test_admin_can_update_registration_from_another_data_source(
     api_client, event2, other_data_source, organization, registration2, user
 ):
     other_data_source.owner = organization
@@ -89,7 +89,7 @@ def test__admin_can_update_registration_from_another_data_source(
 
 
 @pytest.mark.django_db
-def test__correct_api_key_can_update_registration(
+def test_correct_api_key_can_update_registration(
     api_client, event, data_source, organization, registration
 ):
     data_source.owner = organization
@@ -105,7 +105,7 @@ def test__correct_api_key_can_update_registration(
 
 
 @pytest.mark.django_db
-def test__api_key_from_wrong_data_source_cannot_update_registration(
+def test_api_key_from_wrong_data_source_cannot_update_registration(
     api_client, event, organization, other_data_source, registration
 ):
     other_data_source.owner = organization
@@ -122,7 +122,7 @@ def test__api_key_from_wrong_data_source_cannot_update_registration(
 
 
 @pytest.mark.django_db
-def test__api_key_without_organization_cannot_update_registration(
+def test_api_key_without_organization_cannot_update_registration(
     api_client, data_source, event, registration
 ):
     registration_data = {
@@ -136,7 +136,7 @@ def test__api_key_without_organization_cannot_update_registration(
 
 
 @pytest.mark.django_db
-def test__unknown_api_key_cannot_update_registration(api_client, event, registration):
+def test_unknown_api_key_cannot_update_registration(api_client, event, registration):
     api_client.credentials(apikey="unknown")
 
     registration_data = {
@@ -193,7 +193,7 @@ def test_registration_admin_can_update_registration_regardless_of_non_user_edita
 
 
 @pytest.mark.django_db
-def test__user_editable_resources_can_update_registration(
+def test_user_editable_resources_can_update_registration(
     api_client, data_source, event, organization, registration, user
 ):
     data_source.owner = organization
@@ -209,24 +209,23 @@ def test__user_editable_resources_can_update_registration(
 
 
 @pytest.mark.django_db
-def test__admin_cannot_update_registrations_event(
-    api_client, event2, registration, user
+def test_admin_cannot_update_registrations_event(
+    api_client, event, event2, registration, user
 ):
-    """Organization admin user cannot update registration's event to an event for
-    which they are not admin.
-    """
+    """Event field is read-only field and cannot be edited"""
     api_client.force_authenticate(user)
 
     registration_data = {
         "event": {"@id": get_event_url(event2.id)},
         "audience_max_age": 10,
     }
-    response = update_registration(api_client, registration.id, registration_data)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert_update_registration(api_client, registration.id, registration_data)
+    registration.refresh_from_db()
+    assert registration.event == event
 
 
 @pytest.mark.django_db
-def test__send_email_to_new_registration_user_access(registration, user_api_client):
+def test_send_email_to_new_registration_user_access(registration, user_api_client):
     with translation.override("fi"):
         registration.event.type_id = Event.TypeId.GENERAL
         registration.event.name = event_name
@@ -256,7 +255,7 @@ def test__send_email_to_new_registration_user_access(registration, user_api_clie
 
 
 @pytest.mark.django_db
-def test__email_is_not_sent_if_registration_user_access_email_is_not_updated(
+def test_email_is_not_sent_if_registration_user_access_email_is_not_updated(
     registration, user_api_client
 ):
     registration_user_access = RegistrationUserAccess.objects.create(
@@ -281,7 +280,7 @@ def test__email_is_not_sent_if_registration_user_access_email_is_not_updated(
 
 
 @pytest.mark.django_db
-def test__email_is_sent_if_registration_user_access_email_is_updated(
+def test_email_is_sent_if_registration_user_access_email_is_updated(
     registration, user_api_client
 ):
     with translation.override("fi"):
@@ -305,7 +304,7 @@ def test__email_is_sent_if_registration_user_access_email_is_updated(
 
 
 @pytest.mark.django_db
-def test__cannot_update_registration_user_access_with_invalid_id(
+def test_cannot_update_registration_user_access_with_invalid_id(
     registration, user_api_client
 ):
     with translation.override("fi"):
@@ -330,7 +329,7 @@ def test__cannot_update_registration_user_access_with_invalid_id(
 
 
 @pytest.mark.django_db
-def test__cannot_update_registration_user_access_with_unexisting_id(
+def test_cannot_update_registration_user_access_with_unexisting_id(
     registration, user_api_client
 ):
     with translation.override("fi"):
@@ -355,7 +354,7 @@ def test__cannot_update_registration_user_access_with_unexisting_id(
 
 
 @pytest.mark.django_db
-def test__cannot_update_registration_user_access_with_duplicate_email(
+def test_cannot_update_registration_user_access_with_duplicate_email(
     registration, user_api_client
 ):
     email1 = "email1@test.fi"

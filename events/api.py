@@ -1844,6 +1844,10 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
     ):
         super().__init__(*args, **kwargs)
         context = self.context
+        instance = self.instance
+
+        if instance:
+            self.fields["event"].read_only = True
 
         self.registration_admin_tree_ids = context.get(
             "registration_admin_tree_ids", set()
@@ -1912,9 +1916,21 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
 
     @transaction.atomic
     def create(self, validated_data):
+        user = self.request.user
+        if isinstance(user, ApiKeyUser):
+            # allow creating a registration only if the api key matches event data source
+            if (
+                "event" in validated_data
+                and validated_data["event"].data_source != user.data_source
+            ):
+                raise PermissionDenied(
+                    _("Object data source does not match user data source")
+                )
+
         registration_user_accesses = validated_data.pop(
             "registration_user_accesses", []
         )
+
         try:
             registration = super().create(validated_data)
         except IntegrityError as error:
