@@ -306,7 +306,7 @@ def test_signup_deletion_leads_to_changing_status_of_first_waitlisted_user(
         "signups": [signup_data],
     }
     response = assert_create_signups(api_client, signups_data)
-    signup_id = response.data[attendee_status]["people"][0]["id"]
+    signup_id = response.data[0]["id"]
 
     reservation2 = SeatReservationCodeFactory(registration=registration, seats=1)
     signup_data2 = {

@@ -762,10 +762,7 @@ def test_email_sent_on_successful_signup(
         }
 
         response = assert_create_signups(user_api_client, signups_data)
-        assert (
-            signup_data["first_name"]
-            in response.data["attending"]["people"][0]["first_name"]
-        )
+        assert signup_data["first_name"] in response.data[0]["first_name"]
 
         #  assert that the email was sent
         assert mail.outbox[0].subject.startswith(expected_subject)
@@ -823,10 +820,7 @@ def test_confirmation_template_has_correct_text_per_event_type(
     }
 
     response = assert_create_signups(user_api_client, signups_data)
-    assert (
-        signup_data["first_name"]
-        in response.data["attending"]["people"][0]["first_name"]
-    )
+    assert signup_data["first_name"] in response.data[0]["first_name"]
 
     #  assert that the email was sent
     assert expected_heading in str(mail.outbox[0].alternatives[0])
@@ -931,10 +925,7 @@ def test_different_email_sent_if_user_is_added_to_waiting_list(
         }
 
         response = assert_create_signups(user_api_client, signups_data)
-        assert (
-            signup_data["first_name"]
-            in response.data["waitlisted"]["people"][0]["first_name"]
-        )
+        assert signup_data["first_name"] in response.data[0]["first_name"]
 
         #  assert that the email was sent
         assert mail.outbox[0].subject.startswith(expected_subject)
@@ -990,10 +981,7 @@ def test_confirmation_to_waiting_list_template_has_correct_text_per_event_type(
     }
 
     response = assert_create_signups(user_api_client, signups_data)
-    assert (
-        signup_data["first_name"]
-        in response.data["waitlisted"]["people"][0]["first_name"]
-    )
+    assert signup_data["first_name"] in response.data[0]["first_name"]
     #  assert that the email was sent
     assert expected_text in str(mail.outbox[0].alternatives[0])
 
@@ -1023,7 +1011,7 @@ def test_signup_text_fields_are_sanitized(
     signups_data["reservation_code"] = reservation.code
 
     response = assert_create_signups(user_api_client, signups_data)
-    response_signup = response.data["attending"]["people"][0]
+    response_signup = response.data[0]
     assert response_signup["first_name"] == "Michael Html"
     assert response_signup["last_name"] == "Jackson Html"
     assert response_signup["extra_info"] == "Extra info Html"

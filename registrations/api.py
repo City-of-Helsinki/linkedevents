@@ -403,8 +403,7 @@ class SignUpViewSet(
         serializer = CreateSignUpsSerializer(data=data, context=context)
         serializer.is_valid(raise_exception=True)
 
-        attending = []
-        waitlisted = []
+        signups = []
 
         # Create SignUps and add persons to correct list
         for i in data["signups"]:
@@ -412,20 +411,13 @@ class SignUpViewSet(
             signup.is_valid()
             signee = signup.create(validated_data=signup.validated_data)
 
-            if signee.attendee_status == SignUp.AttendeeStatus.ATTENDING:
-                attending.append(SignUpSerializer(signee, context=context).data)
-            else:
-                waitlisted.append(SignUpSerializer(signee, context=context).data)
-        data = {
-            "attending": {"count": len(attending), "people": attending},
-            "waitlisted": {"count": len(waitlisted), "people": waitlisted},
-        }
+            signups.append(SignUpSerializer(signee, context=context).data)
 
         # Delete reservation
         reservation = serializer.validated_data["reservation"]
         reservation.delete()
 
-        return Response(data, status=status.HTTP_201_CREATED)
+        return Response(data=signups, status=status.HTTP_201_CREATED)
 
     @transaction.atomic
     def perform_destroy(self, instance):
