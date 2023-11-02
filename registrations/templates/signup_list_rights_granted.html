@@ -7,14 +7,14 @@
       <div class="content-container" style="padding:0 16px;">
         <div style="margin: 16px 0px 40px">
           <p style="color:#1a1a1a;font-size:16px;font-weight:normal;line-height:24px;margin:0px;">
-            
-            {% if event_type_id == "1" %}
+
+            {% if event_type_id == 1 %}
             <!-- Event -->
             {% blocktranslate %}The e-mail address <strong>{{email}}</strong> has been granted the rights to read the participant list of the event <strong>{{event_name}}</strong>.{% endblocktranslate %}
-            {% elif event_type_id == "2" %}
+            {% elif event_type_id == 2 %}
             <!-- Course -->
             {% blocktranslate %}The e-mail address <strong>{{email}}</strong> has been granted the rights to read the participant list of the course <strong>{{event_name}}</strong>.{% endblocktranslate %}
-            {% elif event_type_id == "3" %}
+            {% elif event_type_id == 3 %}
             <!-- Volunteering -->
             {% blocktranslate %}The e-mail address <strong>{{email}}</strong> has been granted the rights to read the participant list of the volunteering <strong>{{event_name}}</strong>.{% endblocktranslate %}
             {% endif %}

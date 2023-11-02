@@ -929,13 +929,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
         choices=SUPER_EVENT_TYPES,
     )
 
-    type_id = models.CharField(
-        max_length=255,
-        blank=False,
-        null=False,
-        db_index=False,
-        default=TypeId.GENERAL,
-        choices=TYPE_IDS,
+    type_id = models.PositiveSmallIntegerField(
+        db_index=True, default=TypeId.GENERAL, choices=TYPE_IDS
     )
 
     in_language = models.ManyToManyField(
