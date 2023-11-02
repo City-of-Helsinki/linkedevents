@@ -10,6 +10,7 @@ from registrations.models import SignUp
 from registrations.tests.factories import (
     RegistrationUserAccessFactory,
     SignUpFactory,
+    SignUpGroupFactory,
     SignUpProtectedDataFactory,
 )
 
@@ -566,3 +567,33 @@ def test_signup_text_fields_are_sanitized(user_api_client, registration, user):
     assert signup.phone_number == "0441111111"
     assert signup.street_address == "Edited street address Html"
     assert signup.zipcode == "zip"
+
+
+@pytest.mark.django_db
+def test_cannot_remove_only_responsible_person_from_group(api_client, registration):
+    user = UserFactory()
+    user.registration_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(registration=registration, signup_group=signup_group)
+    responsible_signup = SignUpFactory(
+        registration=registration, signup_group=signup_group, responsible_for_group=True
+    )
+
+    signup_data = {
+        "registration": registration.id,
+        "first_name": "Michael",
+        "last_name": "Jackson",
+        "extra_info": "Extra info",
+        "phone_number": "0441111111",
+        "street_address": "Edited street address",
+        "zipcode": "zip",
+        "responsible_for_group": False,
+    }
+
+    response = update_signup(api_client, responsible_signup.id, signup_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["responsible_for_group"][0] == (
+        "Cannot set responsible_for_group to False for the only responsible person of a group"
+    )

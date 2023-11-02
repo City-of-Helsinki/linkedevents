@@ -208,6 +208,15 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
                 ):
                     errors["date_of_birth"] = _("The participant is too old.")
 
+        if (
+            data.get("responsible_for_group") is False
+            and self.instance
+            and self.instance.is_only_responsible_signup
+        ):
+            errors["responsible_for_group"] = _(
+                "Cannot set responsible_for_group to False for the only responsible person of a group"
+            )
+
         if errors:
             raise serializers.ValidationError(errors)
 
