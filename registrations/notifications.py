@@ -17,24 +17,24 @@ signup_email_texts = {
     SignUpNotificationType.CANCELLATION: {
         "heading": _("Registration cancelled"),
         "secondary_heading": {
-            str(Event.TypeId.GENERAL): _(
+            Event.TypeId.GENERAL: _(
                 "%(username)s, registration to the event %(event_name)s has been cancelled."
             ),
-            str(Event.TypeId.COURSE): _(
+            Event.TypeId.COURSE: _(
                 "%(username)s, registration to the course %(event_name)s has been cancelled."
             ),
-            str(Event.TypeId.VOLUNTEERING): _(
+            Event.TypeId.VOLUNTEERING: _(
                 "%(username)s, registration to the volunteering %(event_name)s has been cancelled."
             ),
         },
         "text": {
-            str(Event.TypeId.GENERAL): _(
+            Event.TypeId.GENERAL: _(
                 "You have successfully cancelled your registration to the event <strong>%(event_name)s</strong>."
             ),
-            str(Event.TypeId.COURSE): _(
+            Event.TypeId.COURSE: _(
                 "You have successfully cancelled your registration to the course <strong>%(event_name)s</strong>."
             ),
-            str(Event.TypeId.VOLUNTEERING): _(
+            Event.TypeId.VOLUNTEERING: _(
                 "You have successfully cancelled your registration to the volunteering <strong>%(event_name)s</strong>."
             ),
         },
@@ -42,37 +42,37 @@ signup_email_texts = {
     SignUpNotificationType.CONFIRMATION: {
         "heading": _("Welcome %(username)s"),
         "secondary_heading": {
-            str(Event.TypeId.GENERAL): _(
+            Event.TypeId.GENERAL: _(
                 "Registration to the event %(event_name)s has been saved."
             ),
-            str(Event.TypeId.COURSE): _(
+            Event.TypeId.COURSE: _(
                 "Registration to the course %(event_name)s has been saved."
             ),
-            str(Event.TypeId.VOLUNTEERING): _(
+            Event.TypeId.VOLUNTEERING: _(
                 "Registration to the volunteering %(event_name)s has been saved."
             ),
         },
         "text": {
-            str(Event.TypeId.GENERAL): _(
+            Event.TypeId.GENERAL: _(
                 "Congratulations! Your registration has been confirmed for the event <strong>%(event_name)s</strong>."
             ),
-            str(Event.TypeId.COURSE): _(
+            Event.TypeId.COURSE: _(
                 "Congratulations! Your registration has been confirmed for the course <strong>%(event_name)s</strong>."
             ),
-            str(Event.TypeId.VOLUNTEERING): _(
+            Event.TypeId.VOLUNTEERING: _(
                 "Congratulations! Your registration has been confirmed for the volunteering <strong>%(event_name)s</strong>."  # noqa E501
             ),
         },
         "group": {
             "heading": _("Welcome"),
             "secondary_heading": {
-                str(Event.TypeId.GENERAL): _(
+                Event.TypeId.GENERAL: _(
                     "Group registration to the event %(event_name)s has been saved."
                 ),
-                str(Event.TypeId.COURSE): _(
+                Event.TypeId.COURSE: _(
                     "Group registration to the course %(event_name)s has been saved."
                 ),
-                str(Event.TypeId.VOLUNTEERING): _(
+                Event.TypeId.VOLUNTEERING: _(
                     "Group registration to the volunteering %(event_name)s has been saved."
                 ),
             },
@@ -81,47 +81,47 @@ signup_email_texts = {
     SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST: {
         "heading": _("Thank you for signing up for the waiting list"),
         "text": {
-            str(Event.TypeId.GENERAL): _(
+            Event.TypeId.GENERAL: _(
                 "You have successfully registered for the event <strong>%(event_name)s</strong> waiting list."
             ),
-            str(Event.TypeId.COURSE): _(
+            Event.TypeId.COURSE: _(
                 "You have successfully registered for the course <strong>%(event_name)s</strong> waiting list."
             ),
-            str(Event.TypeId.VOLUNTEERING): _(
+            Event.TypeId.VOLUNTEERING: _(
                 "You have successfully registered for the volunteering <strong>%(event_name)s</strong> waiting list."
             ),
         },
         "secondary_text": {
-            str(Event.TypeId.GENERAL): _(
+            Event.TypeId.GENERAL: _(
                 "You will be automatically transferred as an event participant if a seat becomes available."
             ),
-            str(Event.TypeId.COURSE): _(
+            Event.TypeId.COURSE: _(
                 "You will be automatically transferred as a course participant if a seat becomes available."
             ),
-            str(Event.TypeId.VOLUNTEERING): _(
+            Event.TypeId.VOLUNTEERING: _(
                 "You will be automatically transferred as a volunteering participant if a seat becomes available."
             ),
         },
         "group": {
             "text": {
-                str(Event.TypeId.GENERAL): _(
+                Event.TypeId.GENERAL: _(
                     "The registration for the event <strong>%(event_name)s</strong> waiting list was successful."
                 ),
-                str(Event.TypeId.COURSE): _(
+                Event.TypeId.COURSE: _(
                     "The registration for the course <strong>%(event_name)s</strong> waiting list was successful."
                 ),
-                str(Event.TypeId.VOLUNTEERING): _(
+                Event.TypeId.VOLUNTEERING: _(
                     "The registration for the volunteering <strong>%(event_name)s</strong> waiting list was successful."
                 ),
             },
             "secondary_text": {
-                str(Event.TypeId.GENERAL): _(
+                Event.TypeId.GENERAL: _(
                     "You will be automatically transferred from the waiting list to become a participant in the event if a place becomes available."  # noqa E501
                 ),
-                str(Event.TypeId.COURSE): _(
+                Event.TypeId.COURSE: _(
                     "You will be automatically transferred from the waiting list to become a participant in the course if a place becomes available."  # noqa E501
                 ),
-                str(Event.TypeId.VOLUNTEERING): _(
+                Event.TypeId.VOLUNTEERING: _(
                     "You will be automatically transferred from the waiting list to become a participant in the volunteering if a place becomes available."  # noqa E501
                 ),
             },
@@ -130,13 +130,13 @@ signup_email_texts = {
     SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT: {
         "heading": _("Welcome %(username)s"),
         "text": {
-            str(Event.TypeId.GENERAL): _(
+            Event.TypeId.GENERAL: _(
                 "You have been moved from the waiting list of the event <strong>%(event_name)s</strong> to a participant."  # noqa E501
             ),
-            str(Event.TypeId.COURSE): _(
+            Event.TypeId.COURSE: _(
                 "You have been moved from the waiting list of the course <strong>%(event_name)s</strong> to a participant."  # noqa E501
             ),
-            str(Event.TypeId.VOLUNTEERING): _(
+            Event.TypeId.VOLUNTEERING: _(
                 "You have been moved from the waiting list of the volunteering <strong>%(event_name)s</strong> to a participant."  # noqa E501
             ),
         },

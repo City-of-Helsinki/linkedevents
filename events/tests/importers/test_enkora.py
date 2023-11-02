@@ -2134,7 +2134,7 @@ class TestEnkoraImporter:
             "audience_max_age": 9,
             "super_event": None,
             "super_event_type": None,
-            "type_id": "2",
+            "type_id": 2,
             "deleted": False,
             "replaced_by": None,
             "maximum_attendee_capacity": 8,
