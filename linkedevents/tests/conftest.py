@@ -1,6 +1,5 @@
 import shutil
 
-import pytest
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
@@ -8,6 +7,7 @@ from django.core.management import call_command
 from django_orghierarchy.models import Organization, OrganizationClass
 from rest_framework.test import APIClient
 
+from audit_log.tests.conftest import *  # noqa
 from events.models import DataSource
 
 OTHER_DATA_SOURCE_ID = "testotherdatasourceid"

@@ -14,8 +14,12 @@ from .utils import versioned_reverse as reverse
 
 @override_settings(ENABLE_EXTERNAL_USER_EVENTS=False)
 @pytest.mark.usefixtures(
-    "make_complex_event_dict_class", "make_minimal_event_dict_class", "languages_class"
+    "test_audit_log_class",
+    "make_complex_event_dict_class",
+    "make_minimal_event_dict_class",
+    "languages_class",
 )
+@pytest.mark.no_test_audit_log
 class TestEventAPI(APITestCase):
     def setUp(self):
         user_model = get_user_model()

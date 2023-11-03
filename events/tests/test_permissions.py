@@ -10,6 +10,7 @@ from ..models import DataSource, Event, PublicationStatus
 from .factories import OrganizationFactory
 
 
+@pytest.mark.no_test_audit_log
 class TestUserModelPermissionMixin(TestCase):
     def setUp(self):
         self.instance = UserModelPermissionMixin()
@@ -41,6 +42,7 @@ class TestUserModelPermissionMixin(TestCase):
         )
 
 
+@pytest.mark.no_test_audit_log
 @pytest.mark.parametrize(
     "membership_status, expected_public, expected_draft",
     [
@@ -84,18 +86,23 @@ def test_can_edit_event(membership_status, expected_public, expected_draft):
         )
 
 
+@pytest.mark.no_test_audit_log
 @pytest.mark.parametrize(
-    "is_admin,is_regular_user,expected",
+    "is_admin,is_registration_admin,is_regular_user,expected",
     [
-        (True, True, False),
-        (True, False, False),
-        (False, True, False),
-        (False, False, True),
+        (True, True, True, False),
+        (True, False, True, False),
+        (True, False, False, False),
+        (False, False, True, False),
+        (True, True, False, False),
+        (False, True, True, False),
+        (False, True, False, False),
+        (False, False, False, True),
     ],
 )
 @pytest.mark.django_db
 def test_user_is_external_based_on_group_membership(
-    is_admin, is_regular_user, expected
+    is_admin, is_registration_admin, is_regular_user, expected
 ):
     with (
         patch.object(
@@ -104,13 +111,18 @@ def test_user_is_external_based_on_group_membership(
         patch.object(
             User, "admin_organizations", new_callable=MagicMock
         ) as admin_organizations,
+        patch.object(
+            User, "registration_admin_organizations", new_callable=MagicMock
+        ) as registration_admin_organizations,
     ):
         organization_memberships.exists.return_value = is_regular_user
         admin_organizations.exists.return_value = is_admin
+        registration_admin_organizations.exists.return_value = is_registration_admin
 
         assert User().is_external is expected
 
 
+@pytest.mark.no_test_audit_log
 class TestUserModelPermissions(TestCase):
     def setUp(self):
         self.instance = User.objects.create()

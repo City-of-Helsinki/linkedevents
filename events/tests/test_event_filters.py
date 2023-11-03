@@ -6,6 +6,7 @@ from events.tests.factories import EventFactory
 from events.tests.utils import create_super_event
 
 
+@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_get_event_list_hide_recurring_children_true():
     event_1 = EventFactory()
@@ -21,6 +22,7 @@ def test_get_event_list_hide_recurring_children_true():
     assert super_1 in result
 
 
+@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_get_event_list_hide_recurring_children_false():
     event_1 = EventFactory()

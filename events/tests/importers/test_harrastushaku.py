@@ -33,6 +33,7 @@ def importer():
     return HarrastushakuImporter(dict())
 
 
+@pytest.mark.no_test_audit_log
 @pytest.mark.parametrize(
     "timestamp,expected",
     [
@@ -50,6 +51,7 @@ def test_get_datetime_from_data_success(timestamp, expected):
     assert dt.isoformat() == expected
 
 
+@pytest.mark.no_test_audit_log
 @pytest.mark.parametrize("val", [None, False, ""])
 @pytest.mark.django_db
 def test_get_datetime_from_data_falsey(val):
@@ -60,6 +62,7 @@ def test_get_datetime_from_data_falsey(val):
     assert dt is None
 
 
+@pytest.mark.no_test_audit_log
 @pytest.mark.parametrize(
     "start_date,end_date,timetables,expected",
     [
@@ -158,6 +161,7 @@ def test_build_sub_event_time_ranges(
     assert result == expected_subtime_ranges
 
 
+@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_get_event_offers__translated_fields(importer):
     """Test get_event_offers returns translated fields as expected."""
@@ -179,6 +183,7 @@ def test_get_event_offers__translated_fields(importer):
     assert data[0]["description"] == {"fi": "Kuvaus"}
 
 
+@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_map_harrastushaku_location_ids_to_tprek_ids(importer):
     """Check that different Place matching criteria works as expected."""

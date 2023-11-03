@@ -145,8 +145,9 @@ def test_get_keyword_free_search(api_client, keyword, keyword2, keyword3):
     assert ids == [keyword.id, keyword2.id, keyword3.id]
 
 
+@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
-def test_list_keyword_query_counts(api_client, keyword, keyword2, keyword3):
+def test_list_keyword_query_counts(api_client, keyword, keyword2, keyword3, settings):
     """
     Expect 5 queries when listing keywords
     1) COUNT
@@ -155,5 +156,7 @@ def test_list_keyword_query_counts(api_client, keyword, keyword2, keyword3):
     4) SELECT related keyword labels
     5) SELECT system data source
     """
+    settings.AUDIT_LOG_ENABLED = False
+
     with assertNumQueries(5):
         get_list(api_client, data={"show_all_keywords": True})

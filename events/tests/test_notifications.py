@@ -72,6 +72,7 @@ def user_created_notification_template():
     return template
 
 
+@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_draft_event_deleted(event_deleted_notification_template, user, event):
     event.created_by = user
@@ -91,6 +92,7 @@ def test_draft_event_deleted(event_deleted_notification_template, user, event):
     )
 
 
+@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_public_event_deleted_doesnt_trigger_notification(
     event_deleted_notification_template, user, event
@@ -101,6 +103,7 @@ def test_public_event_deleted_doesnt_trigger_notification(
     assert len(mail.outbox) == 0
 
 
+@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_event_published(event_published_notification_template, user, draft_event):
     draft_event.created_by = user
@@ -118,6 +121,7 @@ def test_event_published(event_published_notification_template, user, draft_even
     )
 
 
+@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_draft_posted_as_super_event_sends(
     draft_posted_notification_template, user, draft_event
@@ -134,6 +138,7 @@ def test_draft_posted_as_super_event_sends(
     )
 
 
+@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_draft_posted_created_by_admin_user_does_not_send(data_source, organization):
     admin = UserFactory()
@@ -148,6 +153,7 @@ def test_draft_posted_created_by_admin_user_does_not_send(data_source, organizat
     assert len(mail.outbox) == 0
 
 
+@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_recurring_child_event_saved_does_not_send(event):
     user = UserFactory()
@@ -163,6 +169,7 @@ def test_recurring_child_event_saved_does_not_send(event):
     assert len(mail.outbox) == 0
 
 
+@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_other_than_recurring_child_event_saved_does_send(event):
     user = UserFactory()
@@ -177,6 +184,7 @@ def test_other_than_recurring_child_event_saved_does_send(event):
     assert len(mail.outbox) == 1
 
 
+@pytest.mark.no_test_audit_log
 @pytest.mark.parametrize(
     "uses_api_key, expect_email",
     [
@@ -206,6 +214,7 @@ def test_draft_notification_is_not_sent_when_using_api_key(
     assert bool(mail.outbox) == expect_email
 
 
+@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_user_created(user_created_notification_template, super_user):
     user = get_user_model().objects.create(
