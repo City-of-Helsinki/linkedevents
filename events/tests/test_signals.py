@@ -6,7 +6,7 @@ from django_orghierarchy.models import Organization
 from ..models import DataSource
 
 
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 class TestOrganizationPostSave(TestCase):
     def setUp(self):
         user_model = get_user_model()

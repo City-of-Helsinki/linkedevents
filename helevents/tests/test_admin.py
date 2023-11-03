@@ -8,7 +8,7 @@ from django_orghierarchy.models import Organization
 from events.tests.factories import OrganizationFactory
 
 
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 class TestLocalOrganizationAdmin(TestCase):
     @classmethod
     def setUpTestData(cls):

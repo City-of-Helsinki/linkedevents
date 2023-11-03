@@ -8,7 +8,7 @@ from helevents.tests.factories import UserFactory
 from ..models import DataSource, Event, Image, KeywordSet, PublicationStatus
 
 
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 class TestImage(TestCase):
     def setUp(self):
         user_model = get_user_model()
@@ -79,7 +79,7 @@ class TestImage(TestCase):
         self.assertTrue(can_be_deleted)
 
 
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 class TestImageExternal(TestCase):
     def setUp(self):
         self.user = UserFactory()
@@ -108,7 +108,7 @@ class TestImageExternal(TestCase):
         self.assertFalse(can_be_edited)
 
 
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 class TestEvent(TestCase):
     def setUp(self):
         user_model = get_user_model()
@@ -176,7 +176,7 @@ class TestEvent(TestCase):
         self.assertTrue(can_be_edited)
 
 
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 class TestKeywordSet(TestCase):
     def setUp(self):
         user_model = get_user_model()

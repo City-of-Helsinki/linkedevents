@@ -23,7 +23,7 @@ def local_tz():
     return pytz.timezone(django_settings.TIME_ZONE)
 
 
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_parse_time_iso8601(local_tz):
     assert parse_time("2022-07-17T17:17:17+03:00") == (
@@ -32,7 +32,7 @@ def test_parse_time_iso8601(local_tz):
     )
 
 
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_parse_time_iso8601_invalid_offset(local_tz):
     with pytest.raises(ParseError) as ex:
@@ -44,7 +44,7 @@ def test_parse_time_iso8601_invalid_offset(local_tz):
     assert "out of bounds" in str(ex.value)
 
 
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_parse_time_invalid_format(local_tz):
     with pytest.raises(ParseError) as ex:
@@ -52,7 +52,7 @@ def test_parse_time_invalid_format(local_tz):
     assert "time in invalid format" in str(ex.value)
 
 
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_parse_time_overflow_error(local_tz):
     # Underlying overflow error that needs to be separately
@@ -62,7 +62,7 @@ def test_parse_time_overflow_error(local_tz):
     assert "time in invalid format" in str(ex.value)
 
 
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_parse_time_dst_handling(local_tz):
     assert parse_end_time("2022-3-27") == (
@@ -91,7 +91,7 @@ def test_parse_time_dst_handling(local_tz):
         assert parse_end_time("now") == (timezone.now(), False)
 
 
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_start_of_day(local_tz):
     naive_dt = datetime(2022, 3, 27)
@@ -102,7 +102,7 @@ def test_start_of_day(local_tz):
     assert start_of_day(utc_dt) == aware_dt
 
 
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_start_of_next_day(local_tz):
     naive_dt = datetime(2022, 3, 27)
@@ -116,7 +116,7 @@ def test_start_of_next_day(local_tz):
     assert start_of_next_day(utc_dt) == aware_tomorrow_dt
 
 
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_start_of_previous_day(local_tz):
     naive_dt = datetime(2022, 3, 27)
@@ -130,7 +130,7 @@ def test_start_of_previous_day(local_tz):
     assert start_of_previous_day(utc_dt) == aware_previous_dt
 
 
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_inconsistent_tz_default(api_client, minimal_event_dict, user, settings):
     """

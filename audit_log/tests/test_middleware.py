@@ -5,7 +5,7 @@ import pytest
 from audit_log.middleware import AuditLogMiddleware
 
 
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 @pytest.mark.parametrize("audit_log_enabled", [True, False])
 def test_middleware_audit_log_setting(settings, audit_log_enabled):
     settings.AUDIT_LOG_ENABLED = audit_log_enabled
@@ -16,7 +16,7 @@ def test_middleware_audit_log_setting(settings, audit_log_enabled):
         assert mocked.called is audit_log_enabled
 
 
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 @pytest.mark.parametrize(
     "path,expected_called",
     [

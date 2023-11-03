@@ -12,7 +12,7 @@ from registrations.tests.factories import (
 )
 
 
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 class TestRegistration(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -66,7 +66,7 @@ class TestRegistration(TestCase):
         self.assertTrue(can_be_edited)
 
 
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 class TestRegistrationUserAccess(TestCase):
     def setUp(self):
         user_model = get_user_model()
@@ -102,7 +102,7 @@ class TestRegistrationUserAccess(TestCase):
         self.assertTrue(can_be_edited)
 
 
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 class TestSignUpGroup(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -167,7 +167,7 @@ class TestSignUpGroup(TestCase):
         self.assertEqual(self.signup_group.data_source.id, self.data_source.id)
 
 
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 class TestSignUp(TestCase):
     @classmethod
     def setUpTestData(cls):

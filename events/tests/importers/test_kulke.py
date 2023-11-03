@@ -12,7 +12,7 @@ from events.tests.factories import DataSourceFactory, EventFactory, KeywordFacto
 from events.tests.utils import create_super_event
 
 
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     "test_input,expected",
@@ -32,7 +32,7 @@ def test_parse_age_range_returns_correct_result(test_input, expected):
     assert parse_age_range(test_input) == expected
 
 
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     "test_input,expected",
@@ -65,7 +65,7 @@ def test_parse_course_time_returns_correct_result(test_input, expected):
     assert parse_course_time(test_input) == expected
 
 
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 class TestKulkeImporter(TestCase):
     def setUp(self) -> None:
         with patch.object(KulkeImporter, "fetch_kulke_categories", return_value={}):

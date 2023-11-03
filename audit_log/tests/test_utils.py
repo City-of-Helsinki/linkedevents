@@ -24,7 +24,7 @@ def _assert_basic_log_entry_data(log_entry):
 
 
 @freeze_time("2023-10-17 13:30:00+02:00")
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 @pytest.mark.parametrize(
     "status_code,audit_status",
     [
@@ -71,7 +71,7 @@ def test_commit_to_audit_log_response_status(status_code, audit_status):
 
 
 @freeze_time("2023-10-17 13:30:00+02:00")
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 @pytest.mark.parametrize(
     "http_method,audit_operation",
     [
@@ -108,7 +108,7 @@ def test_commit_to_audit_log_crud_operations(http_method, audit_operation):
 
 
 @freeze_time("2023-10-17 13:30:00+02:00")
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 @pytest.mark.parametrize(
     "user_role,audit_role",
     [
@@ -166,7 +166,7 @@ def test_commit_to_audit_log_actor_data(user_role, audit_role):
     _assert_basic_log_entry_data(log_entry)
 
 
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 @pytest.mark.parametrize(
     "remote_address,expected,x_forwarded_for",
     [

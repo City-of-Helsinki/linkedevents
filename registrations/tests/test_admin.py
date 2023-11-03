@@ -23,7 +23,7 @@ def make_admin(username="testadmin", is_superuser=True):
     )
 
 
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 class TestRegistrationAdmin(TestCase):
     def setUp(self):
         self.admin = make_admin()

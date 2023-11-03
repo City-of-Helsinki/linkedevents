@@ -8,9 +8,9 @@ from audit_log.models import AuditLogEntry
 
 @pytest.mark.django_db
 @pytest.fixture(autouse=True)
-def use_audit_log(request):
+def test_audit_log(request):
     audit_log_enabled = (
-        settings.AUDIT_LOG_ENABLED and "no_use_audit_log" not in request.keywords
+        settings.AUDIT_LOG_ENABLED and "no_test_audit_log" not in request.keywords
     )
 
     if audit_log_enabled:
@@ -24,7 +24,7 @@ def use_audit_log(request):
 
 @pytest.mark.django_db
 @pytest.fixture
-def use_audit_log_class(request):
+def test_audit_log_class(request):
     if settings.AUDIT_LOG_ENABLED:
 
         def audit_log_test_wrapper(test_function):

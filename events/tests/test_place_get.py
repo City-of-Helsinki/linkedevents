@@ -200,7 +200,7 @@ def test_get_place_with_upcoming_events(api_client, place, place2, event, past_e
     assert place2.id in ids
 
 
-@pytest.mark.no_use_audit_log
+@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_list_place_query_counts(api_client, place, place2, place3, settings):
     """
