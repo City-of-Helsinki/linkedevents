@@ -149,3 +149,7 @@ SENTRY_ENVIRONMENT=local-development-unconfigured
 #MAILGUN_API_KEY=key
 #MAILGUN_SENDER_DOMAIN=do.main.com
 #MAILGUN_API_URL=https://mail.gun.api/
+
+# Linked registrations has encrypted fields. The encryption keys can be rotated.
+# See command encrypt_fields_with_new_key for more information.
+FIELD_ENCRYPTION_KEYS=c87a6669a1ded2834f1dfd0830d86ef6cdd20372ac83e8c7c23feffe87e6a051
