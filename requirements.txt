@@ -44,7 +44,7 @@ defusedxml==0.7.1
     #   social-auth-core
 deprecation==2.1.0
     # via django-helusers
-django==3.2.22
+django==3.2.23
     # via
     #   -r requirements.in
     #   django-admin-autocomplete-filter
@@ -196,7 +196,7 @@ pexpect==4.8.0
     # via ipython
 pickleshare==0.7.5
     # via ipython
-pillow==9.4.0
+pillow==10.0.0
     # via
     #   -r requirements.in
     #   easy-thumbnails
