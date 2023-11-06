@@ -1296,7 +1296,8 @@ class ImageSerializer(EditableLinkedEventsObjectSerializer):
         return representation
 
     def validate(self, data):
-        super().validate(data)
+        # Super class LinkedEventsSerializer requires non-blank name, but for images
+        # it should be allowed, so do not call super().validate(data)
         return data
 
 
