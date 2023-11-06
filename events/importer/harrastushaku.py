@@ -13,7 +13,7 @@ from django.utils.dateparse import parse_time
 from django_orghierarchy.models import Organization
 
 from events.importer.sync import ModelSyncher
-from events.importer.util import clean_text
+from events.importer.utils import clean_text
 from events.importer.yso import KEYWORDS_TO_ADD_TO_AUDIENCE
 from events.keywords import KeywordMatcher
 from events.models import DataSource, Event, Keyword, Place

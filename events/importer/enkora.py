@@ -15,7 +15,7 @@ from events.importer.sync import ModelSyncher
 from events.models import DataSource, Event, Keyword, Place
 
 from .base import Importer, register_importer
-from .util import clean_text
+from .utils import clean_text
 
 logger = logging.getLogger(__name__)
 

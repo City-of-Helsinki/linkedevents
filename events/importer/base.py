@@ -17,7 +17,7 @@ from events.importer.sync import ModelSyncher
 from events.models import Event, EventLink, Image, Language, Offer, Place
 
 from .. import utils
-from .util import clean_text, separate_scripts
+from .utils import clean_text, separate_scripts
 
 logger = logging.getLogger(__name__)
 

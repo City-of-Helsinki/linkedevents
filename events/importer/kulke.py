@@ -31,7 +31,7 @@ from events.models import (
 from events.translation_utils import expand_model_fields
 
 from .base import Importer, recur_dict, register_importer
-from .util import clean_url, unicodetext
+from .utils import clean_url, unicodetext
 from .yso import KEYWORDS_TO_ADD_TO_AUDIENCE
 
 logger = logging.getLogger(__name__)

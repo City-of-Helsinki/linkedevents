@@ -17,7 +17,7 @@ from events.models import DataSource, Event, Keyword, Place
 
 from .base import Importer, recur_dict, register_importer
 from .sync import ModelSyncher
-from .util import clean_text
+from .utils import clean_text
 from .yso import KEYWORDS_TO_ADD_TO_AUDIENCE
 
 logger = logging.getLogger(__name__)
