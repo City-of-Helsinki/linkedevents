@@ -42,7 +42,6 @@ def reverse_mandatory_fields_migration(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("registrations", "0018_signup_first_and_last_name"),
     ]

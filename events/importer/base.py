@@ -240,7 +240,7 @@ class Importer(object):
         if (
             hasattr(obj, "is_user_edited")
             and obj.is_user_edited()
-            and not type(val) == bool
+            and not isinstance(val, bool)
         ):
             logger.debug(
                 "%s edited by user, will not change field %s" % (obj, field_name)

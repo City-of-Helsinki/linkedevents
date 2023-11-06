@@ -6,7 +6,6 @@ import events.models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("events", "0068_image_alt_text"),
     ]

@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("registrations", "0024_signup_and_signup_group_protected_data"),
     ]

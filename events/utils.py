@@ -229,7 +229,8 @@ def get_or_create_default_organization() -> Optional[Organization]:
     if not settings.EXTERNAL_USER_PUBLISHER_ID:
         warnings.warn(
             "EXTERNAL_USER_PUBLISHER_ID is empty, will not set or create "
-            "default organization."
+            "default organization.",
+            stacklevel=2,
         )
         return None
 

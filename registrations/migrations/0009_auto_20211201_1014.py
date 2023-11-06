@@ -5,7 +5,6 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("events", "0085_remove_feedback_limit"),
         ("registrations", "0008_signup_date_of_birth"),

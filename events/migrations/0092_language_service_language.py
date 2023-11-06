@@ -21,7 +21,6 @@ def set_default_service_languages(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("events", "0091_add_new_event_fields"),
     ]

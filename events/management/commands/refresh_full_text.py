@@ -83,7 +83,6 @@ class Command(BaseCommand):
                 cursor.execute(sql)
 
         else:
-
             if not options["force"]:
                 self.stdout.write("Checking if refresh is needed...")
 

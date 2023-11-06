@@ -17,7 +17,6 @@ def forward(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("events", "0038_add_index_for_last_modified_time"),
     ]

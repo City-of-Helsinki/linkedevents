@@ -137,7 +137,6 @@ class Command(BaseCommand):
             "audience"
         ):
             for audience in event.audience.all():
-
                 # if current audience is a valid hel.fi audience keyword, iterate YSO keywords corresponding to it
                 for yso_keyword_id in KEYWORD_MAPPING.get(audience.id, []):
                     yso_keyword_obj = self.get_keyword_obj(yso_keyword_id)

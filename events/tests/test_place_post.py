@@ -57,7 +57,6 @@ def test__cannot_create_an_place_with_existing_id(api_client, place_dict, user):
 
 @pytest.mark.django_db
 def test__a_non_user_cannot_create_a_place(api_client, place_dict):
-
     response = api_client.post(reverse("place-list"), place_dict, format="json")
     assert response.status_code == 401
 
@@ -75,7 +74,6 @@ def test__a_non_admin_cannot_create_a_place(api_client, place_dict, user):
 def test__api_key_with_organization_can_create_a_place(
     api_client, place_dict, data_source, organization
 ):
-
     data_source.owner = organization
     data_source.save()
 
@@ -95,7 +93,6 @@ def test__api_key_without_organization_cannot_create_a_place(
 
 @pytest.mark.django_db
 def test__unknown_api_key_cannot_create_a_place(api_client, place_dict):
-
     api_client.credentials(apikey="unknown")
     response = api_client.post(reverse("place-list"), place_dict, format="json")
     assert response.status_code == 401
@@ -103,7 +100,6 @@ def test__unknown_api_key_cannot_create_a_place(api_client, place_dict):
 
 @pytest.mark.django_db
 def test__empty_api_key_cannot_create_a_place(api_client, place_dict):
-
     api_client.credentials(apikey="")
     response = api_client.post(reverse("place-list"), place_dict, format="json")
     assert response.status_code == 401

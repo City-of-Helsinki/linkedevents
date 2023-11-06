@@ -13,7 +13,6 @@ def forwards_func(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("events", "0032_add_super_event_type"),
     ]

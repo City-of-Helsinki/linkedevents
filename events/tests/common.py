@@ -6,7 +6,6 @@ from events.models import DataSource
 
 class TestDataMixin:
     def set_up_test_data(self):
-
         # dummy inputs
         text = "testing"
 

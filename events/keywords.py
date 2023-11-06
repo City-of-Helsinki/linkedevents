@@ -48,7 +48,6 @@ class KeywordMatcher(object):
             return None
 
     def label_match(self, text, language=None):
-
         # Let's use Postgres full-text search to find a label matched by lexeme and rank the results with
         # TrigramSimilarity as fulltext SearchRank is not suitable for ranking matched individual words. If no language
         # is passed we cycle through all options as specified in FULLTEXT_SEARCH_LANGUAGES and select the best match

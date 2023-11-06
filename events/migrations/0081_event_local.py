@@ -17,7 +17,6 @@ def reverse_func(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("events", "0080_populate_tsvectors_and_indices"),
     ]

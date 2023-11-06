@@ -434,7 +434,6 @@ class CitySDKExporter(Exporter):
                 )
 
     def export_events(self, is_delete=False):
-
         if is_delete:
             self._delete_exported_from_target()
         else:

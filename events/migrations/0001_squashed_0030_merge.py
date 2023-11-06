@@ -34,7 +34,6 @@ def create_initial_licenses(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     replaces = [
         ("events", "0001_initial"),
         ("events", "0002_auto_20150119_2138"),

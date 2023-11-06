@@ -50,7 +50,6 @@ class Command(BaseCommand):
         return fixed_rows
 
     def _write_csv(self, filename, delimiter):
-
         orgs = Organization.objects.filter(parent__isnull=True)
         rows, max_depth = self._iterate_tree(orgs, delimiter)
 

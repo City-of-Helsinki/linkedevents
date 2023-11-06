@@ -49,7 +49,6 @@ def forwards(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("events", "0073_soft_delete_replaced_objects"),
         (
