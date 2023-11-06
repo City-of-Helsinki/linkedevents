@@ -4,38 +4,38 @@
 #
 #    pip-compile requirements.in
 #
-asgiref==3.6.0
+asgiref==3.7.2
     # via django
-asttokens==2.2.1
+asttokens==2.4.1
     # via stack-data
-async-timeout==4.0.2
+async-timeout==4.0.3
     # via redis
-attrs==22.2.0
+attrs==23.1.0
     # via
     #   -r requirements.in
     #   cattrs
     #   requests-cache
-backcall==0.2.0
-    # via ipython
-beautifulsoup4==4.11.2
+beautifulsoup4==4.12.2
     # via -r requirements.in
-bleach==6.0.0
+bleach==6.1.0
     # via -r requirements.in
-cachetools==5.3.0
+cachetools==5.3.2
     # via django-helusers
-cattrs==22.2.0
+cattrs==23.1.2
     # via requests-cache
 certifi==2023.7.22
     # via
     #   elasticsearch
     #   requests
     #   sentry-sdk
-cffi==1.15.1
+cffi==1.16.0
     # via cryptography
-charset-normalizer==3.1.0
+charset-normalizer==3.3.2
     # via requests
-cryptography==41.0.3
-    # via social-auth-core
+cryptography==41.0.5
+    # via
+    #   django-anymail
+    #   social-auth-core
 decorator==5.1.1
     # via ipython
 defusedxml==0.7.1
@@ -44,7 +44,7 @@ defusedxml==0.7.1
     #   social-auth-core
 deprecation==2.1.0
     # via django-helusers
-django==3.2.22
+django==3.2.23
     # via
     #   -r requirements.in
     #   django-admin-autocomplete-filter
@@ -72,17 +72,17 @@ django==3.2.22
     #   helsinki-profile-gdpr-api
 django-admin-autocomplete-filter==0.7.1
     # via -r requirements.in
-django-anymail==9.0
+django-anymail==10.2
     # via -r requirements.in
 django-appconf==1.0.5
     # via django-image-cropping
-django-cleanup==7.0.0
+django-cleanup==8.0.0
     # via -r requirements.in
-django-cors-headers==3.14.0
+django-cors-headers==4.3.0
     # via -r requirements.in
-django-environ==0.10.0
+django-environ==0.11.2
     # via -r requirements.in
-django-filter==22.1
+django-filter==23.3
     # via -r requirements.in
 django-haystack==3.2.1
     # via -r requirements.in
@@ -92,13 +92,13 @@ django-helusers==0.7.1
     #   helsinki-profile-gdpr-api
 django-image-cropping==1.7
     # via -r requirements.in
-django-jinja==2.10.2
+django-jinja==2.11.0
     # via -r requirements.in
-django-js-asset==2.0.0
+django-js-asset==2.1.0
     # via django-mptt
-django-leaflet==0.28.3
+django-leaflet==0.29.0
     # via -r requirements.in
-django-modeltranslation==0.18.9
+django-modeltranslation==0.18.11
     # via -r requirements.in
 django-mptt==0.14.0
     # via
@@ -115,9 +115,9 @@ django-parler==2.3
     #   django-parler-rest
 django-parler-rest==2.2
     # via django-munigeo
-django-redis==5.2.0
+django-redis==5.4.0
     # via -r requirements.in
-django-reversion==5.0.4
+django-reversion==5.0.8
     # via -r requirements.in
 django-searchable-encrypted-fields==0.2.1
     # via -r requirements.in
@@ -144,9 +144,11 @@ ecdsa==0.18.0
     # via python-jose
 elasticsearch==7.17.9
     # via -r requirements.in
-exceptiongroup==1.1.0
-    # via cattrs
-executing==1.2.0
+exceptiongroup==1.1.3
+    # via
+    #   cattrs
+    #   ipython
+executing==2.0.1
     # via stack-data
 future==0.18.3
     # via pyjwkest
@@ -154,19 +156,19 @@ helsinki-profile-gdpr-api==0.2.0
     # via -r requirements.in
 httmock==1.4.0
     # via -r requirements.in
-icalendar==5.0.4
+icalendar==5.0.11
     # via -r requirements.in
 idna==3.4
     # via requests
-importlib-metadata==6.0.0
+importlib-metadata==6.8.0
     # via markdown
-ipython==8.11.0
+ipython==8.17.2
     # via -r requirements.in
 isodate==0.6.1
     # via
     #   -r requirements.in
     #   rdflib
-jedi==0.18.2
+jedi==0.19.1
     # via ipython
 jinja2==3.1.2
     # via
@@ -174,13 +176,13 @@ jinja2==3.1.2
     #   django-jinja
 langdetect==1.0.9
     # via -r requirements.in
-lxml==4.9.2
+lxml==4.9.3
     # via
     #   -r requirements.in
     #   python-docx
-markdown==3.4.1
+markdown==3.5.1
     # via -r requirements.in
-markupsafe==2.1.2
+markupsafe==2.1.3
     # via jinja2
 matplotlib-inline==0.1.6
     # via ipython
@@ -188,21 +190,19 @@ oauthlib==3.2.2
     # via
     #   requests-oauthlib
     #   social-auth-core
-packaging==23.0
+packaging==23.2
     # via deprecation
 parso==0.8.3
     # via jedi
 pexpect==4.8.0
     # via ipython
-pickleshare==0.7.5
-    # via ipython
-pillow==9.4.0
+pillow==10.1.0
     # via
     #   -r requirements.in
     #   easy-thumbnails
-platformdirs==3.1.0
+platformdirs==3.11.0
     # via requests-cache
-prompt-toolkit==3.0.38
+prompt-toolkit==3.0.39
     # via ipython
 psycopg2-binary==2.9.5
     # via -r requirements.in
@@ -210,7 +210,7 @@ ptyprocess==0.7.0
     # via pexpect
 pure-eval==0.2.2
     # via stack-data
-pyasn1==0.4.8
+pyasn1==0.5.0
     # via
     #   python-jose
     #   rsa
@@ -218,41 +218,41 @@ pycparser==2.21
     # via cffi
 pycryptodome==3.19.0
     # via django-searchable-encrypted-fields
-pycryptodomex==3.17
+pycryptodomex==3.19.0
     # via pyjwkest
-pygments==2.15.1
+pygments==2.16.1
     # via ipython
 pyjwkest==1.4.2
     # via drf-oidc-auth
 pyjwt==2.8.0
     # via social-auth-core
-pyparsing==3.0.9
+pyparsing==3.1.1
     # via rdflib
 python-dateutil==2.8.2
     # via
     #   -r requirements.in
     #   icalendar
-python-docx==0.8.11
+python-docx==1.1.0
     # via -r requirements.in
 python-jose==3.3.0
     # via django-helusers
 python3-openid==3.2.0
     # via social-auth-core
-pytz==2022.7.1
+pytz==2023.3.post1
     # via
     #   -r requirements.in
     #   django
     #   djangorestframework
     #   icalendar
-pyyaml==6.0
+pyyaml==6.0.1
     # via
     #   -r requirements.in
     #   django-munigeo
 rdflib==6.1.1
     # via -r requirements.in
-redis==4.5.4
+redis==5.0.1
     # via django-redis
-regex==2022.10.31
+regex==2023.10.3
     # via -r requirements.in
 requests==2.31.0
     # via
@@ -266,7 +266,7 @@ requests==2.31.0
     #   requests-cache
     #   requests-oauthlib
     #   social-auth-core
-requests-cache==1.0.0
+requests-cache==1.1.0
     # via
     #   -r requirements.in
     #   django-munigeo
@@ -274,7 +274,7 @@ requests-oauthlib==1.3.1
     # via social-auth-core
 rsa==4.9
     # via python-jose
-sentry-sdk==1.16.0
+sentry-sdk==1.34.0
     # via -r requirements.in
 six==1.16.0
     # via
@@ -294,37 +294,43 @@ social-auth-core==4.0.3
     # via
     #   -r requirements.in
     #   social-auth-app-django
-soupsieve==2.4
+soupsieve==2.5
     # via beautifulsoup4
 sqlparse==0.4.4
     # via django
-stack-data==0.6.2
+stack-data==0.6.3
     # via ipython
 swapper==1.3.0
     # via django-orghierarchy
-traitlets==5.9.0
+traitlets==5.13.0
     # via
     #   ipython
     #   matplotlib-inline
-typing-extensions==4.5.0
-    # via django-modeltranslation
-ujson==5.7.0
+typing-extensions==4.8.0
+    # via
+    #   asgiref
+    #   cattrs
+    #   django-modeltranslation
+    #   ipython
+    #   python-docx
+ujson==5.8.0
     # via -r requirements.in
 url-normalize==1.4.3
     # via requests-cache
-urllib3==1.26.14
+urllib3==1.26.18
     # via
+    #   django-anymail
     #   elasticsearch
     #   requests
     #   requests-cache
     #   sentry-sdk
-wcwidth==0.2.6
+wcwidth==0.2.9
     # via prompt-toolkit
 webencodings==0.5.1
     # via bleach
-whitenoise==6.4.0
+whitenoise==6.6.0
     # via -r requirements.in
-zipp==3.15.0
+zipp==3.17.0
     # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
