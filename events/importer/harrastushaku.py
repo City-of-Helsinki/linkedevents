@@ -22,7 +22,7 @@ from .base import Importer, register_importer
 
 logger = logging.getLogger(__name__)
 
-HARRASTUSHAKU_API_BASE_URL = "http://www.harrastushaku.fi/api/"
+HARRASTUSHAKU_API_BASE_URL = "https://www.harrastushaku.fi/api/"
 
 TIMEZONE = pytz.timezone("Europe/Helsinki")
 
