@@ -156,7 +156,7 @@ class Image(models.Model):
     objects = BaseQuerySet.as_manager()
 
     # Properties from schema.org/Thing
-    name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True, default='')
+    name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True, blank=True, default='')
 
     data_source = models.ForeignKey(
         DataSource, on_delete=models.CASCADE, related_name='provided_%(class)s_data', db_index=True, null=True)
