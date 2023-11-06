@@ -24,6 +24,7 @@ RUN apt-install.sh \
     build-essential \
     gdal-bin \
     gettext \
+    libpq-dev \
     postgresql-client \
     libcurl4-openssl-dev \
     && pip install --upgrade pip setuptools wheel \
