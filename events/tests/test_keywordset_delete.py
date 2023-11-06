@@ -1,6 +1,8 @@
 import pytest
 from rest_framework import status
 
+from audit_log.models import AuditLogEntry
+
 from .utils import versioned_reverse as reverse
 
 
@@ -14,6 +16,19 @@ def test_keywordset_delete(api_client, user, keyword_set):
 
     response = api_client.get(delete_url)
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.django_db
+def test_keyword_set_id_is_audit_logged_on_delete(user_api_client, keyword_set):
+    delete_url = reverse("keywordset-detail", kwargs={"pk": keyword_set.id})
+
+    response = user_api_client.delete(delete_url)
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+        keyword_set.pk
+    ]
 
 
 @pytest.mark.django_db

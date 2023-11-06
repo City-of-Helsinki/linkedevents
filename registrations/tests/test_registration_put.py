@@ -3,10 +3,10 @@ from django.core import mail
 from django.utils import translation
 from rest_framework import status
 
+from audit_log.models import AuditLogEntry
 from events.models import Event
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import RegistrationUserAccess
-from registrations.tests.factories import RegistrationFactory
 from registrations.tests.test_registration_post import (
     create_registration,
     get_event_url,
@@ -418,3 +418,14 @@ def test_registration_text_fields_are_sanitized(event, registration, user_api_cl
     assert registration.confirmation_message_sv == cleaned_confirmation_message
     assert registration.instructions_fi == allowed_instructions
     assert registration.instructions_sv == cleaned_instructions
+
+
+@pytest.mark.django_db
+def test_registration_id_is_audit_logged_on_put(registration, user_api_client):
+    registration_data = {"event": {"@id": get_event_url(registration.event_id)}}
+    assert_update_registration(user_api_client, registration.id, registration_data)
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+        registration.pk
+    ]

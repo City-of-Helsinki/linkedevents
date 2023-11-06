@@ -1,5 +1,7 @@
 import pytest
 
+from audit_log.models import AuditLogEntry
+
 from .utils import versioned_reverse as reverse
 
 
@@ -12,6 +14,19 @@ def test_keyword_delete(api_client, user, keyword):
 
     response = api_client.get(reverse("keyword-detail", kwargs={"pk": keyword.id}))
     assert response.status_code == 410
+
+
+@pytest.mark.django_db
+def test_keyword_id_is_audit_logged_on_delete(user_api_client, keyword):
+    response = user_api_client.delete(
+        reverse("keyword-detail", kwargs={"pk": keyword.id})
+    )
+    assert response.status_code == 204
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+        keyword.pk
+    ]
 
 
 @pytest.mark.django_db

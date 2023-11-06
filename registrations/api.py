@@ -17,6 +17,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from audit_log.mixins import AuditLogApiViewMixin
 from events.api import (
     _filter_event_queryset,
     JSONAPIViewMixin,
@@ -61,6 +62,7 @@ class RegistrationViewSet(
     UserDataSourceAndOrganizationMixin,
     JSONAPIViewMixin,
     RegistrationsAllowedMethodsMixin,
+    AuditLogApiViewMixin,
     viewsets.ModelViewSet,
 ):
     serializer_class = RegistrationSerializer
@@ -163,7 +165,7 @@ class RegistrationViewSet(
         permission_classes=[CanAccessRegistration],
     )
     def send_message(self, request, pk=None, version=None):
-        registration = self.get_object()
+        registration = self.get_object(skip_log_ids=True)
 
         data = request.data
         data["registration"] = registration
@@ -190,6 +192,8 @@ class RegistrationViewSet(
             subject, cleaned_body, plain_text_body, message_signups
         )
 
+        self._add_audit_logged_object_ids(message_signups)
+
         try:
             send_mass_html_mail(messages, fail_silently=False)
         except SMTPException as e:
@@ -214,7 +218,7 @@ class RegistrationViewSet(
 register_view(RegistrationViewSet, "registration")
 
 
-class RegistrationUserAccessViewSet(viewsets.GenericViewSet):
+class RegistrationUserAccessViewSet(AuditLogApiViewMixin, viewsets.GenericViewSet):
     queryset = RegistrationUserAccess.objects.all()
     serializer_class = RegistrationUserAccessSerializer
     permission_classes = [OrganizationUserEditPermission]
@@ -374,6 +378,7 @@ class SignUpGroupFilter(SignUpBaseFilter):
 class SignUpViewSet(
     UserDataSourceAndOrganizationMixin,
     RegistrationsAllowedMethodsMixin,
+    AuditLogApiViewMixin,
     viewsets.ModelViewSet,
 ):
     serializer_class = SignUpSerializer
@@ -382,6 +387,7 @@ class SignUpViewSet(
     filterset_class = SignUpFilter
     permission_classes = [CanAccessSignup]
 
+    @transaction.atomic
     def create(self, request, *args, **kwargs):
         context = super().get_serializer_context()
         data = request.data
@@ -392,6 +398,7 @@ class SignUpViewSet(
         serializer = CreateSignUpsSerializer(data=data, context=context)
         serializer.is_valid(raise_exception=True)
 
+        audit_logged_signups = []
         signups = []
 
         # Create SignUps and add persons to correct list
@@ -400,11 +407,15 @@ class SignUpViewSet(
             signup.is_valid()
             signee = signup.create(validated_data=signup.validated_data)
 
+            audit_logged_signups.append(signee)
+
             signups.append(SignUpSerializer(signee, context=context).data)
 
         # Delete reservation
         reservation = serializer.validated_data["reservation"]
         reservation.delete()
+
+        self._add_audit_logged_object_ids(audit_logged_signups)
 
         return Response(data=signups, status=status.HTTP_201_CREATED)
 
@@ -425,6 +436,7 @@ register_view(SignUpViewSet, "signup")
 class SignUpGroupViewSet(
     UserDataSourceAndOrganizationMixin,
     RegistrationsAllowedMethodsMixin,
+    AuditLogApiViewMixin,
     viewsets.ModelViewSet,
 ):
     serializer_class = SignUpGroupSerializer
@@ -476,6 +488,7 @@ register_view(SignUpGroupViewSet, "signup_group")
 
 
 class SeatReservationViewSet(
+    AuditLogApiViewMixin,
     mixins.CreateModelMixin,
     mixins.UpdateModelMixin,
     viewsets.GenericViewSet,

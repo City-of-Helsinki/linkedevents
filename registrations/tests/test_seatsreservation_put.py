@@ -4,6 +4,7 @@ import pytest
 from django.utils.timezone import localtime
 from rest_framework import status
 
+from audit_log.models import AuditLogEntry
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
 from registrations.tests.factories import SeatReservationCodeFactory
@@ -284,3 +285,23 @@ def test_cannot_reserve_seats_waiting_list_if_there_are_not_enough_seats_availab
         response.data["seats"][0]
         == "Not enough capacity in the waiting list. Capacity left: 2."
     )
+
+
+@pytest.mark.django_db
+def test_seatreservation_id_is_audit_logged_on_put(registration, user_api_client):
+    registration.maximum_attendee_capacity = 2
+    registration.save(update_fields=["maximum_attendee_capacity"])
+
+    reservation = SeatReservationCodeFactory(seats=1, registration=registration)
+    reservation_data = {
+        "seats": 2,
+        "registration": registration.id,
+        "code": reservation.code,
+    }
+
+    assert_update_seats_reservation(user_api_client, reservation.id, reservation_data)
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+        reservation.pk
+    ]

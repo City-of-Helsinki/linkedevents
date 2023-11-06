@@ -1,5 +1,7 @@
 import pytest
+from rest_framework import status
 
+from audit_log.models import AuditLogEntry
 from events.auth import ApiKeyUser
 from events.tests.test_keyword_post import create_with_post
 from events.tests.utils import assert_keyword_data_is_equal
@@ -38,6 +40,19 @@ def test__update_a_keyword_with_put(api_client, keyword_dict, user):
     response2 = update_with_put(api_client, kw_id, data2)
     # assert
     assert_keyword_data_is_equal(data2, response2.data)
+
+
+@pytest.mark.django_db
+def test_keyword_id_is_audit_logged_on_put(user_api_client, keyword, keyword_dict):
+    detail_url = reverse("keyword-detail", kwargs={"pk": keyword.pk})
+
+    response = update_with_put(user_api_client, detail_url, keyword_dict)
+    assert response.status_code == status.HTTP_200_OK
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+        keyword.pk
+    ]
 
 
 @pytest.mark.django_db

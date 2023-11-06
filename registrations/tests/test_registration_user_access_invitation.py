@@ -3,9 +3,11 @@ from django.core import mail
 from django.utils import translation
 from rest_framework import status
 
+from audit_log.models import AuditLogEntry
 from events.models import Event, Language
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import RegistrationUserAccess
+from registrations.tests.factories import RegistrationUserAccessFactory
 from registrations.tests.utils import assert_invitation_email_is_sent
 
 email = "user@email.com"
@@ -122,3 +124,19 @@ def test_invitation_to_send_in_selected_language(
         assert mail.outbox[0].to[0] == email
         assert mail.outbox[0].subject.startswith(expect_subject)
         assert expect_content in str(mail.outbox[0].alternatives[0])
+
+
+@pytest.mark.django_db
+def test_registration_user_access_id_is_audit_logged_on_invitation(
+    user_api_client, registration
+):
+    registration_user_access = RegistrationUserAccessFactory(
+        email=email, registration=registration
+    )
+
+    assert_send_invitation(user_api_client, registration_user_access.pk)
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+        registration_user_access.pk
+    ]

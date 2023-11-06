@@ -3,6 +3,7 @@ import os
 import pytest
 from rest_framework import status
 
+from audit_log.models import AuditLogEntry
 from events.models import Image
 
 from .test_event_images_v1 import create_uploaded_image
@@ -51,6 +52,14 @@ def test__delete_an_image(api_client, data_source, user, organization):
     # check that the image file is deleted
     image_path = get_image_path(existing_image)
     assert not os.path.isfile(image_path)
+
+
+@pytest.mark.django_db
+def test_image_id_is_audit_logged_on_delete(user_api_client, image):
+    assert_delete_image(user_api_client, image)
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [image.pk]
 
 
 @pytest.mark.django_db

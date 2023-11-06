@@ -2,6 +2,7 @@ import pytest
 from django_orghierarchy.models import Organization
 from rest_framework import status
 
+from audit_log.models import AuditLogEntry
 from events.api import OrganizationDetailSerializer
 from events.tests.utils import versioned_reverse as reverse
 
@@ -103,6 +104,26 @@ def test_admin_user_can_create_organization(data_source, organization, user_api_
 
     response = assert_create_organization(user_api_client, payload)
     assert response.data["name"] == payload["name"]
+
+
+@pytest.mark.django_db
+def test_organization_id_is_audit_logged_on_post(
+    data_source, organization, user_api_client
+):
+    origin_id = "test_organization2"
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+    }
+
+    response = assert_create_organization(user_api_client, payload)
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+        response.data["id"]
+    ]
 
 
 @pytest.mark.django_db
@@ -314,6 +335,21 @@ def test_admin_user_can_update_organization(organization, user_api_client):
 
 
 @pytest.mark.django_db
+def test_organization_id_is_audit_logged_on_put(organization, user_api_client):
+    payload = {
+        "id": organization.id,
+        "name": edited_organization_name,
+    }
+
+    assert_update_organization(user_api_client, organization.pk, payload)
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+        organization.pk
+    ]
+
+
+@pytest.mark.django_db
 def test_admin_user_update_organization_registration_admin_users(
     organization, user2, user_api_client
 ):
@@ -409,6 +445,16 @@ def test_admin_user_can_delete_organization(organization, user_api_client):
     assert_delete_organization(user_api_client, organization.id)
     response = get_organization(user_api_client, organization.id)
     assert response.status_code == 404
+
+
+@pytest.mark.django_db
+def test_organization_id_is_audit_logged_on_delete(organization, user_api_client):
+    assert_delete_organization(user_api_client, organization.pk)
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+        organization.pk
+    ]
 
 
 @pytest.mark.django_db

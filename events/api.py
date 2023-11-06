@@ -69,6 +69,7 @@ from rest_framework_bulk import (
     BulkSerializerMixin,
 )
 
+from audit_log.mixins import AuditLogApiViewMixin
 from events import utils
 from events.api_pagination import LargeResultsSetPagination
 from events.auth import ApiKeyUser
@@ -855,6 +856,7 @@ class KeywordSerializer(EditableLinkedEventsObjectSerializer):
 class KeywordViewSet(
     UserDataSourceAndOrganizationMixin,
     JSONAPIViewMixin,
+    AuditLogApiViewMixin,
     mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
     mixins.DestroyModelMixin,
@@ -901,6 +903,7 @@ class KeywordDeprecatedException(APIException):
 class KeywordListViewSet(
     UserDataSourceAndOrganizationMixin,
     JSONAPIViewMixin,
+    AuditLogApiViewMixin,
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
     viewsets.GenericViewSet,
@@ -1059,7 +1062,10 @@ class KeywordSetSerializer(LinkedEventsSerializer):
 
 
 class KeywordSetViewSet(
-    UserDataSourceAndOrganizationMixin, JSONAPIViewMixin, viewsets.ModelViewSet
+    UserDataSourceAndOrganizationMixin,
+    JSONAPIViewMixin,
+    AuditLogApiViewMixin,
+    viewsets.ModelViewSet,
 ):
     queryset = KeywordSet.objects.all()
     serializer_class = KeywordSetSerializer
@@ -1254,6 +1260,7 @@ class PlaceRetrieveViewSet(
     UserDataSourceAndOrganizationMixin,
     JSONAPIViewMixin,
     GeoModelAPIView,
+    AuditLogApiViewMixin,
     mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
     mixins.DestroyModelMixin,
@@ -1303,6 +1310,7 @@ class PlaceListViewSet(
     UserDataSourceAndOrganizationMixin,
     GeoModelAPIView,
     JSONAPIViewMixin,
+    AuditLogApiViewMixin,
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
     viewsets.GenericViewSet,
@@ -1407,7 +1415,9 @@ class LanguageSerializer(LinkedEventsSerializer):
         return obj.id in utils.get_fixed_lang_codes()
 
 
-class LanguageViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
+class LanguageViewSet(
+    JSONAPIViewMixin, AuditLogApiViewMixin, viewsets.ReadOnlyModelViewSet
+):
     queryset = Language.objects.all()
     serializer_class = LanguageSerializer
     filterset_fields = ("service_language",)
@@ -1607,6 +1617,7 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
 class OrganizationViewSet(
     UserDataSourceAndOrganizationMixin,
     JSONAPIViewMixin,
+    AuditLogApiViewMixin,
     viewsets.ModelViewSet,
 ):
     queryset = Organization.objects.all()
@@ -1666,7 +1677,9 @@ class DataSourceSerializer(LinkedEventsSerializer):
         exclude = ["api_key"]
 
 
-class DataSourceViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
+class DataSourceViewSet(
+    JSONAPIViewMixin, AuditLogApiViewMixin, viewsets.ReadOnlyModelViewSet
+):
     queryset = DataSource.objects.all()
     serializer_class = DataSourceSerializer
     permission_classes = [GuestRetrieve | UserIsAdminInAnyOrganization]
@@ -1683,7 +1696,11 @@ class OrganizationClassSerializer(LinkedEventsSerializer):
         fields = "__all__"
 
 
-class OrganizationClassViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
+class OrganizationClassViewSet(
+    JSONAPIViewMixin,
+    AuditLogApiViewMixin,
+    viewsets.ReadOnlyModelViewSet,
+):
     queryset = OrganizationClass.objects.all()
     serializer_class = OrganizationClassSerializer
     permission_classes = [GuestRetrieve | UserIsAdminInAnyOrganization]
@@ -1748,7 +1765,10 @@ class ImageSerializer(EditableLinkedEventsObjectSerializer):
 
 
 class ImageViewSet(
-    UserDataSourceAndOrganizationMixin, JSONAPIViewMixin, viewsets.ModelViewSet
+    UserDataSourceAndOrganizationMixin,
+    JSONAPIViewMixin,
+    AuditLogApiViewMixin,
+    viewsets.ModelViewSet,
 ):
     queryset = Image.objects.all().select_related(
         "publisher", "data_source", "created_by", "last_modified_by", "license"
@@ -3537,6 +3557,7 @@ class EventDeletedException(APIException):
 class EventViewSet(
     UserDataSourceAndOrganizationMixin,
     JSONAPIViewMixin,
+    AuditLogApiViewMixin,
     BulkModelViewSet,
     viewsets.ModelViewSet,
 ):
@@ -3629,7 +3650,7 @@ class EventViewSet(
             )
         return queryset
 
-    def get_object(self):
+    def get_object(self, skip_log_ids=False):
         event = super().get_object()
         if (
             event.publication_status == PublicationStatus.PUBLIC
@@ -3952,7 +3973,11 @@ DATE_DECAY_SCALE = "30d"
 
 
 class SearchViewSet(
-    JSONAPIViewMixin, GeoModelAPIView, viewsets.ViewSetMixin, generics.ListAPIView
+    JSONAPIViewMixin,
+    GeoModelAPIView,
+    viewsets.ViewSetMixin,
+    AuditLogApiViewMixin,
+    generics.ListAPIView,
 ):
     def get_serializer_class(self):
         if self.request.version == "v0.1":
@@ -4062,14 +4087,18 @@ class FeedbackSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class FeedbackViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+class FeedbackViewSet(
+    AuditLogApiViewMixin, mixins.CreateModelMixin, viewsets.GenericViewSet
+):
     serializer_class = FeedbackSerializer
 
 
 register_view(FeedbackViewSet, "feedback", base_name="feedback")
 
 
-class GuestFeedbackViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+class GuestFeedbackViewSet(
+    AuditLogApiViewMixin, mixins.CreateModelMixin, viewsets.GenericViewSet
+):
     serializer_class = FeedbackSerializer
     permission_classes = (GuestPost,)
 

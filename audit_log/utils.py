@@ -84,6 +84,17 @@ def _get_actor_data(request):
     }
 
 
+def _get_target(request):
+    audit_logged_object_ids = getattr(request, "_audit_logged_object_ids", set())
+
+    target = {"path": request.path, "object_ids": list(audit_logged_object_ids)}
+
+    if hasattr(request, "_audit_logged_object_ids"):
+        delattr(request, "_audit_logged_object_ids")
+
+    return target
+
+
 def commit_to_audit_log(request, response):
     current_time = timezone.now()
     iso_8601_datetime = f"{current_time.replace(tzinfo=None).isoformat(sep='T', timespec='milliseconds')}Z"
@@ -96,7 +107,7 @@ def commit_to_audit_log(request, response):
             "date_time": iso_8601_datetime,
             "actor": _get_actor_data(request),
             "operation": _get_operation_name(request),
-            "target": request.path,
+            "target": _get_target(request),
         }
     }
 

@@ -1,10 +1,12 @@
 import datetime
+from unittest.mock import patch
 
 import haystack
 import pytest
 from django.conf import settings
 from django.test import TestCase
 from pytz import timezone
+from rest_framework import status
 
 # from haystack.management.commands import rebuild_index, clear_index
 from rest_framework.test import APIClient
@@ -65,6 +67,16 @@ class EventSearchTests(TestCase, TestDataMixin):
         response = self._get_response("ASearchQueryThatShouldntReturnMatches")
         self.assertEqual(response.status_code, 200, msg=response.content)
         self.assertTrue(response.data["meta"]["count"] == 0)
+
+    def test_event_id_is_audit_logged_on_event_search(self):
+        with patch(
+            "audit_log.mixins.AuditLogApiViewMixin._add_audit_logged_object_ids"
+        ) as mocked:
+            query = self.dummy.name.split()[0]  # let's use just the first word
+            response = self._get_response(query)
+            assert response.status_code == status.HTTP_200_OK
+
+            mocked.assert_called()
 
     # simple backend doesn't have an index, so we cannot test index updates
     # def test__search_shouldnt_return_deleted_matches(self):

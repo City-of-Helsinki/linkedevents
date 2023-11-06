@@ -8,6 +8,7 @@ from django.utils.timezone import localtime
 from freezegun import freeze_time
 from rest_framework import status
 
+from audit_log.models import AuditLogEntry
 from events.models import Event
 from events.tests.factories import LanguageFactory
 from events.tests.utils import versioned_reverse as reverse
@@ -1000,19 +1001,22 @@ def test_confirmation_message_is_shown_in_service_language(
             "en",
             "Waiting list seat reserved",
             "The registration for the event <strong>Foo</strong> waiting list was successful.",
-            "You will be automatically transferred from the waiting list to become a participant in the event if a place becomes available.",
+            "You will be automatically transferred from the waiting list to become a participant "
+            "in the event if a place becomes available.",
         ),
         (
             "fi",
             "Paikka jonotuslistalla varattu",
             "Ilmoittautuminen tapahtuman <strong>Foo</strong> jonotuslistalle onnistui.",
-            "Jonotuslistalta siirretään automaattisesti tapahtuman osallistujaksi mikäli paikka vapautuu.",
+            "Jonotuslistalta siirretään automaattisesti tapahtuman osallistujaksi mikäli paikka "
+            "vapautuu.",
         ),
         (
             "sv",
             "Väntelista plats reserverad",
             "Registreringen till väntelistan för <strong>Foo</strong>-evenemanget lyckades.",
-            "Du flyttas automatiskt över från väntelistan för att bli deltagare i evenemanget om en plats blir ledig.",
+            "Du flyttas automatiskt över från väntelistan för att bli deltagare i evenemanget om "
+            "en plats blir ledig.",
         ),
     ],
 )
@@ -1073,17 +1077,20 @@ def test_signup_group_different_email_sent_if_user_is_added_to_waiting_list(
         (
             Event.TypeId.GENERAL,
             "The registration for the event <strong>Foo</strong> waiting list was successful.",
-            "You will be automatically transferred from the waiting list to become a participant in the event if a place becomes available.",
+            "You will be automatically transferred from the waiting list to become a participant "
+            "in the event if a place becomes available.",
         ),
         (
             Event.TypeId.COURSE,
             "The registration for the course <strong>Foo</strong> waiting list was successful.",
-            "You will be automatically transferred from the waiting list to become a participant in the course if a place becomes available.",
+            "You will be automatically transferred from the waiting list to become a participant "
+            "in the course if a place becomes available.",
         ),
         (
             Event.TypeId.VOLUNTEERING,
             "The registration for the volunteering <strong>Foo</strong> waiting list was successful.",
-            "You will be automatically transferred from the waiting list to become a participant in the volunteering if a place becomes available.",
+            "You will be automatically transferred from the waiting list to become a participant "
+            "in the volunteering if a place becomes available.",
         ),
     ],
 )
@@ -1179,3 +1186,26 @@ def test_signup_group_text_fields_are_sanitized(
     assert signup.phone_number == "0441111111"
     assert signup.street_address == "Street address Html"
     assert signup.zipcode == "zip"
+
+
+@pytest.mark.django_db
+def test_signup_group_id_is_audit_logged_on_patch(api_client, registration):
+    reservation = SeatReservationCodeFactory(seats=2)
+
+    LanguageFactory(pk="fi", service_language=True)
+    LanguageFactory(pk="en", service_language=True)
+
+    signup_group_data = default_signup_group_data
+    signup_group_data["registration"] = reservation.registration_id
+    signup_group_data["reservation_code"] = reservation.code
+
+    user = UserFactory()
+    user.registration_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    response = assert_create_signup_group(api_client, signup_group_data)
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+        response.data["id"]
+    ]

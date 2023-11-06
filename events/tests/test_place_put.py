@@ -1,5 +1,7 @@
 import pytest
+from rest_framework import status
 
+from audit_log.models import AuditLogEntry
 from events.auth import ApiKeyUser
 from events.tests.test_place_post import create_with_post
 from events.tests.utils import assert_place_data_is_equal
@@ -37,6 +39,17 @@ def test__update_a_place_with_put(api_client, place_dict, user):
     response2 = update_with_put(api_client, place_id, data2)
     # assert
     assert_place_data_is_equal(data2, response2.data)
+
+
+@pytest.mark.django_db
+def test_place_id_is_audit_logged_on_put(user_api_client, place, place_dict):
+    detail_url = reverse("place-detail", kwargs={"pk": place.pk})
+
+    response = update_with_put(user_api_client, detail_url, place_dict)
+    assert response.status_code == status.HTTP_200_OK
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [place.pk]
 
 
 @pytest.mark.django_db

@@ -1,3 +1,4 @@
+from collections import Counter
 from datetime import datetime, timezone
 from unittest.mock import Mock
 
@@ -6,10 +7,14 @@ from django.contrib.auth.models import AnonymousUser
 from freezegun import freeze_time
 
 from audit_log.enums import Operation, Role, Status
+from audit_log.mixins import AuditLogApiViewMixin
 from audit_log.models import AuditLogEntry
-from audit_log.utils import _get_remote_address, commit_to_audit_log
+from audit_log.utils import _get_remote_address, _get_target, commit_to_audit_log
 from events.tests.factories import ApiKeyUserFactory, OrganizationFactory
+from helevents.models import User
 from helevents.tests.factories import UserFactory
+
+# === util methods ===
 
 
 def _assert_basic_log_entry_data(log_entry):
@@ -21,6 +26,24 @@ def _assert_basic_log_entry_data(log_entry):
         current_time.timestamp() * 1000
     )
     assert log_entry.message["audit_event"]["date_time"] == iso_8601_date
+
+
+def _create_default_request_mock(user):
+    return Mock(
+        method="GET",
+        user=user,
+        path="/v1/endpoint",
+        headers={"x-forwarded-for": "1.2.3.4:80"},
+    )
+
+
+def _assert_target_data(target_data, expected_path, expected_object_ids):
+    assert len(target_data.keys()) == 2
+    assert target_data["path"] == expected_path
+    assert Counter(target_data["object_ids"]) == Counter(expected_object_ids)
+
+
+# === tests ===
 
 
 @freeze_time("2023-10-17 13:30:00+02:00")
@@ -52,12 +75,9 @@ def _assert_basic_log_entry_data(log_entry):
 def test_commit_to_audit_log_response_status(status_code, audit_status):
     user = UserFactory()
 
-    req_mock = Mock(
-        method="GET",
-        user=user,
-        path="/v1/endpoint",
-        headers={"x-forwarded-for": "1.2.3.4:80"},
-    )
+    req_mock = _create_default_request_mock(user)
+    req_mock._audit_logged_object_ids = set()
+
     res_mock = Mock(status_code=status_code)
 
     assert AuditLogEntry.objects.count() == 0
@@ -93,7 +113,9 @@ def test_commit_to_audit_log_crud_operations(http_method, audit_operation):
         user=user,
         path="/v1/endpoint",
         headers={"x-forwarded-for": "1.2.3.4:80"},
+        _audit_logged_object_ids=set(),
     )
+
     res_mock = Mock(status_code=200)
 
     assert AuditLogEntry.objects.count() == 0
@@ -103,7 +125,7 @@ def test_commit_to_audit_log_crud_operations(http_method, audit_operation):
     assert AuditLogEntry.objects.count() == 1
     log_entry = AuditLogEntry.objects.first()
     assert log_entry.message["audit_event"]["operation"] == audit_operation
-    assert log_entry.message["audit_event"]["target"] == "/v1/endpoint"
+    assert log_entry.message["audit_event"]["target"]["path"] == "/v1/endpoint"
     _assert_basic_log_entry_data(log_entry)
 
 
@@ -145,12 +167,9 @@ def test_commit_to_audit_log_actor_data(user_role, audit_role):
     if callable(org_role):
         org_role(user)
 
-    req_mock = Mock(
-        method="GET",
-        user=user,
-        path="/v1/endpoint",
-        headers={"x-forwarded-for": "1.2.3.4:80"},
-    )
+    req_mock = _create_default_request_mock(user)
+    req_mock._audit_logged_object_ids = set()
+
     res_mock = Mock(status_code=200)
 
     assert AuditLogEntry.objects.count() == 0
@@ -196,3 +215,107 @@ def test_get_remote_address(remote_address, expected, x_forwarded_for):
         META={"REMOTE_ADDR": remote_address} if not x_forwarded_for else {},
     )
     assert _get_remote_address(req_mock) == expected
+
+
+@pytest.mark.no_test_audit_log
+@pytest.mark.parametrize(
+    "queryset_type",
+    [
+        "queryset",
+        "empty_queryset",
+    ],
+)
+@pytest.mark.django_db
+def test_get_target_queryset(queryset_type):
+    user = UserFactory()
+
+    req_mock = _create_default_request_mock(user)
+    req_mock._request = Mock(path="/v1/endpoint", _audit_logged_object_ids=set())
+
+    if queryset_type == "queryset":
+        UserFactory()
+        instances = User.objects.all()
+        object_ids = [user.pk for user in instances]
+    else:
+        instances = User.objects.none()
+        object_ids = []
+
+    view = AuditLogApiViewMixin()
+    view.request = req_mock
+    view._add_audit_logged_object_ids(instances)
+
+    target_data = _get_target(req_mock._request)
+
+    _assert_target_data(target_data, req_mock.path, object_ids)
+
+
+@pytest.mark.no_test_audit_log
+@pytest.mark.parametrize(
+    "list_type",
+    [
+        "list",
+        "list_of_objects_without_pks",
+        "list_of_nones",
+        "list_of_strings",
+        "empty_list",
+    ],
+)
+@pytest.mark.django_db
+def test_get_target_list(list_type):
+    user = UserFactory()
+
+    req_mock = _create_default_request_mock(user)
+    req_mock._request = Mock(path="/v1/endpoint", _audit_logged_object_ids=set())
+
+    list_type_mapping = {
+        "list": [user, UserFactory()],
+        "list_of_objects_without_pks": [User(), User()],
+        "list_of_nones": [None, None],
+        "list_of_strings": ["test", "", " "],
+        "empty_list": [],
+    }
+
+    instances = list_type_mapping[list_type]
+    object_ids = [user.pk for user in instances] if list_type == "list" else []
+
+    view = AuditLogApiViewMixin()
+    view.request = req_mock
+    view._add_audit_logged_object_ids(instances)
+
+    target_data = _get_target(req_mock._request)
+
+    _assert_target_data(target_data, req_mock.path, object_ids)
+
+
+@pytest.mark.no_test_audit_log
+@pytest.mark.parametrize(
+    "object_type",
+    [
+        "object",
+        "object_without_pk",
+        "none",
+    ],
+)
+@pytest.mark.django_db
+def test_get_target_object(object_type):
+    user = UserFactory()
+
+    req_mock = _create_default_request_mock(user)
+    req_mock._request = Mock(path="/v1/endpoint", _audit_logged_object_ids=set())
+
+    object_type_mapping = {
+        "object": user,
+        "object_without_pk": User(),
+        "none": None,
+    }
+
+    instances = object_type_mapping[object_type]
+    object_ids = [user.pk] if object_type == "object" else []
+
+    view = AuditLogApiViewMixin()
+    view.request = req_mock
+    view._add_audit_logged_object_ids(instances)
+
+    target_data = _get_target(req_mock._request)
+
+    _assert_target_data(target_data, req_mock.path, object_ids)

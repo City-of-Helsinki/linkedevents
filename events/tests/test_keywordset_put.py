@@ -1,6 +1,7 @@
 import pytest
 from rest_framework import status
 
+from audit_log.models import AuditLogEntry
 from events.tests.test_keywordset_post import create_keyword_set
 from events.tests.utils import versioned_reverse as reverse
 
@@ -43,6 +44,16 @@ def test__update_keywordset(api_client, keyword_set_dict, user):
     response = update_keyword_set(api_client, kw_id, keyword_set_data)
     assert response.status_code == status.HTTP_200_OK
     assert response.data["name"]["fi"] == keyword_set_data["name"]["fi"]
+
+
+@pytest.mark.django_db
+def test_keyword_set_id_is_audit_logged_on_put(user_api_client, keyword_set):
+    assert_update_keyword_set(user_api_client, keyword_set)
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+        keyword_set.pk
+    ]
 
 
 @pytest.mark.django_db

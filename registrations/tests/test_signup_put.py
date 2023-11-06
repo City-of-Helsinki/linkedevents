@@ -4,6 +4,7 @@ import pytest
 from freezegun import freeze_time
 from rest_framework import status
 
+from audit_log.models import AuditLogEntry
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
 from registrations.models import SignUp
@@ -597,3 +598,20 @@ def test_cannot_remove_only_responsible_person_from_group(api_client, registrati
     assert response.data["responsible_for_group"][0] == (
         "Cannot set responsible_for_group to False for the only responsible person of a group"
     )
+
+
+@pytest.mark.django_db
+def test_signup_id_is_audit_logged_on_patch(api_client, registration, signup):
+    user = UserFactory()
+    user.registration_admin_organizations.add(signup.publisher)
+    api_client.force_authenticate(user)
+
+    signup_data = {
+        "registration": registration.id,
+        "extra_info": "test test",
+    }
+
+    assert_update_signup(api_client, signup.pk, signup_data)
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [signup.pk]

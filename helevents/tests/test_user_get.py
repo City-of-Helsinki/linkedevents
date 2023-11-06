@@ -1,5 +1,9 @@
-import pytest
+from collections import Counter
 
+import pytest
+from rest_framework import status
+
+from audit_log.models import AuditLogEntry
 from events.tests.utils import assert_fields_exist, get
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
@@ -67,3 +71,28 @@ def test__get_user_list(api_client, user, organization, is_admin):
     else:
         assert len(data) == 1
         assert uuids == {str(user.uuid)}
+
+
+@pytest.mark.django_db
+def test_user_id_is_audit_logged_on_get_detail(user_api_client, user):
+    response = get_detail(user_api_client, user.pk)
+    assert response.status_code == status.HTTP_200_OK
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [user.pk]
+
+
+@pytest.mark.django_db
+def test_user_id_is_audit_logged_on_get_list(api_client):
+    user = UserFactory(is_superuser=True)
+    api_client.force_authenticate(user)
+
+    other_user = UserFactory()
+
+    response = get_list(api_client)
+    assert response.status_code == status.HTTP_200_OK
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert Counter(
+        audit_log_entry.message["audit_event"]["target"]["object_ids"]
+    ) == Counter([user.pk, other_user.pk])

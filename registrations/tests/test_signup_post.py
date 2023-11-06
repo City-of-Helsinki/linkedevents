@@ -8,6 +8,7 @@ from django.utils.timezone import localtime
 from freezegun import freeze_time
 from rest_framework import status
 
+from audit_log.models import AuditLogEntry
 from events.models import Event, Language
 from events.tests.factories import LanguageFactory
 from events.tests.utils import versioned_reverse as reverse
@@ -1018,3 +1019,24 @@ def test_signup_text_fields_are_sanitized(
     assert response_signup["phone_number"] == "0441111111"
     assert response_signup["street_address"] == f"{test_street_address} Html"
     assert response_signup["zipcode"] == "zip"
+
+
+@pytest.mark.django_db
+def test_signup_id_is_audit_logged_on_post(api_client, registration):
+    LanguageFactory(pk="fi", service_language=True)
+
+    reservation = SeatReservationCodeFactory(seats=1)
+    signups_data = default_signups_data
+    signups_data["registration"] = reservation.registration.id
+    signups_data["reservation_code"] = reservation.code
+
+    user = UserFactory()
+    user.registration_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    response = assert_create_signups(api_client, signups_data)
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+        response.data[0]["id"]
+    ]
