@@ -5,6 +5,7 @@
 *.sqlite3
 *.pickle
 local_settings.py
+config_dev.toml
 static/CACHE
 media/
 .vagrant/
