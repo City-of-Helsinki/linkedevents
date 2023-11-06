@@ -366,6 +366,24 @@ class BaseModel(models.Model):
     def is_user_edited(self):
         return bool(self.data_source.user_editable_resources and self.last_modified_by)
 
+    def save(self, update_fields=None, skip_last_modified_time=False, **kwargs):
+        # When saving with update_fields, django will not automatically update
+        # last_modified_time.
+        if (
+            not skip_last_modified_time
+            and update_fields is not None
+            and "last_modified_time" not in update_fields
+        ):
+            update_fields = list(update_fields) + ["last_modified_time"]
+            if (
+                self.last_modified_by_id is not None
+                and "last_modified_by" not in update_fields
+            ):
+                self.last_modified_by = None
+                update_fields.append("last_modified_by")
+
+        super().save(update_fields=update_fields, **kwargs)
+
 
 class Language(models.Model):
     id = models.CharField(max_length=10, primary_key=True)
@@ -1212,7 +1230,9 @@ def keyword_added_or_removed(
             Keyword.objects.filter(pk__in=pk_set).update(n_events_changed=True)
         if model is Event:
             instance.n_events_changed = True
-            instance.save(update_fields=("n_events_changed",))
+            instance.save(
+                update_fields=("n_events_changed",), skip_last_modified_time=True
+            )
 
 
 class Offer(models.Model, SimpleValueMixin):

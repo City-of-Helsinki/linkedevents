@@ -14,7 +14,7 @@ def forward(apps, schema_editor):
         if n_events != keyword.n_events:
             print("Updating event number for " + str(keyword.name))
             keyword.n_events = n_events
-            keyword.save(update_fields=("n_events",))
+            keyword.save(update_fields=("n_events",), skip_last_modified_time=True)
 
 
 class Migration(migrations.Migration):

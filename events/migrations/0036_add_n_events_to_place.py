@@ -11,7 +11,7 @@ def forward(apps, schema_editor):
         n_events = place.events.all().count()
         if n_events != place.n_events:
             place.n_events = n_events
-            place.save(update_fields=("n_events",))
+            place.save(update_fields=("n_events",), skip_last_modified_time=True)
 
 
 class Migration(migrations.Migration):
