@@ -7,6 +7,10 @@ from linkedevents.registry import register_view
 
 
 class UserViewSet(AuditLogApiViewMixin, viewsets.ReadOnlyModelViewSet):
+    queryset = get_user_model().objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
     def get_queryset(self):
         user = self.request.user
         if user.is_superuser:
@@ -23,13 +27,10 @@ class UserViewSet(AuditLogApiViewMixin, viewsets.ReadOnlyModelViewSet):
         else:
             obj = self.request.user
 
+        self.check_object_permissions(self.request, obj)
         self._add_audit_logged_object_ids(obj)
 
         return obj
-
-    permission_classes = [permissions.IsAuthenticated]
-    queryset = get_user_model().objects.all()
-    serializer_class = UserSerializer
 
 
 register_view(UserViewSet, "user")
