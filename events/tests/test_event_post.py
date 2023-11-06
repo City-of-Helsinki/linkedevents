@@ -57,7 +57,6 @@ def test__create_a_minimal_event_with_post(api_client, minimal_event_dict, user)
 def test__create_a_minimal_event_with_naive_datetime(
     api_client, minimal_event_dict, user
 ):
-
     api_client.force_authenticate(user=user)
     minimal_event_dict["start_time"] = (datetime.now() + timedelta(days=1)).isoformat()
     response = create_with_post(api_client, minimal_event_dict)
@@ -84,7 +83,6 @@ def test__cannot_create_an_event_with_existing_id(api_client, minimal_event_dict
 def test__api_key_with_organization_can_create_an_event(
     api_client, minimal_event_dict, data_source, organization
 ):
-
     data_source.owner = organization
     data_source.save()
 
@@ -112,7 +110,6 @@ def test__api_key_with_organization_event_create_sets_correct_publisher(
 def test__api_key_with_organization_can_create_a_suborganization_event(
     api_client, minimal_event_dict, data_source, organization, organization2
 ):
-
     data_source.owner = organization
     data_source.save()
 
@@ -129,7 +126,6 @@ def test__api_key_with_organization_can_create_a_suborganization_event(
 def test__api_key_with_organization_cannot_create_a_superorganization_event(
     api_client, minimal_event_dict, other_data_source, organization, organization2
 ):
-
     other_data_source.owner = organization2
     other_data_source.save()
 
@@ -151,7 +147,6 @@ def test__api_key_with_another_organization_can_create_an_event(
     other_data_source,
     organization2,
 ):
-
     data_source.owner = organization
     data_source.save()
     other_data_source.owner = organization2
@@ -171,7 +166,6 @@ def test__api_key_with_another_organization_can_create_an_event(
 def test__api_key_without_organization_cannot_create_an_event(
     api_client, minimal_event_dict, data_source
 ):
-
     api_client.credentials(apikey=data_source.api_key)
     response = api_client.post(reverse("event-list"), minimal_event_dict, format="json")
     assert response.status_code == 403
@@ -179,7 +173,6 @@ def test__api_key_without_organization_cannot_create_an_event(
 
 @pytest.mark.django_db
 def test__unknown_api_key_cannot_create_an_event(api_client, minimal_event_dict):
-
     api_client.credentials(apikey="unknown")
     response = api_client.post(reverse("event-list"), minimal_event_dict, format="json")
     assert response.status_code == 401
@@ -187,7 +180,6 @@ def test__unknown_api_key_cannot_create_an_event(api_client, minimal_event_dict)
 
 @pytest.mark.django_db
 def test__empty_api_key_cannot_create_an_event(api_client, minimal_event_dict):
-
     api_client.credentials(apikey="")
     response = api_client.post(reverse("event-list"), minimal_event_dict, format="json")
     assert response.status_code == 401
@@ -328,7 +320,6 @@ def test__autopopulated_fields_at_create(
     organization,
     organization2,
 ):
-
     # create an event
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, minimal_event_dict)
@@ -359,7 +350,6 @@ def test__autopopulated_fields_at_create_dst(
     organization,
     organization2,
 ):
-
     # create an event
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, minimal_event_dict)

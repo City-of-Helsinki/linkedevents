@@ -4,7 +4,6 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("events", "0059_migrate_event_image_to_m2m"),
     ]

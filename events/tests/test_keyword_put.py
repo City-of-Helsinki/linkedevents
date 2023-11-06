@@ -23,7 +23,6 @@ def update_with_put(api_client, kw_id, keyword_data, credentials=None):
 
 @pytest.mark.django_db
 def test__update_a_keyword_with_put(api_client, keyword_dict, user):
-
     # create an keyword
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, keyword_dict)
@@ -88,7 +87,6 @@ def test__an_admin_can_update_an_keyword_from_another_data_source(
 def test__correct_api_key_can_update_a_keyword(
     api_client, keyword, keyword_dict, data_source, organization
 ):
-
     data_source.owner = organization
     data_source.save()
 
@@ -107,7 +105,6 @@ def test__correct_api_key_can_update_a_keyword(
 def test__wrong_api_key_cannot_update_a_keyword(
     api_client, keyword, keyword_dict, data_source, other_data_source
 ):
-
     detail_url = reverse("keyword-detail", kwargs={"pk": keyword.pk})
     response = update_with_put(
         api_client,
@@ -122,7 +119,6 @@ def test__wrong_api_key_cannot_update_a_keyword(
 def test__api_key_without_organization_cannot_update_a_keyword(
     api_client, keyword, keyword_dict, data_source
 ):
-
     detail_url = reverse("keyword-detail", kwargs={"pk": keyword.pk})
     response = update_with_put(
         api_client,
@@ -135,7 +131,6 @@ def test__api_key_without_organization_cannot_update_a_keyword(
 
 @pytest.mark.django_db
 def test__unknown_api_key_cannot_update_a_keyword(api_client, keyword, keyword_dict):
-
     detail_url = reverse("keyword-detail", kwargs={"pk": keyword.pk})
     response = update_with_put(
         api_client, detail_url, keyword_dict, credentials={"apikey": "unknown"}
@@ -149,7 +144,6 @@ def test__empty_api_key_cannot_update_a_keyword(
     keyword,
     keyword_dict,
 ):
-
     detail_url = reverse("keyword-detail", kwargs={"pk": keyword.pk})
     response = update_with_put(
         api_client, detail_url, keyword_dict, credentials={"apikey": ""}

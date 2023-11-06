@@ -43,7 +43,6 @@ def delete_zh_hans_lang_code(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("events", "0055_fix_chinese_language_code"),
     ]

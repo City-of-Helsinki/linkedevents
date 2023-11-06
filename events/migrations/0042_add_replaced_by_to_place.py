@@ -5,7 +5,6 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("events", "0041_rebuild_organization_mptt_index"),
     ]

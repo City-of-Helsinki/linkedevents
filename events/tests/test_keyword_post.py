@@ -74,7 +74,6 @@ def test__a_non_admin_cannot_create_a_keyword(api_client, keyword_dict, user):
 def test__api_key_with_organization_can_create_a_keyword(
     api_client, keyword_dict, data_source, organization
 ):
-
     data_source.owner = organization
     data_source.save()
 
@@ -94,7 +93,6 @@ def test__api_key_without_organization_cannot_create_a_keyword(
 
 @pytest.mark.django_db
 def test__unknown_api_key_cannot_create_a_keyword(api_client, keyword_dict):
-
     api_client.credentials(apikey="unknown")
     response = api_client.post(reverse("keyword-list"), keyword_dict, format="json")
     assert response.status_code == 401
@@ -102,7 +100,6 @@ def test__unknown_api_key_cannot_create_a_keyword(api_client, keyword_dict):
 
 @pytest.mark.django_db
 def test__empty_api_key_cannot_create_a_keyword(api_client, keyword_dict):
-
     api_client.credentials(apikey="")
     response = api_client.post(reverse("keyword-list"), keyword_dict, format="json")
     assert response.status_code == 401

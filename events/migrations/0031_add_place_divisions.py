@@ -17,7 +17,6 @@ def forwards_func(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("munigeo", "0001_squashed_0004_building"),
         ("events", "0001_squashed_0030_merge"),

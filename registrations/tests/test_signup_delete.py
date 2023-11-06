@@ -88,7 +88,6 @@ def test_email_sent_on_successful_signup_deletion(
     user_api_client,
     user,
 ):
-
     user.get_default_organization().registration_admin_users.add(user)
 
     signup.first_name = "Username"

@@ -5,7 +5,6 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("events", "0094_remove_image_alt_text_translations"),
         ("registrations", "0020_signup_presence_status"),

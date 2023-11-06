@@ -18,7 +18,6 @@ def forward(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("events", "0034_add_keyword_deprecated"),
     ]

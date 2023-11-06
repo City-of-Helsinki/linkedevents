@@ -33,7 +33,6 @@ def clean_org_data(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("events", "0045_rename_org_admin_users_related_name"),
     ]

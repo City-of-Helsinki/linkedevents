@@ -5,7 +5,6 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("events", "0063_lengthen_origin_id_and_id_fields"),
     ]

@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("django_orghierarchy", "0011_alter_datasource_user_editable_organizations"),
         ("helevents", "0005_increase_user_model_name_field_length"),

@@ -15,7 +15,6 @@ def forward(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("events", "0040_add_hierarchical_and_admin_orgs"),
     ]

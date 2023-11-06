@@ -33,7 +33,6 @@ def update_with_put(api_client, event_id, event_data, credentials=None):
 
 @pytest.mark.django_db
 def test__update_a_draft_with_put(api_client, minimal_event_dict, user):
-
     # create an event
     api_client.force_authenticate(user=user)
     minimal_event_dict.pop("location")
@@ -57,7 +56,6 @@ def test__update_a_draft_with_put(api_client, minimal_event_dict, user):
 
 @pytest.mark.django_db
 def test__cannot_update_a_draft_without_a_name(api_client, minimal_event_dict, user):
-
     # create an event
     api_client.force_authenticate(user=user)
     minimal_event_dict.pop("location")
@@ -83,7 +81,6 @@ def test__cannot_update_a_draft_without_a_name(api_client, minimal_event_dict, u
 def test__cannot_update_an_event_without_a_short_description(
     api_client, minimal_event_dict, user
 ):
-
     # create an event
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, minimal_event_dict)
@@ -106,7 +103,6 @@ def test__cannot_update_an_event_without_a_short_description(
 def test__cannot_update_an_event_without_a_description(
     api_client, minimal_event_dict, user
 ):
-
     # create an event
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, minimal_event_dict)
@@ -129,7 +125,6 @@ def test__cannot_update_an_event_without_a_description(
 def test__keyword_n_events_updated(
     api_client, minimal_event_dict, user, data_source, organization, make_keyword_id
 ):
-
     # create an event
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, minimal_event_dict)
@@ -163,7 +158,6 @@ def test__location_n_events_updated(
     place2,
     make_location_id,
 ):
-
     # create an event
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, minimal_event_dict)
@@ -190,7 +184,6 @@ def test__location_n_events_updated(
 def test__update_minimal_event_with_autopopulated_fields_with_put(
     api_client, minimal_event_dict, user, organization
 ):
-
     # create an event
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, minimal_event_dict)
@@ -221,7 +214,6 @@ def test__update_minimal_event_with_autopopulated_fields_with_put(
 def test__update_minimal_event_with_autopopulated_fields_with_put_dst(
     api_client, minimal_event_dict, user, organization
 ):
-
     # create an event
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, minimal_event_dict)
@@ -248,7 +240,6 @@ def test__update_minimal_event_with_autopopulated_fields_with_put_dst(
 
 @pytest.mark.django_db
 def test__update_an_event_complex_dict(api_client, complex_event_dict, user):
-
     # create an event
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, complex_event_dict)
@@ -287,7 +278,6 @@ def test__update_an_event_complex_dict(api_client, complex_event_dict, user):
 
 @pytest.mark.django_db
 def test__change_event_type(api_client, complex_event_dict, user):
-
     # create an event
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, complex_event_dict)
@@ -328,7 +318,6 @@ def test__bulk_update_single_event(api_client, complex_event_dict, user):
 
 @pytest.mark.django_db
 def test__update_an_event_with_naive_datetime(api_client, minimal_event_dict, user):
-
     # create an event
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, minimal_event_dict)
@@ -356,7 +345,6 @@ def test__update_an_event_with_naive_datetime(api_client, minimal_event_dict, us
 
 @pytest.mark.django_db
 def test__reschedule_an_event_with_put(api_client, complex_event_dict, user):
-
     # create an event
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, complex_event_dict)
@@ -403,7 +391,6 @@ def test__reschedule_an_event_with_put(api_client, complex_event_dict, user):
 
 @pytest.mark.django_db
 def test__postpone_an_event_with_put(api_client, complex_event_dict, user):
-
     # create an event
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, complex_event_dict)
@@ -478,7 +465,6 @@ def test__postpone_an_event_with_put(api_client, complex_event_dict, user):
 
 @pytest.mark.django_db
 def test__cancel_an_event_with_put(api_client, complex_event_dict, user):
-
     # create an event
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, complex_event_dict)
@@ -502,7 +488,6 @@ def test__cancel_an_event_with_put(api_client, complex_event_dict, user):
 
 @pytest.mark.django_db
 def test__cancel_a_postponed_event_with_put(api_client, complex_event_dict, user):
-
     # create an event
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, complex_event_dict)
@@ -533,7 +518,6 @@ def test__cancel_a_postponed_event_with_put(api_client, complex_event_dict, user
 
 @pytest.mark.django_db
 def test__cancel_a_rescheduled_event_with_put(api_client, complex_event_dict, user):
-
     # create an event
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, complex_event_dict)
@@ -568,7 +552,6 @@ def test__cancel_a_rescheduled_event_with_put(api_client, complex_event_dict, us
 
 @pytest.mark.django_db
 def test__reschedule_a_cancelled_event_with_put(api_client, complex_event_dict, user):
-
     # create an event
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, complex_event_dict)
@@ -728,7 +711,6 @@ def test__apikey_cannot_update_an_event_from_another_data_source(
 def test__correct_api_key_can_update_an_event(
     api_client, event, complex_event_dict, data_source, organization
 ):
-
     data_source.owner = organization
     data_source.save()
 
@@ -752,7 +734,6 @@ def test__correct_api_key_can_update_an_event_in_suborganization(
     organization,
     organization2,
 ):
-
     other_data_source.owner = organization
     other_data_source.save()
 
@@ -781,7 +762,6 @@ def test__correct_api_key_cannot_update_an_event_in_superorganization(
     organization,
     organization2,
 ):
-
     other_data_source.owner = organization2
     other_data_source.save()
 
@@ -810,7 +790,6 @@ def test__wrong_api_key_cannot_update_an_event(
     organization,
     organization2,
 ):
-
     data_source.owner = organization
     data_source.save()
     other_data_source.owner = organization2
@@ -831,7 +810,6 @@ def test__wrong_api_key_cannot_update_an_event(
 def test__api_key_without_organization_cannot_update_an_event(
     api_client, event, complex_event_dict, data_source
 ):
-
     detail_url = reverse("event-detail", kwargs={"pk": event.pk})
     response = update_with_put(
         api_client,
@@ -844,7 +822,6 @@ def test__api_key_without_organization_cannot_update_an_event(
 
 @pytest.mark.django_db
 def test__unknown_api_key_cannot_update_an_event(api_client, event, complex_event_dict):
-
     detail_url = reverse("event-detail", kwargs={"pk": event.pk})
     response = update_with_put(
         api_client, detail_url, complex_event_dict, credentials={"apikey": "unknown"}
@@ -858,7 +835,6 @@ def test__empty_api_key_cannot_update_an_event(
     event,
     complex_event_dict,
 ):
-
     detail_url = reverse("event-detail", kwargs={"pk": event.pk})
     response = update_with_put(
         api_client, detail_url, complex_event_dict, credentials={"apikey": ""}

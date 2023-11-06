@@ -29,7 +29,6 @@ def forwards(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("events", "0072_allow_replaced_by_blank"),
     ]

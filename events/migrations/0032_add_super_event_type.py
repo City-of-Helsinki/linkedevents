@@ -27,7 +27,6 @@ def populate_is_recurring_super(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("events", "0031_add_place_divisions"),
     ]

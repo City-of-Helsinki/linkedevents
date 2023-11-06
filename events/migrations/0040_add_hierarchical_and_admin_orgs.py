@@ -6,7 +6,6 @@ import mptt.fields
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("events", "0039_add_user_editable_to_datasource"),
     ]

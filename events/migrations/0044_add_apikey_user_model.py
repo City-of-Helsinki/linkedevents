@@ -7,7 +7,6 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("helevents", "0003_auto_20170915_1529"),
         ("events", "0043_add_publisher_to_keyword"),

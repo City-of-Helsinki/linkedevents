@@ -5,7 +5,6 @@ from django.contrib.postgres.operations import TrigramExtension
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("events", "0074_create_light_admin_group"),
     ]

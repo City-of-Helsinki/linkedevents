@@ -5,7 +5,6 @@ import registrations.models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("registrations", "0011_seatreservationcode"),
     ]

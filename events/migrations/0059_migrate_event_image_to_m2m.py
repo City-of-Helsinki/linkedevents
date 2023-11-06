@@ -21,7 +21,6 @@ def make_one_image(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("events", "0058_add_multiple_images_to_event"),
     ]

@@ -227,7 +227,6 @@ class DOCXRenderer(renderers.BaseRenderer):
                 document.add_heading(str(daterange), 1)
 
                 for event in events:
-
                     # This is here to prevent 00:00-00:00 from being shown.
                     start_time = event["start_time"]
                     end_time = event["end_time"]

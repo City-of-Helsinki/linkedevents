@@ -62,7 +62,6 @@ def backwards_func(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("registrations", "0023_rename_timestamp_fields"),
     ]

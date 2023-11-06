@@ -145,7 +145,7 @@ signup_email_texts = {
 
 
 def get_signup_notification_texts(signup, notification_type: SignUpNotificationType):
-    with (translation.override(signup.get_service_language_pk())):
+    with translation.override(signup.get_service_language_pk()):
         confirmation_message = signup.registration.confirmation_message
         event_name = signup.registration.event.name
 
@@ -198,7 +198,7 @@ def get_signup_notification_texts(signup, notification_type: SignUpNotificationT
 
 def get_signup_notification_subject(signup, notification_type):
     linked_registrations_ui_locale = get_ui_locales(signup.service_language)[1]
-    with (translation.override(signup.get_service_language_pk())):
+    with translation.override(signup.get_service_language_pk()):
         event_name = signup.registration.event.name
 
     with translation.override(linked_registrations_ui_locale):
@@ -230,7 +230,7 @@ def get_signup_notification_variables(signup):
     )
     signup_edit_url = get_signup_edit_url(signup, linked_registrations_ui_locale)
 
-    with (translation.override(signup.get_service_language_pk())):
+    with translation.override(signup.get_service_language_pk()):
         event_name = signup.registration.event.name
         event_type_id = signup.registration.event.type_id
 

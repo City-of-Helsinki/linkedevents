@@ -108,7 +108,7 @@ def unicodetext(item):
 
 
 def reduced_text(text):
-    return re.sub(r"\W", "", text, flags=re.U).lower()
+    return re.sub(r"\W", "", text, flags=re.UNICODE).lower()
 
 
 def text_match(a, b):

@@ -15,7 +15,6 @@ def forward(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("events", "0035_add_n_events_to_keyword"),
     ]
