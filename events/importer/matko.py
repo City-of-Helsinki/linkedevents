@@ -14,7 +14,7 @@ from events.keywords import KeywordMatcher
 from events.models import DataSource, Event, Place
 
 from .base import Importer, recur_dict, register_importer
-from .util import clean_text, replace_location, unicodetext
+from .utils import clean_text, replace_location, unicodetext
 
 logger = logging.getLogger(__name__)
 

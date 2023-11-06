@@ -1,6 +1,6 @@
 import pytest
 
-from events.importer.util import replace_location
+from events.importer.utils import replace_location
 from events.models import Event
 
 

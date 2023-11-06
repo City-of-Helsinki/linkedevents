@@ -8,7 +8,7 @@ from django.core.management import call_command
 from django.db import transaction
 from django_orghierarchy.models import Organization
 
-from events.importer.util import replace_location
+from events.importer.utils import replace_location
 from events.models import DataSource, Place
 
 from .base import Importer, register_importer
