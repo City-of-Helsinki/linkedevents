@@ -1296,13 +1296,8 @@ class ImageSerializer(EditableLinkedEventsObjectSerializer):
         return representation
 
     def validate(self, data):
-        # name the image after the file, if name was not provided
-        if 'name' not in data or not data['name']:
-            if 'url' in data:
-                data['name'] = str(data['url']).rsplit('/', 1)[-1]
-            if 'image' in data:
-                data['name'] = str(data['image']).rsplit('/', 1)[-1]
-        super().validate(data)
+        # Super class LinkedEventsSerializer requires non-blank name, but for images
+        # it should be allowed, so do not call super().validate(data)
         return data
 
 
