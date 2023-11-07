@@ -587,7 +587,10 @@ if env("MAILGUN_API_KEY"):
     }
     EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
 else:
-    print("Warning: MAILGUN_API_KEY not set, using console backend for sending emails")
+    if not DEBUG:
+        print(
+            "Warning: MAILGUN_API_KEY not set, using console backend for sending emails"
+        )
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # Ongoing events will be cached forever
