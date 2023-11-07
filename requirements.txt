@@ -312,7 +312,7 @@ ujson==5.7.0
     # via -r requirements.in
 url-normalize==1.4.3
     # via requests-cache
-urllib3==1.26.14
+urllib3==1.26.18
     # via
     #   elasticsearch
     #   requests
