@@ -51,6 +51,14 @@ class CreatedModifiedBaseSerializer(serializers.ModelSerializer):
     created_by = serializers.StringRelatedField(required=False, allow_null=True)
     last_modified_by = serializers.StringRelatedField(required=False, allow_null=True)
 
+    is_created_by_current_user = serializers.SerializerMethodField()
+
+    def get_is_created_by_current_user(self, obj):
+        if not (request := self.context.get("request")):
+            return False
+
+        return request.user == obj.created_by
+
     def create(self, validated_data):
         validated_data["created_by"] = self.context["request"].user
         validated_data["last_modified_by"] = self.context["request"].user
@@ -240,6 +248,7 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
             "signup_group",
             "native_language",
             "user_consent",
+            "is_created_by_current_user",
         )
         model = SignUp
 
@@ -500,6 +509,7 @@ class SignUpGroupCreateSerializer(
             "last_modified_time",
             "created_by",
             "last_modified_by",
+            "is_created_by_current_user",
         )
         model = SignUpGroup
 
@@ -586,6 +596,7 @@ class SignUpGroupSerializer(CreatedModifiedBaseSerializer):
             "last_modified_time",
             "created_by",
             "last_modified_by",
+            "is_created_by_current_user",
         )
         model = SignUpGroup
 

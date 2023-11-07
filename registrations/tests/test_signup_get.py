@@ -81,6 +81,7 @@ def assert_signup_fields_exist(data):
         "signup_group",
         "native_language",
         "user_consent",
+        "is_created_by_current_user",
     )
     assert_fields_exist(data, fields)
 
@@ -102,7 +103,8 @@ def test_registration_admin_user_can_get_signup(
     default_organization.admin_users.remove(user)
     default_organization.registration_admin_users.add(user)
 
-    assert_get_detail(user_api_client, signup.id)
+    response = assert_get_detail(user_api_client, signup.id)
+    assert response.data["is_created_by_current_user"] == False
 
 
 @pytest.mark.django_db
@@ -120,6 +122,7 @@ def test_registration_user_access_can_get_signup_when_strongly_identified(
         response = assert_get_detail(user_api_client, signup.id)
         assert mocked.called is True
     assert_signup_fields_exist(response.data)
+    assert response.data["is_created_by_current_user"] == False
 
 
 @pytest.mark.django_db
@@ -162,6 +165,7 @@ def test_regular_created_user_can_get_signup(
 
     response = assert_get_detail(user_api_client, signup.id)
     assert_signup_fields_exist(response.data)
+    assert response.data["is_created_by_current_user"] == True
 
 
 @pytest.mark.django_db
@@ -183,6 +187,7 @@ def test_created_user_without_organization_can_get_signup(api_client, registrati
 
     response = assert_get_detail(api_client, signup.id)
     assert_signup_fields_exist(response.data)
+    assert response.data["is_created_by_current_user"] == True
 
 
 @pytest.mark.django_db
@@ -206,6 +211,7 @@ def test_api_key_with_organization_and_registration_permission_can_get_signup(
 
     response = assert_get_detail(api_client, signup.id)
     assert_signup_fields_exist(response.data)
+    assert response.data["is_created_by_current_user"] == False
 
 
 @pytest.mark.django_db
