@@ -1173,6 +1173,32 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
 reversion.register(Event)
 
 
+class EventFullText(models.Model):
+    """
+    A representation of the materialized view used in full-text search.
+    """
+
+    event = models.OneToOneField(
+        Event,
+        related_name="full_text",
+        on_delete=models.DO_NOTHING,
+        primary_key=True,
+    )
+    place = models.ForeignKey(
+        Event, related_name="full_text_place", on_delete=models.DO_NOTHING
+    )
+
+    event_last_modified_time = models.DateTimeField()
+    place_last_modified_time = models.DateTimeField()
+
+    search_vector_fi = SearchVectorField()
+    search_vector_en = SearchVectorField()
+    search_vector_sv = SearchVectorField()
+
+    class Meta:
+        managed = False
+
+
 @receiver(m2m_changed, sender=Event.keywords.through)
 @receiver(m2m_changed, sender=Event.audience.through)
 def keyword_added_or_removed(

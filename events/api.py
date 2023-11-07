@@ -19,7 +19,7 @@ import regex
 from django.conf import settings
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
-from django.contrib.postgres.search import SearchQuery, TrigramSimilarity
+from django.contrib.postgres.search import SearchQuery, SearchRank, TrigramSimilarity
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
@@ -3410,6 +3410,10 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         method="filter_hide_recurring_children"
     )
 
+    x_full_text = django_filters.CharFilter(method="filter_x_full_text")
+
+    x_ongoing = django_filters.BooleanFilter(method="filter_x_ongoing")
+
     class Meta:
         model = Event
         fields = ("division", "super_event_type", "super_event")
@@ -3450,6 +3454,48 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         ).exclude(
             eventaggregatemember__event_aggregate__super_event__super_event_type=Event.SuperEventType.RECURRING
         )
+
+    def filter_x_full_text(self, qs, name, value: Optional[str]):
+        if not value:
+            return qs
+
+        language = self.request.query_params.get("x_full_text_language", "fi")
+        if language not in ["fi", "en", "sv"]:
+            raise serializers.ValidationError(
+                {
+                    "x_full_text_language": _(
+                        "x_full_text supports the following languages: fi, en, sv"
+                    )
+                }
+            )
+
+        config_map = {
+            "fi": "finnish",
+            "en": "english",
+            "sv": "swedish",
+        }
+        search_vector_name = f"full_text__search_vector_{language}"
+        search_query = SearchQuery(
+            value, search_type="websearch", config=config_map[language]
+        )
+        search_rank = SearchRank(F(search_vector_name), search_query)
+
+        # Warning: order matters, annotate should follow filter
+        # Otherwise Django creates a redundant LEFT OUTER JOIN for sorting
+        return (
+            qs.filter(**{search_vector_name: search_query})
+            .annotate(rank=search_rank)
+            .order_by("-rank")
+        )
+
+    def filter_x_ongoing(self, qs, name, ongoing: Optional[bool]):
+        if ongoing is None:
+            return qs
+
+        if ongoing:
+            return qs.filter(end_time__gt=datetime.now(timezone.utc))
+
+        return qs.filter(end_time__lte=datetime.now(timezone.utc))
 
 
 class EventDeletedException(APIException):
