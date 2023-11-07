@@ -1,6 +1,8 @@
+import freezegun
 import pytest
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.utils import timezone
 from django_orghierarchy.models import Organization
 
 from helevents.tests.factories import UserFactory
@@ -174,6 +176,101 @@ class TestEvent(TestCase):
 
         can_be_edited = self.event_2.can_be_edited_by(self.user)
         self.assertTrue(can_be_edited)
+
+    @freezegun.freeze_time("2023-11-6 13:00:00+03:00")
+    def test_event_last_modified_time_is_updated_when_soft_delete(self):
+        self.event_1.refresh_from_db()
+        self.assertGreater(self.event_1.last_modified_time, timezone.now())
+
+        self.event_1.soft_delete()
+        self.event_1.refresh_from_db()
+        self.assertEqual(self.event_1.last_modified_time, timezone.now())
+
+    @freezegun.freeze_time("2023-11-6 13:00:00+03:00")
+    def test_event_last_modified_time_is_updated_when_undelete(self):
+        self.event_1.deleted = True
+        self.event_1.save(
+            update_fields=["deleted"], skip_last_modified_time=True, force_update=True
+        )
+        self.assertGreater(self.event_1.last_modified_time, timezone.now())
+
+        self.event_1.undelete()
+        self.event_1.refresh_from_db()
+        self.assertEqual(self.event_1.last_modified_time, timezone.now())
+
+    @freezegun.freeze_time("2023-11-6 13:00:00+03:00")
+    def test_event_last_modified_time_is_update_when_queryset_soft_delete(self):
+        self.assertGreater(self.event_1.last_modified_time, timezone.now())
+
+        Event.objects.filter(id=self.event_1.id).soft_delete()
+        self.event_1.refresh_from_db()
+        self.assertEqual(self.event_1.last_modified_time, timezone.now())
+
+    @freezegun.freeze_time("2023-11-6 13:00:00+03:00")
+    def test_event_last_modified_time_is_update_when_queryset_undelete(self):
+        self.event_1.deleted = True
+        self.event_1.save(
+            update_fields=["deleted"], skip_last_modified_time=True, force_update=True
+        )
+        self.assertGreater(self.event_1.last_modified_time, timezone.now())
+
+        Event.objects.filter(id=self.event_1.id).undelete()
+        self.event_1.refresh_from_db()
+        self.assertEqual(self.event_1.last_modified_time, timezone.now())
+
+    @freezegun.freeze_time("2023-11-6 13:00:00+03:00")
+    def test_event_undelete_last_modified_time_is_not_updated_when_not_deleted(self):
+        self.event_1.deleted = False
+        self.event_1.save(
+            update_fields=["deleted"], skip_last_modified_time=True, force_update=True
+        )
+        self.assertGreater(self.event_1.last_modified_time, timezone.now())
+
+        self.event_1.undelete()
+        self.event_1.refresh_from_db()
+        self.assertGreater(self.event_1.last_modified_time, timezone.now())
+
+    @freezegun.freeze_time("2023-11-6 13:00:00+03:00")
+    def test_event_soft_delete_last_modified_time_is_not_updated_when_already_deleted(
+        self,
+    ):
+        self.event_1.deleted = True
+        self.event_1.save(
+            update_fields=["deleted"], skip_last_modified_time=True, force_update=True
+        )
+        self.assertGreater(self.event_1.last_modified_time, timezone.now())
+
+        self.event_1.soft_delete()
+        self.event_1.refresh_from_db()
+        self.assertGreater(self.event_1.last_modified_time, timezone.now())
+
+    @freezegun.freeze_time("2023-11-6 13:00:00+03:00")
+    def test_event_queryset_undelete_last_modified_time_is_not_updated_when_not_deleted(
+        self,
+    ):
+        self.event_1.deleted = False
+        self.event_1.save(
+            update_fields=["deleted"], skip_last_modified_time=True, force_update=True
+        )
+        self.assertGreater(self.event_1.last_modified_time, timezone.now())
+
+        Event.objects.filter(id=self.event_1.id).undelete()
+        self.event_1.refresh_from_db()
+        self.assertGreater(self.event_1.last_modified_time, timezone.now())
+
+    @freezegun.freeze_time("2023-11-6 13:00:00+03:00")
+    def test_event_queryset_soft_delete_last_modified_time_is_not_updated_when_already_deleted(
+        self,
+    ):
+        self.event_1.deleted = True
+        self.event_1.save(
+            update_fields=["deleted"], skip_last_modified_time=True, force_update=True
+        )
+        self.assertGreater(self.event_1.last_modified_time, timezone.now())
+
+        Event.objects.filter(id=self.event_1.id).soft_delete()
+        self.event_1.refresh_from_db()
+        self.assertGreater(self.event_1.last_modified_time, timezone.now())
 
 
 @pytest.mark.no_test_audit_log
