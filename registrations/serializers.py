@@ -35,6 +35,29 @@ def _validate_registration_enrolment_times(registration: Registration) -> None:
         raise ConflictException(_("Enrolment is already closed."))
 
 
+def _validate_registration_capacity(
+    registration: Registration, signups_count: int
+) -> tuple[int, int]:
+    attendee_capacity = registration.maximum_attendee_capacity
+    waiting_list_capacity = registration.waiting_list_capacity
+    add_as_attending = add_as_waitlisted = signups_count
+
+    if attendee_capacity is not None:
+        already_attending = SignUp.objects.filter(
+            registration=registration, attendee_status=SignUp.AttendeeStatus.ATTENDING
+        ).count()
+        add_as_attending = attendee_capacity - already_attending
+
+    if waiting_list_capacity is not None:
+        already_waitlisted = SignUp.objects.filter(
+            registration=registration,
+            attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
+        ).count()
+        add_as_waitlisted = waiting_list_capacity - already_waitlisted
+
+    return max(add_as_attending, 0), max(add_as_waitlisted, 0)
+
+
 def _get_protected_data(validated_data: dict, keys: list[str]) -> dict:
     return {key: validated_data.pop(key) for key in keys if key in validated_data}
 
@@ -100,17 +123,11 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
             validated_data, ["extra_info", "date_of_birth"]
         )
 
-        already_attending = SignUp.objects.filter(
-            registration=registration, attendee_status=SignUp.AttendeeStatus.ATTENDING
-        ).count()
-        already_waitlisted = SignUp.objects.filter(
-            registration=registration,
-            attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
-        ).count()
-        attendee_capacity = registration.maximum_attendee_capacity
-        waiting_list_capacity = registration.waiting_list_capacity
+        add_as_attending, add_as_waitlisted = _validate_registration_capacity(
+            registration, 1
+        )
 
-        if (attendee_capacity is None) or (already_attending < attendee_capacity):
+        if add_as_attending:
             signup = super().create(validated_data)
             self._update_or_create_protected_data(signup, **protected_data)
 
@@ -118,9 +135,7 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
                 signup.send_notification(SignUpNotificationType.CONFIRMATION)
 
             return signup
-        elif (waiting_list_capacity is None) or (
-            already_waitlisted < waiting_list_capacity
-        ):
+        elif add_as_waitlisted:
             validated_data["attendee_status"] = SignUp.AttendeeStatus.WAITING_LIST
 
             signup = super().create(validated_data)
@@ -451,6 +466,86 @@ class CreateSignUpsSerializer(serializers.Serializer):
         data = super().validate(data)
         return data
 
+    @staticmethod
+    def send_notifications(signup_instances):
+        confirmation_type_mapping = {
+            SignUp.AttendeeStatus.ATTENDING: SignUpNotificationType.CONFIRMATION,
+            SignUp.AttendeeStatus.WAITING_LIST: SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST,
+        }
+
+        for signup in signup_instances:
+            if not signup.responsible_for_group and signup.signup_group_id:
+                continue
+
+            signup.send_notification(confirmation_type_mapping[signup.attendee_status])
+
+    def create_signups(self, validated_data):
+        user = self.context["request"].user
+        registration = validated_data["registration"]
+
+        add_as_attending, add_as_waitlisted = _validate_registration_capacity(
+            registration, len(validated_data["signups"])
+        )
+        if not (add_as_attending or add_as_waitlisted):
+            raise DRFPermissionDenied(_("The waiting list is already full"))
+
+        capacity_by_attendee_status_map = {
+            SignUp.AttendeeStatus.ATTENDING: add_as_attending,
+            SignUp.AttendeeStatus.WAITING_LIST: add_as_waitlisted,
+        }
+
+        def check_and_set_attendee_status(cleaned_signup_data):
+            if capacity_by_attendee_status_map.get(
+                cleaned_signup_data.get("attendee_status")
+            ):
+                return
+
+            if capacity_by_attendee_status_map[SignUp.AttendeeStatus.ATTENDING]:
+                cleaned_signup_data["attendee_status"] = SignUp.AttendeeStatus.ATTENDING
+            else:
+                cleaned_signup_data[
+                    "attendee_status"
+                ] = SignUp.AttendeeStatus.WAITING_LIST
+
+        signups = []
+        protected_data = []
+
+        for signup_data in validated_data["signups"]:
+            if not (
+                capacity_by_attendee_status_map[SignUp.AttendeeStatus.ATTENDING] > 0
+                or capacity_by_attendee_status_map[SignUp.AttendeeStatus.WAITING_LIST]
+                > 0
+            ):
+                break
+
+            cleaned_signup_data = signup_data.copy()
+            cleaned_signup_data["created_by"] = user
+            cleaned_signup_data["last_modified_by"] = user
+
+            extra_info = cleaned_signup_data.pop("extra_info", None)
+            date_of_birth = cleaned_signup_data.pop("date_of_birth", None)
+
+            check_and_set_attendee_status(cleaned_signup_data)
+            capacity_by_attendee_status_map[cleaned_signup_data["attendee_status"]] -= 1
+
+            signup = SignUp(**cleaned_signup_data)
+            signups.append(signup)
+
+            if extra_info or date_of_birth:
+                protected_data.append(
+                    SignUpProtectedData(
+                        registration=registration,
+                        signup=signup,
+                        extra_info=extra_info,
+                        date_of_birth=date_of_birth,
+                    )
+                )
+
+        signup_instances = SignUp.objects.bulk_create(signups)
+        SignUpProtectedData.objects.bulk_create(protected_data)
+
+        return signup_instances
+
 
 class SignUpGroupCreateSerializer(
     CreatedModifiedBaseSerializer, CreateSignUpsSerializer
@@ -487,12 +582,6 @@ class SignUpGroupCreateSerializer(
             **protected_data,
         )
 
-    def _create_signups(self, instance, validated_signups_data):
-        for signup_data in validated_signups_data:
-            signup_data["signup_group"] = instance
-            signup_serializer = SignUpSerializer(data=signup_data, context=self.context)
-            signup_serializer.create(signup_data)
-
     def create(self, validated_data):
         validated_data.pop("reservation_code")
         reservation = validated_data.pop("reservation")
@@ -500,8 +589,13 @@ class SignUpGroupCreateSerializer(
         protected_data = _get_protected_data(validated_data, ["extra_info"])
 
         instance = super().create(validated_data)
-        self._create_signups(instance, signups_data)
         self._create_protected_data(instance, **protected_data)
+
+        for signup in signups_data:
+            signup["signup_group"] = instance
+        validated_data["signups"] = signups_data
+        signup_instances = self.create_signups(validated_data)
+        self.send_notifications(signup_instances)
 
         reservation.delete()
 
