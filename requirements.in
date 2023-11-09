@@ -2,7 +2,6 @@ attrs
 beautifulsoup4
 bleach
 django-admin-autocomplete-filter
-django-anymail
 django-cleanup
 django-cors-headers
 django-environ

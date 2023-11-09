@@ -33,9 +33,7 @@ cffi==1.16.0
 charset-normalizer==3.3.2
     # via requests
 cryptography==41.0.5
-    # via
-    #   django-anymail
-    #   social-auth-core
+    # via social-auth-core
 decorator==5.1.1
     # via ipython
 defusedxml==0.7.1
@@ -48,7 +46,6 @@ django==3.2.23
     # via
     #   -r requirements.in
     #   django-admin-autocomplete-filter
-    #   django-anymail
     #   django-appconf
     #   django-cors-headers
     #   django-filter
@@ -71,8 +68,6 @@ django==3.2.23
     #   easy-thumbnails
     #   helsinki-profile-gdpr-api
 django-admin-autocomplete-filter==0.7.1
-    # via -r requirements.in
-django-anymail==10.2
     # via -r requirements.in
 django-appconf==1.0.5
     # via django-image-cropping
@@ -257,7 +252,6 @@ regex==2023.10.3
 requests==2.31.0
     # via
     #   -r requirements.in
-    #   django-anymail
     #   django-helusers
     #   django-munigeo
     #   django-orghierarchy
@@ -319,7 +313,6 @@ url-normalize==1.4.3
     # via requests-cache
 urllib3==1.26.18
     # via
-    #   django-anymail
     #   elasticsearch
     #   requests
     #   requests-cache

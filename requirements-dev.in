@@ -2,6 +2,7 @@
 
 Werkzeug
 black
+django-anymail
 django-debug-toolbar
 django-extensions
 factory_boy

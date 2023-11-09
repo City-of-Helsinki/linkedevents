@@ -20,6 +20,10 @@ certifi==2023.7.22
     # via
     #   -c requirements.txt
     #   requests
+cffi==1.16.0
+    # via
+    #   -c requirements.txt
+    #   cryptography
 charset-normalizer==3.3.2
     # via
     #   -c requirements.txt
@@ -32,11 +36,18 @@ coverage[toml]==7.3.2
     # via
     #   coverage
     #   pytest-cov
+cryptography==41.0.5
+    # via
+    #   -c requirements.txt
+    #   django-anymail
 django==3.2.23
     # via
     #   -c requirements.txt
+    #   django-anymail
     #   django-debug-toolbar
     #   django-extensions
+django-anymail==10.2
+    # via -r requirements-dev.in
 django-debug-toolbar==4.2.0
     # via -r requirements-dev.in
 django-extensions==3.2.3
@@ -113,6 +124,10 @@ pyasn1==0.5.0
     #   rsa
 pycodestyle==2.11.1
     # via flake8
+pycparser==2.21
+    # via
+    #   -c requirements.txt
+    #   cffi
 pyflakes==3.1.0
     # via flake8
 pyproject-hooks==1.0.0
@@ -148,6 +163,7 @@ pytz==2023.3.post1
 requests==2.31.0
     # via
     #   -c requirements.txt
+    #   django-anymail
     #   requests-mock
 requests-mock==1.11.0
     # via -r requirements-dev.in
@@ -185,6 +201,7 @@ typing-extensions==4.8.0
 urllib3==1.26.18
     # via
     #   -c requirements.txt
+    #   django-anymail
     #   requests
 werkzeug==3.0.1
     # via -r requirements-dev.in
