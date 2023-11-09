@@ -33,6 +33,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from image_cropping import ImageRatioField
 from mptt.models import MPTTModel, TreeForeignKey
@@ -149,9 +150,18 @@ class BaseQuerySet(models.QuerySet):
 
 class BaseTreeQuerySet(TreeQuerySet, BaseQuerySet):
     def soft_delete(self):
-        return self.update(deleted=True)
+        return self.filter(deleted=False).update(
+            deleted=True, last_modified_time=timezone.now()
+        )
 
     soft_delete.alters_data = True
+
+    def undelete(self):
+        return self.filter(deleted=True).update(
+            deleted=False, last_modified_time=timezone.now()
+        )
+
+    undelete.alters_data = True
 
 
 class ReplacedByMixin:
@@ -1117,12 +1127,34 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
         return user.can_edit_event(self.publisher, self.publication_status)
 
     def soft_delete(self, using=None):
+        db_event = Event.objects.get(id=self.id)
+        if db_event.deleted:
+            return
+
         self.deleted = True
-        self.save(update_fields=("deleted",), using=using, force_update=True)
+        self.save(
+            update_fields=(
+                "deleted",
+                "last_modified_time",
+            ),
+            using=using,
+            force_update=True,
+        )
 
     def undelete(self, using=None):
+        db_event = Event.objects.get(id=self.id)
+        if not db_event.deleted:
+            return
+
         self.deleted = False
-        self.save(update_fields=("deleted",), using=using, force_update=True)
+        self.save(
+            update_fields=(
+                "deleted",
+                "last_modified_time",
+            ),
+            using=using,
+            force_update=True,
+        )
 
     def _send_notification(self, notification_type, recipient_list, request=None):
         if len(recipient_list) == 0:

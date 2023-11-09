@@ -232,15 +232,33 @@ class TestKulkeImporter(TestCase):
             origin_id=3,
             start_time=now - timedelta(days=90),
         )
+        # Event soft deleted but exists in Elis data -- will be restored
+        event_4 = EventFactory(
+            data_source=self.data_source, origin_id=4, start_time=now, deleted=True
+        )
+        # Event soft deleted but does not exist in db in Elis data -- will stay deleted.
+        event_5 = EventFactory(
+            data_source=self.data_source, origin_id=5, start_time=now, deleted=True
+        )
+        # Super event does not contain at least two sub event but exists in data -- should be deleted.
+        event_6 = EventFactory(
+            data_source=self.data_source,
+            origin_id=6,
+            start_time=now,
+            super_event_type=Event.SuperEventType.RECURRING,
+        )
 
         self.importer._handle_removed_events(
-            elis_event_ids=[event_2.origin_id],
+            elis_event_ids=[event_2.origin_id, event_4.origin_id, event_6.origin_id],
             begin_date=now - timedelta(days=60),
         )
 
         self.assert_event_soft_deleted(event_1.id, True)
         self.assert_event_soft_deleted(event_2.id, False)
         self.assert_event_soft_deleted(event_3.id, False)
+        self.assert_event_soft_deleted(event_4.id, False)
+        self.assert_event_soft_deleted(event_5.id, True)
+        self.assert_event_soft_deleted(event_6.id, True)
 
     @pytest.mark.django_db
     def test__handle_removed_events_only_kulke_data_source(self):
