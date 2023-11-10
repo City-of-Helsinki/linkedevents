@@ -79,18 +79,6 @@ class RegistrationViewSet(
         context["registration_admin_tree_ids"] = registration_admin_tree_ids
         return context
 
-    def perform_create(self, serializer):
-        # Check object level permissions for event which has the relevant data_source.
-        event = serializer.validated_data.get("event")
-        self.check_object_permissions(self.request, event)
-        super().perform_create(serializer)
-
-    def perform_update(self, serializer):
-        # Check object level permissions for event which has the relevant data_source.
-        event = serializer.validated_data.get("event", serializer.instance.event)
-        self.check_object_permissions(self.request, event)
-        super().perform_update(serializer)
-
     def perform_destroy(self, instance):
         try:
             instance.delete()

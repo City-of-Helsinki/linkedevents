@@ -265,13 +265,8 @@ class Registration(CreatedModifiedBaseModel):
         """Check if current registration can be edited by the given user"""
         return (
             user.is_superuser
-            or user.is_admin_of(self.event.publisher)
-            or user.is_registration_admin_of(self.event.publisher)
-        )
-
-    def is_user_editable_resources(self):
-        return bool(
-            self.event.data_source and self.event.data_source.user_editable_resources
+            or user.is_admin_of(self.publisher)
+            or user.is_registration_admin_of(self.publisher)
         )
 
 
