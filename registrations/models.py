@@ -8,7 +8,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.core.mail import send_mail
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models import DateTimeField, ExpressionWrapper, F, Sum
+from django.db.models import DateTimeField, ExpressionWrapper, F, Sum, UniqueConstraint
 from django.forms.fields import MultipleChoiceField
 from django.template.loader import render_to_string
 from django.utils import translation
@@ -524,6 +524,7 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         max_length=25,
         choices=ATTENDEE_STATUSES,
         default=AttendeeStatus.ATTENDING,
+        db_index=True,
     )
     native_language = models.ForeignKey(
         Language,
@@ -697,3 +698,10 @@ class SeatReservationCode(models.Model):
     @property
     def expiration(self):
         return self.timestamp + timedelta(minutes=code_validity_duration(self.seats))
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=["registration", "code"], name="unique_seat_reservation"
+            ),
+        ]
