@@ -401,7 +401,7 @@ def test_cannot_get_signup_groups_of_nonexistent_registration(
 
     response = get_list(api_client, "registration=not-exist")
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.data["detail"] == "Registration with id not-exist doesn't exist."
+    assert response.data["registration"] == "Invalid registration ID(s) given."
 
 
 @pytest.mark.django_db
@@ -649,6 +649,21 @@ def test_filter_signup_groups(api_client, registration, registration2):
     )
     get_list_and_assert_signup_groups(
         api_client, f"registration={registration2.id}&text=3456", [signup_group3]
+    )
+
+
+@pytest.mark.django_db
+def test_no_signup_groups_found_with_registration_id(api_client, registration):
+    user = UserFactory()
+    user.registration_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    SignUpGroupFactory(registration=registration)
+
+    get_list_and_assert_signup_groups(
+        api_client,
+        f"registration={registration.pk + 1}",
+        [],
     )
 
 
