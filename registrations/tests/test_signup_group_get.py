@@ -53,6 +53,7 @@ def assert_signup_group_fields_exist(data):
         "last_modified_time",
         "created_by",
         "last_modified_by",
+        "is_created_by_current_user",
     )
     assert_fields_exist(data, fields)
 
@@ -87,6 +88,7 @@ def test_registration_admin_user_can_get_signup_group(
     response = assert_get_detail(user_api_client, signup_group.id)
     assert len(response.json()["signups"]) == 2
     assert_signup_group_fields_exist(response.data)
+    assert response.data["is_created_by_current_user"] == False
 
 
 @pytest.mark.django_db
@@ -103,8 +105,9 @@ def test_registration_user_access_can_get_signup_group_when_strongly_identified(
         new_callable=PropertyMock,
         return_value="heltunnistussuomifi",
     ) as mocked:
-        assert_get_detail(user_api_client, signup_group.id)
+        response = assert_get_detail(user_api_client, signup_group.id)
         assert mocked.called is True
+    assert response.data["is_created_by_current_user"] == False
 
 
 @pytest.mark.django_db
@@ -153,6 +156,7 @@ def test_regular_created_user_can_get_signup_group(user_api_client, user, organi
     response = assert_get_detail(user_api_client, signup_group.id)
     assert len(response.json()["signups"]) == 2
     assert_signup_group_fields_exist(response.data)
+    assert response.data["is_created_by_current_user"] == True
 
 
 @pytest.mark.django_db
@@ -182,6 +186,7 @@ def test_created_user_without_organization_can_get_signup_group(
     response = assert_get_detail(api_client, signup_group.id)
     assert len(response.json()["signups"]) == 2
     assert_signup_group_fields_exist(response.data)
+    assert response.data["is_created_by_current_user"] == True
 
 
 @pytest.mark.django_db
@@ -215,10 +220,11 @@ def test_api_key_with_organization_and_registration_permissions_can_get_signup_g
     response = assert_get_detail(api_client, signup_group.id)
     assert len(response.json()["signups"]) == 2
     assert_signup_group_fields_exist(response.data)
+    assert response.data["is_created_by_current_user"] == False
 
 
 @pytest.mark.django_db
-def test_api_key_with_wrong_organization_cannot_get_signup(
+def test_api_key_with_wrong_organization_cannot_get_signup_group(
     api_client, data_source, organization, organization2
 ):
     signup_group = SignUpGroupFactory(
@@ -235,7 +241,7 @@ def test_api_key_with_wrong_organization_cannot_get_signup(
 
 
 @pytest.mark.django_db
-def test_api_key_from_wrong_data_source_cannot_get_signup(
+def test_api_key_from_wrong_data_source_cannot_get_signup_group(
     api_client, organization, data_source, other_data_source
 ):
     signup_group = SignUpGroupFactory(
