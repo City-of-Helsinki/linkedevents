@@ -21,6 +21,12 @@ resources:
       type: git
       # Azure DevOps project/repository
       name: linkedevents/linkedevents-pipelines
-
+  pipelines:
+    - pipeline: build-linkedevents-api
+      source: build-linkedevents-api
+      trigger:
+        branches:
+          include:
+            - refs/tags/release-*
 extends:
   template: azure-pipelines-deploy-linkedevents-api-staging.yml@linkedevents-pipelines
