@@ -22,7 +22,7 @@ def clean_text(text, strip_newlines=False, parse_html=False):
     if strip_newlines:
         text = text.replace("\r", " ").replace("\n", " ")
     # remove consecutive whitespaces
-    return re.sub(r"\s\s+", " ", text, re.U).strip()
+    return re.sub(r"\s\s+", " ", text, flags=re.UNICODE).strip()
 
 
 def clean_url(url):
