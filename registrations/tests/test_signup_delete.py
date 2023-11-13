@@ -10,6 +10,8 @@ from registrations.models import SignUp
 from registrations.tests.factories import (
     RegistrationUserAccessFactory,
     SeatReservationCodeFactory,
+    SignUpFactory,
+    SignUpGroupFactory,
 )
 from registrations.tests.test_signup_post import assert_create_signups
 
@@ -478,3 +480,31 @@ def test_transferred_as_participant_template_has_correct_text_per_event_type(
     # Send email to signup who is transferred as participant
     assert mail.outbox[1].subject.startswith(expected_subject)
     assert expected_text in str(mail.outbox[1].alternatives[0])
+
+
+@pytest.mark.parametrize("responsible_for_group", [True, False])
+@pytest.mark.django_db
+def test_delete_signup_from_group(api_client, registration, responsible_for_group):
+    user = UserFactory()
+    user.registration_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(registration=registration, signup_group=signup_group)
+    responsible_signup = SignUpFactory(
+        registration=registration,
+        signup_group=signup_group,
+        responsible_for_group=responsible_for_group,
+    )
+
+    assert SignUp.objects.count() == 2
+
+    response = delete_signup(api_client, responsible_signup.pk)
+
+    if responsible_for_group:
+        # Only responsible signup cannot be deleted
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert SignUp.objects.count() == 2
+    else:
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+        assert SignUp.objects.count() == 1

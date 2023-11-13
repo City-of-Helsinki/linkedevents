@@ -13,6 +13,7 @@ from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ParseError
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -409,6 +410,11 @@ class SignUpViewSet(
 
     @transaction.atomic
     def perform_destroy(self, instance):
+        if instance.is_only_responsible_signup:
+            raise ValidationError(
+                _("Cannot delete the only responsible person of a group")
+            )
+
         instance._individually_deleted = True
         instance.delete()
 

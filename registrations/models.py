@@ -598,6 +598,16 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
     )
 
     @cached_property
+    def is_only_responsible_signup(self):
+        return (
+            self.signup_group_id
+            and self.responsible_for_group
+            and not self.signup_group.signups.exclude(pk=self.pk)
+            .filter(responsible_for_group=True)
+            .exists()
+        )
+
+    @cached_property
     def date_of_birth(self):
         protected_data = getattr(self, "protected_data", None)
         return getattr(protected_data, "date_of_birth", None)

@@ -235,3 +235,18 @@ class TestSignUp(TestCase):
         self.signup.save()
 
         self.assertEqual(self.signup.get_service_language_pk(), "fi")
+
+    def test_is_only_responsible_signup(self):
+        group = SignUpGroupFactory(registration=self.signup.registration)
+        SignUpFactory(signup_group=group, registration=self.signup.registration)
+
+        self.signup.signup_group = group
+        self.signup.save(update_fields=["signup_group"])
+
+        self.assertFalse(self.signup.is_only_responsible_signup)
+
+        self.signup.responsible_for_group = True
+        self.signup.save(update_fields=["responsible_for_group"])
+
+        del self.signup.is_only_responsible_signup
+        self.assertTrue(self.signup.is_only_responsible_signup)

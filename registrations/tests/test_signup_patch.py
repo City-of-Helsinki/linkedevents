@@ -11,6 +11,7 @@ from registrations.tests.factories import (
     RegistrationFactory,
     RegistrationUserAccessFactory,
     SignUpFactory,
+    SignUpGroupFactory,
     SignUpProtectedDataFactory,
 )
 
@@ -212,3 +213,28 @@ def test_registration_user_can_patch_signup_presence_status_based_on_identificat
     else:
         assert response.status_code == status.HTTP_200_OK
         assert signup.presence_status == SignUp.PresenceStatus.PRESENT
+
+
+@pytest.mark.django_db
+def test_cannot_remove_only_responsible_person_from_group_through_patch(
+    api_client, registration
+):
+    user = UserFactory()
+    user.registration_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(registration=registration, signup_group=signup_group)
+    responsible_signup = SignUpFactory(
+        registration=registration, signup_group=signup_group, responsible_for_group=True
+    )
+
+    signup_data = {
+        "responsible_for_group": False,
+    }
+
+    response = patch_signup(api_client, responsible_signup.id, signup_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["responsible_for_group"][0] == (
+        "Cannot set responsible_for_group to False for the only responsible person of a group"
+    )
