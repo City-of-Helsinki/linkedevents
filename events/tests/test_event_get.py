@@ -7,6 +7,7 @@ from django.conf import settings
 from django.contrib.gis.gdal import CoordTransform, SpatialReference
 from django.contrib.gis.geos import Point
 from freezegun import freeze_time
+from rest_framework import status
 
 from events.models import Event, Language, PublicationStatus
 from events.tests.conftest import APIClient
@@ -122,7 +123,7 @@ def get_detail_and_assert_events(
 def test_get_event_list_html_renders(api_client, event):
     url = reverse("event-list", version="v1")
     response = api_client.get(url, data=None, HTTP_ACCEPT="text/html")
-    assert response.status_code == 200, str(response.content)
+    assert response.status_code == status.HTTP_200_OK, str(response.content)
 
 
 @pytest.mark.django_db
@@ -146,7 +147,7 @@ def test_get_event_detail_check_fields_exist(api_client, event):
 @pytest.mark.django_db
 def test_get_unknown_event_detail_check_404(api_client):
     response = api_client.get(reverse("event-detail", kwargs={"pk": "möö"}))
-    assert response.status_code == 404
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 @pytest.mark.django_db
@@ -241,7 +242,7 @@ def test_get_event_list_verify_dwithin_filter_error(
     query_string, expected_message, api_client, event, event2
 ):
     response = get_list_no_code_assert(api_client, query_string=query_string)
-    assert response.status_code == 400
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.data["detail"] == expected_message
 
 
@@ -604,6 +605,38 @@ def test_admin_user_filter(api_client, event, event2, user):
 
 
 @pytest.mark.django_db
+def test_registration_admin_user_filter(
+    event, event2, event3, organization3, user, user_api_client
+):
+    event3.publisher = organization3
+    event3.save()
+    event2.publisher.registration_admin_users.add(user)
+    get_list_and_assert_events(
+        "registration_admin_user=false", [event, event2, event3], user_api_client
+    )
+    event2.publisher.registration_admin_users.add(user)
+    get_list_and_assert_events(
+        "registration_admin_user=true", [event, event2], user_api_client
+    )
+
+
+@pytest.mark.django_db
+def test_cannot_use_registration_admin_user_and_admin_user_filters_simultaneously(
+    user_api_client,
+):
+    url = "%s?%s" % (
+        reverse("event-list"),
+        "admin_user=true&registration_admin_user=true",
+    )
+    response = api_client.get(url, format="json")
+    assert (
+        response.data["detail"]
+        == "Supply either 'admin_user' or 'registration_admin_user', not both"
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+@pytest.mark.django_db
 def test_redirect_if_replaced(api_client, event, event2, user):
     api_client.force_authenticate(user=user)
 
@@ -612,10 +645,10 @@ def test_redirect_if_replaced(api_client, event, event2, user):
 
     url = reverse("event-detail", version="v1", kwargs={"pk": event.pk})
     response = api_client.get(url, format="json")
-    assert response.status_code == 301
+    assert response.status_code == status.HTTP_301_MOVED_PERMANENTLY
 
     response2 = api_client.get(response.url, format="json")
-    assert response2.status_code == 200
+    assert response2.status_code == status.HTTP_200_OK
     assert response2.data["id"] == event2.pk
 
 
@@ -630,10 +663,10 @@ def test_redirect_to_end_of_replace_chain(api_client, event, event2, event3, use
 
     url = reverse("event-detail", version="v1", kwargs={"pk": event.pk})
     response = api_client.get(url, format="json")
-    assert response.status_code == 301
+    assert response.status_code == status.HTTP_301_MOVED_PERMANENTLY
 
     response2 = api_client.get(response.url, format="json")
-    assert response2.status_code == 200
+    assert response2.status_code == status.HTTP_200_OK
     assert response2.data["id"] == event3.pk
 
 
@@ -673,7 +706,7 @@ def test_event_list_show_deleted_param(api_client, event, event2, user):
     event.soft_delete()
 
     response = get_list(api_client, query_string="show_deleted=true")
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert event.id in {e["id"] for e in response.data["data"]}
     assert event2.id in {e["id"] for e in response.data["data"]}
 
@@ -695,7 +728,7 @@ def test_event_list_deleted_param(api_client, event, event2, user):
     event.soft_delete()
 
     response = get_list(api_client, query_string="deleted=true")
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert event.id in {e["id"] for e in response.data["data"]}
     assert event2.id not in {e["id"] for e in response.data["data"]}
 
@@ -1063,7 +1096,7 @@ def test_event_get_by_type(api_client, event, event2, event3):
     response = get_list_no_code_assert(
         api_client, query_string="event_type=sometypohere"
     )
-    assert response.status_code == 400
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
 @pytest.mark.django_db

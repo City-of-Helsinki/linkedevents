@@ -113,7 +113,6 @@ def test__api_key_without_organization_cannot_create_keywordset(
 
 @pytest.mark.django_db
 def test__unknown_api_key_cannot_create_keywordset(api_client, keyword_set_dict):
-
     api_client.credentials(apikey="unknown")
     response = create_keyword_set(api_client, keyword_set_dict)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -121,7 +120,6 @@ def test__unknown_api_key_cannot_create_keywordset(api_client, keyword_set_dict)
 
 @pytest.mark.django_db
 def test__empty_api_key_cannot_create_keywordset(api_client, keyword_set_dict):
-
     api_client.credentials(apikey="")
     response = create_keyword_set(api_client, keyword_set_dict)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -136,7 +134,7 @@ def test__non_user_editable_resources_cannot_create_keyword(
     data_source.save()
     api_client.force_authenticate(user)
 
-    response = response = create_keyword_set(api_client, keyword_set_dict)
+    response = create_keyword_set(api_client, keyword_set_dict)
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 

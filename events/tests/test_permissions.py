@@ -7,7 +7,7 @@ from django_orghierarchy.models import Organization
 from helevents.models import User, UserModelPermissionMixin
 
 from ..models import DataSource, Event, PublicationStatus
-from .factories import OrganizationFactory
+from .factories import EventFactory, OrganizationFactory
 
 
 @pytest.mark.no_test_audit_log
@@ -186,4 +186,47 @@ class TestUserModelPermissions(TestCase):
         # test for other users
         self.instance.organization_memberships.remove(self.org)
         qs = self.instance.get_editable_events(total_qs)
+        self.assertQuerysetEqual(qs, [])
+
+    def test_get_editable_events_for_registration(self):
+        # this test requires the whole User model, as admin organizations are dependent on org hierarchy
+        event_1 = EventFactory(
+            id="event-1",
+            name="event-1",
+            data_source=self.data_source,
+            publisher=self.org,
+            publication_status=PublicationStatus.PUBLIC,
+        )
+        event_2 = EventFactory(
+            id="event-2",
+            name="event-2",
+            data_source=self.data_source,
+            publisher=self.org,
+            publication_status=PublicationStatus.PUBLIC,
+        )
+
+        # admins should be allowed to see and edit suborg events
+        event_3 = EventFactory(
+            id="event-3",
+            name="event-3",
+            data_source=self.data_source,
+            publisher=self.org2,
+            publication_status=PublicationStatus.DRAFT,
+        )
+
+        total_qs = Event.objects.all()
+        # test for registration admin user
+        self.instance.registration_admin_organizations.add(self.org)
+        qs = self.instance.get_editable_events_for_registration(total_qs)
+        self.assertQuerysetEqual(qs, [repr(event_1), repr(event_2), repr(event_3)])
+
+        # test for admin user
+        self.instance.registration_admin_organizations.remove(self.org)
+        self.instance.admin_organizations.add(self.org)
+        qs = self.instance.get_editable_events_for_registration(total_qs)
+        self.assertQuerysetEqual(qs, [repr(event_1), repr(event_2), repr(event_3)])
+
+        # test for other users
+        self.instance.admin_organizations.remove(self.org)
+        qs = self.instance.get_editable_events_for_registration(total_qs)
         self.assertQuerysetEqual(qs, [])

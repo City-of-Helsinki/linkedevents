@@ -106,7 +106,7 @@ class RegistrationViewSet(
             if isinstance(self.request.user, AnonymousUser):
                 events = Event.objects.none()
             else:
-                events = self.request.user.get_editable_events(events)
+                events = self.request.user.get_editable_events_for_registration(events)
         registrations = Registration.objects.filter(event__in=events)
 
         return registrations

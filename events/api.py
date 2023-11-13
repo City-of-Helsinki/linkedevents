@@ -3430,6 +3430,10 @@ class EventFilter(django_filters.rest_framework.FilterSet):
 
     x_ongoing = django_filters.BooleanFilter(method="filter_x_ongoing")
 
+    registration_admin_user = django_filters.BooleanFilter(
+        method="filter_registration_admin_user"
+    )
+
     class Meta:
         model = Event
         fields = ("division", "super_event_type", "super_event")
@@ -3512,6 +3516,16 @@ class EventFilter(django_filters.rest_framework.FilterSet):
             return qs.filter(end_time__gt=datetime.now(timezone.utc))
 
         return qs.filter(end_time__lte=datetime.now(timezone.utc))
+
+    def filter_registration_admin_user(self, queryset, name, value):
+        if not value:
+            return queryset
+
+        if self.request.user.is_authenticated:
+            # displays all events whose registration the user can modify
+            return self.request.user.get_editable_events_for_registration(queryset)
+        else:
+            return queryset.none()
 
 
 class EventDeletedException(APIException):
@@ -3654,10 +3668,20 @@ class EventViewSet(
             if show_all:
                 # displays all editable events, including drafts, and public non-editable events
                 queryset = editable_queryset | public_queryset
+
             admin_user = self.request.query_params.get("admin_user")
+            registration_admin_user = self.request.query_params.get(
+                "registration_admin_user"
+            )
+            if admin_user and registration_admin_user:
+                raise ParseError(
+                    "Supply either 'admin_user' or 'registration_admin_user', not both"
+                )
+
             if admin_user:
                 # displays all editable events, including drafts, but no other public events
                 queryset = editable_queryset
+
             created_by = self.request.query_params.get("created_by")
             if created_by:
                 # only displays events by the particular user

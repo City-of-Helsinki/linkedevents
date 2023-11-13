@@ -130,13 +130,19 @@ class UserModelPermissionMixin:
             else:
                 return queryset.none()
 
+        publishers = self.get_admin_organizations_and_descendants()
         # distinct is not needed here, as admin_orgs and memberships should not overlap
-        return queryset.filter(
-            publisher__in=self.get_admin_organizations_and_descendants()
-        ) | queryset.filter(
+        return queryset.filter(publisher__in=publishers) | queryset.filter(
             publication_status=PublicationStatus.DRAFT,
             publisher__in=self.organization_memberships.all(),
         )
+
+    def get_editable_events_for_registration(self, queryset):
+        publishers = (
+            self.get_admin_organizations_and_descendants()
+            | self.get_registration_admin_organizations_and_descendants()
+        )
+        return queryset.filter(publisher__in=publishers)
 
     def _get_admin_tree_ids(self, admin_queryset):
         # returns tree ids for all admin organizations and their replacements
