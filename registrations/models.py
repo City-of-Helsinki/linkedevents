@@ -7,7 +7,7 @@ from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
 from django.core.mail import send_mail
 from django.core.validators import MinValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.db.models import DateTimeField, ExpressionWrapper, F, Sum, UniqueConstraint
 from django.forms.fields import MultipleChoiceField
 from django.template.loader import render_to_string
@@ -38,6 +38,7 @@ from registrations.utils import (
 User = settings.AUTH_USER_MODEL
 
 logger = logging.getLogger(__name__)
+anonymize_replacement = "<DELETED>"
 
 
 class MandatoryFields(models.TextChoices):
@@ -328,6 +329,11 @@ class SignUpGroup(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
     registration = models.ForeignKey(
         Registration, on_delete=models.PROTECT, related_name="signup_groups"
     )
+    anonymization_time = models.DateTimeField(
+        verbose_name=_("Anonymization time"),
+        null=True,
+        editable=False,
+    )
 
     serialize_fields = (
         {"name": "id"},
@@ -345,6 +351,27 @@ class SignUpGroup(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
     def attending_signups(self):
         return self.signups.filter(attendee_status=SignUp.AttendeeStatus.ATTENDING)
 
+    @transaction.atomic
+    def anonymize(self):
+        # Allow to anonymize signup only once
+        if self.anonymization_time is None:
+            if contact_person := getattr(self, "contact_person", None):
+                contact_person.anonymize()
+
+            if protected_data := getattr(self, "protected_data", None):
+                protected_data.anonymize()
+
+            # Anonymize all the signups of the group
+            signups = self.signups.all()
+
+            for signup in signups:
+                signup.anonymize()
+
+            self.anonymization_time = localtime()
+            self.created_by = None
+            self.last_modified_by = None
+            self.save()
+
 
 class SignUpProtectedDataBaseModel(models.Model):
     registration = models.ForeignKey(
@@ -357,6 +384,10 @@ class SignUpProtectedDataBaseModel(models.Model):
         null=True,
         default=None,
     )
+
+    def anonymize(self):
+        self.extra_info = anonymize_replacement
+        self.save()
 
     class Meta:
         abstract = True
@@ -525,6 +556,12 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         default=False,
     )
 
+    anonymization_time = models.DateTimeField(
+        verbose_name=_("Anonymization time"),
+        null=True,
+        editable=False,
+    )
+
     serialize_fields = (
         {"name": "first_name"},
         {"name": "last_name"},
@@ -562,6 +599,24 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
             return getattr(self.signup_group, "contact_person", None)
 
         return getattr(self, "contact_person", None)
+
+    @transaction.atomic
+    def anonymize(self):
+        # Allow to anonymize signup group only once
+        if self.anonymization_time is None:
+            if contact_person := getattr(self, "contact_person", None):
+                contact_person.anonymize()
+
+            if protected_data := getattr(self, "protected_data", None):
+                protected_data.anonymize()
+
+            self.first_name = anonymize_replacement
+            self.last_name = anonymize_replacement
+            self.street_address = anonymize_replacement
+            self.anonymization_time = localtime()
+            self.created_by = None
+            self.last_modified_by = None
+            self.save()
 
 
 class SignUpProtectedData(SignUpProtectedDataBaseModel):
@@ -737,6 +792,14 @@ class SignUpContactPerson(SerializableMixin):
             )
 
         super().save(*args, **kwargs)
+
+    def anonymize(self):
+        self.email = anonymize_replacement
+        self.phone_number = anonymize_replacement
+        self.first_name = anonymize_replacement
+        self.last_name = anonymize_replacement
+        self.membership_number = anonymize_replacement
+        self.save()
 
 
 class SeatReservationCode(models.Model):

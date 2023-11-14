@@ -59,6 +59,7 @@ def assert_signup_group_fields_exist(data):
         "created_by",
         "last_modified_by",
         "is_created_by_current_user",
+        "anonymization_time",
     )
     assert_fields_exist(data, fields)
     assert_contact_person_fields_exist(data["contact_person"])
