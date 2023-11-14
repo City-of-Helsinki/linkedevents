@@ -1,6 +1,7 @@
 import pytest
 from django.conf import settings
 
+from audit_log.models import AuditLogEntry
 from events.auth import ApiKeyUser
 from events.tests.utils import assert_keyword_data_is_equal
 
@@ -33,6 +34,16 @@ def test__create_keyword_with_post(api_client, keyword_dict, user):
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, keyword_dict)
     assert_keyword_data_is_equal(keyword_dict, response.data)
+
+
+@pytest.mark.django_db
+def test_keyword_id_is_audit_logged_on_post(user_api_client, keyword_dict):
+    response = create_with_post(user_api_client, keyword_dict)
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+        response.data["id"]
+    ]
 
 
 @pytest.mark.django_db

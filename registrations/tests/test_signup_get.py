@@ -1,8 +1,10 @@
+from collections import Counter
 from unittest.mock import patch, PropertyMock
 
 import pytest
 from rest_framework import status
 
+from audit_log.models import AuditLogEntry
 from events.tests.conftest import APIClient
 from events.tests.utils import assert_fields_exist
 from events.tests.utils import versioned_reverse as reverse
@@ -104,7 +106,7 @@ def test_registration_admin_user_can_get_signup(
     default_organization.registration_admin_users.add(user)
 
     response = assert_get_detail(user_api_client, signup.id)
-    assert response.data["is_created_by_current_user"] == False
+    assert response.data["is_created_by_current_user"] is False
 
 
 @pytest.mark.django_db
@@ -122,7 +124,7 @@ def test_registration_user_access_can_get_signup_when_strongly_identified(
         response = assert_get_detail(user_api_client, signup.id)
         assert mocked.called is True
     assert_signup_fields_exist(response.data)
-    assert response.data["is_created_by_current_user"] == False
+    assert response.data["is_created_by_current_user"] is False
 
 
 @pytest.mark.django_db
@@ -165,7 +167,7 @@ def test_regular_created_user_can_get_signup(
 
     response = assert_get_detail(user_api_client, signup.id)
     assert_signup_fields_exist(response.data)
-    assert response.data["is_created_by_current_user"] == True
+    assert response.data["is_created_by_current_user"] is True
 
 
 @pytest.mark.django_db
@@ -187,7 +189,7 @@ def test_created_user_without_organization_can_get_signup(api_client, registrati
 
     response = assert_get_detail(api_client, signup.id)
     assert_signup_fields_exist(response.data)
-    assert response.data["is_created_by_current_user"] == True
+    assert response.data["is_created_by_current_user"] is True
 
 
 @pytest.mark.django_db
@@ -211,7 +213,7 @@ def test_api_key_with_organization_and_registration_permission_can_get_signup(
 
     response = assert_get_detail(api_client, signup.id)
     assert_signup_fields_exist(response.data)
-    assert response.data["is_created_by_current_user"] == False
+    assert response.data["is_created_by_current_user"] is False
 
 
 @pytest.mark.django_db
@@ -591,3 +593,29 @@ def test_filter_signups(
     get_list_and_assert_signups(
         api_client, f"registration={registration2.id}&text=3456", [signup8]
     )
+
+
+@pytest.mark.django_db
+def test_signup_id_is_audit_logged_on_get_detail(api_client, signup):
+    user = UserFactory()
+    user.registration_admin_organizations.add(signup.publisher)
+    api_client.force_authenticate(user)
+
+    assert_get_detail(api_client, signup.id)
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [signup.pk]
+
+
+@pytest.mark.django_db
+def test_signup_id_is_audit_logged_on_get_list(api_client, signup, signup2):
+    user = UserFactory()
+    user.registration_admin_organizations.add(signup.publisher)
+    api_client.force_authenticate(user)
+
+    get_list_and_assert_signups(api_client, "", [signup, signup2])
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert Counter(
+        audit_log_entry.message["audit_event"]["target"]["object_ids"]
+    ) == Counter([signup.pk, signup2.pk])

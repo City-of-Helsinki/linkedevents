@@ -1,9 +1,12 @@
+from collections import Counter
+
 import pytest
 from django.conf import settings
 from django.core import mail
 from django.utils import translation
 from rest_framework import status
 
+from audit_log.models import AuditLogEntry
 from events.models import Language
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import SignUp
@@ -529,3 +532,19 @@ def test_registration_admin_can_send_message_regardless_of_non_user_editable_res
     send_message_data = {"subject": "Message subject", "body": "Message body"}
 
     assert_send_message(user_api_client, registration.id, send_message_data, [signup])
+
+
+@pytest.mark.django_db
+def test_signup_ids_are_audit_logged_on_send_message(
+    user_api_client, registration, signup, signup2
+):
+    send_message_data = {"subject": "Message subject", "body": "Message body"}
+
+    assert_send_message(
+        user_api_client, registration.id, send_message_data, [signup, signup2]
+    )
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert Counter(
+        audit_log_entry.message["audit_event"]["target"]["object_ids"]
+    ) == Counter([signup.pk, signup2.pk])

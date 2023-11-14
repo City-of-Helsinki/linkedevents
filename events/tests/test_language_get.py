@@ -1,8 +1,13 @@
+from collections import Counter
+
 import pytest
 from django.conf import settings
+from rest_framework import status
 
+from audit_log.models import AuditLogEntry
 from events.models import Language
 
+from .factories import LanguageFactory
 from .utils import assert_fields_exist, get
 from .utils import versioned_reverse as reverse
 
@@ -110,3 +115,30 @@ def test_get_language_check_translation_available(api_client, default_languages)
 
     response = get_detail(api_client, "tlh")
     assert response.data["translation_available"] is False
+
+
+@pytest.mark.django_db
+def test_language_id_is_audit_logged_on_get_detail(api_client):
+    language = LanguageFactory(pk="fi")
+
+    response = get_detail(api_client, language.pk)
+    assert response.status_code == status.HTTP_200_OK
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+        language.pk
+    ]
+
+
+@pytest.mark.django_db
+def test_language_id_is_audit_logged_on_get_list(api_client):
+    language = LanguageFactory(pk="fi")
+    language2 = LanguageFactory(pk="en")
+
+    response = get_list(api_client)
+    assert response.status_code == status.HTTP_200_OK
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert Counter(
+        audit_log_entry.message["audit_event"]["target"]["object_ids"]
+    ) == Counter([language.pk, language2.pk])

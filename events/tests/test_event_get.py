@@ -1,3 +1,4 @@
+from collections import Counter
 from datetime import datetime, timedelta
 
 import pytest
@@ -9,6 +10,7 @@ from django.contrib.gis.geos import Point
 from freezegun import freeze_time
 from rest_framework import status
 
+from audit_log.models import AuditLogEntry
 from events.models import Event, Language, PublicationStatus
 from events.tests.conftest import APIClient
 from events.tests.utils import assert_fields_exist, datetime_zone_aware, get
@@ -1364,3 +1366,23 @@ def test_sort_events_by_minimum_attendee_capacity(api_client, event, event2, eve
     assert results[0]["id"] == event3.id
     assert results[1]["id"] == event2.id
     assert results[2]["id"] == event.id
+
+
+@pytest.mark.django_db
+def test_event_id_is_audit_logged_on_get_detail(api_client, event):
+    response = get_detail(api_client, event.pk)
+    assert response.status_code == status.HTTP_200_OK
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [event.pk]
+
+
+@pytest.mark.django_db
+def test_event_id_is_audit_logged_on_get_list(api_client, event, event2):
+    response = get_list(api_client)
+    assert response.status_code == status.HTTP_200_OK
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert Counter(
+        audit_log_entry.message["audit_event"]["target"]["object_ids"]
+    ) == Counter([event.pk, event2.pk])

@@ -1,7 +1,12 @@
+from collections import Counter
+
 import pytest
 from django.core.management import call_command
 from pytest_django.asserts import assertNumQueries
+from rest_framework import status
+from rest_framework.exceptions import ValidationError
 
+from audit_log.models import AuditLogEntry
 from events.models import Place
 
 from .test_event_get import get_detail as get_event_detail
@@ -23,6 +28,26 @@ def get_detail(api_client, detail_pk, version="v1", data=None):
 def test_get_place_detail(api_client, place):
     response = get_detail(api_client, place.pk)
     assert response.data["id"] == place.id
+
+
+@pytest.mark.django_db
+def test_place_id_is_audit_logged_on_get_detail(user_api_client, place):
+    response = get_detail(user_api_client, place.pk)
+    assert response.status_code == status.HTTP_200_OK
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [place.pk]
+
+
+@pytest.mark.django_db
+def test_place_id_is_audit_logged_on_get_list(user_api_client, place, place2):
+    response = get_list(user_api_client, data={"show_all_places": True})
+    assert response.status_code == status.HTTP_200_OK
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert Counter(
+        audit_log_entry.message["audit_event"]["target"]["object_ids"]
+    ) == Counter([place.pk, place2.pk])
 
 
 @pytest.mark.django_db
@@ -57,7 +82,7 @@ def test_get_place_detail_check_redirect_and_event_remap(
     assert event_response2.data["location"]["@id"] == reverse(
         "place-detail", kwargs={"pk": place2.id}
     )
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         place2.replaced_by = place
         place.save()
 

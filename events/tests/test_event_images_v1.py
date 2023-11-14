@@ -1,11 +1,13 @@
-import os
 import random
+from collections import Counter
 from io import BytesIO
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from PIL import Image as PILImage
+from rest_framework import status
 
+from audit_log.models import AuditLogEntry
 from events.auth import ApiKeyUser
 from events.models import Image
 from events.tests.test_event_put import update_with_put
@@ -104,6 +106,26 @@ def test__get_image_list_check_fields_exist(api_client):
     Image.objects.create(image=uploaded_image)
     response = get_list(api_client)
     assert_image_fields_exist(response.data["data"][0])
+
+
+@pytest.mark.django_db
+def test_image_id_is_audit_logged_on_get_detail(user_api_client, image):
+    response = get_detail(user_api_client, image.pk)
+    assert response.status_code == status.HTTP_200_OK
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [image.pk]
+
+
+@pytest.mark.django_db
+def test_image_id_is_audit_logged_on_get_list(user_api_client, image, image2):
+    response = get_list(user_api_client)
+    assert response.status_code == status.HTTP_200_OK
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert Counter(
+        audit_log_entry.message["audit_event"]["target"]["object_ids"]
+    ) == Counter([image.pk, image2.pk])
 
 
 @pytest.mark.django_db
@@ -259,7 +281,7 @@ def test__image_edit_as_admin(
     api_client.force_authenticate(user2)
 
     image = Image.objects.get(pk=response.data["id"])
-    assert user2.is_admin_of(image.publisher) == True
+    assert user2.is_admin_of(image.publisher) is True
 
     detail_url = reverse("image-detail", kwargs={"pk": response.data["id"]})
     response2 = api_client.put(detail_url, {"name": "this is needed"})
@@ -279,7 +301,7 @@ def test__image_edit_as_regular_user(
     api_client.force_authenticate(user2)
 
     image = Image.objects.get(pk=response.data["id"])
-    assert user2.is_regular_user_of(image.publisher) == True
+    assert user2.is_regular_user_of(image.publisher) is True
 
     detail_url = reverse("image-detail", kwargs={"pk": response.data["id"]})
     response2 = api_client.put(detail_url, {"name": "this is needed"})

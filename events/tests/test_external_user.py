@@ -1,5 +1,9 @@
+from collections import Counter
+
 import pytest
 from rest_framework import status
+
+from audit_log.models import AuditLogEntry
 
 from ..models import PublicationStatus
 from .factories import (
@@ -121,6 +125,17 @@ class TestEventBulkCreate:
         minimal_event["publisher"] = "others"
         assert_event_data_is_equal(minimal_event, response.data[0])
         assert_event_data_is_equal(minimal_event, response.data[1])
+
+    @pytest.mark.django_db
+    def test_event_id_is_audit_logged_on_bulk_create(
+        self, authed_api_client, minimal_event
+    ):
+        response = bulk_create(authed_api_client, [minimal_event, minimal_event])
+
+        audit_log_entry = AuditLogEntry.objects.first()
+        assert Counter(
+            audit_log_entry.message["audit_event"]["target"]["object_ids"]
+        ) == Counter([response.data[0]["id"], response.data[1]["id"]])
 
 
 class TestEventUpdate:
@@ -246,6 +261,30 @@ class TestEventBulkUpdate:
 
         assert response.status_code == status.HTTP_404_NOT_FOUND, response.data
 
+    @pytest.mark.django_db
+    def test_event_id_is_audit_logged_on_bulk_update(
+        self, authed_api_client, make_event_data, external_user
+    ):
+        event1 = DefaultOrganizationEventFactory(
+            created_by=external_user, publication_status=PublicationStatus.DRAFT
+        )
+        event2 = DefaultOrganizationEventFactory(
+            created_by=external_user, publication_status=PublicationStatus.DRAFT
+        )
+        event_data1 = make_event_data(event1)
+        event_data2 = make_event_data(event2)
+        event_data1["id"] = event1.id
+        event_data2["id"] = event2.id
+        event_data = [event_data1, event_data2]
+
+        response = bulk_update(authed_api_client, event_data)
+        assert response.status_code == status.HTTP_200_OK
+
+        audit_log_entry = AuditLogEntry.objects.first()
+        assert Counter(
+            audit_log_entry.message["audit_event"]["target"]["object_ids"]
+        ) == Counter([event1.pk, event2.pk])
+
 
 class TestEventDelete:
     @pytest.mark.django_db
@@ -294,3 +333,17 @@ class TestEventDelete:
         response = delete(authed_api_client, event.id)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND, response.data
+
+    @pytest.mark.django_db
+    def test_event_id_is_audit_logged_on_delete(self, authed_api_client, external_user):
+        event = DefaultOrganizationEventFactory(
+            created_by=external_user, publication_status=PublicationStatus.DRAFT
+        )
+
+        response = delete(authed_api_client, event.pk)
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+
+        audit_log_entry = AuditLogEntry.objects.first()
+        assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+            event.pk
+        ]

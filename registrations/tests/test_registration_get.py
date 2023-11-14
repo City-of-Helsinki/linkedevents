@@ -1,8 +1,10 @@
+from collections import Counter
 from unittest.mock import patch, PropertyMock
 
 import pytest
 from rest_framework import status
 
+from audit_log.models import AuditLogEntry
 from events.models import Event
 from events.tests.conftest import APIClient
 from events.tests.factories import EventFactory
@@ -190,7 +192,7 @@ def test_registration_user_access_user_can_see_if_he_has_access(
         response = get_detail_and_assert_registration(user_api_client, registration.id)
         assert mocked.called is True
     has_registration_user_access = response.data["has_registration_user_access"]
-    assert has_registration_user_access == True
+    assert has_registration_user_access is True
     assert_registration_fields_exist(response.data, is_admin_user=False)
 
 
@@ -482,3 +484,27 @@ def test_filter_events_with_registrations(api_client, event, event2, registratio
     get_list_and_assert_events("", (event, event2), api_client)
     get_list_and_assert_events("registration=true", (event,), api_client)
     get_list_and_assert_events("registration=false", (event2,), api_client)
+
+
+@pytest.mark.django_db
+def test_registration_id_is_audit_logged_on_get_detail(user_api_client, registration):
+    response = get_detail(user_api_client, registration.id)
+    assert response.status_code == status.HTTP_200_OK
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+        registration.pk
+    ]
+
+
+@pytest.mark.django_db
+def test_registration_id_is_audit_logged_on_get_list(
+    user_api_client, registration, registration2
+):
+    response = get_list(user_api_client)
+    assert response.status_code == status.HTTP_200_OK
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert Counter(
+        audit_log_entry.message["audit_event"]["target"]["object_ids"]
+    ) == Counter([registration.pk, registration2.pk])

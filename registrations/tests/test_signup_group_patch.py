@@ -4,6 +4,7 @@ import pytest
 from freezegun import freeze_time
 from rest_framework import status
 
+from audit_log.models import AuditLogEntry
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
 from registrations.models import SignUp
@@ -343,3 +344,21 @@ def test_created_user_cannot_patch_presence_status_of_signups(
     second_signup.refresh_from_db()
     assert first_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
     assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+
+
+@pytest.mark.django_db
+def test_signup_group_id_is_audit_logged_on_patch(api_client, registration):
+    signup_group = SignUpGroupFactory(registration=registration)
+
+    user = UserFactory()
+    user.registration_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_group_data = {"extra_info": "test test"}
+
+    assert_patch_signup_group(api_client, signup_group.id, signup_group_data)
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+        signup_group.pk
+    ]

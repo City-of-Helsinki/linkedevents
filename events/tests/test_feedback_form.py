@@ -1,7 +1,9 @@
 import pytest
 from django.conf import settings
 from django.core import mail
+from rest_framework import status
 
+from audit_log.models import AuditLogEntry
 from events.models import Feedback
 from events.tests.utils import versioned_reverse as reverse
 
@@ -45,3 +47,29 @@ def test__guest_user_submits(api_client):
     assert mail.outbox[0].body == load["body"]
     assert mail.outbox[0].to == [settings.SUPPORT_EMAIL]
     assert mail.outbox[0].from_email == load["email"]
+
+
+@pytest.mark.django_db
+def test_feedback_id_is_audit_logged_on_signed_user_submit(user_api_client):
+    guest_url = reverse("feedback-list")
+
+    response = user_api_client.post(guest_url, load, format="json")
+    assert response.status_code == status.HTTP_201_CREATED
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+        response.data["id"]
+    ]
+
+
+@pytest.mark.django_db
+def test_feedback_id_is_audit_logged_on_guest_submit(api_client):
+    guest_url = reverse("guest-feedback-list")
+
+    response = api_client.post(guest_url, load, format="json")
+    assert response.status_code == status.HTTP_201_CREATED
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+        response.data["id"]
+    ]

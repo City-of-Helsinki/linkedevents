@@ -1,6 +1,10 @@
+from collections import Counter
+
 import pytest
 from pytest_django.asserts import assertNumQueries
+from rest_framework import status
 
+from audit_log.models import AuditLogEntry
 from events.models import Keyword
 
 from .utils import get
@@ -33,6 +37,30 @@ def test_get_keyword_detail_check_redirect(api_client, keyword, keyword2):
     assert response.status_code == 301
     response2 = api_client.get(response.url, data=None, format="json")
     assert response2.data["id"] == keyword2.id
+
+
+@pytest.mark.django_db
+def test_keyword_id_is_audit_logged_on_get_detail(api_client, keyword):
+    url = reverse("keyword-detail", version="v1", kwargs={"pk": keyword.pk})
+
+    response = api_client.get(url)
+    assert response.status_code == status.HTTP_200_OK
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+        keyword.pk
+    ]
+
+
+@pytest.mark.django_db
+def test_keyword_id_is_audit_logged_on_get_list(api_client, keyword, keyword2):
+    response = api_client.get(reverse("keyword-list"), data={"show_all_keywords": True})
+    assert response.status_code == status.HTTP_200_OK
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert Counter(
+        audit_log_entry.message["audit_event"]["target"]["object_ids"]
+    ) == Counter([keyword.pk, keyword2.pk])
 
 
 @pytest.mark.django_db

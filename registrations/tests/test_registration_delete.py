@@ -2,6 +2,7 @@ import pytest
 from freezegun import freeze_time
 from rest_framework import status
 
+from audit_log.models import AuditLogEntry
 from events.tests.utils import versioned_reverse as reverse
 
 
@@ -125,3 +126,14 @@ def test__unknown_api_key_cannot_delete_registration(api_client, registration):
 
     response = delete_registration(api_client, registration.id)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+@pytest.mark.django_db
+def test_registration_id_is_audit_logged_on_delete(user_api_client, registration):
+    response = delete_registration(user_api_client, registration.id)
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+        registration.pk
+    ]

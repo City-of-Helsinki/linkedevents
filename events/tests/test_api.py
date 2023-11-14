@@ -1,3 +1,4 @@
+from collections import Counter
 from unittest.mock import MagicMock
 
 import pytest
@@ -6,6 +7,8 @@ from django.test import TestCase
 from django_orghierarchy.models import Organization
 from rest_framework import status
 from rest_framework.test import APITestCase
+
+from audit_log.models import AuditLogEntry
 
 from ..api import _terms_to_regex, EventSerializer, OrganizationListSerializer
 from ..auth import ApiKeyAuth
@@ -204,6 +207,28 @@ class TestOrganizationAPI(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["data"]), 0)
 
+    def test_organization_id_is_audit_logged_on_get_detail(self):
+        url = reverse("organization-detail", kwargs={"pk": self.org.pk})
+
+        response = self.client.get(url)
+        assert response.status_code == status.HTTP_200_OK
+
+        audit_log_entry = AuditLogEntry.objects.first()
+        assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+            self.org.pk
+        ]
+
+    def test_organization_id_is_audit_logged_on_get_list(self):
+        url = reverse("organization-list")
+
+        response = self.client.get(url)
+        assert response.status_code == status.HTTP_200_OK
+
+        audit_log_entry = AuditLogEntry.objects.first()
+        assert Counter(
+            audit_log_entry.message["audit_event"]["target"]["object_ids"]
+        ) == Counter([self.org.pk, self.normal_org.pk, self.affiliated_org.pk])
+
 
 @pytest.mark.no_test_audit_log
 @pytest.mark.usefixtures("test_audit_log_class")
@@ -292,6 +317,28 @@ class TestImageAPI(APITestCase):
 
         alt_text = response.data["data"][0]["alt_text"]
         self.assertEqual(alt_text, "Lorem")
+
+    def test_image_id_is_audit_logged_on_get_detail(self):
+        url = reverse("image-detail", kwargs={"pk": self.image_1.id})
+
+        response = self.client.get(url)
+        assert response.status_code == status.HTTP_200_OK
+
+        audit_log_entry = AuditLogEntry.objects.first()
+        assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+            self.image_1.pk
+        ]
+
+    def test_image_id_is_audit_logged_on_get_list(self):
+        url = reverse("image-list")
+
+        response = self.client.get(url)
+        assert response.status_code == status.HTTP_200_OK
+
+        audit_log_entry = AuditLogEntry.objects.first()
+        assert Counter(
+            audit_log_entry.message["audit_event"]["target"]["object_ids"]
+        ) == Counter([self.image_1.pk, self.image_2.pk, self.image_3.pk])
 
 
 @pytest.mark.no_test_audit_log

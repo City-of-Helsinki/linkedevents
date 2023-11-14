@@ -2,6 +2,7 @@ import pytest
 from django.utils import translation
 from rest_framework import status
 
+from audit_log.models import AuditLogEntry
 from events.models import Event
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
@@ -292,3 +293,14 @@ def test_registration_text_fields_are_sanitized(event, user_api_client):
     assert response.data["confirmation_message"]["sv"] == cleaned_confirmation_message
     assert response.data["instructions"]["fi"] == allowed_instructions
     assert response.data["instructions"]["sv"] == cleaned_instructions
+
+
+@pytest.mark.django_db
+def test_registration_id_is_audit_logged_on_post(user_api_client, event):
+    registration_data = {"event": {"@id": get_event_url(event.id)}}
+    response = assert_create_registration(user_api_client, registration_data)
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+        response.data["id"]
+    ]

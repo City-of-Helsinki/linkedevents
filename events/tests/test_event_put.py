@@ -8,6 +8,7 @@ from django.conf import settings
 from django.core.management import call_command
 from django.utils import timezone
 
+from audit_log.models import AuditLogEntry
 from events.auth import ApiKeyUser
 from events.models import Event, Image, Keyword, Place
 from events.tests.test_event_post import create_with_post
@@ -1065,3 +1066,16 @@ def test_can_remove_deprecated_keyword(api_client, event, minimal_event_dict, us
     )
     assert response.status_code == 200
     assert deprecated_kw not in event.keywords.all()
+
+
+@pytest.mark.django_db
+def test_event_id_is_audit_logged_on_put(user_api_client, minimal_event_dict):
+    response = create_with_post(user_api_client, minimal_event_dict)
+    event_id = response.data.pop("@id")
+
+    update_with_put(user_api_client, event_id, minimal_event_dict)
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+        response.data["id"]
+    ]

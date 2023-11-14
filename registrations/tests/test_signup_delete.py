@@ -3,6 +3,7 @@ from django.core import mail
 from django.utils import translation
 from rest_framework import status
 
+from audit_log.models import AuditLogEntry
 from events.models import Event, Language
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
@@ -508,3 +509,15 @@ def test_delete_signup_from_group(api_client, registration, responsible_for_grou
     else:
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert SignUp.objects.count() == 1
+
+
+@pytest.mark.django_db
+def test_signup_id_is_audit_logged_on_delete(api_client, signup):
+    user = UserFactory()
+    user.registration_admin_organizations.add(signup.publisher)
+    api_client.force_authenticate(user)
+
+    assert_delete_signup(api_client, signup.pk)
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [signup.pk]

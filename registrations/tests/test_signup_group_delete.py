@@ -3,6 +3,7 @@ from django.core import mail
 from django.utils import translation
 from rest_framework import status
 
+from audit_log.models import AuditLogEntry
 from events.models import Event
 from events.tests.factories import LanguageFactory
 from events.tests.utils import versioned_reverse as reverse
@@ -557,3 +558,19 @@ def test_signup_group_transferred_as_participant_template_has_correct_text_per_e
     # Send email to signup who is transferred as participant
     assert mail.outbox[1].subject.startswith(expected_subject)
     assert expected_text in str(mail.outbox[1].alternatives[0])
+
+
+@pytest.mark.django_db
+def test_signup_group_id_is_audit_logged_on_delete(api_client, registration):
+    signup_group = SignUpGroupFactory(registration=registration)
+
+    user = UserFactory()
+    user.registration_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    assert_delete_signup_group(api_client, signup_group.pk)
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+        signup_group.pk
+    ]

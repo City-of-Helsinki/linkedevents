@@ -9,6 +9,7 @@ from django.core.management import call_command
 from django.utils import timezone, translation
 from django.utils.encoding import force_text
 
+from audit_log.models import AuditLogEntry
 from events.api import KeywordSerializer
 from events.auth import ApiKeyUser
 from events.models import Event, Keyword, Place
@@ -853,3 +854,13 @@ def test__deprecated_audience(api_client, minimal_event_dict, user):
         str(response.data["audience"][0])
         == f"Deprecated keyword not allowed ({deprecated_kw.pk})"
     )
+
+
+@pytest.mark.django_db
+def test_event_id_is_audit_logged_on_post(user_api_client, minimal_event_dict):
+    response = create_with_post(user_api_client, minimal_event_dict)
+
+    audit_log_entry = AuditLogEntry.objects.first()
+    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+        response.data["id"]
+    ]
