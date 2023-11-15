@@ -19,12 +19,13 @@ resources:
     - repository: linkedevents-pipelines
       type: git
       name: linkedevents/linkedevents-pipelines
-  pipelines:
-    - pipeline: build-linkedevents-api
-      source: build-linkedevents-api
-      trigger:
-        branches:
-          include:
-            - refs/heads/main
+#  pipelines:
+#    - pipeline: build-linkedevents-api
+#      source: build-linkedevents-api
+#      trigger:
+#        branches:
+#          include:
+#            - refs/heads/main
+
 extends:
   template: azure-pipelines-deploy-linkedevents-api-test.yml@linkedevents-pipelines
