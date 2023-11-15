@@ -8,10 +8,10 @@ from django.contrib.auth.models import AnonymousUser
 from django.db import transaction
 from django.db.models import ProtectedError, Q, Value
 from django.db.models.functions import Concat
+from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import ParseError
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
@@ -260,6 +260,10 @@ class SignUpBaseFilter(django_filters.rest_framework.FilterSet):
         self.action = kwargs.pop("action", None)
         super().__init__(*args, **kwargs)
 
+    @cached_property
+    def _user_registration_admin_organizations(self):
+        return self.request.user.get_registration_admin_organizations_and_descendants()
+
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)
 
@@ -272,7 +276,7 @@ class SignUpBaseFilter(django_filters.rest_framework.FilterSet):
         # user has admin rights or is registration user who is
         # strongly identified.
         q_filter = Q(
-            registration__event__publisher__in=user.get_registration_admin_organizations_and_descendants()
+            registration__event__publisher__in=self._user_registration_admin_organizations
         )
         if user.is_strongly_identified:
             q_filter |= Q(registration__registration_user_accesses__email=user.email)
@@ -282,38 +286,32 @@ class SignUpBaseFilter(django_filters.rest_framework.FilterSet):
     def filter_registration(self, queryset, name, value: list[str]):
         user = self.request.user
 
-        # Get admin organizations and descendants only once instead of using is_admin method
-        registration_admin_organizations = (
-            user.get_registration_admin_organizations_and_descendants()
-        )
+        try:
+            registrations = Registration.objects.filter(pk__in=value)
+        except ValueError:
+            raise ValidationError(
+                {"registration": _("Invalid registration ID(s) given.")}
+            )
 
-        registrations = []
-        for pk in value:
-            try:
-                registration = Registration.objects.select_related(
-                    "event__publisher"
-                ).get(pk=pk)
-            except (ValueError, Registration.DoesNotExist):
-                raise ParseError(
-                    _("Registration with id {pk} doesn't exist.").format(pk=pk)
+        if not registrations:
+            return self.Meta.model.objects.none()
+
+        if user.is_superuser:
+            return queryset.filter(registration__in=registrations)
+
+        qs_filter = Q(event__publisher__in=self._user_registration_admin_organizations)
+        if user.is_strongly_identified:
+            qs_filter |= Q(registration_user_accesses__email=user.email)
+        registrations = registrations.filter(qs_filter)
+
+        if not registrations:
+            raise DRFPermissionDenied(
+                _(
+                    "Only the admins of the registration organizations have access rights."
                 )
+            )
 
-            if not (
-                user.is_superuser
-                or user.is_registration_user_access_user_of(
-                    registration.registration_user_accesses
-                )
-                or registration.publisher in registration_admin_organizations
-            ):
-                raise DRFPermissionDenied(
-                    _(
-                        "Only the admins of the organization {organization} have access rights."
-                    ).format(organization=registration.publisher)
-                )
-
-            registrations.append(registration)
-
-        return queryset.filter(**{f"{name}__in": registrations})
+        return queryset.filter(registration__in=registrations)
 
     @staticmethod
     def _build_text_annotations(relation_accessor=""):

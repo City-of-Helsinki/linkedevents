@@ -405,7 +405,7 @@ def test_cannot_get_signups_of_nonexistent_registration(
 
     response = get_list(api_client, "registration=not-exist")
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.data["detail"] == "Registration with id not-exist doesn't exist."
+    assert response.data["registration"] == "Invalid registration ID(s) given."
 
 
 @pytest.mark.django_db
@@ -592,6 +592,21 @@ def test_filter_signups(
     )
     get_list_and_assert_signups(
         api_client, f"registration={registration2.id}&text=3456", [signup8]
+    )
+
+
+@pytest.mark.django_db
+def test_no_signups_found_with_registration_id(api_client, registration):
+    user = UserFactory()
+    user.registration_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    SignUpFactory(registration=registration)
+
+    get_list_and_assert_signups(
+        api_client,
+        f"registration={registration.pk + 1}",
+        [],
     )
 
 
