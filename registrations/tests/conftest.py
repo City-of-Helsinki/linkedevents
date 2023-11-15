@@ -1,6 +1,5 @@
 from django.utils import translation
 
-from audit_log.tests.conftest import *  # noqa
 from events.tests.conftest import *  # noqa
 from linkedevents.tests.conftest import *  # noqa
 from registrations.models import SignUp

@@ -12,7 +12,6 @@ from events.models import Event
 
 
 class TestEnkoraImporter:
-    @pytest.mark.no_test_audit_log
     @pytest.mark.django_db
     @pytest.mark.parametrize(
         "test_input_descriptions,expected_ages",
@@ -382,7 +381,6 @@ class TestEnkoraImporter:
             == expected_ages
         )
 
-    @pytest.mark.no_test_audit_log
     @pytest.mark.django_db
     @pytest.mark.parametrize(
         "test_input_descriptions,expected_keywords",
@@ -1908,7 +1906,6 @@ class TestEnkoraImporter:
 
         return save_cnt
 
-    @pytest.mark.no_test_audit_log
     @pytest.mark.django_db
     @patch("events.importer.enkora.Enkora._request_json")
     @patch("events.importer.enkora.EnkoraImporter._get_timestamps")

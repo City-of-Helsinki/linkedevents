@@ -1,4 +1,3 @@
-import pytest
 from django.contrib import admin
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth import get_user_model
@@ -8,7 +7,6 @@ from django_orghierarchy.models import Organization
 from events.tests.factories import OrganizationFactory
 
 
-@pytest.mark.no_test_audit_log
 class TestLocalOrganizationAdmin(TestCase):
     @classmethod
     def setUpTestData(cls):

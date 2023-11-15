@@ -4,7 +4,6 @@ from events.api import _get_queryset_from_cache, _get_queryset_from_cache_many
 from events.models import Event
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_queryset_from_cache(django_cache, event):
     django_cache.set("local_ids", {event.id: "lapsi"})
@@ -19,7 +18,6 @@ def test_queryset_from_cache(django_cache, event):
     assert queryset.first().id == event.id
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_missing_cache_not_throwing_error_and_returns_none(django_cache):
     django_cache.set("local_ids", {})
@@ -34,7 +32,6 @@ def test_missing_cache_not_throwing_error_and_returns_none(django_cache):
     assert queryset.first() == None
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_queryset_from_cache_many(django_cache, event):
     django_cache.set("local_ids", {event.id: "lapsi"})
@@ -49,7 +46,6 @@ def test_queryset_from_cache_many(django_cache, event):
     assert queryset.first().id == event.id
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_missing_cache_many_not_throwing_error_and_returns_none(django_cache):
     django_cache.set("local_ids", {})

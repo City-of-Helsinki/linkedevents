@@ -464,7 +464,7 @@ def test_signup_group_text_fields_are_sanitized(registration, user, user_api_cli
 
 
 @pytest.mark.django_db
-def test_signup_group_id_is_audit_logged_on_patch(api_client, registration):
+def test_signup_group_id_is_audit_logged_on_put(api_client, registration):
     signup_group = SignUpGroupFactory(registration=registration)
 
     user = UserFactory()

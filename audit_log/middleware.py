@@ -14,9 +14,15 @@ class AuditLogMiddleware:
     def __call__(self, request):
         response = self.get_response(request)
 
-        if settings.AUDIT_LOG_ENABLED and re.match(
-            _AUDIT_LOGGED_ENDPOINTS_RE, request.path
-        ):
+        if self._should_commit_to_audit_log(request, response):
             commit_to_audit_log(request, response)
 
         return response
+
+    @staticmethod
+    def _should_commit_to_audit_log(request, response):
+        return (
+            settings.AUDIT_LOG_ENABLED
+            and re.match(_AUDIT_LOGGED_ENDPOINTS_RE, request.path)
+            and 200 <= response.status_code < 300
+        )

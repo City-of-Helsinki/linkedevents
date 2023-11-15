@@ -5,7 +5,6 @@ from events.keywords import KeywordMatcher
 from events.models import KeywordLabel, Language
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_keyword_label_trigger(languages):
     """Triggers were added in Postgres to update search vectors each time a KeywordLabel in matching language is
@@ -43,7 +42,8 @@ def test_keyword_label_trigger(languages):
 #  matches is repeated.
 #  Syntactic dust - punctuation marks etc. - is ignored.
 #  If the language is specified the search is conducted only within the language specific search vectors.
-@pytest.mark.no_test_audit_log
+
+
 @pytest.mark.django_db
 def test_keyword_match(languages, data_source, organization, keyword, keyword2):
     kl = KeywordLabel(language=Language.objects.get(id="fi"), name="lapsi")
@@ -61,7 +61,6 @@ def test_keyword_match(languages, data_source, organization, keyword, keyword2):
     assert matcher.match("[lapsi! teatteriin}", language="en") is None
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_keyword_match_trgrm(languages, data_source, organization, keyword, keyword2):
     kl = KeywordLabel(language=Language.objects.get(id="fi"), name="asdfg")

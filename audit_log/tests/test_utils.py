@@ -47,7 +47,6 @@ def _assert_target_data(target_data, expected_path, expected_object_ids):
 
 
 @freeze_time("2023-10-17 13:30:00+02:00")
-@pytest.mark.no_test_audit_log
 @pytest.mark.parametrize(
     "status_code,audit_status",
     [
@@ -55,20 +54,9 @@ def _assert_target_data(target_data, expected_path, expected_object_ids):
         (201, Status.SUCCESS.value),
         (204, Status.SUCCESS.value),
         (299, Status.SUCCESS.value),
-        (301, Status.REDIRECT.value),
-        (307, Status.REDIRECT.value),
-        (308, Status.REDIRECT.value),
-        (399, Status.REDIRECT.value),
-        (400, Status.FAILED.value),
-        (401, Status.FORBIDDEN.value),
-        (403, Status.FORBIDDEN.value),
-        (405, Status.FAILED.value),
-        (409, Status.FAILED.value),
-        (499, Status.FAILED.value),
-        (500, Status.FAILED.value),
-        (502, Status.FAILED.value),
-        (599, Status.FAILED.value),
-        (None, Status.FAILED.value),
+        (300, "Unknown: 300"),
+        (400, "Unknown: 400"),
+        (500, "Unknown: 500"),
     ],
 )
 @pytest.mark.django_db
@@ -91,7 +79,6 @@ def test_commit_to_audit_log_response_status(status_code, audit_status):
 
 
 @freeze_time("2023-10-17 13:30:00+02:00")
-@pytest.mark.no_test_audit_log
 @pytest.mark.parametrize(
     "http_method,audit_operation",
     [
@@ -130,7 +117,6 @@ def test_commit_to_audit_log_crud_operations(http_method, audit_operation):
 
 
 @freeze_time("2023-10-17 13:30:00+02:00")
-@pytest.mark.no_test_audit_log
 @pytest.mark.parametrize(
     "user_role,audit_role",
     [
@@ -185,7 +171,6 @@ def test_commit_to_audit_log_actor_data(user_role, audit_role):
     _assert_basic_log_entry_data(log_entry)
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.parametrize(
     "remote_address,expected,x_forwarded_for",
     [
@@ -217,7 +202,6 @@ def test_get_remote_address(remote_address, expected, x_forwarded_for):
     assert _get_remote_address(req_mock) == expected
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.parametrize(
     "queryset_type",
     [
@@ -249,7 +233,6 @@ def test_get_target_queryset(queryset_type):
     _assert_target_data(target_data, req_mock.path, object_ids)
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.parametrize(
     "list_type",
     [
@@ -287,7 +270,6 @@ def test_get_target_list(list_type):
     _assert_target_data(target_data, req_mock.path, object_ids)
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.parametrize(
     "object_type",
     [

@@ -4,7 +4,6 @@ from events.importer.utils import replace_location
 from events.models import Event
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_replace_location_by_different_source(place, place2, other_data_source, event):
     assert event.location == place

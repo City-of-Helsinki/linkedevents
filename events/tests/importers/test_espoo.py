@@ -44,7 +44,6 @@ class EventDataFactory(BaseDataFactory):
     publisher = None
 
 
-@pytest.mark.no_test_audit_log
 def test_parse_jsonld_id():
     assert ["tprek:8100", "espoo:asdfasdf"] == (
         [
@@ -76,7 +75,6 @@ def sleep(monkeypatch):
     return sleep_instance
 
 
-@pytest.mark.no_test_audit_log
 def test_get_data(requests_mock):
     url = "http://localhost"
     data = {"hello": "world"}
@@ -85,7 +83,6 @@ def test_get_data(requests_mock):
     assert mock.call_count == 1
 
 
-@pytest.mark.no_test_audit_log
 def test_get_max_retries(sleep):
     def build_response(status_code):
         response = HTTPResponse(Mock())
@@ -113,7 +110,6 @@ def test_get_max_retries(sleep):
         assert "Exceeded max retries" in str(error.value)
 
 
-@pytest.mark.no_test_audit_log
 def test_list_data(requests_mock, sleep):
     url = "http://localhost/"
     mock = requests_mock.get(
@@ -131,7 +127,6 @@ def test_list_data(requests_mock, sleep):
     assert sleep.call_count == 2
 
 
-@pytest.mark.no_test_audit_log
 def test_list_max_pages(requests_mock, sleep):
     url = "http://localhost/"
     mock = requests_mock.get(url, json={"meta": {"next": url}, "data": []})
@@ -140,7 +135,6 @@ def test_list_max_pages(requests_mock, sleep):
     assert mock.call_count == settings.ESPOO_MAX_PAGES
 
 
-@pytest.mark.no_test_audit_log
 def test_get_origin_objs(requests_mock, sleep):
     requests_mock.get("http://localhost/model/ds:id1/", json={"id": "ds:id1"})
     requests_mock.get("http://localhost/model/ds:id2/", json={"id": "ds:id2"})
@@ -149,7 +143,6 @@ def test_get_origin_objs(requests_mock, sleep):
     assert objs == [{"id": "ds:id1"}, {"id": "ds:id2"}]
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_import_origin_objs():
     importer_ds = DataSourceFactory(id="importer_ds")
@@ -176,7 +169,6 @@ def test_import_origin_objs():
         Organization.objects.get(id=imported_unused_org.id)
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_import_origin_objs_with_super_event():
     common_ds = DataSourceFactory(id="common_ds")
@@ -242,7 +234,6 @@ def test_import_origin_objs_with_super_event():
     assert recurring_event2.super_event_type == Event.SuperEventType.RECURRING
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_split_common_objs():
     common_ds = DataSourceFactory(id="common_ds")
@@ -353,7 +344,6 @@ def mock_org_list_response(requests_mock, pks=(1, 2, 3)):
     )
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_importer(settings, requests_mock, sleep, api_client):
     settings.ESPOO_API_URL = "http://localhost/"

@@ -7,7 +7,6 @@ from pytest_django.asserts import assertNumQueries
 from events.models import Language
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_create_languages():
     out = StringIO()
@@ -23,7 +22,6 @@ def test_create_languages():
         assert lang.name_en
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_create_languages_check_should_create():
     """Re-running the command does a cheap check."""

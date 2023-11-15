@@ -2,7 +2,6 @@ import pytest
 from django.contrib.gis.geos import Point
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.parametrize(
     "position, is_division_expected",
     [(None, False), (Point(1000, 1000), False), (Point(100, 100), True)],
@@ -21,7 +20,6 @@ def test_place_divisions_by_position(
         assert place.divisions.count() == 0
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.parametrize(
     "division_type, is_division_expected",
     [
@@ -47,7 +45,6 @@ def test_place_divisions_by_division_type(
         assert place.divisions.count() == 0
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_place_cannot_replace_itself(place):
     place.replaced_by = place
@@ -56,7 +53,6 @@ def test_place_cannot_replace_itself(place):
         place.save()
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_prevent_circular_place_replacement(place, place2, place3):
     place.replaced_by = place2
