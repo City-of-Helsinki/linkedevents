@@ -281,6 +281,15 @@ git config blame.ignoreRevsFile .git-blame-ignore-revs
 ```
 
 
+## Commit message format
+
+New commit messages must adhere to the [Conventional Commits](https://www.conventionalcommits.org/)
+specification, and line length is limited to 72 characters.
+
+When [`pre-commit`](https://pre-commit.com/) is in use, [`commitlint`](https://github.com/conventional-changelog/commitlint)
+checks new commit messages for the correct format.
+
+
 ## Search
 
 Linkedevents uses Elasticsearch for generating results on the /search-endpoint. If you wish to use that functionality, proceed like so:
