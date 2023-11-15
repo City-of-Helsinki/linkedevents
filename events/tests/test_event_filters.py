@@ -12,7 +12,6 @@ from events.tests.factories import EventFactory, KeywordFactory, PlaceFactory
 from events.tests.utils import create_super_event
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_get_event_list_hide_recurring_children_true():
     event_1 = EventFactory()
@@ -28,7 +27,6 @@ def test_get_event_list_hide_recurring_children_true():
     assert super_1 in result
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_get_event_list_hide_recurring_children_false():
     event_1 = EventFactory()
@@ -46,7 +44,6 @@ def test_get_event_list_hide_recurring_children_false():
     assert event_2 in result
 
 
-@pytest.mark.no_test_audit_log
 def test_filter_full_text_wrong_language():
     request = Mock()
     request.query_params = {"x_full_text_language": "unknown"}
@@ -55,7 +52,6 @@ def test_filter_full_text_wrong_language():
         filter_set.filter_x_full_text(None, "x_full_text", "something")
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db()
 @pytest.mark.parametrize(
     "language",
@@ -135,7 +131,6 @@ def test_get_event_list_full_text(language):
     assert result[0].id == f"test:{language}"
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 @pytest.mark.parametrize("ongoing", [True, False])
 def test_get_event_list_ongoing(ongoing):

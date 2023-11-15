@@ -3,7 +3,6 @@ import datetime
 from helusers.settings import api_token_auth_settings
 from jose import jwt
 
-from audit_log.tests.conftest import *  # noqa
 from events.tests.keys import rsa_key
 from linkedevents.tests.conftest import *  # noqa
 

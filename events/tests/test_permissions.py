@@ -10,7 +10,6 @@ from ..models import DataSource, Event, PublicationStatus
 from .factories import EventFactory, OrganizationFactory
 
 
-@pytest.mark.no_test_audit_log
 class TestUserModelPermissionMixin(TestCase):
     def setUp(self):
         self.instance = UserModelPermissionMixin()
@@ -42,7 +41,6 @@ class TestUserModelPermissionMixin(TestCase):
         )
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.parametrize(
     "membership_status, expected_public, expected_draft",
     [
@@ -86,7 +84,6 @@ def test_can_edit_event(membership_status, expected_public, expected_draft):
         )
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.parametrize(
     "is_admin,is_registration_admin,is_regular_user,expected",
     [
@@ -122,7 +119,6 @@ def test_user_is_external_based_on_group_membership(
         assert User().is_external is expected
 
 
-@pytest.mark.no_test_audit_log
 class TestUserModelPermissions(TestCase):
     def setUp(self):
         self.instance = User.objects.create()

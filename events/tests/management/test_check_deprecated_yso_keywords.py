@@ -98,7 +98,6 @@ def kw_deprecated_invalid_yso_id(yso_ds):
     )
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_command_dryrun(
     requests_mock_graph,
@@ -113,7 +112,6 @@ def test_command_dryrun(
     assert "WOULD replace 1 keywords" in out.getvalue()
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_command_apply(
     requests_mock_graph,
@@ -131,7 +129,6 @@ def test_command_apply(
     assert "Replaced 1 keywords" in out.getvalue()
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_command_nothing_to_do(requests_mock_graph, kw_deprecated_and_replaced):
     out = StringIO()
@@ -139,7 +136,6 @@ def test_command_nothing_to_do(requests_mock_graph, kw_deprecated_and_replaced):
     assert "No keywords need or can be updated." in out.getvalue()
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_command_replacement_does_not_exist(
     requests_mock_graph, kw_deprecated_invalid_replacement
@@ -150,7 +146,6 @@ def test_command_replacement_does_not_exist(
     assert "No keywords need or can be updated." in out.getvalue()
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_command_replacement_is_invalid(
     requests_mock_graph, kw_deprecated_invalid_yso_id
@@ -161,7 +156,6 @@ def test_command_replacement_is_invalid(
     assert "No keywords need or can be updated." in out.getvalue()
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_command_replacement_all(
     requests_mock_graph,

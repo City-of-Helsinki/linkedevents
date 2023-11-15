@@ -36,7 +36,6 @@ def test_api_page_size(api_client, event):
     assert len(resp.data["data"]) <= 100
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_get_authenticated_data_source_and_publisher(data_source):
     org = Organization.objects.create(
@@ -53,7 +52,6 @@ def test_get_authenticated_data_source_and_publisher(data_source):
     assert publisher == org
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_serializer_validate_publisher():
     data_source = DataSource.objects.create(
@@ -97,7 +95,6 @@ def test_serializer_validate_publisher():
     assert le_serializer.validate_publisher(org_2) == org_1
 
 
-@pytest.mark.no_test_audit_log
 class TestOrganizationListSerializer(TestCase):
     def setUp(self):
         data_source = DataSource.objects.create(
@@ -147,8 +144,6 @@ class TestOrganizationListSerializer(TestCase):
         self.assertTrue(has_regular_users)
 
 
-@pytest.mark.no_test_audit_log
-@pytest.mark.usefixtures("test_audit_log_class")
 class TestOrganizationAPI(APITestCase):
     def setUp(self):
         data_source = DataSource.objects.create(
@@ -230,8 +225,6 @@ class TestOrganizationAPI(APITestCase):
         ) == Counter([self.org.pk, self.normal_org.pk, self.affiliated_org.pk])
 
 
-@pytest.mark.no_test_audit_log
-@pytest.mark.usefixtures("test_audit_log_class")
 class TestImageAPI(APITestCase):
     def setUp(self):
         user_model = get_user_model()
@@ -341,7 +334,6 @@ class TestImageAPI(APITestCase):
         ) == Counter([self.image_1.pk, self.image_2.pk, self.image_3.pk])
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.parametrize(
     "val,operator,expected_regex",
     [

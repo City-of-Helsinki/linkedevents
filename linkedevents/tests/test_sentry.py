@@ -5,7 +5,6 @@ from events.tests.factories import ApiKeyUserFactory
 from helevents.tests.factories import UserFactory
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_anonymize_user_repr_function():
     assert len(global_repr_processors) == 1

@@ -1,4 +1,3 @@
-import pytest
 from django.test import TestCase
 from django_orghierarchy.models import Organization
 
@@ -7,7 +6,6 @@ from events.models import DataSource
 from ..models import User
 
 
-@pytest.mark.no_test_audit_log
 class TestUser(TestCase):
     def setUp(self):
         self.user = User.objects.create(username="testuser")

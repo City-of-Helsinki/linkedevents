@@ -20,8 +20,6 @@ for _key, val in settings.HAYSTACK_CONNECTIONS.items():
         val["INDEX_NAME"] = "test_%s" % val["INDEX_NAME"]
 
 
-@pytest.mark.no_test_audit_log
-@pytest.mark.usefixtures("test_audit_log_class")
 class EventSearchTests(TestCase, TestDataMixin):
     def setUp(self):
         self.client = APIClient()

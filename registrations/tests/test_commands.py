@@ -12,7 +12,6 @@ _ENCRYPTION_KEY = "c87a6669a1ded2834f1dfd0830d86ef6cdd20372ac83e8c7c23feffe87e6a
 _ENCRYPTION_KEY2 = "f1a79d4b60a947b988beaf1eae871289fb03f2b9fd443d67107a7d05d05f831e"
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_encrypt_fields_with_new_key(settings):
     old_keys = (_ENCRYPTION_KEY,)

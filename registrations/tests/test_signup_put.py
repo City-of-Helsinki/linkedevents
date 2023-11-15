@@ -601,7 +601,7 @@ def test_cannot_remove_only_responsible_person_from_group(api_client, registrati
 
 
 @pytest.mark.django_db
-def test_signup_id_is_audit_logged_on_patch(api_client, registration, signup):
+def test_signup_id_is_audit_logged_on_put(api_client, registration, signup):
     user = UserFactory()
     user.registration_admin_organizations.add(signup.publisher)
     api_client.force_authenticate(user)

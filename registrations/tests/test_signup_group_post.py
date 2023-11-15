@@ -1163,9 +1163,9 @@ def test_signup_group_text_fields_are_sanitized(
                 "responsible_for_group": True,
             }
         ],
+        "registration": reservation.registration_id,
+        "reservation_code": reservation.code,
     }
-    signup_group_data["registration"] = reservation.registration_id
-    signup_group_data["reservation_code"] = reservation.code
 
     response = assert_create_signup_group(user_api_client, signup_group_data)
     response_signup = response.data["signups"][0]
@@ -1189,7 +1189,7 @@ def test_signup_group_text_fields_are_sanitized(
 
 
 @pytest.mark.django_db
-def test_signup_group_id_is_audit_logged_on_patch(api_client, registration):
+def test_signup_group_id_is_audit_logged_on_post(api_client, registration):
     reservation = SeatReservationCodeFactory(seats=2)
 
     LanguageFactory(pk="fi", service_language=True)

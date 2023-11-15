@@ -24,7 +24,6 @@ def assert_create_keyword_set(api_client, keyword_set_data, data_source=None):
     return response
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_keywordset_cannot_have_deprecated_keyword(keyword, keyword_set):
     keyword.deprecated = True

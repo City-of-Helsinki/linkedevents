@@ -17,17 +17,10 @@ _OPERATION_MAPPING = {
 
 
 def _get_response_status(response):
-    if not getattr(response, "status_code", None):
-        return Status.FAILED.value
-
     if 200 <= response.status_code < 300:
         return Status.SUCCESS.value
-    elif 300 <= response.status_code < 400:
-        return Status.REDIRECT.value
-    elif response.status_code in (401, 403):
-        return Status.FORBIDDEN.value
     else:
-        return Status.FAILED.value
+        return f"Unknown: {response.status_code}"
 
 
 def _get_operation_name(request):
