@@ -13,8 +13,9 @@ from events.models import Event, Language
 from events.tests.factories import LanguageFactory
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
-from registrations.models import MandatoryFields, SignUp
+from registrations.models import MandatoryFields, SeatReservationCode, SignUp
 from registrations.tests.factories import (
+    RegistrationFactory,
     SeatReservationCodeFactory,
     SignUpFactory,
     SignUpGroupFactory,
@@ -60,6 +61,7 @@ def assert_create_signups(api_client, signups_data):
 
 def assert_default_signup_created(signups_data, user):
     assert SignUp.objects.count() == 1
+    assert SeatReservationCode.objects.count() == 0
 
     signup = SignUp.objects.first()
     assert signup.attendee_status == SignUp.AttendeeStatus.ATTENDING
@@ -87,6 +89,30 @@ def assert_default_signup_created(signups_data, user):
     assert signup.user_consent is signups_data["signups"][0]["user_consent"]
 
 
+def assert_attending_and_waitlisted_signups(
+    response,
+    expected_status_code=status.HTTP_201_CREATED,
+    expected_signups_count=2,
+    expected_attending=2,
+    expected_waitlisted=0,
+):
+    assert SignUp.objects.count() == expected_signups_count
+    assert (
+        SignUp.objects.filter(attendee_status=SignUp.AttendeeStatus.ATTENDING).count()
+        == expected_attending
+    )
+    assert (
+        SignUp.objects.filter(
+            attendee_status=SignUp.AttendeeStatus.WAITING_LIST
+        ).count()
+        == expected_waitlisted
+    )
+
+    assert response.status_code == expected_status_code
+    if expected_status_code == status.HTTP_403_FORBIDDEN:
+        assert response.json()["detail"] == "The waiting list is already full"
+
+
 # === tests ===
 
 
@@ -97,8 +123,11 @@ def test_registration_admin_can_create_signups(
     user.get_default_organization().registration_admin_users.add(user)
     user.get_default_organization().admin_users.remove(user)
 
-    assert SignUp.objects.count() == 0
     reservation = SeatReservationCodeFactory(seats=1)
+
+    assert SignUp.objects.count() == 0
+    assert SeatReservationCode.objects.count() == 1
+
     signups_data = default_signups_data
     signups_data["registration"] = reservation.registration.id
     signups_data["reservation_code"] = reservation.code
@@ -111,8 +140,11 @@ def test_registration_admin_can_create_signups(
 def test_organization_admin_can_create_signups(
     languages, organization, user, user_api_client
 ):
-    assert SignUp.objects.count() == 0
     reservation = SeatReservationCodeFactory(seats=1)
+
+    assert SignUp.objects.count() == 0
+    assert SeatReservationCode.objects.count() == 1
+
     signups_data = default_signups_data
     signups_data["registration"] = reservation.registration.id
     signups_data["reservation_code"] = reservation.code
@@ -128,8 +160,11 @@ def test_regular_user_can_create_signups(
     user.get_default_organization().regular_users.add(user)
     user.get_default_organization().admin_users.remove(user)
 
-    assert SignUp.objects.count() == 0
     reservation = SeatReservationCodeFactory(seats=1)
+
+    assert SignUp.objects.count() == 0
+    assert SeatReservationCode.objects.count() == 1
+
     signups_data = default_signups_data
     signups_data["registration"] = reservation.registration.id
     signups_data["reservation_code"] = reservation.code
@@ -143,8 +178,11 @@ def test_user_without_organization_can_create_signups(api_client, languages):
     user = UserFactory()
     api_client.force_authenticate(user)
 
-    assert SignUp.objects.count() == 0
     reservation = SeatReservationCodeFactory(seats=1)
+
+    assert SignUp.objects.count() == 0
+    assert SeatReservationCode.objects.count() == 1
+
     signups_data = default_signups_data
     signups_data["registration"] = reservation.registration.id
     signups_data["reservation_code"] = reservation.code
@@ -159,8 +197,10 @@ def test_can_create_signups_with_empty_extra_info_and_date_of_birth(
 ):
     LanguageFactory(id="fi", service_language=True)
 
-    assert SignUp.objects.count() == 0
     reservation = SeatReservationCodeFactory(seats=1)
+
+    assert SignUp.objects.count() == 0
+    assert SeatReservationCode.objects.count() == 1
 
     signups_data = default_signups_data
     signups_data["registration"] = reservation.registration.id
@@ -187,12 +227,14 @@ def test_non_authenticated_user_cannot_create_signups(api_client, languages):
 def test_add_signups_to_group(user_api_client, languages, registration, user):
     user.get_default_organization().registration_admin_users.add(user)
 
+    reservation = SeatReservationCodeFactory(registration=registration, seats=2)
+
     signup_group = SignUpGroupFactory(registration=registration)
     SignUpFactory(signup_group=signup_group, registration=registration)
 
     assert signup_group.signups.count() == 1
+    assert SeatReservationCode.objects.count() == 1
 
-    reservation = SeatReservationCodeFactory(registration=registration, seats=2)
     signups_data = {
         "registration": registration.id,
         "reservation_code": reservation.code,
@@ -231,6 +273,7 @@ def test_add_signups_to_group(user_api_client, languages, registration, user):
 
     signup_group.refresh_from_db()
     assert signup_group.signups.count() == 3
+    assert SeatReservationCode.objects.count() == 0
 
     new_signup0 = signup_group.signups.filter(email="michael@test.com").first()
     assert new_signup0.registration_id == registration.id
@@ -704,6 +747,140 @@ def test_group_signup_successful_with_waitlist(user_api_client, registration, us
             attendee_status=SignUp.AttendeeStatus.WAITING_LIST
         ).count()
         == 2
+    )
+
+
+@pytest.mark.parametrize(
+    "maximum_attendee_capacity,waiting_list_capacity,expected_signups_count,"
+    "expected_attending,expected_waitlisted,expected_status_code",
+    [
+        (0, 0, 0, 0, 0, status.HTTP_403_FORBIDDEN),
+        (1, 1, 2, 1, 1, status.HTTP_201_CREATED),
+        (1, 0, 1, 1, 0, status.HTTP_201_CREATED),
+        (0, 1, 1, 0, 1, status.HTTP_201_CREATED),
+        (2, 1, 2, 2, 0, status.HTTP_201_CREATED),
+        (0, 2, 2, 0, 2, status.HTTP_201_CREATED),
+        (None, None, 2, 2, 0, status.HTTP_201_CREATED),
+        (None, 1, 2, 2, 0, status.HTTP_201_CREATED),
+        (1, None, 2, 1, 1, status.HTTP_201_CREATED),
+        (0, None, 2, 0, 2, status.HTTP_201_CREATED),
+    ],
+)
+@pytest.mark.django_db
+def test_maximum_attendee_and_waiting_list_capacities(
+    api_client,
+    maximum_attendee_capacity,
+    waiting_list_capacity,
+    expected_signups_count,
+    expected_attending,
+    expected_waitlisted,
+    expected_status_code,
+):
+    registration = RegistrationFactory(
+        maximum_attendee_capacity=maximum_attendee_capacity,
+        waiting_list_capacity=waiting_list_capacity,
+    )
+
+    user = UserFactory()
+    user.registration_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    reservation = SeatReservationCodeFactory(registration=registration, seats=2)
+    signups_payload = {
+        "registration": registration.id,
+        "reservation_code": reservation.code,
+        "signups": [
+            {
+                "first_name": "User",
+                "last_name": "1",
+                "email": "test1@test.com",
+            },
+            {
+                "first_name": "User",
+                "last_name": "2",
+                "email": "test2@test.com",
+            },
+        ],
+    }
+
+    assert SignUp.objects.count() == 0
+
+    response = create_signups(api_client, signups_payload)
+
+    assert_attending_and_waitlisted_signups(
+        response,
+        expected_status_code,
+        expected_signups_count,
+        expected_attending,
+        expected_waitlisted,
+    )
+
+
+@pytest.mark.parametrize(
+    "maximum_attendee_capacity,waiting_list_capacity,expected_signups_count,"
+    "expected_attending,expected_waitlisted,expected_status_code",
+    [
+        (0, 0, 0, 0, 0, status.HTTP_403_FORBIDDEN),
+        (1, 1, 2, 1, 1, status.HTTP_201_CREATED),
+        (1, 0, 1, 1, 0, status.HTTP_201_CREATED),
+        (0, 1, 1, 0, 1, status.HTTP_201_CREATED),
+        (2, 1, 2, 1, 1, status.HTTP_201_CREATED),
+        (0, 2, 2, 0, 2, status.HTTP_201_CREATED),
+        (None, None, 2, 1, 1, status.HTTP_201_CREATED),
+        (None, 1, 2, 1, 1, status.HTTP_201_CREATED),
+        (1, None, 2, 1, 1, status.HTTP_201_CREATED),
+        (0, None, 2, 0, 2, status.HTTP_201_CREATED),
+    ],
+)
+@pytest.mark.django_db
+def test_maximum_attendee_and_waiting_list_capacities_with_attendee_status_given_in_post_data(
+    api_client,
+    maximum_attendee_capacity,
+    waiting_list_capacity,
+    expected_signups_count,
+    expected_attending,
+    expected_waitlisted,
+    expected_status_code,
+):
+    registration = RegistrationFactory(
+        maximum_attendee_capacity=maximum_attendee_capacity,
+        waiting_list_capacity=waiting_list_capacity,
+    )
+
+    user = UserFactory()
+    user.registration_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    reservation = SeatReservationCodeFactory(registration=registration, seats=2)
+    signups_payload = {
+        "registration": registration.id,
+        "reservation_code": reservation.code,
+        "signups": [
+            {
+                "first_name": "User",
+                "last_name": "1",
+                "email": "test1@test.com",
+                "attendee_status": SignUp.AttendeeStatus.WAITING_LIST,
+            },
+            {
+                "first_name": "User",
+                "last_name": "2",
+                "email": "test2@test.com",
+                "attendee_status": SignUp.AttendeeStatus.ATTENDING,
+            },
+        ],
+    }
+
+    assert SignUp.objects.count() == 0
+
+    response = create_signups(api_client, signups_payload)
+
+    assert_attending_and_waitlisted_signups(
+        response,
+        expected_status_code,
+        expected_signups_count,
+        expected_attending,
+        expected_waitlisted,
     )
 
 

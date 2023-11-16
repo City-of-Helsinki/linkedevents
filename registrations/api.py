@@ -389,33 +389,32 @@ class SignUpViewSet(
     def create(self, request, *args, **kwargs):
         context = super().get_serializer_context()
         data = request.data
-        registration = data.get("registration", None)
-        if registration:
+
+        if registration_id := data.get("registration"):
             for i in data["signups"]:
-                i["registration"] = registration
+                i["registration"] = registration_id
+
         serializer = CreateSignUpsSerializer(data=data, context=context)
         serializer.is_valid(raise_exception=True)
 
-        audit_logged_signups = []
-        signups = []
-
-        # Create SignUps and add persons to correct list
-        for i in data["signups"]:
-            signup = SignUpSerializer(data=i, context=context)
-            signup.is_valid()
-            signee = signup.create(validated_data=signup.validated_data)
-
-            audit_logged_signups.append(signee)
-
-            signups.append(SignUpSerializer(signee, context=context).data)
+        signup_instances = serializer.create_signups(serializer.validated_data)
 
         # Delete reservation
         reservation = serializer.validated_data["reservation"]
         reservation.delete()
 
-        self._add_audit_logged_object_ids(audit_logged_signups)
+        serializer.send_notifications(signup_instances)
 
-        return Response(data=signups, status=status.HTTP_201_CREATED)
+        self._add_audit_logged_object_ids(signup_instances)
+
+        return Response(
+            data=SignUpSerializer(signup_instances, many=True, context=context).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @transaction.atomic
+    def perform_update(self, serializer):
+        super().perform_update(serializer)
 
     @transaction.atomic
     def perform_destroy(self, instance):
