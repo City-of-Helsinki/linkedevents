@@ -330,6 +330,8 @@ webencodings==0.5.1
     # via bleach
 whitenoise==6.6.0
     # via -r requirements.in
+xlsxwriter==3.1.9
+    # via -r requirements.in
 zipp==3.17.0
     # via importlib-metadata
 

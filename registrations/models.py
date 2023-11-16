@@ -598,6 +598,10 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         {"name": "user_consent"},
     )
 
+    @property
+    def full_name(self):
+        return f"{self.first_name or ''} {self.last_name or ''}".strip()
+
     @cached_property
     def is_only_responsible_signup(self):
         return (
