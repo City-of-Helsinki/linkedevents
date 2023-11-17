@@ -3634,13 +3634,9 @@ class EventViewSet(
             {"headline", "secondary_headline"}
         )
         context["extensions"] = get_extensions_from_request(self.request)
-        (
-            context["keywords"],
-            context["location"],
-            context["image"],
-            context["sub_events"],
-            bulk,
-        ) = self.cache_related_fields(self.request)
+
+        if self.request.method in ("POST", "PUT", "PATCH"):
+            context = {**context, **self.cache_related_fields_to_context(self.request)}
 
         return context
 
@@ -3753,7 +3749,12 @@ class EventViewSet(
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer = self.get_serializer(
+            instance,
+            data=request.data,
+            partial=partial,
+            context=self.get_serializer_context(),
+        )
         serializer.is_valid(raise_exception=True)
 
         event_data = serializer.validated_data
@@ -3776,7 +3777,7 @@ class EventViewSet(
             response.data = EventSerializer(replacing_event, context=context).data
         return response
 
-    def perform_bulk_update(self, serializer):
+    def perform_bulk_update(self, serializer: EventSerializer):
         # Prevent changing an event that user does not have write permissions
         # For bulk update, the editable queryset is filtered in filter_queryset
         # method
@@ -3806,21 +3807,11 @@ class EventViewSet(
                 "Invalid JSON in request. Bulk update requires a list"
             )
 
-        context = self.get_serializer_context()
-        (
-            context["keywords"],
-            context["location"],
-            context["image"],
-            context["sub_events"],
-            bulk,
-        ) = self.cache_related_fields(
-            request
-        )  # noqa E501
         serializer = EventSerializer(
             self.filter_queryset(self.get_queryset()),
             data=request.data,
-            context=context,
-            many=bulk,
+            context=self.get_serializer_context(),
+            many=True,
             partial=partial,
         )
         if not serializer.instance:
@@ -3830,28 +3821,10 @@ class EventViewSet(
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @transaction.atomic
-    def create(self, request, *args, **kwargs):
-        context = self.get_serializer_context()
-        (
-            context["keywords"],
-            context["location"],
-            context["image"],
-            context["sub_events"],
-            bulk,
-        ) = self.cache_related_fields(request)
-        serializer = EventSerializer(
-            data=request.data,
-            context=context,
-            many=bulk,
-        )
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(
-            serializer.data, status=status.HTTP_201_CREATED, headers=headers
-        )
+    def create(self, *args, **kwargs):
+        return super().create(*args, **kwargs)
 
-    def cache_related_fields(self, request):
+    def cache_related_fields_to_context(self, request):
         def retrieve_ids(key, event):
             if key in event.keys():
                 if isinstance(event[key], list):
@@ -3867,12 +3840,9 @@ class EventViewSet(
             else:
                 return []
 
-        bulk = isinstance(request.data, list)
-
-        if not bulk:
-            events = [request.data]
-        else:
-            events = request.data
+        events = request.data
+        if not isinstance(request.data, list):
+            events = [events]
 
         keywords = Keyword.objects.none()
         locations = Place.objects.none()
@@ -3896,7 +3866,13 @@ class EventViewSet(
             images = Image.objects.filter(id__in=image_ids)
         if subevent_ids:
             sub_events = Event.objects.filter(id__in=subevent_ids)
-        return keywords, locations, images, sub_events, bulk
+
+        return {
+            "keywords": keywords,
+            "location": locations,
+            "image": images,
+            "sub_events": sub_events,
+        }
 
     def perform_create(self, serializer):
         if isinstance(serializer.validated_data, list):
