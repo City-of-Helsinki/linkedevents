@@ -12,7 +12,7 @@ from django.http import HttpResponse
 from django.utils import translation
 from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
-from rest_framework import mixins, status, viewsets
+from rest_framework import filters, mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.exceptions import ValidationError
@@ -417,7 +417,12 @@ class SignUpViewSet(
 ):
     serializer_class = SignUpSerializer
     queryset = SignUp.objects.all()
-    filter_backends = [SignUpFilterBackend]
+    filter_backends = [
+        SignUpFilterBackend,
+        filters.OrderingFilter,
+    ]
+    ordering_fields = ("first_name", "last_name")
+    ordering = ("first_name", "last_name")
     filterset_class = SignUpFilter
     permission_classes = [CanAccessSignup]
 
