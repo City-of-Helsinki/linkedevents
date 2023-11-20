@@ -1,4 +1,5 @@
 import pytest
+from django.utils import translation
 from django_orghierarchy.models import Organization
 from rest_framework import status
 
@@ -172,7 +173,8 @@ def test_cannot_create_organization_with_parent_user_has_no_rights(
         "parent_organization": organization_id(organization.pk),
     }
 
-    response = create_organization(api_client, payload)
+    with translation.override("en"):
+        response = create_organization(api_client, payload)
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert str(response.data["detail"]) == "User has no rights to this organization"
 

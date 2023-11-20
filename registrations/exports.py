@@ -16,6 +16,7 @@ class RegistrationSignUpsExportXLSX:
         self.signups = (
             registration.signups.all()
             .select_related("contact_person", "signup_group__contact_person")
+            .order_by("first_name", "last_name")
             .only(
                 "first_name",
                 "last_name",
@@ -49,6 +50,30 @@ class RegistrationSignUpsExportXLSX:
             },
         ]
 
+    @staticmethod
+    def _add_info_texts(worksheet: Worksheet, row: int = 1) -> None:
+        worksheet.write(
+            row,
+            0,
+            _(
+                "This material is subject to data protection. This material must be processed "
+                "in the manner required by data protection and only to verify \nthe participants "
+                "of the event. This list should be discarded when the event is over and the "
+                "attendees have been entered into the system."
+            ),
+        )
+        worksheet.set_row(row, 40)
+
+        worksheet.write(
+            row + 1,
+            0,
+            _(
+                "Please note that the participant and the participant's contact information "
+                "may be the information of different persons."
+            ),
+        )
+        worksheet.set_row(row + 1, 20)
+
     def _get_signups_table_columns(self) -> list[dict]:
         table_columns = [{"header": column["header"]} for column in self.columns]
 
@@ -72,14 +97,14 @@ class RegistrationSignUpsExportXLSX:
 
         return table_data
 
-    def _add_signups_table(self, worksheet: Worksheet) -> None:
+    def _add_signups_table(self, worksheet: Worksheet, row: int = 4) -> None:
         table_columns = self._get_signups_table_columns()
         table_data = self._get_signups_table_data()
 
         worksheet.add_table(
-            2,
+            row,
             0,
-            2 + len(table_data),
+            row + len(table_data),
             len(self.columns) - 1,
             {
                 "columns": table_columns,
@@ -101,9 +126,12 @@ class RegistrationSignUpsExportXLSX:
             worksheet.write(0, 0, self.worksheet_header, self.formats["bold"])
 
             # Add a table containing the signups' data.
-            self._add_signups_table(worksheet)
+            self._add_signups_table(worksheet, 6)
 
-            # Automatically try to adjust column widths to make values visible in the columns.
+            # Automatically try to adjust signup table column widths to make values visible in the columns.
             worksheet.autofit()
+
+            # Add info texts about data protection and contact information.
+            self._add_info_texts(worksheet, 2)
 
         return output.getvalue()
