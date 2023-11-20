@@ -1,9 +1,11 @@
 from collections import Counter
+from datetime import timedelta
 from unittest.mock import MagicMock
 
 import pytest
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.utils import timezone
 from django_orghierarchy.models import Organization
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -168,6 +170,12 @@ class TestOrganizationAPI(APITestCase):
             parent=self.org,
             internal_type=Organization.AFFILIATED,
         )
+        self.dissolved_organization = Organization.objects.create(
+            name="dissolved_org",
+            origin_id="dissolved_org",
+            data_source=data_source,
+            dissolution_date="2020-01-01",
+        )
 
     def test_sub_organizations_and_affiliated_organizations(self):
         url = reverse("organization-detail", kwargs={"pk": self.org.id})
@@ -220,9 +228,63 @@ class TestOrganizationAPI(APITestCase):
         assert response.status_code == status.HTTP_200_OK
 
         audit_log_entry = AuditLogEntry.objects.first()
+
         assert Counter(
             audit_log_entry.message["audit_event"]["target"]["object_ids"]
-        ) == Counter([self.org.pk, self.normal_org.pk, self.affiliated_org.pk])
+        ) == Counter(
+            [
+                self.org.pk,
+                self.normal_org.pk,
+                self.affiliated_org.pk,
+                self.dissolved_organization.pk,
+            ]
+        )
+
+    def test_dissolved_filter_false_excludes_dissolved(self):
+        url = reverse("organization-list") + "?dissolved=false"
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["data"]), 3)
+
+    def test_dissolved_filter_true_includes_only_dissolved(self):
+        url = reverse("organization-list") + "?dissolved=true"
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["data"]), 1)
+
+    def test_dissolved_filter_false_shows_organization_when_dissolution_date_in_future(
+        self,
+    ):
+        Organization.objects.create(
+            name="future dissolved_org",
+            origin_id="future_dissolved_org",
+            data_source=DataSource.objects.get(id="ds"),
+            dissolution_date=timezone.now() + timedelta(days=1),
+        )
+
+        url = reverse("organization-list") + "?dissolved=false"
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["data"]), 4)
+
+    def test_dissolved_filter_true_does_not_include_organization_when_dissolution_date_in_future(
+        self,
+    ):
+        Organization.objects.create(
+            name="future dissolved_org",
+            origin_id="future_dissolved_org",
+            data_source=DataSource.objects.get(id="ds"),
+            dissolution_date=timezone.now() + timedelta(days=1),
+        )
+
+        url = reverse("organization-list") + "?dissolved=true"
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["data"]), 1)
 
 
 class TestImageAPI(APITestCase):

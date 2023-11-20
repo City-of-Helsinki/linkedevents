@@ -1426,6 +1426,26 @@ class LanguageViewSet(
 register_view(LanguageViewSet, "language")
 
 
+class OrganizationFilter(django_filters.rest_framework.FilterSet):
+    dissolved = django_filters.BooleanFilter(
+        method="filter_dissolved",
+    )
+
+    class Meta:
+        model = Organization
+        fields = ("dissolved",)
+
+    def filter_dissolved(self, queryset, name, value: Optional[bool]):
+        today = timezone.now().date()
+
+        if value:
+            return queryset.filter(dissolution_date__lte=today)
+
+        return queryset.filter(
+            Q(dissolution_date__gt=today) | Q(dissolution_date__isnull=True)
+        )
+
+
 class OrganizationBaseSerializer(LinkedEventsSerializer):
     view_name = "organization-detail"
 
@@ -1624,6 +1644,7 @@ class OrganizationViewSet(
     permission_classes = [
         DataSourceResourceEditPermission & DataSourceOrganizationEditPermission
     ]
+    filterset_class = OrganizationFilter
 
     def get_serializer_class(self, *args, **kwargs):
         if self.action in ["create", "retrieve", "update"]:
