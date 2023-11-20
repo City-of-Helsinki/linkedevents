@@ -2588,15 +2588,6 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
         if request and not request.user.is_authenticated:
             del ret["publication_status"]
 
-        if ret["sub_events"]:
-            sub_events_relation = self.fields["sub_events"].child_relation
-            undeleted_sub_events = []
-            for sub_event in obj.sub_events.filter(deleted=False):
-                undeleted_sub_events.append(
-                    sub_events_relation.to_representation(sub_event)
-                )
-            ret["sub_events"] = undeleted_sub_events
-
         return ret
 
 
@@ -3582,6 +3573,7 @@ class EventViewSet(
     BulkModelViewSet,
     viewsets.ModelViewSet,
 ):
+    # sub_event prefetches are handled in get_queryset()
     queryset = (
         Event.objects.all()
         .select_related("location", "publisher")
@@ -3594,10 +3586,10 @@ class EventViewSet(
             "in_language",
             "offers",
             "registration",
-            "sub_events",
             "videos",
         )
     )
+
     serializer_class = EventSerializer
     filter_backends = (
         EventOrderingFilter,
@@ -3642,26 +3634,38 @@ class EventViewSet(
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        if self.action == "list":
+        if self.action in {"list", "retrieve"}:
             context = self.get_serializer_context()
             # prefetch extra if the user want them included
-            if "include" in context:
-                for included in context["include"]:
-                    if included == "location":
-                        queryset = queryset.select_related(
-                            "location__publisher"
-                        ).prefetch_related(
-                            "location__divisions",
-                            "location__divisions__type",
-                            "location__divisions__municipality",
-                        )
-                    if included == "keywords":
-                        queryset = queryset.prefetch_related(
-                            "audience__alt_labels",
-                            "audience__publisher",
-                            "keywords__alt_labels",
-                            "keywords__publisher",
-                        )
+            includes = context.get("include", [])
+            if "location" in includes:
+                queryset = queryset.select_related(
+                    "location__publisher"
+                ).prefetch_related(
+                    "location__divisions",
+                    "location__divisions__type",
+                    "location__divisions__municipality",
+                )
+            if "keywords" in includes:
+                queryset = queryset.prefetch_related(
+                    "audience__alt_labels",
+                    "audience__publisher",
+                    "keywords__alt_labels",
+                    "keywords__publisher",
+                )
+
+            if "sub_events" in includes:
+                queryset = queryset.prefetch_related(
+                    Prefetch("sub_events", self.queryset.filter(deleted=False)),
+                    Prefetch(
+                        "sub_events__sub_events", self.queryset.filter(deleted=False)
+                    ),
+                )
+            else:
+                queryset = queryset.prefetch_related(
+                    Prefetch("sub_events", Event.objects.filter(deleted=False))
+                )
+
             return apply_select_and_prefetch(
                 queryset=queryset, extensions=get_extensions_from_request(self.request)
             )

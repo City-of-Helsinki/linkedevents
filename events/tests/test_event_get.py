@@ -1,5 +1,6 @@
 from collections import Counter
 from datetime import datetime, timedelta
+from typing import Optional
 
 import pytest
 import pytz
@@ -7,12 +8,15 @@ from dateutil import parser
 from django.conf import settings
 from django.contrib.gis.gdal import CoordTransform, SpatialReference
 from django.contrib.gis.geos import Point
+from django.db import connections, DEFAULT_DB_ALIAS
+from django.test.utils import CaptureQueriesContext
 from freezegun import freeze_time
 from rest_framework import status
 
 from audit_log.models import AuditLogEntry
 from events.models import Event, Language, PublicationStatus
 from events.tests.conftest import APIClient
+from events.tests.factories import EventFactory
 from events.tests.utils import assert_fields_exist, datetime_zone_aware, get
 from events.tests.utils import versioned_reverse as reverse
 
@@ -1386,3 +1390,59 @@ def test_event_id_is_audit_logged_on_get_list(api_client, event, event2):
     assert Counter(
         audit_log_entry.message["audit_event"]["target"]["object_ids"]
     ) == Counter([event.pk, event2.pk])
+
+
+@pytest.mark.parametrize(
+    "qs,sub_event_query_count,sub_sub_event_query_count",
+    [["", 0, 0], ["include=sub_events", 9, 8]],
+)
+@pytest.mark.django_db
+def test_sub_events_increase_query_count_sanely(
+    api_client, qs, sub_event_query_count, sub_sub_event_query_count
+):
+    """
+    Rationale: when there is no include=sub_events, the needed information
+    for generating the response can be obtained via single query using
+    prefetch_related("sub_events"). Since this is done always, the extra
+    overhead from sub (sub) events is zero.
+
+    With include, additional queries need to be performed to populate the
+    response. Sub events require 8+1 queries, where the +1 is a query to
+    discover sub-sub events. Sub-sub events should also require 8 queries.
+    """
+
+    def get_num_queries():
+        with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as queries:
+            response = get_list(api_client, query_string=qs)
+            assert response.status_code == status.HTTP_200_OK
+
+        return len(queries)
+
+    event_1 = EventFactory()
+    event_2 = EventFactory()
+
+    # Do one warmup list, there's some savepoint/insert happening
+    # on first call related to test setup that would give higher
+    # than expected number of queries.
+    get_num_queries()
+
+    base_count = get_num_queries()
+
+    sub_event_1 = EventFactory(super_event=event_1)
+    one_sub_event_count = get_num_queries()
+
+    assert one_sub_event_count == base_count + sub_event_query_count
+
+    # More than one sub event should NOT increase number of queries
+    sub_event_2 = EventFactory(super_event=event_2)
+    assert get_num_queries() == one_sub_event_count
+
+    EventFactory(super_event=sub_event_1)
+    one_sub_sub_event_count = get_num_queries()
+    assert one_sub_sub_event_count == one_sub_event_count + sub_sub_event_query_count
+
+    # More than one sub-sub event should NOT increase number of queries
+    EventFactory(super_event=sub_event_2)
+    EventFactory(super_event=sub_event_2)
+
+    assert get_num_queries() == one_sub_sub_event_count
