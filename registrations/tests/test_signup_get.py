@@ -634,3 +634,88 @@ def test_signup_id_is_audit_logged_on_get_list(api_client, signup, signup2):
     assert Counter(
         audit_log_entry.message["audit_event"]["target"]["object_ids"]
     ) == Counter([signup.pk, signup2.pk])
+
+
+@pytest.mark.parametrize(
+    "is_superuser,organization_role_attr",
+    [
+        (False, "registration_admin_organizations"),
+        (True, "registration_admin_organizations"),
+        (True, "admin_organizations"),
+        (True, "organization_memberships"),
+        (True, None),
+    ],
+)
+@pytest.mark.django_db
+def test_signups_list_ordering(
+    api_client, registration, is_superuser, organization_role_attr
+):
+    user = UserFactory(is_superuser=is_superuser)
+    if organization_role_attr is not None:
+        getattr(user, organization_role_attr).add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    signups = [
+        SignUpFactory(
+            registration=registration,
+            first_name="",
+            last_name="",
+        ),
+        SignUpFactory(
+            registration=registration,
+            first_name="",
+            last_name=None,
+        ),
+        SignUpFactory(
+            registration=registration,
+            first_name="Abc",
+            last_name="Abc",
+        ),
+        SignUpFactory(
+            registration=registration,
+            first_name="Bcd",
+            last_name="Bcd",
+        ),
+        SignUpFactory(
+            registration=registration,
+            first_name="Bcd",
+            last_name="Cde",
+        ),
+        SignUpFactory(
+            registration=registration,
+            first_name="Äää",
+            last_name="Ööö",
+        ),
+        SignUpFactory(
+            registration=registration,
+            first_name="Äöö",
+            last_name="Äää",
+        ),
+        SignUpFactory(
+            registration=registration,
+            first_name="Öää",
+            last_name="Äää",
+        ),
+        SignUpFactory(
+            registration=registration,
+            first_name=None,
+            last_name=None,
+        ),
+    ]
+
+    page_size = 3
+    page_start = 0
+    page_end = page_size
+    for page in range(1, 4):
+        response = get_list(
+            api_client, query_string=f"page={page}&page_size={page_size}"
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data["data"]) == page_size
+
+        for index, signup in enumerate(signups[page_start:page_end]):
+            assert response.data["data"][index]["id"] == signup.id
+
+        page_start += page_size
+        page_end += page_size
