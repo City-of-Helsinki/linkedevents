@@ -21,3 +21,5 @@ resources:
 
 extends:
   template: azure-pipelines-deploy-linkedevents-api-prod.yml@linkedevents-pipelines
+  parameters:
+    buildenv: ${{ parameters.buildenv }}
