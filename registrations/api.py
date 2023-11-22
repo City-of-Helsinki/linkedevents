@@ -127,39 +127,31 @@ class RegistrationViewSet(
         return super().get_serializer_class()
 
     @staticmethod
-    def _get_message_signups(signups, signup_groups):
-        message_signups = []
+    def _get_message_contact_persons(signups, signup_groups):
+        message_contact_persons = []
 
-        if not (signups or signup_groups):
-            return message_signups
-
-        already_included_signups = set()
-
-        # Make personal email for each signup groups' responsible signups
+        # Make personal email for each signup groups' contact_persons.
         for signup_group in signup_groups:
-            responsible_signups = (
-                signup_group.responsible_signups or signup_group.signups.all()
-            )
-            for signup in responsible_signups.exclude(email=None).filter(
-                attendee_status=SignUp.AttendeeStatus.ATTENDING
+            if (
+                signup_group.attending_signups
+                and signup_group.contact_person
+                and signup_group.contact_person.email
             ):
-                message_signups.append(signup)
-                already_included_signups.add(signup.pk)
+                message_contact_persons.append(signup_group.contact_person)
 
-        # Make personal email for each individual signup that
-        # was not already processed as part of a group.
+        # Make personal email for each contact_person that is not part of a group.
         for signup in signups:
-            if signup.pk not in already_included_signups:
-                message_signups.append(signup)
+            if signup.contact_person and signup.contact_person.email:
+                message_contact_persons.append(signup.contact_person)
 
-        return message_signups
+        return message_contact_persons
 
     @staticmethod
-    def _get_messages(subject, cleaned_body, plain_text_body, signups):
+    def _get_messages(subject, cleaned_body, plain_text_body, contact_persons):
         messages = []
 
-        for signup in signups:
-            message = signup.get_registration_message(
+        for contact_person in contact_persons:
+            message = contact_person.get_registration_message(
                 subject, cleaned_body, plain_text_body
             )
             messages.append(message)
@@ -189,14 +181,27 @@ class RegistrationViewSet(
         signup_groups = serializer.validated_data.get("signup_groups", [])
         signups = serializer.validated_data.get("signups", [])
         if not (signup_groups or signups):
-            signup_groups = registration.signup_groups.all()
-            signups = registration.signups.exclude(email=None).filter(
-                attendee_status=SignUp.AttendeeStatus.ATTENDING
+            signup_groups = registration.signup_groups.filter(
+                contact_person__email__isnull=False
+            )
+            signups = registration.signups.filter(
+                contact_person__email__isnull=False,
+                attendee_status=SignUp.AttendeeStatus.ATTENDING,
             )
 
-        message_signups = self._get_message_signups(signups, signup_groups)
+        message_contact_persons = self._get_message_contact_persons(
+            signups, signup_groups
+        )
+        if not message_contact_persons:
+            return Response(
+                _(
+                    "No contact persons with email addresses found for the given participants."
+                ),
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
         messages = self._get_messages(
-            subject, cleaned_body, plain_text_body, message_signups
+            subject, cleaned_body, plain_text_body, message_contact_persons
         )
 
         try:
@@ -209,13 +214,22 @@ class RegistrationViewSet(
                 status=status.HTTP_409_CONFLICT,
             )
 
-        self._add_audit_logged_object_ids(message_signups)
+        self._add_audit_logged_object_ids(message_contact_persons)
 
         return Response(
             {
                 "html_message": cleaned_body,
                 "message": plain_text_body,
-                "signups": [su.id for su in message_signups],
+                "signups": [
+                    contact_person.signup_id
+                    for contact_person in message_contact_persons
+                    if contact_person.signup_id
+                ],
+                "signup_groups": [
+                    contact_person.signup_group_id
+                    for contact_person in message_contact_persons
+                    if contact_person.signup_group_id
+                ],
                 "subject": subject,
             },
             status=status.HTTP_200_OK,
@@ -369,9 +383,9 @@ class SignUpBaseFilter(django_filters.rest_framework.FilterSet):
         filters = {
             f"{relation_accessor}first_last_name__icontains": text_param,
             f"{relation_accessor}last_first_name__icontains": text_param,
-            f"{relation_accessor}email__icontains": text_param,
-            f"{relation_accessor}membership_number__icontains": text_param,
-            f"{relation_accessor}phone_number__icontains": text_param,
+            "contact_person__email__icontains": text_param,
+            "contact_person__membership_number__icontains": text_param,
+            "contact_person__phone_number__icontains": text_param,
         }
 
         q_set = Q()
@@ -444,7 +458,7 @@ class SignUpViewSet(
         reservation = serializer.validated_data["reservation"]
         reservation.delete()
 
-        serializer.send_notifications(signup_instances)
+        serializer.notify_contact_persons(signup_instances)
 
         self._add_audit_logged_object_ids(signup_instances)
 
@@ -459,11 +473,6 @@ class SignUpViewSet(
 
     @transaction.atomic
     def perform_destroy(self, instance):
-        if instance.is_only_responsible_signup:
-            raise ValidationError(
-                _("Cannot delete the only responsible person of a group")
-            )
-
         instance._individually_deleted = True
         instance.delete()
 

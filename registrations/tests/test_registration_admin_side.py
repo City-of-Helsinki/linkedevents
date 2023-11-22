@@ -4,7 +4,7 @@ import pytest
 from django.utils.timezone import localtime
 
 from events.tests.utils import versioned_reverse as reverse
-from registrations.models import SignUp
+from registrations.tests.factories import SignUpContactPersonFactory, SignUpFactory
 
 
 @pytest.mark.django_db
@@ -34,12 +34,12 @@ def test_event_with_open_registrations_and_places_at_the_event(
     registration2.save()
     api_client.force_authenticate(user=None)
 
-    SignUp.objects.create(
+    signup = SignUpFactory(
         registration=registration2,
         first_name="Michael",
         last_name="Jackson",
-        email="test@test.com",
     )
+    SignUpContactPersonFactory(signup=signup, email="test@test.com")
     response = api_client.get(f"{event_url}?enrolment_open=true", format="json")
     assert len(response.data["data"]) == 1
     assert registration.event.id == response.data["data"][0]["id"]
@@ -96,12 +96,12 @@ def test_event_with_open_registrations_and_places_at_the_event_or_waiting_list(
     registration2.waiting_list_capacity = 10
     registration2.save()
 
-    SignUp.objects.create(
+    signup = SignUpFactory(
         registration=registration2,
         first_name="Michael",
         last_name="Jackson",
-        email="test@test.com",
     )
+    SignUpContactPersonFactory(signup=signup, email="test@test.com")
     response = api_client.get(
         f"{event_url}?enrolment_open_waitlist=true", format="json"
     )

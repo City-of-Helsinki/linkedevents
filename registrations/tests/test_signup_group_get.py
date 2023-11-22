@@ -11,9 +11,11 @@ from helevents.tests.factories import UserFactory
 from registrations.models import SignUp
 from registrations.tests.factories import (
     RegistrationUserAccessFactory,
+    SignUpContactPersonFactory,
     SignUpFactory,
     SignUpGroupFactory,
 )
+from registrations.tests.test_signup_get import assert_contact_person_fields_exist
 
 # === util methods ===
 
@@ -50,6 +52,7 @@ def assert_signup_group_fields_exist(data):
         "id",
         "registration",
         "signups",
+        "contact_person",
         "extra_info",
         "created_time",
         "last_modified_time",
@@ -58,6 +61,7 @@ def assert_signup_group_fields_exist(data):
         "is_created_by_current_user",
     )
     assert_fields_exist(data, fields)
+    assert_contact_person_fields_exist(data["contact_person"])
 
 
 def assert_signup_groups_in_response(signups, response, query=""):
@@ -86,6 +90,7 @@ def test_registration_admin_user_can_get_signup_group(
     signup_group = SignUpGroupFactory(registration=registration)
     SignUpFactory(registration=registration, signup_group=signup_group)
     SignUpFactory(registration=registration, signup_group=signup_group)
+    SignUpContactPersonFactory(signup_group=signup_group)
 
     response = assert_get_detail(user_api_client, signup_group.id)
     assert len(response.json()["signups"]) == 2
@@ -145,17 +150,17 @@ def test_regular_non_created_user_cannot_get_signup_group(
 
 
 @pytest.mark.django_db
-def test_regular_created_user_can_get_signup_group(user_api_client, user, organization):
-    signup_group = SignUpGroupFactory(
-        registration__event__publisher=organization, created_by=user
-    )
-    SignUpFactory(registration=signup_group.registration, signup_group=signup_group)
-    SignUpFactory(registration=signup_group.registration, signup_group=signup_group)
+def test_regular_created_user_can_get_signup_group(api_client, user, registration):
+    user = UserFactory()
+    user.organization_memberships.add(registration.publisher)
+    api_client.force_authenticate(user)
 
-    organization.regular_users.add(user)
-    organization.admin_users.remove(user)
+    signup_group = SignUpGroupFactory(registration=registration, created_by=user)
+    SignUpFactory(registration=registration, signup_group=signup_group)
+    SignUpFactory(registration=registration, signup_group=signup_group)
+    SignUpContactPersonFactory(signup_group=signup_group)
 
-    response = assert_get_detail(user_api_client, signup_group.id)
+    response = assert_get_detail(api_client, signup_group.id)
     assert len(response.json()["signups"]) == 2
     assert_signup_group_fields_exist(response.data)
     assert response.data["is_created_by_current_user"] is True
@@ -175,15 +180,15 @@ def test_non_created_user_without_organization_cannot_get_signup_group(
 
 @pytest.mark.django_db
 def test_created_user_without_organization_can_get_signup_group(
-    api_client, organization
+    api_client, registration
 ):
     user = UserFactory()
     api_client.force_authenticate(user)
-    signup_group = SignUpGroupFactory(
-        registration__event__publisher=organization, created_by=user
-    )
-    SignUpFactory(registration=signup_group.registration, signup_group=signup_group)
-    SignUpFactory(registration=signup_group.registration, signup_group=signup_group)
+
+    signup_group = SignUpGroupFactory(registration=registration, created_by=user)
+    SignUpFactory(registration=registration, signup_group=signup_group)
+    SignUpFactory(registration=registration, signup_group=signup_group)
+    SignUpContactPersonFactory(signup_group=signup_group)
 
     response = assert_get_detail(api_client, signup_group.id)
     assert len(response.json()["signups"]) == 2
@@ -213,6 +218,7 @@ def test_api_key_with_organization_and_registration_permissions_can_get_signup_g
     )
     SignUpFactory(registration=signup_group.registration, signup_group=signup_group)
     SignUpFactory(registration=signup_group.registration, signup_group=signup_group)
+    SignUpContactPersonFactory(signup_group=signup_group)
 
     data_source.owner = organization
     data_source.user_editable_registrations = True
@@ -455,35 +461,52 @@ def test_api_key_with_wrong_organization_cannot_get_signup_group_list(
 
 
 @pytest.mark.parametrize(
-    "field",
-    ["first_name", "email", "membership_number", "phone_number"],
+    "field,contact_person_field",
+    [
+        ("first_name", False),
+        ("last_name", False),
+        ("email", True),
+        ("membership_number", True),
+        ("phone_number", True),
+    ],
 )
 @pytest.mark.django_db
-def test_signup_group_list_assert_text_filter(api_client, registration, field):
+def test_signup_group_list_assert_text_filter(
+    field, contact_person_field, api_client, registration
+):
     user = UserFactory()
     user.registration_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
 
     signup_group = SignUpGroupFactory(registration=registration)
+    signup_group2 = SignUpGroupFactory(registration=registration)
+
     signup_kwargs = {
         "signup_group": signup_group,
         "registration": registration,
-        **{field: "field_value_2"},
     }
-    SignUpFactory(**signup_kwargs)
-
-    signup_group2 = SignUpGroupFactory(registration=registration)
     signup2_kwargs = {
         "signup_group": signup_group2,
         "registration": registration,
-        **{field: "field_value_1"},
     }
-    SignUpFactory(**signup2_kwargs)
 
-    api_client.force_authenticate(user)
+    if contact_person_field:
+        SignUpContactPersonFactory(
+            signup_group=signup_group, **{field: "field_value_1"}
+        )
+        SignUpContactPersonFactory(
+            signup_group=signup_group2, **{field: "field_value_2"}
+        )
+    else:
+        signup_kwargs[field] = "field_value_1"
+        signup2_kwargs[field] = "field_value_2"
+
+    SignUpFactory(**signup_kwargs)
+    SignUpFactory(**signup2_kwargs)
 
     get_list_and_assert_signup_groups(
         api_client,
-        f"registration={registration.id}&text=field_value_1",
+        f"registration={registration.id}&text=field_value_2",
         [signup_group2],
     )
 
@@ -550,15 +573,14 @@ def test_filter_signup_groups(api_client, registration, registration2):
         registration=registration,
         first_name="Michael",
         last_name="Jackson",
-        email="test@test.com",
     )
     SignUpFactory(
         signup_group=signup_group0,
         registration=registration,
         first_name="Michael",
         last_name="Jackson2",
-        email="test2@test.com",
     )
+    SignUpContactPersonFactory(signup_group=signup_group0, email="test@test.com")
 
     signup_group1 = SignUpGroupFactory(registration=registration)
     SignUpFactory(
@@ -566,15 +588,14 @@ def test_filter_signup_groups(api_client, registration, registration2):
         registration=registration,
         first_name="Michael",
         last_name="Jackson3",
-        email="test3@test.com",
     )
     SignUpFactory(
         signup_group=signup_group1,
         registration=registration,
         first_name="Michael",
         last_name="Jackson4",
-        email="test4@test.com",
     )
+    SignUpContactPersonFactory(signup_group=signup_group1, email="test3@test.com")
 
     signup_group2 = SignUpGroupFactory(registration=registration2)
     SignUpFactory(
@@ -582,15 +603,14 @@ def test_filter_signup_groups(api_client, registration, registration2):
         registration=registration2,
         first_name="Joe",
         last_name="Biden",
-        email="test@test.com",
     )
     SignUpFactory(
         signup_group=signup_group2,
         registration=registration2,
         first_name="Hillary",
         last_name="Clinton",
-        email="test2@test.com",
     )
+    SignUpContactPersonFactory(signup_group=signup_group2, email="test2@test.com")
 
     signup_group3 = SignUpGroupFactory(registration=registration2)
     SignUpFactory(
@@ -598,16 +618,17 @@ def test_filter_signup_groups(api_client, registration, registration2):
         registration=registration2,
         first_name="Donald",
         last_name="Duck",
-        email="test3@test.com",
-        membership_number="1234",
     )
     SignUpFactory(
         signup_group=signup_group3,
         registration=registration2,
         first_name="Mickey",
         last_name="Mouse",
+    )
+    SignUpContactPersonFactory(
+        signup_group=signup_group3,
         email="test4@test.com",
-        membership_number="3456",
+        membership_number="1234",
     )
 
     api_client.force_authenticate(user)
@@ -648,7 +669,7 @@ def test_filter_signup_groups(api_client, registration, registration2):
         api_client, f"registration={registration2.id}&text=34", [signup_group3]
     )
     get_list_and_assert_signup_groups(
-        api_client, f"registration={registration2.id}&text=3456", [signup_group3]
+        api_client, f"registration={registration2.id}&text=3456", []
     )
 
 

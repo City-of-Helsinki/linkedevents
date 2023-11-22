@@ -6,6 +6,7 @@ from registrations.models import (
     RegistrationUserAccess,
     SeatReservationCode,
     SignUp,
+    SignUpContactPerson,
     SignUpGroup,
     SignUpGroupProtectedData,
     SignUpProtectedData,
@@ -38,6 +39,11 @@ class SignUpFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = SignUp
+
+
+class SignUpContactPersonFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = SignUpContactPerson
 
 
 class SignUpGroupProtectedDataFactory(factory.django.DjangoModelFactory):

@@ -16,6 +16,7 @@ from registrations.models import (
     RegistrationUserAccess,
     SeatReservationCode,
     SignUp,
+    SignUpContactPerson,
     SignUpGroup,
     SignUpGroupProtectedData,
     SignUpNotificationType,
@@ -96,14 +97,38 @@ class CreatedModifiedBaseSerializer(serializers.ModelSerializer):
         return instance
 
 
-class SignUpSerializer(CreatedModifiedBaseSerializer):
-    view_name = "signup"
-    id = serializers.IntegerField(required=False)
+class SignUpContactPersonSerializer(serializers.ModelSerializer):
     service_language = serializers.PrimaryKeyRelatedField(
         queryset=Language.objects.filter(service_language=True),
         many=False,
         required=False,
     )
+
+    def validate(self, data):
+        # Clean html tags from the text fields
+        data = clean_text_fields(data, strip=True)
+
+        return super().validate(data)
+
+    class Meta:
+        fields = (
+            "id",
+            "first_name",
+            "last_name",
+            "email",
+            "phone_number",
+            "native_language",
+            "service_language",
+            "membership_number",
+            "notifications",
+        )
+        model = SignUpContactPerson
+
+
+class SignUpSerializer(CreatedModifiedBaseSerializer):
+    view_name = "signup"
+    id = serializers.IntegerField(required=False)
+    contact_person = SignUpContactPersonSerializer(required=False, allow_null=True)
     extra_info = serializers.CharField(required=False, allow_blank=True)
     date_of_birth = serializers.DateField(required=False, allow_null=True)
 
@@ -118,11 +143,24 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
             defaults=protected_data,
         )
 
+    @staticmethod
+    def _update_or_create_contact_person(signup, **contact_person_data):
+        if signup.signup_group_id or not contact_person_data:
+            return None
+
+        contact_person, _created = SignUpContactPerson.objects.update_or_create(
+            signup=signup,
+            defaults=contact_person_data,
+        )
+
+        return contact_person
+
     def create(self, validated_data):
         registration = validated_data["registration"]
         protected_data = _get_protected_data(
             validated_data, ["extra_info", "date_of_birth"]
         )
+        contact_person_data = validated_data.pop("contact_person", None) or {}
 
         add_as_attending, add_as_waitlisted = _validate_registration_capacity(
             registration, 1
@@ -132,8 +170,11 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
             signup = super().create(validated_data)
             self._update_or_create_protected_data(signup, **protected_data)
 
-            if signup.responsible_for_group or not signup.signup_group_id:
-                signup.send_notification(SignUpNotificationType.CONFIRMATION)
+            contact_person = self._update_or_create_contact_person(
+                signup, **contact_person_data
+            )
+            if contact_person:
+                contact_person.send_notification(SignUpNotificationType.CONFIRMATION)
 
             return signup
         elif add_as_waitlisted:
@@ -142,8 +183,11 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
             signup = super().create(validated_data)
             self._update_or_create_protected_data(signup, **protected_data)
 
-            if signup.responsible_for_group or not signup.signup_group_id:
-                signup.send_notification(
+            contact_person = self._update_or_create_contact_person(
+                signup, **contact_person_data
+            )
+            if contact_person:
+                contact_person.send_notification(
                     SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST
                 )
 
@@ -175,9 +219,18 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
         protected_data = _get_protected_data(
             validated_data, ["extra_info", "date_of_birth"]
         )
+        contact_person_data = validated_data.pop("contact_person", None) or {}
 
         super().update(instance, validated_data)
         self._update_or_create_protected_data(instance, **protected_data)
+
+        contact_person = getattr(instance, "contact_person", None)
+        if instance.signup_group_id and contact_person:
+            # A signup in a group should never have a contact person - it's the group that has it,
+            # so delete the individual signup's contact person.
+            contact_person.delete()
+        elif not instance.signup_group_id:
+            self._update_or_create_contact_person(instance, **contact_person_data)
 
         return instance
 
@@ -232,15 +285,6 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
                 ):
                     errors["date_of_birth"] = _("The participant is too old.")
 
-        if (
-            data.get("responsible_for_group") is False
-            and self.instance
-            and self.instance.is_only_responsible_signup
-        ):
-            errors["responsible_for_group"] = _(
-                "Cannot set responsible_for_group to False for the only responsible person of a group"
-            )
-
         if errors:
             raise serializers.ValidationError(errors)
 
@@ -250,30 +294,24 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
     class Meta:
         fields = (
             "id",
-            "service_language",
             "created_time",
             "last_modified_time",
             "created_by",
             "last_modified_by",
-            "responsible_for_group",
             "first_name",
             "last_name",
             "date_of_birth",
             "city",
-            "email",
             "extra_info",
-            "membership_number",
-            "phone_number",
-            "notifications",
             "attendee_status",
             "street_address",
             "zipcode",
             "presence_status",
             "registration",
             "signup_group",
-            "native_language",
             "user_consent",
             "is_created_by_current_user",
+            "contact_person",
         )
         model = SignUp
 
@@ -466,17 +504,24 @@ class CreateSignUpsSerializer(serializers.Serializer):
         return data
 
     @staticmethod
-    def send_notifications(signup_instances):
+    def _notify_contact_person(contact_person, attendee_status):
+        if not contact_person:
+            return
+
         confirmation_type_mapping = {
             SignUp.AttendeeStatus.ATTENDING: SignUpNotificationType.CONFIRMATION,
             SignUp.AttendeeStatus.WAITING_LIST: SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST,
         }
 
+        contact_person.send_notification(confirmation_type_mapping[attendee_status])
+
+    def notify_contact_persons(self, signup_instances):
         for signup in signup_instances:
-            if not signup.responsible_for_group and signup.signup_group_id:
+            if signup.signup_group_id:
                 continue
 
-            signup.send_notification(confirmation_type_mapping[signup.attendee_status])
+            contact_person = getattr(signup, "contact_person", None)
+            self._notify_contact_person(contact_person, signup.attendee_status)
 
     def create_signups(self, validated_data):
         user = self.context["request"].user
@@ -507,7 +552,6 @@ class CreateSignUpsSerializer(serializers.Serializer):
                 ] = SignUp.AttendeeStatus.WAITING_LIST
 
         signups = []
-        protected_data = []
 
         for signup_data in validated_data["signups"]:
             if not (
@@ -521,27 +565,41 @@ class CreateSignUpsSerializer(serializers.Serializer):
             cleaned_signup_data["created_by"] = user
             cleaned_signup_data["last_modified_by"] = user
 
-            extra_info = cleaned_signup_data.pop("extra_info", None)
-            date_of_birth = cleaned_signup_data.pop("date_of_birth", None)
-
             check_and_set_attendee_status(cleaned_signup_data)
             capacity_by_attendee_status_map[cleaned_signup_data["attendee_status"]] -= 1
 
+            extra_info = cleaned_signup_data.pop("extra_info", None)
+            date_of_birth = cleaned_signup_data.pop("date_of_birth", None)
+            contact_person = cleaned_signup_data.pop("contact_person", None)
+
             signup = SignUp(**cleaned_signup_data)
+            signup._extra_info = extra_info
+            signup._date_of_birth = date_of_birth
+            signup._contact_person = contact_person
             signups.append(signup)
 
-            if extra_info or date_of_birth:
-                protected_data.append(
-                    SignUpProtectedData(
-                        registration=registration,
-                        signup=signup,
-                        extra_info=extra_info,
-                        date_of_birth=date_of_birth,
-                    )
-                )
-
         signup_instances = SignUp.objects.bulk_create(signups)
-        SignUpProtectedData.objects.bulk_create(protected_data)
+
+        SignUpProtectedData.objects.bulk_create(
+            [
+                SignUpProtectedData(
+                    registration=registration,
+                    signup=signup,
+                    extra_info=signup._extra_info,
+                    date_of_birth=signup._date_of_birth,
+                )
+                for signup in signups
+                if signup._extra_info or signup._date_of_birth
+            ]
+        )
+
+        SignUpContactPerson.objects.bulk_create(
+            [
+                SignUpContactPerson(signup=signup, **signup._contact_person)
+                for signup in signups
+                if signup._contact_person
+            ]
+        )
 
         return signup_instances
 
@@ -550,6 +608,7 @@ class SignUpGroupCreateSerializer(
     CreatedModifiedBaseSerializer, CreateSignUpsSerializer
 ):
     reservation_code = serializers.CharField(write_only=True)
+    contact_person = SignUpContactPersonSerializer(required=True)
     extra_info = serializers.CharField(required=False, allow_blank=True)
 
     def validate(self, data):
@@ -559,10 +618,11 @@ class SignUpGroupCreateSerializer(
 
         errors = {}
 
-        signups_data = validated_data.get("signups")
-        if not any(signup.get("responsible_for_group") for signup in signups_data):
-            errors["signups"] = _(
-                "A group must have at least one participant who is responsible for the group"
+        if not validated_data.get("contact_person"):
+            # The field can be given as an empty dict even if it's required
+            # => need to validate this here.
+            errors["contact_person"] = _(
+                "Contact person information must be provided for a group."
             )
 
         if errors:
@@ -581,11 +641,25 @@ class SignUpGroupCreateSerializer(
             **protected_data,
         )
 
+    @staticmethod
+    def _create_contact_person(signup_group, **contact_person_data):
+        return SignUpContactPerson.objects.create(
+            signup_group=signup_group,
+            **contact_person_data,
+        )
+
+    def _create_signups(self, instance, validated_signups_data):
+        for signup_data in validated_signups_data:
+            signup_data["signup_group"] = instance
+            signup_serializer = SignUpSerializer(data=signup_data, context=self.context)
+            signup_serializer.create(signup_data)
+
     def create(self, validated_data):
         validated_data.pop("reservation_code")
         reservation = validated_data.pop("reservation")
         signups_data = validated_data.pop("signups")
         protected_data = _get_protected_data(validated_data, ["extra_info"])
+        contact_person_data = validated_data.pop("contact_person")
 
         instance = super().create(validated_data)
         self._create_protected_data(instance, **protected_data)
@@ -593,8 +667,15 @@ class SignUpGroupCreateSerializer(
         for signup in signups_data:
             signup["signup_group"] = instance
         validated_data["signups"] = signups_data
-        signup_instances = self.create_signups(validated_data)
-        self.send_notifications(signup_instances)
+        self.create_signups(validated_data)
+
+        contact_person = self._create_contact_person(instance, **contact_person_data)
+        self._notify_contact_person(
+            contact_person,
+            SignUp.AttendeeStatus.ATTENDING
+            if instance.attending_signups
+            else SignUp.AttendeeStatus.WAITING_LIST,
+        )
 
         reservation.delete()
 
@@ -604,8 +685,9 @@ class SignUpGroupCreateSerializer(
         fields = (
             "id",
             "registration",
-            "signups",
             "reservation_code",
+            "signups",
+            "contact_person",
             "extra_info",
             "created_time",
             "last_modified_time",
@@ -618,6 +700,7 @@ class SignUpGroupCreateSerializer(
 
 class SignUpGroupSerializer(CreatedModifiedBaseSerializer):
     view_name = "signupgroup-detail"
+    contact_person = SignUpContactPersonSerializer(required=False, allow_null=True)
     extra_info = serializers.CharField(required=False, allow_blank=True)
 
     @staticmethod
@@ -629,6 +712,16 @@ class SignUpGroupSerializer(CreatedModifiedBaseSerializer):
             registration_id=signup_group.registration_id,
             signup_group=signup_group,
             defaults=protected_data,
+        )
+
+    @staticmethod
+    def _update_contact_person(signup_group, **contact_person_data):
+        if not contact_person_data:
+            return
+
+        SignUpContactPerson.objects.update_or_create(
+            signup_group=signup_group,
+            defaults=contact_person_data,
         )
 
     def get_fields(self):
@@ -679,11 +772,13 @@ class SignUpGroupSerializer(CreatedModifiedBaseSerializer):
     def update(self, instance, validated_data):
         signups_data = validated_data.pop("signups", [])
         protected_data = _get_protected_data(validated_data, ["extra_info"])
+        contact_person_data = validated_data.pop("contact_person", None) or {}
 
         validated_data["last_modified_by"] = self.context["request"].user
 
         super().update(instance, validated_data)
         self._update_protected_data(instance, **protected_data)
+        self._update_contact_person(instance, **contact_person_data)
         self._update_signups(instance, signups_data)
 
         return instance
@@ -693,6 +788,7 @@ class SignUpGroupSerializer(CreatedModifiedBaseSerializer):
             "id",
             "registration",
             "signups",
+            "contact_person",
             "extra_info",
             "created_time",
             "last_modified_time",
@@ -838,14 +934,14 @@ class MassEmailSignupGroupsField(serializers.PrimaryKeyRelatedField):
     def get_queryset(self):
         registration = self.context["request"].data["registration"]
 
-        return registration.signup_groups.all()
+        return registration.signup_groups.filter(contact_person__email__isnull=False)
 
 
 class MassEmailSignupsField(serializers.PrimaryKeyRelatedField):
     def get_queryset(self):
         registration = self.context["request"].data["registration"]
 
-        return registration.signups.exclude(email=None)
+        return registration.signups.filter(contact_person__email__isnull=False)
 
 
 class MassEmailSerializer(serializers.Serializer):

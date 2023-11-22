@@ -7,10 +7,11 @@ from rest_framework import status
 from audit_log.models import AuditLogEntry
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
-from registrations.models import SignUp
+from registrations.models import SignUp, SignUpContactPerson
 from registrations.tests.factories import (
     RegistrationFactory,
     RegistrationUserAccessFactory,
+    SignUpContactPersonFactory,
     SignUpFactory,
     SignUpGroupFactory,
     SignUpProtectedDataFactory,
@@ -157,7 +158,6 @@ def test_registration_user_who_created_signup_can_patch_presence_status(
 
     signup = SignUpFactory(
         registration=registration,
-        phone_number="0441234567",
         street_address="Street address",
         created_by=user,
     )
@@ -216,8 +216,31 @@ def test_registration_user_can_patch_signup_presence_status_based_on_identificat
         assert signup.presence_status == SignUp.PresenceStatus.PRESENT
 
 
+@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_cannot_remove_only_responsible_person_from_group_through_patch(
+def test_can_patch_signup_contact_person(api_client, registration):
+    user = UserFactory()
+    user.registration_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup = SignUpFactory(registration=registration)
+    contact_person = SignUpContactPersonFactory(signup=signup)
+
+    assert SignUpContactPerson.objects.count() == 1
+    assert contact_person.membership_number is None
+
+    signup_data = {"contact_person": {"membership_number": "1234"}}
+
+    assert_patch_signup(api_client, signup.id, signup_data)
+
+    contact_person.refresh_from_db()
+    assert SignUpContactPerson.objects.count() == 1
+    assert contact_person.membership_number == "1234"
+
+
+@freeze_time("2023-03-14 03:30:00+02:00")
+@pytest.mark.django_db
+def test_contact_person_deleted_when_signup_linked_to_group_in_patch(
     api_client, registration
 ):
     user = UserFactory()
@@ -225,20 +248,27 @@ def test_cannot_remove_only_responsible_person_from_group_through_patch(
     api_client.force_authenticate(user)
 
     signup_group = SignUpGroupFactory(registration=registration)
-    SignUpFactory(registration=registration, signup_group=signup_group)
-    responsible_signup = SignUpFactory(
-        registration=registration, signup_group=signup_group, responsible_for_group=True
-    )
+    group_contact_person = SignUpContactPersonFactory(signup_group=signup_group)
+
+    signup = SignUpFactory(registration=registration)
+    signup_contact_person = SignUpContactPersonFactory(signup=signup)
+
+    assert SignUpContactPerson.objects.count() == 2
+    assert signup_group.contact_person.pk == group_contact_person.pk
+    assert signup.contact_person.pk == signup_contact_person.pk
 
     signup_data = {
-        "responsible_for_group": False,
+        "signup_group": signup_group.id,
     }
 
-    response = patch_signup(api_client, responsible_signup.id, signup_data)
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.data["responsible_for_group"][0] == (
-        "Cannot set responsible_for_group to False for the only responsible person of a group"
-    )
+    assert_patch_signup(api_client, signup.id, signup_data)
+
+    signup_group.refresh_from_db()
+    signup.refresh_from_db()
+
+    assert SignUpContactPerson.objects.count() == 1
+    assert signup_group.contact_person.pk == group_contact_person.pk
+    assert getattr(signup, "contact_person", None) is None
 
 
 @pytest.mark.django_db

@@ -13,9 +13,11 @@ from events.tests.factories import LanguageFactory
 from helevents.models import User
 from helevents.tests.conftest import get_api_token_for_user_with_scopes
 from helevents.tests.factories import UserFactory
-from registrations.models import SignUp, SignUpGroup
+from registrations.models import SignUp, SignUpContactPerson, SignUpGroup
+from registrations.notifications import NotificationType
 from registrations.tests.factories import (
     RegistrationFactory,
+    SignUpContactPersonFactory,
     SignUpFactory,
     SignUpGroupFactory,
     SignUpProtectedDataFactory,
@@ -24,11 +26,40 @@ from registrations.tests.factories import (
 # === util methods ===
 
 
+def _get_contact_person_data(contact_person: SignUpContactPerson) -> dict:
+    return {
+        "key": "SIGNUPCONTACTPERSON",
+        "children": [
+            {"key": "ID", "value": contact_person.id},
+            {"key": "FIRST_NAME", "value": contact_person.first_name},
+            {"key": "LAST_NAME", "value": contact_person.last_name},
+            {"key": "EMAIL", "value": contact_person.email},
+            {"key": "PHONE_NUMBER", "value": contact_person.phone_number},
+            {
+                "key": "NATIVE_LANGUAGE",
+                "value": str(contact_person.native_language),
+            },
+            {
+                "key": "SERVICE_LANGUAGE",
+                "value": str(contact_person.service_language),
+            },
+            {
+                "key": "MEMBERSHIP_NUMBER",
+                "value": contact_person.membership_number,
+            },
+            {
+                "key": "NOTIFICATIONS",
+                "value": str(contact_person.get_notifications_display()),
+            },
+        ],
+    }
+
+
 def _get_signup_group_profile_data(signup_group: Optional[SignUpGroup]) -> dict:
     if not signup_group:
         return {"key": "SIGNUP_GROUP", "value": None}
 
-    return {
+    profile_data = {
         "key": "SIGNUPGROUP",
         "children": [
             {"key": "ID", "value": signup_group.id},
@@ -38,9 +69,16 @@ def _get_signup_group_profile_data(signup_group: Optional[SignUpGroup]) -> dict:
         ],
     }
 
+    contact_person = getattr(signup_group, "contact_person", None)
+    if not contact_person:
+        return profile_data
+
+    profile_data["children"].append(_get_contact_person_data(contact_person))
+    return profile_data
+
 
 def _get_signup_profile_data(signup: SignUp) -> dict:
-    return {
+    profile_data = {
         "key": "SIGNUP",
         "children": [
             {"key": "FIRST_NAME", "value": signup.first_name},
@@ -54,31 +92,9 @@ def _get_signup_profile_data(signup: SignUp) -> dict:
             {"key": "CITY", "value": signup.city},
             {"key": "STREET_ADDRESS", "value": signup.street_address},
             {"key": "ZIPCODE", "value": signup.zipcode},
-            {"key": "EMAIL", "value": signup.email},
-            {"key": "PHONE_NUMBER", "value": signup.phone_number},
-            {
-                "key": "NATIVE_LANGUAGE",
-                "value": str(signup.native_language),
-            },
-            {
-                "key": "SERVICE_LANGUAGE",
-                "value": str(signup.service_language),
-            },
             {"key": "REGISTRATION_ID", "value": signup.registration_id},
             _get_signup_group_profile_data(signup.signup_group),
-            {
-                "key": "RESPONSIBLE_FOR_GROUP",
-                "value": signup.responsible_for_group,
-            },
             {"key": "EXTRA_INFO", "value": signup.extra_info},
-            {
-                "key": "MEMBERSHIP_NUMBER",
-                "value": signup.membership_number,
-            },
-            {
-                "key": "NOTIFICATIONS",
-                "value": dict(SignUp.NOTIFICATION_TYPES)[signup.notifications],
-            },
             {
                 "key": "ATTENDEE_STATUS",
                 "value": dict(SignUp.ATTENDEE_STATUSES)[signup.attendee_status],
@@ -90,6 +106,13 @@ def _get_signup_profile_data(signup: SignUp) -> dict:
             {"key": "USER_CONSENT", "value": signup.user_consent},
         ],
     }
+
+    contact_person = getattr(signup, "contact_person", None)
+    if not contact_person:
+        return profile_data
+
+    profile_data["children"].append(_get_contact_person_data(contact_person))
+    return profile_data
 
 
 def _get_signups_profile_data(signups_qs: QuerySet[SignUp]) -> list[dict]:
@@ -130,8 +153,9 @@ def _assert_profile_data_in_response(response, user: User):
 # === tests ===
 
 
+@pytest.mark.parametrize("use_contact_person", [True, False])
 @pytest.mark.django_db
-def test_authenticated_user_can_get_own_data(api_client, settings):
+def test_authenticated_user_can_get_own_data(api_client, settings, use_contact_person):
     settings.GDPR_API_QUERY_SCOPE = api_token_auth_settings.API_SCOPE_PREFIX
 
     user = UserFactory()
@@ -146,18 +170,11 @@ def test_authenticated_user_can_get_own_data(api_client, settings):
     first_signup = SignUpFactory(
         registration=registration,
         signup_group=signup_group,
-        responsible_for_group=True,
         first_name="Mickey",
         last_name="Mouse",
-        email="test@test.com",
         city="Test City",
         street_address="Test Street 1",
         zipcode="12345",
-        phone_number="+123123456789",
-        native_language=language_en,
-        service_language=language_fi,
-        membership_number="00000",
-        notifications=SignUp.NotificationType.EMAIL,
         attendee_status=SignUp.AttendeeStatus.ATTENDING,
         presence_status=SignUp.PresenceStatus.PRESENT,
         created_by=user,
@@ -173,15 +190,9 @@ def test_authenticated_user_can_get_own_data(api_client, settings):
         registration=registration,
         first_name="James",
         last_name="Bond",
-        email="test007@test.com",
         city="Test City #2",
         street_address="Test Street 2",
         zipcode="12121",
-        phone_number="+123000111222",
-        native_language=language_en,
-        service_language=language_en,
-        membership_number="00001",
-        notifications=SignUp.NotificationType.SMS,
         attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
         presence_status=SignUp.PresenceStatus.NOT_PRESENT,
         user_consent=True,
@@ -193,6 +204,31 @@ def test_authenticated_user_can_get_own_data(api_client, settings):
         date_of_birth="1920-11-11",
         extra_info="Test extra info #2",
     )
+
+    if use_contact_person:
+        SignUpContactPersonFactory(
+            signup_group=signup_group,
+            first_name="Mickey",
+            last_name="Mouse",
+            email="test@test.com",
+            phone_number="+123123456789",
+            native_language=language_en,
+            service_language=language_fi,
+            membership_number="00000",
+            notifications=NotificationType.EMAIL,
+        )
+
+        SignUpContactPersonFactory(
+            signup=second_signup,
+            first_name="James",
+            last_name="Bond",
+            email="test007@test.com",
+            phone_number="+123000111222",
+            native_language=language_en,
+            service_language=language_en,
+            membership_number="00001",
+            notifications=NotificationType.SMS,
+        )
 
     with requests_mock.Mocker() as req_mock:
         auth_header = get_api_token_for_user_with_scopes(

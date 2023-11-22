@@ -6,6 +6,21 @@ from events.models import Event
 from registrations.utils import get_signup_edit_url, get_ui_locales
 
 
+class NotificationType:
+    NO_NOTIFICATION = "none"
+    SMS = "sms"
+    EMAIL = "email"
+    SMS_EMAIL = "sms and email"
+
+
+NOTIFICATION_TYPES = (
+    (NotificationType.NO_NOTIFICATION, _("No Notification")),
+    (NotificationType.SMS, _("SMS")),
+    (NotificationType.EMAIL, _("E-Mail")),
+    (NotificationType.SMS_EMAIL, _("Both SMS and email.")),
+)
+
+
 class SignUpNotificationType:
     CANCELLATION = "cancellation"
     CONFIRMATION = "confirmation"
@@ -144,13 +159,17 @@ signup_email_texts = {
 }
 
 
-def get_signup_notification_texts(signup, notification_type: SignUpNotificationType):
-    with translation.override(signup.get_service_language_pk()):
-        confirmation_message = signup.registration.confirmation_message
-        event_name = signup.registration.event.name
+def get_signup_notification_texts(
+    contact_person, notification_type: SignUpNotificationType
+):
+    registration = contact_person.registration
 
-    event_type_id = signup.registration.event.type_id
-    username = signup.first_name
+    with translation.override(contact_person.get_service_language_pk()):
+        confirmation_message = registration.confirmation_message
+        event_name = registration.event.name
+
+    event_type_id = registration.event.type_id
+    username = contact_person.first_name
     text_options = signup_email_texts[notification_type]
     texts = {
         "heading": text_options["heading"] % {"username": username},
@@ -165,7 +184,7 @@ def get_signup_notification_texts(signup, notification_type: SignUpNotificationT
             "username": username,
         }
     elif notification_type == SignUpNotificationType.CONFIRMATION:
-        if signup.signup_group_id:
+        if contact_person.signup_group_id:
             # Override default confirmation message heading
             texts["heading"] = text_options["group"]["heading"]
             texts["secondary_heading"] = text_options["group"]["secondary_heading"][
@@ -176,7 +195,7 @@ def get_signup_notification_texts(signup, notification_type: SignUpNotificationT
                 event_type_id
             ] % {"event_name": event_name}
     elif notification_type == SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST:
-        if signup.signup_group_id:
+        if contact_person.signup_group_id:
             # Override default confirmation message heading
             texts["text"] = text_options["group"]["text"][event_type_id] % {
                 "event_name": event_name
@@ -196,10 +215,12 @@ def get_signup_notification_texts(signup, notification_type: SignUpNotificationT
     return texts
 
 
-def get_signup_notification_subject(signup, notification_type):
-    linked_registrations_ui_locale = get_ui_locales(signup.service_language)[1]
-    with translation.override(signup.get_service_language_pk()):
-        event_name = signup.registration.event.name
+def get_signup_notification_subject(contact_person, notification_type):
+    registration = contact_person.registration
+    linked_registrations_ui_locale = get_ui_locales(contact_person.service_language)[1]
+
+    with translation.override(contact_person.get_service_language_pk()):
+        event_name = registration.event.name
 
     with translation.override(linked_registrations_ui_locale):
         notification_subjects = {
@@ -224,15 +245,18 @@ def get_signup_notification_subject(signup, notification_type):
     return notification_subjects[notification_type]
 
 
-def get_signup_notification_variables(signup):
+def get_signup_notification_variables(contact_person):
     [linked_events_ui_locale, linked_registrations_ui_locale] = get_ui_locales(
-        signup.service_language
+        contact_person.service_language
     )
-    signup_edit_url = get_signup_edit_url(signup, linked_registrations_ui_locale)
+    signup_edit_url = get_signup_edit_url(
+        contact_person, linked_registrations_ui_locale
+    )
+    registration = contact_person.registration
 
-    with translation.override(signup.get_service_language_pk()):
-        event_name = signup.registration.event.name
-        event_type_id = signup.registration.event.type_id
+    with translation.override(contact_person.get_service_language_pk()):
+        event_name = registration.event.name
+        event_type_id = registration.event.type_id
 
         email_variables = {
             "event_name": event_name,
@@ -241,9 +265,9 @@ def get_signup_notification_variables(signup):
             "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
             "linked_registrations_ui_locale": linked_registrations_ui_locale,
             "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
-            "registration_id": signup.registration.id,
+            "registration_id": registration.id,
             "signup_edit_url": signup_edit_url,
-            "username": signup.first_name,
+            "username": contact_person.first_name,
         }
 
     return email_variables
