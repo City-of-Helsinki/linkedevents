@@ -1,7 +1,6 @@
 import copy
 from collections import OrderedDict
 
-from django.conf import settings
 from django.urls import NoReverseMatch
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
@@ -70,9 +69,7 @@ class LinkedEventsAPIRouter(DefaultRouter):
         # Imports run register_view for all views
         import events.api  # noqa
         import helevents.api  # noqa
-
-        if settings.ENABLE_REGISTRATION_ENDPOINTS:
-            import registrations.api  # noqa
+        import registrations.api  # noqa
 
         for view in all_views:
             self._register_view(view)

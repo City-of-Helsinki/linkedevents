@@ -70,7 +70,6 @@ env = environ.Env(
         "http://elis.helsinki1.hki.local/event-api/",
     ),
     ENABLE_EXTERNAL_USER_EVENTS=(bool, True),
-    ENABLE_REGISTRATION_ENDPOINTS=(bool, False),
     ESPOO_API_URL=(str, "https://api.espoo.fi/events/"),
     ESPOO_API_EVENT_QUERY_PARAMS=(
         dict,
@@ -446,9 +445,6 @@ CITYSDK_API_SETTINGS = {
 
 # Used in Lippupiste importer
 LIPPUPISTE_EVENT_API_URL = env("LIPPUPISTE_EVENT_API_URL")
-
-# Add registration related routes to router
-ENABLE_REGISTRATION_ENDPOINTS = env("ENABLE_REGISTRATION_ENDPOINTS")
 
 # Seat reservation duration in minutes
 SEAT_RESERVATION_DURATION = env("SEAT_RESERVATION_DURATION")
