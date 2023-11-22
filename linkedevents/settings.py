@@ -69,6 +69,9 @@ env = environ.Env(
         str,
         "http://elis.helsinki1.hki.local/event-api/",
     ),
+    EMAIL_HOST=(str, "relay.hel.fi"),
+    EMAIL_PORT=(int, 25),
+    EMAIL_USE_TLS=(bool, True),
     ENABLE_EXTERNAL_USER_EVENTS=(bool, True),
     ESPOO_API_URL=(str, "https://api.espoo.fi/events/"),
     ESPOO_API_EVENT_QUERY_PARAMS=(
@@ -109,9 +112,6 @@ env = environ.Env(
         str,
         "https://linkedregistrations-ui-prod.apps.platta.hel.fi",
     ),
-    MAILGUN_API_URL=(str, ""),
-    MAILGUN_SENDER_DOMAIN=(str, ""),
-    MAILGUN_API_KEY=(str, ""),
     MEDIA_ROOT=(environ.Path(), root("media")),
     MEDIA_URL=(str, "/media/"),
     # "helsinki_adfs" = Tunnistamo auth_backends.adfs.helsinki.HelsinkiADFS
@@ -229,7 +229,6 @@ INSTALLED_APPS = [
     "django_cleanup",
     "django_filters",
     "django_jinja",
-    "anymail",
     "munigeo",
     "leaflet",
     "django_orghierarchy",
@@ -572,21 +571,21 @@ if "SECRET_KEY" not in locals():
                 % secret_file
             )
 
-#
-# Anymail
-#
-
-if env("MAILGUN_API_KEY"):
-    ANYMAIL = {
-        "MAILGUN_API_KEY": env("MAILGUN_API_KEY"),
-        "MAILGUN_SENDER_DOMAIN": env("MAILGUN_SENDER_DOMAIN"),
-        "MAILGUN_API_URL": env("MAILGUN_API_URL"),
-    }
-    EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
+# Email configuration
+EMAIL_HOST = env("EMAIL_HOST")
+EMAIL_PORT = env("EMAIL_PORT")
+EMAIL_USE_TLS = env("EMAIL_USE_TLS")
+SUPPORT_EMAIL = env("SUPPORT_EMAIL")  # Email address used to send feedback forms
+DEFAULT_FROM_EMAIL = env(
+    "DEFAULT_FROM_EMAIL"
+)  # Email address used as default "from" email
+if EMAIL_HOST and EMAIL_PORT:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 else:
     if not DEBUG:
         print(
-            "Warning: MAILGUN_API_KEY not set, using console backend for sending emails"
+            "Warning: EMAIL_HOST and/or EMAIL_PORT not set, using console backend for sending "
+            "emails"
         )
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
@@ -630,12 +629,6 @@ if env("REDIS_URL"):
 
 # this is relevant for the fulltext search as implemented in _filter_event_queryset()
 FULLTEXT_SEARCH_LANGUAGES = {"fi": "finnish", "sv": "swedish", "en": "english"}
-
-# Email address used to send feedback forms
-SUPPORT_EMAIL = env("SUPPORT_EMAIL")
-
-# Email address used as default "from" email
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
 
 SESSION_SERIALIZER = "django.contrib.sessions.serializers.PickleSerializer"
 
