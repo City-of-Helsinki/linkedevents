@@ -3576,13 +3576,15 @@ class EventViewSet(
     # sub_event prefetches are handled in get_queryset()
     queryset = (
         Event.objects.all()
-        .select_related("location", "publisher")
+        .select_related("publisher", "created_by", "last_modified_by")
         .prefetch_related(
             "audience",
             "external_links",
             "keywords",
             "images",
             "images__publisher",
+            "images__created_by",
+            "images__last_modified_by",
             "in_language",
             "offers",
             "registration",
@@ -3632,34 +3634,46 @@ class EventViewSet(
 
         return context
 
+    @staticmethod
+    def _optimize_include(includes, queryset):
+        if "location" in includes:
+            queryset = queryset.prefetch_related(
+                "location__publisher",
+                "location__divisions",
+                "location__divisions__type",
+                "location__divisions__municipality",
+                "location__divisions__translations",
+            )
+        else:
+            queryset = queryset.prefetch_related(
+                Prefetch("location", Place.objects.all().only("id"))
+            )
+
+        if "keywords" in includes:
+            queryset = queryset.prefetch_related(
+                "audience__alt_labels",
+                "audience__publisher",
+                "keywords__alt_labels",
+                "keywords__publisher",
+            )
+        return queryset
+
     def get_queryset(self):
         queryset = super().get_queryset()
         if self.action in {"list", "retrieve"}:
             context = self.get_serializer_context()
             # prefetch extra if the user want them included
             includes = context.get("include", [])
-            if "location" in includes:
-                queryset = queryset.select_related(
-                    "location__publisher"
-                ).prefetch_related(
-                    "location__divisions",
-                    "location__divisions__type",
-                    "location__divisions__municipality",
-                )
-            if "keywords" in includes:
-                queryset = queryset.prefetch_related(
-                    "audience__alt_labels",
-                    "audience__publisher",
-                    "keywords__alt_labels",
-                    "keywords__publisher",
-                )
+
+            queryset = self._optimize_include(includes, queryset)
 
             if "sub_events" in includes:
+                sub_event_qs = self._optimize_include(
+                    includes, self.queryset.filter(deleted=False)
+                )
                 queryset = queryset.prefetch_related(
-                    Prefetch("sub_events", self.queryset.filter(deleted=False)),
-                    Prefetch(
-                        "sub_events__sub_events", self.queryset.filter(deleted=False)
-                    ),
+                    Prefetch("sub_events", sub_event_qs),
+                    Prefetch("sub_events__sub_events", sub_event_qs),
                 )
             else:
                 queryset = queryset.prefetch_related(
