@@ -2,6 +2,7 @@ from collections import Counter
 from datetime import timedelta
 from unittest.mock import MagicMock
 
+import freezegun
 import pytest
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -247,6 +248,7 @@ class TestOrganizationAPI(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["data"]), 3)
 
+    @freezegun.freeze_time("2020-01-01 00:00:00+02:00")
     def test_dissolved_filter_true_includes_only_dissolved(self):
         url = reverse("organization-list") + "?dissolved=true"
         response = self.client.get(url)
