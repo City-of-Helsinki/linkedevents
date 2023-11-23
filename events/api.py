@@ -1436,7 +1436,7 @@ class OrganizationFilter(django_filters.rest_framework.FilterSet):
         fields = ("dissolved",)
 
     def filter_dissolved(self, queryset, name, value: Optional[bool]):
-        today = timezone.now().date()
+        today = timezone.localdate()
 
         if value:
             return queryset.filter(dissolution_date__lte=today)
