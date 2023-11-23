@@ -1,4 +1,5 @@
 import pytest
+from django.utils import translation
 from rest_framework import status
 
 from audit_log.models import AuditLogEntry
@@ -96,7 +97,8 @@ def test__keywordset_id_cannot_be_updated(api_client, keyword_set_dict, user):
     keyword_set_data["id"] = "changed_id"
     kw_id = keyword_set_data.pop("@id")
 
-    response = update_keyword_set(api_client, kw_id, keyword_set_data)
+    with translation.override("en"):
+        response = update_keyword_set(api_client, kw_id, keyword_set_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.data["id"] == "You may not change the id of an existing object."
 
@@ -113,7 +115,8 @@ def test__keywordset_organization_cannot_be_updated(
     keyword_set_data["organization"] = organization2.id
     kw_id = keyword_set_data.pop("@id")
 
-    response = update_keyword_set(api_client, kw_id, keyword_set_data)
+    with translation.override("en"):
+        response = update_keyword_set(api_client, kw_id, keyword_set_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert (
         response.data["organization"]
@@ -133,7 +136,8 @@ def test__keywordset_data_source_cannot_be_updated(
     keyword_set_data["data_source"] = other_data_source.id
     kw_id = keyword_set_data.pop("@id")
 
-    response = update_keyword_set(api_client, kw_id, keyword_set_data)
+    with translation.override("en"):
+        response = update_keyword_set(api_client, kw_id, keyword_set_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert (
         response.data["data_source"]
