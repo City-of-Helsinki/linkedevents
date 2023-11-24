@@ -75,25 +75,34 @@ def test_registration_admin_can_update_signup(api_client, signup):
 
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_created_admin_can_update_signup(registration, user, user_api_client):
-    signup = SignUpFactory(registration=registration, created_by=user)
+def test_registration_created_admin_can_update_signup(
+    registration, user, user_api_client
+):
+    registration.created_by = user
+    registration.save(update_fields=["created_by"])
+
+    signup = SignUpFactory(registration=registration)
 
     assert signup.first_name != new_signup_name
     assert signup.last_modified_by_id is None
     assert signup.user_consent is False
+    assert signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
 
     signup_data = {
         "registration": registration.id,
         "first_name": new_signup_name,
         "date_of_birth": new_date_of_birth,
         "user_consent": True,
+        "presence_status": SignUp.PresenceStatus.PRESENT,
     }
 
     assert_update_signup(user_api_client, signup.id, signup_data)
+
     signup.refresh_from_db()
     assert signup.first_name == new_signup_name
     assert signup.last_modified_by_id == user.id
     assert signup.user_consent is True
+    assert signup.presence_status == SignUp.PresenceStatus.PRESENT
 
 
 @pytest.mark.django_db
@@ -133,7 +142,10 @@ def test_can_update_signup_with_empty_extra_info_and_date_of_birth(
 
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_non_created_admin_cannot_update_signup(registration, user_api_client):
+def test_non_created_admin_cannot_update_signup(registration, user2, user_api_client):
+    registration.created_by = user2
+    registration.save(update_fields=["created_by"])
+
     signup = SignUpFactory(registration=registration)
     assert signup.first_name != new_signup_name
     assert signup.last_modified_by_id is None

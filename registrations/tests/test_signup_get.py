@@ -106,9 +106,24 @@ def assert_signup_fields_exist(data):
 
 
 @pytest.mark.django_db
-def test_admin_user_cannot_get_signup(registration, signup, user_api_client):
+def test_registration_non_created_admin_user_cannot_get_signup(
+    registration, signup, user2, user_api_client
+):
+    registration.created_by = user2
+    registration.save(update_fields=["created_by"])
+
     response = get_detail(user_api_client, signup.id)
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_registration_created_admin_user_can_get_signup(
+    registration, signup, user, user_api_client
+):
+    registration.created_by = user
+    registration.save(update_fields=["created_by"])
+
+    assert_get_detail(user_api_client, signup.id)
 
 
 @pytest.mark.django_db
@@ -278,11 +293,26 @@ def test_superuser_can_get_signup_list(
 
 
 @pytest.mark.django_db
-def test_admin_user_cannot_get_signup_list(
-    registration, signup, signup2, user_api_client
+def test_registration_non_created_admin_user_cannot_get_signup_list(
+    registration, signup, signup2, user2, user_api_client
 ):
+    registration.created_by = user2
+    registration.save(update_fields=["created_by"])
+
     response = get_list(user_api_client, f"registration={registration.id}")
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_registration_created_admin_user_can_get_signup_list(
+    registration, signup, signup2, user, user_api_client
+):
+    registration.created_by = user
+    registration.save(update_fields=["created_by"])
+
+    get_list_and_assert_signups(
+        user_api_client, f"registration={registration.id}", [signup, signup2]
+    )
 
 
 @pytest.mark.django_db
@@ -294,7 +324,7 @@ def test_registration_admin_user_can_get_signup_list(
     default_organization.registration_admin_users.add(user)
 
     get_list_and_assert_signups(
-        user_api_client, f"registration={registration.id}", (signup, signup2)
+        user_api_client, f"registration={registration.id}", [signup, signup2]
     )
 
 
@@ -360,11 +390,18 @@ def test_get_all_signups_to_which_user_has_admin_role(
     signup3,
     super_user,
     user,
+    user2,
     user_api_client,
 ):
     default_organization = user.get_default_organization()
 
-    # Admin user is not allowed to see signups
+    registration.created_by = user2
+    registration.save(update_fields=["created_by"])
+
+    registration2.created_by = user2
+    registration2.save(update_fields=["created_by"])
+
+    # Admin user is not allowed to see signups (if registration not created by user)
     get_list_and_assert_signups(user_api_client, "", [])
 
     # Registration admin user is allowed to see signups
