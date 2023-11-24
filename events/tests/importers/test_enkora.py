@@ -12,6 +12,7 @@ from events.models import Event
 
 
 class TestEnkoraImporter:
+    @pytest.mark.no_test_audit_log
     @pytest.mark.django_db
     @pytest.mark.parametrize(
         "test_input_descriptions,expected_ages",
@@ -376,11 +377,9 @@ class TestEnkoraImporter:
     def test_parse_age_range_returns_correct_result(
         self, test_input_descriptions, expected_ages
     ):
-        assert (
-            EnkoraImporter._parse_description_age(test_input_descriptions)
-            == expected_ages
-        )
+        assert EnkoraImporter._parse_title_age(test_input_descriptions) == expected_ages
 
+    @pytest.mark.no_test_audit_log
     @pytest.mark.django_db
     @pytest.mark.parametrize(
         "test_input_descriptions,expected_keywords",
@@ -388,11 +387,11 @@ class TestEnkoraImporter:
             ("Äijäjumppa", {EnkoraImporter.AUDIENCE_MEN, EnkoraImporter.SPORT_JUMPPA}),
             (
                 "Aikuisten tekniikka uimakoulu",
-                {EnkoraImporter.AUDIENCE_ADULTS, EnkoraImporter.SPORT_SWIM_SCHOOL},
+                {EnkoraImporter.AUDIENCE_ADULTS, EnkoraImporter.SPORT_SWIMMING_CLASSES},
             ),
             (
                 "Aikuisten tekniikkauimakoulu",
-                {EnkoraImporter.AUDIENCE_ADULTS, EnkoraImporter.SPORT_SWIM_SCHOOL},
+                {EnkoraImporter.AUDIENCE_ADULTS, EnkoraImporter.SPORT_SWIMMING_CLASSES},
             ),
             ("ALKEET 5-6 -VUOTIAAT", set()),
             ("ALKEET 5-6-VUOTIAAT", set()),
@@ -400,26 +399,26 @@ class TestEnkoraImporter:
             ("ALKEET YLI 7-vuotiaat", set()),
             ("ALKEET, 5-6 -vuotiaat", set()),
             ("ALKEET, naiset", {EnkoraImporter.AUDIENCE_WOMEN}),
-            ("ALKEET, työikäiset", {EnkoraImporter.AUDIENCE_WORKING_AGE}),
+            ("ALKEET, työikäiset", {EnkoraImporter.AUDIENCE_ADULTS}),
             ("ALKEET, yli 7 -vuotiaat", set()),
             (
                 "Alkeisjatko uimakoulu, työikäiset",
-                {EnkoraImporter.SPORT_SWIM_SCHOOL, EnkoraImporter.AUDIENCE_WORKING_AGE},
+                {EnkoraImporter.SPORT_SWIMMING_CLASSES, EnkoraImporter.AUDIENCE_ADULTS},
             ),
-            ("Alkeisjatko, työikäiset", {EnkoraImporter.AUDIENCE_WORKING_AGE}),
+            ("Alkeisjatko, työikäiset", {EnkoraImporter.AUDIENCE_ADULTS}),
             (
                 "Alkeisjatkouimakoulu N, työikäiset",
                 {
-                    EnkoraImporter.SPORT_SWIM_SCHOOL,
+                    EnkoraImporter.SPORT_SWIMMING_CLASSES,
                     EnkoraImporter.AUDIENCE_WOMEN,
-                    EnkoraImporter.AUDIENCE_WORKING_AGE,
+                    EnkoraImporter.AUDIENCE_ADULTS,
                 },
             ),
             (
                 "Alkeisuimakoulu, työikäiset N+M",
                 {
-                    EnkoraImporter.SPORT_SWIM_SCHOOL,
-                    EnkoraImporter.AUDIENCE_WORKING_AGE,
+                    EnkoraImporter.SPORT_SWIMMING_CLASSES,
+                    EnkoraImporter.AUDIENCE_ADULTS,
                     EnkoraImporter.AUDIENCE_WOMEN,
                     EnkoraImporter.AUDIENCE_MEN,
                 },
@@ -427,14 +426,14 @@ class TestEnkoraImporter:
             (
                 "AquaPolo -kurssi M + N",
                 {
-                    EnkoraImporter.SPORT_SWIM_SCHOOL,
+                    EnkoraImporter.SPORT_WATER_EXERCISE,
                     EnkoraImporter.AUDIENCE_WOMEN,
                     EnkoraImporter.AUDIENCE_MEN,
                 },
             ),
             (
                 "AquaPoLo -kurssi Naiset",
-                {EnkoraImporter.SPORT_SWIM_SCHOOL, EnkoraImporter.AUDIENCE_WOMEN},
+                {EnkoraImporter.SPORT_WATER_EXERCISE, EnkoraImporter.AUDIENCE_WOMEN},
             ),
             (
                 "Balans och styrketräning D + H",
@@ -452,17 +451,37 @@ class TestEnkoraImporter:
                     EnkoraImporter.LANGUAGE_SWEDISH,
                 },
             ),
-            ("Circuit", {EnkoraImporter.SPORT_GYM}),
-            ("Core ja kehonhuolto", {EnkoraImporter.SPORT_GYM}),
-            ("Dancemix", {EnkoraImporter.SPORT_DANCE}),
+            ("Circuit", {EnkoraImporter.SPORT_STRENGTH_TRAINING}),
+            (
+                "Core ja kehonhuolto",
+                {
+                    EnkoraImporter.SPORT_STRETCHING,
+                    EnkoraImporter.SPORT_BALANCE,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
+                    EnkoraImporter.SPORT_MUSCLE_CARE,
+                },
+            ),
+            ("Dancemix", {EnkoraImporter.SPORT_DANCING}),
             ("Easy Hockey", {EnkoraImporter.SPORT_ICE_HOCKEY}),
             ("EasySport jääkiekko", {EnkoraImporter.SPORT_ICE_HOCKEY}),
             ("EasySport luistelu", {EnkoraImporter.SPORT_SKATING}),
             ("EasySport -luistelukoulu 1. - 3. lk.", {EnkoraImporter.SPORT_SKATING}),
-            ("EasySport -mailapelit 1. - 4. lk.", {EnkoraImporter.SPORT_MAILAPELIT}),
-            ("EasySport -mailapelit 1. - 6. lk.", {EnkoraImporter.SPORT_MAILAPELIT}),
-            ("EasySport -mailapelit 3. - 6. lk.", {EnkoraImporter.SPORT_MAILAPELIT}),
-            ("EasySport -mailapelit 5. - 6. lk.", {EnkoraImporter.SPORT_MAILAPELIT}),
+            (
+                "EasySport -mailapelit 1. - 4. lk.",
+                {EnkoraImporter.SPORT_MAILAPELIT, EnkoraImporter.SPORT_GAMES},
+            ),
+            (
+                "EasySport -mailapelit 1. - 6. lk.",
+                {EnkoraImporter.SPORT_MAILAPELIT, EnkoraImporter.SPORT_GAMES},
+            ),
+            (
+                "EasySport -mailapelit 3. - 6. lk.",
+                {EnkoraImporter.SPORT_MAILAPELIT, EnkoraImporter.SPORT_GAMES},
+            ),
+            (
+                "EasySport -mailapelit 5. - 6. lk.",
+                {EnkoraImporter.SPORT_MAILAPELIT, EnkoraImporter.SPORT_GAMES},
+            ),
             ("EASYSPORT MELONKURSSI 12-15 -vuotiaat", {EnkoraImporter.SPORT_CANOEING}),
             ("EASYSPORT MELONKURSSI 9-12 -vuotiaat", {EnkoraImporter.SPORT_CANOEING}),
             ("EASYSPORT MELONTA 10-13 -vuotiaat", {EnkoraImporter.SPORT_CANOEING}),
@@ -498,18 +517,18 @@ class TestEnkoraImporter:
                 "EasySport -sulkapallo ja squash 5. - 6. lk.",
                 {EnkoraImporter.SPORT_BADMINTON, EnkoraImporter.SPORT_SQUASH},
             ),
-            ("EasySport -tanssi 1. - 6. lk.", {EnkoraImporter.SPORT_DANCE}),
+            ("EasySport -tanssi 1. - 6. lk.", {EnkoraImporter.SPORT_DANCING}),
             (
                 "EasySport -tanssi 1. - 6. lk. (Break dance)",
-                {EnkoraImporter.SPORT_DANCE},
+                {EnkoraImporter.SPORT_DANCING},
             ),
             (
                 "EasySport -tanssi 1. - 6. lk. (Hip Hop, opetuskieli englanti)",
-                {EnkoraImporter.SPORT_DANCE, EnkoraImporter.LANGUAGE_ENGLISH},
+                {EnkoraImporter.SPORT_DANCING, EnkoraImporter.LANGUAGE_ENGLISH},
             ),
             (
                 "EasySport -tanssi 1. - 6. lk. (Showtanssi)",
-                {EnkoraImporter.SPORT_DANCE},
+                {EnkoraImporter.SPORT_DANCING},
             ),
             ("EasySport Temppu ja tramppa", {EnkoraImporter.SPORT_TRAMPOLINING}),
             ("EASYSPORT TENNIS, ALKEET 10-12 -vuotiaat", {EnkoraImporter.SPORT_TENNIS}),
@@ -528,15 +547,24 @@ class TestEnkoraImporter:
             ),
             (
                 "ERITYISLASTEN UIMAKOULU ALKEET YLI 6 -VUOTIAAT",
-                {EnkoraImporter.SPORT_SWIM_SCHOOL, EnkoraImporter.SPORT_ADAPTED_PE},
+                {
+                    EnkoraImporter.SPORT_SWIMMING_CLASSES,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
+                },
             ),
             (
                 "ERITYISLASTEN UIMAKOULU JATKO YLI 6 -VUOTIAAT",
-                {EnkoraImporter.SPORT_SWIM_SCHOOL, EnkoraImporter.SPORT_ADAPTED_PE},
+                {
+                    EnkoraImporter.SPORT_SWIMMING_CLASSES,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
+                },
             ),
             (
                 "ERITYISLASTEN UIMAKOULU, ALKEET, yli 7 -vuotiaat",
-                {EnkoraImporter.SPORT_SWIM_SCHOOL, EnkoraImporter.SPORT_ADAPTED_PE},
+                {
+                    EnkoraImporter.SPORT_SWIMMING_CLASSES,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
+                },
             ),
             (
                 "Erityislasten vesiliikunta",
@@ -554,20 +582,49 @@ class TestEnkoraImporter:
                 "Erityislasten vesiseikkailu",
                 {EnkoraImporter.SPORT_WATER_EXERCISE, EnkoraImporter.SPORT_ADAPTED_PE},
             ),
-            ("Foam roller", {EnkoraImporter.SPORT_GYM}),
-            ("Foam roller & kehonhuolto", {EnkoraImporter.SPORT_GYM}),
+            ("Foam roller", {EnkoraImporter.SPORT_BODY_CONTROL}),
+            (
+                "Foam roller & kehonhuolto",
+                {
+                    EnkoraImporter.SPORT_BODY_CONTROL,
+                    EnkoraImporter.SPORT_STRETCHING,
+                    EnkoraImporter.SPORT_MUSCLE_CARE,
+                    EnkoraImporter.SPORT_BALANCE,
+                },
+            ),
             (
                 "Fortsättningssimskola på svenska för nybörjare, 5-6 år",
                 {EnkoraImporter.LANGUAGE_SWEDISH},
             ),
             ("Hallivesijumppa", {EnkoraImporter.SPORT_WATER_EXERCISE}),
-            ("Hyvänolonjumppa", {EnkoraImporter.SPORT_JUMPPA}),
-            ("Hyväolo", {EnkoraImporter.SPORT_RELAXATION}),
+            (
+                "Hyvänolonjumppa",
+                {
+                    EnkoraImporter.SPORT_JUMPPA,
+                    EnkoraImporter.SPORT_WELL_BEING,
+                    EnkoraImporter.SPORT_RELAXATION,
+                },
+            ),
+            (
+                "Hyväolo",
+                {
+                    EnkoraImporter.SPORT_JUMPPA,
+                    EnkoraImporter.SPORT_WELL_BEING,
+                    EnkoraImporter.SPORT_RELAXATION,
+                },
+            ),
             (
                 "Itsenäinen harjoittelu kuntosalissa ja uima-altaassa N+M",
                 {EnkoraImporter.AUDIENCE_WOMEN, EnkoraImporter.AUDIENCE_MEN},
             ),
-            ("Itsenäinen kuntosaliharjoittelu /Aktiivix", {EnkoraImporter.SPORT_GYM}),
+            (
+                "Itsenäinen kuntosaliharjoittelu /Aktiivix",
+                {
+                    EnkoraImporter.SPORT_GYM,
+                    EnkoraImporter.SPORT_MUSCLE_FITNESS,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
+                },
+            ),
             ("Jääkiekko", {EnkoraImporter.SPORT_ICE_HOCKEY}),
             ("JATKO", set()),
             ("JATKO 1", set()),
@@ -578,10 +635,10 @@ class TestEnkoraImporter:
             ("JATKO 2, YLI 6 -VUOTIAAT", set()),
             ("Jatko 2, yli 6-vuotiaat (25 m uimataito vaaditaan)", set()),
             ("JATKO YLI 6 -VUOTIAAT", set()),
-            ("Jatko, työikäiset", {EnkoraImporter.AUDIENCE_WORKING_AGE}),
+            ("Jatko, työikäiset", {EnkoraImporter.AUDIENCE_ADULTS}),
             (
                 "JATKOUIMAKOULU, Työikäiset",
-                {EnkoraImporter.SPORT_SWIM_SCHOOL, EnkoraImporter.AUDIENCE_WORKING_AGE},
+                {EnkoraImporter.SPORT_SWIMMING_CLASSES, EnkoraImporter.AUDIENCE_ADULTS},
             ),
             (
                 "Jumppakortti Seniorit kevät 2018",
@@ -597,24 +654,31 @@ class TestEnkoraImporter:
             ),
             (
                 "Jumppakortti Työikäiset kevät 2018",
-                {EnkoraImporter.SPORT_JUMPPA, EnkoraImporter.AUDIENCE_WORKING_AGE},
+                {EnkoraImporter.SPORT_JUMPPA, EnkoraImporter.AUDIENCE_ADULTS},
             ),
             (
                 "Jumppakortti Työikäiset Kevät 2019",
-                {EnkoraImporter.SPORT_JUMPPA, EnkoraImporter.AUDIENCE_WORKING_AGE},
+                {EnkoraImporter.SPORT_JUMPPA, EnkoraImporter.AUDIENCE_ADULTS},
             ),
             (
                 "Jumppakortti Työikäiset kevät 7.1. - 27.4.2020",
-                {EnkoraImporter.SPORT_JUMPPA, EnkoraImporter.AUDIENCE_WORKING_AGE},
+                {EnkoraImporter.SPORT_JUMPPA, EnkoraImporter.AUDIENCE_ADULTS},
             ),
             ("Juoksukoulu", {EnkoraImporter.SPORT_RUNNING}),
-            ("Kahvakuula", {EnkoraImporter.SPORT_KETTLEBELL}),
+            (
+                "Kahvakuula",
+                {
+                    EnkoraImporter.SPORT_KETTLEBELL,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
+                },
+            ),
             (
                 "Kahvakuula M + N",
                 {
                     EnkoraImporter.SPORT_KETTLEBELL,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
                 },
             ),
             (
@@ -623,13 +687,23 @@ class TestEnkoraImporter:
                     EnkoraImporter.AUDIENCE_INTELLECTUAL_DISABILITY,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
                 },
             ),
-            ("Kehonhuolto", {EnkoraImporter.SPORT_GYM}),
+            (
+                "Kehonhuolto",
+                {
+                    EnkoraImporter.SPORT_MUSCLE_CARE,
+                    EnkoraImporter.SPORT_STRETCHING,
+                    EnkoraImporter.SPORT_BALANCE,
+                },
+            ),
             (
                 "Kehonhuolto M + N",
                 {
-                    EnkoraImporter.SPORT_GYM,
+                    EnkoraImporter.SPORT_MUSCLE_CARE,
+                    EnkoraImporter.SPORT_STRETCHING,
+                    EnkoraImporter.SPORT_BALANCE,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
@@ -637,11 +711,17 @@ class TestEnkoraImporter:
             ("KESÄJUMPPA", {EnkoraImporter.SPORT_JUMPPA}),
             (
                 "Kesäkuntokurssi, kuulonäkövammaiset",
-                {EnkoraImporter.AUDIENCE_HEARING_IMPAIRED},
+                {
+                    EnkoraImporter.AUDIENCE_HEARING_IMPAIRED,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
+                },
             ),
             (
                 "Kesäkuntokurssi, mielenterveyskuntoutujat ja",
-                {EnkoraImporter.AUDIENCE_PSYCHIATRIC_REHAB},
+                {
+                    EnkoraImporter.AUDIENCE_PSYCHIATRIC_REHAB,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
+                },
             ),
             ("KEVYT KESÄJUMPPA", {EnkoraImporter.SPORT_JUMPPA}),
             ("Kevytjumppa", {EnkoraImporter.SPORT_JUMPPA}),
@@ -663,12 +743,17 @@ class TestEnkoraImporter:
             ),
             (
                 "Kevytjumppa,  Kuulovammaiset ja huonokuuloise",
-                {EnkoraImporter.SPORT_JUMPPA, EnkoraImporter.AUDIENCE_HEARING_IMPAIRED},
+                {
+                    EnkoraImporter.SPORT_JUMPPA,
+                    EnkoraImporter.AUDIENCE_HEARING_IMPAIRED,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
+                },
             ),
             (
                 "Kevytjumppa,  Kuulovammaiset ja huonokuuloiset  M + N",
                 {
                     EnkoraImporter.SPORT_JUMPPA,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
                     EnkoraImporter.AUDIENCE_HEARING_IMPAIRED,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
@@ -677,28 +762,39 @@ class TestEnkoraImporter:
             ("Kiekkokoulu", {EnkoraImporter.SPORT_ICE_HOCKEY}),
             (
                 "Kierto- ja kuntosaliharjoittelu, Kuulovammais",
-                {EnkoraImporter.SPORT_GYM, EnkoraImporter.AUDIENCE_HEARING_IMPAIRED},
+                {
+                    EnkoraImporter.SPORT_ADAPTED_PE,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
+                    EnkoraImporter.SPORT_MUSCLE_FITNESS,
+                    EnkoraImporter.SPORT_GYM,
+                    EnkoraImporter.AUDIENCE_HEARING_IMPAIRED,
+                },
             ),
             (
                 "Kierto- ja kuntosaliharjoittelu, Kuulovammaiset ja huonokuuloiset M + N",
                 {
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
+                    EnkoraImporter.SPORT_MUSCLE_FITNESS,
                     EnkoraImporter.SPORT_GYM,
+                    EnkoraImporter.AUDIENCE_WOMEN,
                     EnkoraImporter.AUDIENCE_HEARING_IMPAIRED,
                     EnkoraImporter.AUDIENCE_MEN,
-                    EnkoraImporter.AUDIENCE_WOMEN,
                 },
             ),
             ("Kiinteytys", {EnkoraImporter.SPORT_JUMPPA}),
             (
                 "Konditionssal, Instruerad D + H",
                 {
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
+                    EnkoraImporter.SPORT_MUSCLE_FITNESS,
                     EnkoraImporter.SPORT_GYM,
                     EnkoraImporter.LANGUAGE_SWEDISH,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
             ),
-            ("Koululaisuinti", {EnkoraImporter.SPORT_SWIM_SCHOOL}),
+            ("Koululaisuinti", {EnkoraImporter.SPORT_SWIMMING_CLASSES}),
             (
                 "Kroppsvård och stretching",
                 {
@@ -708,7 +804,10 @@ class TestEnkoraImporter:
                 },
             ),
             ("Kuntojumppa", {EnkoraImporter.SPORT_JUMPPA}),
-            ("Kuntokävely", {EnkoraImporter.SPORT_WALKING}),
+            (
+                "Kuntokävely",
+                {EnkoraImporter.SPORT_WALKING, EnkoraImporter.SPORT_JUMPPA},
+            ),
             (
                 "Kuntosalin starttikurssi M + N",
                 {
@@ -722,55 +821,87 @@ class TestEnkoraImporter:
             ("Kuntosalistartti", {EnkoraImporter.SPORT_GYM}),
             (
                 "Kuulovammaisten lasten Alkeet 4-5-vuotiaat",
-                {EnkoraImporter.AUDIENCE_HEARING_IMPAIRED},
+                {
+                    EnkoraImporter.AUDIENCE_HEARING_IMPAIRED,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
+                },
             ),
             (
                 "Kuulovammaisten lasten Alkeet 4-7-vuotiaat",
-                {EnkoraImporter.AUDIENCE_HEARING_IMPAIRED},
+                {
+                    EnkoraImporter.AUDIENCE_HEARING_IMPAIRED,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
+                },
             ),
             (
                 "Kuulovammaisten lasten Alkeet 5-6-vuotiaat",
-                {EnkoraImporter.AUDIENCE_HEARING_IMPAIRED},
+                {
+                    EnkoraImporter.AUDIENCE_HEARING_IMPAIRED,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
+                },
             ),
             (
                 "Kuulovammaisten lasten Alkeet 6-8-vuotiaat",
-                {EnkoraImporter.AUDIENCE_HEARING_IMPAIRED},
+                {
+                    EnkoraImporter.AUDIENCE_HEARING_IMPAIRED,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
+                },
             ),
             (
                 "Kuulovammaisten lasten Alkeet yli 7-vuotiaat",
-                {EnkoraImporter.AUDIENCE_HEARING_IMPAIRED},
+                {
+                    EnkoraImporter.AUDIENCE_HEARING_IMPAIRED,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
+                },
             ),
             (
                 "Kuulovammaisten lasten jatko 1, yli 6 -vuotiaat",
-                {EnkoraImporter.AUDIENCE_HEARING_IMPAIRED},
+                {
+                    EnkoraImporter.AUDIENCE_HEARING_IMPAIRED,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
+                },
             ),
             (
                 "Lapsi-aikuinen temppujumppa 2-3 -vuotiaat",
-                {EnkoraImporter.SPORT_JUMPPA},
+                {EnkoraImporter.SPORT_TEMPPUJUMPPA, EnkoraImporter.AUDIENCE_CHILDREN},
             ),
             (
                 "Lapsi-aikuinen temppujumppa 3-4 -vuotiaat",
-                {EnkoraImporter.SPORT_JUMPPA},
+                {EnkoraImporter.SPORT_TEMPPUJUMPPA, EnkoraImporter.AUDIENCE_CHILDREN},
             ),
-            ("Lattarijumppa", {EnkoraImporter.SPORT_DANCE}),
+            ("Lattarijumppa", {EnkoraImporter.SPORT_DANCING}),
             ("Lempeää jooga aloittelijoille", {EnkoraImporter.SPORT_YOGA}),
             ("Liikuntahulinat", set()),
-            ("Liikuntakaruselli", {EnkoraImporter.SPORT_GYM}),
-            ("LIVcircuit", {EnkoraImporter.SPORT_GYM}),
+            ("Liikuntakaruselli", set()),
+            ("LIVcircuit", {EnkoraImporter.SPORT_STRENGTH_TRAINING}),
             (
                 "LIVcore M + N",
                 {
-                    EnkoraImporter.SPORT_GYM,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
             ),
-            ("LIVhyväolo", {EnkoraImporter.SPORT_JUMPPA}),
-            ("LIVkahvakuula", {EnkoraImporter.SPORT_KETTLEBELL}),
+            (
+                "LIVhyväolo",
+                {
+                    EnkoraImporter.SPORT_JUMPPA,
+                    EnkoraImporter.SPORT_WELL_BEING,
+                    EnkoraImporter.SPORT_RELAXATION,
+                },
+            ),
+            (
+                "LIVkahvakuula",
+                {
+                    EnkoraImporter.SPORT_KETTLEBELL,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
+                },
+            ),
             (
                 "LIVkahvakuula M + N",
                 {
                     EnkoraImporter.SPORT_KETTLEBELL,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
@@ -784,7 +915,7 @@ class TestEnkoraImporter:
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
             ),
-            ("LIVlattarit", {EnkoraImporter.SPORT_DANCE}),
+            ("LIVlattarit", {EnkoraImporter.SPORT_DANCING}),
             ("LIVsyke", {EnkoraImporter.SPORT_JUMPPA}),
             (
                 "LIVSyke M + N",
@@ -805,11 +936,11 @@ class TestEnkoraImporter:
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
             ),
-            ("LIVvoima", {EnkoraImporter.SPORT_GYM}),
+            ("LIVvoima", {EnkoraImporter.SPORT_STRENGTH_TRAINING}),
             (
                 "LIVvoima M + N",
                 {
-                    EnkoraImporter.SPORT_GYM,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
@@ -818,14 +949,26 @@ class TestEnkoraImporter:
             ("Luistelukoulu 4-6 lk.", {EnkoraImporter.SPORT_SKATING}),
             (
                 "Luovan liikkeen ryhmä, kehitysvammaiset aikuiset",
-                {EnkoraImporter.AUDIENCE_INTELLECTUAL_DISABILITY},
+                {
+                    EnkoraImporter.SPORT_ADAPTED_PE,
+                    EnkoraImporter.AUDIENCE_INTELLECTUAL_DISABILITY,
+                },
             ),
             (
                 "Luovan liikkeen ryhmä, Mielenterveyskuntoutu",
-                {EnkoraImporter.AUDIENCE_PSYCHIATRIC_REHAB},
+                {
+                    EnkoraImporter.SPORT_ADAPTED_PE,
+                    EnkoraImporter.AUDIENCE_PSYCHIATRIC_REHAB,
+                },
             ),
-            ("Mailapelit 1. - 6. lk.", {EnkoraImporter.SPORT_MAILAPELIT}),
-            ("Mailapelit 3. - 6. lk.", {EnkoraImporter.SPORT_MAILAPELIT}),
+            (
+                "Mailapelit 1. - 6. lk.",
+                {EnkoraImporter.SPORT_MAILAPELIT, EnkoraImporter.SPORT_GAMES},
+            ),
+            (
+                "Mailapelit 3. - 6. lk.",
+                {EnkoraImporter.SPORT_MAILAPELIT, EnkoraImporter.SPORT_GAMES},
+            ),
             (
                 "Mammatreeni",
                 {EnkoraImporter.AUDIENCE_WOMEN, EnkoraImporter.SPORT_JUMPPA},
@@ -836,15 +979,24 @@ class TestEnkoraImporter:
             ("Niska-selkätunti", {EnkoraImporter.SPORT_JUMPPA}),
             (
                 "NYBÖRJARSIM FÖR ÖVER 7 ÅR",
-                {EnkoraImporter.LANGUAGE_SWEDISH, EnkoraImporter.SPORT_SWIM_SCHOOL},
+                {
+                    EnkoraImporter.LANGUAGE_SWEDISH,
+                    EnkoraImporter.SPORT_SWIMMING_CLASSES,
+                },
             ),
             (
                 "NYBÖRJARSIM PÅ SVENSKA FÖR BARN, 6-9 år",
-                {EnkoraImporter.LANGUAGE_SWEDISH, EnkoraImporter.SPORT_SWIM_SCHOOL},
+                {
+                    EnkoraImporter.LANGUAGE_SWEDISH,
+                    EnkoraImporter.SPORT_SWIMMING_CLASSES,
+                },
             ),
             (
                 "NYBÖRJARSIM PÅ SVENSKA FÖR FLICKOR OCH POJKAR, 5-6 år",
-                {EnkoraImporter.LANGUAGE_SWEDISH, EnkoraImporter.SPORT_SWIM_SCHOOL},
+                {
+                    EnkoraImporter.LANGUAGE_SWEDISH,
+                    EnkoraImporter.SPORT_SWIMMING_CLASSES,
+                },
             ),
             (
                 "Ohjattu kuntosaliCircuit M + N",
@@ -858,6 +1010,8 @@ class TestEnkoraImporter:
                 "Ohjattu kuntosaliharjoittelu + 75 vuotiaat M + N",
                 {
                     EnkoraImporter.SPORT_GYM,
+                    EnkoraImporter.SPORT_MUSCLE_FITNESS,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
                     EnkoraImporter.AUDIENCE_SENIORS,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
@@ -865,12 +1019,19 @@ class TestEnkoraImporter:
             ),
             (
                 "Ohjattu kuntosaliharjoittelu M",
-                {EnkoraImporter.SPORT_GYM, EnkoraImporter.AUDIENCE_MEN},
+                {
+                    EnkoraImporter.SPORT_GYM,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
+                    EnkoraImporter.SPORT_MUSCLE_FITNESS,
+                    EnkoraImporter.AUDIENCE_MEN,
+                },
             ),
             (
                 "Ohjattu kuntosaliharjoittelu M + N",
                 {
                     EnkoraImporter.SPORT_GYM,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
+                    EnkoraImporter.SPORT_MUSCLE_FITNESS,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
@@ -879,22 +1040,37 @@ class TestEnkoraImporter:
                 "Ohjattu kuntosaliharjoittelu M+N",
                 {
                     EnkoraImporter.SPORT_GYM,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
+                    EnkoraImporter.SPORT_MUSCLE_FITNESS,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
             ),
             (
                 "Ohjattu kuntosaliharjoittelu Miehet",
-                {EnkoraImporter.SPORT_GYM, EnkoraImporter.AUDIENCE_MEN},
+                {
+                    EnkoraImporter.SPORT_GYM,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
+                    EnkoraImporter.SPORT_MUSCLE_FITNESS,
+                    EnkoraImporter.AUDIENCE_MEN,
+                },
             ),
             (
                 "Ohjattu kuntosaliharjoittelu Naiset",
-                {EnkoraImporter.SPORT_GYM, EnkoraImporter.AUDIENCE_WOMEN},
+                {
+                    EnkoraImporter.SPORT_GYM,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
+                    EnkoraImporter.SPORT_MUSCLE_FITNESS,
+                    EnkoraImporter.AUDIENCE_WOMEN,
+                },
             ),
             (
                 "Ohjattu Kuntosaliharjoittelu, Kehitysvammaise",
                 {
                     EnkoraImporter.SPORT_GYM,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
+                    EnkoraImporter.SPORT_MUSCLE_FITNESS,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
                     EnkoraImporter.AUDIENCE_INTELLECTUAL_DISABILITY,
                 },
             ),
@@ -902,6 +1078,9 @@ class TestEnkoraImporter:
                 "Ohjattu Kuntosaliharjoittelu, Kehitysvammaiset M + N",
                 {
                     EnkoraImporter.SPORT_GYM,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
+                    EnkoraImporter.SPORT_MUSCLE_FITNESS,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
                     EnkoraImporter.AUDIENCE_INTELLECTUAL_DISABILITY,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
@@ -911,6 +1090,9 @@ class TestEnkoraImporter:
                 "Ohjattu Kuntosaliharjoittelu, Kehitysvammaiset M+N",
                 {
                     EnkoraImporter.SPORT_GYM,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
+                    EnkoraImporter.SPORT_MUSCLE_FITNESS,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
                     EnkoraImporter.AUDIENCE_INTELLECTUAL_DISABILITY,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
@@ -918,18 +1100,27 @@ class TestEnkoraImporter:
             ),
             (
                 "Ohjattu kuntosaliharjoittelu, Mielenterveysku",
-                {EnkoraImporter.SPORT_GYM, EnkoraImporter.AUDIENCE_PSYCHIATRIC_REHAB},
+                {
+                    EnkoraImporter.SPORT_GYM,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
+                    EnkoraImporter.SPORT_MUSCLE_FITNESS,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
+                    EnkoraImporter.AUDIENCE_PSYCHIATRIC_REHAB,
+                },
             ),
             (
                 "Ohjattu kuntosaliharjoittelu, Mielenterveyskuntoutujat M + N",
                 {
                     EnkoraImporter.SPORT_GYM,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
+                    EnkoraImporter.SPORT_MUSCLE_FITNESS,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
                     EnkoraImporter.AUDIENCE_PSYCHIATRIC_REHAB,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
             ),
-            ("Päiväkotiuinti, Mustikka", {EnkoraImporter.SPORT_SWIM_SCHOOL}),
+            ("Päiväkotiuinti, Mustikka", {EnkoraImporter.SPORT_SWIMMING_CLASSES}),
             ("Pallomylly", set()),
             ("Parkour", {EnkoraImporter.SPORT_PARKOUR}),
             (
@@ -943,8 +1134,11 @@ class TestEnkoraImporter:
             ("Perhehulinat", set()),
             ("Perheliikunta 2-3 -vuotiaat", set()),
             ("Perhepalloilu", set()),
-            ("Pilates", {EnkoraImporter.SPORT_YOGA}),
-            ("Porrastreeni", {EnkoraImporter.SPORT_WORKOUT_STAIRS}),
+            ("Pilates", set()),
+            (
+                "Porrastreeni",
+                {EnkoraImporter.SPORT_WORKOUT_STAIRS, EnkoraImporter.SPORT_OUTDOOR_PE},
+            ),
             ("PUISTOJUMPPA", {EnkoraImporter.SPORT_OUTDOOR_PE}),
             ("PUISTOJUMPPA (Kansallismuseo)", {EnkoraImporter.SPORT_OUTDOOR_PE}),
             (
@@ -976,7 +1170,10 @@ class TestEnkoraImporter:
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
             ),
-            ("Sauvakävely", {EnkoraImporter.SPORT_NORDIC_WALKING}),
+            (
+                "Sauvakävely",
+                {EnkoraImporter.SPORT_NORDIC_WALKING, EnkoraImporter.SPORT_OUTDOOR_PE},
+            ),
             (
                 "SENIORI VESIJUMPPA, MIEHET JA NAISET",
                 {
@@ -996,13 +1193,16 @@ class TestEnkoraImporter:
             ),
             (
                 "SenioriCircuit",
-                {EnkoraImporter.AUDIENCE_SENIORS, EnkoraImporter.SPORT_GYM},
+                {
+                    EnkoraImporter.AUDIENCE_SENIORS,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
+                },
             ),
             (
                 "SenioriCircuit M + N",
                 {
                     EnkoraImporter.AUDIENCE_SENIORS,
-                    EnkoraImporter.SPORT_GYM,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
@@ -1011,20 +1211,23 @@ class TestEnkoraImporter:
                 "SenioriCircuit N+M",
                 {
                     EnkoraImporter.AUDIENCE_SENIORS,
-                    EnkoraImporter.SPORT_GYM,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
             ),
             (
                 "SenioriCore",
-                {EnkoraImporter.AUDIENCE_SENIORS, EnkoraImporter.SPORT_GYM},
+                {
+                    EnkoraImporter.AUDIENCE_SENIORS,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
+                },
             ),
             (
                 "SenioriCore N+M",
                 {
                     EnkoraImporter.AUDIENCE_SENIORS,
-                    EnkoraImporter.SPORT_GYM,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
@@ -1033,7 +1236,7 @@ class TestEnkoraImporter:
                 "SenioriCore Naiset",
                 {
                     EnkoraImporter.AUDIENCE_SENIORS,
-                    EnkoraImporter.SPORT_GYM,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
             ),
@@ -1041,7 +1244,7 @@ class TestEnkoraImporter:
                 "SenioriCore+Venyttely",
                 {
                     EnkoraImporter.AUDIENCE_SENIORS,
-                    EnkoraImporter.SPORT_GYM,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
                     EnkoraImporter.SPORT_STRETCHING,
                 },
             ),
@@ -1063,11 +1266,20 @@ class TestEnkoraImporter:
             ),
             (
                 "SenioriKahvakuula",
-                {EnkoraImporter.AUDIENCE_SENIORS, EnkoraImporter.SPORT_KETTLEBELL},
+                {
+                    EnkoraImporter.AUDIENCE_SENIORS,
+                    EnkoraImporter.SPORT_KETTLEBELL,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
+                },
             ),
             (
                 "SenioriKehonhuolto",
-                {EnkoraImporter.AUDIENCE_SENIORS, EnkoraImporter.SPORT_GYM},
+                {
+                    EnkoraImporter.AUDIENCE_SENIORS,
+                    EnkoraImporter.SPORT_BALANCE,
+                    EnkoraImporter.SPORT_STRETCHING,
+                    EnkoraImporter.SPORT_MUSCLE_CARE,
+                },
             ),
             (
                 "SenioriKeppijumppa",
@@ -1096,37 +1308,48 @@ class TestEnkoraImporter:
             ),
             (
                 "SenioriKuntokävely",
-                {EnkoraImporter.AUDIENCE_SENIORS, EnkoraImporter.SPORT_WALKING},
+                {
+                    EnkoraImporter.AUDIENCE_SENIORS,
+                    EnkoraImporter.SPORT_WALKING,
+                    EnkoraImporter.SPORT_OUTDOOR_PE,
+                },
             ),
             (
                 "SenioriKuntokävelyTreeni",
-                {EnkoraImporter.AUDIENCE_SENIORS, EnkoraImporter.SPORT_WALKING},
+                {
+                    EnkoraImporter.AUDIENCE_SENIORS,
+                    EnkoraImporter.SPORT_WALKING,
+                    EnkoraImporter.SPORT_OUTDOOR_PE,
+                },
             ),
             (
                 "Seniorikuntosalistartti",
-                {EnkoraImporter.AUDIENCE_SENIORS, EnkoraImporter.SPORT_GYM},
+                {
+                    EnkoraImporter.AUDIENCE_SENIORS,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
+                },
             ),
             (
                 "SenioriKuntotanssi",
-                {EnkoraImporter.AUDIENCE_SENIORS, EnkoraImporter.SPORT_DANCE},
+                {EnkoraImporter.AUDIENCE_SENIORS, EnkoraImporter.SPORT_DANCING},
             ),
             (
                 "SenioriKuntotanssi Naiset",
                 {
                     EnkoraImporter.AUDIENCE_SENIORS,
-                    EnkoraImporter.SPORT_DANCE,
+                    EnkoraImporter.SPORT_DANCING,
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
             ),
             (
                 "SenioriLattarijumppa",
-                {EnkoraImporter.AUDIENCE_SENIORS, EnkoraImporter.SPORT_DANCE},
+                {EnkoraImporter.AUDIENCE_SENIORS, EnkoraImporter.SPORT_DANCING},
             ),
             (
                 "Seniorilattarijumppa Naiset",
                 {
                     EnkoraImporter.AUDIENCE_SENIORS,
-                    EnkoraImporter.SPORT_DANCE,
+                    EnkoraImporter.SPORT_DANCING,
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
             ),
@@ -1134,19 +1357,19 @@ class TestEnkoraImporter:
                 "SenioriLattarijumppa, Naiset",
                 {
                     EnkoraImporter.AUDIENCE_SENIORS,
-                    EnkoraImporter.SPORT_DANCE,
+                    EnkoraImporter.SPORT_DANCING,
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
             ),
             (
                 "SenioriLattarit",
-                {EnkoraImporter.AUDIENCE_SENIORS, EnkoraImporter.SPORT_DANCE},
+                {EnkoraImporter.AUDIENCE_SENIORS, EnkoraImporter.SPORT_DANCING},
             ),
             (
                 "SenioriLattarit Naiset",
                 {
                     EnkoraImporter.AUDIENCE_SENIORS,
-                    EnkoraImporter.SPORT_DANCE,
+                    EnkoraImporter.SPORT_DANCING,
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
             ),
@@ -1154,19 +1377,32 @@ class TestEnkoraImporter:
                 "Senioriltanssi vasta-alkajille M + N",
                 {
                     EnkoraImporter.AUDIENCE_SENIORS,
-                    EnkoraImporter.SPORT_DANCE,
+                    EnkoraImporter.SPORT_DANCING,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
             ),
             (
                 "SenioriPorrastreeni",
-                {EnkoraImporter.AUDIENCE_SENIORS, EnkoraImporter.SPORT_WORKOUT_STAIRS},
+                {
+                    EnkoraImporter.AUDIENCE_SENIORS,
+                    EnkoraImporter.SPORT_WORKOUT_STAIRS,
+                    EnkoraImporter.SPORT_OUTDOOR_PE,
+                },
             ),
-            ("SenioriSäestys", {EnkoraImporter.AUDIENCE_SENIORS}),
+            (
+                "SenioriSäestys",
+                {
+                    EnkoraImporter.AUDIENCE_SENIORS,
+                    EnkoraImporter.SPORT_MUSICAL_EXERCISE,
+                    EnkoraImporter.SPORT_JUMPPA,
+                },
+            ),
             (
                 "SenioriSäestys N + M",
                 {
+                    EnkoraImporter.SPORT_MUSICAL_EXERCISE,
+                    EnkoraImporter.SPORT_JUMPPA,
                     EnkoraImporter.AUDIENCE_SENIORS,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
@@ -1175,6 +1411,8 @@ class TestEnkoraImporter:
             (
                 "SenioriSäestys N+M",
                 {
+                    EnkoraImporter.SPORT_MUSICAL_EXERCISE,
+                    EnkoraImporter.SPORT_JUMPPA,
                     EnkoraImporter.AUDIENCE_SENIORS,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
@@ -1183,7 +1421,11 @@ class TestEnkoraImporter:
             ("Seniorisäpinät", {EnkoraImporter.AUDIENCE_SENIORS}),
             (
                 "SenioriSauvakävely",
-                {EnkoraImporter.AUDIENCE_SENIORS, EnkoraImporter.SPORT_NORDIC_WALKING},
+                {
+                    EnkoraImporter.AUDIENCE_SENIORS,
+                    EnkoraImporter.SPORT_NORDIC_WALKING,
+                    EnkoraImporter.SPORT_OUTDOOR_PE,
+                },
             ),
             (
                 "SenioriSyke",
@@ -1202,7 +1444,7 @@ class TestEnkoraImporter:
                 "SenioriTanssi M + N",
                 {
                     EnkoraImporter.AUDIENCE_SENIORS,
-                    EnkoraImporter.SPORT_DANCE,
+                    EnkoraImporter.SPORT_DANCING,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
@@ -1211,14 +1453,14 @@ class TestEnkoraImporter:
                 "Senioritanssi vasta-alkajille M + N",
                 {
                     EnkoraImporter.AUDIENCE_SENIORS,
-                    EnkoraImporter.SPORT_DANCE,
+                    EnkoraImporter.SPORT_DANCING,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
             ),
             (
                 "SenioriTanssillinenSyke",
-                {EnkoraImporter.AUDIENCE_SENIORS, EnkoraImporter.SPORT_DANCE},
+                {EnkoraImporter.AUDIENCE_SENIORS, EnkoraImporter.SPORT_DANCING},
             ),
             ("SenioriTeema", {EnkoraImporter.AUDIENCE_SENIORS}),
             (
@@ -1273,34 +1515,49 @@ class TestEnkoraImporter:
             ),
             (
                 "SenioriVKehonhuolto",
-                {EnkoraImporter.AUDIENCE_SENIORS, EnkoraImporter.SPORT_GYM},
+                {
+                    EnkoraImporter.AUDIENCE_SENIORS,
+                    EnkoraImporter.SPORT_BALANCE,
+                    EnkoraImporter.SPORT_STRETCHING,
+                    EnkoraImporter.SPORT_MUSCLE_CARE,
+                },
             ),
             (
                 "SenioriVoima",
-                {EnkoraImporter.AUDIENCE_SENIORS, EnkoraImporter.SPORT_GYM},
+                {
+                    EnkoraImporter.AUDIENCE_SENIORS,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
+                },
             ),
             (
                 "SenioriVoima N+M",
                 {
                     EnkoraImporter.AUDIENCE_SENIORS,
-                    EnkoraImporter.SPORT_GYM,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
             ),
-            ("Showjazz", {EnkoraImporter.SPORT_DANCE}),
+            ("Showjazz", {EnkoraImporter.SPORT_DANCING}),
             (
                 "Stolgymnastik",
-                {EnkoraImporter.SPORT_CHAIR_PE, EnkoraImporter.LANGUAGE_SWEDISH},
+                {
+                    EnkoraImporter.SPORT_CHAIR_PE,
+                    EnkoraImporter.SPORT_JUMPPA,
+                    EnkoraImporter.LANGUAGE_SWEDISH,
+                },
             ),
             ("Stretching", {EnkoraImporter.SPORT_STRETCHING}),
             ("Sunnuntaijumppa", {EnkoraImporter.SPORT_JUMPPA}),
             ("Syke", {EnkoraImporter.SPORT_JUMPPA}),
             (
                 "Syke (tanssillinen)",
-                {EnkoraImporter.SPORT_JUMPPA, EnkoraImporter.SPORT_DANCE},
+                {EnkoraImporter.SPORT_JUMPPA, EnkoraImporter.SPORT_DANCING},
             ),
-            ("Syke/Core", {EnkoraImporter.SPORT_GYM, EnkoraImporter.SPORT_JUMPPA}),
+            (
+                "Syke/Core",
+                {EnkoraImporter.SPORT_STRENGTH_TRAINING, EnkoraImporter.SPORT_JUMPPA},
+            ),
             (
                 "SYVÄNVEDEN JUMPPA",
                 {EnkoraImporter.SPORT_WATER_EXERCISE, EnkoraImporter.SPORT_JUMPPA},
@@ -1332,14 +1589,17 @@ class TestEnkoraImporter:
             ),
             (
                 "Tanssillinen syke",
-                {EnkoraImporter.SPORT_JUMPPA, EnkoraImporter.SPORT_DANCE},
+                {EnkoraImporter.SPORT_JUMPPA, EnkoraImporter.SPORT_DANCING},
             ),
-            ("Tasapaino ja core", {EnkoraImporter.SPORT_GYM}),
-            ("Tasapaino- ja voimaharjoittelu", {EnkoraImporter.SPORT_GYM}),
+            ("Tasapaino ja core", {EnkoraImporter.SPORT_STRENGTH_TRAINING}),
+            (
+                "Tasapaino- ja voimaharjoittelu",
+                {EnkoraImporter.SPORT_STRENGTH_TRAINING},
+            ),
             (
                 "Tasapaino- ja voimaharjoittelu M + N",
                 {
-                    EnkoraImporter.SPORT_GYM,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
@@ -1350,25 +1610,59 @@ class TestEnkoraImporter:
                 {EnkoraImporter.AUDIENCE_MEN, EnkoraImporter.AUDIENCE_WOMEN},
             ),
             ("TEKNIIKKA", set()),
-            ("TEKNIIKKA 1, työikäiset", {EnkoraImporter.AUDIENCE_WORKING_AGE}),
+            ("TEKNIIKKA 1, työikäiset", {EnkoraImporter.AUDIENCE_ADULTS}),
             ("TEKNIIKKA 1, yli 7 -VUOTIAAT", set()),
-            ("TEKNIIKKA, Työikäiset", {EnkoraImporter.AUDIENCE_WORKING_AGE}),
-            ("Temppuhulinat 2-6 -vuotiaat", {EnkoraImporter.SPORT_JUMPPA}),
-            ("Temppujumppa 3-4 -vuotiaat", {EnkoraImporter.SPORT_JUMPPA}),
-            ("Temppujumppa 4-5 vuotiaat", {EnkoraImporter.SPORT_JUMPPA}),
-            ("Temppujumppa 4-5 -vuotiaat", {EnkoraImporter.SPORT_JUMPPA}),
-            ("Temppujumppa 5-6 vuotiaat", {EnkoraImporter.SPORT_JUMPPA}),
-            ("Temppujumppa 5-6 -vuotiaat", {EnkoraImporter.SPORT_JUMPPA}),
-            ("Temppujumppa 7-9 -vuotiaat", {EnkoraImporter.SPORT_JUMPPA}),
-            ("Temppujumppa perheet 2-6 -vuotiaat", {EnkoraImporter.SPORT_JUMPPA}),
-            ("Tempputaito 5-6 -vuotiaat", {EnkoraImporter.SPORT_JUMPPA}),
-            ("TemppuTaito 7-8 -vuotiaat", {EnkoraImporter.SPORT_JUMPPA}),
+            ("TEKNIIKKA, Työikäiset", {EnkoraImporter.AUDIENCE_ADULTS}),
+            (
+                "Temppuhulinat 2-6 -vuotiaat",
+                {EnkoraImporter.SPORT_TEMPPUJUMPPA, EnkoraImporter.AUDIENCE_CHILDREN},
+            ),
+            (
+                "Temppujumppa 3-4 -vuotiaat",
+                {EnkoraImporter.SPORT_TEMPPUJUMPPA, EnkoraImporter.AUDIENCE_CHILDREN},
+            ),
+            (
+                "Temppujumppa 4-5 vuotiaat",
+                {EnkoraImporter.SPORT_TEMPPUJUMPPA, EnkoraImporter.AUDIENCE_CHILDREN},
+            ),
+            (
+                "Temppujumppa 4-5 -vuotiaat",
+                {EnkoraImporter.SPORT_TEMPPUJUMPPA, EnkoraImporter.AUDIENCE_CHILDREN},
+            ),
+            (
+                "Temppujumppa 5-6 vuotiaat",
+                {EnkoraImporter.SPORT_TEMPPUJUMPPA, EnkoraImporter.AUDIENCE_CHILDREN},
+            ),
+            (
+                "Temppujumppa 5-6 -vuotiaat",
+                {EnkoraImporter.SPORT_TEMPPUJUMPPA, EnkoraImporter.AUDIENCE_CHILDREN},
+            ),
+            (
+                "Temppujumppa 7-9 -vuotiaat",
+                {EnkoraImporter.SPORT_TEMPPUJUMPPA, EnkoraImporter.AUDIENCE_CHILDREN},
+            ),
+            (
+                "Temppujumppa perheet 2-6 -vuotiaat",
+                {EnkoraImporter.SPORT_TEMPPUJUMPPA, EnkoraImporter.AUDIENCE_CHILDREN},
+            ),
+            (
+                "Tempputaito 5-6 -vuotiaat",
+                {EnkoraImporter.SPORT_TEMPPUJUMPPA, EnkoraImporter.AUDIENCE_CHILDREN},
+            ),
+            (
+                "TemppuTaito 7-8 -vuotiaat",
+                {EnkoraImporter.SPORT_TEMPPUJUMPPA, EnkoraImporter.AUDIENCE_CHILDREN},
+            ),
             ("testikurssi", set()),
-            ("TUOLIJUMPPA", {EnkoraImporter.SPORT_CHAIR_PE}),
+            (
+                "TUOLIJUMPPA",
+                {EnkoraImporter.SPORT_CHAIR_PE, EnkoraImporter.SPORT_JUMPPA},
+            ),
             (
                 "Tuolijumppa M + N",
                 {
                     EnkoraImporter.SPORT_CHAIR_PE,
+                    EnkoraImporter.SPORT_JUMPPA,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
@@ -1377,64 +1671,77 @@ class TestEnkoraImporter:
                 "Tuolijumppa N+M",
                 {
                     EnkoraImporter.SPORT_CHAIR_PE,
+                    EnkoraImporter.SPORT_JUMPPA,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
             ),
             (
                 "Tuolijumppa Naiset",
-                {EnkoraImporter.SPORT_CHAIR_PE, EnkoraImporter.AUDIENCE_WOMEN},
+                {
+                    EnkoraImporter.SPORT_CHAIR_PE,
+                    EnkoraImporter.SPORT_JUMPPA,
+                    EnkoraImporter.AUDIENCE_WOMEN,
+                },
             ),
             (
                 "TYTTÖJEN UIMAKOULU, ALKEET 10 - 12 -VUOTIAAT",
-                {EnkoraImporter.SPORT_SWIM_SCHOOL},
+                {EnkoraImporter.SPORT_SWIMMING_CLASSES},
             ),
             (
                 "TYTTÖJEN UIMAKOULU, ALKEET 10 - 16 -VUOTIAAT",
-                {EnkoraImporter.SPORT_SWIM_SCHOOL},
+                {EnkoraImporter.SPORT_SWIMMING_CLASSES},
             ),
             (
                 "TYTTÖJEN UIMAKOULU, ALKEET 10-16 -vuotiaat",
-                {EnkoraImporter.SPORT_SWIM_SCHOOL},
+                {EnkoraImporter.SPORT_SWIMMING_CLASSES},
             ),
             (
                 "TYTTÖJEN UIMAKOULU, ALKEET 7-9 -vuotiaat",
-                {EnkoraImporter.SPORT_SWIM_SCHOOL},
+                {EnkoraImporter.SPORT_SWIMMING_CLASSES},
             ),
             (
                 "TYTTÖJEN UIMAKOULU, ALKEET yli 6 -vuotiaat",
-                {EnkoraImporter.SPORT_SWIM_SCHOOL},
+                {EnkoraImporter.SPORT_SWIMMING_CLASSES},
             ),
-            ("TYTTÖJEN UIMAKOULU, JATKO", {EnkoraImporter.SPORT_SWIM_SCHOOL}),
-            ("TYTTÖJEN UIMAKOULU, JATKO 1", {EnkoraImporter.SPORT_SWIM_SCHOOL}),
+            ("TYTTÖJEN UIMAKOULU, JATKO", {EnkoraImporter.SPORT_SWIMMING_CLASSES}),
+            ("TYTTÖJEN UIMAKOULU, JATKO 1", {EnkoraImporter.SPORT_SWIMMING_CLASSES}),
             (
                 "TYTTÖJEN UIMAKOULU, JATKO 1 yli 6 -vuotiaat",
-                {EnkoraImporter.SPORT_SWIM_SCHOOL},
+                {EnkoraImporter.SPORT_SWIMMING_CLASSES},
             ),
             (
                 "TYTTÖJEN UIMAKOULU, JATKO 1 yli 6 -vuotiaat (10m uimataito vaaditaan)",
-                {EnkoraImporter.SPORT_SWIM_SCHOOL},
+                {EnkoraImporter.SPORT_SWIMMING_CLASSES},
             ),
             (
                 "TYTTÖJEN UIMAKOULU, TEKNIIKKA yli 6 -vuotiaat",
-                {EnkoraImporter.SPORT_SWIM_SCHOOL},
+                {EnkoraImporter.SPORT_SWIMMING_CLASSES},
             ),
-            ("UINTITEKNIIKKA", {EnkoraImporter.SPORT_SWIM_SCHOOL}),
+            ("UINTITEKNIIKKA", {EnkoraImporter.SPORT_SWIMMING_CLASSES}),
             ("Ulkokuntosalistartti", {EnkoraImporter.SPORT_OUTDOOR_PE}),
             (
                 "Ulkoliikunta Mielenterveyskuntoutujat",
                 {
                     EnkoraImporter.SPORT_OUTDOOR_PE,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
                     EnkoraImporter.AUDIENCE_PSYCHIATRIC_REHAB,
                 },
             ),
             ("Ulkoliikunta, Länsi", {EnkoraImporter.SPORT_OUTDOOR_PE}),
             ("UlkoTreeni", {EnkoraImporter.SPORT_OUTDOOR_PE}),
-            ("UlkoVoima", {EnkoraImporter.SPORT_OUTDOOR_PE, EnkoraImporter.SPORT_GYM}),
+            (
+                "UlkoVoima",
+                {
+                    EnkoraImporter.SPORT_OUTDOOR_PE,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
+                },
+            ),
             (
                 "Uteträning för seniorer",
                 {
                     EnkoraImporter.SPORT_OUTDOOR_PE,
+                    EnkoraImporter.SPORT_JUMPPA,
                     EnkoraImporter.LANGUAGE_SWEDISH,
                     EnkoraImporter.AUDIENCE_SENIORS,
                 },
@@ -1480,6 +1787,7 @@ class TestEnkoraImporter:
                 "Venyttely ja rentoutus, Mielenterveyskuntoutu",
                 {
                     EnkoraImporter.SPORT_STRETCHING,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
                     EnkoraImporter.AUDIENCE_PSYCHIATRIC_REHAB,
                 },
             ),
@@ -1487,6 +1795,7 @@ class TestEnkoraImporter:
                 "Venyttely ja rentoutus, Mielenterveyskuntoutujat M + N",
                 {
                     EnkoraImporter.SPORT_STRETCHING,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
                     EnkoraImporter.AUDIENCE_PSYCHIATRIC_REHAB,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
@@ -1605,6 +1914,7 @@ class TestEnkoraImporter:
                 "Vesijumppa, Kehitysvammaiset M + N",
                 {
                     EnkoraImporter.SPORT_WATER_EXERCISE,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
                     EnkoraImporter.AUDIENCE_INTELLECTUAL_DISABILITY,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
@@ -1614,6 +1924,7 @@ class TestEnkoraImporter:
                 "Vesijumppa, Kuulovammaiset ja huonokuuloiset ",
                 {
                     EnkoraImporter.SPORT_WATER_EXERCISE,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
                     EnkoraImporter.AUDIENCE_HEARING_IMPAIRED,
                 },
             ),
@@ -1641,6 +1952,7 @@ class TestEnkoraImporter:
                 "Vesijumppa, Mielenterveyskuntoutujat M",
                 {
                     EnkoraImporter.SPORT_WATER_EXERCISE,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
                     EnkoraImporter.AUDIENCE_PSYCHIATRIC_REHAB,
                     EnkoraImporter.AUDIENCE_MEN,
                 },
@@ -1649,6 +1961,7 @@ class TestEnkoraImporter:
                 "Vesijumppa, Mielenterveyskuntoutujat M + N",
                 {
                     EnkoraImporter.SPORT_WATER_EXERCISE,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
                     EnkoraImporter.AUDIENCE_PSYCHIATRIC_REHAB,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
@@ -1658,6 +1971,7 @@ class TestEnkoraImporter:
                 "Vesijumppa, Mielenterveyskuntoutujat Naiset",
                 {
                     EnkoraImporter.SPORT_WATER_EXERCISE,
+                    EnkoraImporter.SPORT_ADAPTED_PE,
                     EnkoraImporter.AUDIENCE_PSYCHIATRIC_REHAB,
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
@@ -1701,11 +2015,11 @@ class TestEnkoraImporter:
             ),
             ("Vesijuoksu", {EnkoraImporter.SPORT_WATER_EXERCISE}),
             ("Vesitreeni", {EnkoraImporter.SPORT_WATER_EXERCISE}),
-            ("Voima", {EnkoraImporter.SPORT_GYM}),
+            ("Voima", {EnkoraImporter.SPORT_STRENGTH_TRAINING}),
             (
                 "Voima M + N",
                 {
-                    EnkoraImporter.SPORT_GYM,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
@@ -1744,11 +2058,13 @@ class TestEnkoraImporter:
                 "XXL-kuntosaliharjoittelu N+M",
                 {
                     EnkoraImporter.SPORT_GYM,
+                    EnkoraImporter.SPORT_STRENGTH_TRAINING,
+                    EnkoraImporter.SPORT_MUSCLE_FITNESS,
                     EnkoraImporter.AUDIENCE_MEN,
                     EnkoraImporter.AUDIENCE_WOMEN,
                 },
             ),
-            ("XXL-startti", set()),
+            ("XXL-startti", {EnkoraImporter.SPORT_GYM}),
             ("XXL-stratti", set()),
             (
                 "XXL-vesijumppa M + N",
@@ -1762,14 +2078,34 @@ class TestEnkoraImporter:
                 "XXL-vesijumppa Naiset",
                 {EnkoraImporter.SPORT_WATER_EXERCISE, EnkoraImporter.AUDIENCE_WOMEN},
             ),
+            ("EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat", {EnkoraImporter.SPORT_TENNIS}),
         ],
     )
+    @pytest.mark.no_test_audit_log
     def test_parse_keywords_returns_correct_result(
         self, test_input_descriptions, expected_keywords
     ):
         assert (
-            EnkoraImporter._parse_description_keywords(test_input_descriptions)
+            EnkoraImporter._parse_title_keywords(test_input_descriptions)
             == expected_keywords
+        )
+
+    @pytest.mark.django_db
+    @pytest.mark.parametrize(
+        "test_input_descriptions,expected_age_ranges",
+        [
+            ("EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat", (7, 9)),
+            ("Aikuisten tekniikka uimakoulu", (None, None)),
+            ("ALKEET YLI 7-vuotiaat", (7, None)),
+        ],
+    )
+    @pytest.mark.no_test_audit_log
+    def test_parse_age_returns_correct_result(
+        self, test_input_descriptions, expected_age_ranges
+    ):
+        assert (
+            EnkoraImporter._parse_title_age(test_input_descriptions)
+            == expected_age_ranges
         )
 
     @pytest.fixture
@@ -1836,12 +2172,14 @@ class TestEnkoraImporter:
             # Note:
             # "image": null
             # "alt_labels": []
+            # yso:p20748
             '[{"model": "events.keyword", "pk": "yso:p20748", "fields": {"image": null, "data_source": "yso", "name":'
             ' "ryhmätoiminta", "name_fi": "ryhmätoiminta", "name_sv": "gruppverksamhet", "name_en": "group activity",'
             ' "name_zh_hans": null, "name_ru": null, "name_ar": null, "origin_id": null, "created_time": "2023-05-31T'
             '12:22:33.626Z", "last_modified_time": "2023-06-12T10:33:21.943Z", "created_by": null, "last_modified_by"'
             ': null, "publisher": "hy:kansalliskirjasto", "aggregate": false, "deprecated": false, "has_upcoming_even'
             'ts": false, "n_events": 0, "n_events_changed": true, "replaced_by": null, "alt_labels": []}}]',
+            # yso:p6915
             '[{"model": "events.keyword", "pk": "yso:p6915", "fields": {"image": null, "data_source": "yso", "name": '
             '"leikki-ikäiset", "name_fi": "leikki-ikäiset", "name_sv": "barn i lekåldern", "name_en": "preschoolers ('
             'age group)", "name_zh_hans": null, "name_ru": null, "name_ar": null, "origin_id": null, "created_time": '
@@ -1849,6 +2187,7 @@ class TestEnkoraImporter:
             'modified_by": null, "publisher": "hy:kansalliskirjasto", "aggregate": false, "deprecated": false, "has_u'
             'pcoming_events": false, "n_events": 0, "n_events_changed": true, "replaced_by": null, "alt_labels": []}}'
             "]",
+            # yso:p4354
             '[{"model": "events.keyword", "pk": "yso:p4354", "fields": {"image": null, "data_source": "yso", "name": '
             '"lapset (ikäryhmät)", "name_fi": "lapset (ikäryhmät)", "name_sv": "barn (åldersgrupper)", "name_en": "ch'
             'ildren (age groups)", "name_zh_hans": null, "name_ru": null, "name_ar": null, "origin_id": null, "create'
@@ -1856,42 +2195,62 @@ class TestEnkoraImporter:
             'l, "last_modified_by": null, "publisher": "hy:kansalliskirjasto", "aggregate": false, "deprecated": fals'
             'e, "has_upcoming_events": false, "n_events": 0, "n_events_changed": true, "replaced_by": null, "alt_labe'
             'ls": []}}]',
+            # yso:p26619
             '[{"model": "events.keyword", "pk": "yso:p26619", "fields": {"image": null, "data_source": "yso", "name":'
             ' "ulkoliikunta", "name_fi": "ulkoliikunta", "name_sv": "utomhusidrott", "name_en": "outdoor sports", "na'
             'me_zh_hans": null, "name_ru": null, "name_ar": null, "origin_id": null, "created_time": "2023-05-31T12:1'
             '7:49.290Z", "last_modified_time": "2023-06-12T10:32:58.302Z", "created_by": null, "last_modified_by": nu'
             'll, "publisher": "hy:kansalliskirjasto", "aggregate": false, "deprecated": false, "has_upcoming_events":'
             ' false, "n_events": 0, "n_events_changed": true, "replaced_by": null, "alt_labels": []}}]',
+            # yso:p4330
             '[{"model": "events.keyword", "pk": "yso:p4330", "fields": {"image": null, "data_source": "yso", "name": '
             '"uinti", "name_fi": "uinti", "name_sv": "simning", "name_en": "swimming", "name_zh_hans": null, "name_ru'
             '": null, "name_ar": null, "origin_id": null, "created_time": "2023-05-31T12:23:48.854Z", "last_modified_'
             'time": "2023-06-12T10:33:44.205Z", "created_by": null, "last_modified_by": null, "publisher": "hy:kansal'
             'liskirjasto", "aggregate": false, "deprecated": false, "has_upcoming_events": false, "n_events": 0, "n_e'
             'vents_changed": true, "replaced_by": null, "alt_labels": []}}]',
+            # yso:p4363
             '[{"model": "events.keyword", "pk": "yso:p4363", "fields": {"image": null, "data_source": "yso", "name": '
             '"perheet", "name_fi": "perheet", "name_sv": "familjer", "name_en": "families", "name_zh_hans": null, "na'
             'me_ru": null, "name_ar": null, "origin_id": null, "created_time": "2023-05-31T12:23:58.750Z", "last_modi'
             'fied_time": "2023-06-12T10:33:47.063Z", "created_by": null, "last_modified_by": null, "publisher": "hy:k'
             'ansalliskirjasto", "aggregate": false, "deprecated": false, "has_upcoming_events": false, "n_events": 0,'
             ' "n_events_changed": true, "replaced_by": null, "alt_labels": []}}]',
+            # yso:p11617
             '[{"model": "events.keyword", "pk": "yso:p11617", "fields": {"image": null, "data_source": "yso", "name":'
             ' "nuoret", "name_fi": "nuoret", "name_sv": "ungdomar", "name_en": "young people", "name_zh_hans": null, '
             '"name_ru": null, "name_ar": null, "origin_id": null, "created_time": "2023-05-31T12:23:42.371Z", "last_m'
             'odified_time": "2023-06-12T10:33:41.234Z", "created_by": null, "last_modified_by": null, "publisher": "h'
             'y:kansalliskirjasto", "aggregate": false, "deprecated": false, "has_upcoming_events": false, "n_events":'
             ' 0, "n_events_changed": true, "replaced_by": null, "alt_labels": []}}]',
+            # yso:p6914
             '[{"model": "events.keyword", "pk": "yso:p6914", "fields": {"image": null, "data_source": "yso", "name": '
             '"kouluikäiset", "name_fi": "kouluikäiset", "name_sv": "barn i skolåldern", "name_en": "school-age childr'
             'en", "name_zh_hans": null, "name_ru": null, "name_ar": null, "origin_id": null, "created_time": "2023-05'
             '-31T12:23:44.330Z", "last_modified_time": "2023-06-12T10:33:42.427Z", "created_by": null, "last_modified'
             '_by": null, "publisher": "hy:kansalliskirjasto", "aggregate": false, "deprecated": false, "has_upcoming_'
             'events": false, "n_events": 0, "n_events_changed": true, "replaced_by": null, "alt_labels": []}}]',
+            # yso:p1928
             '[{"model": "events.keyword", "pk": "yso:p1928", "fields": {"image": null, "data_source": "yso", "name": '
             '"tennis", "name_fi": "tennis", "name_sv": null, "name_en": "tennis", "name_zh_hans": null, "name_ru": nu'
             'll, "name_ar": null, "origin_id": null, "created_time": "2023-05-31T12:18:30.390Z", "last_modified_time"'
             ': "2023-05-31T12:18:30.390Z", "created_by": null, "last_modified_by": null, "publisher": "hy:kansalliski'
             'rjasto", "aggregate": false, "deprecated": false, "has_upcoming_events": false, "n_events": 0, "n_events'
             '_changed": true, "replaced_by": null, "alt_labels": []}}]',
+            # yso:p916
+            '[{"model": "events.keyword", "pk": "yso:p916", "fields": {"image": null, "data_source": "yso", "name": "'
+            'liikunta", "name_fi": "liikunta", "name_sv": "motion", "name_en": "physical training", "name_zh_hans": n'
+            'ull, "name_ru": null, "name_ar": null, "origin_id": null, "created_time": "2023-05-31T12:24:02.335Z", "l'
+            'ast_modified_time": "2023-06-12T10:33:48.395Z", "created_by": null, "last_modified_by": null, "publisher'
+            '": "hy:kansalliskirjasto", "aggregate": false, "deprecated": false, "has_upcoming_events": false, "n_eve'
+            'nts": 0, "n_events_changed": true, "replaced_by": null, "alt_labels": []}}]',
+            # yso:p26740
+            '[{"model": "events.keyword", "pk": "yso:p26740", "fields": {"image": null, "data_source": "yso", "name":'
+            ' "ryhmäohjaus", "name_fi": "ryhmäohjaus", "name_sv": "grupphandledning", "name_en": "group guidance", "n'
+            'ame_zh_hans": null, "name_ru": null, "name_ar": null, "origin_id": null, "created_time": "2023-05-31T12:'
+            '15:46.275Z", "last_modified_time": "2023-05-31T12:15:46.275Z", "created_by": null, "last_modified_by": n'
+            'ull, "publisher": "hy:kansalliskirjasto", "aggregate": false, "deprecated": false, "has_upcoming_events"'
+            ': false, "n_events": 0, "n_events_changed": true, "replaced_by": null, "alt_labels": []}}]',
         ]
         save_cnt = 0
         for test_data in test_input_data:
@@ -1906,6 +2265,7 @@ class TestEnkoraImporter:
 
         return save_cnt
 
+    @pytest.mark.no_test_audit_log
     @pytest.mark.django_db
     @patch("events.importer.enkora.Enkora._request_json")
     @patch("events.importer.enkora.EnkoraImporter._get_timestamps")
@@ -2041,13 +2401,14 @@ class TestEnkoraImporter:
                 created, timezone=pytz.timezone("UTC")
             )
 
-        assert len(db_events) == 1
+        # Expect 1 event with 10 sub-events
+        assert len(db_events) == 11
 
         expected_fields = {
             "custom_data": None,
             "data_source": "enkora",
-            "name": "EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat",
-            "name_fi": "EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat",
+            "name": "EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat [ma, ti, ke, to, pe klo 10:00 - 11:00]",
+            "name_fi": "EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat [ma, ti, ke, to, pe klo 10:00 - 11:00]",
             "name_sv": None,
             "name_en": None,
             "name_zh_hans": None,
@@ -2070,8 +2431,8 @@ class TestEnkoraImporter:
             "info_url_zh_hans": None,
             "info_url_ru": None,
             "info_url_ar": None,
-            "description": "EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat",
-            "description_fi": "EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat",
+            "description": "<p>Tenniskursseille voi ottaa oman mailan mukaan. Mailoja saa lainaan myös kurssilta.</p>",
+            "description_fi": "<p>Tenniskursseille voi ottaa oman mailan mukaan. Mailoja saa lainaan myös kurssilta.</p>",
             "description_sv": None,
             "description_en": None,
             "description_zh_hans": None,
@@ -2106,8 +2467,8 @@ class TestEnkoraImporter:
             "provider_zh_hans": None,
             "provider_ru": None,
             "provider_ar": None,
-            "provider_contact_info": "Hki - KUVA - Liikunta",
-            "provider_contact_info_fi": "Hki - KUVA - Liikunta",
+            "provider_contact_info": "Helsingin Kaupunki - Liikuntaluuri, Avoinna ma-to 13-15",
+            "provider_contact_info_fi": "Helsingin Kaupunki - Liikuntaluuri, Avoinna ma-to 13-15",
             "provider_contact_info_sv": None,
             "provider_contact_info_en": None,
             "provider_contact_info_zh_hans": None,
@@ -2115,11 +2476,15 @@ class TestEnkoraImporter:
             "provider_contact_info_ar": None,
             "publisher": "enkora:{}".format(EnkoraImporter.ORGANIZATION),
             "environmental_certificate": None,
-            "event_status": 4,
+            "event_status": 1,
             "publication_status": 1,
             "location": "tprek:45650",
-            "location_extra_info": "Ryhmäliikunta at Latokartanon liikuntapuisto",
-            "location_extra_info_fi": "Ryhmäliikunta at Latokartanon liikuntapuisto",
+            "location_extra_info": '<p>Kurssin lisätiedot, <a href="'
+            'https://www.hel.fi/fi/paatoksenteko-ja-hallinto/liikuntaluuri">'
+            "Liikuntaluuri</a>: +358 9 310 32623</p>",
+            "location_extra_info_fi": '<p>Kurssin lisätiedot, <a href="'
+            'https://www.hel.fi/fi/paatoksenteko-ja-hallinto/liikuntaluuri">'
+            "Liikuntaluuri</a>: +358 9 310 32623</p>",
             "location_extra_info_sv": None,
             "location_extra_info_en": None,
             "location_extra_info_zh_hans": None,
@@ -2133,7 +2498,7 @@ class TestEnkoraImporter:
             "audience_min_age": 7,
             "audience_max_age": 9,
             "super_event": None,
-            "super_event_type": None,
+            "super_event_type": "recurring",
             "type_id": 2,
             "deleted": False,
             "replaced_by": None,
@@ -2142,13 +2507,14 @@ class TestEnkoraImporter:
             "enrolment_start_time": datetime(2023, 4, 12, 13, 0, tzinfo=pytz.UTC),
             "enrolment_end_time": datetime(2023, 6, 15, 21, 0, tzinfo=pytz.UTC),
             "local": False,
-            "keywords": ["yso:p1928", "yso:p20748", "yso:p26619"],
+            "keywords": list(EnkoraImporter.ALL_COURSES_KEYWORDS)
+            + [
+                EnkoraImporter.SPORT_TENNIS,
+                EnkoraImporter.SPORT_GROUP_EXERCISE,
+            ],
             "audience": [
-                "yso:p11617",
-                "yso:p4354",
-                "yso:p4363",
-                "yso:p6914",
-                "yso:p6915",
+                "yso:p4354",  # AUDIENCE_CHILDREN
+                "yso:p6914",  # AUDIENCE_SHCOOL_AGE
             ],
         }
 
@@ -2157,6 +2523,10 @@ class TestEnkoraImporter:
             if field_name not in expected_fields:
                 continue
             if field_name in ("keywords", "audience"):
-                assert sorted(field_value) == sorted(expected_fields[field_name])
+                assert sorted(field_value) == sorted(
+                    expected_fields[field_name]
+                ), f"Field '{field_name}' mismatch!"
             else:
-                assert field_value == expected_fields[field_name]
+                assert (
+                    field_value == expected_fields[field_name]
+                ), f"Field {field_name} mismatch!"
