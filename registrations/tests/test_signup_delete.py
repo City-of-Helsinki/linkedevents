@@ -70,8 +70,23 @@ def assert_delete_signup_failed(
 
 
 @pytest.mark.django_db
-def test_admin_cannot_delete_signup(signup, user_api_client):
+def test_registration_non_created_admin_cannot_delete_signup(
+    registration, signup, user2, user_api_client
+):
+    registration.created_by = user2
+    registration.save(update_fields=["created_by"])
+
     assert_delete_signup_failed(user_api_client, signup.id)
+
+
+@pytest.mark.django_db
+def test_registration_created_admin_can_delete_signup(
+    registration, signup, user, user_api_client
+):
+    registration.created_by = user
+    registration.save(update_fields=["created_by"])
+
+    assert_delete_signup(user_api_client, signup.id)
 
 
 @pytest.mark.django_db

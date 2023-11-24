@@ -81,11 +81,19 @@ def get_list_and_assert_signup_groups(api_client, query, signup_groups):
 # === tests ===
 
 
+@pytest.mark.parametrize(
+    "admin_role", ["registration_admin", "registration_created_admin"]
+)
 @pytest.mark.django_db
-def test_registration_admin_user_can_get_signup_group(
-    user_api_client, registration, organization, user
+def test_registration_admin_or_registration_created_admin_can_get_signup_group(
+    user_api_client, registration, organization, user, admin_role
 ):
-    organization.registration_admin_users.add(user)
+    if admin_role == "registration_admin":
+        organization.registration_admin_users.add(user)
+    else:
+        organization.admin_users.add(user)
+        registration.created_by = user
+        registration.save(update_fields=["created_by"])
 
     signup_group = SignUpGroupFactory(registration=registration)
     SignUpFactory(registration=registration, signup_group=signup_group)
@@ -294,6 +302,27 @@ def test_admin_user_cannot_get_signup_group_list(api_client, registration):
 
     response = get_list(api_client, f"registration={registration.id}")
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_registration_created_admin_user_can_get_signup_group_list(
+    api_client, registration
+):
+    user = UserFactory()
+    user.admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    registration.created_by = user
+    registration.save(update_fields=["created_by"])
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    signup_group2 = SignUpGroupFactory(registration=registration)
+
+    get_list_and_assert_signup_groups(
+        api_client,
+        f"registration={registration.id}",
+        (signup_group, signup_group2),
+    )
 
 
 @pytest.mark.django_db

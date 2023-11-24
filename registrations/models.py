@@ -298,6 +298,10 @@ class SignUpMixin:
         return (
             user.is_superuser
             or user.is_registration_admin_of(self.publisher)
+            or (
+                user.is_admin_of(self.publisher)
+                and self.registration.created_by_id == user.id
+            )
             or user.is_registration_user_access_user_of(
                 self.registration.registration_user_accesses
             )
@@ -309,6 +313,10 @@ class SignUpMixin:
         return (
             user.is_superuser
             or user.is_registration_admin_of(self.publisher)
+            or (
+                user.is_admin_of(self.publisher)
+                and self.registration.created_by_id == user.id
+            )
             or user.id == self.created_by_id
         )
 

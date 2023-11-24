@@ -166,6 +166,14 @@ class RegistrationViewSet(
     def send_message(self, request, pk=None, version=None):
         registration = self.get_object(skip_log_ids=True)
 
+        signups_perm = CanAccessRegistrationSignups()
+        if not signups_perm.has_object_permission(self.request, self, registration):
+            raise DRFPermissionDenied(
+                _(
+                    "Only the admins of the registration organizations have access rights."
+                )
+            )
+
         data = request.data
         data["registration"] = registration
         serializer = self.get_serializer(data=data)
@@ -311,6 +319,10 @@ class SignUpBaseFilter(django_filters.rest_framework.FilterSet):
         super().__init__(*args, **kwargs)
 
     @cached_property
+    def _user_admin_organizations(self):
+        return self.request.user.get_admin_organizations_and_descendants()
+
+    @cached_property
     def _user_registration_admin_organizations(self):
         return self.request.user.get_registration_admin_organizations_and_descendants()
 
@@ -325,13 +337,16 @@ class SignUpBaseFilter(django_filters.rest_framework.FilterSet):
         # By default, return only signups of registrations to which
         # user has admin rights or is registration user who is
         # strongly identified.
-        q_filter = Q(
+        qs_filter = Q(
             registration__event__publisher__in=self._user_registration_admin_organizations
+        ) | (
+            Q(registration__event__publisher__in=self._user_admin_organizations)
+            & Q(registration__created_by=user)
         )
         if user.is_strongly_identified:
-            q_filter |= Q(registration__registration_user_accesses__email=user.email)
+            qs_filter |= Q(registration__registration_user_accesses__email=user.email)
 
-        return queryset.filter(q_filter)
+        return queryset.filter(qs_filter)
 
     def filter_registration(self, queryset, name, value: list[str]):
         user = self.request.user
@@ -349,7 +364,11 @@ class SignUpBaseFilter(django_filters.rest_framework.FilterSet):
         if user.is_superuser:
             return queryset.filter(registration__in=registrations)
 
-        qs_filter = Q(event__publisher__in=self._user_registration_admin_organizations)
+        qs_filter = Q(
+            event__publisher__in=self._user_registration_admin_organizations
+        ) | (
+            Q(event__publisher__in=self._user_admin_organizations) & Q(created_by=user)
+        )
         if user.is_strongly_identified:
             qs_filter |= Q(registration_user_accesses__email=user.email)
         registrations = registrations.filter(qs_filter)

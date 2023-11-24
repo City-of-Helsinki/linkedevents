@@ -85,13 +85,33 @@ def test_registration_admin_can_delete_signup_group(
 
 
 @pytest.mark.django_db
-def test_admin_cannot_delete_signup_group(user_api_client, registration, user):
+def test_registration_non_created_admin_cannot_delete_signup_group(
+    user_api_client, registration, user2
+):
+    registration.created_by = user2
+    registration.save(update_fields=["created_by"])
+
     signup_group = SignUpGroupFactory(registration=registration)
     SignUpFactory(signup_group=signup_group, registration=registration)
     SignUpFactory(signup_group=signup_group, registration=registration)
     SignUpContactPersonFactory(signup_group=signup_group)
 
     assert_delete_signup_group_failed(user_api_client, signup_group.pk)
+
+
+@pytest.mark.django_db
+def test_registration_created_admin_can_delete_signup_group(
+    user_api_client, registration, user
+):
+    registration.created_by = user
+    registration.save(update_fields=["created_by"])
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(signup_group=signup_group, registration=registration)
+    SignUpFactory(signup_group=signup_group, registration=registration)
+    SignUpContactPersonFactory(signup_group=signup_group)
+
+    assert_delete_signup_group(user_api_client, signup_group.pk)
 
 
 @pytest.mark.django_db
