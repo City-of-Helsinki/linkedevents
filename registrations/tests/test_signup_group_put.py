@@ -107,10 +107,20 @@ def test_registration_admin_can_update_signup_group(
     assert signup1.last_modified_by_id is None
 
 
+@pytest.mark.parametrize("admin_role", ["created_admin", "registration_created_admin"])
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_created_admin_can_update_signup_group(registration, user, user_api_client):
-    signup_group = SignUpGroupFactory(registration=registration, created_by=user)
+def test_created_admin_can_update_signup_group(
+    registration, user, user_api_client, admin_role
+):
+    if admin_role == "registration_created_admin":
+        registration.created_by = user
+        registration.save(update_fields=["created_by"])
+
+    signup_group = SignUpGroupFactory(
+        registration=registration,
+        created_by=user if admin_role == "created_admin" else None,
+    )
 
     assert signup_group.extra_info is None
     assert signup_group.last_modified_by_id is None
@@ -410,8 +420,11 @@ def test_user_editable_resources_can_update_signup_group(
 
 @pytest.mark.django_db
 def test_non_user_editable_resources_cannot_update_signup_group(
-    user_api_client, data_source, organization, registration
+    user_api_client, user2, data_source, organization, registration
 ):
+    registration.created_by = user2
+    registration.save(update_fields=["created_by"])
+
     signup_group = SignUpGroupFactory(registration=registration)
 
     data_source.owner = organization

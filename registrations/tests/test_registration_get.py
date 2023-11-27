@@ -99,6 +99,7 @@ def assert_registration_fields_exist(data, is_admin_user=False):
         "mandatory_fields",
         "confirmation_message",
         "instructions",
+        "is_created_by_current_user",
         "@id",
         "@context",
         "@type",
@@ -128,7 +129,8 @@ def test_admin_can_get_registration_created_by_self(
 
     assert registration.created_by_id == user.id
 
-    get_detail_and_assert_registration(user_api_client, registration.id)
+    response = get_detail_and_assert_registration(user_api_client, registration.id)
+    assert response.data["is_created_by_current_user"] is True
 
 
 @pytest.mark.parametrize(
@@ -145,6 +147,7 @@ def test_admin_can_get_registration_not_created_by_self(
     assert registration.created_by_id != user.id
 
     response = get_detail_and_assert_registration(user_api_client, registration.id)
+    assert response.data["is_created_by_current_user"] is False
     assert_registration_fields_exist(response.data, is_admin_user=True)
 
 
@@ -314,13 +317,29 @@ def test_get_registration_with_event_and_audience_included(
 
 
 @pytest.mark.django_db
-def test_admin_user_cannot_include_signups(
-    registration, signup, signup2, user_api_client
+def test_registration_non_created_admin_cannot_include_signups(
+    registration, signup, signup2, user2, user_api_client
 ):
+    registration.created_by = user2
+    registration.save(update_fields=["created_by"])
+
     response = get_detail_and_assert_registration(
         user_api_client, registration.id, include_signups_query
     )
     assert response.data["signups"] is None
+
+
+@pytest.mark.django_db
+def test_registration_created_admin_can_include_signups(
+    registration, signup, signup2, user, user_api_client
+):
+    registration.created_by = user
+    registration.save(update_fields=["created_by"])
+
+    response = get_detail_and_assert_registration(
+        user_api_client, registration.id, include_signups_query
+    )
+    assert len(response.data["signups"]) == 2
 
 
 @pytest.mark.django_db

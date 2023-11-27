@@ -268,6 +268,20 @@ def test_signups_export_allowed_for_registration_admin(registration, api_client)
 
 
 @pytest.mark.django_db
+def test_signups_export_allowed_for_created_by_admin(registration, api_client):
+    user = UserFactory()
+    user.admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    registration.created_by = user
+    registration.save(update_fields=["created_by"])
+
+    _create_default_signups_data(registration)
+
+    _assert_get_signups_export(api_client, registration.id, file_format="xlsx")
+
+
+@pytest.mark.django_db
 def test_signups_export_allowed_for_strongly_identified_registration_user(
     registration, api_client
 ):

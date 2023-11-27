@@ -46,6 +46,7 @@ def assert_patch_signup(api_client, signup_pk, signup_data):
     "user_role,allowed_to_patch",
     [
         ("admin", False),
+        ("registration_created_admin", True),
         ("registration_admin", True),
         ("registration_user_superuser", True),
         ("registration_user_admin", True),
@@ -59,11 +60,18 @@ def test_can_patch_presence_status_of_signup_based_on_role(
 ):
     user = UserFactory(is_superuser=user_role == "registration_user_superuser")
 
+    if user_role == "registration_created_admin":
+        registration.created_by = user
+        registration.save(update_fields=["created_by"])
+
     if user_role in ("registration_user_superuser", "registration_user_admin"):
         RegistrationUserAccessFactory(registration=registration, email=user.email)
 
     user_role_mapping = {
         "admin": lambda usr: usr.admin_organizations.add(registration.publisher),
+        "registration_created_admin": lambda usr: usr.admin_organizations.add(
+            registration.publisher
+        ),
         "registration_admin": lambda usr: usr.registration_admin_organizations.add(
             registration.publisher
         ),
@@ -185,14 +193,16 @@ def test_registration_user_who_created_signup_can_patch_presence_status(
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_registration_user_can_patch_signup_presence_status_based_on_identification_method(
-    api_client, registration, user, identification_method
+    api_client, registration, identification_method
 ):
+    user = UserFactory()
+    user.organization_memberships.add(registration.publisher)
+    api_client.force_authenticate(user)
+
     RegistrationUserAccessFactory(registration=registration, email=user.email)
 
     signup = SignUpFactory(registration=registration)
     assert signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
-
-    api_client.force_authenticate(user)
 
     signup_data = {
         "presence_status": SignUp.PresenceStatus.PRESENT,

@@ -71,6 +71,7 @@ class CanAccessRegistrationSignups(
         return (
             user.is_superuser
             or user.is_registration_admin_of(obj.publisher)
+            or (user.is_admin_of(obj.publisher) and obj.created_by_id == user.id)
             or user.is_registration_user_access_user_of(obj.registration_user_accesses)
         )
 
@@ -81,8 +82,13 @@ class CanAccessSignup(UserDataFromRequestMixin, permissions.BasePermission):
 
     @staticmethod
     def _has_object_update_permission(request: Request, obj: SignUp) -> bool:
-        if request.user.is_superuser or request.user.is_registration_admin_of(
-            obj.publisher
+        if (
+            request.user.is_superuser
+            or request.user.is_registration_admin_of(obj.publisher)
+            or (
+                request.user.is_admin_of(obj.publisher)
+                and obj.registration.created_by_id == request.user.id
+            )
         ):
             return True
 
@@ -125,8 +131,13 @@ class CanAccessSignup(UserDataFromRequestMixin, permissions.BasePermission):
 class CanAccessSignupGroup(CanAccessSignup):
     @staticmethod
     def _has_object_update_permission(request: Request, obj: SignUpGroup) -> bool:
-        if request.user.is_superuser or request.user.is_registration_admin_of(
-            obj.publisher
+        if (
+            request.user.is_superuser
+            or request.user.is_registration_admin_of(obj.publisher)
+            or (
+                request.user.is_admin_of(obj.publisher)
+                and obj.registration.created_by_id == request.user.id
+            )
         ):
             return True
 

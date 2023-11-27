@@ -9,7 +9,7 @@ from django.utils import translation
 from rest_framework import status
 
 from audit_log.models import AuditLogEntry
-from events.tests.factories import LanguageFactory
+from events.tests.factories import ApiKeyUserFactory, LanguageFactory
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import SignUp
 from registrations.tests.factories import (
@@ -92,20 +92,64 @@ def test_head_method_not_allowed(user_api_client, registration):
 
 
 @pytest.mark.django_db
-def test_admin_user_can_send_message_to_all_signups(
-    api_client, registration, signup, signup2, user
+def test_registration_created_admin_user_can_send_message_to_all_signups(
+    user_api_client, registration, user
 ):
-    api_client.force_authenticate(user)
+    assert registration.created_by_id == user.id
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(registration=registration, signup_group=signup_group)
+    group_contact_person = SignUpContactPersonFactory(
+        signup_group=signup_group,
+        email="test@test.com",
+    )
+
+    signup = SignUpFactory(registration=registration)
+    signup_contact_person = SignUpContactPersonFactory(
+        signup=signup, email="test2@test.com"
+    )
+
+    signup2 = SignUpFactory(registration=registration)
+    signup2_contact_person = SignUpContactPersonFactory(
+        signup=signup2, email="test3@test.com"
+    )
+
     send_message_data = {"subject": "Message subject", "body": "Message body"}
 
     assert_send_message(
-        api_client,
+        user_api_client,
         registration.id,
         send_message_data,
-        [signup.contact_person, signup2.contact_person],
+        [group_contact_person, signup_contact_person, signup2_contact_person],
     )
     # Default language for the email is Finnish
     assert "Tarkastele ilmoittautumistasi täällä" in str(mail.outbox[0].alternatives[0])
+
+
+@pytest.mark.django_db
+def test_registration_non_created_admin_cannot_send_message(
+    user_api_client, registration, user, user2
+):
+    registration.created_by = user2
+    registration.save(update_fields=["created_by"])
+
+    registration.refresh_from_db()
+    assert registration.created_by_id != user.id
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(registration=registration, signup_group=signup_group)
+    SignUpContactPersonFactory(signup_group=signup_group, email="test@test.com")
+
+    signup = SignUpFactory(registration=registration)
+    SignUpContactPersonFactory(signup=signup, email="test2@test.com")
+
+    signup2 = SignUpFactory(registration=registration)
+    SignUpContactPersonFactory(signup=signup2, email="test3@test.com")
+
+    send_message_data = {"subject": "Message subject", "body": "Message body"}
+
+    response = send_message(user_api_client, registration.id, send_message_data)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db
@@ -428,11 +472,16 @@ def test_registration_admin_can_send_message_with_missing_datasource_permission(
 
 
 @pytest.mark.django_db
-def test_api_key_with_organization_can_send_message(
+def test_registration_created_api_key_with_organization_can_send_message(
     api_client, data_source, organization, registration, signup, signup2
 ):
+    apikey_user = ApiKeyUserFactory(data_source=data_source)
+
+    registration.created_by = apikey_user
+    registration.save(update_fields=["created_by"])
+
     data_source.owner = organization
-    data_source.save()
+    data_source.save(update_fields=["owner"])
     api_client.credentials(apikey=data_source.api_key)
 
     send_message_data = {"subject": "Message subject", "body": "Message body"}
@@ -443,6 +492,20 @@ def test_api_key_with_organization_can_send_message(
         send_message_data,
         [signup.contact_person, signup2.contact_person],
     )
+
+
+@pytest.mark.django_db
+def test_registration_non_created_api_key_with_organization_cannot_send_message(
+    api_client, data_source, organization, registration, signup, signup2
+):
+    data_source.owner = organization
+    data_source.save(update_fields=["owner"])
+    api_client.credentials(apikey=data_source.api_key)
+
+    send_message_data = {"subject": "Message subject", "body": "Message body"}
+
+    response = send_message(api_client, registration.id, send_message_data)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db

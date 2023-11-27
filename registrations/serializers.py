@@ -435,6 +435,7 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
             "mandatory_fields",
             "confirmation_message",
             "instructions",
+            "is_created_by_current_user",
         )
         model = Registration
 
