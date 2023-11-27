@@ -665,21 +665,19 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                 )
             if value not in allowed_organizations:
                 publisher = self.context["publisher"]
+                publisher = publisher.replaced_by or publisher if publisher else None
+
                 raise serializers.ValidationError(
                     _(
                         "Setting %(field)s to %(given)s "
-                        + "is not allowed for this user. The %(field)s "
-                        + "must be left blank or set to %(required)s or any other organization"
-                        " the user belongs to."
+                        "is not allowed for this user. The %(field)s "
+                        "must be left blank or set to %(required)s or any other organization "
+                        "the user belongs to."
                     )
                     % {
                         "field": str(field),
                         "given": str(value),
-                        "required": str(
-                            publisher
-                            if not publisher.replaced_by
-                            else publisher.replaced_by
-                        ),
+                        "required": str(publisher),
                     }
                 )
             if value.replaced_by:
