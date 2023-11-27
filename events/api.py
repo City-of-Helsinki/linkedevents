@@ -615,7 +615,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                     {
                         "data_source": _(
                             "Setting data_source to %(given)s "
-                            + " is not allowed for this user. The data_source"
+                            " is not allowed for this user. The data_source"
                             " must be left blank or set to %(required)s "
                         )
                         % {"given": str(value), "required": data_source}
@@ -633,7 +633,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                 raise serializers.ValidationError(
                     _(
                         "Setting id to %(given)s "
-                        + "is not allowed for your organization. The id "
+                        "is not allowed for your organization. The id "
                         "must be left blank or set to %(data_source)s:desired_id"
                     )
                     % {"given": str(value), "data_source": data_source}
@@ -835,7 +835,7 @@ class KeywordSerializer(EditableLinkedEventsObjectSerializer):
                 raise serializers.ValidationError(
                     _(
                         "Setting id to %(given)s "
-                        + "is not allowed for your organization. The id "
+                        "is not allowed for your organization. The id "
                         "must be left blank or set to %(data_source)s:desired_id"
                     )
                     % {"given": str(value), "data_source": data_source}
