@@ -14,7 +14,7 @@ media/
 *.kate-swp
 data/
 .pytest_cache/
-templates/rest_framework/*.html
+templates/rest_framework/*
 /venv
 
 
