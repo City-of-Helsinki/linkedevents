@@ -8,7 +8,7 @@ import time
 import urllib.parse
 from copy import deepcopy
 from datetime import datetime
-from datetime import timezone
+from datetime import timezone as dt_timezone
 from datetime import time as datetime_time
 from datetime import timedelta
 from functools import partial, reduce
@@ -2210,7 +2210,7 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
 
         # Filter out events with a publication date in the future. Allow
         # organization members to see events that are not public yet.
-        date_published_filters = [Q(date_published__isnull=True), Q(date_published__lte=datetime.now(timezone.utc))]
+        date_published_filters = [Q(date_published__isnull=True), Q(date_published__lte=datetime.now(dt_timezone.utc))]
         if self.request.user.is_authenticated:
             org_memberships = {org.id for org in self.request.user.organization_memberships.all()}
             admin_orgs = {org.id for org in self.request.user.get_admin_organizations_and_descendants()}
