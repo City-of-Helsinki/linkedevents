@@ -100,7 +100,7 @@ django-mptt==0.14.0
     #   -r requirements.in
     #   django-munigeo
     #   django-orghierarchy
-django-munigeo==0.3.9
+django-munigeo==0.3.10
     # via -r requirements.in
 django-orghierarchy==0.3.0
     # via -r requirements.in
