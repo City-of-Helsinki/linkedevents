@@ -1,20 +1,29 @@
+from typing import Optional, TYPE_CHECKING
+
 from django.conf import settings
 from django.contrib.sites.models import Site
 from django.core.mail import EmailMultiAlternatives, get_connection
+from django.core.mail.backends.base import BaseEmailBackend
+
+if TYPE_CHECKING:
+    from events.models import Language
+    from registrations.models import SignUpContactPerson
 
 
-def code_validity_duration(seats):
+def code_validity_duration(seats: int) -> int:
     return settings.SEAT_RESERVATION_DURATION + seats
 
 
-def get_language_pk_or_default(language, supported_languages):
+def get_language_pk_or_default(
+    language: "Language", supported_languages: list[str]
+) -> str:
     if language is not None and language.pk in supported_languages:
         return language.pk
     else:
         return "fi"
 
 
-def get_ui_locales(language):
+def get_ui_locales(language: "Language") -> list[str]:
     linked_events_ui_locale = get_language_pk_or_default(language, ["fi", "en"])
     linked_registrations_ui_locale = get_language_pk_or_default(
         language, ["fi", "sv", "en"]
@@ -23,7 +32,9 @@ def get_ui_locales(language):
     return [linked_events_ui_locale, linked_registrations_ui_locale]
 
 
-def get_signup_edit_url(contact_person, linked_registrations_ui_locale):
+def get_signup_edit_url(
+    contact_person: "SignUpContactPerson", linked_registrations_ui_locale: str
+) -> str:
     signup_edit_url = (
         f"{settings.LINKED_REGISTRATIONS_UI_URL}/{linked_registrations_ui_locale}"
         f"/registration/{contact_person.registration.id}/"
@@ -38,12 +49,12 @@ def get_signup_edit_url(contact_person, linked_registrations_ui_locale):
 
 
 def send_mass_html_mail(
-    datatuple,
-    fail_silently=False,
-    auth_user=None,
-    auth_password=None,
-    connection=None,
-):
+    datatuple: tuple,
+    fail_silently: bool = False,
+    auth_user: Optional[str] = None,
+    auth_password: Optional[str] = None,
+    connection: Optional[BaseEmailBackend] = None,
+) -> int:
     """
     django.core.mail.send_mass_mail doesn't support sending html mails,
 
@@ -66,7 +77,7 @@ def send_mass_html_mail(
     return connection.send_messages(messages)
 
 
-def get_email_noreply_address():
+def get_email_noreply_address() -> str:
     return (
         settings.DEFAULT_FROM_EMAIL or "noreply@%s" % Site.objects.get_current().domain
     )

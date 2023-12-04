@@ -1,23 +1,27 @@
 import logging
 from smtplib import SMTPException
+from typing import Iterable, Optional, Type, Union
 
 import bleach
 import django_filters
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.db import transaction
-from django.db.models import ProtectedError, Q, Value
+from django.db.models import ProtectedError, Q, QuerySet, Value
 from django.db.models.functions import Concat
 from django.http import HttpResponse
 from django.utils import translation
 from django.utils.functional import cached_property
 from django.utils.translation import gettext as _
+from django_orghierarchy.models import Organization
 from rest_framework import filters, mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.serializers import Serializer
 
 from audit_log.mixins import AuditLogApiViewMixin
 from events.api import (
@@ -36,6 +40,7 @@ from registrations.models import (
     RegistrationUserAccess,
     SeatReservationCode,
     SignUp,
+    SignUpContactPerson,
     SignUpGroup,
 )
 from registrations.permissions import (
@@ -59,25 +64,25 @@ from registrations.utils import send_mass_html_mail
 logger = logging.getLogger(__name__)
 
 
-class RegistrationsAllowedMethodsMixin:
-    http_method_names = ["post", "put", "patch", "get", "delete", "options"]
-
-
-class RegistrationViewSet(
+class RegistrationAPIBaseView(
     UserDataSourceAndOrganizationMixin,
-    JSONAPIViewMixin,
-    RegistrationsAllowedMethodsMixin,
     AuditLogApiViewMixin,
     viewsets.ModelViewSet,
 ):
+    http_method_names = ["post", "put", "patch", "get", "delete", "options"]
+
+
+class RegistrationViewSet(JSONAPIViewMixin, RegistrationAPIBaseView):
     serializer_class = RegistrationSerializer
     queryset = Registration.objects.all()
 
     permission_classes = [CanAccessRegistration]
 
-    def get_serializer_context(self):
+    def get_serializer_context(self) -> dict:
         context = super().get_serializer_context()
-        # user registration admin ids must be injected to the context for nested serializers, to avoid duplicating work
+
+        # User registration admin ids must be injected to the context for nested serializers
+        # to avoid duplicating work.
         user = context["request"].user
         registration_admin_tree_ids = set()
 
@@ -85,9 +90,10 @@ class RegistrationViewSet(
             registration_admin_tree_ids = user.get_registration_admin_tree_ids()
 
         context["registration_admin_tree_ids"] = registration_admin_tree_ids
+
         return context
 
-    def perform_destroy(self, instance):
+    def perform_destroy(self, instance: Registration) -> None:
         try:
             instance.delete()
         # At the moment ProtecterError is raised only if user tries to remove registration with signups.
@@ -95,7 +101,9 @@ class RegistrationViewSet(
         except ProtectedError:
             raise ConflictException(_("Registration with signups cannot be deleted"))
 
-    def filter_queryset(self, queryset):
+    def filter_queryset(
+        self, queryset: QuerySet[Registration]
+    ) -> QuerySet[Registration]:
         events = Event.objects.exclude(registration=None)
 
         # Copy query_params to get mutable version of it
@@ -119,7 +127,7 @@ class RegistrationViewSet(
 
         return registrations
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> Type[Serializer]:
         if self.action == "send_message":
             return MassEmailSerializer
         elif self.action == "signups_export":
@@ -127,7 +135,9 @@ class RegistrationViewSet(
         return super().get_serializer_class()
 
     @staticmethod
-    def _get_message_contact_persons(signups, signup_groups):
+    def _get_message_contact_persons(
+        signups: Iterable[SignUp], signup_groups: Iterable[SignUpGroup]
+    ) -> list[SignUpContactPerson]:
         message_contact_persons = []
 
         # Make personal email for each signup groups' contact_persons.
@@ -147,7 +157,12 @@ class RegistrationViewSet(
         return message_contact_persons
 
     @staticmethod
-    def _get_messages(subject, cleaned_body, plain_text_body, contact_persons):
+    def _get_messages(
+        subject: str,
+        cleaned_body: str,
+        plain_text_body: str,
+        contact_persons: Iterable[SignUpContactPerson],
+    ) -> list[tuple]:
         messages = []
 
         for contact_person in contact_persons:
@@ -163,7 +178,9 @@ class RegistrationViewSet(
         detail=True,
         permission_classes=[CanAccessRegistration],
     )
-    def send_message(self, request, pk=None, version=None):
+    def send_message(
+        self, request: Request, pk: Optional[int] = None, version: Optional[str] = None
+    ) -> Response:
         registration = self.get_object(skip_log_ids=True)
 
         signups_perm = CanAccessRegistrationSignups()
@@ -249,7 +266,13 @@ class RegistrationViewSet(
         permission_classes=[CanAccessRegistrationSignups],
         url_path=r"signups/export/(?P<file_format>xlsx)",
     )
-    def signups_export(self, request, file_format=None, pk=None, version=None):
+    def signups_export(
+        self,
+        request: Request,
+        file_format: Optional[str] = None,
+        pk: Optional[int] = None,
+        version: Optional[str] = None,
+    ) -> HttpResponse:
         serializer = self.get_serializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
 
@@ -282,7 +305,9 @@ class RegistrationUserAccessViewSet(AuditLogApiViewMixin, viewsets.GenericViewSe
     permission_classes = [OrganizationUserEditPermission]
 
     @action(detail=True, methods=["post"])
-    def send_invitation(self, request, pk=None, version=None):
+    def send_invitation(
+        self, request: Request, pk: Optional[int] = None, version: Optional[str] = None
+    ) -> Response:
         registration_user_access = self.get_object()
         registration_user_access.send_invitation()
         return Response(
@@ -294,7 +319,12 @@ register_view(RegistrationUserAccessViewSet, "registration_user_access")
 
 
 class SignUpFilterBackend(django_filters.rest_framework.DjangoFilterBackend):
-    def get_filterset_kwargs(self, request, queryset, view):
+    def get_filterset_kwargs(
+        self,
+        request: Request,
+        queryset: QuerySet[Union[SignUp, SignUpGroup]],
+        view: RegistrationAPIBaseView,
+    ) -> dict:
         kwargs = super().get_filterset_kwargs(request, queryset, view)
         kwargs["action"] = view.action
 
@@ -314,19 +344,21 @@ class SignUpBaseFilter(django_filters.rest_framework.FilterSet):
 
     text = django_filters.CharFilter(method="filter_text")
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         self.action = kwargs.pop("action", None)
         super().__init__(*args, **kwargs)
 
     @cached_property
-    def _user_admin_organizations(self):
+    def _user_admin_organizations(self) -> QuerySet[Organization]:
         return self.request.user.get_admin_organizations_and_descendants()
 
     @cached_property
-    def _user_registration_admin_organizations(self):
+    def _user_registration_admin_organizations(self) -> QuerySet[Organization]:
         return self.request.user.get_registration_admin_organizations_and_descendants()
 
-    def filter_queryset(self, queryset):
+    def filter_queryset(
+        self, queryset: QuerySet[Union[SignUp, SignUpGroup]]
+    ) -> QuerySet[Union[SignUp, SignUpGroup]]:
         queryset = super().filter_queryset(queryset)
 
         user = self.request.user
@@ -348,7 +380,12 @@ class SignUpBaseFilter(django_filters.rest_framework.FilterSet):
 
         return queryset.filter(qs_filter)
 
-    def filter_registration(self, queryset, name, value: list[str]):
+    def filter_registration(
+        self,
+        queryset: QuerySet[Union[SignUp, SignUpGroup]],
+        name: str,
+        value: list[str],
+    ) -> QuerySet[Union[SignUp, SignUpGroup]]:
         user = self.request.user
 
         try:
@@ -383,7 +420,7 @@ class SignUpBaseFilter(django_filters.rest_framework.FilterSet):
         return queryset.filter(registration__in=registrations)
 
     @staticmethod
-    def _build_text_annotations(relation_accessor=""):
+    def _build_text_annotations(relation_accessor: str = "") -> dict[str, Concat]:
         return {
             f"{relation_accessor}first_last_name": Concat(
                 f"{relation_accessor}first_name",
@@ -398,7 +435,7 @@ class SignUpBaseFilter(django_filters.rest_framework.FilterSet):
         }
 
     @staticmethod
-    def _build_text_filter(text_param, relation_accessor=""):
+    def _build_text_filter(text_param: str, relation_accessor: str = "") -> Q:
         filters = {
             f"{relation_accessor}first_last_name__icontains": text_param,
             f"{relation_accessor}last_first_name__icontains": text_param,
@@ -413,7 +450,9 @@ class SignUpBaseFilter(django_filters.rest_framework.FilterSet):
 
         return q_set
 
-    def filter_text(self, queryset, name, value):
+    def filter_text(
+        self, queryset: QuerySet[Union[SignUp, SignUpGroup]], name: str, value: str
+    ) -> QuerySet[Union[SignUp, SignUpGroup]]:
         return queryset.annotate(**self._build_text_annotations()).filter(
             self._build_text_filter(value)
         )
@@ -432,7 +471,9 @@ class SignUpGroupFilter(SignUpBaseFilter):
         widget=django_filters.widgets.CSVWidget(),
     )
 
-    def filter_text(self, queryset, name, value):
+    def filter_text(
+        self, queryset: QuerySet[SignUpGroup], name: str, value: str
+    ) -> QuerySet[SignUpGroup]:
         return queryset.annotate(
             **self._build_text_annotations(relation_accessor="signups__")
         ).filter(self._build_text_filter(value, relation_accessor="signups__"))
@@ -442,12 +483,7 @@ class SignUpGroupFilter(SignUpBaseFilter):
         fields = ("registration",)
 
 
-class SignUpViewSet(
-    UserDataSourceAndOrganizationMixin,
-    RegistrationsAllowedMethodsMixin,
-    AuditLogApiViewMixin,
-    viewsets.ModelViewSet,
-):
+class SignUpViewSet(RegistrationAPIBaseView):
     serializer_class = SignUpSerializer
     queryset = SignUp.objects.all()
     filter_backends = [
@@ -460,7 +496,7 @@ class SignUpViewSet(
     permission_classes = [CanAccessSignup]
 
     @transaction.atomic
-    def create(self, request, *args, **kwargs):
+    def create(self, request: Request, *args, **kwargs) -> Response:
         context = super().get_serializer_context()
         data = request.data
 
@@ -487,11 +523,11 @@ class SignUpViewSet(
         )
 
     @transaction.atomic
-    def perform_update(self, serializer):
+    def perform_update(self, serializer: SignUpSerializer) -> None:
         super().perform_update(serializer)
 
     @transaction.atomic
-    def perform_destroy(self, instance):
+    def perform_destroy(self, instance: SignUp) -> None:
         instance._individually_deleted = True
         instance.delete()
 
@@ -499,24 +535,20 @@ class SignUpViewSet(
 register_view(SignUpViewSet, "signup")
 
 
-class SignUpGroupViewSet(
-    UserDataSourceAndOrganizationMixin,
-    RegistrationsAllowedMethodsMixin,
-    AuditLogApiViewMixin,
-    viewsets.ModelViewSet,
-):
+class SignUpGroupViewSet(RegistrationAPIBaseView):
     serializer_class = SignUpGroupSerializer
     queryset = SignUpGroup.objects.all()
     filter_backends = [SignUpFilterBackend]
     filterset_class = SignUpGroupFilter
     permission_classes = [CanAccessSignupGroup]
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> Type[Serializer]:
         if self.action == "create":
             return SignUpGroupCreateSerializer
+
         return super().get_serializer_class()
 
-    def _ensure_shared_request_data(self, data):
+    def _ensure_shared_request_data(self, data: dict) -> None:
         if self.action == "partial_update":
             registration_id = data.get(
                 "registration", self.get_object().registration_id
@@ -531,22 +563,22 @@ class SignUpGroupViewSet(
             signup_data["registration"] = registration_id
 
     @transaction.atomic
-    def create(self, request, *args, **kwargs):
+    def create(self, request: Request, *args, **kwargs) -> Response:
         self._ensure_shared_request_data(request.data)
         return super().create(request, *args, **kwargs)
 
     @transaction.atomic
-    def update(self, request, *args, **kwargs):
+    def update(self, request: Request, *args, **kwargs) -> Response:
         self._ensure_shared_request_data(request.data)
         return super().update(request, *args, **kwargs)
 
     @transaction.atomic
-    def partial_update(self, request, *args, **kwargs):
+    def partial_update(self, request: Request, *args, **kwargs) -> Response:
         self._ensure_shared_request_data(request.data)
         return super().partial_update(request, *args, **kwargs)
 
     @transaction.atomic
-    def destroy(self, request, *args, **kwargs):
+    def destroy(self, request: Request, *args, **kwargs) -> Response:
         return super().destroy(request, *args, **kwargs)
 
 

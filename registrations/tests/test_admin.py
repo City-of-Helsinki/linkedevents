@@ -1,4 +1,3 @@
-import pytest
 from django.contrib import admin
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth import get_user_model
@@ -6,8 +5,9 @@ from django.test import RequestFactory, TestCase
 from django.utils import translation
 from rest_framework import status
 
+from events.models import Event
 from registrations.admin import RegistrationAdmin
-from registrations.models import Event, Registration, RegistrationUserAccess
+from registrations.models import Registration, RegistrationUserAccess
 from registrations.tests.factories import RegistrationFactory
 from registrations.tests.utils import assert_invitation_email_is_sent
 

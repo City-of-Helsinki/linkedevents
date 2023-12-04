@@ -2,6 +2,7 @@ import io
 
 from django.utils.translation import gettext as _
 from xlsxwriter import Workbook
+from xlsxwriter.format import Format
 from xlsxwriter.worksheet import Worksheet
 
 from registrations.models import Registration
@@ -26,7 +27,7 @@ class RegistrationSignUpsExportXLSX:
             )
         )
         self.columns = self._get_columns()
-        self.formats = {}
+        self.formats: dict[str, Format] = {}
 
     @staticmethod
     def _get_columns() -> list[dict]:

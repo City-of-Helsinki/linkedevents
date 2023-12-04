@@ -1,5 +1,11 @@
+from typing import Optional
+
 from admin_auto_filters.filters import AutocompleteFilter
 from django.contrib import admin
+from django.db.models import Field as ModelField
+from django.forms import Field as FormField
+from django.forms import ModelForm
+from django.http import HttpRequest
 from django.utils.translation import gettext as _
 from reversion.admin import VersionAdmin
 
@@ -18,13 +24,14 @@ class RegistrationUserAccessInline(admin.TabularInline):
     verbose_name = _("Participant list user")
     verbose_name_plural = _("Participant list users")
 
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+    def formfield_for_foreignkey(
+        self, db_field: ModelField, request: HttpRequest, **kwargs
+    ) -> FormField:
         # Allow to select only language which has service_language set to true
         if db_field.name == "language":
             kwargs["queryset"] = Language.objects.filter(service_language=True)
-        return super(RegistrationUserAccessInline, self).formfield_for_foreignkey(
-            db_field, request, **kwargs
-        )
+
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 class RegistrationAdmin(VersionAdmin):
@@ -53,14 +60,16 @@ class RegistrationAdmin(VersionAdmin):
     autocomplete_fields = ("event",)
     inlines = (RegistrationUserAccessInline,)
 
-    def save_model(self, request, obj, form, change):
+    def save_model(self, request: HttpRequest, obj: Registration, form, change) -> None:
         if obj.pk is None:
             obj.created_by = request.user
         else:
             obj.last_modified_by = request.user
         obj.save()
 
-    def save_related(self, request, form, formsets, change):
+    def save_related(
+        self, request: HttpRequest, form: ModelForm, formsets, change: bool
+    ) -> None:
         for formset in formsets:
             if formset.model == RegistrationUserAccess:
                 formset.save(commit=False)
@@ -77,9 +86,11 @@ class RegistrationAdmin(VersionAdmin):
                     if "email" in changed_fields:
                         changed_registration_user_access.send_invitation()
 
-        super(RegistrationAdmin, self).save_related(request, form, formsets, change)
+        super().save_related(request, form, formsets, change)
 
-    def get_readonly_fields(self, request, obj=None):
+    def get_readonly_fields(
+        self, request: HttpRequest, obj: Optional[Registration] = None
+    ) -> list[str]:
         if obj:
             return ["id", "event"]
         else:

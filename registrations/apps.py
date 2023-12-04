@@ -4,5 +4,5 @@ from django.apps import AppConfig
 class RegistrationsConfig(AppConfig):
     name = "registrations"
 
-    def ready(self):
+    def ready(self) -> None:
         import registrations.signals  # noqa

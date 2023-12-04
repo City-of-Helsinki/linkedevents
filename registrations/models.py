@@ -1,6 +1,7 @@
 import logging
-from datetime import timedelta
+from datetime import date, timedelta
 from smtplib import SMTPException
+from typing import Optional, Union
 from uuid import uuid4
 
 from django.conf import settings
@@ -8,7 +9,14 @@ from django.contrib.postgres.fields import ArrayField
 from django.core.mail import send_mail
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
-from django.db.models import DateTimeField, ExpressionWrapper, F, Sum, UniqueConstraint
+from django.db.models import (
+    DateTimeField,
+    ExpressionWrapper,
+    F,
+    QuerySet,
+    Sum,
+    UniqueConstraint,
+)
 from django.forms.fields import MultipleChoiceField
 from django.template.loader import render_to_string
 from django.utils import translation
@@ -16,11 +24,12 @@ from django.utils.functional import cached_property
 from django.utils.timezone import localtime
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation import override
+from django_orghierarchy.models import Organization
 from encrypted_fields import fields
 from helsinki_gdpr.models import SerializableMixin
 from rest_framework.exceptions import ValidationError
 
-from events.models import Event, Language
+from events.models import DataSource
 from registrations.notifications import (
     get_signup_notification_subject,
     get_signup_notification_texts,
@@ -112,9 +121,29 @@ class CreatedModifiedBaseModel(models.Model):
         abstract = True
 
 
+class SignUpProtectedDataBaseModel(models.Model):
+    registration = models.ForeignKey(
+        "registrations.Registration", on_delete=models.PROTECT, related_name="%(class)s"
+    )
+
+    extra_info = fields.EncryptedTextField(
+        verbose_name=_("Extra info"),
+        blank=True,
+        null=True,
+        default=None,
+    )
+
+    def anonymize(self) -> None:
+        self.extra_info = anonymize_replacement
+        self.save()
+
+    class Meta:
+        abstract = True
+
+
 class Registration(CreatedModifiedBaseModel):
     event = models.OneToOneField(
-        Event,
+        "events.Event",
         on_delete=models.CASCADE,
         related_name="registration",
         null=False,
@@ -170,15 +199,15 @@ class Registration(CreatedModifiedBaseModel):
     )
 
     @property
-    def data_source(self):
+    def data_source(self) -> DataSource:
         return self.event.data_source
 
     @property
-    def publisher(self):
+    def publisher(self) -> Organization:
         return self.event.publisher
 
     @cached_property
-    def reserved_seats_amount(self):
+    def reserved_seats_amount(self) -> int:
         return (
             # Calculate expiration time for each reservation
             self.reservations.annotate(
@@ -198,19 +227,19 @@ class Registration(CreatedModifiedBaseModel):
         )
 
     @cached_property
-    def current_attendee_count(self):
+    def current_attendee_count(self) -> int:
         return self.signups.filter(
             attendee_status=SignUp.AttendeeStatus.ATTENDING
         ).count()
 
     @cached_property
-    def current_waiting_list_count(self):
+    def current_waiting_list_count(self) -> int:
         return self.signups.filter(
             attendee_status=SignUp.AttendeeStatus.WAITING_LIST
         ).count()
 
     @property
-    def remaining_attendee_capacity(self):
+    def remaining_attendee_capacity(self) -> int:
         maximum_attendee_capacity = self.maximum_attendee_capacity
 
         if maximum_attendee_capacity is None:
@@ -224,7 +253,7 @@ class Registration(CreatedModifiedBaseModel):
         )
 
     @property
-    def remaining_waiting_list_capacity(self):
+    def remaining_waiting_list_capacity(self) -> Optional[int]:
         waiting_list_capacity = self.waiting_list_capacity
 
         if waiting_list_capacity is None:
@@ -249,7 +278,7 @@ class Registration(CreatedModifiedBaseModel):
             waiting_list_capacity - waiting_list_count - reserved_seats_amount, 0
         )
 
-    def move_first_waitlisted_to_attending(self):
+    def move_first_waitlisted_to_attending(self) -> None:
         waitlisted = (
             self.signups.filter(
                 attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
@@ -271,7 +300,7 @@ class Registration(CreatedModifiedBaseModel):
                 SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT
             )
 
-    def can_be_edited_by(self, user):
+    def can_be_edited_by(self, user: User) -> bool:
         """Check if current registration can be edited by the given user"""
         return (
             user.is_superuser
@@ -282,19 +311,19 @@ class Registration(CreatedModifiedBaseModel):
 
 class SignUpMixin:
     @cached_property
-    def extra_info(self):
+    def extra_info(self) -> Optional[str]:
         protected_data = getattr(self, "protected_data", None)
         return getattr(protected_data, "extra_info", None)
 
     @property
-    def data_source(self):
+    def data_source(self) -> DataSource:
         return self.registration.data_source
 
     @property
-    def publisher(self):
+    def publisher(self) -> Organization:
         return self.registration.publisher
 
-    def can_be_edited_by(self, user):
+    def can_be_edited_by(self, user: User) -> bool:
         """Check if the current signup can be edited by the given user"""
         return (
             user.is_superuser
@@ -309,7 +338,7 @@ class SignUpMixin:
             or user.id == self.created_by_id
         )
 
-    def can_be_deleted_by(self, user):
+    def can_be_deleted_by(self, user: User) -> bool:
         """Check if current signup can be deleted by the given user"""
         return (
             user.is_superuser
@@ -321,153 +350,183 @@ class SignUpMixin:
             or user.id == self.created_by_id
         )
 
-    def is_user_editable_resources(self):
+    def is_user_editable_resources(self) -> bool:
         return bool(self.data_source and self.data_source.user_editable_resources)
 
 
-class SignUpGroup(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
-    registration = models.ForeignKey(
-        Registration, on_delete=models.PROTECT, related_name="signup_groups"
-    )
-    anonymization_time = models.DateTimeField(
-        verbose_name=_("Anonymization time"),
+class SignUpContactPerson(SerializableMixin):
+    # For signups that belong to a group.
+    signup_group = models.OneToOneField(
+        "registrations.SignUpGroup",
+        on_delete=models.CASCADE,
+        related_name="contact_person",
         null=True,
-        editable=False,
+        default=None,
+    )
+
+    # For signups that do not belong to a group.
+    signup = models.OneToOneField(
+        "registrations.SignUp",
+        on_delete=models.CASCADE,
+        related_name="contact_person",
+        null=True,
+        default=None,
+    )
+
+    first_name = models.CharField(
+        verbose_name=_("First name"),
+        max_length=50,
+        blank=True,
+        null=True,
+        default=None,
+    )
+    last_name = models.CharField(
+        verbose_name=_("Last name"),
+        max_length=50,
+        blank=True,
+        null=True,
+        default=None,
+    )
+
+    email = models.EmailField(
+        verbose_name=_("E-mail"), blank=True, null=True, default=None
+    )
+
+    phone_number = models.CharField(
+        verbose_name=_("Phone number"),
+        max_length=18,
+        blank=True,
+        null=True,
+        default=None,
+    )
+
+    native_language = models.ForeignKey(
+        "events.Language",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="signup_contact_person_native_language",
+    )
+    service_language = models.ForeignKey(
+        "events.Language",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="signup_contact_person_service_language",
+    )
+
+    membership_number = models.CharField(
+        verbose_name=_("Membership number"),
+        max_length=50,
+        blank=True,
+        null=True,
+        default=None,
+    )
+
+    notifications = models.CharField(
+        verbose_name=_("Notification type"),
+        max_length=25,
+        choices=NOTIFICATION_TYPES,
+        default=NotificationType.NO_NOTIFICATION,
     )
 
     serialize_fields = (
         {"name": "id"},
-        {"name": "registration_id"},
-        {"name": "extra_info"},
-        {"name": "signups_count"},
-        {"name": "contact_person"},
+        {"name": "first_name"},
+        {"name": "last_name"},
+        {"name": "email"},
+        {"name": "phone_number"},
+        {"name": "native_language", "accessor": lambda value: str(value)},
+        {"name": "service_language", "accessor": lambda value: str(value)},
+        {"name": "membership_number"},
+        {
+            "name": "notifications",
+            "accessor": lambda value: dict(NOTIFICATION_TYPES).get(value, value),
+        },
     )
 
     @cached_property
-    def signups_count(self):
-        return self.signups.count()
+    def registration(self) -> Registration:
+        if self.signup_group_id:
+            return self.signup_group.registration
 
-    @cached_property
-    def attending_signups(self):
-        return self.signups.filter(attendee_status=SignUp.AttendeeStatus.ATTENDING)
+        return self.signup.registration
 
-    @transaction.atomic
-    def anonymize(self):
-        # Allow to anonymize signup only once
-        if self.anonymization_time is None:
-            if contact_person := getattr(self, "contact_person", None):
-                contact_person.anonymize()
+    def get_service_language_pk(self) -> str:
+        if self.service_language:
+            return self.service_language.pk
 
-            if protected_data := getattr(self, "protected_data", None):
-                protected_data.anonymize()
-
-            # Anonymize all the signups of the group
-            signups = self.signups.all()
-
-            for signup in signups:
-                signup.anonymize()
-
-            self.anonymization_time = localtime()
-            self.created_by = None
-            self.last_modified_by = None
-            self.save()
-
-
-class SignUpProtectedDataBaseModel(models.Model):
-    registration = models.ForeignKey(
-        Registration, on_delete=models.PROTECT, related_name="%(class)s"
-    )
-
-    extra_info = fields.EncryptedTextField(
-        verbose_name=_("Extra info"),
-        blank=True,
-        null=True,
-        default=None,
-    )
-
-    def anonymize(self):
-        self.extra_info = anonymize_replacement
-        self.save()
-
-    class Meta:
-        abstract = True
-
-
-class SignUpGroupProtectedData(SignUpProtectedDataBaseModel):
-    signup_group = models.OneToOneField(
-        SignUpGroup,
-        related_name="protected_data",
-        null=True,
-        default=None,
-        on_delete=models.SET_NULL,
-    )
-
-
-class RegistrationUserAccess(models.Model):
-    email = models.EmailField(verbose_name=_("E-mail"))
-
-    registration = models.ForeignKey(
-        Registration,
-        on_delete=models.CASCADE,
-        related_name="registration_user_accesses",
-    )
-    language = models.ForeignKey(
-        Language,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="registration_user_access_language",
-    )
-
-    def can_be_edited_by(self, user):
-        """Check if current registration user can be edited by the given user"""
-        if user.is_superuser:
-            return True
-        return user.is_admin_of(self.registration.event.publisher)
-
-    def _get_language_pk(self):
-        if self.language:
-            return self.language.pk
         return "fi"
 
-    def send_invitation(self):
-        locale = self._get_language_pk()
+    def get_registration_message(
+        self, subject: str, cleaned_body: str, plain_text_body: str
+    ) -> tuple[str, str, str, str, list[str]]:
+        [_, linked_registrations_ui_locale] = get_ui_locales(self.service_language)
 
-        with translation.override(locale):
-            event_name = self.registration.event.name
-            event_type_id = self.registration.event.type_id
+        with override(linked_registrations_ui_locale):
+            email_variables = get_signup_notification_variables(self)
+            email_variables["body"] = cleaned_body
 
-            email_variables = {
-                "email": self.email,
-                "event_name": event_name,
-                "event_type_id": event_type_id,
-                "linked_events_ui_locale": locale,
-                "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
-                "linked_registrations_ui_locale": locale,
-                "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
-                "registration_id": self.registration.id,
-            }
+            rendered_body = render_to_string("message_to_signup.html", email_variables)
 
-            invitation_template = "signup_list_rights_granted.html"
-            invitation_subject = _(
-                "Rights granted to the participant list - %(event_name)s"
-            ) % {"event_name": event_name}
+        return (
+            subject,
+            plain_text_body,
+            rendered_body,
+            settings.SUPPORT_EMAIL,
+            [self.email],
+        )
 
-            rendered_body = render_to_string(invitation_template, email_variables)
+    def send_notification(self, notification_type: str) -> None:
+        [_, linked_registrations_ui_locale] = get_ui_locales(self.service_language)
+
+        with override(linked_registrations_ui_locale, deactivate=True):
+            email_variables: dict[
+                str, Union[str, int, dict]
+            ] = get_signup_notification_variables(self)
+            email_variables["texts"] = get_signup_notification_texts(
+                self, notification_type
+            )
+            email_template = (
+                "cancellation_confirmation.html"
+                if notification_type == SignUpNotificationType.CANCELLATION
+                else "common_signup_confirmation.html",
+            )
+
+            rendered_body = render_to_string(
+                email_template,
+                email_variables,
+            )
 
         try:
             send_mail(
-                invitation_subject,
+                get_signup_notification_subject(self, notification_type),
                 rendered_body,
                 get_email_noreply_address(),
                 [self.email],
                 html_message=rendered_body,
             )
         except SMTPException:
-            logger.exception("Couldn't send registration user access invitation email.")
+            logger.exception("Couldn't send signup notification email.")
 
-    class Meta:
-        unique_together = ("email", "registration")
+    def save(self, *args, **kwargs):
+        if not (self.signup_group_id or self.signup_id):
+            raise ValidationError(_("You must provide either signup_group or signup."))
+
+        if self.signup_group_id and self.signup_id:
+            raise ValidationError(
+                _("You can only provide signup_group or signup, not both.")
+            )
+
+        super().save(*args, **kwargs)
+
+    def anonymize(self) -> None:
+        self.email = anonymize_replacement
+        self.phone_number = anonymize_replacement
+        self.first_name = anonymize_replacement
+        self.last_name = anonymize_replacement
+        self.membership_number = anonymize_replacement
+        self.save()
 
 
 class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
@@ -490,11 +549,11 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
     )
 
     registration = models.ForeignKey(
-        Registration, on_delete=models.PROTECT, related_name="signups"
+        "registrations.Registration", on_delete=models.PROTECT, related_name="signups"
     )
 
     signup_group = models.ForeignKey(
-        SignUpGroup,
+        "registrations.SignUpGroup",
         on_delete=models.CASCADE,
         related_name="signups",
         blank=True,
@@ -585,16 +644,16 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
     )
 
     @property
-    def full_name(self):
+    def full_name(self) -> str:
         return f"{self.first_name or ''} {self.last_name or ''}".strip()
 
     @cached_property
-    def date_of_birth(self):
+    def date_of_birth(self) -> Optional[date]:
         protected_data = getattr(self, "protected_data", None)
         return getattr(protected_data, "date_of_birth", None)
 
     @cached_property
-    def actual_contact_person(self):
+    def actual_contact_person(self) -> Optional[SignUpContactPerson]:
         if self.signup_group_id:
             return getattr(self.signup_group, "contact_person", None)
 
@@ -602,7 +661,7 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
 
     @transaction.atomic
     def anonymize(self):
-        # Allow to anonymize signup group only once
+        # Allow to anonymize signup only once
         if self.anonymization_time is None:
             if contact_person := getattr(self, "contact_person", None):
                 contact_person.anonymize()
@@ -625,7 +684,7 @@ class SignUpProtectedData(SignUpProtectedDataBaseModel):
     )
 
     signup = models.OneToOneField(
-        SignUp,
+        "registrations.SignUp",
         related_name="protected_data",
         null=True,
         default=None,
@@ -633,173 +692,131 @@ class SignUpProtectedData(SignUpProtectedDataBaseModel):
     )
 
 
-class SignUpContactPerson(SerializableMixin):
-    # For signups that belong to a group.
-    signup_group = models.OneToOneField(
-        SignUpGroup,
-        on_delete=models.CASCADE,
-        related_name="contact_person",
+class SignUpGroup(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
+    registration = models.ForeignKey(
+        "registrations.Registration",
+        on_delete=models.PROTECT,
+        related_name="signup_groups",
+    )
+    anonymization_time = models.DateTimeField(
+        verbose_name=_("Anonymization time"),
         null=True,
-        default=None,
-    )
-
-    # For signups that do not belong to a group.
-    signup = models.OneToOneField(
-        SignUp,
-        on_delete=models.CASCADE,
-        related_name="contact_person",
-        null=True,
-        default=None,
-    )
-
-    first_name = models.CharField(
-        verbose_name=_("First name"),
-        max_length=50,
-        blank=True,
-        null=True,
-        default=None,
-    )
-    last_name = models.CharField(
-        verbose_name=_("Last name"),
-        max_length=50,
-        blank=True,
-        null=True,
-        default=None,
-    )
-
-    email = models.EmailField(
-        verbose_name=_("E-mail"), blank=True, null=True, default=None
-    )
-
-    phone_number = models.CharField(
-        verbose_name=_("Phone number"),
-        max_length=18,
-        blank=True,
-        null=True,
-        default=None,
-    )
-
-    native_language = models.ForeignKey(
-        Language,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="signup_contact_person_native_language",
-    )
-    service_language = models.ForeignKey(
-        Language,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="signup_contact_person_service_language",
-    )
-
-    membership_number = models.CharField(
-        verbose_name=_("Membership number"),
-        max_length=50,
-        blank=True,
-        null=True,
-        default=None,
-    )
-
-    notifications = models.CharField(
-        verbose_name=_("Notification type"),
-        max_length=25,
-        choices=NOTIFICATION_TYPES,
-        default=NotificationType.NO_NOTIFICATION,
+        editable=False,
     )
 
     serialize_fields = (
         {"name": "id"},
-        {"name": "first_name"},
-        {"name": "last_name"},
-        {"name": "email"},
-        {"name": "phone_number"},
-        {"name": "native_language", "accessor": lambda value: str(value)},
-        {"name": "service_language", "accessor": lambda value: str(value)},
-        {"name": "membership_number"},
-        {
-            "name": "notifications",
-            "accessor": lambda value: dict(NOTIFICATION_TYPES).get(value, value),
-        },
+        {"name": "registration_id"},
+        {"name": "extra_info"},
+        {"name": "signups_count"},
+        {"name": "contact_person"},
     )
 
     @cached_property
-    def registration(self):
-        if self.signup_group_id:
-            return self.signup_group.registration
-        return self.signup.registration
+    def signups_count(self) -> int:
+        return self.signups.count()
 
-    def get_service_language_pk(self):
-        if self.service_language:
-            return self.service_language.pk
+    @cached_property
+    def attending_signups(self) -> QuerySet[SignUp]:
+        return self.signups.filter(attendee_status=SignUp.AttendeeStatus.ATTENDING)
+
+    @transaction.atomic
+    def anonymize(self) -> None:
+        # Allow to anonymize signup only once
+        if self.anonymization_time is None:
+            if contact_person := getattr(self, "contact_person", None):
+                contact_person.anonymize()
+
+            if protected_data := getattr(self, "protected_data", None):
+                protected_data.anonymize()
+
+            # Anonymize all the signups of the group
+            signups = self.signups.all()
+
+            for signup in signups:
+                signup.anonymize()
+
+            self.anonymization_time = localtime()
+            self.created_by = None
+            self.last_modified_by = None
+            self.save()
+
+
+class SignUpGroupProtectedData(SignUpProtectedDataBaseModel):
+    signup_group = models.OneToOneField(
+        "registrations.SignUpGroup",
+        related_name="protected_data",
+        null=True,
+        default=None,
+        on_delete=models.SET_NULL,
+    )
+
+
+class RegistrationUserAccess(models.Model):
+    email = models.EmailField(verbose_name=_("E-mail"))
+
+    registration = models.ForeignKey(
+        "registrations.Registration",
+        on_delete=models.CASCADE,
+        related_name="registration_user_accesses",
+    )
+    language = models.ForeignKey(
+        "events.Language",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="registration_user_access_language",
+    )
+
+    def can_be_edited_by(self, user: User) -> bool:
+        """Check if current registration user can be edited by the given user"""
+        if user.is_superuser:
+            return True
+        return user.is_admin_of(self.registration.event.publisher)
+
+    def _get_language_pk(self) -> str:
+        if self.language:
+            return self.language.pk
         return "fi"
 
-    def get_registration_message(self, subject, cleaned_body, plain_text_body):
-        [_, linked_registrations_ui_locale] = get_ui_locales(self.service_language)
+    def send_invitation(self) -> None:
+        locale = self._get_language_pk()
 
-        with override(linked_registrations_ui_locale):
-            email_variables = get_signup_notification_variables(self)
-            email_variables["body"] = cleaned_body
+        with translation.override(locale):
+            event_name = self.registration.event.name
+            event_type_id = self.registration.event.type_id
 
-            rendered_body = render_to_string("message_to_signup.html", email_variables)
+            email_variables = {
+                "email": self.email,
+                "event_name": event_name,
+                "event_type_id": event_type_id,
+                "linked_events_ui_locale": locale,
+                "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
+                "linked_registrations_ui_locale": locale,
+                "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
+                "registration_id": self.registration.id,
+            }
 
-        return (
-            subject,
-            plain_text_body,
-            rendered_body,
-            settings.SUPPORT_EMAIL,
-            [self.email],
-        )
+            invitation_template = "signup_list_rights_granted.html"
+            invitation_subject = _(
+                "Rights granted to the participant list - %(event_name)s"
+            ) % {"event_name": event_name}
 
-    def send_notification(self, notification_type):
-        [_, linked_registrations_ui_locale] = get_ui_locales(self.service_language)
-
-        with override(linked_registrations_ui_locale, deactivate=True):
-            email_variables = get_signup_notification_variables(self)
-            email_variables["texts"] = get_signup_notification_texts(
-                self, notification_type
-            )
-            email_template = (
-                "cancellation_confirmation.html"
-                if notification_type == SignUpNotificationType.CANCELLATION
-                else "common_signup_confirmation.html",
-            )
-
-            rendered_body = render_to_string(
-                email_template,
-                email_variables,
-            )
+            rendered_body = render_to_string(invitation_template, email_variables)
 
         try:
             send_mail(
-                get_signup_notification_subject(self, notification_type),
+                invitation_subject,
                 rendered_body,
                 get_email_noreply_address(),
                 [self.email],
                 html_message=rendered_body,
             )
         except SMTPException:
-            logger.exception("Couldn't send signup notification email.")
+            logger.exception("Couldn't send registration user access invitation email.")
 
-    def save(self, *args, **kwargs):
-        if not (self.signup_group_id or self.signup_id):
-            raise ValidationError(_("You must provide either signup_group or signup."))
-
-        if self.signup_group_id and self.signup_id:
-            raise ValidationError(
-                _("You can only provide signup_group or signup, not both.")
-            )
-
-        super().save(*args, **kwargs)
-
-    def anonymize(self):
-        self.email = anonymize_replacement
-        self.phone_number = anonymize_replacement
-        self.first_name = anonymize_replacement
-        self.last_name = anonymize_replacement
-        self.membership_number = anonymize_replacement
-        self.save()
+    class Meta:
+        unique_together = ("email", "registration")
 
 
 class SeatReservationCode(models.Model):
@@ -807,7 +824,10 @@ class SeatReservationCode(models.Model):
         verbose_name=_("Number of seats"), blank=False, default=0
     )
     registration = models.ForeignKey(
-        Registration, on_delete=models.CASCADE, null=False, related_name="reservations"
+        "registrations.Registration",
+        on_delete=models.CASCADE,
+        null=False,
+        related_name="reservations",
     )
     code = models.UUIDField(
         verbose_name=_("Seat reservation code"), default=uuid4, editable=False
@@ -817,7 +837,7 @@ class SeatReservationCode(models.Model):
     )
 
     @property
-    def expiration(self):
+    def expiration(self) -> timedelta:
         return self.timestamp + timedelta(minutes=code_validity_duration(self.seats))
 
     class Meta:

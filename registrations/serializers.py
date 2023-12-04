@@ -1,12 +1,14 @@
 from datetime import timedelta
+from typing import Iterable, Optional, Union
 
 import pytz
+from django.db.models import QuerySet
 from django.utils.timezone import localdate, localtime
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ErrorDetail
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
-from rest_framework.fields import DateTimeField
+from rest_framework.fields import DateTimeField, Field
 
 from events.models import Language
 from events.utils import clean_text_fields
@@ -78,21 +80,26 @@ class CreatedModifiedBaseSerializer(serializers.ModelSerializer):
 
     is_created_by_current_user = serializers.SerializerMethodField()
 
-    def get_is_created_by_current_user(self, obj):
+    def get_is_created_by_current_user(
+        self, obj: Union[Registration, SignUp, SignUpGroup]
+    ) -> bool:
         if not (request := self.context.get("request")):
             return False
 
         return request.user == obj.created_by
 
-    def create(self, validated_data):
+    def create(self, validated_data: dict) -> Union[Registration, SignUp, SignUpGroup]:
         validated_data["created_by"] = self.context["request"].user
         validated_data["last_modified_by"] = self.context["request"].user
 
         instance = super().create(validated_data)
         return instance
 
-    def update(self, instance, validated_data):
+    def update(
+        self, instance: Union[Registration, SignUp, SignUpGroup], validated_data: dict
+    ) -> Union[Registration, SignUp, SignUpGroup]:
         validated_data["last_modified_by"] = self.context["request"].user
+
         super().update(instance, validated_data)
         return instance
 
@@ -104,7 +111,7 @@ class SignUpContactPersonSerializer(serializers.ModelSerializer):
         required=False,
     )
 
-    def validate(self, data):
+    def validate(self, data: dict) -> dict:
         # Clean html tags from the text fields
         data = clean_text_fields(data, strip=True)
 
@@ -133,7 +140,9 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
     date_of_birth = serializers.DateField(required=False, allow_null=True)
 
     @staticmethod
-    def _update_or_create_protected_data(signup, **protected_data):
+    def _update_or_create_protected_data(
+        signup: SignUp, **protected_data: Optional[dict]
+    ) -> None:
         if not protected_data:
             return
 
@@ -144,7 +153,9 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
         )
 
     @staticmethod
-    def _update_or_create_contact_person(signup, **contact_person_data):
+    def _update_or_create_contact_person(
+        signup: SignUp, **contact_person_data: Optional[dict]
+    ) -> Optional[SignUpContactPerson]:
         if signup.signup_group_id or not contact_person_data:
             return None
 
@@ -155,7 +166,7 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
 
         return contact_person
 
-    def create(self, validated_data):
+    def create(self, validated_data: dict) -> SignUp:
         registration = validated_data["registration"]
         protected_data = _get_protected_data(
             validated_data, ["extra_info", "date_of_birth"]
@@ -195,7 +206,7 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
 
         raise DRFPermissionDenied(_("The waiting list is already full"))
 
-    def update(self, instance, validated_data):
+    def update(self, instance: SignUp, validated_data: dict) -> SignUp:
         errors = {}
 
         if (
@@ -234,7 +245,7 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
 
         return instance
 
-    def validate(self, data):
+    def validate(self, data: dict) -> dict:
         # Clean html tags from the text fields
         data = clean_text_fields(data, strip=True)
         errors = {}
@@ -318,7 +329,7 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
 
 
 class RegistrationUserAccessIdField(serializers.PrimaryKeyRelatedField):
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[RegistrationUserAccess]:
         registration_id = self.context["request"].parser_context["kwargs"]["pk"]
         return RegistrationUserAccess.objects.filter(registration__pk=registration_id)
 
@@ -362,7 +373,7 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
         many=True, required=False
     )
 
-    def get_has_registration_user_access(self, obj):
+    def get_has_registration_user_access(self, obj: Registration) -> bool:
         user = self.user
         return (
             user.is_authenticated
@@ -370,7 +381,7 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
             and obj.registration_user_accesses.filter(email=user.email).exists()
         )
 
-    def get_signups(self, obj):
+    def get_signups(self, obj: Registration) -> Optional[dict]:
         params = self.context["request"].query_params
 
         if "signups" in params.get("include", "").split(","):
@@ -387,22 +398,22 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
 
         return None
 
-    def get_current_attendee_count(self, obj):
+    def get_current_attendee_count(self, obj: Registration) -> int:
         return obj.current_attendee_count
 
-    def get_current_waiting_list_count(self, obj):
+    def get_current_waiting_list_count(self, obj: Registration) -> int:
         return obj.current_waiting_list_count
 
-    def get_remaining_attendee_capacity(self, obj):
+    def get_remaining_attendee_capacity(self, obj: Registration) -> int:
         return obj.remaining_attendee_capacity
 
-    def get_remaining_waiting_list_capacity(self, obj):
+    def get_remaining_waiting_list_capacity(self, obj: Registration) -> Optional[int]:
         return obj.remaining_waiting_list_capacity
 
-    def get_data_source(self, obj):
+    def get_data_source(self, obj: Registration) -> str:
         return obj.data_source.id
 
-    def get_publisher(self, obj):
+    def get_publisher(self, obj: Registration) -> str:
         return obj.publisher.id
 
     class Meta:
@@ -448,7 +459,7 @@ class CreateSignUpsSerializer(serializers.Serializer):
     )
     signups = SignUpSerializer(many=True, required=True)
 
-    def validate(self, data):
+    def validate(self, data: dict) -> dict:
         reservation_code = data["reservation_code"]
         registration = data["registration"]
         # Clean html tags from the text fields
@@ -504,7 +515,9 @@ class CreateSignUpsSerializer(serializers.Serializer):
         return data
 
     @staticmethod
-    def _notify_contact_person(contact_person, attendee_status):
+    def _notify_contact_person(
+        contact_person: SignUpContactPerson, attendee_status: str
+    ) -> None:
         if not contact_person:
             return
 
@@ -515,7 +528,7 @@ class CreateSignUpsSerializer(serializers.Serializer):
 
         contact_person.send_notification(confirmation_type_mapping[attendee_status])
 
-    def notify_contact_persons(self, signup_instances):
+    def notify_contact_persons(self, signup_instances: Iterable[SignUp]) -> None:
         for signup in signup_instances:
             if signup.signup_group_id:
                 continue
@@ -523,7 +536,7 @@ class CreateSignUpsSerializer(serializers.Serializer):
             contact_person = getattr(signup, "contact_person", None)
             self._notify_contact_person(contact_person, signup.attendee_status)
 
-    def create_signups(self, validated_data):
+    def create_signups(self, validated_data: dict) -> list[SignUp]:
         user = self.context["request"].user
         registration = validated_data["registration"]
 
@@ -611,7 +624,7 @@ class SignUpGroupCreateSerializer(
     contact_person = SignUpContactPersonSerializer(required=True)
     extra_info = serializers.CharField(required=False, allow_blank=True)
 
-    def validate(self, data):
+    def validate(self, data: dict) -> dict:
         # Clean html tags from the text fields
         data = clean_text_fields(data, strip=True)
         validated_data = super().validate(data)
@@ -631,7 +644,9 @@ class SignUpGroupCreateSerializer(
         return validated_data
 
     @staticmethod
-    def _create_protected_data(signup_group, **protected_data):
+    def _create_protected_data(
+        signup_group: SignUpGroup, **protected_data: Optional[dict]
+    ) -> None:
         if not protected_data:
             return
 
@@ -642,19 +657,23 @@ class SignUpGroupCreateSerializer(
         )
 
     @staticmethod
-    def _create_contact_person(signup_group, **contact_person_data):
+    def _create_contact_person(
+        signup_group: SignUpGroup, **contact_person_data: Optional[dict]
+    ) -> SignUpContactPerson:
         return SignUpContactPerson.objects.create(
             signup_group=signup_group,
             **contact_person_data,
         )
 
-    def _create_signups(self, instance, validated_signups_data):
+    def _create_signups(
+        self, instance: SignUpGroup, validated_signups_data: dict
+    ) -> None:
         for signup_data in validated_signups_data:
             signup_data["signup_group"] = instance
             signup_serializer = SignUpSerializer(data=signup_data, context=self.context)
             signup_serializer.create(signup_data)
 
-    def create(self, validated_data):
+    def create(self, validated_data: dict) -> SignUpGroup:
         validated_data.pop("reservation_code")
         reservation = validated_data.pop("reservation")
         signups_data = validated_data.pop("signups")
@@ -705,7 +724,9 @@ class SignUpGroupSerializer(CreatedModifiedBaseSerializer):
     extra_info = serializers.CharField(required=False, allow_blank=True)
 
     @staticmethod
-    def _update_protected_data(signup_group, **protected_data):
+    def _update_protected_data(
+        signup_group: SignUpGroup, **protected_data: Optional[dict]
+    ) -> None:
         if not protected_data:
             return
 
@@ -716,7 +737,9 @@ class SignUpGroupSerializer(CreatedModifiedBaseSerializer):
         )
 
     @staticmethod
-    def _update_contact_person(signup_group, **contact_person_data):
+    def _update_contact_person(
+        signup_group: SignUpGroup, **contact_person_data: Optional[dict]
+    ) -> None:
         if not contact_person_data:
             return
 
@@ -725,14 +748,16 @@ class SignUpGroupSerializer(CreatedModifiedBaseSerializer):
             defaults=contact_person_data,
         )
 
-    def get_fields(self):
+    def get_fields(self) -> dict[str, Field]:
         fields = super().get_fields()
+
         fields["signups"] = SignUpSerializer(
             many=True, required=False, partial=self.partial
         )
+
         return fields
 
-    def validate(self, data):
+    def validate(self, data: dict) -> dict:
         # Clean html tags from the text fields
         data = clean_text_fields(data, strip=True)
         validated_data = super().validate(data)
@@ -753,7 +778,9 @@ class SignUpGroupSerializer(CreatedModifiedBaseSerializer):
 
         return validated_data
 
-    def _update_signups(self, instance, validated_signups_data):
+    def _update_signups(
+        self, instance: SignUpGroup, validated_signups_data: dict
+    ) -> None:
         for signup_data in validated_signups_data:
             if not signup_data.get("id"):
                 continue
@@ -770,7 +797,7 @@ class SignUpGroupSerializer(CreatedModifiedBaseSerializer):
             )
             signup_serializer.update(signup_serializer.instance, signup_data)
 
-    def update(self, instance, validated_data):
+    def update(self, instance: SignUpGroup, validated_data: dict) -> SignUpGroup:
         signups_data = validated_data.pop("signups", [])
         protected_data = _get_protected_data(validated_data, ["extra_info"])
         contact_person_data = validated_data.pop("contact_person", None) or {}
@@ -810,10 +837,10 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
 
     in_waitlist = serializers.SerializerMethodField()
 
-    def get_expiration(self, obj):
+    def get_expiration(self, obj: SeatReservationCode) -> timedelta:
         return obj.expiration
 
-    def get_in_waitlist(self, obj):
+    def get_in_waitlist(self, obj: SeatReservationCode) -> bool:
         registration = obj.registration
         maximum_attendee_capacity = registration.maximum_attendee_capacity
 
@@ -826,12 +853,13 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
 
         return maximum_attendee_capacity - attendee_count <= 0
 
-    def to_internal_value(self, data):
+    def to_internal_value(self, data: dict) -> dict:
         if self.instance:
             data["registration"] = self.instance.registration.id
+
         return super().to_internal_value(data)
 
-    def validate(self, data):
+    def validate(self, data: dict) -> dict:
         instance = self.instance
         errors = {}
 
@@ -913,7 +941,9 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
 
         return super().validate(data)
 
-    def update(self, instance, validated_data):
+    def update(
+        self, instance: SeatReservationCode, validated_data: dict
+    ) -> SeatReservationCode:
         if localtime() > instance.expiration:
             raise ConflictException(_("Cannot update expired seats reservation."))
 
@@ -933,14 +963,14 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
 
 
 class MassEmailSignupGroupsField(serializers.PrimaryKeyRelatedField):
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[SignUpGroup]:
         registration = self.context["request"].data["registration"]
 
         return registration.signup_groups.filter(contact_person__email__isnull=False)
 
 
 class MassEmailSignupsField(serializers.PrimaryKeyRelatedField):
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[SignUp]:
         registration = self.context["request"].data["registration"]
 
         return registration.signups.filter(contact_person__email__isnull=False)

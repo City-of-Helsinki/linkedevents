@@ -1,9 +1,14 @@
+from typing import TYPE_CHECKING, Union
+
 from django.conf import settings
 from django.utils import translation
 from django.utils.translation import gettext_lazy as _
 
 from events.models import Event
 from registrations.utils import get_signup_edit_url, get_ui_locales
+
+if TYPE_CHECKING:
+    from registrations.models import SignUpContactPerson
 
 
 class NotificationType:
@@ -160,8 +165,8 @@ signup_email_texts = {
 
 
 def get_signup_notification_texts(
-    contact_person, notification_type: SignUpNotificationType
-):
+    contact_person: "SignUpContactPerson", notification_type: str
+) -> dict[str, str]:
     registration = contact_person.registration
 
     with translation.override(contact_person.get_service_language_pk()):
@@ -215,7 +220,9 @@ def get_signup_notification_texts(
     return texts
 
 
-def get_signup_notification_subject(contact_person, notification_type):
+def get_signup_notification_subject(
+    contact_person: "SignUpContactPerson", notification_type: str
+) -> str:
     registration = contact_person.registration
     linked_registrations_ui_locale = get_ui_locales(contact_person.service_language)[1]
 
@@ -245,7 +252,9 @@ def get_signup_notification_subject(contact_person, notification_type):
     return notification_subjects[notification_type]
 
 
-def get_signup_notification_variables(contact_person):
+def get_signup_notification_variables(
+    contact_person: "SignUpContactPerson",
+) -> dict[str, Union[str, int]]:
     [linked_events_ui_locale, linked_registrations_ui_locale] = get_ui_locales(
         contact_person.service_language
     )
