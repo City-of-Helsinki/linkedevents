@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 import pytz
+from django.conf import settings
 from django.utils.timezone import localdate, localtime
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
@@ -361,6 +362,8 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
         many=True, required=False
     )
 
+    signup_url = serializers.SerializerMethodField()
+
     def get_has_registration_user_access(self, obj):
         user = self.user
         return (
@@ -404,6 +407,12 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
     def get_publisher(self, obj):
         return obj.publisher.id
 
+    def get_signup_url(self, obj):
+        return {
+            lang: f"{settings.LINKED_REGISTRATIONS_UI_URL}/{lang}/registration/{obj.id}/signup-group/create"
+            for lang in ["en", "fi", "sv"]
+        }
+
     class Meta:
         fields = (
             "id",
@@ -436,6 +445,7 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
             "confirmation_message",
             "instructions",
             "is_created_by_current_user",
+            "signup_url",
         )
         model = Registration
 

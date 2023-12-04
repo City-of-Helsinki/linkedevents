@@ -2,6 +2,7 @@ from collections import Counter
 from unittest.mock import patch, PropertyMock
 
 import pytest
+from django.conf import settings
 from rest_framework import status
 
 from audit_log.models import AuditLogEntry
@@ -100,6 +101,7 @@ def assert_registration_fields_exist(data, is_admin_user=False):
         "confirmation_message",
         "instructions",
         "is_created_by_current_user",
+        "signup_url",
         "@id",
         "@context",
         "@type",
@@ -219,6 +221,15 @@ def test_anonymous_user_can_see_registration(api_client, registration):
     response = get_detail(api_client, registration.id)
     assert response.status_code == status.HTTP_200_OK
     assert_registration_fields_exist(response.data, is_admin_user=False)
+
+
+@pytest.mark.django_db
+def test_get_registration_contains_correct_signup_url(user_api_client, registration):
+    response = get_detail_and_assert_registration(user_api_client, registration.id)
+    assert response.data["signup_url"] == {
+        lang: f"{settings.LINKED_REGISTRATIONS_UI_URL}/{lang}/registration/{registration.id}/signup-group/create"
+        for lang in ["en", "fi", "sv"]
+    }
 
 
 @pytest.mark.django_db
