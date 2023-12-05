@@ -298,6 +298,7 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
             "last_modified_time",
             "created_by",
             "last_modified_by",
+            "anonymization_time",
             "first_name",
             "last_name",
             "date_of_birth",
@@ -421,8 +422,6 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
             "created_by",
             "last_modified_by",
             "event",
-            "created_time",
-            "last_modified_time",
             "attendee_registration",
             "audience_min_age",
             "audience_max_age",
@@ -694,6 +693,7 @@ class SignUpGroupCreateSerializer(
             "last_modified_time",
             "created_by",
             "last_modified_by",
+            "anonymization_time",
             "is_created_by_current_user",
         )
         model = SignUpGroup
@@ -795,6 +795,7 @@ class SignUpGroupSerializer(CreatedModifiedBaseSerializer):
             "last_modified_time",
             "created_by",
             "last_modified_by",
+            "anonymization_time",
             "is_created_by_current_user",
         )
         model = SignUpGroup

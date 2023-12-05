@@ -1,8 +1,13 @@
+from datetime import timedelta
+
 import pytest
 from django.core.management import call_command
+from django.utils.timezone import localtime
 
+from events.tests.factories import EventFactory
 from registrations.models import SignUpGroupProtectedData, SignUpProtectedData
 from registrations.tests.factories import (
+    RegistrationFactory,
     SignUpFactory,
     SignUpGroupFactory,
     SignUpGroupProtectedDataFactory,
@@ -78,3 +83,37 @@ def test_encrypt_fields_with_new_key(settings):
 
     # Test that fields have been encrypted with the new key
     assert_encrypted_with_keys(new_keys)
+
+
+@pytest.mark.no_test_audit_log
+@pytest.mark.django_db
+def test_anonymize_past_signups():
+    future_event = EventFactory(end_time=localtime() + timedelta(days=31))
+    past_event = EventFactory(end_time=localtime() - timedelta(days=31))
+    future_registration = RegistrationFactory(event=future_event)
+    past_registration = RegistrationFactory(event=past_event)
+    future_signup_group = SignUpGroupFactory(registration=future_registration)
+    future_signup_in_group = SignUpFactory(
+        registration=future_registration, signup_group=future_signup_group
+    )
+    future_signup = SignUpFactory(registration=future_registration)
+    past_signup_group = SignUpGroupFactory(registration=past_registration)
+    past_signup_in_group = SignUpFactory(
+        registration=past_registration, signup_group=past_signup_group
+    )
+    past_signup = SignUpFactory(registration=past_registration)
+
+    call_command("anonymize_past_signups")
+
+    future_signup_group.refresh_from_db()
+    future_signup_in_group.refresh_from_db()
+    future_signup.refresh_from_db()
+    past_signup_group.refresh_from_db()
+    past_signup_in_group.refresh_from_db()
+    past_signup.refresh_from_db()
+    assert future_signup_group.anonymization_time is None
+    assert future_signup_in_group.anonymization_time is None
+    assert future_signup.anonymization_time is None
+    assert past_signup_group.anonymization_time is not None
+    assert past_signup_in_group.anonymization_time is not None
+    assert past_signup.anonymization_time is not None
