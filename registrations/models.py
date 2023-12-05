@@ -47,7 +47,6 @@ class MandatoryFields(models.TextChoices):
     CITY = "city", _("City")
     FIRST_NAME = "first_name", _("First name")
     LAST_NAME = "last_name", _("Last name")
-    PHONE_NUMBER = "phone_number", _("Phone number")
     STREET_ADDRESS = "street_address", _("Street address")
     ZIPCODE = "zipcode", _("ZIP code")
 
