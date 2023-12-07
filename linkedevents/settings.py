@@ -396,7 +396,7 @@ SESSION_COOKIE_NAME = "%s-sessionid" % env("COOKIE_PREFIX")
 
 TEMPLATES = [
     {
-        "BACKEND": "django_jinja.backend.Jinja2",
+        "BACKEND": "django_jinja.jinja2.Jinja2",
         "APP_DIRS": True,
         "OPTIONS": {
             "extensions": DEFAULT_EXTENSIONS + ["jinja2.ext.i18n"],
