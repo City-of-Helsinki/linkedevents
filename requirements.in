@@ -22,7 +22,7 @@ django~=3.2
 djangorestframework
 djangorestframework-bulk
 djangorestframework-gis
-drf-oidc-auth==0.10.0
+drf-oidc-auth
 easy_thumbnails
 elasticsearch<8
 helsinki-profile-gdpr-api
