@@ -825,3 +825,42 @@ class SeatReservationCode(models.Model):
                 fields=["registration", "code"], name="unique_seat_reservation"
             ),
         ]
+
+
+class PriceGroupBaseModel(models.Model):
+    description = models.CharField(max_length=255)
+    price = models.DecimalField(max_digits=19, decimal_places=4)
+
+    class Meta:
+        abstract = True
+
+
+class RegistrationPriceGroup(PriceGroupBaseModel, CreatedModifiedBaseModel):
+    """Price group that is selectable when signing up to an event. These can be created and managed
+    by admins, and they are organization-specific and organization-wide."""
+
+    publisher = models.ForeignKey(
+        "django_orghierarchy.Organization",
+        on_delete=models.CASCADE,
+        verbose_name=_("Publisher"),
+        related_name="registration_price_groups",
+    )
+
+
+class SignUpPriceGroup(PriceGroupBaseModel):
+    """When a registration price group is selected when signing up to an event,
+    the pricing information that existed at that moment is stored into this model/table.
+    """
+
+    signup = models.OneToOneField(
+        SignUp,
+        related_name="price_group",
+        on_delete=models.CASCADE,
+    )
+
+    registration_price_group = models.OneToOneField(
+        RegistrationPriceGroup,
+        null=True,
+        related_name="signup_price_group",
+        on_delete=models.SET_NULL,
+    )
