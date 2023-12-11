@@ -35,6 +35,14 @@ if [ $? -ne 0 ]; then
     echo "helmet importer signaled failure"
 fi
 
+echo "--- Starting espoo importer ---"
+
+timeout --preserve-status -s INT 30m python manage.py event_import espoo --events --disable-indexing
+if [ $? -ne 0 ]; then
+    echo "espoo importer signaled failure"
+fi
+
+
 echo "--- Updating local event cache ---"
 
 nice python manage.py populate_local_event_cache
