@@ -111,6 +111,29 @@ class CreatedModifiedBaseModel(models.Model):
         abstract = True
 
 
+class PriceGroup(CreatedModifiedBaseModel):
+    """Price group / pricing category that is selectable when creating a registration. These can be
+    created and managed by admins for publishers / organizations. Default price groups do not have a
+    publisher, but are system-wide default groups.
+    """
+
+    publisher = models.ForeignKey(
+        "django_orghierarchy.Organization",
+        on_delete=models.CASCADE,
+        verbose_name=_("Publisher"),
+        related_name="registration_price_groups",
+        null=True,
+        blank=False,
+    )
+
+    description = models.CharField(max_length=255)
+
+    is_free = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.description
+
+
 class Registration(CreatedModifiedBaseModel):
     event = models.OneToOneField(
         Event,
@@ -166,6 +189,14 @@ class Registration(CreatedModifiedBaseModel):
         default=list,
         blank=True,
         verbose_name=_("Mandatory fields"),
+    )
+
+    price_groups = models.ManyToManyField(
+        PriceGroup,
+        related_name="registrations",
+        blank=True,
+        through="RegistrationPriceGroup",
+        through_fields=("registration", "price_group"),
     )
 
     @property
@@ -277,6 +308,30 @@ class Registration(CreatedModifiedBaseModel):
             or user.is_admin_of(self.publisher)
             or user.is_registration_admin_of(self.publisher)
         )
+
+
+class RegistrationPriceGroup(models.Model):
+    """Price group selections for SignUps (= what the end-user doing a signup can choose from)."""
+
+    registration = models.ForeignKey(
+        Registration,
+        related_name="registration_price_groups",
+        on_delete=models.CASCADE,
+    )
+    price_group = models.ForeignKey(
+        PriceGroup,
+        related_name="registration_price_groups",
+        on_delete=models.PROTECT,
+    )
+    price = models.DecimalField(max_digits=19, decimal_places=4)
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=["registration", "price_group"],
+                name="unique_registration_price_group",
+            ),
+        ]
 
 
 class SignUpMixin:
@@ -840,3 +895,24 @@ class SeatReservationCode(models.Model):
                 fields=["registration", "code"], name="unique_seat_reservation"
             ),
         ]
+
+
+class SignUpPriceGroup(models.Model):
+    """When a registration price group is selected when creating a signup for a registration,
+    the pricing information that existed at that moment is stored into this model/table.
+    """
+
+    signup = models.OneToOneField(
+        SignUp,
+        related_name="price_group",
+        on_delete=models.CASCADE,
+    )
+
+    registration_price_group = models.OneToOneField(
+        RegistrationPriceGroup,
+        related_name="signup_price_group",
+        on_delete=models.RESTRICT,
+    )
+
+    description = models.CharField(max_length=255)
+    price = models.DecimalField(max_digits=19, decimal_places=4)

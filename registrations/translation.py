@@ -1,14 +1,31 @@
 from modeltranslation.translator import TranslationOptions, translator
 
-from .models import Registration
+from .models import PriceGroup, Registration, SignUpPriceGroup
 
 
-class RegistrationTranslationOptions(TranslationOptions):
+class RegistrationBaseTranslationOptions(TranslationOptions):
+    fallback_languages = {"default": ("fi", "sv", "en")}
+
+
+class RegistrationTranslationOptions(RegistrationBaseTranslationOptions):
     fields = (
         "confirmation_message",
         "instructions",
     )
-    fallback_languages = {"default": ("fi", "sv", "en")}
 
 
 translator.register(Registration, RegistrationTranslationOptions)
+
+
+class PriceGroupTranslationOptions(RegistrationBaseTranslationOptions):
+    fields = ("description",)
+
+
+translator.register(PriceGroup, PriceGroupTranslationOptions)
+
+
+class SignUpPriceGroupTranslationOptions(RegistrationBaseTranslationOptions):
+    fields = ("description",)
+
+
+translator.register(SignUpPriceGroup, SignUpPriceGroupTranslationOptions)
