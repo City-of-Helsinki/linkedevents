@@ -210,9 +210,9 @@ LOGGING = {
 INSTALLED_APPS = [
     "social_django",
     "helusers.apps.HelusersConfig",
+    "modeltranslation",
     "helusers.apps.HelusersAdminConfig",
     "django.contrib.sites",
-    "modeltranslation",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
