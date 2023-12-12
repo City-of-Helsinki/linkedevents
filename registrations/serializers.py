@@ -24,7 +24,9 @@ from registrations.models import (
     SignUpProtectedData,
 )
 from registrations.permissions import CanAccessRegistrationSignups
-from registrations.utils import code_validity_duration
+from registrations.utils import code_validity_duration, validate_mandatory_fields
+
+falsy_values = ("", None)
 
 
 def _validate_registration_enrolment_times(registration: Registration) -> None:
@@ -108,6 +110,28 @@ class SignUpContactPersonSerializer(serializers.ModelSerializer):
     def validate(self, data):
         # Clean html tags from the text fields
         data = clean_text_fields(data, strip=True)
+
+        if isinstance(self.instance, SignUpContactPerson):
+            registration = self.instance.registration
+        else:
+            parent = self.parent
+            max_depth = 4
+            while parent.parent and max_depth > 0:
+                parent = parent.parent
+                max_depth -= 1
+            if isinstance(parent.instance, (SignUp, SignUpGroup)):
+                registration = parent.instance.registration
+            else:
+                registration_id = parent.initial_data["registration"]
+                registration = Registration.objects.get(pk=registration_id)
+
+        # Validate mandatory fields
+        errors = validate_mandatory_fields(
+            data, registration.contact_person_mandatory_fields, self.partial
+        )
+
+        if errors:
+            raise serializers.ValidationError(errors)
 
         return super().validate(data)
 
@@ -238,22 +262,15 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
     def validate(self, data):
         # Clean html tags from the text fields
         data = clean_text_fields(data, strip=True)
-        errors = {}
 
         if isinstance(self.instance, SignUp):
             registration = self.instance.registration
         else:
             registration = data["registration"]
 
-        falsy_values = ("", None)
-
-        # Validate mandatory fields
-        for field in registration.mandatory_fields:
-            # Don't validate field if request method is PATCH and field is missing from the payload
-            if self.partial and field not in data.keys():
-                continue
-            elif data.get(field) in falsy_values:
-                errors[field] = _("This field must be specified.")
+        errors = validate_mandatory_fields(
+            data, registration.mandatory_fields, self.partial
+        )
 
         # Validate date_of_birth if audience_min_age or registration.audience_max_age is defined
         # Don't validate date_of_birth if request method is PATCH and field is missing from the payload
@@ -441,6 +458,7 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
             "waiting_list_capacity",
             "maximum_group_size",
             "mandatory_fields",
+            "contact_person_mandatory_fields",
             "confirmation_message",
             "instructions",
             "is_created_by_current_user",

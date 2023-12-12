@@ -51,6 +51,12 @@ class MandatoryFields(models.TextChoices):
     ZIPCODE = "zipcode", _("ZIP code")
 
 
+class ContactPersonMandatoryFields(models.TextChoices):
+    """Choices for mandatory fields on ContactPerson model."""
+
+    PHONE_NUMBER = "phone_number", _("Phone number")
+
+
 # https://gist.github.com/danni/f55c4ce19598b2b345ef?permalink_comment_id=4448023#gistcomment-4448023
 class _MultipleChoiceField(MultipleChoiceField):
     def __init__(self, *args, **kwargs):
@@ -166,6 +172,17 @@ class Registration(CreatedModifiedBaseModel):
         default=list,
         blank=True,
         verbose_name=_("Mandatory fields"),
+    )
+
+    contact_person_mandatory_fields = ChoiceArrayField(
+        models.CharField(
+            max_length=16,
+            choices=ContactPersonMandatoryFields.choices,
+            blank=True,
+        ),
+        default=list,
+        blank=True,
+        verbose_name=_("Mandatory fields of contact person"),
     )
 
     @property

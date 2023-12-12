@@ -14,6 +14,7 @@ from events.tests.factories import LanguageFactory
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
 from registrations.models import (
+    ContactPersonMandatoryFields,
     MandatoryFields,
     SeatReservationCode,
     SignUp,
@@ -691,6 +692,49 @@ def test_signup_mandatory_fields_has_to_be_filled(
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert (
         response.data["signups"][0][mandatory_field_id][0]
+        == "This field must be specified."
+    )
+
+
+@pytest.mark.parametrize(
+    "mandatory_field_id",
+    [
+        ContactPersonMandatoryFields.PHONE_NUMBER,
+    ],
+)
+@pytest.mark.django_db
+def test_contact_person_mandatory_fields_has_to_be_filled(
+    user_api_client, mandatory_field_id, registration, user
+):
+    user.get_default_organization().registration_admin_users.add(user)
+
+    registration.contact_person_mandatory_fields = [mandatory_field_id]
+    registration.save()
+
+    signup_data = {
+        "first_name": "Michael",
+        "last_name": "Jackson",
+        "street_address": "Street address",
+        "city": "Helsinki",
+        "zipcode": "00100",
+        "contact_person": {
+            "email": test_email1,
+            "phone_number": "0441111111",
+            "notifications": "sms",
+            mandatory_field_id: "",
+        },
+    }
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
+    signups_data = {
+        "registration": registration.id,
+        "reservation_code": reservation.code,
+        "signups": [signup_data],
+    }
+
+    response = create_signups(user_api_client, signups_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert (
+        response.data["signups"][0]["contact_person"][mandatory_field_id][0]
         == "This field must be specified."
     )
 

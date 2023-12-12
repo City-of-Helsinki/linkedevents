@@ -98,6 +98,7 @@ def assert_registration_fields_exist(data, is_admin_user=False):
         "waiting_list_capacity",
         "maximum_group_size",
         "mandatory_fields",
+        "contact_person_mandatory_fields",
         "confirmation_message",
         "instructions",
         "is_created_by_current_user",
