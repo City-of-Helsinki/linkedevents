@@ -1,5 +1,4 @@
 import logging
-from smtplib import SMTPException
 
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
@@ -47,12 +46,14 @@ def user_created_notification(sender, instance, created, **kwargs):
         ]
         notification_type = NotificationType.USER_CREATED
         context = {"user": instance}
+
         if len(recipient_list) == 0:
             logger.warning(
                 "No recipients for notification type '%s'" % notification_type,
                 extra={"user": instance.username},
             )
             return
+
         try:
             rendered_notification = render_notification_template(
                 notification_type, context
@@ -60,13 +61,11 @@ def user_created_notification(sender, instance, created, **kwargs):
         except NotificationTemplateException as e:
             logger.error(e, exc_info=True)
             return
-        try:
-            send_mail(
-                rendered_notification["subject"],
-                rendered_notification["body"],
-                get_email_noreply_address(),
-                recipient_list,
-                html_message=rendered_notification["html_body"],
-            )
-        except SMTPException as e:
-            logger.error(e, exc_info=True, extra={"user": instance.username})
+
+        send_mail(
+            rendered_notification["subject"],
+            rendered_notification["body"],
+            get_email_noreply_address(),
+            recipient_list,
+            html_message=rendered_notification["html_body"],
+        )

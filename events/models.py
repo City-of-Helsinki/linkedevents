@@ -18,7 +18,6 @@ attribute to change @context when need to define schemas for custom fields.
 """
 import datetime
 import logging
-from smtplib import SMTPException
 
 import pytz
 from django.conf import settings
@@ -1012,6 +1011,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
     class MPTTMeta:
         parent_attr = "super_event"
 
+    @transaction.atomic
     def save(self, *args, **kwargs):
         if self._has_circular_replacement():
             raise ValidationError(
@@ -1163,7 +1163,9 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
                 extra={"event": self},
             )
             return
+
         context = {"event": self}
+
         try:
             rendered_notification = render_notification_template(
                 notification_type, context
@@ -1171,16 +1173,14 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
         except NotificationTemplateException as e:
             logger.error(e, exc_info=True, extra={"request": request})
             return
-        try:
-            send_mail(
-                rendered_notification["subject"],
-                rendered_notification["body"],
-                get_email_noreply_address(),
-                recipient_list,
-                html_message=rendered_notification["html_body"],
-            )
-        except SMTPException as e:
-            logger.error(e, exc_info=True, extra={"request": request, "event": self})
+
+        send_mail(
+            rendered_notification["subject"],
+            rendered_notification["body"],
+            get_email_noreply_address(),
+            recipient_list,
+            html_message=rendered_notification["html_body"],
+        )
 
     def _get_author_emails(self):
         author_emails = []
@@ -1362,14 +1362,12 @@ class Feedback(models.Model):
     body = models.TextField(verbose_name=_("Body"), max_length=10000, blank=True)
 
     def save(self, *args, **kwargs):
-        try:
-            send_mail(
-                subject=f"[LinkedEvents] {self.subject} reported by {self.name}",
-                message=self.body,
-                from_email=self.email,
-                recipient_list=[settings.SUPPORT_EMAIL],
-                fail_silently=False,
-            )
-        except SMTPException as e:
-            logger.error(e, exc_info=True)
+        send_mail(
+            subject=f"[LinkedEvents] {self.subject} reported by {self.name}",
+            message=self.body,
+            from_email=self.email,
+            recipient_list=[settings.SUPPORT_EMAIL],
+            fail_silently=False,
+        )
+
         super().save(*args, **kwargs)

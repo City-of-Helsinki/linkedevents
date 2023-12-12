@@ -1,10 +1,12 @@
 from django.contrib.auth import get_user_model
+from django.core import mail
 from django.test import TestCase
 from rest_framework.exceptions import ValidationError
 
 from events.models import Language
 from events.tests.factories import DataSourceFactory, OrganizationFactory
 from helevents.tests.factories import UserFactory
+from registrations.notifications import SignUpNotificationType
 from registrations.tests.factories import (
     RegistrationFactory,
     RegistrationUserAccessFactory,
@@ -468,3 +470,31 @@ class TestSignUpContactPerson(TestCase):
             self.contact_person.registration.pk,
             self.contact_person.signup_group.registration_id,
         )
+
+    def test_send_notification(self):
+        self.contact_person.email = "test@test.dev"
+        self.contact_person.save(update_fields=["email"])
+
+        for notification_type in (
+            SignUpNotificationType.EVENT_CANCELLATION,
+            SignUpNotificationType.CANCELLATION,
+            SignUpNotificationType.CONFIRMATION,
+            SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST,
+            SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT,
+        ):
+            with self.subTest():
+                self.contact_person.send_notification(notification_type)
+
+                self.assertEqual(len(mail.outbox), 1)
+                self.assertEqual(mail.outbox[0].to[0], self.contact_person.email)
+
+                mail.outbox.clear()
+
+    def test_send_notification_unknown_notification_type(self):
+        self.contact_person.email = "test@test.dev"
+        self.contact_person.save(update_fields=["email"])
+
+        with self.assertRaises(ValueError):
+            self.contact_person.send_notification("does-not-exist")
+
+        self.assertEqual(len(mail.outbox), 0)

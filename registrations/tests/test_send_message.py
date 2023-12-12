@@ -1,6 +1,4 @@
 from collections import Counter
-from smtplib import SMTPException
-from unittest.mock import patch
 
 import pytest
 from django.conf import settings
@@ -606,18 +604,6 @@ def test_send_message_no_contact_persons_found(user_api_client, registration):
 
     response = send_message(user_api_client, registration.id, send_message_data)
     assert response.status_code == status.HTTP_404_NOT_FOUND
-
-
-@pytest.mark.django_db
-def test_send_message_exception(user_api_client, registration):
-    signup = SignUpFactory(registration=registration)
-    SignUpContactPersonFactory(signup=signup, email="test@test.com")
-
-    send_message_data = {"subject": "Message subject", "body": "Message body"}
-
-    with patch("registrations.api.send_mass_html_mail", side_effect=SMTPException):
-        response = send_message(user_api_client, registration.id, send_message_data)
-    assert response.status_code == status.HTTP_409_CONFLICT
 
 
 @pytest.mark.django_db
