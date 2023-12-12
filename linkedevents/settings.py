@@ -103,6 +103,7 @@ env = environ.Env(
     FULL_TEXT_WEIGHT_OVERRIDES=(dict, {}),
     GDPR_API_QUERY_SCOPE=(str, ""),
     GDPR_API_DELETE_SCOPE=(str, ""),
+    HELUSERS_BACK_CHANNEL_LOGOUT_ENABLED=(bool, False),
     INSTANCE_NAME=(str, "Linked Events"),
     INTERNAL_IPS=(list, []),
     LANGUAGES=(list, ["fi", "sv", "en", "zh-hans", "ru", "ar"]),
@@ -633,6 +634,7 @@ FULLTEXT_SEARCH_LANGUAGES = {"fi": "finnish", "sv": "swedish", "en": "english"}
 
 SESSION_SERIALIZER = "django.contrib.sessions.serializers.PickleSerializer"
 
+HELUSERS_BACK_CHANNEL_LOGOUT_ENABLED = env("HELUSERS_BACK_CHANNEL_LOGOUT_ENABLED")
 
 OIDC_API_TOKEN_AUTH = {
     "AUDIENCE": env.str("TOKEN_AUTH_ACCEPTED_AUDIENCE"),
