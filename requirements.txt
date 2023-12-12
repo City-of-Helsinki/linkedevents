@@ -61,6 +61,7 @@ django==3.2.23
     #   django-jinja
     #   django-js-asset
     #   django-leaflet
+    #   django-mailer
     #   django-modeltranslation
     #   django-munigeo
     #   django-orghierarchy
@@ -100,6 +101,8 @@ django-jinja==2.11.0
 django-js-asset==2.1.0
     # via django-mptt
 django-leaflet==0.29.0
+    # via -r requirements.in
+django-mailer==2.3
     # via -r requirements.in
 django-modeltranslation==0.18.11
     # via -r requirements.in
@@ -177,6 +180,8 @@ jinja2==3.1.2
     #   django-jinja
 langdetect==1.0.9
     # via -r requirements.in
+lockfile==0.12.2
+    # via django-mailer
 lxml==4.9.3
     # via
     #   -r requirements.in
