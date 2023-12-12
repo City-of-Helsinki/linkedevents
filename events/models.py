@@ -542,6 +542,9 @@ class OpeningHoursSpecification(models.Model):
         verbose_name = _('opening hour specification')
         verbose_name_plural = _('opening hour specifications')
 
+class HobbyCategory(models.Model):
+    label = models.CharField(max_length=20)
+    id = models.CharField(max_length=10, primary_key=True)
 
 class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
     jsonld_type = "Event/LinkedEvent"
@@ -617,6 +620,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
     end_time = models.DateTimeField(verbose_name=_('End time'), null=True, db_index=True, blank=True)
     has_start_time = models.BooleanField(default=True)
     has_end_time = models.BooleanField(default=True)
+
+    hobby_categories = models.ManyToManyField(HobbyCategory)
 
     audience_min_age = models.SmallIntegerField(verbose_name=_('Minimum recommended age'),
                                                 blank=True, null=True, db_index=True)
