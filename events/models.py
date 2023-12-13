@@ -546,6 +546,9 @@ class HobbyCategory(models.Model):
     name_fi = models.CharField(max_length=20, null=True, blank=True)
     name_sv = models.CharField(max_length=20, null=True, blank=True)
     name_en = models.CharField(max_length=20, null=True, blank=True)
+    name_zh_hans = models.CharField(max_length=20, null=True, blank=True)
+    name_ru = models.CharField(max_length=20, null=True, blank=True)
+    name_ar = models.CharField(max_length=20, null=True, blank=True)
     id = models.CharField(max_length=10, primary_key=True)
 
     def __str__(self):

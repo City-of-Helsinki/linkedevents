@@ -1167,11 +1167,19 @@ class HobbyCategorySerializer(LinkedEventsSerializer):
 
     class Meta:
         model = HobbyCategory
-
+        fields = '__all__'
 
 class HobbyCategoryViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
     queryset = HobbyCategory.objects.all()
     serializer_class = HobbyCategorySerializer
+
+    def get_queryset(self):
+        queryset = HobbyCategory.objects.all()
+        val = self.request.query_params.get('text')
+        if val:
+            qset = _text_qset_by_translated_field('name', val)
+            queryset = queryset.filter(qset)
+        return queryset
 
 register_view(HobbyCategoryViewSet, 'hobbycategory')
 
