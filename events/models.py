@@ -543,9 +543,15 @@ class OpeningHoursSpecification(models.Model):
         verbose_name_plural = _('opening hour specifications')
 
 class HobbyCategory(models.Model):
-    label = models.CharField(max_length=20)
+    name_fi = models.CharField(max_length=20, null=True, blank=True)
+    name_sv = models.CharField(max_length=20, null=True, blank=True)
+    name_en = models.CharField(max_length=20, null=True, blank=True)
     id = models.CharField(max_length=10, primary_key=True)
 
+    def __str__(self):
+        return self.name_fi
+
+    
 class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
     jsonld_type = "Event/LinkedEvent"
     objects = BaseTreeQuerySet.as_manager()
@@ -621,7 +627,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
     has_start_time = models.BooleanField(default=True)
     has_end_time = models.BooleanField(default=True)
 
-    hobby_categories = models.ManyToManyField(HobbyCategory)
+    hobby_categories = models.ManyToManyField(HobbyCategory, blank=True, related_name='hobbies')
 
     audience_min_age = models.SmallIntegerField(verbose_name=_('Minimum recommended age'),
                                                 blank=True, null=True, db_index=True)
