@@ -175,6 +175,7 @@ def test_registration_user_who_created_signup_group_can_patch_signups_data(
             {
                 "id": second_signup.pk,
                 "extra_info": "signup2 extra info",
+                "phone_number": "0401111111",
                 "user_consent": True,
             },
         ]
@@ -203,6 +204,7 @@ def test_registration_user_who_created_signup_group_can_patch_signups_data(
 
     assert first_signup.presence_status == SignUp.PresenceStatus.PRESENT
     assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+    assert second_signup.phone_number == "0401111111"
     assert first_signup.extra_info is None
     assert second_signup.extra_info == "signup2 extra info"
     assert second_signup.user_consent is True

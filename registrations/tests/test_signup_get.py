@@ -86,6 +86,7 @@ def assert_signup_fields_exist(data):
         "first_name",
         "last_name",
         "date_of_birth",
+        "phone_number",
         "city",
         "extra_info",
         "attendee_status",

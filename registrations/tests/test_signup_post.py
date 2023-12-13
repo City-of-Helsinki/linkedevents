@@ -37,6 +37,7 @@ default_signups_data = {
             "last_name": "Jackson",
             "extra_info": "Extra info",
             "date_of_birth": "2011-04-07",
+            "phone_number": "0401111111",
             "street_address": test_street_address,
             "zipcode": "myzip1",
             "user_consent": True,
@@ -87,6 +88,7 @@ def assert_default_signup_created(signups_data, user):
     assert signup.attendee_status == SignUp.AttendeeStatus.ATTENDING
     assert signup.first_name == signups_data["signups"][0]["first_name"]
     assert signup.last_name == signups_data["signups"][0]["last_name"]
+    assert signup.phone_number == signups_data["signups"][0]["phone_number"]
     if signups_data["signups"][0].get("date_of_birth"):
         assert signup.date_of_birth == date(2011, 4, 7)
     else:
@@ -654,6 +656,7 @@ def test_signup_age_has_to_match_the_audience_min_max_age(
         MandatoryFields.CITY,
         MandatoryFields.FIRST_NAME,
         MandatoryFields.LAST_NAME,
+        MandatoryFields.PHONE_NUMBER,
         MandatoryFields.STREET_ADDRESS,
         MandatoryFields.ZIPCODE,
     ],

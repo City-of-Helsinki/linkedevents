@@ -18,6 +18,7 @@ from registrations.tests.factories import (
 
 new_signup_name = "Edited name"
 new_date_of_birth = "2015-01-01"
+new_phone_number = "+35812345678"
 
 # === util methods ===
 
@@ -62,6 +63,7 @@ def test_registration_admin_can_update_signup(api_client, signup):
         "registration": signup.registration_id,
         "first_name": new_signup_name,
         "date_of_birth": new_date_of_birth,
+        "phone_number": new_phone_number,
         "user_consent": True,
     }
 
@@ -69,6 +71,7 @@ def test_registration_admin_can_update_signup(api_client, signup):
 
     signup.refresh_from_db()
     assert signup.first_name == new_signup_name
+    assert signup.phone_number == new_phone_number
     assert signup.last_modified_by_id == user.id
     assert signup.user_consent is True
 
@@ -92,6 +95,7 @@ def test_registration_created_admin_can_update_signup(
         "registration": registration.id,
         "first_name": new_signup_name,
         "date_of_birth": new_date_of_birth,
+        "phone_number": new_phone_number,
         "user_consent": True,
         "presence_status": SignUp.PresenceStatus.PRESENT,
     }
@@ -100,6 +104,7 @@ def test_registration_created_admin_can_update_signup(
 
     signup.refresh_from_db()
     assert signup.first_name == new_signup_name
+    assert signup.phone_number == new_phone_number
     assert signup.last_modified_by_id == user.id
     assert signup.user_consent is True
     assert signup.presence_status == SignUp.PresenceStatus.PRESENT
@@ -183,12 +188,14 @@ def test_created_regular_user_can_update_signup(
         "registration": registration.id,
         "first_name": new_signup_name,
         "date_of_birth": new_date_of_birth,
+        "phone_number": new_phone_number,
     }
 
     assert_update_signup(user_api_client, signup.id, signup_data)
 
     db_signup.refresh_from_db()
     assert db_signup.first_name == new_signup_name
+    assert db_signup.phone_number == new_phone_number
     assert db_signup.last_modified_by_id == user.id
 
 
@@ -267,12 +274,14 @@ def test_created_user_without_organization_can_update_signup(api_client, registr
         "registration": registration.id,
         "first_name": new_signup_name,
         "date_of_birth": new_date_of_birth,
+        "phone_number": new_phone_number,
     }
 
     assert_update_signup(api_client, signup.id, signup_data)
 
     signup.refresh_from_db()
     assert signup.first_name == new_signup_name
+    assert signup.phone_number == new_phone_number
     assert signup.last_modified_by_id == user.id
 
 
