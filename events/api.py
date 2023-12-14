@@ -1176,9 +1176,12 @@ class HobbyCategoryViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         queryset = HobbyCategory.objects.all()
         val = self.request.query_params.get('text')
+        selected_topic_ysos = [s.split('/')[-2] for s in self.request.query_params.getlist('topics[]') ]
+        print(selected_topic_ysos)
         if val:
             qset = _text_qset_by_translated_field('name', val)
-            queryset = queryset.filter(qset)
+            queryset = queryset.filter(qset).filter(Q(topics__in=selected_topic_ysos))
+
         return queryset
 
 register_view(HobbyCategoryViewSet, 'hobbycategory')
