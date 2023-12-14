@@ -126,6 +126,18 @@ def test__non_admin_cannot_create_registration(api_client, event, user):
 
 
 @pytest.mark.django_db
+def test_financial_admin_cannot_create_registration(api_client, event):
+    user = UserFactory()
+    user.financial_admin_organizations.add(event.publisher)
+    api_client.force_authenticate(user)
+
+    registration_data = {"event": {"@id": get_event_url(event.id)}}
+
+    response = create_registration(api_client, registration_data)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
 def test__user_from_other_organization_cannot_create_registration(
     api_client, event, user2
 ):

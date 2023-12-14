@@ -147,6 +147,57 @@ def test_can_update_signup_with_empty_extra_info_and_date_of_birth(
 
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
+def test_created_financial_admin_can_update_signup(registration, api_client):
+    user = UserFactory()
+    user.financial_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup = SignUpFactory(registration=registration, created_by=user)
+    assert signup.first_name != new_signup_name
+    assert signup.last_modified_by_id is None
+
+    signup_data = {
+        "registration": registration.id,
+        "first_name": new_signup_name,
+        "date_of_birth": new_date_of_birth,
+    }
+
+    assert_update_signup(api_client, signup.id, signup_data)
+
+    signup.refresh_from_db()
+    assert signup.first_name == new_signup_name
+    assert signup.last_modified_by_id == user.pk
+
+
+@freeze_time("2023-03-14 03:30:00+02:00")
+@pytest.mark.django_db
+def test_non_created_financial_admin_cannot_update_signup(
+    registration, user2, api_client
+):
+    user = UserFactory()
+    user.financial_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup = SignUpFactory(registration=registration)
+    assert signup.first_name != new_signup_name
+    assert signup.last_modified_by_id is None
+
+    signup_data = {
+        "registration": registration.id,
+        "first_name": new_signup_name,
+        "date_of_birth": new_date_of_birth,
+    }
+
+    response = update_signup(api_client, signup.id, signup_data)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    signup.refresh_from_db()
+    assert signup.first_name != new_signup_name
+    assert signup.last_modified_by_id is None
+
+
+@freeze_time("2023-03-14 03:30:00+02:00")
+@pytest.mark.django_db
 def test_non_created_admin_cannot_update_signup(registration, user2, user_api_client):
     registration.created_by = user2
     registration.save(update_fields=["created_by"])

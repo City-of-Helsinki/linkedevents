@@ -126,3 +126,54 @@ class TestLocalOrganizationAdmin(TestCase):
             Organization.objects.last().registration_admin_users.first().pk,
             self.admin_user.pk,
         )
+
+    def test_add_financial_admin(self):
+        self.assertEqual(self.organization.financial_admin_users.count(), 0)
+
+        self.client.force_login(self.admin_user)
+        data = self._get_request_data({"financial_admin_users": [self.admin_user.pk]})
+        self.client.post(
+            f"/admin/django_orghierarchy/organization/{self.organization.id}/change/",
+            data,
+        )
+
+        self.organization.refresh_from_db()
+        self.assertEqual(self.organization.financial_admin_users.count(), 1)
+        self.assertEqual(
+            self.organization.financial_admin_users.first().pk, self.admin_user.pk
+        )
+
+    def test_add_multiple_financial_admins(self):
+        self.assertEqual(self.organization.financial_admin_users.count(), 0)
+
+        self.client.force_login(self.admin_user)
+        admin_user2 = self._create_admin_user("admin 2")
+        data = self._get_request_data(
+            {"financial_admin_users": [self.admin_user.pk, admin_user2.pk]}
+        )
+        self.client.post(
+            f"/admin/django_orghierarchy/organization/{self.organization.id}/change/",
+            data,
+        )
+
+        self.organization.refresh_from_db()
+        self.assertEqual(self.organization.financial_admin_users.count(), 2)
+
+    def test_remove_financial_admin(self):
+        admin_user2 = self._create_admin_user("admin 2")
+        self.organization.financial_admin_users.set([self.admin_user, admin_user2])
+
+        self.assertEqual(self.organization.financial_admin_users.count(), 2)
+
+        self.client.force_login(self.admin_user)
+        data = self._get_request_data({"financial_admin_users": [self.admin_user.pk]})
+        self.client.post(
+            f"/admin/django_orghierarchy/organization/{self.organization.id}/change/",
+            data,
+        )
+
+        self.organization.refresh_from_db()
+        self.assertEqual(self.organization.financial_admin_users.count(), 1)
+        self.assertEqual(
+            self.organization.financial_admin_users.first().pk, self.admin_user.pk
+        )

@@ -282,6 +282,31 @@ def test_cannot_delete_already_deleted_signup_group(
 
 
 @pytest.mark.django_db
+def test_created_financial_admin_can_delete_signup_group(api_client, registration):
+    user = UserFactory()
+    user.financial_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(registration=registration, created_by=user)
+
+    assert_delete_signup_group(api_client, signup_group.id)
+
+
+@pytest.mark.django_db
+def test_non_created_financial_admin_cannot_delete_signup_group(
+    api_client, registration
+):
+    user = UserFactory()
+    user.financial_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+
+    response = delete_signup_group(api_client, signup_group.id)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
 def test_created_user_without_organization_can_delete_signup_group(
     user_api_client, user, registration
 ):

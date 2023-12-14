@@ -9,6 +9,7 @@ from rest_framework import status
 from audit_log.models import AuditLogEntry
 from events.tests.factories import ApiKeyUserFactory, LanguageFactory
 from events.tests.utils import versioned_reverse as reverse
+from helevents.tests.factories import UserFactory
 from registrations.models import SignUp
 from registrations.tests.factories import (
     SignUpContactPersonFactory,
@@ -419,6 +420,18 @@ def test_unauthenticated_user_cannot_send_message(api_client, registration):
 def test_non_admin_cannot_send_message(api_client, registration, user):
     user.get_default_organization().regular_users.add(user)
     user.get_default_organization().admin_users.remove(user)
+    api_client.force_authenticate(user)
+
+    send_message_data = {"subject": "Message subject", "body": "Message body"}
+
+    response = send_message(api_client, registration.id, send_message_data)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_financial_admin_cannot_send_message(api_client, registration):
+    user = UserFactory()
+    user.financial_admin_organizations.add(registration.publisher)
     api_client.force_authenticate(user)
 
     send_message_data = {"subject": "Message subject", "body": "Message body"}

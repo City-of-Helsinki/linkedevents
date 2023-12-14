@@ -12,6 +12,7 @@ from events.tests.factories import EventFactory
 from events.tests.test_event_get import get_list_and_assert_events
 from events.tests.utils import assert_fields_exist
 from events.tests.utils import versioned_reverse as reverse
+from helevents.tests.factories import UserFactory
 from registrations.tests.factories import (
     RegistrationFactory,
     RegistrationUserAccessFactory,
@@ -199,6 +200,20 @@ def test_registration_user_access_user_can_see_if_he_has_access(
     has_registration_user_access = response.data["has_registration_user_access"]
     assert has_registration_user_access is True
     assert_registration_fields_exist(response.data, is_admin_user=False)
+
+
+@pytest.mark.django_db
+def test_financial_admin_cannot_see_registration_user_accesses(
+    registration, api_client
+):
+    user = UserFactory()
+    user.financial_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    RegistrationUserAccessFactory(registration=registration, email=user.email)
+    response = get_detail_and_assert_registration(api_client, registration.id)
+
+    assert response.data.get("registration_user_accesses") is None
 
 
 @pytest.mark.django_db

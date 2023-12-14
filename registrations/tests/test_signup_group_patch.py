@@ -48,6 +48,7 @@ def assert_patch_signup_group(api_client, signup_group_pk, signup_group_data):
         ("admin", False),
         ("registration_created_admin", True),
         ("registration_admin", True),
+        ("financial_admin", False),
         ("regular", False),
         ("superuser", True),
     ],
@@ -68,6 +69,9 @@ def test_patch_signup_group_extra_info_based_on_user_role(
             event.publisher
         ),
         "registration_admin": lambda usr: usr.registration_admin_organizations.add(
+            event.publisher
+        ),
+        "financial_admin": lambda usr: usr.financial_admin_organizations.add(
             event.publisher
         ),
         "regular": lambda usr: usr.organization_memberships.add(event.publisher),
@@ -214,20 +218,25 @@ def test_registration_user_who_created_signup_group_can_patch_signups_data(
     "user_role",
     [
         "admin",
+        "financial_admin",
         "regular",
     ],
 )
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_admin_or_regular_user_cannot_patch_signups_data(
+def test_admin_or_financial_admin_or_regular_user_cannot_patch_signups_data(
     api_client, registration, user_role
 ):
     user = UserFactory()
 
-    if user_role == "admin":
-        user.admin_organizations.add(registration.publisher)
-    else:
-        user.organization_memberships.add(registration.publisher)
+    user_role_mapping = {
+        "admin": lambda usr: usr.admin_organizations.add(registration.publisher),
+        "financial_admin": lambda usr: usr.financial_admin_organizations.add(
+            registration.publisher
+        ),
+        "regular": lambda usr: usr.organization_memberships.add(registration.publisher),
+    }
+    user_role_mapping[user_role](user)
 
     signup_group = SignUpGroupFactory(registration=registration)
     first_signup = SignUpFactory(signup_group=signup_group, registration=registration)

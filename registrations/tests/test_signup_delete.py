@@ -222,6 +222,27 @@ def test_registration_user_access_cannot_delete_signup(
 
 
 @pytest.mark.django_db
+def test_non_created_financial_admin_cannot_delete_signup(signup, api_client):
+    user = UserFactory()
+    user.financial_admin_organizations.add(signup.publisher)
+    api_client.force_authenticate(user)
+
+    assert_delete_signup_failed(api_client, signup.id)
+
+
+@pytest.mark.django_db
+def test_created_financial_admin_can_delete_signup(signup, api_client):
+    user = UserFactory()
+    user.financial_admin_organizations.add(signup.publisher)
+    api_client.force_authenticate(user)
+
+    signup.created_by = user
+    signup.save(update_fields=["created_by"])
+
+    assert_delete_signup(api_client, signup.id)
+
+
+@pytest.mark.django_db
 def test_regular_not_created_user_cannot_delete_signup(signup, user, user_api_client):
     user.get_default_organization().regular_users.add(user)
     user.get_default_organization().admin_users.remove(user)

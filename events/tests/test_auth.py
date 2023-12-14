@@ -12,6 +12,7 @@ from helevents.tests.conftest import get_api_token_for_user_with_scopes
 from helevents.tests.factories import UserFactory
 
 from ..auth import ApiKeyUser
+from .factories import OrganizationFactory
 from .utils import versioned_reverse
 
 DEFAULT_ORGANIZATION_ID = "others"
@@ -71,6 +72,36 @@ class TestApiKeyUser(TestCase):
         is_admin = self.user.is_admin_of(self.org_2)
         self.assertFalse(is_admin)
 
+    def test_is_registration_admin(self):
+        self.user.registration_admin_organizations.add(self.org_1)
+
+        is_admin = self.user.is_registration_admin_of(self.org_1)
+        self.assertFalse(is_admin)
+
+        self.data_source.user_editable_registrations = True
+        self.data_source.save(update_fields=["user_editable_registrations"])
+
+        is_admin = self.user.is_registration_admin_of(self.org_1)
+        self.assertTrue(is_admin)
+
+        is_admin = self.user.is_registration_admin_of(self.org_2)
+        self.assertFalse(is_admin)
+
+    def test_is_financial_admin(self):
+        self.user.financial_admin_organizations.add(self.org_1)
+
+        is_admin = self.user.is_financial_admin_of(self.org_1)
+        self.assertFalse(is_admin)
+
+        self.data_source.user_editable_registration_price_groups = True
+        self.data_source.save(update_fields=["user_editable_registration_price_groups"])
+
+        is_admin = self.user.is_financial_admin_of(self.org_1)
+        self.assertTrue(is_admin)
+
+        is_admin = self.user.is_financial_admin_of(self.org_2)
+        self.assertFalse(is_admin)
+
     def test_is_regular_user(self):
         is_regular_user = self.user.is_regular_user_of(self.org_1)
         self.assertFalse(is_regular_user)
@@ -81,6 +112,34 @@ class TestApiKeyUser(TestCase):
     def test_is_external(self):
         is_external = self.user.is_external
         self.assertFalse(is_external)
+
+    def test_get_financial_admin_organizations_and_descendants(self):
+        child_org = OrganizationFactory(
+            name="child-org",
+            origin_id="child-org",
+            data_source=self.data_source,
+            parent=self.org_1,
+        )
+
+        self.user.financial_admin_organizations.add(self.org_1)
+
+        assert (
+            len(
+                self.user.get_financial_admin_organizations_and_descendants().values_list(
+                    "pk", flat=True
+                )
+            )
+            == 0
+        )
+
+        self.data_source.user_editable_registration_price_groups = True
+        self.data_source.save(update_fields=["user_editable_registration_price_groups"])
+
+        assert set(
+            self.user.get_financial_admin_organizations_and_descendants().values_list(
+                "pk", flat=True
+            )
+        ) == {self.org_1.pk, child_org.pk}
 
 
 @pytest.mark.django_db

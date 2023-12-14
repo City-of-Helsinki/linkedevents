@@ -4,6 +4,7 @@ from rest_framework import status
 
 from audit_log.models import AuditLogEntry
 from events.tests.utils import versioned_reverse as reverse
+from helevents.tests.factories import UserFactory
 
 
 def delete_registration(api_client, id):
@@ -21,6 +22,16 @@ def test_delete_registration(api_client, registration, user):
     detail_url = reverse("registration-detail", kwargs={"pk": registration.id})
     response = api_client.get(detail_url)
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.django_db
+def test_financial_admin_cannot_delete_registration(api_client, registration):
+    user = UserFactory()
+    user.financial_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    response = delete_registration(api_client, registration.id)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db
