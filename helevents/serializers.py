@@ -7,16 +7,22 @@ class UserSerializer(serializers.ModelSerializer):
 
     def to_representation(self, obj):
         rep = super().to_representation(obj)
+
         default_org = obj.get_default_organization()
         if default_org:
             rep["organization"] = default_org.id
+
         rep["admin_organizations"] = [org.id for org in obj.admin_organizations.all()]
         rep["registration_admin_organizations"] = [
             org.id for org in obj.registration_admin_organizations.all()
         ]
+        rep["financial_admin_organizations"] = [
+            org.id for org in obj.financial_admin_organizations.all()
+        ]
         rep["organization_memberships"] = [
             org.id for org in obj.organization_memberships.all()
         ]
+
         return rep
 
     class Meta:

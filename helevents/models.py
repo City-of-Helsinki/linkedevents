@@ -57,6 +57,10 @@ class UserModelPermissionMixin:
         """Check if current user is a registration admin user of the publisher organization"""
         raise NotImplementedError()
 
+    def is_financial_admin_of(self, publisher):
+        """Check if current user is a financial admin user of the publisher organization"""
+        raise NotImplementedError()
+
     def is_regular_user_of(self, publisher):
         """Check if current user is a regular user of the publisher organization"""
         raise NotImplementedError()
@@ -81,6 +85,13 @@ class UserModelPermissionMixin:
         Get a queryset of organizations that the user is a registration admin of.
         Is replaced by django_orghierarchy.models.Organization's
         registration_admin_organizations relation unless implemented in a subclass.
+        """
+        raise NotImplementedError()
+
+    @property
+    def financial_admin_organizations(self):
+        """
+        Get a queryset of organizations that the user is a financial admin of.
         """
         raise NotImplementedError()
 
@@ -195,10 +206,20 @@ class UserModelPermissionMixin:
             "registration_admin_organizations"
         )
 
+    def get_financial_admin_organizations_and_descendants(self):
+        # returns financial admin organizations and their descendants
+        return self._get_admin_organizations_and_descendants(
+            "financial_admin_organizations"
+        )
+
 
 class User(AbstractUser, UserModelPermissionMixin, SerializableMixin):
     registration_admin_organizations = models.ManyToManyField(
         Organization, blank=True, related_name="registration_admin_users"
+    )
+
+    financial_admin_organizations = models.ManyToManyField(
+        Organization, blank=True, related_name="financial_admin_users"
     )
 
     serialize_fields = (
@@ -232,6 +253,14 @@ class User(AbstractUser, UserModelPermissionMixin, SerializableMixin):
             .first()
         )
 
+        financial_admin_org = (
+            self.financial_admin_organizations.filter(
+                replaced_by__isnull=True,
+            )
+            .order_by("created_time")
+            .first()
+        )
+
         regular_org = (
             self.organization_memberships.filter(
                 replaced_by__isnull=True,
@@ -240,7 +269,7 @@ class User(AbstractUser, UserModelPermissionMixin, SerializableMixin):
             .first()
         )
 
-        return admin_org or registration_admin_org or regular_org
+        return admin_org or registration_admin_org or financial_admin_org or regular_org
 
     def is_admin_of(self, publisher):
         if publisher is None:
@@ -251,6 +280,11 @@ class User(AbstractUser, UserModelPermissionMixin, SerializableMixin):
         if publisher is None:
             return False
         return publisher in self.get_registration_admin_organizations_and_descendants()
+
+    def is_financial_admin_of(self, publisher):
+        if publisher is None:
+            return False
+        return publisher in self.get_financial_admin_organizations_and_descendants()
 
     def is_regular_user_of(self, publisher):
         if publisher is None:
@@ -273,4 +307,5 @@ class User(AbstractUser, UserModelPermissionMixin, SerializableMixin):
             not self.organization_memberships.exists()
             and not self.admin_organizations.exists()
             and not self.registration_admin_organizations.exists()
+            and not self.financial_admin_organizations.exists()
         )
