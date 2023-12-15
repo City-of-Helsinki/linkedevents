@@ -34,7 +34,7 @@ def organization_replaced(sender, instance, created, **kwargs):
         instance.owned_systems.update(owner=new_org)
 
 
-@receiver(post_save, sender=get_user_model(), dispatch_uid="user_created_notification")
+# TODO not in use anymore, remove altogether?
 def user_created_notification(sender, instance, created, **kwargs):
     """Send a notification to superusers when a user gets created."""
     if created:

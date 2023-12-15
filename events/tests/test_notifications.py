@@ -206,6 +206,8 @@ def test_draft_notification_is_not_sent_when_using_api_key(
     assert bool(mail.outbox) == expect_email
 
 
+# TODO user created notification is disabled ATM, remove this test if/when it is removed
+@pytest.mark.xfail
 @pytest.mark.django_db
 def test_user_created(user_created_notification_template, super_user):
     user = get_user_model().objects.create(
