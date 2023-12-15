@@ -195,12 +195,14 @@ class LicenseAdmin(BaseAdmin, TranslationAdmin, VersionAdmin):
 
 admin.site.register(License, LicenseAdmin)
 
+
 class HobbyCategoryAdmin(AutoIdBaseAdmin, VersionAdmin):
     fields = ('id', 'name_fi', 'name_sv', 'name_en', 'topics')
-    readonly_fields = [ 'id' ]
-    filter_horizontal=[ 'topics' ]
+    readonly_fields = ['id']
+    filter_horizontal = ['topics']
 
     def get_readonly_fields(self, request, obj=None):
         return ['id']
+
 
 admin.site.register(HobbyCategory, HobbyCategoryAdmin)

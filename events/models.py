@@ -542,6 +542,7 @@ class OpeningHoursSpecification(models.Model):
         verbose_name = _('opening hour specification')
         verbose_name_plural = _('opening hour specifications')
 
+
 class HobbyCategory(BaseModel):
     name_fi = models.CharField(max_length=20, null=True, blank=True)
     name_sv = models.CharField(max_length=20, null=True, blank=True)
@@ -549,12 +550,13 @@ class HobbyCategory(BaseModel):
     name_zh_hans = models.CharField(max_length=20, null=True, blank=True)
     name_ru = models.CharField(max_length=20, null=True, blank=True)
     name_ar = models.CharField(max_length=20, null=True, blank=True)
-    topics = models.ManyToManyField(Keyword, limit_choices_to={ "sets": 'espoo:topics' },  related_name='supercategories')
+    topics = models.ManyToManyField(Keyword,
+                                    limit_choices_to={"sets": 'espoo:topics'},  related_name='supercategories')
 
     def __str__(self):
         return self.name_fi
 
-    
+
 class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
     jsonld_type = "Event/LinkedEvent"
     objects = BaseTreeQuerySet.as_manager()

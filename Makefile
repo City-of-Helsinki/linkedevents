@@ -338,18 +338,3 @@ migrate:
         --name linkedevents-admin \
         linkedevents-admin \
         python manage.py migrate
-
-.PHONY: add_hobby_categories
-add_hobby_categories:
-	@docker run \
-        --rm \
-        --network=host \
-        -e DB_APP_PASSWORD=secret \
-        -e DB_APP_USER=linkedevents_migration \
-        -e DB_HOST=localhost \
-        -e DB_NAME=linkedevents \
-        -v `pwd`:/app \
-        -w /app \
-        --name linkedevents-admin \
-        linkedevents-admin \
-	python manage.py loaddata hobby_categories

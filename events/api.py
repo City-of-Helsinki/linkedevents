@@ -1162,12 +1162,14 @@ class OpeningHoursSpecificationSerializer(LinkedEventsSerializer):
     class Meta:
         model = OpeningHoursSpecification
 
+
 class HobbyCategorySerializer(LinkedEventsSerializer):
     view_name = 'hobbycategory-detail'
 
     class Meta:
         model = HobbyCategory
         fields = '__all__'
+
 
 class HobbyCategoryViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
     queryset = HobbyCategory.objects.all()
@@ -1176,7 +1178,7 @@ class HobbyCategoryViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         queryset = HobbyCategory.objects.all()
         val = self.request.query_params.get('text')
-        selected_topic_ysos = [s.split('/')[-2] for s in self.request.query_params.getlist('topics[]') ]
+        selected_topic_ysos = [s.split('/')[-2] for s in self.request.query_params.getlist('topics[]')]
         print(selected_topic_ysos)
         if val:
             qset = _text_qset_by_translated_field('name', val)
@@ -1184,7 +1186,9 @@ class HobbyCategoryViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
 
         return queryset
 
+
 register_view(HobbyCategoryViewSet, 'hobbycategory')
+
 
 class LanguageSerializer(LinkedEventsSerializer):
     view_name = 'language-detail'
@@ -1409,8 +1413,8 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
     audience = JSONLDRelatedField(serializer=KeywordSerializer, view_name='keyword-detail',
                                   many=True, required=False, queryset=Keyword.objects.filter(deprecated=False))
     hobby_categories = JSONLDRelatedField(serializer=HobbyCategorySerializer, required=False,
-                                     view_name='hobbycategory-detail', many=True, queryset=HobbyCategory.objects.all())
-
+                                          view_name='hobbycategory-detail', many=True,
+                                          queryset=HobbyCategory.objects.all())
     view_name = 'event-detail'
     fields_needed_to_publish = ('keywords', 'location', 'start_time', 'short_description', 'description')
     created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
