@@ -177,3 +177,25 @@ class TestLocalOrganizationAdmin(TestCase):
         self.assertEqual(
             self.organization.financial_admin_users.first().pk, self.admin_user.pk
         )
+
+    def test_add_financial_admin_for_a_new_organization(self):
+        self.assertEqual(Organization.objects.count(), 1)
+
+        self.client.force_login(self.admin_user)
+        data = self._get_request_data(
+            {
+                "name": "New Org",
+                "internal_type": "normal",
+                "financial_admin_users": [self.admin_user.pk],
+            }
+        )
+        self.client.post(
+            "/admin/django_orghierarchy/organization/add/",
+            data,
+        )
+
+        self.assertEqual(Organization.objects.count(), 2)
+        self.assertEqual(
+            Organization.objects.last().financial_admin_users.first().pk,
+            self.admin_user.pk,
+        )
