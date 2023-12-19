@@ -108,7 +108,7 @@ from linkedevents.fields import JSONLDRelatedField
 from linkedevents.registry import register_view, viewset_classes_by_model
 from linkedevents.serializers import LinkedEventsSerializer, TranslatedModelSerializer
 from linkedevents.utils import get_fixed_lang_codes
-from registrations.models import RegistrationUserAccess
+from registrations.models import RegistrationPriceGroup, RegistrationUserAccess
 from registrations.serializers import RegistrationBaseSerializer
 
 logger = logging.getLogger(__name__)
@@ -1495,8 +1495,9 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
             or obj.publisher.tree_id in self.registration_admin_tree_ids
         )
 
+    @staticmethod
     def _create_or_update_registration_user_accesses(
-        self, registration, registration_user_accesses
+        registration, registration_user_accesses
     ):
         users_to_send_invitations = []
 
@@ -1546,6 +1547,17 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
         for user_instance in users_to_send_invitations:
             user_instance.send_invitation()
 
+    @staticmethod
+    def _create_or_update_registration_price_groups(
+        registration, registration_price_groups
+    ):
+        for data in registration_price_groups:
+            RegistrationPriceGroup.objects.update_or_create(
+                id=data.pop("id", None),
+                registration=registration,
+                defaults=data,
+            )
+
     @transaction.atomic
     def create(self, validated_data):
         user = self.request.user
@@ -1562,6 +1574,7 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
         registration_user_accesses = validated_data.pop(
             "registration_user_accesses", []
         )
+        registration_price_groups = validated_data.pop("registration_price_groups", [])
 
         try:
             registration = super().create(validated_data)
@@ -1578,6 +1591,11 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
             registration, registration_user_accesses
         )
 
+        # Create registration price groups that signees / participants can choose from
+        self._create_or_update_registration_price_groups(
+            registration, registration_price_groups
+        )
+
         return registration
 
     @transaction.atomic
@@ -1585,58 +1603,81 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
         registration_user_accesses = validated_data.pop(
             "registration_user_accesses", None
         )
+        registration_price_groups = validated_data.pop(
+            "registration_price_groups", None
+        )
 
         # update validated fields
         super().update(instance, validated_data)
 
-        # update registration users
-        if isinstance(registration_user_accesses, list):
+        def update_related(related_data: list, related_name: str):
             ids = [
-                u["id"].id
-                for u in registration_user_accesses
-                if u.get("id") is not None
+                getattr(
+                    data["id"], "id", data["id"]
+                )  # user access has an object in the "id" field
+                for data in related_data
+                if data.get("id") is not None
             ]
 
-            # Delete registration user access which are not included in the payload
-            instance.registration_user_accesses.exclude(pk__in=ids).delete()
+            # Delete related objects which are not included in the payload
+            getattr(instance, related_name).exclude(pk__in=ids).delete()
 
-            # Update or create registration user accesses and send invitation email to them
-            self._create_or_update_registration_user_accesses(
-                instance, registration_user_accesses
-            )
+            # Update or create related objects
+            getattr(self, f"_create_or_update_{related_name}")(instance, related_data)
+
+        # update registration users
+        if isinstance(registration_user_accesses, list):
+            update_related(registration_user_accesses, "registration_user_accesses")
+
+        # update registration price groups
+        if isinstance(registration_price_groups, list):
+            update_related(registration_price_groups, "registration_price_groups")
 
         return instance
 
-    def validate_registration_user_accesses(self, value):
+    @staticmethod
+    def _validate_for_duplicates(values, field, error_detail_callback):
         errors = []
-        emails = []
+        checked_values = set()
         raise_errors = False
 
-        for data in value:
-            email = data["email"]
-            if email in emails:
-                errors.append(
-                    {
-                        "email": [
-                            ErrorDetail(
-                                _(
-                                    "Registration user access with email %(email)s already exists."
-                                )
-                                % {"email": email},
-                                code="unique",
-                            )
-                        ]
-                    }
-                )
+        for data in values:
+            value = data[field]
+            if value in checked_values:
+                errors.append({field: [error_detail_callback(value)]})
                 raise_errors = True
             else:
-                emails.append(email)
+                checked_values.add(value)
                 errors.append({})
 
         if raise_errors:
             raise serializers.ValidationError(errors)
 
-        return value
+        return values
+
+    def validate_registration_user_accesses(self, value):
+        def error_detail_callback(email):
+            return ErrorDetail(
+                _("Registration user access with email %(email)s already exists.")
+                % {"email": email},
+                code="unique",
+            )
+
+        return self._validate_for_duplicates(value, "email", error_detail_callback)
+
+    def validate_registration_price_groups(self, value):
+        def error_detail_callback(price_group):
+            return ErrorDetail(
+                _(
+                    "Registration price group with price_group %(price_group)s already exists."
+                )
+                % {"price_group": price_group},
+                code="unique",
+            )
+
+        return self._validate_for_duplicates(
+            value, "price_group", error_detail_callback
+        )
 
     # LinkedEventsSerializer validates name which doesn't exist in Registration model
     def validate(self, data):

@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 from freezegun import freeze_time
 from rest_framework import status
@@ -5,6 +7,8 @@ from rest_framework import status
 from audit_log.models import AuditLogEntry
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
+from registrations.models import PriceGroup, RegistrationPriceGroup
+from registrations.tests.factories import PriceGroupFactory
 
 
 def delete_registration(api_client, id):
@@ -35,14 +39,14 @@ def test_financial_admin_cannot_delete_registration(api_client, registration):
 
 
 @pytest.mark.django_db
-def test__unauthenticated_user_cannot_delete_registration(api_client, registration):
+def test_unauthenticated_user_cannot_delete_registration(api_client, registration):
     response = delete_registration(api_client, registration.id)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test__registration_with_signups_cannot_be_deleted(
+def test_registration_with_signups_cannot_be_deleted(
     api_client, registration, signup, user
 ):
     api_client.force_authenticate(user)
@@ -53,7 +57,7 @@ def test__registration_with_signups_cannot_be_deleted(
 
 
 @pytest.mark.django_db
-def test__non_admin_cannot_delete_registration(api_client, registration, user):
+def test_non_admin_cannot_delete_registration(api_client, registration, user):
     user.get_default_organization().regular_users.add(user)
     user.get_default_organization().admin_users.remove(user)
     api_client.force_authenticate(user)
@@ -96,7 +100,7 @@ def test_registration_admin_can_delete_registration_regardless_of_non_user_edita
 
 
 @pytest.mark.django_db
-def test__api_key_with_organization_can_delete_registration(
+def test_api_key_with_organization_can_delete_registration(
     api_client, data_source, organization, registration
 ):
     data_source.owner = organization
@@ -108,7 +112,7 @@ def test__api_key_with_organization_can_delete_registration(
 
 
 @pytest.mark.django_db
-def test__api_key_of_other_organization_cannot_delete_registration(
+def test_api_key_of_other_organization_cannot_delete_registration(
     api_client, data_source, organization2, registration
 ):
     data_source.owner = organization2
@@ -120,7 +124,7 @@ def test__api_key_of_other_organization_cannot_delete_registration(
 
 
 @pytest.mark.django_db
-def test__api_key_from_wrong_data_source_cannot_delete_registration(
+def test_api_key_from_wrong_data_source_cannot_delete_registration(
     api_client, organization, other_data_source, registration
 ):
     other_data_source.owner = organization
@@ -132,7 +136,7 @@ def test__api_key_from_wrong_data_source_cannot_delete_registration(
 
 
 @pytest.mark.django_db
-def test__unknown_api_key_cannot_delete_registration(api_client, registration):
+def test_unknown_api_key_cannot_delete_registration(api_client, registration):
     api_client.credentials(apikey="unknown")
 
     response = delete_registration(api_client, registration.id)
@@ -148,3 +152,25 @@ def test_registration_id_is_audit_logged_on_delete(user_api_client, registration
     assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
         registration.pk
     ]
+
+
+@pytest.mark.django_db
+def test_delete_registration_and_price_groups(api_client, registration, user):
+    api_client.force_authenticate(user)
+
+    default_price_group = PriceGroup.objects.filter(publisher=None).first()
+    custom_price_group = PriceGroupFactory(publisher=registration.publisher)
+
+    RegistrationPriceGroup.objects.create(
+        registration=registration, price_group=default_price_group, price=Decimal("10")
+    )
+    RegistrationPriceGroup.objects.create(
+        registration=registration, price_group=custom_price_group, price=Decimal("10")
+    )
+
+    assert RegistrationPriceGroup.objects.count() == 2
+
+    response = delete_registration(api_client, registration.id)
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    assert RegistrationPriceGroup.objects.count() == 0

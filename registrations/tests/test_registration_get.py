@@ -1,4 +1,5 @@
 from collections import Counter
+from decimal import Decimal
 from unittest.mock import patch, PropertyMock
 
 import pytest
@@ -13,7 +14,9 @@ from events.tests.test_event_get import get_list_and_assert_events
 from events.tests.utils import assert_fields_exist
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
+from registrations.models import PriceGroup, RegistrationPriceGroup
 from registrations.tests.factories import (
+    PriceGroupFactory,
     RegistrationFactory,
     RegistrationUserAccessFactory,
     SeatReservationCodeFactory,
@@ -103,6 +106,7 @@ def assert_registration_fields_exist(data, is_admin_user=False):
         "instructions",
         "is_created_by_current_user",
         "signup_url",
+        "registration_price_groups",
         "@id",
         "@context",
         "@type",
@@ -179,6 +183,59 @@ def test_registration_admin_user_can_see_registration_user_accesses(
     response_registration_user_accesses = response.data["registration_user_accesses"]
     assert len(response_registration_user_accesses) == 2
     assert_registration_fields_exist(response.data, is_admin_user=True)
+
+
+@pytest.mark.django_db
+def test_registration_price_groups_in_response(registration, api_client):
+    user = UserFactory()
+    user.registration_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    default_price_group = PriceGroup.objects.filter(publisher=None).first()
+    custom_price_group = PriceGroupFactory(
+        publisher=registration.publisher,
+        description_en="EN desc",
+        description_fi="FI desc",
+        description_sv="SV desc",
+    )
+
+    price_group1 = RegistrationPriceGroup.objects.create(
+        registration=registration, price_group=default_price_group, price=Decimal("10")
+    )
+    price_group2 = RegistrationPriceGroup.objects.create(
+        registration=registration, price_group=custom_price_group, price=Decimal("10")
+    )
+
+    response = get_detail_and_assert_registration(api_client, registration.id)
+    assert len(response.data["registration_price_groups"]) == 2
+    assert Counter(
+        [data["id"] for data in response.data["registration_price_groups"]]
+    ) == Counter([price_group1.pk, price_group2.pk])
+    assert_fields_exist(
+        response.data["registration_price_groups"][0],
+        (
+            "id",
+            "price_group",
+            "price",
+            "vat_percentage",
+            "price_without_vat",
+            "vat",
+        ),
+    )
+
+    price_group_fields = ("id", "description")
+    language_fields = ("fi", "sv", "en")
+    for index in range(2):
+        assert_fields_exist(
+            response.data["registration_price_groups"][index]["price_group"],
+            price_group_fields,
+        )
+        assert_fields_exist(
+            response.data["registration_price_groups"][index]["price_group"][
+                "description"
+            ],
+            language_fields,
+        )
 
 
 @pytest.mark.django_db

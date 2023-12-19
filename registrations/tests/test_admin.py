@@ -338,6 +338,31 @@ class TestRegistrationAdmin(TestCase):
         self.assertEqual(Registration.objects.count(), 1)
         self.assertEqual(RegistrationPriceGroup.objects.count(), 0)
 
+    def test_cannot_use_more_than_two_decimals_for_registration_price_group_price(self):
+        price_group = PriceGroupFactory(description="Adults")
+
+        self.assertEqual(Registration.objects.count(), 1)
+        self.assertEqual(RegistrationPriceGroup.objects.count(), 0)
+
+        response = self.client.post(
+            f"/admin/registrations/registration/{self.registration.pk}/change/",
+            {
+                "event": self.registration.event.id,
+                "registration_user_accesses-TOTAL_FORMS": 1,
+                "registration_user_accesses-INITIAL_FORMS": 0,
+                "registration_price_groups-TOTAL_FORMS": 2,
+                "registration_price_groups-INITIAL_FORMS": 0,
+                "registration_price_groups-0-registration": self.registration.id,
+                "registration_price_groups-0-price_group": price_group.pk,
+                "registration_price_groups-0-price": Decimal("10.123"),
+                "registration_price_groups-0-vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_24,
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(Registration.objects.count(), 1)
+        self.assertEqual(RegistrationPriceGroup.objects.count(), 0)
+
     def test_delete_price_group_from_registration(self):
         registration_price_group = RegistrationPriceGroupFactory(
             registration=self.registration,

@@ -1,4 +1,5 @@
 from datetime import timedelta
+from decimal import Decimal
 
 import pytz
 from django.conf import settings
@@ -16,6 +17,7 @@ from registrations.exceptions import ConflictException
 from registrations.models import (
     PriceGroup,
     Registration,
+    RegistrationPriceGroup,
     RegistrationUserAccess,
     SeatReservationCode,
     SignUp,
@@ -349,6 +351,77 @@ class RegistrationUserAccessSerializer(RegistrationUserAccessCreateSerializer):
         fields = ["id"] + RegistrationUserAccessCreateSerializer.Meta.fields
 
 
+class PriceGroupRelatedField(serializers.PrimaryKeyRelatedField):
+    def to_representation(self, value):
+        price_group = PriceGroup.objects.only(
+            "pk", "description_fi", "description_sv", "description_en"
+        ).get(pk=value.pk)
+
+        return {
+            "id": price_group.pk,
+            "description": {
+                lang: getattr(price_group, f"description_{lang}")
+                for lang in ("fi", "sv", "en")
+                if getattr(price_group, f"description_{lang}", None) is not None
+            },
+        }
+
+
+class RegistrationPriceGroupSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=False)
+    price_group = PriceGroupRelatedField(queryset=PriceGroup.objects.all())
+    price = serializers.DecimalField(
+        required=False, max_digits=19, decimal_places=2, min_value=0
+    )
+    price_without_vat = serializers.DecimalField(
+        required=False, read_only=True, max_digits=19, decimal_places=2, min_value=0
+    )
+    vat = serializers.DecimalField(
+        required=False, read_only=True, max_digits=19, decimal_places=2, min_value=0
+    )
+    vat_percentage = serializers.DecimalField(
+        required=False,
+        max_digits=4,
+        decimal_places=2,
+        min_value=0,
+        max_value=Decimal("99.99"),
+    )
+
+    def validate(self, data):
+        validated_data = super().validate(data)
+
+        errors = {}
+
+        vat_percentage = validated_data.get("vat_percentage")
+        if vat_percentage not in [
+            vat[0] for vat in RegistrationPriceGroup.VAT_PERCENTAGES
+        ]:
+            errors["vat_percentage"] = _("%(value)s is not a valid choice.") % {
+                "value": vat_percentage
+            }
+
+        if validated_data["price_group"].is_free:
+            validated_data["price"] = Decimal("0")
+        elif validated_data.get("price") is None:
+            errors["price"] = _("Price must be greater than or equal to 0.")
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return validated_data
+
+    class Meta:
+        model = RegistrationPriceGroup
+        fields = [
+            "id",
+            "price_group",
+            "price",
+            "vat_percentage",
+            "price_without_vat",
+            "vat",
+        ]
+
+
 # Don't use this serializer directly but use events.api.RegistrationSerializer instead.
 # Implement methods to mutate and validate Registration in events.api.RegistrationSerializer
 class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
@@ -371,6 +444,11 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
     has_registration_user_access = serializers.SerializerMethodField()
 
     signup_url = serializers.SerializerMethodField()
+
+    registration_price_groups = RegistrationPriceGroupSerializer(
+        many=True,
+        required=False,
+    )
 
     def get_fields(self):
         fields = super().get_fields()
@@ -466,6 +544,7 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
             "instructions",
             "is_created_by_current_user",
             "signup_url",
+            "registration_price_groups",
         )
         model = Registration
 

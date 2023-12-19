@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 from django.core import mail
 from django.utils import translation
@@ -7,8 +9,17 @@ from audit_log.models import AuditLogEntry
 from events.models import Event
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
-from registrations.models import RegistrationUserAccess
-from registrations.tests.factories import RegistrationUserAccessFactory
+from registrations.models import (
+    PriceGroup,
+    RegistrationPriceGroup,
+    RegistrationUserAccess,
+)
+from registrations.tests.factories import (
+    PriceGroupFactory,
+    RegistrationFactory,
+    RegistrationPriceGroupFactory,
+    RegistrationUserAccessFactory,
+)
 from registrations.tests.test_registration_post import (
     create_registration,
     get_event_url,
@@ -468,3 +479,217 @@ def test_registration_id_is_audit_logged_on_put(registration, user_api_client):
     assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
         registration.pk
     ]
+
+
+@pytest.mark.django_db
+def test_update_price_groups_to_registration(api_client, event, user):
+    api_client.force_authenticate(user)
+
+    registration = RegistrationFactory(event=event)
+
+    default_price_group = PriceGroup.objects.filter(publisher=None).first()
+    custom_price_group = PriceGroupFactory(publisher=event.publisher)
+
+    assert RegistrationPriceGroup.objects.count() == 0
+
+    registration_data = {
+        "event": {"@id": get_event_url(event.id)},
+        "registration_price_groups": [
+            {
+                "price_group": default_price_group.pk,
+                "price": Decimal("10"),
+                "vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_24,
+            },
+            {
+                "price_group": custom_price_group.pk,
+                "price": Decimal("15.55"),
+                "vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_14,
+            },
+        ],
+    }
+    response = assert_update_registration(
+        api_client, registration.pk, registration_data
+    )
+    assert len(response.data["registration_price_groups"]) == 2
+
+    assert RegistrationPriceGroup.objects.count() == 2
+
+    registration.refresh_from_db()
+    assert (
+        RegistrationPriceGroup.objects.filter(
+            price_group=default_price_group.pk,
+            price=registration_data["registration_price_groups"][0]["price"],
+            vat_percentage=registration_data["registration_price_groups"][0][
+                "vat_percentage"
+            ],
+            price_without_vat=Decimal("8.06"),
+            vat=Decimal("1.94"),
+        ).count()
+        == 1
+    )
+    assert (
+        registration.registration_price_groups.filter(
+            price_group=custom_price_group,
+            price=registration_data["registration_price_groups"][1]["price"],
+            vat_percentage=registration_data["registration_price_groups"][1][
+                "vat_percentage"
+            ],
+            price_without_vat=Decimal("13.64"),
+            vat=Decimal("1.91"),
+        ).count()
+        == 1
+    )
+
+
+@pytest.mark.django_db
+def test_update_existing_registration_price_group(api_client, event, user):
+    api_client.force_authenticate(user)
+
+    default_price_group = PriceGroup.objects.filter(publisher=None).first()
+    custom_price_group = PriceGroupFactory(publisher=event.publisher)
+
+    registration = RegistrationFactory(event=event)
+    registration_price_group = RegistrationPriceGroupFactory(
+        registration=registration,
+        price_group=default_price_group,
+        price=Decimal("10"),
+        vat_percentage=RegistrationPriceGroup.VatPercentage.VAT_24,
+        price_without_vat=Decimal("8.06"),
+        vat=Decimal("1.94"),
+    )
+
+    assert RegistrationPriceGroup.objects.count() == 1
+
+    registration_data = {
+        "event": {"@id": get_event_url(event.id)},
+        "registration_price_groups": [
+            {
+                "id": registration_price_group.pk,
+                "price_group": custom_price_group.pk,
+                "price": Decimal("5"),
+                "vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_0,
+            },
+        ],
+    }
+    response = assert_update_registration(
+        api_client, registration.pk, registration_data
+    )
+    assert len(response.data["registration_price_groups"]) == 1
+    assert (
+        response.data["registration_price_groups"][0]["id"]
+        == registration_price_group.pk
+    )
+
+    assert RegistrationPriceGroup.objects.count() == 1
+
+    registration.refresh_from_db()
+    assert (
+        registration.registration_price_groups.filter(
+            price_group=custom_price_group,
+            price=registration_data["registration_price_groups"][0]["price"],
+            vat_percentage=registration_data["registration_price_groups"][0][
+                "vat_percentage"
+            ],
+            price_without_vat=Decimal("5"),
+            vat=Decimal("0"),
+        ).count()
+        == 1
+    )
+
+
+@pytest.mark.django_db
+def test_update_registration_price_groups_excluded_is_deleted(api_client, event, user):
+    api_client.force_authenticate(user)
+
+    default_price_group = PriceGroup.objects.filter(publisher=None).first()
+    custom_price_group = PriceGroupFactory(publisher=event.publisher)
+
+    registration = RegistrationFactory(event=event)
+    registration_price_group = RegistrationPriceGroupFactory(
+        registration=registration,
+        price_group=default_price_group,
+        price=Decimal("10"),
+        vat_percentage=RegistrationPriceGroup.VatPercentage.VAT_24,
+        price_without_vat=Decimal("8.06"),
+        vat=Decimal("1.94"),
+    )
+
+    assert RegistrationPriceGroup.objects.count() == 1
+
+    registration_data = {
+        "event": {"@id": get_event_url(event.id)},
+        "registration_price_groups": [
+            {
+                "price_group": custom_price_group.pk,
+                "price": Decimal("5"),
+                "vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_0,
+            },
+        ],
+    }
+    response = assert_update_registration(
+        api_client, registration.pk, registration_data
+    )
+    assert len(response.data["registration_price_groups"]) == 1
+    assert (
+        response.data["registration_price_groups"][0]["id"]
+        != registration_price_group.pk
+    )
+
+    assert RegistrationPriceGroup.objects.count() == 1
+
+    registration.refresh_from_db()
+    assert (
+        registration.registration_price_groups.filter(
+            price_group=custom_price_group,
+            price=registration_data["registration_price_groups"][0]["price"],
+            vat_percentage=registration_data["registration_price_groups"][0][
+                "vat_percentage"
+            ],
+            price_without_vat=Decimal("5"),
+            vat=Decimal("0"),
+        ).count()
+        == 1
+    )
+
+
+@pytest.mark.django_db
+def test_cannot_update_registration_with_duplicate_price_groups(
+    user, api_client, event
+):
+    api_client.force_authenticate(user)
+
+    default_price_group = PriceGroup.objects.filter(
+        publisher=None, is_free=False
+    ).first()
+
+    registration = RegistrationFactory(event=event)
+    registration_price_group = RegistrationPriceGroupFactory(
+        registration=registration,
+        price_group=default_price_group,
+    )
+
+    assert RegistrationPriceGroup.objects.count() == 1
+
+    registration_data = {
+        "event": {"@id": get_event_url(event.id)},
+        "registration_price_groups": [
+            {
+                "id": registration_price_group.pk,
+                "price_group": default_price_group.pk,
+                "price": Decimal("5"),
+                "vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_0,
+            },
+            {
+                "price_group": default_price_group.pk,
+                "price": Decimal("5"),
+                "vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_0,
+            },
+        ],
+    }
+    response = update_registration(api_client, registration.pk, registration_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["registration_price_groups"][1]["price_group"][0] == (
+        f"Registration price group with price_group {default_price_group} already exists."
+    )
+
+    assert RegistrationPriceGroup.objects.count() == 1
