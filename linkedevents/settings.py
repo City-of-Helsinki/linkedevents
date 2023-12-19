@@ -138,7 +138,10 @@ env = environ.Env(
     TOKEN_AUTH_ACCEPTED_AUDIENCE=(str, "https://api.hel.fi/auth/linkedevents"),
     TOKEN_AUTH_ACCEPTED_SCOPE_PREFIX=(str, "linkedevents"),
     TOKEN_AUTH_AUTHSERVER_URL=(str, "https://api.hel.fi/sso/openid"),
-    TOKEN_AUTH_FIELD_FOR_CONSENTS=(str, "https://api.hel.fi/auth"),
+    TOKEN_AUTH_FIELD_FOR_CONSENTS=(
+        list,
+        ["https://api.hel.fi/auth", "authorization.permissions.scopes"],
+    ),
     TOKEN_AUTH_REQUIRE_SCOPE_PREFIX=(bool, True),
     TRUST_X_FORWARDED_HOST=(bool, False),
     WHITENOISE_STATIC_PREFIX=(str, "/static/"),

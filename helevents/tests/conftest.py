@@ -33,10 +33,17 @@ def get_api_token_for_user_with_scopes(
         "sub": str(user_uuid),
         "iat": int(now.timestamp()),
         "exp": int(expire.timestamp()),
-        auth_field: scopes,
     }
+
+    if isinstance(auth_field, list):
+        for field in auth_field:
+            jwt_data[field] = scopes
+    elif isinstance(auth_field, str):
+        jwt_data[auth_field] = scopes
+
     if amr:
         jwt_data["amr"] = amr
+
     encoded_jwt = jwt.encode(
         jwt_data, key=rsa_key.private_key_pem, algorithm=rsa_key.jose_algorithm
     )
