@@ -2,8 +2,8 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core import mail
+from django.core.exceptions import ValidationError
 from django.test import TestCase
-from rest_framework.exceptions import ValidationError
 
 from events.models import Language
 from events.tests.factories import DataSourceFactory, OrganizationFactory

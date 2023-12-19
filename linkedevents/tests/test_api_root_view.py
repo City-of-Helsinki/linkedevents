@@ -12,6 +12,7 @@ def get_api_root(api_client):
 @pytest.mark.django_db
 def test_return_correct_routes(api_client):
     response = get_api_root(api_client)
+
     assert response.data["keyword"] == "http://testserver/v1/keyword/"
     assert response.data["keyword_set"] == "http://testserver/v1/keyword_set/"
     assert response.data["place"] == "http://testserver/v1/place/"
@@ -27,7 +28,10 @@ def test_return_correct_routes(api_client):
     )
     assert response.data["signup"] == "http://testserver/v1/signup/"
     assert response.data["signup_group"] == "http://testserver/v1/signup_group/"
-    assert len(response.data) == 13
+    assert response.data["price_group"] == "http://testserver/v1/price_group/"
+
+    assert len(response.data) == 14
+
     assert response.data.get("data_source") is None
     assert response.data.get("organization_class") is None
     assert response.data.get("feedback") is None

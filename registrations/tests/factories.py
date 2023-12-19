@@ -73,6 +73,7 @@ class SeatReservationCodeFactory(factory.django.DjangoModelFactory):
 
 class PriceGroupFactory(factory.django.DjangoModelFactory):
     publisher = factory.SubFactory(OrganizationFactory)
+    description = factory.Sequence(lambda n: "Price Group {0}".format(n))
 
     class Meta:
         model = PriceGroup

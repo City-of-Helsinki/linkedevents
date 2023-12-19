@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
+from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
@@ -18,9 +19,9 @@ from django.utils.translation import gettext_lazy as _
 from django.utils.translation import override
 from encrypted_fields import fields
 from helsinki_gdpr.models import SerializableMixin
-from rest_framework.exceptions import ValidationError
 
 from events.models import Event, Language
+from registrations.exceptions import PriceGroupValidationError
 from registrations.notifications import (
     get_signup_notification_subject,
     get_signup_notification_texts,
@@ -169,6 +170,47 @@ class PriceGroup(CreatedModifiedBaseModel):
     description = models.CharField(max_length=255)
 
     is_free = models.BooleanField(default=False)
+
+    @property
+    def old_instance(self):
+        if not self.pk:
+            return None
+
+        return PriceGroup.objects.get(pk=self.pk)
+
+    @property
+    def publisher_is_valid(self):
+        if not self.old_instance:
+            return True
+
+        return (
+            self.old_instance.publisher_id == self.publisher_id
+            or not self.registration_price_groups.exists()
+        )
+
+    def delete(self, *args, **kwargs):
+        if self.old_instance and not self.old_instance.publisher_id:
+            raise PriceGroupValidationError(
+                _("You may not delete a default price group.")
+            )
+
+        super().delete(*args, **kwargs)
+
+    def save(self, *args, **kwargs):
+        if self.old_instance and not self.old_instance.publisher_id:
+            raise PriceGroupValidationError(
+                _("You may not edit a default price group.")
+            )
+
+        if not self.publisher_is_valid:
+            raise PriceGroupValidationError(
+                _(
+                    "You may not change the publisher of a price group that has been used "
+                    "in registrations."
+                )
+            )
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.description

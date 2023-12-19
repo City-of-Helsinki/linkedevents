@@ -11,8 +11,10 @@ from rest_framework.fields import DateTimeField
 
 from events.models import Language
 from events.utils import clean_text_fields
+from linkedevents.serializers import TranslatedModelSerializer
 from registrations.exceptions import ConflictException
 from registrations.models import (
+    PriceGroup,
     Registration,
     RegistrationUserAccess,
     SeatReservationCode,
@@ -993,3 +995,58 @@ class RegistrationSignupsExportSerializer(serializers.Serializer):
         choices=["en", "sv", "fi"],
         default="fi",
     )
+
+
+class PriceGroupSerializer(TranslatedModelSerializer, CreatedModifiedBaseSerializer):
+    def _description_is_valid(self, data, validated_data):
+        """
+        Validates the translated description fields for Finnish, English and Swedish languages.
+
+        Description is considered valid if
+        1. request is PATCH without any description fields given in data, OR
+        2. any of the description fields have a valid value.
+        """
+
+        description_fields = ["description_fi", "description_en", "description_sv"]
+
+        def any_description_field_in_data():
+            return any([field in data.keys() for field in description_fields])
+
+        def any_description_field_has_valid_value():
+            return any([validated_data.get(field) for field in description_fields])
+
+        return (
+            self.partial and not any_description_field_in_data()
+        ) or any_description_field_has_valid_value()
+
+    def validate(self, data):
+        # Clean html tags from the text fields
+        data = clean_text_fields(data, strip=True)
+
+        validated_data = super().validate(data)
+
+        errors = {}
+
+        if not self._description_is_valid(data, validated_data):
+            errors["description"] = _("This field is required.")
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return validated_data
+
+    class Meta:
+        fields = (
+            "id",
+            "created_time",
+            "last_modified_time",
+            "created_by",
+            "last_modified_by",
+            "publisher",
+            "description",
+            "is_free",
+        )
+        model = PriceGroup
+        extra_kwargs = {
+            "publisher": {"required": True, "allow_null": False},
+        }
