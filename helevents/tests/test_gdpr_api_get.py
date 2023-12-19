@@ -89,6 +89,7 @@ def _get_signup_profile_data(signup: SignUp) -> dict:
                 if signup.date_of_birth
                 else None,
             },
+            {"key": "PHONE_NUMBER", "value": signup.phone_number},
             {"key": "CITY", "value": signup.city},
             {"key": "STREET_ADDRESS", "value": signup.street_address},
             {"key": "ZIPCODE", "value": signup.zipcode},
@@ -172,6 +173,7 @@ def test_authenticated_user_can_get_own_data(api_client, settings, use_contact_p
         signup_group=signup_group,
         first_name="Mickey",
         last_name="Mouse",
+        phone_number="044111111",
         city="Test City",
         street_address="Test Street 1",
         zipcode="12345",
@@ -190,6 +192,7 @@ def test_authenticated_user_can_get_own_data(api_client, settings, use_contact_p
         registration=registration,
         first_name="James",
         last_name="Bond",
+        phone_number="040111111",
         city="Test City #2",
         street_address="Test Street 2",
         zipcode="12121",

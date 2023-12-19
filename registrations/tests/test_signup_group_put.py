@@ -64,6 +64,7 @@ def test_registration_admin_can_update_signup_group(
     signup1 = SignUpFactory(signup_group=signup_group, registration=registration)
 
     new_signup_name = "Edited name"
+    new_signup_phone_number = "040111111"
 
     assert SignUpGroup.objects.count() == 1
     assert SignUp.objects.count() == 2
@@ -82,7 +83,12 @@ def test_registration_admin_can_update_signup_group(
         "registration": registration.id,
         "extra_info": new_signup_group_extra_info,
         "signups": [
-            {"id": signup0.id, "first_name": new_signup_name, "user_consent": True},
+            {
+                "id": signup0.id,
+                "first_name": new_signup_name,
+                "user_consent": True,
+                "phone_number": new_signup_phone_number,
+            },
             {"extra_info": "This sign-up does not exist"},
         ],
     }
@@ -99,6 +105,7 @@ def test_registration_admin_can_update_signup_group(
 
     signup0.refresh_from_db()
     assert signup0.first_name == new_signup_name
+    assert signup0.phone_number == new_signup_phone_number
     assert signup0.last_modified_by_id == user.id
     assert signup0.user_consent is True
 
@@ -457,6 +464,7 @@ def test_signup_group_text_fields_are_sanitized(registration, user, user_api_cli
                 "id": signup.id,
                 "first_name": "Michael <p>Html</p>",
                 "last_name": "Jackson <p>Html</p>",
+                "phone_number": "<p>0401111111</p>",
                 "extra_info": "Extra info <p>Html</p>",
                 "street_address": "Street address <p>Html</p>",
                 "zipcode": "<p>zip</p>",
@@ -476,6 +484,7 @@ def test_signup_group_text_fields_are_sanitized(registration, user, user_api_cli
     signup.refresh_from_db()
     assert signup.first_name == "Michael Html"
     assert signup.last_name == "Jackson Html"
+    assert signup.phone_number == "0401111111"
     assert signup.extra_info == "Extra info Html"
     assert signup.street_address == "Street address Html"
     assert signup.zipcode == "zip"

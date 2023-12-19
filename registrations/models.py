@@ -47,6 +47,7 @@ class MandatoryFields(models.TextChoices):
     CITY = "city", _("City")
     FIRST_NAME = "first_name", _("First name")
     LAST_NAME = "last_name", _("Last name")
+    PHONE_NUMBER = "phone_number", _("Phone number")
     STREET_ADDRESS = "street_address", _("Street address")
     ZIPCODE = "zipcode", _("ZIP code")
 
@@ -514,6 +515,13 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         null=True,
         default=None,
     )
+    phone_number = models.CharField(
+        verbose_name=_("Phone number"),
+        max_length=18,
+        blank=True,
+        null=True,
+        default=None,
+    )
     city = models.CharField(
         verbose_name=_("City"),
         max_length=50,
@@ -565,6 +573,7 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         {"name": "first_name"},
         {"name": "last_name"},
         {"name": "date_of_birth"},
+        {"name": "phone_number"},
         {"name": "city"},
         {"name": "street_address"},
         {"name": "zipcode"},

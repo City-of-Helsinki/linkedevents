@@ -152,6 +152,25 @@ def test_patch_user_consent(api_client, registration, signup):
     assert signup.user_consent is True
 
 
+@freeze_time("2023-03-14 03:30:00+02:00")
+@pytest.mark.django_db
+def test_patch_phone_number(api_client, registration, signup):
+    user = UserFactory()
+    user.registration_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup = SignUpFactory(registration=registration)
+    assert signup.phone_number is None
+
+    signup_data = {
+        "phone_number": "0401111111",
+    }
+    assert_patch_signup(api_client, signup.id, signup_data)
+
+    signup.refresh_from_db()
+    assert signup.phone_number == signup_data["phone_number"]
+
+
 @pytest.mark.django_db
 def test_registration_user_who_created_signup_can_patch_presence_status(
     api_client, event
