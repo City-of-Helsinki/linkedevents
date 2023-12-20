@@ -31,9 +31,10 @@ class LocalOrganizationAdmin(OrganizationAdmin):
         return form
 
     def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+
         registration_admin_users = form.cleaned_data.get("registration_admin_users", [])
         obj.registration_admin_users.set(registration_admin_users)
-        super().save_model(request, obj, form, change)
 
 
 class UserAdmin(DjangoUserAdmin):

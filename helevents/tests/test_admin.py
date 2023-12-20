@@ -3,6 +3,7 @@ from django.contrib.admin.sites import AdminSite
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django_orghierarchy.models import Organization
+from rest_framework import status
 
 from events.tests.factories import OrganizationFactory
 
@@ -45,6 +46,9 @@ class TestLocalOrganizationAdmin(TestCase):
             data.update(update_data)
         return data
 
+    def setUp(self):
+        self.client.force_login(self.admin_user)
+
     def test_organization_admin_is_registered(self):
         is_registered = admin.site.is_registered(Organization)
         self.assertTrue(is_registered)
@@ -52,7 +56,6 @@ class TestLocalOrganizationAdmin(TestCase):
     def test_add_registration_admin(self):
         self.assertEqual(self.organization.registration_admin_users.count(), 0)
 
-        self.client.force_login(self.admin_user)
         data = self._get_request_data(
             {"registration_admin_users": [self.admin_user.pk]}
         )
@@ -70,7 +73,6 @@ class TestLocalOrganizationAdmin(TestCase):
     def test_add_multiple_registration_admins(self):
         self.assertEqual(self.organization.registration_admin_users.count(), 0)
 
-        self.client.force_login(self.admin_user)
         admin_user2 = self._create_admin_user("admin 2")
         data = self._get_request_data(
             {"registration_admin_users": [self.admin_user.pk, admin_user2.pk]}
@@ -89,7 +91,6 @@ class TestLocalOrganizationAdmin(TestCase):
 
         self.assertEqual(self.organization.registration_admin_users.count(), 2)
 
-        self.client.force_login(self.admin_user)
         data = self._get_request_data(
             {"registration_admin_users": [self.admin_user.pk]}
         )
@@ -102,4 +103,26 @@ class TestLocalOrganizationAdmin(TestCase):
         self.assertEqual(self.organization.registration_admin_users.count(), 1)
         self.assertEqual(
             self.organization.registration_admin_users.first().pk, self.admin_user.pk
+        )
+
+    def test_add_registration_admin_for_a_new_organization(self):
+        self.assertEqual(Organization.objects.count(), 1)
+
+        data = self._get_request_data(
+            {
+                "name": "New Org",
+                "internal_type": "normal",
+                "registration_admin_users": [self.admin_user.pk],
+            }
+        )
+        response = self.client.post(
+            "/admin/django_orghierarchy/organization/add/",
+            data,
+        )
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+
+        self.assertEqual(Organization.objects.count(), 2)
+        self.assertEqual(
+            Organization.objects.last().registration_admin_users.first().pk,
+            self.admin_user.pk,
         )
