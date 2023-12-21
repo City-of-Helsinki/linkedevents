@@ -236,6 +236,7 @@ INSTALLED_APPS = [
     "django_orghierarchy",
     "admin_auto_filters",
     "encrypted_fields",
+    "mailer",
     # Local apps
     "linkedevents",
     "helevents",
@@ -529,19 +530,6 @@ AUTO_ENABLED_EXTENSIONS = env("AUTO_ENABLED_EXTENSIONS")
 # shown in the browsable API
 INSTANCE_NAME = env("INSTANCE_NAME")
 
-# local_settings.py can be used to override environment-specific settings
-# like database and email that differ between development and production.
-f = os.path.join(BASE_DIR, "local_settings.py")
-if os.path.exists(f):
-    import sys
-    import types
-
-    module_name = "%s.local_settings" % ROOT_URLCONF.split(".")[0]
-    module = types.ModuleType(module_name)
-    module.__file__ = f
-    sys.modules[module_name] = module
-    exec(open(f, "rb").read())
-
 # We generate a persistent SECRET_KEY if it is not defined. Note that
 # setting SECRET_KEY will override the persisted key
 if "SECRET_KEY" not in locals():
@@ -581,15 +569,17 @@ SUPPORT_EMAIL = env("SUPPORT_EMAIL")  # Email address used to send feedback form
 DEFAULT_FROM_EMAIL = env(
     "DEFAULT_FROM_EMAIL"
 )  # Email address used as default "from" email
+EMAIL_BACKEND = "mailer.backend.DbBackend"
+MAILER_EMAIL_MAX_RETRIES = 5
 if EMAIL_HOST and EMAIL_PORT:
-    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    MAILER_EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 else:
     if not DEBUG:
         print(
             "Warning: EMAIL_HOST and/or EMAIL_PORT not set, using console backend for sending "
             "emails"
         )
-    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+    MAILER_EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # Ongoing events will be cached forever
 ONGOING_EVENTS_CACHE_TIMEOUT = None
@@ -678,3 +668,16 @@ AUDIT_LOG_ORIGIN = "linkedevents"
 AUDIT_LOG_ENABLED = env("AUDIT_LOG_ENABLED")
 
 FULL_TEXT_WEIGHT_OVERRIDES = env("FULL_TEXT_WEIGHT_OVERRIDES")
+
+# local_settings.py can be used to override environment-specific settings
+# like database and email that differ between development and production.
+f = os.path.join(BASE_DIR, "local_settings.py")
+if os.path.exists(f):
+    import sys
+    import types
+
+    module_name = "%s.local_settings" % ROOT_URLCONF.split(".")[0]
+    module = types.ModuleType(module_name)
+    module.__file__ = f
+    sys.modules[module_name] = module
+    exec(open(f, "rb").read())

@@ -1,6 +1,5 @@
 import logging
 from datetime import timedelta
-from smtplib import SMTPException
 from uuid import uuid4
 
 from django.conf import settings
@@ -455,16 +454,13 @@ class RegistrationUserAccess(models.Model):
 
             rendered_body = render_to_string(invitation_template, email_variables)
 
-        try:
-            send_mail(
-                invitation_subject,
-                rendered_body,
-                get_email_noreply_address(),
-                [self.email],
-                html_message=rendered_body,
-            )
-        except SMTPException:
-            logger.exception("Couldn't send registration user access invitation email.")
+        send_mail(
+            invitation_subject,
+            rendered_body,
+            get_email_noreply_address(),
+            [self.email],
+            html_message=rendered_body,
+        )
 
     class Meta:
         unique_together = ("email", "registration")
@@ -760,18 +756,26 @@ class SignUpContactPerson(SerializableMixin):
             [self.email],
         )
 
-    def send_notification(self, notification_type):
+    def get_notification_message(self, notification_type):
         [_, linked_registrations_ui_locale] = get_ui_locales(self.service_language)
+
+        if notification_type == SignUpNotificationType.EVENT_CANCELLATION:
+            email_template = "event_cancellation_confirmation.html"
+        elif notification_type == SignUpNotificationType.CANCELLATION:
+            email_template = "cancellation_confirmation.html"
+        elif notification_type in (
+            SignUpNotificationType.CONFIRMATION,
+            SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST,
+            SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT,
+        ):
+            email_template = "common_signup_confirmation.html"
+        else:
+            raise ValueError(f"Invalid signup notification type: {notification_type}")
 
         with override(linked_registrations_ui_locale, deactivate=True):
             email_variables = get_signup_notification_variables(self)
             email_variables["texts"] = get_signup_notification_texts(
                 self, notification_type
-            )
-            email_template = (
-                "cancellation_confirmation.html"
-                if notification_type == SignUpNotificationType.CANCELLATION
-                else "common_signup_confirmation.html",
             )
 
             rendered_body = render_to_string(
@@ -779,16 +783,18 @@ class SignUpContactPerson(SerializableMixin):
                 email_variables,
             )
 
-        try:
-            send_mail(
-                get_signup_notification_subject(self, notification_type),
-                rendered_body,
-                get_email_noreply_address(),
-                [self.email],
-                html_message=rendered_body,
-            )
-        except SMTPException:
-            logger.exception("Couldn't send signup notification email.")
+        return (
+            get_signup_notification_subject(self, notification_type),
+            rendered_body,
+            get_email_noreply_address(),
+            [self.email],
+        )
+
+    def send_notification(self, notification_type):
+        message = self.get_notification_message(notification_type)
+        rendered_body = message[1]
+
+        send_mail(*message, html_message=rendered_body)
 
     def save(self, *args, **kwargs):
         if not (self.signup_group_id or self.signup_id):

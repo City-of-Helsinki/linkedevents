@@ -1,5 +1,4 @@
 import logging
-from smtplib import SMTPException
 
 import bleach
 import django_filters
@@ -211,16 +210,7 @@ class RegistrationViewSet(
         messages = self._get_messages(
             subject, cleaned_body, plain_text_body, message_contact_persons
         )
-
-        try:
-            send_mass_html_mail(messages, fail_silently=False)
-        except SMTPException as e:
-            logger.exception("Couldn't send mass HTML email.")
-
-            return Response(
-                str(e),
-                status=status.HTTP_409_CONFLICT,
-            )
+        send_mass_html_mail(messages, fail_silently=False)
 
         self._add_audit_logged_object_ids(message_contact_persons)
 

@@ -22,13 +22,33 @@ NOTIFICATION_TYPES = (
 
 
 class SignUpNotificationType:
+    EVENT_CANCELLATION = "event_cancellation"
     CANCELLATION = "cancellation"
     CONFIRMATION = "confirmation"
     CONFIRMATION_TO_WAITING_LIST = "confirmation_to_waiting_list"
     TRANSFERRED_AS_PARTICIPANT = "transferred_as_participant"
 
 
+signup_notification_subjects = {
+    SignUpNotificationType.EVENT_CANCELLATION: _("Event cancelled - %(event_name)s"),
+    SignUpNotificationType.CANCELLATION: _("Registration cancelled - %(event_name)s"),
+    SignUpNotificationType.CONFIRMATION: _(
+        "Registration confirmation - %(event_name)s"
+    ),
+    SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST: _(
+        "Waiting list seat reserved - %(event_name)s"
+    ),
+    SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT: _(
+        "Registration confirmation - %(event_name)s"
+    ),
+}
+
+
 signup_email_texts = {
+    SignUpNotificationType.EVENT_CANCELLATION: {
+        "heading": _("Event %(event_name)s has been cancelled"),
+        "text": _("Thank you for your interest in the event."),
+    },
     SignUpNotificationType.CANCELLATION: {
         "heading": _("Registration cancelled"),
         "secondary_heading": {
@@ -171,10 +191,19 @@ def get_signup_notification_texts(
     event_type_id = registration.event.type_id
     username = contact_person.first_name
     text_options = signup_email_texts[notification_type]
-    texts = {
-        "heading": text_options["heading"] % {"username": username},
-        "text": text_options["text"][event_type_id] % {"event_name": event_name},
-    }
+
+    if notification_type == SignUpNotificationType.EVENT_CANCELLATION:
+        texts = {
+            "heading": text_options["heading"] % {"event_name": event_name},
+            "text": text_options["text"],
+        }
+    else:
+        event_type_id = registration.event.type_id
+        username = contact_person.first_name
+        texts = {
+            "heading": text_options["heading"] % {"username": username},
+            "text": text_options["text"][event_type_id] % {"event_name": event_name},
+        }
 
     if notification_type == SignUpNotificationType.CANCELLATION:
         texts["secondary_heading"] = text_options["secondary_heading"][
@@ -223,26 +252,11 @@ def get_signup_notification_subject(contact_person, notification_type):
         event_name = registration.event.name
 
     with translation.override(linked_registrations_ui_locale):
-        notification_subjects = {
-            SignUpNotificationType.CANCELLATION: _(
-                "Registration cancelled - %(event_name)s"
-            )
-            % {"event_name": event_name},
-            SignUpNotificationType.CONFIRMATION: _(
-                "Registration confirmation - %(event_name)s"
-            )
-            % {"event_name": event_name},
-            SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST: _(
-                "Waiting list seat reserved - %(event_name)s"
-            )
-            % {"event_name": event_name},
-            SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT: _(
-                "Registration confirmation - %(event_name)s"
-            )
-            % {"event_name": event_name},
+        notification_subject = signup_notification_subjects[notification_type] % {
+            "event_name": event_name
         }
 
-    return notification_subjects[notification_type]
+    return notification_subject
 
 
 def get_signup_notification_variables(contact_person):

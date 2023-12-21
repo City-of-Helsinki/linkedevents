@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-11-20 13:49+0000\n"
+"POT-Creation-Date: 2023-12-12 08:51+0000\n"
 "PO-Revision-Date: 2015-04-29 12:26+0140\n"
 "Last-Translator: <harri.rissanen@vincit.fi>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -60,14 +60,14 @@ msgid ""
 "data_source must be left blank or set to %(required)s "
 msgstr ""
 
-#: events/api.py:635 events/api.py:837
+#: events/api.py:635 events/api.py:835
 #, python-format
 msgid ""
 "Setting id to %(given)s is not allowed for your organization. The id must be "
 "left blank or set to %(data_source)s:desired_id"
 msgstr ""
 
-#: events/api.py:670
+#: events/api.py:672
 #, python-format
 msgid ""
 "Setting %(field)s to %(given)s is not allowed for this user. The %(field)s "
@@ -75,123 +75,123 @@ msgid ""
 "belongs to."
 msgstr ""
 
-#: events/api.py:705
+#: events/api.py:703
 msgid "The name must be specified."
 msgstr "Nimi on pakollinen."
 
-#: events/api.py:770
+#: events/api.py:768
 msgid "An object with given id already exists."
 msgstr ""
 
-#: events/api.py:781 events/api.py:1032
+#: events/api.py:779 events/api.py:1030
 msgid "You may not change the id of an existing object."
 msgstr "Olemassa olevan objektin id-kenttää ei voi vaihtaa."
 
-#: events/api.py:790
+#: events/api.py:788
 msgid "You may not change the publisher of an existing object."
 msgstr "Olemassa olevan objektin julkaisija-kenttää ei voi vaihtaa."
 
-#: events/api.py:801 events/api.py:1052
+#: events/api.py:799 events/api.py:1050
 msgid "You may not change the data source of an existing object."
 msgstr "Olemassa olevan objektin tietolähde-kenttää ei voi vaihtaa."
 
-#: events/api.py:1041
+#: events/api.py:1039
 msgid "You may not change the organization of an existing object."
 msgstr "Olemassa olevan objektin organization-kenttää ei voi vaihtaa."
 
-#: events/api.py:1561
+#: events/api.py:1559
 msgid "User has no rights to this organization"
 msgstr "Käyttäjällä ei ole oikeuksia tähän organisaatioon"
 
-#: events/api.py:1937 events/api.py:2032
+#: events/api.py:1935 events/api.py:2030
 #, python-format
 msgid "Registration user access with email %(email)s already exists."
 msgstr ""
 
-#: events/api.py:1968 events/permissions.py:144
+#: events/api.py:1966 events/permissions.py:144
 msgid "Object data source does not match user data source"
 msgstr ""
 
-#: events/api.py:1980
+#: events/api.py:1978
 msgid "Event already has a registration."
 msgstr ""
 
-#: events/api.py:2221
+#: events/api.py:2219
 msgid "Deprecated keyword not allowed ({})"
 msgstr ""
 
-#: events/api.py:2271
+#: events/api.py:2269
 msgid "You have to set either user_email or user_phone_number."
 msgstr ""
 
-#: events/api.py:2280
+#: events/api.py:2278
 msgid "User consent is required if personal information fields are filled."
 msgstr ""
 
-#: events/api.py:2283
+#: events/api.py:2281
 msgid "This field must be specified before an event is published."
 msgstr "Kenttä on täytettävä ennen kuin tapahtuman voi julkaista."
 
-#: events/api.py:2297
+#: events/api.py:2295
 msgid "Short description length must be 160 characters or less"
 msgstr ""
 
-#: events/api.py:2313
+#: events/api.py:2311
 msgid "Price info must be specified before an event is published."
 msgstr ""
 
-#: events/api.py:2347
+#: events/api.py:2345
 msgid "End time cannot be in the past. Please set a future end time."
 msgstr ""
-"Päättymisaika ei voi olla menneisyydessä. Ole hyvä ja anna tulevaisuudessa oleva "
-"päättymisaika."
+"Päättymisaika ei voi olla menneisyydessä. Ole hyvä ja anna tulevaisuudessa "
+"oleva päättymisaika."
 
-#: events/api.py:2431
+#: events/api.py:2429
 msgid "Cannot edit a past event."
 msgstr ""
 
-#: events/api.py:2446
+#: events/api.py:2444
 msgid ""
 "POSTPONED and RESCHEDULED statuses cannot be set directly.Changing event "
 "start_time or marking start_time nullwill reschedule or postpone an event."
 msgstr ""
 
-#: events/api.py:2467
+#: events/api.py:2465
 msgid ""
 "Public events cannot be set back to SCHEDULED if theyhave already been "
 "CANCELLED, POSTPONED or RESCHEDULED."
 msgstr ""
 
-#: events/api.py:3038
+#: events/api.py:3027
 #, python-brace-format
 msgid "Event type can be of the following values: {event_types}"
 msgstr ""
 
-#: events/api.py:3066
+#: events/api.py:3055
 msgid "Error while parsing days."
 msgstr ""
 
-#: events/api.py:3068
+#: events/api.py:3057
 msgid "Days must be 1 or more."
 msgstr ""
 
-#: events/api.py:3072
+#: events/api.py:3061
 msgid "Start or end cannot be used with days."
 msgstr ""
 
-#: events/api.py:3528
+#: events/api.py:3517
 msgid "x_full_text supports the following languages: fi, en, sv"
 msgstr ""
 
-#: events/api.py:3946
+#: events/api.py:3938
 msgid "Must specify a location when fetching DOCX file."
 msgstr ""
 
-#: events/api.py:3950
+#: events/api.py:3942
 msgid "No events."
 msgstr "Ei tapahtumia."
 
-#: events/api.py:3952
+#: events/api.py:3944
 msgid "Only one location allowed."
 msgstr ""
 
@@ -204,11 +204,11 @@ msgstr ""
 
 #: events/models.py:78 events/models.py:189 events/models.py:206
 #: events/models.py:333 events/models.py:400 events/models.py:414
-#: events/models.py:1293 events/models.py:1309 events/models.py:1359
-#: registrations/exports.py:27
+#: events/models.py:1294 events/models.py:1310 events/models.py:1360
 #: venv/lib/python3.9/site-packages/munigeo/models.py:83
 #: venv/lib/python3.9/site-packages/munigeo/models.py:112
 #: venv/lib/python3.9/site-packages/munigeo/models.py:141
+#: registrations/exports.py:34
 msgid "Name"
 msgstr "Nimi"
 
@@ -267,7 +267,7 @@ msgstr "Rajaus"
 msgid "Photographer name"
 msgstr "Valokuvaajan nimi"
 
-#: events/models.py:260 events/models.py:1316
+#: events/models.py:260 events/models.py:1317
 msgid "Alt text"
 msgstr "Vaihtoehtoinen teksti"
 
@@ -338,8 +338,8 @@ msgstr "Paikan kotisivu"
 msgid "Description"
 msgstr "Kuvaus"
 
-#: events/models.py:621 events/models.py:1360 registrations/exports.py:28
-#: registrations/models.py:367 registrations/models.py:500
+#: events/models.py:621 events/models.py:1361 registrations/exports.py:36
+#: registrations/models.py:406 registrations/models.py:670
 msgid "E-mail"
 msgstr "Sähköposti"
 
@@ -351,7 +351,7 @@ msgstr "Puhelinnumero"
 msgid "Contact type"
 msgstr "Yhteydtiedon tyyppi"
 
-#: events/models.py:629 registrations/models.py:47 registrations/models.py:544
+#: events/models.py:629 registrations/models.py:50 registrations/models.py:532
 msgid "Street address"
 msgstr "Katuosoite"
 
@@ -446,7 +446,7 @@ msgstr "Käyttäjän organisaatio"
 msgid "Event organizer information."
 msgstr "Tapahtuman järjestäjän tiedot."
 
-#: events/models.py:846 registrations/models.py:566
+#: events/models.py:846 registrations/models.py:554
 msgid "User consent"
 msgstr "Käyttäjän suostumus"
 
@@ -514,11 +514,11 @@ msgstr "Alkuaika"
 msgid "End time"
 msgstr "Loppuaika"
 
-#: events/models.py:937 registrations/models.py:121
+#: events/models.py:937 registrations/models.py:124
 msgid "Minimum recommended age"
 msgstr "Suositeltu vähimmäisikä"
 
-#: events/models.py:940 registrations/models.py:124
+#: events/models.py:940 registrations/models.py:127
 msgid "Maximum recommended age"
 msgstr "Suurin suositeltu ikä"
 
@@ -550,38 +550,38 @@ msgstr "tapahtuma"
 msgid "events"
 msgstr "tapahtumat"
 
-#: events/models.py:1019
+#: events/models.py:1020
 msgid ""
 "Trying to replace this event with an event that is replaced by this event. "
 "Please refrain from creating circular replacements and remove one of the "
 "replacements."
 msgstr ""
 
-#: events/models.py:1058
+#: events/models.py:1059
 msgid "The event end time cannot be earlier than the start time."
 msgstr "Tapahtuman päättymisaika ei voi olla aikaisempi kuin alkamisaika."
 
-#: events/models.py:1274
+#: events/models.py:1275
 msgid "Price"
 msgstr "Hinta"
 
-#: events/models.py:1276
+#: events/models.py:1277
 msgid "Web link to offer"
 msgstr "Linkki lipunmyyntiin"
 
-#: events/models.py:1279
+#: events/models.py:1280
 msgid "Offer description"
 msgstr "Hintatietojen kuvaus"
 
-#: events/models.py:1283
+#: events/models.py:1284
 msgid "Is free"
 msgstr "Vapaa pääsy"
 
-#: events/models.py:1361 notifications/models.py:47
+#: events/models.py:1362 notifications/models.py:47
 msgid "Subject"
 msgstr "Otsikko"
 
-#: events/models.py:1362 notifications/models.py:53
+#: events/models.py:1363 notifications/models.py:53
 msgid "Body"
 msgstr "Teksti"
 
@@ -666,16 +666,17 @@ msgstr "Osallistujalista-käyttäjät"
 msgid "Registration with signups cannot be deleted"
 msgstr "Ilmoittautumista, jolla on osallistujia ei voi poistaa"
 
-#: registrations/api.py:329
-msgid "Invalid registration ID(s) given."
-msgstr ""
-
-#: registrations/api.py:346
+#: registrations/api.py:173 registrations/api.py:379
 msgid "Only the admins of the registration organizations have access rights."
 msgstr "Vain ilmoittautumisten organisaatioiden admin-käyttäjillä on oikeudet."
 
-#: registrations/api.py:459
-msgid "Cannot delete the only responsible person of a group"
+#: registrations/api.py:206
+msgid ""
+"No contact persons with email addresses found for the given participants."
+msgstr ""
+
+#: registrations/api.py:358
+msgid "Invalid registration ID(s) given."
 msgstr ""
 
 #: registrations/exceptions.py:8
@@ -686,12 +687,11 @@ msgstr "Pyyntö on ristiriidassa kohderesurssin nykyisen tilan kanssa"
 msgid "Registered persons"
 msgstr "Ilmoittautuneet"
 
-#: registrations/exports.py:29 registrations/models.py:46
-#: registrations/models.py:510
+#: registrations/exports.py:42 registrations/models.py:674
 msgid "Phone number"
 msgstr "Puhelinnumero"
 
-#: registrations/exports.py:42
+#: registrations/exports.py:59
 msgid ""
 "This material is subject to data protection. This material must be processed "
 "in the manner required by data protection and only to verify \n"
@@ -703,163 +703,205 @@ msgstr ""
 "osallistujien varmistamiseen. Tämä lista tulee hävittää, kun tapahtuma on "
 "mennyt ja läsnäolijat merkitty järjestelmään."
 
-#: registrations/exports.py:54
+#: registrations/exports.py:71
 msgid ""
 "Please note that the participant and the participant's contact information "
 "may be the information of different persons."
 msgstr ""
-"Huomaathan, että osallistuja ja osallistujan yhteystiedot voivat olla eri henkilöiden tietoja."
+"Huomaathan, että osallistuja ja osallistujan yhteystiedot voivat olla eri "
+"henkilöiden tietoja."
 
-#: registrations/models.py:43 registrations/models.py:493
+#: registrations/models.py:47 registrations/models.py:518
 msgid "City"
 msgstr "Kaupunki"
 
-#: registrations/models.py:44 registrations/models.py:479
+#: registrations/models.py:48 registrations/models.py:504
+#: registrations/models.py:655
 msgid "First name"
 msgstr "Etunimi"
 
-#: registrations/models.py:45 registrations/models.py:486
+#: registrations/models.py:49 registrations/models.py:511
+#: registrations/models.py:662
 msgid "Last name"
 msgstr "Sukunimi"
 
-#: registrations/models.py:48 registrations/models.py:551
+#: registrations/models.py:51 registrations/models.py:539
 msgid "ZIP code"
 msgstr "Postinumero"
 
-#: registrations/models.py:80
+#: registrations/models.py:83
 msgid "Created at"
 msgstr "Luotu klo"
 
-#: registrations/models.py:86
+#: registrations/models.py:89
 msgid "Modified at"
 msgstr "Muokattu klo"
 
-#: registrations/models.py:128
+#: registrations/models.py:131
 msgid "Enrollment start time"
 msgstr "Ilmoittautumisen alkamisaika"
 
-#: registrations/models.py:131
+#: registrations/models.py:134
 msgid "Enrollment end time"
 msgstr "Ilmoittautumisen päättymisaika"
 
-#: registrations/models.py:135
+#: registrations/models.py:138
 msgid "Confirmation message"
 msgstr "Vahvistusviesti"
 
-#: registrations/models.py:138
+#: registrations/models.py:141
 msgid "Instructions"
 msgstr "Ohjeet"
 
-#: registrations/models.py:142
+#: registrations/models.py:145
 msgid "Maximum attendee capacity"
 msgstr "Paikkojen enimmäismäärä"
 
-#: registrations/models.py:145
+#: registrations/models.py:148
 msgid "Minimum attendee capacity"
 msgstr "Paikkojen vähimmäismäärä"
 
-#: registrations/models.py:148
+#: registrations/models.py:151
 msgid "Waiting list capacity"
 msgstr "Jonopaikkojen lukumäärä"
 
-#: registrations/models.py:151
+#: registrations/models.py:154
 msgid "Maximum group size"
 msgstr "Ryhmän enimmäiskoko"
 
-#: registrations/models.py:165
+#: registrations/models.py:168
 msgid "Mandatory fields"
 msgstr "Pakolliset kentät"
 
-#: registrations/models.py:346
+#: registrations/models.py:332 registrations/models.py:559
+msgid "Anonymization time"
+msgstr ""
+
+#: registrations/models.py:381
 msgid "Extra info"
 msgstr "Lisätiedot"
 
-#: registrations/models.py:413
+#: registrations/models.py:452
 #, python-format
 msgid "Rights granted to the participant list - %(event_name)s"
 msgstr "Oikeudet myönnetty osallistujalistaan  - %(event_name)s"
 
-#: registrations/models.py:439
+#: registrations/models.py:478
 msgid "Waitlisted"
 msgstr "Jonossa"
 
-#: registrations/models.py:440
+#: registrations/models.py:479
 msgid "Attending"
 msgstr "Osallistuu"
 
-#: registrations/models.py:450
-msgid "No Notification"
-msgstr "Ei ilmoituksia"
-
-#: registrations/models.py:451
-msgid "SMS"
-msgstr "Teksiviesti"
-
-#: registrations/models.py:452
-msgid "E-Mail"
-msgstr "Sähköposti"
-
-#: registrations/models.py:453
-msgid "Both SMS and email."
-msgstr "Tekstiviesti ja sähköposti"
-
-#: registrations/models.py:461
+#: registrations/models.py:487
 msgid "Not present"
 msgstr "Ei paikalla"
 
-#: registrations/models.py:462
+#: registrations/models.py:488
 msgid "Present"
 msgstr "Paikalla"
 
-#: registrations/models.py:503
-msgid "Membership number"
-msgstr "Jäsennumero"
-
-#: registrations/models.py:517
-msgid "Notification type"
-msgstr "Ilmoitusten tyyppi"
-
-#: registrations/models.py:523
+#: registrations/models.py:525
 msgid "Attendee status"
 msgstr "Osallistujan tila"
 
-#: registrations/models.py:559
+#: registrations/models.py:547
 msgid "Presence status"
 msgstr "Läsnäolotila"
 
-#: registrations/models.py:676
+#: registrations/models.py:623
 msgid "Date of birth"
 msgstr "Syntymäaika"
 
-#: registrations/models.py:690
+#: registrations/models.py:697
+msgid "Membership number"
+msgstr "Jäsennumero"
+
+#: registrations/models.py:705
+msgid "Notification type"
+msgstr "Ilmoitusten tyyppi"
+
+#: registrations/models.py:798
+msgid "You must provide either signup_group or signup."
+msgstr ""
+
+#: registrations/models.py:802
+msgid "You can only provide signup_group or signup, not both."
+msgstr ""
+
+#: registrations/models.py:818
 msgid "Number of seats"
 msgstr "Paikkojen lukumäärä"
 
-#: registrations/models.py:696
+#: registrations/models.py:824
 msgid "Seat reservation code"
 msgstr "Paikkavarauskoodi"
 
-#: registrations/models.py:699
+#: registrations/models.py:827
 msgid "Timestamp"
 msgstr "Aikaleima"
 
+#: registrations/notifications.py:17
+msgid "No Notification"
+msgstr "Ei ilmoituksia"
+
 #: registrations/notifications.py:18
+msgid "SMS"
+msgstr "Teksiviesti"
+
+#: registrations/notifications.py:19
+msgid "E-Mail"
+msgstr "Sähköposti"
+
+#: registrations/notifications.py:20
+msgid "Both SMS and email."
+msgstr "Tekstiviesti ja sähköposti"
+
+#: registrations/notifications.py:33
+msgid "Event cancelled - %(event_name)s"
+msgstr "Tapahtuma peruttu - %(event_name)s"
+
+#: registrations/notifications.py:34
+#, python-format
+msgid "Registration cancelled - %(event_name)s"
+msgstr "Ilmoittautuminen peruttu - %(event_name)s"
+
+#: registrations/notifications.py:36 registrations/notifications.py:42
+#, python-format
+msgid "Registration confirmation - %(event_name)s"
+msgstr "Vahvistus ilmoittautumisesta - %(event_name)s"
+
+#: registrations/notifications.py:39
+#, python-format
+msgid "Waiting list seat reserved - %(event_name)s"
+msgstr "Paikka jonotuslistalla varattu - %(event_name)s"
+
+#: registrations/notifications.py:49
+msgid "Event %(event_name)s has been cancelled"
+msgstr "Tapahtuma %(event_name)s on peruttu."
+
+#: registrations/notifications.py:50
+msgid "Thank you for your interest in the event."
+msgstr "Kiitos mielenkiinnosta tapahtumaa kohtaan."
+
+#: registrations/notifications.py:53
 msgid "Registration cancelled"
 msgstr "Ilmoittautuminen peruttu"
 
-#: registrations/notifications.py:21
+#: registrations/notifications.py:56
 #, python-format
 msgid ""
 "%(username)s, registration to the event %(event_name)s has been cancelled."
 msgstr "%(username)s, ilmoittautuminen tapahtumaan %(event_name)s on peruttu."
 
-#: registrations/notifications.py:24
+#: registrations/notifications.py:59
 #, python-format
 msgid ""
 "%(username)s, registration to the course %(event_name)s has been cancelled."
 msgstr "%(username)s, ilmoittautuminen kurssille %(event_name)s on peruttu."
 
-#: registrations/notifications.py:27
+#: registrations/notifications.py:62
 #, python-format
 msgid ""
 "%(username)s, registration to the volunteering %(event_name)s has been "
@@ -868,7 +910,7 @@ msgstr ""
 "%(username)s, ilmoittautuminen vapaaehtoistehtävään %(event_name)s on "
 "peruttu."
 
-#: registrations/notifications.py:32
+#: registrations/notifications.py:67
 #, python-format
 msgid ""
 "You have successfully cancelled your registration to the event "
@@ -877,7 +919,7 @@ msgstr ""
 "Olet onnistuneesti peruuttanut ilmoittautumisesi tapahtumaan "
 "<strong>%(event_name)s</strong>."
 
-#: registrations/notifications.py:35
+#: registrations/notifications.py:70
 #, python-format
 msgid ""
 "You have successfully cancelled your registration to the course "
@@ -886,7 +928,7 @@ msgstr ""
 "Olet onnistuneesti peruuttanut ilmoittautumisesi kurssille "
 "<strong>%(event_name)s</strong>."
 
-#: registrations/notifications.py:38
+#: registrations/notifications.py:73
 #, python-format
 msgid ""
 "You have successfully cancelled your registration to the volunteering "
@@ -895,27 +937,27 @@ msgstr ""
 "Olet onnistuneesti peruuttanut ilmoittautumisesi vapaaehtoistehtävään "
 "<strong>%(event_name)s</strong>."
 
-#: registrations/notifications.py:43 registrations/notifications.py:131
+#: registrations/notifications.py:78 registrations/notifications.py:166
 #, python-format
 msgid "Welcome %(username)s"
 msgstr "Tervetuloa %(username)s"
 
-#: registrations/notifications.py:46
+#: registrations/notifications.py:81
 #, python-format
 msgid "Registration to the event %(event_name)s has been saved."
 msgstr "Ilmoittautuminen tapahtumaan %(event_name)s on tallennettu."
 
-#: registrations/notifications.py:49
+#: registrations/notifications.py:84
 #, python-format
 msgid "Registration to the course %(event_name)s has been saved."
 msgstr "Ilmoittautuminen kurssille %(event_name)s on tallennettu."
 
-#: registrations/notifications.py:52
+#: registrations/notifications.py:87
 #, python-format
 msgid "Registration to the volunteering %(event_name)s has been saved."
 msgstr "Ilmoittautuminen vapaaehtoistehtävään %(event_name)s on tallennettu."
 
-#: registrations/notifications.py:57
+#: registrations/notifications.py:92
 #, python-format
 msgid ""
 "Congratulations! Your registration has been confirmed for the event "
@@ -924,7 +966,7 @@ msgstr ""
 "Onnittelut! Ilmoittautumisesi on vahvistettu tapahtumaan "
 "<strong>%(event_name)s</strong>."
 
-#: registrations/notifications.py:60
+#: registrations/notifications.py:95
 #, python-format
 msgid ""
 "Congratulations! Your registration has been confirmed for the course "
@@ -933,7 +975,7 @@ msgstr ""
 "Onnittelut! Ilmoittautumisesi on vahvistettu kurssille "
 "<strong>%(event_name)s</strong>."
 
-#: registrations/notifications.py:63
+#: registrations/notifications.py:98
 #, python-format
 msgid ""
 "Congratulations! Your registration has been confirmed for the volunteering "
@@ -942,31 +984,31 @@ msgstr ""
 "Onnittelut! Ilmoittautumisesi on vahvistettu vapaaehtoistehtävään "
 "<strong>%(event_name)s</strong>."
 
-#: registrations/notifications.py:67
+#: registrations/notifications.py:102
 msgid "Welcome"
 msgstr "Tervetuloa"
 
-#: registrations/notifications.py:70
+#: registrations/notifications.py:105
 #, python-format
 msgid "Group registration to the event %(event_name)s has been saved."
 msgstr "Ryhmäilmoittautuminen tapahtumaan %(event_name)s on tallennettu."
 
-#: registrations/notifications.py:73
+#: registrations/notifications.py:108
 #, python-format
 msgid "Group registration to the course %(event_name)s has been saved."
 msgstr "Ryhmäilmoittautuminen kurssille %(event_name)s on tallennettu."
 
-#: registrations/notifications.py:76
+#: registrations/notifications.py:111
 #, python-format
 msgid "Group registration to the volunteering %(event_name)s has been saved."
 msgstr ""
 "Ryhmäilmoittautuminen vapaaehtoistehtävään %(event_name)s on tallennettu."
 
-#: registrations/notifications.py:82
+#: registrations/notifications.py:117
 msgid "Thank you for signing up for the waiting list"
 msgstr "Kiitos ilmoittautumisesta jonoon"
 
-#: registrations/notifications.py:85
+#: registrations/notifications.py:120
 #, python-format
 msgid ""
 "You have successfully registered for the event <strong>%(event_name)s</"
@@ -975,7 +1017,7 @@ msgstr ""
 "Olet onnistuneesti ilmoittautunut tapahtuman <strong>%(event_name)s</strong> "
 "jonotuslistalle."
 
-#: registrations/notifications.py:88
+#: registrations/notifications.py:123
 #, python-format
 msgid ""
 "You have successfully registered for the course <strong>%(event_name)s</"
@@ -984,7 +1026,7 @@ msgstr ""
 "Olet onnistuneesti ilmoittautunut kurssin <strong>%(event_name)s</strong> "
 "jonotuslistalle."
 
-#: registrations/notifications.py:91
+#: registrations/notifications.py:126
 #, python-format
 msgid ""
 "You have successfully registered for the volunteering "
@@ -993,7 +1035,7 @@ msgstr ""
 "Olet onnistuneesti ilmoittautunut vapaaehtoistehtävän "
 "<strong>%(event_name)s</strong> jonotuslistalle."
 
-#: registrations/notifications.py:96
+#: registrations/notifications.py:131
 msgid ""
 "You will be automatically transferred as an event participant if a seat "
 "becomes available."
@@ -1001,7 +1043,7 @@ msgstr ""
 "Sinut siirretään automaattisesti tapahtuman osallistujaksi mikäli paikka "
 "vapautuu."
 
-#: registrations/notifications.py:99
+#: registrations/notifications.py:134
 msgid ""
 "You will be automatically transferred as a course participant if a seat "
 "becomes available."
@@ -1009,7 +1051,7 @@ msgstr ""
 "Sinut siirretään automaattisesti kurssin osallistujaksi mikäli paikka "
 "vapautuu."
 
-#: registrations/notifications.py:102
+#: registrations/notifications.py:137
 msgid ""
 "You will be automatically transferred as a volunteering participant if a "
 "seat becomes available."
@@ -1017,7 +1059,7 @@ msgstr ""
 "Sinut siirretään automaattisesti vapaaehtoistehtävän osallistujaksi mikäli "
 "paikka vapautuu."
 
-#: registrations/notifications.py:108
+#: registrations/notifications.py:143
 #, python-format
 msgid ""
 "The registration for the event <strong>%(event_name)s</strong> waiting list "
@@ -1026,7 +1068,7 @@ msgstr ""
 "Ilmoittautuminen tapahtuman <strong>%(event_name)s</strong> jonotuslistalle "
 "onnistui."
 
-#: registrations/notifications.py:111
+#: registrations/notifications.py:146
 #, python-format
 msgid ""
 "The registration for the course <strong>%(event_name)s</strong> waiting list "
@@ -1035,7 +1077,7 @@ msgstr ""
 "Ilmoittautuminen kurssin <strong>%(event_name)s</strong> jonotuslistalle "
 "onnistui."
 
-#: registrations/notifications.py:114
+#: registrations/notifications.py:149
 #, python-format
 msgid ""
 "The registration for the volunteering <strong>%(event_name)s</strong> "
@@ -1044,7 +1086,7 @@ msgstr ""
 "Ilmoittautuminen vapaaehtoistehtävän <strong>%(event_name)s</strong> "
 "jonotuslistalle onnistui."
 
-#: registrations/notifications.py:119
+#: registrations/notifications.py:154
 msgid ""
 "You will be automatically transferred from the waiting list to become a "
 "participant in the event if a place becomes available."
@@ -1052,7 +1094,7 @@ msgstr ""
 "Jonotuslistalta siirretään automaattisesti tapahtuman osallistujaksi mikäli "
 "paikka vapautuu."
 
-#: registrations/notifications.py:122
+#: registrations/notifications.py:157
 msgid ""
 "You will be automatically transferred from the waiting list to become a "
 "participant in the course if a place becomes available."
@@ -1060,7 +1102,7 @@ msgstr ""
 "Jonotuslistalta siirretään automaattisesti kurssin osallistujaksi mikäli "
 "paikka vapautuu."
 
-#: registrations/notifications.py:125
+#: registrations/notifications.py:160
 msgid ""
 "You will be automatically transferred from the waiting list to become a "
 "participant in the volunteering if a place becomes available."
@@ -1068,7 +1110,7 @@ msgstr ""
 "Jonotuslistalta siirretään automaattisesti vapaaehtoistehtävän "
 "osallistujaksi mikäli paikka vapautuu."
 
-#: registrations/notifications.py:134
+#: registrations/notifications.py:169
 #, python-format
 msgid ""
 "You have been moved from the waiting list of the event "
@@ -1077,7 +1119,7 @@ msgstr ""
 "Sinut on siirretty tapahtuman <strong>%(event_name)s</strong> "
 "jonotuslistalta osallistujaksi."
 
-#: registrations/notifications.py:137
+#: registrations/notifications.py:172
 #, python-format
 msgid ""
 "You have been moved from the waiting list of the course "
@@ -1086,7 +1128,7 @@ msgstr ""
 "Sinut on siirretty kurssin <strong>%(event_name)s</strong> jonotuslistalta "
 "osallistujaksi."
 
-#: registrations/notifications.py:140
+#: registrations/notifications.py:175
 #, python-format
 msgid ""
 "You have been moved from the waiting list of the volunteering "
@@ -1095,93 +1137,71 @@ msgstr ""
 "Sinut on siirretty vapaaehtoistehtävän <strong>%(event_name)s</strong> "
 "jonotuslistalta osallistujaksi."
 
-#: registrations/notifications.py:207
-#, python-format
-msgid "Registration cancelled - %(event_name)s"
-msgstr "Ilmoittautuminen peruttu - %(event_name)s"
-
-#: registrations/notifications.py:211 registrations/notifications.py:219
-#, python-format
-msgid "Registration confirmation - %(event_name)s"
-msgstr "Vahvistus ilmoittautumisesta - %(event_name)s"
-
-#: registrations/notifications.py:215
-#, python-format
-msgid "Waiting list seat reserved - %(event_name)s"
-msgstr "Paikka jonotuslistalla varattu - %(event_name)s"
-
-#: registrations/serializers.py:34
+#: registrations/serializers.py:36
 msgid "Enrolment is not yet open."
 msgstr "Ilmoittautuminen ei ole vielä auki."
 
-#: registrations/serializers.py:36
+#: registrations/serializers.py:38
 msgid "Enrolment is already closed."
 msgstr "Ilmoittautuminen on jo päättynyt."
 
-#: registrations/serializers.py:152 registrations/serializers.py:489
+#: registrations/serializers.py:197 registrations/serializers.py:544
 msgid "The waiting list is already full"
 msgstr "Jonotuslista on jo täynnä"
 
-#: registrations/serializers.py:162
+#: registrations/serializers.py:207
 msgid "You may not change the attendee_status of an existing object."
 msgstr "Olemassa olevan objektin attendee_status-kenttää ei voi vaihtaa."
 
-#: registrations/serializers.py:169 registrations/serializers.py:654
+#: registrations/serializers.py:214 registrations/serializers.py:758
 msgid "You may not change the registration of an existing object."
 msgstr "Olemassa olevan objektin registration-kenttää ei voi vaihtaa."
 
-#: registrations/serializers.py:202 registrations/serializers.py:213
-#: registrations/serializers.py:744
+#: registrations/serializers.py:256 registrations/serializers.py:267
+#: registrations/serializers.py:852
 msgid "This field must be specified."
 msgstr "Kenttä on pakollinen."
 
-#: registrations/serializers.py:228
+#: registrations/serializers.py:282
 msgid "The participant is too young."
 msgstr "Osallistuja on liian nuori."
 
-#: registrations/serializers.py:233
+#: registrations/serializers.py:287
 msgid "The participant is too old."
 msgstr "Osallistuja on liian vanha."
 
-#: registrations/serializers.py:241
-msgid ""
-"Cannot set responsible_for_group to False for the only responsible person of "
-"a group"
-msgstr ""
-
-#: registrations/serializers.py:432
+#: registrations/serializers.py:480
 msgid "Reservation code doesn't exist."
 msgstr "Varauskoodia ei ole olemassa."
 
-#: registrations/serializers.py:454
+#: registrations/serializers.py:502
 #, python-brace-format
 msgid "Amount of signups is greater than maximum group size: {max_group_size}."
 msgstr ""
 "Ilmoittautumisten määrä on suurempi kuin ryhmän enimmäiskoko: "
 "{max_group_size}."
 
-#: registrations/serializers.py:565
-msgid ""
-"A group must have at least one participant who is responsible for the group"
+#: registrations/serializers.py:635
+msgid "Contact person information must be provided for a group."
 msgstr ""
 
-#: registrations/serializers.py:747
+#: registrations/serializers.py:855
 msgid "The value doesn't match."
 msgstr "Arvo ei täsmää."
 
-#: registrations/serializers.py:765
+#: registrations/serializers.py:873
 #, python-brace-format
 msgid "Amount of seats is greater than maximum group size: {max_group_size}."
 msgstr ""
 "Paikkojen lukumäärä on suurempi kuin ryhmän enimmäiskoko: {max_group_size}."
 
-#: registrations/serializers.py:790
+#: registrations/serializers.py:898
 #, python-brace-format
 msgid "Not enough seats available. Capacity left: {capacity_left}."
 msgstr ""
 "Paikkoja ei ole riittävästi jäljellä. Paikkoja jäljellä: {capacity_left}."
 
-#: registrations/serializers.py:806
+#: registrations/serializers.py:914
 #, python-brace-format
 msgid ""
 "Not enough capacity in the waiting list. Capacity left: {capacity_left}."
@@ -1189,7 +1209,7 @@ msgstr ""
 "Jonotuslistalle ei ole tarpeeksi paikkoja jäljellä. Paikkoja jäljellä "
 "jonotuslistalla: {capacity_left}."
 
-#: registrations/serializers.py:820
+#: registrations/serializers.py:928
 msgid "Cannot update expired seats reservation."
 msgstr "Vanhentunutta paikkavarausta ei voi päivittää."
 
@@ -1214,6 +1234,7 @@ msgid "All rights reserved."
 msgstr "Kaikki oikeudet pidätetään."
 
 #: registrations/templates/cancellation_confirmation.html:22
+#: registrations/templates/event_cancellation_confirmation.html:19
 msgid "More information from our customer service"
 msgstr "Lisätietoja asiakaspalvelustamme"
 

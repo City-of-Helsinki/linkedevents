@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.contrib.sites.models import Site
-from django.core.mail import EmailMultiAlternatives, get_connection
+from django.core.mail import send_mail
 
 
 def code_validity_duration(seats):
@@ -45,25 +45,24 @@ def send_mass_html_mail(
     connection=None,
 ):
     """
-    django.core.mail.send_mass_mail doesn't support sending html mails,
-
-    This method duplicates send_mass_mail except requires html_message for each message
-    and adds html alternative to each mail
+    django.core.mail.send_mass_mail doesn't support sending html mails.
     """
-    connection = connection or get_connection(
-        username=auth_user,
-        password=auth_password,
-        fail_silently=fail_silently,
-    )
-    messages = []
-    for subject, message, html_message, from_email, recipient_list in datatuple:
-        mail = EmailMultiAlternatives(
-            subject, message, from_email, recipient_list, connection=connection
-        )
-        mail.attach_alternative(html_message, "text/html")
-        messages.append(mail)
+    num_messages = 0
 
-    return connection.send_messages(messages)
+    for subject, message, html_message, from_email, recipient_list in datatuple:
+        num_messages += send_mail(
+            subject,
+            message,
+            from_email,
+            recipient_list,
+            fail_silently=fail_silently,
+            auth_user=auth_user,
+            auth_password=auth_password,
+            connection=connection,
+            html_message=html_message,
+        )
+
+    return num_messages
 
 
 def get_email_noreply_address():
