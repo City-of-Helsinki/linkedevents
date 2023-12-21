@@ -15,18 +15,23 @@ from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
 from registrations.models import (
     MandatoryFields,
+    RegistrationPriceGroup,
     SeatReservationCode,
     SignUp,
     SignUpContactPerson,
+    SignUpPriceGroup,
 )
 from registrations.notifications import NotificationType
 from registrations.tests.factories import (
     RegistrationFactory,
+    RegistrationPriceGroupFactory,
     SeatReservationCodeFactory,
     SignUpContactPersonFactory,
     SignUpFactory,
     SignUpGroupFactory,
 )
+from registrations.tests.test_signup_patch import description_fields
+from registrations.tests.utils import create_user_by_role
 
 test_email1 = "test@email.com"
 test_street_address = "my street"
@@ -1273,9 +1278,9 @@ def test_signup_text_fields_are_sanitized(
 def test_signup_id_is_audit_logged_on_post(api_client, registration):
     LanguageFactory(pk="fi", service_language=True)
 
-    reservation = SeatReservationCodeFactory(seats=1)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signups_data = default_signups_data
-    signups_data["registration"] = reservation.registration.id
+    signups_data["registration"] = registration.id
     signups_data["reservation_code"] = reservation.code
 
     user = UserFactory()
@@ -1288,3 +1293,184 @@ def test_signup_id_is_audit_logged_on_post(api_client, registration):
     assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
         response.data[0]["id"]
     ]
+
+
+@pytest.mark.parametrize(
+    "user_role",
+    ["superuser", "admin", "registration_admin", "financial_admin", "regular_user"],
+)
+@pytest.mark.django_db
+def test_can_create_signup_with_price_group(api_client, registration, user_role):
+    user = create_user_by_role(user_role, registration.publisher)
+    api_client.force_authenticate(user)
+
+    LanguageFactory(id="fi", service_language=True)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
+    registration_price_group = RegistrationPriceGroupFactory(
+        registration=registration, price_group__publisher=registration.publisher
+    )
+
+    signups_data = deepcopy(default_signups_data)
+    signups_data["registration"] = registration.id
+    signups_data["reservation_code"] = reservation.code
+    signups_data["signups"][0]["price_group"] = {
+        "registration_price_group": registration_price_group.pk
+    }
+
+    assert SignUp.objects.count() == 0
+    assert SignUpPriceGroup.objects.count() == 0
+
+    assert_create_signups(api_client, signups_data)
+
+    assert SignUp.objects.count() == 1
+    assert SignUpPriceGroup.objects.count() == 1
+
+    price_group = SignUpPriceGroup.objects.first()
+    assert price_group.signup_id == SignUp.objects.first().pk
+    assert price_group.registration_price_group_id == registration_price_group.pk
+    assert price_group.price == registration_price_group.price
+    assert price_group.vat_percentage == registration_price_group.vat_percentage
+    assert price_group.price_without_vat == registration_price_group.price_without_vat
+    assert price_group.vat == registration_price_group.vat
+    for description_field in description_fields:
+        assert getattr(price_group, description_field) == getattr(
+            registration_price_group.price_group, description_field
+        )
+
+
+@pytest.mark.django_db
+def test_can_create_signups_with_the_same_registration_price_group(
+    api_client, registration
+):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    LanguageFactory(id="fi", service_language=True)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=2)
+    registration_price_group = RegistrationPriceGroupFactory(
+        registration=registration, price_group__publisher=registration.publisher
+    )
+
+    signups_data = {
+        "registration": registration.id,
+        "reservation_code": reservation.code,
+        "signups": [
+            {
+                "first_name": "Mickey",
+                "last_name": "Mouse",
+                "attendee_status": SignUp.AttendeeStatus.ATTENDING,
+                "price_group": {
+                    "registration_price_group": registration_price_group.pk,
+                },
+            },
+            {
+                "first_name": "Donald",
+                "last_name": "Duck",
+                "attendee_status": SignUp.AttendeeStatus.ATTENDING,
+                "price_group": {
+                    "registration_price_group": registration_price_group.pk,
+                },
+            },
+        ],
+    }
+
+    assert SignUp.objects.count() == 0
+    assert SignUpPriceGroup.objects.count() == 0
+
+    assert_create_signups(api_client, signups_data)
+
+    assert SignUp.objects.count() == 2
+    assert SignUpPriceGroup.objects.count() == 2
+
+    common_kwargs = {
+        "registration_price_group": registration_price_group.pk,
+        "description_fi": registration_price_group.price_group.description_fi,
+        "description_sv": registration_price_group.price_group.description_sv,
+        "description_en": registration_price_group.price_group.description_en,
+        "price": registration_price_group.price,
+        "vat_percentage": registration_price_group.vat_percentage,
+        "price_without_vat": registration_price_group.price_without_vat,
+        "vat": registration_price_group.vat,
+    }
+    assert (
+        SignUpPriceGroup.objects.filter(
+            signup__first_name=signups_data["signups"][0]["first_name"], **common_kwargs
+        ).count()
+        == 1
+    )
+    assert (
+        SignUpPriceGroup.objects.filter(
+            signup__first_name=signups_data["signups"][1]["first_name"], **common_kwargs
+        ).count()
+        == 1
+    )
+
+
+@pytest.mark.parametrize(
+    "user_role",
+    ["superuser", "admin", "registration_admin", "financial_admin", "regular_user"],
+)
+@pytest.mark.django_db
+def test_cannot_create_signup_with_another_registrations_price_group(
+    api_client, registration, registration2, languages, user_role
+):
+    user = create_user_by_role(user_role, registration.publisher)
+    api_client.force_authenticate(user)
+
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
+    registration_price_group = RegistrationPriceGroupFactory(
+        registration=registration2, price_group__publisher=registration2.publisher
+    )
+
+    signups_data = deepcopy(default_signups_data)
+    signups_data["registration"] = registration.id
+    signups_data["reservation_code"] = reservation.code
+    signups_data["signups"][0]["price_group"] = {
+        "registration_price_group": registration_price_group.pk
+    }
+
+    assert SignUp.objects.count() == 0
+    assert SignUpPriceGroup.objects.count() == 0
+
+    response = create_signups(api_client, signups_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["signups"][0]["price_group"][0] == (
+        "Price group is not one of the allowed price groups for this registration."
+    )
+
+    assert SignUp.objects.count() == 0
+    assert SignUpPriceGroup.objects.count() == 0
+
+
+@pytest.mark.parametrize(
+    "user_role",
+    ["superuser", "admin", "registration_admin", "financial_admin", "regular_user"],
+)
+@pytest.mark.django_db
+def test_cannot_create_signup_without_price_group_if_registration_has_price_groups(
+    api_client, registration, user_role
+):
+    user = create_user_by_role(user_role, registration.publisher)
+    api_client.force_authenticate(user)
+
+    LanguageFactory(id="fi", service_language=True)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
+    RegistrationPriceGroupFactory(
+        registration=registration, price_group__publisher=registration.publisher
+    )
+
+    signups_data = deepcopy(default_signups_data)
+    signups_data["registration"] = registration.id
+    signups_data["reservation_code"] = reservation.code
+
+    assert SignUp.objects.count() == 0
+    assert SignUpPriceGroup.objects.count() == 0
+
+    response = create_signups(api_client, signups_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["signups"][0]["price_group"][0] == (
+        "Price group selection is mandatory for this registration."
+    )
+
+    assert SignUp.objects.count() == 0
+    assert SignUpPriceGroup.objects.count() == 0

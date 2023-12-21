@@ -8,13 +8,20 @@ from events.models import Event
 from events.tests.factories import LanguageFactory
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
-from registrations.models import SignUp, SignUpContactPerson, SignUpGroup
+from registrations.models import (
+    SignUp,
+    SignUpContactPerson,
+    SignUpGroup,
+    SignUpPriceGroup,
+)
 from registrations.tests.factories import (
     RegistrationUserAccessFactory,
     SignUpContactPersonFactory,
     SignUpFactory,
     SignUpGroupFactory,
+    SignUpPriceGroupFactory,
 )
+from registrations.tests.utils import create_user_by_role
 
 test_email1 = "test@test.com"
 
@@ -670,3 +677,27 @@ def test_signup_group_id_is_audit_logged_on_delete(api_client, registration):
     assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
         signup_group.pk
     ]
+
+
+@pytest.mark.parametrize(
+    "user_role", ["superuser", "registration_admin", "regular_user"]
+)
+@pytest.mark.django_db
+def test_signup_price_group_deleted_with_signup_group(
+    api_client, registration, user_role
+):
+    user = create_user_by_role(user_role, registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(
+        registration=registration,
+        created_by=user if user_role == "regular_user" else None,
+    )
+    signup = SignUpFactory(signup_group=signup_group, registration=registration)
+    SignUpPriceGroupFactory(signup=signup)
+
+    assert SignUpPriceGroup.objects.count() == 1
+
+    assert_delete_signup_group(api_client, signup_group.id)
+
+    assert SignUpPriceGroup.objects.count() == 0

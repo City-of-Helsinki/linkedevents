@@ -507,7 +507,7 @@ class TestSignUpContactPerson(TestCase):
 class TestRegistrationPriceGroup(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.registration_price_group = RegistrationPriceGroupFactory()
+        cls.registration_price_group = RegistrationPriceGroupFactory(price=Decimal("0"))
 
     def test_calculate_vat_and_price_without_vat(self):
         self.registration_price_group.price = Decimal("324")

@@ -1,3 +1,4 @@
+from decimal import Decimal
 from unittest.mock import patch, PropertyMock
 
 import pytest
@@ -7,15 +8,19 @@ from rest_framework import status
 from audit_log.models import AuditLogEntry
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
-from registrations.models import SignUp
+from registrations.models import RegistrationPriceGroup, SignUp
 from registrations.notifications import NotificationType
 from registrations.tests.factories import (
     RegistrationFactory,
+    RegistrationPriceGroupFactory,
     RegistrationUserAccessFactory,
     SignUpContactPersonFactory,
     SignUpFactory,
     SignUpGroupFactory,
+    SignUpPriceGroupFactory,
 )
+from registrations.tests.test_signup_patch import description_fields
+from registrations.tests.utils import create_user_by_role
 
 # === util methods ===
 
@@ -39,6 +44,57 @@ def assert_patch_signup_group(api_client, signup_group_pk, signup_group_data):
     return response
 
 
+def assert_patch_signup_group_price_group_failed(
+    api_client,
+    signup_group_pk,
+    signup_group_data,
+    signup_price_group,
+    new_registration_price_group,
+    status_code=status.HTTP_400_BAD_REQUEST,
+):
+    assert (
+        signup_price_group.registration_price_group_id
+        != new_registration_price_group.pk
+    )
+    assert signup_price_group.price != new_registration_price_group.price
+    assert (
+        signup_price_group.vat_percentage != new_registration_price_group.vat_percentage
+    )
+    assert (
+        signup_price_group.price_without_vat
+        != new_registration_price_group.price_without_vat
+    )
+    assert signup_price_group.vat != new_registration_price_group.vat
+    for description_field in description_fields:
+        assert getattr(signup_price_group, description_field) != getattr(
+            new_registration_price_group.price_group, description_field
+        )
+
+    response = patch_signup_group(api_client, signup_group_pk, signup_group_data)
+    assert response.status_code == status_code
+
+    signup_price_group.refresh_from_db()
+    assert (
+        signup_price_group.registration_price_group_id
+        != new_registration_price_group.pk
+    )
+    assert signup_price_group.price != new_registration_price_group.price
+    assert (
+        signup_price_group.vat_percentage != new_registration_price_group.vat_percentage
+    )
+    assert (
+        signup_price_group.price_without_vat
+        != new_registration_price_group.price_without_vat
+    )
+    assert signup_price_group.vat != new_registration_price_group.vat
+    for description_field in description_fields:
+        assert getattr(signup_price_group, description_field) != getattr(
+            new_registration_price_group.price_group, description_field
+        )
+
+    return response
+
+
 # === tests ===
 
 
@@ -49,7 +105,7 @@ def assert_patch_signup_group(api_client, signup_group_pk, signup_group_data):
         ("registration_created_admin", True),
         ("registration_admin", True),
         ("financial_admin", False),
-        ("regular", False),
+        ("regular_user", False),
         ("superuser", True),
     ],
 )
@@ -58,26 +114,18 @@ def assert_patch_signup_group(api_client, signup_group_pk, signup_group_data):
 def test_patch_signup_group_extra_info_based_on_user_role(
     api_client, event, user_role, allowed_to_patch
 ):
-    user = UserFactory(is_superuser=True if user_role == "superuser" else False)
+    user = create_user_by_role(
+        user_role,
+        event.publisher,
+        additional_roles={
+            "registration_created_admin": lambda usr: usr.admin_organizations.add(
+                event.publisher
+            ),
+        },
+    )
     api_client.force_authenticate(user)
 
     other_user = UserFactory()
-
-    user_role_mapping = {
-        "admin": lambda usr: usr.admin_organizations.add(event.publisher),
-        "registration_created_admin": lambda usr: usr.admin_organizations.add(
-            event.publisher
-        ),
-        "registration_admin": lambda usr: usr.registration_admin_organizations.add(
-            event.publisher
-        ),
-        "financial_admin": lambda usr: usr.financial_admin_organizations.add(
-            event.publisher
-        ),
-        "regular": lambda usr: usr.organization_memberships.add(event.publisher),
-        "superuser": lambda usr: None,
-    }
-    user_role_mapping[user_role](user)
 
     registration = RegistrationFactory(
         event=event,
@@ -103,18 +151,25 @@ def test_patch_signup_group_extra_info_based_on_user_role(
 
 
 @pytest.mark.parametrize(
-    "admin_type", ["superuser", "registration_admin", "registration_created_admin"]
+    "user_role", ["superuser", "registration_admin", "registration_created_admin"]
 )
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_registration_user_who_is_superuser_or_registration_admin_can_patch_signups_data(
-    api_client, registration, admin_type
+    api_client, registration, user_role
 ):
-    user = UserFactory(is_superuser=True if admin_type == "superuser" else False)
-    if admin_type == "registration_admin":
-        user.registration_admin_organizations.add(registration.publisher)
-    elif admin_type == "registration_created_admin":
-        user.admin_organizations.add(registration.publisher)
+    user = create_user_by_role(
+        user_role,
+        registration.publisher,
+        additional_roles={
+            "registration_created_admin": lambda usr: usr.admin_organizations.add(
+                registration.publisher
+            )
+        },
+    )
+    api_client.force_authenticate(user)
+
+    if user_role == "registration_created_admin":
         registration.created_by = user
         registration.save(update_fields=["created_by"])
 
@@ -140,8 +195,6 @@ def test_registration_user_who_is_superuser_or_registration_admin_can_patch_sign
     assert first_signup.extra_info is None
     assert second_signup.extra_info is None
     assert second_signup.user_consent is False
-
-    api_client.force_authenticate(user)
 
     assert_patch_signup_group(api_client, signup_group.id, signup_group_data)
 
@@ -219,7 +272,7 @@ def test_registration_user_who_created_signup_group_can_patch_signups_data(
     [
         "admin",
         "financial_admin",
-        "regular",
+        "regular_user",
     ],
 )
 @freeze_time("2023-03-14 03:30:00+02:00")
@@ -227,16 +280,8 @@ def test_registration_user_who_created_signup_group_can_patch_signups_data(
 def test_admin_or_financial_admin_or_regular_user_cannot_patch_signups_data(
     api_client, registration, user_role
 ):
-    user = UserFactory()
-
-    user_role_mapping = {
-        "admin": lambda usr: usr.admin_organizations.add(registration.publisher),
-        "financial_admin": lambda usr: usr.financial_admin_organizations.add(
-            registration.publisher
-        ),
-        "regular": lambda usr: usr.organization_memberships.add(registration.publisher),
-    }
-    user_role_mapping[user_role](user)
+    user = create_user_by_role(user_role, registration.publisher)
+    api_client.force_authenticate(user)
 
     signup_group = SignUpGroupFactory(registration=registration)
     first_signup = SignUpFactory(signup_group=signup_group, registration=registration)
@@ -253,8 +298,6 @@ def test_admin_or_financial_admin_or_regular_user_cannot_patch_signups_data(
     assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
     assert first_signup.extra_info is None
     assert second_signup.extra_info is None
-
-    api_client.force_authenticate(user)
 
     response = patch_signup_group(api_client, signup_group.id, signup_group_data)
     assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -275,8 +318,7 @@ def test_admin_or_financial_admin_or_regular_user_cannot_patch_signups_data(
 def test_registration_user_can_patch_signups_presence_status_if_strongly_identified(
     api_client, registration
 ):
-    user = UserFactory()
-    user.organization_memberships.add(registration.publisher)
+    user = create_user_by_role("regular_user", registration.publisher)
     api_client.force_authenticate(user)
 
     signup_group = SignUpGroupFactory(registration=registration)
@@ -313,8 +355,7 @@ def test_registration_user_can_patch_signups_presence_status_if_strongly_identif
 def test_registration_user_cannot_patch_signups_presence_status_if_not_strongly_identified(
     api_client, registration
 ):
-    user = UserFactory()
-    user.organization_memberships.add(registration.publisher)
+    user = create_user_by_role("regular_user", registration.publisher)
     api_client.force_authenticate(user)
 
     signup_group = SignUpGroupFactory(registration=registration)
@@ -350,8 +391,7 @@ def test_registration_user_cannot_patch_signups_presence_status_if_not_strongly_
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_created_user_cannot_patch_presence_status_of_signups(api_client, registration):
-    user = UserFactory()
-    user.organization_memberships.add(registration.publisher)
+    user = create_user_by_role("regular_user", registration.publisher)
     api_client.force_authenticate(user)
 
     signup_group = SignUpGroupFactory(registration=registration, created_by=user)
@@ -379,8 +419,7 @@ def test_created_user_cannot_patch_presence_status_of_signups(api_client, regist
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_can_patch_signup_group_contact_person(api_client, registration):
-    user = UserFactory()
-    user.registration_admin_organizations.add(registration.publisher)
+    user = create_user_by_role("registration_admin", registration.publisher)
     api_client.force_authenticate(user)
 
     signup_group = SignUpGroupFactory(registration=registration, created_by=user)
@@ -407,8 +446,7 @@ def test_can_patch_signup_group_contact_person(api_client, registration):
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_missing_contact_person_created_on_patch(api_client, registration):
-    user = UserFactory()
-    user.registration_admin_organizations.add(registration.publisher)
+    user = create_user_by_role("registration_admin", registration.publisher)
     api_client.force_authenticate(user)
 
     signup_group = SignUpGroupFactory(registration=registration, created_by=user)
@@ -435,8 +473,7 @@ def test_missing_contact_person_created_on_patch(api_client, registration):
 
 @pytest.mark.django_db
 def test_signup_group_id_is_audit_logged_on_patch(api_client, registration):
-    user = UserFactory()
-    user.registration_admin_organizations.add(registration.publisher)
+    user = create_user_by_role("registration_admin", registration.publisher)
     api_client.force_authenticate(user)
 
     signup_group = SignUpGroupFactory(registration=registration)
@@ -449,3 +486,182 @@ def test_signup_group_id_is_audit_logged_on_patch(api_client, registration):
     assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
         signup_group.pk
     ]
+
+
+@pytest.mark.parametrize(
+    "user_role", ["superuser", "registration_admin", "regular_user"]
+)
+@pytest.mark.django_db
+def test_can_patch_signup_groups_price_group(api_client, registration, user_role):
+    user = create_user_by_role(user_role, registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(
+        registration=registration,
+        created_by=user if user_role == "regular_user" else None,
+    )
+    signup = SignUpFactory(signup_group=signup_group, registration=registration)
+
+    new_registration_price_group = RegistrationPriceGroupFactory(
+        registration=registration,
+        price_group__publisher=registration.publisher,
+        price=Decimal("1.23"),
+        vat_percentage=RegistrationPriceGroup.VatPercentage.VAT_10,
+        vat=Decimal("0.11"),
+        price_without_vat=Decimal("1.12"),
+    )
+    signup_price_group = SignUpPriceGroupFactory(signup=signup)
+
+    assert signup.price_group.pk == signup_price_group.pk
+    assert (
+        signup.price_group.registration_price_group_id
+        != new_registration_price_group.pk
+    )
+    assert signup.price_group.price != new_registration_price_group.price
+    assert (
+        signup.price_group.vat_percentage != new_registration_price_group.vat_percentage
+    )
+    assert (
+        signup.price_group.price_without_vat
+        != new_registration_price_group.price_without_vat
+    )
+    assert signup.price_group.vat != new_registration_price_group.vat
+    for description_field in description_fields:
+        assert getattr(signup.price_group, description_field) != getattr(
+            new_registration_price_group.price_group, description_field
+        )
+
+    signup_group_data = {
+        "signups": [
+            {
+                "id": signup.pk,
+                "price_group": {
+                    "id": signup_price_group.pk,
+                    "registration_price_group": new_registration_price_group.pk,
+                },
+            }
+        ]
+    }
+    assert_patch_signup_group(api_client, signup_group.id, signup_group_data)
+
+    signup.refresh_from_db()
+    assert signup.price_group.pk == signup_price_group.pk
+    assert (
+        signup.price_group.registration_price_group_id
+        == new_registration_price_group.pk
+    )
+    assert signup.price_group.price == new_registration_price_group.price
+    assert (
+        signup.price_group.vat_percentage == new_registration_price_group.vat_percentage
+    )
+    assert (
+        signup.price_group.price_without_vat
+        == new_registration_price_group.price_without_vat
+    )
+    assert signup.price_group.vat == new_registration_price_group.vat
+    for description_field in description_fields:
+        assert getattr(signup.price_group, description_field) == getattr(
+            new_registration_price_group.price_group, description_field
+        )
+
+
+@pytest.mark.parametrize(
+    "user_role", ["superuser", "registration_admin", "regular_user"]
+)
+@pytest.mark.django_db
+def test_cannot_patch_signup_groups_price_group_with_wrong_registration_price_group(
+    api_client, registration, registration2, user_role
+):
+    user = create_user_by_role(user_role, registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(
+        registration=registration,
+        created_by=user if user_role == "regular_user" else None,
+    )
+    signup = SignUpFactory(signup_group=signup_group, registration=registration)
+
+    new_registration_price_group = RegistrationPriceGroupFactory(
+        registration=registration2,
+        price_group__publisher=registration2.publisher,
+        price=Decimal("1.23"),
+        vat_percentage=RegistrationPriceGroup.VatPercentage.VAT_10,
+        vat=Decimal("0.11"),
+        price_without_vat=Decimal("1.12"),
+    )
+    signup_price_group = SignUpPriceGroupFactory(signup=signup)
+
+    signup_group_data = {
+        "signups": [
+            {
+                "id": signup.pk,
+                "price_group": {
+                    "id": signup_price_group.pk,
+                    "registration_price_group": new_registration_price_group.pk,
+                },
+            }
+        ]
+    }
+
+    response = assert_patch_signup_group_price_group_failed(
+        api_client,
+        signup_group.pk,
+        signup_group_data,
+        signup_price_group,
+        new_registration_price_group,
+    )
+    assert response.data["signups"][0]["price_group"][0] == (
+        "Price group is not one of the allowed price groups for this registration."
+    )
+
+
+@pytest.mark.parametrize(
+    "user_role", ["superuser", "registration_admin", "regular_user"]
+)
+@pytest.mark.django_db
+def test_cannot_patch_signup_group_with_another_signups_price_group(
+    api_client, registration, signup, signup2, user_role
+):
+    user = create_user_by_role(user_role, registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(
+        registration=registration,
+        created_by=user if user_role == "regular_user" else None,
+    )
+    signup = SignUpFactory(signup_group=signup_group, registration=registration)
+    signup2 = SignUpFactory(signup_group=signup_group, registration=registration)
+
+    new_registration_price_group = RegistrationPriceGroupFactory(
+        registration=registration,
+        price_group__publisher=registration.publisher,
+        price=Decimal("1.23"),
+        vat_percentage=RegistrationPriceGroup.VatPercentage.VAT_10,
+        vat=Decimal("0.11"),
+        price_without_vat=Decimal("1.12"),
+    )
+    signup_price_group = SignUpPriceGroupFactory(signup=signup)
+    signup_price_group2 = SignUpPriceGroupFactory(signup=signup2)
+
+    signup_group_data = {
+        "signups": [
+            {
+                "id": signup.pk,
+                "price_group": {
+                    "id": signup_price_group2.pk,
+                    "registration_price_group": new_registration_price_group.pk,
+                },
+            }
+        ]
+    }
+
+    response = assert_patch_signup_group_price_group_failed(
+        api_client,
+        signup_group.pk,
+        signup_group_data,
+        signup_price_group,
+        new_registration_price_group,
+    )
+    assert response.data["signups"][0]["price_group"][0] == (
+        "Price group is already assigned to another participant."
+    )

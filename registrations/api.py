@@ -341,6 +341,26 @@ class SignUpViewSet(
         instance._individually_deleted = True
         instance.delete()
 
+    @action(
+        methods=["delete"],
+        detail=True,
+        permission_classes=[CanAccessSignup],
+    )
+    def price_group(self, request, pk=None, version=None):
+        price_group = getattr(self.get_object(), "price_group", None)
+
+        if not price_group:
+            return Response(
+                _("The signup does not have a price group."),
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        price_group.delete()
+
+        return Response(
+            status=status.HTTP_204_NO_CONTENT,
+        )
+
 
 register_view(SignUpViewSet, "signup")
 

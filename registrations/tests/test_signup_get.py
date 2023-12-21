@@ -1,4 +1,5 @@
 from collections import Counter
+from decimal import Decimal
 from unittest.mock import patch, PropertyMock
 
 import pytest
@@ -14,7 +15,9 @@ from registrations.tests.factories import (
     RegistrationUserAccessFactory,
     SignUpContactPersonFactory,
     SignUpFactory,
+    SignUpPriceGroupFactory,
 )
+from registrations.tests.utils import create_user_by_role
 
 # === util methods ===
 
@@ -99,6 +102,7 @@ def assert_signup_fields_exist(data):
         "is_created_by_current_user",
         "contact_person",
         "anonymization_time",
+        "price_group",
     )
     assert_fields_exist(data, fields)
     assert_contact_person_fields_exist(data["contact_person"])
@@ -129,9 +133,7 @@ def test_registration_created_admin_user_can_get_signup(
 
 
 @pytest.mark.django_db
-def test_registration_admin_user_can_get_signup(
-    user_api_client, registration, signup, user
-):
+def test_registration_admin_user_can_get_signup(user_api_client, signup, user):
     default_organization = user.get_default_organization()
     default_organization.admin_users.remove(user)
     default_organization.registration_admin_users.add(user)
@@ -828,3 +830,58 @@ def test_signups_list_ordering(
 
         page_start += page_size
         page_end += page_size
+
+
+@pytest.mark.parametrize(
+    "user_role", ["superuser", "registration_admin", "regular_user"]
+)
+@pytest.mark.django_db
+def test_get_signup_with_price_group(api_client, registration, user_role):
+    languages = ("fi", "sv", "en")
+
+    user = create_user_by_role(user_role, registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup = SignUpFactory(
+        registration=registration,
+        created_by=user if user_role == "regular_user" else None,
+    )
+    signup_price_group = SignUpPriceGroupFactory(signup=signup)
+
+    response = assert_get_detail(api_client, signup.id)
+
+    assert_fields_exist(
+        response.data["price_group"],
+        (
+            "id",
+            "registration_price_group",
+            "description",
+            "price",
+            "vat_percentage",
+            "price_without_vat",
+            "vat",
+        ),
+    )
+    assert_fields_exist(response.data["price_group"]["description"], languages)
+
+    assert response.data["price_group"]["id"] == signup_price_group.pk
+    assert response.data["price_group"]["registration_price_group"] == (
+        signup_price_group.registration_price_group_id
+    )
+    assert Decimal(response.data["price_group"]["price"]) == (
+        signup_price_group.registration_price_group.price
+    )
+    assert Decimal(response.data["price_group"]["vat_percentage"]) == (
+        signup_price_group.registration_price_group.vat_percentage
+    )
+    assert Decimal(response.data["price_group"]["price_without_vat"]) == (
+        signup_price_group.registration_price_group.price_without_vat
+    )
+    assert Decimal(response.data["price_group"]["vat"]) == (
+        signup_price_group.registration_price_group.vat
+    )
+    for lang in languages:
+        assert response.data["price_group"]["description"][lang] == getattr(
+            signup_price_group.registration_price_group.price_group,
+            f"description_{lang}",
+        )

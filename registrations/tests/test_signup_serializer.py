@@ -1,12 +1,16 @@
+from decimal import Decimal
 from unittest.mock import Mock
 
 import pytest
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 
 from helevents.tests.factories import UserFactory
-from registrations.models import SignUp
+from registrations.models import RegistrationPriceGroup, SignUp, SignUpPriceGroup
 from registrations.serializers import SignUpSerializer
-from registrations.tests.factories import RegistrationFactory
+from registrations.tests.factories import (
+    RegistrationFactory,
+    RegistrationPriceGroupFactory,
+)
 
 
 @pytest.mark.no_test_audit_log
@@ -72,3 +76,52 @@ def test_signup_create(
         ).count()
         == expected_waitlisted
     )
+
+
+@pytest.mark.django_db
+def test_signup_create_with_price_group(registration):
+    registration_price_group = RegistrationPriceGroupFactory(
+        registration=registration,
+        price_group__publisher=registration.publisher,
+        price=Decimal("100"),
+        vat_percentage=RegistrationPriceGroup.VatPercentage.VAT_24,
+    )
+
+    signup_payload = {
+        "registration": registration.pk,
+        "first_name": "User",
+        "last_name": "1",
+        "email": "test1@test.com",
+        "price_group": {
+            "registration_price_group": registration_price_group.pk,
+        },
+    }
+
+    request_mock = Mock(user=UserFactory())
+
+    serializer = SignUpSerializer(
+        data=signup_payload, context={"request": request_mock}
+    )
+    serializer.is_valid(raise_exception=True)
+
+    assert SignUp.objects.count() == 0
+    assert SignUpPriceGroup.objects.count() == 0
+
+    serializer.create(serializer.validated_data)
+
+    assert SignUp.objects.count() == 1
+    assert SignUpPriceGroup.objects.count() == 1
+
+    signup_price_group = SignUpPriceGroup.objects.first()
+    assert signup_price_group.signup_id == SignUp.objects.first().pk
+    assert (
+        signup_price_group.description
+        == registration_price_group.price_group.description
+    )
+    assert signup_price_group.price == registration_price_group.price
+    assert signup_price_group.vat_percentage == registration_price_group.vat_percentage
+    assert (
+        signup_price_group.price_without_vat
+        == registration_price_group.price_without_vat
+    )
+    assert signup_price_group.vat == registration_price_group.vat
