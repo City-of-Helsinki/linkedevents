@@ -85,21 +85,22 @@ def test_can_edit_event(membership_status, expected_public, expected_draft):
 
 
 @pytest.mark.parametrize(
-    "is_admin,is_registration_admin,is_regular_user,expected",
+    "is_admin,is_registration_admin,is_financial_admin,is_regular_user,expected",
     [
-        (True, True, True, False),
-        (True, False, True, False),
-        (True, False, False, False),
-        (False, False, True, False),
-        (True, True, False, False),
-        (False, True, True, False),
-        (False, True, False, False),
-        (False, False, False, True),
+        (True, True, True, True, False),
+        (True, False, True, True, False),
+        (True, False, False, False, False),
+        (False, False, False, True, False),
+        (True, True, False, False, False),
+        (False, True, True, True, False),
+        (False, True, False, False, False),
+        (False, False, True, False, False),
+        (False, False, False, False, True),
     ],
 )
 @pytest.mark.django_db
 def test_user_is_external_based_on_group_membership(
-    is_admin, is_registration_admin, is_regular_user, expected
+    is_admin, is_registration_admin, is_financial_admin, is_regular_user, expected
 ):
     with (
         patch.object(
@@ -111,10 +112,14 @@ def test_user_is_external_based_on_group_membership(
         patch.object(
             User, "registration_admin_organizations", new_callable=MagicMock
         ) as registration_admin_organizations,
+        patch.object(
+            User, "financial_admin_organizations", new_callable=MagicMock
+        ) as financial_admin_organizations,
     ):
         organization_memberships.exists.return_value = is_regular_user
         admin_organizations.exists.return_value = is_admin
         registration_admin_organizations.exists.return_value = is_registration_admin
+        financial_admin_organizations.exists.return_value = is_financial_admin
 
         assert User().is_external is expected
 

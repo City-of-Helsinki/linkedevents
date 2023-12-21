@@ -83,10 +83,15 @@ def _create_default_signups_data(registration):
 
 
 @pytest.mark.parametrize(
-    "organization_rel", ["admin_organizations", "organization_memberships"]
+    "organization_rel",
+    [
+        "admin_organizations",
+        "financial_admin_organizations",
+        "organization_memberships",
+    ],
 )
 @pytest.mark.django_db
-def test_signups_export_forbidden_for_organization_admin_and_regular_user(
+def test_signups_export_forbidden_for_admin_and_financial_admin_and_regular_user(
     registration, api_client, organization_rel
 ):
     _create_default_signups_data(registration)
@@ -100,10 +105,15 @@ def test_signups_export_forbidden_for_organization_admin_and_regular_user(
 
 
 @pytest.mark.parametrize(
-    "organization_rel", ["admin_organizations", "organization_memberships"]
+    "organization_rel",
+    [
+        "admin_organizations",
+        "financial_admin_organizations",
+        "organization_memberships",
+    ],
 )
 @pytest.mark.django_db
-def test_signups_export_forbidden_for_admin_and_regular_user_of_another_organization(
+def test_signups_export_forbidden_for_admin_and_financial_admin_and_regular_user_of_another_org(
     registration, api_client, organization_rel
 ):
     _create_default_signups_data(registration)
@@ -222,6 +232,7 @@ def test_signups_export_unauthorized_for_apikey_with_unknown_data_source(
     "other_role",
     [
         "admin",
+        "financial_admin",
         "registration_admin",
         "registration_user_access",
         "regular_user",
@@ -239,6 +250,9 @@ def test_signups_export_allowed_for_superuser_regardless_of_other_roles(
     other_role_mapping = {
         "admin": lambda usr: usr.admin_organizations.add(registration.publisher),
         "registration_admin": lambda usr: usr.registration_admin_organizations.add(
+            registration.publisher
+        ),
+        "financial_admin": lambda usr: usr.financial_admin_organizations.add(
             registration.publisher
         ),
         "registration_user_access": lambda usr: RegistrationUserAccessFactory(

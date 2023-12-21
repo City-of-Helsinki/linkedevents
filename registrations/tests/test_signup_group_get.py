@@ -146,6 +146,29 @@ def test_registration_user_access_cannot_get_signup_group_when_not_strongly_iden
 
 
 @pytest.mark.django_db
+def test_created_financial_admin_can_get_signup_group(api_client, registration):
+    user = UserFactory()
+    user.financial_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(registration=registration, created_by=user)
+
+    assert_get_detail(api_client, signup_group.id)
+
+
+@pytest.mark.django_db
+def test_non_created_financial_admin_cannot_get_signup_group(api_client, registration):
+    user = UserFactory()
+    user.financial_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+
+    response = get_detail(api_client, signup_group.id)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
 def test_regular_non_created_user_cannot_get_signup_group(
     user_api_client, user, organization
 ):
@@ -300,6 +323,19 @@ def test_admin_user_cannot_get_signup_group_list(api_client, registration):
     SignUpGroupFactory(registration=registration)
 
     api_client.force_authenticate(user)
+
+    response = get_list(api_client, f"registration={registration.id}")
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_financial_admin_cannot_get_signup_group_list(api_client, registration):
+    user = UserFactory()
+    user.financial_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    SignUpGroupFactory(registration=registration)
+    SignUpGroupFactory(registration=registration)
 
     response = get_list(api_client, f"registration={registration.id}")
     assert response.status_code == status.HTTP_403_FORBIDDEN

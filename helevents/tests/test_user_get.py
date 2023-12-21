@@ -36,6 +36,7 @@ def assert_user_fields_exist(data, version="v1"):
         "display_name",
         "admin_organizations",
         "registration_admin_organizations",
+        "financial_admin_organizations",
         "organization_memberships",
         "is_external",
         "is_strongly_identified",

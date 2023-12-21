@@ -241,6 +241,7 @@ class DataSourceAdmin(BaseAdmin, VersionAdmin):
         "user_editable_resources",
         "user_editable_organizations",
         "user_editable_registrations",
+        "user_editable_registration_price_groups",
         "create_past_events",
         "edit_past_events",
     )

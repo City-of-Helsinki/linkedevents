@@ -81,6 +81,12 @@ class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
             self.is_admin_of(publisher) and self.data_source.user_editable_registrations
         )
 
+    def is_financial_admin_of(self, publisher):
+        return (
+            self.is_admin_of(publisher)
+            and self.data_source.user_editable_registration_price_groups
+        )
+
     def is_regular_user_of(self, publisher):
         return False
 
@@ -105,10 +111,25 @@ class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
             return Organization.objects.none()
         return Organization.objects.filter(id=self.data_source.owner.id)
 
+    @property
+    def apikey_financial_admin_organizations(self):
+        if not (
+            self.data_source.owner
+            and self.data_source.user_editable_registration_price_groups
+        ):
+            return Organization.objects.none()
+        return Organization.objects.filter(id=self.data_source.owner.id)
+
     def get_registration_admin_organizations_and_descendants(self):
         # returns registration admin organizations and their descendants
         return self._get_admin_organizations_and_descendants(
             "apikey_registration_admin_organizations"
+        )
+
+    def get_financial_admin_organizations_and_descendants(self):
+        # returns financial admin organizations and their descendants
+        return self._get_admin_organizations_and_descendants(
+            "apikey_financial_admin_organizations"
         )
 
     @property

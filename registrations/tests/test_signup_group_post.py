@@ -343,6 +343,28 @@ def test_organization_admin_can_create_signup_group(
 
 
 @pytest.mark.django_db
+def test_financial_admin_can_create_signup_group(registration, api_client):
+    LanguageFactory(pk="en", service_language=True)
+
+    user = UserFactory()
+    user.financial_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    reservation = SeatReservationCodeFactory(seats=2)
+
+    assert SignUpGroup.objects.count() == 0
+    assert SignUp.objects.count() == 0
+    assert SeatReservationCode.objects.count() == 1
+
+    signup_group_data = default_signup_group_data
+    signup_group_data["registration"] = reservation.registration_id
+    signup_group_data["reservation_code"] = reservation.code
+
+    assert_create_signup_group(api_client, signup_group_data)
+    assert_default_signup_group_created(reservation, signup_group_data, user)
+
+
+@pytest.mark.django_db
 def test_regular_user_can_create_signup_group(
     languages, organization, user, user_api_client
 ):

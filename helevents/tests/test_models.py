@@ -87,6 +87,29 @@ class TestUser(TestCase):
         is_registration_admin = self.user.is_registration_admin_of(self.org_1)
         self.assertFalse(is_registration_admin)
 
+    def test_is_financial_admin(self):
+        self.org.financial_admin_users.add(self.user)
+
+        # test for admin organization
+        is_financial_admin = self.user.is_financial_admin_of(self.org)
+        self.assertTrue(is_financial_admin)
+
+        # test for child organization
+        is_financial_admin = self.user.is_financial_admin_of(self.child_org)
+        self.assertTrue(is_financial_admin)
+
+        # test for affiliated organization
+        is_financial_admin = self.user.is_financial_admin_of(self.affiliated_org)
+        self.assertTrue(is_financial_admin)
+
+        # test for some other organization
+        is_financial_admin = self.user.is_financial_admin_of(self.org_1)
+        self.assertFalse(is_financial_admin)
+
+        # test for no organization
+        is_financial_admin = self.user.is_financial_admin_of(None)
+        self.assertFalse(is_financial_admin)
+
     def test_is_regular_user(self):
         self.org.regular_users.add(self.user)
 

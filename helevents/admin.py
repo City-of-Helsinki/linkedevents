@@ -36,6 +36,9 @@ class LocalOrganizationAdmin(OrganizationAdmin):
         registration_admin_users = form.cleaned_data.get("registration_admin_users", [])
         obj.registration_admin_users.set(registration_admin_users)
 
+        financial_admin_users = form.cleaned_data.get("financial_admin_users", [])
+        obj.financial_admin_users.set(financial_admin_users)
+
 
 class UserAdmin(DjangoUserAdmin):
     fieldsets = DjangoUserAdmin.fieldsets + (

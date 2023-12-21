@@ -135,75 +135,46 @@ def assert_attending_and_waitlisted_signups(
 # === tests ===
 
 
+@pytest.mark.parametrize(
+    "user_role",
+    [
+        "admin",
+        "registration_admin",
+        "financial_admin",
+        "regular_user",
+        "regular_user_without_organization",
+    ],
+)
 @pytest.mark.django_db
-def test_registration_admin_can_create_signups(
-    languages, organization, user, user_api_client
-):
-    user.get_default_organization().registration_admin_users.add(user)
-    user.get_default_organization().admin_users.remove(user)
+def test_authenticated_users_can_create_signups(registration, api_client, user_role):
+    LanguageFactory(pk="fi", service_language=True)
 
-    reservation = SeatReservationCodeFactory(seats=1)
-
-    assert SignUp.objects.count() == 0
-    assert SeatReservationCode.objects.count() == 1
-
-    signups_data = default_signups_data
-    signups_data["registration"] = reservation.registration.id
-    signups_data["reservation_code"] = reservation.code
-
-    assert_create_signups(user_api_client, signups_data)
-    assert_default_signup_created(signups_data, user)
-
-
-@pytest.mark.django_db
-def test_organization_admin_can_create_signups(
-    languages, organization, user, user_api_client
-):
-    reservation = SeatReservationCodeFactory(seats=1)
-
-    assert SignUp.objects.count() == 0
-    assert SeatReservationCode.objects.count() == 1
-
-    signups_data = default_signups_data
-    signups_data["registration"] = reservation.registration.id
-    signups_data["reservation_code"] = reservation.code
-
-    assert_create_signups(user_api_client, signups_data)
-    assert_default_signup_created(signups_data, user)
-
-
-@pytest.mark.django_db
-def test_regular_user_can_create_signups(
-    languages, organization, registration, user, user_api_client
-):
-    user.get_default_organization().regular_users.add(user)
-    user.get_default_organization().admin_users.remove(user)
-
-    reservation = SeatReservationCodeFactory(seats=1)
-
-    assert SignUp.objects.count() == 0
-    assert SeatReservationCode.objects.count() == 1
-
-    signups_data = default_signups_data
-    signups_data["registration"] = reservation.registration.id
-    signups_data["reservation_code"] = reservation.code
-
-    assert_create_signups(user_api_client, signups_data)
-    assert_default_signup_created(signups_data, user)
-
-
-@pytest.mark.django_db
-def test_user_without_organization_can_create_signups(api_client, languages):
     user = UserFactory()
+
+    user_role_mapping = {
+        "admin": lambda usr: usr.admin_organizations.add(registration.publisher),
+        "registration_admin": lambda usr: usr.registration_admin_organizations.add(
+            registration.publisher
+        ),
+        "financial_admin": lambda usr: usr.financial_admin_organizations.add(
+            registration.publisher
+        ),
+        "regular_user": lambda usr: usr.organization_memberships.add(
+            registration.publisher
+        ),
+        "regular_user_without_organization": lambda usr: None,
+    }
+    user_role_mapping[user_role](user)
+
     api_client.force_authenticate(user)
 
-    reservation = SeatReservationCodeFactory(seats=1)
+    reservation = SeatReservationCodeFactory(seats=1, registration=registration)
 
     assert SignUp.objects.count() == 0
     assert SeatReservationCode.objects.count() == 1
 
     signups_data = default_signups_data
-    signups_data["registration"] = reservation.registration.id
+    signups_data["registration"] = registration.id
     signups_data["reservation_code"] = reservation.code
 
     assert_create_signups(api_client, signups_data)

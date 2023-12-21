@@ -93,6 +93,12 @@ class DataSource(models.Model):
         default=False,
         verbose_name=_("Owner organization's registrations may be edited by users"),
     )
+    user_editable_registration_price_groups = models.BooleanField(
+        default=False,
+        verbose_name=_(
+            "Owner organization's registration price groups may be edited by users"
+        ),
+    )
     edit_past_events = models.BooleanField(
         default=False, verbose_name=_("Past events may be edited using API")
     )

@@ -6,6 +6,7 @@ from rest_framework import status
 from audit_log.models import AuditLogEntry
 from events.api import OrganizationDetailSerializer
 from events.tests.utils import versioned_reverse as reverse
+from helevents.tests.factories import UserFactory
 
 organization_name = "test org"
 edited_organization_name = "new name"
@@ -326,6 +327,34 @@ def test_admin_user_add_registration_admin_users_to_new_organization(
 
 
 @pytest.mark.django_db
+def test_admin_user_add_financial_admin_users_to_new_organization(
+    api_client, organization, data_source, user2
+):
+    user = UserFactory()
+    user.admin_organizations.add(organization)
+    api_client.force_authenticate(user)
+
+    origin_id = "test_organization2"
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+        "financial_admin_users": [user2.username],
+    }
+    financial_admins_set = set(payload["financial_admin_users"])
+
+    response = assert_create_organization(api_client, payload)
+    assert financial_admins_set == set(
+        [i["username"] for i in response.data["financial_admin_users"]]
+    )
+    new_organization = Organization.objects.get(id=f"{data_source.id}:{origin_id}")
+    assert financial_admins_set == set(
+        new_organization.financial_admin_users.values_list("username", flat=True)
+    )
+
+
+@pytest.mark.django_db
 def test_admin_user_can_update_organization(organization, user_api_client):
     payload = {
         "id": organization.id,
@@ -370,6 +399,27 @@ def test_admin_user_update_organization_registration_admin_users(
 
     organization.refresh_from_db()
     assert organization.registration_admin_users.count() == 1
+
+
+@pytest.mark.django_db
+def test_admin_user_update_organization_financial_admin_users(
+    organization, user2, user_api_client
+):
+    assert organization.financial_admin_users.count() == 0
+
+    payload = {
+        "id": organization.id,
+        "name": organization_name,
+        "financial_admin_users": [user2.username],
+    }
+
+    response = assert_update_organization(user_api_client, organization.id, payload)
+    assert set(payload["financial_admin_users"]) == set(
+        [i["username"] for i in response.data["financial_admin_users"]]
+    )
+
+    organization.refresh_from_db()
+    assert organization.financial_admin_users.count() == 1
 
 
 @pytest.mark.django_db

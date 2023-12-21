@@ -46,6 +46,7 @@ def assert_patch_signup(api_client, signup_pk, signup_data):
     "user_role,allowed_to_patch",
     [
         ("admin", False),
+        ("financial_admin", False),
         ("registration_created_admin", True),
         ("registration_admin", True),
         ("registration_user_superuser", True),
@@ -69,6 +70,9 @@ def test_can_patch_presence_status_of_signup_based_on_role(
 
     user_role_mapping = {
         "admin": lambda usr: usr.admin_organizations.add(registration.publisher),
+        "financial_admin": lambda usr: usr.financial_admin_organizations.add(
+            registration.publisher
+        ),
         "registration_created_admin": lambda usr: usr.admin_organizations.add(
             registration.publisher
         ),

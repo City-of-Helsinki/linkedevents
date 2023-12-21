@@ -177,10 +177,12 @@ def test_can_update_signup_group_with_empty_extra_info(
     "user_role,created_by",
     [
         ("admin", False),
+        ("financial_admin", False),
         ("registration_user", False),
         ("regular", False),
         ("regular_without_organization", False),
         ("admin", True),
+        ("financial_admin", True),
         ("registration_user", True),
         ("regular", True),
         ("regular_without_organization", True),
@@ -195,6 +197,9 @@ def test_can_update_signup_group_based_on_role_and_created_by(
 
     user_role_mapping = {
         "admin": lambda usr: usr.admin_organizations.add(registration.publisher),
+        "financial_admin": lambda usr: usr.financial_admin_organizations.add(
+            registration.publisher
+        ),
         "registration_user": lambda usr: RegistrationUserAccessFactory(
             registration=registration, email=usr.email
         ),

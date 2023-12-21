@@ -6,6 +6,7 @@ from rest_framework import status
 from audit_log.models import AuditLogEntry
 from events.models import Event, Language
 from events.tests.utils import versioned_reverse as reverse
+from helevents.tests.factories import UserFactory
 from registrations.models import RegistrationUserAccess
 from registrations.tests.factories import RegistrationUserAccessFactory
 from registrations.tests.utils import assert_invitation_email_is_sent
@@ -61,6 +62,22 @@ def test_anonymous_user_cannot_send_invitation_to_registration_user_access(
 
     response = send_invitation(api_client, registration_user_access.pk)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+@pytest.mark.django_db
+def test_financial_admin_cannot_send_invitation_to_registration_user_access(
+    api_client, registration
+):
+    user = UserFactory()
+    user.financial_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    registration_user_access = RegistrationUserAccess.objects.create(
+        registration=registration, email=email
+    )
+
+    response = send_invitation(api_client, registration_user_access.pk)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db

@@ -6,6 +6,7 @@ from rest_framework import status
 from audit_log.models import AuditLogEntry
 from events.models import Event
 from events.tests.utils import versioned_reverse as reverse
+from helevents.tests.factories import UserFactory
 from registrations.models import RegistrationUserAccess
 from registrations.tests.test_registration_post import (
     create_registration,
@@ -54,6 +55,20 @@ def test_update_registration(api_client, event, user):
     }
 
     assert_update_registration(api_client, response.data["id"], registration_data)
+
+
+@pytest.mark.django_db
+def test_financial_admin_cannot_update_registration(api_client, event, registration):
+    user = UserFactory()
+    user.financial_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    registration_data = {
+        "event": {"@id": get_event_url(event.id)},
+        "audience_max_age": 10,
+    }
+    response = update_registration(api_client, registration.id, registration_data)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db
