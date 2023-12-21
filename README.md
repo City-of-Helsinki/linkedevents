@@ -224,9 +224,9 @@ Note that search tests will fail unless you configure [search](#search)
 
 
 ## Sending email
-The project uses [django-mailer](https://github.com/pinax/django-mailer) for queuing and sending email. When a normal Django email function like `send_mail` is called, the email will be stored into an email queue that exists in the database for later sending.
+The project uses [django-mailer](https://github.com/pinax/django-mailer) for queuing and sending email. When a normal Django email function like `send_mail` is called, the email will be stored into a queue that exists in the database for later sending.
 
-`django-mailer` comes with a number of management commands for interacting with the email queue. Out of those, the `send_mail` command is for us perhaps the most notable one as it is responsible for the actual sending of the queues messages.
+`django-mailer` comes with a number of management commands for interacting with the email queue. Out of those, the `send_mail` command is for us perhaps the most notable one as it is responsible for the actual sending of the queued messages.
 
 To send messages locally, you can run the `send_mail` command:
 `./manage.py send_mail`
