@@ -1,8 +1,10 @@
 import factory
 
-from events.tests.factories import EventFactory
+from events.tests.factories import EventFactory, OrganizationFactory
 from registrations.models import (
+    PriceGroup,
     Registration,
+    RegistrationPriceGroup,
     RegistrationUserAccess,
     SeatReservationCode,
     SignUp,
@@ -67,3 +69,18 @@ class SeatReservationCodeFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = SeatReservationCode
+
+
+class PriceGroupFactory(factory.django.DjangoModelFactory):
+    publisher = factory.SubFactory(OrganizationFactory)
+
+    class Meta:
+        model = PriceGroup
+
+
+class RegistrationPriceGroupFactory(factory.django.DjangoModelFactory):
+    registration = factory.SubFactory(RegistrationFactory)
+    price_group = factory.SubFactory(PriceGroupFactory)
+
+    class Meta:
+        model = RegistrationPriceGroup

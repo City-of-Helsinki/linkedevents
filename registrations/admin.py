@@ -1,10 +1,27 @@
 from admin_auto_filters.filters import AutocompleteFilter
 from django.contrib import admin
 from django.utils.translation import gettext as _
+from modeltranslation.admin import TranslationAdmin
 from reversion.admin import VersionAdmin
 
+from events.admin import PublisherFilter
 from events.models import Language
-from registrations.models import Registration, RegistrationUserAccess
+from registrations.models import (
+    PriceGroup,
+    Registration,
+    RegistrationPriceGroup,
+    RegistrationUserAccess,
+)
+
+
+class RegistrationBaseAdmin(admin.ModelAdmin):
+    def save_model(self, request, obj, form, change):
+        if obj.pk is None:
+            obj.created_by = request.user
+        else:
+            obj.last_modified_by = request.user
+
+        super().save_model(request, obj, form, change)
 
 
 class EventFilter(AutocompleteFilter):
@@ -27,7 +44,14 @@ class RegistrationUserAccessInline(admin.TabularInline):
         )
 
 
-class RegistrationAdmin(VersionAdmin):
+class RegistrationPriceGroupInline(admin.TabularInline):
+    model = RegistrationPriceGroup
+    extra = 1
+    verbose_name = _("Registration price group")
+    verbose_name_plural = _("Registration price groups")
+
+
+class RegistrationAdmin(RegistrationBaseAdmin, TranslationAdmin, VersionAdmin):
     fields = (
         "id",
         "event",
@@ -51,14 +75,7 @@ class RegistrationAdmin(VersionAdmin):
     )
     list_filter = (EventFilter,)
     autocomplete_fields = ("event",)
-    inlines = (RegistrationUserAccessInline,)
-
-    def save_model(self, request, obj, form, change):
-        if obj.pk is None:
-            obj.created_by = request.user
-        else:
-            obj.last_modified_by = request.user
-        obj.save()
+    inlines = (RegistrationUserAccessInline, RegistrationPriceGroupInline)
 
     def save_related(self, request, form, formsets, change):
         for formset in formsets:
@@ -87,3 +104,68 @@ class RegistrationAdmin(VersionAdmin):
 
 
 admin.site.register(Registration, RegistrationAdmin)
+
+
+class DefaultPriceGroupListFilter(admin.EmptyFieldListFilter):
+    def __init__(self, field, request, params, model, model_admin, field_path):
+        super().__init__(field, request, params, model, model_admin, field_path)
+
+        self.title = _("Is default")
+
+    def choices(self, changelist):
+        for lookup, title in (
+            (None, _("All")),
+            ("1", _("Yes")),
+            ("0", _("No")),
+        ):
+            yield {
+                "selected": self.lookup_val == lookup,
+                "query_string": changelist.get_query_string(
+                    {self.lookup_kwarg: lookup}
+                ),
+                "display": title,
+            }
+
+
+class PriceGroupAdmin(RegistrationBaseAdmin, TranslationAdmin, VersionAdmin):
+    fields = (
+        "id",
+        "publisher",
+        "description",
+        "is_free",
+    )
+    list_display = (
+        "id",
+        "publisher",
+        "description",
+        "is_free",
+        "is_default",
+    )
+    list_filter = (
+        PublisherFilter,
+        ("publisher", DefaultPriceGroupListFilter),
+        ("is_free", admin.BooleanFieldListFilter),
+    )
+    search_fields = ("description",)
+
+    def has_change_permission(self, request, obj=None):
+        if obj and obj.publisher_id is None:
+            return False
+
+        return super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        if obj and obj.publisher_id is None:
+            return False
+
+        return super().has_delete_permission(request, obj)
+
+    @admin.display(description=_("Is default"))
+    def is_default(self, obj):
+        return _("Yes") if obj.publisher_id is None else _("No")
+
+    def get_readonly_fields(self, request, obj=None):
+        return ["id"]
+
+
+admin.site.register(PriceGroup, PriceGroupAdmin)
