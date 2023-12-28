@@ -190,6 +190,72 @@ signup_email_texts = {
 }
 
 
+def _get_notification_texts(
+    notification_type, text_options, event_type_id, event_name, username
+):
+    if notification_type == SignUpNotificationType.EVENT_CANCELLATION:
+        texts = {
+            "heading": text_options["heading"] % {"event_name": event_name},
+            "text": text_options["text"],
+        }
+    else:
+        texts = {
+            "heading": text_options["heading"] % {"username": username},
+            "text": text_options["text"][event_type_id] % {"event_name": event_name},
+        }
+
+    return texts
+
+
+def _format_confirmation_message_texts(texts, confirmation_message):
+    if confirmation_message:
+        texts["confirmation_message"] = confirmation_message
+
+
+def _format_cancellation_texts(
+    texts, text_options, event_type_id, event_name, username
+):
+    if username:
+        texts["secondary_heading"] = text_options["secondary_heading"][
+            event_type_id
+        ] % {
+            "event_name": event_name,
+            "username": username,
+        }
+    else:
+        texts["secondary_heading"] = text_options["secondary_heading_without_username"][
+            event_type_id
+        ] % {"event_name": event_name}
+
+
+def _format_confirmation_texts(
+    texts, text_options, event_type_id, event_name, contact_person
+):
+    if contact_person.signup_group_id:
+        # Override default confirmation message heading
+        texts["heading"] = text_options["group"]["heading"]
+        texts["secondary_heading"] = text_options["group"]["secondary_heading"][
+            event_type_id
+        ] % {"event_name": event_name}
+    else:
+        texts["secondary_heading"] = text_options["secondary_heading"][
+            event_type_id
+        ] % {"event_name": event_name}
+
+
+def _format_confirmation_to_waiting_list_texts(
+    texts, text_options, event_type_id, event_name, contact_person
+):
+    if contact_person.signup_group_id:
+        # Override default confirmation message heading
+        texts["text"] = text_options["group"]["text"][event_type_id] % {
+            "event_name": event_name
+        }
+        texts["secondary_text"] = text_options["group"]["secondary_text"][event_type_id]
+    else:
+        texts["secondary_text"] = text_options["secondary_text"][event_type_id]
+
+
 def get_signup_notification_texts(
     contact_person, notification_type: SignUpNotificationType
 ):
@@ -202,60 +268,25 @@ def get_signup_notification_texts(
     event_type_id = registration.event.type_id
     username = contact_person.first_name
     text_options = signup_email_texts[notification_type]
-
-    if notification_type == SignUpNotificationType.EVENT_CANCELLATION:
-        texts = {
-            "heading": text_options["heading"] % {"event_name": event_name},
-            "text": text_options["text"],
-        }
-    else:
-        event_type_id = registration.event.type_id
-        username = contact_person.first_name
-        texts = {
-            "heading": text_options["heading"] % {"username": username},
-            "text": text_options["text"][event_type_id] % {"event_name": event_name},
-        }
+    texts = _get_notification_texts(
+        notification_type, text_options, event_type_id, event_name, username
+    )
 
     if notification_type == SignUpNotificationType.CANCELLATION:
-        if username:
-            texts["secondary_heading"] = text_options["secondary_heading"][
-                event_type_id
-            ] % {
-                "event_name": event_name,
-                "username": username,
-            }
-        else:
-            texts["secondary_heading"] = text_options[
-                "secondary_heading_without_username"
-            ][event_type_id] % {"event_name": event_name}
+        _format_cancellation_texts(
+            texts, text_options, event_type_id, event_name, username
+        )
     elif notification_type == SignUpNotificationType.CONFIRMATION:
-        if contact_person.signup_group_id:
-            # Override default confirmation message heading
-            texts["heading"] = text_options["group"]["heading"]
-            texts["secondary_heading"] = text_options["group"]["secondary_heading"][
-                event_type_id
-            ] % {"event_name": event_name}
-        else:
-            texts["secondary_heading"] = text_options["secondary_heading"][
-                event_type_id
-            ] % {"event_name": event_name}
+        _format_confirmation_texts(
+            texts, text_options, event_type_id, event_name, contact_person
+        )
+        _format_confirmation_message_texts(texts, confirmation_message)
     elif notification_type == SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST:
-        if contact_person.signup_group_id:
-            # Override default confirmation message heading
-            texts["text"] = text_options["group"]["text"][event_type_id] % {
-                "event_name": event_name
-            }
-            texts["secondary_text"] = text_options["group"]["secondary_text"][
-                event_type_id
-            ]
-        else:
-            texts["secondary_text"] = text_options["secondary_text"][event_type_id]
-
-    if (
-        notification_type == SignUpNotificationType.CONFIRMATION
-        or notification_type == SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT
-    ) and confirmation_message:
-        texts["confirmation_message"] = confirmation_message
+        _format_confirmation_to_waiting_list_texts(
+            texts, text_options, event_type_id, event_name, contact_person
+        )
+    elif notification_type == SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT:
+        _format_confirmation_message_texts(texts, confirmation_message)
 
     return texts
 
