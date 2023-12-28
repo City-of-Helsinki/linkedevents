@@ -10,12 +10,12 @@ from audit_log.models import AuditLogEntry
 from events.tests.factories import ApiKeyUserFactory
 from events.tests.utils import versioned_reverse as reverse
 from helevents.models import User
-from helevents.tests.factories import UserFactory
 from registrations.models import PriceGroup
 from registrations.tests.factories import (
     PriceGroupFactory,
     RegistrationPriceGroupFactory,
 )
+from registrations.tests.utils import create_user_by_role
 
 _NEW_DESCRIPTION_FI = "FI desc"
 _NEW_DESCRIPTION_SV = "SV desc"
@@ -143,19 +143,9 @@ def test_superuser_can_update_price_group_regardless_of_other_roles(
 ):
     price_group = PriceGroupFactory(publisher=organization)
 
-    user = UserFactory(is_superuser=True)
-
-    other_role_mapping = {
-        "admin": lambda usr: usr.admin_organizations.add(organization),
-        "registration_admin": lambda usr: usr.registration_admin_organizations.add(
-            organization
-        ),
-        "financial_admin": lambda usr: usr.financial_admin_organizations.add(
-            organization
-        ),
-        "regular_user": lambda usr: usr.organization_memberships.add(organization),
-    }
-    other_role_mapping[other_role](user)
+    user = create_user_by_role(other_role, organization)
+    user.is_superuser = True
+    user.save(update_fields=["is_superuser"])
 
     api_client.force_authenticate(user)
 
@@ -168,8 +158,7 @@ def test_superuser_can_update_price_group_regardless_of_other_roles(
 def test_financial_admin_can_update_price_group(api_client, organization):
     price_group = PriceGroupFactory(publisher=organization)
 
-    user = UserFactory()
-    user.financial_admin_organizations.add(organization)
+    user = create_user_by_role("financial_admin", organization)
     api_client.force_authenticate(user)
 
     assert_update_price_group_and_check_values(
@@ -181,8 +170,7 @@ def test_financial_admin_can_update_price_group(api_client, organization):
 def test_price_group_update_text_fields_are_sanitized(api_client, organization):
     price_group = PriceGroupFactory(publisher=organization)
 
-    user = UserFactory()
-    user.financial_admin_organizations.add(organization)
+    user = create_user_by_role("financial_admin", organization)
     api_client.force_authenticate(user)
 
     data = {
@@ -201,8 +189,7 @@ def test_can_change_publisher_if_price_group_not_used(
 ):
     price_group = PriceGroupFactory(publisher=organization)
 
-    user = UserFactory()
-    user.financial_admin_organizations.add(organization)
+    user = create_user_by_role("financial_admin", organization)
     api_client.force_authenticate(user)
 
     data = {
@@ -222,8 +209,7 @@ def test_cannot_change_publisher_if_price_group_used(
 ):
     price_group = PriceGroupFactory(publisher=organization)
 
-    user = UserFactory()
-    user.financial_admin_organizations.add(organization)
+    user = create_user_by_role("financial_admin", organization)
     api_client.force_authenticate(user)
 
     RegistrationPriceGroupFactory(
@@ -260,17 +246,7 @@ def test_not_allowed_user_roles_cannot_update_price_group(
 ):
     price_group = PriceGroupFactory(publisher=organization)
 
-    user = UserFactory()
-
-    user_role_mapping = {
-        "admin": lambda usr: usr.admin_organizations.add(organization),
-        "registration_admin": lambda usr: usr.registration_admin_organizations.add(
-            organization
-        ),
-        "regular_user": lambda usr: usr.organization_memberships.add(organization),
-    }
-    user_role_mapping[user_role](user)
-
+    user = create_user_by_role(user_role, organization)
     api_client.force_authenticate(user)
 
     assert_update_price_group_not_allowed(api_client, organization, price_group)
@@ -282,8 +258,7 @@ def test_user_of_another_organization_cannot_update_price_group(
 ):
     price_group = PriceGroupFactory(publisher=organization)
 
-    user = UserFactory()
-    user.financial_admin_organizations.add(organization2)
+    user = create_user_by_role("financial_admin", organization2)
     api_client.force_authenticate(user)
 
     assert_update_price_group_not_allowed(api_client, organization, price_group)
@@ -370,12 +345,12 @@ def test_unknown_apikey_user_cannot_update_price_group(api_client, organization)
     assert price_group.description != data["description"]
 
 
+@pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
 @pytest.mark.django_db
-def test_cannot_update_default_price_group(api_client, organization):
+def test_cannot_update_default_price_group(api_client, organization, user_role):
     price_group = PriceGroup.objects.filter(publisher=None).first()
 
-    user = UserFactory()
-    user.financial_admin_organizations.add(organization)
+    user = create_user_by_role(user_role, organization)
     api_client.force_authenticate(user)
 
     data = {
@@ -383,14 +358,17 @@ def test_cannot_update_default_price_group(api_client, organization):
         "description": {"en": "Test Price Group"},
     }
     response = update_price_group(api_client, price_group.pk, data)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    if user.is_superuser:
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+    else:
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db
 def test_price_group_id_is_audit_logged_on_put(api_client, organization):
     price_group = PriceGroupFactory(publisher=organization)
 
-    user = UserFactory(is_superuser=True)
+    user = create_user_by_role("superuser", organization)
     api_client.force_authenticate(user)
 
     data = {

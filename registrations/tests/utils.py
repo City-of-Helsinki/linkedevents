@@ -18,20 +18,30 @@ def assert_invitation_email_is_sent(email: str, event_name: str) -> None:
 
 
 def create_user_by_role(
-    user_role: str, organization: Organization, additional_roles: Optional[dict] = None
+    user_role: str,
+    organization: Optional[Organization] = None,
+    additional_roles: Optional[dict] = None,
 ) -> User:
     user = UserFactory(is_superuser=user_role == "superuser")
 
     user_role_mapping = {
         "superuser": lambda usr: None,
-        "admin": lambda usr: usr.admin_organizations.add(organization),
+        "admin": lambda usr: usr.admin_organizations.add(organization)
+        if organization
+        else None,
         "registration_admin": lambda usr: usr.registration_admin_organizations.add(
             organization
-        ),
+        )
+        if organization
+        else None,
         "financial_admin": lambda usr: usr.financial_admin_organizations.add(
             organization
-        ),
-        "regular_user": lambda usr: usr.organization_memberships.add(organization),
+        )
+        if organization
+        else None,
+        "regular_user": lambda usr: usr.organization_memberships.add(organization)
+        if organization
+        else None,
     }
     if isinstance(additional_roles, dict):
         user_role_mapping.update(additional_roles)

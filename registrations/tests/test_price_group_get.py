@@ -9,9 +9,9 @@ from rest_framework.test import APIClient
 from audit_log.models import AuditLogEntry
 from events.tests.utils import assert_fields_exist
 from events.tests.utils import versioned_reverse as reverse
-from helevents.tests.factories import UserFactory
 from registrations.models import PriceGroup
 from registrations.tests.factories import PriceGroupFactory
+from registrations.tests.utils import create_user_by_role
 
 # === util methods ===
 
@@ -91,21 +91,7 @@ def test_authenticated_user_can_get_price_group_detail_and_list(
         description_en="EN",
     )
 
-    user = UserFactory(is_superuser=user_role == "superuser")
-
-    user_role_mapping = {
-        "superuser": lambda usr: None,
-        "admin": lambda usr: usr.admin_organizations.add(organization),
-        "registration_admin": lambda usr: usr.registration_admin_organizations.add(
-            organization
-        ),
-        "financial_admin": lambda usr: usr.financial_admin_organizations.add(
-            organization
-        ),
-        "regular_user": lambda usr: usr.organization_memberships.add(organization),
-    }
-    user_role_mapping[user_role](user)
-
+    user = create_user_by_role(user_role, organization)
     api_client.force_authenticate(user)
 
     if url_type == "list":
@@ -157,9 +143,12 @@ def test_apikey_user_can_get_price_group_detail_and_list(
         assert_price_group_fields_exist(response.data)
 
 
+@pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
 @pytest.mark.django_db
-def test_filter_price_groups_by_publisher(api_client, organization, organization2):
-    user = UserFactory(is_superuser=True)
+def test_filter_price_groups_by_publisher(
+    api_client, organization, organization2, user_role
+):
+    user = create_user_by_role(user_role, organization)
     api_client.force_authenticate(user)
 
     price_group = PriceGroupFactory(publisher=organization)
@@ -194,7 +183,7 @@ def test_filter_price_groups_by_publisher(api_client, organization, organization
 
 @pytest.mark.django_db
 def test_filter_price_groups_by_publisher_without_publishers(api_client):
-    user = UserFactory(is_superuser=True)
+    user = create_user_by_role("superuser", None)
     api_client.force_authenticate(user)
 
     response = assert_get_list(api_client, query="publisher=1")
@@ -219,7 +208,7 @@ def test_filter_price_groups_by_publisher_without_publishers(api_client):
 def test_filter_price_groups_by_description(
     api_client, lang, query_term, expected_description
 ):
-    user = UserFactory(is_superuser=True)
+    user = create_user_by_role("superuser", None)
     api_client.force_authenticate(user)
 
     with translation.override(lang):
@@ -237,7 +226,7 @@ def test_filter_price_groups_by_description(
 )
 @pytest.mark.django_db
 def test_filter_by_is_free(api_client, is_free, expected_count):
-    user = UserFactory(is_superuser=True)
+    user = create_user_by_role("superuser", None)
     api_client.force_authenticate(user)
 
     price_groups = PriceGroup.objects.filter(publisher=None, is_free=bool(is_free))
@@ -254,7 +243,7 @@ def test_filter_by_is_free(api_client, is_free, expected_count):
 def test_price_group_list_ordering(api_client):
     PriceGroup.objects.filter(publisher=None).delete()
 
-    user = UserFactory(is_superuser=True)
+    user = create_user_by_role("superuser", None)
     api_client.force_authenticate(user)
 
     price_groups = [
@@ -289,7 +278,7 @@ def test_price_group_list_ordering(api_client):
 def test_price_group_id_is_audit_logged_on_get_detail(api_client):
     price_group = PriceGroup.objects.filter(publisher=None).first()
 
-    user = UserFactory(is_superuser=True)
+    user = create_user_by_role("superuser", None)
     api_client.force_authenticate(user)
 
     assert_get_detail(api_client, price_group.pk)
@@ -302,7 +291,7 @@ def test_price_group_id_is_audit_logged_on_get_detail(api_client):
 
 @pytest.mark.django_db
 def test_price_group_ids_are_audit_logged_on_get_list(api_client):
-    user = UserFactory(is_superuser=True)
+    user = create_user_by_role("superuser", None)
     api_client.force_authenticate(user)
 
     assert_get_list(api_client)

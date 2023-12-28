@@ -8,12 +8,12 @@ from rest_framework.test import APIClient
 
 from audit_log.models import AuditLogEntry
 from events.tests.utils import versioned_reverse as reverse
-from helevents.tests.factories import UserFactory
 from registrations.models import PriceGroup
 from registrations.tests.factories import (
     PriceGroupFactory,
     RegistrationPriceGroupFactory,
 )
+from registrations.tests.utils import create_user_by_role
 
 # === util methods ===
 
@@ -67,19 +67,9 @@ def test_superuser_can_delete_price_group_regardless_of_other_roles(
 ):
     price_group = PriceGroupFactory(publisher=organization)
 
-    user = UserFactory(is_superuser=True)
-
-    other_role_mapping = {
-        "admin": lambda usr: usr.admin_organizations.add(organization),
-        "registration_admin": lambda usr: usr.registration_admin_organizations.add(
-            organization
-        ),
-        "financial_admin": lambda usr: usr.financial_admin_organizations.add(
-            organization
-        ),
-        "regular_user": lambda usr: usr.organization_memberships.add(organization),
-    }
-    other_role_mapping[other_role](user)
+    user = create_user_by_role(other_role, organization)
+    user.is_superuser = True
+    user.save(update_fields=["is_superuser"])
 
     api_client.force_authenticate(user)
 
@@ -90,8 +80,7 @@ def test_superuser_can_delete_price_group_regardless_of_other_roles(
 def test_financial_admin_can_delete_price_group(api_client, organization):
     price_group = PriceGroupFactory(publisher=organization)
 
-    user = UserFactory()
-    user.financial_admin_organizations.add(organization)
+    user = create_user_by_role("financial_admin", organization)
     api_client.force_authenticate(user)
 
     assert_delete_price_group(api_client, price_group.pk)
@@ -107,8 +96,7 @@ def test_cannot_delete_price_group_if_used_in_registrations(api_client, organiza
         price=Decimal("10"),
     )
 
-    user = UserFactory()
-    user.financial_admin_organizations.add(organization)
+    user = create_user_by_role("financial_admin", organization)
     api_client.force_authenticate(user)
 
     assert PriceGroup.objects.count() == 9
@@ -133,17 +121,7 @@ def test_not_allowed_user_roles_cannot_delete_price_group(
 ):
     price_group = PriceGroupFactory(publisher=organization)
 
-    user = UserFactory()
-
-    user_role_mapping = {
-        "admin": lambda usr: usr.admin_organizations.add(organization),
-        "registration_admin": lambda usr: usr.registration_admin_organizations.add(
-            organization
-        ),
-        "regular_user": lambda usr: usr.organization_memberships.add(organization),
-    }
-    user_role_mapping[user_role](user)
-
+    user = create_user_by_role(user_role, organization)
     api_client.force_authenticate(user)
 
     assert_delete_price_group_not_allowed(api_client, price_group.pk)
@@ -155,8 +133,7 @@ def test_user_of_another_organization_cannot_delete_price_group(
 ):
     price_group = PriceGroupFactory(publisher=organization)
 
-    user = UserFactory()
-    user.financial_admin_organizations.add(organization2)
+    user = create_user_by_role("financial_admin", organization2)
     api_client.force_authenticate(user)
 
     assert_delete_price_group_not_allowed(api_client, price_group.pk)
@@ -237,9 +214,7 @@ def test_unknown_apikey_user_cannot_delete_price_group(api_client, organization)
 def test_cannot_delete_default_price_group(api_client, organization, user_role):
     price_group = PriceGroup.objects.filter(publisher=None).first()
 
-    user = UserFactory(is_superuser=user_role == "superuser")
-    if user_role == "financial_admin":
-        user.financial_admin_organizations.add(organization)
+    user = create_user_by_role(user_role, organization)
     api_client.force_authenticate(user)
 
     assert PriceGroup.objects.count() == 8
@@ -258,7 +233,7 @@ def test_cannot_delete_default_price_group(api_client, organization, user_role):
 def test_price_group_id_is_audit_logged_on_delete(api_client, organization):
     price_group = PriceGroupFactory(publisher=organization)
 
-    user = UserFactory(is_superuser=True)
+    user = create_user_by_role("superuser", organization)
     api_client.force_authenticate(user)
 
     assert_delete_price_group(api_client, price_group.pk)

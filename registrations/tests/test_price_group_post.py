@@ -7,8 +7,8 @@ from audit_log.models import AuditLogEntry
 from events.tests.factories import ApiKeyUserFactory
 from events.tests.utils import versioned_reverse as reverse
 from helevents.models import User
-from helevents.tests.factories import UserFactory
 from registrations.models import PriceGroup
+from registrations.tests.utils import create_user_by_role
 
 # === util methods ===
 
@@ -89,19 +89,9 @@ def assert_create_price_group_not_allowed(
 def test_superuser_can_create_price_group_regardless_of_other_roles(
     api_client, organization, other_role
 ):
-    user = UserFactory(is_superuser=True)
-
-    other_role_mapping = {
-        "admin": lambda usr: usr.admin_organizations.add(organization),
-        "registration_admin": lambda usr: usr.registration_admin_organizations.add(
-            organization
-        ),
-        "financial_admin": lambda usr: usr.financial_admin_organizations.add(
-            organization
-        ),
-        "regular_user": lambda usr: usr.organization_memberships.add(organization),
-    }
-    other_role_mapping[other_role](user)
+    user = create_user_by_role(other_role, organization)
+    user.is_superuser = True
+    user.save(update_fields=["is_superuser"])
 
     api_client.force_authenticate(user)
 
@@ -110,8 +100,7 @@ def test_superuser_can_create_price_group_regardless_of_other_roles(
 
 @pytest.mark.django_db
 def test_financial_admin_can_create_price_group(api_client, organization):
-    user = UserFactory()
-    user.financial_admin_organizations.add(organization)
+    user = create_user_by_role("financial_admin", organization)
     api_client.force_authenticate(user)
 
     assert_create_price_group_and_check_values(api_client, organization, user)
@@ -119,8 +108,7 @@ def test_financial_admin_can_create_price_group(api_client, organization):
 
 @pytest.mark.django_db
 def test_price_group_create_text_fields_are_sanitized(api_client, organization):
-    user = UserFactory()
-    user.financial_admin_organizations.add(organization)
+    user = create_user_by_role("financial_admin", organization)
     api_client.force_authenticate(user)
 
     assert PriceGroup.objects.count() == 8
@@ -149,17 +137,7 @@ def test_price_group_create_text_fields_are_sanitized(api_client, organization):
 def test_not_allowed_user_roles_cannot_create_price_group(
     api_client, organization, user_role
 ):
-    user = UserFactory()
-
-    user_role_mapping = {
-        "admin": lambda usr: usr.admin_organizations.add(organization),
-        "registration_admin": lambda usr: usr.registration_admin_organizations.add(
-            organization
-        ),
-        "regular_user": lambda usr: usr.organization_memberships.add(organization),
-    }
-    user_role_mapping[user_role](user)
-
+    user = create_user_by_role(user_role, organization)
     api_client.force_authenticate(user)
 
     assert_create_price_group_not_allowed(api_client, organization)
@@ -224,7 +202,7 @@ def test_unknown_apikey_user_cannot_create_price_group(api_client, organization)
 @pytest.mark.parametrize("publisher", ["", None, "not_given"])
 @pytest.mark.django_db
 def test_cannot_create_signup_group_without_publisher(api_client, publisher):
-    user = UserFactory(is_superuser=True)
+    user = create_user_by_role("superuser", None)
     api_client.force_authenticate(user)
 
     assert PriceGroup.objects.count() == 8
@@ -246,7 +224,7 @@ def test_cannot_create_signup_group_without_publisher(api_client, publisher):
 def test_cannot_create_signup_group_without_description(
     api_client, organization, description
 ):
-    user = UserFactory(is_superuser=True)
+    user = create_user_by_role("superuser", organization)
     api_client.force_authenticate(user)
 
     assert PriceGroup.objects.count() == 8
@@ -265,7 +243,7 @@ def test_cannot_create_signup_group_without_description(
 
 @pytest.mark.django_db
 def test_price_group_id_is_audit_logged_on_post(api_client, organization):
-    user = UserFactory(is_superuser=True)
+    user = create_user_by_role("superuser", organization)
     api_client.force_authenticate(user)
 
     data = {
