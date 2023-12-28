@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-12-28 11:42+0000\n"
+"POT-Creation-Date: 2023-12-28 13:33+0000\n"
 "PO-Revision-Date: 2015-04-29 12:26+0140\n"
 "Last-Translator: <harri.rissanen@vincit.fi>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -941,14 +941,17 @@ msgstr ""
 "peruttu."
 
 #: registrations/notifications.py:67
+#, python-format
 msgid "Registration to the event %(event_name)s has been cancelled."
 msgstr "Ilmoittautuminen tapahtumaan %(event_name)s on peruttu."
 
 #: registrations/notifications.py:70
+#, python-format
 msgid "Registration to the course %(event_name)s has been cancelled."
 msgstr "Ilmoittautuminen kurssille %(event_name)s on peruttu."
 
 #: registrations/notifications.py:73
+#, python-format
 msgid "Registration to the volunteering %(event_name)s has been cancelled."
 msgstr "Ilmoittautuminen vapaaehtoistehtävään %(event_name)s on peruttu."
 
@@ -979,27 +982,32 @@ msgstr ""
 "Olet onnistuneesti peruuttanut ilmoittautumisesi vapaaehtoistehtävään "
 "<strong>%(event_name)s</strong>."
 
-#: registrations/notifications.py:89 registrations/notifications.py:177
+#: registrations/notifications.py:89 registrations/notifications.py:178
 #, python-format
 msgid "Welcome %(username)s"
 msgstr "Tervetuloa %(username)s"
 
-#: registrations/notifications.py:92
+#: registrations/notifications.py:90 registrations/notifications.py:114
+#: registrations/notifications.py:179
+msgid "Welcome"
+msgstr "Tervetuloa"
+
+#: registrations/notifications.py:93
 #, python-format
 msgid "Registration to the event %(event_name)s has been saved."
 msgstr "Ilmoittautuminen tapahtumaan %(event_name)s on tallennettu."
 
-#: registrations/notifications.py:95
+#: registrations/notifications.py:96
 #, python-format
 msgid "Registration to the course %(event_name)s has been saved."
 msgstr "Ilmoittautuminen kurssille %(event_name)s on tallennettu."
 
-#: registrations/notifications.py:98
+#: registrations/notifications.py:99
 #, python-format
 msgid "Registration to the volunteering %(event_name)s has been saved."
 msgstr "Ilmoittautuminen vapaaehtoistehtävään %(event_name)s on tallennettu."
 
-#: registrations/notifications.py:103
+#: registrations/notifications.py:104
 #, python-format
 msgid ""
 "Congratulations! Your registration has been confirmed for the event "
@@ -1008,7 +1016,7 @@ msgstr ""
 "Onnittelut! Ilmoittautumisesi on vahvistettu tapahtumaan "
 "<strong>%(event_name)s</strong>."
 
-#: registrations/notifications.py:106
+#: registrations/notifications.py:107
 #, python-format
 msgid ""
 "Congratulations! Your registration has been confirmed for the course "
@@ -1017,7 +1025,7 @@ msgstr ""
 "Onnittelut! Ilmoittautumisesi on vahvistettu kurssille "
 "<strong>%(event_name)s</strong>."
 
-#: registrations/notifications.py:109
+#: registrations/notifications.py:110
 #, python-format
 msgid ""
 "Congratulations! Your registration has been confirmed for the volunteering "
@@ -1026,31 +1034,27 @@ msgstr ""
 "Onnittelut! Ilmoittautumisesi on vahvistettu vapaaehtoistehtävään "
 "<strong>%(event_name)s</strong>."
 
-#: registrations/notifications.py:113
-msgid "Welcome"
-msgstr "Tervetuloa"
-
-#: registrations/notifications.py:116
+#: registrations/notifications.py:117
 #, python-format
 msgid "Group registration to the event %(event_name)s has been saved."
 msgstr "Ryhmäilmoittautuminen tapahtumaan %(event_name)s on tallennettu."
 
-#: registrations/notifications.py:119
+#: registrations/notifications.py:120
 #, python-format
 msgid "Group registration to the course %(event_name)s has been saved."
 msgstr "Ryhmäilmoittautuminen kurssille %(event_name)s on tallennettu."
 
-#: registrations/notifications.py:122
+#: registrations/notifications.py:123
 #, python-format
 msgid "Group registration to the volunteering %(event_name)s has been saved."
 msgstr ""
 "Ryhmäilmoittautuminen vapaaehtoistehtävään %(event_name)s on tallennettu."
 
-#: registrations/notifications.py:128
+#: registrations/notifications.py:129
 msgid "Thank you for signing up for the waiting list"
 msgstr "Kiitos ilmoittautumisesta jonoon"
 
-#: registrations/notifications.py:131
+#: registrations/notifications.py:132
 #, python-format
 msgid ""
 "You have successfully registered for the event <strong>%(event_name)s</"
@@ -1059,7 +1063,7 @@ msgstr ""
 "Olet onnistuneesti ilmoittautunut tapahtuman <strong>%(event_name)s</strong> "
 "jonotuslistalle."
 
-#: registrations/notifications.py:134
+#: registrations/notifications.py:135
 #, python-format
 msgid ""
 "You have successfully registered for the course <strong>%(event_name)s</"
@@ -1068,7 +1072,7 @@ msgstr ""
 "Olet onnistuneesti ilmoittautunut kurssin <strong>%(event_name)s</strong> "
 "jonotuslistalle."
 
-#: registrations/notifications.py:137
+#: registrations/notifications.py:138
 #, python-format
 msgid ""
 "You have successfully registered for the volunteering "
@@ -1077,7 +1081,7 @@ msgstr ""
 "Olet onnistuneesti ilmoittautunut vapaaehtoistehtävän "
 "<strong>%(event_name)s</strong> jonotuslistalle."
 
-#: registrations/notifications.py:142
+#: registrations/notifications.py:143
 msgid ""
 "You will be automatically transferred as an event participant if a seat "
 "becomes available."
@@ -1085,7 +1089,7 @@ msgstr ""
 "Sinut siirretään automaattisesti tapahtuman osallistujaksi mikäli paikka "
 "vapautuu."
 
-#: registrations/notifications.py:145
+#: registrations/notifications.py:146
 msgid ""
 "You will be automatically transferred as a course participant if a seat "
 "becomes available."
@@ -1093,7 +1097,7 @@ msgstr ""
 "Sinut siirretään automaattisesti kurssin osallistujaksi mikäli paikka "
 "vapautuu."
 
-#: registrations/notifications.py:148
+#: registrations/notifications.py:149
 msgid ""
 "You will be automatically transferred as a volunteering participant if a "
 "seat becomes available."
@@ -1101,7 +1105,7 @@ msgstr ""
 "Sinut siirretään automaattisesti vapaaehtoistehtävän osallistujaksi mikäli "
 "paikka vapautuu."
 
-#: registrations/notifications.py:154
+#: registrations/notifications.py:155
 #, python-format
 msgid ""
 "The registration for the event <strong>%(event_name)s</strong> waiting list "
@@ -1110,7 +1114,7 @@ msgstr ""
 "Ilmoittautuminen tapahtuman <strong>%(event_name)s</strong> jonotuslistalle "
 "onnistui."
 
-#: registrations/notifications.py:157
+#: registrations/notifications.py:158
 #, python-format
 msgid ""
 "The registration for the course <strong>%(event_name)s</strong> waiting list "
@@ -1119,7 +1123,7 @@ msgstr ""
 "Ilmoittautuminen kurssin <strong>%(event_name)s</strong> jonotuslistalle "
 "onnistui."
 
-#: registrations/notifications.py:160
+#: registrations/notifications.py:161
 #, python-format
 msgid ""
 "The registration for the volunteering <strong>%(event_name)s</strong> "
@@ -1128,7 +1132,7 @@ msgstr ""
 "Ilmoittautuminen vapaaehtoistehtävän <strong>%(event_name)s</strong> "
 "jonotuslistalle onnistui."
 
-#: registrations/notifications.py:165
+#: registrations/notifications.py:166
 msgid ""
 "You will be automatically transferred from the waiting list to become a "
 "participant in the event if a place becomes available."
@@ -1136,7 +1140,7 @@ msgstr ""
 "Jonotuslistalta siirretään automaattisesti tapahtuman osallistujaksi mikäli "
 "paikka vapautuu."
 
-#: registrations/notifications.py:168
+#: registrations/notifications.py:169
 msgid ""
 "You will be automatically transferred from the waiting list to become a "
 "participant in the course if a place becomes available."
@@ -1144,7 +1148,7 @@ msgstr ""
 "Jonotuslistalta siirretään automaattisesti kurssin osallistujaksi mikäli "
 "paikka vapautuu."
 
-#: registrations/notifications.py:171
+#: registrations/notifications.py:172
 msgid ""
 "You will be automatically transferred from the waiting list to become a "
 "participant in the volunteering if a place becomes available."
@@ -1152,7 +1156,7 @@ msgstr ""
 "Jonotuslistalta siirretään automaattisesti vapaaehtoistehtävän "
 "osallistujaksi mikäli paikka vapautuu."
 
-#: registrations/notifications.py:180
+#: registrations/notifications.py:182
 #, python-format
 msgid ""
 "You have been moved from the waiting list of the event "
@@ -1161,7 +1165,7 @@ msgstr ""
 "Sinut on siirretty tapahtuman <strong>%(event_name)s</strong> "
 "jonotuslistalta osallistujaksi."
 
-#: registrations/notifications.py:183
+#: registrations/notifications.py:185
 #, python-format
 msgid ""
 "You have been moved from the waiting list of the course "
@@ -1170,7 +1174,7 @@ msgstr ""
 "Sinut on siirretty kurssin <strong>%(event_name)s</strong> jonotuslistalta "
 "osallistujaksi."
 
-#: registrations/notifications.py:186
+#: registrations/notifications.py:188
 #, python-format
 msgid ""
 "You have been moved from the waiting list of the volunteering "

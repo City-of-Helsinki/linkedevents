@@ -1021,9 +1021,10 @@ def test_email_sent_on_successful_signup_group(
         assert SignUp.objects.first().attendee_status == SignUp.AttendeeStatus.ATTENDING
 
         #  assert that the email was sent
+        message_string = str(mail.outbox[0].alternatives[0])
         assert mail.outbox[0].subject.startswith(expected_subject)
-        assert expected_heading in str(mail.outbox[0].alternatives[0])
-        assert expected_text in str(mail.outbox[0].alternatives[0])
+        assert expected_heading in message_string
+        assert expected_text in message_string
 
 
 @pytest.mark.parametrize(

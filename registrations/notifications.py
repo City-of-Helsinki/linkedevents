@@ -87,6 +87,7 @@ signup_email_texts = {
     },
     SignUpNotificationType.CONFIRMATION: {
         "heading": _("Welcome %(username)s"),
+        "heading_without_username": _("Welcome"),
         "secondary_heading": {
             Event.TypeId.GENERAL: _(
                 "Registration to the event %(event_name)s has been saved."
@@ -175,6 +176,7 @@ signup_email_texts = {
     },
     SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT: {
         "heading": _("Welcome %(username)s"),
+        "heading_without_username": _("Welcome"),
         "text": {
             Event.TypeId.GENERAL: _(
                 "You have been moved from the waiting list of the event <strong>%(event_name)s</strong> to a participant."  # noqa E501
@@ -194,13 +196,21 @@ def _get_notification_texts(
     notification_type, text_options, event_type_id, event_name, username
 ):
     if notification_type == SignUpNotificationType.EVENT_CANCELLATION:
-        texts = {
+        return {
             "heading": text_options["heading"] % {"event_name": event_name},
             "text": text_options["text"],
         }
-    else:
+
+    if username:
         texts = {
             "heading": text_options["heading"] % {"username": username},
+            "text": text_options["text"][event_type_id] % {"event_name": event_name},
+        }
+    else:
+        texts = {
+            "heading": text_options.get(
+                "heading_without_username", text_options["heading"]
+            ),
             "text": text_options["text"][event_type_id] % {"event_name": event_name},
         }
 
