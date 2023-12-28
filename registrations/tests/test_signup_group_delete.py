@@ -144,24 +144,48 @@ def test_registration_user_access_cannot_delete_signup_group(
 
 
 @pytest.mark.parametrize(
-    "service_language,expected_subject,expected_heading,expected_text",
+    "username,service_language,expected_subject,expected_heading,expected_text",
     [
         (
+            "Username",
             "en",
             "Registration cancelled",
             "Username, registration to the event Foo has been cancelled.",
             "You have successfully cancelled your registration to the event <strong>Foo</strong>.",
         ),
         (
+            "Käyttäjänimi",
             "fi",
             "Ilmoittautuminen peruttu",
-            "Username, ilmoittautuminen tapahtumaan Foo on peruttu.",
+            "Käyttäjänimi, ilmoittautuminen tapahtumaan Foo on peruttu.",
             "Olet onnistuneesti peruuttanut ilmoittautumisesi tapahtumaan <strong>Foo</strong>.",
         ),
         (
+            "Användarnamn",
             "sv",
             "Registreringen avbruten",
-            "Username, anmälan till evenemanget Foo har ställts in.",
+            "Användarnamn, anmälan till evenemanget Foo har ställts in.",
+            "Du har avbrutit din registrering till evenemanget <strong>Foo</strong>.",
+        ),
+        (
+            None,
+            "en",
+            "Registration cancelled",
+            "Registration to the event Foo has been cancelled.",
+            "You have successfully cancelled your registration to the event <strong>Foo</strong>.",
+        ),
+        (
+            None,
+            "fi",
+            "Ilmoittautuminen peruttu",
+            "Ilmoittautuminen tapahtumaan Foo on peruttu.",
+            "Olet onnistuneesti peruuttanut ilmoittautumisesi tapahtumaan <strong>Foo</strong>.",
+        ),
+        (
+            None,
+            "sv",
+            "Registreringen avbruten",
+            "Anmälan till evenemanget Foo har ställts in.",
             "Du har avbrutit din registrering till evenemanget <strong>Foo</strong>.",
         ),
     ],
@@ -172,6 +196,7 @@ def test_email_sent_on_successful_signup_group_deletion(
     expected_subject,
     expected_text,
     registration,
+    username,
     service_language,
     user_api_client,
     user,
@@ -187,7 +212,7 @@ def test_email_sent_on_successful_signup_group_deletion(
     )
     SignUpContactPersonFactory(
         signup_group=signup_group,
-        first_name="Username",
+        first_name=username,
         service_language=service_lang,
         email=test_email1,
     )

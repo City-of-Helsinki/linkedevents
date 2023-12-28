@@ -62,6 +62,17 @@ signup_email_texts = {
                 "%(username)s, registration to the volunteering %(event_name)s has been cancelled."
             ),
         },
+        "secondary_heading_without_username": {
+            Event.TypeId.GENERAL: _(
+                "Registration to the event %(event_name)s has been cancelled."
+            ),
+            Event.TypeId.COURSE: _(
+                "Registration to the course %(event_name)s has been cancelled."
+            ),
+            Event.TypeId.VOLUNTEERING: _(
+                "Registration to the volunteering %(event_name)s has been cancelled."
+            ),
+        },
         "text": {
             Event.TypeId.GENERAL: _(
                 "You have successfully cancelled your registration to the event <strong>%(event_name)s</strong>."
@@ -206,12 +217,17 @@ def get_signup_notification_texts(
         }
 
     if notification_type == SignUpNotificationType.CANCELLATION:
-        texts["secondary_heading"] = text_options["secondary_heading"][
-            event_type_id
-        ] % {
-            "event_name": event_name,
-            "username": username,
-        }
+        if username:
+            texts["secondary_heading"] = text_options["secondary_heading"][
+                event_type_id
+            ] % {
+                "event_name": event_name,
+                "username": username,
+            }
+        else:
+            texts["secondary_heading"] = text_options[
+                "secondary_heading_without_username"
+            ][event_type_id] % {"event_name": event_name}
     elif notification_type == SignUpNotificationType.CONFIRMATION:
         if contact_person.signup_group_id:
             # Override default confirmation message heading
