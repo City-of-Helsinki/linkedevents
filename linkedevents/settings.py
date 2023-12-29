@@ -151,6 +151,9 @@ env = environ.Env(
     TOKEN_AUTH_FIELD_FOR_CONSENTS=(list, ["https://api.hel.fi/auth"]),
     TOKEN_AUTH_REQUIRE_SCOPE_PREFIX=(bool, False),
     TRUST_X_FORWARDED_HOST=(bool, False),
+    WEB_STORE_API_BASE_URL=(str, ""),
+    WEB_STORE_API_KEY=(str, ""),
+    WEB_STORE_API_NAMESPACE=(str, ""),
     WEB_STORE_INTEGRATION_ENABLED=(bool, False),
     WHITENOISE_STATIC_PREFIX=(str, "/static/"),
 )
@@ -255,6 +258,7 @@ INSTALLED_APPS = [
     "events",
     "registrations",
     "audit_log",
+    "web_store",
 ] + env("EXTRA_INSTALLED_APPS")
 
 # django-extensions is a set of developer friendly tools
@@ -684,6 +688,9 @@ FULL_TEXT_WEIGHT_OVERRIDES = env("FULL_TEXT_WEIGHT_OVERRIDES")
 
 # Talpa web store integration
 WEB_STORE_INTEGRATION_ENABLED = env("WEB_STORE_INTEGRATION_ENABLED")  # Temporary flag
+WEB_STORE_API_BASE_URL = env("WEB_STORE_API_BASE_URL")
+WEB_STORE_API_KEY = env("WEB_STORE_API_KEY")
+WEB_STORE_API_NAMESPACE = env("WEB_STORE_API_NAMESPACE")
 
 SUBSTITUTE_USER_ALLOWED_EMAIL_DOMAINS = env("SUBSTITUTE_USER_ALLOWED_EMAIL_DOMAINS")
 
