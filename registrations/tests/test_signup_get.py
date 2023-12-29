@@ -1,9 +1,9 @@
 from collections import Counter
 from decimal import Decimal
 from unittest.mock import patch, PropertyMock
-from uuid import UUID
 
 import pytest
+from django.conf import settings
 from rest_framework import status
 
 from audit_log.models import AuditLogEntry
@@ -11,12 +11,12 @@ from events.tests.conftest import APIClient
 from events.tests.utils import assert_fields_exist
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
-from registrations.models import SignUp, SignUpContactPerson
+from registrations.models import SignUp
 from registrations.tests.factories import (
     RegistrationUserAccessFactory,
     SignUpContactPersonFactory,
     SignUpFactory,
-    SignUpGroupFactory,
+    SignUpPaymentFactory,
     SignUpPriceGroupFactory,
 )
 from registrations.tests.test_registration_post import hel_email
@@ -82,6 +82,22 @@ def assert_contact_person_fields_exist(data):
     assert_fields_exist(data, fields)
 
 
+def assert_payment_fields_exist(data):
+    fields = (
+        "id",
+        "created_time",
+        "last_modified_time",
+        "created_by",
+        "last_modified_by",
+        "external_order_id",
+        "checkout_url",
+        "logged_in_checkout_url",
+        "amount",
+        "status",
+    )
+    assert_fields_exist(data, fields)
+
+
 def assert_signup_fields_exist(data):
     fields = (
         "id",
@@ -108,6 +124,9 @@ def assert_signup_fields_exist(data):
         "price_group",
         "has_contact_person_access",
     )
+    if settings.WEB_STORE_INTEGRATION_ENABLED:
+        fields += ("payment",)
+
     assert_fields_exist(data, fields)
     assert_contact_person_fields_exist(data["contact_person"])
 
@@ -409,6 +428,61 @@ def test_api_key_with_organization_and_registration_permission_can_get_signup(
     assert_signup_fields_exist(response.data)
     assert response.data["is_created_by_current_user"] is False
     assert response.data["has_contact_person_access"] is False
+
+
+@pytest.mark.parametrize(
+    "user_role",
+    [
+        "superuser",
+        "registration_admin",
+        "created_admin",
+        "created_regular_user",
+        "created_regular_user_without_organization",
+    ],
+)
+@pytest.mark.django_db
+def test_authenticated_user_with_correct_role_can_get_signup_with_payment(
+    api_client, registration, user_role
+):
+    user = create_user_by_role(
+        user_role,
+        registration.publisher,
+        additional_roles={
+            "created_admin": lambda usr: usr.admin_organizations.add(
+                registration.publisher
+            ),
+            "created_regular_user": lambda usr: usr.organization_memberships.add(
+                registration.publisher
+            ),
+            "created_regular_user_without_organization": lambda usr: None,
+        },
+    )
+    api_client.force_authenticate(user)
+
+    signup = SignUpFactory(
+        registration=registration,
+        created_by=user if user_role.startswith("created_") else None,
+    )
+    SignUpPaymentFactory(signup=signup)
+
+    response = assert_get_detail(api_client, signup.id)
+    assert_payment_fields_exist(response.data["payment"])
+
+
+@pytest.mark.django_db
+def test_api_key_with_organization_and_registration_permission_can_get_signup_with_payment(
+    api_client, data_source, registration
+):
+    data_source.owner = registration.publisher
+    data_source.user_editable_registrations = True
+    data_source.save(update_fields=["owner", "user_editable_registrations"])
+    api_client.credentials(apikey=data_source.api_key)
+
+    signup = SignUpFactory(registration=registration)
+    SignUpPaymentFactory(signup=signup)
+
+    response = assert_get_detail(api_client, signup.id)
+    assert_payment_fields_exist(response.data["payment"])
 
 
 @pytest.mark.django_db

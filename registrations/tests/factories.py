@@ -13,6 +13,7 @@ from registrations.models import (
     SignUpContactPerson,
     SignUpGroup,
     SignUpGroupProtectedData,
+    SignUpPayment,
     SignUpPriceGroup,
     SignUpProtectedData,
 )
@@ -134,3 +135,11 @@ class SignUpPriceGroupFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = SignUpPriceGroup
+
+
+class SignUpPaymentFactory(factory.django.DjangoModelFactory):
+    signup = factory.SubFactory(SignUpFactory)
+    amount = Decimal("10")
+
+    class Meta:
+        model = SignUpPayment

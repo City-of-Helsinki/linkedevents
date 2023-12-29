@@ -1,13 +1,29 @@
-from typing import Optional
+from decimal import Decimal
+from typing import Optional, Union
+from unittest.mock import Mock
+from uuid import uuid4
 
 from django.conf import settings
 from django.core import mail
 from django_orghierarchy.models import Organization
+from requests import RequestException
 from rest_framework import status
 
 from helevents.models import User
 from helevents.tests.factories import UserFactory
-from registrations.models import RegistrationUserAccess, SignUp
+from registrations.models import RegistrationUserAccess, SignUp, SignUpGroup, SignUpPayment
+
+DEFAULT_CREATE_ORDER_RESPONSE_JSON = {
+    "orderId": str(uuid4()),
+    "priceTotal": "100.00",
+    "checkoutUrl": "https://checkout.dev/v1/123/",
+    "loggedInCheckoutUrl": "https://logged-in-checkout.dev/v1/123/",
+}
+DEFAULT_CREATE_ORDER_ERROR_RESPONSE = {
+    "errors": [
+        {"firstName": "error"},
+    ],
+}
 
 
 def assert_invitation_email_is_sent(
@@ -112,3 +128,79 @@ def create_user_by_role(
     user_role_mapping[user_role](user)
 
     return user
+
+
+def get_web_store_order_response(payment_amount: Optional[Decimal] = None):
+    resp_json = DEFAULT_CREATE_ORDER_RESPONSE_JSON.copy()
+
+    if payment_amount is not None:
+        resp_json["priceTotal"] = str(payment_amount)
+
+    return resp_json
+
+
+def get_web_store_failed_order_response(
+    web_store_api_status_code=status.HTTP_400_BAD_REQUEST, has_web_store_api_errors=True
+):
+    response = Mock(status_code=status.HTTP_400_BAD_REQUEST)
+
+    web_store_api_response = Mock(status_code=web_store_api_status_code)
+    web_store_api_response.json.return_value = (
+        DEFAULT_CREATE_ORDER_ERROR_RESPONSE if has_web_store_api_errors else {}
+    )
+    response.raise_for_status.side_effect = RequestException(
+        response=web_store_api_response
+    )
+
+    return response
+
+
+def assert_signup_payment_data_is_correct(
+    payment_data,
+    user,
+    signup: Optional[SignUp] = None,
+    signup_group: Optional[SignUpGroup] = None,
+):
+    if signup:
+        assert Decimal(payment_data["amount"]) == signup.total_payment_amount
+    else:
+        assert Decimal(payment_data["amount"]) == signup_group.total_payment_amount
+    assert payment_data["status"] == SignUpPayment.PaymentStatus.CREATED
+    assert (
+        payment_data["external_order_id"]
+        == DEFAULT_CREATE_ORDER_RESPONSE_JSON["orderId"]
+    )
+    assert (
+        payment_data["checkout_url"]
+        == DEFAULT_CREATE_ORDER_RESPONSE_JSON["checkoutUrl"]
+    )
+    assert (
+        payment_data["logged_in_checkout_url"]
+        == DEFAULT_CREATE_ORDER_RESPONSE_JSON["loggedInCheckoutUrl"]
+    )
+    assert payment_data["created_by"] == str(user)
+    assert payment_data["created_time"] is not None
+
+    signup_payment = SignUpPayment.objects.first()
+    if signup:
+        assert signup_payment.signup_group_id is None
+        assert signup_payment.signup_id == signup.pk
+        assert signup_payment.amount == signup.total_payment_amount
+    else:
+        assert signup_payment.signup_group_id == signup_group.pk
+        assert signup_payment.signup_id is None
+        assert signup_payment.amount == signup_group.total_payment_amount
+    assert signup_payment.status == SignUpPayment.PaymentStatus.CREATED
+    assert (
+        signup_payment.external_order_id
+        == DEFAULT_CREATE_ORDER_RESPONSE_JSON["orderId"]
+    )
+    assert (
+        signup_payment.checkout_url == DEFAULT_CREATE_ORDER_RESPONSE_JSON["checkoutUrl"]
+    )
+    assert (
+        signup_payment.logged_in_checkout_url
+        == DEFAULT_CREATE_ORDER_RESPONSE_JSON["loggedInCheckoutUrl"]
+    )
+    assert signup_payment.created_by_id == user.id
+    assert signup_payment.created_time is not None
