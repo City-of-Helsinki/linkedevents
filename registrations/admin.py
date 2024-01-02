@@ -6,6 +6,7 @@ from reversion.admin import VersionAdmin
 
 from events.admin import PublisherFilter
 from events.models import Language
+from registrations.forms import RegistrationPriceGroupAdminForm
 from registrations.models import (
     PriceGroup,
     Registration,
@@ -46,6 +47,7 @@ class RegistrationUserAccessInline(admin.TabularInline):
 
 class RegistrationPriceGroupInline(admin.TabularInline):
     model = RegistrationPriceGroup
+    form = RegistrationPriceGroupAdminForm
     extra = 1
     verbose_name = _("Registration price group")
     verbose_name_plural = _("Registration price groups")

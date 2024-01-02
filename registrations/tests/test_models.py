@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.test import TestCase
@@ -6,9 +8,11 @@ from rest_framework.exceptions import ValidationError
 from events.models import Language
 from events.tests.factories import DataSourceFactory, OrganizationFactory
 from helevents.tests.factories import UserFactory
+from registrations.models import RegistrationPriceGroup
 from registrations.notifications import SignUpNotificationType
 from registrations.tests.factories import (
     RegistrationFactory,
+    RegistrationPriceGroupFactory,
     RegistrationUserAccessFactory,
     SignUpContactPersonFactory,
     SignUpFactory,
@@ -498,3 +502,25 @@ class TestSignUpContactPerson(TestCase):
             self.contact_person.send_notification("does-not-exist")
 
         self.assertEqual(len(mail.outbox), 0)
+
+
+class TestRegistrationPriceGroup(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.registration_price_group = RegistrationPriceGroupFactory()
+
+    def test_calculate_vat_and_price_without_vat(self):
+        self.registration_price_group.price = Decimal("324")
+        self.registration_price_group.vat_percentage = (
+            RegistrationPriceGroup.VatPercentage.VAT_24
+        )
+
+        self.assertEquals(self.registration_price_group.price_without_vat, Decimal("0"))
+        self.assertEquals(self.registration_price_group.vat, Decimal("0"))
+
+        self.registration_price_group.calculate_vat_and_price_without_vat()
+
+        self.assertEquals(
+            self.registration_price_group.price_without_vat, Decimal("261.29")
+        )
+        self.assertEquals(self.registration_price_group.vat, Decimal("62.71"))

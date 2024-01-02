@@ -1,5 +1,6 @@
 import logging
 from datetime import timedelta
+from decimal import Decimal, ROUND_HALF_UP
 from uuid import uuid4
 
 from django.conf import settings
@@ -106,6 +107,45 @@ class CreatedModifiedBaseModel(models.Model):
         blank=True,
         related_name="%(class)s_last_modified_by",
     )
+
+    class Meta:
+        abstract = True
+
+
+class RegistrationPriceGroupBaseModel(models.Model):
+    class VatPercentage:
+        VAT_24 = Decimal("24.00")
+        VAT_14 = Decimal("14.00")
+        VAT_10 = Decimal("10.00")
+        VAT_0 = Decimal("0.00")
+
+    VAT_PERCENTAGES = (
+        (VatPercentage.VAT_24, "24 %"),
+        (VatPercentage.VAT_14, "14 %"),
+        (VatPercentage.VAT_10, "10 %"),
+        (VatPercentage.VAT_0, "0 %"),
+    )
+
+    price = models.DecimalField(max_digits=19, decimal_places=2, default=Decimal("0"))
+    price_without_vat = models.DecimalField(
+        max_digits=19, decimal_places=2, default=Decimal("0")
+    )
+    vat_percentage = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        choices=VAT_PERCENTAGES,
+        default=VatPercentage.VAT_0,
+    )
+    vat = models.DecimalField(max_digits=19, decimal_places=2, default=Decimal("0"))
+
+    def calculate_vat_and_price_without_vat(self):
+        cents = Decimal(".01")
+
+        self.price_without_vat = (
+            self.price / (1 + self.vat_percentage / 100)
+        ).quantize(cents, ROUND_HALF_UP)
+
+        self.vat = (self.price - self.price_without_vat).quantize(cents, ROUND_HALF_UP)
 
     class Meta:
         abstract = True
@@ -310,7 +350,7 @@ class Registration(CreatedModifiedBaseModel):
         )
 
 
-class RegistrationPriceGroup(models.Model):
+class RegistrationPriceGroup(RegistrationPriceGroupBaseModel):
     """Price group selections for SignUps (= what the end-user doing a signup can choose from)."""
 
     registration = models.ForeignKey(
@@ -323,7 +363,6 @@ class RegistrationPriceGroup(models.Model):
         related_name="registration_price_groups",
         on_delete=models.PROTECT,
     )
-    price = models.DecimalField(max_digits=19, decimal_places=2)
 
     class Meta:
         constraints = [
@@ -897,7 +936,7 @@ class SeatReservationCode(models.Model):
         ]
 
 
-class SignUpPriceGroup(models.Model):
+class SignUpPriceGroup(RegistrationPriceGroupBaseModel):
     """When a registration price group is selected when creating a signup for a registration,
     the pricing information that existed at that moment is stored into this model/table.
     """
@@ -915,4 +954,3 @@ class SignUpPriceGroup(models.Model):
     )
 
     description = models.CharField(max_length=255)
-    price = models.DecimalField(max_digits=19, decimal_places=2)
