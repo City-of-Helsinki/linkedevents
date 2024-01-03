@@ -27,7 +27,12 @@ CACHES = {
 
 # Auth
 SOCIAL_AUTH_TUNNISTAMO_OIDC_ENDPOINT = "https://test_issuer"
-OIDC_API_TOKEN_AUTH["ISSUER"] = "https://test_issuer"
+OIDC_API_TOKEN_AUTH["ISSUER"] = ["https://test_issuer"]
+OIDC_API_TOKEN_AUTH["AUDIENCE"] = ["linkedevents-api-pytest"]
+OIDC_API_TOKEN_AUTH["API_AUTHORIZATION_FIELD"] = ["authorization.permissions.scopes"]
+GDPR_API_QUERY_SCOPE = "gdprquery"
+GDPR_API_DELETE_SCOPE = "gdprdelete"
+
 
 SECRET_KEY = "xxx"
 

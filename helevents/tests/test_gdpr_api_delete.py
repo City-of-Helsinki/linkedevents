@@ -93,8 +93,6 @@ def _assert_gdpr_delete(
 
 @pytest.mark.django_db
 def test_authenticated_user_can_delete_own_data(api_client, settings):
-    settings.GDPR_API_DELETE_SCOPE = api_token_auth_settings.API_SCOPE_PREFIX
-
     user = UserFactory()
 
     _create_default_data(user)
@@ -121,8 +119,6 @@ def test_authenticated_user_can_delete_own_data(api_client, settings):
 
 @pytest.mark.django_db
 def test_authenticated_user_cannot_delete_other_users_data(api_client, settings):
-    settings.GDPR_API_DELETE_SCOPE = api_token_auth_settings.API_SCOPE_PREFIX
-
     user = UserFactory()
     other_user = UserFactory()
 
@@ -153,8 +149,6 @@ def test_authenticated_user_cannot_delete_other_users_data(api_client, settings)
 
 @pytest.mark.django_db
 def test_non_authenticated_user_cannot_delete_any_data(api_client, settings):
-    settings.GDPR_API_DELETE_SCOPE = api_token_auth_settings.API_SCOPE_PREFIX
-
     user = UserFactory()
 
     _create_default_data(user)
