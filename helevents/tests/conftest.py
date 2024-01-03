@@ -11,9 +11,9 @@ def get_api_token_for_user_with_scopes(
     user_uuid, scopes: list, requests_mock, amr: str = None
 ):
     """Build a proper auth token with desired scopes."""
-    audience = api_token_auth_settings.AUDIENCE
-    issuer = api_token_auth_settings.ISSUER
-    auth_field = api_token_auth_settings.API_AUTHORIZATION_FIELD
+    audience = api_token_auth_settings.AUDIENCE[0]
+    issuer = api_token_auth_settings.ISSUER[0]
+
     config_url = f"{issuer}/.well-known/openid-configuration"
     jwks_url = f"{issuer}/jwks"
 
@@ -33,7 +33,7 @@ def get_api_token_for_user_with_scopes(
         "sub": str(user_uuid),
         "iat": int(now.timestamp()),
         "exp": int(expire.timestamp()),
-        auth_field: scopes,
+        "authorization": {"permissions": [{"scopes": scopes}]},
     }
     if amr:
         jwt_data["amr"] = amr

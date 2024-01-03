@@ -157,8 +157,6 @@ def _assert_profile_data_in_response(response, user: User):
 @pytest.mark.parametrize("use_contact_person", [True, False])
 @pytest.mark.django_db
 def test_authenticated_user_can_get_own_data(api_client, settings, use_contact_person):
-    settings.GDPR_API_QUERY_SCOPE = api_token_auth_settings.API_SCOPE_PREFIX
-
     user = UserFactory()
 
     language_en = LanguageFactory(id="en", name="English")
@@ -247,8 +245,6 @@ def test_authenticated_user_can_get_own_data(api_client, settings, use_contact_p
 
 @pytest.mark.django_db
 def test_authenticated_user_cannot_get_other_users_data(api_client, settings):
-    settings.GDPR_API_QUERY_SCOPE = api_token_auth_settings.API_SCOPE_PREFIX
-
     user = UserFactory()
     other_user = UserFactory()
 
@@ -264,8 +260,6 @@ def test_authenticated_user_cannot_get_other_users_data(api_client, settings):
 
 @pytest.mark.django_db
 def test_non_authenticated_user_cannot_get_any_data(api_client, settings):
-    settings.GDPR_API_QUERY_SCOPE = api_token_auth_settings.API_SCOPE_PREFIX
-
     user = UserFactory()
 
     response = _get_gdpr_data(api_client, user.uuid)
