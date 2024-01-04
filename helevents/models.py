@@ -229,6 +229,8 @@ class User(AbstractUser, UserModelPermissionMixin, SerializableMixin):
         {"name": "last_name"},
         {"name": "email"},
         {"name": "signup_created_by"},
+        {"name": "events_event_created_by"},
+        {"name": "publisher_organizations"},
     )
 
     def __str__(self):
