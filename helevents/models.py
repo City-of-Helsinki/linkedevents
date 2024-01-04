@@ -3,6 +3,7 @@ from functools import reduce
 
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 from django.utils.functional import cached_property
 from django_orghierarchy.models import Organization
 from helsinki_gdpr.models import SerializableMixin
@@ -233,6 +234,19 @@ class User(AbstractUser, UserModelPermissionMixin, SerializableMixin):
     def __str__(self):
         return " - ".join([self.get_display_name(), self.email])
 
+    @property
+    def publisher_organizations(self):
+        """
+        Organizations where user is part of as admin or regular user.
+        This is used in the gdpr api user data serialization.
+        """
+        return [
+            org.serialize()
+            for org in SerializablePublisher.objects.filter(
+                Q(admin_users=self) | Q(regular_users=self)
+            )
+        ]
+
     def get_display_name(self):
         return "{0} {1}".format(self.first_name, self.last_name).strip()
 
@@ -309,3 +323,12 @@ class User(AbstractUser, UserModelPermissionMixin, SerializableMixin):
             and not self.registration_admin_organizations.exists()
             and not self.financial_admin_organizations.exists()
         )
+
+
+class SerializablePublisher(Organization, SerializableMixin):
+    """Organization proxy model containing gdpr api serialization."""
+
+    class Meta:
+        proxy = True
+
+    serialize_fields = ({"name": "id"}, {"name": "name"})
