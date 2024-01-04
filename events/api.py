@@ -27,7 +27,6 @@ from django.db.models import Count, Exists, F, OuterRef, Prefetch, Q, QuerySet
 from django.db.models.functions import Greatest
 from django.db.utils import IntegrityError
 from django.http import Http404, HttpResponsePermanentRedirect
-from django.urls import NoReverseMatch
 from django.utils import timezone, translation
 from django.utils.encoding import force_text
 from django.utils.functional import cached_property
@@ -36,7 +35,6 @@ from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization, OrganizationClass
 from haystack.query import AutoQuery
 from isodate import Duration, duration_isoformat, parse_duration
-from modeltranslation.translator import NotRegistered, translator
 from munigeo.api import (
     build_bbox_filter,
     DEFAULT_SRS,
@@ -51,7 +49,6 @@ from rest_framework import (
     generics,
     mixins,
     permissions,
-    relations,
     serializers,
     status,
     viewsets,
@@ -107,12 +104,16 @@ from events.translation import EventTranslationOptions, PlaceTranslationOptions
 from events.utils import clean_text_fields
 from helevents.models import User
 from helevents.serializers import UserSerializer
+from linkedevents.fields import JSONLDRelatedField
 from linkedevents.registry import register_view, viewset_classes_by_model
+from linkedevents.serializers import LinkedEventsSerializer, TranslatedModelSerializer
+from linkedevents.utils import get_fixed_lang_codes
 from registrations.models import RegistrationUserAccess
 from registrations.serializers import RegistrationBaseSerializer
 
 logger = logging.getLogger(__name__)
 LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
+EVENT_SERIALIZER_REF = "events.api.EventSerializer"
 
 
 def get_serializer_for_model(model, version="v1"):
@@ -236,89 +237,6 @@ def parse_digit(val, param):
         raise ParseError(f'{param} must be an integer, you passed "{val}"')
 
 
-class JSONLDRelatedField(relations.HyperlinkedRelatedField):
-    """
-    Support of showing and saving of expanded JSON nesting or just a resource
-    URL.
-    Serializing is controlled by query string param 'expand', deserialization
-    by format of JSON given.
-
-    Default serializing is expand=false.
-    """
-
-    invalid_json_error = _("Incorrect JSON. Expected JSON, received %s.")
-    id_missing_error = _("@id field missing")
-
-    def __init__(self, *args, **kwargs):
-        self.related_serializer = kwargs.pop("serializer", None)
-        self.hide_ld_context = kwargs.pop("hide_ld_context", False)
-        self.expanded = kwargs.pop("expanded", False)
-        super().__init__(*args, **kwargs)
-
-    def use_pk_only_optimization(self):
-        if self.is_expanded():
-            return False
-        else:
-            return True
-
-    def to_representation(self, obj):
-        if isinstance(self.related_serializer, str):
-            self.related_serializer = globals().get(self.related_serializer, None)
-
-        if self.is_expanded():
-            context = self.context.copy()
-            # To avoid infinite recursion, only include sub/super events one level at a time
-            if "include" in context:
-                context["include"] = [
-                    x
-                    for x in context["include"]
-                    if x != "sub_events" and x != "super_event" and x != "registration"
-                ]
-            return self.related_serializer(
-                obj, hide_ld_context=self.hide_ld_context, context=context
-            ).data
-        link = super().to_representation(obj)
-        if link is None:
-            return None
-        return {"@id": link}
-
-    def to_internal_value(self, value):
-        if not isinstance(value, dict):
-            raise serializers.ValidationError(
-                self.invalid_json_error % type(value).__name__
-            )
-        if "@id" not in value:
-            raise serializers.ValidationError(self.id_missing_error)
-
-        url = value["@id"]
-        if not url:
-            if self.required:
-                raise serializers.ValidationError(_("This field is required."))
-            return None
-
-        return super().to_internal_value(urllib.parse.unquote(url))
-
-    def is_expanded(self):
-        return getattr(self, "expanded", False)
-
-    def get_queryset(self):
-        #  For certain related fields we preload the queryset to avoid *.objects.all() query which can easily overload
-        #  the memory as database grows.
-        if isinstance(self._kwargs["serializer"], str):
-            return super().get_queryset()
-        current_model = self._kwargs["serializer"].Meta.model
-        preloaded_fields = {
-            Place: "location",
-            Keyword: "keywords",
-            Image: "image",
-            Event: "sub_events",
-        }
-        if current_model in preloaded_fields.keys():
-            return self.context.get(preloaded_fields[current_model])
-        else:
-            return super().get_queryset()
-
-
 class EnumChoiceField(serializers.Field):
     """
     Database value of tinyint is converted to and from a string representation
@@ -367,348 +285,9 @@ class ISO8601DurationField(serializers.Field):
             return 0
 
 
-class MPTTModelSerializer(serializers.ModelSerializer):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        for field_name in "lft", "rght", "tree_id", "level":
-            if field_name in self.fields:
-                del self.fields[field_name]
-
-
-class TranslatedModelSerializer(serializers.ModelSerializer):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        model = self.Meta.model
-        try:
-            trans_opts = translator.get_options_for_model(model)
-        except NotRegistered:
-            self.translated_fields = []
-            return
-
-        self.translated_fields = trans_opts.fields.keys()
-        lang_codes = utils.get_fixed_lang_codes()
-        # Remove the pre-existing data in the bundle.
-        for field_name in self.translated_fields:
-            for lang in lang_codes:
-                key = "%s_%s" % (field_name, lang)
-                if key in self.fields:
-                    del self.fields[key]
-            del self.fields[field_name]
-
-    def to_representation(self, obj):
-        ret = super().to_representation(obj)
-        if obj is None:
-            return ret
-        return self.translated_fields_to_representation(obj, ret)
-
-    def to_internal_value(self, data):
-        """
-        Convert complex translated json objects to flat format.
-        E.g. json structure containing `name` key like this:
-        {
-            "name": {
-                "fi": "musiikkiklubit",
-                "sv": "musikklubbar",
-                "en": "music clubs"
-            },
-            ...
-        }
-        Transforms this:
-        {
-            "name": "musiikkiklubit",
-            "name_fi": "musiikkiklubit",
-            "name_sv": "musikklubbar",
-            "name_en": "music clubs"
-            ...
-        }
-        :param data:
-        :return:
-        """
-
-        extra_fields = {}  # will contain the transformation result
-        for field_name in self.translated_fields:
-            obj = data.get(field_name, None)  # { "fi": "musiikkiklubit", "sv": ... }
-            if not obj:
-                continue
-            if not isinstance(obj, dict):
-                raise serializers.ValidationError(
-                    {
-                        field_name: "This field is a translated field. Instead of a string,"
-                        " you must supply an object with strings corresponding"
-                        " to desired language ids."
-                    }
-                )
-            for language in (
-                lang for lang in utils.get_fixed_lang_codes() if lang in obj
-            ):
-                value = obj[language]  # "musiikkiklubit"
-                if language == settings.LANGUAGES[0][0]:  # default language
-                    extra_fields[field_name] = value  # { "name": "musiikkiklubit" }
-                extra_fields[
-                    "{}_{}".format(field_name, language)
-                ] = value  # { "name_fi": "musiikkiklubit" }
-            del data[field_name]  # delete original translated fields
-
-        # handle other than translated fields
-        data = super().to_internal_value(data)
-
-        # add translated fields to the final result
-        data.update(extra_fields)
-
-        return data
-
-    def translated_fields_to_representation(self, obj, ret):
-        for field_name in self.translated_fields:
-            d = {}
-            for lang in utils.get_fixed_lang_codes():
-                key = "%s_%s" % (field_name, lang)
-                val = getattr(obj, key, None)
-                if val is None:
-                    continue
-                d[lang] = val
-
-            # If no text provided, leave the field as null
-            for _key, val in d.items():
-                if val is not None:
-                    break
-            else:
-                d = None
-            ret[field_name] = d
-
-        return ret
-
-
-class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
-    """Serializer with the support for JSON-LD/Schema.org.
-    JSON-LD/Schema.org syntax::
-      {
-         "@context": "http://schema.org",
-         "@type": "Event",
-         "name": "Event name",
-         ...
-      }
-    See full example at: http://schema.org/Event
-    Args:
-      hide_ld_context (bool):
-        Hides `@context` from JSON, can be used in nested
-        serializers
-    """
-
-    system_generated_fields = (
-        "created_time",
-        "last_modified_time",
-        "created_by",
-        "last_modified_by",
-    )
-    only_admin_visible_fields = ("created_by", "last_modified_by")
-
-    def __init__(
-        self,
-        *args,
-        skip_fields: Optional[set] = None,
-        hide_ld_context=False,
-        **kwargs,
-    ):
-        super().__init__(*args, **kwargs)
-        context = self.context
-
-        if skip_fields is None:
-            skip_fields = set()
-
-        self.skip_fields = skip_fields
-
-        if "request" in context:
-            self.request = context["request"]
-
-        # for post and put methods as well as field visibility, user information is needed
-        if "user" in context:
-            self.user = context["user"]
-        if "admin_tree_ids" in context:
-            self.admin_tree_ids = context["admin_tree_ids"]
-
-        # query allows non-skipped fields to be expanded
-        include_fields = context.get("include", [])
-        for field_name in include_fields:
-            if field_name not in self.fields:
-                continue
-            field = self.fields[field_name]
-            if isinstance(field, relations.ManyRelatedField):
-                field = field.child_relation
-            if not isinstance(field, JSONLDRelatedField):
-                continue
-            field.expanded = True
-        # query allows additional fields to be skipped
-        self.skip_fields |= context.get("skip_fields", set())
-
-        self.hide_ld_context = hide_ld_context
-
-    def are_only_admin_visible_fields_allowed(self, obj):
-        return (
-            self.user
-            and hasattr(obj, "publisher")
-            and obj.publisher
-            and obj.publisher.tree_id in self.admin_tree_ids
-        )
-
-    def to_internal_value(self, data):
-        for field in self.system_generated_fields:
-            if field in data:
-                del data[field]
-        data = super().to_internal_value(data)
-        return data
-
-    def to_representation(self, obj):
-        """
-        Before sending to renderer there's a need to do additional work on
-        to-be-JSON dictionary data:
-            1. Add @context, @type and @id fields
-        Renderer is the right place for this but now loop is done just once.
-        Reversal conversion is done in parser.
-        """
-        ret = super().to_representation(obj)
-        if "id" in ret and "request" in self.context:
-            try:
-                ret["@id"] = reverse(
-                    self.view_name,
-                    kwargs={"pk": ret["id"]},
-                    request=self.context["request"],
-                )
-            except NoReverseMatch:
-                ret["@id"] = str(ret["id"])
-
-        # Context is hidden if:
-        # 1) hide_ld_context is set to True
-        #   2) self.object is None, e.g. we are in the list of stuff
-        if not self.hide_ld_context and self.instance is not None:
-            if hasattr(obj, "jsonld_context") and isinstance(
-                obj.jsonld_context, (dict, list)
-            ):
-                ret["@context"] = obj.jsonld_context
-            else:
-                ret["@context"] = "http://schema.org"
-
-        # Use jsonld_type attribute if present,
-        # if not fallback to automatic resolution by model name.
-        # Note: Plan 'type' could be aliased to @type in context definition to
-        # conform JSON-LD spec.
-        if hasattr(obj, "jsonld_type"):
-            ret["@type"] = obj.jsonld_type
-        else:
-            ret["@type"] = obj.__class__.__name__
-        # display non-public fields if 1) obj has publisher org and 2) user belongs to the same org tree
-        # never modify self.skip_fields, as it survives multiple calls in the serializer across objects
-        obj_skip_fields = set(self.skip_fields)
-        if not self.are_only_admin_visible_fields_allowed(obj):
-            obj_skip_fields |= set(self.only_admin_visible_fields)
-
-        for field in obj_skip_fields:
-            if field in ret:
-                del ret[field]
-        return ret
-
-    def validate_data_source(self, value):
-        # a single POST always comes from a single source
-        data_source = self.context["data_source"]
-        if value and self.context["request"].method == "POST":
-            if value != data_source:
-                raise DRFPermissionDenied(
-                    {
-                        "data_source": _(
-                            "Setting data_source to %(given)s "
-                            " is not allowed for this user. The data_source"
-                            " must be left blank or set to %(required)s "
-                        )
-                        % {"given": str(value), "required": data_source}
-                    }
-                )
-        return value
-
-    def validate_id(self, value):
-        # a single POST always comes from a single source
-        data_source = self.context["data_source"]
-        if value and self.context["request"].method == "POST":
-            id_data_source_prefix = value.split(":", 1)[0]
-            if id_data_source_prefix != data_source.id:
-                # if we are creating, there's no excuse to have any other data source than the request gave
-                raise serializers.ValidationError(
-                    _(
-                        "Setting id to %(given)s "
-                        "is not allowed for your organization. The id "
-                        "must be left blank or set to %(data_source)s:desired_id"
-                    )
-                    % {"given": str(value), "data_source": data_source}
-                )
-        return value
-
-    def validate_publisher(
-        self, value, field="publisher", allowed_to_regular_user=True
-    ):
-        # a single POST always comes from a single source
-        if value and self.context["request"].method == "POST":
-            allowed_organizations = set(
-                self.user.get_admin_organizations_and_descendants()
-            ) | set(
-                map(
-                    lambda x: x.replaced_by,
-                    self.user.get_admin_organizations_and_descendants(),
-                )
-            )
-            # Allow regular users to post if allowed_to_regular_user is True
-            if allowed_to_regular_user:
-                allowed_organizations |= set(
-                    self.user.organization_memberships.all()
-                ) | set(
-                    map(
-                        lambda x: x.replaced_by,
-                        self.user.organization_memberships.all(),
-                    )
-                )
-            if value not in allowed_organizations:
-                publisher = self.context["publisher"]
-                publisher = publisher.replaced_by or publisher if publisher else None
-
-                raise serializers.ValidationError(
-                    _(
-                        "Setting %(field)s to %(given)s "
-                        "is not allowed for this user. The %(field)s "
-                        "must be left blank or set to %(required)s or any other organization "
-                        "the user belongs to."
-                    )
-                    % {
-                        "field": str(field),
-                        "given": str(value),
-                        "required": str(publisher),
-                    }
-                )
-            if value.replaced_by:
-                # for replaced organizations, we automatically update to the current organization
-                # even if the POST uses the old id
-                return value.replaced_by
-        return value
-
-    def validate(self, data):
-        if "name" in self.translated_fields:
-            name_exists = False
-            languages = [x[0] for x in settings.LANGUAGES]
-            for language in languages:
-                # null or empty strings are not allowed, they are the same as missing name!
-                if "name_%s" % language in data and data["name_%s" % language]:
-                    name_exists = True
-                    break
-        else:
-            # null or empty strings are not allowed, they are the same as missing name!
-            name_exists = "name" in data and data["name"]
-        if not name_exists:
-            raise serializers.ValidationError(
-                {"name": _("The name must be specified.")}
-            )
-        data = super().validate(data)
-        return data
-
-
 def _text_qset_by_translated_field(field, val):
     # Free text search from all languages of the field
-    languages = utils.get_fixed_lang_codes()
+    languages = get_fixed_lang_codes()
     qset = Q()
     for lang in languages:
         kwarg = {field + "_" + lang + "__icontains": val}
@@ -1410,7 +989,7 @@ class LanguageSerializer(LinkedEventsSerializer):
         fields = "__all__"
 
     def get_translation_available(self, obj):
-        return obj.id in utils.get_fixed_lang_codes()
+        return obj.id in get_fixed_lang_codes()
 
 
 class LanguageViewSet(
@@ -1878,7 +1457,7 @@ class VideoSerializer(serializers.ModelSerializer):
 # RegistrationSerializer is in this file to avoid circular imports
 class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer):
     event = JSONLDRelatedField(
-        serializer="EventSerializer",
+        serializer=EVENT_SERIALIZER_REF,
         many=False,
         view_name="event-detail",
         queryset=Event.objects.all(),
@@ -2110,7 +1689,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
         allow_null=True,
     )
     super_event = JSONLDRelatedField(
-        serializer="EventSerializer",
+        serializer=EVENT_SERIALIZER_REF,
         required=False,
         view_name="event-detail",
         allow_null=True,
@@ -2133,7 +1712,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
         allow_null=True,
     )
     sub_events = JSONLDRelatedField(
-        serializer="EventSerializer",
+        serializer=EVENT_SERIALIZER_REF,
         required=False,
         view_name="event-detail",
         many=True,
@@ -2269,7 +1848,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
                 return data
 
         # check that published events have a location, keyword and start_time
-        languages = utils.get_fixed_lang_codes()
+        languages = get_fixed_lang_codes()
 
         errors = {}
 
@@ -3246,7 +2825,7 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
         val = val.split(",")
         q = Q()
         for lang in val:
-            if lang in utils.get_fixed_lang_codes():
+            if lang in get_fixed_lang_codes():
                 # check string content if language has translations available
                 name_arg = {"name_" + lang + "__isnull": False}
                 desc_arg = {"description_" + lang + "__isnull": False}
@@ -3319,7 +2898,7 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
         val = val.split(",")
         q = Q()
         for lang in val:
-            if lang in utils.get_fixed_lang_codes():
+            if lang in get_fixed_lang_codes():
                 # check string content if language has translations available
                 name_arg = {"name_" + lang + "__isnull": False}
                 desc_arg = {"description_" + lang + "__isnull": False}
@@ -4012,10 +3591,11 @@ class SearchViewSet(
         return SearchSerializer
 
     def list(self, request, *args, **kwargs):
-        languages = utils.get_fixed_lang_codes()
+        languages = get_fixed_lang_codes()
+        default_language = languages[0] if languages else None
 
         # If the incoming language is not specified, go with the default.
-        self.lang_code = request.query_params.get("language", languages[0])
+        self.lang_code = request.query_params.get("language", default_language)
         if self.lang_code not in languages:
             raise ParseError(
                 "Invalid language supplied. Supported languages: %s"
