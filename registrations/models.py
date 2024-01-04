@@ -323,7 +323,7 @@ class RegistrationPriceGroup(models.Model):
         related_name="registration_price_groups",
         on_delete=models.PROTECT,
     )
-    price = models.DecimalField(max_digits=19, decimal_places=4)
+    price = models.DecimalField(max_digits=19, decimal_places=2)
 
     class Meta:
         constraints = [
@@ -908,11 +908,11 @@ class SignUpPriceGroup(models.Model):
         on_delete=models.CASCADE,
     )
 
-    registration_price_group = models.OneToOneField(
+    registration_price_group = models.ForeignKey(
         RegistrationPriceGroup,
-        related_name="signup_price_group",
+        related_name="signup_price_groups",
         on_delete=models.RESTRICT,
     )
 
     description = models.CharField(max_length=255)
-    price = models.DecimalField(max_digits=19, decimal_places=4)
+    price = models.DecimalField(max_digits=19, decimal_places=2)
