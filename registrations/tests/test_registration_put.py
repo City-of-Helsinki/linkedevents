@@ -8,6 +8,7 @@ from events.models import Event
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
 from registrations.models import RegistrationUserAccess
+from registrations.tests.factories import RegistrationUserAccessFactory
 from registrations.tests.test_registration_post import (
     create_registration,
     get_event_url,
@@ -366,6 +367,29 @@ def test_cannot_update_registration_user_access_with_unexisting_id(
             response.data["registration_user_accesses"][0]["id"][0].code
             == "does_not_exist"
         )
+
+
+@pytest.mark.django_db
+def test_cannot_update_registration_user_access_with_another_registrations_user_accesses_id(
+    registration, user_api_client
+):
+    another_registrations_user_access = RegistrationUserAccessFactory(
+        email="test@test.com",
+    )
+
+    registration_data = {
+        "event": {"@id": get_event_url(registration.event.id)},
+        "registration_user_accesses": [
+            {"id": another_registrations_user_access.pk, "email": edited_email},
+        ],
+    }
+
+    response = update_registration(user_api_client, registration.id, registration_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert (
+        response.data["registration_user_accesses"][0]["id"][0]
+        == f'Invalid pk "{another_registrations_user_access.pk}" - object does not exist.'
+    )
 
 
 @pytest.mark.django_db

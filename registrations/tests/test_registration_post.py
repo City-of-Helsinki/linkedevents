@@ -6,6 +6,8 @@ from audit_log.models import AuditLogEntry
 from events.models import Event
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
+from registrations.models import Registration, RegistrationUserAccess
+from registrations.tests.factories import RegistrationUserAccessFactory
 from registrations.tests.utils import assert_invitation_email_is_sent
 
 email = "user@email.com"
@@ -105,7 +107,7 @@ def test_maximum_group_size_cannot_be_less_than_one(user, api_client, event):
 
 
 @pytest.mark.django_db
-def test__unauthenticated_user_cannot_create_registration(api_client, event):
+def test_unauthenticated_user_cannot_create_registration(api_client, event):
     api_client.force_authenticate(None)
     registration_data = {"event": {"@id": get_event_url(event.id)}}
 
@@ -114,7 +116,7 @@ def test__unauthenticated_user_cannot_create_registration(api_client, event):
 
 
 @pytest.mark.django_db
-def test__non_admin_cannot_create_registration(api_client, event, user):
+def test_non_admin_cannot_create_registration(api_client, event, user):
     user.get_default_organization().regular_users.add(user)
     user.get_default_organization().admin_users.remove(user)
     api_client.force_authenticate(user)
@@ -138,7 +140,7 @@ def test_financial_admin_cannot_create_registration(api_client, event):
 
 
 @pytest.mark.django_db
-def test__user_from_other_organization_cannot_create_registration(
+def test_user_from_other_organization_cannot_create_registration(
     api_client, event, user2
 ):
     api_client.force_authenticate(user2)
@@ -164,7 +166,7 @@ def test_can_create_registration_with_datasource_permission_missing(
 
 
 @pytest.mark.django_db
-def test__api_key_with_organization_can_create_registration(
+def test_api_key_with_organization_can_create_registration(
     api_client, data_source, event, organization
 ):
     data_source.owner = organization
@@ -175,7 +177,7 @@ def test__api_key_with_organization_can_create_registration(
 
 
 @pytest.mark.django_db
-def test__api_key_with_wrong_data_source_cannot_create_registration(
+def test_api_key_with_wrong_data_source_cannot_create_registration(
     api_client, data_source, event, organization, other_data_source
 ):
     other_data_source.owner = organization
@@ -187,7 +189,7 @@ def test__api_key_with_wrong_data_source_cannot_create_registration(
 
 
 @pytest.mark.django_db
-def test__unknown_api_key_cannot_create_registration(api_client, event):
+def test_unknown_api_key_cannot_create_registration(api_client, event):
     api_client.credentials(apikey="unknown")
 
     registration_data = {"event": {"@id": get_event_url(event.id)}}
@@ -196,7 +198,7 @@ def test__unknown_api_key_cannot_create_registration(api_client, event):
 
 
 @pytest.mark.django_db
-def test__empty_api_key_cannot_create_registration(api_client, event):
+def test_empty_api_key_cannot_create_registration(api_client, event):
     api_client.credentials(apikey="")
 
     registration_data = {"event": {"@id": get_event_url(event.id)}}
@@ -233,7 +235,7 @@ def test_registration_admin_can_create_registration_regardless_of_non_user_edita
 
 
 @pytest.mark.django_db
-def test__user_editable_resources_can_create_registration(
+def test_user_editable_resources_can_create_registration(
     api_client, data_source, event, organization, user
 ):
     data_source.owner = organization
@@ -246,7 +248,7 @@ def test__user_editable_resources_can_create_registration(
 
 
 @pytest.mark.django_db
-def test__send_email_to_registration_user_access(event, user_api_client):
+def test_send_email_to_registration_user_access(event, user_api_client):
     with translation.override("fi"):
         event.type_id = Event.TypeId.GENERAL
         event.name = event_name
@@ -262,7 +264,7 @@ def test__send_email_to_registration_user_access(event, user_api_client):
 
 
 @pytest.mark.django_db
-def test__cannot_create_registration_user_accesses_with_duplicate_emails(
+def test_cannot_create_registration_user_accesses_with_duplicate_emails(
     event, user_api_client
 ):
     with translation.override("fi"):
@@ -279,6 +281,53 @@ def test__cannot_create_registration_user_accesses_with_duplicate_emails(
         assert (
             response.data["registration_user_accesses"][1]["email"][0].code == "unique"
         )
+
+
+@pytest.mark.django_db
+def test_create_registration_with_another_registrations_user_accesses(
+    event, user_api_client
+):
+    another_registrations_user_access = RegistrationUserAccessFactory(
+        email="test@test.com",
+    )
+
+    registration_data = {
+        "event": {"@id": get_event_url(event.id)},
+        "registration_user_accesses": [
+            {
+                "id": another_registrations_user_access.pk,
+                "email": another_registrations_user_access.email,
+            },
+        ],
+    }
+
+    assert Registration.objects.count() == 1
+    assert RegistrationUserAccess.objects.count() == 1
+
+    response = create_registration(user_api_client, registration_data)
+    assert response.status_code == status.HTTP_201_CREATED
+
+    assert Registration.objects.count() == 2
+    assert RegistrationUserAccess.objects.count() == 2
+
+    assert (
+        RegistrationUserAccess.objects.filter(
+            registration=Registration.objects.first(),
+            email=another_registrations_user_access.email,
+        )
+        .first()
+        .pk
+        == another_registrations_user_access.pk
+    )
+    assert (
+        RegistrationUserAccess.objects.filter(
+            registration=Registration.objects.last(),
+            email=another_registrations_user_access.email,
+        )
+        .first()
+        .pk
+        != another_registrations_user_access.pk
+    )
 
 
 @pytest.mark.django_db
