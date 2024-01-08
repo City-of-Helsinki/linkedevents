@@ -908,23 +908,53 @@ def test_maximum_attendee_and_waiting_list_capacities_with_attendee_status_given
 
 
 @pytest.mark.parametrize(
-    "service_language,expected_subject,expected_heading,expected_text",
+    "service_language,username,expected_subject,expected_heading,expected_secondary_heading,expected_text",
     [
         (
             "en",
+            "Username",
             "Registration confirmation",
+            "Welcome Username",
             "Registration to the event Foo has been saved.",
             "Congratulations! Your registration has been confirmed for the event <strong>Foo</strong>.",
         ),
         (
             "fi",
+            "Käyttäjänimi",
             "Vahvistus ilmoittautumisesta",
+            "Tervetuloa Käyttäjänimi",
             "Ilmoittautuminen tapahtumaan Foo on tallennettu.",
             "Onnittelut! Ilmoittautumisesi on vahvistettu tapahtumaan <strong>Foo</strong>.",
         ),
         (
             "sv",
+            "Användarnamn",
             "Bekräftelse av registrering",
+            "Välkommen Användarnamn",
+            "Anmälan till evenemanget Foo har sparats.",
+            "Grattis! Din registrering har bekräftats för evenemanget <strong>Foo</strong>.",
+        ),
+        (
+            "en",
+            None,
+            "Registration confirmation",
+            "Welcome",
+            "Registration to the event Foo has been saved.",
+            "Congratulations! Your registration has been confirmed for the event <strong>Foo</strong>.",
+        ),
+        (
+            "fi",
+            None,
+            "Vahvistus ilmoittautumisesta",
+            "Tervetuloa",
+            "Ilmoittautuminen tapahtumaan Foo on tallennettu.",
+            "Onnittelut! Ilmoittautumisesi on vahvistettu tapahtumaan <strong>Foo</strong>.",
+        ),
+        (
+            "sv",
+            None,
+            "Bekräftelse av registrering",
+            "Välkommen",
             "Anmälan till evenemanget Foo har sparats.",
             "Grattis! Din registrering har bekräftats för evenemanget <strong>Foo</strong>.",
         ),
@@ -934,14 +964,17 @@ def test_maximum_attendee_and_waiting_list_capacities_with_attendee_status_given
 def test_email_sent_on_successful_signup(
     user_api_client,
     expected_heading,
+    expected_secondary_heading,
     expected_subject,
     expected_text,
-    languages,
     registration,
     service_language,
+    username,
     user,
 ):
     user.get_default_organization().registration_admin_users.add(user)
+
+    LanguageFactory(id=service_language, name=service_language, service_language=True)
 
     with translation.override(service_language):
         registration.event.type_id = Event.TypeId.GENERAL
@@ -954,6 +987,7 @@ def test_email_sent_on_successful_signup(
             "last_name": "Jackson",
             "date_of_birth": "2011-04-07",
             "contact_person": {
+                "first_name": username,
                 "email": test_email1,
                 "service_language": service_language,
             },
@@ -968,9 +1002,13 @@ def test_email_sent_on_successful_signup(
         assert signup_data["first_name"] in response.data[0]["first_name"]
 
         #  assert that the email was sent
+        message_string = str(mail.outbox[0].alternatives[0])
         assert mail.outbox[0].subject.startswith(expected_subject)
-        assert expected_heading in str(mail.outbox[0].alternatives[0])
-        assert expected_text in str(mail.outbox[0].alternatives[0])
+        assert expected_heading in message_string
+        assert expected_secondary_heading in message_string
+        assert expected_text in message_string
+        if username is None:
+            assert f"{expected_heading} None" not in message_string
 
 
 @pytest.mark.parametrize(
