@@ -319,9 +319,6 @@ class Importer(object):
         deprecated ones.
         """
         changed = False
-        logger.debug(
-            f"Checking for deprecated keywords in attribute '{attr}' for event {obj}"
-        )
 
         for keyword in getattr(obj, attr).filter(deprecated=True):
             getattr(obj, attr).remove(keyword)
