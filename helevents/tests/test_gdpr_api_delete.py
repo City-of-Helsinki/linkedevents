@@ -4,10 +4,10 @@ from uuid import UUID
 import pytest
 import requests_mock
 from django.urls import reverse
-from helusers.settings import api_token_auth_settings
 from rest_framework import status
 
 from events.tests.conftest import APIClient
+from events.tests.factories import EventFactory
 from helevents.models import User
 from helevents.tests.conftest import get_api_token_for_user_with_scopes
 from helevents.tests.factories import UserFactory
@@ -55,6 +55,15 @@ def _create_default_data(created_by_user):
     SignUpProtectedDataFactory(signup=first_signup, registration=registration)
     SignUpProtectedDataFactory(signup=second_signup, registration=registration)
 
+    EventFactory(
+        user_email=created_by_user.email,
+        user_name="test",
+        user_organization="test",
+        user_consent=True,
+        user_phone_number="123",
+        created_by=created_by_user,
+    )
+
 
 def _assert_gdpr_delete(
     callback,
@@ -96,6 +105,7 @@ def test_authenticated_user_can_delete_own_data(api_client, settings):
     user = UserFactory()
 
     _create_default_data(user)
+    event = user.events_event_created_by.first()
 
     def callback():
         with (
@@ -115,6 +125,49 @@ def test_authenticated_user_can_delete_own_data(api_client, settings):
             assert mocked_signup_post_delete.called is True
 
     _assert_gdpr_delete(callback)
+
+    event.refresh_from_db()
+    assert event.user_name is None
+    assert event.user_email is None
+    assert event.user_phone_number is None
+    assert event.user_organization is None
+
+
+@pytest.mark.django_db
+def test_authenticated_user_can_delete_own_data_event_user_details_not_nulled(
+    api_client, settings
+):
+    user = UserFactory()
+
+    _create_default_data(user)
+    event = user.events_event_created_by.first()
+    event.user_email = "someotherguy@localhost"
+    event.save()
+
+    def callback():
+        with (
+            requests_mock.Mocker() as req_mock,
+            patch(
+                "registrations.signals._signup_or_group_post_delete"
+            ) as mocked_signup_post_delete,
+        ):
+            auth_header = get_api_token_for_user_with_scopes(
+                user.uuid, [settings.GDPR_API_DELETE_SCOPE], req_mock
+            )
+            api_client.credentials(HTTP_AUTHORIZATION=auth_header)
+
+            response = _delete_gdpr_data(api_client, user.uuid)
+            assert response.status_code == status.HTTP_204_NO_CONTENT
+
+            assert mocked_signup_post_delete.called is True
+
+    _assert_gdpr_delete(callback)
+
+    event.refresh_from_db()
+    assert event.user_name == "test"
+    assert event.user_email == "someotherguy@localhost"
+    assert event.user_phone_number == "123"
+    assert event.user_organization == "test"
 
 
 @pytest.mark.django_db

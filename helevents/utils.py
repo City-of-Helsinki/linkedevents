@@ -30,4 +30,11 @@ def delete_user_and_gdpr_data(user: get_user_model(), dry_run: bool) -> None:
 
     user.signupgroup_created_by.all().delete()
 
+    user.events_event_created_by.filter(user_email=user.email).update(
+        user_email=None,
+        user_name=None,
+        user_phone_number=None,
+        user_organization=None,
+    )
+
     user.delete()
