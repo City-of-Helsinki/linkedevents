@@ -1,4 +1,5 @@
 import uuid
+from unittest.mock import patch, PropertyMock
 
 import pytest
 from django.test import RequestFactory, TestCase
@@ -150,27 +151,60 @@ def test_valid_jwt_is_accepted():
     assert user.uuid == user_uuid
 
 
-@pytest.mark.parametrize("login_using_ad", [True, False])
+@pytest.mark.parametrize(
+    "login_method,expected",
+    [
+        pytest.param(["keycloak-internal"], False, id="list-amr"),
+        pytest.param("tunnistamo-internal", False, id="plain-amr"),
+        pytest.param("non-ad-method", True, id="external-method-plain"),
+        pytest.param(["non-ad-method"], True, id="external-method-list"),
+        pytest.param([], True, id="empty"),
+    ],
+)
 @pytest.mark.django_db
-def test_user_is_external_based_on_login_method(api_client, settings, login_using_ad):
+def test_user_is_external_based_on_login_method(
+    api_client, settings, login_method, expected
+):
     """Using AD authentication forces the User.is_external to False."""
+    settings.NON_EXTERNAL_AUTHENTICATION_METHODS = [
+        "keycloak-internal",
+        "tunnistamo-internal",
+    ]
     user = UserFactory()
     detail_url = versioned_reverse("user-detail", kwargs={"pk": user.uuid})
-    ad_method = "helsinkiazuread"
-    settings.NON_EXTERNAL_AUTHENTICATION_METHODS = [ad_method]
-    if login_using_ad:
-        auth_method = ad_method
-    else:
-        auth_method = "non-ad_method"
     auth_header = get_api_token_for_user_with_scopes(
-        user.uuid, [api_token_auth_settings.API_SCOPE_PREFIX], req_mock, amr=auth_method
+        user.uuid,
+        [api_token_auth_settings.API_SCOPE_PREFIX],
+        req_mock,
+        amr=login_method,
     )
     api_client.credentials(HTTP_AUTHORIZATION=auth_header)
 
     response = api_client.get(detail_url, format="json")
 
     assert response.status_code == status.HTTP_200_OK, str(response.content)
-    assert response.data["is_external"] != login_using_ad
+    assert response.data["is_external"] == expected
+
+
+@pytest.mark.parametrize(
+    "login_method,expected",
+    [
+        pytest.param(["strong"], True, id="strong"),
+        pytest.param(["not-strong"], False, id="not-strong"),
+        pytest.param([], False, id="empty"),
+    ],
+)
+@pytest.mark.django_db
+def test_user_is_strongly_identified(user, settings, login_method, expected):
+    settings.STRONG_IDENTIFICATION_AUTHENTICATION_METHODS = ["strong"]
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value=login_method,
+    ) as mocked:
+        assert user.is_strongly_identified == expected
+        assert mocked.called is True
 
 
 @pytest.mark.parametrize("authenticated", [True, False])

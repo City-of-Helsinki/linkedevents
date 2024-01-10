@@ -119,7 +119,7 @@ def test_registration_user_access_can_get_signup_group_when_strongly_identified(
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
         new_callable=PropertyMock,
-        return_value="heltunnistussuomifi",
+        return_value=["heltunnistussuomifi"],
     ) as mocked:
         response = assert_get_detail(user_api_client, signup_group.id)
         assert mocked.called is True
@@ -138,7 +138,7 @@ def test_registration_user_access_cannot_get_signup_group_when_not_strongly_iden
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
         new_callable=PropertyMock,
-        return_value=None,
+        return_value=[],
     ) as mocked:
         response = get_detail(user_api_client, signup_group.id)
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -375,7 +375,7 @@ def test_registration_user_access_can_get_signup_group_list_when_strongly_identi
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
         new_callable=PropertyMock,
-        return_value="heltunnistussuomifi",
+        return_value=["heltunnistussuomifi"],
     ) as mocked:
         get_list_and_assert_signup_groups(
             user_api_client,
@@ -398,7 +398,7 @@ def test_registration_user_access_cannot_get_signup_group_list_when_not_strongly
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
         new_callable=PropertyMock,
-        return_value=None,
+        return_value=[],
     ) as mocked:
         response = get_list(user_api_client, f"registration={registration.id}")
         assert response.status_code == status.HTTP_403_FORBIDDEN

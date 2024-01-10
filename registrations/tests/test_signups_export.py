@@ -143,7 +143,7 @@ def test_signups_export_forbidden_for_weakly_identified_registration_user(
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
         new_callable=PropertyMock,
-        return_value=None,
+        return_value=[],
     ) as mocked:
         response = _get_signups_export(api_client, registration.id, file_format="xlsx")
 
@@ -310,7 +310,7 @@ def test_signups_export_allowed_for_strongly_identified_registration_user(
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
         new_callable=PropertyMock,
-        return_value="heltunnistussuomifi",
+        return_value=["heltunnistussuomifi"],
     ) as mocked:
         _assert_get_signups_export(api_client, registration.id, file_format="xlsx")
 
