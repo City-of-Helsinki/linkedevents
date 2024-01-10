@@ -203,7 +203,7 @@ def test_registration_user_who_created_signup_can_patch_presence_status(
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
         new_callable=PropertyMock,
-        return_value="heltunnistussuomifi",
+        return_value=["heltunnistussuomifi"],
     ) as mocked:
         assert_patch_signup(api_client, signup.id, signup_data)
         assert mocked.called is True
@@ -212,7 +212,13 @@ def test_registration_user_who_created_signup_can_patch_presence_status(
     assert signup.presence_status == SignUp.PresenceStatus.PRESENT
 
 
-@pytest.mark.parametrize("identification_method", ["heltunnistussuomifi", None])
+@pytest.mark.parametrize(
+    "identification_method",
+    [
+        pytest.param(["heltunnistussuomifi"], id="strong"),
+        pytest.param([], id="not-strong"),
+    ],
+)
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_registration_user_can_patch_signup_presence_status_based_on_identification_method(
@@ -241,7 +247,7 @@ def test_registration_user_can_patch_signup_presence_status_based_on_identificat
 
     signup.refresh_from_db()
 
-    if identification_method is None:
+    if not identification_method:
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
     else:

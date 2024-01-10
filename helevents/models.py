@@ -22,7 +22,7 @@ class UserModelPermissionMixin:
     """
 
     @property
-    def token_amr_claim(self) -> str:
+    def token_amr_claim(self) -> list[str]:
         claim = getattr(self, "_token_amr_claim", None)
         if claim is None:
             logger.warning(
@@ -31,6 +31,13 @@ class UserModelPermissionMixin:
                 stacklevel=2,
             )
 
+        if not claim:
+            return []
+
+        if not isinstance(claim, list):
+            # Tunnistamo returns amr-claim as string instead of list as it should
+            # be according to the spec. This is a workaround for that.
+            claim = [claim]
         return claim
 
     @token_amr_claim.setter
@@ -40,9 +47,10 @@ class UserModelPermissionMixin:
     @property
     def is_strongly_identified(self):
         """Check if the user is strongly identified"""
-        return (
-            self.token_amr_claim
-            in settings.STRONG_IDENTIFICATION_AUTHENTICATION_METHODS
+
+        return any(
+            login_method in settings.STRONG_IDENTIFICATION_AUTHENTICATION_METHODS
+            for login_method in self.token_amr_claim
         )
 
     @property
@@ -316,7 +324,10 @@ class User(AbstractUser, UserModelPermissionMixin, SerializableMixin):
 
     @cached_property
     def is_external(self):
-        if self.token_amr_claim in settings.NON_EXTERNAL_AUTHENTICATION_METHODS:
+        if any(
+            login_method in settings.NON_EXTERNAL_AUTHENTICATION_METHODS
+            for login_method in self.token_amr_claim
+        ):
             return False
 
         return (
