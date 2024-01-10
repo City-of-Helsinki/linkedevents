@@ -2,7 +2,17 @@ import factory
 
 from events import utils
 from events.auth import ApiKeyUser
-from events.models import DataSource, Event, Keyword, Language, Place
+from events.models import (
+    DataSource,
+    Event,
+    Image,
+    Keyword,
+    KeywordLabel,
+    Language,
+    Offer,
+    Place,
+    Video,
+)
 from helevents.tests.factories import UserFactory
 
 
@@ -51,6 +61,13 @@ class DefaultOrganizationEventFactory(EventFactory):
         return self.publisher.data_source
 
 
+class KeywordLabelFactory(factory.django.DjangoModelFactory):
+    name = factory.Faker("bs")
+
+    class Meta:
+        model = KeywordLabel
+
+
 class KeywordFactory(factory.django.DjangoModelFactory):
     name = factory.Faker("bs")
 
@@ -84,3 +101,18 @@ class PlaceFactory(factory.django.DjangoModelFactory):
     @factory.lazy_attribute_sequence
     def id(self, n):
         return f"{self.data_source.id}:{n}"
+
+
+class ImageFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Image
+
+
+class OfferFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Offer
+
+
+class VideoFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Video

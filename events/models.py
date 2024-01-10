@@ -34,7 +34,9 @@ from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from helsinki_gdpr.models import SerializableMixin
 from image_cropping import ImageRatioField
+from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
 from mptt.querysets import TreeQuerySet
 from munigeo.models import AdministrativeDivision
@@ -153,6 +155,11 @@ class BaseQuerySet(models.QuerySet):
         return True
 
 
+class BaseSerializableManager(SerializableMixin.SerializableManager):
+    def get_queryset(self):
+        return BaseQuerySet(self.model, using=self._db)
+
+
 class BaseTreeQuerySet(TreeQuerySet, BaseQuerySet):
     def soft_delete(self):
         return self.filter(deleted=False).update(
@@ -167,6 +174,13 @@ class BaseTreeQuerySet(TreeQuerySet, BaseQuerySet):
         )
 
     undelete.alters_data = True
+
+
+class BaseSerializableTreeManager(TreeManager, SerializableMixin.SerializableManager):
+    def get_queryset(self):
+        return BaseTreeQuerySet(self.model, using=self._db).order_by(
+            self.tree_id_attr, self.left_attr
+        )
 
 
 class ReplacedByMixin:
@@ -202,9 +216,11 @@ class License(models.Model):
         return self.name
 
 
-class Image(models.Model):
+class Image(SerializableMixin):
+    serialize_fields = [{"name": "name"}, {"name": "url"}]
+
     jsonld_type = "ImageObject"
-    objects = BaseQuerySet.as_manager()
+    objects = BaseSerializableManager()
 
     # Properties from schema.org/Thing
     name = models.CharField(
@@ -400,7 +416,12 @@ class BaseModel(models.Model):
         super().save(update_fields=update_fields, **kwargs)
 
 
-class Language(models.Model):
+class Language(SerializableMixin):
+    serialize_fields = [
+        {"name": "name"},
+        {"name": "service_language"},
+    ]
+
     id = models.CharField(max_length=10, primary_key=True)
     name = models.CharField(verbose_name=_("Name"), max_length=20)
     service_language = models.BooleanField(
@@ -415,7 +436,12 @@ class Language(models.Model):
         verbose_name_plural = _("languages")
 
 
-class KeywordLabel(models.Model):
+class KeywordLabel(SerializableMixin):
+    serialize_fields = [
+        {"name": "name"},
+        {"name": "language"},
+    ]
+
     name = models.CharField(verbose_name=_("Name"), max_length=255, db_index=True)
     language = models.ForeignKey(
         Language, on_delete=models.CASCADE, blank=False, null=False
@@ -431,7 +457,7 @@ class KeywordLabel(models.Model):
         unique_together = (("name", "language"),)
 
 
-class UpcomingEventsUpdater(models.Manager):
+class UpcomingEventsUpdater(BaseSerializableManager):
     def has_upcoming_events_update(self):
         now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
         qs = self.model.objects.filter(n_events__gte=1)
@@ -443,7 +469,11 @@ class UpcomingEventsUpdater(models.Manager):
         qs.exclude(events__end_time__gte=now).update(has_upcoming_events=False)
 
 
-class Keyword(BaseModel, ImageMixin, ReplacedByMixin):
+class Keyword(BaseModel, ImageMixin, ReplacedByMixin, SerializableMixin):
+    serialize_fields = [
+        {"name": "alt_labels"},
+    ]
+
     publisher = models.ForeignKey(
         "django_orghierarchy.Organization",
         on_delete=models.CASCADE,
@@ -601,8 +631,33 @@ class KeywordSet(BaseModel, ImageMixin):
         super().save(*args, **kwargs)
 
 
-class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin, ReplacedByMixin):
-    objects = BaseTreeQuerySet.as_manager()
+class Place(
+    MPTTModel,
+    BaseModel,
+    SchemalessFieldMixin,
+    ImageMixin,
+    ReplacedByMixin,
+    SerializableMixin,
+):
+    serialize_fields = [
+        {"name": "name"},
+        {
+            "name": "publisher",
+            "accessor": lambda x: (f"{x.id} - {x.name}") if x else "",
+        },
+        {"name": "info_url"},
+        {"name": "description"},
+        {"name": "email"},
+        {"name": "telephone"},
+        {"name": "street_address"},
+        {"name": "address_locality"},
+        {"name": "address_region"},
+        {"name": "postal_code"},
+        {"name": "post_office_box_num"},
+        {"name": "address_country"},
+    ]
+
+    objects = BaseSerializableTreeManager()
     upcoming_events = UpcomingEventsUpdater()
 
     geo_objects = objects
@@ -783,9 +838,49 @@ class OpeningHoursSpecification(models.Model):
         verbose_name_plural = _("opening hour specifications")
 
 
-class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
+class Event(
+    MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin, SerializableMixin
+):
     jsonld_type = "Event/LinkedEvent"
-    objects = BaseTreeQuerySet.as_manager()
+    objects = BaseSerializableTreeManager()
+
+    base_serialize_fields = [
+        {"name": "id"},
+        {"name": "name"},
+        {"name": "description"},
+        {"name": "short_description"},
+        {"name": "start_time"},
+        {"name": "end_time"},
+        {"name": "images"},
+        {"name": "keywords"},
+        {
+            "name": "publisher",
+            "accessor": lambda x: (f"{x.id} - {x.name}") if x else "",
+        },
+        {"name": "in_language"},
+        {"name": "location"},
+        {"name": "offers"},
+        {"name": "videos"},
+        {"name": "audience"},
+        {"name": "info_url"},
+    ]
+    serialize_user_fields = base_serialize_fields + [
+        {"name": "user_email"},
+        {"name": "user_name"},
+        {"name": "user_phone_number"},
+        {"name": "user_organization"},
+        {"name": "user_consent"},
+    ]
+
+    def serialize(self):
+        email = getattr(self.created_by, "email", None)
+
+        if email and email == self.user_email:
+            self.serialize_fields = self.serialize_user_fields
+        else:
+            self.serialize_fields = self.base_serialize_fields
+
+        return super().serialize()
 
     """
     eventStatus enumeration is based on http://schema.org/EventStatusType
@@ -1273,7 +1368,9 @@ def keyword_added_or_removed(
             )
 
 
-class Offer(models.Model, SimpleValueMixin):
+class Offer(SimpleValueMixin, SerializableMixin):
+    serialize_fields = [{"name": "price"}, {"name": "description"}]
+
     event = models.ForeignKey(
         Event, on_delete=models.CASCADE, db_index=True, related_name="offers"
     )
@@ -1310,7 +1407,9 @@ class EventLink(models.Model, SimpleValueMixin):
         return ["name", "language_id", "link"]
 
 
-class Video(models.Model, SimpleValueMixin):
+class Video(SimpleValueMixin, SerializableMixin):
+    serialize_fields = [{"name": "name"}, {"name": "url"}, {"name": "alt_text"}]
+
     name = models.CharField(
         verbose_name=_("Name"), max_length=255, db_index=True, default=""
     )

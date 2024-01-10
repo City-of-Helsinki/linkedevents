@@ -3,13 +3,27 @@ from uuid import UUID
 
 import pytest
 import requests_mock
-from django.db.models import QuerySet
+from django.conf import settings
+from django.db.models import Q, QuerySet
+from django.test import override_settings
 from django.urls import reverse
+from django_orghierarchy.models import Organization
 from helusers.settings import api_token_auth_settings
 from rest_framework import status
 
+from events.models import Event
 from events.tests.conftest import APIClient
-from events.tests.factories import LanguageFactory
+from events.tests.factories import (
+    EventFactory,
+    ImageFactory,
+    KeywordFactory,
+    KeywordLabelFactory,
+    LanguageFactory,
+    OfferFactory,
+    OrganizationFactory,
+    PlaceFactory,
+    VideoFactory,
+)
 from helevents.models import User
 from helevents.tests.conftest import get_api_token_for_user_with_scopes
 from helevents.tests.factories import UserFactory
@@ -77,6 +91,246 @@ def _get_signup_group_profile_data(signup_group: Optional[SignUpGroup]) -> dict:
     return profile_data
 
 
+def _get_event_data(user) -> list:
+    events = Event.objects.filter(created_by=user)
+
+    event_data = []
+    for e in events:
+        image = e.images.first()
+        keyword = e.keywords.first()
+        keyword_label = keyword.alt_labels.first() if keyword else None
+        language = e.in_language.first()
+        offer = e.offers.first()
+        video = e.videos.first()
+        audience = e.audience.first()
+        audience_label = audience.alt_labels.first() if audience else None
+
+        data = {
+            "children": [
+                {"key": "ID", "value": e.id},
+                {"key": "NAME", "value": e.name},
+                {"key": "DESCRIPTION", "value": e.description},
+                {"key": "SHORT_DESCRIPTION", "value": e.short_description},
+                {"key": "START_TIME", "value": e.start_time},
+                {"key": "END_TIME", "value": e.end_time},
+                [
+                    {
+                        "children": [
+                            {"key": "NAME", "value": image.name},
+                            {"key": "URL", "value": image.url},
+                        ]
+                        if image
+                        else [],
+                        "key": "IMAGE",
+                    }
+                ]
+                if image
+                else [],
+                [
+                    {
+                        "children": [
+                            [
+                                {
+                                    "children": [
+                                        {
+                                            "key": "NAME",
+                                            "value": keyword_label.name,
+                                        },
+                                        {
+                                            "children": [
+                                                {
+                                                    "key": "NAME",
+                                                    "value": keyword_label.language.name,
+                                                },
+                                                {
+                                                    "key": "SERVICE_LANGUAGE",
+                                                    "value": keyword_label.language.service_language,
+                                                },
+                                            ],
+                                            "key": "LANGUAGE",
+                                        },
+                                    ]
+                                    if keyword_label
+                                    else [],
+                                    "key": "KEYWORDLABEL",
+                                }
+                            ]
+                        ],
+                        "key": "KEYWORD",
+                    }
+                ]
+                if keyword
+                else [],
+                {
+                    "key": "PUBLISHER",
+                    "value": f"{e.publisher.id} - {e.publisher.name}",
+                },
+                [
+                    {
+                        "children": [
+                            {"key": "NAME", "value": language.name},
+                            {
+                                "key": "SERVICE_LANGUAGE",
+                                "value": language.service_language,
+                            },
+                        ]
+                        if language
+                        else [],
+                        "key": "LANGUAGE",
+                    }
+                ]
+                if language
+                else [],
+                {
+                    "children": [
+                        {"key": "NAME", "value": e.location.name},
+                        {
+                            "key": "PUBLISHER",
+                            "value": f"{e.location.publisher.id} - {e.location.publisher.name}",
+                        },
+                        {"key": "INFO_URL", "value": e.location.info_url},
+                        {"key": "DESCRIPTION", "value": e.location.description},
+                        {"key": "EMAIL", "value": e.location.email},
+                        {"key": "TELEPHONE", "value": e.location.telephone},
+                        {
+                            "key": "STREET_ADDRESS",
+                            "value": e.location.street_address,
+                        },
+                        {
+                            "key": "ADDRESS_LOCALITY",
+                            "value": e.location.address_locality,
+                        },
+                        {
+                            "key": "ADDRESS_REGION",
+                            "value": e.location.address_region,
+                        },
+                        {"key": "POSTAL_CODE", "value": e.location.postal_code},
+                        {
+                            "key": "POST_OFFICE_BOX_NUM",
+                            "value": e.location.post_office_box_num,
+                        },
+                        {
+                            "key": "ADDRESS_COUNTRY",
+                            "value": e.location.address_country,
+                        },
+                    ],
+                    "key": "PLACE",
+                }
+                if e.location
+                else {"key": "LOCATION", "value": None},
+                {
+                    "children": [
+                        {
+                            "children": [
+                                {"key": "PRICE", "value": offer.price},
+                                {"key": "DESCRIPTION", "value": offer.description},
+                            ],
+                            "key": "OFFER",
+                        }
+                    ]
+                    if offer
+                    else [],
+                    "key": "OFFERS",
+                },
+                {
+                    "children": [
+                        {
+                            "children": [
+                                {"key": "NAME", "value": video.name},
+                                {"key": "URL", "value": video.url},
+                                {"key": "ALT_TEXT", "value": video.alt_text},
+                            ],
+                            "key": "VIDEO",
+                        }
+                    ]
+                    if video
+                    else [],
+                    "key": "VIDEOS",
+                },
+                [
+                    {
+                        "children": [
+                            [
+                                {
+                                    "children": [
+                                        {
+                                            "key": "NAME",
+                                            "value": audience_label.name,
+                                        },
+                                        {
+                                            "children": [
+                                                {
+                                                    "key": "NAME",
+                                                    "value": audience_label.language.name,
+                                                },
+                                                {
+                                                    "key": "SERVICE_LANGUAGE",
+                                                    "value": audience_label.language.service_language,
+                                                },
+                                            ],
+                                            "key": "LANGUAGE",
+                                        },
+                                    ],
+                                    "key": "KEYWORDLABEL",
+                                }
+                            ]
+                        ]
+                        if audience
+                        else [],
+                        "key": "KEYWORD",
+                    }
+                ]
+                if audience
+                else [],
+                {"key": "INFO_URL", "value": e.info_url},
+            ],
+            "key": "EVENT",
+        }
+        if e.user_email == user.email:
+            data["children"].extend(
+                [
+                    {
+                        "key": "USER_EMAIL",
+                        "value": e.user_email,
+                    },
+                    {"key": "USER_NAME", "value": e.user_name},
+                    {
+                        "key": "USER_PHONE_NUMBER",
+                        "value": e.user_phone_number,
+                    },
+                    {
+                        "key": "USER_ORGANIZATION",
+                        "value": e.user_organization,
+                    },
+                    {
+                        "key": "USER_CONSENT",
+                        "value": e.user_consent,
+                    },
+                ]
+            )
+
+        event_data.append(data)
+
+    return event_data
+
+
+def _get_organizations(user: User) -> list[dict]:
+    orgs = []
+
+    for org in Organization.objects.filter(Q(admin_users=user) | Q(regular_users=user)):
+        orgs.append(
+            {
+                "children": [
+                    {"key": "ID", "value": org.id},
+                    {"key": "NAME", "value": org.name},
+                ],
+                "key": "SERIALIZABLEPUBLISHER",
+            }
+        )
+
+    return orgs
+
+
 def _get_signup_profile_data(signup: SignUp) -> dict:
     profile_data = {
         "key": "SIGNUP",
@@ -126,7 +380,11 @@ def _get_signups_profile_data(signups_qs: QuerySet[SignUp]) -> list[dict]:
     return signup_datas
 
 
-def _get_user_data(user: User) -> list[dict]:
+def _get_user_data(user: User, expect_event_user_data: bool = True) -> list[dict]:
+    ext_event = Event.objects.filter(
+        user_email=user.email, publisher=settings.EXTERNAL_USER_PUBLISHER_ID
+    ).first()
+
     return [
         {"key": "ID", "value": user.id},
         {"key": "FIRST_NAME", "value": user.first_name},
@@ -138,6 +396,11 @@ def _get_user_data(user: User) -> list[dict]:
                 user.signup_created_by.select_related("signup_group").all()
             ),
         },
+        {
+            "key": "EVENTS_EVENT_CREATED_BY",
+            "children": _get_event_data(user),
+        },
+        {"key": "PUBLISHER_ORGANIZATIONS", "value": _get_organizations(user)},
     ]
 
 
@@ -155,14 +418,77 @@ def _assert_profile_data_in_response(response, user: User):
 
 
 @pytest.mark.parametrize("use_contact_person", [True, False])
+@override_settings(EXTERNAL_USER_PUBLISHER_ID="ext-org")
 @pytest.mark.django_db
 def test_authenticated_user_can_get_own_data(api_client, settings, use_contact_person):
-    user = UserFactory()
+    settings.GDPR_API_QUERY_SCOPE = api_token_auth_settings.API_SCOPE_PREFIX
+
+    user = UserFactory(email="also_an_exteral_user@localhost")
 
     language_en = LanguageFactory(id="en", name="English")
     language_fi = LanguageFactory(id="fi", name="Suomi", service_language=True)
 
-    registration = RegistrationFactory()
+    EventFactory.create_batch(5, created_by=UserFactory(), name="someoneelsesevent")
+    org = OrganizationFactory(name="admin_org")
+    regular_org = OrganizationFactory(name="regular_org")
+    OrganizationFactory(name="im_not_included_org")
+    org.admin_users.add(user)
+    regular_org.regular_users.add(user)
+
+    event = EventFactory(
+        created_by=user,
+        publisher=org,
+        user_organization=org.name,
+        location=PlaceFactory(
+            name="Test place",
+            info_url="https://localhost/place",
+            description="Test place",
+            email="place@localhost",
+            telephone="+123123123",
+            street_address="Test Street 1",
+            address_region="Test Region",
+            address_locality="Test Locality",
+            postal_code="12345",
+            post_office_box_num="123",
+            address_country="XG",
+        ),
+        info_url="https://localhost/event",
+    )
+    OfferFactory(price="10", description="Test offer", event=event)
+    VideoFactory(
+        name="test_video",
+        url="https://localhost/video",
+        alt_text="Test video",
+        event=event,
+    )
+
+    keyword = KeywordFactory(name="test_keyword")
+    keyword.alt_labels.add(
+        KeywordLabelFactory(name="test_keyword label", language=language_en)
+    )
+    audience = KeywordFactory(name="test_audience")
+    audience.alt_labels.add(
+        KeywordLabelFactory(name="test_audience label", language=language_en)
+    )
+
+    event.audience.add(audience)
+    event.keywords.add(keyword)
+    event.in_language.add(language_en)
+    event.images.add(ImageFactory(name="test image", url="https://localhost/image"))
+
+    ext_org = OrganizationFactory(id="ext-org", name="External org")
+    EventFactory(
+        created_by=user,
+        publisher=ext_org,
+        info_url="https://localhost/extevent",
+        user_email=user.email,
+        user_name="ext_user",
+        user_phone_number="+123123123",
+        user_organization="ext-org",
+        user_consent=True,
+    )
+
+    registration = RegistrationFactory(event=event)
 
     signup_group = SignUpGroupFactory(registration=registration, created_by=user)
 
