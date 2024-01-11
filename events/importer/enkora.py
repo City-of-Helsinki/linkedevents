@@ -9,6 +9,7 @@ import pytz
 import requests
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
+from django.contrib.gis.geos import Point
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils import timezone
@@ -18,7 +19,6 @@ from events.importer.sync import ModelSyncher
 from events.models import DataSource, Event, Keyword, Place
 
 from .base import Importer, recur_dict, register_importer
-from .utils import clean_text
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +119,8 @@ class EnkoraImporter(Importer):
     }
 
     PROVIDER = "Helsingin kaupungin liikuntapalvelut"
-    ORGANIZATION = "kuva-liikunta"  # XXX need to confirm this!
+    ORGANIZATION = "ahjo:u021600"
+    DATASOURCE_ORGANIZATION = "kuva-liikunta"
 
     service_map = {
         99: {
@@ -398,6 +399,7 @@ class EnkoraImporter(Importer):
             "street-address": "Metsäpurontie 25",
             "city": "Helsinki",
             "zip-code": "00630",
+            "epsg:4326": (60.22790426985482, 24.924536415379556),
             "keywords": set(),
         },
         220: {
@@ -493,6 +495,7 @@ class EnkoraImporter(Importer):
             "street-address": "Loisteputki 4 C (2. krs)",
             "city": "Helsinki",
             "zip-code": "00750",
+            "epsg:4326": (60.28009905444841, 25.01913033251879),
             "keywords": set(),
         },
         243: {
@@ -503,6 +506,7 @@ class EnkoraImporter(Importer):
         244: {
             "enkora-name": "Tanssikoulu Footlight, Lauttasaari",
             "tprek-id": None,
+            "epsg:4326": (60.151487631902505, 24.880141113484108),
             "keywords": {SPORT_DANCING},
         },
         245: {
@@ -611,11 +615,12 @@ class EnkoraImporter(Importer):
             "keywords": set(),
         },
         318: {
-            "enkora-name": "Kuntosali Fabian, Fabianinkatu 21, -K2 kerros",  # 8 TPrek paikkaa
+            "enkora-name": "Kuntosali Fabian, Fabianinkatu 21, -K2 kerros",
             "tprek-id": None,
             "street-address": "Fabianinkatu 21",
             "city": "Helsinki",
             "zip-code": "00130",
+            "epsg:4326": (60.16631379895938, 24.94999595581348),
             "keywords": set(),
         },
     }
@@ -645,6 +650,7 @@ class EnkoraImporter(Importer):
             "kuntosalistartti",
             "kuntosalicircuit",
             "xxl_kuntosaliharjoittelu",
+            "gym",
         ): {SPORT_GYM},
         (
             "livvoima",
@@ -835,61 +841,20 @@ class EnkoraImporter(Importer):
         "xxl-startti": {SPORT_GYM},
     }
 
-    LIIKUNTAKAUPPA_GYM = "kuntosalikurssit"
-    LIIKUNTAKAUPPA_GROUP_SPORT = "ryhmäliikunta"
-    LIIKUNTAKAUPPA_SWIM_SCHOOL = "uimakoulut"
-    LIIKUNTAKAUPPA_WATER_SPORT = "vesiliikunta"
-    LIIKUNTAKAUPPA_DEFAULT = "muut"
-
     liikuntakauppa_link_base = "https://liikuntakauppa.hel.fi/helsinginkaupunki/ng/shop"
     liikuntakauppa_links = {
-        LIIKUNTAKAUPPA_GYM: f"{liikuntakauppa_link_base}/reservations/132/-/-/-/-/-",
-        LIIKUNTAKAUPPA_GROUP_SPORT: f"{liikuntakauppa_link_base}/reservations/99/-/-/-/-/-",
-        LIIKUNTAKAUPPA_SWIM_SCHOOL: f"{liikuntakauppa_link_base}/reservations/100/-/-/-/-/-",
-        LIIKUNTAKAUPPA_WATER_SPORT: f"{liikuntakauppa_link_base}/reservations/102/-/-/-/-/-",
-        LIIKUNTAKAUPPA_DEFAULT: f"{liikuntakauppa_link_base}/home",
-    }
-    liikuntakauppa_sport = {
-        SPORT_ACROBATICS: LIIKUNTAKAUPPA_GROUP_SPORT,
-        SPORT_ADAPTED_PE: LIIKUNTAKAUPPA_GROUP_SPORT,
-        SPORT_BADMINTON: LIIKUNTAKAUPPA_DEFAULT,
-        SPORT_BALANCE: LIIKUNTAKAUPPA_DEFAULT,
-        SPORT_BROOMSTICK: LIIKUNTAKAUPPA_GROUP_SPORT,
-        SPORT_CANOEING: LIIKUNTAKAUPPA_WATER_SPORT,
-        SPORT_CIRCUS: LIIKUNTAKAUPPA_GROUP_SPORT,
-        SPORT_CHAIR_PE: LIIKUNTAKAUPPA_GROUP_SPORT,
-        SPORT_GYM: LIIKUNTAKAUPPA_GYM,
-        SPORT_DANCE_SPORT: LIIKUNTAKAUPPA_DEFAULT,
-        SPORT_DANCING: LIIKUNTAKAUPPA_DEFAULT,
-        SPORT_ICE_HOCKEY: LIIKUNTAKAUPPA_DEFAULT,
-        SPORT_JUMPPA: LIIKUNTAKAUPPA_DEFAULT,
-        SPORT_KETTLEBELL: LIIKUNTAKAUPPA_GYM,
-        SPORT_MAILAPELIT: LIIKUNTAKAUPPA_DEFAULT,
-        SPORT_MUSICAL_EXERCISE: LIIKUNTAKAUPPA_DEFAULT,
-        SPORT_NORDIC_WALKING: LIIKUNTAKAUPPA_DEFAULT,
-        SPORT_OUTDOOR_PE: LIIKUNTAKAUPPA_DEFAULT,
-        SPORT_PADEL: LIIKUNTAKAUPPA_DEFAULT,
-        SPORT_PARKOUR: LIIKUNTAKAUPPA_DEFAULT,
-        SPORT_RELAXATION: LIIKUNTAKAUPPA_DEFAULT,
-        SPORT_RUNNING: LIIKUNTAKAUPPA_DEFAULT,
-        SPORT_SQUASH: LIIKUNTAKAUPPA_DEFAULT,
-        SPORT_SKATING: LIIKUNTAKAUPPA_DEFAULT,
-        SPORT_STRETCHING: LIIKUNTAKAUPPA_DEFAULT,
-        SPORT_STRENGTH_TRAINING: LIIKUNTAKAUPPA_DEFAULT,
-        SPORT_SWIMMING_CLASSES: LIIKUNTAKAUPPA_SWIM_SCHOOL,
-        SPORT_TENNIS: LIIKUNTAKAUPPA_DEFAULT,
-        SPORT_TEMPPUJUMPPA: LIIKUNTAKAUPPA_DEFAULT,
-        SPORT_TRACK_N_FIELD: LIIKUNTAKAUPPA_DEFAULT,
-        SPORT_TRAMPOLINING: LIIKUNTAKAUPPA_DEFAULT,
-        SPORT_WALKING: LIIKUNTAKAUPPA_DEFAULT,
-        SPORT_WATER_EXERCISE: LIIKUNTAKAUPPA_WATER_SPORT,
-        SPORT_WORKOUT_STAIRS: LIIKUNTAKAUPPA_DEFAULT,
-        SPORT_YOGA: LIIKUNTAKAUPPA_GROUP_SPORT,
+        99: f"{liikuntakauppa_link_base}/reservations/99/-/-/-/-/-/",
+        100: f"{liikuntakauppa_link_base}/reservations/100/-/-/-/-/-/",
+        102: f"{liikuntakauppa_link_base}/reservations/102/-/-/-/-/-/",
+        132: f"{liikuntakauppa_link_base}/reservations/132/-/-/-/-/-/",
+        "": f"{liikuntakauppa_link_base}/home",
     }
 
     def __init__(self, options) -> None:
         self.data_source = None
+        self.publisher_datasource = None
         self.organization = None
+        self.datasource_organization = None
         super().__init__(options)
 
         self.now_tz_is = timezone.now()
@@ -899,15 +864,26 @@ class EnkoraImporter(Importer):
 
     def setup(self) -> None:
         logger.debug("Running Enkora importer setup...")
-        ds_defaults = dict(name="Enkora")
+
+        defaults = dict(name="Enkora")
         self.data_source, _ = DataSource.objects.get_or_create(
-            id=self.name, defaults=ds_defaults
+            id=self.name, defaults=defaults
+        )
+        org_args = dict(origin_id="enkora", data_source=self.data_source)
+        self.datasource_organization, _ = Organization.objects.get_or_create(
+            defaults=defaults, **org_args
         )
 
-        DataSource.objects.get_or_create(defaults={"name": "Enkora Oy"}, id="enkora")
-
+        org_parts = EnkoraImporter.ORGANIZATION.split(":")
+        ds_args = dict(id=org_parts[0])
+        defaults = dict(name=org_parts[0].capitalize())
+        self.publisher_datasource, _ = DataSource.objects.get_or_create(
+            defaults=defaults, **ds_args
+        )
+        org_args = dict(origin_id=org_parts[1], data_source=self.publisher_datasource)
+        defaults = dict(name="Tietotekniikka- ja viestintäosasto")
         self.organization, _ = Organization.objects.get_or_create(
-            origin_id=self.ORGANIZATION, data_source=self.data_source
+            defaults=defaults, **org_args
         )
 
         if self.options.get("remap", None):
@@ -926,55 +902,11 @@ class EnkoraImporter(Importer):
         return datetime.now(), timezone.now()
 
     def import_courses(self) -> None:
-        """
-        A recurring course will have a super event which includes the course's
-        whole time period, and sub events which will represent individual course
-        occurrences. Other than start and end times, a super event and its sub
-        events will all contain the same data.
-
-        A recurring course's sub event start and end datetimes will be build using
-        the activity's "timetables". The time tables contain info out weekday,
-        times, and repetition which means number of days there is between
-        occurrences (basically a multiple of 7).
-
-        A recurring course's sub events will be given an ID that has the
-        activity's ID and start and end times of the sub event in a compressed
-        form. This also means that between imports only sub events that are
-        happening exactly at the same time are considered to be the same instance,
-        so if a sub event's begin or end time changes at all, a new sub event will
-        be created instead of updating an old one (because there is no unambiguous
-        way to determine which old sub event the new one corresponds to).
-        :return: None
-        """
-
         kurssi_api = self.driver_cls(
             settings.ENKORA_API_USER, settings.ENKORA_API_PASSWORD, request_timeout=20.0
         )
 
         now_is, self.now_tz_is = self._get_timestamps()
-
-        def _is_course_expired(course: dict) -> bool:
-            if "public_visibility_end" not in course:
-                raise ValueError(
-                    "Expected to have 'public_visibility_end' field in course! Missing."
-                )
-
-            visibility_expiry_timestamp = None
-            if course["public_visibility_end"]:
-                # This is the primary attempt: course has a proper public visibility end date
-                visibility_expiry_timestamp = course["public_visibility_end"]
-            elif course["public_reservation_end"]:
-                # Secondary attempt: when public reservation ends
-                visibility_expiry_timestamp = course["public_reservation_end"]
-            elif course["first_event_date"]:
-                # Tertiary attempt: when course begins, we'll assume it isn't visible anymore
-                visibility_expiry_timestamp = course["first_event_date"]
-            else:
-                raise ValueError(
-                    "Expected to have something for expiry date in course data! Missing."
-                )
-
-            return visibility_expiry_timestamp < now_is
 
         first_date = now_is.date() - relativedelta(months=2)
         last_date = now_is.date() + relativedelta(days=365)
@@ -1019,13 +951,24 @@ class EnkoraImporter(Importer):
         )
 
         # Now we have the course list populated, iterate it.
+        if self.options["single"]:
+            logger.info(
+                "Requested sync of a single course: {}".format(self.options["single"])
+            )
+
         course_count = 0
         course_event_count = 0
+        course_sync_count = 0
         errors = []
         for course_id, course in reservation_event_groups.items():
             course_count += 1
             logger.debug("{}) Enkora course ID {}".format(course_count, course_id))
-            if _is_course_expired(course):
+            if self.options["single"]:
+                course_id = "enkora:{}".format(course["reservation_event_group_id"])
+                if course_id != self.options["single"]:
+                    # Single course was requested and this isn't it.
+                    continue
+            if self._is_course_expired(course, now_is):
                 logger.debug(
                     "Skipping event with public visibility ended at: {}".format(
                         course["public_visibility_end"]
@@ -1057,7 +1000,7 @@ class EnkoraImporter(Importer):
             sub_event_syncher = ModelSyncher(
                 event.sub_events.filter(deleted=False),
                 lambda event: event.id,
-                delete_func=self.mark_deleted,
+                delete_func=self.mark_deleted_sub_event,
                 check_deleted_func=self.check_deleted,
             )
 
@@ -1079,25 +1022,46 @@ class EnkoraImporter(Importer):
             if event._changed:
                 event.save()
 
+            course_sync_count += 1
+
+        # After looping all the courses, delete the obsoleted ones (unless doing a single event).
         event_syncher.finish(force=True)
 
         # Delayed conversion exception?
         if errors:
             logger.error(
-                "Enkora course import finished with {} courses with {} events seen. {} errors encounterd.".format(
-                    course_count, course_event_count, len(errors)
+                "Enkora course import finished with {} courses with {} events seen. {} courses synchronized. "
+                "{} errors encounterd.".format(
+                    course_count, course_event_count, course_sync_count, len(errors)
                 )
             )
             raise errors[0]
 
         # Success
         logger.info(
-            "Enkora course import finished with {} courses with {} events seen. No errors encounterd.".format(
-                course_count, course_event_count
+            "Enkora course import finished with {} courses with {} events seen. {} courses synchronized. "
+            "No errors encounterd.".format(
+                course_count, course_event_count, course_sync_count
             )
         )
 
     def mark_deleted(self, event: Event) -> bool:
+        if event.deleted:
+            return False
+        if event.end_time < self.now_tz_is:
+            return False
+        if self.options["single"]:
+            # Don't delete events on single sync
+            return False
+
+        # Event expired, mark it deleted
+        event.soft_delete()
+        for sub_event in event.sub_events.all():
+            sub_event.soft_delete()
+
+        return True
+
+    def mark_deleted_sub_event(self, event: Event) -> bool:
         if event.deleted:
             return False
         if event.end_time < self.now_tz_is:
@@ -1111,7 +1075,129 @@ class EnkoraImporter(Importer):
         return True
 
     def check_deleted(self, event: Event) -> bool:
+        if self.options["single"]:
+            # Don't delete events on single sync
+            return False
+
         return event.deleted
+
+    def import_places(self):
+        kurssi_api = self.driver_cls(
+            settings.ENKORA_API_USER, settings.ENKORA_API_PASSWORD, request_timeout=20.0
+        )
+
+        now_is, self.now_tz_is = self._get_timestamps()
+
+        first_date = now_is.date() - relativedelta(months=2)
+        last_date = now_is.date() + relativedelta(days=365)
+        reservation_event_groups = []
+        reservation_events = []
+
+        # Round #1: past data
+        for _ in kurssi_api.get_data_for_date_range(
+            first_date, now_is, reservation_event_groups, reservation_events
+        ):
+            # Skip reservations, they're not relevant here.
+            pass
+
+        # Round #2: future data
+        for _ in kurssi_api.get_data_for_date_range(
+            now_is, last_date, reservation_event_groups, reservation_events
+        ):
+            # Skip reservations, they're not relevant here.
+            pass
+
+        # Fold a list of into a mapping dictionary per ID of the course
+        reservation_event_groups = {
+            reg["reservation_event_group_id"]: reg for reg in reservation_event_groups
+        }
+
+        course_count = 0
+        place_count = 0
+        places_done = set()
+        for course_id, course in reservation_event_groups.items():
+            course_count += 1
+            logger.debug("{}) Enkora course ID {}".format(course_count, course_id))
+            if self.options["single"]:
+                course_id = "enkora:{}".format(course["reservation_event_group_id"])
+                if course_id != self.options["single"]:
+                    # Single course was requested and this isn't it.
+                    continue
+
+            if self._is_course_expired(course, now_is):
+                logger.debug(
+                    "Skipping event with public visibility ended at: {}".format(
+                        course["public_visibility_end"]
+                    )
+                )
+                continue
+
+            # Location:
+            if course["location_id"] not in EnkoraImporter.place_map:
+                raise ValueError(
+                    "Unknown Enkora location: {} for course {} / {}. Mapping missing!".format(
+                        course["location_id"],
+                        course["reservation_event_group_id"],
+                        course["reservation_event_group_name"],
+                    )
+                )
+
+            location_mapping = EnkoraImporter.place_map[course["location_id"]]
+            if location_mapping["tprek-id"]:
+                # Skip TPrek places
+                continue
+
+            (
+                location_data,
+                location_extra_info,
+                description_add_text,
+            ) = self.convert_location(course)
+            if "street-address" not in location_mapping:
+                # Skip non-Enkora places
+                continue
+
+            if course["location_id"] in places_done:
+                continue
+
+            # For any non-TPR Place, we'll create an own place. Make sure data exists.
+            place_count += 1
+            self._handle_place(course["location_id"], location_mapping)
+            places_done.add(course["location_id"])
+
+        # Success
+        logger.info(
+            "Enkora place import finished with {} courses having {} unique Enkora-places. No errors encounterd.".format(
+                course_count, place_count
+            )
+        )
+
+    @staticmethod
+    def _is_course_expired(course: dict, now_is: datetime) -> bool:
+        if "public_visibility_end" not in course:
+            raise ValueError(
+                "Expected to have 'public_visibility_end' field in course with ID {}! Missing.".format(
+                    course["reservation_event_group_id"]
+                )
+            )
+
+        visibility_expiry_timestamp = None
+        if course["public_visibility_end"]:
+            # This is the primary attempt: course has a proper public visibility end date
+            visibility_expiry_timestamp = course["public_visibility_end"]
+        elif course["public_reservation_end"]:
+            # Secondary attempt: when public reservation ends
+            visibility_expiry_timestamp = course["public_reservation_end"]
+        elif course["first_event_date"]:
+            # Tertiary attempt: when course begins, we'll assume it isn't visible anymore
+            visibility_expiry_timestamp = course["first_event_date"]
+        else:
+            raise ValueError(
+                "Expected to have something for expiry date in course data for course with ID {}! Missing.".format(
+                    course["reservation_event_group_id"]
+                )
+            )
+
+        return visibility_expiry_timestamp < now_is
 
     @staticmethod
     def generate_documentation_md() -> str:  # noqa: C901
@@ -1255,9 +1341,15 @@ class EnkoraImporter(Importer):
                     ).insert_link(place.id, tprek_base_url.format(mapping["tprek-id"]))
                 )
             elif "street-address" in mapping:
+                longitude = mapping["epsg:4326"][1]
+                latitude = mapping["epsg:4326"][0]
                 tprek = Inline(
-                    "Non-Tprek place: {}, {}, {}".format(
-                        mapping["street-address"], mapping["city"], mapping["zip-code"]
+                    "Non-Tprek place: {}, {}, {}. Coordinates: {}N, {}E".format(
+                        mapping["street-address"],
+                        mapping["city"],
+                        mapping["zip-code"],
+                        latitude,
+                        longitude,
                     )
                 )
             else:
@@ -1369,19 +1461,18 @@ class EnkoraImporter(Importer):
 
         # Section 5:
         # Registration links
-        doc.add_heading("Sport Keyword to LE Registration Link", level=2)
+        doc.add_heading("Enkora Service to Web Shop Link", level=2)
         doc.add_paragraph(
             "Importer sport/activity list mapping to Liikuntakauppa. "
             "Optimally the link would point directly to a course. Current implementation of "
             "liikuntakauppa doesn't allow this."
         )
         ul = []
-        for kw_id, link_name in EnkoraImporter.liikuntakauppa_sport.items():
-            kws = _keyword_helper({kw_id})
-            link_url = EnkoraImporter.liikuntakauppa_links[link_name]
+        for service_id, link_url_base in EnkoraImporter.liikuntakauppa_links.items():
+            link_url = "{}/<course-ID>".format(link_url_base)
             text = str(Paragraph("{}".format(link_url)).insert_link(link_url, link_url))
 
-            item_text = "{}: {}:".format(kws[0], text)
+            item_text = "{}: {}:".format(service_id, text)
             ul.append(Inline(item_text))
 
         doc.add_block(MDList(ul))
@@ -1439,6 +1530,7 @@ class EnkoraImporter(Importer):
         capacity_full = None
         has_queue_capacity = None
         description = None
+        sub_event_overrides = {}
 
         # Add time zone information
         dates = {}
@@ -1484,7 +1576,7 @@ class EnkoraImporter(Importer):
             has_queue_capacity = queue_capacity > 0
 
         # Course title, with additional information
-        title = self.convert_title(course)
+        main_event_title, sub_event_title = self.convert_title(course)
 
         # Description, as HTML:
         description = self.convert_description(
@@ -1492,13 +1584,13 @@ class EnkoraImporter(Importer):
         )
 
         # Location:
-        location_data, location_extra_info = self.convert_location(course)
-        location_extra_info = {
-            # Apparently this is HTML
-            "fi": '<p>Kurssin lisätiedot, <a href="{}">Liikuntaluuri</a>: {}</p>'.format(
-                self.COURSE_CONTACT_LINK, self.COURSE_CONTACT_PHONE
-            )
-        }
+        (
+            location_data,
+            location_extra_info,
+            description_add_text,
+        ) = self.convert_location(course)
+        if description_add_text:
+            description += description_add_text
 
         # Keywords
         location_kwids, service_kwids, images = self.convert_keywords(course)
@@ -1539,12 +1631,12 @@ class EnkoraImporter(Importer):
             )
 
         # Price [€ cents]
-        offers = self.convert_price(course)
+        offers = self.convert_price(course, liikuntakauppa_fi_link)
 
         # Wrapping up all details:
         event_data = {
             "type_id": Event.TypeId.COURSE,
-            "name": {"fi": title},
+            "name": {"fi": main_event_title},
             "description": {"fi": description},
             "audience_min_age": audience_min_age,
             "audience_max_age": audience_max_age,
@@ -1555,7 +1647,8 @@ class EnkoraImporter(Importer):
             "end_time": dates["last_event_date"],
             "has_end_time": True,
             "date_published": dates["public_visibility_start"],
-            "external_links": {"fi": {"registration": liikuntakauppa_fi_link}},
+            # Obsoleted and should not be used anymore. Offers / URL replaces this.
+            "external_links": None,  # {"fi": {"registration": liikuntakauppa_fi_link}},
             "provider": {"fi": self.PROVIDER},
             "provider_contact_info": {"fi": self.COURSE_PROVIDER_CONTACT_INFO},
             "enrolment_start_time": dates["public_reservation_start"],
@@ -1580,7 +1673,8 @@ class EnkoraImporter(Importer):
 
         # Sub-events:
         # Literally all Enkora courses are multi-event
-        _, sub_events = self.build_sub_events(course, event_data)
+        sub_event_overrides = {"name": {"fi": sub_event_title}}
+        _, sub_events = self.build_sub_events(course, event_data, sub_event_overrides)
 
         # For development/testing:
         # Output commands to invalidate event cache for the course being imported
@@ -1595,7 +1689,7 @@ class EnkoraImporter(Importer):
         return event_data, sub_events
 
     def build_sub_events(
-        self, course: dict, event_data: dict
+        self, course: dict, event_data: dict, overridden_event_data: dict
     ) -> tuple[dict, list[dict]]:
         """
         Enkora course consists of multiple events.
@@ -1611,6 +1705,10 @@ class EnkoraImporter(Importer):
         for reservation_event in course["reservation_events"]:
             # Basis for all sub-events is the super-event
             sub_event_data = deepcopy(event_data)
+
+            # Override?
+            sub_event_data.update(overridden_event_data)
+
             if "super_event_type" in sub_event_data:
                 del sub_event_data["super_event_type"]
             sub_event_data["super_event"] = None  # Note: This will be populated on save
@@ -1685,16 +1783,16 @@ class EnkoraImporter(Importer):
 
         return kws
 
-    def convert_title(self, course: dict) -> str:
+    def convert_title(self, course: dict) -> tuple[str, str]:
         """
         Add information to course title about event hour and weekday
         :param course: dict, Enkora course information as returned from API
-        :return: str, modified course title
+        :return: tuple[str, str], modified course title
         """
         course_title = course["reservation_event_group_name"].strip()
         if not course["reservation_events"]:
             # This should never happen. A course typically has events.
-            return course_title
+            return course_title, course_title
 
         # Iterate course events and collect the weekdays
         start_times = {}
@@ -1731,11 +1829,11 @@ class EnkoraImporter(Importer):
         weekday_list = [wkday_map[wkday] for wkday in wkday_map if wkday in weekdays]
 
         # Combine
-        title = "{} [{} klo {} - {}]".format(
+        formatted_title = "{} [{} klo {} - {}]".format(
             course_title, ", ".join(weekday_list), start_time, end_time
         )
 
-        return title
+        return formatted_title, course_title
 
     def convert_description(
         self,
@@ -1771,7 +1869,7 @@ class EnkoraImporter(Importer):
 
         return desc_html
 
-    def convert_location(self, course: dict) -> tuple[Optional[dict], dict]:
+    def convert_location(self, course: dict) -> tuple[Optional[dict], dict, str]:
         """
         Convert Enkora course information into location and extra information.
         Not all locations have Tprek mapping, then a street address will be returned.
@@ -1789,6 +1887,7 @@ class EnkoraImporter(Importer):
             )
 
         location = recur_dict()
+        extra_info = recur_dict()
         location_mapping = EnkoraImporter.place_map[course["location_id"]]
         if location_mapping["tprek-id"]:
             tprek_id = "tprek:{}".format(location_mapping["tprek-id"])
@@ -1801,37 +1900,86 @@ class EnkoraImporter(Importer):
 
             location["id"] = tprek_id
         elif "street-address" in location_mapping:
-            # Note: Importer.save_event() will explicitly save only location ID
-            # For any Enkora courses, this is a problem.
-            # Contact phone number will be derived from Place. However, at the location they have
-            # literally zero knowledge of the course being held. Contacting the Place for further
-            # information is discouraged.
-            # We need to establish proper contact channel for every course!
-            if "id" in location:
-                del location["id"]
-            location["name"] = location_mapping["enkora-name"]
-            # location["info_url"] =
-            location["street_address"]["fi"] = location_mapping["street-address"]
-            location["address_locality"]["fi"] = location_mapping["city"]
-            location["postal_code"]["fi"] = location_mapping["zip-code"]
-            location["data_source"] = self.data_source
-            location["origin_id"] = course["location_id"]
-            location["publisher"] = self.organization
-            # Note: This has no effect when using location ID.
-            # Phone number is for liikuntaluuri.
-            # location_data["telephone"] = {"fi": "+358 9 310 32623"}
+            # For any non-TPR Place we must use Enkora-places.
+            place_id = "enkora:{}".format(course["location_id"])
+            enkora_place = Place.objects.get(pk=place_id)
+
+            location["id"] = enkora_place.id
         else:
             location = None
 
-        # Extra info:
-        extra_info = recur_dict()
-        extra_info_text = clean_text(course["service_at_area_name"])
-        if extra_info_text:
-            extra_info["fi"] = extra_info_text
+        description_addon = (
+            '<p><b>Kurssin lisätiedot</b></p>\n<p><a href="{}">Liikuntaluuri</a>: '
+            '<a href="tel:{}">{}</a></p>'
+        ).format(
+            self.COURSE_CONTACT_LINK,
+            self.COURSE_CONTACT_PHONE,
+            self.COURSE_CONTACT_PHONE,
+        )
 
-        return location, extra_info
+        return location, extra_info, description_addon
 
-    def convert_price(self, course: dict) -> list[dict]:
+    @transaction.atomic
+    def _handle_place(self, enkora_place_id: int, info_in: dict) -> None:
+        # Note:
+        # Helsinki Palvelukartta can do geocoding if address is suitably accurate.
+        # See: https://api.hel.fi/servicemap/schema/swagger-ui/#/v2/v2_search_retrieve
+
+        # Map incoming information with _fi -affix to work with _save_translated_field()
+        info = {f"{key}_fi": value for key, value in info_in.items()}
+
+        # For any non-TPR Place, we'll create an own place.
+        place_id = "enkora:{}".format(enkora_place_id)
+
+        longitude = info_in["epsg:4326"][1]
+        latitude = info_in["epsg:4326"][0]
+        position = Point(
+            longitude, latitude, srid=settings.WGS84_SRID
+        )  # GPS coordinate system
+
+        try:
+            obj = Place.objects.get(pk=place_id)
+        except ObjectDoesNotExist:
+            obj = None
+        if not obj:
+            obj = Place(data_source=self.data_source, origin_id=enkora_place_id)
+            obj._changed = True
+            obj._created = True
+            obj.id = place_id
+            obj._changed_fields = []
+        else:
+            obj._changed = False
+            obj._created = False
+            obj._changed_fields = []
+
+            if obj.position and position.distance(obj.position) < 0.10:
+                position = obj.position
+            if position != obj.position:
+                obj._changed = True
+                obj._changed_fields.append("position")
+                obj.position = position
+            if obj.deleted:
+                obj.deleted = False
+                obj._changed_fields.append("deleted")
+                obj._changed = True
+
+        self._save_translated_field(obj, "name", info, "enkora-name")
+        self._save_translated_field(obj, "street_address", info, "street-address")
+        self._save_translated_field(obj, "address_locality", info, "city")
+
+        if obj.publisher_id != self.datasource_organization.id:
+            obj.publisher = self.datasource_organization
+            obj._changed_fields.append("publisher")
+            obj._changed = True
+
+        if obj._changed:
+            if obj._created:
+                logger.info("- Creating place {}".format(place_id))
+            else:
+                logger.info("- Updating place {}".format(place_id))
+            obj.save()
+
+    def convert_price(self, course: dict, url: str) -> list[dict]:
         offers = []
         fare_words_to_remove = ("itäinen", "läntinen", "pohjoinen")
         do_fare_description = False
@@ -1850,18 +1998,16 @@ class EnkoraImporter(Importer):
                     offer["price"] = {"fi": "{0:.2f}€".format(price_in_cents / 100)}
                     if do_fare_description:
                         offer["description"] = {"fi": offer_desc}
-                    if "info_url" in offer:
-                        del offer["info_url"]
                     price_is_free = False
                 else:
                     price_is_free = True
                 offer["is_free"] = price_is_free
+                offer["info_url"] = {"fi": url}
                 offers.append(offer)
         else:
             offer = recur_dict()
             offer["is_free"] = True
-            if "info_url" in offer:
-                del offer["info_url"]
+            offer["info_url"] = {"fi": url}
             offers.append(offer)
 
         return offers
@@ -1922,7 +2068,7 @@ class EnkoraImporter(Importer):
                 sport_kw_ids.add(kw_id)
 
         # Determine shop link:
-        liikuntakauppa_fi_link = self.liikuntakauppa_link(sport_kw_ids)
+        liikuntakauppa_fi_link = self.liikuntakauppa_link(course)
 
         return (
             event_language,
@@ -1934,38 +2080,18 @@ class EnkoraImporter(Importer):
         )
 
     @staticmethod
-    def liikuntakauppa_link(keywords: set) -> str:
-        if not keywords:
-            # We didn't manage to match to any sport.
-            return EnkoraImporter.liikuntakauppa_links[
-                EnkoraImporter.LIIKUNTAKAUPPA_DEFAULT
-            ]
+    def liikuntakauppa_link(course: dict) -> str:
+        service_id = course["service_id"]
 
-        sports_with_keyword = set(keywords).intersection(
-            EnkoraImporter.liikuntakauppa_sport.keys()
-        )
-        if (
-            sports_with_keyword
-            and len(sports_with_keyword) == 1
-            and EnkoraImporter.LIIKUNTAKAUPPA_DEFAULT in sports_with_keyword
-        ):
-            # The only match is into default sport
-            return EnkoraImporter.liikuntakauppa_links[
-                EnkoraImporter.LIIKUNTAKAUPPA_DEFAULT
-            ]
-
-        if EnkoraImporter.LIIKUNTAKAUPPA_DEFAULT in sports_with_keyword:
-            sports_with_keyword.remove(EnkoraImporter.LIIKUNTAKAUPPA_DEFAULT)
-        if not sports_with_keyword:
-            raise ValueError(
-                "Enkora importer internal error: Keyword '{}' has no Liikuntakauppa definition! "
-                "Refusing to continue.".format(", ".join(list(keywords)))
-            )
         # Return first one
-        chosen_keyword = next(iter(sports_with_keyword))
-        chosen_link = EnkoraImporter.liikuntakauppa_sport[chosen_keyword]
+        if service_id not in EnkoraImporter.liikuntakauppa_links:
+            return EnkoraImporter.liikuntakauppa_links[""]
 
-        return EnkoraImporter.liikuntakauppa_links[chosen_link]
+        # All other link types, except default, will get the course ID attached to the link
+        chosen_link_base = EnkoraImporter.liikuntakauppa_links[service_id]
+        chosen_link = chosen_link_base + str(course["reservation_event_group_id"])
+
+        return chosen_link
 
     @staticmethod
     def _parse_title_age(course_title: str) -> tuple[Optional[int], Optional[int]]:
