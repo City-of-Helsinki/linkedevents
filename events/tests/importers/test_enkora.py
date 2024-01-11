@@ -2383,7 +2383,7 @@ class TestEnkoraImporter:
         )
 
         # Test importing and syncing fixed set of events
-        importer_options = {}
+        importer_options = {"single": False}
         importer = EnkoraImporter(importer_options)
         importer.import_courses()
 
@@ -2431,8 +2431,16 @@ class TestEnkoraImporter:
             "info_url_zh_hans": None,
             "info_url_ru": None,
             "info_url_ar": None,
-            "description": "<p>Tenniskursseille voi ottaa oman mailan mukaan. Mailoja saa lainaan myös kurssilta.</p>",
-            "description_fi": "<p>Tenniskursseille voi ottaa oman mailan mukaan. Mailoja saa lainaan myös kurssilta.</p>",
+            "description": "<p>Tenniskursseille voi ottaa oman mailan mukaan. Mailoja saa lainaan myös "
+            "kurssilta.</p><p><b>Kurssin lisätiedot</b></p>\n"
+            "<p><a "
+            'href="https://www.hel.fi/fi/paatoksenteko-ja-hallinto/liikuntaluuri">Liikuntaluuri</a>: '
+            '<a href="tel:+358 9 310 32623">+358 9 310 32623</a></p>',
+            "description_fi": "<p>Tenniskursseille voi ottaa oman mailan mukaan. Mailoja saa lainaan myös "
+            "kurssilta.</p><p><b>Kurssin lisätiedot</b></p>\n"
+            "<p><a "
+            'href="https://www.hel.fi/fi/paatoksenteko-ja-hallinto/liikuntaluuri">Liikuntaluuri</a>: '
+            '<a href="tel:+358 9 310 32623">+358 9 310 32623</a></p>',
             "description_sv": None,
             "description_en": None,
             "description_zh_hans": None,
@@ -2474,17 +2482,13 @@ class TestEnkoraImporter:
             "provider_contact_info_zh_hans": None,
             "provider_contact_info_ru": None,
             "provider_contact_info_ar": None,
-            "publisher": "enkora:{}".format(EnkoraImporter.ORGANIZATION),
+            "publisher": EnkoraImporter.ORGANIZATION,
             "environmental_certificate": None,
             "event_status": 1,
             "publication_status": 1,
             "location": "tprek:45650",
-            "location_extra_info": '<p>Kurssin lisätiedot, <a href="'
-            'https://www.hel.fi/fi/paatoksenteko-ja-hallinto/liikuntaluuri">'
-            "Liikuntaluuri</a>: +358 9 310 32623</p>",
-            "location_extra_info_fi": '<p>Kurssin lisätiedot, <a href="'
-            'https://www.hel.fi/fi/paatoksenteko-ja-hallinto/liikuntaluuri">'
-            "Liikuntaluuri</a>: +358 9 310 32623</p>",
+            "location_extra_info": None,
+            "location_extra_info_fi": None,
             "location_extra_info_sv": None,
             "location_extra_info_en": None,
             "location_extra_info_zh_hans": None,
