@@ -203,7 +203,7 @@ def test_registration_user_who_created_signup_can_patch_presence_status(
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
         new_callable=PropertyMock,
-        return_value=["heltunnistussuomifi"],
+        return_value=["suomi_fi"],
     ) as mocked:
         assert_patch_signup(api_client, signup.id, signup_data)
         assert mocked.called is True
@@ -215,7 +215,7 @@ def test_registration_user_who_created_signup_can_patch_presence_status(
 @pytest.mark.parametrize(
     "identification_method",
     [
-        pytest.param(["heltunnistussuomifi"], id="strong"),
+        pytest.param(["suomi_fi"], id="strong"),
         pytest.param([], id="not-strong"),
     ],
 )

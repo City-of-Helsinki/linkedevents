@@ -310,7 +310,7 @@ def test_signups_export_allowed_for_strongly_identified_registration_user(
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
         new_callable=PropertyMock,
-        return_value=["heltunnistussuomifi"],
+        return_value=["suomi_fi"],
     ) as mocked:
         _assert_get_signups_export(api_client, registration.id, file_format="xlsx")
 

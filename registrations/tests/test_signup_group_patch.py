@@ -196,7 +196,7 @@ def test_registration_user_who_created_signup_group_can_patch_signups_data(
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
         new_callable=PropertyMock,
-        return_value=["heltunnistussuomifi"],
+        return_value=["suomi_fi"],
     ) as mocked:
         assert_patch_signup_group(api_client, signup_group.id, signup_group_data)
         assert mocked.called is True
@@ -297,7 +297,7 @@ def test_registration_user_can_patch_signups_presence_status_if_strongly_identif
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
         new_callable=PropertyMock,
-        return_value=["heltunnistussuomifi"],
+        return_value=["suomi_fi"],
     ) as mocked:
         assert_patch_signup_group(api_client, signup_group.id, signup_group_data)
         assert mocked.called is True
