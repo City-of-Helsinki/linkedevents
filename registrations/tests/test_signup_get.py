@@ -150,7 +150,7 @@ def test_registration_user_access_can_get_signup_when_strongly_identified(
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
         new_callable=PropertyMock,
-        return_value=["heltunnistussuomifi"],
+        return_value=["suomi_fi"],
     ) as mocked:
         response = assert_get_detail(user_api_client, signup.id)
         assert mocked.called is True
@@ -374,7 +374,7 @@ def test_registration_user_access_can_get_signup_list_when_strongly_identified(
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
         new_callable=PropertyMock,
-        return_value=["heltunnistussuomifi"],
+        return_value=["suomi_fi"],
     ) as mocked:
         get_list_and_assert_signups(
             user_api_client, f"registration={registration.id}", [signup, signup2]
@@ -469,7 +469,7 @@ def test_get_all_signups_to_which_user_has_admin_role(
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
         new_callable=PropertyMock,
-        return_value=["heltunnistussuomifi"],
+        return_value=["suomi_fi"],
     ) as mocked:
         get_list_and_assert_signups(user_api_client, "", [signup, signup2])
         assert mocked.called is True

@@ -119,7 +119,7 @@ def test_registration_user_access_can_get_signup_group_when_strongly_identified(
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
         new_callable=PropertyMock,
-        return_value=["heltunnistussuomifi"],
+        return_value=["suomi_fi"],
     ) as mocked:
         response = assert_get_detail(user_api_client, signup_group.id)
         assert mocked.called is True
@@ -375,7 +375,7 @@ def test_registration_user_access_can_get_signup_group_list_when_strongly_identi
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
         new_callable=PropertyMock,
-        return_value=["heltunnistussuomifi"],
+        return_value=["suomi_fi"],
     ) as mocked:
         get_list_and_assert_signup_groups(
             user_api_client,

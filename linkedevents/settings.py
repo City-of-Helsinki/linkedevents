@@ -123,7 +123,10 @@ env = environ.Env(
         ["helsinki_adfs", "helsinkiazuread", "helsinkiad"],
     ),
     ANONYMIZATION_THRESHOLD_DAYS=(int, 30),
-    STRONG_IDENTIFICATION_AUTHENTICATION_METHODS=(list, ["heltunnistussuomifi"]),
+    STRONG_IDENTIFICATION_AUTHENTICATION_METHODS=(
+        list,
+        ["suomi_fi", "heltunnistussuomifi"],
+    ),
     REDIS_SENTINELS=(list, []),
     REDIS_URL=(str, None),
     REDIS_PASSWORD=(str, None),

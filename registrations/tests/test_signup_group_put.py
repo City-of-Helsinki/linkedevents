@@ -256,7 +256,7 @@ def test_registration_user_access_cannot_update_signup_group(api_client, registr
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
         new_callable=PropertyMock,
-        return_value=["heltunnistussuomifi"],
+        return_value=["suomi_fi"],
     ) as mocked:
         response = update_signup_group(api_client, signup_group.id, signup_group_data)
         assert mocked.called is True
@@ -281,7 +281,7 @@ def test_registration_user_who_created_signup_group_can_update_signup_group(
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
         new_callable=PropertyMock,
-        return_value=["heltunnistussuomifi"],
+        return_value=["suomi_fi"],
     ) as mocked:
         assert_update_signup_group(api_client, signup_group.id, signup_group_data)
         assert mocked.called is True
