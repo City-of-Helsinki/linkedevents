@@ -189,7 +189,16 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
     contact_person = SignUpContactPersonSerializer(required=False, allow_null=True)
     extra_info = serializers.CharField(required=False, allow_blank=True)
     date_of_birth = serializers.DateField(required=False, allow_null=True)
-    price_group = SignUpPriceGroupSerializer(required=False, allow_null=True)
+
+    def get_fields(self):
+        fields = super().get_fields()
+
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            fields["price_group"] = SignUpPriceGroupSerializer(
+                required=False, allow_null=True
+            )
+
+        return fields
 
     @staticmethod
     def _update_or_create_protected_data(signup, **protected_data):
@@ -216,7 +225,7 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
 
     @staticmethod
     def _update_or_create_price_group(signup, **price_group_data):
-        if not price_group_data:
+        if not price_group_data or not settings.WEB_STORE_INTEGRATION_ENABLED:
             return
 
         SignUpPriceGroup.objects.update_or_create(
@@ -364,31 +373,32 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
                 ):
                     errors["date_of_birth"] = _("The participant is too old.")
 
-        price_group = validated_data.get("price_group") or {}
-        if not price_group and registration.registration_price_groups.exists():
-            errors["price_group"] = _(
-                "Price group selection is mandatory for this registration."
-            )
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            price_group = validated_data.get("price_group") or {}
+            if not price_group and registration.registration_price_groups.exists():
+                errors["price_group"] = _(
+                    "Price group selection is mandatory for this registration."
+                )
 
-        if (
-            price_group.get("id")
-            and instance_id
-            and registration.signups.exclude(pk=instance_id)
-            .filter(price_group=price_group["id"])
-            .exists()
-        ):
-            errors["price_group"] = _(
-                "Price group is already assigned to another participant."
-            )
+            if (
+                price_group.get("id")
+                and instance_id
+                and registration.signups.exclude(pk=instance_id)
+                .filter(price_group=price_group["id"])
+                .exists()
+            ):
+                errors["price_group"] = _(
+                    "Price group is already assigned to another participant."
+                )
 
-        if (
-            price_group
-            and price_group["registration_price_group"].registration_id
-            != registration.pk
-        ):
-            errors["price_group"] = _(
-                "Price group is not one of the allowed price groups for this registration."
-            )
+            if (
+                price_group
+                and price_group["registration_price_group"].registration_id
+                != registration.pk
+            ):
+                errors["price_group"] = _(
+                    "Price group is not one of the allowed price groups for this registration."
+                )
 
         if errors:
             raise serializers.ValidationError(errors)
@@ -418,8 +428,9 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
             "user_consent",
             "is_created_by_current_user",
             "contact_person",
-            "price_group",
         )
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            fields += ("price_group",)
         model = SignUp
 
 
@@ -545,11 +556,6 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
 
     signup_url = serializers.SerializerMethodField()
 
-    registration_price_groups = RegistrationPriceGroupSerializer(
-        many=True,
-        required=False,
-    )
-
     def get_fields(self):
         fields = super().get_fields()
 
@@ -560,6 +566,12 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
         else:
             fields["registration_user_accesses"] = RegistrationUserAccessSerializer(
                 many=True, required=False
+            )
+
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            fields["registration_price_groups"] = RegistrationPriceGroupSerializer(
+                many=True,
+                required=False,
             )
 
         return fields
@@ -644,8 +656,9 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
             "instructions",
             "is_created_by_current_user",
             "signup_url",
-            "registration_price_groups",
         )
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            fields += ("registration_price_groups",)
         model = Registration
 
 
@@ -784,10 +797,12 @@ class CreateSignUpsSerializer(serializers.Serializer):
             price_group = cleaned_signup_data.pop("price_group", None)
 
             signup = SignUp(**cleaned_signup_data)
+
             signup._extra_info = extra_info
             signup._date_of_birth = date_of_birth
             signup._contact_person = contact_person
             signup._price_group = price_group
+
             signups.append(signup)
 
         signup_instances = SignUp.objects.bulk_create(signups)
@@ -813,13 +828,14 @@ class CreateSignUpsSerializer(serializers.Serializer):
             ]
         )
 
-        SignUpPriceGroup.objects.bulk_create(
-            [
-                SignUpPriceGroup(signup=signup, **signup._price_group)
-                for signup in signups
-                if signup._price_group
-            ]
-        )
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            SignUpPriceGroup.objects.bulk_create(
+                [
+                    SignUpPriceGroup(signup=signup, **signup._price_group)
+                    for signup in signups
+                    if signup._price_group
+                ]
+            )
 
         return signup_instances
 

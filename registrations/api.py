@@ -347,6 +347,11 @@ class SignUpViewSet(
         permission_classes=[CanAccessSignup],
     )
     def price_group(self, request, pk=None, version=None):
+        if not settings.WEB_STORE_INTEGRATION_ENABLED:
+            return Response(
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
         price_group = getattr(self.get_object(), "price_group", None)
 
         if not price_group:
@@ -470,4 +475,5 @@ class PriceGroupViewSet(
             )
 
 
-register_view(PriceGroupViewSet, "price_group")
+if settings.WEB_STORE_INTEGRATION_ENABLED:
+    register_view(PriceGroupViewSet, "price_group")

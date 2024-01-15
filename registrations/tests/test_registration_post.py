@@ -9,9 +9,15 @@ from events.models import Event
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
 from registrations.models import (
-    PriceGroup, Registration, RegistrationPriceGroup, RegistrationUserAccess,
+    PriceGroup,
+    Registration,
+    RegistrationPriceGroup,
+    RegistrationUserAccess,
 )
-from registrations.tests.factories import PriceGroupFactory, RegistrationUserAccessFactory
+from registrations.tests.factories import (
+    PriceGroupFactory,
+    RegistrationUserAccessFactory,
+)
 from registrations.tests.utils import assert_invitation_email_is_sent
 
 email = "user@email.com"

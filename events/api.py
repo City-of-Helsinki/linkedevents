@@ -1591,10 +1591,11 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
             registration, registration_user_accesses
         )
 
-        # Create registration price groups that signees / participants can choose from
-        self._create_or_update_registration_price_groups(
-            registration, registration_price_groups
-        )
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            # Create registration price groups that signees / participants can choose from
+            self._create_or_update_registration_price_groups(
+                registration, registration_price_groups
+            )
 
         return registration
 
@@ -1630,7 +1631,9 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
             update_related(registration_user_accesses, "registration_user_accesses")
 
         # update registration price groups
-        if isinstance(registration_price_groups, list):
+        if settings.WEB_STORE_INTEGRATION_ENABLED and isinstance(
+            registration_price_groups, list
+        ):
             update_related(registration_price_groups, "registration_price_groups")
 
         return instance
