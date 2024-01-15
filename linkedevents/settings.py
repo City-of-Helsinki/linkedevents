@@ -577,6 +577,7 @@ DEFAULT_FROM_EMAIL = env(
     "DEFAULT_FROM_EMAIL"
 )  # Email address used as default "from" email
 EMAIL_BACKEND = "mailer.backend.DbBackend"
+MAILER_USE_FILE_LOCK = False
 MAILER_EMAIL_MAX_RETRIES = 5
 if EMAIL_HOST and EMAIL_PORT:
     MAILER_EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
