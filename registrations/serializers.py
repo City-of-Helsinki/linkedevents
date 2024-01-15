@@ -321,13 +321,14 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
 
 class RegistrationUserAccessIdField(serializers.PrimaryKeyRelatedField):
     def get_queryset(self):
-        registration_id = self.context["request"].parser_context["kwargs"]["pk"]
+        registration_id = self.context["request"].parser_context["kwargs"].get("pk")
+        if not registration_id:
+            return RegistrationUserAccess.objects.none()
+
         return RegistrationUserAccess.objects.filter(registration__pk=registration_id)
 
 
-class RegistrationUserAccessSerializer(serializers.ModelSerializer):
-    id = RegistrationUserAccessIdField(required=False, allow_null=True)
-
+class RegistrationUserAccessCreateSerializer(serializers.ModelSerializer):
     language = serializers.PrimaryKeyRelatedField(
         queryset=Language.objects.filter(service_language=True),
         required=False,
@@ -336,7 +337,14 @@ class RegistrationUserAccessSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RegistrationUserAccess
-        fields = ["id", "email", "language"]
+        fields = ["email", "language"]
+
+
+class RegistrationUserAccessSerializer(RegistrationUserAccessCreateSerializer):
+    id = RegistrationUserAccessIdField(required=False, allow_null=True)
+
+    class Meta(RegistrationUserAccessCreateSerializer.Meta):
+        fields = ["id"] + RegistrationUserAccessCreateSerializer.Meta.fields
 
 
 # Don't use this serializer directly but use events.api.RegistrationSerializer instead.
@@ -360,11 +368,21 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
 
     has_registration_user_access = serializers.SerializerMethodField()
 
-    registration_user_accesses = RegistrationUserAccessSerializer(
-        many=True, required=False
-    )
-
     signup_url = serializers.SerializerMethodField()
+
+    def get_fields(self):
+        fields = super().get_fields()
+
+        if self.instance is None:
+            fields[
+                "registration_user_accesses"
+            ] = RegistrationUserAccessCreateSerializer(many=True, required=False)
+        else:
+            fields["registration_user_accesses"] = RegistrationUserAccessSerializer(
+                many=True, required=False
+            )
+
+        return fields
 
     def get_has_registration_user_access(self, obj):
         user = self.user
