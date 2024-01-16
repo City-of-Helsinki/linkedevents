@@ -761,20 +761,53 @@ def test_signup_group_date_of_birth_is_mandatory_if_audience_min_or_max_age_spec
 
 
 @pytest.mark.parametrize(
-    "date_of_birth,expected_status,expected_error",
+    "date_of_birth,expected_status,expected_error,has_event_start_time",
     [
-        ("2011-04-07", status.HTTP_400_BAD_REQUEST, "The participant is too young."),
-        ("1879-03-14", status.HTTP_400_BAD_REQUEST, "The participant is too old."),
-        ("2000-02-29", status.HTTP_201_CREATED, None),
+        (
+            "2004-03-13",
+            status.HTTP_400_BAD_REQUEST,
+            "The participant is too young.",
+            False,
+        ),
+        (
+            "2004-03-13",
+            status.HTTP_201_CREATED,
+            None,
+            True,
+        ),
+        (
+            "1982-03-13",
+            status.HTTP_400_BAD_REQUEST,
+            "The participant is too old.",
+            False,
+        ),
+        (
+            "1983-03-13",
+            status.HTTP_400_BAD_REQUEST,
+            "The participant is too old.",
+            True,
+        ),
+        ("2000-02-29", status.HTTP_201_CREATED, None, False),
     ],
 )
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_signup_group_age_has_to_match_the_audience_min_max_age(
-    user_api_client, date_of_birth, expected_error, expected_status, registration, user
+    user_api_client,
+    date_of_birth,
+    expected_error,
+    expected_status,
+    registration,
+    user,
+    has_event_start_time,
 ):
     user.get_default_organization().registration_admin_users.add(user)
 
+    registration.event.start_time = (
+        localtime() + timedelta(days=365) if has_event_start_time else None
+    )
+    registration.event.end_time = localtime() + timedelta(days=2 * 365)
+    registration.event.save()
     registration.audience_max_age = 40
     registration.audience_min_age = 20
     registration.enrolment_start_time = localtime()
