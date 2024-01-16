@@ -1,4 +1,5 @@
 import logging
+from typing import Optional, Union
 
 import bleach
 from django.conf import settings
@@ -8,8 +9,10 @@ from django.db.models import ProtectedError
 from django.http import HttpResponse
 from django.utils import translation
 from django.utils.translation import gettext as _
+from requests import RequestException
 from rest_framework import filters, mixins, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import NotFound
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -39,7 +42,9 @@ from registrations.models import (
     SeatReservationCode,
     SignUp,
     SignUpGroup,
+    SignUpPayment,
 )
+from registrations.notifications import SignUpNotificationType
 from registrations.permissions import (
     CanAccessPriceGroups,
     CanAccessRegistration,
@@ -57,8 +62,17 @@ from registrations.serializers import (
     SignUpGroupCreateSerializer,
     SignUpGroupSerializer,
     SignUpSerializer,
+    WebStoreOrderWebhookSerializer,
+    WebStorePaymentWebhookSerializer,
 )
 from registrations.utils import send_mass_html_mail
+from web_store.order.clients import WebStoreOrderAPIClient
+from web_store.order.enums import WebStoreOrderStatus, WebStoreOrderWebhookEventType
+from web_store.payment.clients import WebStorePaymentAPIClient
+from web_store.payment.enums import (
+    WebStorePaymentStatus,
+    WebStorePaymentWebhookEventType,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -504,3 +518,163 @@ class PriceGroupViewSet(
 
 if settings.WEB_STORE_INTEGRATION_ENABLED:
     register_view(PriceGroupViewSet, "price_group")
+
+
+class WebStoreWebhookViewSet(AuditLogApiViewMixin, viewsets.ViewSet):
+    serializer_class = None
+    http_method_names = ["post"]
+    permission_classes = [IsAuthenticated]
+
+    @staticmethod
+    def _get_payment(order_id: str) -> Optional[SignUpPayment]:
+        payment = (
+            SignUpPayment.objects.select_for_update()
+            .filter(
+                external_order_id=order_id,
+                status=SignUpPayment.PaymentStatus.CREATED,
+            )
+            .first()
+        )
+
+        if not payment:
+            raise NotFound(
+                _("Payment not found with order ID %(order_id)s.")
+                % {"order_id": order_id}
+            )
+
+        return payment
+
+    @staticmethod
+    def _get_payment_status_from_web_store_api(order_id: str) -> Optional[str]:
+        payment_api_client = WebStorePaymentAPIClient()
+
+        try:
+            resp_json = payment_api_client.get_payment(order_id=order_id)
+        except RequestException:
+            raise ConflictException(_("Could not check payment status from Talpa API."))
+
+        return resp_json.get("status")
+
+    @staticmethod
+    def _get_order_status_from_web_store_api(order_id: str) -> Optional[str]:
+        order_api_client = WebStoreOrderAPIClient()
+
+        try:
+            resp_json = order_api_client.get_order(order_id=order_id)
+        except RequestException:
+            raise ConflictException(_("Could not check order status from Talpa API."))
+
+        return resp_json.get("status")
+
+    @staticmethod
+    def _confirm_signup(signup_or_signup_group: Union[SignUp, SignUpGroup]) -> None:
+        contact_person = signup_or_signup_group.actual_contact_person
+        if not contact_person:
+            return
+
+        if not signup_or_signup_group.created_by_id:
+            access_code = contact_person.create_access_code()
+        else:
+            access_code = (
+                contact_person.create_access_code()
+                if contact_person.can_create_access_code(
+                    signup_or_signup_group.created_by
+                )
+                else None
+            )
+
+        contact_person.send_notification(
+            SignUpNotificationType.CONFIRMATION, access_code=access_code
+        )
+
+    @staticmethod
+    def _cancel_signup(signup_or_signup_group: Union[SignUp, SignUpGroup]) -> None:
+        if isinstance(signup_or_signup_group, SignUp):
+            signup_or_signup_group._individually_deleted = True
+        signup_or_signup_group.delete()
+
+    @action(detail=False, methods=["post"])
+    @transaction.atomic
+    def order(self, request, pk=None, version=None):
+        serializer = WebStoreOrderWebhookSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        payment = self._get_payment(order_id=str(serializer.validated_data["order_id"]))
+
+        if (
+            serializer.validated_data["event_type"]
+            == WebStoreOrderWebhookEventType.ORDER_CANCELLED.value
+        ):
+            order_status = self._get_order_status_from_web_store_api(
+                payment.external_order_id
+            )
+            if order_status != WebStoreOrderStatus.CANCELLED.value:
+                return Response(
+                    _(
+                        "Order marked as cancelled in webhook payload, but not in Talpa API."
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Order cancelled => cancel signup
+            # (email notification is sent automatically as a result of that).
+            self._cancel_signup(payment.signup_or_signup_group)
+
+        self._add_audit_logged_object_ids(payment)
+
+        return Response(status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["post"])
+    @transaction.atomic
+    def payment(self, request, pk=None, version=None):
+        serializer = WebStorePaymentWebhookSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        payment = self._get_payment(order_id=str(serializer.validated_data["order_id"]))
+
+        if (
+            serializer.validated_data["event_type"]
+            == WebStorePaymentWebhookEventType.PAYMENT_PAID.value
+        ):
+            payment_status = self._get_payment_status_from_web_store_api(
+                payment.external_order_id
+            )
+            if payment_status != WebStorePaymentStatus.PAID.value:
+                return Response(
+                    _(
+                        "Payment marked as paid in webhook payload, but not in Talpa API."
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Paid successfully => send signup confirmation.
+            payment.status = SignUpPayment.PaymentStatus.PAID
+            payment.save(update_fields=["status", "last_modified_time"])
+
+            self._confirm_signup(payment.signup_or_signup_group)
+        elif (
+            serializer.validated_data["event_type"]
+            == WebStorePaymentWebhookEventType.PAYMENT_CANCELLED.value
+        ):
+            payment_status = self._get_payment_status_from_web_store_api(
+                payment.external_order_id
+            )
+            if payment_status != WebStorePaymentStatus.CANCELLED.value:
+                return Response(
+                    _(
+                        "Payment marked as cancelled in webhook payload, but not in Talpa API."
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Payment cancelled => cancel signup
+            # (email notification is sent automatically as a result of that).
+            self._cancel_signup(payment.signup_or_signup_group)
+
+        self._add_audit_logged_object_ids(payment)
+
+        return Response(status=status.HTTP_200_OK)
+
+
+if settings.WEB_STORE_INTEGRATION_ENABLED:
+    register_view(WebStoreWebhookViewSet, "webhook", base_name="webhook")

@@ -87,6 +87,10 @@ class ChoiceArrayField(ArrayField):
 
 
 class SignUpOrGroupDependingMixin:
+    @cached_property
+    def signup_or_signup_group(self):
+        return getattr(self, "signup_group", None) or getattr(self, "signup", None)
+
     def save(self, *args, **kwargs):
         if not (self.signup_group_id or self.signup_id):
             raise ValidationError(_("You must provide either signup_group or signup."))
@@ -1286,7 +1290,3 @@ class SignUpPayment(SignUpOrGroupDependingMixin, CreatedModifiedBaseModel):
     checkout_url = models.URLField(null=True, blank=True, default=None)
 
     logged_in_checkout_url = models.URLField(null=True, blank=True, default=None)
-
-    @cached_property
-    def signup_or_signup_group(self):
-        return getattr(self, "signup_group", None) or getattr(self, "signup", None)

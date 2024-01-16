@@ -1,4 +1,4 @@
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 from requests.exceptions import RequestException
@@ -6,6 +6,7 @@ from rest_framework import status
 
 from web_store.clients import WebStoreAPIBaseClient
 from web_store.exceptions import WebStoreImproperlyConfiguredException
+from web_store.tests.utils import get_mock_response
 
 DEFAULT_API_URL = "https://test_api/v1/"
 DEFAULT_HEADERS = {
@@ -14,17 +15,6 @@ DEFAULT_HEADERS = {
 DEFAULT_PARAMS = {
     "key": "value",
 }
-
-
-def get_mock_response(status_code=status.HTTP_201_CREATED, json_return_value=None):
-    response = Mock()
-
-    response.status_code = status_code
-    response.json.return_value = json_return_value or {}
-    if status.is_client_error(status_code) or status.is_server_error(status_code):
-        response.raise_for_status.side_effect = RequestException()
-
-    return response
 
 
 @pytest.mark.parametrize(
