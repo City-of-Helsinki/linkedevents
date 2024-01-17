@@ -148,6 +148,7 @@ env = environ.Env(
     TOKEN_AUTH_FIELD_FOR_CONSENTS=(list, ["https://api.hel.fi/auth"]),
     TOKEN_AUTH_REQUIRE_SCOPE_PREFIX=(bool, False),
     TRUST_X_FORWARDED_HOST=(bool, False),
+    WEB_STORE_INTEGRATION_ENABLED=(bool, False),
     WHITENOISE_STATIC_PREFIX=(str, "/static/"),
 )
 
@@ -676,6 +677,9 @@ AUDIT_LOG_ORIGIN = "linkedevents"
 AUDIT_LOG_ENABLED = env("AUDIT_LOG_ENABLED")
 
 FULL_TEXT_WEIGHT_OVERRIDES = env("FULL_TEXT_WEIGHT_OVERRIDES")
+
+# Talpa web store integration
+WEB_STORE_INTEGRATION_ENABLED = env("WEB_STORE_INTEGRATION_ENABLED")  # Temporary flag
 
 # local_settings.py can be used to override environment-specific settings
 # like database and email that differ between development and production.

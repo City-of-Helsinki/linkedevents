@@ -7,6 +7,7 @@ from django.dispatch import receiver
 from events.models import Event
 from registrations.models import (
     Registration,
+    RegistrationPriceGroup,
     SignUp,
     SignUpContactPerson,
     SignUpGroup,
@@ -76,3 +77,16 @@ def notify_signups_on_event_cancellation_pre_save(
     old_instance = Event.objects.filter(pk=instance.pk).first()
     if old_instance and old_instance.event_status != instance.event_status:
         _send_event_cancellation_notification(instance)
+
+
+@receiver(
+    pre_save,
+    sender=RegistrationPriceGroup,
+    dispatch_uid="calculate_registration_price_group_vat_prices",
+)
+def calculate_registration_price_group_vat_prices(
+    sender: type[RegistrationPriceGroup],
+    instance: RegistrationPriceGroup,
+    **kwargs: dict,
+) -> None:
+    instance.calculate_vat_and_price_without_vat()

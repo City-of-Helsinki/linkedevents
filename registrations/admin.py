@@ -1,4 +1,5 @@
 from admin_auto_filters.filters import AutocompleteFilter
+from django.conf import settings
 from django.contrib import admin
 from django.utils.translation import gettext as _
 from modeltranslation.admin import TranslationAdmin
@@ -6,6 +7,7 @@ from reversion.admin import VersionAdmin
 
 from events.admin import PublisherFilter
 from events.models import Language
+from registrations.forms import RegistrationPriceGroupAdminForm
 from registrations.models import (
     PriceGroup,
     Registration,
@@ -46,6 +48,7 @@ class RegistrationUserAccessInline(admin.TabularInline):
 
 class RegistrationPriceGroupInline(admin.TabularInline):
     model = RegistrationPriceGroup
+    form = RegistrationPriceGroupAdminForm
     extra = 1
     verbose_name = _("Registration price group")
     verbose_name_plural = _("Registration price groups")
@@ -76,6 +79,15 @@ class RegistrationAdmin(RegistrationBaseAdmin, TranslationAdmin, VersionAdmin):
     list_filter = (EventFilter,)
     autocomplete_fields = ("event",)
     inlines = (RegistrationUserAccessInline, RegistrationPriceGroupInline)
+
+    def get_formsets_with_inlines(self, request, obj=None):
+        for inline in self.get_inline_instances(request, obj):
+            # hide RegistrationPriceGroupInline if Talpa integration is not enabled
+            if (
+                not isinstance(inline, RegistrationPriceGroupInline)
+                or settings.WEB_STORE_INTEGRATION_ENABLED
+            ):
+                yield inline.get_formset(request, obj), inline
 
     def save_related(self, request, form, formsets, change):
         for formset in formsets:
@@ -168,4 +180,5 @@ class PriceGroupAdmin(RegistrationBaseAdmin, TranslationAdmin, VersionAdmin):
         return ["id"]
 
 
-admin.site.register(PriceGroup, PriceGroupAdmin)
+if settings.WEB_STORE_INTEGRATION_ENABLED:
+    admin.site.register(PriceGroup, PriceGroupAdmin)

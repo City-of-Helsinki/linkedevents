@@ -1,4 +1,5 @@
 from collections import Counter
+from decimal import Decimal
 from unittest.mock import patch, PropertyMock
 
 import pytest
@@ -14,8 +15,10 @@ from registrations.tests.factories import (
     SignUpContactPersonFactory,
     SignUpFactory,
     SignUpGroupFactory,
+    SignUpPriceGroupFactory,
 )
 from registrations.tests.test_signup_get import assert_contact_person_fields_exist
+from registrations.tests.utils import create_user_by_role
 
 # === util methods ===
 
@@ -785,3 +788,62 @@ def test_signup_group_id_is_audit_logged_on_get_list(api_client, registration):
     assert Counter(
         audit_log_entry.message["audit_event"]["target"]["object_ids"]
     ) == Counter([signup_group.pk, signup_group2.pk])
+
+
+@pytest.mark.parametrize(
+    "user_role", ["superuser", "registration_admin", "regular_user"]
+)
+@pytest.mark.django_db
+def test_signup_price_group_in_signup_group_data(api_client, registration, user_role):
+    languages = ("fi", "sv", "en")
+
+    user = create_user_by_role(user_role, registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(
+        registration=registration,
+        created_by=user if user_role == "regular_user" else None,
+    )
+    signup = SignUpFactory(registration=registration, signup_group=signup_group)
+    signup_price_group = SignUpPriceGroupFactory(signup=signup)
+
+    response = assert_get_detail(api_client, signup_group.id)
+    resp_json = response.json()
+
+    assert_fields_exist(
+        resp_json["signups"][0]["price_group"],
+        (
+            "id",
+            "registration_price_group",
+            "description",
+            "price",
+            "vat_percentage",
+            "price_without_vat",
+            "vat",
+        ),
+    )
+    assert_fields_exist(
+        resp_json["signups"][0]["price_group"]["description"], languages
+    )
+
+    assert resp_json["signups"][0]["price_group"]["id"] == signup_price_group.pk
+    assert resp_json["signups"][0]["price_group"]["registration_price_group"] == (
+        signup_price_group.registration_price_group_id
+    )
+    assert Decimal(resp_json["signups"][0]["price_group"]["price"]) == (
+        signup_price_group.registration_price_group.price
+    )
+    assert Decimal(resp_json["signups"][0]["price_group"]["vat_percentage"]) == (
+        signup_price_group.registration_price_group.vat_percentage
+    )
+    assert Decimal(resp_json["signups"][0]["price_group"]["price_without_vat"]) == (
+        signup_price_group.registration_price_group.price_without_vat
+    )
+    assert Decimal(resp_json["signups"][0]["price_group"]["vat"]) == (
+        signup_price_group.registration_price_group.vat
+    )
+    for lang in languages:
+        assert resp_json["signups"][0]["price_group"]["description"][lang] == getattr(
+            signup_price_group.registration_price_group.price_group,
+            f"description_{lang}",
+        )

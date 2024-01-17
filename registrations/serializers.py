@@ -1,4 +1,5 @@
 from datetime import timedelta
+from decimal import Decimal
 
 import pytz
 from django.conf import settings
@@ -11,9 +12,12 @@ from rest_framework.fields import DateTimeField
 
 from events.models import Language
 from events.utils import clean_text_fields
+from linkedevents.serializers import TranslatedModelSerializer
 from registrations.exceptions import ConflictException
 from registrations.models import (
+    PriceGroup,
     Registration,
+    RegistrationPriceGroup,
     RegistrationUserAccess,
     SeatReservationCode,
     SignUp,
@@ -21,6 +25,7 @@ from registrations.models import (
     SignUpGroup,
     SignUpGroupProtectedData,
     SignUpNotificationType,
+    SignUpPriceGroup,
     SignUpProtectedData,
 )
 from registrations.permissions import CanAccessRegistrationSignups
@@ -126,12 +131,74 @@ class SignUpContactPersonSerializer(serializers.ModelSerializer):
         model = SignUpContactPerson
 
 
+class SignUpPriceGroupSerializer(
+    TranslatedModelSerializer, serializers.ModelSerializer
+):
+    id = serializers.IntegerField(required=False)
+    registration_price_group = serializers.PrimaryKeyRelatedField(
+        queryset=RegistrationPriceGroup.objects.all(),
+    )
+    price = serializers.DecimalField(
+        required=False, read_only=True, max_digits=19, decimal_places=2
+    )
+    price_without_vat = serializers.DecimalField(
+        required=False, read_only=True, max_digits=19, decimal_places=2
+    )
+    vat = serializers.DecimalField(
+        required=False, read_only=True, max_digits=19, decimal_places=2
+    )
+    vat_percentage = serializers.DecimalField(
+        required=False,
+        read_only=True,
+        max_digits=4,
+        decimal_places=2,
+    )
+
+    def validate(self, data):
+        validated_data = super().validate(data)
+
+        for lang_field in ("description_fi", "description_sv", "description_en"):
+            validated_data[lang_field] = getattr(
+                validated_data["registration_price_group"].price_group, lang_field, None
+            )
+
+        for field in ("price", "price_without_vat", "vat", "vat_percentage"):
+            validated_data[field] = getattr(
+                validated_data["registration_price_group"], field
+            )
+
+        return data
+
+    class Meta:
+        model = SignUpPriceGroup
+        fields = [
+            "id",
+            "registration_price_group",
+            "description",
+            "price",
+            "vat_percentage",
+            "price_without_vat",
+            "vat",
+        ]
+        extra_kwargs = {"description": {"required": False, "read_only": True}}
+
+
 class SignUpSerializer(CreatedModifiedBaseSerializer):
     view_name = "signup"
     id = serializers.IntegerField(required=False)
     contact_person = SignUpContactPersonSerializer(required=False, allow_null=True)
     extra_info = serializers.CharField(required=False, allow_blank=True)
     date_of_birth = serializers.DateField(required=False, allow_null=True)
+
+    def get_fields(self):
+        fields = super().get_fields()
+
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            fields["price_group"] = SignUpPriceGroupSerializer(
+                required=False, allow_null=True
+            )
+
+        return fields
 
     @staticmethod
     def _update_or_create_protected_data(signup, **protected_data):
@@ -156,12 +223,23 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
 
         return contact_person
 
+    @staticmethod
+    def _update_or_create_price_group(signup, **price_group_data):
+        if not price_group_data or not settings.WEB_STORE_INTEGRATION_ENABLED:
+            return
+
+        SignUpPriceGroup.objects.update_or_create(
+            signup=signup,
+            defaults=price_group_data,
+        )
+
     def create(self, validated_data):
         registration = validated_data["registration"]
         protected_data = _get_protected_data(
             validated_data, ["extra_info", "date_of_birth"]
         )
         contact_person_data = validated_data.pop("contact_person", None) or {}
+        price_group_data = validated_data.pop("price_group", None) or {}
 
         add_as_attending, add_as_waitlisted = _validate_registration_capacity(
             registration, 1
@@ -170,6 +248,7 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
         if add_as_attending:
             signup = super().create(validated_data)
             self._update_or_create_protected_data(signup, **protected_data)
+            self._update_or_create_price_group(signup, **price_group_data)
 
             contact_person = self._update_or_create_contact_person(
                 signup, **contact_person_data
@@ -183,6 +262,7 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
 
             signup = super().create(validated_data)
             self._update_or_create_protected_data(signup, **protected_data)
+            self._update_or_create_price_group(signup, **price_group_data)
 
             contact_person = self._update_or_create_contact_person(
                 signup, **contact_person_data
@@ -221,9 +301,11 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
             validated_data, ["extra_info", "date_of_birth"]
         )
         contact_person_data = validated_data.pop("contact_person", None) or {}
+        price_group_data = validated_data.pop("price_group", None) or {}
 
         super().update(instance, validated_data)
         self._update_or_create_protected_data(instance, **protected_data)
+        self._update_or_create_price_group(instance, **price_group_data)
 
         contact_person = getattr(instance, "contact_person", None)
         if instance.signup_group_id and contact_person:
@@ -238,21 +320,26 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
     def validate(self, data):
         # Clean html tags from the text fields
         data = clean_text_fields(data, strip=True)
+
+        validated_data = super().validate(data)
+
         errors = {}
+
+        instance_id = validated_data.get("id", getattr(self.instance, "pk", None))
 
         if isinstance(self.instance, SignUp):
             registration = self.instance.registration
         else:
-            registration = data["registration"]
+            registration = validated_data["registration"]
 
         falsy_values = ("", None)
 
         # Validate mandatory fields
         for field in registration.mandatory_fields:
             # Don't validate field if request method is PATCH and field is missing from the payload
-            if self.partial and field not in data.keys():
+            if self.partial and field not in validated_data.keys():
                 continue
-            elif data.get(field) in falsy_values:
+            elif validated_data.get(field) in falsy_values:
                 errors[field] = _("This field must be specified.")
 
         # Validate date_of_birth if audience_min_age or registration.audience_max_age is defined
@@ -260,8 +347,8 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
         if (
             registration.audience_min_age not in falsy_values
             or registration.audience_max_age not in falsy_values
-        ) and not (self.partial and "date_of_birth" not in data.keys()):
-            date_of_birth = data.get("date_of_birth")
+        ) and not (self.partial and "date_of_birth" not in validated_data.keys()):
+            date_of_birth = validated_data.get("date_of_birth")
 
             if date_of_birth in falsy_values:
                 errors["date_of_birth"] = _("This field must be specified.")
@@ -293,11 +380,37 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
                 ):
                     errors["date_of_birth"] = _("The participant is too old.")
 
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            price_group = validated_data.get("price_group") or {}
+            if not price_group and registration.registration_price_groups.exists():
+                errors["price_group"] = _(
+                    "Price group selection is mandatory for this registration."
+                )
+
+            if (
+                price_group.get("id")
+                and instance_id
+                and registration.signups.exclude(pk=instance_id)
+                .filter(price_group=price_group["id"])
+                .exists()
+            ):
+                errors["price_group"] = _(
+                    "Price group is already assigned to another participant."
+                )
+
+            if (
+                price_group
+                and price_group["registration_price_group"].registration_id
+                != registration.pk
+            ):
+                errors["price_group"] = _(
+                    "Price group is not one of the allowed price groups for this registration."
+                )
+
         if errors:
             raise serializers.ValidationError(errors)
 
-        super().validate(data)
-        return data
+        return validated_data
 
     class Meta:
         fields = (
@@ -323,6 +436,8 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
             "is_created_by_current_user",
             "contact_person",
         )
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            fields += ("price_group",)
         model = SignUp
 
 
@@ -352,6 +467,77 @@ class RegistrationUserAccessSerializer(RegistrationUserAccessCreateSerializer):
 
     class Meta(RegistrationUserAccessCreateSerializer.Meta):
         fields = ["id"] + RegistrationUserAccessCreateSerializer.Meta.fields
+
+
+class PriceGroupRelatedField(serializers.PrimaryKeyRelatedField):
+    def to_representation(self, value):
+        price_group = PriceGroup.objects.only(
+            "pk", "description_fi", "description_sv", "description_en"
+        ).get(pk=value.pk)
+
+        return {
+            "id": price_group.pk,
+            "description": {
+                lang: getattr(price_group, f"description_{lang}")
+                for lang in ("fi", "sv", "en")
+                if getattr(price_group, f"description_{lang}", None) is not None
+            },
+        }
+
+
+class RegistrationPriceGroupSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=False)
+    price_group = PriceGroupRelatedField(queryset=PriceGroup.objects.all())
+    price = serializers.DecimalField(
+        required=False, max_digits=19, decimal_places=2, min_value=0
+    )
+    price_without_vat = serializers.DecimalField(
+        required=False, read_only=True, max_digits=19, decimal_places=2
+    )
+    vat = serializers.DecimalField(
+        required=False, read_only=True, max_digits=19, decimal_places=2
+    )
+    vat_percentage = serializers.DecimalField(
+        required=False,
+        max_digits=4,
+        decimal_places=2,
+        min_value=0,
+        max_value=Decimal("99.99"),
+    )
+
+    def validate(self, data):
+        validated_data = super().validate(data)
+
+        errors = {}
+
+        vat_percentage = validated_data.get("vat_percentage")
+        if vat_percentage not in [
+            vat[0] for vat in RegistrationPriceGroup.VAT_PERCENTAGES
+        ]:
+            errors["vat_percentage"] = _("%(value)s is not a valid choice.") % {
+                "value": vat_percentage
+            }
+
+        if validated_data["price_group"].is_free:
+            validated_data["price"] = Decimal("0")
+        elif validated_data.get("price") is None:
+            errors["price"] = _("Price must be greater than or equal to 0.")
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return validated_data
+
+    class Meta:
+        model = RegistrationPriceGroup
+        fields = [
+            "id",
+            "price_group",
+            "price",
+            "vat_percentage",
+            "price_without_vat",
+            "vat",
+        ]
 
 
 # Don't use this serializer directly but use events.api.RegistrationSerializer instead.
@@ -387,6 +573,12 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
         else:
             fields["registration_user_accesses"] = RegistrationUserAccessSerializer(
                 many=True, required=False
+            )
+
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            fields["registration_price_groups"] = RegistrationPriceGroupSerializer(
+                many=True,
+                required=False,
             )
 
         return fields
@@ -472,6 +664,8 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
             "is_created_by_current_user",
             "signup_url",
         )
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            fields += ("registration_price_groups",)
         model = Registration
 
 
@@ -607,11 +801,15 @@ class CreateSignUpsSerializer(serializers.Serializer):
             extra_info = cleaned_signup_data.pop("extra_info", None)
             date_of_birth = cleaned_signup_data.pop("date_of_birth", None)
             contact_person = cleaned_signup_data.pop("contact_person", None)
+            price_group = cleaned_signup_data.pop("price_group", None)
 
             signup = SignUp(**cleaned_signup_data)
+
             signup._extra_info = extra_info
             signup._date_of_birth = date_of_birth
             signup._contact_person = contact_person
+            signup._price_group = price_group
+
             signups.append(signup)
 
         signup_instances = SignUp.objects.bulk_create(signups)
@@ -636,6 +834,15 @@ class CreateSignUpsSerializer(serializers.Serializer):
                 if signup._contact_person
             ]
         )
+
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            SignUpPriceGroup.objects.bulk_create(
+                [
+                    SignUpPriceGroup(signup=signup, **signup._price_group)
+                    for signup in signups
+                    if signup._price_group
+                ]
+            )
 
         return signup_instances
 
@@ -771,6 +978,7 @@ class SignUpGroupSerializer(CreatedModifiedBaseSerializer):
     def validate(self, data):
         # Clean html tags from the text fields
         data = clean_text_fields(data, strip=True)
+
         validated_data = super().validate(data)
 
         errors = {}
@@ -1000,3 +1208,58 @@ class RegistrationSignupsExportSerializer(serializers.Serializer):
         choices=["en", "sv", "fi"],
         default="fi",
     )
+
+
+class PriceGroupSerializer(TranslatedModelSerializer, CreatedModifiedBaseSerializer):
+    def _description_is_valid(self, data, validated_data):
+        """
+        Validates the translated description fields for Finnish, English and Swedish languages.
+
+        Description is considered valid if
+        1. request is PATCH without any description fields given in data, OR
+        2. any of the description fields have a valid value.
+        """
+
+        description_fields = ["description_fi", "description_en", "description_sv"]
+
+        def any_description_field_in_data():
+            return any([field in data.keys() for field in description_fields])
+
+        def any_description_field_has_valid_value():
+            return any([validated_data.get(field) for field in description_fields])
+
+        return (
+            self.partial and not any_description_field_in_data()
+        ) or any_description_field_has_valid_value()
+
+    def validate(self, data):
+        # Clean html tags from the text fields
+        data = clean_text_fields(data, strip=True)
+
+        validated_data = super().validate(data)
+
+        errors = {}
+
+        if not self._description_is_valid(data, validated_data):
+            errors["description"] = _("This field is required.")
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return validated_data
+
+    class Meta:
+        fields = (
+            "id",
+            "created_time",
+            "last_modified_time",
+            "created_by",
+            "last_modified_by",
+            "publisher",
+            "description",
+            "is_free",
+        )
+        model = PriceGroup
+        extra_kwargs = {
+            "publisher": {"required": True, "allow_null": False},
+        }

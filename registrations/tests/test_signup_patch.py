@@ -1,3 +1,4 @@
+from decimal import Decimal
 from unittest.mock import patch, PropertyMock
 
 import pytest
@@ -7,15 +8,20 @@ from rest_framework import status
 from audit_log.models import AuditLogEntry
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
-from registrations.models import SignUp, SignUpContactPerson
+from registrations.models import RegistrationPriceGroup, SignUp, SignUpContactPerson
 from registrations.tests.factories import (
     RegistrationFactory,
+    RegistrationPriceGroupFactory,
     RegistrationUserAccessFactory,
     SignUpContactPersonFactory,
     SignUpFactory,
     SignUpGroupFactory,
+    SignUpPriceGroupFactory,
     SignUpProtectedDataFactory,
 )
+from registrations.tests.utils import create_user_by_role
+
+description_fields = ("description_fi", "description_sv", "description_en")
 
 # === util methods ===
 
@@ -35,6 +41,59 @@ def assert_patch_signup(api_client, signup_pk, signup_data):
 
     assert response.status_code == status.HTTP_200_OK
     assert response.data["id"] == signup_pk
+
+    return response
+
+
+def assert_patch_signup_price_group_failed(
+    api_client,
+    signup,
+    signup_data,
+    signup_price_group,
+    new_registration_price_group,
+    status_code=status.HTTP_400_BAD_REQUEST,
+):
+    assert signup.price_group.pk == signup_price_group.pk
+    assert (
+        signup.price_group.registration_price_group_id
+        != new_registration_price_group.pk
+    )
+    assert signup.price_group.price != new_registration_price_group.price
+    assert (
+        signup.price_group.price_without_vat
+        != new_registration_price_group.price_without_vat
+    )
+    assert signup.price_group.vat != new_registration_price_group.vat
+    assert (
+        signup.price_group.vat_percentage != new_registration_price_group.vat_percentage
+    )
+    for description_field in description_fields:
+        assert getattr(signup_price_group, description_field) != getattr(
+            new_registration_price_group.price_group, description_field
+        )
+
+    response = patch_signup(api_client, signup.id, signup_data)
+    assert response.status_code == status_code
+
+    signup.refresh_from_db()
+    assert signup.price_group.pk == signup_price_group.pk
+    assert (
+        signup.price_group.registration_price_group_id
+        != new_registration_price_group.pk
+    )
+    assert signup.price_group.price != new_registration_price_group.price
+    assert (
+        signup.price_group.price_without_vat
+        != new_registration_price_group.price_without_vat
+    )
+    assert signup.price_group.vat != new_registration_price_group.vat
+    assert (
+        signup.price_group.vat_percentage != new_registration_price_group.vat_percentage
+    )
+    for description_field in description_fields:
+        assert getattr(signup_price_group, description_field) != getattr(
+            new_registration_price_group.price_group, description_field
+        )
 
     return response
 
@@ -324,3 +383,166 @@ def test_signup_id_is_audit_logged_on_patch(api_client, signup):
 
     audit_log_entry = AuditLogEntry.objects.first()
     assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [signup.pk]
+
+
+@pytest.mark.parametrize(
+    "user_role", ["superuser", "registration_admin", "regular_user"]
+)
+@pytest.mark.django_db
+def test_patch_signup_price_group(api_client, registration, user_role):
+    user = create_user_by_role(user_role, registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup = SignUpFactory(
+        registration=registration,
+        created_by=user if user_role == "regular_user" else None,
+    )
+
+    new_registration_price_group = RegistrationPriceGroupFactory(
+        registration=registration,
+        price_group__publisher=registration.publisher,
+        price=Decimal("1.23"),
+        vat_percentage=RegistrationPriceGroup.VatPercentage.VAT_10,
+        vat=Decimal("0.11"),
+        price_without_vat=Decimal("1.12"),
+    )
+    signup_price_group = SignUpPriceGroupFactory(signup=signup)
+
+    assert signup.price_group.pk == signup_price_group.pk
+    assert (
+        signup.price_group.registration_price_group_id
+        != new_registration_price_group.pk
+    )
+    assert signup.price_group.price != new_registration_price_group.price
+    assert (
+        signup.price_group.vat_percentage != new_registration_price_group.vat_percentage
+    )
+    assert (
+        signup.price_group.price_without_vat
+        != new_registration_price_group.price_without_vat
+    )
+    assert signup.price_group.vat != new_registration_price_group.vat
+    for description_field in description_fields:
+        assert getattr(signup.price_group, description_field) != getattr(
+            new_registration_price_group.price_group, description_field
+        )
+
+    signup_data = {
+        "price_group": {
+            "id": signup_price_group.pk,
+            "registration_price_group": new_registration_price_group.pk,
+        },
+    }
+    assert_patch_signup(api_client, signup.id, signup_data)
+
+    signup.refresh_from_db()
+    assert signup.price_group.pk == signup_price_group.pk
+    assert (
+        signup.price_group.registration_price_group_id
+        == new_registration_price_group.pk
+    )
+    assert signup.price_group.price == new_registration_price_group.price
+    assert (
+        signup.price_group.vat_percentage == new_registration_price_group.vat_percentage
+    )
+    assert (
+        signup.price_group.price_without_vat
+        == new_registration_price_group.price_without_vat
+    )
+    assert signup.price_group.vat == new_registration_price_group.vat
+    for description_field in description_fields:
+        assert getattr(signup.price_group, description_field) == getattr(
+            new_registration_price_group.price_group, description_field
+        )
+
+
+@pytest.mark.parametrize(
+    "user_role", ["superuser", "registration_admin", "regular_user"]
+)
+@pytest.mark.django_db
+def test_cannot_patch_signup_price_group_with_wrong_registration_price_group(
+    api_client, registration, registration2, user_role
+):
+    user = create_user_by_role(user_role, registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup = SignUpFactory(
+        registration=registration,
+        created_by=user if user_role == "regular_user" else None,
+    )
+
+    new_registration_price_group = RegistrationPriceGroupFactory(
+        registration=registration2,
+        price_group__publisher=registration2.publisher,
+        price=Decimal("1.23"),
+        vat_percentage=RegistrationPriceGroup.VatPercentage.VAT_10,
+        vat=Decimal("0.11"),
+        price_without_vat=Decimal("1.12"),
+    )
+    signup_price_group = SignUpPriceGroupFactory(signup=signup)
+
+    signup_data = {
+        "price_group": {
+            "id": signup_price_group.pk,
+            "registration_price_group": new_registration_price_group.pk,
+        },
+    }
+    response = assert_patch_signup_price_group_failed(
+        api_client,
+        signup,
+        signup_data,
+        signup_price_group,
+        new_registration_price_group,
+    )
+    assert response.data["price_group"][0] == (
+        "Price group is not one of the allowed price groups for this registration."
+    )
+
+
+@pytest.mark.parametrize(
+    "user_role", ["superuser", "registration_admin", "regular_user"]
+)
+@pytest.mark.django_db
+def test_cannot_patch_signup_with_another_signups_price_group(
+    api_client, registration, user_role
+):
+    user = create_user_by_role(user_role, registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup = SignUpFactory(
+        registration=registration,
+        created_by=user if user_role == "regular_user" else None,
+    )
+    signup2 = SignUpFactory(
+        registration=registration,
+        created_by=user if user_role == "regular_user" else None,
+    )
+
+    new_registration_price_group = RegistrationPriceGroupFactory(
+        registration=registration,
+        price_group__publisher=registration.publisher,
+        price=Decimal("1.23"),
+        vat_percentage=RegistrationPriceGroup.VatPercentage.VAT_10,
+        vat=Decimal("0.11"),
+        price_without_vat=Decimal("1.12"),
+    )
+    signup_price_group = SignUpPriceGroupFactory(signup=signup)
+    signup_price_group2 = SignUpPriceGroupFactory(signup=signup2)
+
+    signup_data = {
+        "price_group": {
+            "id": signup_price_group2.pk,
+            "registration_price_group": new_registration_price_group.pk,
+        },
+    }
+
+    response = assert_patch_signup_price_group_failed(
+        api_client,
+        signup,
+        signup_data,
+        signup_price_group,
+        new_registration_price_group,
+    )
+    assert response.data["price_group"][0] == (
+        "Price group is already assigned to another participant."
+    )

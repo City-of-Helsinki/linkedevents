@@ -8,15 +8,17 @@ from events.models import Event
 from events.tests.factories import LanguageFactory
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
-from registrations.models import SignUp, SignUpContactPerson
+from registrations.models import SignUp, SignUpContactPerson, SignUpPriceGroup
 from registrations.tests.factories import (
     RegistrationUserAccessFactory,
     SeatReservationCodeFactory,
     SignUpContactPersonFactory,
     SignUpFactory,
     SignUpGroupFactory,
+    SignUpPriceGroupFactory,
 )
 from registrations.tests.test_signup_post import assert_create_signups
+from registrations.tests.utils import create_user_by_role
 
 # === util methods ===
 
@@ -41,12 +43,12 @@ def assert_delete_signup(
     response = delete_signup(api_client, signup_pk, query_string)
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
-    assert SignUp.objects.count() == signup_count - 1 if signup_count else 0
-    assert (
-        SignUpContactPerson.objects.count() == contact_person_count - 1
-        if contact_person_count
-        else 0
-    )
+    assert SignUp.objects.count() == (signup_count - 1 if signup_count else 0)
+
+    if contact_person_count:
+        assert SignUpContactPerson.objects.count() == (contact_person_count - 1)
+    else:
+        assert SignUpContactPerson.objects.count() == 0
 
 
 def assert_delete_signup_failed(
@@ -669,3 +671,24 @@ def test_signup_id_is_audit_logged_on_delete(api_client, signup):
 
     audit_log_entry = AuditLogEntry.objects.first()
     assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [signup.pk]
+
+
+@pytest.mark.parametrize(
+    "user_role", ["superuser", "registration_admin", "regular_user"]
+)
+@pytest.mark.django_db
+def test_signup_price_group_deleted_with_signup(api_client, registration, user_role):
+    user = create_user_by_role(user_role, registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup = SignUpFactory(
+        registration=registration,
+        created_by=user if user_role == "regular_user" else None,
+    )
+    SignUpPriceGroupFactory(signup=signup)
+
+    assert SignUpPriceGroup.objects.count() == 1
+
+    assert_delete_signup(api_client, signup.id, contact_person_count=0)
+
+    assert SignUpPriceGroup.objects.count() == 0

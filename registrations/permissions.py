@@ -4,10 +4,14 @@ from rest_framework.views import APIView
 
 from events.auth import ApiKeyUser
 from events.permissions import UserDataFromRequestMixin
-from registrations.models import Registration, SignUp, SignUpGroup
+from registrations.models import PriceGroup, Registration, SignUp, SignUpGroup
 
 
-class CanAccessRegistration(UserDataFromRequestMixin, permissions.BasePermission):
+class RegistrationBasePermission(UserDataFromRequestMixin, permissions.BasePermission):
+    pass
+
+
+class CanAccessRegistration(RegistrationBasePermission):
     def has_permission(self, request: Request, view: APIView) -> bool:
         if view.action == "retrieve":
             return True
@@ -51,9 +55,7 @@ class CanAccessRegistration(UserDataFromRequestMixin, permissions.BasePermission
         return obj.can_be_edited_by(request.user)
 
 
-class CanAccessRegistrationSignups(
-    UserDataFromRequestMixin, permissions.BasePermission
-):
+class CanAccessRegistrationSignups(RegistrationBasePermission):
     def has_permission(self, request: Request, view: APIView) -> bool:
         return request.method == "GET" and request.user.is_authenticated
 
@@ -76,7 +78,7 @@ class CanAccessRegistrationSignups(
         )
 
 
-class CanAccessSignup(UserDataFromRequestMixin, permissions.BasePermission):
+class CanAccessSignup(RegistrationBasePermission):
     def has_permission(self, request: Request, view: APIView) -> bool:
         return request.user.is_authenticated
 
@@ -170,3 +172,31 @@ class CanAccessSignupGroup(CanAccessSignup):
             return "presence_status" not in data_keys
 
         return False
+
+
+class CanAccessPriceGroups(RegistrationBasePermission):
+    def has_permission(self, request: Request, view: APIView) -> bool:
+        if not request.user.is_authenticated:
+            return False
+
+        if request.user.is_superuser:
+            return True
+
+        if request.method == "POST":
+            (
+                __,
+                user_organization,
+            ) = self.user_data_source_and_organization_from_request(request)
+            return request.user.is_financial_admin_of(user_organization)
+
+        return True
+
+    def has_object_permission(
+        self, request: Request, view: APIView, obj: PriceGroup
+    ) -> bool:
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
+        return request.user.is_superuser or request.user.is_financial_admin_of(
+            obj.publisher
+        )

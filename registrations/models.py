@@ -1,9 +1,11 @@
 import logging
 from datetime import timedelta
+from decimal import Decimal, ROUND_HALF_UP
 from uuid import uuid4
 
 from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
+from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
@@ -17,9 +19,9 @@ from django.utils.translation import gettext_lazy as _
 from django.utils.translation import override
 from encrypted_fields import fields
 from helsinki_gdpr.models import SerializableMixin
-from rest_framework.exceptions import ValidationError
 
 from events.models import Event, Language
+from registrations.exceptions import PriceGroupValidationError
 from registrations.notifications import (
     get_signup_notification_subject,
     get_signup_notification_texts,
@@ -111,6 +113,45 @@ class CreatedModifiedBaseModel(models.Model):
         abstract = True
 
 
+class RegistrationPriceGroupBaseModel(models.Model):
+    class VatPercentage:
+        VAT_24 = Decimal("24.00")
+        VAT_14 = Decimal("14.00")
+        VAT_10 = Decimal("10.00")
+        VAT_0 = Decimal("0.00")
+
+    VAT_PERCENTAGES = (
+        (VatPercentage.VAT_24, "24 %"),
+        (VatPercentage.VAT_14, "14 %"),
+        (VatPercentage.VAT_10, "10 %"),
+        (VatPercentage.VAT_0, "0 %"),
+    )
+
+    price = models.DecimalField(max_digits=19, decimal_places=2, default=Decimal("0"))
+    price_without_vat = models.DecimalField(
+        max_digits=19, decimal_places=2, default=Decimal("0")
+    )
+    vat_percentage = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        choices=VAT_PERCENTAGES,
+        default=VatPercentage.VAT_0,
+    )
+    vat = models.DecimalField(max_digits=19, decimal_places=2, default=Decimal("0"))
+
+    def calculate_vat_and_price_without_vat(self):
+        cents = Decimal(".01")
+
+        self.price_without_vat = (
+            self.price / (1 + self.vat_percentage / 100)
+        ).quantize(cents, ROUND_HALF_UP)
+
+        self.vat = (self.price - self.price_without_vat).quantize(cents, ROUND_HALF_UP)
+
+    class Meta:
+        abstract = True
+
+
 class PriceGroup(CreatedModifiedBaseModel):
     """Price group / pricing category that is selectable when creating a registration. These can be
     created and managed by admins for publishers / organizations. Default price groups do not have a
@@ -129,6 +170,47 @@ class PriceGroup(CreatedModifiedBaseModel):
     description = models.CharField(max_length=255)
 
     is_free = models.BooleanField(default=False)
+
+    @property
+    def old_instance(self):
+        if not self.pk:
+            return None
+
+        return PriceGroup.objects.get(pk=self.pk)
+
+    @property
+    def publisher_is_valid(self):
+        if not self.old_instance:
+            return True
+
+        return (
+            self.old_instance.publisher_id == self.publisher_id
+            or not self.registration_price_groups.exists()
+        )
+
+    def delete(self, *args, **kwargs):
+        if self.old_instance and not self.old_instance.publisher_id:
+            raise PriceGroupValidationError(
+                _("You may not delete a default price group.")
+            )
+
+        super().delete(*args, **kwargs)
+
+    def save(self, *args, **kwargs):
+        if self.old_instance and not self.old_instance.publisher_id:
+            raise PriceGroupValidationError(
+                _("You may not edit a default price group.")
+            )
+
+        if not self.publisher_is_valid:
+            raise PriceGroupValidationError(
+                _(
+                    "You may not change the publisher of a price group that has been used "
+                    "in registrations."
+                )
+            )
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.description
@@ -310,7 +392,7 @@ class Registration(CreatedModifiedBaseModel):
         )
 
 
-class RegistrationPriceGroup(models.Model):
+class RegistrationPriceGroup(RegistrationPriceGroupBaseModel):
     """Price group selections for SignUps (= what the end-user doing a signup can choose from)."""
 
     registration = models.ForeignKey(
@@ -323,7 +405,6 @@ class RegistrationPriceGroup(models.Model):
         related_name="registration_price_groups",
         on_delete=models.PROTECT,
     )
-    price = models.DecimalField(max_digits=19, decimal_places=4)
 
     class Meta:
         constraints = [
@@ -897,7 +978,7 @@ class SeatReservationCode(models.Model):
         ]
 
 
-class SignUpPriceGroup(models.Model):
+class SignUpPriceGroup(RegistrationPriceGroupBaseModel):
     """When a registration price group is selected when creating a signup for a registration,
     the pricing information that existed at that moment is stored into this model/table.
     """
@@ -908,11 +989,10 @@ class SignUpPriceGroup(models.Model):
         on_delete=models.CASCADE,
     )
 
-    registration_price_group = models.OneToOneField(
+    registration_price_group = models.ForeignKey(
         RegistrationPriceGroup,
-        related_name="signup_price_group",
+        related_name="signup_price_groups",
         on_delete=models.RESTRICT,
     )
 
     description = models.CharField(max_length=255)
-    price = models.DecimalField(max_digits=19, decimal_places=4)

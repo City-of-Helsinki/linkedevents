@@ -203,17 +203,6 @@ def start_of_previous_day(dt: datetime) -> datetime:
     return start_of_day(dt.astimezone(tz).replace(tzinfo=None) - timedelta(days=1))
 
 
-def get_fixed_lang_codes():
-    lang_codes = []
-    for language in settings.LANGUAGES:
-        lang_code = language[0]
-        lang_code = lang_code.replace(
-            "-", "_"
-        )  # to handle complex codes like e.g. zh-hans
-        lang_codes.append(lang_code)
-    return lang_codes
-
-
 def get_deleted_object_name():
     return {
         "fi": "POISTETTU",
