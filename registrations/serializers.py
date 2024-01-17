@@ -267,22 +267,29 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
                 errors["date_of_birth"] = _("This field must be specified.")
             else:
                 today = localdate()
-                current_age = (
-                    today.year
+                comparison_date = (
+                    max([today, registration.event.start_time.date()])
+                    if registration.event.start_time
+                    else today
+                )
+
+                age = (
+                    comparison_date.year
                     - date_of_birth.year
                     - (
-                        (today.month, today.day)
-                        < (date_of_birth.month, date_of_birth.year)
+                        (comparison_date.month, comparison_date.day)
+                        < (date_of_birth.month, date_of_birth.day)
                     )
                 )
+
                 if (
                     registration.audience_min_age
-                    and current_age < registration.audience_min_age
+                    and age < registration.audience_min_age
                 ):
                     errors["date_of_birth"] = _("The participant is too young.")
                 elif (
                     registration.audience_max_age
-                    and current_age > registration.audience_max_age
+                    and age > registration.audience_max_age
                 ):
                     errors["date_of_birth"] = _("The participant is too old.")
 
