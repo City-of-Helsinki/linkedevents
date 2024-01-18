@@ -8,7 +8,11 @@ from events.tests.factories import ApiKeyUserFactory
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
 from registrations.models import SignUpPriceGroup
-from registrations.tests.factories import SignUpPriceGroupFactory
+from registrations.tests.factories import (
+    RegistrationUserAccessFactory,
+    SignUpPriceGroupFactory,
+)
+from registrations.tests.test_registration_post import hel_email
 from registrations.tests.utils import create_user_by_role
 
 # === util methods ===
@@ -68,6 +72,8 @@ def test_wrong_http_method_not_allowed(api_client, signup, http_method):
         "financial_admin",
         "regular_user",
         "regular_user_without_organization",
+        "registration_user_access",
+        "registration_substitute_user",
     ],
 )
 @pytest.mark.django_db
@@ -79,11 +85,28 @@ def test_delete_signup_price_group_allowed(api_client, signup, user_role):
         signup.publisher,
         additional_roles={
             "regular_user_without_organization": lambda usr: None,
+            "registration_user_access": lambda usr: RegistrationUserAccessFactory(
+                registration=signup.registration, email=usr.email
+            ),
+            "registration_substitute_user": lambda usr: RegistrationUserAccessFactory(
+                registration=signup.registration,
+                email=hel_email,
+                is_substitute_user=True,
+            ),
         },
     )
+
+    if user_role == "registration_substitute_user":
+        user.email = hel_email
+        user.save(update_fields=["email"])
+
     api_client.force_authenticate(user)
 
-    if user_role not in ("superuser", "registration_admin"):
+    if user_role not in (
+        "superuser",
+        "registration_admin",
+        "registration_substitute_user",
+    ):
         signup.created_by = user
         signup.save(update_fields=["created_by"])
 

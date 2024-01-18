@@ -24,6 +24,7 @@ from registrations.tests.factories import (
     SignUpGroupProtectedDataFactory,
     SignUpPriceGroupFactory,
 )
+from registrations.tests.test_registration_post import hel_email
 from registrations.tests.test_signup_patch import description_fields
 from registrations.tests.utils import create_user_by_role
 
@@ -329,6 +330,25 @@ def test_registration_user_access_cannot_update_signup_group(api_client, registr
         assert mocked.called is True
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_registration_substitute_user_can_update_signup_group(api_client, registration):
+    user = UserFactory(email=hel_email)
+    user.organization_memberships.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+
+    RegistrationUserAccessFactory(
+        registration=registration, email=user.email, is_substitute_user=True
+    )
+
+    signup_group_data = {
+        "registration": registration.id,
+        "extra_info": new_signup_group_extra_info,
+    }
+    assert_update_signup_group(api_client, signup_group.id, signup_group_data)
 
 
 @pytest.mark.django_db

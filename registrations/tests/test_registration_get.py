@@ -21,7 +21,9 @@ from registrations.tests.factories import (
     RegistrationUserAccessFactory,
     SeatReservationCodeFactory,
 )
+from registrations.tests.test_registration_post import hel_email
 from registrations.tests.test_signup_post import assert_create_signups
+from registrations.tests.utils import create_user_by_role
 
 include_signups_query = "include=signups"
 test_email = "test@email.com"
@@ -89,6 +91,7 @@ def assert_registration_fields_exist(data, is_admin_user=False):
         "data_source",
         "publisher",
         "has_registration_user_access",
+        "has_substitute_user_access",
         "created_time",
         "last_modified_time",
         "event",
@@ -240,23 +243,49 @@ def test_registration_price_groups_in_response(registration, api_client):
 
 @pytest.mark.django_db
 def test_registration_user_access_user_can_see_if_he_has_access(
-    registration, user, user_api_client
+    registration, api_client
 ):
-    user.get_default_organization().admin_users.remove(user)
+    user = UserFactory()
+    user.organization_memberships.add(registration.publisher)
+    api_client.force_authenticate(user)
 
-    RegistrationUserAccessFactory(registration=registration, email=user.email)
-    RegistrationUserAccessFactory(registration=registration, email=test_email)
+    RegistrationUserAccessFactory(
+        registration=registration,
+        email=user.email,
+    )
 
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
         new_callable=PropertyMock,
         return_value=["suomi_fi"],
     ) as mocked:
-        response = get_detail_and_assert_registration(user_api_client, registration.id)
+        response = get_detail_and_assert_registration(api_client, registration.id)
         assert mocked.called is True
-    has_registration_user_access = response.data["has_registration_user_access"]
-    assert has_registration_user_access is True
+
+    assert response.data["has_registration_user_access"] is True
+    assert response.data["has_substitute_user_access"] is False
     assert_registration_fields_exist(response.data, is_admin_user=False)
+
+
+@pytest.mark.django_db
+def test_registration_substitute_user_can_see_if_he_has_access(
+    registration, api_client
+):
+    user = UserFactory(email=hel_email)
+    user.organization_memberships.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    RegistrationUserAccessFactory(
+        registration=registration,
+        email=user.email,
+        is_substitute_user=True,
+    )
+
+    response = get_detail_and_assert_registration(api_client, registration.id)
+
+    assert response.data["has_registration_user_access"] is True
+    assert response.data["has_substitute_user_access"] is True
+    assert_registration_fields_exist(response.data, is_admin_user=True)
 
 
 @pytest.mark.django_db
@@ -425,12 +454,20 @@ def test_registration_created_admin_can_include_signups(
     assert len(response.data["signups"]) == 2
 
 
+@pytest.mark.parametrize("is_substitute_user", [False, True])
 @pytest.mark.django_db
 def test_registration_user_access_can_include_signups_when_strongly_identified(
-    registration, signup, signup2, user, user_api_client
+    registration, signup, signup2, api_client, is_substitute_user
 ):
-    user.get_default_organization().admin_users.remove(user)
-    RegistrationUserAccessFactory(registration=registration, email=user.email)
+    user = UserFactory(email=hel_email if is_substitute_user else "test@test.com")
+    user.organization_memberships.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    RegistrationUserAccessFactory(
+        registration=registration,
+        email=user.email,
+        is_substitute_user=is_substitute_user,
+    )
 
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
@@ -438,18 +475,22 @@ def test_registration_user_access_can_include_signups_when_strongly_identified(
         return_value=["suomi_fi"],
     ) as mocked:
         response = get_detail_and_assert_registration(
-            user_api_client, registration.id, include_signups_query
+            api_client, registration.id, include_signups_query
         )
         assert mocked.called is True
+
     response_signups = response.data["signups"]
     assert len(response_signups) == 2
 
 
 @pytest.mark.django_db
 def test_registration_user_access_cannot_include_signups_when_not_strongly_identified(
-    registration, signup, signup2, user, user_api_client
+    registration, signup, signup2, api_client
 ):
-    user.get_default_organization().admin_users.remove(user)
+    user = UserFactory()
+    user.organization_memberships.add(registration.publisher)
+    api_client.force_authenticate(user)
+
     RegistrationUserAccessFactory(registration=registration, email=user.email)
 
     with patch(
@@ -458,11 +499,33 @@ def test_registration_user_access_cannot_include_signups_when_not_strongly_ident
         return_value=[],
     ) as mocked:
         response = get_detail_and_assert_registration(
-            user_api_client, registration.id, include_signups_query
+            api_client, registration.id, include_signups_query
         )
         assert mocked.called is True
+
     response_signups = response.data["signups"]
     assert response_signups is None
+
+
+@pytest.mark.django_db
+def test_registration_substitute_user_can_include_signups_when_not_strongly_identified(
+    registration, signup, signup2, api_client
+):
+    user = UserFactory(email=hel_email)
+    user.organization_memberships.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    RegistrationUserAccessFactory(
+        registration=registration,
+        email=user.email,
+        is_substitute_user=True,
+    )
+
+    response = get_detail_and_assert_registration(
+        api_client, registration.id, include_signups_query
+    )
+    response_signups = response.data["signups"]
+    assert len(response_signups) == 2
 
 
 @pytest.mark.django_db
@@ -533,6 +596,58 @@ def test_registration_list(
 ):
     get_list_and_assert_registrations(
         user_api_client, "", [registration, registration2, registration3, registration4]
+    )
+
+
+@pytest.mark.django_db
+def test_registration_list_admin_user_filter(
+    organization3, registration, registration2, registration3, user, user_api_client
+):
+    registration3.event.publisher = organization3
+    registration3.event.save()
+
+    get_list_and_assert_registrations(
+        user_api_client, "", [registration, registration2, registration3]
+    )
+    get_list_and_assert_registrations(
+        user_api_client, "admin_user=true", [registration]
+    )
+
+    organization3.registration_admin_users.add(user)
+    get_list_and_assert_registrations(
+        user_api_client, "admin_user=true", [registration, registration3]
+    )
+
+
+@pytest.mark.django_db
+def test_registration_list_substitute_user_filter(
+    organization3, registration, registration2, registration3, api_client
+):
+    user = create_user_by_role("regular_user", registration.publisher)
+    user.email = hel_email
+    user.save(update_fields=["email"])
+    api_client.force_authenticate(user)
+
+    registration3.event.publisher = organization3
+    registration3.event.save(update_fields=["publisher"])
+
+    RegistrationUserAccessFactory(
+        registration=registration,
+        email=hel_email,
+        is_substitute_user=True,
+    )
+    get_list_and_assert_registrations(
+        api_client, "", [registration, registration2, registration3]
+    )
+    get_list_and_assert_registrations(api_client, "admin_user=true", [registration])
+
+    RegistrationUserAccessFactory(
+        registration=registration3,
+        email=hel_email,
+        is_substitute_user=True,
+    )
+    get_list_and_assert_registrations(
+        api_client, "admin_user=true", [registration, registration3]
     )
 
 

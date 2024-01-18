@@ -2,6 +2,8 @@ from django.test import TestCase
 from django_orghierarchy.models import Organization
 
 from events.models import DataSource
+from registrations.tests.factories import RegistrationUserAccessFactory
+from registrations.tests.test_registration_post import hel_email
 
 from ..models import User
 
@@ -136,3 +138,35 @@ class TestUser(TestCase):
         self.assertFalse(is_admin)
         is_regular_user = self.user.is_regular_user_of(self.org_1)
         self.assertFalse(is_regular_user)
+
+    def test_is_substitute_user(self):
+        self.org.regular_users.add(self.user)
+        self.user.email = hel_email
+        self.user.save(update_fields=["email"])
+
+        # User has correct email and a substitute user access exists.
+        substitute_user_access = RegistrationUserAccessFactory(
+            email=hel_email, is_substitute_user=True
+        )
+        self.assertTrue(self.user.is_substitute_user)
+
+        # User has correct email, but a substitute user access is not granted.
+        substitute_user_access.is_substitute_user = False
+        substitute_user_access.save(update_fields=["is_substitute_user"])
+        del self.user.is_substitute_user
+        self.assertFalse(self.user.is_substitute_user)
+
+        # User has wrong email while a substitute user access exists.
+        substitute_user_access.is_substitute_user = True
+        substitute_user_access.save(update_fields=["is_substitute_user"])
+        self.user.email = "wrong@test.dev"
+        self.user.save(update_fields=["email"])
+        del self.user.is_substitute_user
+        self.assertFalse(self.user.is_substitute_user)
+
+        # User does not have substitute user access.
+        substitute_user_access.delete()
+        self.user.email = hel_email
+        self.user.save(update_fields=["email"])
+        del self.user.is_substitute_user
+        self.assertFalse(self.user.is_substitute_user)

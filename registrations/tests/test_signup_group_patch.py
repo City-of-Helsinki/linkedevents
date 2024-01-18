@@ -19,6 +19,7 @@ from registrations.tests.factories import (
     SignUpGroupFactory,
     SignUpPriceGroupFactory,
 )
+from registrations.tests.test_registration_post import hel_email
 from registrations.tests.test_signup_patch import description_fields
 from registrations.tests.utils import create_user_by_role
 
@@ -155,7 +156,7 @@ def test_patch_signup_group_extra_info_based_on_user_role(
 )
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_registration_user_who_is_superuser_or_registration_admin_can_patch_signups_data(
+def test_registration_user_access_who_is_superuser_or_registration_admin_can_patch_signups_data(
     api_client, registration, user_role
 ):
     user = create_user_by_role(
@@ -212,7 +213,7 @@ def test_registration_user_who_is_superuser_or_registration_admin_can_patch_sign
 
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_registration_user_who_created_signup_group_can_patch_signups_data(
+def test_registration_user_access_who_created_signup_group_can_patch_signups_data(
     api_client, registration
 ):
     user = UserFactory()
@@ -315,7 +316,7 @@ def test_admin_or_financial_admin_or_regular_user_cannot_patch_signups_data(
 
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_registration_user_can_patch_signups_presence_status_if_strongly_identified(
+def test_registration_user_access_can_patch_signups_presence_status_if_strongly_identified(
     api_client, registration
 ):
     user = create_user_by_role("regular_user", registration.publisher)
@@ -352,7 +353,7 @@ def test_registration_user_can_patch_signups_presence_status_if_strongly_identif
 
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_registration_user_cannot_patch_signups_presence_status_if_not_strongly_identified(
+def test_registration_user_access_cannot_patch_signups_presence_status_if_not_strongly_identified(
     api_client, registration
 ):
     user = create_user_by_role("regular_user", registration.publisher)
@@ -385,6 +386,43 @@ def test_registration_user_cannot_patch_signups_presence_status_if_not_strongly_
     first_signup.refresh_from_db()
     second_signup.refresh_from_db()
     assert first_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+    assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+
+
+@pytest.mark.django_db
+def test_registration_substitute_user_can_patch_signup_presence_status_if_not_strongly_identified(
+    api_client, registration
+):
+    user = create_user_by_role("regular_user", registration.publisher)
+    user.email = hel_email
+    user.save(update_fields=["email"])
+
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    first_signup = SignUpFactory(signup_group=signup_group, registration=registration)
+    second_signup = SignUpFactory(signup_group=signup_group, registration=registration)
+
+    RegistrationUserAccessFactory(
+        registration=registration,
+        email=user.email,
+        is_substitute_user=True,
+    )
+
+    assert first_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+    assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+
+    signup_group_data = {
+        "signups": [
+            {"id": first_signup.pk, "presence_status": SignUp.PresenceStatus.PRESENT},
+        ]
+    }
+
+    assert_patch_signup_group(api_client, signup_group.id, signup_group_data)
+
+    first_signup.refresh_from_db()
+    second_signup.refresh_from_db()
+    assert first_signup.presence_status == SignUp.PresenceStatus.PRESENT
     assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
 
 

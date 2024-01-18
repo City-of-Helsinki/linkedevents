@@ -10,6 +10,8 @@ from helsinki_gdpr.models import SerializableMixin
 from helusers.models import AbstractUser
 
 from events.models import PublicationStatus
+from registrations.models import RegistrationUserAccess
+from registrations.utils import has_allowed_substitute_user_email_domain
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +60,11 @@ class UserModelPermissionMixin:
         """Check if the user is an external user"""
         raise NotImplementedError()
 
+    @property
+    def is_substitute_user(self):
+        """Check if the user is a substitute user of any registration"""
+        raise NotImplementedError()
+
     def is_admin_of(self, publisher):
         """Check if current user is an admin user of the publisher organization"""
         raise NotImplementedError()
@@ -76,6 +83,10 @@ class UserModelPermissionMixin:
 
     def is_registration_user_access_user_of(self, registration_user_accesses):
         """Check if current user can be found in registration user accesses"""
+        raise NotImplementedError()
+
+    def is_substitute_user_of(self, registration_user_accesses):
+        """Check if current user is a substitute user for registrations"""
         raise NotImplementedError()
 
     @property
@@ -162,7 +173,15 @@ class UserModelPermissionMixin:
             self.get_admin_organizations_and_descendants()
             | self.get_registration_admin_organizations_and_descendants()
         )
-        return queryset.filter(publisher__in=publishers)
+
+        if has_allowed_substitute_user_email_domain(self.email):
+            # Show also events where the user is a Helsinki substitute user.
+            return queryset.filter(publisher__in=publishers) | queryset.filter(
+                registration__registration_user_accesses__email=self.email,
+                registration__registration_user_accesses__is_substitute_user=True,
+            )
+        else:
+            return queryset.filter(publisher__in=publishers)
 
     def _get_admin_tree_ids(self, admin_queryset):
         # returns tree ids for all admin organizations and their replacements
@@ -322,6 +341,15 @@ class User(AbstractUser, UserModelPermissionMixin, SerializableMixin):
             and registration_user_accesses.filter(email=self.email).exists()
         )
 
+    def is_substitute_user_of(self, registration_user_accesses):
+        """Check if current user is a substitute user for registrations"""
+        if not has_allowed_substitute_user_email_domain(self.email):
+            return False
+
+        return registration_user_accesses.filter(
+            email=self.email, is_substitute_user=True
+        ).exists()
+
     @cached_property
     def is_external(self):
         if any(
@@ -336,6 +364,15 @@ class User(AbstractUser, UserModelPermissionMixin, SerializableMixin):
             and not self.registration_admin_organizations.exists()
             and not self.financial_admin_organizations.exists()
         )
+
+    @cached_property
+    def is_substitute_user(self):
+        if not has_allowed_substitute_user_email_domain(self.email):
+            return False
+
+        return RegistrationUserAccess.objects.filter(
+            email=self.email, is_substitute_user=True
+        ).exists()
 
 
 class SerializablePublisher(Organization, SerializableMixin):

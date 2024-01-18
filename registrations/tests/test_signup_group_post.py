@@ -24,8 +24,10 @@ from registrations.models import (
 from registrations.tests.factories import (
     RegistrationFactory,
     RegistrationPriceGroupFactory,
+    RegistrationUserAccessFactory,
     SeatReservationCodeFactory,
 )
+from registrations.tests.test_registration_post import hel_email
 from registrations.tests.test_signup_post import assert_attending_and_waitlisted_signups
 from registrations.tests.utils import create_user_by_role
 
@@ -150,6 +152,35 @@ def test_registration_admin_can_create_signup_group(api_client, organization):
     api_client.force_authenticate(user)
 
     reservation = SeatReservationCodeFactory(seats=2)
+
+    LanguageFactory(pk="fi", service_language=True)
+    LanguageFactory(pk="en", service_language=True)
+
+    assert SignUpGroup.objects.count() == 0
+    assert SignUp.objects.count() == 0
+    assert SeatReservationCode.objects.count() == 1
+
+    signup_group_data = default_signup_group_data
+    signup_group_data["registration"] = reservation.registration_id
+    signup_group_data["reservation_code"] = reservation.code
+
+    assert_create_signup_group(api_client, signup_group_data)
+    assert_default_signup_group_created(reservation, signup_group_data, user)
+
+
+@pytest.mark.django_db
+def test_registration_substitute_user_can_create_signup_group(api_client, registration):
+    user = UserFactory(email=hel_email)
+    user.organization_memberships.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    RegistrationUserAccessFactory(
+        registration=registration,
+        email=user.email,
+        is_substitute_user=True,
+    )
+
+    reservation = SeatReservationCodeFactory(registration=registration, seats=2)
 
     LanguageFactory(pk="fi", service_language=True)
     LanguageFactory(pk="en", service_language=True)

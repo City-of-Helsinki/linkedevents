@@ -17,6 +17,7 @@ from registrations.tests.factories import (
     SignUpGroupFactory,
     SignUpPriceGroupFactory,
 )
+from registrations.tests.test_registration_post import hel_email
 from registrations.tests.test_signup_get import assert_contact_person_fields_exist
 from registrations.tests.utils import create_user_by_role
 
@@ -110,22 +111,31 @@ def test_registration_admin_or_registration_created_admin_can_get_signup_group(
     assert response.data["is_created_by_current_user"] is False
 
 
+@pytest.mark.parametrize("is_substitute_user", [False, True])
 @pytest.mark.django_db
 def test_registration_user_access_can_get_signup_group_when_strongly_identified(
-    registration, user, user_api_client
+    registration, api_client, is_substitute_user
 ):
+    user = UserFactory(email="user@hel.fi" if is_substitute_user else "user@test.com")
+    user.organization_memberships.add(registration.publisher)
+    api_client.force_authenticate(user)
+
     signup_group = SignUpGroupFactory(registration=registration)
 
-    user.get_default_organization().admin_users.remove(user)
-    RegistrationUserAccessFactory(registration=registration, email=user.email)
+    RegistrationUserAccessFactory(
+        registration=registration,
+        email=user.email,
+        is_substitute_user=is_substitute_user,
+    )
 
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
         new_callable=PropertyMock,
         return_value=["suomi_fi"],
     ) as mocked:
-        response = assert_get_detail(user_api_client, signup_group.id)
+        response = assert_get_detail(api_client, signup_group.id)
         assert mocked.called is True
+
     assert response.data["is_created_by_current_user"] is False
 
 
@@ -146,6 +156,26 @@ def test_registration_user_access_cannot_get_signup_group_when_not_strongly_iden
         response = get_detail(user_api_client, signup_group.id)
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert mocked.called is True
+
+
+@pytest.mark.django_db
+def test_substitute_user_can_get_signup_group_without_strong_identification(
+    registration, api_client
+):
+    user = UserFactory(email=hel_email)
+    user.organization_memberships.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    RegistrationUserAccessFactory(
+        registration=registration,
+        email=user.email,
+        is_substitute_user=True,
+    )
+
+    signup_group = SignUpGroupFactory(registration=registration)
+
+    response = assert_get_detail(api_client, signup_group.id)
+    assert response.data["is_created_by_current_user"] is False
 
 
 @pytest.mark.django_db

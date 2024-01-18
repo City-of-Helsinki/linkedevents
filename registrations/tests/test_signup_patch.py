@@ -19,6 +19,7 @@ from registrations.tests.factories import (
     SignUpPriceGroupFactory,
     SignUpProtectedDataFactory,
 )
+from registrations.tests.test_registration_post import hel_email
 from registrations.tests.utils import create_user_by_role
 
 description_fields = ("description_fi", "description_sv", "description_en")
@@ -235,7 +236,7 @@ def test_patch_phone_number(api_client, registration, signup):
 
 
 @pytest.mark.django_db
-def test_registration_user_who_created_signup_can_patch_presence_status(
+def test_registration_user_access_who_created_signup_can_patch_presence_status(
     api_client, event
 ):
     user = UserFactory()
@@ -280,7 +281,7 @@ def test_registration_user_who_created_signup_can_patch_presence_status(
 )
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_registration_user_can_patch_signup_presence_status_based_on_identification_method(
+def test_registration_user_access_can_patch_signup_presence_status_based_on_identification_method(
     api_client, registration, identification_method
 ):
     user = UserFactory()
@@ -312,6 +313,35 @@ def test_registration_user_can_patch_signup_presence_status_based_on_identificat
     else:
         assert response.status_code == status.HTTP_200_OK
         assert signup.presence_status == SignUp.PresenceStatus.PRESENT
+
+
+@pytest.mark.django_db
+def test_registration_substitute_user_can_patch_signup(api_client, registration):
+    user = UserFactory(email=hel_email)
+    user.organization_memberships.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    RegistrationUserAccessFactory(
+        registration=registration,
+        email=user.email,
+        is_substitute_user=True,
+    )
+
+    signup = SignUpFactory(registration=registration)
+    assert signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+    assert signup.extra_info is None
+
+    signup_data = {
+        "presence_status": SignUp.PresenceStatus.PRESENT,
+        "extra_info": "new extra info",
+    }
+
+    assert_patch_signup(api_client, signup.id, signup_data)
+
+    signup.refresh_from_db()
+    del signup.extra_info
+    assert signup.presence_status == SignUp.PresenceStatus.PRESENT
+    assert signup.extra_info == signup_data["extra_info"]
 
 
 @freeze_time("2023-03-14 03:30:00+02:00")

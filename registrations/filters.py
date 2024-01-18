@@ -8,6 +8,7 @@ from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.exceptions import ValidationError
 
 from registrations.models import PriceGroup, Registration, SignUp, SignUpGroup
+from registrations.utils import has_allowed_substitute_user_email_domain
 
 
 class ActionDependingBackend(django_filters.rest_framework.DjangoFilterBackend):
@@ -62,6 +63,13 @@ class SignUpBaseFilter(ActionDependingFilter):
             Q(registration__event__publisher__in=self._user_admin_organizations)
             & Q(registration__created_by=user)
         )
+
+        if has_allowed_substitute_user_email_domain(user.email):
+            qs_filter |= Q(
+                registration__registration_user_accesses__email=user.email,
+                registration__registration_user_accesses__is_substitute_user=True,
+            )
+
         if user.is_strongly_identified:
             qs_filter |= Q(registration__registration_user_accesses__email=user.email)
 
@@ -88,8 +96,16 @@ class SignUpBaseFilter(ActionDependingFilter):
         ) | (
             Q(event__publisher__in=self._user_admin_organizations) & Q(created_by=user)
         )
+
+        if has_allowed_substitute_user_email_domain(user.email):
+            qs_filter |= Q(
+                registration_user_accesses__email=user.email,
+                registration_user_accesses__is_substitute_user=True,
+            )
+
         if user.is_strongly_identified:
             qs_filter |= Q(registration_user_accesses__email=user.email)
+
         registrations = registrations.filter(qs_filter)
 
         if not registrations:

@@ -20,14 +20,14 @@ from registrations.tests.factories import (
     RegistrationPriceGroupFactory,
     RegistrationUserAccessFactory,
 )
-from registrations.tests.test_registration_post import (
-    create_registration,
-    get_event_url,
+from registrations.tests.test_registration_post import email, get_event_url, hel_email
+from registrations.tests.utils import (
+    assert_invitation_email_is_sent,
+    create_user_by_role,
 )
-from registrations.tests.utils import assert_invitation_email_is_sent
 
-email = "user@email.com"
 edited_email = "edited@email.com"
+edited_hel_email = "edited@hel.fi"
 event_name = "Foo"
 
 # === util methods ===
@@ -54,19 +54,44 @@ def assert_update_registration(api_client, pk, registration_data, data_source=No
 # === tests ===
 
 
+@pytest.mark.parametrize(
+    "user_role",
+    [
+        "superuser",
+        "admin",
+        "registration_admin",
+        "substitute_user_access",
+        "substitute_user_access_without_organization",
+    ],
+)
 @pytest.mark.django_db
-def test_update_registration(api_client, event, user):
+def test_can_update_registration(api_client, registration, user_role):
+    user = create_user_by_role(
+        user_role,
+        registration.publisher,
+        additional_roles={
+            "substitute_user_access": lambda usr: usr.organization_memberships.add(
+                registration.publisher
+            ),
+            "substitute_user_access_without_organization": lambda usr: None,
+        },
+    )
+
+    if user_role.startswith("substitute_user_access"):
+        user.email = hel_email
+        user.save(update_fields=["email"])
+
+        RegistrationUserAccessFactory(
+            registration=registration, email=hel_email, is_substitute_user=True
+        )
+
     api_client.force_authenticate(user)
 
-    registration_data = {"event": {"@id": get_event_url(event.id)}}
-
-    response = create_registration(api_client, registration_data)
     registration_data = {
-        "event": {"@id": get_event_url(event.id)},
+        "event": {"@id": get_event_url(registration.event_id)},
         "audience_max_age": 10,
     }
-
-    assert_update_registration(api_client, response.data["id"], registration_data)
+    assert_update_registration(api_client, registration.id, registration_data)
 
 
 @pytest.mark.django_db
@@ -251,48 +276,62 @@ def test_admin_cannot_update_registrations_event(
     assert registration.event == event
 
 
+@pytest.mark.parametrize("is_substitute_user", [False, True])
 @pytest.mark.django_db
-def test_send_email_to_new_registration_user_access(registration, user_api_client):
+def test_send_email_to_new_registration_user_access(
+    registration, user_api_client, is_substitute_user
+):
+    user_email = hel_email if is_substitute_user else email
+
+    RegistrationUserAccessFactory(registration=registration, email="delete1@email.com")
+    RegistrationUserAccessFactory(registration=registration, email="delete2@email.com")
+    assert len(registration.registration_user_accesses.all()) == 2
+
+    registration_data = {
+        "event": {"@id": get_event_url(registration.event.id)},
+        "registration_user_accesses": [
+            {"email": user_email, "is_substitute_user": is_substitute_user}
+        ],
+    }
+
     with translation.override("fi"):
         registration.event.type_id = Event.TypeId.GENERAL
         registration.event.name = event_name
         registration.event.save()
 
-        RegistrationUserAccess.objects.create(
-            registration=registration, email="delete1@email.com"
-        )
-        RegistrationUserAccess.objects.create(
-            registration=registration, email="delete2@email.com"
-        )
-        assert len(registration.registration_user_accesses.all()) == 2
-
-        registration_data = {
-            "event": {"@id": get_event_url(registration.event.id)},
-            "registration_user_accesses": [{"email": email}],
-        }
         response = assert_update_registration(
             user_api_client, registration.id, registration_data
         )
-        #  assert that registration user was created
-        registration_user_accesses = response.data["registration_user_accesses"]
-        assert len(registration_user_accesses) == 1
-        assert registration_user_accesses[0]["email"] == email
-        #  assert that the email was sent
-        assert_invitation_email_is_sent(email, event_name)
+
+    #  assert that registration user was created
+    registration_user_accesses = response.data["registration_user_accesses"]
+    assert len(registration_user_accesses) == 1
+    assert registration_user_accesses[0]["email"] == user_email
+
+    #  assert that the email was sent
+    registration_user_access = RegistrationUserAccess.objects.get(
+        pk=registration_user_accesses[0]["id"]
+    )
+    assert_invitation_email_is_sent(user_email, event_name, registration_user_access)
 
 
+@pytest.mark.parametrize("is_substitute_user", [False, True])
 @pytest.mark.django_db
 def test_email_is_not_sent_if_registration_user_access_email_is_not_updated(
-    registration, user_api_client
+    registration, user_api_client, is_substitute_user
 ):
-    registration_user_access = RegistrationUserAccess.objects.create(
-        registration=registration, email=email
+    user_email = hel_email if is_substitute_user else email
+
+    registration_user_access = RegistrationUserAccessFactory(
+        registration=registration,
+        email=user_email,
+        is_substitute_user=is_substitute_user,
     )
 
     registration_data = {
         "event": {"@id": get_event_url(registration.event.id)},
         "registration_user_accesses": [
-            {"id": registration_user_access.id, "email": email}
+            {"id": registration_user_access.id, "email": user_email}
         ],
     }
     assert_update_registration(user_api_client, registration.id, registration_data)
@@ -301,97 +340,132 @@ def test_email_is_not_sent_if_registration_user_access_email_is_not_updated(
     registration_user_accesses = registration.registration_user_accesses.all()
     assert len(registration_user_accesses) == 1
     assert registration_user_access.id == registration_user_accesses[0].id
-    assert registration_user_accesses[0].email == email
+    assert registration_user_accesses[0].email == user_email
     #  assert that the email is not sent
     assert len(mail.outbox) == 0
 
 
+@pytest.mark.parametrize("is_substitute_user", [False, True])
 @pytest.mark.django_db
 def test_email_is_sent_if_registration_user_access_email_is_updated(
-    registration, user_api_client
+    registration, user_api_client, is_substitute_user
 ):
-    with translation.override("fi"):
-        registration.event.type_id = Event.TypeId.GENERAL
-        registration.event.name = event_name
-        registration.event.save()
+    user_email = hel_email if is_substitute_user else email
+    edited_user_email = edited_hel_email if is_substitute_user else edited_email
 
-        registration_user_access = RegistrationUserAccess.objects.create(
-            registration=registration, email=email
-        )
-
-        registration_data = {
-            "event": {"@id": get_event_url(registration.event.id)},
-            "registration_user_accesses": [
-                {"id": registration_user_access.id, "email": edited_email}
-            ],
-        }
-        assert_update_registration(user_api_client, registration.id, registration_data)
-        #  assert that the email was sent
-        assert_invitation_email_is_sent(edited_email, event_name)
-
-
-@pytest.mark.django_db
-def test_cannot_update_registration_user_access_with_invalid_id(
-    registration, user_api_client
-):
-    with translation.override("fi"):
-        registration.event.type_id = Event.TypeId.GENERAL
-        registration.event.name = event_name
-        registration.event.save()
-
-        RegistrationUserAccess.objects.create(registration=registration, email=email)
-
-        registration_data = {
-            "event": {"@id": get_event_url(registration.event.id)},
-            "registration_user_accesses": [{"id": "invalid", "email": edited_email}],
-        }
-        response = update_registration(
-            user_api_client, registration.id, registration_data
-        )
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert (
-            response.data["registration_user_accesses"][0]["id"][0].code
-            == "incorrect_type"
-        )
-
-
-@pytest.mark.django_db
-def test_cannot_update_registration_user_access_with_unexisting_id(
-    registration, user_api_client
-):
-    with translation.override("fi"):
-        registration.event.type_id = Event.TypeId.GENERAL
-        registration.event.name = event_name
-        registration.event.save()
-
-        RegistrationUserAccess.objects.create(registration=registration, email=email)
-
-        registration_data = {
-            "event": {"@id": get_event_url(registration.event.id)},
-            "registration_user_accesses": [{"id": 1234567, "email": edited_email}],
-        }
-        response = update_registration(
-            user_api_client, registration.id, registration_data
-        )
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert (
-            response.data["registration_user_accesses"][0]["id"][0].code
-            == "does_not_exist"
-        )
-
-
-@pytest.mark.django_db
-def test_cannot_update_registration_user_access_with_another_registrations_user_accesses_id(
-    registration, user_api_client
-):
-    another_registrations_user_access = RegistrationUserAccessFactory(
-        email="test@test.com",
+    registration_user_access = RegistrationUserAccessFactory(
+        registration=registration,
+        email=user_email,
+        is_substitute_user=is_substitute_user,
     )
 
     registration_data = {
         "event": {"@id": get_event_url(registration.event.id)},
         "registration_user_accesses": [
-            {"id": another_registrations_user_access.pk, "email": edited_email},
+            {
+                "id": registration_user_access.id,
+                "email": edited_user_email,
+                "is_substitute_user": is_substitute_user,
+            }
+        ],
+    }
+
+    with translation.override("fi"):
+        registration.event.type_id = Event.TypeId.GENERAL
+        registration.event.name = event_name
+        registration.event.save()
+
+        assert_update_registration(user_api_client, registration.id, registration_data)
+
+        #  assert that the email was sent
+        registration_user_access.refresh_from_db()
+        assert_invitation_email_is_sent(
+            edited_user_email, event_name, registration_user_access
+        )
+
+
+@pytest.mark.parametrize(
+    "is_substitute_user,user_id,expected_error_code",
+    [
+        (False, "invalid", "incorrect_type"),
+        (True, "invalid", "incorrect_type"),
+        (False, 1234567, "does_not_exist"),
+        (True, 1234567, "does_not_exist"),
+    ],
+)
+@pytest.mark.django_db
+def test_cannot_update_registration_user_access_with_invalid_id(
+    registration, user_api_client, is_substitute_user, user_id, expected_error_code
+):
+    user_email = hel_email if is_substitute_user else email
+    edited_user_email = edited_hel_email if is_substitute_user else edited_email
+
+    RegistrationUserAccessFactory(registration=registration, email=user_email)
+
+    registration_data = {
+        "event": {"@id": get_event_url(registration.event.id)},
+        "registration_user_accesses": [
+            {
+                "id": user_id,
+                "email": edited_user_email,
+                "is_substitute_user": is_substitute_user,
+            }
+        ],
+    }
+
+    response = update_registration(user_api_client, registration.id, registration_data)
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert (
+        response.data["registration_user_accesses"][0]["id"][0].code
+        == expected_error_code
+    )
+
+
+@pytest.mark.django_db
+def test_cannot_update_substitute_user_access_without_helsinki_email(
+    registration, user_api_client
+):
+    user_access = RegistrationUserAccessFactory(registration=registration, email=email)
+
+    registration_data = {
+        "event": {"@id": get_event_url(registration.event.id)},
+        "registration_user_accesses": [
+            {
+                "id": user_access.pk,
+                "email": edited_email,
+                "is_substitute_user": True,
+            }
+        ],
+    }
+    response = update_registration(user_api_client, registration.id, registration_data)
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert (
+        response.data["registration_user_accesses"][0]["is_substitute_user"][0]
+        == "The user's email domain is not one of the allowed domains for substitute users."
+    )
+
+
+@pytest.mark.parametrize("is_substitute_user", [False, True])
+@pytest.mark.django_db
+def test_cannot_update_registration_user_access_with_another_registrations_user_accesses_id(
+    registration, user_api_client, is_substitute_user
+):
+    edited_user_email = edited_hel_email if is_substitute_user else edited_email
+
+    another_registrations_user_access = RegistrationUserAccessFactory(
+        email="test@test.com", is_substitute_user=is_substitute_user
+    )
+
+    registration_data = {
+        "event": {"@id": get_event_url(registration.event.id)},
+        "registration_user_accesses": [
+            {
+                "id": another_registrations_user_access.pk,
+                "email": edited_user_email,
+                "is_substitute_user": is_substitute_user,
+            },
         ],
     }
 
@@ -403,39 +477,48 @@ def test_cannot_update_registration_user_access_with_another_registrations_user_
     )
 
 
+@pytest.mark.parametrize("is_substitute_user", [False, True])
 @pytest.mark.django_db
 def test_cannot_update_registration_user_access_with_duplicate_email(
-    registration, user_api_client
+    registration, user_api_client, is_substitute_user
 ):
-    email1 = "email1@test.fi"
-    email2 = "email2@test.fi"
+    email1 = "email1@hel.fi" if is_substitute_user else "email1@test.fi"
+    email2 = "email2@hel.fi" if is_substitute_user else "email2@test.fi"
+
+    registration_user_access1 = RegistrationUserAccessFactory(
+        registration=registration, email=email1, is_substitute_user=is_substitute_user
+    )
+    registration_user_access2 = RegistrationUserAccessFactory(
+        registration=registration, email=email2, is_substitute_user=is_substitute_user
+    )
+
+    registration_data = {
+        "event": {"@id": get_event_url(registration.event.id)},
+        "registration_user_accesses": [
+            {
+                "id": registration_user_access1.id,
+                "email": email2,
+                "is_substitute_user": is_substitute_user,
+            },
+            {
+                "id": registration_user_access2.id,
+                "email": email1,
+                "is_substitute_user": is_substitute_user,
+            },
+        ],
+    }
 
     with translation.override("fi"):
         registration.event.type_id = Event.TypeId.GENERAL
         registration.event.name = event_name
         registration.event.save()
 
-        registration_user_access1 = RegistrationUserAccess.objects.create(
-            registration=registration, email=email1
-        )
-        registration_user_access2 = RegistrationUserAccess.objects.create(
-            registration=registration, email=email2
-        )
-
-        registration_data = {
-            "event": {"@id": get_event_url(registration.event.id)},
-            "registration_user_accesses": [
-                {"id": registration_user_access1.id, "email": email2},
-                {"id": registration_user_access2.id, "email": email1},
-            ],
-        }
-
         response = update_registration(
             user_api_client, registration.id, registration_data
         )
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data["registration_user_accesses"][0].code == "unique"
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["registration_user_accesses"][0].code == "unique"
 
 
 @pytest.mark.django_db

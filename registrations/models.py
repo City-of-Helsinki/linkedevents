@@ -23,6 +23,9 @@ from helsinki_gdpr.models import SerializableMixin
 from events.models import Event, Language
 from registrations.exceptions import PriceGroupValidationError
 from registrations.notifications import (
+    get_registration_user_access_invitation_subject,
+    get_registration_user_access_invitation_texts,
+    get_registration_user_access_invitation_variables,
     get_signup_notification_subject,
     get_signup_notification_texts,
     get_signup_notification_variables,
@@ -389,6 +392,7 @@ class Registration(CreatedModifiedBaseModel):
             user.is_superuser
             or user.is_admin_of(self.publisher)
             or user.is_registration_admin_of(self.publisher)
+            or user.is_substitute_user_of(self.registration_user_accesses)
         )
 
 
@@ -438,6 +442,7 @@ class SignUpMixin:
                 user.is_admin_of(self.publisher)
                 and self.registration.created_by_id == user.id
             )
+            or user.is_substitute_user_of(self.registration.registration_user_accesses)
             or user.is_registration_user_access_user_of(
                 self.registration.registration_user_accesses
             )
@@ -453,6 +458,7 @@ class SignUpMixin:
                 user.is_admin_of(self.publisher)
                 and self.registration.created_by_id == user.id
             )
+            or user.is_substitute_user_of(self.registration.registration_user_accesses)
             or user.id == self.created_by_id
         )
 
@@ -546,6 +552,7 @@ class RegistrationUserAccess(models.Model):
         on_delete=models.CASCADE,
         related_name="registration_user_accesses",
     )
+
     language = models.ForeignKey(
         Language,
         on_delete=models.SET_NULL,
@@ -554,44 +561,31 @@ class RegistrationUserAccess(models.Model):
         related_name="registration_user_access_language",
     )
 
+    is_substitute_user = models.BooleanField(default=False)
+
     def can_be_edited_by(self, user):
         """Check if current registration user can be edited by the given user"""
         if user.is_superuser:
             return True
         return user.is_admin_of(self.registration.event.publisher)
 
-    def _get_language_pk(self):
+    def get_language_pk(self):
         if self.language:
             return self.language.pk
         return "fi"
 
     def send_invitation(self):
-        locale = self._get_language_pk()
+        subject = get_registration_user_access_invitation_subject(self)
 
-        with translation.override(locale):
-            event_name = self.registration.event.name
-            event_type_id = self.registration.event.type_id
+        invitation_template = "registration_user_access_invitation.html"
+        email_variables = get_registration_user_access_invitation_variables(self)
+        email_variables["texts"] = get_registration_user_access_invitation_texts(self)
 
-            email_variables = {
-                "email": self.email,
-                "event_name": event_name,
-                "event_type_id": event_type_id,
-                "linked_events_ui_locale": locale,
-                "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
-                "linked_registrations_ui_locale": locale,
-                "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
-                "registration_id": self.registration.id,
-            }
-
-            invitation_template = "signup_list_rights_granted.html"
-            invitation_subject = _(
-                "Rights granted to the participant list - %(event_name)s"
-            ) % {"event_name": event_name}
-
+        with translation.override(self.get_language_pk()):
             rendered_body = render_to_string(invitation_template, email_variables)
 
         send_mail(
-            invitation_subject,
+            subject,
             rendered_body,
             get_email_noreply_address(),
             [self.email],

@@ -143,8 +143,10 @@ class TestRegistrationAdmin(TestCase):
 
             assert response.status_code == status.HTTP_302_FOUND
             assert response.url == "/admin/registrations/registration/"
+
             # Assert that invitation is sent to registration user
-            assert_invitation_email_is_sent(EMAIL, EVENT_NAME)
+            registration_user_access = RegistrationUserAccess.objects.first()
+            assert_invitation_email_is_sent(EMAIL, EVENT_NAME, registration_user_access)
 
     def test_change_last_modified_by_when_updating_registration(self):
         ra = RegistrationAdmin(Registration, self.site)
@@ -190,8 +192,12 @@ class TestRegistrationAdmin(TestCase):
 
             assert response.status_code == status.HTTP_302_FOUND
             assert response.url == "/admin/registrations/registration/"
+
             # Assert that invitation is sent to updated email
-            assert_invitation_email_is_sent(EDITED_EMAIL, EVENT_NAME)
+            registration_user_access.refresh_from_db()
+            assert_invitation_email_is_sent(
+                EDITED_EMAIL, EVENT_NAME, registration_user_access
+            )
 
     def test_add_new_registration_with_price_groups(self):
         data_source = self.registration.event.data_source

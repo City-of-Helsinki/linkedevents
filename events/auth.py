@@ -93,6 +93,9 @@ class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
     def is_registration_user_access_user_of(self, registration_user_accesses):
         return False
 
+    def is_substitute_user_of(self, registration_user_accesses):
+        return False
+
     @property
     def admin_organizations(self):
         if not self.data_source.owner:
@@ -134,6 +137,10 @@ class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
 
     @property
     def is_external(self):
+        return False
+
+    @property
+    def is_substitute_user(self):
         return False
 
 
