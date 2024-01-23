@@ -3,6 +3,7 @@ from uuid import UUID
 
 import pytest
 import requests_mock
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 
@@ -101,6 +102,7 @@ def _assert_gdpr_delete(
 
 
 @pytest.mark.django_db
+@override_settings(GDPR_DISABLE_API_DELETION=False)
 def test_authenticated_user_can_delete_own_data(api_client, settings):
     user = UserFactory()
 
@@ -134,6 +136,7 @@ def test_authenticated_user_can_delete_own_data(api_client, settings):
 
 
 @pytest.mark.django_db
+@override_settings(GDPR_DISABLE_API_DELETION=False)
 def test_authenticated_user_can_delete_own_data_event_user_details_not_nulled(
     api_client, settings
 ):
