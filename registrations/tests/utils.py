@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import Optional, Union
+from typing import Optional
 from unittest.mock import Mock
 from uuid import uuid4
 
@@ -11,7 +11,12 @@ from rest_framework import status
 
 from helevents.models import User
 from helevents.tests.factories import UserFactory
-from registrations.models import RegistrationUserAccess, SignUp, SignUpGroup, SignUpPayment
+from registrations.models import (
+    RegistrationUserAccess,
+    SignUp,
+    SignUpGroup,
+    SignUpPayment,
+)
 
 DEFAULT_CREATE_ORDER_RESPONSE_JSON = {
     "orderId": str(uuid4()),

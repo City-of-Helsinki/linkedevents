@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-02-01 07:49+0000\n"
+"POT-Creation-Date: 2024-02-02 11:18+0000\n"
 "PO-Revision-Date: 2015-04-29 12:26+0140\n"
 "Last-Translator: <harri.rissanen@vincit.fi>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -197,7 +197,7 @@ msgstr "Käyttäjät voivat muokata organisaation ilmoittautumisia."
 
 #: events/models.py:101
 msgid "Owner organization's registration price groups may be edited by users"
-msgstr "Käyttäjät voivat muokata organisaation alennusryhmiä."
+msgstr "Käyttäjät voivat muokata organisaation asiakasryhmiä."
 
 #: events/models.py:105
 msgid "Past events may be edited using API"
@@ -224,7 +224,7 @@ msgid "Licenses"
 msgstr "Lisenssit"
 
 #: events/models.py:240 events/models.py:480 events/models.py:668
-#: events/models.py:986 registrations/models.py:167
+#: events/models.py:986 registrations/models.py:182
 msgid "Publisher"
 msgstr "Julkaisija"
 
@@ -311,8 +311,8 @@ msgstr "Paikan kotisivu"
 msgid "Description"
 msgstr "Kuvaus"
 
-#: events/models.py:681 events/models.py:1465 registrations/models.py:548
-#: registrations/models.py:805
+#: events/models.py:681 events/models.py:1465 registrations/models.py:662
+#: registrations/models.py:932
 msgid "E-mail"
 msgstr "Sähköposti"
 
@@ -324,7 +324,7 @@ msgstr "Puhelinnumero"
 msgid "Contact type"
 msgstr "Yhteydtiedon tyyppi"
 
-#: events/models.py:689 registrations/models.py:55 registrations/models.py:666
+#: events/models.py:689 registrations/models.py:57 registrations/models.py:780
 msgid "Street address"
 msgstr "Katuosoite"
 
@@ -419,7 +419,7 @@ msgstr "Käyttäjän organisaatio"
 msgid "Event organizer information."
 msgstr "Tapahtuman järjestäjän tiedot."
 
-#: events/models.py:946 registrations/models.py:688
+#: events/models.py:946 registrations/models.py:802
 msgid "User consent"
 msgstr "Käyttäjän suostumus"
 
@@ -487,11 +487,11 @@ msgstr "Alkuaika"
 msgid "End time"
 msgstr "Loppuaika"
 
-#: events/models.py:1037 registrations/models.py:232
+#: events/models.py:1037 registrations/models.py:247
 msgid "Minimum recommended age"
 msgstr "Suositeltu vähimmäisikä"
 
-#: events/models.py:1040 registrations/models.py:235
+#: events/models.py:1040 registrations/models.py:250
 msgid "Maximum recommended age"
 msgstr "Suurin suositeltu ikä"
 
@@ -592,7 +592,7 @@ msgstr ""
 msgid "@id field missing"
 msgstr ""
 
-#: linkedevents/fields.py:69 registrations/serializers.py:1277
+#: linkedevents/fields.py:69 registrations/serializers.py:1495
 msgid "This field is required."
 msgstr "Kenttä on pakollinen."
 
@@ -673,11 +673,11 @@ msgstr "Osallistujalista-käyttäjät"
 
 #: registrations/admin.py:53
 msgid "Registration price group"
-msgstr "Ilmoittautumisten alennusryhmä"
+msgstr "Ilmoittautumisten asiakasryhmä"
 
 #: registrations/admin.py:54
 msgid "Registration price groups"
-msgstr "Ilmoittautumisten alennusryhmät"
+msgstr "Ilmoittautumisten asiakasryhmät"
 
 #: registrations/admin.py:125 registrations/admin.py:175
 msgid "Is default"
@@ -695,20 +695,20 @@ msgstr ""
 msgid "No"
 msgstr ""
 
-#: registrations/api.py:100
+#: registrations/api.py:114
 msgid "Registration with signups cannot be deleted"
 msgstr "Ilmoittautumista, jolla on osallistujia ei voi poistaa"
 
-#: registrations/api.py:177 registrations/filters.py:114
+#: registrations/api.py:191 registrations/filters.py:114
 msgid "Only the admins of the registration organizations have access rights."
 msgstr "Vain ilmoittautumisten organisaatioiden admin-käyttäjillä on oikeudet."
 
-#: registrations/api.py:210
+#: registrations/api.py:224
 msgid ""
 "No contact persons with email addresses found for the given participants."
 msgstr ""
 
-#: registrations/api.py:359
+#: registrations/api.py:386
 msgid "The signup does not have a price group."
 msgstr ""
 
@@ -720,8 +720,8 @@ msgstr "Pyyntö on ristiriidassa kohderesurssin nykyisen tilan kanssa"
 msgid "Registered persons"
 msgstr "Ilmoittautuneet"
 
-#: registrations/exports.py:36 registrations/models.py:54
-#: registrations/models.py:645 registrations/models.py:809
+#: registrations/exports.py:36 registrations/models.py:56
+#: registrations/models.py:759 registrations/models.py:936
 msgid "Phone number"
 msgstr "Puhelinnumero"
 
@@ -757,146 +757,206 @@ msgstr ""
 msgid "Invalid registration ID(s) given."
 msgstr ""
 
-#: registrations/models.py:51 registrations/models.py:652
+#: registrations/models.py:53 registrations/models.py:766
 msgid "City"
 msgstr "Kaupunki"
 
-#: registrations/models.py:52 registrations/models.py:631
-#: registrations/models.py:790
+#: registrations/models.py:54 registrations/models.py:745
+#: registrations/models.py:917
 msgid "First name"
 msgstr "Etunimi"
 
-#: registrations/models.py:53 registrations/models.py:638
-#: registrations/models.py:797
+#: registrations/models.py:55 registrations/models.py:752
+#: registrations/models.py:924
 msgid "Last name"
 msgstr "Sukunimi"
 
-#: registrations/models.py:56 registrations/models.py:673
+#: registrations/models.py:58 registrations/models.py:787
 msgid "ZIP code"
 msgstr "Postinumero"
 
-#: registrations/models.py:88
+#: registrations/models.py:91
+msgid "You must provide either signup_group or signup."
+msgstr ""
+
+#: registrations/models.py:95
+msgid "You can only provide signup_group or signup, not both."
+msgstr ""
+
+#: registrations/models.py:103
 msgid "Created at"
 msgstr "Luotu klo"
 
-#: registrations/models.py:94
+#: registrations/models.py:109
 msgid "Modified at"
 msgstr "Muokattu klo"
 
-#: registrations/models.py:197
+#: registrations/models.py:212
 msgid "You may not delete a default price group."
 msgstr ""
 
-#: registrations/models.py:205
+#: registrations/models.py:220
 msgid "You may not edit a default price group."
 msgstr ""
 
-#: registrations/models.py:211
+#: registrations/models.py:226
 msgid ""
 "You may not change the publisher of a price group that has been used in "
 "registrations."
 msgstr ""
-"Ilmoittautumisissa käytetyn alennusryhmän julkaisija-kenttää ei voi vaihtaa."
+"Ilmoittautumisissa käytetyn asiakasryhmän julkaisija-kenttää ei voi vaihtaa."
 
-#: registrations/models.py:239
+#: registrations/models.py:254
 msgid "Enrollment start time"
 msgstr "Ilmoittautumisen alkamisaika"
 
-#: registrations/models.py:242
+#: registrations/models.py:257
 msgid "Enrollment end time"
 msgstr "Ilmoittautumisen päättymisaika"
 
-#: registrations/models.py:246
+#: registrations/models.py:261
 msgid "Confirmation message"
 msgstr "Vahvistusviesti"
 
-#: registrations/models.py:249
+#: registrations/models.py:264
 msgid "Instructions"
 msgstr "Ohjeet"
 
-#: registrations/models.py:253
+#: registrations/models.py:268
 msgid "Maximum attendee capacity"
 msgstr "Paikkojen enimmäismäärä"
 
-#: registrations/models.py:256
+#: registrations/models.py:271
 msgid "Minimum attendee capacity"
 msgstr "Paikkojen vähimmäismäärä"
 
-#: registrations/models.py:259
+#: registrations/models.py:274
 msgid "Waiting list capacity"
 msgstr "Jonopaikkojen lukumäärä"
 
-#: registrations/models.py:262
+#: registrations/models.py:277
 msgid "Maximum group size"
 msgstr "Ryhmän enimmäiskoko"
 
-#: registrations/models.py:276
+#: registrations/models.py:291
 msgid "Mandatory fields"
 msgstr "Pakolliset kentät"
 
-#: registrations/models.py:474 registrations/models.py:693
+#: registrations/models.py:555 registrations/models.py:807
 msgid "Anonymization time"
 msgstr ""
 
-#: registrations/models.py:523
+#: registrations/models.py:611
+msgid "Group registration to event"
+msgstr "Ryhmäilmoittautuminen tapahtumaan"
+
+#: registrations/models.py:612
+msgid "Group registration to course"
+msgstr "Ryhmäilmoittautuminen kurssille"
+
+#: registrations/models.py:613
+msgid "Group registration to volunteering"
+msgstr "Ryhmäilmoittautuminen vapaaehtoistehtävään"
+
+#: registrations/models.py:637
 msgid "Extra info"
 msgstr "Lisätiedot"
 
-#: registrations/models.py:605
+#: registrations/models.py:719
 msgid "Waitlisted"
 msgstr "Jonossa"
 
-#: registrations/models.py:606
+#: registrations/models.py:720
 msgid "Attending"
 msgstr "Osallistuu"
 
-#: registrations/models.py:614
+#: registrations/models.py:728
 msgid "Not present"
 msgstr "Ei paikalla"
 
-#: registrations/models.py:615
+#: registrations/models.py:729
 msgid "Present"
 msgstr "Paikalla"
 
-#: registrations/models.py:659
+#: registrations/models.py:773
 msgid "Attendee status"
 msgstr "Osallistujan tila"
 
-#: registrations/models.py:681
+#: registrations/models.py:795
 msgid "Presence status"
 msgstr "Läsnäolotila"
 
-#: registrations/models.py:758
+#: registrations/models.py:870
+msgid "Registration to event"
+msgstr "Ilmoittautuminen tapahtumaan"
+
+#: registrations/models.py:871
+msgid "Registration to course"
+msgstr "Ilmoittautuminen kurssille"
+
+#: registrations/models.py:872
+msgid "Registration to volunteering"
+msgstr "Ilmoittautuminen vapaaehtoistehtävään"
+
+#: registrations/models.py:885
 msgid "Date of birth"
 msgstr "Syntymäaika"
 
-#: registrations/models.py:832
+#: registrations/models.py:959
 msgid "Membership number"
 msgstr "Jäsennumero"
 
-#: registrations/models.py:840
+#: registrations/models.py:967
 msgid "Notification type"
 msgstr "Ilmoitusten tyyppi"
 
-#: registrations/models.py:931
-msgid "You must provide either signup_group or signup."
+#: registrations/models.py:974
+msgid "Access code"
 msgstr ""
 
-#: registrations/models.py:935
-msgid "You can only provide signup_group or signup, not both."
-msgstr ""
-
-#: registrations/models.py:951
+#: registrations/models.py:1132
 msgid "Number of seats"
 msgstr "Paikkojen lukumäärä"
 
-#: registrations/models.py:957
+#: registrations/models.py:1138
 msgid "Seat reservation code"
 msgstr "Paikkavarauskoodi"
 
-#: registrations/models.py:960
+#: registrations/models.py:1141
 msgid "Timestamp"
 msgstr "Aikaleima"
+
+#: registrations/models.py:1181
+msgid "pcs"
+msgstr "kpl"
+
+#: registrations/models.py:1203
+msgid "Created"
+msgstr "Luotu"
+
+#: registrations/models.py:1204
+msgid "Paid"
+msgstr "Maksettu"
+
+#: registrations/models.py:1205
+msgid "Cancelled"
+msgstr "Peruttu"
+
+#: registrations/models.py:1206
+msgid "Refunded"
+msgstr "Hyvitety"
+
+#: registrations/models.py:1207
+msgid "Expired"
+msgstr "Vanhentunut"
+
+#: registrations/models.py:1231
+msgid "Payment status"
+msgstr "Maksun tila"
+
+#: registrations/models.py:1245
+msgid "Expires at"
+msgstr "Vanhenee"
 
 #: registrations/notifications.py:17
 msgid "No Notification"
@@ -1279,99 +1339,125 @@ msgstr ""
 "käyttöoikeudet vapaaehtoistehtävän <strong>%(event_name)s</strong> "
 "ilmoittautumiselle."
 
-#: registrations/serializers.py:44
+#: registrations/serializers.py:75
 msgid "Enrolment is not yet open."
 msgstr "Ilmoittautuminen ei ole vielä auki."
 
-#: registrations/serializers.py:46
+#: registrations/serializers.py:77
 msgid "Enrolment is already closed."
 msgstr "Ilmoittautuminen on jo päättynyt."
 
-#: registrations/serializers.py:280 registrations/serializers.py:797
+#: registrations/serializers.py:85
+msgid "Contact person's first and last name are required to make a payment."
+msgstr ""
+
+#: registrations/serializers.py:101
+msgid ""
+"Participants must have a price group with price greater than 0 selected to "
+"make a payment."
+msgstr ""
+
+#: registrations/serializers.py:115
+msgid "A payment can only be added for attending participants."
+msgstr ""
+
+#: registrations/serializers.py:290
+msgid "Unknown Talpa web store API error"
+msgstr ""
+
+#: registrations/serializers.py:293
+msgid "Talpa web store API error"
+msgstr ""
+
+#: registrations/serializers.py:457 registrations/serializers.py:1002
 msgid "The waiting list is already full"
 msgstr "Jonotuslista on jo täynnä"
 
-#: registrations/serializers.py:290
+#: registrations/serializers.py:467
 msgid "You may not change the attendee_status of an existing object."
 msgstr "Olemassa olevan objektin attendee_status-kenttää ei voi vaihtaa."
 
-#: registrations/serializers.py:297 registrations/serializers.py:1025
+#: registrations/serializers.py:474 registrations/serializers.py:1246
 msgid "You may not change the registration of an existing object."
 msgstr "Olemassa olevan objektin registration-kenttää ei voi vaihtaa."
 
-#: registrations/serializers.py:346 registrations/serializers.py:357
-#: registrations/serializers.py:1119
+#: registrations/serializers.py:523 registrations/serializers.py:534
+#: registrations/serializers.py:1337
 msgid "This field must be specified."
 msgstr "Kenttä on pakollinen."
 
-#: registrations/serializers.py:379
+#: registrations/serializers.py:556
 msgid "The participant is too young."
 msgstr "Osallistuja on liian nuori."
 
-#: registrations/serializers.py:384
+#: registrations/serializers.py:561
 msgid "The participant is too old."
 msgstr "Osallistuja on liian vanha."
 
-#: registrations/serializers.py:390
+#: registrations/serializers.py:567
 msgid "Price group selection is mandatory for this registration."
 msgstr ""
 
-#: registrations/serializers.py:401
+#: registrations/serializers.py:578
 msgid "Price group is already assigned to another participant."
 msgstr ""
 
-#: registrations/serializers.py:410
+#: registrations/serializers.py:587
 msgid ""
 "Price group is not one of the allowed price groups for this registration."
 msgstr ""
 
-#: registrations/serializers.py:473
+#: registrations/serializers.py:655
 msgid ""
 "The user's email domain is not one of the allowed domains for substitute "
 "users."
 msgstr ""
 
-#: registrations/serializers.py:538
+#: registrations/serializers.py:720
 #, python-format
 msgid "%(value)s is not a valid choice."
 msgstr ""
 
-#: registrations/serializers.py:545
+#: registrations/serializers.py:727
 msgid "Price must be greater than or equal to 0."
 msgstr ""
 
-#: registrations/serializers.py:733
+#: registrations/serializers.py:913
 msgid "Reservation code doesn't exist."
 msgstr "Varauskoodia ei ole olemassa."
 
-#: registrations/serializers.py:755
+#: registrations/serializers.py:935
 #, python-brace-format
 msgid "Amount of signups is greater than maximum group size: {max_group_size}."
 msgstr ""
 "Ilmoittautumisten määrä on suurempi kuin ryhmän enimmäiskoko: "
 "{max_group_size}."
 
-#: registrations/serializers.py:901
+#: registrations/serializers.py:957
+msgid "Only one signup is supported when creating a Talpa web store payment."
+msgstr ""
+
+#: registrations/serializers.py:1108
 msgid "Contact person information must be provided for a group."
 msgstr ""
 
-#: registrations/serializers.py:1122
+#: registrations/serializers.py:1340
 msgid "The value doesn't match."
 msgstr "Arvo ei täsmää."
 
-#: registrations/serializers.py:1140
+#: registrations/serializers.py:1358
 #, python-brace-format
 msgid "Amount of seats is greater than maximum group size: {max_group_size}."
 msgstr ""
 "Paikkojen lukumäärä on suurempi kuin ryhmän enimmäiskoko: {max_group_size}."
 
-#: registrations/serializers.py:1165
+#: registrations/serializers.py:1383
 #, python-brace-format
 msgid "Not enough seats available. Capacity left: {capacity_left}."
 msgstr ""
 "Paikkoja ei ole riittävästi jäljellä. Paikkoja jäljellä: {capacity_left}."
 
-#: registrations/serializers.py:1181
+#: registrations/serializers.py:1399
 #, python-brace-format
 msgid ""
 "Not enough capacity in the waiting list. Capacity left: {capacity_left}."
@@ -1379,7 +1465,7 @@ msgstr ""
 "Jonotuslistalle ei ole tarpeeksi paikkoja jäljellä. Paikkoja jäljellä "
 "jonotuslistalla: {capacity_left}."
 
-#: registrations/serializers.py:1195
+#: registrations/serializers.py:1413
 msgid "Cannot update expired seats reservation."
 msgstr "Vanhentunutta paikkavarausta ei voi päivittää."
 
