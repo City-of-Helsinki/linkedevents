@@ -1,5 +1,6 @@
 from decimal import Decimal
 from unittest.mock import patch, PropertyMock
+from uuid import UUID
 
 import pytest
 from freezegun import freeze_time
@@ -142,6 +143,77 @@ def test_registration_admin_can_update_signup(api_client, signup):
     assert signup.phone_number == new_phone_number
     assert signup.last_modified_by_id == user.id
     assert signup.user_consent is True
+
+
+@pytest.mark.django_db
+def test_contact_person_can_update_signup_when_strongly_identified(
+    api_client, registration
+):
+    user = UserFactory()
+    api_client.force_authenticate(user)
+
+    signup = SignUpFactory(registration=registration)
+    SignUpContactPersonFactory(signup=signup, user=user)
+
+    assert signup.first_name != new_signup_name
+    assert signup.last_modified_by_id is None
+
+    signup_data = {
+        "registration": signup.registration_id,
+        "first_name": new_signup_name,
+    }
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value=["suomi_fi"],
+    ) as mocked:
+        assert_update_signup(
+            api_client,
+            signup.id,
+            signup_data,
+        )
+        assert mocked.called is True
+
+    signup.refresh_from_db()
+    assert signup.first_name == new_signup_name
+    assert signup.last_modified_by_id == user.id
+
+
+@pytest.mark.django_db
+def test_contact_person_can_update_signup_when_strongly_identified(
+    api_client, registration
+):
+    user = UserFactory()
+    api_client.force_authenticate(user)
+
+    signup = SignUpFactory(registration=registration)
+    SignUpContactPersonFactory(signup=signup, user=user)
+
+    assert signup.first_name != new_signup_name
+    assert signup.last_modified_by_id is None
+
+    signup_data = {
+        "registration": signup.registration_id,
+        "first_name": new_signup_name,
+    }
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value=[],
+    ) as mocked:
+        response = update_signup(
+            api_client,
+            signup.id,
+            signup_data,
+        )
+        assert mocked.called is True
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    signup.refresh_from_db()
+    assert signup.first_name != new_signup_name
+    assert signup.last_modified_by_id is None
 
 
 @freeze_time("2023-03-14 03:30:00+02:00")

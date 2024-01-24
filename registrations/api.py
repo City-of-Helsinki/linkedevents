@@ -67,6 +67,20 @@ class RegistrationsAllowedMethodsMixin:
     http_method_names = ["post", "put", "patch", "get", "delete", "options"]
 
 
+class SignUpAccessCodeMixin:
+    @transaction.atomic
+    def retrieve(self, request, *args, **kwargs):
+        if request.GET.get("access_code"):
+            contact_person = self.get_object().actual_contact_person
+
+            if contact_person and contact_person.check_access_code(
+                request.GET.get("access_code")
+            ):
+                contact_person.link_user(self.request.user)
+
+        return super().retrieve(request, *args, **kwargs)
+
+
 class RegistrationViewSet(
     UserDataSourceAndOrganizationMixin,
     JSONAPIViewMixin,
@@ -291,6 +305,7 @@ register_view(RegistrationUserAccessViewSet, "registration_user_access")
 class SignUpViewSet(
     UserDataSourceAndOrganizationMixin,
     RegistrationsAllowedMethodsMixin,
+    SignUpAccessCodeMixin,
     AuditLogApiViewMixin,
     viewsets.ModelViewSet,
 ):
@@ -373,6 +388,7 @@ register_view(SignUpViewSet, "signup")
 class SignUpGroupViewSet(
     UserDataSourceAndOrganizationMixin,
     RegistrationsAllowedMethodsMixin,
+    SignUpAccessCodeMixin,
     AuditLogApiViewMixin,
     viewsets.ModelViewSet,
 ):

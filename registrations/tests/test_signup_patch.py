@@ -1,5 +1,7 @@
 from decimal import Decimal
+from typing import Optional
 from unittest.mock import patch, PropertyMock
+from uuid import UUID
 
 import pytest
 from freezegun import freeze_time
@@ -27,18 +29,27 @@ description_fields = ("description_fi", "description_sv", "description_en")
 # === util methods ===
 
 
-def patch_signup(api_client, signup_pk, signup_data):
+def patch_signup(
+    api_client, signup_pk, signup_data, query_string: Optional[str] = None
+):
     signup_url = reverse(
         "signup-detail",
         kwargs={"pk": signup_pk},
     )
 
+    if query_string:
+        signup_url = "%s?%s" % (signup_url, query_string)
+
     response = api_client.patch(signup_url, signup_data, format="json")
     return response
 
 
-def assert_patch_signup(api_client, signup_pk, signup_data):
-    response = patch_signup(api_client, signup_pk, signup_data)
+def assert_patch_signup(
+    api_client, signup_pk, signup_data, query_string: Optional[str] = None
+):
+    response = patch_signup(
+        api_client, signup_pk, signup_data, query_string=query_string
+    )
 
     assert response.status_code == status.HTTP_200_OK
     assert response.data["id"] == signup_pk
@@ -170,6 +181,79 @@ def test_can_patch_presence_status_of_signup_based_on_role(
     else:
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+
+
+@pytest.mark.django_db
+def test_contact_person_can_patch_signup_when_strongly_identified(
+    api_client, registration
+):
+    user = UserFactory()
+    api_client.force_authenticate(user)
+
+    signup = SignUpFactory(registration=registration)
+    SignUpContactPersonFactory(signup=signup, user=user)
+
+    new_signup_name = "Edited first name"
+
+    assert signup.first_name != new_signup_name
+    assert signup.last_modified_by_id is None
+
+    signup_data = {
+        "first_name": new_signup_name,
+    }
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value=["suomi_fi"],
+    ) as mocked:
+        assert_patch_signup(
+            api_client,
+            signup.id,
+            signup_data,
+        )
+        assert mocked.called is True
+
+    signup.refresh_from_db()
+    assert signup.first_name == new_signup_name
+    assert signup.last_modified_by_id == user.id
+
+
+@pytest.mark.django_db
+def test_contact_person_cannot_patch_signup_when_not_strongly_identified(
+    api_client, registration
+):
+    user = UserFactory()
+    api_client.force_authenticate(user)
+
+    signup = SignUpFactory(registration=registration)
+    SignUpContactPersonFactory(signup=signup, user=user)
+
+    new_signup_name = "Edited first name"
+
+    assert signup.first_name != new_signup_name
+    assert signup.last_modified_by_id is None
+
+    signup_data = {
+        "first_name": new_signup_name,
+    }
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value=[],
+    ) as mocked:
+        response = patch_signup(
+            api_client,
+            signup.id,
+            signup_data,
+        )
+        assert mocked.called is True
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    signup.refresh_from_db()
+    assert signup.first_name != new_signup_name
+    assert signup.last_modified_by_id is None
 
 
 @freeze_time("2023-03-14 03:30:00+02:00")

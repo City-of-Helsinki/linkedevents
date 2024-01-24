@@ -1,4 +1,5 @@
 from unittest.mock import patch, PropertyMock
+from uuid import UUID
 
 import pytest
 from django.core import mail
@@ -122,6 +123,48 @@ def test_registration_created_admin_can_delete_signup_group(
     SignUpContactPersonFactory(signup_group=signup_group)
 
     assert_delete_signup_group(user_api_client, signup_group.pk)
+
+
+@pytest.mark.django_db
+def test_contact_person_can_delete_signup_group_when_strongly_identified(
+    api_client, registration
+):
+    user = UserFactory()
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(signup_group=signup_group, registration=registration)
+    SignUpContactPersonFactory(signup_group=signup_group, user=user)
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value=["suomi_fi"],
+    ) as mocked:
+        assert_delete_signup_group(api_client, signup_group.id)
+        assert mocked.called is True
+
+
+@pytest.mark.django_db
+def test_contact_person_cannot_delete_signup_group_when_not_strongly_identified(
+    api_client,
+    registration,
+):
+    user = UserFactory()
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(signup_group=signup_group, registration=registration)
+    SignUpContactPersonFactory(signup_group=signup_group, user=user)
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value=[],
+    ) as mocked:
+        response = delete_signup_group(api_client, signup_group.id)
+        assert mocked.called is True
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db

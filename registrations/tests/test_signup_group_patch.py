@@ -1,5 +1,7 @@
 from decimal import Decimal
+from typing import Optional
 from unittest.mock import patch, PropertyMock
+from uuid import UUID
 
 import pytest
 from freezegun import freeze_time
@@ -26,18 +28,27 @@ from registrations.tests.utils import create_user_by_role
 # === util methods ===
 
 
-def patch_signup_group(api_client, signup_group_pk, signup_group_data):
+def patch_signup_group(
+    api_client, signup_group_pk, signup_group_data, query_string: Optional[str] = None
+):
     signup_group_url = reverse(
         "signupgroup-detail",
         kwargs={"pk": signup_group_pk},
     )
 
+    if query_string:
+        signup_group_url = "%s?%s" % (signup_group_url, query_string)
+
     response = api_client.patch(signup_group_url, signup_group_data, format="json")
     return response
 
 
-def assert_patch_signup_group(api_client, signup_group_pk, signup_group_data):
-    response = patch_signup_group(api_client, signup_group_pk, signup_group_data)
+def assert_patch_signup_group(
+    api_client, signup_group_pk, signup_group_data, query_string: Optional[str] = None
+):
+    response = patch_signup_group(
+        api_client, signup_group_pk, signup_group_data, query_string=query_string
+    )
 
     assert response.status_code == status.HTTP_200_OK
     assert response.data["id"] == signup_group_pk
@@ -266,6 +277,109 @@ def test_registration_user_access_who_created_signup_group_can_patch_signups_dat
     assert first_signup.extra_info is None
     assert second_signup.extra_info == "signup2 extra info"
     assert second_signup.user_consent is True
+
+
+@pytest.mark.django_db
+def test_contact_person_can_patch_signup_group_when_strongly_identified(
+    api_client, registration
+):
+    user = UserFactory()
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    signup = SignUpFactory(signup_group=signup_group, registration=registration)
+    SignUpContactPersonFactory(signup_group=signup_group, user=user)
+
+    new_signup_group_extra_info = "Edited extra info"
+    new_signup_name = "Edited first name"
+
+    signup_group_data = {
+        "extra_info": new_signup_group_extra_info,
+        "signups": [
+            {
+                "id": signup.id,
+                "first_name": new_signup_name,
+            },
+        ],
+    }
+
+    assert signup_group.extra_info is None
+    assert signup_group.last_modified_by_id is None
+
+    assert signup.first_name != new_signup_name
+    assert signup.last_modified_by_id is None
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value=["suomi_fi"],
+    ) as mocked:
+        assert_patch_signup_group(api_client, signup_group.id, signup_group_data)
+        assert mocked.called is True
+
+    signup_group.refresh_from_db()
+    del signup_group.extra_info
+    assert signup_group.extra_info == new_signup_group_extra_info
+    assert signup_group.last_modified_by_id == user.id
+
+    signup.refresh_from_db()
+    assert signup.first_name == new_signup_name
+    assert signup.last_modified_by_id == user.id
+
+
+@pytest.mark.django_db
+def test_contact_person_cannot_patch_signup_group_when_not_strongly_identified(
+    api_client,
+    registration,
+):
+    user = UserFactory()
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    signup = SignUpFactory(signup_group=signup_group, registration=registration)
+    SignUpContactPersonFactory(signup_group=signup_group, user=user)
+
+    new_signup_group_extra_info = "Edited extra info"
+    new_signup_name = "Edited name"
+
+    signup_group_data = {
+        "registration": registration.id,
+        "extra_info": new_signup_group_extra_info,
+        "signups": [
+            {
+                "id": signup.id,
+                "first_name": new_signup_name,
+            },
+        ],
+    }
+
+    assert signup_group.extra_info is None
+    assert signup_group.last_modified_by_id is None
+
+    assert signup.first_name != new_signup_name
+    assert signup.last_modified_by_id is None
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value=[],
+    ) as mocked:
+        response = patch_signup_group(
+            api_client,
+            signup_group.id,
+            signup_group_data,
+        )
+        assert mocked.called is True
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    signup_group.refresh_from_db()
+    del signup_group.extra_info
+    assert signup_group.extra_info is None
+    assert signup_group.last_modified_by_id is None
+
+    signup.refresh_from_db()
+    assert signup.first_name != new_signup_name
+    assert signup.last_modified_by_id is None
 
 
 @pytest.mark.parametrize(

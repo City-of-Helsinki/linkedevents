@@ -1,3 +1,5 @@
+from typing import Union
+
 from rest_framework import permissions
 from rest_framework.request import Request
 from rest_framework.views import APIView
@@ -5,6 +7,36 @@ from rest_framework.views import APIView
 from events.auth import ApiKeyUser
 from events.permissions import UserDataFromRequestMixin
 from registrations.models import PriceGroup, Registration, SignUp, SignUpGroup
+
+
+class SignUpPermissionMixin:
+    @staticmethod
+    def _has_signup_admin_permissions(
+        request: Request, obj: Union[SignUp, SignUpGroup]
+    ):
+        return (
+            request.user.is_superuser
+            or request.user.is_registration_admin_of(obj.publisher)
+            or (
+                request.user.is_admin_of(obj.publisher)
+                and obj.registration.created_by_id == request.user.id
+            )
+            or request.user.is_substitute_user_of(
+                obj.registration.registration_user_accesses
+            )
+            or request.user.is_contact_person_of(obj)
+        )
+
+    @staticmethod
+    def _can_use_access_code(request: Request, obj: Union[SignUp, SignUpGroup]):
+        return (
+            request.method == "GET"
+            and request.user.is_strongly_identified
+            and obj.actual_contact_person is not None
+            and obj.actual_contact_person.check_access_code(
+                request.GET.get("access_code")
+            )
+        )
 
 
 class RegistrationBasePermission(UserDataFromRequestMixin, permissions.BasePermission):
@@ -79,25 +111,12 @@ class CanAccessRegistrationSignups(RegistrationBasePermission):
         )
 
 
-class CanAccessSignup(RegistrationBasePermission):
+class CanAccessSignup(SignUpPermissionMixin, RegistrationBasePermission):
     def has_permission(self, request: Request, view: APIView) -> bool:
         return request.user.is_authenticated
 
     @staticmethod
     def _has_object_update_permission(request: Request, obj: SignUp) -> bool:
-        if (
-            request.user.is_superuser
-            or request.user.is_registration_admin_of(obj.publisher)
-            or (
-                request.user.is_admin_of(obj.publisher)
-                and obj.registration.created_by_id == request.user.id
-            )
-            or request.user.is_substitute_user_of(
-                obj.registration.registration_user_accesses
-            )
-        ):
-            return True
-
         if request.user.is_registration_user_access_user_of(
             obj.registration.registration_user_accesses
         ):
@@ -129,27 +148,18 @@ class CanAccessSignup(RegistrationBasePermission):
             return obj.can_be_deleted_by(request.user)
 
         if request.method in ("PUT", "PATCH"):
-            return self._has_object_update_permission(request, obj)
+            return self._has_signup_admin_permissions(
+                request, obj
+            ) or self._has_object_update_permission(request, obj)
 
-        return obj.can_be_edited_by(request.user)
+        return obj.can_be_edited_by(request.user) or self._can_use_access_code(
+            request, obj
+        )
 
 
 class CanAccessSignupGroup(CanAccessSignup):
     @staticmethod
     def _has_object_update_permission(request: Request, obj: SignUpGroup) -> bool:
-        if (
-            request.user.is_superuser
-            or request.user.is_registration_admin_of(obj.publisher)
-            or (
-                request.user.is_admin_of(obj.publisher)
-                and obj.registration.created_by_id == request.user.id
-            )
-            or request.user.is_substitute_user_of(
-                obj.registration.registration_user_accesses
-            )
-        ):
-            return True
-
         def get_signups_keys():
             keys = set()
             for signup in request.data.get("signups", []):

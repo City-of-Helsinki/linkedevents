@@ -3,10 +3,11 @@ from typing import Optional
 from django.conf import settings
 from django.core import mail
 from django_orghierarchy.models import Organization
+from rest_framework import status
 
 from helevents.models import User
 from helevents.tests.factories import UserFactory
-from registrations.models import RegistrationUserAccess
+from registrations.models import RegistrationUserAccess, SignUp
 
 
 def assert_invitation_email_is_sent(
@@ -52,6 +53,30 @@ def assert_invitation_email_is_sent(
         f"{registration_user_access.registration_id}/attendance-list/"
     )
     assert participant_list_url in email_body_string
+
+
+def assert_attending_and_waitlisted_signups(
+    response,
+    expected_status_code: int = status.HTTP_201_CREATED,
+    expected_signups_count: int = 2,
+    expected_attending: int = 2,
+    expected_waitlisted: int = 0,
+) -> None:
+    assert SignUp.objects.count() == expected_signups_count
+    assert (
+        SignUp.objects.filter(attendee_status=SignUp.AttendeeStatus.ATTENDING).count()
+        == expected_attending
+    )
+    assert (
+        SignUp.objects.filter(
+            attendee_status=SignUp.AttendeeStatus.WAITING_LIST
+        ).count()
+        == expected_waitlisted
+    )
+
+    assert response.status_code == expected_status_code
+    if expected_status_code == status.HTTP_403_FORBIDDEN:
+        assert response.json()["detail"] == "The waiting list is already full"
 
 
 def create_user_by_role(
