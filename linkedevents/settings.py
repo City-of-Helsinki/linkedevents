@@ -103,6 +103,7 @@ env = environ.Env(
     FULL_TEXT_WEIGHT_OVERRIDES=(dict, {}),
     GDPR_API_QUERY_SCOPE=(str, ""),
     GDPR_API_DELETE_SCOPE=(str, ""),
+    GDPR_DISABLE_API_DELETION=(bool, True),
     HELUSERS_BACK_CHANNEL_LOGOUT_ENABLED=(bool, False),
     INSTANCE_NAME=(str, "Linked Events"),
     INTERNAL_IPS=(list, []),
@@ -657,6 +658,7 @@ GDPR_API_USER_PROVIDER = "helevents.utils.get_user_for_gdpr_api"
 GDPR_API_DELETER = "helevents.utils.delete_user_and_gdpr_data"
 GDPR_API_QUERY_SCOPE = env("GDPR_API_QUERY_SCOPE")
 GDPR_API_DELETE_SCOPE = env("GDPR_API_DELETE_SCOPE")
+GDPR_DISABLE_API_DELETION = env("GDPR_DISABLE_API_DELETION")
 
 # A list of hex-encoded 32 byte keys used for encrypting sensitive data
 FIELD_ENCRYPTION_KEYS = env("FIELD_ENCRYPTION_KEYS")
