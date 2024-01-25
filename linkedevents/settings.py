@@ -119,9 +119,10 @@ env = environ.Env(
     # "helsinki_adfs" = Tunnistamo auth_backends.adfs.helsinki.HelsinkiADFS
     # "helsinkiazuread" = Tunnistamo auth_backends.helsinki_azure_ad.HelsinkiAzureADTenantOAuth2
     # "helsinkiad" Helsinki Keycloak AD authentication
+    # "vantaalinkedevents" Vantaa AD authentication in Helsinki Keycloak
     NON_EXTERNAL_AUTHENTICATION_METHODS=(
         list,
-        ["helsinki_adfs", "helsinkiazuread", "helsinkiad"],
+        ["helsinki_adfs", "helsinkiazuread", "helsinkiad", "vantaalinkedevents"],
     ),
     ANONYMIZATION_THRESHOLD_DAYS=(int, 30),
     STRONG_IDENTIFICATION_AUTHENTICATION_METHODS=(
