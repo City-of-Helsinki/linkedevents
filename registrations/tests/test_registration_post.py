@@ -21,6 +21,7 @@ from registrations.tests.factories import (
 from registrations.tests.utils import assert_invitation_email_is_sent
 
 email = "user@email.com"
+hel_email = "user@hel.fi"
 event_name = "Foo"
 
 # === util methods ===
@@ -257,8 +258,13 @@ def test_user_editable_resources_can_create_registration(
     assert_create_registration(api_client, registration_data, data_source)
 
 
+@pytest.mark.parametrize("is_substitute_user", [False, True])
 @pytest.mark.django_db
-def test_send_email_to_registration_user_access(event, user_api_client):
+def test_send_email_to_registration_user_access(
+    event, user_api_client, is_substitute_user
+):
+    user_email = hel_email if is_substitute_user else email
+
     with translation.override("fi"):
         event.type_id = Event.TypeId.GENERAL
         event.name = event_name
@@ -266,17 +272,26 @@ def test_send_email_to_registration_user_access(event, user_api_client):
 
         registration_data = {
             "event": {"@id": get_event_url(event.id)},
-            "registration_user_accesses": [{"email": email}],
+            "registration_user_accesses": [
+                {"email": user_email, "is_substitute_user": is_substitute_user}
+            ],
         }
         assert_create_registration(user_api_client, registration_data)
+
         #  assert that the email was sent
-        assert_invitation_email_is_sent(email, event_name)
+        registration_user_access = RegistrationUserAccess.objects.first()
+        assert_invitation_email_is_sent(
+            user_email, event_name, registration_user_access
+        )
 
 
+@pytest.mark.parametrize("is_substitute_user", [False, True])
 @pytest.mark.django_db
 def test_cannot_create_registration_user_accesses_with_duplicate_emails(
-    event, user_api_client
+    event, user_api_client, is_substitute_user
 ):
+    user_email = hel_email if is_substitute_user else email
+
     with translation.override("fi"):
         event.type_id = Event.TypeId.GENERAL
         event.name = event_name
@@ -284,12 +299,45 @@ def test_cannot_create_registration_user_accesses_with_duplicate_emails(
 
         registration_data = {
             "event": {"@id": get_event_url(event.id)},
-            "registration_user_accesses": [{"email": email}, {"email": email}],
+            "registration_user_accesses": [
+                {
+                    "email": user_email,
+                    "is_substitute_user": is_substitute_user,
+                },
+                {
+                    "email": user_email,
+                    "is_substitute_user": is_substitute_user,
+                },
+            ],
         }
         response = create_registration(user_api_client, registration_data)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert (
             response.data["registration_user_accesses"][1]["email"][0].code == "unique"
+        )
+
+
+@pytest.mark.django_db
+def test_cannot_create_substitute_user_without_helsinki_email(event, user_api_client):
+    with translation.override("fi"):
+        event.type_id = Event.TypeId.GENERAL
+        event.name = event_name
+        event.save()
+
+        registration_data = {
+            "event": {"@id": get_event_url(event.id)},
+            "registration_user_accesses": [
+                {
+                    "email": email,
+                    "is_substitute_user": True,
+                },
+            ],
+        }
+        response = create_registration(user_api_client, registration_data)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert (
+            response.data["registration_user_accesses"][0]["is_substitute_user"][0]
+            == "The user's email domain is not one of the allowed domains for substitute users."
         )
 
 

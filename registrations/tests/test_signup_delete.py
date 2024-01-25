@@ -1,3 +1,5 @@
+from unittest.mock import patch, PropertyMock
+
 import pytest
 from django.core import mail
 from django.utils import translation
@@ -17,6 +19,7 @@ from registrations.tests.factories import (
     SignUpGroupFactory,
     SignUpPriceGroupFactory,
 )
+from registrations.tests.test_registration_post import hel_email
 from registrations.tests.test_signup_post import assert_create_signups
 from registrations.tests.utils import create_user_by_role
 
@@ -246,6 +249,21 @@ def test_registration_user_access_cannot_delete_signup(
 
     response = delete_signup(user_api_client, signup.id)
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_registration_substitute_user_delete_signup(registration, signup, api_client):
+    user = UserFactory(email=hel_email)
+    user.organization_memberships.add(signup.publisher)
+    api_client.force_authenticate(user)
+
+    RegistrationUserAccessFactory(
+        registration=registration,
+        email=user.email,
+        is_substitute_user=True,
+    )
+
+    assert_delete_signup(api_client, signup.id)
 
 
 @pytest.mark.django_db

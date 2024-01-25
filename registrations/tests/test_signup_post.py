@@ -15,7 +15,6 @@ from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
 from registrations.models import (
     MandatoryFields,
-    RegistrationPriceGroup,
     SeatReservationCode,
     SignUp,
     SignUpContactPerson,
@@ -25,11 +24,13 @@ from registrations.notifications import NotificationType
 from registrations.tests.factories import (
     RegistrationFactory,
     RegistrationPriceGroupFactory,
+    RegistrationUserAccessFactory,
     SeatReservationCodeFactory,
     SignUpContactPersonFactory,
     SignUpFactory,
     SignUpGroupFactory,
 )
+from registrations.tests.test_registration_post import hel_email
 from registrations.tests.test_signup_patch import description_fields
 from registrations.tests.utils import create_user_by_role
 
@@ -148,28 +149,33 @@ def assert_attending_and_waitlisted_signups(
         "financial_admin",
         "regular_user",
         "regular_user_without_organization",
+        "registration_user_access",
+        "registration_substitute_user",
     ],
 )
 @pytest.mark.django_db
 def test_authenticated_users_can_create_signups(registration, api_client, user_role):
     LanguageFactory(pk="fi", service_language=True)
 
-    user = UserFactory()
-
-    user_role_mapping = {
-        "admin": lambda usr: usr.admin_organizations.add(registration.publisher),
-        "registration_admin": lambda usr: usr.registration_admin_organizations.add(
-            registration.publisher
-        ),
-        "financial_admin": lambda usr: usr.financial_admin_organizations.add(
-            registration.publisher
-        ),
-        "regular_user": lambda usr: usr.organization_memberships.add(
-            registration.publisher
-        ),
-        "regular_user_without_organization": lambda usr: None,
-    }
-    user_role_mapping[user_role](user)
+    user_email = (
+        hel_email if user_role == "registration_substitute_user" else "user@test.com"
+    )
+    user = create_user_by_role(
+        user_role,
+        registration.publisher,
+        additional_roles={
+            "regular_user_without_organization": lambda usr: None,
+            "registration_user_access": lambda usr: RegistrationUserAccessFactory(
+                registration=registration,
+                email=user_email,
+            ),
+            "registration_substitute_user": lambda usr: RegistrationUserAccessFactory(
+                registration=registration, email=user_email, is_substitute_user=True
+            ),
+        },
+    )
+    user.email = user_email
+    user.save(update_fields=["email"])
 
     api_client.force_authenticate(user)
 

@@ -141,6 +141,7 @@ env = environ.Env(
     SOCIAL_AUTH_TUNNISTAMO_OIDC_ENDPOINT=(str, ""),
     STATIC_ROOT=(environ.Path(), root("static")),
     STATIC_URL=(str, "/static/"),
+    SUBSTITUTE_USER_ALLOWED_EMAIL_DOMAINS=(list, ["@hel.fi"]),
     SUPPORT_EMAIL=(str, ""),
     SYSTEM_DATA_SOURCE_ID=(str, "system"),
     TOKEN_AUTH_ACCEPTED_AUDIENCE=(list, ["https://api.hel.fi/auth/linkedevents"]),
@@ -682,6 +683,8 @@ FULL_TEXT_WEIGHT_OVERRIDES = env("FULL_TEXT_WEIGHT_OVERRIDES")
 
 # Talpa web store integration
 WEB_STORE_INTEGRATION_ENABLED = env("WEB_STORE_INTEGRATION_ENABLED")  # Temporary flag
+
+SUBSTITUTE_USER_ALLOWED_EMAIL_DOMAINS = env("SUBSTITUTE_USER_ALLOWED_EMAIL_DOMAINS")
 
 # local_settings.py can be used to override environment-specific settings
 # like database and email that differ between development and production.

@@ -39,5 +39,6 @@ class UserSerializer(serializers.ModelSerializer):
             "display_name",
             "is_external",
             "is_strongly_identified",
+            "is_substitute_user",
         ]
         model = get_user_model()

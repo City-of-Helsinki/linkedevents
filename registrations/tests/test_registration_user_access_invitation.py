@@ -1,5 +1,4 @@
 import pytest
-from django.core import mail
 from django.utils import translation
 from rest_framework import status
 
@@ -49,7 +48,7 @@ def test_admin_user_can_send_invitation_to_registration_user_access(
         )
 
         assert_send_invitation(user_api_client, registration_user_access.pk)
-        assert_invitation_email_is_sent(email, event_name)
+        assert_invitation_email_is_sent(email, event_name, registration_user_access)
 
 
 @pytest.mark.django_db
@@ -96,25 +95,49 @@ def test_regular_user_cannot_send_invitation_to_registration_user_access(
 
 
 @pytest.mark.parametrize(
-    "language_pk,expect_subject,expect_content",
+    "language_pk,is_substitute_user,expect_subject,expect_content",
     [
         (
             "en",
+            False,
             "Rights granted to the participant list",
             f"The e-mail address <strong>{email}</strong> has been granted the rights "
             f"to read the participant list of the event <strong>{event_name}</strong>.",
         ),
         (
             "fi",
+            False,
             "Oikeudet myönnetty osallistujalistaan",
             f"Sähköpostiosoitteelle <strong>{email}</strong> on myönnetty oikeudet "
             f"lukea tapahtuman <strong>{event_name}</strong> osallistujalista.",
         ),
         (
             "sv",
+            False,
             "Rättigheter tilldelade deltagarlistan",
             f"E-postadressen <strong>{email}</strong> har beviljats rättigheter att "
             f"läsa deltagarlistan för evenemanget <strong>{event_name}</strong>.",
+        ),
+        (
+            "en",
+            True,
+            "Rights granted to the registration",
+            f"The e-mail address <strong>{email}</strong> has been granted substitute user rights "
+            f"to the registration of the event <strong>{event_name}</strong>.",
+        ),
+        (
+            "fi",
+            True,
+            "Oikeudet myönnetty ilmoittautumiseen",
+            f"Sähköpostiosoitteelle <strong>{email}</strong> on myönnetty sijaisen käyttöoikeudet "
+            f"tapahtuman <strong>{event_name}</strong> ilmoittautumiselle.",
+        ),
+        (
+            "sv",
+            True,
+            "Rättigheter beviljade till registreringen",
+            f"E-postadressen <strong>{email}</strong> har beviljats ersättningsanvändarrättigheter "
+            f"till registreringen av evenemanget <strong>{event_name}</strong>.",
         ),
     ],
 )
@@ -122,6 +145,7 @@ def test_regular_user_cannot_send_invitation_to_registration_user_access(
 def test_invitation_to_send_in_selected_language(
     expect_content,
     expect_subject,
+    is_substitute_user,
     language_pk,
     languages,
     registration,
@@ -133,14 +157,23 @@ def test_invitation_to_send_in_selected_language(
         registration.event.save()
 
         language = Language.objects.get(pk=language_pk)
-        registration_user_access = RegistrationUserAccess.objects.create(
-            registration=registration, email=email, language=language
+        registration_user_access = RegistrationUserAccessFactory(
+            registration=registration,
+            email=email,
+            language=language,
+            is_substitute_user=is_substitute_user,
         )
 
         assert_send_invitation(user_api_client, registration_user_access.pk)
-        assert mail.outbox[0].to[0] == email
-        assert mail.outbox[0].subject.startswith(expect_subject)
-        assert expect_content in str(mail.outbox[0].alternatives[0])
+
+        assert_invitation_email_is_sent(
+            email,
+            "",
+            registration_user_access,
+            language_pk,
+            expect_subject,
+            expect_content,
+        )
 
 
 @pytest.mark.django_db

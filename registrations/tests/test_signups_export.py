@@ -18,6 +18,7 @@ from registrations.tests.factories import (
     SignUpFactory,
     SignUpGroupFactory,
 )
+from registrations.tests.test_registration_post import hel_email
 
 # === util methods ===
 
@@ -235,6 +236,7 @@ def test_signups_export_unauthorized_for_apikey_with_unknown_data_source(
         "financial_admin",
         "registration_admin",
         "registration_user_access",
+        "registration_substitute_user",
         "regular_user",
         "none",
     ],
@@ -258,12 +260,19 @@ def test_signups_export_allowed_for_superuser_regardless_of_other_roles(
         "registration_user_access": lambda usr: RegistrationUserAccessFactory(
             registration=registration, email=user.email
         ),
+        "registration_substitute_user": lambda usr: RegistrationUserAccessFactory(
+            registration=registration, email=user.email, is_substitute_user=True
+        ),
         "regular_user": lambda usr: usr.organization_memberships.add(
             registration.publisher
         ),
         "none": lambda usr: None,
     }
     other_role_mapping[other_role](user)
+
+    if other_role == "registration_substitute_user":
+        user.email = hel_email
+        user.save(update_fields=["email"])
 
     api_client.force_authenticate(user)
 
@@ -315,6 +324,23 @@ def test_signups_export_allowed_for_strongly_identified_registration_user(
         _assert_get_signups_export(api_client, registration.id, file_format="xlsx")
 
         assert mocked.called is True
+
+
+@pytest.mark.django_db
+def test_signups_export_allowed_for_registration_substitute_user(
+    registration, api_client
+):
+    _create_default_signups_data(registration)
+
+    user = UserFactory(email=hel_email)
+    user.organization_memberships.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    RegistrationUserAccessFactory(
+        registration=registration, email=user.email, is_substitute_user=True
+    )
+
+    _assert_get_signups_export(api_client, registration.id, file_format="xlsx")
 
 
 @pytest.mark.django_db

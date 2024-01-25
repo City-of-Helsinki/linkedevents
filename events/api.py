@@ -1493,6 +1493,7 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
         return not user.is_anonymous and (
             obj.publisher.tree_id in self.admin_tree_ids
             or obj.publisher.tree_id in self.registration_admin_tree_ids
+            or user.is_substitute_user_of(obj.registration_user_accesses)
         )
 
     @staticmethod

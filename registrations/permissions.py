@@ -36,7 +36,7 @@ class CanAccessRegistration(RegistrationBasePermission):
                 __,
                 user_organization,
             ) = self.user_data_source_and_organization_from_request(request)
-            return bool(user_organization)
+            return bool(user_organization) or request.user.is_substitute_user
 
         return request.method in permissions.SAFE_METHODS
 
@@ -74,6 +74,7 @@ class CanAccessRegistrationSignups(RegistrationBasePermission):
             user.is_superuser
             or user.is_registration_admin_of(obj.publisher)
             or (user.is_admin_of(obj.publisher) and obj.created_by_id == user.id)
+            or user.is_substitute_user_of(obj.registration_user_accesses)
             or user.is_registration_user_access_user_of(obj.registration_user_accesses)
         )
 
@@ -90,6 +91,9 @@ class CanAccessSignup(RegistrationBasePermission):
             or (
                 request.user.is_admin_of(obj.publisher)
                 and obj.registration.created_by_id == request.user.id
+            )
+            or request.user.is_substitute_user_of(
+                obj.registration.registration_user_accesses
             )
         ):
             return True
@@ -139,6 +143,9 @@ class CanAccessSignupGroup(CanAccessSignup):
             or (
                 request.user.is_admin_of(obj.publisher)
                 and obj.registration.created_by_id == request.user.id
+            )
+            or request.user.is_substitute_user_of(
+                obj.registration.registration_user_accesses
             )
         ):
             return True

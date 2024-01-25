@@ -17,6 +17,7 @@ from registrations.tests.factories import (
     SignUpFactory,
     SignUpPriceGroupFactory,
 )
+from registrations.tests.test_registration_post import hel_email
 from registrations.tests.utils import create_user_by_role
 
 # === util methods ===
@@ -142,29 +143,41 @@ def test_registration_admin_user_can_get_signup(user_api_client, signup, user):
     assert response.data["is_created_by_current_user"] is False
 
 
+@pytest.mark.parametrize("is_substitute_user", [False, True])
 @pytest.mark.django_db
 def test_registration_user_access_can_get_signup_when_strongly_identified(
-    registration, signup, user, user_api_client
+    registration, signup, api_client, is_substitute_user
 ):
-    user.get_default_organization().admin_users.remove(user)
-    RegistrationUserAccessFactory(registration=registration, email=user.email)
+    user = UserFactory(email="user@hel.fi" if is_substitute_user else "user@test.com")
+    user.organization_memberships.add(signup.publisher)
+    api_client.force_authenticate(user)
+
+    RegistrationUserAccessFactory(
+        registration=registration,
+        email=user.email,
+        is_substitute_user=is_substitute_user,
+    )
 
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
         new_callable=PropertyMock,
         return_value=["suomi_fi"],
     ) as mocked:
-        response = assert_get_detail(user_api_client, signup.id)
+        response = assert_get_detail(api_client, signup.id)
         assert mocked.called is True
+
     assert_signup_fields_exist(response.data)
     assert response.data["is_created_by_current_user"] is False
 
 
 @pytest.mark.django_db
 def test_registration_user_access_cannot_get_signup_when_not_strongly_identified(
-    registration, signup, user, user_api_client
+    registration, signup, api_client
 ):
-    user.get_default_organization().admin_users.remove(user)
+    user = UserFactory()
+    user.organization_memberships.add(signup.publisher)
+    api_client.force_authenticate(user)
+
     RegistrationUserAccessFactory(registration=registration, email=user.email)
 
     with patch(
@@ -172,8 +185,9 @@ def test_registration_user_access_cannot_get_signup_when_not_strongly_identified
         new_callable=PropertyMock,
         return_value=[],
     ) as mocked:
-        response = get_detail(user_api_client, signup.id)
+        response = get_detail(api_client, signup.id)
         assert mocked.called is True
+
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
@@ -366,12 +380,20 @@ def test_registration_admin_user_can_get_signup_list(
     )
 
 
+@pytest.mark.parametrize("is_substitute_user", [False, True])
 @pytest.mark.django_db
 def test_registration_user_access_can_get_signup_list_when_strongly_identified(
-    registration, signup, signup2, user, user_api_client
+    registration, signup, signup2, api_client, is_substitute_user
 ):
-    user.get_default_organization().admin_users.remove(user)
-    RegistrationUserAccessFactory(registration=registration, email=user.email)
+    user = UserFactory(email="user@hel.fi" if is_substitute_user else "user@test.com")
+    user.organization_memberships.add(signup.publisher)
+    api_client.force_authenticate(user)
+
+    RegistrationUserAccessFactory(
+        registration=registration,
+        email=user.email,
+        is_substitute_user=is_substitute_user,
+    )
 
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
@@ -379,16 +401,19 @@ def test_registration_user_access_can_get_signup_list_when_strongly_identified(
         return_value=["suomi_fi"],
     ) as mocked:
         get_list_and_assert_signups(
-            user_api_client, f"registration={registration.id}", [signup, signup2]
+            api_client, f"registration={registration.id}", [signup, signup2]
         )
         assert mocked.called is True
 
 
 @pytest.mark.django_db
 def test_registration_user_access_cannot_get_signup_list_when_not_strongly_identified(
-    registration, signup, signup2, user, user_api_client
+    registration, signup, signup2, api_client
 ):
-    user.get_default_organization().admin_users.remove(user)
+    user = UserFactory()
+    user.organization_memberships.add(signup.publisher)
+    api_client.force_authenticate(user)
+
     RegistrationUserAccessFactory(registration=registration, email=user.email)
 
     with patch(
@@ -396,9 +421,29 @@ def test_registration_user_access_cannot_get_signup_list_when_not_strongly_ident
         new_callable=PropertyMock,
         return_value=[],
     ) as mocked:
-        response = get_list(user_api_client, f"registration={registration.id}")
+        response = get_list(api_client, f"registration={registration.id}")
         assert mocked.called is True
+
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_substitute_user_can_get_signup_list_when_not_strongly_identified(
+    registration, signup, signup2, api_client
+):
+    user = UserFactory(email=hel_email)
+    user.organization_memberships.add(signup.publisher)
+    api_client.force_authenticate(user)
+
+    RegistrationUserAccessFactory(
+        registration=registration,
+        email=user.email,
+        is_substitute_user=True,
+    )
+
+    get_list_and_assert_signups(
+        api_client, f"registration={registration.id}", [signup, signup2]
+    )
 
 
 @pytest.mark.django_db

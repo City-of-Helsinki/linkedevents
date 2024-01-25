@@ -23,6 +23,7 @@ from registrations.tests.factories import (
     SignUpPriceGroupFactory,
     SignUpProtectedDataFactory,
 )
+from registrations.tests.test_registration_post import hel_email
 from registrations.tests.test_signup_patch import description_fields
 from registrations.tests.utils import create_user_by_role
 
@@ -529,6 +530,32 @@ def test_registration_user_access_who_created_signup_can_update(
     ) as mocked:
         assert_update_signup(api_client, signup.id, signup_data)
         assert mocked.called is True
+
+
+@pytest.mark.django_db
+def test_registration_substitute_user_can_update_signup(registration, api_client):
+    user = UserFactory(email=hel_email)
+    user.organization_memberships.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    RegistrationUserAccessFactory(
+        registration=registration,
+        email=user.email,
+        is_substitute_user=True,
+    )
+
+    signup = SignUpFactory(registration=registration, first_name="user")
+    assert signup.first_name != new_signup_name
+
+    signup_data = {
+        "registration": registration.id,
+        "first_name": new_signup_name,
+    }
+
+    assert_update_signup(api_client, signup.id, signup_data)
+
+    signup.refresh_from_db()
+    assert signup.first_name == new_signup_name
 
 
 @pytest.mark.parametrize("admin_type", ["superuser", "registration_admin"])

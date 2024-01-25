@@ -29,7 +29,10 @@ from registrations.models import (
     SignUpProtectedData,
 )
 from registrations.permissions import CanAccessRegistrationSignups
-from registrations.utils import code_validity_duration
+from registrations.utils import (
+    code_validity_duration,
+    has_allowed_substitute_user_email_domain,
+)
 
 
 def _validate_registration_enrolment_times(registration: Registration) -> None:
@@ -457,9 +460,27 @@ class RegistrationUserAccessCreateSerializer(serializers.ModelSerializer):
         allow_null=True,
     )
 
+    def validate(self, data):
+        validated_data = super().validate(data)
+
+        errors = {}
+
+        email = validated_data["email"]
+        if validated_data.get(
+            "is_substitute_user"
+        ) and not has_allowed_substitute_user_email_domain(email):
+            errors["is_substitute_user"] = _(
+                "The user's email domain is not one of the allowed domains for substitute users."
+            )
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return validated_data
+
     class Meta:
         model = RegistrationUserAccess
-        fields = ["email", "language"]
+        fields = ["email", "language", "is_substitute_user"]
 
 
 class RegistrationUserAccessSerializer(RegistrationUserAccessCreateSerializer):
@@ -561,6 +582,8 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
 
     has_registration_user_access = serializers.SerializerMethodField()
 
+    has_substitute_user_access = serializers.SerializerMethodField()
+
     signup_url = serializers.SerializerMethodField()
 
     def get_fields(self):
@@ -585,10 +608,19 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
 
     def get_has_registration_user_access(self, obj):
         user = self.user
-        return (
+
+        has_registration_user_access = (
             user.is_authenticated
             and user.is_strongly_identified
             and obj.registration_user_accesses.filter(email=user.email).exists()
+        )
+
+        return has_registration_user_access or self.get_has_substitute_user_access(obj)
+
+    def get_has_substitute_user_access(self, obj):
+        user = self.user
+        return user.is_authenticated and user.is_substitute_user_of(
+            obj.registration_user_accesses
         )
 
     def get_signups(self, obj):
@@ -644,6 +676,7 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
             "publisher",
             "registration_user_accesses",
             "has_registration_user_access",
+            "has_substitute_user_access",
             "created_time",
             "last_modified_time",
             "created_by",

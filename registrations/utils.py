@@ -69,3 +69,12 @@ def get_email_noreply_address():
     return (
         settings.DEFAULT_FROM_EMAIL or "noreply@%s" % Site.objects.get_current().domain
     )
+
+
+def has_allowed_substitute_user_email_domain(email_address):
+    return email_address and any(
+        [
+            email_address.endswith(domain)
+            for domain in settings.SUBSTITUTE_USER_ALLOWED_EMAIL_DOMAINS
+        ]
+    )

@@ -1,3 +1,5 @@
+from unittest.mock import patch, PropertyMock
+
 import pytest
 from django.core import mail
 from django.utils import translation
@@ -21,6 +23,7 @@ from registrations.tests.factories import (
     SignUpGroupFactory,
     SignUpPriceGroupFactory,
 )
+from registrations.tests.test_registration_post import hel_email
 from registrations.tests.utils import create_user_by_role
 
 test_email1 = "test@test.com"
@@ -148,6 +151,26 @@ def test_registration_user_access_cannot_delete_signup_group(
     SignUpContactPersonFactory(signup_group=signup_group)
 
     assert_delete_signup_group_failed(user_api_client, signup_group.pk)
+
+
+@pytest.mark.django_db
+def test_registration_substitute_user_delete_signup_group(api_client, registration):
+    user = UserFactory(email=hel_email)
+    user.organization_memberships.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    RegistrationUserAccessFactory(
+        registration=registration,
+        email=user.email,
+        is_substitute_user=True,
+    )
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(signup_group=signup_group, registration=registration)
+    SignUpFactory(signup_group=signup_group, registration=registration)
+    SignUpContactPersonFactory(signup_group=signup_group)
+
+    assert_delete_signup_group(api_client, signup_group.pk)
 
 
 @pytest.mark.parametrize(

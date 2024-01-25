@@ -1,20 +1,57 @@
 from typing import Optional
 
+from django.conf import settings
 from django.core import mail
 from django_orghierarchy.models import Organization
 
 from helevents.models import User
 from helevents.tests.factories import UserFactory
+from registrations.models import RegistrationUserAccess
 
 
-def assert_invitation_email_is_sent(email: str, event_name: str) -> None:
+def assert_invitation_email_is_sent(
+    email: str,
+    event_name: str,
+    registration_user_access: RegistrationUserAccess,
+    ui_locale: Optional[str] = None,
+    expected_subject: Optional[str] = None,
+    expected_body: Optional[str] = None,
+) -> None:
     assert mail.outbox[0].to[0] == email
-    assert mail.outbox[0].subject.startswith("Oikeudet myönnetty osallistujalistaan")
-    assert (
-        f"Sähköpostiosoitteelle <strong>{email}</strong> on myönnetty oikeudet lukea "
-        f"tapahtuman <strong>{event_name}</strong> osallistujalista."
-        in str(mail.outbox[0].alternatives[0])
+
+    ui_locale = ui_locale or "fi"
+    email_body_string = str(mail.outbox[0].alternatives[0])
+
+    if registration_user_access.is_substitute_user:
+        expected_subject = expected_subject or "Oikeudet myönnetty ilmoittautumiseen"
+        assert mail.outbox[0].subject.startswith(expected_subject)
+
+        expected_body = expected_body or (
+            f"Sähköpostiosoitteelle <strong>{email}</strong> on myönnetty sijaisen käyttöoikeudet "
+            f"tapahtuman <strong>{event_name}</strong> ilmoittautumiselle."
+        )
+        assert expected_body in email_body_string
+
+        service_base_url = settings.LINKED_EVENTS_UI_URL
+        registration_term = "registrations"
+    else:
+        expected_subject = expected_subject or "Oikeudet myönnetty osallistujalistaan"
+        assert mail.outbox[0].subject.startswith(expected_subject)
+
+        expected_body = expected_body or (
+            f"Sähköpostiosoitteelle <strong>{email}</strong> on myönnetty oikeudet lukea "
+            f"tapahtuman <strong>{event_name}</strong> osallistujalista."
+        )
+        assert expected_body in email_body_string
+
+        service_base_url = settings.LINKED_REGISTRATIONS_UI_URL
+        registration_term = "registration"
+
+    participant_list_url = (
+        f"{service_base_url}/{ui_locale}/{registration_term}/"
+        f"{registration_user_access.registration_id}/attendance-list/"
     )
+    assert participant_list_url in email_body_string
 
 
 def create_user_by_role(

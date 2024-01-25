@@ -40,6 +40,7 @@ def assert_user_fields_exist(data, version="v1"):
         "organization_memberships",
         "is_external",
         "is_strongly_identified",
+        "is_substitute_user",
     )
     assert_fields_exist(data, fields)
 

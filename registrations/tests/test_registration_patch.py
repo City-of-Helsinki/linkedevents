@@ -10,7 +10,10 @@ from registrations.models import PriceGroup, RegistrationPriceGroup
 from registrations.tests.factories import (
     PriceGroupFactory,
     RegistrationPriceGroupFactory,
+    RegistrationUserAccessFactory,
 )
+from registrations.tests.test_registration_post import email
+from registrations.tests.test_registration_put import edited_email, edited_hel_email
 
 # === util methods ===
 
@@ -128,3 +131,54 @@ def test_cannot_patch_registration_with_duplicate_price_groups(
     )
 
     assert RegistrationPriceGroup.objects.count() == 1
+
+
+@pytest.mark.django_db
+def test_can_patch_substitute_user_access_with_helsinki_email(
+    registration, user_api_client
+):
+    user_access = RegistrationUserAccessFactory(registration=registration, email=email)
+
+    assert user_access.email != edited_hel_email
+    assert user_access.is_substitute_user is False
+
+    registration_data = {
+        "registration_user_accesses": [
+            {
+                "id": user_access.pk,
+                "email": edited_hel_email,
+                "is_substitute_user": True,
+            }
+        ],
+    }
+
+    assert_patch_registration(user_api_client, registration.pk, registration_data)
+
+    user_access.refresh_from_db()
+    assert user_access.email == edited_hel_email
+    assert user_access.is_substitute_user is True
+
+
+@pytest.mark.django_db
+def test_cannot_patch_substitute_user_access_without_helsinki_email(
+    registration, user_api_client
+):
+    user_access = RegistrationUserAccessFactory(registration=registration, email=email)
+
+    registration_data = {
+        "registration_user_accesses": [
+            {
+                "id": user_access.pk,
+                "email": edited_email,
+                "is_substitute_user": True,
+            }
+        ],
+    }
+
+    response = patch_registration(user_api_client, registration.pk, registration_data)
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert (
+        response.data["registration_user_accesses"][0]["is_substitute_user"][0]
+        == "The user's email domain is not one of the allowed domains for substitute users."
+    )

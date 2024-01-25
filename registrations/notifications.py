@@ -192,6 +192,46 @@ signup_email_texts = {
 }
 
 
+registration_user_access_invitation_subjects = {
+    "registration_user_access": _(
+        "Rights granted to the participant list - %(event_name)s"
+    ),
+    "registration_substitute_user": _(
+        "Rights granted to the registration - %(event_name)s"
+    ),
+}
+
+
+registration_user_access_invitation_texts = {
+    "registration_user_access": {
+        "text": {
+            Event.TypeId.GENERAL: _(
+                "The e-mail address <strong>%(email)s</strong> has been granted the rights to read the participant list of the event <strong>%(event_name)s</strong>."  # noqa E501
+            ),
+            Event.TypeId.COURSE: _(
+                "The e-mail address <strong>%(email)s</strong> has been granted the rights to read the participant list of the course <strong>%(event_name)s</strong>."  # noqa E501
+            ),
+            Event.TypeId.VOLUNTEERING: _(
+                "The e-mail address <strong>%(email)s</strong> has been granted the rights to read the participant list of the volunteering <strong>%(event_name)s</strong>."  # noqa E501
+            ),
+        }
+    },
+    "registration_substitute_user": {
+        "text": {
+            Event.TypeId.GENERAL: _(
+                "The e-mail address <strong>%(email)s</strong> has been granted substitute user rights to the registration of the event <strong>%(event_name)s</strong>."  # noqa E501
+            ),
+            Event.TypeId.COURSE: _(
+                "The e-mail address <strong>%(email)s</strong> has been granted substitute user rights to the registration of the course <strong>%(event_name)s</strong>."  # noqa E501
+            ),
+            Event.TypeId.VOLUNTEERING: _(
+                "The e-mail address <strong>%(email)s</strong> has been granted substitute user rights to the registration of the volunteering <strong>%(event_name)s</strong>."  # noqa E501
+            ),
+        }
+    },
+}
+
+
 def _get_notification_texts(
     notification_type, text_options, event_type_id, event_name, username
 ):
@@ -340,5 +380,75 @@ def get_signup_notification_variables(contact_person):
             "signup_edit_url": signup_edit_url,
             "username": contact_person.first_name,
         }
+
+    return email_variables
+
+
+def get_registration_user_access_invitation_texts(registration_user_access):
+    registration = registration_user_access.registration
+    language = registration_user_access.get_language_pk()
+    event_type_id = registration.event.type_id
+
+    if registration_user_access.is_substitute_user:
+        text_options = registration_user_access_invitation_texts[
+            "registration_substitute_user"
+        ]
+    else:
+        text_options = registration_user_access_invitation_texts[
+            "registration_user_access"
+        ]
+
+    with translation.override(language):
+        event_name = registration.event.name
+        texts = {
+            "text": text_options["text"][event_type_id]
+            % {
+                "email": registration_user_access.email,
+                "event_name": event_name,
+            }
+        }
+
+    return texts
+
+
+def get_registration_user_access_invitation_subject(registration_user_access):
+    registration = registration_user_access.registration
+    language = registration_user_access.get_language_pk()
+
+    with translation.override(language):
+        event_name = registration.event.name
+
+        if registration_user_access.is_substitute_user:
+            subject = registration_user_access_invitation_subjects[
+                "registration_substitute_user"
+            ]
+        else:
+            subject = registration_user_access_invitation_subjects[
+                "registration_user_access"
+            ]
+
+    return subject % {"event_name": event_name}
+
+
+def get_registration_user_access_invitation_variables(registration_user_access):
+    registration = registration_user_access.registration
+    language = registration_user_access.get_language_pk()
+
+    if registration_user_access.is_substitute_user:
+        base_url = settings.LINKED_EVENTS_UI_URL
+        registration_term = "registrations"
+    else:
+        base_url = settings.LINKED_REGISTRATIONS_UI_URL
+        registration_term = "registration"
+    participant_list_url = (
+        f"{base_url}/{language}/{registration_term}/{registration.pk}/attendance-list/"
+    )
+
+    email_variables = {
+        "linked_events_ui_locale": language,
+        "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
+        "linked_registrations_ui_url": settings.LINKED_REGISTRATIONS_UI_URL,
+        "participant_list_url": participant_list_url,
+    }
 
     return email_variables
