@@ -319,8 +319,8 @@ class KulkeImporter(Importer):
         defaults = dict(name="Ahjo")
         ahjo_ds, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
 
-        org_args = dict(origin_id="u4804001050", data_source=ahjo_ds)
-        defaults = dict(name="Yleiset kulttuuripalvelut")
+        org_args = dict(origin_id="u48040010", data_source=ahjo_ds)
+        defaults = dict(name="Kulttuuripalvelukokonaisuus")
         self.organization, _ = Organization.objects.get_or_create(
             defaults=defaults, **org_args
         )

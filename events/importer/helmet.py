@@ -197,8 +197,8 @@ class HelmetImporter(Importer):
             id=settings.SYSTEM_DATA_SOURCE_ID, defaults=system_data_source_defaults
         )
 
-        org_args = dict(origin_id="u4804001010", data_source=self.ahjo_data_source)
-        defaults = dict(name="Helsingin kaupunginkirjasto")
+        org_args = dict(origin_id="u48040050", data_source=self.ahjo_data_source)
+        defaults = dict(name="Kirjastopalvelukokonaisuus")
         self.organization, _ = Organization.objects.get_or_create(
             defaults=defaults, **org_args
         )
