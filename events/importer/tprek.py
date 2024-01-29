@@ -36,8 +36,8 @@ class TprekImporter(Importer):
         defaults = dict(name="Ahjo")
         ahjo_ds, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
 
-        org_args = dict(origin_id="u021600", data_source=ahjo_ds)
-        defaults = dict(name="Tietotekniikka- ja viestintäosasto")
+        org_args = dict(origin_id="u021800", data_source=ahjo_ds)
+        defaults = dict(name="Viestintäosasto")
         self.organization, _ = Organization.objects.get_or_create(
             defaults=defaults, **org_args
         )
