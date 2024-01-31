@@ -21,7 +21,7 @@ from events.importer.espoo import (
     EspooImporterError,
     parse_jsonld_id,
 )
-from events.models import Event, Keyword, Place
+from events.models import Event, Image, Keyword, Place
 from events.tests.factories import (
     DataSourceFactory,
     KeywordFactory,
@@ -312,7 +312,21 @@ def event_mock_data(
         "offers": offers,
         "external_links": external_links,
         "super_event": None,
-        "images": [],
+        "images": [
+            {
+                "id": 11950,
+                "license": "event_only",
+                "created_time": "2024-01-31T10:54:22.360925Z",
+                "last_modified_time": "2024-01-31T10:54:22.360956Z",
+                "name": "Test Image",
+                "url": "https://localhost/test_image.jpeg",
+                "cropping": "72,0,625,554",
+                "photographer_name": "",
+                "alt_text": "lovely test picture",
+                "data_source": "espoo",
+                "publisher": "espoo:sito",
+            }
+        ],
     }
 
 
@@ -414,6 +428,7 @@ def test_importer(settings, requests_mock, sleep, api_client):
     importer.import_events()
 
     assert Event.objects.filter(data_source=importer.data_source).count() == 3
+    assert Image.objects.filter(data_source=importer.data_source).count() == 1
     assert Keyword.objects.filter(data_source=importer.data_source).count() == 2
     assert Place.objects.filter(data_source=importer.data_source).count() == 1
 
@@ -426,6 +441,7 @@ def test_importer(settings, requests_mock, sleep, api_client):
     importer.import_events()
 
     assert Event.objects.filter(data_source=importer.data_source).count() == 2
+    assert Image.objects.filter(data_source=importer.data_source).count() == 1
     assert Keyword.objects.filter(data_source=importer.data_source).count() == 1
     assert Place.objects.filter(data_source=importer.data_source).count() == 0
 
@@ -446,6 +462,7 @@ def test_importer(settings, requests_mock, sleep, api_client):
     importer.import_events()
 
     assert Event.objects.filter(data_source=importer.data_source).count() == 0
+    assert Image.objects.filter(data_source=importer.data_source).count() == 0
     assert Keyword.objects.filter(data_source=importer.data_source).count() == 0
     assert Place.objects.filter(data_source=importer.data_source).count() == 0
     assert Organization.objects.filter(data_source=importer.data_source).count() == 0
