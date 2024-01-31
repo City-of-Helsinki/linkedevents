@@ -15,7 +15,7 @@ from requests.exceptions import RetryError
 from rest_framework.fields import empty
 from urllib3 import Retry
 
-from events.models import DataSource, Event, Keyword, Language, Place
+from events.models import DataSource, Event, Image, Keyword, Language, Place
 from events.translation import EventTranslationOptions
 
 from ..api import generate_id
@@ -143,6 +143,15 @@ def _build_pre_map_to_id(mapping: dict[str, str]) -> PreMapper:
     return pre_map_to_id
 
 
+def _pre_map_value_to_id(
+    field_name: str, field_data: Optional[Union[str, dict]], data: dict
+) -> dict[str, Any]:
+    """
+    Direct map a value to the relevant id (foreign key)
+    """
+    return {**data, f"{field_name}_id": field_data}
+
+
 def _pre_map_translation(
     field_name: str, field_data: Optional[dict], data: dict
 ) -> dict:
@@ -175,10 +184,11 @@ def _post_map_to_self_id(
     return mapper(field_name, field_data, data)
 
 
-def _build_post_map_m2m_obj(mapping: dict[str, str]) -> PostMapper:
+def _build_post_map_m2m_obj(mapping: dict[str, str], id_getter=None) -> PostMapper:
     """
     Post mapper for ManyToMany fields
     """
+    id_getter = id_getter or (lambda d: d["id"])
 
     def post_map_m2m_obj(
         field_name: str,
@@ -188,7 +198,7 @@ def _build_post_map_m2m_obj(mapping: dict[str, str]) -> PostMapper:
         instance_map: dict[str, str],
     ) -> dict[str, Any]:
         field = getattr(instance, field_name)
-        field.set([mapping[d["id"]] for d in field_data])
+        field.set([mapping[id_getter(d)] for d in field_data])
         return {**data}
 
     return post_map_m2m_obj
@@ -250,22 +260,36 @@ def _post_recreate_external_links(
     )
 
 
-def _import_origin_obj(obj_data, model, data_source, copy_fields, pre_field_mappers):
+def _import_origin_obj(
+    obj_data,
+    model,
+    data_source,
+    copy_fields,
+    pre_field_mappers,
+    auto_pk=False,
+    origin_id_field="id",
+    instance_id_field="origin_id",
+):
     obj_data = deepcopy(obj_data)
-    origin_id = obj_data.pop("id")
+    origin_id = obj_data.pop(origin_id_field)
     obj_data.pop("data_source")
 
     data = {k: v for k, v in obj_data.items() if k in copy_fields}
     for field_name, mapper in pre_field_mappers.items():
         data = mapper(field_name, obj_data.get(field_name), data)
 
-    qs = model.objects.filter(origin_id=origin_id, data_source=data_source)
+    qs = model.objects.filter(data_source=data_source, **{instance_id_field: origin_id})
     qs_count = qs.count()
     if qs_count == 0:
+        kwargs = {
+            instance_id_field: origin_id,
+            "data_source": data_source,
+        }
+        if not auto_pk:
+            kwargs["id"] = generate_id(data_source)
+
         instance = model.objects.create(
-            id=generate_id(data_source),
-            origin_id=origin_id,
-            data_source=data_source,
+            **kwargs,
             **data,
         )
     elif qs_count == 1:
@@ -274,7 +298,7 @@ def _import_origin_obj(obj_data, model, data_source, copy_fields, pre_field_mapp
     else:
         raise EspooImporterError(
             f"Data integrity is broken "
-            f"(origin_id={origin_id}, data_source={data_source.pk})"
+            f"({instance_id_field}={origin_id}, data_source={data_source.pk})"
         )
     return instance
 
@@ -287,6 +311,9 @@ def _import_origin_objs(
     copy_fields: Optional[list[str]] = None,
     pre_field_mappers: Optional[dict[str, PreMapper]] = None,
     post_field_mappers: Optional[dict[str, PostMapper]] = None,
+    auto_pk=False,
+    instance_id_field: Optional[str] = "origin_id",
+    origin_id_field: Optional[str] = "id",
 ) -> tuple[dict[str, str], ModelSyncher]:
     """
     Import data from origin_objs into model instances using mapping
@@ -298,12 +325,17 @@ def _import_origin_objs(
     copy_fields: list of field names to be copied as is from origin to target
     pre_field_mappers: fields that are mapped before saving the model instance
     post_field_mappers: fields that are mapped after saving all the model instances
+    auto_id: set True for models that use AutoField pk
+    syncher_key:
     """
     logger.info(f"Importing related Espoo {model.__name__}s")
 
+    def origin_id(instance):
+        return getattr(instance, instance_id_field)
+
     syncher = ModelSyncher(
         model.objects.filter(data_source=data_source),
-        lambda instance: instance.origin_id,
+        origin_id,
     )
 
     copy_fields = copy_fields or []
@@ -314,7 +346,14 @@ def _import_origin_objs(
     instance_data_map = {}
     for obj_data in origin_objs:
         instance = _import_origin_obj(
-            obj_data, model, data_source, copy_fields, pre_field_mappers
+            obj_data,
+            model,
+            data_source,
+            copy_fields,
+            pre_field_mappers,
+            auto_pk=auto_pk,
+            instance_id_field=instance_id_field,
+            origin_id_field=origin_id_field,
         )
 
         instances.append(instance)
@@ -323,7 +362,7 @@ def _import_origin_objs(
 
     instance_mapping = {
         **{obj.id: obj.id for obj in common_objs},
-        **{instance.origin_id: instance.id for instance in instances},
+        **{origin_id(instance): instance.id for instance in instances},
     }
 
     for instance in instances:
@@ -468,6 +507,7 @@ class EspooImporter(Importer):
         origin_keywords = {}
         origin_audiences = {}
         origin_org_ids = set()
+        origin_images = {}
 
         # Collect remote relations from events
         for event_data in events_data:
@@ -475,6 +515,7 @@ class EspooImporter(Importer):
             _add_id_to_dict(origin_audiences, event_data, "audience")
             _add_id_to_dict(origin_places, event_data, "location")
             _add_id_to_dict(origin_keywords, event_data, "keywords")
+            _add_id_to_dict(origin_images, event_data, "images")
 
         # Collect publisher organizations from places and keywords
         logger.info("Discovering organizations from relations")
@@ -486,6 +527,9 @@ class EspooImporter(Importer):
 
         for audience_data in origin_audiences.values():
             _add_id_to_set(origin_org_ids, audience_data, "publisher")
+
+        for image_data in origin_images.values():
+            _add_id_to_set(origin_org_ids, image_data, "publisher")
 
         # Import organizations
         logger.info("Importing organizations")
@@ -533,6 +577,27 @@ class EspooImporter(Importer):
             },
         )
 
+        image_map, image_syncher = _import_origin_objs(
+            Image,
+            self.data_source,
+            [],
+            list(origin_images.values()),
+            copy_fields=[
+                "created_time",
+                "last_modified_time",
+                "name",
+                "url",
+                "cropping",
+                "photographer_name",
+                "alt_text",
+                "data_source",
+            ],
+            pre_field_mappers={"license": _pre_map_value_to_id},
+            auto_pk=True,
+            instance_id_field="url",
+            origin_id_field="url",
+        )
+
         # And finally import events
         _, event_syncher = _import_origin_objs(
             Event,
@@ -560,6 +625,9 @@ class EspooImporter(Importer):
             post_field_mappers={
                 "audience": _build_post_map_m2m_obj(keyword_map),
                 "keywords": _build_post_map_m2m_obj(keyword_map),
+                "images": _build_post_map_m2m_obj(
+                    image_map, id_getter=lambda d: d["url"]
+                ),
                 "offers": _post_recreate_m2o,
                 "external_links": _post_recreate_external_links,
                 "super_event": _post_map_to_self_id,
@@ -570,6 +638,7 @@ class EspooImporter(Importer):
         event_syncher.finish(force=force)
         place_syncher.finish(force=force)
         keyword_syncher.finish(force=force)
+        image_syncher.finish(force=force)
         org_syncher.finish(force=force)
 
         logger.info("{} events processed".format(len(events_data)))
