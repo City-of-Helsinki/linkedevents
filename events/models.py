@@ -49,6 +49,7 @@ from notifications.models import (
     NotificationType,
     render_notification_template,
 )
+from notifications.utils import format_date, format_datetime
 from registrations.utils import get_email_noreply_address
 
 logger = logging.getLogger(__name__)
@@ -1319,6 +1320,25 @@ class Event(
         except ApiKeyUser.DoesNotExist:
             pass
         return False
+
+    def get_start_and_end_time_display(self, lang="fi", date_only=False) -> str:
+        if date_only:
+            formatter_func = format_date
+        else:
+            formatter_func = format_datetime
+
+        if self.start_time and self.end_time:
+            return (
+                f"{formatter_func(self.start_time, lang)}"
+                if self.start_time.date() == self.end_time.date() and date_only
+                else f"{formatter_func(self.start_time, lang)} - {formatter_func(self.end_time, lang)}"
+            )
+        elif self.start_time:
+            return f"{formatter_func(self.start_time, lang)} -"
+        elif self.end_time:
+            return f"- {formatter_func(self.end_time, lang)}"
+
+        return ""
 
 
 reversion.register(Event)

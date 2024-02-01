@@ -1,9 +1,6 @@
 import logging
 
-from django.conf import settings
 from django.db import models
-from django.utils import timezone
-from django.utils.formats import date_format
 from django.utils.html import strip_tags
 from django.utils.translation import activate
 from django.utils.translation import gettext_lazy as _
@@ -11,7 +8,8 @@ from jinja2 import StrictUndefined
 from jinja2.exceptions import TemplateError
 from jinja2.sandbox import SandboxedEnvironment
 
-DEFAULT_LANG = settings.LANGUAGES[0][0]
+from notifications.exceptions import NotificationTemplateException
+from notifications.utils import DEFAULT_LANG, format_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -21,10 +19,6 @@ class NotificationType:
     EVENT_PUBLISHED = "event_published"
     DRAFT_POSTED = "draft_posted"
     USER_CREATED = "user_created"
-
-
-class NotificationTemplateException(Exception):
-    pass
 
 
 class NotificationTemplate(models.Model):
@@ -107,25 +101,6 @@ class NotificationTemplate(models.Model):
             return rendered_notification
         except TemplateError as e:
             raise NotificationTemplateException(e) from e
-
-
-def format_datetime(dt, lang="fi"):
-    dt = timezone.template_localtime(dt)
-    if lang == "fi":
-        # 1.1.2017 klo 12:00
-        dt_format = r"j.n.Y \k\l\o G:i"
-    elif lang == "sv":
-        # 1.1.2017 kl. 12:00
-        dt_format = r"j.n.Y \k\l\. G:i"
-    elif lang == "en":
-        # 1 Jan 2017 at 12:00
-        dt_format = r"j M Y \a\t G:i"
-    else:
-        raise NotificationTemplateException(
-            f"format_datetime received unknown language '{lang}'"
-        )
-
-    return date_format(dt, dt_format)
 
 
 def render_notification_template(

@@ -1066,7 +1066,9 @@ class SignUpContactPerson(SignUpOrGroupDependingMixin, SerializableMixin):
             [self.email],
         )
 
-    def get_notification_message(self, notification_type, access_code=None):
+    def get_notification_message(
+        self, notification_type, access_code=None, is_sub_event_cancellation=False
+    ):
         [_, linked_registrations_ui_locale] = get_ui_locales(self.service_language)
 
         if notification_type == SignUpNotificationType.EVENT_CANCELLATION:
@@ -1087,7 +1089,9 @@ class SignUpContactPerson(SignUpOrGroupDependingMixin, SerializableMixin):
                 self, access_code=access_code
             )
             email_variables["texts"] = get_signup_notification_texts(
-                self, notification_type
+                self,
+                notification_type,
+                is_sub_event_cancellation=is_sub_event_cancellation,
             )
 
             rendered_body = render_to_string(
@@ -1096,15 +1100,23 @@ class SignUpContactPerson(SignUpOrGroupDependingMixin, SerializableMixin):
             )
 
         return (
-            get_signup_notification_subject(self, notification_type),
+            get_signup_notification_subject(
+                self,
+                notification_type,
+                is_sub_event_cancellation=is_sub_event_cancellation,
+            ),
             rendered_body,
             get_email_noreply_address(),
             [self.email],
         )
 
-    def send_notification(self, notification_type, access_code=None):
+    def send_notification(
+        self, notification_type, access_code=None, is_sub_event_cancellation=False
+    ):
         message = self.get_notification_message(
-            notification_type, access_code=access_code
+            notification_type,
+            access_code=access_code,
+            is_sub_event_cancellation=is_sub_event_cancellation,
         )
         rendered_body = message[1]
 
