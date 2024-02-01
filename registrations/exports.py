@@ -20,6 +20,7 @@ class RegistrationSignUpsExportXLSX:
             .only(
                 "first_name",
                 "last_name",
+                "phone_number",
                 "attendee_status",
                 "contact_person",
                 "signup_group",
@@ -32,14 +33,15 @@ class RegistrationSignUpsExportXLSX:
     def _get_columns() -> list[dict]:
         return [
             {"header": _("Name"), "accessor": "full_name"},
+            {"header": _("Phone number"), "accessor": "phone_number"},
             {
-                "header": _("E-mail"),
+                "header": _("Contact person's email"),
                 "accessor": lambda signup: signup.actual_contact_person.email
                 if signup.actual_contact_person
                 else None,
             },
             {
-                "header": _("Phone number"),
+                "header": _("Contact person's phone number"),
                 "accessor": lambda signup: signup.actual_contact_person.phone_number
                 if signup.actual_contact_person
                 else None,
