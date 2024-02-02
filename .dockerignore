@@ -19,6 +19,7 @@
 !templates*
 !.prod
 !registrations
+!web_store
 
 #################################################
 # Whitelisted files
