@@ -345,12 +345,11 @@ class SignUpViewSet(
             ]
         else:
             signup_instances = serializer.create_signups(serializer.validated_data)
+            serializer.notify_contact_persons(signup_instances)
 
         # Delete reservation
         reservation = serializer.validated_data["reservation"]
         reservation.delete()
-
-        serializer.notify_contact_persons(signup_instances)
 
         self._add_audit_logged_object_ids(signup_instances)
 
