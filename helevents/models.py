@@ -89,6 +89,10 @@ class UserModelPermissionMixin:
         """Check if current user is a substitute user for registrations"""
         raise NotImplementedError()
 
+    def is_contact_person_of(self, signup_or_group):
+        """Check if current user is the contact person of a signup or a signup group"""
+        raise NotImplementedError()
+
     @property
     def admin_organizations(self):
         """
@@ -349,6 +353,16 @@ class User(AbstractUser, UserModelPermissionMixin, SerializableMixin):
         return registration_user_accesses.filter(
             email=self.email, is_substitute_user=True
         ).exists()
+
+    def is_contact_person_of(self, signup_or_group):
+        """Check if current user is the contact person of a signup or a signup group"""
+        if not signup_or_group.actual_contact_person:
+            return False
+
+        return (
+            self.is_strongly_identified
+            and signup_or_group.actual_contact_person.user_id == self.id
+        )
 
     @cached_property
     def is_external(self):

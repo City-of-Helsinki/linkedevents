@@ -1,6 +1,7 @@
 from collections import Counter
 from decimal import Decimal
 from unittest.mock import patch, PropertyMock
+from uuid import UUID
 
 import pytest
 from rest_framework import status
@@ -9,7 +10,7 @@ from audit_log.models import AuditLogEntry
 from events.tests.utils import assert_fields_exist
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
-from registrations.models import SignUp
+from registrations.models import SignUp, SignUpContactPerson
 from registrations.tests.factories import (
     RegistrationUserAccessFactory,
     SignUpContactPersonFactory,
@@ -64,6 +65,7 @@ def assert_signup_group_fields_exist(data):
         "last_modified_by",
         "is_created_by_current_user",
         "anonymization_time",
+        "has_contact_person_access",
     )
     assert_fields_exist(data, fields)
     assert_contact_person_fields_exist(data["contact_person"])
@@ -109,6 +111,7 @@ def test_registration_admin_or_registration_created_admin_can_get_signup_group(
     assert len(response.json()["signups"]) == 2
     assert_signup_group_fields_exist(response.data)
     assert response.data["is_created_by_current_user"] is False
+    assert response.data["has_contact_person_access"] is False
 
 
 @pytest.mark.parametrize("is_substitute_user", [False, True])
@@ -137,6 +140,7 @@ def test_registration_user_access_can_get_signup_group_when_strongly_identified(
         assert mocked.called is True
 
     assert response.data["is_created_by_current_user"] is False
+    assert response.data["has_contact_person_access"] is False
 
 
 @pytest.mark.django_db
@@ -176,6 +180,133 @@ def test_substitute_user_can_get_signup_group_without_strong_identification(
 
     response = assert_get_detail(api_client, signup_group.id)
     assert response.data["is_created_by_current_user"] is False
+    assert response.data["has_contact_person_access"] is False
+
+
+@patch(
+    "helevents.models.UserModelPermissionMixin.token_amr_claim",
+    new_callable=PropertyMock,
+    return_value=["suomi_fi"],
+)
+@pytest.mark.django_db
+def test_get_contact_person_access_to_signup_group_with_access_code(
+    mocked_amr_claim, api_client, registration
+):
+    user = UserFactory()
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(signup_group=signup_group, registration=registration)
+    contact_person = SignUpContactPersonFactory(
+        signup_group=signup_group, email="test@test.com"
+    )
+    access_code = contact_person.create_access_code()
+
+    contact_person.refresh_from_db()
+    assert contact_person.user_id is None
+    assert contact_person.access_code is not None
+
+    assert user.is_contact_person_of(signup_group) is False
+    assert mocked_amr_claim.called is True
+    mocked_amr_claim.reset_mock()
+
+    # Use access code.
+    response = assert_get_detail(
+        api_client, signup_group.id, query=f"access_code={access_code}"
+    )
+    assert response.data["has_contact_person_access"] is True
+    assert_signup_group_fields_exist(response.data)
+    assert mocked_amr_claim.called is True
+    mocked_amr_claim.reset_mock()
+
+    contact_person.refresh_from_db()
+    assert contact_person.user_id == user.id
+    assert contact_person.access_code is None
+
+    assert user.is_contact_person_of(signup_group) is True
+    assert mocked_amr_claim.called is True
+
+
+@pytest.mark.django_db
+def test_cannot_use_already_used_signup_group_access_code(api_client, registration):
+    user = UserFactory()
+
+    user2 = UserFactory()
+    api_client.force_authenticate(user2)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(signup_group=signup_group, registration=registration)
+    contact_person = SignUpContactPersonFactory(
+        signup_group=signup_group, email="test@test.com"
+    )
+
+    access_code = contact_person.create_access_code()
+    assert access_code is not None
+
+    contact_person.link_user(user)
+    contact_person.refresh_from_db()
+    assert contact_person.user_id == user.id
+    assert contact_person.access_code is None
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value=["suomi_fi"],
+    ) as mocked:
+        response = get_detail(
+            api_client, signup_group.id, query=f"access_code={access_code}"
+        )
+        assert mocked.called is True
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    contact_person.refresh_from_db()
+    assert contact_person.user_id == user.id
+    assert contact_person.access_code is None
+
+
+@pytest.mark.django_db
+def test_contact_person_can_get_signup_group_when_strongly_identified(
+    api_client, registration
+):
+    user = UserFactory()
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(signup_group=signup_group, registration=registration)
+    SignUpContactPersonFactory(signup_group=signup_group, user=user)
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value=["suomi_fi"],
+    ) as mocked:
+        response = assert_get_detail(api_client, signup_group.id)
+        assert mocked.called is True
+
+    assert_signup_group_fields_exist(response.data)
+    assert response.data["has_contact_person_access"] is True
+
+
+@pytest.mark.django_db
+def test_contact_person_cannot_get_signup_group_when_not_strongly_identified(
+    api_client,
+    registration,
+):
+    user = UserFactory()
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(signup_group=signup_group, registration=registration)
+    SignUpContactPersonFactory(signup_group=signup_group, user=user)
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value=[],
+    ) as mocked:
+        response = get_detail(api_client, signup_group.id)
+        assert mocked.called is True
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db
@@ -229,6 +360,7 @@ def test_regular_created_user_can_get_signup_group(api_client, user, registratio
     assert len(response.json()["signups"]) == 2
     assert_signup_group_fields_exist(response.data)
     assert response.data["is_created_by_current_user"] is True
+    assert response.data["has_contact_person_access"] is False
 
 
 @pytest.mark.django_db
@@ -259,6 +391,7 @@ def test_created_user_without_organization_can_get_signup_group(
     assert len(response.json()["signups"]) == 2
     assert_signup_group_fields_exist(response.data)
     assert response.data["is_created_by_current_user"] is True
+    assert response.data["has_contact_person_access"] is False
 
 
 @pytest.mark.django_db
@@ -294,6 +427,7 @@ def test_api_key_with_organization_and_registration_permissions_can_get_signup_g
     assert len(response.json()["signups"]) == 2
     assert_signup_group_fields_exist(response.data)
     assert response.data["is_created_by_current_user"] is False
+    assert response.data["has_contact_person_access"] is False
 
 
 @pytest.mark.django_db
@@ -358,6 +492,27 @@ def test_admin_user_cannot_get_signup_group_list(api_client, registration):
     api_client.force_authenticate(user)
 
     response = get_list(api_client, f"registration={registration.id}")
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_contact_person_cannot_get_signup_group_list(api_client, registration):
+    user = UserFactory()
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpContactPersonFactory(signup_group=signup_group, user=user)
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value=["suomi_fi"],
+    ) as mocked:
+        response = get_list(
+            api_client,
+            f"registration={registration.id}",
+        )
+        assert mocked.called is True
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 

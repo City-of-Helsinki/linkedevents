@@ -5,7 +5,12 @@ import pytest
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 
 from helevents.tests.factories import UserFactory
-from registrations.models import RegistrationPriceGroup, SignUp, SignUpPriceGroup
+from registrations.models import (
+    RegistrationPriceGroup,
+    SignUp,
+    SignUpContactPerson,
+    SignUpPriceGroup,
+)
 from registrations.serializers import SignUpSerializer
 from registrations.tests.factories import (
     RegistrationFactory,
@@ -48,6 +53,11 @@ def test_signup_create(
         "first_name": "User",
         "last_name": "1",
         "email": "test1@test.com",
+        "contact_person": {
+            "first_name": "Contact",
+            "last_name": "Person",
+            "email": "contact@test.com",
+        },
     }
 
     request_mock = Mock(user=UserFactory())
@@ -58,6 +68,7 @@ def test_signup_create(
     serializer.is_valid(raise_exception=True)
 
     assert SignUp.objects.count() == 0
+    assert SignUpContactPerson.objects.count() == 0
 
     if expected_signups_count == 0:
         with pytest.raises(DRFPermissionDenied):
@@ -66,6 +77,7 @@ def test_signup_create(
         serializer.create(serializer.validated_data)
 
     assert SignUp.objects.count() == expected_signups_count
+    assert SignUpContactPerson.objects.count() == expected_signups_count
     assert (
         SignUp.objects.filter(attendee_status=SignUp.AttendeeStatus.ATTENDING).count()
         == expected_attending

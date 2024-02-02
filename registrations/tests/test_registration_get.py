@@ -20,6 +20,7 @@ from registrations.tests.factories import (
     RegistrationFactory,
     RegistrationUserAccessFactory,
     SeatReservationCodeFactory,
+    SignUpContactPersonFactory,
 )
 from registrations.tests.test_registration_post import hel_email
 from registrations.tests.test_signup_post import assert_create_signups
@@ -537,6 +538,32 @@ def test_regular_user_cannot_include_signups(
     response = get_detail_and_assert_registration(
         user_api_client, registration.id, include_signups_query
     )
+    response_signups = response.data["signups"]
+    assert response_signups is None
+
+
+@pytest.mark.django_db
+def test_contact_person_cannot_include_signups(
+    api_client, registration, signup, signup2
+):
+    user = UserFactory()
+    api_client.force_authenticate(user)
+
+    signup.contact_person.user = user
+    signup.contact_person.save(update_fields=["user"])
+    signup2.contact_person.user = user
+    signup2.contact_person.save(update_fields=["user"])
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value=["suomi_fi"],
+    ) as mocked:
+        response = get_detail_and_assert_registration(
+            api_client, registration.id, include_signups_query
+        )
+        assert mocked.called is True
+
     response_signups = response.data["signups"]
     assert response_signups is None
 

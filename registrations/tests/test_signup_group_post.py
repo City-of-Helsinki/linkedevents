@@ -1,7 +1,9 @@
 from copy import deepcopy
 from datetime import datetime, timedelta
+from unittest.mock import patch
 
 import pytest
+from django.conf import settings
 from django.core import mail
 from django.utils import translation
 from django.utils.timezone import localtime
@@ -17,6 +19,7 @@ from registrations.models import (
     MandatoryFields,
     SeatReservationCode,
     SignUp,
+    SignUpContactPerson,
     SignUpGroup,
     SignUpGroupProtectedData,
     SignUpPriceGroup,
@@ -28,9 +31,12 @@ from registrations.tests.factories import (
     SeatReservationCodeFactory,
 )
 from registrations.tests.test_registration_post import hel_email
-from registrations.tests.test_signup_post import assert_attending_and_waitlisted_signups
-from registrations.tests.utils import create_user_by_role
+from registrations.tests.utils import (
+    assert_attending_and_waitlisted_signups,
+    create_user_by_role,
+)
 
+test_access_code = "803aabab-8fa5-4c26-a372-7792a8b8456f"
 test_email1 = "test@test.com"
 test_email2 = "mickey@test.com"
 default_signups_data = [
@@ -1083,15 +1089,71 @@ def test_email_sent_on_successful_signup_group(
             },
         }
 
-        assert_create_signup_group(user_api_client, signup_group_data)
+        with patch(
+            "registrations.models.SignUpContactPerson.create_access_code"
+        ) as mocked_access_code:
+            mocked_access_code.return_value = test_access_code
+            assert_create_signup_group(user_api_client, signup_group_data)
+            assert mocked_access_code.called is True
+
         assert SignUp.objects.count() == 1
         assert SignUp.objects.first().attendee_status == SignUp.AttendeeStatus.ATTENDING
+
+        contact_person = SignUpContactPerson.objects.first()
+        signup_group_edit_url = (
+            f"{settings.LINKED_REGISTRATIONS_UI_URL}/{service_language}"
+            f"/registration/{registration.id}/signup-group/{contact_person.signup_group_id}/edit"
+            f"?access_code={test_access_code}"
+        )
 
         #  assert that the email was sent
         message_string = str(mail.outbox[0].alternatives[0])
         assert mail.outbox[0].subject.startswith(expected_subject)
         assert expected_heading in message_string
         assert expected_text in message_string
+        assert signup_group_edit_url in message_string
+
+
+@pytest.mark.parametrize(
+    "access_code_not_sent_reason", ["same_user", "has_full_permissions"]
+)
+@pytest.mark.django_db
+def test_access_code_not_sent_on_successful_signup_group_if_user_has_edit_rights(
+    api_client, registration, access_code_not_sent_reason
+):
+    user = UserFactory(email=test_email1)
+    if access_code_not_sent_reason == "has_full_permissions":
+        user.registration_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
+
+    service_language = LanguageFactory(id="fi", service_language=True)
+
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
+    signup_data = {
+        "first_name": "Michael",
+        "last_name": "Jackson",
+        "date_of_birth": "2011-04-07",
+    }
+    signup_group_data = {
+        "registration": registration.id,
+        "reservation_code": reservation.code,
+        "signups": [signup_data],
+        "contact_person": {
+            "email": test_email1,
+            "service_language": service_language.pk,
+        },
+    }
+
+    with patch(
+        "registrations.models.SignUpContactPerson.create_access_code"
+    ) as mocked_access_code:
+        assert_create_signup_group(api_client, signup_group_data)
+        assert mocked_access_code.called is False
+
+    #  assert that the email was sent
+    message_string = str(mail.outbox[0].alternatives[0])
+    assert mail.outbox[0].subject.startswith("Vahvistus ilmoittautumisesta")
+    assert "access_code" not in message_string
 
 
 @pytest.mark.parametrize(

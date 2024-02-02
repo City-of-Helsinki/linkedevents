@@ -4,6 +4,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from uuid import uuid4
 
 from django.conf import settings
+from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
@@ -433,6 +434,13 @@ class SignUpMixin:
     def publisher(self):
         return self.registration.publisher
 
+    @cached_property
+    def actual_contact_person(self):
+        if signup_group := getattr(self, "signup_group", None):
+            return getattr(signup_group, "contact_person", None)
+
+        return getattr(self, "contact_person", None)
+
     def can_be_edited_by(self, user):
         """Check if the current signup can be edited by the given user"""
         return (
@@ -447,6 +455,7 @@ class SignUpMixin:
                 self.registration.registration_user_accesses
             )
             or user.id == self.created_by_id
+            or user.is_contact_person_of(self)
         )
 
     def can_be_deleted_by(self, user):
@@ -460,6 +469,7 @@ class SignUpMixin:
             )
             or user.is_substitute_user_of(self.registration.registration_user_accesses)
             or user.id == self.created_by_id
+            or user.is_contact_person_of(self)
         )
 
     def is_user_editable_resources(self):
@@ -727,13 +737,6 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         protected_data = getattr(self, "protected_data", None)
         return getattr(protected_data, "date_of_birth", None)
 
-    @cached_property
-    def actual_contact_person(self):
-        if self.signup_group_id:
-            return getattr(self.signup_group, "contact_person", None)
-
-        return getattr(self, "contact_person", None)
-
     @transaction.atomic
     def anonymize(self):
         # Allow to anonymize signup group only once
@@ -843,6 +846,21 @@ class SignUpContactPerson(SerializableMixin):
         default=NotificationType.NO_NOTIFICATION,
     )
 
+    access_code = models.CharField(
+        _("Access code"),
+        max_length=128,
+        blank=True,
+        null=True,
+        default=None,
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="contact_persons",
+    )
+
     serialize_fields = (
         {"name": "id"},
         {"name": "first_name"},
@@ -858,11 +876,49 @@ class SignUpContactPerson(SerializableMixin):
         },
     )
 
+    def can_create_access_code(self, current_user: User) -> bool:
+        if not self.email:
+            return False
+
+        if (
+            self.email == current_user.email
+            and self.signup_or_signup_group.can_be_edited_by(current_user)
+            and self.signup_or_signup_group.can_be_deleted_by(current_user)
+        ):
+            # User already has full permissions for the signup or signup group.
+            return False
+
+        return True
+
+    def create_access_code(self) -> str:
+        access_code = str(uuid4())
+
+        self.access_code = make_password(access_code)
+        self.save(update_fields=["access_code"])
+
+        return access_code
+
+    def check_access_code(self, access_code: str) -> bool:
+        if not (access_code and self.access_code) or self.user_id:
+            return False
+
+        return check_password(access_code, self.access_code)
+
+    def link_user(self, user: User) -> None:
+        self.access_code = None
+        self.user = user
+        self.save(update_fields=["access_code", "user"])
+
+    @cached_property
+    def signup_or_signup_group(self):
+        if self.signup_group_id:
+            return self.signup_group
+
+        return self.signup
+
     @cached_property
     def registration(self):
-        if self.signup_group_id:
-            return self.signup_group.registration
-        return self.signup.registration
+        return self.signup_or_signup_group.registration
 
     def get_service_language_pk(self):
         if self.service_language:
@@ -886,7 +942,7 @@ class SignUpContactPerson(SerializableMixin):
             [self.email],
         )
 
-    def get_notification_message(self, notification_type):
+    def get_notification_message(self, notification_type, access_code=None):
         [_, linked_registrations_ui_locale] = get_ui_locales(self.service_language)
 
         if notification_type == SignUpNotificationType.EVENT_CANCELLATION:
@@ -903,7 +959,9 @@ class SignUpContactPerson(SerializableMixin):
             raise ValueError(f"Invalid signup notification type: {notification_type}")
 
         with override(linked_registrations_ui_locale, deactivate=True):
-            email_variables = get_signup_notification_variables(self)
+            email_variables = get_signup_notification_variables(
+                self, access_code=access_code
+            )
             email_variables["texts"] = get_signup_notification_texts(
                 self, notification_type
             )
@@ -920,8 +978,10 @@ class SignUpContactPerson(SerializableMixin):
             [self.email],
         )
 
-    def send_notification(self, notification_type):
-        message = self.get_notification_message(notification_type)
+    def send_notification(self, notification_type, access_code=None):
+        message = self.get_notification_message(
+            notification_type, access_code=access_code
+        )
         rendered_body = message[1]
 
         send_mail(*message, html_message=rendered_body)

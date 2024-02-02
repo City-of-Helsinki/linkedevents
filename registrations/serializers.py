@@ -105,6 +105,14 @@ class CreatedModifiedBaseSerializer(serializers.ModelSerializer):
         super().update(instance, validated_data)
         return instance
 
+    class Meta:
+        fields = (
+            "created_time",
+            "last_modified_time",
+            "created_by",
+            "last_modified_by",
+        )
+
 
 class SignUpContactPersonSerializer(serializers.ModelSerializer):
     service_language = serializers.PrimaryKeyRelatedField(
@@ -132,6 +140,26 @@ class SignUpContactPersonSerializer(serializers.ModelSerializer):
             "notifications",
         )
         model = SignUpContactPerson
+
+
+class SignUpBaseSerializer(CreatedModifiedBaseSerializer):
+    contact_person = SignUpContactPersonSerializer(required=False, allow_null=True)
+    extra_info = serializers.CharField(required=False, allow_blank=True)
+    has_contact_person_access = serializers.SerializerMethodField()
+
+    def get_has_contact_person_access(self, obj):
+        if not (request := self.context.get("request")):
+            return False
+
+        return request.user.is_authenticated and request.user.is_contact_person_of(obj)
+
+    class Meta(CreatedModifiedBaseSerializer.Meta):
+        fields = (
+            "contact_person",
+            "extra_info",
+            "has_contact_person_access",
+            "is_created_by_current_user",
+        ) + CreatedModifiedBaseSerializer.Meta.fields
 
 
 class SignUpPriceGroupSerializer(
@@ -186,11 +214,9 @@ class SignUpPriceGroupSerializer(
         extra_kwargs = {"description": {"required": False, "read_only": True}}
 
 
-class SignUpSerializer(CreatedModifiedBaseSerializer):
+class SignUpSerializer(SignUpBaseSerializer):
     view_name = "signup"
     id = serializers.IntegerField(required=False)
-    contact_person = SignUpContactPersonSerializer(required=False, allow_null=True)
-    extra_info = serializers.CharField(required=False, allow_blank=True)
     date_of_birth = serializers.DateField(required=False, allow_null=True)
 
     def get_fields(self):
@@ -248,31 +274,33 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
             registration, 1
         )
 
-        if add_as_attending:
-            signup = super().create(validated_data)
-            self._update_or_create_protected_data(signup, **protected_data)
-            self._update_or_create_price_group(signup, **price_group_data)
+        signup = None
 
-            contact_person = self._update_or_create_contact_person(
-                signup, **contact_person_data
-            )
-            if contact_person:
-                contact_person.send_notification(SignUpNotificationType.CONFIRMATION)
-
-            return signup
-        elif add_as_waitlisted:
+        if not add_as_attending and add_as_waitlisted:
             validated_data["attendee_status"] = SignUp.AttendeeStatus.WAITING_LIST
 
+        if add_as_attending or add_as_waitlisted:
             signup = super().create(validated_data)
             self._update_or_create_protected_data(signup, **protected_data)
             self._update_or_create_price_group(signup, **price_group_data)
 
+        if signup:
             contact_person = self._update_or_create_contact_person(
                 signup, **contact_person_data
             )
             if contact_person:
+                access_code = (
+                    contact_person.create_access_code()
+                    if contact_person.can_create_access_code(
+                        self.context["request"].user
+                    )
+                    else None
+                )
                 contact_person.send_notification(
-                    SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST
+                    SignUpNotificationType.CONFIRMATION
+                    if add_as_attending
+                    else SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST,
+                    access_code=access_code,
                 )
 
             return signup
@@ -415,20 +443,15 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
 
         return validated_data
 
-    class Meta:
+    class Meta(SignUpBaseSerializer.Meta):
         fields = (
             "id",
-            "created_time",
-            "last_modified_time",
-            "created_by",
-            "last_modified_by",
             "anonymization_time",
             "first_name",
             "last_name",
             "date_of_birth",
             "phone_number",
             "city",
-            "extra_info",
             "attendee_status",
             "street_address",
             "zipcode",
@@ -436,9 +459,7 @@ class SignUpSerializer(CreatedModifiedBaseSerializer):
             "registration",
             "signup_group",
             "user_consent",
-            "is_created_by_current_user",
-            "contact_person",
-        )
+        ) + SignUpBaseSerializer.Meta.fields
         if settings.WEB_STORE_INTEGRATION_ENABLED:
             fields += ("price_group",)
         model = SignUp
@@ -664,7 +685,7 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
             for lang in ["en", "fi", "sv"]
         }
 
-    class Meta:
+    class Meta(CreatedModifiedBaseSerializer.Meta):
         fields = (
             "id",
             "signups",
@@ -677,10 +698,6 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
             "registration_user_accesses",
             "has_registration_user_access",
             "has_substitute_user_access",
-            "created_time",
-            "last_modified_time",
-            "created_by",
-            "last_modified_by",
             "event",
             "attendee_registration",
             "audience_min_age",
@@ -694,9 +711,9 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
             "mandatory_fields",
             "confirmation_message",
             "instructions",
-            "is_created_by_current_user",
             "signup_url",
-        )
+            "is_created_by_current_user",
+        ) + CreatedModifiedBaseSerializer.Meta.fields
         if settings.WEB_STORE_INTEGRATION_ENABLED:
             fields += ("registration_price_groups",)
         model = Registration
@@ -767,7 +784,7 @@ class CreateSignUpsSerializer(serializers.Serializer):
         return data
 
     @staticmethod
-    def _notify_contact_person(contact_person, attendee_status):
+    def _notify_contact_person(contact_person, attendee_status, user):
         if not contact_person:
             return
 
@@ -776,15 +793,24 @@ class CreateSignUpsSerializer(serializers.Serializer):
             SignUp.AttendeeStatus.WAITING_LIST: SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST,
         }
 
-        contact_person.send_notification(confirmation_type_mapping[attendee_status])
+        access_code = (
+            contact_person.create_access_code()
+            if contact_person.can_create_access_code(user)
+            else None
+        )
+        contact_person.send_notification(
+            confirmation_type_mapping[attendee_status], access_code=access_code
+        )
 
     def notify_contact_persons(self, signup_instances):
+        user = self.context["request"].user
+
         for signup in signup_instances:
             if signup.signup_group_id:
                 continue
 
             contact_person = getattr(signup, "contact_person", None)
-            self._notify_contact_person(contact_person, signup.attendee_status)
+            self._notify_contact_person(contact_person, signup.attendee_status, user)
 
     def create_signups(self, validated_data):
         user = self.context["request"].user
@@ -880,12 +906,9 @@ class CreateSignUpsSerializer(serializers.Serializer):
         return signup_instances
 
 
-class SignUpGroupCreateSerializer(
-    CreatedModifiedBaseSerializer, CreateSignUpsSerializer
-):
+class SignUpGroupCreateSerializer(SignUpBaseSerializer, CreateSignUpsSerializer):
     reservation_code = serializers.CharField(write_only=True)
     contact_person = SignUpContactPersonSerializer(required=True)
-    extra_info = serializers.CharField(required=False, allow_blank=True)
 
     def validate(self, data):
         # Clean html tags from the text fields
@@ -951,34 +974,26 @@ class SignUpGroupCreateSerializer(
             SignUp.AttendeeStatus.ATTENDING
             if instance.attending_signups
             else SignUp.AttendeeStatus.WAITING_LIST,
+            self.context["request"].user,
         )
 
         reservation.delete()
 
         return instance
 
-    class Meta:
+    class Meta(SignUpBaseSerializer.Meta):
         fields = (
             "id",
             "registration",
             "reservation_code",
             "signups",
-            "contact_person",
-            "extra_info",
-            "created_time",
-            "last_modified_time",
-            "created_by",
-            "last_modified_by",
             "anonymization_time",
-            "is_created_by_current_user",
-        )
+        ) + SignUpBaseSerializer.Meta.fields
         model = SignUpGroup
 
 
-class SignUpGroupSerializer(CreatedModifiedBaseSerializer):
+class SignUpGroupSerializer(SignUpBaseSerializer):
     view_name = "signupgroup-detail"
-    contact_person = SignUpContactPersonSerializer(required=False, allow_null=True)
-    extra_info = serializers.CharField(required=False, allow_blank=True)
 
     @staticmethod
     def _update_protected_data(signup_group, **protected_data):
@@ -1061,20 +1076,13 @@ class SignUpGroupSerializer(CreatedModifiedBaseSerializer):
 
         return instance
 
-    class Meta:
+    class Meta(SignUpBaseSerializer.Meta):
         fields = (
             "id",
             "registration",
             "signups",
-            "contact_person",
-            "extra_info",
-            "created_time",
-            "last_modified_time",
-            "created_by",
-            "last_modified_by",
             "anonymization_time",
-            "is_created_by_current_user",
-        )
+        ) + SignUpBaseSerializer.Meta.fields
         model = SignUpGroup
 
 
@@ -1281,17 +1289,13 @@ class PriceGroupSerializer(TranslatedModelSerializer, CreatedModifiedBaseSeriali
 
         return validated_data
 
-    class Meta:
+    class Meta(CreatedModifiedBaseSerializer.Meta):
         fields = (
             "id",
-            "created_time",
-            "last_modified_time",
-            "created_by",
-            "last_modified_by",
             "publisher",
             "description",
             "is_free",
-        )
+        ) + CreatedModifiedBaseSerializer.Meta.fields
         model = PriceGroup
         extra_kwargs = {
             "publisher": {"required": True, "allow_null": False},

@@ -10,7 +10,7 @@ from events.tests.conftest import APIClient
 from events.tests.factories import OrganizationFactory
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
-from registrations.models import SignUp
+from registrations.models import SignUp, SignUpContactPerson
 from registrations.tests.factories import (
     RegistrationFactory,
     RegistrationUserAccessFactory,
@@ -163,6 +163,31 @@ def test_signups_export_forbidden_for_user_without_organization(
     api_client.force_authenticate(user)
 
     response = _get_signups_export(api_client, registration.id, file_format="xlsx")
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_signups_export_forbidden_for_contact_person(registration, api_client):
+    _create_default_signups_data(registration)
+
+    user = UserFactory()
+    api_client.force_authenticate(user)
+
+    contact_person = SignUpContactPerson.objects.first()
+    contact_person.user = user
+    contact_person.save(update_fields=["user"])
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value=["suomi_fi"],
+    ) as mocked:
+        response = _get_signups_export(
+            api_client,
+            registration.id,
+            file_format="xlsx",
+        )
+        assert mocked.called is True
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 

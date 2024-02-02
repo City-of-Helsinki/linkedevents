@@ -96,6 +96,9 @@ class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
     def is_substitute_user_of(self, registration_user_accesses):
         return False
 
+    def is_contact_person_of(self, signup_or_group):
+        return False
+
     @property
     def admin_organizations(self):
         if not self.data_source.owner:

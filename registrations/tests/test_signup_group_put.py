@@ -1,5 +1,6 @@
 from decimal import Decimal
 from unittest.mock import patch, PropertyMock
+from uuid import UUID
 
 import pytest
 from freezegun import freeze_time
@@ -180,6 +181,112 @@ def test_registration_admin_can_update_signup_group(
     signup1.refresh_from_db()
     assert signup1.first_name != new_signup_name
     assert signup1.last_modified_by_id is None
+
+
+@pytest.mark.django_db
+def test_contact_person_can_update_signup_group_when_strongly_identified(
+    api_client, registration
+):
+    user = UserFactory()
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    signup = SignUpFactory(signup_group=signup_group, registration=registration)
+    SignUpContactPersonFactory(signup_group=signup_group, user=user)
+
+    new_signup_name = "Edited name"
+
+    signup_group_data = {
+        "registration": registration.id,
+        "extra_info": new_signup_group_extra_info,
+        "signups": [
+            {
+                "id": signup.id,
+                "first_name": new_signup_name,
+            },
+        ],
+    }
+
+    assert signup_group.extra_info is None
+    assert signup_group.last_modified_by_id is None
+
+    assert signup.first_name != new_signup_name
+    assert signup.last_modified_by_id is None
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value=["suomi_fi"],
+    ) as mocked:
+        assert_update_signup_group(
+            api_client,
+            signup_group.id,
+            signup_group_data,
+        )
+        assert mocked.called is True
+
+    signup_group.refresh_from_db()
+    del signup_group.extra_info  # Refresh cached property; test will fail otherwise
+    assert signup_group.extra_info == new_signup_group_extra_info
+    assert signup_group.last_modified_by_id == user.id
+
+    signup.refresh_from_db()
+    assert signup.first_name == new_signup_name
+    assert signup.last_modified_by_id == user.id
+
+
+@pytest.mark.django_db
+def test_contact_person_cannot_update_signup_group_when_not_strongly_identified(
+    api_client,
+    registration,
+):
+    user = UserFactory()
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    signup = SignUpFactory(signup_group=signup_group, registration=registration)
+    SignUpContactPersonFactory(signup_group=signup_group, user=user)
+
+    new_signup_name = "Edited name"
+
+    signup_group_data = {
+        "registration": registration.id,
+        "extra_info": new_signup_group_extra_info,
+        "signups": [
+            {
+                "id": signup.id,
+                "first_name": new_signup_name,
+            },
+        ],
+    }
+
+    assert signup_group.extra_info is None
+    assert signup_group.last_modified_by_id is None
+
+    assert signup.first_name != new_signup_name
+    assert signup.last_modified_by_id is None
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value=[],
+    ) as mocked:
+        response = update_signup_group(
+            api_client,
+            signup_group.id,
+            signup_group_data,
+        )
+        assert mocked.called is True
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    signup_group.refresh_from_db()
+    del signup_group.extra_info  # Refresh cached property
+    assert signup_group.extra_info is None
+    assert signup_group.last_modified_by_id is None
+
+    signup.refresh_from_db()
+    assert signup.first_name != new_signup_name
+    assert signup.last_modified_by_id is None
 
 
 @pytest.mark.parametrize("admin_role", ["created_admin", "registration_created_admin"])

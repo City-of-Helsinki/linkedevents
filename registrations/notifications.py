@@ -356,12 +356,12 @@ def get_signup_notification_subject(contact_person, notification_type):
     return notification_subject
 
 
-def get_signup_notification_variables(contact_person):
+def get_signup_notification_variables(contact_person, access_code=None):
     [linked_events_ui_locale, linked_registrations_ui_locale] = get_ui_locales(
         contact_person.service_language
     )
     signup_edit_url = get_signup_edit_url(
-        contact_person, linked_registrations_ui_locale
+        contact_person, linked_registrations_ui_locale, access_code=access_code
     )
     registration = contact_person.registration
 

@@ -1,4 +1,5 @@
 from decimal import Decimal
+from uuid import uuid4
 
 from django.contrib.auth import get_user_model
 from django.core import mail
@@ -475,6 +476,73 @@ class TestSignUpContactPerson(TestCase):
             self.contact_person.signup_group.registration_id,
         )
 
+    def test_can_create_access_code(self):
+        self.user = UserFactory(email="test@test.com")
+
+        self.contact_person.email = "test2@test.com"
+        self.contact_person.save(update_fields=["email"])
+        self.assertNotEquals(self.contact_person.email, self.user.email)
+
+        self.assertTrue(self.contact_person.can_create_access_code(self.user))
+
+    def test_cannot_create_access_code_without_contact_person_email(self):
+        self.user = UserFactory(email="test@test.com")
+
+        # Email address is None.
+        self.assertIsNone(self.contact_person.email)
+        self.assertFalse(self.contact_person.can_create_access_code(self.user))
+
+        # Email address is an empty string.
+        self.contact_person.email = ""
+        self.contact_person.save(update_fields=["email"])
+        self.assertFalse(self.contact_person.can_create_access_code(self.user))
+
+    def test_cannot_create_access_code_if_already_have_full_permissions(self):
+        self.user = UserFactory(email="test@test.com")
+
+        self.user.registration_admin_organizations.add(
+            self.contact_person.signup.publisher
+        )
+        self.contact_person.email = self.user.email
+        self.contact_person.save(update_fields=["email"])
+
+        self.assertFalse(self.contact_person.can_create_access_code(self.user))
+
+    def test_create_access_code(self):
+        self.assertIsNone(self.contact_person.access_code)
+
+        access_code = self.contact_person.create_access_code()
+        self.assertTrue(isinstance(access_code, str))
+
+        self.contact_person.refresh_from_db()
+        self.assertIsNotNone(self.contact_person.access_code)
+        self.assertTrue(self.contact_person.check_access_code(access_code))
+
+    def test_check_access_code(self):
+        access_code = self.contact_person.create_access_code()
+        self.assertTrue(self.contact_person.check_access_code(access_code))
+
+    def test_check_access_code_no_code_created(self):
+        self.assertIsNone(self.contact_person.access_code)
+        self.assertFalse(self.contact_person.check_access_code(str(uuid4())))
+
+    def test_check_access_code_invalid_code_given(self):
+        access_code = self.contact_person.create_access_code()
+
+        # Create a unique wrong access code.
+        while (wrong_access_code := str(uuid4())) == access_code:
+            pass
+
+        for access_code_arg in ["", None, "not-uuid4", wrong_access_code]:
+            with self.subTest():
+                self.assertFalse(self.contact_person.check_access_code(access_code_arg))
+
+    def test_check_access_code_already_used(self):
+        access_code = self.contact_person.create_access_code()
+
+        self.contact_person.link_user(UserFactory())
+        self.assertFalse(self.contact_person.check_access_code(access_code))
+
     def test_send_notification(self):
         self.contact_person.email = "test@test.dev"
         self.contact_person.save(update_fields=["email"])
@@ -491,6 +559,27 @@ class TestSignUpContactPerson(TestCase):
 
                 self.assertEqual(len(mail.outbox), 1)
                 self.assertEqual(mail.outbox[0].to[0], self.contact_person.email)
+
+                mail.outbox.clear()
+
+    def test_send_notification_with_access_code(self):
+        self.contact_person.email = "test@test.dev"
+        self.contact_person.save(update_fields=["email"])
+
+        access_code = str(uuid4())
+
+        for notification_type in (
+            SignUpNotificationType.CONFIRMATION,
+            SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST,
+        ):
+            with self.subTest():
+                self.contact_person.send_notification(
+                    notification_type, access_code=access_code
+                )
+
+                self.assertEqual(len(mail.outbox), 1)
+                self.assertEqual(mail.outbox[0].to[0], self.contact_person.email)
+                self.assertTrue(access_code in str(mail.outbox[0].alternatives[0]))
 
                 mail.outbox.clear()
 

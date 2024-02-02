@@ -1,4 +1,5 @@
 from unittest.mock import patch, PropertyMock
+from uuid import UUID
 
 import pytest
 from django.core import mail
@@ -101,6 +102,45 @@ def test_registration_admin_can_delete_signup(signup, user, user_api_client):
     default_organization.registration_admin_users.add(user)
 
     assert_delete_signup(user_api_client, signup.id)
+
+
+@pytest.mark.django_db
+def test_contact_person_can_delete_signup_when_strongly_identified(
+    api_client, registration
+):
+    user = UserFactory()
+    api_client.force_authenticate(user)
+
+    signup = SignUpFactory(registration=registration)
+    SignUpContactPersonFactory(signup=signup, user=user)
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value=["suomi_fi"],
+    ) as mocked:
+        assert_delete_signup(api_client, signup.id)
+        assert mocked.called is True
+
+
+@pytest.mark.django_db
+def test_contact_person_cannot_delete_signup_when_not_strongly_identified(
+    api_client, registration
+):
+    user = UserFactory()
+    api_client.force_authenticate(user)
+
+    signup = SignUpFactory(registration=registration)
+    SignUpContactPersonFactory(signup=signup, user=user)
+
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value=[],
+    ) as mocked:
+        response = delete_signup(api_client, signup.id)
+        assert mocked.called is True
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.parametrize(
