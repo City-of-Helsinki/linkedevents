@@ -332,13 +332,24 @@ class SignUpViewSet(
         serializer = CreateSignUpsSerializer(data=data, context=context)
         serializer.is_valid(raise_exception=True)
 
-        signup_instances = serializer.create_signups(serializer.validated_data)
+        signup_with_payment = next(
+            (signup for signup in data["signups"] if signup.get("create_payment")), None
+        )
+        if settings.WEB_STORE_INTEGRATION_ENABLED and signup_with_payment:
+            signup_serializer = SignUpSerializer(
+                data=signup_with_payment, context=context
+            )
+            signup_serializer.is_valid(raise_exception=True)
+            signup_instances = [
+                signup_serializer.create(signup_serializer.validated_data)
+            ]
+        else:
+            signup_instances = serializer.create_signups(serializer.validated_data)
+            serializer.notify_contact_persons(signup_instances)
 
         # Delete reservation
         reservation = serializer.validated_data["reservation"]
         reservation.delete()
-
-        serializer.notify_contact_persons(signup_instances)
 
         self._add_audit_logged_object_ids(signup_instances)
 

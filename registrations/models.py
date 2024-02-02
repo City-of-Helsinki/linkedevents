@@ -1,7 +1,7 @@
 import logging
 from datetime import timedelta
 from decimal import Decimal, ROUND_HALF_UP
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from django.conf import settings
 from django.contrib.auth.hashers import check_password, make_password
@@ -38,6 +38,7 @@ from registrations.utils import (
     code_validity_duration,
     get_email_noreply_address,
     get_ui_locales,
+    strip_trailing_zeroes_from_decimal,
 )
 
 User = settings.AUTH_USER_MODEL
@@ -82,6 +83,19 @@ class ChoiceArrayField(ArrayField):
                 **kwargs,
             }
         )
+
+
+class SignUpOrGroupDependingMixin:
+    def save(self, *args, **kwargs):
+        if not (self.signup_group_id or self.signup_id):
+            raise ValidationError(_("You must provide either signup_group or signup."))
+
+        if self.signup_group_id and self.signup_id:
+            raise ValidationError(
+                _("You can only provide signup_group or signup, not both.")
+            )
+
+        super().save(*args, **kwargs)
 
 
 class CreatedModifiedBaseModel(models.Model):
@@ -475,6 +489,63 @@ class SignUpMixin:
     def is_user_editable_resources(self):
         return bool(self.data_source and self.data_source.user_editable_resources)
 
+    @property
+    def web_store_meta_label(self):
+        raise NotImplementedError("web_store_meta_label not implemented")
+
+    @staticmethod
+    def add_price_group_to_web_store_order_data(price_group, order_data):
+        order_data["items"].append(price_group.to_web_store_order_json())
+
+        order_data["priceNet"] += price_group.price_without_vat
+        order_data["priceVat"] += price_group.vat
+        order_data["priceTotal"] += price_group.price
+
+    def add_price_groups_to_web_store_order_data(self, order_data):
+        raise NotImplementedError(
+            "add_price_groups_to_web_store_order_data not implemented"
+        )
+
+    def to_web_store_order_json(self, user_uuid: UUID, contact_person=None):
+        order_data = {
+            "namespace": settings.WEB_STORE_API_NAMESPACE,
+            "user": str(user_uuid),
+            "items": [],
+            "priceNet": Decimal("0"),
+            "priceVat": Decimal("0"),
+            "priceTotal": Decimal("0"),
+        }
+
+        contact_person = contact_person or getattr(self, "contact_person", None)
+        if contact_person:
+            order_data["customer"] = contact_person.to_web_store_order_json()
+
+        order_data["language"] = getattr(contact_person, "service_language_id", "fi")
+
+        self.add_price_groups_to_web_store_order_data(order_data)
+        order_data["priceNet"] = str(
+            strip_trailing_zeroes_from_decimal(order_data["priceNet"])
+        )
+        order_data["priceVat"] = str(
+            strip_trailing_zeroes_from_decimal(order_data["priceVat"])
+        )
+        order_data["priceTotal"] = str(
+            strip_trailing_zeroes_from_decimal(order_data["priceTotal"])
+        )
+
+        if order_data["items"]:
+            order_data["items"][len(order_data["items"]) - 1]["meta"] = [
+                {
+                    "key": "eventName",
+                    "value": self.registration.event.name,
+                    "label": str(self.web_store_meta_label),
+                    "visibleInCheckout": True,
+                    "ordinal": "0",
+                }
+            ]
+
+        return order_data
+
 
 class SignUpGroup(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
     registration = models.ForeignKey(
@@ -502,6 +573,17 @@ class SignUpGroup(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
     def attending_signups(self):
         return self.signups.filter(attendee_status=SignUp.AttendeeStatus.ATTENDING)
 
+    @cached_property
+    def total_payment_amount(self):
+        total_payment_amount = Decimal("0")
+
+        for signup in self.signups.select_related("price_group").filter(
+            price_group__isnull=False
+        ):
+            total_payment_amount += signup.total_payment_amount
+
+        return total_payment_amount
+
     @transaction.atomic
     def anonymize(self):
         # Allow to anonymize signup only once
@@ -522,6 +604,28 @@ class SignUpGroup(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
             self.created_by = None
             self.last_modified_by = None
             self.save()
+
+    @property
+    def web_store_meta_label(self):
+        labels = {
+            Event.TypeId.GENERAL: _("Group registration to event"),
+            Event.TypeId.COURSE: _("Group registration to course"),
+            Event.TypeId.VOLUNTEERING: _("Group registration to volunteering"),
+        }
+
+        return labels[self.registration.event.type_id]
+
+    def add_price_groups_to_web_store_order_data(self, order_data):
+        for signup in (
+            self.signups.select_related("price_group")
+            .filter(price_group__isnull=False)
+            .order_by("pk")
+        ):
+            signup_price_group = getattr(signup, "price_group", None)
+            if signup_price_group:
+                self.add_price_group_to_web_store_order_data(
+                    signup_price_group, order_data
+                )
 
 
 class SignUpProtectedDataBaseModel(models.Model):
@@ -737,6 +841,11 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         protected_data = getattr(self, "protected_data", None)
         return getattr(protected_data, "date_of_birth", None)
 
+    @cached_property
+    def total_payment_amount(self):
+        price_group = getattr(self, "price_group", None)
+        return price_group.price if price_group is not None else Decimal("0")
+
     @transaction.atomic
     def anonymize(self):
         # Allow to anonymize signup group only once
@@ -755,6 +864,21 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
             self.last_modified_by = None
             self.save()
 
+    @property
+    def web_store_meta_label(self):
+        labels = {
+            Event.TypeId.GENERAL: _("Registration to event"),
+            Event.TypeId.COURSE: _("Registration to course"),
+            Event.TypeId.VOLUNTEERING: _("Registration to volunteering"),
+        }
+
+        return labels[self.registration.event.type_id]
+
+    def add_price_groups_to_web_store_order_data(self, order_data):
+        signup_price_group = getattr(self, "price_group", None)
+        if signup_price_group:
+            self.add_price_group_to_web_store_order_data(signup_price_group, order_data)
+
 
 class SignUpProtectedData(SignUpProtectedDataBaseModel):
     date_of_birth = fields.EncryptedDateField(
@@ -770,7 +894,7 @@ class SignUpProtectedData(SignUpProtectedDataBaseModel):
     )
 
 
-class SignUpContactPerson(SerializableMixin):
+class SignUpContactPerson(SignUpOrGroupDependingMixin, SerializableMixin):
     # For signups that belong to a group.
     signup_group = models.OneToOneField(
         SignUpGroup,
@@ -986,17 +1110,6 @@ class SignUpContactPerson(SerializableMixin):
 
         send_mail(*message, html_message=rendered_body)
 
-    def save(self, *args, **kwargs):
-        if not (self.signup_group_id or self.signup_id):
-            raise ValidationError(_("You must provide either signup_group or signup."))
-
-        if self.signup_group_id and self.signup_id:
-            raise ValidationError(
-                _("You can only provide signup_group or signup, not both.")
-            )
-
-        super().save(*args, **kwargs)
-
     def anonymize(self):
         self.email = anonymize_replacement
         self.phone_number = anonymize_replacement
@@ -1004,6 +1117,14 @@ class SignUpContactPerson(SerializableMixin):
         self.last_name = anonymize_replacement
         self.membership_number = anonymize_replacement
         self.save()
+
+    def to_web_store_order_json(self):
+        return {
+            "firstName": self.first_name,
+            "lastName": self.last_name,
+            "email": self.email,
+            "phone": self.phone_number,
+        }
 
 
 class SeatReservationCode(models.Model):
@@ -1050,3 +1171,87 @@ class SignUpPriceGroup(RegistrationPriceGroupBaseModel):
     )
 
     description = models.CharField(max_length=255)
+
+    def to_web_store_order_json(self):
+        # TODO: use a non-hardcoded productId once product mapping is implemented.
+        return {
+            "productId": "0d2be9c8-ad1e-3268-8d76-c94dbc3f6bcb",
+            "productName": str(self.description),
+            "quantity": 1,
+            "unit": str(_("pcs")),
+            "rowPriceNet": str(
+                strip_trailing_zeroes_from_decimal(self.price_without_vat)
+            ),
+            "rowPriceVat": str(strip_trailing_zeroes_from_decimal(self.vat)),
+            "rowPriceTotal": str(strip_trailing_zeroes_from_decimal(self.price)),
+            "priceNet": str(strip_trailing_zeroes_from_decimal(self.price_without_vat)),
+            "priceGross": str(strip_trailing_zeroes_from_decimal(self.price)),
+            "priceVat": str(strip_trailing_zeroes_from_decimal(self.vat)),
+            "vatPercentage": str(int(self.vat_percentage)),
+        }
+
+
+class SignUpPayment(SignUpOrGroupDependingMixin, CreatedModifiedBaseModel):
+    class PaymentStatus:
+        CREATED = "created"
+        PAID = "paid"
+        CANCELLED = "cancelled"
+        REFUNDED = "refunded"
+        EXPIRED = "expired"
+
+    PAYMENT_STATUSES = (
+        (PaymentStatus.CREATED, _("Created")),
+        (PaymentStatus.PAID, _("Paid")),
+        (PaymentStatus.CANCELLED, _("Cancelled")),
+        (PaymentStatus.REFUNDED, _("Refunded")),
+        (PaymentStatus.EXPIRED, _("Expired")),
+    )
+
+    # For signups that belong to a group.
+    signup_group = models.OneToOneField(
+        SignUpGroup,
+        on_delete=models.CASCADE,
+        related_name="payment",
+        null=True,
+        default=None,
+    )
+
+    # For signups that do not belong to a group.
+    signup = models.OneToOneField(
+        SignUp,
+        on_delete=models.CASCADE,
+        related_name="payment",
+        null=True,
+        default=None,
+    )
+
+    amount = models.DecimalField(max_digits=19, decimal_places=2)
+
+    status = models.CharField(
+        verbose_name=_("Payment status"),
+        max_length=25,
+        choices=PAYMENT_STATUSES,
+        default=PaymentStatus.CREATED,
+    )
+
+    external_order_id = models.CharField(
+        max_length=64,
+        null=True,
+        blank=True,
+        default=None,
+    )
+
+    expires_at = models.DateTimeField(
+        verbose_name=_("Expires at"),
+        null=True,
+        blank=True,
+        default=None,
+    )
+
+    checkout_url = models.URLField(null=True, blank=True, default=None)
+
+    logged_in_checkout_url = models.URLField(null=True, blank=True, default=None)
+
+    @cached_property
+    def signup_or_signup_group(self):
+        return getattr(self, "signup_group", None) or getattr(self, "signup", None)

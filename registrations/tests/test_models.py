@@ -1,13 +1,18 @@
 from decimal import Decimal
 from uuid import uuid4
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from events.models import Language
-from events.tests.factories import DataSourceFactory, OrganizationFactory
+from events.tests.factories import (
+    DataSourceFactory,
+    LanguageFactory,
+    OrganizationFactory,
+)
 from helevents.tests.factories import UserFactory
 from registrations.models import RegistrationPriceGroup
 from registrations.notifications import SignUpNotificationType
@@ -19,8 +24,10 @@ from registrations.tests.factories import (
     SignUpFactory,
     SignUpGroupFactory,
     SignUpGroupProtectedDataFactory,
+    SignUpPriceGroupFactory,
     SignUpProtectedDataFactory,
 )
+from registrations.utils import strip_trailing_zeroes_from_decimal
 
 contact_person_data = {
     "email": "test@email.com",
@@ -278,6 +285,114 @@ class TestSignUpGroup(TestCase):
         assert signup.created_by is None
         assert signup.last_modified_by is None
 
+    def test_to_web_store_order_json(self):
+        english = LanguageFactory(pk="en", service_language=True)
+
+        contact_person = SignUpContactPersonFactory(
+            signup_group=self.signup_group,
+            first_name="Mickey",
+            last_name="Mouse",
+            email="mickey@test.com",
+            phone_number="+35811111111",
+            service_language=english,
+        )
+
+        signup = SignUpFactory(
+            registration=self.signup_group.registration,
+            signup_group=self.signup_group,
+        )
+
+        price_group = SignUpPriceGroupFactory(signup=signup)
+        price_group.refresh_from_db()
+        price_net = str(
+            strip_trailing_zeroes_from_decimal(price_group.price_without_vat)
+        )
+        price_vat = str(strip_trailing_zeroes_from_decimal(price_group.vat))
+        price_total = str(strip_trailing_zeroes_from_decimal(price_group.price))
+
+        signup2 = SignUpFactory(
+            registration=self.signup_group.registration,
+            signup_group=self.signup_group,
+        )
+
+        price_group2 = SignUpPriceGroupFactory(
+            signup=signup2,
+            registration_price_group__vat_percentage=RegistrationPriceGroup.VatPercentage.VAT_10,
+        )
+        price_group2.refresh_from_db()
+        price_net2 = str(
+            strip_trailing_zeroes_from_decimal(price_group2.price_without_vat)
+        )
+        price_vat2 = str(strip_trailing_zeroes_from_decimal(price_group2.vat))
+        price_total2 = str(strip_trailing_zeroes_from_decimal(price_group2.price))
+
+        self.assertDictEqual(
+            self.signup_group.to_web_store_order_json(self.user.uuid),
+            {
+                "namespace": settings.WEB_STORE_API_NAMESPACE,
+                "user": str(self.user.uuid),
+                "items": [
+                    {
+                        "productId": "0d2be9c8-ad1e-3268-8d76-c94dbc3f6bcb",
+                        "productName": price_group.description_en,
+                        "quantity": 1,
+                        "unit": "pcs",
+                        "rowPriceNet": price_net,
+                        "rowPriceVat": price_vat,
+                        "rowPriceTotal": price_total,
+                        "priceNet": price_net,
+                        "priceGross": price_total,
+                        "priceVat": price_vat,
+                        "vatPercentage": str(int(price_group.vat_percentage)),
+                    },
+                    {
+                        "productId": "0d2be9c8-ad1e-3268-8d76-c94dbc3f6bcb",
+                        "productName": price_group2.description_en,
+                        "quantity": 1,
+                        "unit": "pcs",
+                        "rowPriceNet": price_net2,
+                        "rowPriceVat": price_vat2,
+                        "rowPriceTotal": price_total2,
+                        "priceNet": price_net2,
+                        "priceGross": price_total2,
+                        "priceVat": price_vat2,
+                        "vatPercentage": str(int(price_group2.vat_percentage)),
+                        "meta": [
+                            {
+                                "key": "eventName",
+                                "value": self.signup_group.registration.event.name,
+                                "label": self.signup_group.web_store_meta_label,
+                                "visibleInCheckout": True,
+                                "ordinal": "0",
+                            }
+                        ],
+                    },
+                ],
+                "priceNet": str(
+                    strip_trailing_zeroes_from_decimal(
+                        price_group.price_without_vat + price_group2.price_without_vat
+                    )
+                ),
+                "priceVat": str(
+                    strip_trailing_zeroes_from_decimal(
+                        price_group.vat + price_group2.vat
+                    )
+                ),
+                "priceTotal": str(
+                    strip_trailing_zeroes_from_decimal(
+                        price_group.price + price_group2.price
+                    )
+                ),
+                "customer": {
+                    "firstName": contact_person.first_name,
+                    "lastName": contact_person.last_name,
+                    "email": contact_person.email,
+                    "phone": contact_person.phone_number,
+                },
+                "language": contact_person.service_language_id,
+            },
+        )
+
 
 class TestSignUp(TestCase):
     @classmethod
@@ -425,6 +540,67 @@ class TestSignUp(TestCase):
         assert signup.anonymization_time is not None
         assert signup.created_by is None
         assert signup.last_modified_by is None
+
+    def test_to_web_store_order_json(self):
+        english = LanguageFactory(pk="en", service_language=True)
+
+        contact_person = SignUpContactPersonFactory(
+            signup=self.signup,
+            first_name="Mickey",
+            last_name="Mouse",
+            email="mickey@test.com",
+            phone_number="+35811111111",
+            service_language=english,
+        )
+        price_group = SignUpPriceGroupFactory(signup=self.signup)
+
+        price_net = str(
+            strip_trailing_zeroes_from_decimal(price_group.price_without_vat)
+        )
+        price_vat = str(strip_trailing_zeroes_from_decimal(price_group.vat))
+        price_total = str(strip_trailing_zeroes_from_decimal(price_group.price))
+
+        self.assertDictEqual(
+            self.signup.to_web_store_order_json(self.user.uuid),
+            {
+                "namespace": settings.WEB_STORE_API_NAMESPACE,
+                "user": str(self.user.uuid),
+                "items": [
+                    {
+                        "productId": "0d2be9c8-ad1e-3268-8d76-c94dbc3f6bcb",
+                        "productName": price_group.description_en,
+                        "quantity": 1,
+                        "unit": "pcs",
+                        "rowPriceNet": price_net,
+                        "rowPriceVat": price_vat,
+                        "rowPriceTotal": price_total,
+                        "priceNet": price_net,
+                        "priceGross": price_total,
+                        "priceVat": price_vat,
+                        "vatPercentage": str(int(price_group.vat_percentage)),
+                        "meta": [
+                            {
+                                "key": "eventName",
+                                "value": self.signup.registration.event.name,
+                                "label": self.signup.web_store_meta_label,
+                                "visibleInCheckout": True,
+                                "ordinal": "0",
+                            }
+                        ],
+                    },
+                ],
+                "priceNet": price_net,
+                "priceVat": price_vat,
+                "priceTotal": price_total,
+                "language": contact_person.service_language_id,
+                "customer": {
+                    "firstName": contact_person.first_name,
+                    "lastName": contact_person.last_name,
+                    "email": contact_person.email,
+                    "phone": contact_person.phone_number,
+                },
+            },
+        )
 
 
 class TestSignUpContactPerson(TestCase):
@@ -592,6 +768,25 @@ class TestSignUpContactPerson(TestCase):
 
         self.assertEqual(len(mail.outbox), 0)
 
+    def test_to_web_store_order_json(self):
+        self.contact_person.first_name = "Mickey"
+        self.contact_person.last_name = "Mouse"
+        self.contact_person.email = "mickey@test.com"
+        self.contact_person.phone_number = "+3581111111111"
+        self.contact_person.save(
+            update_fields=["first_name", "last_name", "email", "phone_number"]
+        )
+
+        self.assertDictEqual(
+            self.contact_person.to_web_store_order_json(),
+            {
+                "firstName": self.contact_person.first_name,
+                "lastName": self.contact_person.last_name,
+                "email": self.contact_person.email,
+                "phone": self.contact_person.phone_number,
+            },
+        )
+
 
 class TestRegistrationPriceGroup(TestCase):
     @classmethod
@@ -613,3 +808,33 @@ class TestRegistrationPriceGroup(TestCase):
             self.registration_price_group.price_without_vat, Decimal("261.29")
         )
         self.assertEquals(self.registration_price_group.vat, Decimal("62.71"))
+
+
+class TestSignUpPriceGroup(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.price_group = SignUpPriceGroupFactory()
+
+    def test_to_web_store_order_json(self):
+        price_net = str(
+            strip_trailing_zeroes_from_decimal(self.price_group.price_without_vat)
+        )
+        price_vat = str(strip_trailing_zeroes_from_decimal(self.price_group.vat))
+        price_total = str(strip_trailing_zeroes_from_decimal(self.price_group.price))
+
+        self.assertDictEqual(
+            self.price_group.to_web_store_order_json(),
+            {
+                "productId": "0d2be9c8-ad1e-3268-8d76-c94dbc3f6bcb",
+                "productName": self.price_group.description_en,
+                "quantity": 1,
+                "unit": "pcs",
+                "rowPriceNet": price_net,
+                "rowPriceVat": price_vat,
+                "rowPriceTotal": price_total,
+                "priceNet": price_net,
+                "priceGross": price_total,
+                "priceVat": price_vat,
+                "vatPercentage": str(int(self.price_group.vat_percentage)),
+            },
+        )

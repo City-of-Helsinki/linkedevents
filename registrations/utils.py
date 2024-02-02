@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.conf import settings
 from django.contrib.sites.models import Site
 from django.core.mail import send_mail
@@ -83,3 +85,10 @@ def has_allowed_substitute_user_email_domain(email_address):
             for domain in settings.SUBSTITUTE_USER_ALLOWED_EMAIL_DOMAINS
         ]
     )
+
+
+def strip_trailing_zeroes_from_decimal(value: Decimal):
+    if value == value.to_integral():
+        return value.quantize(Decimal(1))
+
+    return value.normalize()

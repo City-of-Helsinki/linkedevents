@@ -4,6 +4,7 @@ from unittest.mock import patch, PropertyMock
 from uuid import UUID
 
 import pytest
+from django.conf import settings
 from rest_framework import status
 
 from audit_log.models import AuditLogEntry
@@ -16,10 +17,14 @@ from registrations.tests.factories import (
     SignUpContactPersonFactory,
     SignUpFactory,
     SignUpGroupFactory,
+    SignUpPaymentFactory,
     SignUpPriceGroupFactory,
 )
 from registrations.tests.test_registration_post import hel_email
-from registrations.tests.test_signup_get import assert_contact_person_fields_exist
+from registrations.tests.test_signup_get import (
+    assert_contact_person_fields_exist,
+    assert_payment_fields_exist,
+)
 from registrations.tests.utils import create_user_by_role
 
 # === util methods ===
@@ -67,6 +72,9 @@ def assert_signup_group_fields_exist(data):
         "anonymization_time",
         "has_contact_person_access",
     )
+    if settings.WEB_STORE_INTEGRATION_ENABLED:
+        fields += ("payment",)
+
     assert_fields_exist(data, fields)
     assert_contact_person_fields_exist(data["contact_person"])
 
@@ -112,6 +120,69 @@ def test_registration_admin_or_registration_created_admin_can_get_signup_group(
     assert_signup_group_fields_exist(response.data)
     assert response.data["is_created_by_current_user"] is False
     assert response.data["has_contact_person_access"] is False
+
+
+@pytest.mark.parametrize(
+    "user_role",
+    [
+        "superuser",
+        "registration_admin",
+        "created_admin",
+        "created_regular_user",
+        "created_regular_user_without_organization",
+    ],
+)
+@pytest.mark.django_db
+def test_authenticated_user_with_correct_role_can_get_signup_group_with_payment(
+    api_client, registration, user_role
+):
+    user = create_user_by_role(
+        user_role,
+        registration.publisher,
+        additional_roles={
+            "created_admin": lambda usr: usr.admin_organizations.add(
+                registration.publisher
+            ),
+            "created_regular_user": lambda usr: usr.organization_memberships.add(
+                registration.publisher
+            ),
+            "created_regular_user_without_organization": lambda usr: None,
+        },
+    )
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(
+        registration=registration,
+        created_by=user if user_role.startswith("created_") else None,
+    )
+    SignUpFactory(
+        signup_group=signup_group,
+        registration=registration,
+    )
+    SignUpPaymentFactory(signup=None, signup_group=signup_group)
+
+    response = assert_get_detail(api_client, signup_group.pk)
+    assert_payment_fields_exist(response.data["payment"])
+
+
+@pytest.mark.django_db
+def test_api_key_with_organization_and_registration_permission_can_get_signup_group_with_payment(
+    api_client, data_source, registration
+):
+    data_source.owner = registration.publisher
+    data_source.user_editable_registrations = True
+    data_source.save(update_fields=["owner", "user_editable_registrations"])
+    api_client.credentials(apikey=data_source.api_key)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(
+        signup_group=signup_group,
+        registration=registration,
+    )
+    SignUpPaymentFactory(signup=None, signup_group=signup_group)
+
+    response = assert_get_detail(api_client, signup_group.pk)
+    assert_payment_fields_exist(response.data["payment"])
 
 
 @pytest.mark.parametrize("is_substitute_user", [False, True])

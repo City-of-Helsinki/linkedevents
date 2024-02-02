@@ -1,5 +1,6 @@
 from copy import deepcopy
 from datetime import datetime, timedelta
+from decimal import Decimal
 from unittest.mock import patch
 
 import pytest
@@ -22,6 +23,7 @@ from registrations.models import (
     SignUpContactPerson,
     SignUpGroup,
     SignUpGroupProtectedData,
+    SignUpPayment,
     SignUpPriceGroup,
 )
 from registrations.tests.factories import (
@@ -33,8 +35,13 @@ from registrations.tests.factories import (
 from registrations.tests.test_registration_post import hel_email
 from registrations.tests.utils import (
     assert_attending_and_waitlisted_signups,
+    assert_signup_payment_data_is_correct,
     create_user_by_role,
+    DEFAULT_CREATE_ORDER_ERROR_RESPONSE,
+    get_web_store_failed_order_response,
+    get_web_store_order_response,
 )
+from web_store.tests.test_web_store_api_base_client import get_mock_response
 
 test_access_code = "803aabab-8fa5-4c26-a372-7792a8b8456f"
 test_email1 = "test@test.com"
@@ -63,6 +70,8 @@ default_signup_group_data = {
     "extra_info": "Extra info for group",
     "signups": default_signups_data,
     "contact_person": {
+        "first_name": "Mickey",
+        "last_name": "Mouse",
         "email": test_email2,
         "phone_number": "0441111111",
         "notifications": "sms",
@@ -201,6 +210,409 @@ def test_registration_substitute_user_can_create_signup_group(api_client, regist
 
     assert_create_signup_group(api_client, signup_group_data)
     assert_default_signup_group_created(reservation, signup_group_data, user)
+
+
+@pytest.mark.parametrize(
+    "user_role",
+    [
+        "superuser",
+        "admin",
+        "registration_admin",
+        "financial_admin",
+        "regular_user",
+        "regular_user_without_organization",
+    ],
+)
+@pytest.mark.django_db
+def test_authenticated_user_can_create_signup_group_with_payment(
+    registration, api_client, user_role
+):
+    reservation = SeatReservationCodeFactory(seats=2, registration=registration)
+
+    LanguageFactory(pk="fi", service_language=True)
+    LanguageFactory(pk="en", service_language=True)
+
+    registration_price_group = RegistrationPriceGroupFactory(registration=registration)
+    registration_price_group2 = RegistrationPriceGroupFactory(registration=registration)
+
+    user = create_user_by_role(
+        user_role,
+        registration.publisher,
+        additional_roles={
+            "regular_user_without_organization": lambda usr: None,
+        },
+    )
+    api_client.force_authenticate(user)
+
+    signup_group_data = deepcopy(default_signup_group_data)
+    signup_group_data.update(
+        {
+            "registration": registration.pk,
+            "reservation_code": reservation.code,
+            "create_payment": True,
+        }
+    )
+    signup_group_data["signups"][0].update(
+        {
+            "price_group": {"registration_price_group": registration_price_group.pk},
+        }
+    )
+    signup_group_data["signups"][1].update(
+        {
+            "price_group": {"registration_price_group": registration_price_group2.pk},
+        }
+    )
+
+    assert SignUpPayment.objects.count() == 0
+
+    total_payment_amount = (
+        registration_price_group.price + registration_price_group2.price
+    )
+    mocked_web_store_api_response = get_mock_response(
+        json_return_value=get_web_store_order_response(
+            payment_amount=total_payment_amount
+        )
+    )
+    with patch("requests.post") as mocked_web_store_api_request:
+        mocked_web_store_api_request.return_value = mocked_web_store_api_response
+        response = assert_create_signup_group(api_client, signup_group_data)
+
+    assert SignUpPayment.objects.count() == 1
+
+    assert_signup_payment_data_is_correct(
+        response.data["payment"],
+        user,
+        signup_group=SignUpGroup.objects.first(),
+    )
+
+
+@pytest.mark.django_db
+def test_create_signup_group_payment_without_pricetotal_in_response(
+    registration, api_client
+):
+    reservation = SeatReservationCodeFactory(seats=2, registration=registration)
+
+    LanguageFactory(pk="fi", service_language=True)
+    LanguageFactory(pk="en", service_language=True)
+
+    registration_price_group = RegistrationPriceGroupFactory(registration=registration)
+    registration_price_group2 = RegistrationPriceGroupFactory(registration=registration)
+
+    user = create_user_by_role(
+        "registration_admin",
+        registration.publisher,
+    )
+    api_client.force_authenticate(user)
+
+    signup_group_data = deepcopy(default_signup_group_data)
+    signup_group_data.update(
+        {
+            "registration": registration.pk,
+            "reservation_code": reservation.code,
+            "create_payment": True,
+        }
+    )
+    signup_group_data["signups"][0].update(
+        {
+            "price_group": {"registration_price_group": registration_price_group.pk},
+        }
+    )
+    signup_group_data["signups"][1].update(
+        {
+            "price_group": {"registration_price_group": registration_price_group2.pk},
+        }
+    )
+
+    assert SignUpPayment.objects.count() == 0
+
+    mocked_web_store_api_json = get_web_store_order_response()
+    del mocked_web_store_api_json["priceTotal"]
+
+    mocked_web_store_api_response = get_mock_response(
+        json_return_value=mocked_web_store_api_json
+    )
+    with patch("requests.post") as mocked_web_store_api_request:
+        mocked_web_store_api_request.return_value = mocked_web_store_api_response
+        response = assert_create_signup_group(api_client, signup_group_data)
+
+    assert SignUpPayment.objects.count() == 1
+
+    assert_signup_payment_data_is_correct(
+        response.data["payment"],
+        user,
+        signup_group=SignUpGroup.objects.first(),
+    )
+
+
+@pytest.mark.django_db
+def test_create_signup_group_payment_web_store_api_field_error(
+    registration, api_client
+):
+    reservation = SeatReservationCodeFactory(seats=2, registration=registration)
+
+    LanguageFactory(pk="fi", service_language=True)
+    LanguageFactory(pk="en", service_language=True)
+
+    registration_price_group = RegistrationPriceGroupFactory(registration=registration)
+
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_group_data = deepcopy(default_signup_group_data)
+    signup_group_data.update(
+        {
+            "registration": registration.pk,
+            "reservation_code": reservation.code,
+            "create_payment": True,
+        }
+    )
+    signup_group_data["signups"][0].update(
+        {
+            "price_group": {"registration_price_group": registration_price_group.pk},
+        }
+    )
+    signup_group_data["signups"][1].update(
+        {
+            "price_group": {"registration_price_group": registration_price_group.pk},
+        }
+    )
+
+    web_store_api_status_code = status.HTTP_400_BAD_REQUEST
+    mock_api_response = get_web_store_failed_order_response(
+        web_store_api_status_code=web_store_api_status_code,
+        has_web_store_api_errors=True,
+    )
+
+    assert SignUpPayment.objects.count() == 0
+
+    with patch("requests.post") as mocked_api_request:
+        mocked_api_request.return_value = mock_api_response
+        response = create_signup_group(api_client, signup_group_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    assert SignUpPayment.objects.count() == 0
+
+    errors = DEFAULT_CREATE_ORDER_ERROR_RESPONSE["errors"]
+    assert response.data[0] == (
+        f"Talpa web store API error (status_code: {web_store_api_status_code}): {errors}"
+    )
+
+
+@pytest.mark.django_db
+def test_create_signup_group_payment_web_store_api_non_field_error(
+    registration, api_client
+):
+    reservation = SeatReservationCodeFactory(seats=2, registration=registration)
+
+    LanguageFactory(pk="fi", service_language=True)
+    LanguageFactory(pk="en", service_language=True)
+
+    registration_price_group = RegistrationPriceGroupFactory(registration=registration)
+
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_group_data = deepcopy(default_signup_group_data)
+    signup_group_data.update(
+        {
+            "registration": registration.pk,
+            "reservation_code": reservation.code,
+            "create_payment": True,
+        }
+    )
+    signup_group_data["signups"][0].update(
+        {
+            "price_group": {"registration_price_group": registration_price_group.pk},
+        }
+    )
+    signup_group_data["signups"][1].update(
+        {
+            "price_group": {"registration_price_group": registration_price_group.pk},
+        }
+    )
+
+    web_store_api_status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    mock_api_response = get_web_store_failed_order_response(
+        web_store_api_status_code=web_store_api_status_code,
+        has_web_store_api_errors=False,
+    )
+
+    assert SignUpPayment.objects.count() == 0
+
+    with patch("requests.post") as mocked_api_request:
+        mocked_api_request.return_value = mock_api_response
+        response = create_signup_group(api_client, signup_group_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    assert SignUpPayment.objects.count() == 0
+
+    assert response.data[0] == (
+        f"Unknown Talpa web store API error (status_code: {web_store_api_status_code})"
+    )
+
+
+@pytest.mark.parametrize(
+    "first_name,last_name",
+    [
+        ("Test", None),
+        (None, "Test"),
+        ("Test", ""),
+        ("", "Test"),
+        ("", None),
+        (None, ""),
+        (None, None),
+        ("", ""),
+    ],
+)
+@pytest.mark.django_db
+def test_create_signup_group_payment_contact_person_name_missing(
+    api_client, registration, first_name, last_name
+):
+    reservation = SeatReservationCodeFactory(seats=2, registration=registration)
+
+    LanguageFactory(pk="fi", service_language=True)
+    LanguageFactory(pk="en", service_language=True)
+
+    registration_price_group = RegistrationPriceGroupFactory(registration=registration)
+
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_group_data = deepcopy(default_signup_group_data)
+    signup_group_data.update(
+        {
+            "registration": registration.pk,
+            "reservation_code": reservation.code,
+            "create_payment": True,
+        }
+    )
+    signup_group_data["contact_person"].update(
+        {
+            "first_name": first_name,
+            "last_name": last_name,
+        }
+    )
+
+    signup_group_data["signups"][0].update(
+        {
+            "price_group": {"registration_price_group": registration_price_group.pk},
+        }
+    )
+
+    signup_group_data["signups"][1].update(
+        {
+            "price_group": {"registration_price_group": registration_price_group.pk},
+        }
+    )
+
+    assert SignUpPayment.objects.count() == 0
+
+    response = create_signup_group(api_client, signup_group_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    assert SignUpPayment.objects.count() == 0
+
+    assert response.data["contact_person"][0] == (
+        "Contact person's first and last name are required to make a payment."
+    )
+
+
+@pytest.mark.parametrize("price", [Decimal("0"), Decimal("-10")])
+@pytest.mark.django_db
+def test_create_signup_payment_with_zero_or_negative_price(
+    api_client, registration, price
+):
+    reservation = SeatReservationCodeFactory(seats=2, registration=registration)
+
+    LanguageFactory(pk="fi", service_language=True)
+    LanguageFactory(pk="en", service_language=True)
+
+    registration_price_group = RegistrationPriceGroupFactory(
+        registration=registration, price=price
+    )
+
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_group_data = deepcopy(default_signup_group_data)
+    signup_group_data.update(
+        {
+            "registration": registration.pk,
+            "reservation_code": reservation.code,
+            "create_payment": True,
+        }
+    )
+    signup_group_data["signups"][0].update(
+        {
+            "price_group": {"registration_price_group": registration_price_group.pk},
+        }
+    )
+    signup_group_data["signups"][1].update(
+        {
+            "price_group": {"registration_price_group": registration_price_group.pk},
+        }
+    )
+
+    assert SignUpPayment.objects.count() == 0
+
+    response = create_signup_group(api_client, signup_group_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    assert SignUpPayment.objects.count() == 0
+
+    assert response.data["signups"][0] == (
+        "Participants must have a price group with price greater than 0 "
+        "selected to make a payment."
+    )
+
+
+@pytest.mark.django_db
+def test_create_signup_group_payment_signup_is_waitlisted(api_client, registration):
+    registration.maximum_attendee_capacity = 0
+    registration.waiting_list_capacity = 1
+    registration.save(
+        update_fields=["maximum_attendee_capacity", "waiting_list_capacity"]
+    )
+
+    reservation = SeatReservationCodeFactory(seats=2, registration=registration)
+
+    LanguageFactory(pk="fi", service_language=True)
+    LanguageFactory(pk="en", service_language=True)
+
+    registration_price_group = RegistrationPriceGroupFactory(registration=registration)
+
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_group_data = deepcopy(default_signup_group_data)
+    signup_group_data.update(
+        {
+            "registration": registration.pk,
+            "reservation_code": reservation.code,
+            "create_payment": True,
+        }
+    )
+    signup_group_data["signups"][0].update(
+        {
+            "price_group": {"registration_price_group": registration_price_group.pk},
+        }
+    )
+    signup_group_data["signups"][1].update(
+        {
+            "price_group": {"registration_price_group": registration_price_group.pk},
+        }
+    )
+
+    assert SignUpPayment.objects.count() == 0
+
+    response = create_signup_group(api_client, signup_group_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    assert SignUpPayment.objects.count() == 0
+
+    assert response.data["create_payment"][0] == (
+        "A payment can only be added for attending participants."
+    )
 
 
 @pytest.mark.parametrize(

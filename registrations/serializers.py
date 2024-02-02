@@ -3,8 +3,10 @@ from decimal import Decimal
 
 import pytz
 from django.conf import settings
+from django.utils import translation
 from django.utils.timezone import localdate, localtime
 from django.utils.translation import gettext_lazy as _
+from requests import RequestException
 from rest_framework import serializers
 from rest_framework.exceptions import ErrorDetail
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
@@ -25,6 +27,7 @@ from registrations.models import (
     SignUpGroup,
     SignUpGroupProtectedData,
     SignUpNotificationType,
+    SignUpPayment,
     SignUpPriceGroup,
     SignUpProtectedData,
 )
@@ -33,20 +36,10 @@ from registrations.utils import (
     code_validity_duration,
     has_allowed_substitute_user_email_domain,
 )
+from web_store.order.clients import WebStoreOrderAPIClient
 
 
-def _validate_registration_enrolment_times(registration: Registration) -> None:
-    enrolment_start_time = registration.enrolment_start_time
-    enrolment_end_time = registration.enrolment_end_time
-    current_time = localtime()
-
-    if enrolment_start_time and current_time < enrolment_start_time:
-        raise ConflictException(_("Enrolment is not yet open."))
-    if enrolment_end_time and current_time > enrolment_end_time:
-        raise ConflictException(_("Enrolment is already closed."))
-
-
-def _validate_registration_capacity(
+def _get_attending_and_waitlisted_capacities(
     registration: Registration, signups_count: int
 ) -> tuple[int, int]:
     attendee_capacity = registration.maximum_attendee_capacity
@@ -71,6 +64,56 @@ def _validate_registration_capacity(
 
 def _get_protected_data(validated_data: dict, keys: list[str]) -> dict:
     return {key: validated_data.pop(key) for key in keys if key in validated_data}
+
+
+def _validate_registration_enrolment_times(registration: Registration) -> None:
+    enrolment_start_time = registration.enrolment_start_time
+    enrolment_end_time = registration.enrolment_end_time
+    current_time = localtime()
+
+    if enrolment_start_time and current_time < enrolment_start_time:
+        raise ConflictException(_("Enrolment is not yet open."))
+    if enrolment_end_time and current_time > enrolment_end_time:
+        raise ConflictException(_("Enrolment is already closed."))
+
+
+def _validate_contact_person_for_payment(contact_person: dict, errors: dict) -> None:
+    if not contact_person or not (
+        contact_person.get("first_name") and contact_person.get("last_name")
+    ):
+        errors["contact_person"] = _(
+            "Contact person's first and last name are required to make a payment."
+        )
+
+
+def _validate_signups_for_payment(
+    signups: list[dict], errors: dict, field_name: str
+) -> None:
+    if any(
+        [
+            signup
+            for signup in signups
+            if signup.get("price_group")
+            and signup["price_group"]["registration_price_group"].price <= 0
+        ]
+    ):
+        errors[field_name] = _(
+            "Participants must have a price group with price greater than 0 "
+            "selected to make a payment."
+        )
+
+
+def _validate_attendee_status_for_payment(
+    registration: Registration, signups_count: int, errors: dict
+) -> None:
+    (
+        add_as_attending,
+        _add_as_waitlisted,
+    ) = _get_attending_and_waitlisted_capacities(registration, signups_count)
+    if add_as_attending < signups_count:
+        errors["create_payment"] = _(
+            "A payment can only be added for attending participants."
+        )
 
 
 class CreatedModifiedBaseSerializer(serializers.ModelSerializer):
@@ -214,7 +257,107 @@ class SignUpPriceGroupSerializer(
         extra_kwargs = {"description": {"required": False, "read_only": True}}
 
 
-class SignUpSerializer(SignUpBaseSerializer):
+class SignUpPaymentSerializer(CreatedModifiedBaseSerializer):
+    class Meta(CreatedModifiedBaseSerializer.Meta):
+        fields = (
+            "id",
+            "signup_group",
+            "signup",
+            "external_order_id",
+            "checkout_url",
+            "logged_in_checkout_url",
+            "amount",
+            "status",
+        ) + CreatedModifiedBaseSerializer.Meta.fields
+        model = SignUpPayment
+        extra_kwargs = {
+            "signup_group": {"write_only": True},
+            "signup": {"write_only": True},
+        }
+
+
+class WebStorePaymentBaseSerializer(serializers.Serializer):
+    create_payment = serializers.BooleanField(required=False, write_only=True)
+    payment = SignUpPaymentSerializer(required=False, read_only=True)
+
+    @staticmethod
+    def _get_web_store_api_error(response):
+        error_status_code = getattr(response, "status_code", None)
+
+        try:
+            errors = response.json()["errors"]
+        except (AttributeError, ValueError, KeyError):
+            error_message = _("Unknown Talpa web store API error")
+            error = f"{error_message} (status_code: {error_status_code})"
+        else:
+            error_message = _("Talpa web store API error")
+            error = f"{error_message} (status_code: {error_status_code}): {errors}"
+
+        return error
+
+    def _create_web_store_api_order(self, signup_or_group, expiration_datetime):
+        contact_person = getattr(signup_or_group, "contact_person", None)
+
+        service_lang = getattr(contact_person, "service_language_id", "fi")
+        with translation.override(service_lang):
+            order_data = signup_or_group.to_web_store_order_json(
+                self.context["request"].user.uuid, contact_person=contact_person
+            )
+
+        order_data["lastValidPurchaseDateTime"] = expiration_datetime.strftime(
+            "%Y-%m-%dT%H:%M:%S"
+        )
+
+        client = WebStoreOrderAPIClient()
+        try:
+            resp_json = client.create_order(order_data)
+        except RequestException as request_exc:
+            api_error = self._get_web_store_api_error(request_exc.response)
+            raise serializers.ValidationError(api_error)
+
+        return resp_json
+
+    def _create_payment(self, signup_or_group):
+        if isinstance(signup_or_group, SignUp):
+            kwargs = {"signup": signup_or_group}
+        else:
+            kwargs = {"signup_group": signup_or_group}
+
+        kwargs["expires_at"] = localtime() + timedelta(
+            hours=settings.WEB_STORE_ORDER_EXPIRATION_HOURS
+        )
+
+        api_response = self._create_web_store_api_order(
+            signup_or_group, kwargs["expires_at"]
+        )
+
+        if api_response.get("orderId"):
+            kwargs["external_order_id"] = api_response["orderId"]
+
+        if api_response.get("priceTotal"):
+            kwargs["amount"] = Decimal(api_response["priceTotal"])
+        else:
+            kwargs["amount"] = signup_or_group.total_payment_amount
+
+        if api_response.get("checkoutUrl"):
+            kwargs["checkout_url"] = api_response["checkoutUrl"]
+
+        if api_response.get("loggedInCheckoutUrl"):
+            kwargs["logged_in_checkout_url"] = api_response["loggedInCheckoutUrl"]
+
+        kwargs["created_by"] = self.context["request"].user
+        kwargs["last_modified_by"] = self.context["request"].user
+
+        SignUpPayment.objects.create(**kwargs)
+
+    class Meta:
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            fields = ("create_payment", "payment")
+        else:
+            fields = ()
+
+
+class SignUpSerializer(SignUpBaseSerializer, WebStorePaymentBaseSerializer):
     view_name = "signup"
     id = serializers.IntegerField(required=False)
     date_of_birth = serializers.DateField(required=False, allow_null=True)
@@ -269,40 +412,44 @@ class SignUpSerializer(SignUpBaseSerializer):
         )
         contact_person_data = validated_data.pop("contact_person", None) or {}
         price_group_data = validated_data.pop("price_group", None) or {}
+        create_payment = validated_data.pop("create_payment", False)
 
-        add_as_attending, add_as_waitlisted = _validate_registration_capacity(
+        add_as_attending, add_as_waitlisted = _get_attending_and_waitlisted_capacities(
             registration, 1
         )
 
         signup = None
+        contact_person = None
 
         if not add_as_attending and add_as_waitlisted:
             validated_data["attendee_status"] = SignUp.AttendeeStatus.WAITING_LIST
 
         if add_as_attending or add_as_waitlisted:
             signup = super().create(validated_data)
+
             self._update_or_create_protected_data(signup, **protected_data)
             self._update_or_create_price_group(signup, **price_group_data)
-
-        if signup:
             contact_person = self._update_or_create_contact_person(
                 signup, **contact_person_data
             )
-            if contact_person:
-                access_code = (
-                    contact_person.create_access_code()
-                    if contact_person.can_create_access_code(
-                        self.context["request"].user
-                    )
-                    else None
-                )
-                contact_person.send_notification(
-                    SignUpNotificationType.CONFIRMATION
-                    if add_as_attending
-                    else SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST,
-                    access_code=access_code,
-                )
 
+        if create_payment and signup and not signup.signup_group_id:
+            self._create_payment(signup)
+
+        if contact_person:
+            access_code = (
+                contact_person.create_access_code()
+                if contact_person.can_create_access_code(self.context["request"].user)
+                else None
+            )
+            contact_person.send_notification(
+                SignUpNotificationType.CONFIRMATION
+                if add_as_attending
+                else SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST,
+                access_code=access_code,
+            )
+
+        if signup:
             return signup
 
         raise DRFPermissionDenied(_("The waiting list is already full"))
@@ -438,12 +585,21 @@ class SignUpSerializer(SignUpBaseSerializer):
                     "Price group is not one of the allowed price groups for this registration."
                 )
 
+            if validated_data.get("create_payment"):
+                _validate_signups_for_payment([validated_data], errors, "price_group")
+
+                _validate_contact_person_for_payment(
+                    validated_data.get("contact_person"), errors
+                )
+
+                _validate_attendee_status_for_payment(registration, 1, errors)
+
         if errors:
             raise serializers.ValidationError(errors)
 
         return validated_data
 
-    class Meta(SignUpBaseSerializer.Meta):
+    class Meta(SignUpBaseSerializer.Meta, WebStorePaymentBaseSerializer.Meta):
         fields = (
             "id",
             "anonymization_time",
@@ -460,8 +616,11 @@ class SignUpSerializer(SignUpBaseSerializer):
             "signup_group",
             "user_consent",
         ) + SignUpBaseSerializer.Meta.fields
+
         if settings.WEB_STORE_INTEGRATION_ENABLED:
             fields += ("price_group",)
+            fields += WebStorePaymentBaseSerializer.Meta.fields
+
         model = SignUp
 
 
@@ -714,8 +873,10 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
             "signup_url",
             "is_created_by_current_user",
         ) + CreatedModifiedBaseSerializer.Meta.fields
+
         if settings.WEB_STORE_INTEGRATION_ENABLED:
             fields += ("registration_price_groups",)
+
         model = Registration
 
 
@@ -776,10 +937,26 @@ class CreateSignUpsSerializer(serializers.Serializer):
                 }
             )
 
-        if len(data["signups"]) > reservation.seats:
+        signups_count = len(data["signups"])
+
+        if signups_count > reservation.seats:
             raise serializers.ValidationError(
                 {"signups": "Number of signups exceeds the number of requested seats"}
             )
+
+        if (
+            settings.WEB_STORE_INTEGRATION_ENABLED
+            and signups_count > 1
+            and any([signup.get("create_payment") for signup in data["signups"]])
+        ):
+            raise serializers.ValidationError(
+                {
+                    "signups": _(
+                        "Only one signup is supported when creating a Talpa web store payment."
+                    )
+                }
+            )
+
         data = super().validate(data)
         return data
 
@@ -816,7 +993,7 @@ class CreateSignUpsSerializer(serializers.Serializer):
         user = self.context["request"].user
         registration = validated_data["registration"]
 
-        add_as_attending, add_as_waitlisted = _validate_registration_capacity(
+        add_as_attending, add_as_waitlisted = _get_attending_and_waitlisted_capacities(
             registration, len(validated_data["signups"])
         )
         if not (add_as_attending or add_as_waitlisted):
@@ -906,7 +1083,11 @@ class CreateSignUpsSerializer(serializers.Serializer):
         return signup_instances
 
 
-class SignUpGroupCreateSerializer(SignUpBaseSerializer, CreateSignUpsSerializer):
+class SignUpGroupCreateSerializer(
+    SignUpBaseSerializer,
+    CreateSignUpsSerializer,
+    WebStorePaymentBaseSerializer,
+):
     reservation_code = serializers.CharField(write_only=True)
     contact_person = SignUpContactPersonSerializer(required=True)
 
@@ -917,11 +1098,26 @@ class SignUpGroupCreateSerializer(SignUpBaseSerializer, CreateSignUpsSerializer)
 
         errors = {}
 
-        if not validated_data.get("contact_person"):
+        contact_person = validated_data.get("contact_person")
+        if not contact_person:
             # The field can be given as an empty dict even if it's required
             # => need to validate this here.
             errors["contact_person"] = _(
                 "Contact person information must be provided for a group."
+            )
+
+        if validated_data.get("create_payment"):
+            _validate_signups_for_payment(validated_data["signups"], errors, "signups")
+
+            _validate_contact_person_for_payment(
+                contact_person,
+                errors,
+            )
+
+            _validate_attendee_status_for_payment(
+                validated_data["registration"],
+                len(validated_data["signups"]),
+                errors,
             )
 
         if errors:
@@ -947,18 +1143,13 @@ class SignUpGroupCreateSerializer(SignUpBaseSerializer, CreateSignUpsSerializer)
             **contact_person_data,
         )
 
-    def _create_signups(self, instance, validated_signups_data):
-        for signup_data in validated_signups_data:
-            signup_data["signup_group"] = instance
-            signup_serializer = SignUpSerializer(data=signup_data, context=self.context)
-            signup_serializer.create(signup_data)
-
     def create(self, validated_data):
         validated_data.pop("reservation_code")
         reservation = validated_data.pop("reservation")
         signups_data = validated_data.pop("signups")
         protected_data = _get_protected_data(validated_data, ["extra_info"])
         contact_person_data = validated_data.pop("contact_person")
+        create_payment = validated_data.pop("create_payment", False)
 
         instance = super().create(validated_data)
         self._create_protected_data(instance, **protected_data)
@@ -969,6 +1160,10 @@ class SignUpGroupCreateSerializer(SignUpBaseSerializer, CreateSignUpsSerializer)
         self.create_signups(validated_data)
 
         contact_person = self._create_contact_person(instance, **contact_person_data)
+
+        if create_payment:
+            self._create_payment(instance)
+
         self._notify_contact_person(
             contact_person,
             SignUp.AttendeeStatus.ATTENDING
@@ -981,7 +1176,7 @@ class SignUpGroupCreateSerializer(SignUpBaseSerializer, CreateSignUpsSerializer)
 
         return instance
 
-    class Meta(SignUpBaseSerializer.Meta):
+    class Meta(SignUpBaseSerializer.Meta, WebStorePaymentBaseSerializer.Meta):
         fields = (
             "id",
             "registration",
@@ -989,6 +1184,10 @@ class SignUpGroupCreateSerializer(SignUpBaseSerializer, CreateSignUpsSerializer)
             "signups",
             "anonymization_time",
         ) + SignUpBaseSerializer.Meta.fields
+
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            fields += WebStorePaymentBaseSerializer.Meta.fields
+
         model = SignUpGroup
 
 
@@ -1018,9 +1217,14 @@ class SignUpGroupSerializer(SignUpBaseSerializer):
 
     def get_fields(self):
         fields = super().get_fields()
+
         fields["signups"] = SignUpSerializer(
             many=True, required=False, partial=self.partial
         )
+
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            fields["payment"] = SignUpPaymentSerializer(read_only=True, required=False)
+
         return fields
 
     def validate(self, data):
@@ -1083,6 +1287,10 @@ class SignUpGroupSerializer(SignUpBaseSerializer):
             "signups",
             "anonymization_time",
         ) + SignUpBaseSerializer.Meta.fields
+
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            fields += ("payment",)
+
         model = SignUpGroup
 
 
