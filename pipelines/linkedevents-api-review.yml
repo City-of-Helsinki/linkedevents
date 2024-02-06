@@ -38,8 +38,6 @@ resources:
     # Azure DevOps repository
     - repository: linkedevents-pipelines
       type: git
-      ref: refs/heads/ansible_automation_update
-
       # Azure DevOps project/repository
       name: linkedevents/linkedevents-pipelines
 
