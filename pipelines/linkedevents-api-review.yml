@@ -1,0 +1,57 @@
+#
+# Review pipeline. Run build and deploy for Platta dev environments.
+# Pipeline runs different tests e.g. unittest and browser tests.
+#
+# Continuous integration (CI) triggers cause a pipeline to run whenever you push
+# an update to the specified branches or you push specified tags.
+# only PR trigger pipeline
+trigger: none
+
+# Pull request (PR) triggers cause a pipeline to run whenever a pull request is
+# opened with one of the specified target branches, or when updates are made to 
+# such a pull request.
+#
+# GitHub creates a new ref when a pull request is created. The ref points to a 
+# merge commit, which is the merged code between the source and target branches 
+# of the pull request.
+#
+# Opt out of pull request validation 
+pr:
+  # PR target branch
+  branches:
+    include:
+    - main
+  paths:
+    exclude:
+    - '*release-please*'
+    - '*.md'
+    - '.github/'
+    - 'pipelines/linkedevents-api-release.yml'
+    - 'pipelines/linkedevents-api-dev.yml'
+    - 'docker-compose*'
+
+# By default, use self-hosted agents
+pool: Default
+
+resources:
+  repositories:
+    # Azure DevOps repository
+    - repository: linkedevents-pipelines
+      type: git
+      # Azure DevOps project/repository
+      name: linkedevents/linkedevents-pipelines
+
+extends:
+  # Filename in Azure DevOps Repository
+  template: azure-pipelines-linkedevents-api-review.yml@linkedevents-pipelines
+  # parameters:
+    # Application build arguments and config map values as key value pairs.
+    # Does not contain all buildArguments or configMap values, the rest located in linkedevents-pipelines
+    # Default value to pythonVersion is set on template.
+    # The values here will override the values defined in the linkedevents-pipelines repository
+    # buildArgs:
+    #   DEBUG: 1
+    # configMap: # pod environment variables
+    #   DEBUG: 1
+    ## Used tool version
+    # pythonVersion: 3.11
