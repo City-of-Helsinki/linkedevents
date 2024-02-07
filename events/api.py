@@ -23,7 +23,9 @@ from django.contrib.postgres.search import SearchQuery, SearchRank, TrigramSimil
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.db.models import Count, Exists, F, OuterRef, Prefetch, Q, QuerySet
+from django.db.models import Case, Count
+from django.db.models import DateTimeField as ModelDateTimeField
+from django.db.models import Exists, F, OuterRef, Prefetch, Q, QuerySet, When
 from django.db.models.functions import Greatest
 from django.db.utils import IntegrityError
 from django.http import Http404, HttpResponsePermanentRedirect
@@ -2015,7 +2017,8 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
                 "created_by": user,
                 "last_modified_by": user,
                 "created_time": Event.now(),  # we must specify creation time as we are setting id
-                "event_status": Event.Status.SCHEDULED,  # mark all newly created events as scheduled
+                "event_status": Event.Status.SCHEDULED,
+                # mark all newly created events as scheduled
             }
         )
 
@@ -2254,14 +2257,64 @@ class LinkedEventsOrderingFilter(filters.OrderingFilter):
 
 
 class EventOrderingFilter(LinkedEventsOrderingFilter):
+    def annotate_queryset_for_ordering_by_enrolment_start_or_end(
+        self, queryset, ordering, order_field_name: str, db_field_name: str
+    ):
+        if order_field_name in ordering:
+            # Put events with null enrolment times to the end of the list for
+            # the ascending ordering.
+            events_with_null_times_last = timezone.datetime.max.replace(
+                tzinfo=timezone.get_default_timezone()
+            )
+        else:
+            # Put events with null enrolment times to the end of the list for
+            # the descending ordering.
+            events_with_null_times_last = timezone.datetime.min.replace(
+                tzinfo=timezone.utc
+            )
+            order_field_name = order_field_name.removeprefix("-")
+
+        return queryset.annotate(
+            **{
+                f"{order_field_name}": Case(
+                    When(
+                        **{
+                            f"registration__{db_field_name}__isnull": False,
+                        },
+                        then=F(f"registration__{db_field_name}"),
+                    ),
+                    When(
+                        **{
+                            f"{db_field_name}__isnull": True,
+                            f"registration__{db_field_name}__isnull": True,
+                        },
+                        then=events_with_null_times_last,
+                    ),
+                    default=F(f"{db_field_name}"),
+                    output_field=ModelDateTimeField(),
+                ),
+            }
+        )
+
     def filter_queryset(self, request, queryset, view):
-        queryset = super().filter_queryset(request, queryset, view)
         ordering = self.get_ordering(request, queryset, view)
         if not ordering:
             ordering = []
+
         if "duration" in ordering or "-duration" in ordering:
             queryset = queryset.extra(select={"duration": "end_time - start_time"})
-        return queryset
+
+        if "enrolment_start" in ordering or "-enrolment_start" in ordering:
+            queryset = self.annotate_queryset_for_ordering_by_enrolment_start_or_end(
+                queryset, ordering, "enrolment_start", "enrolment_start_time"
+            )
+
+        if "enrolment_end" in ordering or "-enrolment_end" in ordering:
+            queryset = self.annotate_queryset_for_ordering_by_enrolment_start_or_end(
+                queryset, ordering, "enrolment_end", "enrolment_end_time"
+            )
+
+        return super().filter_queryset(request, queryset, view)
 
 
 def parse_duration_string(duration):
@@ -3243,6 +3296,12 @@ class EventViewSet(
         "name",
         "maximum_attendee_capacity",
         "minimum_attendee_capacity",
+        "enrolment_start_time",
+        "enrolment_end_time",
+        "registration__enrolment_start_time",
+        "registration__enrolment_end_time",
+        "enrolment_start",
+        "enrolment_end",
     )
     ordering = ("-last_modified_time",)
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES + [DOCXRenderer]
