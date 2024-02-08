@@ -1038,6 +1038,7 @@ class CreateSignUpsSerializer(serializers.Serializer):
             date_of_birth = cleaned_signup_data.pop("date_of_birth", None)
             contact_person = cleaned_signup_data.pop("contact_person", None)
             price_group = cleaned_signup_data.pop("price_group", None)
+            cleaned_signup_data.pop("create_payment", False)
 
             signup = SignUp(**cleaned_signup_data)
 

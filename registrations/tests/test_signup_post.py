@@ -248,6 +248,36 @@ def test_authenticated_user_can_create_signups_with_payments(
 
 
 @pytest.mark.django_db
+def test_can_create_signup_with_create_payment_as_false_in_payload(
+    registration, api_client
+):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    LanguageFactory(pk="fi", service_language=True)
+    reservation = SeatReservationCodeFactory(seats=1, registration=registration)
+
+    signups_data = deepcopy(default_signups_data)
+    signups_data.update(
+        {
+            "registration": registration.pk,
+            "reservation_code": reservation.code,
+        }
+    )
+    signups_data["signups"][0].update(
+        {
+            "create_payment": False,
+        }
+    )
+
+    assert SignUpPayment.objects.count() == 0
+
+    assert_create_signups(api_client, signups_data)
+
+    assert SignUpPayment.objects.count() == 0
+
+
+@pytest.mark.django_db
 def test_create_signup_payment_without_pricetotal_in_response(registration, api_client):
     LanguageFactory(pk="fi", service_language=True)
     reservation = SeatReservationCodeFactory(seats=1, registration=registration)
