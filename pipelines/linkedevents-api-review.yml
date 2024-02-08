@@ -15,7 +15,7 @@ trigger: none
 # merge commit, which is the merged code between the source and target branches 
 # of the pull request.
 #
-# Opt out of pull request validation 
+# Opt out of pull request validation
 pr:
   # PR target branch
   branches:
