@@ -3,6 +3,10 @@ from decimal import Decimal
 from django.conf import settings
 from django.contrib.sites.models import Site
 from django.core.mail import send_mail
+from django.utils import translation
+from icalendar import Calendar
+from icalendar import Event as CalendarEvent
+from icalendar import vText
 
 
 def code_validity_duration(seats):
@@ -85,6 +89,43 @@ def has_allowed_substitute_user_email_domain(email_address):
             for domain in settings.SUBSTITUTE_USER_ALLOWED_EMAIL_DOMAINS
         ]
     )
+
+
+def create_event_ics_file_content(event, language="fi"):
+    cal = Calendar()
+    # Some properties are required to be compliant
+    cal.add("prodid", "-//linkedevents.hel.fi//NONSGML API//EN")
+    cal.add("version", "2.0")
+
+    with translation.override(language):
+        calendar_event = CalendarEvent()
+
+        if (start_time := event.start_time) and (name := event.name):
+            calendar_event.add("dtstart", start_time)
+            calendar_event.add("summary", name)
+        else:
+            raise ValueError(
+                "Event doesn't have start_time or name. Ics file cannot be created."
+            )
+
+        calendar_event.add("dtend", event.end_time if event.end_time else start_time)
+
+        if description := event.short_description:
+            calendar_event.add("description", description)
+        if location := event.location:
+            location_parts = [
+                location.name,
+                location.street_address,
+                location.address_locality,
+            ]
+            location_text = ", ".join([i for i in location_parts if i])
+            calendar_event["location"] = vText(location_text)
+
+        cal.add_component(calendar_event)
+
+    filename = f"event_{event.id}.ics"
+
+    return filename, cal.to_ical()
 
 
 def strip_trailing_zeroes_from_decimal(value: Decimal):
