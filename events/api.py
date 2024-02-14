@@ -2241,6 +2241,44 @@ def _format_images_v0_1(data):
         data["image"] = images[0].get("url", None)
 
 
+def _annotate_queryset_for_filtering_by_enrolment_start_or_end(
+    queryset, ordering, order_field_name: str, db_field_name: str
+):
+    if order_field_name in ordering:
+        # Put events with null enrolment times to the end of the list for
+        # the ascending ordering.
+        events_with_null_times_last = timezone.datetime.max.replace(
+            tzinfo=timezone.get_default_timezone()
+        )
+    else:
+        # Put events with null enrolment times to the end of the list for
+        # the descending ordering.
+        events_with_null_times_last = timezone.datetime.min.replace(tzinfo=timezone.utc)
+        order_field_name = order_field_name.removeprefix("-")
+
+    return queryset.annotate(
+        **{
+            f"{order_field_name}": Case(
+                When(
+                    **{
+                        f"registration__{db_field_name}__isnull": False,
+                    },
+                    then=F(f"registration__{db_field_name}"),
+                ),
+                When(
+                    **{
+                        f"{db_field_name}__isnull": True,
+                        f"registration__{db_field_name}__isnull": True,
+                    },
+                    then=events_with_null_times_last,
+                ),
+                default=F(f"{db_field_name}"),
+                output_field=ModelDateTimeField(),
+            ),
+        }
+    )
+
+
 class EventSerializerV0_1(EventSerializer):  # noqa: N801
     def __init__(self, *args, **kwargs):
         kwargs.setdefault("context", {}).setdefault("include", []).append("image")
@@ -2257,45 +2295,6 @@ class LinkedEventsOrderingFilter(filters.OrderingFilter):
 
 
 class EventOrderingFilter(LinkedEventsOrderingFilter):
-    def annotate_queryset_for_ordering_by_enrolment_start_or_end(
-        self, queryset, ordering, order_field_name: str, db_field_name: str
-    ):
-        if order_field_name in ordering:
-            # Put events with null enrolment times to the end of the list for
-            # the ascending ordering.
-            events_with_null_times_last = timezone.datetime.max.replace(
-                tzinfo=timezone.get_default_timezone()
-            )
-        else:
-            # Put events with null enrolment times to the end of the list for
-            # the descending ordering.
-            events_with_null_times_last = timezone.datetime.min.replace(
-                tzinfo=timezone.utc
-            )
-            order_field_name = order_field_name.removeprefix("-")
-
-        return queryset.annotate(
-            **{
-                f"{order_field_name}": Case(
-                    When(
-                        **{
-                            f"registration__{db_field_name}__isnull": False,
-                        },
-                        then=F(f"registration__{db_field_name}"),
-                    ),
-                    When(
-                        **{
-                            f"{db_field_name}__isnull": True,
-                            f"registration__{db_field_name}__isnull": True,
-                        },
-                        then=events_with_null_times_last,
-                    ),
-                    default=F(f"{db_field_name}"),
-                    output_field=ModelDateTimeField(),
-                ),
-            }
-        )
-
     def filter_queryset(self, request, queryset, view):
         ordering = self.get_ordering(request, queryset, view)
         if not ordering:
@@ -2305,12 +2304,12 @@ class EventOrderingFilter(LinkedEventsOrderingFilter):
             queryset = queryset.extra(select={"duration": "end_time - start_time"})
 
         if "enrolment_start" in ordering or "-enrolment_start" in ordering:
-            queryset = self.annotate_queryset_for_ordering_by_enrolment_start_or_end(
+            queryset = _annotate_queryset_for_filtering_by_enrolment_start_or_end(
                 queryset, ordering, "enrolment_start", "enrolment_start_time"
             )
 
         if "enrolment_end" in ordering or "-enrolment_end" in ordering:
-            queryset = self.annotate_queryset_for_ordering_by_enrolment_start_or_end(
+            queryset = _annotate_queryset_for_filtering_by_enrolment_start_or_end(
                 queryset, ordering, "enrolment_end", "enrolment_end_time"
             )
 
@@ -3155,9 +3154,23 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         method="filter_registration_admin_user"
     )
 
+    enrolment_open_on = django_filters.DateTimeFilter(method="filter_enrolment_open_on")
+
     class Meta:
         model = Event
         fields = ("division", "super_event_type", "super_event")
+
+    def filter_enrolment_open_on(self, queryset, name, value: datetime):
+        value = value.astimezone(pytz.timezone(settings.TIME_ZONE))
+
+        queryset = _annotate_queryset_for_filtering_by_enrolment_start_or_end(
+            queryset, [], "-enrolment_start", "enrolment_start_time"
+        )
+        queryset = _annotate_queryset_for_filtering_by_enrolment_start_or_end(
+            queryset, ["enrolment_end"], "enrolment_end", "enrolment_end_time"
+        )
+
+        return queryset.filter(enrolment_start__lte=value, enrolment_end__gte=value)
 
     def filter_dwithin(self, queryset, name, value: tuple[tuple[str, str], str]):
         srs = srid_to_srs(self.request.query_params.get("srid"))
