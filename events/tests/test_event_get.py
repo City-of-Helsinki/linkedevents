@@ -1592,6 +1592,61 @@ def test_sort_events_by_registration_enrolment_start_time_or_enrolment_end_time(
 
 
 @pytest.mark.django_db
+def test_filter_events_by_enrolment_open_on(api_client):
+    now = localtime()
+
+    event = EventFactory()
+    RegistrationFactory(
+        event=event,
+        enrolment_start_time=now.replace(year=2024, month=1, day=1, hour=10),
+        enrolment_end_time=now.replace(year=2024, month=1, day=7, hour=10),
+    )
+
+    event2 = EventFactory(
+        enrolment_start_time=now.replace(year=2024, month=2, day=1, hour=12)
+    )
+
+    event3 = EventFactory(
+        enrolment_start_time=now.replace(year=2024, month=3, day=1, hour=12),
+        enrolment_end_time=now.replace(year=2024, month=3, day=31, hour=12),
+    )
+    RegistrationFactory(
+        event=event3,
+        enrolment_start_time=now.replace(year=2025, month=2, day=2, hour=12),
+        enrolment_end_time=now.replace(year=2025, month=3, day=2, hour=12),
+    )
+
+    event4 = EventFactory(
+        enrolment_end_time=now.replace(year=2024, month=12, day=1, hour=12)
+    )
+
+    response = get_list(
+        api_client=api_client, query_string="enrolment_open_on=2025-02-01"
+    )
+    results = response.data["data"]
+    assert len(results) == 1
+    assert results[0]["id"] == event2.id
+
+    response = get_list(
+        api_client=api_client, query_string="enrolment_open_on=2025-02-02T13:00:00"
+    )
+    results = response.data["data"]
+    assert len(results) == 2
+    assert Counter([result["id"] for result in results]) == Counter(
+        [event2.id, event3.id]
+    )
+
+    response = get_list(
+        api_client=api_client, query_string="enrolment_open_on=2024-01-02T13:00:00"
+    )
+    results = response.data["data"]
+    assert len(results) == 2
+    assert Counter([result["id"] for result in results]) == Counter(
+        [event.id, event4.id]
+    )
+
+
+@pytest.mark.django_db
 def test_event_id_is_audit_logged_on_get_detail(api_client, event):
     response = get_detail(api_client, event.pk)
     assert response.status_code == status.HTTP_200_OK
