@@ -25,12 +25,19 @@ def get_ui_locales(language):
     return [linked_events_ui_locale, linked_registrations_ui_locale]
 
 
+def get_signup_create_url(registration, language):
+    return (
+        f"{settings.LINKED_REGISTRATIONS_UI_URL}/{language}/"
+        f"registration/{registration.id}/signup-group/create"
+    )
+
+
 def get_signup_edit_url(
     contact_person, linked_registrations_ui_locale, access_code=None
 ):
     signup_edit_url = (
-        f"{settings.LINKED_REGISTRATIONS_UI_URL}/{linked_registrations_ui_locale}"
-        f"/registration/{contact_person.registration.id}/"
+        f"{settings.LINKED_REGISTRATIONS_UI_URL}/{linked_registrations_ui_locale}/"
+        f"registration/{contact_person.registration.id}/"
     )
 
     if contact_person.signup_group_id:
