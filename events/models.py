@@ -575,6 +575,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
 
     # Properties from schema.org/Thing
     info_url = models.URLField(verbose_name=_('Event home page'), blank=True, null=True, max_length=1000)
+    event_registration_link = models.URLField(verbose_name=_('Event registration link'),
+                                              blank=True, null=True, max_length=1000)
     description = models.TextField(verbose_name=_('Description'), blank=True, null=True)
     short_description = models.TextField(verbose_name=_('Short description'), blank=True, null=True)
 
