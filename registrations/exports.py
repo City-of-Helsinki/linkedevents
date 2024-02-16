@@ -1,5 +1,6 @@
 import io
 
+from django.utils import translation
 from django.utils.translation import gettext as _
 from xlsxwriter import Workbook
 from xlsxwriter.worksheet import Worksheet
@@ -13,26 +14,42 @@ class RegistrationSignUpsExportXLSX:
             event_name=registration.event.name,
             registered_persons=_("Registered persons"),
         )
+
         self.signups = (
             registration.signups.all()
-            .select_related("contact_person", "signup_group__contact_person")
+            .select_related(
+                "contact_person", "signup_group__contact_person", "protected_data"
+            )
             .order_by("first_name", "last_name")
             .only(
                 "first_name",
                 "last_name",
+                "protected_data",
                 "phone_number",
                 "attendee_status",
                 "contact_person",
                 "signup_group",
             )
         )
+
         self.columns = self._get_columns()
         self.formats = {}
+
+        self.date_formats = {
+            "fi": "dd.mm.yyyy",
+            "sv": "dd.mm.yyyy",
+            "en": "dd mmm yyyy",
+        }
 
     @staticmethod
     def _get_columns() -> list[dict]:
         return [
             {"header": _("Name"), "accessor": "full_name"},
+            {
+                "header": _("Date of birth"),
+                "accessor": "date_of_birth",
+                "format": "date_format",
+            },
             {"header": _("Phone number"), "accessor": "phone_number"},
             {
                 "header": _("Contact person's email"),
@@ -77,7 +94,15 @@ class RegistrationSignUpsExportXLSX:
         worksheet.set_row(row + 1, 20)
 
     def _get_signups_table_columns(self) -> list[dict]:
-        table_columns = [{"header": column["header"]} for column in self.columns]
+        table_columns = [
+            {
+                "header": column["header"],
+                "format": self.formats.get(column["format"])
+                if "format" in column
+                else None,
+            }
+            for column in self.columns
+        ]
 
         return table_columns
 
@@ -118,8 +143,15 @@ class RegistrationSignUpsExportXLSX:
         output = io.BytesIO()
 
         with Workbook(output, {"in_memory": True}) as workbook:
-            # Add "bold" formatting.
+            # Add formatting options.
             self.formats["bold"] = workbook.add_format({"bold": True})
+            self.formats["date_format"] = workbook.add_format(
+                {
+                    "num_format": self.date_formats.get(
+                        translation.get_language(), self.date_formats["fi"]
+                    ),
+                }
+            )
 
             # Add a worksheet.
             worksheet = workbook.add_worksheet()
