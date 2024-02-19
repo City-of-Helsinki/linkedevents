@@ -7,7 +7,7 @@ from django.test import RequestFactory, TestCase
 from django.utils import translation
 from rest_framework import status
 
-from events.tests.factories import OrganizationFactory
+from events.tests.factories import EventFactory, OfferFactory, OrganizationFactory
 from registrations.admin import RegistrationAdmin
 from registrations.models import (
     Event,
@@ -22,6 +22,7 @@ from registrations.tests.factories import (
     RegistrationPriceGroupFactory,
 )
 from registrations.tests.utils import assert_invitation_email_is_sent
+from registrations.utils import get_signup_create_url
 
 EMAIL = "user@email.com"
 EDITED_EMAIL = "user_edited@email.com"
@@ -86,6 +87,96 @@ class TestRegistrationAdmin(TestCase):
             self.admin,
             registration.created_by,
         )
+
+    def test_signup_url_is_linked_to_event_offer_without_info_url(self):
+        data_source = self.registration.event.data_source
+        publisher = self.registration.event.publisher
+        event = EventFactory(id="event-2", data_source=data_source, publisher=publisher)
+
+        for info_url_fi, info_url_sv, info_url_en in [
+            (None, None, None),
+            (None, None, ""),
+            (None, "", ""),
+            ("", None, None),
+            ("", "", None),
+            ("", "", ""),
+        ]:
+            with self.subTest():
+                offer = OfferFactory(
+                    event=event,
+                    info_url_fi=info_url_fi,
+                    info_url_sv=info_url_sv,
+                    info_url_en=info_url_en,
+                )
+
+                self.assertEqual(Registration.objects.count(), 1)
+
+                self.client.post(
+                    "/admin/registrations/registration/add/",
+                    {
+                        "event": event.id,
+                        "registration_user_accesses-TOTAL_FORMS": 1,
+                        "registration_user_accesses-INITIAL_FORMS": 0,
+                        "registration_price_groups-TOTAL_FORMS": 0,
+                        "registration_price_groups-INITIAL_FORMS": 0,
+                    },
+                )
+
+                self.assertEqual(Registration.objects.count(), 2)
+                registration = Registration.objects.last()
+
+                offer.refresh_from_db()
+                self.assertEqual(
+                    offer.info_url_fi, get_signup_create_url(registration, "fi")
+                )
+                self.assertEqual(
+                    offer.info_url_sv, get_signup_create_url(registration, "sv")
+                )
+                self.assertEqual(
+                    offer.info_url_en, get_signup_create_url(registration, "en")
+                )
+
+                offer.delete()
+                registration.delete()
+
+    def test_signup_url_is_not_linked_to_event_offer_with_info_url_on_update(self):
+        blank_values = (None, "")
+
+        for info_url_fi, info_url_sv, info_url_en in [
+            (None, None, None),
+            (None, None, ""),
+            (None, "", ""),
+            ("", None, None),
+            ("", "", None),
+            ("", "", ""),
+        ]:
+            with self.subTest():
+                offer = OfferFactory(
+                    event=self.registration.event,
+                    info_url_fi=info_url_fi,
+                    info_url_sv=info_url_sv,
+                    info_url_en=info_url_en,
+                )
+
+                response = self.client.post(
+                    f"/admin/registrations/registration/{self.registration.id}/change/",
+                    {
+                        "event": self.registration.event.id,
+                        "registration_user_accesses-TOTAL_FORMS": 1,
+                        "registration_user_accesses-INITIAL_FORMS": 0,
+                        "registration_price_groups-TOTAL_FORMS": 0,
+                        "registration_price_groups-INITIAL_FORMS": 0,
+                    },
+                )
+                assert response.status_code == status.HTTP_302_FOUND
+                assert response.url == "/admin/registrations/registration/"
+
+                offer.refresh_from_db()
+                self.assertIn(offer.info_url_fi, blank_values)
+                self.assertIn(offer.info_url_sv, blank_values)
+                self.assertIn(offer.info_url_en, blank_values)
+
+                offer.delete()
 
     def test_registration_user_accesses_cannot_have_duplicate_emails(self):
         with translation.override("en"):

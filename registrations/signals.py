@@ -1,7 +1,7 @@
 from typing import Union
 
 from django.db.models import Q
-from django.db.models.signals import post_delete, pre_save
+from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
 from events.models import Event
@@ -13,6 +13,7 @@ from registrations.models import (
     SignUpGroup,
     SignUpNotificationType,
 )
+from registrations.utils import get_signup_create_url
 
 
 def _signup_or_group_post_delete(instance: Union[SignUp, SignUpGroup]) -> None:
@@ -106,3 +107,26 @@ def calculate_registration_price_group_vat_prices(
     **kwargs: dict,
 ) -> None:
     instance.calculate_vat_and_price_without_vat()
+
+
+@receiver(
+    post_save,
+    sender=Registration,
+    dispatch_uid="create_signup_link_for_event",
+)
+def create_signup_link_for_event(
+    sender: type[Registration], instance: Registration, **kwargs: dict
+) -> None:
+    if not kwargs.get("created"):
+        # Only create the signup link if a new registration has been created.
+        return
+
+    instance.event.offers.filter(
+        (Q(info_url_fi=None) | Q(info_url_fi=""))
+        & (Q(info_url_sv=None) | Q(info_url_sv=""))
+        & (Q(info_url_en=None) | Q(info_url_en=""))
+    ).update(
+        info_url_fi=get_signup_create_url(instance, "fi"),
+        info_url_sv=get_signup_create_url(instance, "sv"),
+        info_url_en=get_signup_create_url(instance, "en"),
+    )

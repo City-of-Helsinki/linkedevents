@@ -7,6 +7,7 @@ from rest_framework import status
 
 from audit_log.models import AuditLogEntry
 from events.models import Event
+from events.tests.factories import OfferFactory
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
 from registrations.models import (
@@ -92,6 +93,44 @@ def test_can_update_registration(api_client, registration, user_role):
         "audience_max_age": 10,
     }
     assert_update_registration(api_client, registration.id, registration_data)
+
+
+@pytest.mark.parametrize(
+    "info_url_fi,info_url_sv,info_url_en",
+    [
+        (None, None, None),
+        (None, None, ""),
+        (None, "", ""),
+        ("", None, None),
+        ("", "", None),
+        ("", "", ""),
+    ],
+)
+@pytest.mark.django_db
+def test_signup_url_is_not_linked_to_event_offer_on_registration_update(
+    api_client, registration, info_url_fi, info_url_sv, info_url_en
+):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    offer = OfferFactory(
+        event=registration.event,
+        info_url_fi=info_url_fi,
+        info_url_sv=info_url_sv,
+        info_url_en=info_url_en,
+    )
+
+    registration_data = {
+        "event": {"@id": get_event_url(registration.event_id)},
+        "audience_max_age": 10,
+    }
+    assert_update_registration(api_client, registration.pk, registration_data)
+
+    blank_values = (None, "")
+    offer.refresh_from_db()
+    assert offer.info_url_fi in blank_values
+    assert offer.info_url_sv in blank_values
+    assert offer.info_url_en in blank_values
 
 
 @pytest.mark.django_db

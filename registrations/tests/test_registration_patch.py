@@ -5,6 +5,7 @@ import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from events.tests.factories import OfferFactory
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import PriceGroup, RegistrationPriceGroup
 from registrations.tests.factories import (
@@ -14,6 +15,7 @@ from registrations.tests.factories import (
 )
 from registrations.tests.test_registration_post import email
 from registrations.tests.test_registration_put import edited_email, edited_hel_email
+from registrations.tests.utils import create_user_by_role
 
 # === util methods ===
 
@@ -41,6 +43,41 @@ def assert_patch_registration(
 
 
 # === tests ===
+
+
+@pytest.mark.parametrize(
+    "info_url_fi,info_url_sv,info_url_en",
+    [
+        (None, None, None),
+        (None, None, ""),
+        (None, "", ""),
+        ("", None, None),
+        ("", "", None),
+        ("", "", ""),
+    ],
+)
+@pytest.mark.django_db
+def test_signup_url_is_not_linked_to_event_offer_on_registration_patch(
+    api_client, registration, info_url_fi, info_url_sv, info_url_en
+):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    offer = OfferFactory(
+        event=registration.event,
+        info_url_fi=info_url_fi,
+        info_url_sv=info_url_sv,
+        info_url_en=info_url_en,
+    )
+
+    registration_data = {"audience_max_age": 10}
+    assert_patch_registration(api_client, registration.pk, registration_data)
+
+    blank_values = (None, "")
+    offer.refresh_from_db()
+    assert offer.info_url_fi in blank_values
+    assert offer.info_url_sv in blank_values
+    assert offer.info_url_en in blank_values
 
 
 @pytest.mark.django_db

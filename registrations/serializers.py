@@ -34,6 +34,7 @@ from registrations.models import (
 from registrations.permissions import CanAccessRegistrationSignups
 from registrations.utils import (
     code_validity_duration,
+    get_signup_create_url,
     has_allowed_substitute_user_email_domain,
 )
 from web_store.order.clients import WebStoreOrderAPIClient
@@ -839,10 +840,7 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
         return obj.publisher.id
 
     def get_signup_url(self, obj):
-        return {
-            lang: f"{settings.LINKED_REGISTRATIONS_UI_URL}/{lang}/registration/{obj.id}/signup-group/create"
-            for lang in ["en", "fi", "sv"]
-        }
+        return {lang: get_signup_create_url(obj, lang) for lang in ["en", "fi", "sv"]}
 
     class Meta(CreatedModifiedBaseSerializer.Meta):
         fields = (

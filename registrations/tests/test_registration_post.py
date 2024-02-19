@@ -1,4 +1,5 @@
 from decimal import Decimal
+from unittest.mock import patch
 
 import pytest
 from django.utils import translation
@@ -6,6 +7,7 @@ from rest_framework import status
 
 from audit_log.models import AuditLogEntry
 from events.models import Event
+from events.tests.factories import OfferFactory
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
 from registrations.models import (
@@ -19,6 +21,7 @@ from registrations.tests.factories import (
     RegistrationUserAccessFactory,
 )
 from registrations.tests.utils import assert_invitation_email_is_sent
+from registrations.utils import get_signup_create_url
 
 email = "user@email.com"
 hel_email = "user@hel.fi"
@@ -57,6 +60,79 @@ def test_create_registration(user, api_client, event):
     registration_data = {"event": {"@id": get_event_url(event.id)}}
 
     assert_create_registration(api_client, registration_data)
+
+
+@pytest.mark.parametrize(
+    "info_url_fi,info_url_sv,info_url_en",
+    [
+        (None, None, None),
+        (None, None, ""),
+        (None, "", ""),
+        ("", None, None),
+        ("", "", None),
+        ("", "", ""),
+    ],
+)
+@pytest.mark.django_db
+def test_signup_url_is_linked_to_event_offer_without_info_url(
+    user_api_client, event, info_url_fi, info_url_sv, info_url_en
+):
+    offer = OfferFactory(
+        event=event,
+        info_url_fi=info_url_fi,
+        info_url_sv=info_url_sv,
+        info_url_en=info_url_en,
+    )
+
+    assert Registration.objects.count() == 0
+
+    registration_data = {"event": {"@id": get_event_url(event.id)}}
+    assert_create_registration(user_api_client, registration_data)
+
+    assert Registration.objects.count() == 1
+    registration = Registration.objects.first()
+
+    offer.refresh_from_db()
+    assert offer.info_url_fi == get_signup_create_url(registration, "fi")
+    assert offer.info_url_sv == get_signup_create_url(registration, "sv")
+    assert offer.info_url_en == get_signup_create_url(registration, "en")
+
+
+@pytest.mark.parametrize(
+    "info_url_field,info_url_value,blank_value",
+    [
+        ("info_url_fi", "https://test.com", None),
+        ("info_url_sv", "https://test.com", None),
+        ("info_url_en", "https://test.com", None),
+        ("info_url_fi", "https://test.com", ""),
+        ("info_url_sv", "https://test.com", ""),
+        ("info_url_en", "https://test.com", ""),
+    ],
+)
+@pytest.mark.django_db
+def test_signup_url_is_not_linked_to_event_offer_with_info_url(
+    user_api_client, event, info_url_field, info_url_value, blank_value
+):
+    fields = ("info_url_fi", "info_url_sv", "info_url_en")
+
+    offer_kwargs = {info_url_field: info_url_value}
+    for field in fields:
+        if field != info_url_field:
+            offer_kwargs[field] = blank_value
+
+    offer = OfferFactory(event=event, **offer_kwargs)
+    assert getattr(offer, info_url_field) == info_url_value
+
+    registration_data = {"event": {"@id": get_event_url(event.id)}}
+    assert_create_registration(user_api_client, registration_data)
+
+    offer.refresh_from_db()
+    assert getattr(offer, info_url_field) == info_url_value
+
+    blank_values = (blank_value,)
+    for field in fields:
+        if field != info_url_field:
+            assert getattr(offer, field) in blank_values
 
 
 @pytest.mark.django_db
