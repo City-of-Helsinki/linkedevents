@@ -27,7 +27,20 @@ def _signup_or_group_post_delete(instance: Union[SignUp, SignUpGroup]) -> None:
 
 
 def _send_event_cancellation_notification(event):
-    registration_ids = Registration.objects.filter(event_id=event.pk).values_list(
+    is_recurring_sub_event_cancellation = (
+        event.super_event_id is not None
+        and event.super_event.super_event_type == Event.SuperEventType.RECURRING
+        and getattr(event, "registration", None) is None
+    )
+
+    if is_recurring_sub_event_cancellation:
+        # When a sub-event is cancelled, a registration might have been done to the super event
+        # => notify that registration's contact person.
+        qs_filter = Q(event_id=event.super_event_id)
+    else:
+        qs_filter = Q(event_id=event.pk)
+
+    registration_ids = Registration.objects.filter(qs_filter).values_list(
         "pk", flat=True
     )
 
@@ -39,7 +52,10 @@ def _send_event_cancellation_notification(event):
             | Q(signup_group__registration_id__in=registration_ids)
         )
     ):
-        contact_person.send_notification(SignUpNotificationType.EVENT_CANCELLATION)
+        contact_person.send_notification(
+            SignUpNotificationType.EVENT_CANCELLATION,
+            is_sub_event_cancellation=is_recurring_sub_event_cancellation,
+        )
 
 
 @receiver(

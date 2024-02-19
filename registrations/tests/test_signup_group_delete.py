@@ -1,9 +1,12 @@
+from datetime import timedelta
 from unittest.mock import patch, PropertyMock
 from uuid import UUID
 
 import pytest
 from django.core import mail
 from django.utils import translation
+from django.utils.timezone import localtime
+from freezegun import freeze_time
 from rest_framework import status
 
 from audit_log.models import AuditLogEntry
@@ -18,6 +21,7 @@ from registrations.models import (
     SignUpPriceGroup,
 )
 from registrations.tests.factories import (
+    RegistrationFactory,
     RegistrationUserAccessFactory,
     SignUpContactPersonFactory,
     SignUpFactory,
@@ -304,6 +308,106 @@ def test_email_sent_on_successful_signup_group_deletion(
 
 
 @pytest.mark.parametrize(
+    "username,service_language,expected_subject,expected_heading,expected_text",
+    [
+        (
+            "Username",
+            "en",
+            "Registration cancelled - Recurring: Foo",
+            "Username, registration to the recurring event Foo 1 Feb 2024 - 29 Feb 2024 "
+            "has been cancelled.",
+            "You have successfully cancelled your registration to the recurring event "
+            "<strong>Foo 1 Feb 2024 - 29 Feb 2024</strong>.",
+        ),
+        (
+            "Käyttäjänimi",
+            "fi",
+            "Ilmoittautuminen peruttu - Sarja: Foo",
+            "Käyttäjänimi, ilmoittautuminen sarjatapahtumaan Foo 1.2.2024 - 29.2.2024 on peruttu.",
+            "Olet onnistuneesti peruuttanut ilmoittautumisesi sarjatapahtumaan "
+            "<strong>Foo 1.2.2024 - 29.2.2024</strong>.",
+        ),
+        (
+            "Användarnamn",
+            "sv",
+            "Registreringen avbruten - Serie: Foo",
+            "Användarnamn, anmälan till serieevenemanget Foo 1.2.2024 - 29.2.2024 har ställts in.",
+            "Du har avbrutit din registrering till serieevenemanget "
+            "<strong>Foo 1.2.2024 - 29.2.2024</strong>.",
+        ),
+        (
+            None,
+            "en",
+            "Registration cancelled - Recurring: Foo",
+            "Registration to the recurring event Foo 1 Feb 2024 - 29 Feb 2024 has been cancelled.",
+            "You have successfully cancelled your registration to the recurring event "
+            "<strong>Foo 1 Feb 2024 - 29 Feb 2024</strong>.",
+        ),
+        (
+            None,
+            "fi",
+            "Ilmoittautuminen peruttu - Sarja: Foo",
+            "Ilmoittautuminen sarjatapahtumaan Foo 1.2.2024 - 29.2.2024 on peruttu.",
+            "Olet onnistuneesti peruuttanut ilmoittautumisesi sarjatapahtumaan "
+            "<strong>Foo 1.2.2024 - 29.2.2024</strong>.",
+        ),
+        (
+            None,
+            "sv",
+            "Registreringen avbruten - Serie: Foo",
+            "Anmälan till serieevenemanget Foo 1.2.2024 - 29.2.2024 har ställts in.",
+            "Du har avbrutit din registrering till serieevenemanget "
+            "<strong>Foo 1.2.2024 - 29.2.2024</strong>.",
+        ),
+    ],
+)
+@freeze_time("2024-02-01 03:30:00+02:00")
+@pytest.mark.django_db
+def test_email_sent_on_successful_signup_group_deletion_for_a_recurring_event(
+    api_client,
+    username,
+    service_language,
+    expected_heading,
+    expected_subject,
+    expected_text,
+):
+    lang = LanguageFactory(pk=service_language, service_language=True)
+
+    with translation.override(service_language):
+        now = localtime()
+        registration = RegistrationFactory(
+            event__start_time=now,
+            event__end_time=now + timedelta(days=28),
+            event__super_event_type=Event.SuperEventType.RECURRING,
+            event__name="Foo",
+        )
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(
+        signup_group=signup_group,
+        registration=registration,
+    )
+    SignUpContactPersonFactory(
+        signup_group=signup_group,
+        first_name=username,
+        service_language=lang,
+        email=test_email1,
+    )
+
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    with translation.override(service_language):
+        assert_delete_signup_group(api_client, signup_group.id)
+
+    #  assert that the email was sent
+    message_html_string = str(mail.outbox[0].alternatives[0])
+    assert mail.outbox[0].subject.startswith(expected_subject)
+    assert expected_heading in message_html_string
+    assert expected_text in message_html_string
+
+
+@pytest.mark.parametrize(
     "event_type,expected_heading,expected_text",
     [
         (
@@ -364,6 +468,81 @@ def test_signup_group_cancellation_confirmation_template_has_correct_text_per_ev
     assert len(mail.outbox) == 1
     assert expected_heading in str(mail.outbox[0].alternatives[0])
     assert expected_text in str(mail.outbox[0].alternatives[0])
+
+
+@pytest.mark.parametrize(
+    "event_type,expected_heading,expected_text",
+    [
+        (
+            Event.TypeId.GENERAL,
+            "Username, registration to the recurring event Foo 1 Feb 2024 - 29 Feb 2024 "
+            "has been cancelled.",
+            "You have successfully cancelled your registration to the recurring event "
+            "<strong>Foo 1 Feb 2024 - 29 Feb 2024</strong>.",
+        ),
+        (
+            Event.TypeId.COURSE,
+            "Username, registration to the recurring course Foo 1 Feb 2024 - 29 Feb 2024 "
+            "has been cancelled.",
+            "You have successfully cancelled your registration to the recurring course "
+            "<strong>Foo 1 Feb 2024 - 29 Feb 2024</strong>.",
+        ),
+        (
+            Event.TypeId.VOLUNTEERING,
+            "Username, registration to the recurring volunteering Foo 1 Feb 2024 - 29 Feb 2024 "
+            "has been cancelled.",
+            "You have successfully cancelled your registration to the recurring volunteering "
+            "<strong>Foo 1 Feb 2024 - 29 Feb 2024</strong>.",
+        ),
+    ],
+)
+@freeze_time("2024-02-01 03:30:00+02:00")
+@pytest.mark.django_db
+def test_group_cancellation_confirmation_has_correct_text_per_event_type_for_a_recurring_event(
+    api_client,
+    event_type,
+    expected_heading,
+    expected_text,
+):
+    lang = LanguageFactory(pk="en", service_language=True)
+
+    now = localtime()
+    registration = RegistrationFactory(
+        event__start_time=now,
+        event__end_time=now + timedelta(days=28),
+        event__super_event_type=Event.SuperEventType.RECURRING,
+        event__type_id=event_type,
+        event__name="Foo",
+    )
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(
+        signup_group=signup_group,
+        registration=registration,
+        first_name="Username",
+    )
+    SignUpFactory(
+        signup_group=signup_group,
+        registration=registration,
+        first_name="Username",
+    )
+    SignUpContactPersonFactory(
+        signup_group=signup_group,
+        first_name="Username",
+        service_language=lang,
+        email=test_email1,
+    )
+
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    assert_delete_signup_group(api_client, signup_group.id)
+
+    # Assert that the email was sent to the group's contact_person.
+    message_html_string = str(mail.outbox[0].alternatives[0])
+    assert len(mail.outbox) == 1
+    assert expected_heading in message_html_string
+    assert expected_text in message_html_string
 
 
 @pytest.mark.django_db
@@ -657,6 +836,87 @@ def test_signup_group_send_email_when_moving_participant_from_waitlist(
 
 
 @pytest.mark.parametrize(
+    "service_language,expected_subject,expected_text",
+    [
+        (
+            "en",
+            "Registration confirmation - Recurring: Foo",
+            "You have been moved from the waiting list of the recurring event "
+            "<strong>Foo 1 Feb 2024 - 29 Feb 2024</strong> to a participant.",
+        ),
+        (
+            "fi",
+            "Vahvistus ilmoittautumisesta - Sarja: Foo",
+            "Sinut on siirretty sarjatapahtuman "
+            "<strong>Foo 1.2.2024 - 29.2.2024</strong> jonotuslistalta osallistujaksi.",
+        ),
+        (
+            "sv",
+            "Bekräftelse av registrering - Serie: Foo",
+            "Du har flyttats från väntelistan för serieevenemanget "
+            "<strong>Foo 1.2.2024 - 29.2.2024</strong> till en deltagare.",
+        ),
+    ],
+)
+@freeze_time("2024-02-01 03:30:00+02:00")
+@pytest.mark.django_db
+def test_signup_group_send_email_when_moving_participant_from_waitlist_for_a_recurring_event(
+    api_client,
+    service_language,
+    expected_subject,
+    expected_text,
+):
+    lang = LanguageFactory(pk=service_language, service_language=True)
+
+    with translation.override(service_language):
+        now = localtime()
+        registration = RegistrationFactory(
+            event__start_time=now,
+            event__end_time=now + timedelta(days=28),
+            event__super_event_type=Event.SuperEventType.RECURRING,
+            event__name="Foo",
+            maximum_attendee_capacity=1,
+        )
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(
+        signup_group=signup_group,
+        attendee_status=SignUp.AttendeeStatus.ATTENDING,
+        registration=registration,
+    )
+    SignUpContactPersonFactory(
+        signup_group=signup_group,
+        email=test_email1,
+    )
+
+    signup2 = SignUpFactory(
+        attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
+        registration=registration,
+    )
+    SignUpContactPersonFactory(
+        signup=signup2,
+        service_language=lang,
+        email="test@test2.com",
+    )
+
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    assert signup2.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
+
+    with translation.override(service_language):
+        assert_delete_signup_group(api_client, signup_group.pk)
+
+    # signup1's status should be changed
+    signup2.refresh_from_db()
+    assert signup2.attendee_status == SignUp.AttendeeStatus.ATTENDING
+
+    # Send email to signup who is transferred as participant
+    assert mail.outbox[0].subject.startswith(expected_subject)
+    assert expected_text in str(mail.outbox[0].alternatives[0])
+
+
+@pytest.mark.parametrize(
     "event_type,expected_subject,expected_text",
     [
         (
@@ -724,6 +984,86 @@ def test_signup_group_transferred_as_participant_template_has_correct_text_per_e
     # signup1's status should be changed
     signup1.refresh_from_db()
     assert signup1.attendee_status == SignUp.AttendeeStatus.ATTENDING
+    # Send email to signup who is transferred as participant
+    assert mail.outbox[0].subject.startswith(expected_subject)
+    assert expected_text in str(mail.outbox[0].alternatives[0])
+
+
+@pytest.mark.parametrize(
+    "event_type,expected_subject,expected_text",
+    [
+        (
+            Event.TypeId.GENERAL,
+            "Registration confirmation - Recurring: Foo",
+            "You have been moved from the waiting list of the recurring event "
+            "<strong>Foo 1 Feb 2024 - 29 Feb 2024</strong> to a participant.",
+        ),
+        (
+            Event.TypeId.COURSE,
+            "Registration confirmation - Recurring: Foo",
+            "You have been moved from the waiting list of the recurring course "
+            "<strong>Foo 1 Feb 2024 - 29 Feb 2024</strong> to a participant.",
+        ),
+        (
+            Event.TypeId.VOLUNTEERING,
+            "Registration confirmation - Recurring: Foo",
+            "You have been moved from the waiting list of the recurring volunteering "
+            "<strong>Foo 1 Feb 2024 - 29 Feb 2024</strong> to a participant.",
+        ),
+    ],
+)
+@freeze_time("2024-02-01 03:30:00+02:00")
+@pytest.mark.django_db
+def test_group_transferred_as_participant_has_correct_text_per_event_type_for_a_recurring_event(
+    api_client,
+    event_type,
+    expected_subject,
+    expected_text,
+):
+    lang = LanguageFactory(pk="en", service_language=True)
+
+    now = localtime()
+    registration = RegistrationFactory(
+        event__start_time=now,
+        event__end_time=now + timedelta(days=28),
+        event__super_event_type=Event.SuperEventType.RECURRING,
+        event__name="Foo",
+        event__type_id=event_type,
+        maximum_attendee_capacity=1,
+    )
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(
+        signup_group=signup_group,
+        attendee_status=SignUp.AttendeeStatus.ATTENDING,
+        registration=registration,
+    )
+    SignUpContactPersonFactory(
+        signup_group=signup_group,
+        email="test@test.com",
+    )
+
+    signup2 = SignUpFactory(
+        attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
+        registration=registration,
+    )
+    SignUpContactPersonFactory(
+        signup=signup2,
+        email="test2@test.com",
+        service_language=lang,
+    )
+
+    assert signup2.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
+
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    assert_delete_signup_group(api_client, signup_group.pk)
+
+    # signup2's status should be changed
+    signup2.refresh_from_db()
+    assert signup2.attendee_status == SignUp.AttendeeStatus.ATTENDING
+
     # Send email to signup who is transferred as participant
     assert mail.outbox[0].subject.startswith(expected_subject)
     assert expected_text in str(mail.outbox[0].alternatives[0])

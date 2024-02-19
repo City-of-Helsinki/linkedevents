@@ -1,5 +1,4 @@
 import pytest
-from django.contrib.auth import get_user_model
 from django.core import mail
 
 from helevents.tests.factories import UserFactory

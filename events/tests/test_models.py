@@ -1,8 +1,11 @@
+from datetime import timedelta
+
 import freezegun
 import pytest
 from django.contrib.auth import get_user_model
 from django.test import TestCase
-from django.utils import timezone
+from django.utils import timezone, translation
+from django.utils.timezone import localtime
 from django_orghierarchy.models import Organization
 
 from helevents.tests.factories import UserFactory
@@ -268,6 +271,99 @@ class TestEvent(TestCase):
         Event.objects.filter(id=self.event_1.id).soft_delete()
         self.event_1.refresh_from_db()
         self.assertGreater(self.event_1.last_modified_time, timezone.now())
+
+    @freezegun.freeze_time("2024-02-01 03:30:00+02:00")
+    def test_event_get_start_and_end_time_display_both_times_given(self):
+        self.event_1.start_time = localtime()
+        self.event_1.end_time = self.event_1.start_time + timedelta(days=28)
+        self.event_1.save(update_fields=["start_time", "end_time"])
+
+        for lang, date_only, expected_time_display in (
+            ("fi", False, "1.2.2024 klo 3:30 - 29.2.2024 klo 3:30"),
+            ("fi", True, "1.2.2024 - 29.2.2024"),
+            ("sv", False, "1.2.2024 kl. 3:30 - 29.2.2024 kl. 3:30"),
+            ("sv", True, "1.2.2024 - 29.2.2024"),
+            ("en", False, "1 Feb 2024 at 3:30 - 29 Feb 2024 at 3:30"),
+            ("en", True, "1 Feb 2024 - 29 Feb 2024"),
+        ):
+            with self.subTest(), translation.override(lang):
+                self.assertEqual(
+                    self.event_1.get_start_and_end_time_display(
+                        lang=lang, date_only=date_only
+                    ),
+                    expected_time_display,
+                )
+
+    @freezegun.freeze_time("2024-02-01 03:30:00+02:00")
+    def test_event_get_start_and_end_time_display_start_time_given(self):
+        self.event_1.start_time = localtime()
+        self.event_1.save(update_fields=["start_time"])
+
+        self.assertIsNone(self.event_1.end_time)
+
+        for lang, date_only, expected_time_display in (
+            ("fi", False, "1.2.2024 klo 3:30 -"),
+            ("fi", True, "1.2.2024 -"),
+            ("sv", False, "1.2.2024 kl. 3:30 -"),
+            ("sv", True, "1.2.2024 -"),
+            ("en", False, "1 Feb 2024 at 3:30 -"),
+            ("en", True, "1 Feb 2024 -"),
+        ):
+            with self.subTest(), translation.override(lang):
+                self.assertEqual(
+                    self.event_1.get_start_and_end_time_display(
+                        lang=lang, date_only=date_only
+                    ),
+                    expected_time_display,
+                )
+
+    @freezegun.freeze_time("2024-02-01 03:30:00+02:00")
+    def test_event_get_start_and_end_time_display_end_time_given(self):
+        self.event_1.end_time = localtime()
+        self.event_1.save(update_fields=["end_time"])
+
+        self.assertIsNone(self.event_1.start_time)
+
+        for lang, date_only, expected_time_display in (
+            ("fi", False, "- 1.2.2024 klo 3:30"),
+            ("fi", True, "- 1.2.2024"),
+            ("sv", False, "- 1.2.2024 kl. 3:30"),
+            ("sv", True, "- 1.2.2024"),
+            ("en", False, "- 1 Feb 2024 at 3:30"),
+            ("en", True, "- 1 Feb 2024"),
+        ):
+            with self.subTest(), translation.override(lang):
+                self.assertEqual(
+                    self.event_1.get_start_and_end_time_display(
+                        lang=lang, date_only=date_only
+                    ),
+                    expected_time_display,
+                )
+
+    @freezegun.freeze_time("2024-02-01 03:30:00+02:00")
+    def test_event_get_start_and_end_time_display_both_times_missing(self):
+        self.event_1.start_time = None
+        self.event_1.end_time = None
+        self.event_1.save(update_fields=["start_time", "end_time"])
+
+        self.assertIsNone(self.event_1.start_time)
+        self.assertIsNone(self.event_1.end_time)
+
+        for lang, date_only, expected_time_display in (
+            ("fi", False, ""),
+            ("fi", True, ""),
+            ("sv", False, ""),
+            ("sv", True, ""),
+            ("en", False, ""),
+            ("en", True, ""),
+        ):
+            with self.subTest(), translation.override(lang):
+                self.assertEqual(
+                    self.event_1.get_start_and_end_time_display(
+                        lang=lang, date_only=date_only
+                    ),
+                    expected_time_display,
+                )
 
 
 class TestKeywordSet(TestCase):

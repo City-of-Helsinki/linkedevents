@@ -5,6 +5,14 @@ from django.utils.translation import gettext_lazy as _
 from events.models import Event
 from registrations.utils import get_signup_edit_url, get_ui_locales
 
+CONFIRMATION_HEADING_WITH_USERNAME = _("Welcome %(username)s")
+CONFIRMATION_HEADING_WITHOUT_USERNAME = _("Welcome")
+CONFIRMATION_TO_WAITING_LIST_HEADING = _(
+    "Thank you for signing up for the waiting list"
+)
+EVENT_CANCELLED_TEXT = _("Thank you for your interest in the event.")
+REGISTRATION_CANCELLED_HEADING = _("Registration cancelled")
+
 
 class NotificationType:
     NO_NOTIFICATION = "none"
@@ -47,10 +55,13 @@ signup_notification_subjects = {
 signup_email_texts = {
     SignUpNotificationType.EVENT_CANCELLATION: {
         "heading": _("Event %(event_name)s has been cancelled"),
-        "text": _("Thank you for your interest in the event."),
+        "text": EVENT_CANCELLED_TEXT,
+        "sub_event_cancellation": {
+            "heading": _("Event %(event_name)s %(event_period)s has been cancelled"),
+        },
     },
     SignUpNotificationType.CANCELLATION: {
-        "heading": _("Registration cancelled"),
+        "heading": REGISTRATION_CANCELLED_HEADING,
         "secondary_heading": {
             Event.TypeId.GENERAL: _(
                 "%(username)s, registration to the event %(event_name)s has been cancelled."
@@ -86,8 +97,8 @@ signup_email_texts = {
         },
     },
     SignUpNotificationType.CONFIRMATION: {
-        "heading": _("Welcome %(username)s"),
-        "heading_without_username": _("Welcome"),
+        "heading": CONFIRMATION_HEADING_WITH_USERNAME,
+        "heading_without_username": CONFIRMATION_HEADING_WITHOUT_USERNAME,
         "secondary_heading": {
             Event.TypeId.GENERAL: _(
                 "Registration to the event %(event_name)s has been saved."
@@ -111,7 +122,7 @@ signup_email_texts = {
             ),
         },
         "group": {
-            "heading": _("Welcome"),
+            "heading": CONFIRMATION_HEADING_WITHOUT_USERNAME,
             "secondary_heading": {
                 Event.TypeId.GENERAL: _(
                     "Group registration to the event %(event_name)s has been saved."
@@ -126,7 +137,7 @@ signup_email_texts = {
         },
     },
     SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST: {
-        "heading": _("Thank you for signing up for the waiting list"),
+        "heading": CONFIRMATION_TO_WAITING_LIST_HEADING,
         "text": {
             Event.TypeId.GENERAL: _(
                 "You have successfully registered for the event <strong>%(event_name)s</strong> waiting list."
@@ -175,8 +186,8 @@ signup_email_texts = {
         },
     },
     SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT: {
-        "heading": _("Welcome %(username)s"),
-        "heading_without_username": _("Welcome"),
+        "heading": CONFIRMATION_HEADING_WITH_USERNAME,
+        "heading_without_username": CONFIRMATION_HEADING_WITHOUT_USERNAME,
         "text": {
             Event.TypeId.GENERAL: _(
                 "You have been moved from the waiting list of the event <strong>%(event_name)s</strong> to a participant."  # noqa E501
@@ -186,6 +197,186 @@ signup_email_texts = {
             ),
             Event.TypeId.VOLUNTEERING: _(
                 "You have been moved from the waiting list of the volunteering <strong>%(event_name)s</strong> to a participant."  # noqa E501
+            ),
+        },
+    },
+}
+
+
+recurring_event_signup_notification_subjects = {
+    SignUpNotificationType.EVENT_CANCELLATION: _(
+        "Event cancelled - Recurring: %(event_name)s"
+    ),
+    SignUpNotificationType.CANCELLATION: _(
+        "Registration cancelled - Recurring: %(event_name)s"
+    ),
+    SignUpNotificationType.CONFIRMATION: _(
+        "Registration confirmation - Recurring: %(event_name)s"
+    ),
+    SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST: _(
+        "Waiting list seat reserved - Recurring: %(event_name)s"
+    ),
+    SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT: _(
+        "Registration confirmation - Recurring: %(event_name)s"
+    ),
+}
+
+
+recurring_event_signup_email_texts = {
+    SignUpNotificationType.EVENT_CANCELLATION: {
+        "heading": _(
+            "Recurring event %(event_name)s %(event_period)s has been cancelled"
+        ),
+        "text": EVENT_CANCELLED_TEXT,
+    },
+    SignUpNotificationType.CANCELLATION: {
+        "heading": REGISTRATION_CANCELLED_HEADING,
+        "secondary_heading": {
+            Event.TypeId.GENERAL: _(
+                "%(username)s, registration to the recurring event %(event_name)s "
+                "%(event_period)s has been cancelled."
+            ),
+            Event.TypeId.COURSE: _(
+                "%(username)s, registration to the recurring course %(event_name)s "
+                "%(event_period)s has been cancelled."
+            ),
+            Event.TypeId.VOLUNTEERING: _(
+                "%(username)s, registration to the recurring volunteering %(event_name)s "
+                "%(event_period)s has been cancelled."
+            ),
+        },
+        "secondary_heading_without_username": {
+            Event.TypeId.GENERAL: _(
+                "Registration to the recurring event %(event_name)s %(event_period)s "
+                "has been cancelled."
+            ),
+            Event.TypeId.COURSE: _(
+                "Registration to the recurring course %(event_name)s %(event_period)s "
+                "has been cancelled."
+            ),
+            Event.TypeId.VOLUNTEERING: _(
+                "Registration to the recurring volunteering %(event_name)s %(event_period)s "
+                "has been cancelled."
+            ),
+        },
+        "text": {
+            Event.TypeId.GENERAL: _(
+                "You have successfully cancelled your registration to the recurring event "
+                "<strong>%(event_name)s %(event_period)s</strong>."
+            ),
+            Event.TypeId.COURSE: _(
+                "You have successfully cancelled your registration to the recurring course "
+                "<strong>%(event_name)s %(event_period)s</strong>."
+            ),
+            Event.TypeId.VOLUNTEERING: _(
+                "You have successfully cancelled your registration to the recurring volunteering "
+                "<strong>%(event_name)s %(event_period)s</strong>."
+            ),
+        },
+    },
+    SignUpNotificationType.CONFIRMATION: {
+        "heading": CONFIRMATION_HEADING_WITH_USERNAME,
+        "heading_without_username": CONFIRMATION_HEADING_WITHOUT_USERNAME,
+        "secondary_heading": {
+            Event.TypeId.GENERAL: _(
+                "Registration to the recurring event %(event_name)s %(event_period)s "
+                "has been saved."
+            ),
+            Event.TypeId.COURSE: _(
+                "Registration to the recurring course %(event_name)s %(event_period)s "
+                "has been saved."
+            ),
+            Event.TypeId.VOLUNTEERING: _(
+                "Registration to the recurring volunteering %(event_name)s %(event_period)s "
+                "has been saved."
+            ),
+        },
+        "text": {
+            Event.TypeId.GENERAL: _(
+                "Congratulations! Your registration has been confirmed for the recurring event "
+                "<strong>%(event_name)s %(event_period)s</strong>."
+            ),
+            Event.TypeId.COURSE: _(
+                "Congratulations! Your registration has been confirmed for the recurring course "
+                "<strong>%(event_name)s %(event_period)s</strong>."
+            ),
+            Event.TypeId.VOLUNTEERING: _(
+                "Congratulations! Your registration has been confirmed for the recurring "
+                "volunteering <strong>%(event_name)s %(event_period)s</strong>."
+            ),
+        },
+        "group": {
+            "heading": CONFIRMATION_HEADING_WITHOUT_USERNAME,
+            "secondary_heading": {
+                Event.TypeId.GENERAL: _(
+                    "Group registration to the recurring event %(event_name)s %(event_period)s "
+                    "has been saved."
+                ),
+                Event.TypeId.COURSE: _(
+                    "Group registration to the recurring course %(event_name)s %(event_period)s "
+                    "has been saved."
+                ),
+                Event.TypeId.VOLUNTEERING: _(
+                    "Group registration to the recurring volunteering %(event_name)s "
+                    "%(event_period)s has been saved."
+                ),
+            },
+        },
+    },
+    SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST: {
+        "heading": CONFIRMATION_TO_WAITING_LIST_HEADING,
+        "text": {
+            Event.TypeId.GENERAL: _(
+                "You have successfully registered for the recurring event "
+                "<strong>%(event_name)s %(event_period)s</strong> waiting list."
+            ),
+            Event.TypeId.COURSE: _(
+                "You have successfully registered for the recurring course "
+                "<strong>%(event_name)s %(event_period)s</strong> waiting list."
+            ),
+            Event.TypeId.VOLUNTEERING: _(
+                "You have successfully registered for the recurring volunteering "
+                "<strong>%(event_name)s %(event_period)s</strong> waiting list."
+            ),
+        },
+        "secondary_text": signup_email_texts[
+            SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST
+        ]["secondary_text"],
+        "group": {
+            "text": {
+                Event.TypeId.GENERAL: _(
+                    "The registration for the recurring event "
+                    "<strong>%(event_name)s %(event_period)s</strong> waiting list was successful."
+                ),
+                Event.TypeId.COURSE: _(
+                    "The registration for the recurring course "
+                    "<strong>%(event_name)s %(event_period)s</strong> waiting list was successful."
+                ),
+                Event.TypeId.VOLUNTEERING: _(
+                    "The registration for the recurring volunteering "
+                    "<strong>%(event_name)s %(event_period)s</strong> waiting list was successful."
+                ),
+            },
+            "secondary_text": signup_email_texts[
+                SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST
+            ]["group"]["secondary_text"],
+        },
+    },
+    SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT: {
+        "heading": CONFIRMATION_HEADING_WITH_USERNAME,
+        "heading_without_username": CONFIRMATION_HEADING_WITHOUT_USERNAME,
+        "text": {
+            Event.TypeId.GENERAL: _(
+                "You have been moved from the waiting list of the recurring event "
+                "<strong>%(event_name)s %(event_period)s</strong> to a participant."
+            ),
+            Event.TypeId.COURSE: _(
+                "You have been moved from the waiting list of the recurring course "
+                "<strong>%(event_name)s %(event_period)s</strong> to a participant."
+            ),
+            Event.TypeId.VOLUNTEERING: _(
+                "You have been moved from the waiting list of the recurring volunteering "
+                "<strong>%(event_name)s %(event_period)s</strong> to a participant."
             ),
         },
     },
@@ -232,27 +423,52 @@ registration_user_access_invitation_texts = {
 }
 
 
-def _get_notification_texts(
-    notification_type, text_options, event_type_id, event_name, username
+def _get_event_text_kwargs(event_name, event_period=None):
+    kwargs = {"event_name": event_name}
+
+    if event_period is not None:
+        kwargs["event_period"] = event_period
+
+    return kwargs
+
+
+def _get_event_cancellation_texts(
+    text_options, event_name, event_period, is_sub_event_cancellation=False
 ):
-    if notification_type == SignUpNotificationType.EVENT_CANCELLATION:
-        return {
-            "heading": text_options["heading"] % {"event_name": event_name},
-            "text": text_options["text"],
+    event_text_kwargs = _get_event_text_kwargs(event_name, event_period=event_period)
+
+    if is_sub_event_cancellation:
+        texts = {
+            "heading": text_options["sub_event_cancellation"]["heading"]
+            % event_text_kwargs,
         }
+    else:
+        texts = {
+            "heading": text_options["heading"] % event_text_kwargs,
+        }
+
+    texts["text"] = text_options["text"]
+
+    return texts
+
+
+def _get_notification_texts(
+    text_options, event_type_id, event_name, event_period, username
+):
+    event_text_kwargs = _get_event_text_kwargs(event_name, event_period=event_period)
 
     if username:
         texts = {
             "heading": text_options["heading"] % {"username": username},
-            "text": text_options["text"][event_type_id] % {"event_name": event_name},
         }
     else:
         texts = {
             "heading": text_options.get(
                 "heading_without_username", text_options["heading"]
             ),
-            "text": text_options["text"][event_type_id] % {"event_name": event_name},
         }
+
+    texts["text"] = text_options["text"][event_type_id] % event_text_kwargs
 
     return texts
 
@@ -263,77 +479,120 @@ def _format_confirmation_message_texts(texts, confirmation_message):
 
 
 def _format_cancellation_texts(
-    texts, text_options, event_type_id, event_name, username
+    texts, text_options, event_type_id, event_name, event_period, username
 ):
+    event_text_kwargs = _get_event_text_kwargs(event_name, event_period=event_period)
+
     if username:
         texts["secondary_heading"] = text_options["secondary_heading"][
             event_type_id
         ] % {
-            "event_name": event_name,
+            **event_text_kwargs,
             "username": username,
         }
     else:
-        texts["secondary_heading"] = text_options["secondary_heading_without_username"][
-            event_type_id
-        ] % {"event_name": event_name}
+        texts["secondary_heading"] = (
+            text_options["secondary_heading_without_username"][event_type_id]
+            % event_text_kwargs
+        )
 
 
 def _format_confirmation_texts(
-    texts, text_options, event_type_id, event_name, contact_person
+    texts, text_options, event_type_id, event_name, event_period, contact_person
 ):
+    event_text_kwargs = _get_event_text_kwargs(event_name, event_period=event_period)
+
     if contact_person.signup_group_id:
         # Override default confirmation message heading
         texts["heading"] = text_options["group"]["heading"]
-        texts["secondary_heading"] = text_options["group"]["secondary_heading"][
-            event_type_id
-        ] % {"event_name": event_name}
+        texts["secondary_heading"] = (
+            text_options["group"]["secondary_heading"][event_type_id]
+            % event_text_kwargs
+        )
     else:
-        texts["secondary_heading"] = text_options["secondary_heading"][
-            event_type_id
-        ] % {"event_name": event_name}
+        texts["secondary_heading"] = (
+            text_options["secondary_heading"][event_type_id] % event_text_kwargs
+        )
 
 
 def _format_confirmation_to_waiting_list_texts(
-    texts, text_options, event_type_id, event_name, contact_person
+    texts, text_options, event_type_id, event_name, event_period, contact_person
 ):
     if contact_person.signup_group_id:
         # Override default confirmation message heading
-        texts["text"] = text_options["group"]["text"][event_type_id] % {
-            "event_name": event_name
-        }
+        event_text_kwargs = _get_event_text_kwargs(
+            event_name, event_period=event_period
+        )
+        texts["text"] = text_options["group"]["text"][event_type_id] % event_text_kwargs
         texts["secondary_text"] = text_options["group"]["secondary_text"][event_type_id]
     else:
         texts["secondary_text"] = text_options["secondary_text"][event_type_id]
 
 
 def get_signup_notification_texts(
-    contact_person, notification_type: SignUpNotificationType
+    contact_person,
+    notification_type: SignUpNotificationType,
+    is_sub_event_cancellation=False,
 ):
     registration = contact_person.registration
+    service_lang = contact_person.get_service_language_pk()
 
-    with translation.override(contact_person.get_service_language_pk()):
+    with translation.override(service_lang):
         confirmation_message = registration.confirmation_message
         event_name = registration.event.name
 
     event_type_id = registration.event.type_id
     username = contact_person.first_name
-    text_options = signup_email_texts[notification_type]
-    texts = _get_notification_texts(
-        notification_type, text_options, event_type_id, event_name, username
-    )
+
+    if (
+        not is_sub_event_cancellation
+        and registration.event.super_event_type == Event.SuperEventType.RECURRING
+    ):
+        # Signup or cancellation for a recurring super event.
+        text_options = recurring_event_signup_email_texts[notification_type]
+        event_period = registration.event.get_start_and_end_time_display(
+            lang=service_lang, date_only=True
+        )
+    else:
+        # Signup or cancellation for a normal event (or for a sub-event of a super event).
+        text_options = signup_email_texts[notification_type]
+        event_period = None
+
+    if notification_type == SignUpNotificationType.EVENT_CANCELLATION:
+        sub_event_period = (
+            registration.event.get_start_and_end_time_display(
+                lang=service_lang, date_only=True
+            )
+            if is_sub_event_cancellation
+            else event_period
+        )
+        texts = _get_event_cancellation_texts(
+            text_options,
+            event_name,
+            sub_event_period,
+            is_sub_event_cancellation=is_sub_event_cancellation,
+        )
+    else:
+        texts = _get_notification_texts(
+            text_options,
+            event_type_id,
+            event_name,
+            event_period,
+            username,
+        )
 
     if notification_type == SignUpNotificationType.CANCELLATION:
         _format_cancellation_texts(
-            texts, text_options, event_type_id, event_name, username
+            texts, text_options, event_type_id, event_name, event_period, username
         )
     elif notification_type == SignUpNotificationType.CONFIRMATION:
         _format_confirmation_texts(
-            texts, text_options, event_type_id, event_name, contact_person
+            texts, text_options, event_type_id, event_name, event_period, contact_person
         )
         _format_confirmation_message_texts(texts, confirmation_message)
     elif notification_type == SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST:
         _format_confirmation_to_waiting_list_texts(
-            texts, text_options, event_type_id, event_name, contact_person
+            texts, text_options, event_type_id, event_name, event_period, contact_person
         )
     elif notification_type == SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT:
         _format_confirmation_message_texts(texts, confirmation_message)
@@ -341,17 +600,35 @@ def get_signup_notification_texts(
     return texts
 
 
-def get_signup_notification_subject(contact_person, notification_type):
+def get_signup_notification_subject(
+    contact_person, notification_type, is_sub_event_cancellation=False
+):
     registration = contact_person.registration
     linked_registrations_ui_locale = get_ui_locales(contact_person.service_language)[1]
 
     with translation.override(contact_person.get_service_language_pk()):
-        event_name = registration.event.name
+        subject_format_kwargs = {"event_name": registration.event.name}
 
     with translation.override(linked_registrations_ui_locale):
-        notification_subject = signup_notification_subjects[notification_type] % {
-            "event_name": event_name
-        }
+        if (
+            not is_sub_event_cancellation
+            and registration.event.super_event_type == Event.SuperEventType.RECURRING
+        ):
+            # Signup or cancellation for a recurring super event.
+            subject_format_kwargs[
+                "event_period"
+            ] = registration.event.get_start_and_end_time_display(
+                lang=linked_registrations_ui_locale, date_only=True
+            )
+            notification_subject = (
+                recurring_event_signup_notification_subjects[notification_type]
+                % subject_format_kwargs
+            )
+        else:
+            # Signup or cancellation for a normal event (or for a sub-event of a super event).
+            notification_subject = (
+                signup_notification_subjects[notification_type] % subject_format_kwargs
+            )
 
     return notification_subject
 

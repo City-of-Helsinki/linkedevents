@@ -31,6 +31,7 @@ from registrations.tests.factories import (
     RegistrationPriceGroupFactory,
     RegistrationUserAccessFactory,
     SeatReservationCodeFactory,
+    SignUpFactory,
 )
 from registrations.tests.test_registration_post import hel_email
 from registrations.tests.utils import (
@@ -1555,6 +1556,99 @@ def test_email_sent_on_successful_signup_group(
 
 
 @pytest.mark.parametrize(
+    "service_language,expected_subject,expected_heading,expected_text",
+    [
+        (
+            "en",
+            "Registration confirmation - Recurring: Foo",
+            "Group registration to the recurring event Foo 1 Feb 2024 - 29 Feb 2024 has been saved.",
+            "Congratulations! Your registration has been confirmed for the recurring event "
+            "<strong>Foo 1 Feb 2024 - 29 Feb 2024</strong>.",
+        ),
+        (
+            "fi",
+            "Vahvistus ilmoittautumisesta - Sarja: Foo",
+            "Ryhmäilmoittautuminen sarjatapahtumaan Foo 1.2.2024 - 29.2.2024 on tallennettu.",
+            "Onnittelut! Ilmoittautumisesi on vahvistettu sarjatapahtumaan "
+            "<strong>Foo 1.2.2024 - 29.2.2024</strong>.",
+        ),
+        (
+            "sv",
+            "Bekräftelse av registrering - Serie: Foo",
+            "Gruppregistrering till serieevenemanget Foo 1.2.2024 - 29.2.2024 har sparats.",
+            "Grattis! Din registrering har bekräftats för serieevenemanget "
+            "<strong>Foo 1.2.2024 - 29.2.2024</strong>.",
+        ),
+    ],
+)
+@freeze_time("2024-02-01 03:30:00+02:00")
+@pytest.mark.django_db
+def test_email_sent_on_successful_signup_group_to_a_recurring_event(
+    api_client,
+    expected_heading,
+    expected_subject,
+    expected_text,
+    service_language,
+):
+    LanguageFactory(id=service_language, name=service_language, service_language=True)
+
+    with translation.override(service_language):
+        now = localtime()
+        registration = RegistrationFactory(
+            event__start_time=now,
+            event__end_time=now + timedelta(days=28),
+            event__super_event_type=Event.SuperEventType.RECURRING,
+            event__name="Foo",
+        )
+
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
+
+    signup_data = {
+        "first_name": "Michael",
+        "last_name": "Jackson",
+        "date_of_birth": "2011-04-07",
+    }
+    signup_group_data = {
+        "registration": registration.id,
+        "reservation_code": reservation.code,
+        "signups": [signup_data],
+        "contact_person": {
+            "email": test_email1,
+            "service_language": service_language,
+        },
+    }
+
+    assert SignUp.objects.count() == 0
+
+    with translation.override(service_language), patch(
+        "registrations.models.SignUpContactPerson.create_access_code"
+    ) as mocked_access_code:
+        mocked_access_code.return_value = test_access_code
+        assert_create_signup_group(api_client, signup_group_data)
+        assert mocked_access_code.called is True
+
+    assert SignUp.objects.count() == 1
+    assert SignUp.objects.first().attendee_status == SignUp.AttendeeStatus.ATTENDING
+
+    contact_person = SignUpContactPerson.objects.first()
+    signup_group_edit_url = (
+        f"{settings.LINKED_REGISTRATIONS_UI_URL}/{service_language}"
+        f"/registration/{registration.id}/signup-group/{contact_person.signup_group_id}/edit"
+        f"?access_code={test_access_code}"
+    )
+
+    #  assert that the email was sent
+    message_string = str(mail.outbox[0].alternatives[0])
+    assert mail.outbox[0].subject.startswith(expected_subject)
+    assert expected_heading in message_string
+    assert expected_text in message_string
+    assert signup_group_edit_url in message_string
+
+
+@pytest.mark.parametrize(
     "access_code_not_sent_reason", ["same_user", "has_full_permissions"]
 )
 @pytest.mark.django_db
@@ -1832,6 +1926,97 @@ def test_signup_group_different_email_sent_if_user_is_added_to_waiting_list(
 
 
 @pytest.mark.parametrize(
+    "service_language,expected_subject,expected_heading,expected_text",
+    [
+        (
+            "en",
+            "Waiting list seat reserved - Recurring: Foo",
+            "The registration for the recurring event <strong>Foo 1 Feb 2024 - 29 Feb 2024</strong>"
+            " waiting list was successful.",
+            "You will be automatically transferred from the waiting list to become a participant "
+            "in the event if a place becomes available.",
+        ),
+        (
+            "fi",
+            "Paikka jonotuslistalla varattu - Sarja: Foo",
+            "Ilmoittautuminen sarjatapahtuman <strong>Foo 1.2.2024 - 29.2.2024</strong>"
+            " jonotuslistalle onnistui.",
+            "Jonotuslistalta siirretään automaattisesti tapahtuman osallistujaksi mikäli paikka "
+            "vapautuu.",
+        ),
+        (
+            "sv",
+            "Väntelista plats reserverad - Serie: Foo",
+            "Registreringen till väntelistan för serieevenemanget "
+            "<strong>Foo 1.2.2024 - 29.2.2024</strong> lyckades.",
+            "Du flyttas automatiskt över från väntelistan för att bli deltagare i evenemanget om "
+            "en plats blir ledig.",
+        ),
+    ],
+)
+@freeze_time("2024-02-01 03:30:00+02:00")
+@pytest.mark.django_db
+def test_signup_group_different_email_sent_if_user_is_added_to_waiting_list_of_a_recurring_event(
+    api_client,
+    service_language,
+    expected_subject,
+    expected_heading,
+    expected_text,
+):
+    LanguageFactory(id=service_language, name=service_language, service_language=True)
+
+    with translation.override(service_language):
+        now = localtime()
+        registration = RegistrationFactory(
+            event__start_time=now,
+            event__end_time=now + timedelta(days=28),
+            event__super_event_type=Event.SuperEventType.RECURRING,
+            event__name="Foo",
+            maximum_attendee_capacity=1,
+        )
+
+    # Attending seat already reserved by this signup.
+    SignUpFactory(registration=registration)
+
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
+
+    signup_data = {
+        "first_name": "Michael",
+        "last_name": "Jackson",
+    }
+    signup_group_data = {
+        "registration": registration.id,
+        "reservation_code": reservation.code,
+        "signups": [signup_data],
+        "contact_person": {
+            "email": "michael@test.com",
+            "service_language": service_language,
+        },
+    }
+
+    assert SignUp.objects.count() == 1
+
+    with translation.override(service_language):
+        assert_create_signup_group(api_client, signup_group_data)
+
+    assert SignUp.objects.count() == 2
+    assert (
+        SignUp.objects.filter(first_name=signup_data["first_name"])
+        .first()
+        .attendee_status
+        == SignUp.AttendeeStatus.WAITING_LIST
+    )
+
+    #  assert that the email was sent
+    assert mail.outbox[0].subject.startswith(expected_subject)
+    assert expected_heading in str(mail.outbox[0].alternatives[0])
+    assert expected_text in str(mail.outbox[0].alternatives[0])
+
+
+@pytest.mark.parametrize(
     "event_type,expected_heading,expected_text",
     [
         (
@@ -1903,6 +2088,83 @@ def test_signup_group_confirmation_to_waiting_list_template_has_correct_text_per
 
     #  assert that the email was sent
     assert expected_heading in str(mail.outbox[0].alternatives[0])
+    assert expected_text in str(mail.outbox[0].alternatives[0])
+
+
+@pytest.mark.parametrize(
+    "event_type,expected_text",
+    [
+        (
+            Event.TypeId.GENERAL,
+            "The registration for the recurring event "
+            "<strong>Foo 1 Feb 2024 - 29 Feb 2024</strong> waiting list was successful.",
+        ),
+        (
+            Event.TypeId.COURSE,
+            "The registration for the recurring course "
+            "<strong>Foo 1 Feb 2024 - 29 Feb 2024</strong> waiting list was successful.",
+        ),
+        (
+            Event.TypeId.VOLUNTEERING,
+            "The registration for the recurring volunteering "
+            "<strong>Foo 1 Feb 2024 - 29 Feb 2024</strong> waiting list was successful.",
+        ),
+    ],
+)
+@freeze_time("2024-02-01 03:30:00+02:00")
+@pytest.mark.django_db
+def test_group_confirmation_to_waiting_list_has_correct_text_per_event_type_for_a_recurring_event(
+    api_client,
+    event_type,
+    expected_text,
+):
+    LanguageFactory(id="en", name="English", service_language=True)
+
+    now = localtime()
+    registration = RegistrationFactory(
+        event__start_time=now,
+        event__end_time=now + timedelta(days=28),
+        event__super_event_type=Event.SuperEventType.RECURRING,
+        event__type_id=event_type,
+        event__name="Foo",
+        maximum_attendee_capacity=1,
+    )
+
+    # Attending seat already reserved by this signup.
+    SignUpFactory(registration=registration)
+
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
+
+    signup_data = {
+        "first_name": "Michael",
+        "last_name": "Jackson",
+    }
+    signup_group_data = {
+        "registration": registration.id,
+        "reservation_code": reservation.code,
+        "signups": [signup_data],
+        "contact_person": {
+            "email": "michael@test.com",
+            "service_language": "en",
+        },
+    }
+
+    assert SignUp.objects.count() == 1
+
+    assert_create_signup_group(api_client, signup_group_data)
+
+    assert SignUp.objects.count() == 2
+    assert (
+        SignUp.objects.filter(first_name=signup_data["first_name"])
+        .first()
+        .attendee_status
+        == SignUp.AttendeeStatus.WAITING_LIST
+    )
+
+    #  assert that the email was sent
     assert expected_text in str(mail.outbox[0].alternatives[0])
 
 
