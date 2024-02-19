@@ -1,12 +1,18 @@
 from decimal import Decimal
 
+import pytz
 from django.conf import settings
 from django.contrib.sites.models import Site
 from django.core.mail import send_mail
 from django.utils import translation
+from django.utils.translation import gettext_lazy as _
 from icalendar import Calendar
 from icalendar import Event as CalendarEvent
 from icalendar import vText
+from requests import RequestException
+
+from registrations.exceptions import WebStoreAPIError
+from web_store.order.clients import WebStoreOrderAPIClient
 
 
 def code_validity_duration(seats):
@@ -147,7 +153,15 @@ def move_first_waitlisted_to_attending(signup_or_signup_group):
     attending_signups = getattr(signup_or_signup_group, "attending_signups", None)
 
     if is_attending or attending_signups:
-        signup_or_signup_group.registration.move_first_waitlisted_to_attending()
+        registration = signup_or_signup_group.registration
+
+        if (
+            settings.WEB_STORE_INTEGRATION_ENABLED
+            and registration.registration_price_groups.exists()
+        ):
+            registration.move_first_waitlisted_to_attending_with_payment_link()
+        else:
+            registration.move_first_waitlisted_to_attending()
 
 
 def get_access_code_for_contact_person(contact_person, user):
@@ -164,3 +178,44 @@ def get_access_code_for_contact_person(contact_person, user):
         )
 
     return access_code
+
+
+def get_web_store_api_error_message(response):
+    error_status_code = getattr(response, "status_code", None)
+
+    try:
+        errors = response.json()["errors"]
+    except (AttributeError, ValueError, KeyError):
+        error_message = _("Unknown Talpa web store API error")
+        error = f"{error_message} (status_code: {error_status_code})"
+    else:
+        error_message = _("Talpa web store API error")
+        error = f"{error_message} (status_code: {error_status_code}): {errors}"
+
+    return error
+
+
+def create_web_store_api_order(signup_or_group, localized_expiration_datetime):
+    user_uuid = (
+        signup_or_group.created_by.uuid if signup_or_group.created_by_id else None
+    )
+    contact_person = getattr(signup_or_group, "contact_person", None)
+
+    service_lang = getattr(contact_person, "service_language_id", "fi")
+    with translation.override(service_lang):
+        order_data = signup_or_group.to_web_store_order_json(
+            user_uuid, contact_person=contact_person
+        )
+
+    order_data["lastValidPurchaseDateTime"] = localized_expiration_datetime.astimezone(
+        pytz.UTC
+    ).strftime("%Y-%m-%dT%H:%M:%S")
+
+    client = WebStoreOrderAPIClient()
+    try:
+        resp_json = client.create_order(order_data)
+    except RequestException as request_exc:
+        api_error_message = get_web_store_api_error_message(request_exc.response)
+        raise WebStoreAPIError(api_error_message)
+
+    return resp_json

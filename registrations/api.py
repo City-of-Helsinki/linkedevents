@@ -573,6 +573,15 @@ class WebStoreWebhookViewSet(AuditLogApiViewMixin, viewsets.ViewSet):
         if not contact_person:
             return
 
+        if (
+            getattr(signup_or_signup_group, "attendee_status", "")
+            == SignUp.AttendeeStatus.WAITING_LIST
+        ):
+            # In this case, the signup has probably been in waiting list until they've
+            # received a payment link and made the payment.
+            signup_or_signup_group.attendee_status = SignUp.AttendeeStatus.ATTENDING
+            signup_or_signup_group.save(update_fields=["attendee_status"])
+
         access_code = get_access_code_for_contact_person(
             contact_person, signup_or_signup_group.created_by
         )

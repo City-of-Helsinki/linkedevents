@@ -1,0 +1,10 @@
+{% load i18n %}
+
+<div class="cta-button-wrapper" style="margin: 0px 0px 40px">
+  <a href="{{payment_url}}" target="_blank" rel="noopener" class="cta-button" style="background:#0000bf;border-radius:0px;border:none;height:56px;text-align:center;text-decoration:none;vertical-align:middle;padding:16px 24px;box-sizing:border-box;display:inline-block;">
+    <span style="color:#ffffff;font-size:16px;font-weight:500;line-height:24px;">
+      {% blocktranslate %}Open payment link{% endblocktranslate %}
+    </span>
+    <img alt="" aria-hidden="true" src="{{linked_events_ui_url}}/images/email/icon-arrow-right-white.png" style="height:24px;width:24px;margin-left:16px;vertical-align:top;" />
+  </a>
+</div>

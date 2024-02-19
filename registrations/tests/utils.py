@@ -76,6 +76,21 @@ def assert_invitation_email_is_sent(
     assert participant_list_url in email_body_string
 
 
+def assert_payment_link_email_sent(
+    contact_person, signup_payment, expected_subject, expected_text
+):
+    # Email has been sent to the contact person.
+    assert len(mail.outbox) == 2  # second email = cancellation email
+    email_html_body = str(mail.outbox[0].alternatives[0])
+    assert mail.outbox[0].to[0] == contact_person.email
+    assert mail.outbox[0].subject == expected_subject
+    assert expected_text in email_html_body
+
+    # Payment link is in the email.
+    assert len(signup_payment.logged_in_checkout_url) > 1
+    assert signup_payment.logged_in_checkout_url in email_html_body
+
+
 def assert_attending_and_waitlisted_signups(
     response,
     expected_status_code: int = status.HTTP_201_CREATED,

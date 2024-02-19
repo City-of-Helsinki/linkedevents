@@ -3,10 +3,8 @@ from decimal import Decimal
 
 import pytz
 from django.conf import settings
-from django.utils import translation
 from django.utils.timezone import localdate, localtime
 from django.utils.translation import gettext_lazy as _
-from requests import RequestException
 from rest_framework import serializers
 from rest_framework.exceptions import ErrorDetail
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
@@ -15,7 +13,7 @@ from rest_framework.fields import DateTimeField
 from events.models import Language
 from events.utils import clean_text_fields
 from linkedevents.serializers import TranslatedModelSerializer
-from registrations.exceptions import ConflictException
+from registrations.exceptions import ConflictException, WebStoreAPIError
 from registrations.models import (
     PriceGroup,
     Registration,
@@ -37,7 +35,6 @@ from registrations.utils import (
     get_signup_create_url,
     has_allowed_substitute_user_email_domain,
 )
-from web_store.order.clients import WebStoreOrderAPIClient
 from web_store.order.enums import WebStoreOrderWebhookEventType
 from web_store.payment.enums import WebStorePaymentWebhookEventType
 
@@ -284,74 +281,11 @@ class WebStorePaymentBaseSerializer(serializers.Serializer):
     payment = SignUpPaymentSerializer(required=False, read_only=True)
 
     @staticmethod
-    def _get_web_store_api_error(response):
-        error_status_code = getattr(response, "status_code", None)
-
+    def _create_payment(signup_or_group):
         try:
-            errors = response.json()["errors"]
-        except (AttributeError, ValueError, KeyError):
-            error_message = _("Unknown Talpa web store API error")
-            error = f"{error_message} (status_code: {error_status_code})"
-        else:
-            error_message = _("Talpa web store API error")
-            error = f"{error_message} (status_code: {error_status_code}): {errors}"
-
-        return error
-
-    def _create_web_store_api_order(self, signup_or_group, expiration_datetime):
-        contact_person = getattr(signup_or_group, "contact_person", None)
-
-        service_lang = getattr(contact_person, "service_language_id", "fi")
-        with translation.override(service_lang):
-            order_data = signup_or_group.to_web_store_order_json(
-                self.context["request"].user.uuid, contact_person=contact_person
-            )
-
-        order_data["lastValidPurchaseDateTime"] = expiration_datetime.strftime(
-            "%Y-%m-%dT%H:%M:%S"
-        )
-
-        client = WebStoreOrderAPIClient()
-        try:
-            resp_json = client.create_order(order_data)
-        except RequestException as request_exc:
-            api_error = self._get_web_store_api_error(request_exc.response)
-            raise serializers.ValidationError(api_error)
-
-        return resp_json
-
-    def _create_payment(self, signup_or_group):
-        if isinstance(signup_or_group, SignUp):
-            kwargs = {"signup": signup_or_group}
-        else:
-            kwargs = {"signup_group": signup_or_group}
-
-        kwargs["expires_at"] = localtime() + timedelta(
-            hours=settings.WEB_STORE_ORDER_EXPIRATION_HOURS
-        )
-
-        api_response = self._create_web_store_api_order(
-            signup_or_group, kwargs["expires_at"]
-        )
-
-        if api_response.get("orderId"):
-            kwargs["external_order_id"] = api_response["orderId"]
-
-        if api_response.get("priceTotal"):
-            kwargs["amount"] = Decimal(api_response["priceTotal"])
-        else:
-            kwargs["amount"] = signup_or_group.total_payment_amount
-
-        if api_response.get("checkoutUrl"):
-            kwargs["checkout_url"] = api_response["checkoutUrl"]
-
-        if api_response.get("loggedInCheckoutUrl"):
-            kwargs["logged_in_checkout_url"] = api_response["loggedInCheckoutUrl"]
-
-        kwargs["created_by"] = self.context["request"].user
-        kwargs["last_modified_by"] = self.context["request"].user
-
-        SignUpPayment.objects.create(**kwargs)
+            signup_or_group.create_web_store_payment()
+        except WebStoreAPIError as exc:
+            raise serializers.ValidationError(exc.messages)
 
     class Meta:
         if settings.WEB_STORE_INTEGRATION_ENABLED:
