@@ -1,6 +1,5 @@
 from collections import Counter
 from datetime import datetime, timedelta
-from typing import Optional
 
 import pytest
 import pytz
@@ -10,6 +9,7 @@ from django.contrib.gis.gdal import CoordTransform, SpatialReference
 from django.contrib.gis.geos import Point
 from django.db import connections, DEFAULT_DB_ALIAS
 from django.test.utils import CaptureQueriesContext
+from django.utils.timezone import localtime
 from freezegun import freeze_time
 from rest_framework import status
 
@@ -19,6 +19,7 @@ from events.tests.conftest import APIClient
 from events.tests.factories import EventFactory
 from events.tests.utils import assert_fields_exist, datetime_zone_aware, get
 from events.tests.utils import versioned_reverse as reverse
+from registrations.tests.factories import RegistrationFactory
 
 api_client = APIClient()
 
@@ -1370,6 +1371,279 @@ def test_sort_events_by_minimum_attendee_capacity(api_client, event, event2, eve
     assert results[0]["id"] == event3.id
     assert results[1]["id"] == event2.id
     assert results[2]["id"] == event.id
+
+
+@pytest.mark.parametrize(
+    "db_field_name,ordering",
+    [
+        ("enrolment_start_time", "enrolment_start"),
+        ("enrolment_start_time", "-enrolment_start"),
+        ("enrolment_end_time", "enrolment_end"),
+        ("enrolment_end_time", "-enrolment_end"),
+    ],
+)
+@pytest.mark.django_db
+def test_sort_events_by_enrolment_start_or_enrolment_end(
+    api_client, db_field_name, ordering
+):
+    event = EventFactory(
+        **{db_field_name: localtime().replace(year=2024, month=1, day=1, hour=10)}
+    )
+
+    event2 = EventFactory(
+        **{db_field_name: localtime().replace(year=2024, month=1, day=1, hour=12)}
+    )
+
+    event3 = EventFactory(
+        **{db_field_name: localtime().replace(year=2024, month=2, day=1, hour=12)}
+    )
+
+    event4 = EventFactory(
+        **{db_field_name: localtime().replace(year=2024, month=2, day=2, hour=12)}
+    )
+    RegistrationFactory(
+        event=event4,
+        **{db_field_name: localtime().replace(year=2024, month=1, day=1, hour=11)},
+    )
+
+    event5 = EventFactory()
+
+    event6 = EventFactory()
+    RegistrationFactory(event=event6)
+
+    event7 = EventFactory()
+    RegistrationFactory(
+        event=event7,
+        **{db_field_name: localtime().replace(year=2024, month=2, day=1, hour=11)},
+    )
+
+    response = get_list(api_client=api_client, query_string=f"sort={ordering}")
+
+    results = response.data["data"]
+    assert len(results) == 7
+
+    if ordering.startswith("-"):
+        # Desc.
+        assert results[0]["id"] == event3.id  # 1 Feb 2024 at 12.00
+        assert (
+            results[1]["id"] == event7.id
+        )  # 1 Feb 2024 at 11.00 (registration's time)
+        assert results[2]["id"] == event2.id  # 1 Jan 2024 at 12.00
+        assert (
+            results[3]["id"] == event4.id
+        )  # 1 Jan 2024 at 11.00 (registration's time)
+        assert results[4]["id"] == event.id  # 1 Jan 2024 at 10.00
+    else:
+        # Asc.
+        assert results[0]["id"] == event.id  # 1 Jan 2024 at 10.00
+        assert (
+            results[1]["id"] == event4.id
+        )  # 1 Jan 2024 at 11.00 (registration's time)
+        assert results[2]["id"] == event2.id  # 1 Jan 2024 at 12.00
+        assert (
+            results[3]["id"] == event7.id
+        )  # 1 Feb 2024 at 11.00 (registration's time)
+        assert results[4]["id"] == event3.id  # 1 Feb 2024 at 12.00
+
+    # Events with null enrolment times will be last. Order might vary.
+    assert Counter([results[5]["id"], results[6]["id"]]) == Counter(
+        [event5.id, event6.id]
+    )
+
+
+@pytest.mark.parametrize(
+    "ordering",
+    [
+        "enrolment_start_time",
+        "-enrolment_start_time",
+        "enrolment_end_time",
+        "-enrolment_end_time",
+    ],
+)
+@pytest.mark.django_db
+def test_sort_events_by_enrolment_start_time_or_enrolment_end_time(
+    api_client, ordering
+):
+    db_field_name = ordering.removeprefix("-")
+    now = localtime()
+
+    event = EventFactory(
+        **{db_field_name: now.replace(year=2024, month=1, day=1, hour=10)}
+    )
+
+    event2 = EventFactory(
+        **{db_field_name: now.replace(year=2024, month=1, day=1, hour=12)}
+    )
+
+    event3 = EventFactory(
+        **{db_field_name: now.replace(year=2024, month=2, day=1, hour=12)}
+    )
+
+    event4 = EventFactory(
+        **{db_field_name: now.replace(year=2024, month=2, day=2, hour=12)}
+    )
+    RegistrationFactory(
+        event=event4, **{db_field_name: now.replace(year=2024, month=1, day=1, hour=11)}
+    )
+
+    event5 = EventFactory()
+
+    event6 = EventFactory()
+    RegistrationFactory(event=event6)
+
+    event7 = EventFactory()
+    RegistrationFactory(
+        event=event7, **{db_field_name: now.replace(year=2024, month=2, day=1, hour=11)}
+    )
+
+    response = get_list(api_client=api_client, query_string=f"sort={ordering}")
+
+    results = response.data["data"]
+    assert len(results) == 7
+
+    if ordering.startswith("-"):
+        # Desc.
+        assert Counter(
+            [results[0]["id"], results[1]["id"], results[2]["id"]]
+        ) == Counter([event5.id, event6.id, event7.id])
+        assert results[3]["id"] == event4.id  # 2 Feb 2024 at 12.00
+        assert results[4]["id"] == event3.id  # 1 Feb 2024 at 12.00
+        assert results[5]["id"] == event2.id  # 1 Jan 2024 at 12.00
+        assert results[6]["id"] == event.id  # 1 Jan 2024 at 10.00
+    else:
+        # Asc.
+        assert results[0]["id"] == event.id  # 1 Jan 2024 at 10.00
+        assert results[1]["id"] == event2.id  # 1 Jan 2024 at 12.00
+        assert results[2]["id"] == event3.id  # 1 Feb 2024 at 12.00
+        assert results[3]["id"] == event4.id  # 2 Feb 2024 at 12.00
+        assert Counter(
+            [results[4]["id"], results[5]["id"], results[6]["id"]]
+        ) == Counter([event5.id, event6.id, event7.id])
+
+
+@pytest.mark.parametrize(
+    "ordering",
+    [
+        "registration__enrolment_start_time",
+        "-registration__enrolment_start_time",
+        "registration__enrolment_end_time",
+        "-registration__enrolment_end_time",
+    ],
+)
+@pytest.mark.django_db
+def test_sort_events_by_registration_enrolment_start_time_or_enrolment_end_time(
+    api_client, ordering
+):
+    db_field_name = ordering.split("__")[1]
+    now = localtime()
+
+    event = EventFactory()
+    RegistrationFactory(
+        event=event, **{db_field_name: now.replace(year=2024, month=1, day=1, hour=10)}
+    )
+
+    event2 = EventFactory()
+    RegistrationFactory(
+        event=event2, **{db_field_name: now.replace(year=2024, month=1, day=1, hour=12)}
+    )
+
+    event3 = EventFactory()
+    RegistrationFactory(
+        event=event3, **{db_field_name: now.replace(year=2024, month=2, day=1, hour=12)}
+    )
+
+    event4 = EventFactory(
+        **{db_field_name: now.replace(year=2024, month=2, day=2, hour=12)}
+    )
+    RegistrationFactory(
+        event=event4, **{db_field_name: now.replace(year=2024, month=2, day=2, hour=12)}
+    )
+
+    event5 = EventFactory()
+
+    event6 = EventFactory()
+    RegistrationFactory(event=event6)
+
+    event7 = EventFactory()
+
+    response = get_list(api_client=api_client, query_string=f"sort={ordering}")
+
+    results = response.data["data"]
+    assert len(results) == 7
+
+    if ordering.startswith("-"):
+        # Desc.
+        assert Counter(
+            [results[0]["id"], results[1]["id"], results[2]["id"]]
+        ) == Counter([event5.id, event6.id, event7.id])
+        assert results[3]["id"] == event4.id  # 2 Feb 2024 at 12.00
+        assert results[4]["id"] == event3.id  # 1 Feb 2024 at 12.00
+        assert results[5]["id"] == event2.id  # 1 Jan 2024 at 12.00
+        assert results[6]["id"] == event.id  # 1 Jan 2024 at 10.00
+    else:
+        # Asc.
+        assert results[0]["id"] == event.id  # 1 Jan 2024 at 10.00
+        assert results[1]["id"] == event2.id  # 1 Jan 2024 at 12.00
+        assert results[2]["id"] == event3.id  # 1 Feb 2024 at 12.00
+        assert results[3]["id"] == event4.id  # 2 Feb 2024 at 12.00
+        assert Counter(
+            [results[4]["id"], results[5]["id"], results[6]["id"]]
+        ) == Counter([event5.id, event6.id, event7.id])
+
+
+@pytest.mark.django_db
+def test_filter_events_by_enrolment_open_on(api_client):
+    now = localtime()
+
+    event = EventFactory()
+    RegistrationFactory(
+        event=event,
+        enrolment_start_time=now.replace(year=2024, month=1, day=1, hour=10),
+        enrolment_end_time=now.replace(year=2024, month=1, day=7, hour=10),
+    )
+
+    event2 = EventFactory(
+        enrolment_start_time=now.replace(year=2024, month=2, day=1, hour=12)
+    )
+
+    event3 = EventFactory(
+        enrolment_start_time=now.replace(year=2024, month=3, day=1, hour=12),
+        enrolment_end_time=now.replace(year=2024, month=3, day=31, hour=12),
+    )
+    RegistrationFactory(
+        event=event3,
+        enrolment_start_time=now.replace(year=2025, month=2, day=2, hour=12),
+        enrolment_end_time=now.replace(year=2025, month=3, day=2, hour=12),
+    )
+
+    event4 = EventFactory(
+        enrolment_end_time=now.replace(year=2024, month=12, day=1, hour=12)
+    )
+
+    response = get_list(
+        api_client=api_client, query_string="enrolment_open_on=2025-02-01"
+    )
+    results = response.data["data"]
+    assert len(results) == 1
+    assert results[0]["id"] == event2.id
+
+    response = get_list(
+        api_client=api_client, query_string="enrolment_open_on=2025-02-02T13:00:00"
+    )
+    results = response.data["data"]
+    assert len(results) == 2
+    assert Counter([result["id"] for result in results]) == Counter(
+        [event2.id, event3.id]
+    )
+
+    response = get_list(
+        api_client=api_client, query_string="enrolment_open_on=2024-01-02T13:00:00"
+    )
+    results = response.data["data"]
+    assert len(results) == 2
+    assert Counter([result["id"] for result in results]) == Counter(
+        [event.id, event4.id]
+    )
 
 
 @pytest.mark.django_db
