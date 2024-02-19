@@ -361,6 +361,16 @@
         <pre><code>event/?enrolment_open_waitlist=true</code></pre>
         <p><a href="?enrolment_open_waitlist=true" title="json">See the result</a></p>
 
+        <h3 id="enrolment-open-on">Enrolment open on a given date</h3>
+        <p>It is possible to check if a given datetime is within events' enrolment start and end times. In other words,
+            if any events are open on a given date and time. The given datetime is expected to be in the events' timezone.</p>
+        <p><code>enrolment_open_on</code> parameter displays events where the given datetime is within the
+            <code>enrolment_start_time</code> and <code>enrolment_end_time</code> of the events. If an event
+            has a registration, the registration's enrolment start and end times will be preferred over the event's times.</p>
+        <p>For example:</p>
+        <pre><code>event/?enrolment_open_on=2024-02-19T12:00:00</code></pre>
+        <p><a href="?enrolment_open_on=2024-02-19T12:00:00" title="json">See the result</a></p>
+
         <h3 id="attendee-capacity">Attendee capacity</h3>
         <p>Filters for filtering by event maximum_attendee_capacity and minimum_attendee_capacity:</p>
 
@@ -452,11 +462,24 @@
 
         <h2 id="ordering">Ordering</h2>
         <p>Default ordering is descending order by <code>-last_modified_time</code>. You may also order
-            results by <code>start_time</code>, <code>end_time</code>, <code>name</code> and
-            <code>duration</code>. Descending order is denoted by adding <code>-</code> in front of the
-            parameter, default order is ascending.</p>
+            results by <code>start_time</code>, <code>end_time</code>, <code>name</code>,
+            <code>duration</code>, <code>enrolment_start_time</code>, <code>enrolment_end_time</code>,
+            <code>registration__enrolment_start_time</code>, <code>registration__enrolment_end_time</code>,
+            <code>enrolment_start</code> and <code>enrolment_end</code>. Descending order is denoted by
+            adding <code>-</code> in front of the parameter, default order is ascending.</p>
         <p>For example:</p>
         <pre><code>event/?sort=-end_time</code></pre>
         <p><a href="?sort=-end_time" title="json">See the result</a></p>
+
+        <h3 id="enrolment-start-enrolment-end">Enrolment start and enrolment end</h3>
+        <p>The ordering filters <code>enrolment_start</code> and <code>enrolment_end</code> have two
+            notable differences compared to the rest of the ordering filters related to enrolment start
+            and enrolment end times:</p>
+        <p>First, if an event has a registration with an enrolment time defined, the registration's time
+            will be preferred over the event's time.</p>
+        <p>Second, if neither the event's registration nor the event has enrolment times defined
+            (<code>enrolment_start_time</code> and <code>enrolment_end_time</code> are both NULL), the
+            event will be placed at the end of the results list regardless of whether ascending or
+            descending order was used.</p>
     </div>
 </div>
