@@ -1,17 +1,27 @@
+from collections import Counter
 from datetime import timedelta
 
+import freezegun
 import pytest
 from django.core.management import call_command
+from django.db import transaction
+from django.test import TestCase
 from django.utils.timezone import localtime
 
 from events.tests.factories import EventFactory
-from registrations.models import SignUpGroupProtectedData, SignUpProtectedData
+from registrations.models import (
+    SeatReservationCode,
+    SignUpGroupProtectedData,
+    SignUpProtectedData,
+)
 from registrations.tests.factories import (
     RegistrationFactory,
+    SeatReservationCodeFactory,
     SignUpFactory,
     SignUpGroupFactory,
     SignUpGroupProtectedDataFactory,
 )
+from registrations.utils import code_validity_duration
 
 _ENCRYPTION_KEY = "c87a6669a1ded2834f1dfd0830d86ef6cdd20372ac83e8c7c23feffe87e6a051"
 _ENCRYPTION_KEY2 = "f1a79d4b60a947b988beaf1eae871289fb03f2b9fd443d67107a7d05d05f831e"
@@ -85,7 +95,6 @@ def test_encrypt_fields_with_new_key(settings):
     assert_encrypted_with_keys(new_keys)
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.django_db
 def test_anonymize_past_signups():
     future_event = EventFactory(end_time=localtime() + timedelta(days=31))
@@ -117,3 +126,55 @@ def test_anonymize_past_signups():
     assert past_signup_group.anonymization_time is not None
     assert past_signup_in_group.anonymization_time is not None
     assert past_signup.anonymization_time is not None
+
+
+@freezegun.freeze_time("2024-02-16 16:45:00+02:00")
+@pytest.mark.django_db(transaction=True)
+def test_delete_expired_seatreservations():
+    registration = RegistrationFactory(
+        maximum_attendee_capacity=5, waiting_list_capacity=5
+    )
+
+    now = localtime()
+    expired_timestamp = now - timedelta(minutes=code_validity_duration(1) + 1)
+    expired_timestamp2 = now - timedelta(minutes=code_validity_duration(2) + 1)
+    exactly_expiration_threshold = now - timedelta(minutes=code_validity_duration(1))
+
+    expired_reservation = SeatReservationCodeFactory(registration=registration, seats=1)
+    SeatReservationCode.objects.filter(pk=expired_reservation.pk).update(
+        timestamp=expired_timestamp
+    )
+
+    non_expired_reservation = SeatReservationCodeFactory(
+        registration=registration, seats=1
+    )
+    non_expired_reservation2 = SeatReservationCodeFactory(
+        registration=registration, seats=1
+    )
+    SeatReservationCode.objects.filter(pk=non_expired_reservation2.pk).update(
+        timestamp=exactly_expiration_threshold
+    )
+
+    expired_reservation2 = SeatReservationCodeFactory(
+        registration=registration, seats=2
+    )
+    SeatReservationCode.objects.filter(pk=expired_reservation2.pk).update(
+        timestamp=expired_timestamp2
+    )
+
+    registration.refresh_from_db()
+    assert registration.remaining_attendee_capacity == 1
+    assert registration.remaining_waiting_list_capacity == 5
+
+    assert SeatReservationCode.objects.count() == 4
+
+    call_command("delete_expired_seat_reservations")
+
+    assert SeatReservationCode.objects.count() == 2
+    assert Counter(SeatReservationCode.objects.values_list("pk", flat=True)) == Counter(
+        [non_expired_reservation.pk, non_expired_reservation2.pk]
+    )
+
+    registration.refresh_from_db()
+    assert registration.remaining_attendee_capacity == 3
+    assert registration.remaining_waiting_list_capacity == 5

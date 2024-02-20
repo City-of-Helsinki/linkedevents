@@ -321,14 +321,14 @@ class Registration(CreatedModifiedBaseModel):
         return (
             # Calculate expiration time for each reservation
             self.reservations.annotate(
-                expiration=ExpressionWrapper(
+                expires_at=ExpressionWrapper(
                     F("timestamp")
                     + timedelta(minutes=1) * code_validity_duration(F("seats")),
                     output_field=DateTimeField(),
                 )
             )
             # Filter to get all not expired reservations
-            .filter(expiration__gte=localtime())
+            .filter(expires_at__gte=localtime())
             # Sum  seats of not expired reservation
             .aggregate(seats_sum=Sum("seats", output_field=models.IntegerField()))[
                 "seats_sum"
