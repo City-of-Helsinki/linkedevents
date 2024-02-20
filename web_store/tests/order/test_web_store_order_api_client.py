@@ -1,5 +1,6 @@
 from decimal import Decimal
 from unittest.mock import patch
+from uuid import uuid4
 
 import pytest
 from requests.exceptions import RequestException
@@ -7,9 +8,12 @@ from rest_framework import status
 
 from web_store.exceptions import WebStoreImproperlyConfiguredException
 from web_store.order.clients import WebStoreOrderAPIClient
-from web_store.tests.test_web_store_api_base_client import get_mock_response
+from web_store.order.enums import WebStoreOrderStatus
+from web_store.tests.utils import get_mock_response
 
-DEFAULT_ORDER_DATA = {
+DEFAULT_ORDER_ID = str(uuid4())
+
+DEFAULT_CREATE_ORDER_DATA = {
     "namespace": "namespace",
     "user": "user_uuid",
     "items": [
@@ -37,6 +41,48 @@ DEFAULT_ORDER_DATA = {
     },
 }
 
+DEFAULT_GET_ORDER_DATA = {
+    "orderId": DEFAULT_ORDER_ID,
+    "createdAt": "2024-02-01T12:00:00Z",
+    "checkoutUrl": "https://test.dev/",
+    "receiptUrl": "https://test.dev/receipt/",
+    "loggedInCheckoutUrl": "https://test.dev/logged_in/",
+    "updateCardUrl": "https://test.dev/cart/update/",
+    "isValidForCheckout": True,
+    "invoice": {
+        "invoiceId": "string",
+        "businessId": "string",
+        "name": "string",
+        "address": "string",
+        "postcode": "string",
+        "city": "string",
+        "ovtId": "string",
+    },
+    "status": WebStoreOrderStatus.DRAFT.value,
+    "subscriptionId": "string",
+    "type": "subscription",
+    "paymentMethod": {
+        "name": "string",
+        "code": "string",
+        "group": "string",
+        "img": "string",
+        "gateway": "string",
+    },
+    "merchant": {
+        "merchantName": "string",
+        "merchantStreet": "string",
+        "merchantZip": "string",
+        "merchantCity": "string",
+        "merchantEmail": "string",
+        "merchantUrl": "string",
+        "merchantTermsOfServiceUrl": "string",
+        "merchantBusinessId": "string",
+        "merchantPhone": "string",
+        "merchantShopId": "string",
+    },
+}
+DEFAULT_GET_ORDER_DATA.update(DEFAULT_CREATE_ORDER_DATA)
+
 
 @pytest.mark.parametrize(
     "setting_name,setting_value",
@@ -60,13 +106,13 @@ def test_mandatory_web_store_order_setting_missing_causes_right_exception(
 
 def test_create_order_success():
     client = WebStoreOrderAPIClient()
-    mocked_response = get_mock_response(json_return_value=DEFAULT_ORDER_DATA)
+    mocked_response = get_mock_response(json_return_value=DEFAULT_CREATE_ORDER_DATA)
 
     with patch("requests.post") as mocked_request:
         mocked_request.return_value = mocked_response
-        response_json = client.create_order(DEFAULT_ORDER_DATA)
+        response_json = client.create_order(DEFAULT_CREATE_ORDER_DATA)
 
-    assert response_json == DEFAULT_ORDER_DATA
+    assert response_json == DEFAULT_CREATE_ORDER_DATA
 
 
 @pytest.mark.parametrize(
@@ -78,4 +124,34 @@ def test_create_order_exception(status_code):
 
     with patch("requests.post") as mocked_request, pytest.raises(RequestException):
         mocked_request.return_value = mocked_response
-        client.create_order(DEFAULT_ORDER_DATA)
+        client.create_order(DEFAULT_CREATE_ORDER_DATA)
+
+
+def test_get_order_success():
+    client = WebStoreOrderAPIClient()
+    mocked_response = get_mock_response(
+        status_code=status.HTTP_200_OK, json_return_value=DEFAULT_GET_ORDER_DATA
+    )
+
+    with patch("requests.get") as mocked_request:
+        mocked_request.return_value = mocked_response
+        response_json = client.get_order(order_id=DEFAULT_ORDER_ID)
+
+    assert response_json == DEFAULT_GET_ORDER_DATA
+
+
+@pytest.mark.parametrize(
+    "status_code",
+    [
+        status.HTTP_403_FORBIDDEN,
+        status.HTTP_404_NOT_FOUND,
+        status.HTTP_500_INTERNAL_SERVER_ERROR,
+    ],
+)
+def test_get_order_exception(status_code):
+    client = WebStoreOrderAPIClient()
+    mocked_response = get_mock_response(status_code=status_code)
+
+    with patch("requests.get") as mocked_request, pytest.raises(RequestException):
+        mocked_request.return_value = mocked_response
+        client.get_order(order_id=DEFAULT_ORDER_ID)

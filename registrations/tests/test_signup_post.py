@@ -246,6 +246,9 @@ def test_authenticated_user_can_create_signups_with_payments(
         SignUp.objects.first(),
     )
 
+    # Email confirmation will be sent only when payment webhook arrives and payment has been paid.
+    assert len(mail.outbox) == 0
+
 
 @pytest.mark.django_db
 def test_can_create_signup_with_create_payment_as_false_in_payload(
@@ -323,6 +326,8 @@ def test_create_signup_payment_without_pricetotal_in_response(registration, api_
         user,
         SignUp.objects.first(),
     )
+
+    assert len(mail.outbox) == 0
 
 
 @pytest.mark.django_db

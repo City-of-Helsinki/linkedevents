@@ -95,6 +95,19 @@ signup_email_texts = {
                 "You have successfully cancelled your registration to the volunteering <strong>%(event_name)s</strong>."
             ),
         },
+        "payment": {
+            "text": {
+                Event.TypeId.GENERAL: _(
+                    "Your registration and payment for the event <strong>%(event_name)s</strong> have been cancelled."
+                ),
+                Event.TypeId.COURSE: _(
+                    "Your registration and payment for the course <strong>%(event_name)s</strong> have been cancelled."
+                ),
+                Event.TypeId.VOLUNTEERING: _(
+                    "Your registration to the volunteering <strong>%(event_name)s</strong> has been cancelled."
+                ),
+            },
+        },
     },
     SignUpNotificationType.CONFIRMATION: {
         "heading": CONFIRMATION_HEADING_WITH_USERNAME,
@@ -453,13 +466,14 @@ def _get_event_cancellation_texts(
 
 
 def _get_notification_texts(
-    text_options, event_type_id, event_name, event_period, username
+    text_options, event_type_id, event_name, event_period, contact_person
 ):
     event_text_kwargs = _get_event_text_kwargs(event_name, event_period=event_period)
 
-    if username:
+    if contact_person.first_name:
         texts = {
-            "heading": text_options["heading"] % {"username": username},
+            "heading": text_options["heading"]
+            % {"username": contact_person.first_name},
         }
     else:
         texts = {
@@ -479,22 +493,28 @@ def _format_confirmation_message_texts(texts, confirmation_message):
 
 
 def _format_cancellation_texts(
-    texts, text_options, event_type_id, event_name, event_period, username
+    texts, text_options, event_type_id, event_name, event_period, contact_person
 ):
     event_text_kwargs = _get_event_text_kwargs(event_name, event_period=event_period)
 
-    if username:
+    if contact_person.first_name:
         texts["secondary_heading"] = text_options["secondary_heading"][
             event_type_id
         ] % {
             **event_text_kwargs,
-            "username": username,
+            "username": contact_person.first_name,
         }
     else:
         texts["secondary_heading"] = (
             text_options["secondary_heading_without_username"][event_type_id]
             % event_text_kwargs
         )
+
+    payment = getattr(contact_person.signup_or_signup_group, "payment", None)
+    if payment:
+        texts["text"] = text_options["payment"]["text"][event_type_id] % {
+            "event_name": event_name
+        }
 
 
 def _format_confirmation_texts(
@@ -536,13 +556,11 @@ def get_signup_notification_texts(
 ):
     registration = contact_person.registration
     service_lang = contact_person.get_service_language_pk()
+    event_type_id = registration.event.type_id
 
     with translation.override(service_lang):
         confirmation_message = registration.confirmation_message
         event_name = registration.event.name
-
-    event_type_id = registration.event.type_id
-    username = contact_person.first_name
 
     if (
         not is_sub_event_cancellation
@@ -578,12 +596,12 @@ def get_signup_notification_texts(
             event_type_id,
             event_name,
             event_period,
-            username,
+            contact_person,
         )
 
     if notification_type == SignUpNotificationType.CANCELLATION:
         _format_cancellation_texts(
-            texts, text_options, event_type_id, event_name, event_period, username
+            texts, text_options, event_type_id, event_name, event_period, contact_person
         )
     elif notification_type == SignUpNotificationType.CONFIRMATION:
         _format_confirmation_texts(

@@ -38,6 +38,8 @@ from registrations.utils import (
     has_allowed_substitute_user_email_domain,
 )
 from web_store.order.clients import WebStoreOrderAPIClient
+from web_store.order.enums import WebStoreOrderWebhookEventType
+from web_store.payment.enums import WebStorePaymentWebhookEventType
 
 
 def _get_attending_and_waitlisted_capacities(
@@ -437,7 +439,7 @@ class SignUpSerializer(SignUpBaseSerializer, WebStorePaymentBaseSerializer):
         if create_payment and signup and not signup.signup_group_id:
             self._create_payment(signup)
 
-        if contact_person:
+        if contact_person and not create_payment:
             access_code = (
                 contact_person.create_access_code()
                 if contact_person.can_create_access_code(self.context["request"].user)
@@ -1167,13 +1169,14 @@ class SignUpGroupCreateSerializer(
         if create_payment:
             self._create_payment(instance)
 
-        self._notify_contact_person(
-            contact_person,
-            SignUp.AttendeeStatus.ATTENDING
-            if instance.attending_signups
-            else SignUp.AttendeeStatus.WAITING_LIST,
-            self.context["request"].user,
-        )
+        if not (create_payment and instance.attending_signups):
+            self._notify_contact_person(
+                contact_person,
+                SignUp.AttendeeStatus.ATTENDING
+                if instance.attending_signups
+                else SignUp.AttendeeStatus.WAITING_LIST,
+                self.context["request"].user,
+            )
 
         reservation.delete()
 
@@ -1511,3 +1514,25 @@ class PriceGroupSerializer(TranslatedModelSerializer, CreatedModifiedBaseSeriali
         extra_kwargs = {
             "publisher": {"required": True, "allow_null": False},
         }
+
+
+class WebStoreWebhookBaseSerializer(serializers.Serializer):
+    order_id = serializers.UUIDField(write_only=True)
+    namespace = serializers.ChoiceField(
+        choices=[settings.WEB_STORE_API_NAMESPACE],
+        write_only=True,
+    )
+
+
+class WebStoreOrderWebhookSerializer(WebStoreWebhookBaseSerializer):
+    event_type = serializers.ChoiceField(
+        choices=[event_type.value for event_type in WebStoreOrderWebhookEventType],
+        write_only=True,
+    )
+
+
+class WebStorePaymentWebhookSerializer(WebStoreWebhookBaseSerializer):
+    event_type = serializers.ChoiceField(
+        choices=[event_type.value for event_type in WebStorePaymentWebhookEventType],
+        write_only=True,
+    )
