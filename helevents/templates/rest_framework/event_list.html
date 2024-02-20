@@ -374,7 +374,7 @@
         <h3 id="attendee-capacity">Attendee capacity</h3>
         <p>Filters for filtering by event maximum_attendee_capacity and minimum_attendee_capacity:</p>
 
-        <h4 id="">Filtering for maximum_attendee_capacity</h4>
+        <h4>Filtering for maximum_attendee_capacity</h4>
         <p>It is possible to filter by maximum_attendee_capacity using gte (>) or lte (<) filters.</p>
 
         <p><code>maximum_attendee_capacity_gte</code> parameter displays events with maximum attendee capacity greater than
@@ -389,7 +389,7 @@
         <pre><code>event/?maximum_attendee_capacity_lte=10</code></pre>
         <p><a href="?maximum_attendee_capacity_lte=10" title="json">See the result</a></p>
 
-        <h4 id="">Filtering for minimum_attendee_capacity</h4>
+        <h4>Filtering for minimum_attendee_capacity</h4>
         <p>It is possible to filter by minimum_attendee_capacity using gte (>) or lte (<) filters.</p>
 
         <p><code>minimum_attendee_capacity_gte</code> parameter displays events with minimum attendee capacity greater than
@@ -403,6 +403,43 @@
         <p>Example:</p>
         <pre><code>event/?minimum_attendee_capacity_lte=10</code></pre>
         <p><a href="?minimum_attendee_capacity_lte=10" title="json">See the result</a></p>
+
+        <h3 id="remaining-attendee-capacity">Remaining registration attendee or waiting list capacity</h3>
+        <p>Filters for filtering by registration remaining_attendee_capacity and remaining_waiting_list_capacity:</p>
+
+        <h4>Filtering for registration remaining_attendee_capacity</h4>
+        <p>It is possible to filter by registration remaining_attendee_capacity using gte (>=) or isnull filters.</p>
+
+        <p><code>registration__remaining_attendee_capacity__gte</code> parameter displays events where registration's
+            remaining attendee capacity is greater than or equal the applied parameter (integer value)</p>
+        <p>Example:</p>
+        <pre><code>event/?registration__remaining_attendee_capacity__gte=10</code></pre>
+        <p><a href="?registration__remaining_attendee_capacity__gte=10" title="json">See the result</a></p>
+
+        <p><code>registration__remaining_attendee_capacity__isnull</code> parameter displays events where registration's
+            remaining attendee capacity is or is not NULL</p>
+        <p>The values <code>True</code>, <code>true</code> and <code>1</code> are all considered to be "true".</p>
+        <p>The values <code>False</code>, <code>false</code> and <code>0</code> are all considered to be "false".</p>
+        <p>Example:</p>
+        <pre><code>event/?registration__remaining_attendee_capacity__isnull=true</code></pre>
+        <p><a href="?registration__remaining_attendee_capacity__isnull=true" title="json">See the result</a></p>
+
+        <h4>Filtering for registration remaining_waiting_list_capacity</h4>
+        <p>It is possible to filter by registration remaining_waiting_list_capacity using gte (>=) or isnull filters.</p>
+
+        <p><code>registration__remaining_waiting_list_capacity__gte</code> parameter displays events where registration's
+            remaining waiting list capacity is greater than or equal the applied parameter (integer value)</p>
+        <p>Example:</p>
+        <pre><code>event/?registration__remaining_waiting_list_capacity__gte=10</code></pre>
+        <p><a href="?registration__remaining_waiting_list_capacity__gte=10" title="json">See the result</a></p>
+
+        <p><code>registration__remaining_waiting_list_capacity__isnull</code> parameter displays events where registration's
+            remaining waiting list capacity is or is not NULL</p>
+        <p>The values <code>True</code>, <code>true</code> and <code>1</code> are all considered to be "true".</p>
+        <p>The values <code>False</code>, <code>false</code> and <code>0</code> are all considered to be "false".</p>
+        <p>Example:</p>
+        <pre><code>event/?registration__remaining_waiting_list_capacity__isnull=true</code></pre>
+        <p><a href="?registration__remaining_waiting_list_capacity__isnull=true" title="json">See the result</a></p>
 
         <h3 id="event-for-authenticated-users">Filtering for authenticated users</h3>
         <p>By default, only public events are shown in the event list. However, certain query parameters allow

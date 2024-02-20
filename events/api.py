@@ -3158,7 +3158,10 @@ class EventFilter(django_filters.rest_framework.FilterSet):
 
     class Meta:
         model = Event
-        fields = ("division", "super_event_type", "super_event")
+        fields = {
+            "registration__remaining_attendee_capacity": ["gte", "isnull"],
+            "registration__remaining_waiting_list_capacity": ["gte", "isnull"],
+        }
 
     def filter_enrolment_open_on(self, queryset, name, value: datetime):
         value = value.astimezone(pytz.timezone(settings.TIME_ZONE))

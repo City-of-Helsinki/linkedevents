@@ -1,5 +1,6 @@
 from typing import Union
 
+from django.db import transaction
 from django.db.models import Q
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
@@ -8,6 +9,7 @@ from events.models import Event
 from registrations.models import (
     Registration,
     RegistrationPriceGroup,
+    SeatReservationCode,
     SignUp,
     SignUpContactPerson,
     SignUpGroup,
@@ -16,15 +18,38 @@ from registrations.models import (
 from registrations.utils import get_signup_create_url
 
 
-def _signup_or_group_post_delete(instance: Union[SignUp, SignUpGroup]) -> None:
-    attendee_status = getattr(instance, "attendee_status", "")
-    attending_signups = getattr(instance, "attending_signups", None)
-    if attendee_status == SignUp.AttendeeStatus.ATTENDING or attending_signups:
-        instance.registration.move_first_waitlisted_to_attending()
+def _create_signup_link_for_event(registration: Registration) -> None:
+    registration.event.offers.filter(
+        (Q(info_url_fi=None) | Q(info_url_fi=""))
+        & (Q(info_url_sv=None) | Q(info_url_sv=""))
+        & (Q(info_url_en=None) | Q(info_url_en=""))
+    ).update(
+        info_url_fi=get_signup_create_url(registration, "fi"),
+        info_url_sv=get_signup_create_url(registration, "sv"),
+        info_url_en=get_signup_create_url(registration, "en"),
+    )
 
-    contact_person = getattr(instance, "contact_person", None)
-    if contact_person:
-        contact_person.send_notification(SignUpNotificationType.CANCELLATION)
+
+@transaction.atomic
+def _recalculate_registration_capacities(registration_id: int) -> None:
+    registration = (
+        Registration.objects.filter(pk=registration_id).select_for_update().first()
+    )
+
+    registration.remaining_attendee_capacity = (
+        registration.calculate_remaining_attendee_capacity()
+    )
+    registration.remaining_waiting_list_capacity = (
+        registration.calculate_remaining_waiting_list_capacity()
+    )
+
+    registration._capacities_recalculation_save = True
+    registration.save(
+        update_fields=[
+            "remaining_attendee_capacity",
+            "remaining_waiting_list_capacity",
+        ]
+    )
 
 
 def _send_event_cancellation_notification(event):
@@ -59,25 +84,19 @@ def _send_event_cancellation_notification(event):
         )
 
 
-@receiver(
-    post_delete,
-    sender=SignUp,
-    dispatch_uid="signup_post_delete",
-)
-def signup_post_delete(sender: type[SignUp], instance: SignUp, **kwargs: dict) -> None:
-    if getattr(instance, "_individually_deleted", False):
-        _signup_or_group_post_delete(instance)
+def _signup_or_group_post_delete(instance: Union[SignUp, SignUpGroup]) -> None:
+    attendee_status = getattr(instance, "attendee_status", "")
+    attending_signups = getattr(instance, "attending_signups", None)
+    if attendee_status == SignUp.AttendeeStatus.ATTENDING or attending_signups:
+        instance.registration.move_first_waitlisted_to_attending()
 
+    contact_person = getattr(instance, "contact_person", None)
+    if contact_person:
+        contact_person.send_notification(SignUpNotificationType.CANCELLATION)
 
-@receiver(
-    post_delete,
-    sender=SignUpGroup,
-    dispatch_uid="signup_group_post_delete",
-)
-def signup_group_post_delete(
-    sender: type[SignUpGroup], instance: SignUpGroup, **kwargs: dict
-) -> None:
-    _signup_or_group_post_delete(instance)
+    transaction.on_commit(
+        lambda: _recalculate_registration_capacities(instance.registration_id)
+    )
 
 
 @receiver(
@@ -112,21 +131,89 @@ def calculate_registration_price_group_vat_prices(
 @receiver(
     post_save,
     sender=Registration,
-    dispatch_uid="create_signup_link_for_event",
+    dispatch_uid="registration_post_save",
 )
-def create_signup_link_for_event(
+def registration_post_save(
     sender: type[Registration], instance: Registration, **kwargs: dict
 ) -> None:
-    if not kwargs.get("created"):
-        # Only create the signup link if a new registration has been created.
-        return
+    if kwargs.get("created"):
+        _create_signup_link_for_event(instance)
 
-    instance.event.offers.filter(
-        (Q(info_url_fi=None) | Q(info_url_fi=""))
-        & (Q(info_url_sv=None) | Q(info_url_sv=""))
-        & (Q(info_url_en=None) | Q(info_url_en=""))
-    ).update(
-        info_url_fi=get_signup_create_url(instance, "fi"),
-        info_url_sv=get_signup_create_url(instance, "sv"),
-        info_url_en=get_signup_create_url(instance, "en"),
+    update_fields = kwargs.get("update_fields")
+    if not getattr(instance, "_capacities_recalculation_save", False) and (
+        update_fields is None
+        or "maximum_attendee_capacity" in update_fields
+        or "waiting_list_capacity" in update_fields
+    ):
+        transaction.on_commit(lambda: _recalculate_registration_capacities(instance.pk))
+
+
+@receiver(
+    post_save,
+    sender=SignUp,
+    dispatch_uid="signup_post_save",
+)
+def signup_post_save(sender: type[SignUp], instance: SignUp, **kwargs: dict) -> None:
+    transaction.on_commit(
+        lambda: _recalculate_registration_capacities(instance.registration_id)
+    )
+
+
+@receiver(
+    post_save,
+    sender=SignUpGroup,
+    dispatch_uid="signup_group_post_save",
+)
+def signup_group_post_save(
+    sender: type[SignUpGroup], instance: SignUpGroup, **kwargs: dict
+) -> None:
+    transaction.on_commit(
+        lambda: _recalculate_registration_capacities(instance.registration_id)
+    )
+
+
+@receiver(
+    post_delete,
+    sender=SignUp,
+    dispatch_uid="signup_post_delete",
+)
+def signup_post_delete(sender: type[SignUp], instance: SignUp, **kwargs: dict) -> None:
+    if getattr(instance, "_individually_deleted", False):
+        _signup_or_group_post_delete(instance)
+
+
+@receiver(
+    post_delete,
+    sender=SignUpGroup,
+    dispatch_uid="signup_group_post_delete",
+)
+def signup_group_post_delete(
+    sender: type[SignUpGroup], instance: SignUpGroup, **kwargs: dict
+) -> None:
+    _signup_or_group_post_delete(instance)
+
+
+@receiver(
+    post_save,
+    sender=SeatReservationCode,
+    dispatch_uid="seat_reservation_post_save",
+)
+def seat_reservation_post_save(
+    sender: type[SeatReservationCode], instance: SeatReservationCode, **kwargs: dict
+) -> None:
+    transaction.on_commit(
+        lambda: _recalculate_registration_capacities(instance.registration_id)
+    )
+
+
+@receiver(
+    post_delete,
+    sender=SeatReservationCode,
+    dispatch_uid="seat_reservation_post_delete",
+)
+def seat_reservation_post_delete(
+    sender: type[SeatReservationCode], instance: SeatReservationCode, **kwargs: dict
+) -> None:
+    transaction.on_commit(
+        lambda: _recalculate_registration_capacities(instance.registration_id)
     )

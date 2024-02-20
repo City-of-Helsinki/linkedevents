@@ -300,6 +300,15 @@ class Registration(CreatedModifiedBaseModel):
         through_fields=("registration", "price_group"),
     )
 
+    remaining_attendee_capacity = models.PositiveSmallIntegerField(
+        blank=True, null=True, default=None
+    )
+    remaining_waiting_list_capacity = models.PositiveSmallIntegerField(
+        blank=True,
+        null=True,
+        default=None,
+    )
+
     @property
     def data_source(self):
         return self.event.data_source
@@ -313,14 +322,14 @@ class Registration(CreatedModifiedBaseModel):
         return (
             # Calculate expiration time for each reservation
             self.reservations.annotate(
-                expiration=ExpressionWrapper(
+                expires_at=ExpressionWrapper(
                     F("timestamp")
                     + timedelta(minutes=1) * code_validity_duration(F("seats")),
                     output_field=DateTimeField(),
                 )
             )
             # Filter to get all not expired reservations
-            .filter(expiration__gte=localtime())
+            .filter(expires_at__gte=localtime())
             # Sum  seats of not expired reservation
             .aggregate(seats_sum=Sum("seats", output_field=models.IntegerField()))[
                 "seats_sum"
@@ -340,8 +349,7 @@ class Registration(CreatedModifiedBaseModel):
             attendee_status=SignUp.AttendeeStatus.WAITING_LIST
         ).count()
 
-    @property
-    def remaining_attendee_capacity(self):
+    def calculate_remaining_attendee_capacity(self):
         maximum_attendee_capacity = self.maximum_attendee_capacity
 
         if maximum_attendee_capacity is None:
@@ -354,8 +362,7 @@ class Registration(CreatedModifiedBaseModel):
             maximum_attendee_capacity - attendee_count - reserved_seats_amount, 0
         )
 
-    @property
-    def remaining_waiting_list_capacity(self):
+    def calculate_remaining_waiting_list_capacity(self):
         waiting_list_capacity = self.waiting_list_capacity
 
         if waiting_list_capacity is None:
