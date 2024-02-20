@@ -4,6 +4,7 @@ from unittest.mock import patch, PropertyMock
 
 import pytest
 from django.conf import settings
+from django.test import TestCase
 from rest_framework import status
 
 from audit_log.models import AuditLogEntry
@@ -14,13 +15,13 @@ from events.tests.test_event_get import get_list_and_assert_events
 from events.tests.utils import assert_fields_exist
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
-from registrations.models import PriceGroup, RegistrationPriceGroup
+from registrations.models import PriceGroup, RegistrationPriceGroup, SignUp
 from registrations.tests.factories import (
     PriceGroupFactory,
     RegistrationFactory,
     RegistrationUserAccessFactory,
     SeatReservationCodeFactory,
-    SignUpContactPersonFactory,
+    SignUpFactory,
 )
 from registrations.tests.test_registration_post import hel_email
 from registrations.tests.test_signup_post import assert_create_signups
@@ -392,29 +393,6 @@ def test_get_registration_with_event_and_in_language_included(
 
 
 @pytest.mark.django_db
-def test_get_registration_with_correct_attendee_capacity(
-    user_api_client, registration, signup
-):
-    registration.maximum_attendee_capacity = 5
-    registration.waiting_list_capacity = 5
-    registration.save()
-
-    response = get_detail_and_assert_registration(user_api_client, registration.id)
-    assert response.data["remaining_attendee_capacity"] == 4
-    assert response.data["remaining_waiting_list_capacity"] == 5
-
-    SeatReservationCodeFactory(registration=registration, seats=3)
-    response = get_detail_and_assert_registration(user_api_client, registration.id)
-    assert response.data["remaining_attendee_capacity"] == 1
-    assert response.data["remaining_waiting_list_capacity"] == 5
-
-    SeatReservationCodeFactory(registration=registration, seats=3)
-    response = get_detail_and_assert_registration(user_api_client, registration.id)
-    assert response.data["remaining_attendee_capacity"] == 0
-    assert response.data["remaining_waiting_list_capacity"] == 3
-
-
-@pytest.mark.django_db
 def test_get_registration_with_event_and_audience_included(
     user_api_client, event, keyword, registration
 ):
@@ -569,12 +547,10 @@ def test_contact_person_cannot_include_signups(
 
 
 @pytest.mark.django_db
-def test_current_attendee_and_waitlist_count(user_api_client, registration, user):
-    user.get_default_organization().registration_admin_users.add(user)
-
-    registration.maximum_attendee_capacity = 1
-    registration.waiting_list_capacity = 1
-    registration.save()
+def test_current_attendee_and_waitlist_count(user_api_client):
+    registration = RegistrationFactory(
+        maximum_attendee_capacity=1, waiting_list_capacity=1
+    )
 
     response = get_detail(user_api_client, registration.id)
     assert response.data["current_attendee_count"] == 0
@@ -594,6 +570,7 @@ def test_current_attendee_and_waitlist_count(user_api_client, registration, user
         "signups": [signup_data],
     }
     assert_create_signups(user_api_client, signups_data)
+
     response = get_detail(user_api_client, registration.id)
     assert response.data["current_attendee_count"] == 1
     assert response.data["current_waiting_list_count"] == 0
@@ -612,6 +589,7 @@ def test_current_attendee_and_waitlist_count(user_api_client, registration, user
         "signups": [signup_data2],
     }
     assert_create_signups(user_api_client, signups_data2)
+
     response = get_detail(user_api_client, registration.id)
     assert response.data["current_attendee_count"] == 1
     assert response.data["current_waiting_list_count"] == 1
@@ -752,3 +730,173 @@ def test_registration_id_is_audit_logged_on_get_list(
     assert Counter(
         audit_log_entry.message["audit_event"]["target"]["object_ids"]
     ) == Counter([registration.pk, registration2.pk])
+
+
+class RegistrationCapacityTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        with cls.captureOnCommitCallbacks(execute=True):
+            cls.registration = RegistrationFactory(
+                maximum_attendee_capacity=5,
+                waiting_list_capacity=5,
+            )
+
+        cls.registration_detail_url = reverse(
+            "registration-detail", kwargs={"pk": cls.registration.pk}
+        )
+
+    def test_update_registration_maximum_attendee_capacity(self):
+        with self.captureOnCommitCallbacks(execute=True) as callbacks:
+            self.registration.maximum_attendee_capacity = 4
+            self.registration.save(update_fields=["maximum_attendee_capacity"])
+        self.assertEqual(len(callbacks), 1)
+
+        response = self.client.get(self.registration_detail_url)
+        self.assertEqual(response.data["remaining_attendee_capacity"], 4)
+        self.assertEqual(response.data["remaining_waiting_list_capacity"], 5)
+
+        with self.captureOnCommitCallbacks(execute=True) as callbacks:
+            self.registration.maximum_attendee_capacity = 5
+            self.registration.save()
+        self.assertEqual(len(callbacks), 1)
+
+        response = self.client.get(self.registration_detail_url)
+        self.assertEqual(response.data["remaining_attendee_capacity"], 5)
+        self.assertEqual(response.data["remaining_waiting_list_capacity"], 5)
+
+    def test_update_registration_waiting_list_capacity(self):
+        with self.captureOnCommitCallbacks(execute=True) as callbacks:
+            self.registration.waiting_list_capacity = 4
+            self.registration.save(update_fields=["waiting_list_capacity"])
+        self.assertEqual(len(callbacks), 1)
+
+        response = self.client.get(self.registration_detail_url)
+        self.assertEqual(response.data["remaining_attendee_capacity"], 5)
+        self.assertEqual(response.data["remaining_waiting_list_capacity"], 4)
+
+        with self.captureOnCommitCallbacks(execute=True) as callbacks:
+            self.registration.waiting_list_capacity = 5
+            self.registration.save()
+        self.assertEqual(len(callbacks), 1)
+
+        response = self.client.get(self.registration_detail_url)
+        self.assertEqual(response.data["remaining_attendee_capacity"], 5)
+        self.assertEqual(response.data["remaining_waiting_list_capacity"], 5)
+
+    def test_update_registration_both_capacities(self):
+        with self.captureOnCommitCallbacks(execute=True) as callbacks:
+            self.registration.maximum_attendee_capacity = 4
+            self.registration.waiting_list_capacity = 3
+            self.registration.save(
+                update_fields=["maximum_attendee_capacity", "waiting_list_capacity"]
+            )
+        self.assertEqual(len(callbacks), 1)
+
+        response = self.client.get(self.registration_detail_url)
+        self.assertEqual(response.data["remaining_attendee_capacity"], 4)
+        self.assertEqual(response.data["remaining_waiting_list_capacity"], 3)
+
+        with self.captureOnCommitCallbacks(execute=True) as callbacks:
+            self.registration.maximum_attendee_capacity = 5
+            self.registration.waiting_list_capacity = 4
+            self.registration.save()
+        self.assertEqual(len(callbacks), 1)
+
+        response = self.client.get(self.registration_detail_url)
+        self.assertEqual(response.data["remaining_attendee_capacity"], 5)
+        self.assertEqual(response.data["remaining_waiting_list_capacity"], 4)
+
+    def test_update_non_capacity_field(self):
+        with self.captureOnCommitCallbacks(execute=True) as callbacks:
+            self.registration.audience_min_age = 18
+            self.registration.save(update_fields=["audience_min_age"])
+        self.assertEqual(len(callbacks), 0)
+
+        response = self.client.get(self.registration_detail_url)
+        self.assertEqual(response.data["remaining_attendee_capacity"], 5)
+        self.assertEqual(response.data["remaining_waiting_list_capacity"], 5)
+
+    def test_get_registration_remaining_attendee_capacity_is_none(self):
+        with self.captureOnCommitCallbacks(execute=True) as callbacks:
+            self.registration.maximum_attendee_capacity = None
+            self.registration.save(update_fields=["maximum_attendee_capacity"])
+        self.assertEqual(len(callbacks), 1)
+
+        response = self.client.get(self.registration_detail_url)
+        self.assertIsNone(response.data["remaining_attendee_capacity"])
+        self.assertEqual(response.data["remaining_waiting_list_capacity"], 5)
+
+    def test_get_registration_remaining_waiting_list_capacity_is_none(self):
+        with self.captureOnCommitCallbacks(execute=True) as callbacks:
+            self.registration.waiting_list_capacity = None
+            self.registration.save(update_fields=["waiting_list_capacity"])
+        self.assertEqual(len(callbacks), 1)
+
+        response = self.client.get(self.registration_detail_url)
+        self.assertEqual(response.data["remaining_attendee_capacity"], 5)
+        self.assertIsNone(response.data["remaining_waiting_list_capacity"])
+
+    def test_get_registration_with_attending_signup(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            signup = SignUpFactory(
+                registration=self.registration,
+                attendee_status=SignUp.AttendeeStatus.ATTENDING,
+            )
+
+        response = self.client.get(self.registration_detail_url)
+        self.assertEqual(response.data["remaining_attendee_capacity"], 4)
+        self.assertEqual(response.data["remaining_waiting_list_capacity"], 5)
+
+        # Release reserved attendee capacity.
+        with self.captureOnCommitCallbacks(execute=True):
+            signup._individually_deleted = True
+            signup.delete()
+
+        response = self.client.get(self.registration_detail_url)
+        self.assertEqual(response.data["remaining_attendee_capacity"], 5)
+        self.assertEqual(response.data["remaining_waiting_list_capacity"], 5)
+
+    def test_get_registration_with_waitlisted_signup(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            signup = SignUpFactory(
+                registration=self.registration,
+                attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
+            )
+
+        response = self.client.get(self.registration_detail_url)
+        self.assertEqual(response.data["remaining_attendee_capacity"], 5)
+        self.assertEqual(response.data["remaining_waiting_list_capacity"], 4)
+
+        # Release reserved waiting list capacity.
+        with self.captureOnCommitCallbacks(execute=True):
+            signup._individually_deleted = True
+            signup.delete()
+
+        response = self.client.get(self.registration_detail_url)
+        self.assertEqual(response.data["remaining_attendee_capacity"], 5)
+        self.assertEqual(response.data["remaining_waiting_list_capacity"], 5)
+
+    def test_get_registration_with_seat_reservations(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            SeatReservationCodeFactory(registration=self.registration, seats=3)
+
+        response = self.client.get(self.registration_detail_url)
+        self.assertEqual(response.data["remaining_attendee_capacity"], 2)
+        self.assertEqual(response.data["remaining_waiting_list_capacity"], 5)
+
+        with self.captureOnCommitCallbacks(execute=True):
+            seat_reservation2 = SeatReservationCodeFactory(
+                registration=self.registration, seats=3
+            )
+
+        response = self.client.get(self.registration_detail_url)
+        self.assertEqual(response.data["remaining_attendee_capacity"], 0)
+        self.assertEqual(response.data["remaining_waiting_list_capacity"], 4)
+
+        # Release the second reservation.
+        with self.captureOnCommitCallbacks(execute=True):
+            seat_reservation2.delete()
+
+        response = self.client.get(self.registration_detail_url)
+        self.assertEqual(response.data["remaining_attendee_capacity"], 2)
+        self.assertEqual(response.data["remaining_waiting_list_capacity"], 5)

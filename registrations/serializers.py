@@ -828,10 +828,14 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
         return obj.current_waiting_list_count
 
     def get_remaining_attendee_capacity(self, obj):
-        return obj.remaining_attendee_capacity
+        # Because there can be slight delay with capacity calculations in case of seat expiration,
+        # calculate the current value on the fly so that front-end gets the most recent information.
+        return obj.calculate_remaining_attendee_capacity()
 
     def get_remaining_waiting_list_capacity(self, obj):
-        return obj.remaining_waiting_list_capacity
+        # Because there can be slight delay with capacity calculations in case of seat expiration,
+        # calculate the current value on the fly so that front-end gets the most recent information.
+        return obj.calculate_remaining_waiting_list_capacity()
 
     def get_data_source(self, obj):
         return obj.data_source.id
