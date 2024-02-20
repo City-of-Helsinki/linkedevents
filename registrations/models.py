@@ -7,7 +7,7 @@ from django.conf import settings
 from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives, send_mail
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.db.models import DateTimeField, ExpressionWrapper, F, Sum, UniqueConstraint
@@ -36,6 +36,7 @@ from registrations.notifications import (
 )
 from registrations.utils import (
     code_validity_duration,
+    create_event_ics_file_content,
     get_email_noreply_address,
     get_ui_locales,
     strip_trailing_zeroes_from_decimal,
@@ -1120,7 +1121,22 @@ class SignUpContactPerson(SignUpOrGroupDependingMixin, SerializableMixin):
         )
         rendered_body = message[1]
 
-        send_mail(*message, html_message=rendered_body)
+        email = EmailMultiAlternatives(*message)
+        email.attach_alternative(rendered_body, "text/html")  # Optional HTML message
+
+        if notification_type in [
+            SignUpNotificationType.CONFIRMATION,
+            SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST,
+        ]:
+            try:
+                ics_attachment = create_event_ics_file_content(
+                    self.registration.event, self.get_service_language_pk()
+                )
+                email.attach(*ics_attachment, "text/calendar")
+            except ValueError as error:
+                logger.error(error)
+
+        email.send(fail_silently=False)
 
     def anonymize(self):
         self.email = anonymize_replacement
