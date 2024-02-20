@@ -8,6 +8,7 @@ from django.conf import settings
 from django.contrib.gis.gdal import CoordTransform, SpatialReference
 from django.contrib.gis.geos import Point
 from django.db import connections, DEFAULT_DB_ALIAS
+from django.test import TestCase
 from django.test.utils import CaptureQueriesContext
 from django.utils.timezone import localtime
 from freezegun import freeze_time
@@ -126,6 +127,24 @@ def get_detail_and_assert_events(
 
 
 # === tests ===
+
+
+class EventsListTestCaseMixin:
+    def _assert_events_in_response(self, events, response):
+        response_event_ids = [event["id"] for event in response.data["data"]]
+        expected_event_ids = [event.id for event in events]
+        self.assertTrue(Counter(response_event_ids) == Counter(expected_event_ids))
+
+    def _get_list_and_assert_events(self, query_string=None, events=None):
+        if query_string:
+            url = "%s?%s" % (self.list_url, query_string)
+        else:
+            url = self.list_url
+
+        response = self.client.get(url)
+        self._assert_events_in_response(events or [], response)
+
+
 @pytest.mark.django_db
 def test_get_event_list_html_renders(api_client, event):
     url = reverse("event-list", version="v1")
@@ -1720,3 +1739,76 @@ def test_sub_events_increase_query_count_sanely(
     EventFactory(super_event=sub_event_2)
 
     assert get_num_queries() == one_sub_sub_event_count
+
+
+class FilterEventsByRegistrationCapacitiesV1TestCase(TestCase, EventsListTestCaseMixin):
+    @classmethod
+    def setUpTestData(cls):
+        cls.list_url = reverse("event-list", version="v1")
+
+    def test_get_event_list_registration_remaining_attendee_capacity_gte(self):
+        registration = RegistrationFactory(remaining_attendee_capacity=10)
+        registration2 = RegistrationFactory(remaining_attendee_capacity=5)
+        registration3 = RegistrationFactory(remaining_attendee_capacity=1)
+
+        for capacity, events in [
+            (1, [registration.event, registration2.event, registration3.event]),
+            (5, [registration.event, registration2.event]),
+            (10, [registration.event]),
+            (11, []),
+        ]:
+            with self.subTest():
+                self._get_list_and_assert_events(
+                    f"registration__remaining_attendee_capacity__gte={capacity}", events
+                )
+
+    def test_get_event_list_registration_remaining_waiting_list_capacity_gte(self):
+        registration = RegistrationFactory(remaining_waiting_list_capacity=10)
+        registration2 = RegistrationFactory(remaining_waiting_list_capacity=5)
+        registration3 = RegistrationFactory(remaining_waiting_list_capacity=1)
+
+        for capacity, events in [
+            (1, [registration.event, registration2.event, registration3.event]),
+            (5, [registration.event, registration2.event]),
+            (10, [registration.event]),
+            (11, []),
+        ]:
+            with self.subTest():
+                self._get_list_and_assert_events(
+                    f"registration__remaining_waiting_list_capacity__gte={capacity}",
+                    events,
+                )
+
+    def test_get_event_list_registration_remaining_attendee_capacity_isnull(self):
+        registration = RegistrationFactory(remaining_attendee_capacity=10)
+        registration2 = RegistrationFactory(remaining_attendee_capacity=None)
+        registration3 = RegistrationFactory(remaining_attendee_capacity=1)
+
+        for capacity, events in [
+            (1, [registration2.event]),
+            (0, [registration.event, registration3.event]),
+            (True, [registration2.event]),
+            (False, [registration.event, registration3.event]),
+        ]:
+            with self.subTest():
+                self._get_list_and_assert_events(
+                    f"registration__remaining_attendee_capacity__isnull={capacity}",
+                    events,
+                )
+
+    def test_get_event_list_registration_remaining_waiting_list_capacity_isnull(self):
+        registration = RegistrationFactory(remaining_waiting_list_capacity=10)
+        registration2 = RegistrationFactory(remaining_waiting_list_capacity=None)
+        registration3 = RegistrationFactory(remaining_waiting_list_capacity=1)
+
+        for capacity, events in [
+            (1, [registration2.event]),
+            (0, [registration.event, registration3.event]),
+            (True, [registration2.event]),
+            (False, [registration.event, registration3.event]),
+        ]:
+            with self.subTest():
+                self._get_list_and_assert_events(
+                    f"registration__remaining_waiting_list_capacity__isnull={capacity}",
+                    events,
+                )
