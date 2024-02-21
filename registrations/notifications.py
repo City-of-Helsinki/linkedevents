@@ -35,6 +35,7 @@ class SignUpNotificationType:
     CONFIRMATION = "confirmation"
     CONFIRMATION_TO_WAITING_LIST = "confirmation_to_waiting_list"
     TRANSFERRED_AS_PARTICIPANT = "transferred_as_participant"
+    PAYMENT_EXPIRED = "payment_expired"
 
 
 signup_notification_subjects = {
@@ -48,6 +49,9 @@ signup_notification_subjects = {
     ),
     SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT: _(
         "Registration confirmation - %(event_name)s"
+    ),
+    SignUpNotificationType.PAYMENT_EXPIRED: _(
+        "Registration payment expired - %(event_name)s"
     ),
 }
 
@@ -210,6 +214,37 @@ signup_email_texts = {
             ),
             Event.TypeId.VOLUNTEERING: _(
                 "You have been moved from the waiting list of the volunteering <strong>%(event_name)s</strong> to a participant."  # noqa E501
+            ),
+        },
+    },
+    SignUpNotificationType.PAYMENT_EXPIRED: {
+        "heading": _("Registration payment expired"),
+        "secondary_heading": {
+            Event.TypeId.GENERAL: _(
+                "Registration to the event %(event_name)s has been cancelled due to an expired "
+                "payment."
+            ),
+            Event.TypeId.COURSE: _(
+                "Registration to the course %(event_name)s has been cancelled due to an expired "
+                "payment."
+            ),
+            Event.TypeId.VOLUNTEERING: _(
+                "Registration to the volunteering %(event_name)s has been cancelled due to an "
+                "expired payment."
+            ),
+        },
+        "text": {
+            Event.TypeId.GENERAL: _(
+                "Your registration to the event <strong>%(event_name)s</strong> has been "
+                "cancelled due no payment received within the payment period."
+            ),
+            Event.TypeId.COURSE: _(
+                "Your registration to the course <strong>%(event_name)s</strong> has been "
+                "cancelled due no payment received within the payment period."
+            ),
+            Event.TypeId.VOLUNTEERING: _(
+                "Your registration to the volunteering <strong>%(event_name)s</strong> has been "
+                "cancelled due no payment received within the payment period."
             ),
         },
     },
@@ -549,6 +584,12 @@ def _format_confirmation_to_waiting_list_texts(
         texts["secondary_text"] = text_options["secondary_text"][event_type_id]
 
 
+def _format_payment_expiration_texts(texts, text_options, event_type_id, event_name):
+    texts["secondary_heading"] = text_options["secondary_heading"][event_type_id] % {
+        "event_name": event_name
+    }
+
+
 def get_signup_notification_texts(
     contact_person,
     notification_type: SignUpNotificationType,
@@ -614,6 +655,8 @@ def get_signup_notification_texts(
         )
     elif notification_type == SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT:
         _format_confirmation_message_texts(texts, confirmation_message)
+    elif notification_type == SignUpNotificationType.PAYMENT_EXPIRED:
+        _format_payment_expiration_texts(texts, text_options, event_type_id, event_name)
 
     return texts
 

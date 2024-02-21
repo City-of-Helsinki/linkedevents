@@ -1,12 +1,18 @@
 from datetime import timedelta
 from unittest.mock import patch
+from uuid import UUID
 
 import pytest
 from django.utils import translation
 from django.utils.timezone import localtime
 
 from events.tests.factories import EventFactory, PlaceFactory
-from registrations.utils import create_event_ics_file_content
+from helevents.tests.factories import UserFactory
+from registrations.tests.factories import SignUpContactPersonFactory, SignUpFactory
+from registrations.utils import (
+    create_event_ics_file_content,
+    get_access_code_for_contact_person,
+)
 
 
 @pytest.mark.django_db
@@ -159,3 +165,34 @@ def test_create_ics_file_correct_fallback_language_used_if_event_name_is_none(
         create_event_ics_file_content(event, language=language)
 
         mocked_translation_override.assert_called_with(expected_fallback_language)
+
+
+@pytest.mark.parametrize(
+    "has_contact_person,has_user,expected_access_code_type",
+    [
+        (True, True, str),
+        (True, False, str),
+        (False, True, None),
+        (False, False, None),
+    ],
+)
+@pytest.mark.django_db
+def test_get_access_code_for_contact_person(
+    has_contact_person, has_user, expected_access_code_type
+):
+    contact_person = (
+        SignUpContactPersonFactory(
+            signup=SignUpFactory(),
+            email="test@test.com",
+        )
+        if has_contact_person
+        else None
+    )
+    user = UserFactory() if has_user else None
+
+    access_code = get_access_code_for_contact_person(contact_person, user)
+
+    if expected_access_code_type is str:
+        assert str(UUID(access_code)) == access_code
+    else:
+        assert access_code is None

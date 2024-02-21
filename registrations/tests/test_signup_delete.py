@@ -1,6 +1,5 @@
 from datetime import timedelta
 from unittest.mock import patch, PropertyMock
-from uuid import UUID
 
 import pytest
 from django.core import mail
@@ -1057,3 +1056,52 @@ def test_signup_price_group_deleted_with_signup(api_client, registration, user_r
     assert_delete_signup(api_client, signup.id, contact_person_count=0)
 
     assert SignUpPriceGroup.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_cannot_delete_soft_deleted_signup(api_client, registration):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    soft_deleted_signup = SignUpFactory(registration=registration)
+    SignUpContactPersonFactory(signup=soft_deleted_signup, email="test2@test.com")
+    soft_deleted_signup.soft_delete()
+
+    assert SignUp.all_objects.count() == 1
+
+    response = delete_signup(api_client, soft_deleted_signup.pk)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    assert SignUp.all_objects.count() == 1
+
+    assert len(mail.outbox) == 0
+
+
+@pytest.mark.django_db
+def test_soft_deleted_signup_is_not_moved_to_attending_from_waiting_list(
+    api_client, registration
+):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup = SignUpFactory(
+        registration=registration,
+        attendee_status=SignUp.AttendeeStatus.ATTENDING,
+    )
+    SignUpContactPersonFactory(signup=signup, email="test@test.com")
+
+    soft_deleted_signup = SignUpFactory(
+        registration=registration,
+        attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
+    )
+    SignUpContactPersonFactory(signup=soft_deleted_signup, email="test2@test.com")
+    soft_deleted_signup.soft_delete()
+
+    assert_delete_signup(api_client, signup.id, signup_count=1, contact_person_count=1)
+
+    soft_deleted_signup.refresh_from_db()
+    assert soft_deleted_signup.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
+
+    # The deleted signup will get a cancellation email, but the soft deleted one will not get any.
+    assert len(mail.outbox) == 1
+    assert mail.outbox[0].subject.startswith("Ilmoittautuminen peruttu")
