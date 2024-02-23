@@ -1260,7 +1260,11 @@ def test_group_send_email_with_payment_link_when_moving_participant_from_waitlis
     assert signup2.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
 
     assert_payment_link_email_sent(
-        contact_person2, SignUpPayment.objects.first(), expected_subject, expected_text
+        contact_person2,
+        SignUpPayment.objects.first(),
+        expected_mailbox_length=2,
+        expected_subject=expected_subject,
+        expected_text=expected_text,
     )
 
 
@@ -1359,7 +1363,11 @@ def test_group_send_email_with_payment_link_when_moving_participant_from_waitlis
     assert signup2.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
 
     assert_payment_link_email_sent(
-        contact_person2, SignUpPayment.objects.first(), expected_subject, expected_text
+        contact_person2,
+        SignUpPayment.objects.first(),
+        expected_mailbox_length=2,
+        expected_subject=expected_subject,
+        expected_text=expected_text,
     )
 
 

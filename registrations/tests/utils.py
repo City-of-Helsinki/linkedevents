@@ -77,10 +77,14 @@ def assert_invitation_email_is_sent(
 
 
 def assert_payment_link_email_sent(
-    contact_person, signup_payment, expected_subject, expected_text
+    contact_person,
+    signup_payment,
+    expected_mailbox_length=1,
+    expected_subject="",
+    expected_text="",
 ):
     # Email has been sent to the contact person.
-    assert len(mail.outbox) == 2  # second email = cancellation email
+    assert len(mail.outbox) == expected_mailbox_length
     email_html_body = str(mail.outbox[0].alternatives[0])
     assert mail.outbox[0].to[0] == contact_person.email
     assert mail.outbox[0].subject == expected_subject

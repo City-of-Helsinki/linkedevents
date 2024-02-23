@@ -66,6 +66,32 @@ def _get_protected_data(validated_data: dict, keys: list[str]) -> dict:
     return {key: validated_data.pop(key) for key in keys if key in validated_data}
 
 
+def _notify_contact_person(
+    contact_person, attendee_status, current_user=None, payment_link=None
+):
+    if not contact_person:
+        return
+
+    confirmation_type_mapping = {
+        SignUp.AttendeeStatus.ATTENDING: SignUpNotificationType.CONFIRMATION_WITH_PAYMENT
+        if payment_link
+        else SignUpNotificationType.CONFIRMATION,
+        SignUp.AttendeeStatus.WAITING_LIST: SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST,
+    }
+
+    access_code = (
+        contact_person.create_access_code()
+        if contact_person.can_create_access_code(current_user) and not payment_link
+        else None
+    )
+
+    contact_person.send_notification(
+        confirmation_type_mapping[attendee_status],
+        access_code=access_code,
+        payment_link=payment_link,
+    )
+
+
 def _validate_registration_enrolment_times(registration: Registration) -> None:
     enrolment_start_time = registration.enrolment_start_time
     enrolment_end_time = registration.enrolment_end_time
@@ -100,19 +126,6 @@ def _validate_signups_for_payment(
         errors[field_name] = _(
             "Participants must have a price group with price greater than 0 "
             "selected to make a payment."
-        )
-
-
-def _validate_attendee_status_for_payment(
-    registration: Registration, signups_count: int, errors: dict
-) -> None:
-    (
-        add_as_attending,
-        _add_as_waitlisted,
-    ) = _get_attending_and_waitlisted_capacities(registration, signups_count)
-    if add_as_attending < signups_count:
-        errors["create_payment"] = _(
-            "A payment can only be added for attending participants."
         )
 
 
@@ -283,7 +296,7 @@ class WebStorePaymentBaseSerializer(serializers.Serializer):
     @staticmethod
     def _create_payment(signup_or_group):
         try:
-            signup_or_group.create_web_store_payment()
+            return signup_or_group.create_web_store_payment()
         except WebStoreAPIError as exc:
             raise serializers.ValidationError(exc.messages)
 
@@ -357,6 +370,7 @@ class SignUpSerializer(SignUpBaseSerializer, WebStorePaymentBaseSerializer):
 
         signup = None
         contact_person = None
+        payment_link = None
 
         if not add_as_attending and add_as_waitlisted:
             validated_data["attendee_status"] = SignUp.AttendeeStatus.WAITING_LIST
@@ -370,23 +384,25 @@ class SignUpSerializer(SignUpBaseSerializer, WebStorePaymentBaseSerializer):
                 signup, **contact_person_data
             )
 
-        if create_payment and signup and not signup.signup_group_id:
-            self._create_payment(signup)
-
-        if contact_person and not create_payment:
-            access_code = (
-                contact_person.create_access_code()
-                if contact_person.can_create_access_code(self.context["request"].user)
-                else None
-            )
-            contact_person.send_notification(
-                SignUpNotificationType.CONFIRMATION
-                if add_as_attending
-                else SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST,
-                access_code=access_code,
-            )
+        if (
+            create_payment
+            and signup
+            and signup.attendee_status == SignUp.AttendeeStatus.ATTENDING
+            and not signup.signup_group_id
+        ):
+            # Payment can only be created here for an attending signup that is not part of a group.
+            # A group will have a single shared payment that is created in the group serializer.
+            payment = self._create_payment(signup)
+            payment_link = payment.logged_in_checkout_url or payment.checkout_url
 
         if signup:
+            _notify_contact_person(
+                contact_person,
+                signup.attendee_status,
+                current_user=self.context["request"].user,
+                payment_link=payment_link,
+            )
+
             return signup
 
         raise DRFPermissionDenied(_("The waiting list is already full"))
@@ -528,8 +544,6 @@ class SignUpSerializer(SignUpBaseSerializer, WebStorePaymentBaseSerializer):
                 _validate_contact_person_for_payment(
                     validated_data.get("contact_person"), errors
                 )
-
-                _validate_attendee_status_for_payment(registration, 1, errors)
 
         if errors:
             raise serializers.ValidationError(errors)
@@ -898,25 +912,6 @@ class CreateSignUpsSerializer(serializers.Serializer):
         data = super().validate(data)
         return data
 
-    @staticmethod
-    def _notify_contact_person(contact_person, attendee_status, user):
-        if not contact_person:
-            return
-
-        confirmation_type_mapping = {
-            SignUp.AttendeeStatus.ATTENDING: SignUpNotificationType.CONFIRMATION,
-            SignUp.AttendeeStatus.WAITING_LIST: SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST,
-        }
-
-        access_code = (
-            contact_person.create_access_code()
-            if contact_person.can_create_access_code(user)
-            else None
-        )
-        contact_person.send_notification(
-            confirmation_type_mapping[attendee_status], access_code=access_code
-        )
-
     def notify_contact_persons(self, signup_instances):
         user = self.context["request"].user
 
@@ -925,7 +920,9 @@ class CreateSignUpsSerializer(serializers.Serializer):
                 continue
 
             contact_person = getattr(signup, "contact_person", None)
-            self._notify_contact_person(contact_person, signup.attendee_status, user)
+            _notify_contact_person(
+                contact_person, signup.attendee_status, current_user=user
+            )
 
     def create_signups(self, validated_data):
         user = self.context["request"].user
@@ -1053,12 +1050,6 @@ class SignUpGroupCreateSerializer(
                 errors,
             )
 
-            _validate_attendee_status_for_payment(
-                validated_data["registration"],
-                len(validated_data["signups"]),
-                errors,
-            )
-
         if errors:
             raise serializers.ValidationError(errors)
 
@@ -1099,18 +1090,23 @@ class SignUpGroupCreateSerializer(
         self.create_signups(validated_data)
 
         contact_person = self._create_contact_person(instance, **contact_person_data)
+        payment = None
+        payment_link = None
 
-        if create_payment:
-            self._create_payment(instance)
+        if create_payment and instance.attending_signups:
+            payment = self._create_payment(instance)
+            payment_link = payment.logged_in_checkout_url or payment.checkout_url
 
-        if not (create_payment and instance.attending_signups):
-            self._notify_contact_person(
-                contact_person,
-                SignUp.AttendeeStatus.ATTENDING
-                if instance.attending_signups
-                else SignUp.AttendeeStatus.WAITING_LIST,
-                self.context["request"].user,
-            )
+        if payment or instance.attending_signups:
+            attendee_status = SignUp.AttendeeStatus.ATTENDING
+        else:
+            attendee_status = SignUp.AttendeeStatus.WAITING_LIST
+        _notify_contact_person(
+            contact_person,
+            attendee_status,
+            current_user=self.context["request"].user,
+            payment_link=payment_link,
+        )
 
         reservation.delete()
 
