@@ -53,7 +53,7 @@ class WebStoreAPIBaseClient:
         self,
         url: str,
         method: str,
-        params: Optional[dict] = None,
+        params: Optional[Union[dict, list]] = None,
         headers: Optional[dict] = None,
     ) -> dict[str, Any]:
         request_kwargs = self._get_request_kwargs(method, params, headers)

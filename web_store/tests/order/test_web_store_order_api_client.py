@@ -3,7 +3,7 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
-from django.conf import settings as django_settings
+from django.conf import settings
 from requests.exceptions import RequestException
 from rest_framework import status
 
@@ -13,25 +13,24 @@ from web_store.order.enums import WebStoreOrderStatus
 from web_store.tests.utils import get_mock_response
 
 DEFAULT_ORDER_ID = str(uuid4())
+DEFAULT_ITEM = {
+    "productId": "product_id",
+    "productName": "description",
+    "quantity": 1,
+    "unit": "pcs",
+    "rowPriceNet": "80.65",
+    "rowPriceVat": "19.35",
+    "rowPriceTotal": "100",
+    "priceNet": "80.65",
+    "priceGross": "100",
+    "priceVat": "19.35",
+    "vatPercentage": "24.00",
+}
 
 DEFAULT_CREATE_ORDER_DATA = {
-    "namespace": django_settings.WEB_STORE_API_NAMESPACE,
+    "namespace": settings.WEB_STORE_API_NAMESPACE,
     "user": "user_uuid",
-    "items": [
-        {
-            "productId": "product_id",
-            "productName": "description",
-            "quantity": 1,
-            "unit": "pcs",
-            "rowPriceNet": "80.65",
-            "rowPriceVat": "19.35",
-            "rowPriceTotal": "100",
-            "priceNet": "80.65",
-            "priceGross": "100",
-            "priceVat": "19.35",
-            "vatPercentage": "24.00",
-        }
-    ],
+    "items": [DEFAULT_ITEM.copy()],
     "priceNet": Decimal("0"),
     "priceVat": Decimal("0"),
     "priceTotal": Decimal("0"),
@@ -173,7 +172,7 @@ def test_cancel_order_success():
         mocked_request.return_value = mocked_response
         response_json = client.cancel_order(order_id=DEFAULT_ORDER_ID)
 
-    assert response_json == DEFAULT_CANCEL_ORDER_DATA
+        assert response_json == DEFAULT_CANCEL_ORDER_DATA
 
 
 @pytest.mark.parametrize(
