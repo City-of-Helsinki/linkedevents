@@ -16,7 +16,7 @@ from events.tests.factories import (
 from helevents.tests.factories import UserFactory
 from registrations.enums import VatPercentage
 from registrations.exceptions import PriceGroupValidationError
-from registrations.models import RegistrationPriceGroup, WebStoreMerchant
+from registrations.models import WebStoreMerchant
 from registrations.notifications import SignUpNotificationType
 from registrations.tests.factories import (
     RegistrationFactory,

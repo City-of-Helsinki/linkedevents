@@ -38,6 +38,9 @@ from registrations.tests.utils import (
     create_user_by_role,
     get_web_store_order_response,
 )
+from web_store.tests.payment.test_web_store_payment_api_client import (
+    DEFAULT_GET_REFUND_DATA,
+)
 from web_store.tests.utils import get_mock_response
 
 test_email1 = "test@test.com"
@@ -1533,3 +1536,225 @@ def test_group_email_with_payment_link_not_sent_when_moving_participant_if_conta
     assert len(mail.outbox) == 1
     assert mail.outbox[0].to[0] == contact_person.email
     assert mail.outbox[0].subject == "Registration cancelled - Foo"
+
+
+@pytest.mark.parametrize(
+    "service_lang,expected_subject,expected_text",
+    [
+        (
+            "en",
+            "Registration cancelled - Foo",
+            "You have successfully cancelled your registration to the event "
+            "<strong>Foo</strong>. Your payment for the registration has been refunded.",
+        ),
+        (
+            "fi",
+            "Ilmoittautuminen peruttu - Foo",
+            "Olet onnistuneesti peruuttanut ilmoittautumisesi tapahtumaan "
+            "<strong>Foo</strong>. Ilmoittautumismaksusi on hyvitetty.",
+        ),
+        (
+            "sv",
+            "Registreringen avbruten - Foo",
+            "Du har avbrutit din registrering till evenemanget "
+            "<strong>Foo</strong>. Din betalning för registreringen har återbetalats.",
+        ),
+    ],
+)
+@pytest.mark.django_db
+def test_signup_grop_web_store_automatically_fully_refund_paid_signup_payment(
+    api_client, service_lang, expected_subject, expected_text
+):
+    language = LanguageFactory(pk=service_lang, service_language=True)
+
+    with translation.override(language.pk):
+        price_group = SignUpPriceGroupFactory(signup__registration__event__name="Foo")
+
+    signup = price_group.signup
+
+    signup_group = SignUpGroupFactory(registration=signup.registration)
+    signup.signup_group = signup_group
+    signup.save(update_fields=["signup_group"])
+
+    SignUpContactPersonFactory(
+        signup_group=signup_group, email="test@test.com", service_language=language
+    )
+
+    SignUpPaymentFactory(
+        signup_group=signup_group,
+        signup=None,
+        external_order_id="1234",
+        status=SignUpPayment.PaymentStatus.PAID,
+    )
+
+    user = create_user_by_role("registration_admin", signup.publisher)
+    api_client.force_authenticate(user)
+
+    assert SignUpPayment.objects.count() == 1
+    assert SignUpPriceGroup.objects.count() == 1
+
+    json_return_value = DEFAULT_GET_REFUND_DATA.copy()
+    mocked_web_store_response = get_mock_response(
+        status_code=status.HTTP_200_OK, json_return_value=json_return_value
+    )
+    with translation.override(language.pk), patch(
+        "requests.get"
+    ) as mocked_web_store_request:
+        mocked_web_store_request.return_value = mocked_web_store_response
+
+        assert_delete_signup_group(api_client, signup_group.pk)
+        assert mocked_web_store_request.called is True
+
+    assert SignUpPayment.objects.count() == 0
+    assert SignUpPriceGroup.objects.count() == 0
+
+    assert len(mail.outbox) == 1
+    assert mail.outbox[0].subject == expected_subject
+    assert expected_text in str(mail.outbox[0].alternatives[0])
+
+
+@pytest.mark.django_db
+def test_signup_group_web_store_automatically_cancel_unpaid_created_signup_payment_on_delete(
+    api_client,
+):
+    language = LanguageFactory(pk="en", service_language=True)
+
+    price_group = SignUpPriceGroupFactory(signup__registration__event__name="Foo")
+
+    signup = price_group.signup
+
+    signup_group = SignUpGroupFactory(registration=signup.registration)
+    signup.signup_group = signup_group
+    signup.save(update_fields=["signup_group"])
+
+    SignUpContactPersonFactory(
+        signup_group=signup_group, email="test@test.com", service_language=language
+    )
+
+    SignUpPaymentFactory(
+        signup_group=signup_group,
+        signup=None,
+        external_order_id="1234",
+        status=SignUpPayment.PaymentStatus.CREATED,
+    )
+
+    user = create_user_by_role("registration_admin", signup.publisher)
+    api_client.force_authenticate(user)
+
+    assert SignUpPayment.objects.count() == 1
+    assert SignUpPriceGroup.objects.count() == 1
+
+    mocked_web_store_response = get_mock_response(status_code=status.HTTP_200_OK)
+    with patch("requests.post") as mocked_web_store_request:
+        mocked_web_store_request.return_value = mocked_web_store_response
+
+        assert_delete_signup_group(api_client, signup_group.pk)
+        assert mocked_web_store_request.called is True
+
+    assert SignUpPayment.objects.count() == 0
+    assert SignUpPriceGroup.objects.count() == 0
+
+    assert len(mail.outbox) == 1
+    assert mail.outbox[0].subject == "Registration cancelled - Foo"
+    assert (
+        "Your registration and payment for the event <strong>Foo</strong> have been cancelled."
+        in str(mail.outbox[0].alternatives[0])
+    )
+
+
+@pytest.mark.django_db
+def test_signup_group_web_store_automatically_fully_refund_payment_api_error(
+    api_client,
+):
+    price_group = SignUpPriceGroupFactory()
+    signup = price_group.signup
+
+    signup_group = SignUpGroupFactory(registration=signup.registration)
+
+    signup.signup_group = signup_group
+    signup.save(update_fields=["signup_group"])
+
+    SignUpPaymentFactory(
+        signup_group=signup_group,
+        signup=None,
+        external_order_id="1234",
+        status=SignUpPayment.PaymentStatus.PAID,
+    )
+
+    user = create_user_by_role("registration_admin", signup.publisher)
+    api_client.force_authenticate(user)
+
+    assert SignUpGroup.objects.count() == 1
+    assert SignUp.objects.count() == 1
+    assert SignUpPayment.objects.count() == 1
+    assert SignUpPriceGroup.objects.count() == 1
+
+    mocked_web_store_response = get_mock_response(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+    )
+    with patch("requests.get") as mocked_web_store_request:
+        mocked_web_store_request.return_value = mocked_web_store_response
+
+        response = delete_signup_group(api_client, signup_group.pk)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.data[0] == (
+            f"Unknown Talpa web store API error (status_code: "
+            f"{status.HTTP_500_INTERNAL_SERVER_ERROR})"
+        )
+        assert mocked_web_store_request.called is True
+
+    assert SignUpGroup.objects.count() == 1
+    assert SignUp.objects.count() == 1
+    assert SignUpPayment.objects.count() == 1
+    assert SignUpPriceGroup.objects.count() == 1
+
+    assert len(mail.outbox) == 0
+
+
+@pytest.mark.django_db
+def test_signup_group_web_store_automatically_cancel_unpaid_created_signup_payment_api_error(
+    api_client,
+):
+    price_group = SignUpPriceGroupFactory()
+    signup = price_group.signup
+
+    signup_group = SignUpGroupFactory(registration=signup.registration)
+
+    signup.signup_group = signup_group
+    signup.save(update_fields=["signup_group"])
+
+    SignUpPaymentFactory(
+        signup_group=signup_group,
+        signup=None,
+        external_order_id="1234",
+        status=SignUpPayment.PaymentStatus.CREATED,
+    )
+
+    user = create_user_by_role("registration_admin", signup.publisher)
+    api_client.force_authenticate(user)
+
+    assert SignUpGroup.objects.count() == 1
+    assert SignUp.objects.count() == 1
+    assert SignUpPayment.objects.count() == 1
+    assert SignUpPriceGroup.objects.count() == 1
+
+    mocked_web_store_response = get_mock_response(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+    )
+    with patch("requests.post") as mocked_web_store_request:
+        mocked_web_store_request.return_value = mocked_web_store_response
+
+        response = delete_signup_group(api_client, signup_group.pk)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.data[0] == (
+            f"Unknown Talpa web store API error (status_code: "
+            f"{status.HTTP_500_INTERNAL_SERVER_ERROR})"
+        )
+        assert mocked_web_store_request.called is True
+
+    assert SignUpGroup.objects.count() == 1
+    assert SignUp.objects.count() == 1
+    assert SignUpPayment.objects.count() == 1
+    assert SignUpPriceGroup.objects.count() == 1
+
+    assert len(mail.outbox) == 0

@@ -14,6 +14,7 @@ from requests import RequestException
 from registrations.exceptions import WebStoreAPIError
 from web_store.merchant.clients import WebStoreMerchantAPIClient
 from web_store.order.clients import WebStoreOrderAPIClient
+from web_store.payment.clients import WebStorePaymentAPIClient
 
 
 def code_validity_duration(seats):
@@ -150,19 +151,15 @@ def strip_trailing_zeroes_from_decimal(value: Decimal):
 
 
 def move_first_waitlisted_to_attending(signup_or_signup_group):
-    is_attending = getattr(signup_or_signup_group, "is_attending", False)
-    attending_signups = getattr(signup_or_signup_group, "attending_signups", None)
+    registration = signup_or_signup_group.registration
 
-    if is_attending or attending_signups:
-        registration = signup_or_signup_group.registration
-
-        if (
-            settings.WEB_STORE_INTEGRATION_ENABLED
-            and registration.registration_price_groups.exists()
-        ):
-            registration.move_first_waitlisted_to_attending_with_payment_link()
-        else:
-            registration.move_first_waitlisted_to_attending()
+    if (
+        settings.WEB_STORE_INTEGRATION_ENABLED
+        and registration.registration_price_groups.exists()
+    ):
+        registration.move_first_waitlisted_to_attending_with_payment_link()
+    else:
+        registration.move_first_waitlisted_to_attending()
 
 
 def get_access_code_for_contact_person(contact_person, user):
@@ -237,3 +234,27 @@ def create_or_update_web_store_merchant(merchant, created: bool):
     except RequestException as request_exc:
         api_error_message = get_web_store_api_error_message(request_exc.response)
         raise WebStoreAPIError(api_error_message)
+
+
+def create_web_store_refund(payment):
+    client = WebStorePaymentAPIClient()
+
+    try:
+        resp_json = client.create_instant_refund(payment.external_order_id)
+    except RequestException as request_exc:
+        api_error_message = get_web_store_api_error_message(request_exc.response)
+        raise WebStoreAPIError(api_error_message)
+
+    return resp_json
+
+
+def cancel_web_store_order(payment):
+    client = WebStoreOrderAPIClient()
+
+    try:
+        resp_json = client.cancel_order(payment.external_order_id)
+    except RequestException as request_exc:
+        api_error_message = get_web_store_api_error_message(request_exc.response)
+        raise WebStoreAPIError(api_error_message)
+
+    return resp_json
