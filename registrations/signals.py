@@ -1,5 +1,3 @@
-from typing import Union
-
 from django.db import transaction
 from django.db.models import Q
 from django.db.models.signals import post_delete, post_save, pre_save
@@ -14,10 +12,7 @@ from registrations.models import (
     SignUpGroup,
     SignUpNotificationType,
 )
-from registrations.utils import (
-    get_signup_create_url,
-    move_first_waitlisted_to_attending,
-)
+from registrations.utils import get_signup_create_url
 
 
 def _create_signup_link_for_event(registration: Registration) -> None:
@@ -84,18 +79,6 @@ def _send_event_cancellation_notification(event):
             SignUpNotificationType.EVENT_CANCELLATION,
             is_sub_event_cancellation=is_recurring_sub_event_cancellation,
         )
-
-
-def _signup_or_group_post_delete(instance: Union[SignUp, SignUpGroup]) -> None:
-    move_first_waitlisted_to_attending(instance)
-
-    contact_person = getattr(instance, "contact_person", None)
-    if contact_person:
-        contact_person.send_notification(SignUpNotificationType.CANCELLATION)
-
-    transaction.on_commit(
-        lambda: _recalculate_registration_capacities(instance.registration_id)
-    )
 
 
 @receiver(
@@ -165,7 +148,9 @@ def signup_group_post_save(
 )
 def signup_post_delete(sender: type[SignUp], instance: SignUp, **kwargs: dict) -> None:
     if getattr(instance, "_individually_deleted", False):
-        _signup_or_group_post_delete(instance)
+        transaction.on_commit(
+            lambda: _recalculate_registration_capacities(instance.registration_id)
+        )
 
 
 @receiver(
@@ -176,7 +161,9 @@ def signup_post_delete(sender: type[SignUp], instance: SignUp, **kwargs: dict) -
 def signup_group_post_delete(
     sender: type[SignUpGroup], instance: SignUpGroup, **kwargs: dict
 ) -> None:
-    _signup_or_group_post_delete(instance)
+    transaction.on_commit(
+        lambda: _recalculate_registration_capacities(instance.registration_id)
+    )
 
 
 @receiver(
