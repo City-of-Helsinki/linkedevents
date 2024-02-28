@@ -370,7 +370,7 @@ class SignUpSerializer(SignUpBaseSerializer, WebStorePaymentBaseSerializer):
 
         signup = None
         contact_person = None
-        payment_link = None
+        payment = None
 
         if not add_as_attending and add_as_waitlisted:
             validated_data["attendee_status"] = SignUp.AttendeeStatus.WAITING_LIST
@@ -393,14 +393,13 @@ class SignUpSerializer(SignUpBaseSerializer, WebStorePaymentBaseSerializer):
             # Payment can only be created here for an attending signup that is not part of a group.
             # A group will have a single shared payment that is created in the group serializer.
             payment = self._create_payment(signup)
-            payment_link = payment.logged_in_checkout_url or payment.checkout_url
 
         if signup:
             _notify_contact_person(
                 contact_person,
                 signup.attendee_status,
                 current_user=self.context["request"].user,
-                payment_link=payment_link,
+                payment_link=getattr(payment, "checkout_url", None),
             )
 
             return signup
@@ -1091,11 +1090,9 @@ class SignUpGroupCreateSerializer(
 
         contact_person = self._create_contact_person(instance, **contact_person_data)
         payment = None
-        payment_link = None
 
         if create_payment and instance.attending_signups:
             payment = self._create_payment(instance)
-            payment_link = payment.logged_in_checkout_url or payment.checkout_url
 
         if payment or instance.attending_signups:
             attendee_status = SignUp.AttendeeStatus.ATTENDING
@@ -1105,7 +1102,7 @@ class SignUpGroupCreateSerializer(
             contact_person,
             attendee_status,
             current_user=self.context["request"].user,
-            payment_link=payment_link,
+            payment_link=getattr(payment, "checkout_url", None),
         )
 
         reservation.delete()

@@ -460,7 +460,7 @@ class Registration(CreatedModifiedBaseModel):
             contact_person = first_on_list.actual_contact_person
             contact_person.send_notification(
                 SignUpNotificationType.TRANSFER_AS_PARTICIPANT_WITH_PAYMENT,
-                payment_link=payment.logged_in_checkout_url or payment.checkout_url,
+                payment_link=payment.checkout_url,
             )
 
     def move_first_waitlisted_to_attending(self, first_on_list=None):

@@ -91,8 +91,8 @@ def assert_payment_link_email_sent(
     assert expected_text in email_html_body
 
     # Payment link is in the email.
-    assert len(signup_payment.logged_in_checkout_url) > 1
-    assert signup_payment.logged_in_checkout_url in email_html_body
+    assert len(signup_payment.checkout_url) > 1
+    assert signup_payment.checkout_url in email_html_body
 
 
 def assert_attending_and_waitlisted_signups(
