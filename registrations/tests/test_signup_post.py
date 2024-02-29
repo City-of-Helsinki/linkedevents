@@ -266,7 +266,8 @@ def test_authenticated_user_can_create_signups_with_payments(api_client, user_ro
         SignUpPayment.objects.first(),
         expected_subject="Maksu vaaditaan ilmoittautumisen vahvistamiseksi - Foo",
         expected_text="Voit vahvistaa ilmoittautumisesi tapahtumaan <strong>Foo</strong> "
-        "oheisen maksulinkin avulla.",
+        "oheisen maksulinkin avulla. Maksulinkki vanhenee %(hours)s tunnin kuluttua."
+        % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
     )
 
 
@@ -360,7 +361,8 @@ def test_create_signup_payment_without_pricetotal_in_response(api_client):
         SignUpPayment.objects.first(),
         expected_subject="Maksu vaaditaan ilmoittautumisen vahvistamiseksi - Foo",
         expected_text="Voit vahvistaa ilmoittautumisesi tapahtumaan <strong>Foo</strong> "
-        "oheisen maksulinkin avulla.",
+        "oheisen maksulinkin avulla. Maksulinkki vanhenee %(hours)s tunnin kuluttua."
+        % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
     )
 
 

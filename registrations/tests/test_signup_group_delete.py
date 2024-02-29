@@ -3,6 +3,7 @@ from decimal import Decimal
 from unittest.mock import patch, PropertyMock
 
 import pytest
+from django.conf import settings
 from django.core import mail
 from django.utils import translation
 from django.utils.timezone import localtime
@@ -1179,21 +1180,24 @@ def test_soft_deleted_signup_group_is_not_moved_to_attending_from_waiting_list(
             "Payment required for registration confirmation - Foo",
             "You have been selected to be moved from the waiting list of the event "
             "<strong>Foo</strong> to a participant. Please use the "
-            "payment link to confirm your participation.",
+            "payment link to confirm your participation. The payment link expires in "
+            "%(hours)s hours." % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
         ),
         (
             "fi",
             "Maksu vaaditaan ilmoittautumisen vahvistamiseksi - Foo",
             "Sinut on valittu siirrettäväksi tapahtuman <strong>Foo</strong> "
             "jonotuslistalta osallistujaksi. Ole hyvä ja käytä oheista maksulinkkiä "
-            "vahvistaaksesi osallistumisesi.",
+            "vahvistaaksesi osallistumisesi. Maksulinkki vanhenee %(hours)s tunnin kuluttua."
+            % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
         ),
         (
             "sv",
             "Betalning krävs för bekräftelse av registreringen - Foo",
             "Du har blivit utvald att flyttats från väntelistan för evenemanget "
             "<strong>Foo</strong> till en deltagare. Använd betalningslänken "
-            "för att bekräfta ditt deltagande.",
+            "för att bekräfta ditt deltagande. Betalningslänken går ut efter %(hours)s timmar."
+            % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
         ),
     ],
 )
@@ -1276,21 +1280,25 @@ def test_group_send_email_with_payment_link_when_moving_participant_from_waitlis
             "Payment required for registration confirmation - Recurring: Foo",
             "You have been selected to be moved from the waiting list of the recurring event "
             "<strong>Foo 1 Feb 2024 - 29 Feb 2024</strong> to a participant. Please use the "
-            "payment link to confirm your participation.",
+            "payment link to confirm your participation. The payment link expires in "
+            "%(hours)s hours." % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
         ),
         (
             "fi",
             "Maksu vaaditaan ilmoittautumisen vahvistamiseksi - Sarja: Foo",
             "Sinut on valittu siirrettäväksi sarjatapahtuman "
             "<strong>Foo 1.2.2024 - 29.2.2024</strong> jonotuslistalta osallistujaksi. Ole hyvä "
-            "ja käytä oheista maksulinkkiä vahvistaaksesi osallistumisesi.",
+            "ja käytä oheista maksulinkkiä vahvistaaksesi osallistumisesi. Maksulinkki vanhenee "
+            "%(hours)s tunnin kuluttua."
+            % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
         ),
         (
             "sv",
             "Betalning krävs för bekräftelse av registreringen - Serie: Foo",
             "Du har blivit utvald att flyttats från väntelistan för serieevenemanget "
             "<strong>Foo 1.2.2024 - 29.2.2024</strong> till en deltagare. Använd betalningslänken "
-            "för att bekräfta ditt deltagande.",
+            "för att bekräfta ditt deltagande. Betalningslänken går ut efter %(hours)s timmar."
+            % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
         ),
     ],
 )

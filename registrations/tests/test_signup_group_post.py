@@ -297,7 +297,8 @@ def test_authenticated_user_can_create_signup_group_with_payment(api_client, use
         SignUpPayment.objects.first(),
         expected_subject="Payment required for registration confirmation - Foo",
         expected_text="Please use the payment link to confirm your registration for the event "
-        "<strong>Foo</strong>.",
+        "<strong>Foo</strong>. The payment link expires in %(hours)s hours."
+        % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
     )
 
 
@@ -392,7 +393,8 @@ def test_create_signup_group_payment_without_pricetotal_in_response(api_client):
         SignUpPayment.objects.first(),
         expected_subject="Payment required for registration confirmation - Foo",
         expected_text="Please use the payment link to confirm your registration for the event "
-        "<strong>Foo</strong>.",
+        "<strong>Foo</strong>. The payment link expires in %(hours)s hours."
+        % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
     )
 
 
@@ -679,7 +681,8 @@ def test_create_signup_group_payment_signup_is_waitlisted(
             SignUpPayment.objects.first(),
             expected_subject="Payment required for registration confirmation - Foo",
             expected_text="Please use the payment link to confirm your registration for the event "
-            "<strong>Foo</strong>.",
+            "<strong>Foo</strong>. The payment link expires in %(hours)s hours."
+            % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
         )
     else:
         assert len(mail.outbox) == 1

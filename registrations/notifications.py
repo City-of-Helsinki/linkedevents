@@ -181,15 +181,18 @@ signup_email_texts = {
         "text": {
             Event.TypeId.GENERAL: _(
                 "Please use the payment link to confirm your registration for the event "
-                "<strong>%(event_name)s</strong>."
+                "<strong>%(event_name)s</strong>. The payment link expires in "
+                "%(expiration_hours)s hours."
             ),
             Event.TypeId.COURSE: _(
                 "Please use the payment link to confirm your registration for the course "
-                "<strong>%(event_name)s</strong>."
+                "<strong>%(event_name)s</strong>. The payment link expires in "
+                "%(expiration_hours)s hours."
             ),
             Event.TypeId.VOLUNTEERING: _(
                 "Please use the payment link to confirm your registration for the volunteering "
-                "<strong>%(event_name)s</strong>."
+                "<strong>%(event_name)s</strong>. The payment link expires in "
+                "%(expiration_hours)s hours."
             ),
         },
         "group": {
@@ -284,17 +287,20 @@ signup_email_texts = {
             Event.TypeId.GENERAL: _(
                 "You have been selected to be moved from the waiting list of the event "
                 "<strong>%(event_name)s</strong> to a participant. Please use the "
-                "payment link to confirm your participation."
+                "payment link to confirm your participation. The payment link expires in "
+                "%(expiration_hours)s hours."
             ),
             Event.TypeId.COURSE: _(
                 "You have been selected to be moved from the waiting list of the course "
                 "<strong>%(event_name)s</strong> to a participant. Please use the "
-                "payment link to confirm your participation."
+                "payment link to confirm your participation. The payment link expires in "
+                "%(expiration_hours)s hours."
             ),
             Event.TypeId.VOLUNTEERING: _(
                 "You have been selected to be moved from the waiting list of the volunteering "
                 "<strong>%(event_name)s</strong> to a participant. Please use the "
-                "payment link to confirm your participation."
+                "payment link to confirm your participation. The payment link expires in "
+                "%(expiration_hours)s hours."
             ),
         },
     },
@@ -474,15 +480,18 @@ recurring_event_signup_email_texts = {
         "text": {
             Event.TypeId.GENERAL: _(
                 "Please use the payment link to confirm your registration for the recurring event "
-                "<strong>%(event_name)s %(event_period)s</strong>."
+                "<strong>%(event_name)s %(event_period)s</strong>. The payment link expires in "
+                "%(expiration_hours)s hours."
             ),
             Event.TypeId.COURSE: _(
                 "Please use the payment link to confirm your registration for the recurring course "
-                "<strong>%(event_name)s %(event_period)s</strong>."
+                "<strong>%(event_name)s %(event_period)s</strong>. The payment link expires in "
+                "%(expiration_hours)s hours."
             ),
             Event.TypeId.VOLUNTEERING: _(
                 "Please use the payment link to confirm your registration for the recurring "
-                "volunteering <strong>%(event_name)s %(event_period)s</strong>."
+                "volunteering <strong>%(event_name)s %(event_period)s</strong>. The payment link "
+                "expires in %(expiration_hours)s hours."
             ),
         },
         "group": {
@@ -567,17 +576,20 @@ recurring_event_signup_email_texts = {
             Event.TypeId.GENERAL: _(
                 "You have been selected to be moved from the waiting list of the recurring "
                 "event <strong>%(event_name)s %(event_period)s</strong> to a participant. "
-                "Please use the payment link to confirm your participation."
+                "Please use the payment link to confirm your participation. The payment link "
+                "expires in %(expiration_hours)s hours."
             ),
             Event.TypeId.COURSE: _(
                 "You have been selected to be moved from the waiting list of the recurring "
                 "course <strong>%(event_name)s %(event_period)s</strong> to a participant. "
-                "Please use the payment link to confirm your participation."
+                "Please use the payment link to confirm your participation. The payment link "
+                "expires in %(expiration_hours)s hours."
             ),
             Event.TypeId.VOLUNTEERING: _(
                 "You have been selected to be moved from the waiting list of the recurring "
                 "volunteering <strong>%(event_name)s %(event_period)s</strong> to a participant. "
-                "Please use the payment link to confirm your participation."
+                "Please use the payment link to confirm your participation. The payment link "
+                "expires in %(expiration_hours)s hours."
             ),
         },
     },
@@ -624,11 +636,17 @@ registration_user_access_invitation_texts = {
 }
 
 
-def _get_event_text_kwargs(event_name, event_period=None):
+def _get_event_text_kwargs(event_name, event_period=None, notification_type=None):
     kwargs = {"event_name": event_name}
 
     if event_period is not None:
         kwargs["event_period"] = event_period
+
+    if notification_type is not None and notification_type in (
+        SignUpNotificationType.CONFIRMATION_WITH_PAYMENT,
+        SignUpNotificationType.TRANSFER_AS_PARTICIPANT_WITH_PAYMENT,
+    ):
+        kwargs["expiration_hours"] = settings.WEB_STORE_ORDER_EXPIRATION_HOURS
 
     return kwargs
 
@@ -654,9 +672,16 @@ def _get_event_cancellation_texts(
 
 
 def _get_notification_texts(
-    text_options, event_type_id, event_name, event_period, contact_person
+    text_options,
+    event_type_id,
+    event_name,
+    event_period,
+    contact_person,
+    notification_type,
 ):
-    event_text_kwargs = _get_event_text_kwargs(event_name, event_period=event_period)
+    event_text_kwargs = _get_event_text_kwargs(
+        event_name, event_period=event_period, notification_type=notification_type
+    )
 
     if contact_person.first_name:
         texts = {
@@ -791,6 +816,7 @@ def get_signup_notification_texts(
             event_name,
             event_period,
             contact_person,
+            notification_type,
         )
 
     if notification_type == SignUpNotificationType.CANCELLATION:
