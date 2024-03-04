@@ -130,19 +130,18 @@ def test_anonymize_past_signups():
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    "enrolment_time_delta,event_time_delta,should_anonymize",
+    "enrolment_time_delta,event_time_delta",
     [
-        (0, -31, False),
-        (31, -31, False),
-        (-29, -31, False),
-        (-31, -31, True),
-        (-31, 0, False),
-        (-31, 31, False),
-        (-31, -29, False),
+        (0, -31),
+        (31, -31),
+        (-29, -31),
+        (-31, 0),
+        (-31, 31),
+        (-31, -29),
     ],
 )
-def test_anonymize_if_enrolment_end_time_and_end_time_are_over_30_days_in_past(
-    enrolment_time_delta, event_time_delta, should_anonymize
+def test_do_not_anonymize_if_enrolment_end_time_and_end_time_are_not_over_30_days_in_past(
+    enrolment_time_delta, event_time_delta
 ):
     event = EventFactory(end_time=localtime() + timedelta(days=event_time_delta))
     registration = RegistrationFactory(
@@ -160,14 +159,32 @@ def test_anonymize_if_enrolment_end_time_and_end_time_are_over_30_days_in_past(
     signup_group.refresh_from_db()
     signup_in_group.refresh_from_db()
     signup.refresh_from_db()
-    if should_anonymize:
-        assert signup_group.anonymization_time is not None
-        assert signup_in_group.anonymization_time is not None
-        assert signup.anonymization_time is not None
-    else:
-        assert signup_group.anonymization_time is None
-        assert signup_in_group.anonymization_time is None
-        assert signup.anonymization_time is None
+    assert signup_group.anonymization_time is None
+    assert signup_in_group.anonymization_time is None
+    assert signup.anonymization_time is None
+
+
+@pytest.mark.django_db
+def test_anonymize_if_enrolment_end_time_and_end_time_are_over_30_days_in_past():
+    event = EventFactory(end_time=localtime() - timedelta(days=31))
+    registration = RegistrationFactory(
+        event=event,
+        enrolment_end_time=localtime() - timedelta(days=31),
+    )
+    signup_group = SignUpGroupFactory(registration=registration)
+    signup_in_group = SignUpFactory(
+        registration=registration, signup_group=signup_group
+    )
+    signup = SignUpFactory(registration=registration)
+
+    call_command("anonymize_past_signups")
+
+    signup_group.refresh_from_db()
+    signup_in_group.refresh_from_db()
+    signup.refresh_from_db()
+    assert signup_group.anonymization_time is not None
+    assert signup_in_group.anonymization_time is not None
+    assert signup.anonymization_time is not None
 
 
 @freezegun.freeze_time("2024-02-16 16:45:00+02:00")

@@ -254,7 +254,7 @@ class TestSignUpGroup(TestCase):
         signup_group.anonymize()
 
         # Signup group should be anonymized
-        assert signup_group_protected_data.extra_info == anonymize_replacement
+        assert signup_group_protected_data.extra_info is None
         assert contact_person.email == anonymize_replacement
         assert contact_person.first_name == anonymize_replacement
         assert contact_person.last_name == anonymize_replacement
@@ -280,7 +280,7 @@ class TestSignUpGroup(TestCase):
             == signup_data["protected_data"]["date_of_birth"]
         )
         # Extra info is anonymized
-        assert signup_protected_data.extra_info == anonymize_replacement
+        assert signup_protected_data.extra_info is None
         assert signup.anonymization_time is not None
         assert signup.created_by is None
         assert signup.last_modified_by is None
@@ -536,7 +536,7 @@ class TestSignUp(TestCase):
             == signup_data["protected_data"]["date_of_birth"]
         )
         # Extra info is anonymized
-        assert protected_data.extra_info == anonymize_replacement
+        assert protected_data.extra_info is None
         assert signup.anonymization_time is not None
         assert signup.created_by is None
         assert signup.last_modified_by is None

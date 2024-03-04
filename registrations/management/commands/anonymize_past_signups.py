@@ -1,9 +1,9 @@
 from datetime import timedelta
-from django.db.models.functions import Greatest
 
 from django.conf import settings
 from django.core.management import BaseCommand
 from django.db import transaction
+from django.db.models.functions import Greatest
 from django.utils.timezone import localtime
 
 from registrations.models import SignUp, SignUpGroup
