@@ -148,7 +148,11 @@ class EventsListTestCaseMixin:
 @pytest.mark.django_db
 def test_get_event_list_html_renders(api_client, event):
     url = reverse("event-list", version="v1")
-    response = api_client.get(url, data=None, HTTP_ACCEPT="text/html")
+    response = api_client.get(
+        url,
+        data=None,
+        headers={"accept": "text/html"},
+    )
     assert response.status_code == status.HTTP_200_OK, str(response.content)
 
 

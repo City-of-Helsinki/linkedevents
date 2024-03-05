@@ -49,7 +49,7 @@ defusedxml==0.7.1
     #   social-auth-core
 deprecation==2.1.0
     # via django-helusers
-django==3.2.23
+django==4.2.11
     # via
     #   -r requirements.in
     #   django-admin-autocomplete-filter
@@ -243,7 +243,6 @@ python3-openid==3.2.0
 pytz==2023.3.post1
     # via
     #   -r requirements.in
-    #   django
     #   djangorestframework
     #   icalendar
 pyyaml==6.0.1

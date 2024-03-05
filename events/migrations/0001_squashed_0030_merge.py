@@ -231,7 +231,7 @@ class Migration(migrations.Migration):
                     "data_source",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        to="events.DataSource",
+                        to=settings.DJANGO_ORGHIERARCHY_DATASOURCE_MODEL,
                     ),
                 ),
             ],
@@ -583,7 +583,7 @@ class Migration(migrations.Migration):
                     "data_source",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        to="events.DataSource",
+                        to=settings.DJANGO_ORGHIERARCHY_DATASOURCE_MODEL,
                     ),
                 ),
                 (
@@ -804,7 +804,7 @@ class Migration(migrations.Migration):
                     "data_source",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        to="events.DataSource",
+                        to=settings.DJANGO_ORGHIERARCHY_DATASOURCE_MODEL,
                     ),
                 ),
                 (
@@ -886,7 +886,8 @@ class Migration(migrations.Migration):
             model_name="keyword",
             name="data_source",
             field=models.ForeignKey(
-                on_delete=django.db.models.deletion.CASCADE, to="events.DataSource"
+                on_delete=django.db.models.deletion.CASCADE,
+                to=settings.DJANGO_ORGHIERARCHY_DATASOURCE_MODEL,
             ),
         ),
         migrations.AddField(
@@ -1551,7 +1552,7 @@ class Migration(migrations.Migration):
                     "data_source",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        to="events.DataSource",
+                        to=settings.DJANGO_ORGHIERARCHY_DATASOURCE_MODEL,
                     ),
                 ),
                 (
@@ -2054,8 +2055,8 @@ class Migration(migrations.Migration):
             name="data_source",
             field=models.ForeignKey(
                 on_delete=django.db.models.deletion.CASCADE,
-                related_name="provided_event_data",
-                to="events.DataSource",
+                related_name="provided_%(class)s_data",
+                to=settings.DJANGO_ORGHIERARCHY_DATASOURCE_MODEL,
             ),
         ),
         migrations.AlterField(
@@ -2063,8 +2064,8 @@ class Migration(migrations.Migration):
             name="data_source",
             field=models.ForeignKey(
                 on_delete=django.db.models.deletion.CASCADE,
-                related_name="provided_keyword_data",
-                to="events.DataSource",
+                related_name="provided_%(class)s_data",
+                to=settings.DJANGO_ORGHIERARCHY_DATASOURCE_MODEL,
             ),
         ),
         migrations.AlterField(
@@ -2072,8 +2073,8 @@ class Migration(migrations.Migration):
             name="data_source",
             field=models.ForeignKey(
                 on_delete=django.db.models.deletion.CASCADE,
-                related_name="provided_keywordset_data",
-                to="events.DataSource",
+                related_name="provided_%(class)s_data",
+                to=settings.DJANGO_ORGHIERARCHY_DATASOURCE_MODEL,
             ),
         ),
         migrations.AlterField(
@@ -2082,7 +2083,7 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(
                 on_delete=django.db.models.deletion.CASCADE,
                 related_name="provided_organization_data",
-                to="events.DataSource",
+                to=settings.DJANGO_ORGHIERARCHY_DATASOURCE_MODEL,
             ),
         ),
         migrations.AlterField(
@@ -2090,8 +2091,8 @@ class Migration(migrations.Migration):
             name="data_source",
             field=models.ForeignKey(
                 on_delete=django.db.models.deletion.CASCADE,
-                related_name="provided_place_data",
-                to="events.DataSource",
+                related_name="provided_%(class)s_data",
+                to=settings.DJANGO_ORGHIERARCHY_DATASOURCE_MODEL,
             ),
         ),
         migrations.AddField(

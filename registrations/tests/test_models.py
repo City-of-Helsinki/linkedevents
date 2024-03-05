@@ -657,7 +657,7 @@ class TestSignUpContactPerson(TestCase):
 
         self.contact_person.email = "test2@test.com"
         self.contact_person.save(update_fields=["email"])
-        self.assertNotEquals(self.contact_person.email, self.user.email)
+        self.assertNotEqual(self.contact_person.email, self.user.email)
 
         self.assertTrue(self.contact_person.can_create_access_code(self.user))
 
@@ -799,15 +799,15 @@ class TestRegistrationPriceGroup(TestCase):
             RegistrationPriceGroup.VatPercentage.VAT_24
         )
 
-        self.assertEquals(self.registration_price_group.price_without_vat, Decimal("0"))
-        self.assertEquals(self.registration_price_group.vat, Decimal("0"))
+        self.assertEqual(self.registration_price_group.price_without_vat, Decimal("0"))
+        self.assertEqual(self.registration_price_group.vat, Decimal("0"))
 
         self.registration_price_group.calculate_vat_and_price_without_vat()
 
-        self.assertEquals(
+        self.assertEqual(
             self.registration_price_group.price_without_vat, Decimal("261.29")
         )
-        self.assertEquals(self.registration_price_group.vat, Decimal("62.71"))
+        self.assertEqual(self.registration_price_group.vat, Decimal("62.71"))
 
 
 class TestSignUpPriceGroup(TestCase):

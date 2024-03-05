@@ -89,7 +89,7 @@ class Migration(migrations.Migration):
                     "registration",
                     models.ForeignKey(
                         on_delete=deletion.PROTECT,
-                        related_name="signupprotecteddata",
+                        related_name="%(class)s",
                         to="registrations.registration",
                     ),
                 ),
@@ -136,7 +136,7 @@ class Migration(migrations.Migration):
                     "registration",
                     models.ForeignKey(
                         on_delete=deletion.PROTECT,
-                        related_name="signupgroupprotecteddata",
+                        related_name="%(class)s",
                         to="registrations.registration",
                     ),
                 ),
