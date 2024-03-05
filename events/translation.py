@@ -39,6 +39,13 @@ translator.register(Place, PlaceTranslationOptions)
 
 
 class EventTranslationOptions(TranslationOptions):
+    fallback_languages = {
+        "default": ("fi", "sv", "en"),
+        "fi": ("en", "sv"),
+        "sv": ("en", "fi"),
+        "en": ("fi", "sv"),
+    }
+
     fields = (
         "name",
         "description",
