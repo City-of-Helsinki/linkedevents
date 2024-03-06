@@ -653,7 +653,7 @@ class SignUpProtectedDataBaseModel(models.Model):
     )
 
     def anonymize(self):
-        self.extra_info = anonymize_replacement
+        self.extra_info = None
         self.save()
 
     class Meta:

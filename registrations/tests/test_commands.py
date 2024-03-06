@@ -128,6 +128,65 @@ def test_anonymize_past_signups():
     assert past_signup.anonymization_time is not None
 
 
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "enrolment_time_delta,event_time_delta",
+    [
+        (0, -31),
+        (31, -31),
+        (-29, -31),
+        (-31, 0),
+        (-31, 31),
+        (-31, -29),
+    ],
+)
+def test_do_not_anonymize_if_enrolment_end_time_and_end_time_are_not_over_30_days_in_past(
+    enrolment_time_delta, event_time_delta
+):
+    event = EventFactory(end_time=localtime() + timedelta(days=event_time_delta))
+    registration = RegistrationFactory(
+        event=event,
+        enrolment_end_time=localtime() + timedelta(days=enrolment_time_delta),
+    )
+    signup_group = SignUpGroupFactory(registration=registration)
+    signup_in_group = SignUpFactory(
+        registration=registration, signup_group=signup_group
+    )
+    signup = SignUpFactory(registration=registration)
+
+    call_command("anonymize_past_signups")
+
+    signup_group.refresh_from_db()
+    signup_in_group.refresh_from_db()
+    signup.refresh_from_db()
+    assert signup_group.anonymization_time is None
+    assert signup_in_group.anonymization_time is None
+    assert signup.anonymization_time is None
+
+
+@pytest.mark.django_db
+def test_anonymize_if_enrolment_end_time_and_end_time_are_over_30_days_in_past():
+    event = EventFactory(end_time=localtime() - timedelta(days=31))
+    registration = RegistrationFactory(
+        event=event,
+        enrolment_end_time=localtime() - timedelta(days=31),
+    )
+    signup_group = SignUpGroupFactory(registration=registration)
+    signup_in_group = SignUpFactory(
+        registration=registration, signup_group=signup_group
+    )
+    signup = SignUpFactory(registration=registration)
+
+    call_command("anonymize_past_signups")
+
+    signup_group.refresh_from_db()
+    signup_in_group.refresh_from_db()
+    signup.refresh_from_db()
+    assert signup_group.anonymization_time is not None
+    assert signup_in_group.anonymization_time is not None
+    assert signup.anonymization_time is not None
+
+
 @freezegun.freeze_time("2024-02-16 16:45:00+02:00")
 @pytest.mark.django_db(transaction=True)
 def test_delete_expired_seatreservations():

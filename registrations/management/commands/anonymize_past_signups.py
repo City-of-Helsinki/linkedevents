@@ -3,6 +3,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.core.management import BaseCommand
 from django.db import transaction
+from django.db.models.functions import Greatest
 from django.utils.timezone import localtime
 
 from registrations.models import SignUp, SignUpGroup
@@ -15,6 +16,14 @@ class Command(BaseCommand):
         "days in the ANONYMIZATION_THRESHOLD_DAYS environment variable."
     )
 
+    def _build_compare_time_annotation(self):
+        return {
+            "compare_time": Greatest(
+                "registration__event__end_time",
+                "registration__enrolment_end_time",
+            ),
+        }
+
     def handle(self, *args, **options):
         threshold_time = localtime() - timedelta(
             days=settings.ANONYMIZATION_THRESHOLD_DAYS
@@ -26,9 +35,10 @@ class Command(BaseCommand):
         )
         signup_groups = (
             SignUpGroup.objects.prefetch_related("signups")
+            .annotate(**self._build_compare_time_annotation())
             .select_for_update()
             .filter(
-                registration__event__end_time__lt=threshold_time,
+                compare_time__lt=threshold_time,
                 anonymization_time__isnull=True,
             )
         )
@@ -40,9 +50,13 @@ class Command(BaseCommand):
 
         # Anonymize all signups without a group
         self.stdout.write("Start anonymizing past signups")
-        signups = SignUp.objects.select_for_update().filter(
-            registration__event__end_time__lt=threshold_time,
-            anonymization_time__isnull=True,
+        signups = (
+            SignUp.objects.annotate(**self._build_compare_time_annotation())
+            .select_for_update()
+            .filter(
+                compare_time__lt=threshold_time,
+                anonymization_time__isnull=True,
+            )
         )
 
         with transaction.atomic():
