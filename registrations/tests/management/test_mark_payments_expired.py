@@ -2,6 +2,7 @@ from datetime import timedelta
 from unittest.mock import patch
 
 import pytest
+from django.conf import settings
 from django.core import mail
 from django.core.management import call_command
 from django.utils import translation
@@ -14,10 +15,14 @@ from registrations.models import SignUp, SignUpPayment
 from registrations.tests.factories import (
     RegistrationFactory,
     SignUpContactPersonFactory,
+    SignUpFactory,
     SignUpGroupFactory,
     SignUpPaymentFactory,
+    SignUpPriceGroupFactory,
 )
+from registrations.tests.utils import assert_payment_link_email_sent
 from web_store.payment.enums import WebStorePaymentStatus
+from web_store.tests.order.test_web_store_order_api_client import DEFAULT_GET_ORDER_DATA
 from web_store.tests.payment.test_web_store_payment_api_client import (
     DEFAULT_GET_PAYMENT_DATA,
 )
@@ -263,6 +268,84 @@ def test_payment_expired_event_type(
 
 
 @pytest.mark.django_db
+def test_mark_payments_expired_signup_moved_to_waitlisted_with_payment_link():
+    now = localtime()
+    fourteen_days_ago = now - timedelta(days=14)
+
+    registration = RegistrationFactory(event__name=_EVENT_NAME)
+    service_language = LanguageFactory(pk="en", service_language=True)
+
+    payment = SignUpPaymentFactory(
+        signup__registration=registration,
+        status=SignUpPayment.PaymentStatus.CREATED,
+        expires_at=fourteen_days_ago,
+        external_order_id="4321",
+    )
+
+    contact_person = SignUpContactPersonFactory(
+        signup=payment.signup,
+        email=_CONTACT_PERSON_EMAIL,
+        service_language=service_language,
+    )
+
+    waitlisted_signup = SignUpFactory(
+        registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
+    )
+    contact_person2 = SignUpContactPersonFactory(
+        signup=waitlisted_signup,
+        first_name="Test",
+        last_name="Test",
+        email=_CONTACT_PERSON2_EMAIL,
+        service_language=service_language,
+    )
+    SignUpPriceGroupFactory(signup=waitlisted_signup)
+
+    assert SignUpPayment.objects.count() == 1
+    assert SignUp.objects.count() == 2
+
+    mocked_get_payment_api_response = get_mock_response(
+        status_code=status.HTTP_404_NOT_FOUND
+    )
+    mocked_create_order_api_response = get_mock_response(
+        status_code=status.HTTP_201_CREATED, json_return_value=DEFAULT_GET_ORDER_DATA
+    )
+
+    with (
+        patch("requests.get") as mocked_get_payment_request,
+        patch("requests.post") as mocked_create_payment_request,
+    ):
+        mocked_get_payment_request.return_value = mocked_get_payment_api_response
+        mocked_create_payment_request.return_value = mocked_create_order_api_response
+
+        call_command("mark_payments_expired")
+
+    assert mocked_get_payment_request.called is True
+    assert mocked_create_payment_request.called is True
+
+    assert SignUpPayment.objects.count() == 1
+    assert SignUp.objects.count() == 1
+
+    waitlisted_signup.refresh_from_db()
+    assert waitlisted_signup.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
+
+    new_payment = SignUpPayment.objects.first()
+    assert new_payment.signup_id == waitlisted_signup.pk
+
+    assert_payment_link_email_sent(
+        contact_person2,
+        new_payment,
+        expected_mailbox_length=2,
+        expected_subject=f"Payment required for registration confirmation - {_EVENT_NAME}",
+        expected_text="You have been selected to be moved from the waiting list of the event "
+        "<strong>Foo</strong> to a participant. Please use the "
+        "payment link to confirm your participation. The payment link expires in "
+        "%(hours)s hours" % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
+    )
+    assert mail.outbox[1].to[0] == contact_person.email
+    assert mail.outbox[1].subject == f"Registration payment expired - {_EVENT_NAME}"
+
+
+@pytest.mark.django_db
 def test_payment_expired_order_cancellation_api_exception():
     now = localtime()
     fourteen_days_ago = now - timedelta(days=14)
@@ -348,6 +431,86 @@ def test_mark_payments_expired_payment_cancelled():
     assert SignUp.objects.count() == 0
 
     _assert_email_sent(contact_person.email, f"Registration cancelled - {_EVENT_NAME}")
+
+
+@pytest.mark.django_db
+def test_mark_payments_expired_payment_cancelled_signup_moved_to_waitlisted_with_payment_link():
+    now = localtime()
+    fourteen_days_ago = now - timedelta(days=14)
+
+    registration = RegistrationFactory(event__name=_EVENT_NAME)
+    service_language = LanguageFactory(pk="en", service_language=True)
+
+    payment = SignUpPaymentFactory(
+        signup__registration=registration,
+        status=SignUpPayment.PaymentStatus.CREATED,
+        expires_at=fourteen_days_ago,
+        external_order_id="4321",
+    )
+
+    contact_person = SignUpContactPersonFactory(
+        signup=payment.signup,
+        email=_CONTACT_PERSON_EMAIL,
+        service_language=service_language,
+    )
+
+    waitlisted_signup = SignUpFactory(
+        registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
+    )
+    contact_person2 = SignUpContactPersonFactory(
+        signup=waitlisted_signup,
+        first_name="Test",
+        last_name="Test",
+        email=_CONTACT_PERSON2_EMAIL,
+        service_language=service_language,
+    )
+    SignUpPriceGroupFactory(signup=waitlisted_signup)
+
+    assert SignUpPayment.objects.count() == 1
+    assert SignUp.objects.count() == 2
+
+    api_payment_data = DEFAULT_GET_PAYMENT_DATA.copy()
+    api_payment_data["status"] = WebStorePaymentStatus.CANCELLED.value
+    mocked_get_payment_api_response = get_mock_response(
+        status_code=status.HTTP_200_OK, json_return_value=api_payment_data
+    )
+    mocked_create_order_api_response = get_mock_response(
+        status_code=status.HTTP_201_CREATED, json_return_value=DEFAULT_GET_ORDER_DATA
+    )
+
+    with (
+        patch("requests.get") as mocked_get_payment_request,
+        patch("requests.post") as mocked_create_payment_request,
+    ):
+        mocked_get_payment_request.return_value = mocked_get_payment_api_response
+        mocked_create_payment_request.return_value = mocked_create_order_api_response
+
+        call_command("mark_payments_expired")
+
+    assert mocked_get_payment_request.called is True
+    assert mocked_create_payment_request.called is True
+
+    assert SignUpPayment.objects.count() == 1
+    assert SignUp.objects.count() == 1
+
+    waitlisted_signup.refresh_from_db()
+    assert waitlisted_signup.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
+
+    new_payment = SignUpPayment.objects.first()
+    assert new_payment.signup_id == waitlisted_signup.pk
+
+    assert_payment_link_email_sent(
+        contact_person2,
+        new_payment,
+        expected_mailbox_length=2,
+        expected_subject=f"Payment required for registration confirmation - {_EVENT_NAME}",
+        expected_text="You have been selected to be moved from the waiting list of the event "
+        "<strong>Foo</strong> to a participant. Please use the "
+        "payment link to confirm your participation. The payment link expires in "
+        "%(hours)s hours" % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
+    )
+    assert mail.outbox[1].to[0] == contact_person.email
+    assert mail.outbox[1].subject == f"Registration cancelled - {_EVENT_NAME}"
 
 
 @pytest.mark.parametrize("has_contact_person", [True, False])
