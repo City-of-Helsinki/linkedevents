@@ -10,6 +10,7 @@ from events.models import Event
 from events.tests.factories import OfferFactory
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
+from registrations.enums import VatPercentage
 from registrations.models import (
     PriceGroup,
     RegistrationPriceGroup,
@@ -620,12 +621,12 @@ def test_update_price_groups_to_registration(api_client, event, user):
             {
                 "price_group": default_price_group.pk,
                 "price": Decimal("10"),
-                "vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_24,
+                "vat_percentage": VatPercentage.VAT_24.value,
             },
             {
                 "price_group": custom_price_group.pk,
                 "price": Decimal("15.55"),
-                "vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_14,
+                "vat_percentage": VatPercentage.VAT_14.value,
             },
         ],
     }
@@ -675,7 +676,7 @@ def test_update_existing_registration_price_group(api_client, event, user):
         registration=registration,
         price_group=default_price_group,
         price=Decimal("10"),
-        vat_percentage=RegistrationPriceGroup.VatPercentage.VAT_24,
+        vat_percentage=VatPercentage.VAT_24.value,
         price_without_vat=Decimal("8.06"),
         vat=Decimal("1.94"),
     )
@@ -689,7 +690,7 @@ def test_update_existing_registration_price_group(api_client, event, user):
                 "id": registration_price_group.pk,
                 "price_group": custom_price_group.pk,
                 "price": Decimal("5"),
-                "vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_0,
+                "vat_percentage": VatPercentage.VAT_0.value,
             },
         ],
     }
@@ -731,7 +732,7 @@ def test_update_registration_price_groups_excluded_is_deleted(api_client, event,
         registration=registration,
         price_group=default_price_group,
         price=Decimal("10"),
-        vat_percentage=RegistrationPriceGroup.VatPercentage.VAT_24,
+        vat_percentage=VatPercentage.VAT_24.value,
         price_without_vat=Decimal("8.06"),
         vat=Decimal("1.94"),
     )
@@ -744,7 +745,7 @@ def test_update_registration_price_groups_excluded_is_deleted(api_client, event,
             {
                 "price_group": custom_price_group.pk,
                 "price": Decimal("5"),
-                "vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_0,
+                "vat_percentage": VatPercentage.VAT_0.value,
             },
         ],
     }
@@ -799,12 +800,12 @@ def test_cannot_update_registration_with_duplicate_price_groups(
                 "id": registration_price_group.pk,
                 "price_group": default_price_group.pk,
                 "price": Decimal("5"),
-                "vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_0,
+                "vat_percentage": VatPercentage.VAT_0.value,
             },
             {
                 "price_group": default_price_group.pk,
                 "price": Decimal("5"),
-                "vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_0,
+                "vat_percentage": VatPercentage.VAT_0.value,
             },
         ],
     }

@@ -9,6 +9,7 @@ from rest_framework import status
 from audit_log.models import AuditLogEntry
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
+from registrations.enums import VatPercentage
 from registrations.models import (
     RegistrationPriceGroup,
     SignUp,
@@ -835,7 +836,7 @@ def test_can_update_signup_groups_price_group(api_client, registration, user_rol
         registration=signup.registration,
         price_group__publisher=signup.publisher,
         price=Decimal("1.23"),
-        vat_percentage=RegistrationPriceGroup.VatPercentage.VAT_10,
+        vat_percentage=VatPercentage.VAT_10.value,
         vat=Decimal("0.11"),
         price_without_vat=Decimal("1.12"),
     )
@@ -917,7 +918,7 @@ def test_cannot_update_signup_group_without_selecting_price_group_if_registratio
         registration=registration,
         price_group__publisher=registration.publisher,
         price=Decimal("1.23"),
-        vat_percentage=RegistrationPriceGroup.VatPercentage.VAT_10,
+        vat_percentage=VatPercentage.VAT_10.value,
         vat=Decimal("0.11"),
         price_without_vat=Decimal("1.12"),
     )
@@ -964,7 +965,7 @@ def test_cannot_update_signup_price_group_with_wrong_signup_groups_registration(
         registration=registration2,
         price_group__publisher=registration2.publisher,
         price=Decimal("1.23"),
-        vat_percentage=RegistrationPriceGroup.VatPercentage.VAT_10,
+        vat_percentage=VatPercentage.VAT_10.value,
         vat=Decimal("0.11"),
         price_without_vat=Decimal("1.12"),
     )
@@ -1025,7 +1026,7 @@ def test_cannot_update_signup_group_with_another_signups_price_group(
         registration=registration,
         price_group__publisher=registration.publisher,
         price=Decimal("1.23"),
-        vat_percentage=RegistrationPriceGroup.VatPercentage.VAT_10,
+        vat_percentage=VatPercentage.VAT_10.value,
         vat=Decimal("0.11"),
         price_without_vat=Decimal("1.12"),
     )

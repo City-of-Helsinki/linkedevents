@@ -1,5 +1,6 @@
 from copy import deepcopy
 from datetime import datetime, timedelta
+from decimal import Decimal
 
 import pytest
 import pytz
@@ -7,15 +8,19 @@ from dateutil.parser import parse as dateutil_parse
 from django.conf import settings
 from django.core.management import call_command
 from django.utils import timezone
+from rest_framework import status
 
 from audit_log.models import AuditLogEntry
 from events.auth import ApiKeyUser
-from events.models import Event, Image, Keyword, Place
+from events.models import Event, Image, Keyword, Offer, Place
 from events.tests.test_event_post import create_with_post
 from events.tests.utils import assert_event_data_is_equal
+from registrations.enums import VatPercentage
+from registrations.models import OfferPriceGroup, PriceGroup
+from registrations.tests.factories import OfferPriceGroupFactory, PriceGroupFactory
 
 from ..api import ImageSerializer
-from .factories import KeywordFactory
+from .factories import KeywordFactory, OfferFactory
 from .utils import versioned_reverse as reverse
 
 # === util methods ===
@@ -1055,3 +1060,247 @@ def test_event_id_is_audit_logged_on_put(user_api_client, minimal_event_dict):
     assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
         response.data["id"]
     ]
+
+
+@pytest.mark.django_db
+def test_update_price_groups_to_event_offer(user_api_client, event, minimal_event_dict):
+    OfferFactory(event=event)
+
+    default_price_group = PriceGroup.objects.filter(publisher=None).first()
+    custom_price_group = PriceGroupFactory(publisher=event.publisher)
+
+    assert OfferPriceGroup.objects.count() == 0
+    assert Offer.objects.count() == 1
+
+    minimal_event_dict["offers"] = [
+        {
+            "is_free": False,
+            "price": {"fi": "10 - 15.55 €"},
+            "offer_price_groups": [
+                {
+                    "price_group": default_price_group.pk,
+                    "price": Decimal("10"),
+                    "vat_percentage": VatPercentage.VAT_24.value,
+                },
+                {
+                    "price_group": custom_price_group.pk,
+                    "price": Decimal("15.55"),
+                    "vat_percentage": VatPercentage.VAT_14.value,
+                },
+            ],
+        }
+    ]
+    response = user_api_client.put(
+        reverse("event-detail", kwargs={"pk": event.id}),
+        minimal_event_dict,
+        format="json",
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.data["offers"][0]["offer_price_groups"]) == 2
+
+    assert OfferPriceGroup.objects.count() == 2
+    assert Offer.objects.count() == 1
+
+    offer = Offer.objects.filter(event=event).first()
+    assert (
+        OfferPriceGroup.objects.filter(
+            offer=offer,
+            price_group=default_price_group.pk,
+            price=minimal_event_dict["offers"][0]["offer_price_groups"][0]["price"],
+            vat_percentage=minimal_event_dict["offers"][0]["offer_price_groups"][0][
+                "vat_percentage"
+            ],
+            price_without_vat=Decimal("8.06"),
+            vat=Decimal("1.94"),
+        ).count()
+        == 1
+    )
+    assert (
+        OfferPriceGroup.objects.filter(
+            offer=offer,
+            price_group=custom_price_group,
+            price=minimal_event_dict["offers"][0]["offer_price_groups"][1]["price"],
+            vat_percentage=minimal_event_dict["offers"][0]["offer_price_groups"][1][
+                "vat_percentage"
+            ],
+            price_without_vat=Decimal("13.64"),
+            vat=Decimal("1.91"),
+        ).count()
+        == 1
+    )
+
+
+@pytest.mark.django_db
+def test_update_existing_event_offer_price_group(
+    user_api_client, event, minimal_event_dict
+):
+    default_price_group = PriceGroup.objects.filter(publisher=None).first()
+    custom_price_group = PriceGroupFactory(publisher=event.publisher)
+
+    offer = OfferFactory(event=event)
+    offer_price_group = OfferPriceGroupFactory(
+        offer=offer,
+        price_group=default_price_group,
+        price=Decimal("10"),
+        vat_percentage=VatPercentage.VAT_24.value,
+        price_without_vat=Decimal("8.06"),
+        vat=Decimal("1.94"),
+    )
+
+    assert OfferPriceGroup.objects.count() == 1
+    assert Offer.objects.count() == 1
+
+    minimal_event_dict["offers"] = [
+        {
+            "is_free": False,
+            "price": {"fi": "10 - 15.55 €"},
+            "offer_price_groups": [
+                {
+                    "id": offer_price_group.pk,
+                    "price_group": custom_price_group.pk,
+                    "price": Decimal("5"),
+                    "vat_percentage": VatPercentage.VAT_0.value,
+                },
+            ],
+        }
+    ]
+    response = user_api_client.put(
+        reverse("event-detail", kwargs={"pk": event.id}),
+        minimal_event_dict,
+        format="json",
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.data["offers"][0]["offer_price_groups"]) == 1
+    assert (
+        response.data["offers"][0]["offer_price_groups"][0]["id"]
+        == offer_price_group.pk
+    )
+
+    assert OfferPriceGroup.objects.count() == 1
+    assert Offer.objects.count() == 1
+
+    offer = Offer.objects.filter(event=event).first()
+    assert (
+        OfferPriceGroup.objects.filter(
+            offer=offer,
+            price_group=custom_price_group,
+            price=minimal_event_dict["offers"][0]["offer_price_groups"][0]["price"],
+            vat_percentage=minimal_event_dict["offers"][0]["offer_price_groups"][0][
+                "vat_percentage"
+            ],
+            price_without_vat=Decimal("5"),
+            vat=Decimal("0"),
+        ).count()
+        == 1
+    )
+
+
+@pytest.mark.django_db
+def test_update_event_offer_price_groups_excluded_is_deleted(
+    user_api_client, event, minimal_event_dict
+):
+    default_price_group = PriceGroup.objects.filter(publisher=None).first()
+    custom_price_group = PriceGroupFactory(publisher=event.publisher)
+
+    offer = OfferFactory(event=event)
+    offer_price_group = OfferPriceGroupFactory(
+        offer=offer,
+        price_group=default_price_group,
+        price=Decimal("10"),
+        vat_percentage=VatPercentage.VAT_24.value,
+        price_without_vat=Decimal("8.06"),
+        vat=Decimal("1.94"),
+    )
+
+    assert OfferPriceGroup.objects.count() == 1
+    assert Offer.objects.count() == 1
+
+    minimal_event_dict["offers"] = [
+        {
+            "is_free": False,
+            "price": {"fi": "10 - 15.55 €"},
+            "offer_price_groups": [
+                {
+                    "price_group": custom_price_group.pk,
+                    "price": Decimal("5"),
+                    "vat_percentage": VatPercentage.VAT_0.value,
+                },
+            ],
+        }
+    ]
+    response = user_api_client.put(
+        reverse("event-detail", kwargs={"pk": event.id}),
+        minimal_event_dict,
+        format="json",
+    )
+    assert len(response.data["offers"][0]["offer_price_groups"]) == 1
+    assert (
+        response.data["offers"][0]["offer_price_groups"][0]["id"]
+        != offer_price_group.pk
+    )
+
+    assert OfferPriceGroup.objects.count() == 1
+    assert Offer.objects.count() == 1
+
+    offer = Offer.objects.filter(event=event).first()
+    assert (
+        OfferPriceGroup.objects.filter(
+            offer=offer,
+            price_group=custom_price_group,
+            price=minimal_event_dict["offers"][0]["offer_price_groups"][0]["price"],
+            vat_percentage=minimal_event_dict["offers"][0]["offer_price_groups"][0][
+                "vat_percentage"
+            ],
+            price_without_vat=Decimal("5"),
+            vat=Decimal("0"),
+        ).count()
+        == 1
+    )
+
+
+@pytest.mark.django_db
+def test_cannot_update_event_offer_with_duplicate_price_groups(
+    user_api_client, event, minimal_event_dict
+):
+    default_price_group = PriceGroup.objects.filter(
+        publisher=None, is_free=False
+    ).first()
+
+    offer = OfferFactory(event=event)
+    registration_price_group = OfferPriceGroupFactory(
+        offer=offer,
+        price_group=default_price_group,
+    )
+
+    assert OfferPriceGroup.objects.count() == 1
+
+    minimal_event_dict["offers"] = [
+        {
+            "is_free": False,
+            "price": {"fi": "10 - 15.55 €"},
+            "offer_price_groups": [
+                {
+                    "id": registration_price_group.pk,
+                    "price_group": default_price_group.pk,
+                    "price": Decimal("5"),
+                    "vat_percentage": VatPercentage.VAT_0.value,
+                },
+                {
+                    "price_group": default_price_group.pk,
+                    "price": Decimal("5"),
+                    "vat_percentage": VatPercentage.VAT_0.value,
+                },
+            ],
+        }
+    ]
+    response = user_api_client.put(
+        reverse("event-detail", kwargs={"pk": event.id}),
+        minimal_event_dict,
+        format="json",
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["offers"][0]["offer_price_groups"][1]["price_group"][0] == (
+        f"Offer price group with price_group {default_price_group} already exists."
+    )
+
+    assert OfferPriceGroup.objects.count() == 1

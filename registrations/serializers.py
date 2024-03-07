@@ -15,6 +15,7 @@ from events.utils import clean_text_fields
 from linkedevents.serializers import TranslatedModelSerializer
 from registrations.exceptions import ConflictException, WebStoreAPIError
 from registrations.models import (
+    OfferPriceGroup,
     PriceGroup,
     Registration,
     RegistrationPriceGroup,
@@ -28,6 +29,7 @@ from registrations.models import (
     SignUpPayment,
     SignUpPriceGroup,
     SignUpProtectedData,
+    VAT_PERCENTAGES,
 )
 from registrations.permissions import CanAccessRegistrationSignups
 from registrations.utils import (
@@ -636,7 +638,7 @@ class PriceGroupRelatedField(serializers.PrimaryKeyRelatedField):
         }
 
 
-class RegistrationPriceGroupSerializer(serializers.ModelSerializer):
+class RegistrationPriceGroupBaseSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(required=False)
     price_group = PriceGroupRelatedField(queryset=PriceGroup.objects.all())
     price = serializers.DecimalField(
@@ -662,9 +664,7 @@ class RegistrationPriceGroupSerializer(serializers.ModelSerializer):
         errors = {}
 
         vat_percentage = validated_data.get("vat_percentage")
-        if vat_percentage not in [
-            vat[0] for vat in RegistrationPriceGroup.VAT_PERCENTAGES
-        ]:
+        if vat_percentage not in [vat[0] for vat in VAT_PERCENTAGES]:
             errors["vat_percentage"] = _("%(value)s is not a valid choice.") % {
                 "value": vat_percentage
             }
@@ -680,7 +680,6 @@ class RegistrationPriceGroupSerializer(serializers.ModelSerializer):
         return validated_data
 
     class Meta:
-        model = RegistrationPriceGroup
         fields = [
             "id",
             "price_group",
@@ -689,6 +688,16 @@ class RegistrationPriceGroupSerializer(serializers.ModelSerializer):
             "price_without_vat",
             "vat",
         ]
+
+
+class OfferPriceGroupSerializer(RegistrationPriceGroupBaseSerializer):
+    class Meta(RegistrationPriceGroupBaseSerializer.Meta):
+        model = OfferPriceGroup
+
+
+class RegistrationPriceGroupSerializer(RegistrationPriceGroupBaseSerializer):
+    class Meta(RegistrationPriceGroupBaseSerializer.Meta):
+        model = RegistrationPriceGroup
 
 
 # Don't use this serializer directly but use events.api.RegistrationSerializer instead.

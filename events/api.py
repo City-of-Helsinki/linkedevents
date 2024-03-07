@@ -111,8 +111,15 @@ from linkedevents.fields import JSONLDRelatedField
 from linkedevents.registry import register_view, viewset_classes_by_model
 from linkedevents.serializers import LinkedEventsSerializer, TranslatedModelSerializer
 from linkedevents.utils import get_fixed_lang_codes
-from registrations.models import RegistrationPriceGroup, RegistrationUserAccess
-from registrations.serializers import RegistrationBaseSerializer
+from registrations.models import (
+    OfferPriceGroup,
+    RegistrationPriceGroup,
+    RegistrationUserAccess,
+)
+from registrations.serializers import (
+    OfferPriceGroupSerializer,
+    RegistrationBaseSerializer,
+)
 
 logger = logging.getLogger(__name__)
 LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
@@ -136,6 +143,26 @@ def generate_id(namespace):
     postfix = base64.b32encode(struct.pack(">Q", int(t)).lstrip(b"\x00"))
     postfix = postfix.strip(b"=").lower().decode(encoding="UTF-8")
     return "{}:{}".format(namespace, postfix)
+
+
+def validate_for_duplicates(values, field, error_detail_callback):
+    errors = []
+    checked_values = set()
+    raise_errors = False
+
+    for data in values:
+        value = data[field]
+        if value in checked_values:
+            errors.append({field: [error_detail_callback(value)]})
+            raise_errors = True
+        else:
+            checked_values.add(value)
+            errors.append({})
+
+    if raise_errors:
+        raise serializers.ValidationError(errors)
+
+    return values
 
 
 class UserDataSourceAndOrganizationMixin:
@@ -1337,9 +1364,32 @@ class EventLinkSerializer(serializers.ModelSerializer):
 
 
 class OfferSerializer(TranslatedModelSerializer):
+    def get_fields(self):
+        fields = super().get_fields()
+
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            fields["offer_price_groups"] = OfferPriceGroupSerializer(
+                many=True,
+                required=False,
+            )
+
+        return fields
+
+    def validate_offer_price_groups(self, value):
+        def error_detail_callback(price_group):
+            return ErrorDetail(
+                _("Offer price group with price_group %(price_group)s already exists.")
+                % {"price_group": price_group},
+                code="unique",
+            )
+
+        return validate_for_duplicates(value, "price_group", error_detail_callback)
+
     class Meta:
         model = Offer
-        exclude = ["id", "event"]
+        fields = ["price", "info_url", "description", "is_free"]
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            fields += ("offer_price_groups",)
 
 
 class ImageSerializer(EditableLinkedEventsObjectSerializer):
@@ -1642,26 +1692,6 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
 
         return instance
 
-    @staticmethod
-    def _validate_for_duplicates(values, field, error_detail_callback):
-        errors = []
-        checked_values = set()
-        raise_errors = False
-
-        for data in values:
-            value = data[field]
-            if value in checked_values:
-                errors.append({field: [error_detail_callback(value)]})
-                raise_errors = True
-            else:
-                checked_values.add(value)
-                errors.append({})
-
-        if raise_errors:
-            raise serializers.ValidationError(errors)
-
-        return values
-
     def validate_registration_user_accesses(self, value):
         def error_detail_callback(email):
             return ErrorDetail(
@@ -1670,7 +1700,7 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
                 code="unique",
             )
 
-        return self._validate_for_duplicates(value, "email", error_detail_callback)
+        return validate_for_duplicates(value, "email", error_detail_callback)
 
     def validate_registration_price_groups(self, value):
         def error_detail_callback(price_group):
@@ -1682,9 +1712,7 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
                 code="unique",
             )
 
-        return self._validate_for_duplicates(
-            value, "price_group", error_detail_callback
-        )
+        return validate_for_duplicates(value, "price_group", error_detail_callback)
 
     # LinkedEventsSerializer validates name which doesn't exist in Registration model
     def validate(self, data):
@@ -2000,6 +2028,25 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
                 data = new_data
         return data
 
+    @staticmethod
+    def _create_or_update_offers(offers, event, update=False):
+        if not isinstance(offers, list):
+            return
+
+        if update:
+            event.offers.all().delete()
+
+        for offer in offers:
+            offer_price_groups = offer.pop("offer_price_groups", [])
+
+            offer = Offer.objects.create(event=event, **offer)
+
+            if not settings.WEB_STORE_INTEGRATION_ENABLED:
+                continue
+
+            for offer_price_group in offer_price_groups:
+                OfferPriceGroup.objects.create(offer=offer, **offer_price_group)
+
     def create(self, validated_data):
         # if id was not provided, we generate it upon creation:
         data_source = self.context["data_source"]
@@ -2038,10 +2085,11 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
         event = super().create(validated_data)
 
         # create and add related objects
-        for offer in offers:
-            Offer.objects.create(event=event, **offer)
+        self._create_or_update_offers(offers, event)
+
         for link in links:
             EventLink.objects.create(event=event, **link)
+
         for video in videos:
             Video.objects.create(event=event, **video)
 
@@ -2131,10 +2179,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
         super().update(instance, validated_data)
 
         # update offers
-        if isinstance(offers, list):
-            instance.offers.all().delete()
-            for offer in offers:
-                Offer.objects.create(event=instance, **offer)
+        self._create_or_update_offers(offers, instance, update=True)
 
         # update ext links
         if isinstance(links, list):

@@ -17,10 +17,10 @@ from rest_framework import status
 from audit_log.models import AuditLogEntry
 from events.models import Event, Language, PublicationStatus
 from events.tests.conftest import APIClient
-from events.tests.factories import EventFactory
+from events.tests.factories import EventFactory, OfferFactory
 from events.tests.utils import assert_fields_exist, datetime_zone_aware, get
 from events.tests.utils import versioned_reverse as reverse
-from registrations.tests.factories import RegistrationFactory
+from registrations.tests.factories import OfferPriceGroupFactory, RegistrationFactory
 
 api_client = APIClient()
 
@@ -100,6 +100,29 @@ def assert_event_fields_exist(data, version="v1"):
             "headline",
             "secondary_headline",
         )
+    assert_fields_exist(data, fields)
+
+
+def assert_offer_fields_exist(data):
+    fields = (
+        "description",
+        "info_url",
+        "is_free",
+        "offer_price_groups",
+        "price",
+    )
+    assert_fields_exist(data, fields)
+
+
+def assert_offer_price_group_fields_exist(data):
+    fields = (
+        "id",
+        "price_group",
+        "price",
+        "vat_percentage",
+        "price_without_vat",
+        "vat",
+    )
     assert_fields_exist(data, fields)
 
 
@@ -1743,6 +1766,23 @@ def test_sub_events_increase_query_count_sanely(
     EventFactory(super_event=sub_event_2)
 
     assert get_num_queries() == one_sub_sub_event_count
+
+
+@pytest.mark.django_db
+def test_get_event_with_offer_and_offer_price_groups(api_client, event):
+    offer = OfferFactory(event=event)
+    OfferPriceGroupFactory(offer=offer)
+
+    response = get_detail(api_client, event.pk)
+    assert response.status_code == status.HTTP_200_OK
+
+    assert len(response.data["offers"]) == 1
+    assert_offer_fields_exist(response.data["offers"][0])
+
+    assert len(response.data["offers"][0]["offer_price_groups"]) == 1
+    assert_offer_price_group_fields_exist(
+        response.data["offers"][0]["offer_price_groups"][0]
+    )
 
 
 class FilterEventsByRegistrationCapacitiesV1TestCase(TestCase, EventsListTestCaseMixin):

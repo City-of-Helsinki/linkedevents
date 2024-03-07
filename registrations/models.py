@@ -21,7 +21,8 @@ from django.utils.translation import override
 from encrypted_fields import fields
 from helsinki_gdpr.models import SerializableMixin
 
-from events.models import Event, Language
+from events.models import Event, Language, Offer
+from registrations.enums import VatPercentage
 from registrations.exceptions import PriceGroupValidationError
 from registrations.notifications import (
     get_registration_user_access_invitation_subject,
@@ -47,6 +48,13 @@ User = settings.AUTH_USER_MODEL
 
 logger = logging.getLogger(__name__)
 anonymize_replacement = "<DELETED>"
+
+VAT_PERCENTAGES = (
+    (VatPercentage.VAT_24.value, "24 %"),
+    (VatPercentage.VAT_14.value, "14 %"),
+    (VatPercentage.VAT_10.value, "10 %"),
+    (VatPercentage.VAT_0.value, "0 %"),
+)
 
 
 class MandatoryFields(models.TextChoices):
@@ -167,45 +175,6 @@ class CreatedModifiedBaseModel(models.Model):
         blank=True,
         related_name="%(class)s_last_modified_by",
     )
-
-    class Meta:
-        abstract = True
-
-
-class RegistrationPriceGroupBaseModel(models.Model):
-    class VatPercentage:
-        VAT_24 = Decimal("24.00")
-        VAT_14 = Decimal("14.00")
-        VAT_10 = Decimal("10.00")
-        VAT_0 = Decimal("0.00")
-
-    VAT_PERCENTAGES = (
-        (VatPercentage.VAT_24, "24 %"),
-        (VatPercentage.VAT_14, "14 %"),
-        (VatPercentage.VAT_10, "10 %"),
-        (VatPercentage.VAT_0, "0 %"),
-    )
-
-    price = models.DecimalField(max_digits=19, decimal_places=2, default=Decimal("0"))
-    price_without_vat = models.DecimalField(
-        max_digits=19, decimal_places=2, default=Decimal("0")
-    )
-    vat_percentage = models.DecimalField(
-        max_digits=4,
-        decimal_places=2,
-        choices=VAT_PERCENTAGES,
-        default=VatPercentage.VAT_0,
-    )
-    vat = models.DecimalField(max_digits=19, decimal_places=2, default=Decimal("0"))
-
-    def calculate_vat_and_price_without_vat(self):
-        cents = Decimal(".01")
-
-        self.price_without_vat = (
-            self.price / (1 + self.vat_percentage / 100)
-        ).quantize(cents, ROUND_HALF_UP)
-
-        self.vat = (self.price - self.price_without_vat).quantize(cents, ROUND_HALF_UP)
 
     class Meta:
         abstract = True
@@ -487,6 +456,67 @@ class Registration(CreatedModifiedBaseModel):
         )
 
 
+class RegistrationPriceGroupBaseModel(models.Model):
+    price = models.DecimalField(max_digits=19, decimal_places=2, default=Decimal("0"))
+    price_without_vat = models.DecimalField(
+        max_digits=19, decimal_places=2, default=Decimal("0")
+    )
+    vat_percentage = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        choices=VAT_PERCENTAGES,
+        default=VatPercentage.VAT_0.value,
+    )
+    vat = models.DecimalField(max_digits=19, decimal_places=2, default=Decimal("0"))
+
+    def calculate_vat_and_price_without_vat(self):
+        cents = Decimal(".01")
+
+        self.price_without_vat = (
+            self.price / (1 + self.vat_percentage / 100)
+        ).quantize(cents, ROUND_HALF_UP)
+
+        self.vat = (self.price - self.price_without_vat).quantize(cents, ROUND_HALF_UP)
+
+    def save(self, *args, **kwargs):
+        self.calculate_vat_and_price_without_vat()
+
+        if update_fields := kwargs.get("update_fields"):
+            updated_update_fields = set(update_fields)
+            updated_update_fields.update({"vat", "price_without_vat"})
+            kwargs["update_fields"] = updated_update_fields
+
+        super().save(*args, **kwargs)
+
+    class Meta:
+        abstract = True
+
+
+class OfferPriceGroup(RegistrationPriceGroupBaseModel):
+    """Price group selections for event Offers. These will be the initial values for
+    registration price groups."""
+
+    offer = models.ForeignKey(
+        Offer,
+        related_name="offer_price_groups",
+        on_delete=models.CASCADE,
+    )
+
+    price_group = models.ForeignKey(
+        PriceGroup,
+        related_name="offer_price_groups",
+        on_delete=models.PROTECT,
+    )
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=["offer", "price_group"],
+                name="unique_offer_price_group",
+            ),
+        ]
+
+
 class RegistrationPriceGroup(RegistrationPriceGroupBaseModel):
     """Price group selections for SignUps (= what the end-user doing a signup can choose from)."""
 
@@ -495,19 +525,12 @@ class RegistrationPriceGroup(RegistrationPriceGroupBaseModel):
         related_name="registration_price_groups",
         on_delete=models.CASCADE,
     )
+
     price_group = models.ForeignKey(
         PriceGroup,
         related_name="registration_price_groups",
         on_delete=models.PROTECT,
     )
-
-    def save(self, *args, **kwargs):
-        self.calculate_vat_and_price_without_vat()
-
-        if update_fields := kwargs.get("update_fields"):
-            update_fields.update({"vat", "price_without_vat"})
-
-        super().save(*args, **kwargs)
 
     class Meta:
         constraints = [

@@ -1405,6 +1405,14 @@ class Offer(SimpleValueMixin, SerializableMixin):
     # between missing price info and confirmed free entry.
     is_free = models.BooleanField(verbose_name=_("Is free"), default=False)
 
+    price_groups = models.ManyToManyField(
+        "registrations.PriceGroup",
+        related_name="offers",
+        blank=True,
+        through="registrations.OfferPriceGroup",
+        through_fields=("offer", "price_group"),
+    )
+
     def value_fields(self):
         return ["price", "info_url", "description", "is_free"]
 

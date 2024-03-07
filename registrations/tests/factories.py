@@ -2,8 +2,10 @@ from decimal import Decimal
 
 import factory
 
-from events.tests.factories import EventFactory, OrganizationFactory
+from events.tests.factories import EventFactory, OfferFactory, OrganizationFactory
+from registrations.enums import VatPercentage
 from registrations.models import (
+    OfferPriceGroup,
     PriceGroup,
     Registration,
     RegistrationPriceGroup,
@@ -89,10 +91,20 @@ class RegistrationPriceGroupFactory(factory.django.DjangoModelFactory):
     registration = factory.SubFactory(RegistrationFactory)
     price_group = factory.SubFactory(PriceGroupFactory)
     price = Decimal("10")
-    vat_percentage = RegistrationPriceGroup.VatPercentage.VAT_24
+    vat_percentage = VatPercentage.VAT_24.value
 
     class Meta:
         model = RegistrationPriceGroup
+
+
+class OfferPriceGroupFactory(factory.django.DjangoModelFactory):
+    offer = factory.SubFactory(OfferFactory)
+    price_group = factory.SubFactory(PriceGroupFactory)
+    price = Decimal("10")
+    vat_percentage = VatPercentage.VAT_24.value
+
+    class Meta:
+        model = OfferPriceGroup
 
 
 class SignUpPriceGroupFactory(factory.django.DjangoModelFactory):

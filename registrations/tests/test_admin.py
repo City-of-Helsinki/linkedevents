@@ -9,6 +9,7 @@ from rest_framework import status
 
 from events.tests.factories import EventFactory, OfferFactory, OrganizationFactory
 from registrations.admin import RegistrationAdmin
+from registrations.enums import VatPercentage
 from registrations.models import (
     Event,
     PriceGroup,
@@ -313,10 +314,10 @@ class TestRegistrationAdmin(TestCase):
                 "registration_price_groups-INITIAL_FORMS": 0,
                 "registration_price_groups-0-price_group": price_group.pk,
                 "registration_price_groups-0-price": Decimal("10"),
-                "registration_price_groups-0-vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_24,
+                "registration_price_groups-0-vat_percentage": VatPercentage.VAT_24.value,
                 "registration_price_groups-1-price_group": price_group2.pk,
                 "registration_price_groups-1-price": Decimal("5"),
-                "registration_price_groups-1-vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_10,
+                "registration_price_groups-1-vat_percentage": VatPercentage.VAT_10.value,
             },
         )
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
@@ -335,7 +336,7 @@ class TestRegistrationAdmin(TestCase):
         self.assertEqual(registration_price_group.price, Decimal("10"))
         self.assertEqual(
             registration_price_group.vat_percentage,
-            RegistrationPriceGroup.VatPercentage.VAT_24,
+            VatPercentage.VAT_24.value,
         )
         self.assertEqual(registration_price_group.price_without_vat, Decimal("8.06"))
         self.assertEqual(registration_price_group.vat, Decimal("1.94"))
@@ -345,7 +346,7 @@ class TestRegistrationAdmin(TestCase):
         self.assertEqual(registration_price_group2.price, Decimal("5"))
         self.assertEqual(
             registration_price_group2.vat_percentage,
-            RegistrationPriceGroup.VatPercentage.VAT_10,
+            VatPercentage.VAT_10.value,
         )
         self.assertEqual(registration_price_group2.price_without_vat, Decimal("4.55"))
         self.assertEqual(registration_price_group2.vat, Decimal("0.45"))
@@ -368,11 +369,11 @@ class TestRegistrationAdmin(TestCase):
                 "registration_price_groups-0-registration": self.registration.id,
                 "registration_price_groups-0-price_group": price_group.pk,
                 "registration_price_groups-0-price": Decimal("10"),
-                "registration_price_groups-0-vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_14,
+                "registration_price_groups-0-vat_percentage": VatPercentage.VAT_14.value,
                 "registration_price_groups-1-registration": self.registration.id,
                 "registration_price_groups-1-price_group": price_group2.pk,
                 "registration_price_groups-1-price": Decimal("5"),
-                "registration_price_groups-1-vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_0,
+                "registration_price_groups-1-vat_percentage": VatPercentage.VAT_0.value,
             },
         )
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
@@ -391,7 +392,7 @@ class TestRegistrationAdmin(TestCase):
         self.assertEqual(registration_price_group.price, Decimal("10"))
         self.assertEqual(
             registration_price_group.vat_percentage,
-            RegistrationPriceGroup.VatPercentage.VAT_14,
+            VatPercentage.VAT_14.value,
         )
         self.assertEqual(registration_price_group.price_without_vat, Decimal("8.77"))
         self.assertEqual(registration_price_group.vat, Decimal("1.23"))
@@ -401,7 +402,7 @@ class TestRegistrationAdmin(TestCase):
         self.assertEqual(registration_price_group2.price, Decimal("5"))
         self.assertEqual(
             registration_price_group2.vat_percentage,
-            RegistrationPriceGroup.VatPercentage.VAT_0,
+            VatPercentage.VAT_0.value,
         )
         self.assertEqual(registration_price_group2.price_without_vat, Decimal("5"))
         self.assertEqual(registration_price_group2.vat, Decimal("0"))
@@ -423,11 +424,11 @@ class TestRegistrationAdmin(TestCase):
                 "registration_price_groups-0-registration": self.registration.id,
                 "registration_price_groups-0-price_group": price_group.pk,
                 "registration_price_groups-0-price": Decimal("10"),
-                "registration_price_groups-0-vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_24,
+                "registration_price_groups-0-vat_percentage": VatPercentage.VAT_24.value,
                 "registration_price_groups-1-registration": self.registration.id,
                 "registration_price_groups-1-price_group": price_group.pk,
                 "registration_price_groups-1-price": Decimal("5"),
-                "registration_price_groups-1-vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_24,
+                "registration_price_groups-1-vat_percentage": VatPercentage.VAT_24.value,
             },
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -452,7 +453,7 @@ class TestRegistrationAdmin(TestCase):
                 "registration_price_groups-0-registration": self.registration.id,
                 "registration_price_groups-0-price_group": price_group.pk,
                 "registration_price_groups-0-price": Decimal("10.123"),
-                "registration_price_groups-0-vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_24,
+                "registration_price_groups-0-vat_percentage": VatPercentage.VAT_24.value,
             },
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -480,7 +481,7 @@ class TestRegistrationAdmin(TestCase):
                 "registration_price_groups-0-registration": self.registration.id,
                 "registration_price_groups-0-price_group": registration_price_group.price_group_id,
                 "registration_price_groups-0-price": Decimal("10"),
-                "registration_price_groups-0-vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_24,
+                "registration_price_groups-0-vat_percentage": VatPercentage.VAT_24.value,
                 "registration_price_groups-0-DELETE": "on",
             },
         )
