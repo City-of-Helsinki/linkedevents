@@ -3,6 +3,7 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
+from django.conf import settings as django_settings
 from requests.exceptions import RequestException
 from rest_framework import status
 
@@ -14,7 +15,7 @@ from web_store.tests.utils import get_mock_response
 DEFAULT_ORDER_ID = str(uuid4())
 
 DEFAULT_CREATE_ORDER_DATA = {
-    "namespace": "namespace",
+    "namespace": django_settings.WEB_STORE_API_NAMESPACE,
     "user": "user_uuid",
     "items": [
         {
@@ -82,6 +83,11 @@ DEFAULT_GET_ORDER_DATA = {
     },
 }
 DEFAULT_GET_ORDER_DATA.update(DEFAULT_CREATE_ORDER_DATA)
+
+DEFAULT_CANCEL_ORDER_DATA = {
+    "order": DEFAULT_GET_ORDER_DATA.copy(),
+    "cancelUrl": f"https://test.dev/order/{DEFAULT_ORDER_ID}/cancel",
+}
 
 
 @pytest.mark.parametrize(
@@ -155,3 +161,34 @@ def test_get_order_exception(status_code):
     with patch("requests.get") as mocked_request, pytest.raises(RequestException):
         mocked_request.return_value = mocked_response
         client.get_order(order_id=DEFAULT_ORDER_ID)
+
+
+def test_cancel_order_success():
+    client = WebStoreOrderAPIClient()
+    mocked_response = get_mock_response(
+        status_code=status.HTTP_200_OK, json_return_value=DEFAULT_CANCEL_ORDER_DATA
+    )
+
+    with patch("requests.post") as mocked_request:
+        mocked_request.return_value = mocked_response
+        response_json = client.cancel_order(order_id=DEFAULT_ORDER_ID)
+
+    assert response_json == DEFAULT_CANCEL_ORDER_DATA
+
+
+@pytest.mark.parametrize(
+    "status_code",
+    [
+        status.HTTP_400_BAD_REQUEST,
+        status.HTTP_403_FORBIDDEN,
+        status.HTTP_404_NOT_FOUND,
+        status.HTTP_500_INTERNAL_SERVER_ERROR,
+    ],
+)
+def test_cancel_order_exception(status_code):
+    client = WebStoreOrderAPIClient()
+    mocked_response = get_mock_response(status_code=status_code)
+
+    with patch("requests.post") as mocked_request, pytest.raises(RequestException):
+        mocked_request.return_value = mocked_response
+        client.cancel_order(order_id=DEFAULT_ORDER_ID)

@@ -32,6 +32,7 @@ from registrations.tests.factories import (
     RegistrationUserAccessFactory,
     SeatReservationCodeFactory,
     SignUpFactory,
+    SignUpGroupFactory,
 )
 from registrations.tests.test_registration_post import hel_email
 from registrations.tests.utils import (
@@ -2374,3 +2375,56 @@ def test_cannot_create_signup_group_with_another_registrations_price_group(
     )
 
     assert SignUpPriceGroup.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_not_added_to_waiting_list_if_attending_signup_group_is_soft_deleted(
+    api_client,
+):
+    registration = RegistrationFactory(
+        confirmation_message_en="Confirmation message",
+        maximum_attendee_capacity=1,
+    )
+
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    soft_deleted_signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(
+        registration=registration,
+        signup_group=soft_deleted_signup_group,
+        attendee_status=SignUp.AttendeeStatus.ATTENDING,
+    )
+    soft_deleted_signup_group.soft_delete()
+
+    service_language = LanguageFactory(id="en", service_language=True)
+
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
+
+    signup_data = {
+        "first_name": "Michael",
+        "last_name": "Jackson",
+    }
+    signup_group_data = {
+        "registration": registration.id,
+        "reservation_code": reservation.code,
+        "signups": [signup_data],
+        "contact_person": {
+            "email": test_email1,
+            "service_language": service_language.pk,
+        },
+    }
+
+    assert SignUpGroup.objects.count() == 0
+    assert SignUpGroup.all_objects.count() == 1
+    assert SignUp.objects.count() == 0
+
+    assert_create_signup_group(api_client, signup_group_data)
+
+    assert len(mail.outbox) == 1
+    assert registration.confirmation_message_en in str(mail.outbox[0].alternatives[0])
+
+    assert SignUpGroup.objects.count() == 1
+    assert SignUpGroup.all_objects.count() == 2
+    assert SignUp.objects.count() == 1
+    assert SignUp.objects.first().attendee_status == SignUp.AttendeeStatus.ATTENDING

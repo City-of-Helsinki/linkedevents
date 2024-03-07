@@ -140,3 +140,27 @@ def strip_trailing_zeroes_from_decimal(value: Decimal):
         return value.quantize(Decimal(1))
 
     return value.normalize()
+
+
+def move_first_waitlisted_to_attending(signup_or_signup_group):
+    is_attending = getattr(signup_or_signup_group, "is_attending", False)
+    attending_signups = getattr(signup_or_signup_group, "attending_signups", None)
+
+    if is_attending or attending_signups:
+        signup_or_signup_group.registration.move_first_waitlisted_to_attending()
+
+
+def get_access_code_for_contact_person(contact_person, user):
+    if not contact_person:
+        return None
+
+    if not user:
+        access_code = contact_person.create_access_code()
+    else:
+        access_code = (
+            contact_person.create_access_code()
+            if contact_person.can_create_access_code(user)
+            else None
+        )
+
+    return access_code

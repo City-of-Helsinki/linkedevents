@@ -1153,3 +1153,30 @@ def test_get_signup_with_price_group(api_client, registration, user_role):
             signup_price_group.registration_price_group.price_group,
             f"description_{lang}",
         )
+
+
+@pytest.mark.django_db
+def test_soft_deleted_signup_not_found(api_client, registration):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup = SignUpFactory(registration=registration, deleted=True)
+
+    response = get_detail(api_client, signup.pk)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.django_db
+def test_soft_deleted_signups_not_in_list(api_client, registration):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup = SignUpFactory(registration=registration)
+    signup2 = SignUpFactory(registration=registration)
+    SignUpFactory(registration=registration, deleted=True)
+
+    get_list_and_assert_signups(
+        api_client,
+        f"registration={registration.pk}",
+        [signup, signup2],
+    )

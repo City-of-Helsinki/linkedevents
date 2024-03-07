@@ -636,3 +636,28 @@ def test_signup_ids_are_audit_logged_on_send_message(
     assert Counter(
         audit_log_entry.message["audit_event"]["target"]["object_ids"]
     ) == Counter([signup.contact_person.pk, signup2.contact_person.pk])
+
+
+@pytest.mark.django_db
+def test_cannot_send_message_to_soft_deleted_signups(api_client, registration, user):
+    api_client.force_authenticate(user)
+
+    signup = SignUpFactory(registration=registration)
+    SignUpContactPersonFactory(signup=signup, email="test@test.com")
+    signup.soft_delete()
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpContactPersonFactory(signup_group=signup_group, email="test-group@test.com")
+    signup_group.soft_delete()
+
+    send_message_data = {
+        "subject": "Message subject",
+        "body": "Message body",
+        "signups": [signup.id],
+        "signup_groups": [signup_group.id],
+    }
+
+    response = send_message(api_client, registration.id, send_message_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["signups"][0].code == "does_not_exist"
+    assert response.data["signup_groups"][0].code == "does_not_exist"

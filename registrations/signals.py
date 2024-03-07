@@ -15,7 +15,10 @@ from registrations.models import (
     SignUpGroup,
     SignUpNotificationType,
 )
-from registrations.utils import get_signup_create_url
+from registrations.utils import (
+    get_signup_create_url,
+    move_first_waitlisted_to_attending,
+)
 
 
 def _create_signup_link_for_event(registration: Registration) -> None:
@@ -85,10 +88,7 @@ def _send_event_cancellation_notification(event):
 
 
 def _signup_or_group_post_delete(instance: Union[SignUp, SignUpGroup]) -> None:
-    attendee_status = getattr(instance, "attendee_status", "")
-    attending_signups = getattr(instance, "attending_signups", None)
-    if attendee_status == SignUp.AttendeeStatus.ATTENDING or attending_signups:
-        instance.registration.move_first_waitlisted_to_attending()
+    move_first_waitlisted_to_attending(instance)
 
     contact_person = getattr(instance, "contact_person", None)
     if contact_person:

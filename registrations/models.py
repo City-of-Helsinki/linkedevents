@@ -103,6 +103,41 @@ class SignUpOrGroupDependingMixin:
         super().save(*args, **kwargs)
 
 
+class ObjectsWithoutSoftDeletedManager(SerializableMixin.SerializableManager):
+    def get_queryset(self):
+        return super().get_queryset().filter(deleted=False)
+
+
+class SoftDeletableBaseModel(models.Model):
+    deleted = models.BooleanField(default=False)
+
+    objects = ObjectsWithoutSoftDeletedManager()
+    all_objects = models.Manager()
+
+    def soft_delete(self):
+        self.deleted = True
+
+        update_fields = ["deleted"]
+        for field in ("last_modified_time", "last_modified_by"):
+            if hasattr(self, field):
+                update_fields.append(field)
+
+        self.save(update_fields=update_fields)
+
+    def undelete(self):
+        self.deleted = False
+
+        update_fields = ["deleted"]
+        for field in ("last_modified_time", "last_modified_by"):
+            if hasattr(self, field):
+                update_fields.append(field)
+
+        self.save(update_fields=update_fields)
+
+    class Meta:
+        abstract = True
+
+
 class CreatedModifiedBaseModel(models.Model):
     created_time = models.DateTimeField(
         verbose_name=_("Created at"),
@@ -559,7 +594,9 @@ class SignUpMixin:
         return order_data
 
 
-class SignUpGroup(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
+class SignUpGroup(
+    CreatedModifiedBaseModel, SoftDeletableBaseModel, SignUpMixin, SerializableMixin
+):
     registration = models.ForeignKey(
         Registration, on_delete=models.PROTECT, related_name="signup_groups"
     )
@@ -576,6 +613,44 @@ class SignUpGroup(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         {"name": "signups_count"},
         {"name": "contact_person"},
     )
+
+    @transaction.atomic
+    def soft_delete(self):
+        super().soft_delete()
+
+        for signup in SignUp.objects.filter(signup_group_id=self.pk):
+            signup.last_modified_by = self.last_modified_by
+            signup.soft_delete()
+
+        SignUpContactPerson.objects.filter(signup_group_id=self.pk).update(deleted=True)
+        SignUpGroupProtectedData.objects.filter(signup_group_id=self.pk).update(
+            deleted=True
+        )
+        SignUpPayment.objects.filter(signup_group_id=self.pk).update(
+            deleted=True,
+            last_modified_by=self.last_modified_by,
+            last_modified_time=self.last_modified_time,
+        )
+
+    @transaction.atomic
+    def undelete(self):
+        super().undelete()
+
+        for signup in SignUp.all_objects.filter(signup_group_id=self.pk):
+            signup.last_modified_by = self.last_modified_by
+            signup.undelete()
+
+        SignUpContactPerson.all_objects.filter(signup_group_id=self.pk).update(
+            deleted=False
+        )
+        SignUpGroupProtectedData.all_objects.filter(signup_group_id=self.pk).update(
+            deleted=False
+        )
+        SignUpPayment.all_objects.filter(signup_group_id=self.pk).update(
+            deleted=False,
+            last_modified_by=self.last_modified_by,
+            last_modified_time=self.last_modified_time,
+        )
 
     @cached_property
     def signups_count(self):
@@ -660,7 +735,7 @@ class SignUpProtectedDataBaseModel(models.Model):
         abstract = True
 
 
-class SignUpGroupProtectedData(SignUpProtectedDataBaseModel):
+class SignUpGroupProtectedData(SignUpProtectedDataBaseModel, SoftDeletableBaseModel):
     signup_group = models.OneToOneField(
         SignUpGroup,
         related_name="protected_data",
@@ -722,7 +797,9 @@ class RegistrationUserAccess(models.Model):
         unique_together = ("email", "registration")
 
 
-class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
+class SignUp(
+    CreatedModifiedBaseModel, SoftDeletableBaseModel, SignUpMixin, SerializableMixin
+):
     class AttendeeStatus:
         WAITING_LIST = "waitlisted"
         ATTENDING = "attending"
@@ -844,6 +921,32 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
         {"name": "contact_person"},
     )
 
+    @transaction.atomic
+    def soft_delete(self):
+        super().soft_delete()
+
+        SignUpContactPerson.objects.filter(signup_id=self.pk).update(deleted=True)
+        SignUpProtectedData.objects.filter(signup_id=self.pk).update(deleted=True)
+        SignUpPriceGroup.objects.filter(signup_id=self.pk).update(deleted=True)
+        SignUpPayment.objects.filter(signup_id=self.pk).update(
+            deleted=True,
+            last_modified_by=self.last_modified_by,
+            last_modified_time=self.last_modified_time,
+        )
+
+    @transaction.atomic
+    def undelete(self):
+        super().undelete()
+
+        SignUpContactPerson.all_objects.filter(signup_id=self.pk).update(deleted=False)
+        SignUpProtectedData.all_objects.filter(signup_id=self.pk).update(deleted=False)
+        SignUpPriceGroup.all_objects.filter(signup_id=self.pk).update(deleted=False)
+        SignUpPayment.all_objects.filter(signup_id=self.pk).update(
+            deleted=False,
+            last_modified_by=self.last_modified_by,
+            last_modified_time=self.last_modified_time,
+        )
+
     @property
     def full_name(self):
         return f"{self.first_name or ''} {self.last_name or ''}".strip()
@@ -857,6 +960,10 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
     def total_payment_amount(self):
         price_group = getattr(self, "price_group", None)
         return price_group.price if price_group is not None else Decimal("0")
+
+    @property
+    def is_attending(self):
+        return self.attendee_status == SignUp.AttendeeStatus.ATTENDING
 
     @transaction.atomic
     def anonymize(self):
@@ -892,7 +999,7 @@ class SignUp(CreatedModifiedBaseModel, SignUpMixin, SerializableMixin):
             self.add_price_group_to_web_store_order_data(signup_price_group, order_data)
 
 
-class SignUpProtectedData(SignUpProtectedDataBaseModel):
+class SignUpProtectedData(SignUpProtectedDataBaseModel, SoftDeletableBaseModel):
     date_of_birth = fields.EncryptedDateField(
         verbose_name=_("Date of birth"), blank=True, null=True
     )
@@ -906,7 +1013,9 @@ class SignUpProtectedData(SignUpProtectedDataBaseModel):
     )
 
 
-class SignUpContactPerson(SignUpOrGroupDependingMixin, SerializableMixin):
+class SignUpContactPerson(
+    SoftDeletableBaseModel, SignUpOrGroupDependingMixin, SerializableMixin
+):
     # For signups that belong to a group.
     signup_group = models.OneToOneField(
         SignUpGroup,
@@ -1046,13 +1155,6 @@ class SignUpContactPerson(SignUpOrGroupDependingMixin, SerializableMixin):
         self.save(update_fields=["access_code", "user"])
 
     @cached_property
-    def signup_or_signup_group(self):
-        if self.signup_group_id:
-            return self.signup_group
-
-        return self.signup
-
-    @cached_property
     def registration(self):
         return self.signup_or_signup_group.registration
 
@@ -1085,7 +1187,10 @@ class SignUpContactPerson(SignUpOrGroupDependingMixin, SerializableMixin):
 
         if notification_type == SignUpNotificationType.EVENT_CANCELLATION:
             email_template = "event_cancellation_confirmation.html"
-        elif notification_type == SignUpNotificationType.CANCELLATION:
+        elif notification_type in (
+            SignUpNotificationType.CANCELLATION,
+            SignUpNotificationType.PAYMENT_EXPIRED,
+        ):
             email_template = "cancellation_confirmation.html"
         elif notification_type in (
             SignUpNotificationType.CONFIRMATION,
@@ -1192,7 +1297,7 @@ class SeatReservationCode(models.Model):
         ]
 
 
-class SignUpPriceGroup(RegistrationPriceGroupBaseModel):
+class SignUpPriceGroup(RegistrationPriceGroupBaseModel, SoftDeletableBaseModel):
     """When a registration price group is selected when creating a signup for a registration,
     the pricing information that existed at that moment is stored into this model/table.
     """
@@ -1230,7 +1335,9 @@ class SignUpPriceGroup(RegistrationPriceGroupBaseModel):
         }
 
 
-class SignUpPayment(SignUpOrGroupDependingMixin, CreatedModifiedBaseModel):
+class SignUpPayment(
+    SignUpOrGroupDependingMixin, CreatedModifiedBaseModel, SoftDeletableBaseModel
+):
     class PaymentStatus:
         CREATED = "created"
         PAID = "paid"

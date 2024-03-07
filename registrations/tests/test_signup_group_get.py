@@ -1,7 +1,6 @@
 from collections import Counter
 from decimal import Decimal
 from unittest.mock import patch, PropertyMock
-from uuid import UUID
 
 import pytest
 from django.conf import settings
@@ -11,7 +10,7 @@ from audit_log.models import AuditLogEntry
 from events.tests.utils import assert_fields_exist
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
-from registrations.models import SignUp, SignUpContactPerson
+from registrations.models import SignUp
 from registrations.tests.factories import (
     RegistrationUserAccessFactory,
     SignUpContactPersonFactory,
@@ -1103,3 +1102,30 @@ def test_signup_price_group_in_signup_group_data(api_client, registration, user_
             signup_price_group.registration_price_group.price_group,
             f"description_{lang}",
         )
+
+
+@pytest.mark.django_db
+def test_soft_deleted_signup_group_not_found(api_client, registration):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(registration=registration, deleted=True)
+
+    response = get_detail(api_client, signup_group.pk)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.django_db
+def test_soft_deleted_signup_groups_not_in_list(api_client, registration):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    signup_group2 = SignUpGroupFactory(registration=registration)
+    SignUpGroupFactory(registration=registration, deleted=True)
+
+    get_list_and_assert_signup_groups(
+        api_client,
+        f"registration={registration.pk}",
+        [signup_group, signup_group2],
+    )

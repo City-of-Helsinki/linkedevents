@@ -43,6 +43,7 @@ from registrations.models import (
     SignUp,
     SignUpGroup,
     SignUpPayment,
+    SignUpPriceGroup,
 )
 from registrations.notifications import SignUpNotificationType
 from registrations.permissions import (
@@ -65,7 +66,7 @@ from registrations.serializers import (
     WebStoreOrderWebhookSerializer,
     WebStorePaymentWebhookSerializer,
 )
-from registrations.utils import send_mass_html_mail
+from registrations.utils import get_access_code_for_contact_person, send_mass_html_mail
 from web_store.order.clients import WebStoreOrderAPIClient
 from web_store.order.enums import WebStoreOrderStatus, WebStoreOrderWebhookEventType
 from web_store.payment.clients import WebStorePaymentAPIClient
@@ -392,7 +393,7 @@ class SignUpViewSet(
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        price_group = getattr(self.get_object(), "price_group", None)
+        price_group = SignUpPriceGroup.objects.filter(signup=self.get_object()).first()
 
         if not price_group:
             return Response(
@@ -572,17 +573,9 @@ class WebStoreWebhookViewSet(AuditLogApiViewMixin, viewsets.ViewSet):
         if not contact_person:
             return
 
-        if not signup_or_signup_group.created_by_id:
-            access_code = contact_person.create_access_code()
-        else:
-            access_code = (
-                contact_person.create_access_code()
-                if contact_person.can_create_access_code(
-                    signup_or_signup_group.created_by
-                )
-                else None
-            )
-
+        access_code = get_access_code_for_contact_person(
+            contact_person, signup_or_signup_group.created_by
+        )
         contact_person.send_notification(
             SignUpNotificationType.CONFIRMATION, access_code=access_code
         )

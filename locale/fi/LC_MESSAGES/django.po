@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-02-20 14:28+0000\n"
+"POT-Creation-Date: 2024-02-21 10:59+0000\n"
 "PO-Revision-Date: 2015-04-29 12:26+0140\n"
 "Last-Translator: <harri.rissanen@vincit.fi>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -224,7 +224,7 @@ msgid "Licenses"
 msgstr "Lisenssit"
 
 #: events/models.py:241 events/models.py:481 events/models.py:669
-#: events/models.py:987 registrations/models.py:187
+#: events/models.py:987 registrations/models.py:210
 msgid "Publisher"
 msgstr "Julkaisija"
 
@@ -311,8 +311,8 @@ msgstr "Paikan kotisivu"
 msgid "Description"
 msgstr "Kuvaus"
 
-#: events/models.py:682 events/models.py:1485 registrations/models.py:674
-#: registrations/models.py:944
+#: events/models.py:682 events/models.py:1485 registrations/models.py:727
+#: registrations/models.py:1023
 msgid "E-mail"
 msgstr "Sähköposti"
 
@@ -324,7 +324,7 @@ msgstr "Puhelinnumero"
 msgid "Contact type"
 msgstr "Yhteydtiedon tyyppi"
 
-#: events/models.py:690 registrations/models.py:58 registrations/models.py:792
+#: events/models.py:690 registrations/models.py:58 registrations/models.py:847
 msgid "Street address"
 msgstr "Katuosoite"
 
@@ -419,7 +419,7 @@ msgstr "Käyttäjän organisaatio"
 msgid "Event organizer information."
 msgstr "Tapahtuman järjestäjän tiedot."
 
-#: events/models.py:947 registrations/models.py:814
+#: events/models.py:947 registrations/models.py:869
 msgid "User consent"
 msgstr "Käyttäjän suostumus"
 
@@ -487,11 +487,11 @@ msgstr "Alkuaika"
 msgid "End time"
 msgstr "Loppuaika"
 
-#: events/models.py:1038 registrations/models.py:252
+#: events/models.py:1038 registrations/models.py:275
 msgid "Minimum recommended age"
 msgstr "Suositeltu vähimmäisikä"
 
-#: events/models.py:1041 registrations/models.py:255
+#: events/models.py:1041 registrations/models.py:278
 msgid "Maximum recommended age"
 msgstr "Suurin suositeltu ikä"
 
@@ -695,49 +695,49 @@ msgstr ""
 msgid "No"
 msgstr ""
 
-#: registrations/api.py:128
+#: registrations/api.py:129
 msgid "Registration with signups cannot be deleted"
 msgstr "Ilmoittautumista, jolla on osallistujia ei voi poistaa"
 
-#: registrations/api.py:205 registrations/filters.py:114
+#: registrations/api.py:206 registrations/filters.py:114
 msgid "Only the admins of the registration organizations have access rights."
 msgstr "Vain ilmoittautumisten organisaatioiden admin-käyttäjillä on oikeudet."
 
-#: registrations/api.py:238
+#: registrations/api.py:239
 msgid ""
 "No contact persons with email addresses found for the given participants."
 msgstr ""
 
-#: registrations/api.py:399
+#: registrations/api.py:400
 msgid "The signup does not have a price group."
 msgstr ""
 
-#: registrations/api.py:541
+#: registrations/api.py:542
 #, python-format
 msgid "Payment not found with order ID %(order_id)s."
 msgstr "Maksua ei löytynyt tilauksen ID:llä %(order_id)s."
 
-#: registrations/api.py:554
+#: registrations/api.py:555
 msgid "Could not check payment status from Talpa API."
 msgstr "Maksun tilaa ei voitu tarkistaa Talpa-rajapinnasta."
 
-#: registrations/api.py:565
+#: registrations/api.py:566
 msgid "Could not check order status from Talpa API."
 msgstr "Tilauksen tilaa ei voitu tarkistaa Talpa-rajapinnasta."
 
-#: registrations/api.py:614
+#: registrations/api.py:607
 msgid "Order marked as cancelled in webhook payload, but not in Talpa API."
 msgstr ""
 "Tilaus on merkitty perutuksi webhook-notifikaatiossa, mutta ei Talpa-"
 "rajapinnassa."
 
-#: registrations/api.py:645
+#: registrations/api.py:638
 msgid "Payment marked as paid in webhook payload, but not in Talpa API."
 msgstr ""
 "Maksu on merkitty maksetuksi webhook-notifikaatiossa, mutta ei Talpa-"
 "rajapinnassa."
 
-#: registrations/api.py:665
+#: registrations/api.py:658
 msgid "Payment marked as cancelled in webhook payload, but not in Talpa API."
 msgstr ""
 "Maksu on merkitty perutuksi webhook-notifikaatiossa, mutta ei Talpa-"
@@ -751,12 +751,12 @@ msgstr "Pyyntö on ristiriidassa kohderesurssin nykyisen tilan kanssa"
 msgid "Registered persons"
 msgstr "Ilmoittautuneet"
 
-#: registrations/exports.py:49 registrations/models.py:897
+#: registrations/exports.py:49 registrations/models.py:974
 msgid "Date of birth"
 msgstr "Syntymäaika"
 
 #: registrations/exports.py:53 registrations/models.py:57
-#: registrations/models.py:771 registrations/models.py:948
+#: registrations/models.py:826 registrations/models.py:1027
 msgid "Phone number"
 msgstr "Puhelinnumero"
 
@@ -792,21 +792,21 @@ msgstr ""
 msgid "Invalid registration ID(s) given."
 msgstr ""
 
-#: registrations/models.py:54 registrations/models.py:778
+#: registrations/models.py:54 registrations/models.py:833
 msgid "City"
 msgstr "Kaupunki"
 
-#: registrations/models.py:55 registrations/models.py:757
-#: registrations/models.py:929
+#: registrations/models.py:55 registrations/models.py:812
+#: registrations/models.py:1008
 msgid "First name"
 msgstr "Etunimi"
 
-#: registrations/models.py:56 registrations/models.py:764
-#: registrations/models.py:936
+#: registrations/models.py:56 registrations/models.py:819
+#: registrations/models.py:1015
 msgid "Last name"
 msgstr "Sukunimi"
 
-#: registrations/models.py:59 registrations/models.py:799
+#: registrations/models.py:59 registrations/models.py:854
 msgid "ZIP code"
 msgstr "Postinumero"
 
@@ -818,174 +818,174 @@ msgstr ""
 msgid "You can only provide signup_group or signup, not both."
 msgstr ""
 
-#: registrations/models.py:108
+#: registrations/models.py:131
 msgid "Created at"
 msgstr "Luotu klo"
 
-#: registrations/models.py:114
+#: registrations/models.py:137
 msgid "Modified at"
 msgstr "Muokattu klo"
 
-#: registrations/models.py:217
+#: registrations/models.py:240
 msgid "You may not delete a default price group."
 msgstr ""
 
-#: registrations/models.py:225
+#: registrations/models.py:248
 msgid "You may not edit a default price group."
 msgstr ""
 
-#: registrations/models.py:231
+#: registrations/models.py:254
 msgid ""
 "You may not change the publisher of a price group that has been used in "
 "registrations."
 msgstr ""
 "Ilmoittautumisissa käytetyn asiakasryhmän julkaisija-kenttää ei voi vaihtaa."
 
-#: registrations/models.py:259
+#: registrations/models.py:282
 msgid "Enrollment start time"
 msgstr "Ilmoittautumisen alkamisaika"
 
-#: registrations/models.py:262
+#: registrations/models.py:285
 msgid "Enrollment end time"
 msgstr "Ilmoittautumisen päättymisaika"
 
-#: registrations/models.py:266
+#: registrations/models.py:289
 msgid "Confirmation message"
 msgstr "Vahvistusviesti"
 
-#: registrations/models.py:269
+#: registrations/models.py:292
 msgid "Instructions"
 msgstr "Ohjeet"
 
-#: registrations/models.py:273
+#: registrations/models.py:296
 msgid "Maximum attendee capacity"
 msgstr "Paikkojen enimmäismäärä"
 
-#: registrations/models.py:276
+#: registrations/models.py:299
 msgid "Minimum attendee capacity"
 msgstr "Paikkojen vähimmäismäärä"
 
-#: registrations/models.py:279
+#: registrations/models.py:302
 msgid "Waiting list capacity"
 msgstr "Jonopaikkojen lukumäärä"
 
-#: registrations/models.py:282
+#: registrations/models.py:305
 msgid "Maximum group size"
 msgstr "Ryhmän enimmäiskoko"
 
-#: registrations/models.py:296
+#: registrations/models.py:319
 msgid "Mandatory fields"
 msgstr "Pakolliset kentät"
 
-#: registrations/models.py:567 registrations/models.py:819
+#: registrations/models.py:592 registrations/models.py:874
 msgid "Anonymization time"
 msgstr ""
 
-#: registrations/models.py:623
+#: registrations/models.py:676
 msgid "Group registration to event"
 msgstr "Ryhmäilmoittautuminen tapahtumaan"
 
-#: registrations/models.py:624
+#: registrations/models.py:677
 msgid "Group registration to course"
 msgstr "Ryhmäilmoittautuminen kurssille"
 
-#: registrations/models.py:625
+#: registrations/models.py:678
 msgid "Group registration to volunteering"
 msgstr "Ryhmäilmoittautuminen vapaaehtoistehtävään"
 
-#: registrations/models.py:649
+#: registrations/models.py:702
 msgid "Extra info"
 msgstr "Lisätiedot"
 
-#: registrations/models.py:731
+#: registrations/models.py:786
 msgid "Waitlisted"
 msgstr "Jonossa"
 
-#: registrations/models.py:732
+#: registrations/models.py:787
 msgid "Attending"
 msgstr "Osallistuu"
 
-#: registrations/models.py:740
+#: registrations/models.py:795
 msgid "Not present"
 msgstr "Ei paikalla"
 
-#: registrations/models.py:741
+#: registrations/models.py:796
 msgid "Present"
 msgstr "Paikalla"
 
-#: registrations/models.py:785
+#: registrations/models.py:840
 msgid "Attendee status"
 msgstr "Osallistujan tila"
 
-#: registrations/models.py:807
+#: registrations/models.py:862
 msgid "Presence status"
 msgstr "Läsnäolotila"
 
-#: registrations/models.py:882
+#: registrations/models.py:959
 msgid "Registration to event"
 msgstr "Ilmoittautuminen tapahtumaan"
 
-#: registrations/models.py:883
+#: registrations/models.py:960
 msgid "Registration to course"
 msgstr "Ilmoittautuminen kurssille"
 
-#: registrations/models.py:884
+#: registrations/models.py:961
 msgid "Registration to volunteering"
 msgstr "Ilmoittautuminen vapaaehtoistehtävään"
 
-#: registrations/models.py:971
+#: registrations/models.py:1050
 msgid "Membership number"
 msgstr "Jäsennumero"
 
-#: registrations/models.py:979
+#: registrations/models.py:1058
 msgid "Notification type"
 msgstr "Ilmoitusten tyyppi"
 
-#: registrations/models.py:986
+#: registrations/models.py:1065
 msgid "Access code"
 msgstr ""
 
-#: registrations/models.py:1171
+#: registrations/models.py:1246
 msgid "Number of seats"
 msgstr "Paikkojen lukumäärä"
 
-#: registrations/models.py:1177
+#: registrations/models.py:1252
 msgid "Seat reservation code"
 msgstr "Paikkavarauskoodi"
 
-#: registrations/models.py:1180
+#: registrations/models.py:1255
 msgid "Timestamp"
 msgstr "Aikaleima"
 
-#: registrations/models.py:1220
+#: registrations/models.py:1295
 msgid "pcs"
 msgstr "kpl"
 
-#: registrations/models.py:1242
+#: registrations/models.py:1319
 msgid "Created"
 msgstr "Luotu"
 
-#: registrations/models.py:1243
+#: registrations/models.py:1320
 msgid "Paid"
 msgstr "Maksettu"
 
-#: registrations/models.py:1244
+#: registrations/models.py:1321
 msgid "Cancelled"
 msgstr "Peruttu"
 
-#: registrations/models.py:1245
+#: registrations/models.py:1322
 msgid "Refunded"
 msgstr "Hyvitety"
 
-#: registrations/models.py:1246
+#: registrations/models.py:1323
 msgid "Expired"
 msgstr "Vanhentunut"
 
-#: registrations/models.py:1270
+#: registrations/models.py:1347
 msgid "Payment status"
 msgstr "Maksun tila"
 
-#: registrations/models.py:1284
+#: registrations/models.py:1361
 msgid "Expires at"
 msgstr "Vanhenee"
 
@@ -1026,49 +1026,54 @@ msgstr "Sähköposti"
 msgid "Both SMS and email."
 msgstr "Tekstiviesti ja sähköposti"
 
-#: registrations/notifications.py:41
+#: registrations/notifications.py:42
 #, python-format
 msgid "Event cancelled - %(event_name)s"
 msgstr "Tapahtuma peruttu - %(event_name)s"
 
-#: registrations/notifications.py:42
+#: registrations/notifications.py:43
 #, python-format
 msgid "Registration cancelled - %(event_name)s"
 msgstr "Ilmoittautuminen peruttu - %(event_name)s"
 
-#: registrations/notifications.py:44 registrations/notifications.py:50
+#: registrations/notifications.py:45 registrations/notifications.py:51
 #, python-format
 msgid "Registration confirmation - %(event_name)s"
 msgstr "Vahvistus ilmoittautumisesta - %(event_name)s"
 
-#: registrations/notifications.py:47
+#: registrations/notifications.py:48
 #, python-format
 msgid "Waiting list seat reserved - %(event_name)s"
 msgstr "Paikka jonotuslistalla varattu - %(event_name)s"
 
-#: registrations/notifications.py:57
+#: registrations/notifications.py:54
+#, python-format
+msgid "Registration payment expired - %(event_name)s"
+msgstr "Ilmoittautumismaksu vanhentunut - %(event_name)s"
+
+#: registrations/notifications.py:61
 #, python-format
 msgid "Event %(event_name)s has been cancelled"
 msgstr "Tapahtuma %(event_name)s on peruttu."
 
-#: registrations/notifications.py:60
+#: registrations/notifications.py:64
 #, python-format
 msgid "Event %(event_name)s %(event_period)s has been cancelled"
 msgstr "Tapahtuma %(event_name)s %(event_period)s on peruttu."
 
-#: registrations/notifications.py:67
+#: registrations/notifications.py:71
 #, python-format
 msgid ""
 "%(username)s, registration to the event %(event_name)s has been cancelled."
 msgstr "%(username)s, ilmoittautuminen tapahtumaan %(event_name)s on peruttu."
 
-#: registrations/notifications.py:70
+#: registrations/notifications.py:74
 #, python-format
 msgid ""
 "%(username)s, registration to the course %(event_name)s has been cancelled."
 msgstr "%(username)s, ilmoittautuminen kurssille %(event_name)s on peruttu."
 
-#: registrations/notifications.py:73
+#: registrations/notifications.py:77
 #, python-format
 msgid ""
 "%(username)s, registration to the volunteering %(event_name)s has been "
@@ -1077,22 +1082,22 @@ msgstr ""
 "%(username)s, ilmoittautuminen vapaaehtoistehtävään %(event_name)s on "
 "peruttu."
 
-#: registrations/notifications.py:78
+#: registrations/notifications.py:82
 #, python-format
 msgid "Registration to the event %(event_name)s has been cancelled."
 msgstr "Ilmoittautuminen tapahtumaan %(event_name)s on peruttu."
 
-#: registrations/notifications.py:81
+#: registrations/notifications.py:85
 #, python-format
 msgid "Registration to the course %(event_name)s has been cancelled."
 msgstr "Ilmoittautuminen kurssille %(event_name)s on peruttu."
 
-#: registrations/notifications.py:84
+#: registrations/notifications.py:88
 #, python-format
 msgid "Registration to the volunteering %(event_name)s has been cancelled."
 msgstr "Ilmoittautuminen vapaaehtoistehtävään %(event_name)s on peruttu."
 
-#: registrations/notifications.py:89
+#: registrations/notifications.py:93
 #, python-format
 msgid ""
 "You have successfully cancelled your registration to the event "
@@ -1101,7 +1106,7 @@ msgstr ""
 "Olet onnistuneesti peruuttanut ilmoittautumisesi tapahtumaan "
 "<strong>%(event_name)s</strong>."
 
-#: registrations/notifications.py:92
+#: registrations/notifications.py:96
 #, python-format
 msgid ""
 "You have successfully cancelled your registration to the course "
@@ -1110,7 +1115,7 @@ msgstr ""
 "Olet onnistuneesti peruuttanut ilmoittautumisesi kurssille "
 "<strong>%(event_name)s</strong>."
 
-#: registrations/notifications.py:95
+#: registrations/notifications.py:99
 #, python-format
 msgid ""
 "You have successfully cancelled your registration to the volunteering "
@@ -1119,7 +1124,7 @@ msgstr ""
 "Olet onnistuneesti peruuttanut ilmoittautumisesi vapaaehtoistehtävään "
 "<strong>%(event_name)s</strong>."
 
-#: registrations/notifications.py:101
+#: registrations/notifications.py:105
 #, python-format
 msgid ""
 "Your registration and payment for the event <strong>%(event_name)s</strong> "
@@ -1128,7 +1133,7 @@ msgstr ""
 "Ilmoittautumisesi ja maksusi tapahtumaan <strong>%(event_name)s</strong> on "
 "peruttu."
 
-#: registrations/notifications.py:104
+#: registrations/notifications.py:108
 #, python-format
 msgid ""
 "Your registration and payment for the course <strong>%(event_name)s</strong> "
@@ -1137,7 +1142,7 @@ msgstr ""
 "Ilmoittautumisesi ja maksusi kurssille <strong>%(event_name)s</strong> on "
 "peruttu."
 
-#: registrations/notifications.py:107
+#: registrations/notifications.py:111
 #, python-format
 msgid ""
 "Your registration to the volunteering <strong>%(event_name)s</strong> has "
@@ -1146,22 +1151,22 @@ msgstr ""
 "Ilmoittautumisesi vapaaehtoistehtävään <strong>%(event_name)s</strong> on "
 "peruttu."
 
-#: registrations/notifications.py:117
+#: registrations/notifications.py:121
 #, python-format
 msgid "Registration to the event %(event_name)s has been saved."
 msgstr "Ilmoittautuminen tapahtumaan %(event_name)s on tallennettu."
 
-#: registrations/notifications.py:120
+#: registrations/notifications.py:124
 #, python-format
 msgid "Registration to the course %(event_name)s has been saved."
 msgstr "Ilmoittautuminen kurssille %(event_name)s on tallennettu."
 
-#: registrations/notifications.py:123
+#: registrations/notifications.py:127
 #, python-format
 msgid "Registration to the volunteering %(event_name)s has been saved."
 msgstr "Ilmoittautuminen vapaaehtoistehtävään %(event_name)s on tallennettu."
 
-#: registrations/notifications.py:128
+#: registrations/notifications.py:132
 #, python-format
 msgid ""
 "Congratulations! Your registration has been confirmed for the event "
@@ -1170,7 +1175,7 @@ msgstr ""
 "Onnittelut! Ilmoittautumisesi on vahvistettu tapahtumaan "
 "<strong>%(event_name)s</strong>."
 
-#: registrations/notifications.py:131
+#: registrations/notifications.py:135
 #, python-format
 msgid ""
 "Congratulations! Your registration has been confirmed for the course "
@@ -1179,7 +1184,7 @@ msgstr ""
 "Onnittelut! Ilmoittautumisesi on vahvistettu kurssille "
 "<strong>%(event_name)s</strong>."
 
-#: registrations/notifications.py:134
+#: registrations/notifications.py:138
 #, python-format
 msgid ""
 "Congratulations! Your registration has been confirmed for the volunteering "
@@ -1188,23 +1193,23 @@ msgstr ""
 "Onnittelut! Ilmoittautumisesi on vahvistettu vapaaehtoistehtävään "
 "<strong>%(event_name)s</strong>."
 
-#: registrations/notifications.py:141
+#: registrations/notifications.py:145
 #, python-format
 msgid "Group registration to the event %(event_name)s has been saved."
 msgstr "Ryhmäilmoittautuminen tapahtumaan %(event_name)s on tallennettu."
 
-#: registrations/notifications.py:144
+#: registrations/notifications.py:148
 #, python-format
 msgid "Group registration to the course %(event_name)s has been saved."
 msgstr "Ryhmäilmoittautuminen kurssille %(event_name)s on tallennettu."
 
-#: registrations/notifications.py:147
+#: registrations/notifications.py:151
 #, python-format
 msgid "Group registration to the volunteering %(event_name)s has been saved."
 msgstr ""
 "Ryhmäilmoittautuminen vapaaehtoistehtävään %(event_name)s on tallennettu."
 
-#: registrations/notifications.py:156
+#: registrations/notifications.py:160
 #, python-format
 msgid ""
 "You have successfully registered for the event <strong>%(event_name)s</"
@@ -1213,7 +1218,7 @@ msgstr ""
 "Olet onnistuneesti ilmoittautunut tapahtuman <strong>%(event_name)s</strong> "
 "jonotuslistalle."
 
-#: registrations/notifications.py:159
+#: registrations/notifications.py:163
 #, python-format
 msgid ""
 "You have successfully registered for the course <strong>%(event_name)s</"
@@ -1222,7 +1227,7 @@ msgstr ""
 "Olet onnistuneesti ilmoittautunut kurssin <strong>%(event_name)s</strong> "
 "jonotuslistalle."
 
-#: registrations/notifications.py:162
+#: registrations/notifications.py:166
 #, python-format
 msgid ""
 "You have successfully registered for the volunteering "
@@ -1231,7 +1236,7 @@ msgstr ""
 "Olet onnistuneesti ilmoittautunut vapaaehtoistehtävän "
 "<strong>%(event_name)s</strong> jonotuslistalle."
 
-#: registrations/notifications.py:167
+#: registrations/notifications.py:171
 msgid ""
 "You will be automatically transferred as an event participant if a seat "
 "becomes available."
@@ -1239,7 +1244,7 @@ msgstr ""
 "Sinut siirretään automaattisesti tapahtuman osallistujaksi mikäli paikka "
 "vapautuu."
 
-#: registrations/notifications.py:170
+#: registrations/notifications.py:174
 msgid ""
 "You will be automatically transferred as a course participant if a seat "
 "becomes available."
@@ -1247,7 +1252,7 @@ msgstr ""
 "Sinut siirretään automaattisesti kurssin osallistujaksi mikäli paikka "
 "vapautuu."
 
-#: registrations/notifications.py:173
+#: registrations/notifications.py:177
 msgid ""
 "You will be automatically transferred as a volunteering participant if a "
 "seat becomes available."
@@ -1255,7 +1260,7 @@ msgstr ""
 "Sinut siirretään automaattisesti vapaaehtoistehtävän osallistujaksi mikäli "
 "paikka vapautuu."
 
-#: registrations/notifications.py:179
+#: registrations/notifications.py:183
 #, python-format
 msgid ""
 "The registration for the event <strong>%(event_name)s</strong> waiting list "
@@ -1264,7 +1269,7 @@ msgstr ""
 "Ilmoittautuminen tapahtuman <strong>%(event_name)s</strong> jonotuslistalle "
 "onnistui."
 
-#: registrations/notifications.py:182
+#: registrations/notifications.py:186
 #, python-format
 msgid ""
 "The registration for the course <strong>%(event_name)s</strong> waiting list "
@@ -1273,7 +1278,7 @@ msgstr ""
 "Ilmoittautuminen kurssin <strong>%(event_name)s</strong> jonotuslistalle "
 "onnistui."
 
-#: registrations/notifications.py:185
+#: registrations/notifications.py:189
 #, python-format
 msgid ""
 "The registration for the volunteering <strong>%(event_name)s</strong> "
@@ -1282,7 +1287,7 @@ msgstr ""
 "Ilmoittautuminen vapaaehtoistehtävän <strong>%(event_name)s</strong> "
 "jonotuslistalle onnistui."
 
-#: registrations/notifications.py:190
+#: registrations/notifications.py:194
 msgid ""
 "You will be automatically transferred from the waiting list to become a "
 "participant in the event if a place becomes available."
@@ -1290,7 +1295,7 @@ msgstr ""
 "Jonotuslistalta siirretään automaattisesti tapahtuman osallistujaksi mikäli "
 "paikka vapautuu."
 
-#: registrations/notifications.py:193
+#: registrations/notifications.py:197
 msgid ""
 "You will be automatically transferred from the waiting list to become a "
 "participant in the course if a place becomes available."
@@ -1298,7 +1303,7 @@ msgstr ""
 "Jonotuslistalta siirretään automaattisesti kurssin osallistujaksi mikäli "
 "paikka vapautuu."
 
-#: registrations/notifications.py:196
+#: registrations/notifications.py:200
 msgid ""
 "You will be automatically transferred from the waiting list to become a "
 "participant in the volunteering if a place becomes available."
@@ -1306,7 +1311,7 @@ msgstr ""
 "Jonotuslistalta siirretään automaattisesti vapaaehtoistehtävän "
 "osallistujaksi mikäli paikka vapautuu."
 
-#: registrations/notifications.py:206
+#: registrations/notifications.py:210
 #, python-format
 msgid ""
 "You have been moved from the waiting list of the event "
@@ -1315,7 +1320,7 @@ msgstr ""
 "Sinut on siirretty tapahtuman <strong>%(event_name)s</strong> "
 "jonotuslistalta osallistujaksi."
 
-#: registrations/notifications.py:209
+#: registrations/notifications.py:213
 #, python-format
 msgid ""
 "You have been moved from the waiting list of the course "
@@ -1324,7 +1329,7 @@ msgstr ""
 "Sinut on siirretty kurssin <strong>%(event_name)s</strong> jonotuslistalta "
 "osallistujaksi."
 
-#: registrations/notifications.py:212
+#: registrations/notifications.py:216
 #, python-format
 msgid ""
 "You have been moved from the waiting list of the volunteering "
@@ -1334,31 +1339,90 @@ msgstr ""
 "jonotuslistalta osallistujaksi."
 
 #: registrations/notifications.py:221
+msgid "Registration payment expired"
+msgstr "Ilmoittautumismaksu vanhentunut"
+
+#: registrations/notifications.py:224
+#, python-format
+msgid ""
+"Registration to the event %(event_name)s has been cancelled due to an "
+"expired payment."
+msgstr ""
+"Ilmoittautuminen tapahtumaan %(event_name)s on peruttu ilmoittautumismaksun "
+"vanhenemisen vuoksi."
+
+#: registrations/notifications.py:228
+#, python-format
+msgid ""
+"Registration to the course %(event_name)s has been cancelled due to an "
+"expired payment."
+msgstr ""
+"Ilmoittautuminen kurssille %(event_name)s on peruttu ilmoittautumismaksun "
+"vanhenemisen vuoksi."
+
+#: registrations/notifications.py:232
+#, python-format
+msgid ""
+"Registration to the volunteering %(event_name)s has been cancelled due to an "
+"expired payment."
+msgstr ""
+"Ilmoittautuminen vapaaehtoistehtävään %(event_name)s on peruttu "
+"ilmoittautumismaksun vanhenemisen vuoksi."
+
+#: registrations/notifications.py:238
+#, python-format
+msgid ""
+"Your registration to the event <strong>%(event_name)s</strong> has been "
+"cancelled due no payment received within the payment period."
+msgstr ""
+"Ilmoittautumisesi tapahtumaan <strong>%(event_name)s</strong> on peruttu, "
+"koska ilmoittautumismaksua ei ole maksettu maksuajan loppuun mennessä."
+
+#: registrations/notifications.py:242
+#, python-format
+msgid ""
+"Your registration to the course <strong>%(event_name)s</strong> has been "
+"cancelled due no payment received within the payment period."
+msgstr ""
+"Ilmoittautumisesi kurssille <strong>%(event_name)s</strong> on peruttu, "
+"koska ilmoittautumismaksua ei ole maksettu maksuajan loppuun mennessä."
+
+#: registrations/notifications.py:246
+#, python-format
+msgid ""
+"Your registration to the volunteering <strong>%(event_name)s</strong> has "
+"been cancelled due no payment received within the payment period."
+msgstr ""
+"Ilmoittautumisesi vapaaehtoistehtävään <strong>%(event_name)s</strong> on "
+"peruttu, koska ilmoittautumismaksua ei ole maksettu maksuajan loppuun "
+"mennessä."
+
+#: registrations/notifications.py:256
 #, python-format
 msgid "Event cancelled - Recurring: %(event_name)s"
 msgstr "Tapahtuma peruttu - Sarja: %(event_name)s"
 
-#: registrations/notifications.py:224
+#: registrations/notifications.py:259
 #, python-format
 msgid "Registration cancelled - Recurring: %(event_name)s"
 msgstr "Ilmoittautuminen peruttu - Sarja: %(event_name)s"
 
-#: registrations/notifications.py:227 registrations/notifications.py:233
+#: registrations/notifications.py:262 registrations/notifications.py:268
 #, python-format
 msgid "Registration confirmation - Recurring: %(event_name)s"
 msgstr "Vahvistus ilmoittautumisesta - Sarja: %(event_name)s"
 
-#: registrations/notifications.py:230
+#: registrations/notifications.py:265
 #, python-format
 msgid "Waiting list seat reserved - Recurring: %(event_name)s"
 msgstr "Paikka jonotuslistalla varattu - Sarja: %(event_name)s"
 
-#: registrations/notifications.py:241
+#: registrations/notifications.py:276
 #, python-format
 msgid "Recurring event %(event_name)s %(event_period)s has been cancelled"
 msgstr "Sarjatapahtuma %(event_name)s %(event_period)s on peruttu."
 
-#: registrations/notifications.py:249
+#: registrations/notifications.py:284
 #, python-format
 msgid ""
 "%(username)s, registration to the recurring event %(event_name)s "
@@ -1367,7 +1431,7 @@ msgstr ""
 "%(username)s, ilmoittautuminen sarjatapahtumaan %(event_name)s "
 "%(event_period)s on peruttu."
 
-#: registrations/notifications.py:253
+#: registrations/notifications.py:288
 #, python-format
 msgid ""
 "%(username)s, registration to the recurring course %(event_name)s "
@@ -1376,7 +1440,7 @@ msgstr ""
 "%(username)s, ilmoittautuminen sarjakurssille %(event_name)s "
 "%(event_period)s on peruttu."
 
-#: registrations/notifications.py:257
+#: registrations/notifications.py:292
 #, python-format
 msgid ""
 "%(username)s, registration to the recurring volunteering %(event_name)s "
@@ -1385,7 +1449,7 @@ msgstr ""
 "%(username)s, ilmoittautuminen sarjavapaaehtoistehtävään %(event_name)s "
 "%(event_period)s on peruttu."
 
-#: registrations/notifications.py:263
+#: registrations/notifications.py:298
 #, python-format
 msgid ""
 "Registration to the recurring event %(event_name)s %(event_period)s has been "
@@ -1393,7 +1457,7 @@ msgid ""
 msgstr ""
 "Ilmoittautuminen sarjatapahtumaan %(event_name)s %(event_period)s on peruttu."
 
-#: registrations/notifications.py:267
+#: registrations/notifications.py:302
 #, python-format
 msgid ""
 "Registration to the recurring course %(event_name)s %(event_period)s has "
@@ -1401,7 +1465,7 @@ msgid ""
 msgstr ""
 "Ilmoittautuminen sarjakurssille %(event_name)s %(event_period)s on peruttu."
 
-#: registrations/notifications.py:271
+#: registrations/notifications.py:306
 #, python-format
 msgid ""
 "Registration to the recurring volunteering %(event_name)s %(event_period)s "
@@ -1410,7 +1474,7 @@ msgstr ""
 "Ilmoittautuminen sarjavapaaehtoistehtävään %(event_name)s %(event_period)s "
 "on peruttu."
 
-#: registrations/notifications.py:277
+#: registrations/notifications.py:312
 #, python-format
 msgid ""
 "You have successfully cancelled your registration to the recurring event "
@@ -1419,7 +1483,7 @@ msgstr ""
 "Olet onnistuneesti peruuttanut ilmoittautumisesi sarjatapahtumaan "
 "<strong>%(event_name)s %(event_period)s</strong>."
 
-#: registrations/notifications.py:281
+#: registrations/notifications.py:316
 #, python-format
 msgid ""
 "You have successfully cancelled your registration to the recurring course "
@@ -1428,7 +1492,7 @@ msgstr ""
 "Olet onnistuneesti peruuttanut ilmoittautumisesi sarjakurssille "
 "<strong>%(event_name)s %(event_period)s</strong>."
 
-#: registrations/notifications.py:285
+#: registrations/notifications.py:320
 #, python-format
 msgid ""
 "You have successfully cancelled your registration to the recurring "
@@ -1437,7 +1501,7 @@ msgstr ""
 "Olet onnistuneesti peruuttanut ilmoittautumisesi sarjavapaaehtoistehtävään "
 "<strong>%(event_name)s %(event_period)s</strong>."
 
-#: registrations/notifications.py:295
+#: registrations/notifications.py:330
 #, python-format
 msgid ""
 "Registration to the recurring event %(event_name)s %(event_period)s has been "
@@ -1446,7 +1510,7 @@ msgstr ""
 "Ilmoittautuminen sarjatapahtumaan %(event_name)s %(event_period)s on "
 "tallennettu."
 
-#: registrations/notifications.py:299
+#: registrations/notifications.py:334
 #, python-format
 msgid ""
 "Registration to the recurring course %(event_name)s %(event_period)s has "
@@ -1455,7 +1519,7 @@ msgstr ""
 "Ilmoittautuminen sarjakurssille %(event_name)s %(event_period)s on "
 "tallennettu."
 
-#: registrations/notifications.py:303
+#: registrations/notifications.py:338
 #, python-format
 msgid ""
 "Registration to the recurring volunteering %(event_name)s %(event_period)s "
@@ -1464,7 +1528,7 @@ msgstr ""
 "Ilmoittautuminen sarjavapaaehtoistehtävään %(event_name)s %(event_period)s "
 "on tallennettu."
 
-#: registrations/notifications.py:309
+#: registrations/notifications.py:344
 #, python-format
 msgid ""
 "Congratulations! Your registration has been confirmed for the recurring "
@@ -1473,7 +1537,7 @@ msgstr ""
 "Onnittelut! Ilmoittautumisesi on vahvistettu sarjatapahtumaan "
 "<strong>%(event_name)s %(event_period)s</strong>."
 
-#: registrations/notifications.py:313
+#: registrations/notifications.py:348
 #, python-format
 msgid ""
 "Congratulations! Your registration has been confirmed for the recurring "
@@ -1482,7 +1546,7 @@ msgstr ""
 "Onnittelut! Ilmoittautumisesi on vahvistettu sarjakurssille "
 "<strong>%(event_name)s %(event_period)s</strong>."
 
-#: registrations/notifications.py:317
+#: registrations/notifications.py:352
 #, python-format
 msgid ""
 "Congratulations! Your registration has been confirmed for the recurring "
@@ -1491,7 +1555,7 @@ msgstr ""
 "Onnittelut! Ilmoittautumisesi on vahvistettu sarjavapaaehtoistehtävään "
 "<strong>%(event_name)s %(event_period)s</strong>."
 
-#: registrations/notifications.py:325
+#: registrations/notifications.py:360
 #, python-format
 msgid ""
 "Group registration to the recurring event %(event_name)s %(event_period)s "
@@ -1500,7 +1564,7 @@ msgstr ""
 "Ryhmäilmoittautuminen sarjatapahtumaan %(event_name)s %(event_period)s on "
 "tallennettu."
 
-#: registrations/notifications.py:329
+#: registrations/notifications.py:364
 #, python-format
 msgid ""
 "Group registration to the recurring course %(event_name)s %(event_period)s "
@@ -1509,7 +1573,7 @@ msgstr ""
 "Ryhmäilmoittautuminen sarjakurssille %(event_name)s %(event_period)s on "
 "tallennettu."
 
-#: registrations/notifications.py:333
+#: registrations/notifications.py:368
 #, python-format
 msgid ""
 "Group registration to the recurring volunteering %(event_name)s "
@@ -1518,7 +1582,7 @@ msgstr ""
 "Ryhmäilmoittautuminen sarjavapaaehtoistehtävään %(event_name)s "
 "%(event_period)s on tallennettu."
 
-#: registrations/notifications.py:343
+#: registrations/notifications.py:378
 #, python-format
 msgid ""
 "You have successfully registered for the recurring event "
@@ -1527,7 +1591,7 @@ msgstr ""
 "Olet onnistuneesti ilmoittautunut sarjatapahtuman <strong>%(event_name)s "
 "%(event_period)s</strong> jonotuslistalle."
 
-#: registrations/notifications.py:347
+#: registrations/notifications.py:382
 #, python-format
 msgid ""
 "You have successfully registered for the recurring course "
@@ -1536,7 +1600,7 @@ msgstr ""
 "Olet onnistuneesti ilmoittautunut sarjakurssin <strong>%(event_name)s "
 "%(event_period)s</strong> jonotuslistalle."
 
-#: registrations/notifications.py:351
+#: registrations/notifications.py:386
 #, python-format
 msgid ""
 "You have successfully registered for the recurring volunteering "
@@ -1545,7 +1609,7 @@ msgstr ""
 "Olet onnistuneesti ilmoittautunut sarjavapaaehtoistehtävän "
 "<strong>%(event_name)s %(event_period)s</strong> jonotuslistalle."
 
-#: registrations/notifications.py:361
+#: registrations/notifications.py:396
 #, python-format
 msgid ""
 "The registration for the recurring event <strong>%(event_name)s "
@@ -1554,7 +1618,7 @@ msgstr ""
 "Ilmoittautuminen sarjatapahtuman <strong>%(event_name)s %(event_period)s</"
 "strong> jonotuslistalle onnistui."
 
-#: registrations/notifications.py:365
+#: registrations/notifications.py:400
 #, python-format
 msgid ""
 "The registration for the recurring course <strong>%(event_name)s "
@@ -1563,7 +1627,7 @@ msgstr ""
 "Ilmoittautuminen sarjakurssin <strong>%(event_name)s %(event_period)s</"
 "strong> jonotuslistalle onnistui."
 
-#: registrations/notifications.py:369
+#: registrations/notifications.py:404
 #, python-format
 msgid ""
 "The registration for the recurring volunteering <strong>%(event_name)s "
@@ -1572,7 +1636,7 @@ msgstr ""
 "Ilmoittautuminen sarjavapaaehtoistehtävän <strong>%(event_name)s "
 "%(event_period)s</strong> jonotuslistalle onnistui."
 
-#: registrations/notifications.py:383
+#: registrations/notifications.py:418
 #, python-format
 msgid ""
 "You have been moved from the waiting list of the recurring event "
@@ -1581,7 +1645,7 @@ msgstr ""
 "Sinut on siirretty sarjatapahtuman <strong>%(event_name)s %(event_period)s</"
 "strong> jonotuslistalta osallistujaksi."
 
-#: registrations/notifications.py:387
+#: registrations/notifications.py:422
 #, python-format
 msgid ""
 "You have been moved from the waiting list of the recurring course "
@@ -1590,7 +1654,7 @@ msgstr ""
 "Sinut on siirretty sarjakurssin <strong>%(event_name)s %(event_period)s</"
 "strong> jonotuslistalta osallistujaksi."
 
-#: registrations/notifications.py:391
+#: registrations/notifications.py:426
 #, python-format
 msgid ""
 "You have been moved from the waiting list of the recurring volunteering "
@@ -1599,17 +1663,17 @@ msgstr ""
 "Sinut on siirretty sarjavapaaehtoistehtävän <strong>%(event_name)s "
 "%(event_period)s</strong> jonotuslistalta osallistujaksi."
 
-#: registrations/notifications.py:401
+#: registrations/notifications.py:436
 #, python-format
 msgid "Rights granted to the participant list - %(event_name)s"
 msgstr "Oikeudet myönnetty osallistujalistaan  - %(event_name)s"
 
-#: registrations/notifications.py:404
+#: registrations/notifications.py:439
 #, python-format
 msgid "Rights granted to the registration - %(event_name)s"
 msgstr "Oikeudet myönnetty ilmoittautumiseen - %(event_name)s"
 
-#: registrations/notifications.py:413
+#: registrations/notifications.py:448
 #, python-format
 msgid ""
 "The e-mail address <strong>%(email)s</strong> has been granted the rights to "
@@ -1618,7 +1682,7 @@ msgstr ""
 "Sähköpostiosoitteelle <strong>%(email)s</strong> on myönnetty oikeudet lukea "
 "tapahtuman <strong>%(event_name)s</strong> osallistujalista."
 
-#: registrations/notifications.py:416
+#: registrations/notifications.py:451
 #, python-format
 msgid ""
 "The e-mail address <strong>%(email)s</strong> has been granted the rights to "
@@ -1627,7 +1691,7 @@ msgstr ""
 "Sähköpostiosoitteelle <strong>%(email)s</strong> on myönnetty oikeudet lukea "
 "kurssin <strong>%(event_name)s</strong> osallistujalista."
 
-#: registrations/notifications.py:419
+#: registrations/notifications.py:454
 #, python-format
 msgid ""
 "The e-mail address <strong>%(email)s</strong> has been granted the rights to "
@@ -1637,7 +1701,7 @@ msgstr ""
 "Sähköpostiosoitteelle <strong>%(email)s</strong> on myönnetty oikeudet lukea "
 "vapaaehtoistehtävän <strong>%(event_name)s</strong> osallistujalista."
 
-#: registrations/notifications.py:426
+#: registrations/notifications.py:461
 #, python-format
 msgid ""
 "The e-mail address <strong>%(email)s</strong> has been granted substitute "
@@ -1646,7 +1710,7 @@ msgstr ""
 "Sähköpostiosoitteelle <strong>%(email)s</strong> on myönnetty sijaisen "
 "käyttöoikeudet tapahtuman <strong>%(event_name)s</strong> ilmoittautumiselle."
 
-#: registrations/notifications.py:429
+#: registrations/notifications.py:464
 #, python-format
 msgid ""
 "The e-mail address <strong>%(email)s</strong> has been granted substitute "
@@ -1656,7 +1720,7 @@ msgstr ""
 "Sähköpostiosoitteelle <strong>%(email)s</strong> on myönnetty sijaisen "
 "käyttöoikeudet kurssin <strong>%(event_name)s</strong> ilmoittautumiselle."
 
-#: registrations/notifications.py:432
+#: registrations/notifications.py:467
 #, python-format
 msgid ""
 "The e-mail address <strong>%(email)s</strong> has been granted substitute "

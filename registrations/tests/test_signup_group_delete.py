@@ -1,6 +1,5 @@
 from datetime import timedelta
 from unittest.mock import patch, PropertyMock
-from uuid import UUID
 
 import pytest
 from django.core import mail
@@ -1107,3 +1106,62 @@ def test_signup_price_group_deleted_with_signup_group(
     assert_delete_signup_group(api_client, signup_group.id)
 
     assert SignUpPriceGroup.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_cannot_delete_soft_deleted_signup_group(api_client, registration):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    soft_deleted_signup_group = SignUpGroupFactory(registration=registration)
+    SignUpContactPersonFactory(
+        signup_group=soft_deleted_signup_group, email="test2@test.com"
+    )
+    soft_deleted_signup_group.soft_delete()
+
+    assert SignUpGroup.all_objects.count() == 1
+
+    response = delete_signup_group(api_client, soft_deleted_signup_group.pk)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    assert SignUpGroup.all_objects.count() == 1
+
+    assert len(mail.outbox) == 0
+
+
+@pytest.mark.django_db
+def test_soft_deleted_signup_group_is_not_moved_to_attending_from_waiting_list(
+    api_client, registration
+):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(
+        registration=registration,
+        signup_group=signup_group,
+        attendee_status=SignUp.AttendeeStatus.ATTENDING,
+    )
+    SignUpContactPersonFactory(signup_group=signup_group, email="test@test.com")
+
+    soft_deleted_signup_group = SignUpGroupFactory(registration=registration)
+    signup = SignUpFactory(
+        registration=registration,
+        signup_group=soft_deleted_signup_group,
+        attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
+    )
+    SignUpContactPersonFactory(
+        signup_group=soft_deleted_signup_group, email="test@test.com"
+    )
+
+    soft_deleted_signup_group.soft_delete()
+
+    assert_delete_signup_group(api_client, signup_group.id)
+
+    signup.refresh_from_db()
+    assert signup.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
+
+    # The deleted signup group will get a cancellation email, but the soft deleted one will not
+    # get any.
+    assert len(mail.outbox) == 1
+    assert mail.outbox[0].subject.startswith("Ilmoittautuminen peruttu")

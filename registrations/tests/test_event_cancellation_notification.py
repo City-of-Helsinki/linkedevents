@@ -14,7 +14,7 @@ from events.tests.conftest import TEXT_EN, TEXT_FI, TEXT_SV
 from events.tests.factories import EventFactory, LanguageFactory, PlaceFactory
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
-from registrations.models import SignUpContactPerson
+from registrations.models import SignUp, SignUpContactPerson, SignUpGroup
 from registrations.notifications import (
     recurring_event_signup_email_texts,
     recurring_event_signup_notification_subjects,
@@ -343,6 +343,38 @@ class EventCancellationNotificationAPITestCase(APITestCase):
                     complex_event_dict,
                     format="json",
                 )
+
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_event_put_cancellation_email_not_sent_to_soft_deleted_contact_persons(
+        self,
+    ):
+        for signup_group in SignUpGroup.objects.all():
+            signup_group.soft_delete()
+
+        for signup in SignUp.objects.all():
+            signup.soft_delete()
+
+        self.assertEqual(SignUpContactPerson.objects.count(), 0)
+        self.assertEqual(SignUpContactPerson.all_objects.count(), 3)
+
+        complex_event_dict = self.make_complex_event_dict(
+            self.event.data_source,
+            self.event.publisher,
+            self.location_id,
+            self.languages,
+        )
+        complex_event_dict["event_status"] = "EventCancelled"
+
+        response = self.client.put(
+            self.event_detail_url,
+            complex_event_dict,
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.event_status, Event.Status.CANCELLED)
 
         self.assertEqual(len(mail.outbox), 0)
 

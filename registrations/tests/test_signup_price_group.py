@@ -204,3 +204,26 @@ def test_delete_signup_price_group_not_found(api_client, signup):
 
     response = delete_price_group(api_client, signup.pk)
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.django_db
+def test_cannot_delete_soft_deleted_signup_price_group(api_client, signup):
+    price_group = SignUpPriceGroupFactory(signup=signup)
+    price_group.soft_delete()
+
+    user = create_user_by_role(
+        "registration_admin",
+        signup.publisher,
+    )
+    api_client.force_authenticate(user)
+
+    assert SignUpPriceGroup.all_objects.count() == 1
+
+    assert_delete_price_group_failed(
+        api_client,
+        signup.pk,
+        status_code=status.HTTP_404_NOT_FOUND,
+        price_groups_count=0,
+    )
+
+    assert SignUpPriceGroup.all_objects.count() == 1
