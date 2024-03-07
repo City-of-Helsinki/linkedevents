@@ -33,7 +33,11 @@
               </p>
             {% endif %}
           </div>
-          {% include "_open_registration_button.html" %}
+          {% if payment_url %}
+            {% include "_open_payment_link_button.html" %}
+          {% else %}
+            {% include "_open_registration_button.html" %}
+          {% endif %}
       </div>
     </td>
   </tr>

@@ -12,3 +12,7 @@ class ConflictException(APIException):
 
 class PriceGroupValidationError(ValidationError):
     pass
+
+
+class WebStoreAPIError(ValidationError):
+    pass

@@ -10,6 +10,12 @@ CONFIRMATION_HEADING_WITHOUT_USERNAME = _("Welcome")
 CONFIRMATION_TO_WAITING_LIST_HEADING = _(
     "Thank you for signing up for the waiting list"
 )
+CONFIRMATION_WITH_PAYMENT_HEADING = _(
+    "Payment required for registration confirmation - %(event_name)s"
+)
+CONFIRMATION_WITH_PAYMENT_HEADING_RECURRING = _(
+    "Payment required for registration confirmation - Recurring: %(event_name)s"
+)
 EVENT_CANCELLED_TEXT = _("Thank you for your interest in the event.")
 REGISTRATION_CANCELLED_HEADING = _("Registration cancelled")
 
@@ -33,8 +39,10 @@ class SignUpNotificationType:
     EVENT_CANCELLATION = "event_cancellation"
     CANCELLATION = "cancellation"
     CONFIRMATION = "confirmation"
+    CONFIRMATION_WITH_PAYMENT = "confirmation_with_payment"
     CONFIRMATION_TO_WAITING_LIST = "confirmation_to_waiting_list"
     TRANSFERRED_AS_PARTICIPANT = "transferred_as_participant"
+    TRANSFER_AS_PARTICIPANT_WITH_PAYMENT = "transfer_as_participant_with_payment"
     PAYMENT_EXPIRED = "payment_expired"
 
 
@@ -44,12 +52,14 @@ signup_notification_subjects = {
     SignUpNotificationType.CONFIRMATION: _(
         "Registration confirmation - %(event_name)s"
     ),
+    SignUpNotificationType.CONFIRMATION_WITH_PAYMENT: CONFIRMATION_WITH_PAYMENT_HEADING,
     SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST: _(
         "Waiting list seat reserved - %(event_name)s"
     ),
     SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT: _(
         "Registration confirmation - %(event_name)s"
     ),
+    SignUpNotificationType.TRANSFER_AS_PARTICIPANT_WITH_PAYMENT: CONFIRMATION_WITH_PAYMENT_HEADING,
     SignUpNotificationType.PAYMENT_EXPIRED: _(
         "Registration payment expired - %(event_name)s"
     ),
@@ -153,6 +163,56 @@ signup_email_texts = {
             },
         },
     },
+    SignUpNotificationType.CONFIRMATION_WITH_PAYMENT: {
+        "heading": CONFIRMATION_HEADING_WITH_USERNAME,
+        "heading_without_username": CONFIRMATION_HEADING_WITHOUT_USERNAME,
+        "secondary_heading": {
+            Event.TypeId.GENERAL: _(
+                "Payment is required to confirm your registration to the event %(event_name)s."
+            ),
+            Event.TypeId.COURSE: _(
+                "Payment is required to confirm your registration to the course %(event_name)s."
+            ),
+            Event.TypeId.VOLUNTEERING: _(
+                "Payment is required to confirm your registration to the volunteering "
+                "%(event_name)s."
+            ),
+        },
+        "text": {
+            Event.TypeId.GENERAL: _(
+                "Please use the payment link to confirm your registration for the event "
+                "<strong>%(event_name)s</strong>. The payment link expires in "
+                "%(expiration_hours)s hours."
+            ),
+            Event.TypeId.COURSE: _(
+                "Please use the payment link to confirm your registration for the course "
+                "<strong>%(event_name)s</strong>. The payment link expires in "
+                "%(expiration_hours)s hours."
+            ),
+            Event.TypeId.VOLUNTEERING: _(
+                "Please use the payment link to confirm your registration for the volunteering "
+                "<strong>%(event_name)s</strong>. The payment link expires in "
+                "%(expiration_hours)s hours."
+            ),
+        },
+        "group": {
+            "heading": CONFIRMATION_HEADING_WITHOUT_USERNAME,
+            "secondary_heading": {
+                Event.TypeId.GENERAL: _(
+                    "Payment is required to confirm your group registration to the event "
+                    "%(event_name)s."
+                ),
+                Event.TypeId.COURSE: _(
+                    "Payment is required to confirm your group registration to the course "
+                    "%(event_name)s."
+                ),
+                Event.TypeId.VOLUNTEERING: _(
+                    "Payment is required to confirm your group registration to the volunteering "
+                    "%(event_name)s."
+                ),
+            },
+        },
+    },
     SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST: {
         "heading": CONFIRMATION_TO_WAITING_LIST_HEADING,
         "text": {
@@ -207,13 +267,40 @@ signup_email_texts = {
         "heading_without_username": CONFIRMATION_HEADING_WITHOUT_USERNAME,
         "text": {
             Event.TypeId.GENERAL: _(
-                "You have been moved from the waiting list of the event <strong>%(event_name)s</strong> to a participant."  # noqa E501
+                "You have been moved from the waiting list of the event "
+                "<strong>%(event_name)s</strong> to a participant."
             ),
             Event.TypeId.COURSE: _(
-                "You have been moved from the waiting list of the course <strong>%(event_name)s</strong> to a participant."  # noqa E501
+                "You have been moved from the waiting list of the course "
+                "<strong>%(event_name)s</strong> to a participant."
             ),
             Event.TypeId.VOLUNTEERING: _(
-                "You have been moved from the waiting list of the volunteering <strong>%(event_name)s</strong> to a participant."  # noqa E501
+                "You have been moved from the waiting list of the volunteering "
+                "<strong>%(event_name)s</strong> to a participant."
+            ),
+        },
+    },
+    SignUpNotificationType.TRANSFER_AS_PARTICIPANT_WITH_PAYMENT: {
+        "heading": CONFIRMATION_HEADING_WITH_USERNAME,
+        "heading_without_username": CONFIRMATION_HEADING_WITHOUT_USERNAME,
+        "text": {
+            Event.TypeId.GENERAL: _(
+                "You have been selected to be moved from the waiting list of the event "
+                "<strong>%(event_name)s</strong> to a participant. Please use the "
+                "payment link to confirm your participation. The payment link expires in "
+                "%(expiration_hours)s hours."
+            ),
+            Event.TypeId.COURSE: _(
+                "You have been selected to be moved from the waiting list of the course "
+                "<strong>%(event_name)s</strong> to a participant. Please use the "
+                "payment link to confirm your participation. The payment link expires in "
+                "%(expiration_hours)s hours."
+            ),
+            Event.TypeId.VOLUNTEERING: _(
+                "You have been selected to be moved from the waiting list of the volunteering "
+                "<strong>%(event_name)s</strong> to a participant. Please use the "
+                "payment link to confirm your participation. The payment link expires in "
+                "%(expiration_hours)s hours."
             ),
         },
     },
@@ -261,12 +348,14 @@ recurring_event_signup_notification_subjects = {
     SignUpNotificationType.CONFIRMATION: _(
         "Registration confirmation - Recurring: %(event_name)s"
     ),
+    SignUpNotificationType.CONFIRMATION_WITH_PAYMENT: CONFIRMATION_WITH_PAYMENT_HEADING_RECURRING,
     SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST: _(
         "Waiting list seat reserved - Recurring: %(event_name)s"
     ),
     SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT: _(
         "Registration confirmation - Recurring: %(event_name)s"
     ),
+    SignUpNotificationType.TRANSFER_AS_PARTICIPANT_WITH_PAYMENT: CONFIRMATION_WITH_PAYMENT_HEADING_RECURRING,
 }
 
 
@@ -371,6 +460,58 @@ recurring_event_signup_email_texts = {
             },
         },
     },
+    SignUpNotificationType.CONFIRMATION_WITH_PAYMENT: {
+        "heading": CONFIRMATION_HEADING_WITH_USERNAME,
+        "heading_without_username": CONFIRMATION_HEADING_WITHOUT_USERNAME,
+        "secondary_heading": {
+            Event.TypeId.GENERAL: _(
+                "Payment is required to confirm your registration to the recurring event "
+                "%(event_name)s %(event_period)s."
+            ),
+            Event.TypeId.COURSE: _(
+                "Payment is required to confirm your registration to the recurring course "
+                "%(event_name)s %(event_period)s."
+            ),
+            Event.TypeId.VOLUNTEERING: _(
+                "Payment is required to confirm your registration to the recurring volunteering "
+                "%(event_name)s %(event_period)s."
+            ),
+        },
+        "text": {
+            Event.TypeId.GENERAL: _(
+                "Please use the payment link to confirm your registration for the recurring event "
+                "<strong>%(event_name)s %(event_period)s</strong>. The payment link expires in "
+                "%(expiration_hours)s hours."
+            ),
+            Event.TypeId.COURSE: _(
+                "Please use the payment link to confirm your registration for the recurring course "
+                "<strong>%(event_name)s %(event_period)s</strong>. The payment link expires in "
+                "%(expiration_hours)s hours."
+            ),
+            Event.TypeId.VOLUNTEERING: _(
+                "Please use the payment link to confirm your registration for the recurring "
+                "volunteering <strong>%(event_name)s %(event_period)s</strong>. The payment link "
+                "expires in %(expiration_hours)s hours."
+            ),
+        },
+        "group": {
+            "heading": CONFIRMATION_HEADING_WITHOUT_USERNAME,
+            "secondary_heading": {
+                Event.TypeId.GENERAL: _(
+                    "Payment is required to confirm your group registration to the recurring "
+                    "event %(event_name)s %(event_period)s."
+                ),
+                Event.TypeId.COURSE: _(
+                    "Payment is required to confirm your group registration to the recurring "
+                    "course %(event_name)s %(event_period)s."
+                ),
+                Event.TypeId.VOLUNTEERING: _(
+                    "Payment is required to confirm your group registration to the recurring "
+                    "volunteering %(event_name)s %(event_period)s."
+                ),
+            },
+        },
+    },
     SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST: {
         "heading": CONFIRMATION_TO_WAITING_LIST_HEADING,
         "text": {
@@ -428,6 +569,30 @@ recurring_event_signup_email_texts = {
             ),
         },
     },
+    SignUpNotificationType.TRANSFER_AS_PARTICIPANT_WITH_PAYMENT: {
+        "heading": CONFIRMATION_HEADING_WITH_USERNAME,
+        "heading_without_username": CONFIRMATION_HEADING_WITHOUT_USERNAME,
+        "text": {
+            Event.TypeId.GENERAL: _(
+                "You have been selected to be moved from the waiting list of the recurring "
+                "event <strong>%(event_name)s %(event_period)s</strong> to a participant. "
+                "Please use the payment link to confirm your participation. The payment link "
+                "expires in %(expiration_hours)s hours."
+            ),
+            Event.TypeId.COURSE: _(
+                "You have been selected to be moved from the waiting list of the recurring "
+                "course <strong>%(event_name)s %(event_period)s</strong> to a participant. "
+                "Please use the payment link to confirm your participation. The payment link "
+                "expires in %(expiration_hours)s hours."
+            ),
+            Event.TypeId.VOLUNTEERING: _(
+                "You have been selected to be moved from the waiting list of the recurring "
+                "volunteering <strong>%(event_name)s %(event_period)s</strong> to a participant. "
+                "Please use the payment link to confirm your participation. The payment link "
+                "expires in %(expiration_hours)s hours."
+            ),
+        },
+    },
 }
 
 
@@ -471,11 +636,17 @@ registration_user_access_invitation_texts = {
 }
 
 
-def _get_event_text_kwargs(event_name, event_period=None):
+def _get_event_text_kwargs(event_name, event_period=None, notification_type=None):
     kwargs = {"event_name": event_name}
 
     if event_period is not None:
         kwargs["event_period"] = event_period
+
+    if notification_type is not None and notification_type in (
+        SignUpNotificationType.CONFIRMATION_WITH_PAYMENT,
+        SignUpNotificationType.TRANSFER_AS_PARTICIPANT_WITH_PAYMENT,
+    ):
+        kwargs["expiration_hours"] = settings.WEB_STORE_ORDER_EXPIRATION_HOURS
 
     return kwargs
 
@@ -501,9 +672,16 @@ def _get_event_cancellation_texts(
 
 
 def _get_notification_texts(
-    text_options, event_type_id, event_name, event_period, contact_person
+    text_options,
+    event_type_id,
+    event_name,
+    event_period,
+    contact_person,
+    notification_type,
 ):
-    event_text_kwargs = _get_event_text_kwargs(event_name, event_period=event_period)
+    event_text_kwargs = _get_event_text_kwargs(
+        event_name, event_period=event_period, notification_type=notification_type
+    )
 
     if contact_person.first_name:
         texts = {
@@ -638,6 +816,7 @@ def get_signup_notification_texts(
             event_name,
             event_period,
             contact_person,
+            notification_type,
         )
 
     if notification_type == SignUpNotificationType.CANCELLATION:

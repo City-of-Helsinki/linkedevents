@@ -37,6 +37,7 @@ from registrations.notifications import (
 from registrations.utils import (
     code_validity_duration,
     create_event_ics_file_content,
+    create_web_store_api_order,
     get_email_noreply_address,
     get_ui_locales,
     strip_trailing_zeroes_from_decimal,
@@ -426,19 +427,47 @@ class Registration(CreatedModifiedBaseModel):
             waiting_list_capacity - waiting_list_count - reserved_seats_amount, 0
         )
 
-    def move_first_waitlisted_to_attending(self):
+    def get_first_waitlisted(self):
         waitlisted = (
-            self.signups.filter(
-                attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
-            )
+            self.signups.filter(attendee_status=SignUp.AttendeeStatus.WAITING_LIST)
             .select_for_update()
             .order_by("id")
         )
 
-        if not waitlisted.exists():
+        return waitlisted[0] if waitlisted else None
+
+    def move_first_waitlisted_to_attending_with_payment_link(self):
+        first_on_list = self.get_first_waitlisted()
+        if not first_on_list:
             return
 
-        first_on_list = waitlisted[0]
+        try:
+            payment = (
+                first_on_list.create_web_store_payment()
+                if first_on_list.price_group.price > 0
+                else None
+            )
+        except (ValidationError, AttributeError) as exc:
+            logger.error(
+                f"Failed to create payment when moving waitlisted signup #{first_on_list.pk} "
+                f"to attending: {exc}"
+            )
+            return
+
+        if not payment:
+            self.move_first_waitlisted_to_attending(first_on_list)
+        else:
+            contact_person = first_on_list.actual_contact_person
+            contact_person.send_notification(
+                SignUpNotificationType.TRANSFER_AS_PARTICIPANT_WITH_PAYMENT,
+                payment_link=payment.checkout_url,
+            )
+
+    def move_first_waitlisted_to_attending(self, first_on_list=None):
+        first_on_list = first_on_list or self.get_first_waitlisted()
+        if not first_on_list:
+            return
+
         first_on_list.attendee_status = SignUp.AttendeeStatus.ATTENDING
         first_on_list.save(update_fields=["attendee_status"])
 
@@ -535,6 +564,37 @@ class SignUpMixin:
 
     def is_user_editable_resources(self):
         return bool(self.data_source and self.data_source.user_editable_resources)
+
+    def create_web_store_payment(self):
+        if isinstance(self, SignUp):
+            kwargs = {"signup": self}
+        else:
+            kwargs = {"signup_group": self}
+
+        kwargs["expires_at"] = localtime() + timedelta(
+            hours=settings.WEB_STORE_ORDER_EXPIRATION_HOURS
+        )
+
+        api_response = create_web_store_api_order(self, kwargs["expires_at"])
+
+        if api_response.get("orderId"):
+            kwargs["external_order_id"] = api_response["orderId"]
+
+        if api_response.get("priceTotal"):
+            kwargs["amount"] = Decimal(api_response["priceTotal"])
+        else:
+            kwargs["amount"] = self.total_payment_amount
+
+        if api_response.get("checkoutUrl"):
+            kwargs["checkout_url"] = api_response["checkoutUrl"]
+
+        if api_response.get("loggedInCheckoutUrl"):
+            kwargs["logged_in_checkout_url"] = api_response["loggedInCheckoutUrl"]
+
+        kwargs["created_by"] = self.created_by
+        kwargs["last_modified_by"] = self.created_by
+
+        return SignUpPayment.objects.create(**kwargs)
 
     @property
     def web_store_meta_label(self):
@@ -703,16 +763,19 @@ class SignUpGroup(
         return labels[self.registration.event.type_id]
 
     def add_price_groups_to_web_store_order_data(self, order_data):
-        for signup in (
+        signups_with_price_groups = (
             self.signups.select_related("price_group")
             .filter(price_group__isnull=False)
             .order_by("pk")
-        ):
+        )
+        if not signups_with_price_groups.exists():
+            raise PriceGroupValidationError(
+                _("No price groups exist for signup group.")
+            )
+
+        for signup in signups_with_price_groups:
             signup_price_group = getattr(signup, "price_group", None)
-            if signup_price_group:
-                self.add_price_group_to_web_store_order_data(
-                    signup_price_group, order_data
-                )
+            self.add_price_group_to_web_store_order_data(signup_price_group, order_data)
 
 
 class SignUpProtectedDataBaseModel(models.Model):
@@ -995,8 +1058,10 @@ class SignUp(
 
     def add_price_groups_to_web_store_order_data(self, order_data):
         signup_price_group = getattr(self, "price_group", None)
-        if signup_price_group:
-            self.add_price_group_to_web_store_order_data(signup_price_group, order_data)
+        if not signup_price_group:
+            raise PriceGroupValidationError(_("Price group does not exist for signup."))
+
+        self.add_price_group_to_web_store_order_data(signup_price_group, order_data)
 
 
 class SignUpProtectedData(SignUpProtectedDataBaseModel, SoftDeletableBaseModel):
@@ -1181,7 +1246,11 @@ class SignUpContactPerson(
         )
 
     def get_notification_message(
-        self, notification_type, access_code=None, is_sub_event_cancellation=False
+        self,
+        notification_type,
+        access_code=None,
+        is_sub_event_cancellation=False,
+        payment_link=None,
     ):
         [_, linked_registrations_ui_locale] = get_ui_locales(self.service_language)
 
@@ -1194,8 +1263,10 @@ class SignUpContactPerson(
             email_template = "cancellation_confirmation.html"
         elif notification_type in (
             SignUpNotificationType.CONFIRMATION,
+            SignUpNotificationType.CONFIRMATION_WITH_PAYMENT,
             SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST,
             SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT,
+            SignUpNotificationType.TRANSFER_AS_PARTICIPANT_WITH_PAYMENT,
         ):
             email_template = "common_signup_confirmation.html"
         else:
@@ -1210,6 +1281,7 @@ class SignUpContactPerson(
                 notification_type,
                 is_sub_event_cancellation=is_sub_event_cancellation,
             )
+            email_variables["payment_url"] = payment_link
 
             rendered_body = render_to_string(
                 email_template,
@@ -1228,12 +1300,17 @@ class SignUpContactPerson(
         )
 
     def send_notification(
-        self, notification_type, access_code=None, is_sub_event_cancellation=False
+        self,
+        notification_type,
+        access_code=None,
+        is_sub_event_cancellation=False,
+        payment_link=None,
     ):
         message = self.get_notification_message(
             notification_type,
             access_code=access_code,
             is_sub_event_cancellation=is_sub_event_cancellation,
+            payment_link=payment_link,
         )
         rendered_body = message[1]
 

@@ -1,7 +1,9 @@
 from datetime import timedelta
+from decimal import Decimal
 from unittest.mock import patch, PropertyMock
 
 import pytest
+from django.conf import settings
 from django.core import mail
 from django.utils import translation
 from django.utils.timezone import localtime
@@ -17,18 +19,26 @@ from registrations.models import (
     SignUp,
     SignUpContactPerson,
     SignUpGroup,
+    SignUpPayment,
     SignUpPriceGroup,
 )
 from registrations.tests.factories import (
     RegistrationFactory,
+    RegistrationPriceGroupFactory,
     RegistrationUserAccessFactory,
     SignUpContactPersonFactory,
     SignUpFactory,
     SignUpGroupFactory,
+    SignUpPaymentFactory,
     SignUpPriceGroupFactory,
 )
 from registrations.tests.test_registration_post import hel_email
-from registrations.tests.utils import create_user_by_role
+from registrations.tests.utils import (
+    assert_payment_link_email_sent,
+    create_user_by_role,
+    get_web_store_order_response,
+)
+from web_store.tests.utils import get_mock_response
 
 test_email1 = "test@test.com"
 
@@ -1137,11 +1147,6 @@ def test_soft_deleted_signup_group_is_not_moved_to_attending_from_waiting_list(
     api_client.force_authenticate(user)
 
     signup_group = SignUpGroupFactory(registration=registration)
-    SignUpFactory(
-        registration=registration,
-        signup_group=signup_group,
-        attendee_status=SignUp.AttendeeStatus.ATTENDING,
-    )
     SignUpContactPersonFactory(signup_group=signup_group, email="test@test.com")
 
     soft_deleted_signup_group = SignUpGroupFactory(registration=registration)
@@ -1165,3 +1170,366 @@ def test_soft_deleted_signup_group_is_not_moved_to_attending_from_waiting_list(
     # get any.
     assert len(mail.outbox) == 1
     assert mail.outbox[0].subject.startswith("Ilmoittautuminen peruttu")
+
+
+@pytest.mark.parametrize(
+    "service_language,expected_subject,expected_text",
+    [
+        (
+            "en",
+            "Payment required for registration confirmation - Foo",
+            "You have been selected to be moved from the waiting list of the event "
+            "<strong>Foo</strong> to a participant. Please use the "
+            "payment link to confirm your participation. The payment link expires in "
+            "%(hours)s hours." % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
+        ),
+        (
+            "fi",
+            "Maksu vaaditaan ilmoittautumisen vahvistamiseksi - Foo",
+            "Sinut on valittu siirrettäväksi tapahtuman <strong>Foo</strong> "
+            "jonotuslistalta osallistujaksi. Ole hyvä ja käytä oheista maksulinkkiä "
+            "vahvistaaksesi osallistumisesi. Maksulinkki vanhenee %(hours)s tunnin kuluttua."
+            % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
+        ),
+        (
+            "sv",
+            "Betalning krävs för bekräftelse av registreringen - Foo",
+            "Du har blivit utvald att flyttats från väntelistan för evenemanget "
+            "<strong>Foo</strong> till en deltagare. Använd betalningslänken "
+            "för att bekräfta ditt deltagande. Betalningslänken går ut efter %(hours)s timmar."
+            % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
+        ),
+    ],
+)
+@pytest.mark.django_db
+def test_group_send_email_with_payment_link_when_moving_participant_from_waitlist(
+    api_client,
+    service_language,
+    expected_subject,
+    expected_text,
+):
+    language = LanguageFactory(pk=service_language, service_language=True)
+
+    with translation.override(service_language):
+        registration = RegistrationFactory(
+            event__name="Foo", maximum_attendee_capacity=1
+        )
+
+    registration_price_group = RegistrationPriceGroupFactory(registration=registration)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(
+        registration=registration,
+        signup_group=signup_group,
+        attendee_status=SignUp.AttendeeStatus.ATTENDING,
+    )
+    SignUpContactPersonFactory(
+        signup_group=signup_group, service_language=language, email="test2@test.com"
+    )
+
+    signup2 = SignUpFactory(
+        registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
+    )
+    contact_person2 = SignUpContactPersonFactory(
+        signup=signup2,
+        first_name="Mickey",
+        last_name="Mouse",
+        email="test@test.com",
+        service_language=language,
+    )
+    SignUpPriceGroupFactory(
+        signup=signup2, registration_price_group=registration_price_group
+    )
+
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    assert SignUpPayment.objects.count() == 0
+
+    mocked_create_payment_response = get_mock_response(
+        json_return_value=get_web_store_order_response()
+    )
+    with (
+        translation.override(service_language),
+        patch("requests.post") as mocked_create_payment_request,
+    ):
+        mocked_create_payment_request.return_value = mocked_create_payment_response
+
+        assert_delete_signup_group(api_client, signup_group.id)
+
+    assert SignUpPayment.objects.count() == 1
+
+    # Signup 2 status is not changed until a webhook notification updates the status.
+    signup2.refresh_from_db()
+    assert signup2.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
+
+    assert_payment_link_email_sent(
+        contact_person2,
+        SignUpPayment.objects.first(),
+        expected_mailbox_length=2,
+        expected_subject=expected_subject,
+        expected_text=expected_text,
+    )
+
+
+@pytest.mark.parametrize(
+    "service_language,expected_subject,expected_text",
+    [
+        (
+            "en",
+            "Payment required for registration confirmation - Recurring: Foo",
+            "You have been selected to be moved from the waiting list of the recurring event "
+            "<strong>Foo 1 Feb 2024 - 29 Feb 2024</strong> to a participant. Please use the "
+            "payment link to confirm your participation. The payment link expires in "
+            "%(hours)s hours." % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
+        ),
+        (
+            "fi",
+            "Maksu vaaditaan ilmoittautumisen vahvistamiseksi - Sarja: Foo",
+            "Sinut on valittu siirrettäväksi sarjatapahtuman "
+            "<strong>Foo 1.2.2024 - 29.2.2024</strong> jonotuslistalta osallistujaksi. Ole hyvä "
+            "ja käytä oheista maksulinkkiä vahvistaaksesi osallistumisesi. Maksulinkki vanhenee "
+            "%(hours)s tunnin kuluttua."
+            % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
+        ),
+        (
+            "sv",
+            "Betalning krävs för bekräftelse av registreringen - Serie: Foo",
+            "Du har blivit utvald att flyttats från väntelistan för serieevenemanget "
+            "<strong>Foo 1.2.2024 - 29.2.2024</strong> till en deltagare. Använd betalningslänken "
+            "för att bekräfta ditt deltagande. Betalningslänken går ut efter %(hours)s timmar."
+            % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
+        ),
+    ],
+)
+@freeze_time("2024-02-01 03:30:00+02:00")
+@pytest.mark.django_db
+def test_group_send_email_with_payment_link_when_moving_participant_from_waitlist_for_recurring_event(
+    api_client,
+    service_language,
+    expected_subject,
+    expected_text,
+):
+    now = localtime()
+    language = LanguageFactory(pk=service_language, service_language=True)
+
+    with translation.override(service_language):
+        registration = RegistrationFactory(
+            event__start_time=now,
+            event__end_time=now + timedelta(days=28),
+            event__super_event_type=Event.SuperEventType.RECURRING,
+            event__name="Foo",
+            maximum_attendee_capacity=1,
+        )
+
+    registration_price_group = RegistrationPriceGroupFactory(registration=registration)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(
+        registration=registration,
+        signup_group=signup_group,
+        attendee_status=SignUp.AttendeeStatus.ATTENDING,
+    )
+    SignUpContactPersonFactory(
+        signup_group=signup_group, service_language=language, email="test2@test.com"
+    )
+
+    signup2 = SignUpFactory(
+        registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
+    )
+    contact_person2 = SignUpContactPersonFactory(
+        signup=signup2,
+        first_name="Mickey",
+        last_name="Mouse",
+        email="test@test.com",
+        service_language=language,
+    )
+    SignUpPriceGroupFactory(
+        signup=signup2, registration_price_group=registration_price_group
+    )
+
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    assert SignUpPayment.objects.count() == 0
+
+    mocked_create_payment_response = get_mock_response(
+        json_return_value=get_web_store_order_response()
+    )
+    with (
+        translation.override(service_language),
+        patch("requests.post") as mocked_create_payment_request,
+    ):
+        mocked_create_payment_request.return_value = mocked_create_payment_response
+
+        assert_delete_signup_group(api_client, signup_group.id)
+
+    assert SignUpPayment.objects.count() == 1
+
+    # Signup 2 status is not changed until a webhook notification updates the status.
+    signup2.refresh_from_db()
+    assert signup2.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
+
+    assert_payment_link_email_sent(
+        contact_person2,
+        SignUpPayment.objects.first(),
+        expected_mailbox_length=2,
+        expected_subject=expected_subject,
+        expected_text=expected_text,
+    )
+
+
+@pytest.mark.parametrize(
+    "price,expected_attendee_status,expected_mailbox_count",
+    [
+        (None, SignUp.AttendeeStatus.WAITING_LIST, 1),
+        (Decimal("0"), SignUp.AttendeeStatus.ATTENDING, 2),
+    ],
+)
+@pytest.mark.django_db
+def test_group_email_with_payment_link_not_sent_when_moving_participant_if_price_missing(
+    api_client, price, expected_attendee_status, expected_mailbox_count
+):
+    language = LanguageFactory(pk="en", service_language=True)
+
+    with translation.override(language.pk):
+        registration = RegistrationFactory(
+            event__name="Foo", maximum_attendee_capacity=1
+        )
+
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    registration_price_group = RegistrationPriceGroupFactory(registration=registration)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(
+        registration=registration,
+        signup_group=signup_group,
+        attendee_status=SignUp.AttendeeStatus.ATTENDING,
+    )
+    contact_person = SignUpContactPersonFactory(
+        signup_group=signup_group, service_language=language, email="test2@test.com"
+    )
+
+    signup2 = SignUpFactory(
+        registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
+    )
+    contact_person2 = SignUpContactPersonFactory(
+        signup=signup2,
+        first_name="Mickey",
+        last_name="Mouse",
+        email="test@test.com",
+        service_language=language,
+    )
+
+    if price is not None:
+        registration_price_group.price = price
+        registration_price_group.save()
+
+        SignUpPriceGroupFactory(
+            signup=signup2, registration_price_group=registration_price_group
+        )
+
+    assert SignUpPayment.objects.count() == 0
+
+    with (
+        translation.override(language.pk),
+        patch("requests.post") as mocked_create_payment_request,
+    ):
+        assert_delete_signup_group(api_client, signup_group.id)
+
+        assert mocked_create_payment_request.called is False
+
+    assert SignUpPayment.objects.count() == 0
+
+    signup2.refresh_from_db()
+    assert signup2.attendee_status == expected_attendee_status
+
+    assert len(mail.outbox) == expected_mailbox_count
+    if expected_mailbox_count == 1:
+        assert mail.outbox[0].to[0] == contact_person.email
+        assert mail.outbox[0].subject == "Registration cancelled - Foo"
+    else:
+        assert mail.outbox[0].to[0] == contact_person2.email
+        assert mail.outbox[0].subject == "Registration confirmation - Foo"
+        assert mail.outbox[1].to[0] == contact_person.email
+        assert mail.outbox[1].subject == "Registration cancelled - Foo"
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("first_name", None),
+        ("last_name", None),
+        ("email", None),
+        ("first_name", ""),
+        ("last_name", ""),
+        ("email", ""),
+        (None, None),
+    ],
+)
+@pytest.mark.django_db
+def test_group_email_with_payment_link_not_sent_when_moving_participant_if_contact_person_invalid(
+    api_client, field, value
+):
+    language = LanguageFactory(pk="en", service_language=True)
+
+    with translation.override(language.pk):
+        registration = RegistrationFactory(
+            event__name="Foo", maximum_attendee_capacity=1
+        )
+
+    registration_price_group = RegistrationPriceGroupFactory(registration=registration)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    SignUpFactory(
+        registration=registration,
+        signup_group=signup_group,
+        attendee_status=SignUp.AttendeeStatus.ATTENDING,
+    )
+    contact_person = SignUpContactPersonFactory(
+        signup_group=signup_group, service_language=language, email="test2@test.com"
+    )
+
+    signup2 = SignUpFactory(
+        registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
+    )
+    if field:
+        SignUpContactPersonFactory(
+            signup=signup2,
+            first_name="Mickey" if field != "first_name" else value,
+            last_name="Mouse" if field != "last_name" else value,
+            email="test@test.com" if field != "email" else value,
+            service_language=language,
+        )
+    SignUpPriceGroupFactory(
+        signup=signup2, registration_price_group=registration_price_group
+    )
+
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    assert SignUpPayment.objects.count() == 0
+
+    mocked_create_payment_response = get_mock_response(
+        status_code=status.HTTP_400_BAD_REQUEST
+    )
+    with (
+        translation.override(language.pk),
+        patch("requests.post") as mocked_create_payment_request,
+    ):
+        mocked_create_payment_request.return_value = mocked_create_payment_response
+
+        assert_delete_signup_group(api_client, signup_group.id)
+
+    assert SignUpPayment.objects.count() == 0
+
+    # Signup 2 status is not changed.
+    signup2.refresh_from_db()
+    assert signup2.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
+
+    # Email has been sent to signup that was cancelled.
+    assert len(mail.outbox) == 1
+    assert mail.outbox[0].to[0] == contact_person.email
+    assert mail.outbox[0].subject == "Registration cancelled - Foo"

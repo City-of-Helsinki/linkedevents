@@ -37,6 +37,7 @@ from registrations.tests.factories import (
 from registrations.tests.test_registration_post import hel_email
 from registrations.tests.utils import (
     assert_attending_and_waitlisted_signups,
+    assert_payment_link_email_sent,
     assert_signup_payment_data_is_correct,
     create_user_by_role,
     DEFAULT_CREATE_ORDER_ERROR_RESPONSE,
@@ -226,9 +227,20 @@ def test_registration_substitute_user_can_create_signup_group(api_client, regist
     ],
 )
 @pytest.mark.django_db
-def test_authenticated_user_can_create_signup_group_with_payment(
-    registration, api_client, user_role
-):
+def test_authenticated_user_can_create_signup_group_with_payment(api_client, user_role):
+    registration = RegistrationFactory(event__name="Foo")
+
+    user = create_user_by_role(
+        user_role,
+        registration.publisher,
+        additional_roles={
+            "regular_user_without_organization": lambda usr: None,
+        }
+        if user_role == "regular_user_without_organization"
+        else None,
+    )
+    api_client.force_authenticate(user)
+
     reservation = SeatReservationCodeFactory(seats=2, registration=registration)
 
     LanguageFactory(pk="fi", service_language=True)
@@ -236,15 +248,6 @@ def test_authenticated_user_can_create_signup_group_with_payment(
 
     registration_price_group = RegistrationPriceGroupFactory(registration=registration)
     registration_price_group2 = RegistrationPriceGroupFactory(registration=registration)
-
-    user = create_user_by_role(
-        user_role,
-        registration.publisher,
-        additional_roles={
-            "regular_user_without_organization": lambda usr: None,
-        },
-    )
-    api_client.force_authenticate(user)
 
     signup_group_data = deepcopy(default_signup_group_data)
     signup_group_data.update(
@@ -277,6 +280,7 @@ def test_authenticated_user_can_create_signup_group_with_payment(
     )
     with patch("requests.post") as mocked_web_store_api_request:
         mocked_web_store_api_request.return_value = mocked_web_store_api_response
+
         response = assert_create_signup_group(api_client, signup_group_data)
 
     assert SignUpPayment.objects.count() == 1
@@ -287,8 +291,15 @@ def test_authenticated_user_can_create_signup_group_with_payment(
         signup_group=SignUpGroup.objects.first(),
     )
 
-    # Email confirmation will be sent only when payment webhook arrives and payment has been paid.
-    assert len(mail.outbox) == 0
+    # Payment link is sent via email.
+    assert_payment_link_email_sent(
+        SignUpContactPerson.objects.first(),
+        SignUpPayment.objects.first(),
+        expected_subject="Payment required for registration confirmation - Foo",
+        expected_text="Please use the payment link to confirm your registration for the event "
+        "<strong>Foo</strong>. The payment link expires in %(hours)s hours."
+        % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
+    )
 
 
 @pytest.mark.django_db
@@ -320,9 +331,15 @@ def test_can_create_signup_group_with_create_payment_as_false_in_payload(
 
 
 @pytest.mark.django_db
-def test_create_signup_group_payment_without_pricetotal_in_response(
-    registration, api_client
-):
+def test_create_signup_group_payment_without_pricetotal_in_response(api_client):
+    registration = RegistrationFactory(event__name="Foo")
+
+    user = create_user_by_role(
+        "registration_admin",
+        registration.publisher,
+    )
+    api_client.force_authenticate(user)
+
     reservation = SeatReservationCodeFactory(seats=2, registration=registration)
 
     LanguageFactory(pk="fi", service_language=True)
@@ -330,12 +347,6 @@ def test_create_signup_group_payment_without_pricetotal_in_response(
 
     registration_price_group = RegistrationPriceGroupFactory(registration=registration)
     registration_price_group2 = RegistrationPriceGroupFactory(registration=registration)
-
-    user = create_user_by_role(
-        "registration_admin",
-        registration.publisher,
-    )
-    api_client.force_authenticate(user)
 
     signup_group_data = deepcopy(default_signup_group_data)
     signup_group_data.update(
@@ -376,7 +387,15 @@ def test_create_signup_group_payment_without_pricetotal_in_response(
         signup_group=SignUpGroup.objects.first(),
     )
 
-    assert len(mail.outbox) == 0
+    # Payment link is sent via email.
+    assert_payment_link_email_sent(
+        SignUpContactPerson.objects.first(),
+        SignUpPayment.objects.first(),
+        expected_subject="Payment required for registration confirmation - Foo",
+        expected_text="Please use the payment link to confirm your registration for the event "
+        "<strong>Foo</strong>. The payment link expires in %(hours)s hours."
+        % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
+    )
 
 
 @pytest.mark.django_db
@@ -601,12 +620,15 @@ def test_create_signup_payment_with_zero_or_negative_price(
     )
 
 
+@pytest.mark.parametrize("maximum_attendee_capacity", [0, 1])
 @pytest.mark.django_db
-def test_create_signup_group_payment_signup_is_waitlisted(api_client, registration):
-    registration.maximum_attendee_capacity = 0
-    registration.waiting_list_capacity = 1
-    registration.save(
-        update_fields=["maximum_attendee_capacity", "waiting_list_capacity"]
+def test_create_signup_group_payment_signup_is_waitlisted(
+    api_client, maximum_attendee_capacity
+):
+    registration = RegistrationFactory(
+        maximum_attendee_capacity=maximum_attendee_capacity,
+        waiting_list_capacity=2 if maximum_attendee_capacity == 0 else 1,
+        event__name="Foo",
     )
 
     reservation = SeatReservationCodeFactory(seats=2, registration=registration)
@@ -640,14 +662,31 @@ def test_create_signup_group_payment_signup_is_waitlisted(api_client, registrati
 
     assert SignUpPayment.objects.count() == 0
 
-    response = create_signup_group(api_client, signup_group_data)
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    assert SignUpPayment.objects.count() == 0
-
-    assert response.data["create_payment"][0] == (
-        "A payment can only be added for attending participants."
+    mocked_web_store_api_response = get_mock_response(
+        json_return_value=get_web_store_order_response(
+            payment_amount=registration_price_group.price
+        )
     )
+    with patch("requests.post") as mocked_web_store_api_request:
+        mocked_web_store_api_request.return_value = mocked_web_store_api_response
+
+        assert_create_signup_group(api_client, signup_group_data)
+
+    assert SignUpPayment.objects.count() == maximum_attendee_capacity
+
+    if maximum_attendee_capacity:
+        # Payment link is sent via email for the attending signup.
+        assert_payment_link_email_sent(
+            SignUpContactPerson.objects.first(),
+            SignUpPayment.objects.first(),
+            expected_subject="Payment required for registration confirmation - Foo",
+            expected_text="Please use the payment link to confirm your registration for the event "
+            "<strong>Foo</strong>. The payment link expires in %(hours)s hours."
+            % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
+        )
+    else:
+        assert len(mail.outbox) == 1
+        assert mail.outbox[0].subject == "Waiting list seat reserved - Foo"
 
 
 @pytest.mark.parametrize(

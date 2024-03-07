@@ -14,6 +14,7 @@ from events.tests.factories import (
     OrganizationFactory,
 )
 from helevents.tests.factories import UserFactory
+from registrations.exceptions import PriceGroupValidationError
 from registrations.models import RegistrationPriceGroup
 from registrations.notifications import SignUpNotificationType
 from registrations.tests.factories import (
@@ -394,6 +395,29 @@ class TestSignUpGroup(TestCase):
             },
         )
 
+    def test_to_web_store_order_json_missing_price_group(self):
+        english = LanguageFactory(pk="en", service_language=True)
+
+        SignUpContactPersonFactory(
+            signup_group=self.signup_group,
+            first_name="Mickey",
+            last_name="Mouse",
+            email="mickey@test.com",
+            phone_number="+35811111111",
+            service_language=english,
+        )
+
+        SignUpFactory(
+            registration=self.signup_group.registration,
+            signup_group=self.signup_group,
+        )
+
+        with self.assertRaises(PriceGroupValidationError) as exc:
+            self.signup_group.to_web_store_order_json(self.user.uuid)
+        self.assertEquals(
+            exc.exception.messages[0], "No price groups exist for signup group."
+        )
+
     def test_soft_delete(self):
         signup = SignUpFactory(
             registration=self.signup_group.registration, signup_group=self.signup_group
@@ -738,6 +762,25 @@ class TestSignUp(TestCase):
                     "phone": contact_person.phone_number,
                 },
             },
+        )
+
+    def test_to_web_store_order_json_missing_price_group(self):
+        english = LanguageFactory(pk="en", service_language=True)
+
+        SignUpContactPersonFactory(
+            signup=self.signup,
+            first_name="Mickey",
+            last_name="Mouse",
+            email="mickey@test.com",
+            phone_number="+35811111111",
+            service_language=english,
+        )
+
+        with self.assertRaises(PriceGroupValidationError) as exc:
+            self.signup.to_web_store_order_json(self.user.uuid)
+
+        self.assertEquals(
+            exc.exception.messages[0], "Price group does not exist for signup."
         )
 
     def test_soft_delete(self):

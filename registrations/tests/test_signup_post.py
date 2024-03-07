@@ -38,6 +38,7 @@ from registrations.tests.test_registration_post import hel_email
 from registrations.tests.test_signup_patch import description_fields
 from registrations.tests.utils import (
     assert_attending_and_waitlisted_signups,
+    assert_payment_link_email_sent,
     assert_signup_payment_data_is_correct,
     create_user_by_role,
     DEFAULT_CREATE_ORDER_ERROR_RESPONSE,
@@ -196,10 +197,12 @@ def test_authenticated_users_can_create_signups(registration, api_client, user_r
     ],
 )
 @pytest.mark.django_db
-def test_authenticated_user_can_create_signups_with_payments(
-    registration, api_client, user_role
-):
-    LanguageFactory(pk="fi", service_language=True)
+def test_authenticated_user_can_create_signups_with_payments(api_client, user_role):
+    language = LanguageFactory(pk="fi", service_language=True)
+
+    with translation.override(language.pk):
+        registration = RegistrationFactory(event__name="Foo")
+
     reservation = SeatReservationCodeFactory(seats=1, registration=registration)
     registration_price_group = RegistrationPriceGroupFactory(registration=registration)
 
@@ -208,7 +211,9 @@ def test_authenticated_user_can_create_signups_with_payments(
         registration.publisher,
         additional_roles={
             "regular_user_without_organization": lambda usr: None,
-        },
+        }
+        if user_role == "regular_user_without_organization"
+        else None,
     )
     api_client.force_authenticate(user)
 
@@ -225,6 +230,12 @@ def test_authenticated_user_can_create_signups_with_payments(
             "create_payment": True,
         }
     )
+    signups_data["signups"][0]["contact_person"].update(
+        {
+            "native_language": language.pk,
+            "service_language": language.pk,
+        }
+    )
 
     assert SignUpPayment.objects.count() == 0
 
@@ -233,8 +244,11 @@ def test_authenticated_user_can_create_signups_with_payments(
             payment_amount=registration_price_group.price
         )
     )
-    with patch("requests.post") as mocked_web_store_api_request:
+    with translation.override(language.pk), patch(
+        "requests.post"
+    ) as mocked_web_store_api_request:
         mocked_web_store_api_request.return_value = mocked_web_store_api_response
+
         response = assert_create_signups(api_client, signups_data)
 
     assert SignUpPayment.objects.count() == 1
@@ -246,8 +260,15 @@ def test_authenticated_user_can_create_signups_with_payments(
         SignUp.objects.first(),
     )
 
-    # Email confirmation will be sent only when payment webhook arrives and payment has been paid.
-    assert len(mail.outbox) == 0
+    # Payment link is sent via email.
+    assert_payment_link_email_sent(
+        SignUpContactPerson.objects.first(),
+        SignUpPayment.objects.first(),
+        expected_subject="Maksu vaaditaan ilmoittautumisen vahvistamiseksi - Foo",
+        expected_text="Voit vahvistaa ilmoittautumisesi tapahtumaan <strong>Foo</strong> "
+        "oheisen maksulinkin avulla. Maksulinkki vanhenee %(hours)s tunnin kuluttua."
+        % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
+    )
 
 
 @pytest.mark.django_db
@@ -281,16 +302,20 @@ def test_can_create_signup_with_create_payment_as_false_in_payload(
 
 
 @pytest.mark.django_db
-def test_create_signup_payment_without_pricetotal_in_response(registration, api_client):
-    LanguageFactory(pk="fi", service_language=True)
-    reservation = SeatReservationCodeFactory(seats=1, registration=registration)
-    registration_price_group = RegistrationPriceGroupFactory(registration=registration)
+def test_create_signup_payment_without_pricetotal_in_response(api_client):
+    language = LanguageFactory(pk="fi", service_language=True)
+
+    with translation.override(language.pk):
+        registration = RegistrationFactory(event__name="Foo")
 
     user = create_user_by_role(
         "registration_admin",
         registration.publisher,
     )
     api_client.force_authenticate(user)
+
+    reservation = SeatReservationCodeFactory(seats=1, registration=registration)
+    registration_price_group = RegistrationPriceGroupFactory(registration=registration)
 
     signups_data = deepcopy(default_signups_data)
     signups_data.update(
@@ -314,8 +339,11 @@ def test_create_signup_payment_without_pricetotal_in_response(registration, api_
     mocked_web_store_api_response = get_mock_response(
         json_return_value=mocked_web_store_api_json
     )
-    with patch("requests.post") as mocked_web_store_api_request:
+    with translation.override(language.pk), patch(
+        "requests.post"
+    ) as mocked_web_store_api_request:
         mocked_web_store_api_request.return_value = mocked_web_store_api_response
+
         response = assert_create_signups(api_client, signups_data)
 
     assert SignUpPayment.objects.count() == 1
@@ -327,7 +355,15 @@ def test_create_signup_payment_without_pricetotal_in_response(registration, api_
         SignUp.objects.first(),
     )
 
-    assert len(mail.outbox) == 0
+    # Payment link is sent via email.
+    assert_payment_link_email_sent(
+        SignUpContactPerson.objects.first(),
+        SignUpPayment.objects.first(),
+        expected_subject="Maksu vaaditaan ilmoittautumisen vahvistamiseksi - Foo",
+        expected_text="Voit vahvistaa ilmoittautumisesi tapahtumaan <strong>Foo</strong> "
+        "oheisen maksulinkin avulla. Maksulinkki vanhenee %(hours)s tunnin kuluttua."
+        % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
+    )
 
 
 @pytest.mark.django_db
@@ -513,19 +549,20 @@ def test_create_signup_payment_with_zero_or_negative_price(
 
 
 @pytest.mark.django_db
-def test_create_signup_payment_signup_is_waitlisted(api_client, registration):
-    registration.maximum_attendee_capacity = 0
-    registration.waiting_list_capacity = 1
-    registration.save(
-        update_fields=["maximum_attendee_capacity", "waiting_list_capacity"]
-    )
+def test_create_signup_payment_signup_is_waitlisted(api_client):
+    language = LanguageFactory(pk="en", service_language=True)
 
-    LanguageFactory(pk="fi", service_language=True)
-    reservation = SeatReservationCodeFactory(seats=1, registration=registration)
-    registration_price_group = RegistrationPriceGroupFactory(registration=registration)
+    registration = RegistrationFactory(
+        maximum_attendee_capacity=0,
+        waiting_list_capacity=1,
+        event__name="Foo",
+    )
 
     user = create_user_by_role("registration_admin", registration.publisher)
     api_client.force_authenticate(user)
+
+    reservation = SeatReservationCodeFactory(seats=1, registration=registration)
+    registration_price_group = RegistrationPriceGroupFactory(registration=registration)
 
     signups_data = deepcopy(default_signups_data)
     signups_data.update(
@@ -540,17 +577,24 @@ def test_create_signup_payment_signup_is_waitlisted(api_client, registration):
             "create_payment": True,
         }
     )
-
-    assert SignUpPayment.objects.count() == 0
-
-    response = create_signups(api_client, signups_data)
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    assert SignUpPayment.objects.count() == 0
-
-    assert response.data["signups"][0]["create_payment"][0] == (
-        "A payment can only be added for attending participants."
+    signups_data["signups"][0]["contact_person"].update(
+        {
+            "native_language": language.pk,
+            "service_language": language.pk,
+        }
     )
+
+    assert SignUpPayment.objects.count() == 0
+
+    assert_create_signups(api_client, signups_data)
+
+    assert SignUpPayment.objects.count() == 0
+
+    assert SignUp.objects.count() == 1
+    assert SignUp.objects.first().attendee_status == SignUp.AttendeeStatus.WAITING_LIST
+
+    assert len(mail.outbox) == 1
+    assert mail.outbox[0].subject == "Waiting list seat reserved - Foo"
 
 
 @pytest.mark.django_db
