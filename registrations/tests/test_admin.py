@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.contrib import admin
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth import get_user_model
+from django.core import mail
 from django.test import RequestFactory, TestCase
 from django.utils import translation
 from rest_framework import status
@@ -262,6 +263,7 @@ class TestRegistrationAdmin(TestCase):
             registration_user_access = RegistrationUserAccess.objects.create(
                 registration=self.registration, email=EMAIL
             )
+            mail.outbox.clear()
             self.registration.event.name = EVENT_NAME
             self.registration.event.save()
 

@@ -325,6 +325,7 @@ def test_send_email_to_new_registration_user_access(
     RegistrationUserAccessFactory(registration=registration, email="delete1@email.com")
     RegistrationUserAccessFactory(registration=registration, email="delete2@email.com")
     assert len(registration.registration_user_accesses.all()) == 2
+    mail.outbox.clear()
 
     registration_data = {
         "event": {"@id": get_event_url(registration.event.id)},
@@ -366,6 +367,7 @@ def test_email_is_not_sent_if_registration_user_access_email_is_not_updated(
         email=user_email,
         is_substitute_user=is_substitute_user,
     )
+    mail.outbox.clear()
 
     registration_data = {
         "event": {"@id": get_event_url(registration.event.id)},
@@ -397,29 +399,68 @@ def test_email_is_sent_if_registration_user_access_email_is_updated(
         email=user_email,
         is_substitute_user=is_substitute_user,
     )
-
-    registration_data = {
-        "event": {"@id": get_event_url(registration.event.id)},
-        "registration_user_accesses": [
-            {
-                "id": registration_user_access.id,
-                "email": edited_user_email,
-                "is_substitute_user": is_substitute_user,
-            }
-        ],
-    }
+    mail.outbox.clear()
 
     with translation.override("fi"):
         registration.event.type_id = Event.TypeId.GENERAL
         registration.event.name = event_name
         registration.event.save()
 
-        assert_update_registration(user_api_client, registration.id, registration_data)
+        registration_data = {
+            "event": {"@id": get_event_url(registration.event.id)},
+            "registration_user_accesses": [
+                {
+                    "id": registration_user_access.id,
+                    "email": edited_user_email,
+                    "is_substitute_user": is_substitute_user,
+                }
+            ],
+        }
 
-        #  assert that the email was sent
+        assert_update_registration(user_api_client, registration.id, registration_data)
+        #  assert that the email after update was sent
         registration_user_access.refresh_from_db()
         assert_invitation_email_is_sent(
             edited_user_email, event_name, registration_user_access
+        )
+
+
+@pytest.mark.parametrize("is_substitute_user", [False, True])
+@pytest.mark.django_db
+def test_email_is_sent_if_is_substitute_value_of_registration_user_access_is_updated(
+    registration, user_api_client, is_substitute_user
+):
+    user_email = hel_email
+
+    registration_user_access = RegistrationUserAccessFactory(
+        registration=registration,
+        email=user_email,
+        is_substitute_user=is_substitute_user,
+    )
+    mail.outbox.clear()
+
+    with translation.override("fi"):
+        registration.event.type_id = Event.TypeId.GENERAL
+        registration.event.name = event_name
+        registration.event.save()
+
+        registration_data = {
+            "event": {"@id": get_event_url(registration.event.id)},
+            "registration_user_accesses": [
+                {
+                    "id": registration_user_access.id,
+                    "email": hel_email,
+                    "is_substitute_user": False if is_substitute_user else True,
+                }
+            ],
+        }
+
+        assert_update_registration(user_api_client, registration.id, registration_data)
+
+        #  assert that the email after update was sent
+        registration_user_access.refresh_from_db()
+        assert_invitation_email_is_sent(
+            user_email, event_name, registration_user_access
         )
 
 

@@ -89,25 +89,6 @@ class RegistrationAdmin(RegistrationBaseAdmin, TranslationAdmin, VersionAdmin):
             ):
                 yield inline.get_formset(request, obj), inline
 
-    def save_related(self, request, form, formsets, change):
-        for formset in formsets:
-            if formset.model == RegistrationUserAccess:
-                formset.save(commit=False)
-
-                for added_registration_user_accesses in formset.new_objects:
-                    # Send invitation email if new registration user accesses is added
-                    added_registration_user_accesses.send_invitation()
-
-                for [
-                    changed_registration_user_access,
-                    changed_fields,
-                ] in formset.changed_objects:
-                    # Send invitation email if email address is changed
-                    if "email" in changed_fields:
-                        changed_registration_user_access.send_invitation()
-
-        super(RegistrationAdmin, self).save_related(request, form, formsets, change)
-
     def get_readonly_fields(self, request, obj=None):
         if obj:
             return ["id", "event"]
