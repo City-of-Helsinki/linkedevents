@@ -63,7 +63,7 @@ TOKEN_AUTH_SHARED_SECRET=abcdefghacbdefgabcdefghacbdefgabcdefghacbdefgabcdefghac
 # Note that Linkedevents accesses Elasticsearch through django-haystack
 # and does not support versions beyond 5.x. We've only tested using 1.7 (yes!)
 # Does not correspond to standard Django setting
-ELASTICSEARCH_URL=http://localhost:9200/
+#ELASTICSEARCH_URL=http://localhost:9200/
 
 # Secret used for various functions within Django. This setting is
 # mandatory for Django, but Linkedevents will generate a key, if it is not
