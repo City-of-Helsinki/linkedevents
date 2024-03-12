@@ -8,6 +8,7 @@ from copy import deepcopy
 from datetime import datetime
 from datetime import time as datetime_time
 from datetime import timedelta
+from datetime import timezone as datetime_timezone
 from functools import partial, reduce
 from operator import or_
 from typing import Iterable, Optional
@@ -30,7 +31,7 @@ from django.db.models.functions import Greatest
 from django.db.utils import IntegrityError
 from django.http import Http404, HttpResponsePermanentRedirect
 from django.utils import timezone, translation
-from django.utils.encoding import force_text
+from django.utils.encoding import force_str
 from django.utils.functional import cached_property
 from django.utils.timezone import localtime
 from django.utils.translation import gettext_lazy as _
@@ -1981,7 +1982,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
             and data["end_time"] < timezone.now()
             and not past_allowed
         ):
-            errors["end_time"] = force_text(
+            errors["end_time"] = force_str(
                 _("End time cannot be in the past. Please set a future end time.")
             )
 
@@ -2253,7 +2254,9 @@ def _annotate_queryset_for_filtering_by_enrolment_start_or_end(
     else:
         # Put events with null enrolment times to the end of the list for
         # the descending ordering.
-        events_with_null_times_last = timezone.datetime.min.replace(tzinfo=timezone.utc)
+        events_with_null_times_last = timezone.datetime.min.replace(
+            tzinfo=datetime_timezone.utc
+        )
         order_field_name = order_field_name.removeprefix("-")
 
     return queryset.annotate(
@@ -2751,7 +2754,7 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
                 _("Start or end cannot be used with days.")
             )
 
-        today = datetime.now(timezone.utc).date()
+        today = datetime.now(datetime_timezone.utc).date()
 
         start = today.isoformat()
         end = (today + timedelta(days=days)).isoformat()
@@ -3250,9 +3253,9 @@ class EventFilter(django_filters.rest_framework.FilterSet):
             return qs
 
         if ongoing:
-            return qs.filter(end_time__gt=datetime.now(timezone.utc))
+            return qs.filter(end_time__gt=datetime.now(datetime_timezone.utc))
 
-        return qs.filter(end_time__lte=datetime.now(timezone.utc))
+        return qs.filter(end_time__lte=datetime.now(datetime_timezone.utc))
 
     def filter_registration_admin_user(self, queryset, name, value):
         if not value:

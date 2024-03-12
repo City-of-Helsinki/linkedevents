@@ -501,6 +501,14 @@ class RegistrationPriceGroup(RegistrationPriceGroupBaseModel):
         on_delete=models.PROTECT,
     )
 
+    def save(self, *args, **kwargs):
+        self.calculate_vat_and_price_without_vat()
+
+        if update_fields := kwargs.get("update_fields"):
+            update_fields.update({"vat", "price_without_vat"})
+
+        super().save(*args, **kwargs)
+
     class Meta:
         constraints = [
             UniqueConstraint(

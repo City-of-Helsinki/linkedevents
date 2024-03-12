@@ -3,10 +3,7 @@ version: '3.7'
 services:
 
     postgres:
-        platform: linux/amd64
-        build:
-            context: ./
-            dockerfile: ./docker/postgres/Dockerfile
+        image: "postgis/postgis:14-3.2-alpine"
         environment:
             POSTGRES_USER: linkedevents
             POSTGRES_PASSWORD: linkedevents

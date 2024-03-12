@@ -7,7 +7,7 @@ from dateutil.parser import parse as dateutil_parse
 from django.conf import settings
 from django.core.management import call_command
 from django.utils import timezone, translation
-from django.utils.encoding import force_text
+from django.utils.encoding import force_str
 
 from audit_log.models import AuditLogEntry
 from events.api import KeywordSerializer
@@ -536,11 +536,11 @@ def test_description_and_short_description_required_in_name_languages(
     assert len(response.data["description"]) == 1
 
     assert (
-        force_text(response.data["short_description"]["sv"])
+        force_str(response.data["short_description"]["sv"])
         == "This field must be specified before an event is published."
     )
     assert (
-        force_text(response.data["description"]["fi"])
+        force_str(response.data["description"]["fi"])
         == "This field must be specified before an event is published."
     )
 
@@ -558,7 +558,7 @@ def test_short_description_cannot_exceed_160_chars(
             reverse("event-list"), minimal_event_dict, format="json"
         )
     assert response.status_code == 400
-    assert force_text(
+    assert force_str(
         response.data["short_description"]["fi"]
         == "Short description length must be 160 characters or less"
     )
@@ -631,7 +631,7 @@ def test_price_info_options(api_client, minimal_event_dict, user, offers, expect
     assert response.status_code == expected
     if expected == 400:
         assert (
-            force_text(response.data["offers"][0])
+            force_str(response.data["offers"][0])
             == "Price info must be specified before an event is published."
         )
 
@@ -677,7 +677,7 @@ def test_name_required_in_some_language(
         assert response.status_code == 400
 
     if not is_valid:
-        assert force_text(response.data["name"][0]) == "The name must be specified."
+        assert force_str(response.data["name"][0]) == "The name must be specified."
 
 
 @pytest.mark.django_db

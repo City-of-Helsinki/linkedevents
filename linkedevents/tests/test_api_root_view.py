@@ -40,5 +40,5 @@ def test_return_correct_routes(api_client):
 
 @pytest.mark.django_db
 def test_has_correct_name(api_client):
-    response = api_client.get(reverse("api-root"), HTTP_ACCEPT="text/html")
+    response = api_client.get(reverse("api-root"), headers={"accept": "text/html"})
     assert "<h1>Linked Events</h1>" in str(response.content)

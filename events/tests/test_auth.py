@@ -38,7 +38,7 @@ def do_authentication(user_uuid):
     )
 
     rf = RequestFactory()
-    request = rf.get("/path", HTTP_AUTHORIZATION=auth_header)
+    request = rf.get("/path", headers={"authorization": auth_header})
 
     return auth.authenticate(request)
 
