@@ -62,6 +62,7 @@ env = environ.Env(
     AUTO_ENABLED_EXTENSIONS=(list, []),
     COOKIE_PREFIX=(str, "linkedevents"),
     DATABASE_URL=(str, "postgis:///linkedevents"),
+    DATABASE_PASSWORD=(str, ""),
     DEBUG=(bool, False),
     DEFAULT_FROM_EMAIL=(str, "noreply@linkedevents.hel.fi"),
     ELASTICSEARCH_URL=(str, None),
@@ -181,6 +182,9 @@ DATABASES = {"default": env.db()}
 
 DATABASES["default"]["ENGINE"] = "django.contrib.gis.db.backends.postgis"
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
+
+if env("DATABASE_PASSWORD"):
+    DATABASES["default"]["PASSWORD"] = env("DATABASE_PASSWORD")
 
 SYSTEM_DATA_SOURCE_ID = env("SYSTEM_DATA_SOURCE_ID")
 
