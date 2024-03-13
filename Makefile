@@ -77,6 +77,20 @@ test:
 	linkedevents-build \
 	py.test events helevents
 
+.PHONY: test2
+test2:
+	@docker run \
+	--rm \
+	--network=host \
+	-e DB_APP_PASSWORD=secret \
+	-e DB_APP_USER=linkedevents_application \
+	-e DB_HOST=localhost \
+	-e DB_NAME=linkedevents \
+	-e SYSTEM_DATA_SOURCE_ID=espooevents \
+	--name linkedevents-test \
+	linkedevents \
+	py.test events helevents
+
 .PHONY: import_yso
 import_yso:
 	@docker run \
@@ -314,7 +328,7 @@ make_migrations:
         --rm \
         --network=host \
         -e DB_APP_PASSWORD=secret \
-        -e DB_APP_USER=linkedevents_application \
+        -e DB_APP_USER=linkedevents_migration \
         -e DB_HOST=localhost \
         -e DB_NAME=linkedevents \
         -v `pwd`:/app \
