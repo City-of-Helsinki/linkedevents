@@ -58,6 +58,7 @@ def assert_event_fields_exist(data, version='v1'):
         'info_url',
         'keywords',
         'event_registration_link',
+        'hobby_categories',
         'last_modified_time',
         'location',
         'location_extra_info',
