@@ -16,6 +16,7 @@ from events.importer.espoo import (
     _import_origin_objs,
     _list_data,
     _post_map_to_self_id,
+    _post_map_to_self_id_or_skip,
     _split_common_objs,
     EspooImporter,
     EspooImporterError,
@@ -167,6 +168,52 @@ def test_import_origin_objs():
     assert Organization.objects.filter(data_source=importer_ds).count() == 2
     with pytest.raises(Organization.DoesNotExist):
         Organization.objects.get(id=imported_unused_org.id)
+
+
+@pytest.mark.django_db
+def test_import_origin_objs_skip(settings):
+    importer_ds = DataSourceFactory(id="importer_ds")
+    imported_org = OrganizationFactory(
+        data_source=importer_ds, origin_id="origin_org_id"
+    )
+
+    origin_data = [
+        {
+            "id": "parent",
+            "data_source": "origin_ds",
+            "publisher": imported_org.origin_id,
+            "super_event": None,
+        },
+        {
+            "id": "child_of_parent",
+            "data_source": "origin_ds",
+            "publisher": imported_org.origin_id,
+            "super_event": {"@id": "https://localhost/event/parent/"},
+        },
+        {
+            "id": "child_whose_parent_is_missing",
+            "data_source": "origin_ds",
+            "publisher": imported_org.origin_id,
+            "super_event": {"@id": "https://localhost/event/parent_does_not_exist/"},
+        },
+    ]
+
+    org_map = {imported_org.origin_id: imported_org.id}
+
+    instance_map, synch = _import_origin_objs(
+        Event,
+        importer_ds,
+        [],
+        origin_data,
+        pre_field_mappers={"publisher": _build_pre_map_to_id(org_map)},
+        post_field_mappers={"super_event": _post_map_to_self_id_or_skip},
+    )
+
+    synch.finish()
+    assert len(instance_map) == 2
+    assert Event.objects.filter(data_source=importer_ds).count() == 2
+    assert Event.objects.filter(origin_id="parent").exists()
+    assert Event.objects.filter(origin_id="child_of_parent").exists()
 
 
 @pytest.mark.django_db

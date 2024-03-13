@@ -6,6 +6,7 @@ from typing import Annotated, Any, Callable, Optional, Type, TypeVar, Union
 from urllib.parse import urljoin, urlparse
 
 import requests
+import sentry_sdk
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Model
@@ -54,6 +55,10 @@ PostMapper = Annotated[
 
 
 class EspooImporterError(Exception):
+    pass
+
+
+class SkipObjectImport(Exception):
     pass
 
 
@@ -182,6 +187,21 @@ def _post_map_to_self_id(
 ):
     mapper = _build_pre_map_to_id(instance_map)
     return mapper(field_name, field_data, data)
+
+
+def _post_map_to_self_id_or_skip(
+    field_name: str,
+    field_data: Optional[Union[str, dict]],
+    data: dict,
+    instance: M,
+    instance_map: dict[str, str],
+):
+    try:
+        return _post_map_to_self_id(
+            field_name, field_data, data, instance, instance_map
+        )
+    except KeyError as ex:
+        raise SkipObjectImport from ex
 
 
 def _build_post_map_m2m_obj(mapping: dict[str, str], id_getter=None) -> PostMapper:
@@ -366,15 +386,34 @@ def _import_origin_objs(
     }
 
     for instance in instances:
-        post_data = {}
-        for field_name, mapper in post_field_mappers.items():
-            obj_data = instance_data_map[instance]
-            post_data = mapper(
-                field_name, obj_data[field_name], post_data, instance, instance_mapping
+        try:
+            post_data = {}
+            for field_name, mapper in post_field_mappers.items():
+                obj_data = instance_data_map[instance]
+                post_data = mapper(
+                    field_name,
+                    obj_data[field_name],
+                    post_data,
+                    instance,
+                    instance_mapping,
+                )
+
+            if post_data:
+                type(instance).objects.filter(pk=instance.pk).update(**post_data)
+        except SkipObjectImport as ex:
+            sentry_sdk.capture_exception(ex)
+            logger.warning(
+                f"Skipped origin obj {getattr(instance, 'origin_id', None)}",
+                exc_info=ex,
             )
 
-        if post_data:
-            type(instance).objects.filter(pk=instance.pk).update(**post_data)
+            # Revert found state so that syncher deletes this instance
+            instance._found = False
+
+            if (mapping_id := origin_id(instance)) in instance_mapping:
+                del instance_mapping[mapping_id]
+
+            continue
 
     return instance_mapping, syncher
 
@@ -630,7 +669,7 @@ class EspooImporter(Importer):
                 ),
                 "offers": _post_recreate_m2o,
                 "external_links": _post_recreate_external_links,
-                "super_event": _post_map_to_self_id,
+                "super_event": _post_map_to_self_id_or_skip,
             },
         )
 
