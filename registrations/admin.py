@@ -7,7 +7,7 @@ from reversion.admin import VersionAdmin
 
 from events.admin import PublisherFilter
 from events.models import Language
-from registrations.forms import RegistrationPriceGroupAdminForm
+from registrations.forms import RegistrationAdminForm, RegistrationPriceGroupAdminForm
 from registrations.models import (
     PriceGroup,
     Registration,
@@ -49,27 +49,13 @@ class RegistrationUserAccessInline(admin.TabularInline):
 class RegistrationPriceGroupInline(admin.TabularInline):
     model = RegistrationPriceGroup
     form = RegistrationPriceGroupAdminForm
-    extra = 1
+    extra = 0
     verbose_name = _("Registration price group")
     verbose_name_plural = _("Registration price groups")
 
 
 class RegistrationAdmin(RegistrationBaseAdmin, TranslationAdmin, VersionAdmin):
-    fields = (
-        "id",
-        "event",
-        "enrolment_start_time",
-        "enrolment_end_time",
-        "minimum_attendee_capacity",
-        "maximum_attendee_capacity",
-        "waiting_list_capacity",
-        "maximum_group_size",
-        "instructions",
-        "confirmation_message",
-        "audience_min_age",
-        "audience_max_age",
-        "mandatory_fields",
-    )
+    form = RegistrationAdminForm
     list_display = (
         "id",
         "event",
@@ -88,6 +74,22 @@ class RegistrationAdmin(RegistrationBaseAdmin, TranslationAdmin, VersionAdmin):
                 or settings.WEB_STORE_INTEGRATION_ENABLED
             ):
                 yield inline.get_formset(request, obj), inline
+
+    def save_formset(self, request, form, formset, change):
+        if (
+            settings.WEB_STORE_INTEGRATION_ENABLED
+            and formset.model == RegistrationPriceGroup
+        ):
+            instances = formset.save(commit=False)
+
+            for obj in formset.deleted_objects:
+                obj.delete()
+
+            for instance in instances:
+                instance.vat_percentage = form.cleaned_data["vat_percentage"]
+                instance.save()
+        else:
+            super().save_formset(request, form, formset, change)
 
     def get_readonly_fields(self, request, obj=None):
         if obj:

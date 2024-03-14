@@ -524,7 +524,7 @@ def test_create_registration_with_price_groups(user, api_client, event):
             {
                 "price_group": custom_price_group.pk,
                 "price": Decimal("15.55"),
-                "vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_24,
+                "vat_percentage": VatPercentage.VAT_24.value,
             },
         ],
     }
@@ -620,12 +620,12 @@ def test_cannot_create_registration_price_groups_with_different_vat_percentages(
             {
                 "price_group": default_price_group.pk,
                 "price": Decimal("10"),
-                "vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_24,
+                "vat_percentage": VatPercentage.VAT_24.value,
             },
             {
                 "price_group": custom_price_group.pk,
                 "price": Decimal("15.55"),
-                "vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_10,
+                "vat_percentage": VatPercentage.VAT_10.value,
             },
         ],
     }

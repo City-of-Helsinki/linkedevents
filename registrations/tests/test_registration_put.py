@@ -835,12 +835,12 @@ def test_cannot_update_price_groups_to_registration_with_different_vat_percentag
             {
                 "price_group": default_price_group.pk,
                 "price": Decimal("10"),
-                "vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_24,
+                "vat_percentage": VatPercentage.VAT_24.value,
             },
             {
                 "price_group": custom_price_group.pk,
                 "price": Decimal("15.55"),
-                "vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_14,
+                "vat_percentage": VatPercentage.VAT_14.value,
             },
         ],
     }

@@ -1695,9 +1695,7 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
                 code="unique",
             )
 
-        validate_for_duplicates(
-            value, "price_group", duplicate_error_detail_callback
-        )
+        validate_for_duplicates(value, "price_group", duplicate_error_detail_callback)
 
         if value and not all(
             [

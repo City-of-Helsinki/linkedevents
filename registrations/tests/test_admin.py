@@ -75,6 +75,7 @@ class TestRegistrationAdmin(TestCase):
             "/admin/registrations/registration/add/",
             {
                 "event": event2.id,
+                "vat_percentage": VatPercentage.VAT_10.value,
                 "registration_user_accesses-TOTAL_FORMS": 1,
                 "registration_user_accesses-INITIAL_FORMS": 0,
                 "registration_price_groups-TOTAL_FORMS": 0,
@@ -117,6 +118,7 @@ class TestRegistrationAdmin(TestCase):
                     "/admin/registrations/registration/add/",
                     {
                         "event": event.id,
+                        "vat_percentage": VatPercentage.VAT_10.value,
                         "registration_user_accesses-TOTAL_FORMS": 1,
                         "registration_user_accesses-INITIAL_FORMS": 0,
                         "registration_price_groups-TOTAL_FORMS": 0,
@@ -164,6 +166,7 @@ class TestRegistrationAdmin(TestCase):
                     f"/admin/registrations/registration/{self.registration.id}/change/",
                     {
                         "event": self.registration.event.id,
+                        "vat_percentage": VatPercentage.VAT_10.value,
                         "registration_user_accesses-TOTAL_FORMS": 1,
                         "registration_user_accesses-INITIAL_FORMS": 0,
                         "registration_price_groups-TOTAL_FORMS": 0,
@@ -194,6 +197,7 @@ class TestRegistrationAdmin(TestCase):
                 "/admin/registrations/registration/add/",
                 {
                     "event": event2.id,
+                    "vat_percentage": VatPercentage.VAT_10.value,
                     "registration_user_accesses-TOTAL_FORMS": 2,
                     "registration_user_accesses-INITIAL_FORMS": 0,
                     "registration_user_accesses-0-email": EMAIL,
@@ -225,6 +229,7 @@ class TestRegistrationAdmin(TestCase):
                 "/admin/registrations/registration/add/",
                 {
                     "event": event2.id,
+                    "vat_percentage": VatPercentage.VAT_10.value,
                     "registration_user_accesses-TOTAL_FORMS": 1,
                     "registration_user_accesses-INITIAL_FORMS": 0,
                     "registration_user_accesses-0-email": EMAIL,
@@ -273,6 +278,7 @@ class TestRegistrationAdmin(TestCase):
                 f"/admin/registrations/registration/{self.registration.id}/change/",
                 {
                     "event": self.registration.event.id,
+                    "vat_percentage": VatPercentage.VAT_10.value,
                     "registration_user_accesses-TOTAL_FORMS": 2,
                     "registration_user_accesses-INITIAL_FORMS": 1,
                     "registration_user_accesses-0-email": EDITED_EMAIL,
@@ -310,16 +316,15 @@ class TestRegistrationAdmin(TestCase):
             "/admin/registrations/registration/add/",
             {
                 "event": event2.id,
+                "vat_percentage": VatPercentage.VAT_24.value,
                 "registration_user_accesses-TOTAL_FORMS": 0,
                 "registration_user_accesses-INITIAL_FORMS": 0,
                 "registration_price_groups-TOTAL_FORMS": 2,
                 "registration_price_groups-INITIAL_FORMS": 0,
                 "registration_price_groups-0-price_group": price_group.pk,
                 "registration_price_groups-0-price": Decimal("10"),
-                "registration_price_groups-0-vat_percentage": VatPercentage.VAT_24.value,
                 "registration_price_groups-1-price_group": price_group2.pk,
                 "registration_price_groups-1-price": Decimal("5"),
-                "registration_price_groups-1-vat_percentage": VatPercentage.VAT_10.value,
             },
         )
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
@@ -348,10 +353,10 @@ class TestRegistrationAdmin(TestCase):
         self.assertEqual(registration_price_group2.price, Decimal("5"))
         self.assertEqual(
             registration_price_group2.vat_percentage,
-            VatPercentage.VAT_10.value,
+            VatPercentage.VAT_24.value,
         )
-        self.assertEqual(registration_price_group2.price_without_vat, Decimal("4.55"))
-        self.assertEqual(registration_price_group2.vat, Decimal("0.45"))
+        self.assertEqual(registration_price_group2.price_without_vat, Decimal("4.03"))
+        self.assertEqual(registration_price_group2.vat, Decimal("0.97"))
 
     def test_add_price_groups_to_existing_registration(self):
         price_group = PriceGroupFactory(description="Adults")
@@ -364,6 +369,7 @@ class TestRegistrationAdmin(TestCase):
             f"/admin/registrations/registration/{self.registration.pk}/change/",
             {
                 "event": self.registration.event.id,
+                "vat_percentage": VatPercentage.VAT_14.value,
                 "registration_user_accesses-TOTAL_FORMS": 1,
                 "registration_user_accesses-INITIAL_FORMS": 0,
                 "registration_price_groups-TOTAL_FORMS": 2,
@@ -371,11 +377,9 @@ class TestRegistrationAdmin(TestCase):
                 "registration_price_groups-0-registration": self.registration.id,
                 "registration_price_groups-0-price_group": price_group.pk,
                 "registration_price_groups-0-price": Decimal("10"),
-                "registration_price_groups-0-vat_percentage": VatPercentage.VAT_14.value,
                 "registration_price_groups-1-registration": self.registration.id,
                 "registration_price_groups-1-price_group": price_group2.pk,
                 "registration_price_groups-1-price": Decimal("5"),
-                "registration_price_groups-1-vat_percentage": VatPercentage.VAT_0.value,
             },
         )
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
@@ -404,10 +408,10 @@ class TestRegistrationAdmin(TestCase):
         self.assertEqual(registration_price_group2.price, Decimal("5"))
         self.assertEqual(
             registration_price_group2.vat_percentage,
-            VatPercentage.VAT_0.value,
+            VatPercentage.VAT_14.value,
         )
-        self.assertEqual(registration_price_group2.price_without_vat, Decimal("5"))
-        self.assertEqual(registration_price_group2.vat, Decimal("0"))
+        self.assertEqual(registration_price_group2.price_without_vat, Decimal("4.39"))
+        self.assertEqual(registration_price_group2.vat, Decimal("0.61"))
 
     def test_cannot_add_duplicate_price_groups_to_registration(self):
         price_group = PriceGroupFactory(description="Adults")
@@ -419,6 +423,7 @@ class TestRegistrationAdmin(TestCase):
             f"/admin/registrations/registration/{self.registration.pk}/change/",
             {
                 "event": self.registration.event.id,
+                "vat_percentage": VatPercentage.VAT_24.value,
                 "registration_user_accesses-TOTAL_FORMS": 1,
                 "registration_user_accesses-INITIAL_FORMS": 0,
                 "registration_price_groups-TOTAL_FORMS": 2,
@@ -426,11 +431,9 @@ class TestRegistrationAdmin(TestCase):
                 "registration_price_groups-0-registration": self.registration.id,
                 "registration_price_groups-0-price_group": price_group.pk,
                 "registration_price_groups-0-price": Decimal("10"),
-                "registration_price_groups-0-vat_percentage": VatPercentage.VAT_24.value,
                 "registration_price_groups-1-registration": self.registration.id,
                 "registration_price_groups-1-price_group": price_group.pk,
                 "registration_price_groups-1-price": Decimal("5"),
-                "registration_price_groups-1-vat_percentage": VatPercentage.VAT_24.value,
             },
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -448,6 +451,7 @@ class TestRegistrationAdmin(TestCase):
             f"/admin/registrations/registration/{self.registration.pk}/change/",
             {
                 "event": self.registration.event.id,
+                "vat_percentage": VatPercentage.VAT_24.value,
                 "registration_user_accesses-TOTAL_FORMS": 1,
                 "registration_user_accesses-INITIAL_FORMS": 0,
                 "registration_price_groups-TOTAL_FORMS": 2,
@@ -455,7 +459,6 @@ class TestRegistrationAdmin(TestCase):
                 "registration_price_groups-0-registration": self.registration.id,
                 "registration_price_groups-0-price_group": price_group.pk,
                 "registration_price_groups-0-price": Decimal("10.123"),
-                "registration_price_groups-0-vat_percentage": VatPercentage.VAT_24.value,
             },
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -475,6 +478,7 @@ class TestRegistrationAdmin(TestCase):
             f"/admin/registrations/registration/{self.registration.pk}/change/",
             {
                 "event": self.registration.event.id,
+                "vat_percentage": VatPercentage.VAT_24.value,
                 "registration_user_accesses-TOTAL_FORMS": 1,
                 "registration_user_accesses-INITIAL_FORMS": 0,
                 "registration_price_groups-TOTAL_FORMS": 1,
@@ -483,7 +487,6 @@ class TestRegistrationAdmin(TestCase):
                 "registration_price_groups-0-registration": self.registration.id,
                 "registration_price_groups-0-price_group": registration_price_group.price_group_id,
                 "registration_price_groups-0-price": Decimal("10"),
-                "registration_price_groups-0-vat_percentage": VatPercentage.VAT_24.value,
                 "registration_price_groups-0-DELETE": "on",
             },
         )
