@@ -524,7 +524,7 @@ def test_create_registration_with_price_groups(user, api_client, event):
             {
                 "price_group": custom_price_group.pk,
                 "price": Decimal("15.55"),
-                "vat_percentage": VatPercentage.VAT_10.value,
+                "vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_24,
             },
         ],
     }
@@ -551,8 +551,8 @@ def test_create_registration_with_price_groups(user, api_client, event):
             vat_percentage=registration_data["registration_price_groups"][1][
                 "vat_percentage"
             ],
-            price_without_vat=Decimal("14.14"),
-            vat=Decimal("1.41"),
+            price_without_vat=Decimal("12.54"),
+            vat=Decimal("3.01"),
         ).count()
         == 1
     )
@@ -599,6 +599,43 @@ def test_create_registration_with_a_free_price_group(
     assert registration_price_group.vat_percentage == vat_percentage
     assert registration_price_group.price_without_vat == Decimal("0")
     assert registration_price_group.vat == Decimal("0")
+
+
+@pytest.mark.django_db
+def test_cannot_create_registration_price_groups_with_different_vat_percentages(
+    user, api_client, event
+):
+    api_client.force_authenticate(user)
+
+    default_price_group = PriceGroup.objects.filter(
+        publisher=None, is_free=False
+    ).first()
+    custom_price_group = PriceGroupFactory(publisher=event.publisher)
+
+    assert RegistrationPriceGroup.objects.count() == 0
+
+    registration_data = {
+        "event": {"@id": get_event_url(event.id)},
+        "registration_price_groups": [
+            {
+                "price_group": default_price_group.pk,
+                "price": Decimal("10"),
+                "vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_24,
+            },
+            {
+                "price_group": custom_price_group.pk,
+                "price": Decimal("15.55"),
+                "vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_10,
+            },
+        ],
+    }
+    response = create_registration(api_client, registration_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["registration_price_groups"]["price_group"][0] == (
+        "All registration price groups must have the same VAT percentage."
+    )
+
+    assert RegistrationPriceGroup.objects.count() == 0
 
 
 @pytest.mark.parametrize(
