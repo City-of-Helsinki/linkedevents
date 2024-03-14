@@ -18,6 +18,7 @@ from django.utils.functional import cached_property
 from django.utils.timezone import localtime
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation import override
+from django_orghierarchy.models import Organization
 from encrypted_fields import fields
 from helsinki_gdpr.models import SerializableMixin
 
@@ -178,6 +179,63 @@ class CreatedModifiedBaseModel(models.Model):
 
     class Meta:
         abstract = True
+
+
+class WebStoreMerchant(CreatedModifiedBaseModel):
+    organization = models.ForeignKey(
+        Organization,
+        related_name="web_store_merchants",
+        on_delete=models.CASCADE,
+    )
+
+    # Since merchants cannot be deleted from Talpa, allow to
+    # toggle their active / inactive status instead in Linked Events.
+    active = models.BooleanField(
+        verbose_name=_("Is active"),
+        default=True,
+    )
+
+    name = models.CharField(
+        verbose_name=_("Name"),
+        max_length=100,
+    )
+    street_address = models.CharField(
+        verbose_name=_("Street address"),
+        max_length=500,
+    )
+    zipcode = models.CharField(
+        verbose_name=_("ZIP code"),
+        max_length=10,
+    )
+    city = models.CharField(
+        verbose_name=_("City"),
+        max_length=50,
+    )
+    email = models.EmailField(verbose_name=_("E-mail"))
+    phone_number = models.CharField(
+        verbose_name=_("Phone number"),
+        max_length=18,
+    )
+    url = models.URLField(verbose_name=_("URL"))
+    terms_of_service_url = models.URLField(verbose_name=_("Terms of Service URL"))
+    business_id = models.CharField(
+        verbose_name=_("Business ID"),
+        max_length=9,
+    )
+
+    # Paytrail "main" merchant ID. 100 character limit is an estimated maximum provided
+    # by the Talpa team. Real values are probably much shorter.
+    paytrail_merchant_id = models.CharField(
+        verbose_name=_("Paytrail merchant ID"),
+        max_length=100,
+    )
+
+    # Talpa merchant ID.
+    merchant_id = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+    )
 
 
 class PriceGroup(CreatedModifiedBaseModel):

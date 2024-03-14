@@ -18,6 +18,7 @@ from registrations.models import (
     SignUpPayment,
     SignUpPriceGroup,
     SignUpProtectedData,
+    WebStoreMerchant,
 )
 
 
@@ -155,3 +156,22 @@ class SignUpPaymentFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = SignUpPayment
+
+
+class WebStoreMerchantFactory(factory.django.DjangoModelFactory):
+    organization = factory.SubFactory(OrganizationFactory)
+
+    name = factory.Sequence(lambda n: "Merchant {0}".format(n))
+    street_address = factory.Faker("street_address", locale="fi_FI")
+    zipcode = factory.Faker("postcode", locale="fi_FI")
+    city = factory.Faker("city", locale="fi_FI")
+    email = factory.Faker("email")
+    phone_number = factory.Faker("phone_number", locale="fi_FI")
+    url = factory.Faker("url")
+    terms_of_service_url = factory.Faker("url")
+    business_id = factory.Faker("company_business_id", locale="fi_FI")
+
+    paytrail_merchant_id = factory.Sequence(lambda n: "{0}".format(n))
+
+    class Meta:
+        model = WebStoreMerchant

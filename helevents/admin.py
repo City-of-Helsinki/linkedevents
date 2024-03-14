@@ -1,16 +1,47 @@
+from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
+from django.utils.translation import gettext as _
 from django_orghierarchy.admin import OrganizationAdmin
 from django_orghierarchy.models import Organization
+
+from registrations.models import WebStoreMerchant
 
 from .forms import LocalOrganizationAdminForm
 from .models import User
 
 
+class WebStoreMerchantInline(admin.StackedInline):
+    model = WebStoreMerchant
+    extra = 0
+    min_num = 0
+    max_num = 1
+    verbose_name = _("Merchant")
+    verbose_name_plural = _("Merchants")
+
+    def has_delete_permission(self, request, obj=None):
+        # A merchant cannot be deleted from Talpa so we only want
+        # to allow making a merchant inactive in Linked Events.
+        return False
+
+    def get_readonly_fields(self, request, obj=None):
+        return ["created_by", "last_modified_by", "merchant_id"]
+
+
 class LocalOrganizationAdmin(OrganizationAdmin):
     filter_horizontal = ("admin_users", "regular_users")
     form = LocalOrganizationAdminForm
+    inlines = (WebStoreMerchantInline,)
+
+    def get_formsets_with_inlines(self, request, obj=None):
+        for inline in self.get_inline_instances(request, obj):
+            # hide WebStoreMerchantInline if Talpa integration is not enabled
+            if (
+                not isinstance(inline, WebStoreMerchantInline)
+                or settings.WEB_STORE_INTEGRATION_ENABLED
+            ):
+                yield inline.get_formset(request, obj), inline
 
     def get_form(self, request, obj=None, change=False, **kwargs):
         form = super().get_form(request, obj, change, **kwargs)
@@ -29,6 +60,20 @@ class LocalOrganizationAdmin(OrganizationAdmin):
         form.wrapper_kwargs = wrapper_kwargs
 
         return form
+
+    def save_related(self, request, form, formsets, change):
+        for formset in formsets:
+            if formset.model == WebStoreMerchant:
+                formset.save(commit=False)
+
+                for added_merchant in formset.new_objects:
+                    added_merchant.created_by = request.user
+                    added_merchant.last_modified_by = request.user
+
+                for changed_merchant, __ in formset.changed_objects:
+                    changed_merchant.last_modified_by = request.user
+
+        super().save_related(request, form, formsets, change)
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
