@@ -543,6 +543,20 @@ class OpeningHoursSpecification(models.Model):
         verbose_name_plural = _('opening hour specifications')
 
 
+class HobbyCategory(BaseModel):
+    name_fi = models.CharField(max_length=20, null=True, blank=True)
+    name_sv = models.CharField(max_length=20, null=True, blank=True)
+    name_en = models.CharField(max_length=20, null=True, blank=True)
+    name_zh_hans = models.CharField(max_length=20, null=True, blank=True)
+    name_ru = models.CharField(max_length=20, null=True, blank=True)
+    name_ar = models.CharField(max_length=20, null=True, blank=True)
+    topics = models.ManyToManyField(Keyword,
+                                    limit_choices_to={"sets": 'espoo:topics'},  related_name='supercategories')
+
+    def __str__(self):
+        return self.name_fi
+
+
 class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
     jsonld_type = "Event/LinkedEvent"
     objects = BaseTreeQuerySet.as_manager()
@@ -617,6 +631,8 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
     end_time = models.DateTimeField(verbose_name=_('End time'), null=True, db_index=True, blank=True)
     has_start_time = models.BooleanField(default=True)
     has_end_time = models.BooleanField(default=True)
+
+    hobby_categories = models.ManyToManyField(HobbyCategory, blank=True, related_name='hobbies')
 
     audience_min_age = models.SmallIntegerField(verbose_name=_('Minimum recommended age'),
                                                 blank=True, null=True, db_index=True)

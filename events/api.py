@@ -58,7 +58,7 @@ from events.custom_elasticsearch_search_backend import \
     CustomEsSearchQuerySet as SearchQuerySet
 from events.extensions import (apply_select_and_prefetch,
                                get_extensions_from_request)
-from events.models import (PUBLICATION_STATUSES, DataSource, Event, EventLink,
+from events.models import (PUBLICATION_STATUSES, DataSource, Event, EventLink, HobbyCategory,
                            Image, Keyword, KeywordSet, Language, License,
                            Offer, OpeningHoursSpecification, Place,
                            PublicationStatus, Video)
@@ -1163,6 +1163,33 @@ class OpeningHoursSpecificationSerializer(LinkedEventsSerializer):
         model = OpeningHoursSpecification
 
 
+class HobbyCategorySerializer(LinkedEventsSerializer):
+    view_name = 'hobbycategory-detail'
+
+    class Meta:
+        model = HobbyCategory
+        fields = '__all__'
+
+
+class HobbyCategoryViewSet(JSONAPIViewMixin, viewsets.ReadOnlyModelViewSet):
+    queryset = HobbyCategory.objects.all()
+    serializer_class = HobbyCategorySerializer
+
+    def get_queryset(self):
+        queryset = HobbyCategory.objects.all()
+        return queryset
+        # val = self.request.query_params.get('text')
+        # selected_topic_ysos = [s.split('/')[-2] for s in self.request.query_params.getlist('topics[]')]
+        # if val:
+        #       qset = _text_qset_by_translated_field('name', val)
+        # queryset = queryset.filter(qset).filter(Q(topics__in=selected_topic_ysos))
+#
+        # return queryset
+
+
+register_view(HobbyCategoryViewSet, 'hobbycategory')
+
+
 class LanguageSerializer(LinkedEventsSerializer):
     view_name = 'language-detail'
     translation_available = serializers.SerializerMethodField()
@@ -1385,7 +1412,9 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
                                      view_name='language-detail', many=True, queryset=Language.objects.all())
     audience = JSONLDRelatedField(serializer=KeywordSerializer, view_name='keyword-detail',
                                   many=True, required=False, queryset=Keyword.objects.filter(deprecated=False))
-
+    hobby_categories = JSONLDRelatedField(serializer=HobbyCategorySerializer, required=False,
+                                          view_name='hobbycategory-detail', many=True,
+                                          queryset=HobbyCategory.objects.all())
     view_name = 'event-detail'
     fields_needed_to_publish = ('keywords', 'location', 'start_time', 'short_description', 'description')
     created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)

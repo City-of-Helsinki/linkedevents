@@ -6,7 +6,7 @@ from modeltranslation.admin import TranslationAdmin
 from reversion.admin import VersionAdmin
 from admin_auto_filters.filters import AutocompleteFilter
 from events.api import generate_id
-from events.models import Place, License, DataSource, Event, Keyword, KeywordSet, Language
+from events.models import Place, License, DataSource, Event, Keyword, KeywordSet, Language, HobbyCategory
 
 
 class BaseAdmin(admin.ModelAdmin):
@@ -194,3 +194,15 @@ class LicenseAdmin(BaseAdmin, TranslationAdmin, VersionAdmin):
 
 
 admin.site.register(License, LicenseAdmin)
+
+
+class HobbyCategoryAdmin(AutoIdBaseAdmin, VersionAdmin):
+    fields = ('id', 'name_fi', 'name_sv', 'name_en', 'topics')
+    readonly_fields = ['id']
+    filter_horizontal = ['topics']
+
+    def get_readonly_fields(self, request, obj=None):
+        return ['id']
+
+
+admin.site.register(HobbyCategory, HobbyCategoryAdmin)
