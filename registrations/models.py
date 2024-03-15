@@ -44,6 +44,7 @@ from registrations.utils import (
     get_ui_locales,
     strip_trailing_zeroes_from_decimal,
 )
+from web_store.merchant.clients import WebStoreMerchantAPIClient
 
 User = settings.AUTH_USER_MODEL
 
@@ -236,6 +237,47 @@ class WebStoreMerchant(CreatedModifiedBaseModel):
         blank=True,
         default="",
     )
+
+    def to_web_store_merchant_json(self):
+        return {
+            "merchantName": self.name,
+            "merchantStreet": self.street_address,
+            "merchantZip": self.zipcode,
+            "merchantCity": self.city,
+            "merchantEmail": self.email,
+            "merchantPhone": self.phone_number,
+            "merchantUrl": self.url,
+            "merchantTermsOfServiceUrl": self.terms_of_service_url,
+            "merchantBusinessId": self.business_id,
+            "merchantPaytrailMerchantId": self.paytrail_merchant_id,
+        }
+
+    def delete(self, using=None, keep_parents=False, force_delete=False):
+        if force_delete:
+            super().delete()
+        else:
+            raise ValidationError(_("Cannot delete a Talpa merchant."))
+
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        created = self.pk is None
+
+        super().save(*args, **kwargs)
+
+        if (
+            not settings.WEB_STORE_INTEGRATION_ENABLED
+            or not self.active
+            or kwargs.get("update_fields") == {"merchant_id"}
+        ):
+            return
+
+        client = WebStoreMerchantAPIClient()
+        if created:
+            resp_json = client.create_merchant(self.to_web_store_merchant_json())
+            self.merchant_id = resp_json.get("merchantId")
+            self.save(update_fields=["merchant_id"])
+        else:
+            client.update_merchant(self.merchant_id, self.to_web_store_merchant_json())
 
 
 class PriceGroup(CreatedModifiedBaseModel):
