@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 from django.utils import translation
 from django_orghierarchy.models import Organization
@@ -5,11 +7,34 @@ from rest_framework import status
 
 from audit_log.models import AuditLogEntry
 from events.api import OrganizationDetailSerializer
+from events.tests.utils import assert_fields_exist
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
+from registrations.models import WebStoreMerchant
+from registrations.tests.factories import WebStoreMerchantFactory
+from registrations.tests.utils import create_user_by_role
+from web_store.tests.merchant.test_web_store_merchant_api_client import (
+    DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA,
+)
+from web_store.tests.utils import get_mock_response
 
 organization_name = "test org"
 edited_organization_name = "new name"
+default_web_store_merchants_data = [
+    {
+        "active": True,
+        "name": "Test Merchant",
+        "street_address": "Street Address",
+        "zipcode": "12345",
+        "city": "Test City",
+        "email": "test@test.dev",
+        "phone_number": "+3580000000",
+        "url": "https://test.dev/homepage/",
+        "terms_of_service_url": "https://test.dev/terms_of_service/",
+        "business_id": "1234567-8",
+        "paytrail_merchant_id": "1234567",
+    }
+]
 
 
 def organization_id(pk):
@@ -58,10 +83,51 @@ def update_organization(api_client, pk, organization_data):
     return response
 
 
+def patch_organization(api_client, pk, organization_data):
+    url = reverse(OrganizationDetailSerializer.view_name, kwargs={"pk": pk})
+
+    response = api_client.patch(url, organization_data, format="json")
+    return response
+
+
 def assert_update_organization(api_client, pk, organization_data):
     response = update_organization(api_client, pk, organization_data)
     assert response.status_code == status.HTTP_200_OK
     return response
+
+
+def assert_patch_organization(api_client, pk, organization_data):
+    response = patch_organization(api_client, pk, organization_data)
+    assert response.status_code == status.HTTP_200_OK
+    return response
+
+
+def assert_merchant_fields_exist(data, is_admin_user=False):
+    fields = (
+        "id",
+        "active",
+        "name",
+        "street_address",
+        "zipcode",
+        "city",
+        "email",
+        "phone_number",
+        "url",
+        "terms_of_service_url",
+        "business_id",
+        "created_by",
+        "created_time",
+        "last_modified_by",
+        "last_modified_time",
+    )
+
+    if is_admin_user:
+        fields += (
+            "paytrail_merchant_id",
+            "merchant_id",
+        )
+
+    assert_fields_exist(data, fields)
 
 
 @pytest.mark.django_db
@@ -648,3 +714,845 @@ def test_get_organization_list_html_renders(api_client, event):
     url = reverse("organization-list", version="v1")
     response = api_client.get(url, data=None, headers={"accept": "text/html"})
     assert response.status_code == status.HTTP_200_OK, str(response.content)
+
+
+@pytest.mark.django_db
+def test_superuser_can_create_organization_with_web_store_merchant(
+    data_source, organization, api_client
+):
+    user = create_user_by_role("superuser", None)
+    api_client.force_authenticate(user)
+
+    origin_id = "test_organization2"
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+        "web_store_merchants": default_web_store_merchants_data,
+    }
+
+    assert WebStoreMerchant.objects.count() == 0
+
+    json_return_value = DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA.copy()
+    json_return_value["merchantId"] = "1234"
+    mocked_web_store_api_response = get_mock_response(
+        json_return_value=json_return_value,
+    )
+    with patch("requests.post") as mocked_web_store_api_request:
+        mocked_web_store_api_request.return_value = mocked_web_store_api_response
+
+        response = assert_create_organization(api_client, payload)
+    assert mocked_web_store_api_request.called is True
+    assert len(response.data["web_store_merchants"]) == 1
+
+    assert WebStoreMerchant.objects.count() == 1
+    assert (
+        WebStoreMerchant.objects.filter(
+            organization_id=response.data["id"],
+            merchant_id=response.data["web_store_merchants"][0]["merchant_id"],
+            created_by=user,
+            last_modified_by=user,
+            created_time__isnull=False,
+            last_modified_time__isnull=False,
+            **payload["web_store_merchants"][0],
+        ).count()
+        == 1
+    )
+
+
+@pytest.mark.django_db
+def test_superuser_can_update_organization_with_web_store_merchant(
+    data_source, organization, api_client
+):
+    user = create_user_by_role("superuser")
+    api_client.force_authenticate(user)
+
+    origin_id = "test_organization2"
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+        "web_store_merchants": default_web_store_merchants_data,
+    }
+
+    assert WebStoreMerchant.objects.count() == 0
+
+    json_return_value = DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA.copy()
+    json_return_value["merchantId"] = "1234"
+    mocked_web_store_api_response = get_mock_response(
+        json_return_value=json_return_value,
+    )
+    with patch("requests.post") as mocked_web_store_api_request:
+        mocked_web_store_api_request.return_value = mocked_web_store_api_response
+
+        response = assert_update_organization(api_client, organization.id, payload)
+    assert mocked_web_store_api_request.called is True
+    assert len(response.data["web_store_merchants"]) == 1
+
+    assert WebStoreMerchant.objects.count() == 1
+    assert (
+        WebStoreMerchant.objects.filter(
+            organization_id=response.data["id"],
+            merchant_id=response.data["web_store_merchants"][0]["merchant_id"],
+            created_by=user,
+            last_modified_by=user,
+            created_time__isnull=False,
+            last_modified_time__isnull=False,
+            **payload["web_store_merchants"][0],
+        ).count()
+        == 1
+    )
+
+
+@pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
+@pytest.mark.django_db
+def test_superuser_and_financial_admin_can_patch_organization_with_web_store_merchant(
+    data_source, organization, api_client, user_role
+):
+    user = create_user_by_role(user_role, organization)
+    api_client.force_authenticate(user)
+
+    payload = {
+        "web_store_merchants": default_web_store_merchants_data,
+    }
+
+    assert WebStoreMerchant.objects.count() == 0
+
+    json_return_value = DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA.copy()
+    json_return_value["merchantId"] = "1234"
+    mocked_web_store_api_response = get_mock_response(
+        json_return_value=json_return_value,
+    )
+    with patch("requests.post") as mocked_web_store_api_request:
+        mocked_web_store_api_request.return_value = mocked_web_store_api_response
+
+        response = assert_patch_organization(api_client, organization.id, payload)
+    assert mocked_web_store_api_request.called is True
+    assert len(response.data["web_store_merchants"]) == 1
+
+    assert WebStoreMerchant.objects.count() == 1
+    assert (
+        WebStoreMerchant.objects.filter(
+            organization_id=response.data["id"],
+            merchant_id=response.data["web_store_merchants"][0]["merchant_id"],
+            created_by=user,
+            last_modified_by=user,
+            created_time__isnull=False,
+            last_modified_time__isnull=False,
+            **payload["web_store_merchants"][0],
+        ).count()
+        == 1
+    )
+
+
+@pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
+@pytest.mark.django_db
+def test_superuser_and_financial_can_patch_organizations_web_store_merchant(
+    data_source, organization, api_client, settings, user_role
+):
+    user = create_user_by_role(user_role, organization)
+    api_client.force_authenticate(user)
+
+    settings.WEB_STORE_INTEGRATION_ENABLED = False
+    merchant = WebStoreMerchantFactory(organization=organization, merchant_id="1234")
+    settings.WEB_STORE_INTEGRATION_ENABLED = True
+
+    merchants_data = default_web_store_merchants_data[0].copy()
+    merchants_data["id"] = merchant.pk
+    payload = {
+        "web_store_merchants": [merchants_data],
+    }
+
+    assert WebStoreMerchant.objects.count() == 1
+    assert (
+        WebStoreMerchant.objects.filter(
+            organization_id=organization.id, **payload["web_store_merchants"][0]
+        ).count()
+        == 0
+    )
+    assert merchant.last_modified_by is None
+    last_modified_time = merchant.last_modified_time
+
+    json_return_value = DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA.copy()
+    mocked_web_store_api_response = get_mock_response(
+        status_code=status.HTTP_200_OK,
+        json_return_value=json_return_value,
+    )
+    with patch("requests.post") as mocked_web_store_api_request:
+        mocked_web_store_api_request.return_value = mocked_web_store_api_response
+
+        response = assert_patch_organization(api_client, organization.id, payload)
+    assert mocked_web_store_api_request.called is True
+    assert len(response.data["web_store_merchants"]) == 1
+
+    assert WebStoreMerchant.objects.count() == 1
+    assert (
+        WebStoreMerchant.objects.filter(
+            organization_id=organization.id, **payload["web_store_merchants"][0]
+        ).count()
+        == 1
+    )
+    merchant.refresh_from_db()
+    assert merchant.last_modified_by == user
+    assert merchant.last_modified_time > last_modified_time
+
+
+@pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
+@pytest.mark.django_db
+def test_superuser_and_financial_can_make_web_store_merchant_inactive(
+    data_source, organization, api_client, settings, user_role
+):
+    user = create_user_by_role(user_role, organization)
+    api_client.force_authenticate(user)
+
+    settings.WEB_STORE_INTEGRATION_ENABLED = False
+    merchant = WebStoreMerchantFactory(organization=organization, merchant_id="1234")
+    settings.WEB_STORE_INTEGRATION_ENABLED = True
+
+    payload = {
+        "web_store_merchants": [
+            {
+                "id": merchant.pk,
+                "active": False,
+            }
+        ],
+    }
+
+    assert WebStoreMerchant.objects.count() == 1
+    assert merchant.active is True
+    assert merchant.last_modified_by is None
+    last_modified_time = merchant.last_modified_time
+
+    with patch("requests.post") as mocked_web_store_api_request:
+        response = assert_patch_organization(api_client, organization.id, payload)
+    assert mocked_web_store_api_request.called is False
+    assert len(response.data["web_store_merchants"]) == 1
+
+    merchant.refresh_from_db()
+    assert WebStoreMerchant.objects.count() == 1
+    assert merchant.active is False
+    assert merchant.last_modified_by == user
+    assert merchant.last_modified_time > last_modified_time
+
+
+@pytest.mark.parametrize(
+    "user_role",
+    [
+        "admin",
+        "registration_admin",
+        "regular_user",
+        "regular_user_without_organization",
+    ],
+)
+@pytest.mark.django_db
+def test_not_allowed_user_roles_cannot_create_an_organization_with_a_web_store_merchant(
+    data_source, organization, api_client, user_role
+):
+    user = create_user_by_role(
+        user_role,
+        organization if user_role != "regular_user_without_organization" else None,
+        additional_roles={"regular_user_without_organization": lambda usr: None},
+    )
+    api_client.force_authenticate(user)
+
+    origin_id = "test_organization2"
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+        "web_store_merchants": default_web_store_merchants_data,
+    }
+
+    assert WebStoreMerchant.objects.count() == 0
+
+    with patch("requests.post") as mocked_web_store_api_request:
+        response = create_organization(api_client, payload)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.data.get("web_store_merchants") is None
+    assert mocked_web_store_api_request.called is False
+
+    assert WebStoreMerchant.objects.count() == 0
+
+
+@pytest.mark.parametrize(
+    "user_role",
+    [
+        "admin",
+        "registration_admin",
+        "regular_user",
+        "regular_user_without_organization",
+    ],
+)
+@pytest.mark.django_db
+def test_not_allowed_user_roles_cannot_update_an_organization_with_a_web_store_merchant(
+    data_source, organization, api_client, user_role
+):
+    user = create_user_by_role(
+        user_role,
+        organization if user_role != "regular_user_without_organization" else None,
+        additional_roles={"regular_user_without_organization": lambda usr: None},
+    )
+    api_client.force_authenticate(user)
+
+    origin_id = "test_organization2"
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+        "web_store_merchants": default_web_store_merchants_data,
+    }
+
+    assert WebStoreMerchant.objects.count() == 0
+
+    with patch("requests.post") as mocked_web_store_api_request:
+        response = update_organization(api_client, organization.id, payload)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.data.get("web_store_merchants") is None
+    assert mocked_web_store_api_request.called is False
+
+    assert WebStoreMerchant.objects.count() == 0
+
+
+@pytest.mark.parametrize(
+    "user_role",
+    [
+        "admin",
+        "registration_admin",
+        "regular_user",
+        "regular_user_without_organization",
+    ],
+)
+@pytest.mark.django_db
+def test_not_allowed_user_roles_cannot_update_an_organizations_web_store_merchant(
+    data_source, organization, api_client, settings, user_role
+):
+    user = create_user_by_role(
+        user_role,
+        organization if user_role != "regular_user_without_organization" else None,
+        additional_roles={"regular_user_without_organization": lambda usr: None},
+    )
+    api_client.force_authenticate(user)
+
+    settings.WEB_STORE_INTEGRATION_ENABLED = False
+    merchant = WebStoreMerchantFactory(organization=organization, merchant_id="1234")
+    settings.WEB_STORE_INTEGRATION_ENABLED = True
+
+    origin_id = "test_organization2"
+
+    merchants_data = default_web_store_merchants_data[0].copy()
+    merchants_data["id"] = merchant.pk
+
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+        "web_store_merchants": [merchants_data],
+    }
+
+    assert WebStoreMerchant.objects.count() == 1
+
+    with patch("requests.post") as mocked_web_store_api_request:
+        response = update_organization(api_client, organization.id, payload)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.data.get("web_store_merchants") is None
+    assert mocked_web_store_api_request.called is False
+
+    assert WebStoreMerchant.objects.count() == 1
+
+
+@pytest.mark.parametrize(
+    "user_role",
+    [
+        "admin",
+        "registration_admin",
+        "regular_user",
+        "regular_user_without_organization",
+    ],
+)
+@pytest.mark.django_db
+def test_not_allowed_user_roles_cannot_patch_an_organizations_web_store_merchant(
+    data_source, organization, api_client, settings, user_role
+):
+    user = create_user_by_role(
+        user_role,
+        organization if user_role != "regular_user_without_organization" else None,
+        additional_roles={"regular_user_without_organization": lambda usr: None},
+    )
+    api_client.force_authenticate(user)
+
+    settings.WEB_STORE_INTEGRATION_ENABLED = False
+    merchant = WebStoreMerchantFactory(organization=organization, merchant_id="1234")
+    settings.WEB_STORE_INTEGRATION_ENABLED = True
+
+    merchants_data = default_web_store_merchants_data[0].copy()
+    merchants_data["id"] = merchant.pk
+    payload = {
+        "web_store_merchants": [merchants_data],
+    }
+
+    assert WebStoreMerchant.objects.count() == 1
+
+    with patch("requests.post") as mocked_web_store_api_request:
+        response = patch_organization(api_client, organization.id, payload)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.data.get("web_store_merchants") is None
+    assert mocked_web_store_api_request.called is False
+
+    assert WebStoreMerchant.objects.count() == 1
+
+
+@pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
+@pytest.mark.django_db
+def test_superuser_and_financial_admin_can_get_organization_with_all_web_store_merchant_fields(
+    data_source, organization, api_client, settings, user_role
+):
+    user = create_user_by_role(user_role, organization)
+    api_client.force_authenticate(user)
+
+    settings.WEB_STORE_INTEGRATION_ENABLED = False
+    WebStoreMerchantFactory(organization=organization, merchant_id="1234")
+    settings.WEB_STORE_INTEGRATION_ENABLED = True
+
+    response = get_organization(api_client, organization.id)
+    assert response.status_code == status.HTTP_200_OK
+    assert_merchant_fields_exist(
+        response.data["web_store_merchants"][0], is_admin_user=True
+    )
+
+
+@pytest.mark.parametrize(
+    "user_role",
+    [
+        "admin",
+        "registration_admin",
+        "regular_user",
+        "regular_user_without_organization",
+    ],
+)
+@pytest.mark.django_db
+def test_not_allowed_user_roles_cannot_get_organization_with_all_web_store_merchant_fields(
+    data_source, organization, api_client, settings, user_role
+):
+    user = create_user_by_role(
+        user_role,
+        organization if user_role != "regular_user_without_organization" else None,
+        additional_roles={"regular_user_without_organization": lambda usr: None},
+    )
+    api_client.force_authenticate(user)
+
+    settings.WEB_STORE_INTEGRATION_ENABLED = False
+    WebStoreMerchantFactory(organization=organization, merchant_id="1234")
+    settings.WEB_STORE_INTEGRATION_ENABLED = True
+
+    response = get_organization(api_client, organization.id)
+    assert response.status_code == status.HTTP_200_OK
+    assert_merchant_fields_exist(response.data["web_store_merchants"][0])
+
+
+@pytest.mark.django_db
+def test_cannot_create_organization_with_more_than_one_web_store_merchant(
+    data_source, organization, api_client
+):
+    user = create_user_by_role("superuser", None)
+    api_client.force_authenticate(user)
+
+    origin_id = "test_organization2"
+
+    merchants_data = default_web_store_merchants_data.copy()
+    merchants_data.append(
+        {
+            "active": True,
+            "name": "Test Merchant 2",
+            "street_address": "Street Address 2",
+            "zipcode": "12345",
+            "city": "Test City",
+            "email": "test2@test.dev",
+            "phone_number": "+3580000001",
+            "url": "https://test2.dev/homepage/",
+            "terms_of_service_url": "https://test2.dev/terms_of_service/",
+            "business_id": "1234567-9",
+            "paytrail_merchant_id": "12345678",
+        }
+    )
+
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+        "web_store_merchants": merchants_data,
+    }
+
+    assert WebStoreMerchant.objects.count() == 0
+
+    with patch("requests.post") as mocked_web_store_api_request:
+        response = create_organization(api_client, payload)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["web_store_merchants"]["non_field_errors"][0] == (
+        "Ensure this field has no more than 1 elements."
+    )
+    assert mocked_web_store_api_request.called is False
+
+    assert WebStoreMerchant.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_cannot_update_organization_with_more_than_one_web_store_merchant(
+    data_source, organization, api_client
+):
+    user = create_user_by_role("superuser", None)
+    api_client.force_authenticate(user)
+
+    origin_id = "test_organization2"
+
+    merchants_data = default_web_store_merchants_data.copy()
+    merchants_data.append(
+        {
+            "active": True,
+            "name": "Test Merchant 2",
+            "street_address": "Street Address 2",
+            "zipcode": "12345",
+            "city": "Test City",
+            "email": "test2@test.dev",
+            "phone_number": "+3580000001",
+            "url": "https://test2.dev/homepage/",
+            "terms_of_service_url": "https://test2.dev/terms_of_service/",
+            "business_id": "1234567-9",
+            "paytrail_merchant_id": "12345678",
+        }
+    )
+
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+        "web_store_merchants": merchants_data,
+    }
+
+    assert WebStoreMerchant.objects.count() == 0
+
+    with patch("requests.post") as mocked_web_store_api_request:
+        response = update_organization(api_client, organization.id, payload)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["web_store_merchants"]["non_field_errors"][0] == (
+        "Ensure this field has no more than 1 elements."
+    )
+    assert mocked_web_store_api_request.called is False
+
+    assert WebStoreMerchant.objects.count() == 0
+
+
+@pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
+@pytest.mark.django_db
+def test_cannot_patch_organization_with_more_than_one_web_store_merchant(
+    data_source, organization, api_client, user_role
+):
+    user = create_user_by_role(user_role, organization)
+    api_client.force_authenticate(user)
+
+    merchants_data = default_web_store_merchants_data.copy()
+    merchants_data.append(
+        {
+            "active": True,
+            "name": "Test Merchant 2",
+            "street_address": "Street Address 2",
+            "zipcode": "12345",
+            "city": "Test City",
+            "email": "test2@test.dev",
+            "phone_number": "+3580000001",
+            "url": "https://test2.dev/homepage/",
+            "terms_of_service_url": "https://test2.dev/terms_of_service/",
+            "business_id": "1234567-9",
+            "paytrail_merchant_id": "12345678",
+        }
+    )
+    payload = {
+        "web_store_merchants": merchants_data,
+    }
+
+    assert WebStoreMerchant.objects.count() == 0
+
+    with patch("requests.post") as mocked_web_store_api_request:
+        response = patch_organization(api_client, organization.id, payload)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["web_store_merchants"]["non_field_errors"][0] == (
+        "Ensure this field has no more than 1 elements."
+    )
+    assert mocked_web_store_api_request.called is False
+
+    assert WebStoreMerchant.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_always_update_existing_web_store_merchant(
+    data_source, organization, api_client, settings
+):
+    user = create_user_by_role("superuser", None)
+
+    api_client.force_authenticate(user)
+
+    settings.WEB_STORE_INTEGRATION_ENABLED = False
+    merchant = WebStoreMerchantFactory(organization=organization, merchant_id="1234")
+    settings.WEB_STORE_INTEGRATION_ENABLED = True
+
+    origin_id = "test_organization2"
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+        "web_store_merchants": [
+            {
+                "active": True,
+                "name": "Test Merchant 2",
+                "street_address": "Street Address 2",
+                "zipcode": "12345",
+                "city": "Test City",
+                "email": "test2@test.dev",
+                "phone_number": "+3580000001",
+                "url": "https://test2.dev/homepage/",
+                "terms_of_service_url": "https://test2.dev/terms_of_service/",
+                "business_id": "1234567-9",
+                "paytrail_merchant_id": "12345678",
+            },
+        ],
+    }
+
+    assert WebStoreMerchant.objects.count() == 1
+    for field, value in payload["web_store_merchants"][0].items():
+        if field == "active":
+            assert getattr(merchant, field) is value
+        else:
+            assert getattr(merchant, field) != value
+
+    json_return_value = DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA.copy()
+    mocked_web_store_api_response = get_mock_response(
+        status_code=status.HTTP_200_OK,
+        json_return_value=json_return_value,
+    )
+    with patch("requests.post") as mocked_web_store_api_request:
+        mocked_web_store_api_request.return_value = mocked_web_store_api_response
+
+        assert_update_organization(api_client, organization.id, payload)
+    assert mocked_web_store_api_request.called is True
+
+    merchant.refresh_from_db()
+    assert WebStoreMerchant.objects.count() == 1
+    for field, value in payload["web_store_merchants"][0].items():
+        if field == "active":
+            assert getattr(merchant, field) is value
+        else:
+            assert getattr(merchant, field) == value
+
+
+@pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
+@pytest.mark.django_db
+def test_always_patch_existing_web_store_merchant(
+    data_source, organization, api_client, settings, user_role
+):
+    user = create_user_by_role(user_role, organization)
+    api_client.force_authenticate(user)
+
+    settings.WEB_STORE_INTEGRATION_ENABLED = False
+    merchant = WebStoreMerchantFactory(organization=organization, merchant_id="1234")
+    settings.WEB_STORE_INTEGRATION_ENABLED = True
+
+    payload = {
+        "web_store_merchants": [
+            {
+                "active": True,
+                "name": "Test Merchant 2",
+                "street_address": "Street Address 2",
+                "zipcode": "12345",
+                "city": "Test City",
+                "email": "test2@test.dev",
+                "phone_number": "+3580000001",
+                "url": "https://test2.dev/homepage/",
+                "terms_of_service_url": "https://test2.dev/terms_of_service/",
+                "business_id": "1234567-9",
+                "paytrail_merchant_id": "12345678",
+            },
+        ],
+    }
+
+    assert WebStoreMerchant.objects.count() == 1
+    for field, value in payload["web_store_merchants"][0].items():
+        if field == "active":
+            assert getattr(merchant, field) is value
+        else:
+            assert getattr(merchant, field) != value
+
+    json_return_value = DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA.copy()
+    mocked_web_store_api_response = get_mock_response(
+        status_code=status.HTTP_200_OK,
+        json_return_value=json_return_value,
+    )
+    with patch("requests.post") as mocked_web_store_api_request:
+        mocked_web_store_api_request.return_value = mocked_web_store_api_response
+
+        assert_patch_organization(api_client, organization.id, payload)
+    assert mocked_web_store_api_request.called is True
+
+    merchant.refresh_from_db()
+    assert WebStoreMerchant.objects.count() == 1
+    for field, value in payload["web_store_merchants"][0].items():
+        if field == "active":
+            assert getattr(merchant, field) is value
+        else:
+            assert getattr(merchant, field) == value
+
+
+@pytest.mark.django_db
+def test_create_organization_with_web_store_merchant_api_field_exception(
+    data_source, organization, api_client
+):
+    user = create_user_by_role("superuser", None)
+    api_client.force_authenticate(user)
+
+    origin_id = "test_organization2"
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+        "web_store_merchants": default_web_store_merchants_data,
+    }
+
+    assert Organization.objects.count() == 1
+    assert WebStoreMerchant.objects.count() == 0
+
+    json_return_value = {
+        "errors": [{"code": "test", "message": "Merchant already exists."}]
+    }
+    mocked_web_store_api_response = get_mock_response(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        exception_json_return_value=json_return_value,
+    )
+    with patch("requests.post") as mocked_web_store_api_request:
+        mocked_web_store_api_request.return_value = mocked_web_store_api_response
+
+        response = create_organization(api_client, payload)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert mocked_web_store_api_request.called is True
+    assert response.data[0] == (
+        f"Talpa web store API error (status_code: {status.HTTP_400_BAD_REQUEST}): "
+        f"{json_return_value['errors']}"
+    )
+
+    assert Organization.objects.count() == 1
+    assert WebStoreMerchant.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_create_organization_with_web_store_merchant_api_unknown_exception(
+    data_source, organization, api_client
+):
+    user = create_user_by_role("superuser", None)
+    api_client.force_authenticate(user)
+
+    origin_id = "test_organization2"
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+        "web_store_merchants": default_web_store_merchants_data,
+    }
+
+    assert Organization.objects.count() == 1
+    assert WebStoreMerchant.objects.count() == 0
+
+    mocked_web_store_api_response = get_mock_response(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    )
+    with patch("requests.post") as mocked_web_store_api_request:
+        mocked_web_store_api_request.return_value = mocked_web_store_api_response
+
+        response = create_organization(api_client, payload)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert mocked_web_store_api_request.called is True
+    assert response.data[0] == (
+        f"Unknown Talpa web store API error (status_code: {status.HTTP_500_INTERNAL_SERVER_ERROR})"
+    )
+
+    assert Organization.objects.count() == 1
+    assert WebStoreMerchant.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_update_organization_with_web_store_merchant_api_field_exception(
+    data_source, organization, api_client
+):
+    user = create_user_by_role("superuser", None)
+    api_client.force_authenticate(user)
+
+    origin_id = "test_organization2"
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+        "web_store_merchants": default_web_store_merchants_data,
+    }
+
+    assert WebStoreMerchant.objects.count() == 0
+
+    json_return_value = {
+        "errors": [{"code": "test", "message": "Merchant already exists."}]
+    }
+    mocked_web_store_api_response = get_mock_response(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        exception_json_return_value=json_return_value,
+    )
+    with patch("requests.post") as mocked_web_store_api_request:
+        mocked_web_store_api_request.return_value = mocked_web_store_api_response
+
+        response = update_organization(api_client, organization.id, payload)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data[0] == (
+        f"Talpa web store API error (status_code: {status.HTTP_400_BAD_REQUEST}): "
+        f"{json_return_value['errors']}"
+    )
+    assert mocked_web_store_api_request.called is True
+
+    assert WebStoreMerchant.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_update_organization_with_web_store_merchant_api_unknown_exception(
+    data_source, organization, api_client
+):
+    user = create_user_by_role("superuser", None)
+    api_client.force_authenticate(user)
+
+    origin_id = "test_organization2"
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+        "web_store_merchants": default_web_store_merchants_data,
+    }
+
+    assert WebStoreMerchant.objects.count() == 0
+
+    mocked_web_store_api_response = get_mock_response(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    )
+    with patch("requests.post") as mocked_web_store_api_request:
+        mocked_web_store_api_request.return_value = mocked_web_store_api_response
+
+        response = update_organization(api_client, organization.id, payload)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data[0] == (
+        f"Unknown Talpa web store API error (status_code: {status.HTTP_500_INTERNAL_SERVER_ERROR})"
+    )
+    assert mocked_web_store_api_request.called is True
+
+    assert WebStoreMerchant.objects.count() == 0

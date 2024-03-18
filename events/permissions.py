@@ -1,5 +1,6 @@
 import logging
 
+from django.conf import settings
 from django.utils.translation import gettext as _
 from rest_framework import permissions
 from rest_framework.exceptions import PermissionDenied
@@ -157,7 +158,11 @@ class DataSourceResourceEditPermission(
 class DataSourceOrganizationEditPermission(BasePermission):
     def has_permission(self, request, view):
         if request.method == "POST":
-            if (
+            if settings.WEB_STORE_INTEGRATION_ENABLED and request.data.get(
+                "web_store_merchants"
+            ):
+                return request.user.is_authenticated and request.user.is_superuser
+            elif (
                 request.user.is_authenticated
                 and request.user.admin_organizations.exists()
             ):
@@ -171,6 +176,20 @@ class DataSourceOrganizationEditPermission(BasePermission):
     def has_object_permission(self, request: Request, view, obj):
         if request.method in permissions.SAFE_METHODS:
             return True
+
+        if (
+            settings.WEB_STORE_INTEGRATION_ENABLED
+            and request.method in ("PUT", "PATCH")
+            and request.data.get("web_store_merchants")
+        ):
+            data_keys = request.data.keys()
+
+            if len(data_keys) > 1:
+                return request.user.is_superuser
+            else:
+                return request.user.is_superuser or request.user.is_financial_admin_of(
+                    obj
+                )
 
         return utils.organization_can_be_edited_by(obj, request.user)
 

@@ -10,6 +10,7 @@ from requests import RequestException
 from rest_framework import status
 
 from events.tests.factories import OrganizationFactory
+from registrations.exceptions import WebStoreAPIError
 from registrations.models import WebStoreMerchant
 from registrations.tests.factories import WebStoreMerchantFactory
 from web_store.tests.merchant.test_web_store_merchant_api_client import (
@@ -512,7 +513,7 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
         )
         with patch(
             "requests.post"
-        ) as mocked_create_merchant_request, self.assertRaises(RequestException):
+        ) as mocked_create_merchant_request, self.assertRaises(WebStoreAPIError):
             mocked_create_merchant_request.return_value = (
                 mocked_create_merchant_response
             )
@@ -556,7 +557,7 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
         )
         with patch(
             "requests.post"
-        ) as mocked_update_merchant_request, self.assertRaises(RequestException):
+        ) as mocked_update_merchant_request, self.assertRaises(WebStoreAPIError):
             mocked_update_merchant_request.return_value = (
                 mocked_update_merchant_response
             )

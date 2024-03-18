@@ -12,6 +12,7 @@ from icalendar import vText
 from requests import RequestException
 
 from registrations.exceptions import WebStoreAPIError
+from web_store.merchant.clients import WebStoreMerchantAPIClient
 from web_store.order.clients import WebStoreOrderAPIClient
 
 
@@ -219,3 +220,20 @@ def create_web_store_api_order(signup_or_group, localized_expiration_datetime):
         raise WebStoreAPIError(api_error_message)
 
     return resp_json
+
+
+def create_or_update_web_store_merchant(merchant, created: bool):
+    client = WebStoreMerchantAPIClient()
+
+    try:
+        if created:
+            resp_json = client.create_merchant(merchant.to_web_store_merchant_json())
+            merchant.merchant_id = resp_json.get("merchantId")
+            merchant.save(update_fields=["merchant_id"])
+        else:
+            client.update_merchant(
+                merchant.merchant_id, merchant.to_web_store_merchant_json()
+            )
+    except RequestException as request_exc:
+        api_error_message = get_web_store_api_error_message(request_exc.response)
+        raise WebStoreAPIError(api_error_message)

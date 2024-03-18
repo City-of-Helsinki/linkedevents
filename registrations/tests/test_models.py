@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.test import override_settings, TestCase
 
 from events.models import Language
 from events.tests.factories import (
@@ -16,7 +16,7 @@ from events.tests.factories import (
 from helevents.tests.factories import UserFactory
 from registrations.enums import VatPercentage
 from registrations.exceptions import PriceGroupValidationError
-from registrations.models import RegistrationPriceGroup
+from registrations.models import RegistrationPriceGroup, WebStoreMerchant
 from registrations.notifications import SignUpNotificationType
 from registrations.tests.factories import (
     RegistrationFactory,
@@ -29,6 +29,7 @@ from registrations.tests.factories import (
     SignUpPaymentFactory,
     SignUpPriceGroupFactory,
     SignUpProtectedDataFactory,
+    WebStoreMerchantFactory,
 )
 from registrations.utils import strip_trailing_zeroes_from_decimal
 
@@ -1135,3 +1136,40 @@ class TestSignUpPriceGroup(TestCase):
 
         self.price_group.refresh_from_db()
         self.assertFalse(self.price_group.deleted)
+
+
+class TestWebStoreMerchant(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+            cls.merchant = WebStoreMerchantFactory()
+
+    def test_delete_not_allowed(self):
+        with self.assertRaises(ValidationError) as exc:
+            self.merchant.delete()
+        self.assertEqual(exc.exception.messages[0], "Cannot delete a Talpa merchant.")
+
+        self.assertEqual(WebStoreMerchant.objects.count(), 1)
+
+    def test_force_delete(self):
+        self.merchant.delete(force_delete=True)
+
+        self.assertEqual(WebStoreMerchant.objects.count(), 0)
+
+    def test_to_web_store_merchant_json(self):
+        self.assertDictEqual(
+            {
+                "merchantName": self.merchant.name,
+                "merchantStreet": self.merchant.street_address,
+                "merchantZip": self.merchant.zipcode,
+                "merchantCity": self.merchant.city,
+                "merchantEmail": self.merchant.email,
+                "merchantPhone": self.merchant.phone_number,
+                "merchantUrl": self.merchant.url,
+                "merchantTermsOfServiceUrl": self.merchant.terms_of_service_url,
+                "merchantBusinessId": self.merchant.business_id,
+                "merchantPaytrailMerchantId": self.merchant.paytrail_merchant_id,
+                "merchantShopId": self.merchant.paytrail_merchant_id,
+            },
+            self.merchant.to_web_store_merchant_json(),
+        )

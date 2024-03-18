@@ -111,14 +111,17 @@ from linkedevents.fields import JSONLDRelatedField
 from linkedevents.registry import register_view, viewset_classes_by_model
 from linkedevents.serializers import LinkedEventsSerializer, TranslatedModelSerializer
 from linkedevents.utils import get_fixed_lang_codes
+from registrations.exceptions import WebStoreAPIError
 from registrations.models import (
     OfferPriceGroup,
     RegistrationPriceGroup,
     RegistrationUserAccess,
+    WebStoreMerchant,
 )
 from registrations.serializers import (
     OfferPriceGroupSerializer,
     RegistrationBaseSerializer,
+    WebStoreMerchantSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -1168,6 +1171,24 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
                 for field in self.user_fields:
                     self.fields.pop(field, None)
 
+    def get_fields(self):
+        fields = super().get_fields()
+
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            fields["web_store_merchants"] = WebStoreMerchantSerializer(
+                instance=self.instance.web_store_merchants.first()
+                if self.instance
+                else None,
+                many=True,
+                required=False,
+                allow_null=True,
+                max_length=1,
+                min_length=0,
+                context=self.context,
+            )
+
+        return fields
+
     def validate_parent_organization(self, value):
         if value:
             user = self.request.user
@@ -1178,6 +1199,16 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
                 raise DRFPermissionDenied(_("User has no rights to this organization"))
 
         return value
+
+    @staticmethod
+    def _create_or_update_web_store_merchant(organization, web_store_merchants):
+        try:
+            WebStoreMerchant.objects.update_or_create(
+                organization=organization,
+                defaults=web_store_merchants,
+            )
+        except WebStoreAPIError as exc:
+            raise serializers.ValidationError(exc.messages)
 
     def connect_organizations(self, connected_orgs, created_org):
         internal_types = {
@@ -1190,6 +1221,7 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
             )
             created_org.children.add(*conn_org)
 
+    @transaction.atomic
     def create(self, validated_data):
         # Add current user to admin users
         if "admin_users" not in validated_data:
@@ -1212,18 +1244,42 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
                         f"{org_type} should be a list, you provided {type(self.request.data[org_type])}"
                     )
 
+        web_store_merchants = validated_data.pop("web_store_merchants", None)
+
         org = super().create(validated_data)
         self.connect_organizations(conn_orgs_in_request, org)
 
+        if settings.WEB_STORE_INTEGRATION_ENABLED and web_store_merchants:
+            merchants_data = web_store_merchants[0]
+
+            merchants_data["created_by"] = self.request.user
+            merchants_data["last_modified_by"] = self.request.user
+
+            self._create_or_update_web_store_merchant(org, merchants_data)
+
         return org
 
+    @transaction.atomic
     def update(self, instance, validated_data):
         # Prevent user to accidentally remove himself from admin
         if validated_data.get("admin_users") is not None:
             admin_users = validated_data.pop("admin_users")
             instance.admin_users.set([*admin_users, self.user])
 
-        return super().update(instance, validated_data)
+        web_store_merchants = validated_data.pop("web_store_merchants", None)
+
+        org = super().update(instance, validated_data)
+
+        if settings.WEB_STORE_INTEGRATION_ENABLED and web_store_merchants:
+            merchants_data = web_store_merchants[0]
+
+            if not org.web_store_merchants.exists():
+                merchants_data["created_by"] = self.request.user
+            merchants_data["last_modified_by"] = self.request.user
+
+            self._create_or_update_web_store_merchant(org, merchants_data)
+
+        return org
 
     class Meta:
         model = Organization
@@ -1250,6 +1306,8 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
             "registration_admin_users",
             "admin_users",
         )
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            fields += ("web_store_merchants",)
 
 
 class OrganizationViewSet(
@@ -1265,7 +1323,7 @@ class OrganizationViewSet(
     filterset_class = OrganizationFilter
 
     def get_serializer_class(self, *args, **kwargs):
-        if self.action in ["create", "retrieve", "update"]:
+        if self.action in ["create", "retrieve", "update", "partial_update"]:
             return OrganizationDetailSerializer
         else:
             return OrganizationListSerializer

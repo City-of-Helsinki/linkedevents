@@ -39,12 +39,12 @@ from registrations.notifications import (
 from registrations.utils import (
     code_validity_duration,
     create_event_ics_file_content,
+    create_or_update_web_store_merchant,
     create_web_store_api_order,
     get_email_noreply_address,
     get_ui_locales,
     strip_trailing_zeroes_from_decimal,
 )
-from web_store.merchant.clients import WebStoreMerchantAPIClient
 
 User = settings.AUTH_USER_MODEL
 
@@ -250,11 +250,14 @@ class WebStoreMerchant(CreatedModifiedBaseModel):
             "merchantTermsOfServiceUrl": self.terms_of_service_url,
             "merchantBusinessId": self.business_id,
             "merchantPaytrailMerchantId": self.paytrail_merchant_id,
+            "merchantShopId": self.paytrail_merchant_id,
         }
 
     def delete(self, using=None, keep_parents=False, force_delete=False):
         if force_delete:
+            pk = self.pk
             super().delete()
+            logger.info(f"Deleted Talpa merchant {self.name} (ID: {pk})")
         else:
             raise ValidationError(_("Cannot delete a Talpa merchant."))
 
@@ -271,13 +274,7 @@ class WebStoreMerchant(CreatedModifiedBaseModel):
         ):
             return
 
-        client = WebStoreMerchantAPIClient()
-        if created:
-            resp_json = client.create_merchant(self.to_web_store_merchant_json())
-            self.merchant_id = resp_json.get("merchantId")
-            self.save(update_fields=["merchant_id"])
-        else:
-            client.update_merchant(self.merchant_id, self.to_web_store_merchant_json())
+        create_or_update_web_store_merchant(self, created)
 
 
 class PriceGroup(CreatedModifiedBaseModel):
