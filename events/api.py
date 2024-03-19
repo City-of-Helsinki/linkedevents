@@ -1582,6 +1582,24 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         links = validated_data.pop('external_links', None)
         videos = validated_data.pop('videos', None)
 
+        if instance.super_event is not None and (
+            (
+                instance.super_event.start_time
+                and instance.start_time
+                and instance.start_time < instance.super_event.start_time
+            )
+            or (
+                instance.super_event.end_time
+                and instance.end_time
+                and instance.end_time > instance.super_event.end_time
+            )
+        ):
+            raise DRFPermissionDenied(
+                _(
+                    "Cannot set sub event to start before super event start or end after super event end."
+                )
+            )
+
         if instance.end_time and instance.end_time < timezone.now() and not self.data_source.edit_past_events:
             raise DRFPermissionDenied(_('Cannot edit a past event.'))
 
