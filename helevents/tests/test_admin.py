@@ -11,8 +11,8 @@ from rest_framework import status
 
 from events.tests.factories import OrganizationFactory
 from registrations.exceptions import WebStoreAPIError
-from registrations.models import WebStoreMerchant
-from registrations.tests.factories import WebStoreMerchantFactory
+from registrations.models import WebStoreAccount, WebStoreMerchant
+from registrations.tests.factories import WebStoreAccountFactory, WebStoreMerchantFactory
 from web_store.tests.merchant.test_web_store_merchant_api_client import (
     DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA,
 )
@@ -64,6 +64,10 @@ class LocalOrganizationAdminTestCaseMixin:
                     "web_store_merchants-INITIAL_FORMS": "0",
                     "web_store_merchants-MIN_NUM_FORMS": "0",
                     "web_store_merchants-MAX_NUM_FORMS": "1",
+                    "web_store_accounts-TOTAL_FORMS": "0",
+                    "web_store_accounts-INITIAL_FORMS": "0",
+                    "web_store_accounts-MIN_NUM_FORMS": "0",
+                    "web_store_accounts-MAX_NUM_FORMS": "1",
                 }
             )
 
@@ -576,3 +580,245 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
             merchant, data, attrs_to_skip=merchant_attrs_to_skip
         )
         self.assertEqual(merchant_last_modified_time, merchant.last_modified_time)
+
+
+class TestLocalOrganizationAccountAdmin(LocalOrganizationAdminTestCaseMixin, TestCase):
+    @staticmethod
+    def _get_account_data(update_data=None):
+        data = {
+            "web_store_accounts-TOTAL_FORMS": "1",
+            "web_store_accounts-INITIAL_FORMS": "0",
+            "web_store_accounts-MIN_NUM_FORMS": "0",
+            "web_store_accounts-MAX_NUM_FORMS": "1",
+            "web_store_accounts-0-active": "on",
+            "web_store_accounts-0-vat_code": "33",
+            "web_store_accounts-0-company_code": "4444",
+            "web_store_accounts-0-main_ledger_account": "555555",
+            "web_store_accounts-0-balance_profit_center": "66666",
+        }
+
+        if update_data:
+            data.update(update_data)
+
+        return data
+
+    def assertAccountValuesEqual(self, account, data, attrs_to_skip=None):
+        attrs_to_skip = attrs_to_skip or []
+
+        for field, value in data.items():
+            if field.startswith("web_store_accounts-0-"):
+                account_attr = field.split("-")[-1]
+                if account_attr in attrs_to_skip:
+                    continue
+
+                if account_attr == "active":
+                    account_value = True if value == "on" else False
+                    getattr(self, f"assert{account_value}")(account.active)
+                else:
+                    self.assertEqual(getattr(account, account_attr), value)
+
+    def assertAccountValuesNotEqual(self, account, data, attrs_to_skip=None):
+        attrs_to_skip = attrs_to_skip or []
+
+        for field, value in data.items():
+            if field.startswith("web_store_accounts-0-"):
+                account_attr = field.split("-")[-1]
+                if account_attr in attrs_to_skip:
+                    continue
+
+                if account_attr == "active":
+                    account_value = False if value == "on" else True
+                    getattr(self, f"assert{account_value}")(account.active)
+                else:
+                    self.assertNotEqual(getattr(account, account_attr), value)
+
+    def test_can_add_web_store_account_to_a_new_organization(self):
+        self.assertEqual(Organization.objects.count(), 1)
+        self.assertEqual(WebStoreAccount.objects.count(), 0)
+
+        data = self._get_request_data(
+            {
+                "name": "New Org",
+                "internal_type": "normal",
+                **self._get_account_data(),
+            }
+        )
+
+        response = self.client.post(
+            "/admin/django_orghierarchy/organization/add/",
+            data,
+        )
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+
+        self.assertEqual(Organization.objects.count(), 2)
+        self.assertEqual(WebStoreAccount.objects.count(), 1)
+
+        account = WebStoreAccount.objects.first()
+        self.assertEqual(
+            Organization.objects.last().web_store_accounts.first().pk,
+            account.pk,
+        )
+        self.assertEqual(account.created_by_id, self.admin_user.pk)
+        self.assertEqual(account.last_modified_by_id, self.admin_user.pk)
+        self.assertIsNotNone(account.created_time)
+        self.assertIsNotNone(account.last_modified_time)
+        self.assertAccountValuesEqual(account, data)
+
+    def test_can_add_web_store_account_to_an_existing_organization(self):
+        self.assertEqual(Organization.objects.count(), 1)
+        self.assertEqual(WebStoreAccount.objects.count(), 0)
+
+        account_data = self._get_account_data(
+            update_data={"web_store_accounts-0-organization": self.organization.pk}
+        )
+        data = self._get_request_data(account_data)
+
+        self.client.post(
+            f"/admin/django_orghierarchy/organization/{self.organization.id}/change/",
+            data,
+        )
+
+        self.assertEqual(Organization.objects.count(), 1)
+        self.assertEqual(WebStoreAccount.objects.count(), 1)
+
+        account = WebStoreAccount.objects.first()
+        self.assertEqual(
+            Organization.objects.first().web_store_accounts.first().pk,
+            account.pk,
+        )
+        self.assertEqual(account.created_by_id, self.admin_user.pk)
+        self.assertEqual(account.last_modified_by_id, self.admin_user.pk)
+        self.assertIsNotNone(account.created_time)
+        self.assertIsNotNone(account.last_modified_time)
+        self.assertAccountValuesEqual(account, data, attrs_to_skip=["organization"])
+
+    def test_can_edit_web_store_account(self):
+        account = WebStoreAccountFactory(organization=self.organization)
+
+        self.assertIsNotNone(account.created_time)
+        self.assertIsNotNone(account.last_modified_time)
+        account_last_modified_time = account.last_modified_time
+
+        self.assertEqual(Organization.objects.count(), 1)
+        self.assertEqual(WebStoreAccount.objects.count(), 1)
+
+        account_data = self._get_account_data(
+            update_data={
+                "web_store_accounts-INITIAL_FORMS": "1",
+                "web_store_accounts-0-id": account.pk,
+                "web_store_accounts-0-organization": self.organization.pk,
+            }
+        )
+        data = self._get_request_data(account_data)
+
+        attrs_to_skip = ("id", "organization", "active")
+
+        self.assertAccountValuesNotEqual(account, data, attrs_to_skip=attrs_to_skip)
+
+        self.client.post(
+            f"/admin/django_orghierarchy/organization/{self.organization.id}/change/",
+            data,
+        )
+
+        self.assertEqual(Organization.objects.count(), 1)
+        self.assertEqual(WebStoreAccount.objects.count(), 1)
+
+        self.organization.refresh_from_db()
+        account.refresh_from_db()
+        self.assertEqual(self.organization.web_store_accounts.first().pk, account.pk)
+        self.assertEqual(account.last_modified_by_id, self.admin_user.pk)
+        self.assertIsNotNone(account.created_time)
+        self.assertIsNotNone(account.last_modified_time)
+        self.assertTrue(account.last_modified_time > account_last_modified_time)
+        self.assertAccountValuesEqual(account, data, attrs_to_skip=attrs_to_skip)
+
+    def test_can_add_web_store_account_with_all_fields(self):
+        self.assertEqual(Organization.objects.count(), 1)
+        self.assertEqual(WebStoreAccount.objects.count(), 0)
+
+        account_data = self._get_account_data(
+            update_data={
+                "web_store_accounts-0-internal_order": "1234567890",
+                "web_store_accounts-0-profit_center": "1234567",
+                "web_store_accounts-0-project": "1234567890123456",
+                "web_store_accounts-0-operation_area": "123456",
+            }
+        )
+        data = self._get_request_data(
+            {
+                "name": "New Org",
+                "internal_type": "normal",
+                **account_data,
+            }
+        )
+
+        response = self.client.post(
+            "/admin/django_orghierarchy/organization/add/",
+            data,
+        )
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+
+        self.assertEqual(Organization.objects.count(), 2)
+        self.assertEqual(WebStoreAccount.objects.count(), 1)
+
+        account = WebStoreAccount.objects.first()
+        self.assertEqual(
+            Organization.objects.last().web_store_accounts.first().pk,
+            account.pk,
+        )
+        self.assertEqual(account.created_by_id, self.admin_user.pk)
+        self.assertEqual(account.last_modified_by_id, self.admin_user.pk)
+        self.assertIsNotNone(account.created_time)
+        self.assertIsNotNone(account.last_modified_time)
+        self.assertAccountValuesEqual(account, data)
+
+    def test_cannot_add_web_store_account_without_all_required_fields(self):
+        self.assertEqual(Organization.objects.count(), 1)
+        self.assertEqual(WebStoreAccount.objects.count(), 0)
+
+        for field in [
+            "web_store_accounts-0-vat_code",
+            "web_store_accounts-0-company_code",
+            "web_store_accounts-0-main_ledger_account",
+            "web_store_accounts-0-balance_profit_center",
+        ]:
+            with self.subTest():
+                data = self._get_request_data(
+                    {
+                        "name": "New Org",
+                        "internal_type": "normal",
+                        **self._get_account_data(),
+                    }
+                )
+                del data[field]
+
+                self.client.post("/admin/django_orghierarchy/organization/add/", data)
+
+                self.assertEqual(Organization.objects.count(), 1)
+                self.assertEqual(WebStoreAccount.objects.count(), 0)
+
+    def test_cannot_delete_web_store_account(self):
+        account = WebStoreAccountFactory(organization=self.organization)
+
+        self.assertEqual(Organization.objects.count(), 1)
+        self.assertEqual(WebStoreAccount.objects.count(), 1)
+
+        account_data = self._get_account_data(
+            update_data={
+                "web_store_accounts-INITIAL_FORMS": "1",
+                "web_store_accounts-0-vat_code": account.vat_code,
+                "web_store_accounts-0-company_code": account.company_code,
+                "web_store_accounts-0-main_ledger_account": account.main_ledger_account,
+                "web_store_accounts-0-balance_profit_center": account.balance_profit_center,
+                "web_store_accounts-0-DELETE": "on",
+            }
+        )
+        data = self._get_request_data(account_data)
+
+        self.client.post(
+            f"/admin/django_orghierarchy/organization/{self.organization.id}/change/",
+            data,
+        )
+
+        self.assertEqual(Organization.objects.count(), 1)
+        self.assertEqual(WebStoreAccount.objects.count(), 1)

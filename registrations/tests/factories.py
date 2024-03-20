@@ -18,6 +18,7 @@ from registrations.models import (
     SignUpPayment,
     SignUpPriceGroup,
     SignUpProtectedData,
+    WebStoreAccount,
     WebStoreMerchant,
 )
 
@@ -175,3 +176,15 @@ class WebStoreMerchantFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = WebStoreMerchant
+
+
+class WebStoreAccountFactory(factory.django.DjangoModelFactory):
+    organization = factory.SubFactory(OrganizationFactory)
+
+    vat_code = "12"
+    company_code = "1234"
+    main_ledger_account = "123456"
+    balance_profit_center = "1234567890"
+
+    class Meta:
+        model = WebStoreAccount
