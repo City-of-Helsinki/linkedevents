@@ -16,7 +16,7 @@ from events.tests.factories import (
 from helevents.tests.factories import UserFactory
 from registrations.enums import VatPercentage
 from registrations.exceptions import PriceGroupValidationError
-from registrations.models import WebStoreMerchant
+from registrations.models import WebStoreAccount, WebStoreMerchant
 from registrations.notifications import SignUpNotificationType
 from registrations.tests.factories import (
     RegistrationFactory,
@@ -29,6 +29,7 @@ from registrations.tests.factories import (
     SignUpPaymentFactory,
     SignUpPriceGroupFactory,
     SignUpProtectedDataFactory,
+    WebStoreAccountFactory,
     WebStoreMerchantFactory,
 )
 from registrations.utils import strip_trailing_zeroes_from_decimal
@@ -1173,3 +1174,21 @@ class TestWebStoreMerchant(TestCase):
             },
             self.merchant.to_web_store_merchant_json(),
         )
+
+
+class TestWebStoreAccount(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.account = WebStoreAccountFactory()
+
+    def test_delete_not_allowed(self):
+        with self.assertRaises(ValidationError) as exc:
+            self.account.delete()
+        self.assertEqual(exc.exception.messages[0], "Cannot delete a Talpa account.")
+
+        self.assertEqual(WebStoreAccount.objects.count(), 1)
+
+    def test_force_delete(self):
+        self.account.delete(force_delete=True)
+
+        self.assertEqual(WebStoreAccount.objects.count(), 0)

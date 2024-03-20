@@ -1703,3 +1703,72 @@ class SignUpPayment(
     checkout_url = models.URLField(null=True, blank=True, default=None)
 
     logged_in_checkout_url = models.URLField(null=True, blank=True, default=None)
+
+
+class WebStoreAccount(CreatedModifiedBaseModel):
+    organization = models.ForeignKey(
+        Organization,
+        related_name="web_store_accounts",
+        on_delete=models.CASCADE,
+    )
+
+    # Since accounts cannot be deleted from Talpa, allow to
+    # toggle their active / inactive status instead in Linked Events.
+    active = models.BooleanField(
+        verbose_name=_("Is active"),
+        default=True,
+    )
+
+    vat_code = models.CharField(
+        verbose_name=_("VAT code"),
+        max_length=2,
+    )
+
+    company_code = models.CharField(
+        verbose_name=_("SAP company code"),
+        max_length=4,
+    )
+
+    main_ledger_account = models.CharField(
+        verbose_name=_("Main ledger account"),
+        max_length=6,
+    )
+
+    balance_profit_center = models.CharField(
+        verbose_name=_("Balance profit center"),
+        max_length=10,
+    )
+
+    internal_order = models.CharField(
+        verbose_name=_("Internal order"),
+        max_length=10,
+        blank=True,
+        default="",
+    )
+
+    profit_center = models.CharField(
+        verbose_name=_("Profit center"),
+        max_length=7,
+        blank=True,
+        default="",
+    )
+
+    project = models.CharField(
+        verbose_name=_("Project"),
+        max_length=16,
+        blank=True,
+        default="",
+    )
+
+    operation_area = models.CharField(
+        verbose_name=_("SAP functional area"),
+        max_length=6,
+        blank=True,
+        default="",
+    )
+
+    def delete(self, using=None, keep_parents=False, force_delete=False):
+        if force_delete:
+            super().delete()
+        else:
+            raise ValidationError(_("Cannot delete a Talpa account."))
