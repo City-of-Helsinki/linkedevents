@@ -12,7 +12,7 @@ attrs==23.1.0
     # via
     #   -c requirements.txt
     #   flake8-bugbear
-black==23.11.0
+black==24.3.0
     # via -r requirements-dev.in
 build==1.0.3
     # via pip-tools
@@ -33,9 +33,7 @@ click==8.1.7
     #   black
     #   pip-tools
 coverage[toml]==7.3.2
-    # via
-    #   coverage
-    #   pytest-cov
+    # via pytest-cov
 cryptography==41.0.7
     # via
     #   -c requirements.txt
