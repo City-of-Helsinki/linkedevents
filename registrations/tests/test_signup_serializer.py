@@ -5,12 +5,8 @@ import pytest
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 
 from helevents.tests.factories import UserFactory
-from registrations.models import (
-    RegistrationPriceGroup,
-    SignUp,
-    SignUpContactPerson,
-    SignUpPriceGroup,
-)
+from registrations.enums import VatPercentage
+from registrations.models import SignUp, SignUpContactPerson, SignUpPriceGroup
 from registrations.serializers import SignUpSerializer
 from registrations.tests.factories import (
     RegistrationFactory,
@@ -96,7 +92,7 @@ def test_signup_create_with_price_group(registration):
         registration=registration,
         price_group__publisher=registration.publisher,
         price=Decimal("100"),
-        vat_percentage=RegistrationPriceGroup.VatPercentage.VAT_24,
+        vat_percentage=VatPercentage.VAT_24.value,
     )
 
     signup_payload = {

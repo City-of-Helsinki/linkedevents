@@ -7,6 +7,7 @@ from rest_framework.test import APIClient
 
 from events.tests.factories import OfferFactory
 from events.tests.utils import versioned_reverse as reverse
+from registrations.enums import VatPercentage
 from registrations.models import PriceGroup, RegistrationPriceGroup
 from registrations.tests.factories import (
     PriceGroupFactory,
@@ -93,16 +94,13 @@ def test_patch_registration_price_group(api_client, user, registration):
         registration=registration,
         price_group=default_price_group,
         price=Decimal("10"),
-        vat_percentage=RegistrationPriceGroup.VatPercentage.VAT_24,
+        vat_percentage=VatPercentage.VAT_24.value,
         price_without_vat=Decimal("8.06"),
         vat=Decimal("1.94"),
     )
     assert registration_price_group.price_group_id == default_price_group.pk
     assert registration_price_group.price == Decimal("10")
-    assert (
-        registration_price_group.vat_percentage
-        == RegistrationPriceGroup.VatPercentage.VAT_24
-    )
+    assert registration_price_group.vat_percentage == VatPercentage.VAT_24.value
     assert registration_price_group.price_without_vat == Decimal("8.06")
     assert registration_price_group.vat == Decimal("1.94")
 
@@ -112,7 +110,7 @@ def test_patch_registration_price_group(api_client, user, registration):
                 "id": registration_price_group.pk,
                 "price_group": custom_price_group.pk,
                 "price": Decimal("10"),
-                "vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_10,
+                "vat_percentage": VatPercentage.VAT_10.value,
             },
         ],
     }
@@ -121,10 +119,7 @@ def test_patch_registration_price_group(api_client, user, registration):
     registration_price_group.refresh_from_db()
     assert registration_price_group.price_group_id == custom_price_group.pk
     assert registration_price_group.price == Decimal("10")
-    assert (
-        registration_price_group.vat_percentage
-        == RegistrationPriceGroup.VatPercentage.VAT_10
-    )
+    assert registration_price_group.vat_percentage == VatPercentage.VAT_10.value
     assert registration_price_group.price_without_vat == Decimal("9.09")
     assert registration_price_group.vat == Decimal("0.91")
 
@@ -152,12 +147,12 @@ def test_cannot_patch_registration_with_duplicate_price_groups(
                 "id": registration_price_group.pk,
                 "price_group": default_price_group.pk,
                 "price": Decimal("5"),
-                "vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_0,
+                "vat_percentage": VatPercentage.VAT_0.value,
             },
             {
                 "price_group": default_price_group.pk,
                 "price": Decimal("5"),
-                "vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_0,
+                "vat_percentage": VatPercentage.VAT_0.value,
             },
         ],
     }

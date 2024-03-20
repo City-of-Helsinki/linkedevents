@@ -14,6 +14,7 @@ from events.tests.factories import (
     OrganizationFactory,
 )
 from helevents.tests.factories import UserFactory
+from registrations.enums import VatPercentage
 from registrations.exceptions import PriceGroupValidationError
 from registrations.models import RegistrationPriceGroup
 from registrations.notifications import SignUpNotificationType
@@ -319,7 +320,7 @@ class TestSignUpGroup(TestCase):
 
         price_group2 = SignUpPriceGroupFactory(
             signup=signup2,
-            registration_price_group__vat_percentage=RegistrationPriceGroup.VatPercentage.VAT_10,
+            registration_price_group__vat_percentage=VatPercentage.VAT_10.value,
         )
         price_group2.refresh_from_db()
         price_net2 = str(
@@ -1075,9 +1076,7 @@ class TestRegistrationPriceGroup(TestCase):
 
     def test_calculate_vat_and_price_without_vat(self):
         self.registration_price_group.price = Decimal("324")
-        self.registration_price_group.vat_percentage = (
-            RegistrationPriceGroup.VatPercentage.VAT_24
-        )
+        self.registration_price_group.vat_percentage = VatPercentage.VAT_24.value
 
         self.assertEqual(self.registration_price_group.price_without_vat, Decimal("0"))
         self.assertEqual(self.registration_price_group.vat, Decimal("0"))

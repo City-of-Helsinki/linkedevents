@@ -10,6 +10,7 @@ from events.models import Event
 from events.tests.factories import OfferFactory
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
+from registrations.enums import VatPercentage
 from registrations.models import (
     PriceGroup,
     Registration,
@@ -518,12 +519,12 @@ def test_create_registration_with_price_groups(user, api_client, event):
             {
                 "price_group": default_price_group.pk,
                 "price": Decimal("10"),
-                "vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_24,
+                "vat_percentage": VatPercentage.VAT_24.value,
             },
             {
                 "price_group": custom_price_group.pk,
                 "price": Decimal("15.55"),
-                "vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_10,
+                "vat_percentage": VatPercentage.VAT_10.value,
             },
         ],
     }
@@ -560,9 +561,9 @@ def test_create_registration_with_price_groups(user, api_client, event):
 @pytest.mark.parametrize(
     "price,vat_percentage",
     [
-        (Decimal("10"), RegistrationPriceGroup.VatPercentage.VAT_24),
-        (Decimal("10"), RegistrationPriceGroup.VatPercentage.VAT_0),
-        (None, RegistrationPriceGroup.VatPercentage.VAT_24),
+        (Decimal("10"), VatPercentage.VAT_24.value),
+        (Decimal("10"), VatPercentage.VAT_0.value),
+        (None, VatPercentage.VAT_24.value),
     ],
 )
 @pytest.mark.django_db
@@ -603,12 +604,12 @@ def test_create_registration_with_a_free_price_group(
 @pytest.mark.parametrize(
     "price,vat_percentage",
     [
-        (-10, RegistrationPriceGroup.VatPercentage.VAT_24),
-        (Decimal("-10"), RegistrationPriceGroup.VatPercentage.VAT_24),
-        (Decimal("-10"), RegistrationPriceGroup.VatPercentage.VAT_0),
-        (Decimal("10.123"), RegistrationPriceGroup.VatPercentage.VAT_24),
-        (Decimal("10.1234"), RegistrationPriceGroup.VatPercentage.VAT_24),
-        (None, RegistrationPriceGroup.VatPercentage.VAT_24),
+        (-10, VatPercentage.VAT_24.value),
+        (Decimal("-10"), VatPercentage.VAT_24.value),
+        (Decimal("-10"), VatPercentage.VAT_0.value),
+        (Decimal("10.123"), VatPercentage.VAT_24.value),
+        (Decimal("10.1234"), VatPercentage.VAT_24.value),
+        (None, VatPercentage.VAT_24.value),
     ],
 )
 @pytest.mark.django_db
@@ -698,7 +699,7 @@ def test_cannot_create_registration_with_duplicate_price_groups(
     price_group_data = {
         "price_group": default_price_group.pk,
         "price": Decimal("10"),
-        "vat_percentage": RegistrationPriceGroup.VatPercentage.VAT_24,
+        "vat_percentage": VatPercentage.VAT_24.value,
     }
     registration_data = {
         "event": {"@id": get_event_url(event.id)},

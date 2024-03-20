@@ -1,5 +1,6 @@
 from django import forms
 
+from registrations.enums import VatPercentage
 from registrations.models import RegistrationPriceGroup
 
 
@@ -20,7 +21,7 @@ class RegistrationPriceGroupAdminForm(forms.ModelForm):
         if self.instance.id:
             self.initial["vat_percentage"] = self.instance.vat_percentage
         else:
-            self.initial["vat_percentage"] = RegistrationPriceGroup.VatPercentage.VAT_24
+            self.initial["vat_percentage"] = VatPercentage.VAT_24.value
 
     class Meta:
         model = RegistrationPriceGroup
