@@ -667,7 +667,7 @@ def test_update_price_groups_to_registration(api_client, event, user):
             {
                 "price_group": custom_price_group.pk,
                 "price": Decimal("15.55"),
-                "vat_percentage": VatPercentage.VAT_14.value,
+                "vat_percentage": VatPercentage.VAT_24.value,
             },
         ],
     }
@@ -698,8 +698,8 @@ def test_update_price_groups_to_registration(api_client, event, user):
             vat_percentage=registration_data["registration_price_groups"][1][
                 "vat_percentage"
             ],
-            price_without_vat=Decimal("13.64"),
-            vat=Decimal("1.91"),
+            price_without_vat=Decimal("12.54"),
+            vat=Decimal("3.01"),
         ).count()
         == 1
     )
@@ -814,6 +814,43 @@ def test_update_registration_price_groups_excluded_is_deleted(api_client, event,
         ).count()
         == 1
     )
+
+
+@pytest.mark.django_db
+def test_cannot_update_price_groups_to_registration_with_different_vat_percentages(
+    api_client, event, user
+):
+    api_client.force_authenticate(user)
+
+    registration = RegistrationFactory(event=event)
+
+    default_price_group = PriceGroup.objects.filter(publisher=None).first()
+    custom_price_group = PriceGroupFactory(publisher=event.publisher)
+
+    assert RegistrationPriceGroup.objects.count() == 0
+
+    registration_data = {
+        "event": {"@id": get_event_url(event.id)},
+        "registration_price_groups": [
+            {
+                "price_group": default_price_group.pk,
+                "price": Decimal("10"),
+                "vat_percentage": VatPercentage.VAT_24.value,
+            },
+            {
+                "price_group": custom_price_group.pk,
+                "price": Decimal("15.55"),
+                "vat_percentage": VatPercentage.VAT_14.value,
+            },
+        ],
+    }
+    response = update_registration(api_client, registration.pk, registration_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["registration_price_groups"]["price_group"][0] == (
+        "All registration price groups must have the same VAT percentage."
+    )
+
+    assert RegistrationPriceGroup.objects.count() == 0
 
 
 @pytest.mark.django_db

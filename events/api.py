@@ -1686,7 +1686,7 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
         return validate_for_duplicates(value, "email", error_detail_callback)
 
     def validate_registration_price_groups(self, value):
-        def error_detail_callback(price_group):
+        def duplicate_error_detail_callback(price_group):
             return ErrorDetail(
                 _(
                     "Registration price group with price_group %(price_group)s already exists."
@@ -1695,7 +1695,28 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
                 code="unique",
             )
 
-        return validate_for_duplicates(value, "price_group", error_detail_callback)
+        validate_for_duplicates(value, "price_group", duplicate_error_detail_callback)
+
+        if value and not all(
+            [
+                price_group["vat_percentage"] == value[0]["vat_percentage"]
+                for price_group in value
+            ]
+        ):
+            raise serializers.ValidationError(
+                {
+                    "price_group": [
+                        ErrorDetail(
+                            _(
+                                "All registration price groups must have the same VAT percentage."
+                            ),
+                            code="vat_percentage",
+                        )
+                    ]
+                }
+            )
+
+        return value
 
     # LinkedEventsSerializer validates name which doesn't exist in Registration model
     def validate(self, data):
