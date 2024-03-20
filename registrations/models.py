@@ -864,6 +864,22 @@ class RegistrationUserAccess(models.Model):
             html_message=rendered_body,
         )
 
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        if self.pk:
+            old_instance = RegistrationUserAccess.objects.filter(pk=self.pk).first()
+        else:
+            old_instance = None
+
+        super().save(*args, **kwargs)
+
+        if (
+            not old_instance
+            or old_instance.email != self.email
+            or old_instance.is_substitute_user != self.is_substitute_user
+        ):
+            self.send_invitation()
+
     class Meta:
         unique_together = ("email", "registration")
 

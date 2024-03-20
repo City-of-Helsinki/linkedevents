@@ -1503,21 +1503,14 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
     def _create_or_update_registration_user_accesses(
         registration, registration_user_accesses
     ):
-        users_to_send_invitations = []
-
         for data in registration_user_accesses:
             if current_obj := data.pop("id", None):
                 current_id = current_obj.id
-                current_email = current_obj.email
             else:
                 current_id = None
-                current_email = None
 
             try:
-                (
-                    user_instance,
-                    created,
-                ) = RegistrationUserAccess.objects.update_or_create(
+                RegistrationUserAccess.objects.update_or_create(
                     id=current_id,
                     registration=registration,
                     defaults=data,
@@ -1540,16 +1533,6 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
                     )
                 else:
                     raise
-
-            # Send invitation to new registration users or if the email is updated to an
-            # existing registration user
-            if created or (current_email != user_instance.email):
-                users_to_send_invitations.append(user_instance)
-
-        # Send invitations to registration users after updating all registration users to
-        # make sure that all instances are created or updated successfully
-        for user_instance in users_to_send_invitations:
-            user_instance.send_invitation()
 
     @staticmethod
     def _create_or_update_registration_price_groups(
