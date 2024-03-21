@@ -425,6 +425,36 @@ def _add_id_to_dict(container: dict, obj, key):
             container[row["id"]] = row
 
 
+def purge_orphans(events_data: list[dict], skip_log=False) -> list[dict]:
+    """
+    This function can (and should) be called to recursively get rid of
+    broken super event references. Each iteration produces a map of known
+    events and then checks if there are any events that reference missing events.
+
+    Multiple iterations are required since each call gets rid of one "generation"
+    """
+    ids = [event_data["id"] for event_data in events_data]
+    keep = []
+    drop = set()
+    for event_data in events_data:
+        if (super_event := event_data["super_event"]) and (
+            super_event_id := parse_jsonld_id(super_event)
+        ) not in ids:
+            drop.add(super_event_id)
+            continue
+        keep.append(event_data)
+
+    if drop:
+        if not skip_log:
+            logger.error(
+                f"Events referenced as super events are missing from the data: {', '.join(drop)}",
+                stack_info=False,
+            )
+        return purge_orphans(keep, skip_log=True)
+
+    return keep
+
+
 @register_importer
 class EspooImporter(Importer):
     """
@@ -501,6 +531,8 @@ class EspooImporter(Importer):
                 **settings.ESPOO_API_EVENT_QUERY_PARAMS,
             },
         )
+
+        events_data = purge_orphans(events_data)
 
         # Relations that need to be imported separately
         origin_places = {}

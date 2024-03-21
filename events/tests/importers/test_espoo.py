@@ -20,6 +20,7 @@ from events.importer.espoo import (
     EspooImporter,
     EspooImporterError,
     parse_jsonld_id,
+    purge_orphans,
 )
 from events.models import Event, Image, Keyword, Place
 from events.tests.factories import (
@@ -466,3 +467,29 @@ def test_importer(settings, requests_mock, sleep, api_client):
     assert Keyword.objects.filter(data_source=importer.data_source).count() == 0
     assert Place.objects.filter(data_source=importer.data_source).count() == 0
     assert Organization.objects.filter(data_source=importer.data_source).count() == 0
+
+
+def test_purge_orphans_no_orphans():
+    events_data = [
+        {"id": "super", "super_event": None},
+        {"id": "child", "super_event": {"@id": "https:/foobar/events/v1/event/super/"}},
+        {
+            "id": "grandchild",
+            "super_event": {"@id": "https:/foobar/events/v1/event/child/"},
+        },
+    ]
+    assert purge_orphans(events_data) == events_data
+
+
+def test_purge_orphans():
+    events_data = [
+        {"id": "unrelated", "super_event": None},
+        {"id": "child", "super_event": {"@id": "https:/foobar/events/v1/event/super/"}},
+        {
+            "id": "grandchild",
+            "super_event": {"@id": "https:/foobar/events/v1/event/child/"},
+        },
+    ]
+    assert purge_orphans(events_data) == [
+        {"id": "unrelated", "super_event": None},
+    ]
