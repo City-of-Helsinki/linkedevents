@@ -116,11 +116,13 @@ from registrations.models import (
     OfferPriceGroup,
     RegistrationPriceGroup,
     RegistrationUserAccess,
+    WebStoreAccount,
     WebStoreMerchant,
 )
 from registrations.serializers import (
     OfferPriceGroupSerializer,
     RegistrationBaseSerializer,
+    WebStoreAccountSerializer,
     WebStoreMerchantSerializer,
 )
 
@@ -1175,16 +1177,27 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
         fields = super().get_fields()
 
         if settings.WEB_STORE_INTEGRATION_ENABLED:
+            common_web_store_field_kwargs = {
+                "many": True,
+                "required": False,
+                "allow_null": True,
+                "max_length": 1,
+                "min_length": 0,
+                "context": self.context,
+            }
+
             fields["web_store_merchants"] = WebStoreMerchantSerializer(
                 instance=self.instance.web_store_merchants.first()
                 if self.instance
                 else None,
-                many=True,
-                required=False,
-                allow_null=True,
-                max_length=1,
-                min_length=0,
-                context=self.context,
+                **common_web_store_field_kwargs,
+            )
+
+            fields["web_store_accounts"] = WebStoreAccountSerializer(
+                instance=self.instance.web_store_accounts.first()
+                if self.instance
+                else None,
+                **common_web_store_field_kwargs,
             )
 
         return fields
@@ -1209,6 +1222,13 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
             )
         except WebStoreAPIError as exc:
             raise serializers.ValidationError(exc.messages)
+
+    @staticmethod
+    def _create_or_update_web_store_account(organization, web_store_account):
+        WebStoreAccount.objects.update_or_create(
+            organization=organization,
+            defaults=web_store_account,
+        )
 
     def connect_organizations(self, connected_orgs, created_org):
         internal_types = {
@@ -1245,17 +1265,29 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
                     )
 
         web_store_merchants = validated_data.pop("web_store_merchants", None)
+        web_store_accounts = validated_data.pop("web_store_accounts", None)
 
         org = super().create(validated_data)
         self.connect_organizations(conn_orgs_in_request, org)
 
-        if settings.WEB_STORE_INTEGRATION_ENABLED and web_store_merchants:
+        if not settings.WEB_STORE_INTEGRATION_ENABLED:
+            return org
+
+        if web_store_merchants:
             merchants_data = web_store_merchants[0]
 
             merchants_data["created_by"] = self.request.user
             merchants_data["last_modified_by"] = self.request.user
 
             self._create_or_update_web_store_merchant(org, merchants_data)
+
+        if web_store_accounts:
+            account_data = web_store_accounts[0]
+
+            account_data["created_by"] = self.request.user
+            account_data["last_modified_by"] = self.request.user
+
+            self._create_or_update_web_store_account(org, account_data)
 
         return org
 
@@ -1267,10 +1299,14 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
             instance.admin_users.set([*admin_users, self.user])
 
         web_store_merchants = validated_data.pop("web_store_merchants", None)
+        web_store_accounts = validated_data.pop("web_store_accounts", None)
 
         org = super().update(instance, validated_data)
 
-        if settings.WEB_STORE_INTEGRATION_ENABLED and web_store_merchants:
+        if not settings.WEB_STORE_INTEGRATION_ENABLED:
+            return org
+
+        if web_store_merchants:
             merchants_data = web_store_merchants[0]
 
             if not org.web_store_merchants.exists():
@@ -1278,6 +1314,15 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
             merchants_data["last_modified_by"] = self.request.user
 
             self._create_or_update_web_store_merchant(org, merchants_data)
+
+        if web_store_accounts:
+            account_data = web_store_accounts[0]
+
+            if not org.web_store_accounts.exists():
+                account_data["created_by"] = self.request.user
+            account_data["last_modified_by"] = self.request.user
+
+            self._create_or_update_web_store_account(org, account_data)
 
         return org
 
@@ -1307,7 +1352,7 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
             "admin_users",
         )
         if settings.WEB_STORE_INTEGRATION_ENABLED:
-            fields += ("web_store_merchants",)
+            fields += ("web_store_merchants", "web_store_accounts")
 
 
 class OrganizationViewSet(
