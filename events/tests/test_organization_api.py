@@ -10,8 +10,11 @@ from events.api import OrganizationDetailSerializer
 from events.tests.utils import assert_fields_exist
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
-from registrations.models import WebStoreMerchant
-from registrations.tests.factories import WebStoreMerchantFactory
+from registrations.models import WebStoreAccount, WebStoreMerchant
+from registrations.tests.factories import (
+    WebStoreAccountFactory,
+    WebStoreMerchantFactory,
+)
 from registrations.tests.utils import create_user_by_role
 from web_store.tests.merchant.test_web_store_merchant_api_client import (
     DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA,
@@ -33,6 +36,15 @@ default_web_store_merchants_data = [
         "terms_of_service_url": "https://test.dev/terms_of_service/",
         "business_id": "1234567-8",
         "paytrail_merchant_id": "1234567",
+    }
+]
+default_web_store_accounts_data = [
+    {
+        "active": True,
+        "vat_code": "12",
+        "company_code": "1234",
+        "main_ledger_account": "123456",
+        "balance_profit_center": "1234567890",
     }
 ]
 
@@ -83,16 +95,16 @@ def update_organization(api_client, pk, organization_data):
     return response
 
 
+def assert_update_organization(api_client, pk, organization_data):
+    response = update_organization(api_client, pk, organization_data)
+    assert response.status_code == status.HTTP_200_OK
+    return response
+
+
 def patch_organization(api_client, pk, organization_data):
     url = reverse(OrganizationDetailSerializer.view_name, kwargs={"pk": pk})
 
     response = api_client.patch(url, organization_data, format="json")
-    return response
-
-
-def assert_update_organization(api_client, pk, organization_data):
-    response = update_organization(api_client, pk, organization_data)
-    assert response.status_code == status.HTTP_200_OK
     return response
 
 
@@ -126,6 +138,27 @@ def assert_merchant_fields_exist(data, is_admin_user=False):
             "paytrail_merchant_id",
             "merchant_id",
         )
+
+    assert_fields_exist(data, fields)
+
+
+def assert_account_fields_exist(data):
+    fields = (
+        "id",
+        "active",
+        "vat_code",
+        "company_code",
+        "main_ledger_account",
+        "balance_profit_center",
+        "internal_order",
+        "profit_center",
+        "project",
+        "operation_area",
+        "created_by",
+        "created_time",
+        "last_modified_by",
+        "last_modified_time",
+    )
 
     assert_fields_exist(data, fields)
 
@@ -1556,3 +1589,561 @@ def test_update_organization_with_web_store_merchant_api_unknown_exception(
     assert mocked_web_store_api_request.called is True
 
     assert WebStoreMerchant.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_superuser_can_create_organization_with_web_store_account(
+    data_source, organization, api_client
+):
+    user = create_user_by_role("superuser", None)
+    api_client.force_authenticate(user)
+
+    origin_id = "test_organization2"
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+        "web_store_accounts": default_web_store_accounts_data,
+    }
+
+    assert WebStoreAccount.objects.count() == 0
+
+    response = assert_create_organization(api_client, payload)
+    assert len(response.data["web_store_accounts"]) == 1
+
+    assert WebStoreAccount.objects.count() == 1
+    assert (
+        WebStoreAccount.objects.filter(
+            organization_id=response.data["id"],
+            created_by=user,
+            last_modified_by=user,
+            created_time__isnull=False,
+            last_modified_time__isnull=False,
+            **payload["web_store_accounts"][0],
+        ).count()
+        == 1
+    )
+
+
+@pytest.mark.django_db
+def test_superuser_can_update_organization_with_web_store_account(
+    data_source, organization, api_client
+):
+    user = create_user_by_role("superuser", None)
+    api_client.force_authenticate(user)
+
+    origin_id = "test_organization2"
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+        "web_store_accounts": default_web_store_accounts_data,
+    }
+
+    assert WebStoreAccount.objects.count() == 0
+
+    response = assert_update_organization(api_client, organization.id, payload)
+    assert len(response.data["web_store_accounts"]) == 1
+
+    assert WebStoreAccount.objects.count() == 1
+    assert (
+        WebStoreAccount.objects.filter(
+            organization_id=response.data["id"],
+            created_by=user,
+            last_modified_by=user,
+            created_time__isnull=False,
+            last_modified_time__isnull=False,
+            **payload["web_store_accounts"][0],
+        ).count()
+        == 1
+    )
+
+
+@pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
+@pytest.mark.django_db
+def test_superuser_and_financial_admin_can_patch_organization_with_web_store_account(
+    data_source, organization, api_client, user_role
+):
+    user = create_user_by_role(user_role, organization)
+    api_client.force_authenticate(user)
+
+    payload = {
+        "web_store_accounts": default_web_store_accounts_data,
+    }
+
+    assert WebStoreAccount.objects.count() == 0
+
+    response = assert_patch_organization(api_client, organization.id, payload)
+    assert len(response.data["web_store_accounts"]) == 1
+
+    assert WebStoreAccount.objects.count() == 1
+    assert (
+        WebStoreAccount.objects.filter(
+            organization_id=response.data["id"],
+            created_by=user,
+            last_modified_by=user,
+            created_time__isnull=False,
+            last_modified_time__isnull=False,
+            **payload["web_store_accounts"][0],
+        ).count()
+        == 1
+    )
+
+
+@pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
+@pytest.mark.django_db
+def test_superuser_and_financial_can_patch_organizations_web_store_account(
+    data_source, organization, api_client, user_role
+):
+    user = create_user_by_role(user_role, organization)
+    api_client.force_authenticate(user)
+
+    account = WebStoreAccountFactory(organization=organization)
+
+    accounts_data = default_web_store_accounts_data[0].copy()
+    accounts_data["id"] = account.pk
+    accounts_data["profit_center"] = "007"
+    payload = {
+        "web_store_accounts": [accounts_data],
+    }
+
+    assert WebStoreAccount.objects.count() == 1
+    assert (
+        WebStoreAccount.objects.filter(
+            organization_id=organization.id, **payload["web_store_accounts"][0]
+        ).count()
+        == 0
+    )
+    assert account.last_modified_by is None
+    last_modified_time = account.last_modified_time
+
+    response = assert_patch_organization(api_client, organization.id, payload)
+    assert len(response.data["web_store_accounts"]) == 1
+
+    assert WebStoreAccount.objects.count() == 1
+    assert (
+        WebStoreAccount.objects.filter(
+            organization_id=organization.id, **payload["web_store_accounts"][0]
+        ).count()
+        == 1
+    )
+    account.refresh_from_db()
+    assert account.last_modified_by == user
+    assert account.last_modified_time > last_modified_time
+
+
+@pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
+@pytest.mark.django_db
+def test_superuser_and_financial_can_make_web_store_account_inactive(
+    data_source, organization, api_client, user_role
+):
+    user = create_user_by_role(user_role, organization)
+    api_client.force_authenticate(user)
+
+    account = WebStoreAccountFactory(organization=organization)
+
+    payload = {
+        "web_store_accounts": [
+            {
+                "id": account.pk,
+                "active": False,
+            }
+        ],
+    }
+
+    assert WebStoreAccount.objects.count() == 1
+    assert account.active is True
+    assert account.last_modified_by is None
+    last_modified_time = account.last_modified_time
+
+    response = assert_patch_organization(api_client, organization.id, payload)
+    assert len(response.data["web_store_accounts"]) == 1
+
+    account.refresh_from_db()
+    assert WebStoreAccount.objects.count() == 1
+    assert account.active is False
+    assert account.last_modified_by == user
+    assert account.last_modified_time > last_modified_time
+
+
+@pytest.mark.parametrize(
+    "user_role",
+    [
+        "admin",
+        "registration_admin",
+        "regular_user",
+        "regular_user_without_organization",
+    ],
+)
+@pytest.mark.django_db
+def test_not_allowed_user_roles_cannot_create_an_organization_with_a_web_store_account(
+    data_source, organization, api_client, user_role
+):
+    user = create_user_by_role(
+        user_role,
+        organization if user_role != "regular_user_without_organization" else None,
+        additional_roles={"regular_user_without_organization": lambda usr: None},
+    )
+    api_client.force_authenticate(user)
+
+    origin_id = "test_organization2"
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+        "web_store_accounts": default_web_store_accounts_data,
+    }
+
+    assert WebStoreAccount.objects.count() == 0
+
+    response = create_organization(api_client, payload)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.data.get("web_store_accounts") is None
+
+    assert WebStoreAccount.objects.count() == 0
+
+
+@pytest.mark.parametrize(
+    "user_role",
+    [
+        "admin",
+        "registration_admin",
+        "regular_user",
+        "regular_user_without_organization",
+    ],
+)
+@pytest.mark.django_db
+def test_not_allowed_user_roles_cannot_update_an_organization_with_a_web_store_account(
+    data_source, organization, api_client, user_role
+):
+    user = create_user_by_role(
+        user_role,
+        organization if user_role != "regular_user_without_organization" else None,
+        additional_roles={"regular_user_without_organization": lambda usr: None},
+    )
+    api_client.force_authenticate(user)
+
+    origin_id = "test_organization2"
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+        "web_store_accounts": default_web_store_accounts_data,
+    }
+
+    assert WebStoreAccount.objects.count() == 0
+
+    response = update_organization(api_client, organization.id, payload)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.data.get("web_store_accounts") is None
+
+    assert WebStoreAccount.objects.count() == 0
+
+
+@pytest.mark.parametrize(
+    "user_role",
+    [
+        "admin",
+        "registration_admin",
+        "regular_user",
+        "regular_user_without_organization",
+    ],
+)
+@pytest.mark.django_db
+def test_not_allowed_user_roles_cannot_update_an_organizations_web_store_account(
+    data_source, organization, api_client, user_role
+):
+    user = create_user_by_role(
+        user_role,
+        organization if user_role != "regular_user_without_organization" else None,
+        additional_roles={"regular_user_without_organization": lambda usr: None},
+    )
+    api_client.force_authenticate(user)
+
+    account = WebStoreAccountFactory(organization=organization)
+
+    origin_id = "test_organization2"
+
+    accounts_data = default_web_store_accounts_data[0].copy()
+    accounts_data["id"] = account.pk
+
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+        "web_store_accounts": [accounts_data],
+    }
+
+    assert WebStoreAccount.objects.count() == 1
+
+    response = update_organization(api_client, organization.id, payload)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.data.get("web_store_accounts") is None
+
+    assert WebStoreAccount.objects.count() == 1
+
+
+@pytest.mark.parametrize(
+    "user_role",
+    [
+        "admin",
+        "registration_admin",
+        "regular_user",
+        "regular_user_without_organization",
+    ],
+)
+@pytest.mark.django_db
+def test_not_allowed_user_roles_cannot_patch_an_organizations_web_store_account(
+    data_source, organization, api_client, user_role
+):
+    user = create_user_by_role(
+        user_role,
+        organization if user_role != "regular_user_without_organization" else None,
+        additional_roles={"regular_user_without_organization": lambda usr: None},
+    )
+    api_client.force_authenticate(user)
+
+    account = WebStoreAccountFactory(organization=organization)
+
+    accounts_data = default_web_store_accounts_data[0].copy()
+    accounts_data["id"] = account.pk
+    payload = {
+        "web_store_accounts": [accounts_data],
+    }
+
+    assert WebStoreAccount.objects.count() == 1
+
+    response = patch_organization(api_client, organization.id, payload)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.data.get("web_store_accounts") is None
+
+    assert WebStoreAccount.objects.count() == 1
+
+
+@pytest.mark.parametrize(
+    "user_role",
+    [
+        "superuser",
+        "financial_admin",
+        "admin",
+        "registration_admin",
+        "regular_user",
+        "regular_user_without_organization",
+    ],
+)
+@pytest.mark.django_db
+def test_users_can_get_organization_with_all_web_store_account_fields(
+    data_source, organization, api_client, user_role
+):
+    user = create_user_by_role(
+        user_role,
+        organization if user_role != "regular_user_without_organization" else None,
+        additional_roles={"regular_user_without_organization": lambda usr: None},
+    )
+    api_client.force_authenticate(user)
+
+    WebStoreAccountFactory(organization=organization)
+
+    response = get_organization(api_client, organization.id)
+    assert response.status_code == status.HTTP_200_OK
+    assert_account_fields_exist(response.data["web_store_accounts"][0])
+
+
+@pytest.mark.django_db
+def test_cannot_create_organization_with_more_than_one_web_store_account(
+    data_source, organization, api_client
+):
+    user = create_user_by_role("superuser", None)
+    api_client.force_authenticate(user)
+
+    origin_id = "test_organization2"
+
+    accounts_data = default_web_store_accounts_data.copy()
+    accounts_data.append(
+        {
+            "active": True,
+            "vat_code": "22",
+            "company_code": "2234",
+            "main_ledger_account": "223456",
+            "balance_profit_center": "2234567890",
+        }
+    )
+
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+        "web_store_accounts": accounts_data,
+    }
+
+    assert WebStoreAccount.objects.count() == 0
+
+    response = create_organization(api_client, payload)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["web_store_accounts"]["non_field_errors"][0] == (
+        "Ensure this field has no more than 1 elements."
+    )
+
+    assert WebStoreAccount.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_cannot_update_organization_with_more_than_one_web_store_account(
+    data_source, organization, api_client
+):
+    user = create_user_by_role("superuser", None)
+    api_client.force_authenticate(user)
+
+    origin_id = "test_organization2"
+
+    accounts_data = default_web_store_accounts_data.copy()
+    accounts_data.append(
+        {
+            "active": True,
+            "vat_code": "22",
+            "company_code": "2234",
+            "main_ledger_account": "223456",
+            "balance_profit_center": "2234567890",
+        }
+    )
+
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+        "web_store_accounts": accounts_data,
+    }
+
+    assert WebStoreAccount.objects.count() == 0
+
+    response = update_organization(api_client, organization.id, payload)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["web_store_accounts"]["non_field_errors"][0] == (
+        "Ensure this field has no more than 1 elements."
+    )
+
+    assert WebStoreAccount.objects.count() == 0
+
+
+@pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
+@pytest.mark.django_db
+def test_cannot_patch_organization_with_more_than_one_web_store_account(
+    data_source, organization, api_client, user_role
+):
+    user = create_user_by_role(user_role, organization)
+    api_client.force_authenticate(user)
+
+    accounts_data = default_web_store_accounts_data.copy()
+    accounts_data.append(
+        {
+            "active": True,
+            "vat_code": "22",
+            "company_code": "2234",
+            "main_ledger_account": "223456",
+            "balance_profit_center": "2234567890",
+        }
+    )
+    payload = {
+        "web_store_accounts": accounts_data,
+    }
+
+    assert WebStoreAccount.objects.count() == 0
+
+    response = patch_organization(api_client, organization.id, payload)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["web_store_accounts"]["non_field_errors"][0] == (
+        "Ensure this field has no more than 1 elements."
+    )
+
+    assert WebStoreAccount.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_always_update_existing_web_store_account(
+    data_source, organization, api_client
+):
+    user = create_user_by_role("superuser", None)
+    api_client.force_authenticate(user)
+
+    account = WebStoreAccountFactory(organization=organization)
+
+    origin_id = "test_organization2"
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+        "web_store_accounts": [
+            {
+                "active": True,
+                "vat_code": "22",
+                "company_code": "2234",
+                "main_ledger_account": "223456",
+                "balance_profit_center": "2234567890",
+            },
+        ],
+    }
+
+    assert WebStoreAccount.objects.count() == 1
+    for field, value in payload["web_store_accounts"][0].items():
+        if field == "active":
+            assert getattr(account, field) is value
+        else:
+            assert getattr(account, field) != value
+
+    assert_update_organization(api_client, organization.id, payload)
+
+    account.refresh_from_db()
+    assert WebStoreAccount.objects.count() == 1
+    for field, value in payload["web_store_accounts"][0].items():
+        if field == "active":
+            assert getattr(account, field) is value
+        else:
+            assert getattr(account, field) == value
+
+
+@pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
+@pytest.mark.django_db
+def test_always_patch_existing_web_store_account(
+    data_source, organization, api_client, user_role
+):
+    user = create_user_by_role(user_role, organization)
+    api_client.force_authenticate(user)
+
+    account = WebStoreAccountFactory(organization=organization)
+
+    payload = {
+        "web_store_accounts": [
+            {
+                "active": True,
+                "vat_code": "22",
+                "company_code": "2234",
+                "main_ledger_account": "223456",
+                "balance_profit_center": "2234567890",
+            },
+        ],
+    }
+
+    assert WebStoreAccount.objects.count() == 1
+    for field, value in payload["web_store_accounts"][0].items():
+        if field == "active":
+            assert getattr(account, field) is value
+        else:
+            assert getattr(account, field) != value
+
+    assert_patch_organization(api_client, organization.id, payload)
+
+    account.refresh_from_db()
+    assert WebStoreAccount.objects.count() == 1
+    for field, value in payload["web_store_accounts"][0].items():
+        if field == "active":
+            assert getattr(account, field) is value
+        else:
+            assert getattr(account, field) == value

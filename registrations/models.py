@@ -1769,6 +1769,8 @@ class WebStoreAccount(CreatedModifiedBaseModel):
 
     def delete(self, using=None, keep_parents=False, force_delete=False):
         if force_delete:
+            pk = self.pk
             super().delete()
+            logger.info(f"Deleted Talpa account {self.main_ledger_account} (ID: {pk})")
         else:
             raise ValidationError(_("Cannot delete a Talpa account."))
