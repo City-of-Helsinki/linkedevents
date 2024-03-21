@@ -12,7 +12,10 @@ from rest_framework import status
 from events.tests.factories import OrganizationFactory
 from registrations.exceptions import WebStoreAPIError
 from registrations.models import WebStoreAccount, WebStoreMerchant
-from registrations.tests.factories import WebStoreAccountFactory, WebStoreMerchantFactory
+from registrations.tests.factories import (
+    WebStoreAccountFactory,
+    WebStoreMerchantFactory,
+)
 from web_store.tests.merchant.test_web_store_merchant_api_client import (
     DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA,
 )
