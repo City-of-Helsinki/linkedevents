@@ -1,0 +1,11 @@
+{
+  "bootstrap-sha": "87b00d45084d57f4dea3ad67c04fd3a07b25f35a",
+  "sequential-calls": true,
+  "packages": {
+    ".": {
+      "release-type": "python",
+      "package-name": "linkedevents"
+    }
+  },
+  "plugins": ["sentence-case"]
+}
