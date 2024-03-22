@@ -119,7 +119,7 @@ python manage.py event_import helmet --events
 # Import events from Espoo
 python manage.py event_import espoo --events
 # Import City of Helsinki hierarchical organization for UI user rights management
-python manage.py import_organizations https://api.hel.fi/paatos/v1/organization/ -s helsinki:ahjo
+python manage.py import_organizations https://dev.hel.fi/paatokset/v1/organization/?limit=1000 -c openahjo -s OpenAhjoAPI:ahjo
 # Import municipalities in Finland
 python manage.py geo_import finland --municipalities
 # Import districts in Helsinki
