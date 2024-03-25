@@ -1,5 +1,6 @@
 import freezegun
 import pytest
+from django.utils import translation
 from django.utils.timezone import localtime
 
 from notifications.exceptions import NotificationTemplateException
@@ -17,7 +18,9 @@ from notifications.utils import format_date, format_datetime
 @freezegun.freeze_time("2024-02-01 03:30:00+02:00")
 def test_format_datetime_according_to_language(language, expected_formatted_datetime):
     dt = localtime()
-    assert format_datetime(dt, lang=language) == expected_formatted_datetime
+
+    with translation.override(language):
+        assert format_datetime(dt, lang=language) == expected_formatted_datetime
 
 
 @pytest.mark.parametrize("language", ["wrong", "", None])
@@ -40,7 +43,9 @@ def test_format_datetime_invalid_language(language):
 @freezegun.freeze_time("2024-02-01 03:30:00+02:00")
 def test_format_date_according_to_language(language, expected_formatted_date):
     dt = localtime()
-    assert format_date(dt, lang=language) == expected_formatted_date
+
+    with translation.override(language):
+        assert format_date(dt, lang=language) == expected_formatted_date
 
 
 @pytest.mark.parametrize("language", ["wrong", "", None])
