@@ -22,7 +22,7 @@ DEFAULT_GET_PRODUCT_MAPPING_DATA = {
         "namespace": django_settings.WEB_STORE_API_NAMESPACE,
         "namespaceEntityId": "string",
         "merchantId": "string",
-        "productId": "string",
+        "productId": DEFAULT_PRODUCT_ID,
     }
 }
 

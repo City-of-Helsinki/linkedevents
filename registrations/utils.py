@@ -14,6 +14,7 @@ from requests import RequestException
 from registrations.exceptions import WebStoreAPIError
 from web_store.merchant.clients import WebStoreMerchantAPIClient
 from web_store.order.clients import WebStoreOrderAPIClient
+from web_store.product.clients import WebStoreProductAPIClient
 
 
 def code_validity_duration(seats):
@@ -237,3 +238,29 @@ def create_or_update_web_store_merchant(merchant, created: bool):
     except RequestException as request_exc:
         api_error_message = get_web_store_api_error_message(request_exc.response)
         raise WebStoreAPIError(api_error_message)
+
+
+def create_web_store_product_mapping(product_mapping_data: dict):
+    client = WebStoreProductAPIClient()
+
+    try:
+        resp_json = client.create_product_mapping(product_mapping_data)
+    except RequestException as request_exc:
+        api_error_message = get_web_store_api_error_message(request_exc.response)
+        raise WebStoreAPIError(api_error_message)
+
+    return resp_json
+
+
+def create_web_store_product_accounting(product_id: str, product_accounting_data: dict):
+    client = WebStoreProductAPIClient()
+
+    try:
+        resp_json = client.create_product_accounting(
+            product_id, product_accounting_data
+        )
+    except RequestException as request_exc:
+        api_error_message = get_web_store_api_error_message(request_exc.response)
+        raise WebStoreAPIError(api_error_message)
+
+    return resp_json
