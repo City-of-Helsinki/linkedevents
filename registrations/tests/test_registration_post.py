@@ -1,8 +1,11 @@
 from decimal import Decimal
-from unittest.mock import patch
 
 import pytest
+import requests_mock
+from django.conf import settings as django_settings
+from django.test import override_settings
 from django.utils import translation
+from requests import RequestException
 from rest_framework import status
 
 from audit_log.models import AuditLogEntry
@@ -16,13 +19,20 @@ from registrations.models import (
     Registration,
     RegistrationPriceGroup,
     RegistrationUserAccess,
+    RegistrationWebStoreProductMapping,
 )
 from registrations.tests.factories import (
     PriceGroupFactory,
     RegistrationUserAccessFactory,
+    WebStoreAccountFactory,
+    WebStoreMerchantFactory,
 )
 from registrations.tests.utils import assert_invitation_email_is_sent
 from registrations.utils import get_signup_create_url
+from web_store.tests.product.test_web_store_product_api_client import (
+    DEFAULT_GET_PRODUCT_MAPPING_DATA,
+    DEFAULT_PRODUCT_ID,
+)
 
 email = "user@email.com"
 hel_email = "user@hel.fi"
@@ -506,6 +516,11 @@ def test_registration_id_is_audit_logged_on_post(user_api_client, event):
 def test_create_registration_with_price_groups(user, api_client, event):
     api_client.force_authenticate(user)
 
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        WebStoreMerchantFactory(organization=event.publisher)
+
+    WebStoreAccountFactory(organization=event.publisher)
+
     default_price_group = PriceGroup.objects.filter(
         publisher=None, is_free=False
     ).first()
@@ -528,7 +543,17 @@ def test_create_registration_with_price_groups(user, api_client, event):
             },
         ],
     }
-    response = assert_create_registration(api_client, registration_data)
+
+    with requests_mock.Mocker() as req_mock:
+        base_url = f"{django_settings.WEB_STORE_API_BASE_URL}product/"
+        req_mock.post(base_url, json=DEFAULT_GET_PRODUCT_MAPPING_DATA)
+        req_mock.post(
+            f"{base_url}{DEFAULT_PRODUCT_ID}/accounting",
+            json=DEFAULT_GET_PRODUCT_MAPPING_DATA,
+        )
+
+        response = assert_create_registration(api_client, registration_data)
+
     assert len(response.data["registration_price_groups"]) == 2
 
     assert RegistrationPriceGroup.objects.count() == 2
@@ -572,6 +597,11 @@ def test_create_registration_with_a_free_price_group(
 ):
     api_client.force_authenticate(user)
 
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        WebStoreMerchantFactory(organization=event.publisher)
+
+    WebStoreAccountFactory(organization=event.publisher)
+
     default_price_group = PriceGroup.objects.filter(
         publisher=None, is_free=True
     ).first()
@@ -589,7 +619,17 @@ def test_create_registration_with_a_free_price_group(
         "event": {"@id": get_event_url(event.id)},
         "registration_price_groups": [price_group_data],
     }
-    response = assert_create_registration(api_client, registration_data)
+
+    with requests_mock.Mocker() as req_mock:
+        base_url = f"{django_settings.WEB_STORE_API_BASE_URL}product/"
+        req_mock.post(base_url, json=DEFAULT_GET_PRODUCT_MAPPING_DATA)
+        req_mock.post(
+            f"{base_url}{DEFAULT_PRODUCT_ID}/accounting",
+            json=DEFAULT_GET_PRODUCT_MAPPING_DATA,
+        )
+
+        response = assert_create_registration(api_client, registration_data)
+
     assert len(response.data["registration_price_groups"]) == 1
 
     assert RegistrationPriceGroup.objects.count() == 1
@@ -749,3 +789,228 @@ def test_cannot_create_registration_with_duplicate_price_groups(
     )
 
     assert RegistrationPriceGroup.objects.count() == 0
+
+
+@pytest.mark.parametrize(
+    "account_kwargs",
+    [
+        {
+            "internal_order": "1234567890",
+            "profit_center": "1234567",
+            "project": "1234567890654321",
+            "operation_area": "654321",
+        },
+        {
+            "internal_order": "1234567890",
+            "profit_center": "1234567",
+            "project": "1234567890654321",
+        },
+        {
+            "internal_order": "1234567890",
+            "profit_center": "1234567",
+        },
+        {
+            "internal_order": "1234567890",
+        },
+        {},
+    ],
+)
+@pytest.mark.django_db
+def test_create_registration_with_product_mapping_and_accounting(
+    user_api_client, event, account_kwargs
+):
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        merchant = WebStoreMerchantFactory(organization=event.publisher)
+
+    account = WebStoreAccountFactory(organization=event.publisher, **account_kwargs)
+
+    default_price_group = PriceGroup.objects.first()
+    registration_data = {
+        "event": {"@id": get_event_url(event.id)},
+        "registration_price_groups": [
+            {
+                "price_group": default_price_group.pk,
+                "price": Decimal("10"),
+                "vat_percentage": VatPercentage.VAT_24.value,
+            },
+        ],
+    }
+
+    assert Registration.objects.count() == 0
+    assert RegistrationWebStoreProductMapping.objects.count() == 0
+
+    with requests_mock.Mocker() as req_mock:
+        base_url = f"{django_settings.WEB_STORE_API_BASE_URL}product/"
+        req_mock.post(base_url, json=DEFAULT_GET_PRODUCT_MAPPING_DATA)
+        req_mock.post(
+            f"{base_url}{DEFAULT_PRODUCT_ID}/accounting",
+            json=DEFAULT_GET_PRODUCT_MAPPING_DATA,
+        )
+
+        assert_create_registration(user_api_client, registration_data)
+
+        assert req_mock.call_count == 2
+
+    assert Registration.objects.count() == 1
+    assert RegistrationWebStoreProductMapping.objects.count() == 1
+    assert (
+        RegistrationWebStoreProductMapping.objects.filter(
+            registration=Registration.objects.first(),
+            merchant=merchant,
+            account=account,
+            external_product_id=DEFAULT_PRODUCT_ID,
+        ).count()
+        == 1
+    )
+
+
+@pytest.mark.django_db
+def test_update_registration_with_product_mapping_merchant_missing(
+    user_api_client, event
+):
+    WebStoreAccountFactory(organization=event.publisher)
+
+    default_price_group = PriceGroup.objects.first()
+    registration_data = {
+        "event": {"@id": get_event_url(event.id)},
+        "registration_price_groups": [
+            {
+                "price_group": default_price_group.pk,
+                "price": Decimal("10"),
+                "vat_percentage": VatPercentage.VAT_24.value,
+            },
+        ],
+    }
+
+    assert Registration.objects.count() == 0
+    assert RegistrationWebStoreProductMapping.objects.count() == 0
+
+    response = create_registration(user_api_client, registration_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data[0] == (
+        "A WebStoreMerchant is required to create a product mapping in Talpa."
+    )
+
+    assert Registration.objects.count() == 0
+    assert RegistrationWebStoreProductMapping.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_create_registration_with_product_mapping_account_missing(
+    user_api_client, event
+):
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        WebStoreMerchantFactory(organization=event.publisher)
+
+    default_price_group = PriceGroup.objects.first()
+    registration_data = {
+        "event": {"@id": get_event_url(event.id)},
+        "registration_price_groups": [
+            {
+                "price_group": default_price_group.pk,
+                "price": Decimal("10"),
+                "vat_percentage": VatPercentage.VAT_24.value,
+            },
+        ],
+    }
+
+    assert Registration.objects.count() == 0
+    assert RegistrationWebStoreProductMapping.objects.count() == 0
+
+    response = create_registration(user_api_client, registration_data)
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data[0] == (
+        "A WebStoreAccount is required to create product accounting in Talpa."
+    )
+
+    assert Registration.objects.count() == 0
+    assert RegistrationWebStoreProductMapping.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_create_registration_with_product_mapping_api_exception(user_api_client, event):
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        WebStoreMerchantFactory(organization=event.publisher)
+
+    WebStoreAccountFactory(organization=event.publisher)
+
+    default_price_group = PriceGroup.objects.first()
+    registration_data = {
+        "event": {"@id": get_event_url(event.id)},
+        "registration_price_groups": [
+            {
+                "price_group": default_price_group.pk,
+                "price": Decimal("10"),
+                "vat_percentage": VatPercentage.VAT_24.value,
+            },
+        ],
+    }
+
+    assert Registration.objects.count() == 0
+    assert RegistrationWebStoreProductMapping.objects.count() == 0
+
+    with requests_mock.Mocker() as req_mock:
+        base_url = f"{django_settings.WEB_STORE_API_BASE_URL}product/"
+
+        req_mock.post(
+            base_url,
+            exc=RequestException,
+        )
+        req_mock.post(
+            f"{base_url}{DEFAULT_PRODUCT_ID}/accounting",
+            json=DEFAULT_GET_PRODUCT_MAPPING_DATA,
+        )
+
+        response = create_registration(user_api_client, registration_data)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+        assert req_mock.call_count == 1
+
+    assert Registration.objects.count() == 0
+    assert RegistrationWebStoreProductMapping.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_create_registration_with_product_accounting_api_exception(
+    user_api_client, event
+):
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        WebStoreMerchantFactory(organization=event.publisher)
+
+    WebStoreAccountFactory(organization=event.publisher)
+
+    default_price_group = PriceGroup.objects.first()
+    registration_data = {
+        "event": {"@id": get_event_url(event.id)},
+        "registration_price_groups": [
+            {
+                "price_group": default_price_group.pk,
+                "price": Decimal("10"),
+                "vat_percentage": VatPercentage.VAT_24.value,
+            },
+        ],
+    }
+
+    assert Registration.objects.count() == 0
+    assert RegistrationWebStoreProductMapping.objects.count() == 0
+
+    with requests_mock.Mocker() as req_mock:
+        base_url = f"{django_settings.WEB_STORE_API_BASE_URL}product/"
+
+        req_mock.post(
+            base_url,
+            json=DEFAULT_GET_PRODUCT_MAPPING_DATA,
+        )
+        req_mock.post(
+            f"{base_url}{DEFAULT_PRODUCT_ID}/accounting",
+            exc=RequestException,
+        )
+
+        response = create_registration(user_api_client, registration_data)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+        assert req_mock.call_count == 2
+
+    assert Registration.objects.count() == 0
+    assert RegistrationWebStoreProductMapping.objects.count() == 0

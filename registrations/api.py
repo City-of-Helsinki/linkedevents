@@ -14,9 +14,9 @@ from rest_framework import filters, mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
-from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.serializers import ValidationError
 
 from audit_log.mixins import AuditLogApiViewMixin
 from events.api import (
@@ -32,6 +32,7 @@ from registrations.exceptions import (
     ConflictException,
     PriceGroupValidationError,
     WebStoreAPIError,
+    WebStoreProductMappingValidationError,
 )
 from registrations.exports import RegistrationSignUpsExportXLSX
 from registrations.filters import (
@@ -133,6 +134,30 @@ class RegistrationViewSet(
 
         context["registration_admin_tree_ids"] = registration_admin_tree_ids
         return context
+
+    @transaction.atomic
+    def perform_create(self, serializer):
+        super().perform_create(serializer)
+
+        if not settings.WEB_STORE_INTEGRATION_ENABLED:
+            return
+
+        try:
+            serializer.instance.create_or_update_web_store_product_mapping_and_accounting()
+        except (WebStoreAPIError, WebStoreProductMappingValidationError) as exc:
+            raise ValidationError(exc.messages)
+
+    @transaction.atomic
+    def perform_update(self, serializer):
+        super().perform_update(serializer)
+
+        if not settings.WEB_STORE_INTEGRATION_ENABLED:
+            return
+
+        try:
+            serializer.instance.create_or_update_web_store_product_mapping_and_accounting()
+        except (WebStoreAPIError, WebStoreProductMappingValidationError) as exc:
+            raise ValidationError(exc.messages)
 
     def perform_destroy(self, instance):
         try:

@@ -6,6 +6,7 @@ from unittest.mock import patch
 import pytest
 from django.conf import settings
 from django.core import mail
+from django.test import override_settings
 from django.utils import translation
 from django.utils.timezone import localtime
 from freezegun import freeze_time
@@ -30,6 +31,7 @@ from registrations.tests.factories import (
     RegistrationFactory,
     RegistrationPriceGroupFactory,
     RegistrationUserAccessFactory,
+    RegistrationWebStoreProductMappingFactory,
     SeatReservationCodeFactory,
     SignUpFactory,
     SignUpGroupFactory,
@@ -230,6 +232,9 @@ def test_registration_substitute_user_can_create_signup_group(api_client, regist
 def test_authenticated_user_can_create_signup_group_with_payment(api_client, user_role):
     registration = RegistrationFactory(event__name="Foo")
 
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        RegistrationWebStoreProductMappingFactory(registration=registration)
+
     user = create_user_by_role(
         user_role,
         registration.publisher,
@@ -334,6 +339,9 @@ def test_can_create_signup_group_with_create_payment_as_false_in_payload(
 def test_create_signup_group_payment_without_pricetotal_in_response(api_client):
     registration = RegistrationFactory(event__name="Foo")
 
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        RegistrationWebStoreProductMappingFactory(registration=registration)
+
     user = create_user_by_role(
         "registration_admin",
         registration.publisher,
@@ -399,9 +407,55 @@ def test_create_signup_group_payment_without_pricetotal_in_response(api_client):
 
 
 @pytest.mark.django_db
+def test_create_signup_group_payment_product_mapping_missing(registration, api_client):
+    reservation = SeatReservationCodeFactory(seats=2, registration=registration)
+
+    LanguageFactory(pk="fi", service_language=True)
+    LanguageFactory(pk="en", service_language=True)
+
+    registration_price_group = RegistrationPriceGroupFactory(registration=registration)
+    registration_price_group2 = RegistrationPriceGroupFactory(registration=registration)
+
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_group_data = deepcopy(default_signup_group_data)
+    signup_group_data.update(
+        {
+            "registration": registration.pk,
+            "reservation_code": reservation.code,
+            "create_payment": True,
+        }
+    )
+    signup_group_data["signups"][0].update(
+        {
+            "price_group": {"registration_price_group": registration_price_group.pk},
+        }
+    )
+    signup_group_data["signups"][1].update(
+        {
+            "price_group": {"registration_price_group": registration_price_group2.pk},
+        }
+    )
+
+    assert SignUpPayment.objects.count() == 0
+
+    response = create_signup_group(api_client, signup_group_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data[0] == (
+        "A RegistrationWebStoreProductMapping is required before a Talpa order can be created."
+    )
+
+    assert SignUpPayment.objects.count() == 0
+
+
+@pytest.mark.django_db
 def test_create_signup_group_payment_web_store_api_field_error(
     registration, api_client
 ):
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        RegistrationWebStoreProductMappingFactory(registration=registration)
+
     reservation = SeatReservationCodeFactory(seats=2, registration=registration)
 
     LanguageFactory(pk="fi", service_language=True)
@@ -456,6 +510,9 @@ def test_create_signup_group_payment_web_store_api_field_error(
 def test_create_signup_group_payment_web_store_api_non_field_error(
     registration, api_client
 ):
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        RegistrationWebStoreProductMappingFactory(registration=registration)
+
     reservation = SeatReservationCodeFactory(seats=2, registration=registration)
 
     LanguageFactory(pk="fi", service_language=True)
@@ -630,6 +687,9 @@ def test_create_signup_group_payment_signup_is_waitlisted(
         waiting_list_capacity=2 if maximum_attendee_capacity == 0 else 1,
         event__name="Foo",
     )
+
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        RegistrationWebStoreProductMappingFactory(registration=registration)
 
     reservation = SeatReservationCodeFactory(seats=2, registration=registration)
 

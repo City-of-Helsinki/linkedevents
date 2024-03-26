@@ -1,30 +1,45 @@
 from decimal import Decimal
 
+import requests_mock
+from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth import get_user_model
 from django.core import mail
-from django.test import RequestFactory, TestCase
+from django.test import override_settings, RequestFactory, TestCase
 from django.utils import translation
+from requests import RequestException
 from rest_framework import status
 
 from events.tests.factories import EventFactory, OfferFactory, OrganizationFactory
 from registrations.admin import RegistrationAdmin
 from registrations.enums import VatPercentage
+from registrations.exceptions import (
+    WebStoreAPIError,
+    WebStoreProductMappingValidationError,
+)
 from registrations.models import (
     Event,
     PriceGroup,
     Registration,
     RegistrationPriceGroup,
     RegistrationUserAccess,
+    RegistrationWebStoreProductMapping,
 )
 from registrations.tests.factories import (
     PriceGroupFactory,
     RegistrationFactory,
     RegistrationPriceGroupFactory,
+    RegistrationWebStoreProductMappingFactory,
+    WebStoreAccountFactory,
+    WebStoreMerchantFactory,
 )
 from registrations.tests.utils import assert_invitation_email_is_sent
 from registrations.utils import get_signup_create_url
+from web_store.tests.product.test_web_store_product_api_client import (
+    DEFAULT_GET_PRODUCT_MAPPING_DATA,
+    DEFAULT_PRODUCT_ID,
+)
 
 EMAIL = "user@email.com"
 EDITED_EMAIL = "user_edited@email.com"
@@ -309,25 +324,39 @@ class TestRegistrationAdmin(TestCase):
         price_group = PriceGroupFactory(description="Adults")
         price_group2 = PriceGroupFactory(description="Children")
 
+        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+            WebStoreMerchantFactory(organization=publisher, merchant_id="1234")
+        WebStoreAccountFactory(organization=publisher)
+
         self.assertEqual(Registration.objects.count(), 1)
         self.assertEqual(RegistrationPriceGroup.objects.count(), 0)
 
-        response = self.client.post(
-            "/admin/registrations/registration/add/",
-            {
-                "event": event2.id,
-                "vat_percentage": VatPercentage.VAT_24.value,
-                "registration_user_accesses-TOTAL_FORMS": 0,
-                "registration_user_accesses-INITIAL_FORMS": 0,
-                "registration_price_groups-TOTAL_FORMS": 2,
-                "registration_price_groups-INITIAL_FORMS": 0,
-                "registration_price_groups-0-price_group": price_group.pk,
-                "registration_price_groups-0-price": Decimal("10"),
-                "registration_price_groups-1-price_group": price_group2.pk,
-                "registration_price_groups-1-price": Decimal("5"),
-            },
-        )
-        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        with requests_mock.Mocker() as req_mock:
+            base_url = f"{settings.WEB_STORE_API_BASE_URL}product/"
+            req_mock.post(base_url, json=DEFAULT_GET_PRODUCT_MAPPING_DATA)
+            req_mock.post(
+                f"{base_url}{DEFAULT_PRODUCT_ID}/accounting",
+                json=DEFAULT_GET_PRODUCT_MAPPING_DATA,
+            )
+
+            response = self.client.post(
+                "/admin/registrations/registration/add/",
+                {
+                    "event": event2.id,
+                    "vat_percentage": VatPercentage.VAT_24.value,
+                    "registration_user_accesses-TOTAL_FORMS": 0,
+                    "registration_user_accesses-INITIAL_FORMS": 0,
+                    "registration_price_groups-TOTAL_FORMS": 2,
+                    "registration_price_groups-INITIAL_FORMS": 0,
+                    "registration_price_groups-0-price_group": price_group.pk,
+                    "registration_price_groups-0-price": Decimal("10"),
+                    "registration_price_groups-1-price_group": price_group2.pk,
+                    "registration_price_groups-1-price": Decimal("5"),
+                },
+            )
+            self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+
+            self.assertEqual(req_mock.call_count, 2)
 
         self.assertEqual(Registration.objects.count(), 2)
         self.assertEqual(RegistrationPriceGroup.objects.count(), 2)
@@ -362,27 +391,43 @@ class TestRegistrationAdmin(TestCase):
         price_group = PriceGroupFactory(description="Adults")
         price_group2 = PriceGroupFactory(description="Children")
 
+        publisher = self.registration.publisher
+
+        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+            WebStoreMerchantFactory(organization=publisher, merchant_id="1234")
+        WebStoreAccountFactory(organization=publisher)
+
         self.assertEqual(Registration.objects.count(), 1)
         self.assertEqual(RegistrationPriceGroup.objects.count(), 0)
 
-        response = self.client.post(
-            f"/admin/registrations/registration/{self.registration.pk}/change/",
-            {
-                "event": self.registration.event.id,
-                "vat_percentage": VatPercentage.VAT_14.value,
-                "registration_user_accesses-TOTAL_FORMS": 1,
-                "registration_user_accesses-INITIAL_FORMS": 0,
-                "registration_price_groups-TOTAL_FORMS": 2,
-                "registration_price_groups-INITIAL_FORMS": 0,
-                "registration_price_groups-0-registration": self.registration.id,
-                "registration_price_groups-0-price_group": price_group.pk,
-                "registration_price_groups-0-price": Decimal("10"),
-                "registration_price_groups-1-registration": self.registration.id,
-                "registration_price_groups-1-price_group": price_group2.pk,
-                "registration_price_groups-1-price": Decimal("5"),
-            },
-        )
-        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        with requests_mock.Mocker() as req_mock:
+            base_url = f"{settings.WEB_STORE_API_BASE_URL}product/"
+            req_mock.post(base_url, json=DEFAULT_GET_PRODUCT_MAPPING_DATA)
+            req_mock.post(
+                f"{base_url}{DEFAULT_PRODUCT_ID}/accounting",
+                json=DEFAULT_GET_PRODUCT_MAPPING_DATA,
+            )
+
+            response = self.client.post(
+                f"/admin/registrations/registration/{self.registration.pk}/change/",
+                {
+                    "event": self.registration.event.id,
+                    "vat_percentage": VatPercentage.VAT_14.value,
+                    "registration_user_accesses-TOTAL_FORMS": 1,
+                    "registration_user_accesses-INITIAL_FORMS": 0,
+                    "registration_price_groups-TOTAL_FORMS": 2,
+                    "registration_price_groups-INITIAL_FORMS": 0,
+                    "registration_price_groups-0-registration": self.registration.id,
+                    "registration_price_groups-0-price_group": price_group.pk,
+                    "registration_price_groups-0-price": Decimal("10"),
+                    "registration_price_groups-1-registration": self.registration.id,
+                    "registration_price_groups-1-price_group": price_group2.pk,
+                    "registration_price_groups-1-price": Decimal("5"),
+                },
+            )
+            self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+
+            self.assertEqual(req_mock.call_count, 2)
 
         self.assertEqual(Registration.objects.count(), 1)
         self.assertEqual(RegistrationPriceGroup.objects.count(), 2)
@@ -472,6 +517,9 @@ class TestRegistrationAdmin(TestCase):
             price=Decimal("10"),
         )
 
+        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+            RegistrationWebStoreProductMappingFactory(registration=self.registration)
+
         self.assertEqual(RegistrationPriceGroup.objects.count(), 1)
 
         response = self.client.post(
@@ -493,6 +541,289 @@ class TestRegistrationAdmin(TestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
 
         self.assertEqual(RegistrationPriceGroup.objects.count(), 0)
+
+    def test_create_web_store_product_mapping_and_accounting_when_creating_registration(
+        self,
+    ):
+        # Create event for new registration
+        data_source = self.registration.event.data_source
+        publisher = self.registration.event.publisher
+        event2 = EventFactory(
+            id="event-2", data_source=data_source, publisher=publisher
+        )
+
+        price_group = PriceGroup.objects.first()
+
+        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+            merchant = WebStoreMerchantFactory(
+                organization=publisher, merchant_id="1234"
+            )
+        account = WebStoreAccountFactory(organization=publisher)
+
+        self.assertEqual(Registration.objects.count(), 1)
+        self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 0)
+
+        # Create new registration and make API calls for Talpa product mapping and accounting.
+        with requests_mock.Mocker() as req_mock:
+            base_url = f"{settings.WEB_STORE_API_BASE_URL}product/"
+            req_mock.post(base_url, json=DEFAULT_GET_PRODUCT_MAPPING_DATA)
+            req_mock.post(
+                f"{base_url}{DEFAULT_PRODUCT_ID}/accounting",
+                json=DEFAULT_GET_PRODUCT_MAPPING_DATA,
+            )
+
+            self.client.post(
+                "/admin/registrations/registration/add/",
+                {
+                    "event": event2.id,
+                    "vat_percentage": VatPercentage.VAT_24.value,
+                    "registration_user_accesses-TOTAL_FORMS": 1,
+                    "registration_user_accesses-INITIAL_FORMS": 0,
+                    "registration_price_groups-TOTAL_FORMS": 1,
+                    "registration_price_groups-INITIAL_FORMS": 0,
+                    "registration_price_groups-0-price_group": price_group.pk,
+                    "registration_price_groups-0-price": Decimal("10"),
+                    "_save": "Save",
+                },
+            )
+
+            self.assertEqual(req_mock.call_count, 2)
+
+        self.assertEqual(Registration.objects.count(), 2)
+        self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 1)
+        self.assertEqual(
+            RegistrationWebStoreProductMapping.objects.filter(
+                registration=Registration.objects.last(),
+                merchant=merchant,
+                account=account,
+                external_product_id=DEFAULT_PRODUCT_ID,
+            ).count(),
+            1,
+        )
+
+    def test_create_web_store_product_mapping_and_accounting_when_updating_registration(
+        self,
+    ):
+        registration_price_group = RegistrationPriceGroupFactory(
+            registration=self.registration
+        )
+
+        publisher = self.registration.publisher
+
+        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+            merchant = WebStoreMerchantFactory(
+                organization=publisher, merchant_id="1234"
+            )
+        account = WebStoreAccountFactory(organization=publisher)
+
+        self.assertEqual(Registration.objects.count(), 1)
+        self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 0)
+
+        with requests_mock.Mocker() as req_mock:
+            base_url = f"{settings.WEB_STORE_API_BASE_URL}product/"
+            req_mock.post(base_url, json=DEFAULT_GET_PRODUCT_MAPPING_DATA)
+            req_mock.post(
+                f"{base_url}{DEFAULT_PRODUCT_ID}/accounting",
+                json=DEFAULT_GET_PRODUCT_MAPPING_DATA,
+            )
+
+            self.client.post(
+                f"/admin/registrations/registration/{self.registration.id}/change/",
+                {
+                    "event": self.registration.event.id,
+                    "vat_percentage": VatPercentage.VAT_24.value,
+                    "registration_user_accesses-TOTAL_FORMS": 1,
+                    "registration_user_accesses-INITIAL_FORMS": 0,
+                    "registration_price_groups-TOTAL_FORMS": 1,
+                    "registration_price_groups-INITIAL_FORMS": 1,
+                    "registration_price_groups-0-id": registration_price_group.pk,
+                    "registration_price_groups-0-price_group": registration_price_group.price_group_id,
+                    "registration_price_groups-0-price": registration_price_group.price,
+                },
+            )
+
+            self.assertEqual(req_mock.call_count, 2)
+
+        self.assertEqual(Registration.objects.count(), 1)
+        self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 1)
+        self.assertEqual(
+            RegistrationWebStoreProductMapping.objects.filter(
+                registration=self.registration,
+                merchant=merchant,
+                account=account,
+                external_product_id=DEFAULT_PRODUCT_ID,
+            ).count(),
+            1,
+        )
+
+    def test_web_store_product_mapping_and_accounting_merchant_missing_when_creating_registration(
+        self,
+    ):
+        data_source = self.registration.event.data_source
+        publisher = self.registration.event.publisher
+        event2 = EventFactory(
+            id="event-2", data_source=data_source, publisher=publisher
+        )
+
+        price_group = PriceGroup.objects.first()
+
+        WebStoreAccountFactory(organization=publisher)
+
+        self.assertEqual(Registration.objects.count(), 1)
+        self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 0)
+
+        with self.assertRaises(WebStoreProductMappingValidationError):
+            self.client.post(
+                "/admin/registrations/registration/add/",
+                {
+                    "event": event2.id,
+                    "vat_percentage": VatPercentage.VAT_24.value,
+                    "registration_user_accesses-TOTAL_FORMS": 1,
+                    "registration_user_accesses-INITIAL_FORMS": 0,
+                    "registration_price_groups-TOTAL_FORMS": 1,
+                    "registration_price_groups-INITIAL_FORMS": 0,
+                    "registration_price_groups-0-price_group": price_group.pk,
+                    "registration_price_groups-0-price": Decimal("10"),
+                    "_save": "Save",
+                },
+            )
+
+        self.assertEqual(Registration.objects.count(), 1)
+        self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 0)
+
+    def test_web_store_product_mapping_and_accounting_account_missing_when_creating_registration(
+        self,
+    ):
+        data_source = self.registration.event.data_source
+        publisher = self.registration.event.publisher
+        event2 = EventFactory(
+            id="event-2", data_source=data_source, publisher=publisher
+        )
+
+        price_group = PriceGroup.objects.first()
+
+        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+            WebStoreMerchantFactory(organization=publisher, merchant_id="1234")
+
+        self.assertEqual(Registration.objects.count(), 1)
+        self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 0)
+
+        with self.assertRaises(WebStoreProductMappingValidationError):
+            self.client.post(
+                "/admin/registrations/registration/add/",
+                {
+                    "event": event2.id,
+                    "vat_percentage": VatPercentage.VAT_24.value,
+                    "registration_user_accesses-TOTAL_FORMS": 1,
+                    "registration_user_accesses-INITIAL_FORMS": 0,
+                    "registration_price_groups-TOTAL_FORMS": 1,
+                    "registration_price_groups-INITIAL_FORMS": 0,
+                    "registration_price_groups-0-price_group": price_group.pk,
+                    "registration_price_groups-0-price": Decimal("10"),
+                    "_save": "Save",
+                },
+            )
+
+        self.assertEqual(Registration.objects.count(), 1)
+        self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 0)
+
+    def test_web_store_product_mapping_and_accounting_api_exception_when_creating_registration(
+        self,
+    ):
+        data_source = self.registration.event.data_source
+        publisher = self.registration.event.publisher
+        event2 = EventFactory(
+            id="event-2", data_source=data_source, publisher=publisher
+        )
+
+        price_group = PriceGroup.objects.first()
+
+        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+            WebStoreMerchantFactory(organization=publisher, merchant_id="1234")
+        WebStoreAccountFactory(organization=publisher)
+
+        self.assertEqual(Registration.objects.count(), 1)
+        self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 0)
+
+        with requests_mock.Mocker() as req_mock, self.assertRaises(WebStoreAPIError):
+            base_url = f"{settings.WEB_STORE_API_BASE_URL}product/"
+
+            req_mock.post(
+                base_url,
+                json=DEFAULT_GET_PRODUCT_MAPPING_DATA,
+            )
+            req_mock.post(
+                f"{base_url}{DEFAULT_PRODUCT_ID}/accounting",
+                exc=RequestException,
+            )
+
+            self.client.post(
+                "/admin/registrations/registration/add/",
+                {
+                    "event": event2.id,
+                    "vat_percentage": VatPercentage.VAT_24.value,
+                    "registration_user_accesses-TOTAL_FORMS": 1,
+                    "registration_user_accesses-INITIAL_FORMS": 0,
+                    "registration_price_groups-TOTAL_FORMS": 1,
+                    "registration_price_groups-INITIAL_FORMS": 0,
+                    "registration_price_groups-0-price_group": price_group.pk,
+                    "registration_price_groups-0-price": Decimal("10"),
+                    "_save": "Save",
+                },
+            )
+
+            self.assertEqual(req_mock.call_count, 1)
+
+        self.assertEqual(Registration.objects.count(), 1)
+        self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 0)
+
+    def test_web_store_product_mapping_and_accounting_api_exception_when_updating_registration(
+        self,
+    ):
+        registration_price_group = RegistrationPriceGroupFactory(
+            registration=self.registration
+        )
+
+        publisher = self.registration.publisher
+
+        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+            WebStoreMerchantFactory(organization=publisher, merchant_id="1234")
+        WebStoreAccountFactory(organization=publisher)
+
+        self.assertEqual(Registration.objects.count(), 1)
+        self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 0)
+
+        with requests_mock.Mocker() as req_mock, self.assertRaises(WebStoreAPIError):
+            base_url = f"{settings.WEB_STORE_API_BASE_URL}product/"
+
+            req_mock.post(
+                base_url,
+                json=DEFAULT_GET_PRODUCT_MAPPING_DATA,
+            )
+            req_mock.post(
+                f"{base_url}{DEFAULT_PRODUCT_ID}/accounting",
+                exc=RequestException,
+            )
+
+            self.client.post(
+                f"/admin/registrations/registration/{self.registration.id}/change/",
+                {
+                    "event": self.registration.event.id,
+                    "vat_percentage": VatPercentage.VAT_24.value,
+                    "registration_user_accesses-TOTAL_FORMS": 1,
+                    "registration_user_accesses-INITIAL_FORMS": 0,
+                    "registration_price_groups-TOTAL_FORMS": 1,
+                    "registration_price_groups-INITIAL_FORMS": 1,
+                    "registration_price_groups-0-id": registration_price_group.pk,
+                    "registration_price_groups-0-price_group": registration_price_group.price_group_id,
+                    "registration_price_groups-0-price": registration_price_group.price,
+                },
+            )
+
+            self.assertEqual(req_mock.call_count, 1)
+
+        self.assertEqual(Registration.objects.count(), 1)
+        self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 0)
 
 
 class TestPriceGroupAdmin(TestCase):

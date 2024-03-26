@@ -1,6 +1,7 @@
 from admin_auto_filters.filters import AutocompleteFilter
 from django.conf import settings
 from django.contrib import admin
+from django.db import transaction
 from django.utils.translation import gettext as _
 from modeltranslation.admin import TranslationAdmin
 from reversion.admin import VersionAdmin
@@ -90,6 +91,13 @@ class RegistrationAdmin(RegistrationBaseAdmin, TranslationAdmin, VersionAdmin):
                 instance.save()
         else:
             super().save_formset(request, form, formset, change)
+
+    @transaction.atomic
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            form.instance.create_or_update_web_store_product_mapping_and_accounting()
 
     def get_readonly_fields(self, request, obj=None):
         if obj:

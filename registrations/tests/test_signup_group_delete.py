@@ -5,6 +5,7 @@ from unittest.mock import patch, PropertyMock
 import pytest
 from django.conf import settings
 from django.core import mail
+from django.test import override_settings
 from django.utils import translation
 from django.utils.timezone import localtime
 from freezegun import freeze_time
@@ -26,6 +27,7 @@ from registrations.tests.factories import (
     RegistrationFactory,
     RegistrationPriceGroupFactory,
     RegistrationUserAccessFactory,
+    RegistrationWebStoreProductMappingFactory,
     SignUpContactPersonFactory,
     SignUpFactory,
     SignUpGroupFactory,
@@ -1218,6 +1220,9 @@ def test_group_send_email_with_payment_link_when_moving_participant_from_waitlis
             event__name="Foo", maximum_attendee_capacity=1
         )
 
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        RegistrationWebStoreProductMappingFactory(registration=registration)
+
     registration_price_group = RegistrationPriceGroupFactory(registration=registration)
 
     signup_group = SignUpGroupFactory(registration=registration)
@@ -1324,6 +1329,9 @@ def test_group_send_email_with_payment_link_when_moving_participant_from_waitlis
             event__name="Foo",
             maximum_attendee_capacity=1,
         )
+
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        RegistrationWebStoreProductMappingFactory(registration=registration)
 
     registration_price_group = RegistrationPriceGroupFactory(registration=registration)
 
