@@ -16,12 +16,10 @@ DEFAULT_CREATE_PRODUCT_MAPPING_DATA = {
 }
 
 DEFAULT_GET_PRODUCT_MAPPING_DATA = {
-    "productMapping": {
-        "namespace": django_settings.WEB_STORE_API_NAMESPACE,
-        "namespaceEntityId": "string",
-        "merchantId": "string",
-        "productId": "string",
-    }
+    "namespace": django_settings.WEB_STORE_API_NAMESPACE,
+    "namespaceEntityId": "string",
+    "merchantId": "string",
+    "productId": DEFAULT_PRODUCT_ID,
 }
 
 DEFAULT_CREATE_PRODUCT_ACCOUNTING_DATA = {

@@ -6,6 +6,7 @@ from unittest.mock import patch
 import pytest
 from django.conf import settings
 from django.core import mail
+from django.test import override_settings
 from django.utils import translation
 from django.utils.timezone import localtime
 from freezegun import freeze_time
@@ -29,6 +30,7 @@ from registrations.tests.factories import (
     RegistrationFactory,
     RegistrationPriceGroupFactory,
     RegistrationUserAccessFactory,
+    RegistrationWebStoreProductMappingFactory,
     SeatReservationCodeFactory,
     SignUpContactPersonFactory,
     SignUpFactory,
@@ -206,6 +208,9 @@ def test_authenticated_user_can_create_signups_with_payments(api_client, user_ro
     reservation = SeatReservationCodeFactory(seats=1, registration=registration)
     registration_price_group = RegistrationPriceGroupFactory(registration=registration)
 
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        RegistrationWebStoreProductMappingFactory(registration=registration)
+
     user = create_user_by_role(
         user_role,
         registration.publisher,
@@ -311,6 +316,9 @@ def test_create_signup_payment_without_pricetotal_in_response(api_client):
     with translation.override(language.pk):
         registration = RegistrationFactory(event__name="Foo")
 
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        RegistrationWebStoreProductMappingFactory(registration=registration)
+
     user = create_user_by_role(
         "registration_admin",
         registration.publisher,
@@ -371,7 +379,44 @@ def test_create_signup_payment_without_pricetotal_in_response(api_client):
 
 
 @pytest.mark.django_db
+def test_create_signup_payment_product_mapping_missing(registration, api_client):
+    LanguageFactory(pk="fi", service_language=True)
+    reservation = SeatReservationCodeFactory(seats=1, registration=registration)
+    registration_price_group = RegistrationPriceGroupFactory(registration=registration)
+
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    signups_data = deepcopy(default_signups_data)
+    signups_data.update(
+        {
+            "registration": registration.pk,
+            "reservation_code": reservation.code,
+        }
+    )
+    signups_data["signups"][0].update(
+        {
+            "price_group": {"registration_price_group": registration_price_group.pk},
+            "create_payment": True,
+        }
+    )
+
+    assert SignUpPayment.objects.count() == 0
+
+    response = create_signups(api_client, signups_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data[0] == (
+        "A RegistrationWebStoreProductMapping is required before a Talpa order can be created."
+    )
+
+    assert SignUpPayment.objects.count() == 0
+
+
+@pytest.mark.django_db
 def test_create_signup_payment_web_store_api_field_error(registration, api_client):
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        RegistrationWebStoreProductMappingFactory(registration=registration)
+
     LanguageFactory(pk="fi", service_language=True)
     reservation = SeatReservationCodeFactory(seats=1, registration=registration)
     registration_price_group = RegistrationPriceGroupFactory(registration=registration)
@@ -416,6 +461,9 @@ def test_create_signup_payment_web_store_api_field_error(registration, api_clien
 
 @pytest.mark.django_db
 def test_create_signup_payment_web_store_api_non_field_error(registration, api_client):
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        RegistrationWebStoreProductMappingFactory(registration=registration)
+
     LanguageFactory(pk="fi", service_language=True)
     reservation = SeatReservationCodeFactory(seats=1, registration=registration)
     registration_price_group = RegistrationPriceGroupFactory(registration=registration)

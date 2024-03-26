@@ -24,7 +24,10 @@ from helsinki_gdpr.models import SerializableMixin
 
 from events.models import Event, Language, Offer
 from registrations.enums import VatPercentage
-from registrations.exceptions import PriceGroupValidationError
+from registrations.exceptions import (
+    PriceGroupValidationError,
+    WebStoreProductMappingValidationError,
+)
 from registrations.notifications import (
     get_registration_user_access_invitation_subject,
     get_registration_user_access_invitation_texts,
@@ -42,6 +45,8 @@ from registrations.utils import (
     create_event_ics_file_content,
     create_or_update_web_store_merchant,
     create_web_store_api_order,
+    create_web_store_product_accounting,
+    create_web_store_product_mapping,
     create_web_store_refund,
     get_email_noreply_address,
     get_ui_locales,
@@ -580,6 +585,97 @@ class Registration(CreatedModifiedBaseModel):
             or user.is_admin_of(self.publisher)
             or user.is_registration_admin_of(self.publisher)
             or user.is_substitute_user_of(self.registration_user_accesses)
+        )
+
+    @cached_property
+    def merchant(self):
+        if merchant := self.publisher.web_store_merchants.filter(active=True).first():
+            return merchant
+
+        for ancestor in self.publisher.get_ancestors(ascending=True):
+            if merchant := ancestor.web_store_merchants.filter(active=True).first():
+                return merchant
+
+        return None
+
+    @cached_property
+    def account(self):
+        if account := self.publisher.web_store_accounts.filter(active=True).first():
+            return account
+
+        for ancestor in self.publisher.get_ancestors(ascending=True):
+            if account := ancestor.web_store_accounts.filter(active=True).first():
+                return account
+
+        return None
+
+    def to_web_store_product_mapping_data(self):
+        if not (merchant := self.merchant):
+            raise WebStoreProductMappingValidationError(
+                _(
+                    "A WebStoreMerchant is required to create a product mapping in Talpa."
+                )
+            )
+
+        return {
+            "namespace": settings.WEB_STORE_API_NAMESPACE,
+            "namespaceEntityId": self.pk,
+            "merchantId": merchant.merchant_id,
+        }
+
+    def to_web_store_product_accounting_data(self):
+        if not (account := self.account):
+            raise WebStoreProductMappingValidationError(
+                _(
+                    "A WebStoreAccount is required to create product accounting in Talpa."
+                )
+            )
+
+        data = {
+            "vatCode": account.vat_code,
+            "balanceProfitCenter": account.balance_profit_center,
+            "companyCode": account.company_code,
+            "mainLedgerAccount": account.main_ledger_account,
+        }
+
+        if account.internal_order:
+            data["internalOrder"] = account.internal_order
+
+        if account.profit_center:
+            data["profitCenter"] = account.profit_center
+
+        if account.project:
+            data["project"] = account.project
+
+        if account.operation_area:
+            data["operationArea"] = account.operation_area
+
+        return data
+
+    def create_or_update_web_store_product_mapping_and_accounting(self):
+        if (
+            not self.registration_price_groups.exists()
+            or RegistrationWebStoreProductMapping.objects.filter(
+                registration_id=self.pk, merchant=self.merchant, account=self.account
+            ).exists()
+        ):
+            return
+
+        product_mapping_data = self.to_web_store_product_mapping_data()
+        accounting_data = self.to_web_store_product_accounting_data()
+
+        resp_json = create_web_store_product_mapping(product_mapping_data)
+        product_id = resp_json["productId"]
+
+        create_web_store_product_accounting(product_id, accounting_data)
+
+        RegistrationWebStoreProductMapping.objects.update_or_create(
+            registration=self,
+            defaults={
+                "merchant": self.merchant,
+                "account": self.account,
+                "external_product_id": product_id,
+            },
         )
 
 
@@ -1650,9 +1746,20 @@ class SignUpPriceGroup(RegistrationPriceGroupBaseModel, SoftDeletableBaseModel):
     description = models.CharField(max_length=255)
 
     def to_web_store_order_json(self):
-        # TODO: use a non-hardcoded productId once product mapping is implemented.
+        if not (
+            product_mapping := RegistrationWebStoreProductMapping.objects.filter(
+                registration_id=self.signup.registration_id
+            ).first()
+        ):
+            raise WebStoreProductMappingValidationError(
+                _(
+                    "A RegistrationWebStoreProductMapping is required before a Talpa "
+                    "order can be created."
+                )
+            )
+
         return {
-            "productId": "0d2be9c8-ad1e-3268-8d76-c94dbc3f6bcb",
+            "productId": product_mapping.external_product_id,
             "productName": str(self.description),
             "quantity": 1,
             "unit": str(_("pcs")),
@@ -1801,3 +1908,29 @@ class WebStoreAccount(CreatedModifiedBaseModel):
             logger.info(f"Deleted Talpa account {self.main_ledger_account} (ID: {pk})")
         else:
             raise ValidationError(_("Cannot delete a Talpa account."))
+
+
+class RegistrationWebStoreProductMapping(models.Model):
+    _PRODUCT_MAPPING_RELATED_NAME = "web_store_product_mapping"
+
+    registration = models.OneToOneField(
+        Registration,
+        related_name=_PRODUCT_MAPPING_RELATED_NAME,
+        on_delete=models.CASCADE,
+    )
+
+    merchant = models.OneToOneField(
+        WebStoreMerchant,
+        related_name=_PRODUCT_MAPPING_RELATED_NAME,
+        on_delete=models.PROTECT,
+    )
+
+    account = models.OneToOneField(
+        WebStoreAccount,
+        related_name=_PRODUCT_MAPPING_RELATED_NAME,
+        on_delete=models.PROTECT,
+    )
+
+    external_product_id = models.CharField(
+        max_length=64,
+    )

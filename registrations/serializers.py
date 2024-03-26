@@ -13,7 +13,11 @@ from rest_framework.fields import DateTimeField
 from events.models import Language
 from events.utils import clean_text_fields
 from linkedevents.serializers import TranslatedModelSerializer
-from registrations.exceptions import ConflictException, WebStoreAPIError
+from registrations.exceptions import (
+    ConflictException,
+    WebStoreAPIError,
+    WebStoreProductMappingValidationError,
+)
 from registrations.models import (
     OfferPriceGroup,
     PriceGroup,
@@ -303,7 +307,7 @@ class WebStorePaymentBaseSerializer(serializers.Serializer):
     def _create_payment(signup_or_group):
         try:
             return signup_or_group.create_web_store_payment()
-        except WebStoreAPIError as exc:
+        except (WebStoreAPIError, WebStoreProductMappingValidationError) as exc:
             raise serializers.ValidationError(exc.messages)
 
     class Meta:

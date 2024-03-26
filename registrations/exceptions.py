@@ -16,3 +16,7 @@ class PriceGroupValidationError(ValidationError):
 
 class WebStoreAPIError(ValidationError):
     pass
+
+
+class WebStoreProductMappingValidationError(ValidationError):
+    pass

@@ -2,6 +2,7 @@ from decimal import Decimal
 from typing import Union
 
 import pytest
+from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -13,6 +14,7 @@ from registrations.tests.factories import (
     PriceGroupFactory,
     RegistrationPriceGroupFactory,
     RegistrationUserAccessFactory,
+    RegistrationWebStoreProductMappingFactory,
 )
 from registrations.tests.test_registration_post import email
 from registrations.tests.test_registration_put import edited_email, edited_hel_email
@@ -38,6 +40,7 @@ def assert_patch_registration(
     data: dict,
 ):
     response = patch_registration(api_client, pk, data)
+    print(response.data)
     assert response.status_code == status.HTTP_200_OK
 
     return response
@@ -84,6 +87,9 @@ def test_signup_url_is_not_linked_to_event_offer_on_registration_patch(
 @pytest.mark.django_db
 def test_patch_registration_price_group(api_client, user, registration):
     api_client.force_authenticate(user)
+
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        RegistrationWebStoreProductMappingFactory(registration=registration)
 
     default_price_group = PriceGroup.objects.filter(
         publisher=None, is_free=False
