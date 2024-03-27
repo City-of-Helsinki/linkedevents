@@ -30,6 +30,7 @@ from registrations.models import (
     SignUpPriceGroup,
     SignUpProtectedData,
     VAT_PERCENTAGES,
+    WebStoreMerchant,
 )
 from registrations.permissions import CanAccessRegistrationSignups
 from registrations.utils import (
@@ -1472,3 +1473,46 @@ class WebStorePaymentWebhookSerializer(WebStoreWebhookBaseSerializer):
         choices=[event_type.value for event_type in WebStorePaymentWebhookEventType],
         write_only=True,
     )
+
+
+class WebStoreMerchantSerializer(CreatedModifiedBaseSerializer):
+    admin_only_fields = [
+        "paytrail_merchant_id",
+        "merchant_id",
+    ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        instance = self.instance
+        if instance:
+            user = self.context["user"]
+
+            if not (
+                user.is_authenticated
+                and (
+                    user.is_superuser
+                    or user.is_financial_admin_of(instance.organization)
+                )
+            ):
+                # Show Paytrail and merchant ID fields only to superusers and financial admins.
+                for field in self.admin_only_fields:
+                    self.fields.pop(field, None)
+
+    class Meta(CreatedModifiedBaseSerializer.Meta):
+        model = WebStoreMerchant
+        fields = (
+            "id",
+            "active",
+            "name",
+            "street_address",
+            "zipcode",
+            "city",
+            "email",
+            "phone_number",
+            "url",
+            "terms_of_service_url",
+            "business_id",
+            "paytrail_merchant_id",
+            "merchant_id",
+        ) + CreatedModifiedBaseSerializer.Meta.fields

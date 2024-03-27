@@ -355,15 +355,27 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
             languages = [x[0] for x in settings.LANGUAGES]
             for language in languages:
                 # null or empty strings are not allowed, they are the same as missing name!
-                if "name_%s" % language in data and data["name_%s" % language]:
+                name_lang_key = "name_%s" % language
+                if (
+                    data.get(name_lang_key)
+                    or self.partial is True
+                    and name_lang_key not in data
+                ):
                     name_exists = True
                     break
         else:
             # null or empty strings are not allowed, they are the same as missing name!
-            name_exists = "name" in data and data["name"]
+            name_exists = (
+                "name" in data
+                and data["name"]
+                or self.partial is True
+                and "name" not in data
+            )
+
         if not name_exists:
             raise serializers.ValidationError(
                 {"name": _("The name must be specified.")}
             )
+
         data = super().validate(data)
         return data

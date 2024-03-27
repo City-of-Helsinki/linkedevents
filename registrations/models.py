@@ -18,6 +18,7 @@ from django.utils.functional import cached_property
 from django.utils.timezone import localtime
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation import override
+from django_orghierarchy.models import Organization
 from encrypted_fields import fields
 from helsinki_gdpr.models import SerializableMixin
 
@@ -38,6 +39,7 @@ from registrations.notifications import (
 from registrations.utils import (
     code_validity_duration,
     create_event_ics_file_content,
+    create_or_update_web_store_merchant,
     create_web_store_api_order,
     get_email_noreply_address,
     get_ui_locales,
@@ -178,6 +180,101 @@ class CreatedModifiedBaseModel(models.Model):
 
     class Meta:
         abstract = True
+
+
+class WebStoreMerchant(CreatedModifiedBaseModel):
+    organization = models.ForeignKey(
+        Organization,
+        related_name="web_store_merchants",
+        on_delete=models.CASCADE,
+    )
+
+    # Since merchants cannot be deleted from Talpa, allow to
+    # toggle their active / inactive status instead in Linked Events.
+    active = models.BooleanField(
+        verbose_name=_("Is active"),
+        default=True,
+    )
+
+    name = models.CharField(
+        verbose_name=_("Name"),
+        max_length=100,
+    )
+    street_address = models.CharField(
+        verbose_name=_("Street address"),
+        max_length=500,
+    )
+    zipcode = models.CharField(
+        verbose_name=_("ZIP code"),
+        max_length=10,
+    )
+    city = models.CharField(
+        verbose_name=_("City"),
+        max_length=50,
+    )
+    email = models.EmailField(verbose_name=_("E-mail"))
+    phone_number = models.CharField(
+        verbose_name=_("Phone number"),
+        max_length=18,
+    )
+    url = models.URLField(verbose_name=_("URL"))
+    terms_of_service_url = models.URLField(verbose_name=_("Terms of Service URL"))
+    business_id = models.CharField(
+        verbose_name=_("Business ID"),
+        max_length=9,
+    )
+
+    # Paytrail "main" merchant ID. 100 character limit is an estimated maximum provided
+    # by the Talpa team. Real values are probably much shorter.
+    paytrail_merchant_id = models.CharField(
+        verbose_name=_("Paytrail merchant ID"),
+        max_length=100,
+    )
+
+    # Talpa merchant ID.
+    merchant_id = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+    )
+
+    def to_web_store_merchant_json(self):
+        return {
+            "merchantName": self.name,
+            "merchantStreet": self.street_address,
+            "merchantZip": self.zipcode,
+            "merchantCity": self.city,
+            "merchantEmail": self.email,
+            "merchantPhone": self.phone_number,
+            "merchantUrl": self.url,
+            "merchantTermsOfServiceUrl": self.terms_of_service_url,
+            "merchantBusinessId": self.business_id,
+            "merchantPaytrailMerchantId": self.paytrail_merchant_id,
+            "merchantShopId": self.paytrail_merchant_id,
+        }
+
+    def delete(self, using=None, keep_parents=False, force_delete=False):
+        if force_delete:
+            pk = self.pk
+            super().delete()
+            logger.info(f"Deleted Talpa merchant {self.name} (ID: {pk})")
+        else:
+            raise ValidationError(_("Cannot delete a Talpa merchant."))
+
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        created = self.pk is None
+
+        super().save(*args, **kwargs)
+
+        if (
+            not settings.WEB_STORE_INTEGRATION_ENABLED
+            or not self.active
+            or kwargs.get("update_fields") == {"merchant_id"}
+        ):
+            return
+
+        create_or_update_web_store_merchant(self, created)
 
 
 class PriceGroup(CreatedModifiedBaseModel):
