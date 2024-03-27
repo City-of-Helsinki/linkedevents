@@ -447,7 +447,7 @@ def purge_orphans(events_data: list[dict], skip_log=False) -> list[dict]:
     if drop:
         if not skip_log:
             logger.error(
-                f"Events referenced as super events are missing from the data: {', '.join(drop)}",
+                f"Events referenced as super events are missing from the data: {', '.join(sorted(drop))}",
                 stack_info=False,
             )
         return purge_orphans(keep, skip_log=True)
