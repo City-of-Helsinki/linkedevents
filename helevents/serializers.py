@@ -36,6 +36,7 @@ class UserSerializer(serializers.ModelSerializer):
             "uuid",
             "department_name",
             "is_staff",
+            "is_superuser",
             "display_name",
             "is_external",
             "is_strongly_identified",
