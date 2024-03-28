@@ -10,6 +10,7 @@ from registrations.models import (
     Registration,
     RegistrationPriceGroup,
     RegistrationUserAccess,
+    RegistrationWebStoreProductMapping,
     SeatReservationCode,
     SignUp,
     SignUpContactPerson,
@@ -18,8 +19,10 @@ from registrations.models import (
     SignUpPayment,
     SignUpPriceGroup,
     SignUpProtectedData,
+    WebStoreAccount,
     WebStoreMerchant,
 )
+from web_store.tests.product.test_web_store_product_api_client import DEFAULT_PRODUCT_ID
 
 
 class RegistrationFactory(factory.django.DjangoModelFactory):
@@ -175,3 +178,35 @@ class WebStoreMerchantFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = WebStoreMerchant
+
+
+class WebStoreAccountFactory(factory.django.DjangoModelFactory):
+    organization = factory.SubFactory(OrganizationFactory)
+
+    vat_code = "12"
+    company_code = "1234"
+    main_ledger_account = "123456"
+    balance_profit_center = "1234567890"
+
+    class Meta:
+        model = WebStoreAccount
+
+
+class RegistrationWebStoreProductMappingFactory(factory.django.DjangoModelFactory):
+    registration = factory.SubFactory(RegistrationFactory)
+    external_product_id = DEFAULT_PRODUCT_ID
+
+    @factory.lazy_attribute
+    def merchant(self):
+        return WebStoreMerchantFactory(
+            organization=self.registration.publisher,
+        )
+
+    @factory.lazy_attribute
+    def account(self):
+        return WebStoreAccountFactory(
+            organization=self.registration.publisher,
+        )
+
+    class Meta:
+        model = RegistrationWebStoreProductMapping

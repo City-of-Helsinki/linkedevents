@@ -5,6 +5,7 @@ import pytest
 from django.conf import settings
 from django.core import mail
 from django.core.management import call_command
+from django.test import override_settings
 from django.utils import translation
 from django.utils.timezone import localtime
 from rest_framework import status
@@ -14,6 +15,7 @@ from events.tests.factories import LanguageFactory
 from registrations.models import SignUp, SignUpPayment
 from registrations.tests.factories import (
     RegistrationFactory,
+    RegistrationWebStoreProductMappingFactory,
     SignUpContactPersonFactory,
     SignUpFactory,
     SignUpGroupFactory,
@@ -273,6 +275,10 @@ def test_mark_payments_expired_signup_moved_to_waitlisted_with_payment_link():
     fourteen_days_ago = now - timedelta(days=14)
 
     registration = RegistrationFactory(event__name=_EVENT_NAME)
+
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        RegistrationWebStoreProductMappingFactory(registration=registration)
+
     service_language = LanguageFactory(pk="en", service_language=True)
 
     payment = SignUpPaymentFactory(
@@ -439,6 +445,10 @@ def test_mark_payments_expired_payment_cancelled_signup_moved_to_waitlisted_with
     fourteen_days_ago = now - timedelta(days=14)
 
     registration = RegistrationFactory(event__name=_EVENT_NAME)
+
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        RegistrationWebStoreProductMappingFactory(registration=registration)
+
     service_language = LanguageFactory(pk="en", service_language=True)
 
     payment = SignUpPaymentFactory(

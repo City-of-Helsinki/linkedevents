@@ -16,12 +16,13 @@ from events.tests.factories import (
 from helevents.tests.factories import UserFactory
 from registrations.enums import VatPercentage
 from registrations.exceptions import PriceGroupValidationError
-from registrations.models import RegistrationPriceGroup, WebStoreMerchant
+from registrations.models import WebStoreAccount, WebStoreMerchant
 from registrations.notifications import SignUpNotificationType
 from registrations.tests.factories import (
     RegistrationFactory,
     RegistrationPriceGroupFactory,
     RegistrationUserAccessFactory,
+    RegistrationWebStoreProductMappingFactory,
     SignUpContactPersonFactory,
     SignUpFactory,
     SignUpGroupFactory,
@@ -29,6 +30,7 @@ from registrations.tests.factories import (
     SignUpPaymentFactory,
     SignUpPriceGroupFactory,
     SignUpProtectedDataFactory,
+    WebStoreAccountFactory,
     WebStoreMerchantFactory,
 )
 from registrations.utils import strip_trailing_zeroes_from_decimal
@@ -109,6 +111,48 @@ class TestRegistration(TestCase):
 
         can_be_edited = self.registration.can_be_edited_by(self.user)
         self.assertTrue(can_be_edited)
+
+    def test_merchant(self):
+        self.assertIsNone(self.registration.merchant)
+
+        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+            merchant = WebStoreMerchantFactory(organization=self.registration.publisher)
+        del self.registration.merchant
+
+        self.assertEqual(merchant.pk, self.registration.merchant.pk)
+
+    def test_merchant_from_ancestor(self):
+        self.assertIsNone(self.registration.merchant)
+
+        parent_organization = OrganizationFactory()
+        self.registration.publisher.parent = parent_organization
+        self.registration.publisher.save(update_fields=["parent"])
+
+        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+            merchant = WebStoreMerchantFactory(organization=parent_organization)
+        del self.registration.merchant
+
+        self.assertEqual(merchant.pk, self.registration.merchant.pk)
+
+    def test_account(self):
+        self.assertIsNone(self.registration.account)
+
+        account = WebStoreAccountFactory(organization=self.registration.publisher)
+        del self.registration.account
+
+        self.assertEqual(account.pk, self.registration.account.pk)
+
+    def test_account_from_ancestor(self):
+        self.assertIsNone(self.registration.account)
+
+        parent_organization = OrganizationFactory()
+        self.registration.publisher.parent = parent_organization
+        self.registration.publisher.save(update_fields=["parent"])
+
+        account = WebStoreAccountFactory(organization=parent_organization)
+        del self.registration.account
+
+        self.assertEqual(account.pk, self.registration.account.pk)
 
 
 class TestRegistrationUserAccess(TestCase):
@@ -290,6 +334,11 @@ class TestSignUpGroup(TestCase):
         assert signup.last_modified_by is None
 
     def test_to_web_store_order_json(self):
+        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+            product_mapping = RegistrationWebStoreProductMappingFactory(
+                registration=self.signup_group.registration
+            )
+
         english = LanguageFactory(pk="en", service_language=True)
 
         contact_person = SignUpContactPersonFactory(
@@ -337,7 +386,7 @@ class TestSignUpGroup(TestCase):
                 "user": str(self.user.uuid),
                 "items": [
                     {
-                        "productId": "0d2be9c8-ad1e-3268-8d76-c94dbc3f6bcb",
+                        "productId": product_mapping.external_product_id,
                         "productName": price_group.description_en,
                         "quantity": 1,
                         "unit": "pcs",
@@ -350,7 +399,7 @@ class TestSignUpGroup(TestCase):
                         "vatPercentage": str(int(price_group.vat_percentage)),
                     },
                     {
-                        "productId": "0d2be9c8-ad1e-3268-8d76-c94dbc3f6bcb",
+                        "productId": product_mapping.external_product_id,
                         "productName": price_group2.description_en,
                         "quantity": 1,
                         "unit": "pcs",
@@ -706,6 +755,11 @@ class TestSignUp(TestCase):
         assert signup.last_modified_by is None
 
     def test_to_web_store_order_json(self):
+        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+            product_mapping = RegistrationWebStoreProductMappingFactory(
+                registration=self.signup.registration
+            )
+
         english = LanguageFactory(pk="en", service_language=True)
 
         contact_person = SignUpContactPersonFactory(
@@ -731,7 +785,7 @@ class TestSignUp(TestCase):
                 "user": str(self.user.uuid),
                 "items": [
                     {
-                        "productId": "0d2be9c8-ad1e-3268-8d76-c94dbc3f6bcb",
+                        "productId": product_mapping.external_product_id,
                         "productName": price_group.description_en,
                         "quantity": 1,
                         "unit": "pcs",
@@ -1096,6 +1150,11 @@ class TestSignUpPriceGroup(TestCase):
         cls.price_group = SignUpPriceGroupFactory()
 
     def test_to_web_store_order_json(self):
+        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+            product_mapping = RegistrationWebStoreProductMappingFactory(
+                registration=self.price_group.signup.registration
+            )
+
         price_net = str(
             strip_trailing_zeroes_from_decimal(self.price_group.price_without_vat)
         )
@@ -1105,7 +1164,7 @@ class TestSignUpPriceGroup(TestCase):
         self.assertDictEqual(
             self.price_group.to_web_store_order_json(),
             {
-                "productId": "0d2be9c8-ad1e-3268-8d76-c94dbc3f6bcb",
+                "productId": product_mapping.external_product_id,
                 "productName": self.price_group.description_en,
                 "quantity": 1,
                 "unit": "pcs",
@@ -1173,3 +1232,21 @@ class TestWebStoreMerchant(TestCase):
             },
             self.merchant.to_web_store_merchant_json(),
         )
+
+
+class TestWebStoreAccount(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.account = WebStoreAccountFactory()
+
+    def test_delete_not_allowed(self):
+        with self.assertRaises(ValidationError) as exc:
+            self.account.delete()
+        self.assertEqual(exc.exception.messages[0], "Cannot delete a Talpa account.")
+
+        self.assertEqual(WebStoreAccount.objects.count(), 1)
+
+    def test_force_delete(self):
+        self.account.delete(force_delete=True)
+
+        self.assertEqual(WebStoreAccount.objects.count(), 0)
