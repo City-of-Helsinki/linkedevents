@@ -158,8 +158,9 @@ class DataSourceResourceEditPermission(
 class DataSourceOrganizationEditPermission(BasePermission):
     def has_permission(self, request, view):
         if request.method == "POST":
-            if settings.WEB_STORE_INTEGRATION_ENABLED and request.data.get(
-                "web_store_merchants"
+            if settings.WEB_STORE_INTEGRATION_ENABLED and (
+                request.data.get("web_store_merchants")
+                or request.data.get("web_store_accounts")
             ):
                 return request.user.is_authenticated and request.user.is_superuser
             elif (
@@ -180,7 +181,10 @@ class DataSourceOrganizationEditPermission(BasePermission):
         if (
             settings.WEB_STORE_INTEGRATION_ENABLED
             and request.method in ("PUT", "PATCH")
-            and request.data.get("web_store_merchants")
+            and (
+                request.data.get("web_store_merchants")
+                or request.data.get("web_store_accounts")
+            )
         ):
             data_keys = request.data.keys()
 

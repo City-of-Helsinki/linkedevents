@@ -6,7 +6,7 @@ from django.utils.translation import gettext as _
 from django_orghierarchy.admin import OrganizationAdmin
 from django_orghierarchy.models import Organization
 
-from registrations.models import WebStoreMerchant
+from registrations.models import WebStoreAccount, WebStoreMerchant
 
 from .forms import LocalOrganizationAdminForm
 from .models import User
@@ -29,16 +29,37 @@ class WebStoreMerchantInline(admin.StackedInline):
         return ["created_by", "last_modified_by", "merchant_id"]
 
 
+class WebStoreAccountInline(admin.StackedInline):
+    model = WebStoreAccount
+    extra = 0
+    min_num = 0
+    max_num = 1
+    verbose_name = _("Account")
+    verbose_name_plural = _("Accounts")
+
+    def has_delete_permission(self, request, obj=None):
+        # An account cannot be deleted from Talpa so we only want
+        # to allow making an account inactive in Linked Events.
+        return False
+
+    def get_readonly_fields(self, request, obj=None):
+        return ["created_by", "last_modified_by"]
+
+
 class LocalOrganizationAdmin(OrganizationAdmin):
     filter_horizontal = ("admin_users", "regular_users")
     form = LocalOrganizationAdminForm
-    inlines = (WebStoreMerchantInline,)
+    inlines = (WebStoreMerchantInline, WebStoreAccountInline)
 
     def get_formsets_with_inlines(self, request, obj=None):
         for inline in self.get_inline_instances(request, obj):
-            # hide WebStoreMerchantInline if Talpa integration is not enabled
+            # Hide WebStoreMerchantInline and WebStoreAccountInline
+            # if Talpa integration is not enabled.
             if (
-                not isinstance(inline, WebStoreMerchantInline)
+                not (
+                    isinstance(inline, WebStoreMerchantInline)
+                    or isinstance(inline, WebStoreAccountInline)
+                )
                 or settings.WEB_STORE_INTEGRATION_ENABLED
             ):
                 yield inline.get_formset(request, obj), inline
@@ -63,15 +84,15 @@ class LocalOrganizationAdmin(OrganizationAdmin):
 
     def save_related(self, request, form, formsets, change):
         for formset in formsets:
-            if formset.model == WebStoreMerchant:
+            if formset.model in (WebStoreMerchant, WebStoreAccount):
                 formset.save(commit=False)
 
-                for added_merchant in formset.new_objects:
-                    added_merchant.created_by = request.user
-                    added_merchant.last_modified_by = request.user
+                for added_object in formset.new_objects:
+                    added_object.created_by = request.user
+                    added_object.last_modified_by = request.user
 
-                for changed_merchant, __ in formset.changed_objects:
-                    changed_merchant.last_modified_by = request.user
+                for changed_object, __ in formset.changed_objects:
+                    changed_object.last_modified_by = request.user
 
         super().save_related(request, form, formsets, change)
 
