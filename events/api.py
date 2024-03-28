@@ -1581,8 +1581,8 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         offers = validated_data.pop('offers', None)
         links = validated_data.pop('external_links', None)
         videos = validated_data.pop('videos', None)
-        start_time = validated_data.pop('start_time', None)
-        end_time = validated_data.pop('end_time', None)
+        start_time = validated_data.get('start_time', None)
+        end_time = validated_data.get('end_time', None)
 
         if instance.super_event is not None and (
             (
