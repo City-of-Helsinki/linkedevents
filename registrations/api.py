@@ -14,6 +14,7 @@ from rest_framework import filters, mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -27,7 +28,11 @@ from events.api import (
 from events.models import Event
 from events.permissions import OrganizationUserEditPermission
 from linkedevents.registry import register_view
-from registrations.exceptions import ConflictException, PriceGroupValidationError
+from registrations.exceptions import (
+    ConflictException,
+    PriceGroupValidationError,
+    WebStoreAPIError,
+)
 from registrations.exports import RegistrationSignUpsExportXLSX
 from registrations.filters import (
     ActionDependingBackend,
@@ -94,6 +99,15 @@ class SignUpAccessCodeMixin:
                 contact_person.link_user(self.request.user)
 
         return super().retrieve(request, *args, **kwargs)
+
+
+class SignUpPaymentRefundMixin:
+    @transaction.atomic
+    def perform_destroy(self, instance):
+        try:
+            super().perform_destroy(instance)
+        except WebStoreAPIError as exc:
+            raise ValidationError(exc.messages)
 
 
 class RegistrationViewSet(
@@ -321,6 +335,7 @@ class SignUpViewSet(
     UserDataSourceAndOrganizationMixin,
     RegistrationsAllowedMethodsMixin,
     SignUpAccessCodeMixin,
+    SignUpPaymentRefundMixin,
     AuditLogApiViewMixin,
     viewsets.ModelViewSet,
 ):
@@ -379,8 +394,17 @@ class SignUpViewSet(
 
     @transaction.atomic
     def perform_destroy(self, instance):
+        if (
+            settings.WEB_STORE_INTEGRATION_ENABLED
+            and instance.signup_group
+            and getattr(instance.signup_group, "payment", None)
+        ):
+            raise ValidationError(
+                _("Cannot delete a participant from a group with a payment.")
+            )
+
         instance._individually_deleted = True
-        instance.delete()
+        super().perform_destroy(instance)
 
     @action(
         methods=["delete"],
@@ -415,6 +439,7 @@ class SignUpGroupViewSet(
     UserDataSourceAndOrganizationMixin,
     RegistrationsAllowedMethodsMixin,
     SignUpAccessCodeMixin,
+    SignUpPaymentRefundMixin,
     AuditLogApiViewMixin,
     viewsets.ModelViewSet,
 ):
@@ -593,7 +618,8 @@ class WebStoreWebhookViewSet(AuditLogApiViewMixin, viewsets.ViewSet):
     def _cancel_signup(signup_or_signup_group: Union[SignUp, SignUpGroup]) -> None:
         if isinstance(signup_or_signup_group, SignUp):
             signup_or_signup_group._individually_deleted = True
-        signup_or_signup_group.delete()
+
+        signup_or_signup_group.delete(bypass_web_store_api_calls=True)
 
     @action(detail=False, methods=["post"])
     @transaction.atomic

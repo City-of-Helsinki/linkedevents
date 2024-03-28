@@ -37,12 +37,15 @@ from registrations.notifications import (
     SignUpNotificationType,
 )
 from registrations.utils import (
+    cancel_web_store_order,
     code_validity_duration,
     create_event_ics_file_content,
     create_or_update_web_store_merchant,
     create_web_store_api_order,
+    create_web_store_refund,
     get_email_noreply_address,
     get_ui_locales,
+    move_first_waitlisted_to_attending,
     strip_trailing_zeroes_from_decimal,
 )
 
@@ -781,6 +784,34 @@ class SignUpMixin:
 
         return order_data
 
+    def refund_or_cancel_web_store_payment(self, bypass_web_store_api_calls=False):
+        refunded = False
+        cancelled = False
+
+        if not settings.WEB_STORE_INTEGRATION_ENABLED:
+            return refunded, cancelled
+
+        payment = getattr(self, "payment", None)
+        if payment and not bypass_web_store_api_calls:
+            if payment.status == SignUpPayment.PaymentStatus.PAID:
+                create_web_store_refund(payment)
+                logger.info(
+                    f"{self.__class__.__name__} delete: payment with ID {payment.pk} refunded for "
+                    f"object with ID {self.pk}."
+                )
+                refunded = True
+            elif payment.status == SignUpPayment.PaymentStatus.CREATED:
+                cancel_web_store_order(payment)
+                logger.info(
+                    f"{self.__class__.__name__} delete: payment with ID {payment.pk} cancelled for "
+                    f"object with ID {self.pk}."
+                )
+                cancelled = True
+        elif payment and bypass_web_store_api_calls:
+            cancelled = True
+
+        return refunded, cancelled
+
 
 class SignUpGroup(
     CreatedModifiedBaseModel, SoftDeletableBaseModel, SignUpMixin, SerializableMixin
@@ -801,6 +832,27 @@ class SignUpGroup(
         {"name": "signups_count"},
         {"name": "contact_person"},
     )
+
+    @transaction.atomic
+    def delete(self, *args, **kwargs):
+        contact_person = getattr(self, "contact_person", None)
+        is_attending = bool(self.attending_signups)
+
+        payment_refunded, payment_cancelled = self.refund_or_cancel_web_store_payment(
+            bypass_web_store_api_calls=kwargs.pop("bypass_web_store_api_calls", False)
+        )
+
+        super().delete(*args, **kwargs)
+
+        if is_attending:
+            move_first_waitlisted_to_attending(self)
+
+        if contact_person:
+            contact_person.send_notification(
+                SignUpNotificationType.CANCELLATION,
+                payment_cancelled=payment_cancelled,
+                payment_refunded=payment_refunded,
+            )
 
     @transaction.atomic
     def soft_delete(self):
@@ -1129,6 +1181,31 @@ class SignUp(
     )
 
     @transaction.atomic
+    def delete(self, *args, **kwargs):
+        contact_person = getattr(self, "contact_person", None)
+
+        payment_refunded, payment_cancelled = self.refund_or_cancel_web_store_payment(
+            bypass_web_store_api_calls=kwargs.pop("bypass_web_store_api_calls", False)
+        )
+
+        super().delete(*args, **kwargs)
+
+        if not getattr(self, "_individually_deleted", False):
+            # If a signup is deleted as part of a signup group, return.
+            # If an individual signup is deleted, continue.
+            return
+
+        if self.is_attending:
+            move_first_waitlisted_to_attending(self)
+
+        if contact_person:
+            contact_person.send_notification(
+                SignUpNotificationType.CANCELLATION,
+                payment_refunded=payment_refunded,
+                payment_cancelled=payment_cancelled,
+            )
+
+    @transaction.atomic
     def soft_delete(self):
         super().soft_delete()
 
@@ -1395,6 +1472,8 @@ class SignUpContactPerson(
         access_code=None,
         is_sub_event_cancellation=False,
         payment_link=None,
+        payment_refunded=False,
+        payment_cancelled=False,
     ):
         [_, linked_registrations_ui_locale] = get_ui_locales(self.service_language)
 
@@ -1424,6 +1503,8 @@ class SignUpContactPerson(
                 self,
                 notification_type,
                 is_sub_event_cancellation=is_sub_event_cancellation,
+                payment_refunded=payment_refunded,
+                payment_cancelled=payment_cancelled,
             )
             email_variables["payment_url"] = payment_link
 
@@ -1449,12 +1530,16 @@ class SignUpContactPerson(
         access_code=None,
         is_sub_event_cancellation=False,
         payment_link=None,
+        payment_refunded=False,
+        payment_cancelled=False,
     ):
         message = self.get_notification_message(
             notification_type,
             access_code=access_code,
             is_sub_event_cancellation=is_sub_event_cancellation,
             payment_link=payment_link,
+            payment_refunded=payment_refunded,
+            payment_cancelled=payment_cancelled,
         )
         rendered_body = message[1]
 

@@ -49,7 +49,7 @@ class Command(BaseCommand):
         if isinstance(payment.signup_or_signup_group, SignUp):
             payment.signup_or_signup_group._individually_deleted = True
 
-        payment.signup_or_signup_group.delete()
+        payment.signup_or_signup_group.delete(bypass_web_store_api_calls=True)
 
     @staticmethod
     def _handle_payment_expired(payment, order_api_client):
@@ -68,13 +68,18 @@ class Command(BaseCommand):
                 f"{payment.external_order_id}, response.status_code: {status_code})"
             )
 
-        move_first_waitlisted_to_attending(payment.signup_or_signup_group)
+        signup_or_signup_group = payment.signup_or_signup_group
 
-        contact_person = payment.signup_or_signup_group.actual_contact_person
+        if getattr(signup_or_signup_group, "is_attending", None) or getattr(
+            signup_or_signup_group, "attending_signups", None
+        ):
+            move_first_waitlisted_to_attending(signup_or_signup_group)
+
+        contact_person = signup_or_signup_group.actual_contact_person
         if contact_person:
             contact_person.send_notification(SignUpNotificationType.PAYMENT_EXPIRED)
 
-        payment.signup_or_signup_group.soft_delete()
+        signup_or_signup_group.soft_delete()
 
     def handle(self, *args, **options):
         payment_api_client = WebStorePaymentAPIClient()

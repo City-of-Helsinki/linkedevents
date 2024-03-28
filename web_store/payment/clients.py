@@ -16,3 +16,12 @@ class WebStorePaymentAPIClient(WebStoreAPIBaseClient):
                 "namespace": self.api_namespace,
             },
         )
+
+    def create_instant_refund(self, order_id: str) -> dict:
+        return self._make_request(
+            f"{self.payment_api_base_url}refund/instant/{order_id}",
+            "get",
+            headers={
+                "api-key": self.api_key,
+            },
+        )

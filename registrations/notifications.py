@@ -109,7 +109,7 @@ signup_email_texts = {
                 "You have successfully cancelled your registration to the volunteering <strong>%(event_name)s</strong>."
             ),
         },
-        "payment": {
+        "payment_cancelled": {
             "text": {
                 Event.TypeId.GENERAL: _(
                     "Your registration and payment for the event <strong>%(event_name)s</strong> have been cancelled."
@@ -119,6 +119,25 @@ signup_email_texts = {
                 ),
                 Event.TypeId.VOLUNTEERING: _(
                     "Your registration to the volunteering <strong>%(event_name)s</strong> has been cancelled."
+                ),
+            },
+        },
+        "payment_refunded": {
+            "text": {
+                Event.TypeId.GENERAL: _(
+                    "You have successfully cancelled your registration to the event "
+                    "<strong>%(event_name)s</strong>. Your payment for the registration "
+                    "has been refunded."
+                ),
+                Event.TypeId.COURSE: _(
+                    "You have successfully cancelled your registration to the course "
+                    "<strong>%(event_name)s</strong>. Your payment for the registration "
+                    "has been refunded."
+                ),
+                Event.TypeId.VOLUNTEERING: _(
+                    "You have successfully cancelled your registration to the volunteering "
+                    "<strong>%(event_name)s</strong>. Your payment for the registration "
+                    "has been refunded."
                 ),
             },
         },
@@ -706,7 +725,14 @@ def _format_confirmation_message_texts(texts, confirmation_message):
 
 
 def _format_cancellation_texts(
-    texts, text_options, event_type_id, event_name, event_period, contact_person
+    texts,
+    text_options,
+    event_type_id,
+    event_name,
+    event_period,
+    contact_person,
+    payment_refunded=False,
+    payment_cancelled=False,
 ):
     event_text_kwargs = _get_event_text_kwargs(event_name, event_period=event_period)
 
@@ -723,9 +749,12 @@ def _format_cancellation_texts(
             % event_text_kwargs
         )
 
-    payment = getattr(contact_person.signup_or_signup_group, "payment", None)
-    if payment:
-        texts["text"] = text_options["payment"]["text"][event_type_id] % {
+    if payment_refunded:
+        texts["text"] = text_options["payment_refunded"]["text"][event_type_id] % {
+            "event_name": event_name
+        }
+    elif payment_cancelled:
+        texts["text"] = text_options["payment_cancelled"]["text"][event_type_id] % {
             "event_name": event_name
         }
 
@@ -772,6 +801,8 @@ def get_signup_notification_texts(
     contact_person,
     notification_type: SignUpNotificationType,
     is_sub_event_cancellation=False,
+    payment_refunded=False,
+    payment_cancelled=False,
 ):
     registration = contact_person.registration
     service_lang = contact_person.get_service_language_pk()
@@ -821,7 +852,14 @@ def get_signup_notification_texts(
 
     if notification_type == SignUpNotificationType.CANCELLATION:
         _format_cancellation_texts(
-            texts, text_options, event_type_id, event_name, event_period, contact_person
+            texts,
+            text_options,
+            event_type_id,
+            event_name,
+            event_period,
+            contact_person,
+            payment_refunded=payment_refunded,
+            payment_cancelled=payment_cancelled,
         )
     elif notification_type == SignUpNotificationType.CONFIRMATION:
         _format_confirmation_texts(

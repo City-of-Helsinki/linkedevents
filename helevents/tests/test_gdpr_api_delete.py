@@ -101,7 +101,7 @@ def _assert_gdpr_delete(
 # === tests ===
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 @override_settings(GDPR_DISABLE_API_DELETION=False)
 def test_authenticated_user_can_delete_own_data(api_client, settings):
     user = UserFactory()
@@ -113,7 +113,7 @@ def test_authenticated_user_can_delete_own_data(api_client, settings):
         with (
             requests_mock.Mocker() as req_mock,
             patch(
-                "registrations.signals._signup_or_group_post_delete"
+                "registrations.signals._recalculate_registration_capacities"
             ) as mocked_signup_post_delete,
         ):
             auth_header = get_api_token_for_user_with_scopes(
@@ -135,7 +135,7 @@ def test_authenticated_user_can_delete_own_data(api_client, settings):
     assert event.user_organization is None
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 @override_settings(GDPR_DISABLE_API_DELETION=False)
 def test_authenticated_user_can_delete_own_data_event_user_details_not_nulled(
     api_client, settings
@@ -151,7 +151,7 @@ def test_authenticated_user_can_delete_own_data_event_user_details_not_nulled(
         with (
             requests_mock.Mocker() as req_mock,
             patch(
-                "registrations.signals._signup_or_group_post_delete"
+                "registrations.signals._recalculate_registration_capacities"
             ) as mocked_signup_post_delete,
         ):
             auth_header = get_api_token_for_user_with_scopes(
