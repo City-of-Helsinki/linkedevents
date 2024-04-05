@@ -113,175 +113,197 @@ def _get_event_data(user) -> list:
                 {"key": "SHORT_DESCRIPTION", "value": e.short_description},
                 {"key": "START_TIME", "value": e.start_time},
                 {"key": "END_TIME", "value": e.end_time},
-                [
-                    {
-                        "children": [
-                            {"key": "NAME", "value": image.name},
-                            {"key": "URL", "value": image.url},
-                        ]
-                        if image
-                        else [],
-                        "key": "IMAGE",
-                    }
-                ]
-                if image
-                else [],
-                [
-                    {
-                        "children": [
-                            [
-                                {
-                                    "children": [
-                                        {
-                                            "key": "NAME",
-                                            "value": keyword_label.name,
-                                        },
-                                        {
-                                            "children": [
+                (
+                    [
+                        {
+                            "children": (
+                                [
+                                    {"key": "NAME", "value": image.name},
+                                    {"key": "URL", "value": image.url},
+                                ]
+                                if image
+                                else []
+                            ),
+                            "key": "IMAGE",
+                        }
+                    ]
+                    if image
+                    else []
+                ),
+                (
+                    [
+                        {
+                            "children": [
+                                [
+                                    {
+                                        "children": (
+                                            [
                                                 {
                                                     "key": "NAME",
-                                                    "value": keyword_label.language.name,
+                                                    "value": keyword_label.name,
                                                 },
                                                 {
-                                                    "key": "SERVICE_LANGUAGE",
-                                                    "value": keyword_label.language.service_language,
+                                                    "children": [
+                                                        {
+                                                            "key": "NAME",
+                                                            "value": keyword_label.language.name,
+                                                        },
+                                                        {
+                                                            "key": "SERVICE_LANGUAGE",
+                                                            "value": keyword_label.language.service_language,
+                                                        },
+                                                    ],
+                                                    "key": "LANGUAGE",
                                                 },
-                                            ],
-                                            "key": "LANGUAGE",
-                                        },
-                                    ]
-                                    if keyword_label
-                                    else [],
-                                    "key": "KEYWORDLABEL",
-                                }
-                            ]
-                        ],
-                        "key": "KEYWORD",
-                    }
-                ]
-                if keyword
-                else [],
+                                            ]
+                                            if keyword_label
+                                            else []
+                                        ),
+                                        "key": "KEYWORDLABEL",
+                                    }
+                                ]
+                            ],
+                            "key": "KEYWORD",
+                        }
+                    ]
+                    if keyword
+                    else []
+                ),
                 {
                     "key": "PUBLISHER",
                     "value": f"{e.publisher.id} - {e.publisher.name}",
                 },
-                [
-                    {
-                        "children": [
-                            {"key": "NAME", "value": language.name},
-                            {
-                                "key": "SERVICE_LANGUAGE",
-                                "value": language.service_language,
-                            },
-                        ]
-                        if language
-                        else [],
-                        "key": "LANGUAGE",
-                    }
-                ]
-                if language
-                else [],
-                {
-                    "children": [
-                        {"key": "NAME", "value": e.location.name},
+                (
+                    [
                         {
-                            "key": "PUBLISHER",
-                            "value": f"{e.location.publisher.id} - {e.location.publisher.name}",
-                        },
-                        {"key": "INFO_URL", "value": e.location.info_url},
-                        {"key": "DESCRIPTION", "value": e.location.description},
-                        {"key": "EMAIL", "value": e.location.email},
-                        {"key": "TELEPHONE", "value": e.location.telephone},
-                        {
-                            "key": "STREET_ADDRESS",
-                            "value": e.location.street_address,
-                        },
-                        {
-                            "key": "ADDRESS_LOCALITY",
-                            "value": e.location.address_locality,
-                        },
-                        {
-                            "key": "ADDRESS_REGION",
-                            "value": e.location.address_region,
-                        },
-                        {"key": "POSTAL_CODE", "value": e.location.postal_code},
-                        {
-                            "key": "POST_OFFICE_BOX_NUM",
-                            "value": e.location.post_office_box_num,
-                        },
-                        {
-                            "key": "ADDRESS_COUNTRY",
-                            "value": e.location.address_country,
-                        },
-                    ],
-                    "key": "PLACE",
-                }
-                if e.location
-                else {"key": "LOCATION", "value": None},
-                {
-                    "children": [
-                        {
-                            "children": [
-                                {"key": "PRICE", "value": offer.price},
-                                {"key": "DESCRIPTION", "value": offer.description},
-                            ],
-                            "key": "OFFER",
+                            "children": (
+                                [
+                                    {"key": "NAME", "value": language.name},
+                                    {
+                                        "key": "SERVICE_LANGUAGE",
+                                        "value": language.service_language,
+                                    },
+                                ]
+                                if language
+                                else []
+                            ),
+                            "key": "LANGUAGE",
                         }
                     ]
-                    if offer
-                    else [],
+                    if language
+                    else []
+                ),
+                (
+                    {
+                        "children": [
+                            {"key": "NAME", "value": e.location.name},
+                            {
+                                "key": "PUBLISHER",
+                                "value": f"{e.location.publisher.id} - {e.location.publisher.name}",
+                            },
+                            {"key": "INFO_URL", "value": e.location.info_url},
+                            {"key": "DESCRIPTION", "value": e.location.description},
+                            {"key": "EMAIL", "value": e.location.email},
+                            {"key": "TELEPHONE", "value": e.location.telephone},
+                            {
+                                "key": "STREET_ADDRESS",
+                                "value": e.location.street_address,
+                            },
+                            {
+                                "key": "ADDRESS_LOCALITY",
+                                "value": e.location.address_locality,
+                            },
+                            {
+                                "key": "ADDRESS_REGION",
+                                "value": e.location.address_region,
+                            },
+                            {"key": "POSTAL_CODE", "value": e.location.postal_code},
+                            {
+                                "key": "POST_OFFICE_BOX_NUM",
+                                "value": e.location.post_office_box_num,
+                            },
+                            {
+                                "key": "ADDRESS_COUNTRY",
+                                "value": e.location.address_country,
+                            },
+                        ],
+                        "key": "PLACE",
+                    }
+                    if e.location
+                    else {"key": "LOCATION", "value": None}
+                ),
+                {
+                    "children": (
+                        [
+                            {
+                                "children": [
+                                    {"key": "PRICE", "value": offer.price},
+                                    {"key": "DESCRIPTION", "value": offer.description},
+                                ],
+                                "key": "OFFER",
+                            }
+                        ]
+                        if offer
+                        else []
+                    ),
                     "key": "OFFERS",
                 },
                 {
-                    "children": [
-                        {
-                            "children": [
-                                {"key": "NAME", "value": video.name},
-                                {"key": "URL", "value": video.url},
-                                {"key": "ALT_TEXT", "value": video.alt_text},
-                            ],
-                            "key": "VIDEO",
-                        }
-                    ]
-                    if video
-                    else [],
+                    "children": (
+                        [
+                            {
+                                "children": [
+                                    {"key": "NAME", "value": video.name},
+                                    {"key": "URL", "value": video.url},
+                                    {"key": "ALT_TEXT", "value": video.alt_text},
+                                ],
+                                "key": "VIDEO",
+                            }
+                        ]
+                        if video
+                        else []
+                    ),
                     "key": "VIDEOS",
                 },
-                [
-                    {
-                        "children": [
-                            [
-                                {
-                                    "children": [
-                                        {
-                                            "key": "NAME",
-                                            "value": audience_label.name,
-                                        },
+                (
+                    [
+                        {
+                            "children": (
+                                [
+                                    [
                                         {
                                             "children": [
                                                 {
                                                     "key": "NAME",
-                                                    "value": audience_label.language.name,
+                                                    "value": audience_label.name,
                                                 },
                                                 {
-                                                    "key": "SERVICE_LANGUAGE",
-                                                    "value": audience_label.language.service_language,
+                                                    "children": [
+                                                        {
+                                                            "key": "NAME",
+                                                            "value": audience_label.language.name,
+                                                        },
+                                                        {
+                                                            "key": "SERVICE_LANGUAGE",
+                                                            "value": audience_label.language.service_language,
+                                                        },
+                                                    ],
+                                                    "key": "LANGUAGE",
                                                 },
                                             ],
-                                            "key": "LANGUAGE",
-                                        },
-                                    ],
-                                    "key": "KEYWORDLABEL",
-                                }
-                            ]
-                        ]
-                        if audience
-                        else [],
-                        "key": "KEYWORD",
-                    }
-                ]
-                if audience
-                else [],
+                                            "key": "KEYWORDLABEL",
+                                        }
+                                    ]
+                                ]
+                                if audience
+                                else []
+                            ),
+                            "key": "KEYWORD",
+                        }
+                    ]
+                    if audience
+                    else []
+                ),
                 {"key": "INFO_URL", "value": e.info_url},
             ],
             "key": "EVENT",
@@ -339,9 +361,11 @@ def _get_signup_profile_data(signup: SignUp) -> dict:
             {"key": "LAST_NAME", "value": signup.last_name},
             {
                 "key": "DATE_OF_BIRTH",
-                "value": signup.date_of_birth.strftime("%Y-%m-%d")
-                if signup.date_of_birth
-                else None,
+                "value": (
+                    signup.date_of_birth.strftime("%Y-%m-%d")
+                    if signup.date_of_birth
+                    else None
+                ),
             },
             {"key": "PHONE_NUMBER", "value": signup.phone_number},
             {"key": "CITY", "value": signup.city},

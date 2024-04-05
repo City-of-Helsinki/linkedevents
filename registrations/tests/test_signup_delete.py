@@ -1541,9 +1541,10 @@ def test_web_store_automatically_fully_refund_paid_signup_payment(
     mocked_web_store_response = get_mock_response(
         status_code=status.HTTP_200_OK, json_return_value=json_return_value
     )
-    with translation.override(language.pk), patch(
-        "requests.get"
-    ) as mocked_web_store_request:
+    with (
+        translation.override(language.pk),
+        patch("requests.get") as mocked_web_store_request,
+    ):
         mocked_web_store_request.return_value = mocked_web_store_response
 
         assert_delete_signup(api_client, signup.pk)

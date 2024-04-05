@@ -158,10 +158,13 @@ def test_create_ics_file_correct_fallback_language_used_if_event_name_is_none(
     assert getattr(event, f"name_{language}") is None
     assert getattr(event, f"name_{expected_fallback_language}") is None
 
-    with pytest.raises(
-        ValueError,
-        match="Event doesn't have start_time or name. Ics file cannot be created.",
-    ), patch("django.utils.translation.override") as mocked_translation_override:
+    with (
+        pytest.raises(
+            ValueError,
+            match="Event doesn't have start_time or name. Ics file cannot be created.",
+        ),
+        patch("django.utils.translation.override") as mocked_translation_override,
+    ):
         create_event_ics_file_content(event, language=language)
 
         mocked_translation_override.assert_called_with(expected_fallback_language)

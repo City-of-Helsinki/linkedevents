@@ -416,9 +416,9 @@ class LippupisteImporter(Importer):
             most_common_matches = matches_by_partial_name[most_common_words]
             least_different_words = min(most_common_matches.keys())
             the_perfect_match = most_common_matches[least_different_words][0]
-            self.existing_place_id_matches[
-                source_event["EventVenue"]
-            ] = the_perfect_match
+            self.existing_place_id_matches[source_event["EventVenue"]] = (
+                the_perfect_match
+            )
             logger.info(Place.objects.get(id=the_perfect_match))
             return the_perfect_match
         if matches_by_provider_name:

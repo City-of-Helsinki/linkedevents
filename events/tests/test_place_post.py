@@ -11,7 +11,7 @@ from .utils import versioned_reverse as reverse
 
 
 def create_with_post(api_client, place_data, data_source=None, version="v1"):
-    create_url = reverse("place-list", version=version)
+    create_url = reverse("places-list", version=version)
     if data_source:
         api_client.credentials(apikey=data_source.api_key)
 
@@ -51,13 +51,13 @@ def test__cannot_create_an_place_with_existing_id(api_client, place_dict, user):
     api_client.force_authenticate(user=user)
     place_dict["id"] = settings.SYSTEM_DATA_SOURCE_ID + ":1"
     create_with_post(api_client, place_dict)
-    response2 = api_client.post(reverse("place-list"), place_dict, format="json")
+    response2 = api_client.post(reverse("places-list"), place_dict, format="json")
     assert response2.status_code == 400
 
 
 @pytest.mark.django_db
 def test__a_non_user_cannot_create_a_place(api_client, place_dict):
-    response = api_client.post(reverse("place-list"), place_dict, format="json")
+    response = api_client.post(reverse("places-list"), place_dict, format="json")
     assert response.status_code == 401
 
 
@@ -66,7 +66,7 @@ def test__a_non_admin_cannot_create_a_place(api_client, place_dict, user):
     user.get_default_organization().admin_users.remove(user)
     api_client.force_authenticate(user)
 
-    response = api_client.post(reverse("place-list"), place_dict, format="json")
+    response = api_client.post(reverse("places-list"), place_dict, format="json")
     assert response.status_code == 403
 
 
@@ -87,21 +87,21 @@ def test__api_key_without_organization_cannot_create_a_place(
     api_client, place_dict, data_source
 ):
     api_client.credentials(apikey=data_source.api_key)
-    response = api_client.post(reverse("place-list"), place_dict, format="json")
+    response = api_client.post(reverse("places-list"), place_dict, format="json")
     assert response.status_code == 403
 
 
 @pytest.mark.django_db
 def test__unknown_api_key_cannot_create_a_place(api_client, place_dict):
     api_client.credentials(apikey="unknown")
-    response = api_client.post(reverse("place-list"), place_dict, format="json")
+    response = api_client.post(reverse("places-list"), place_dict, format="json")
     assert response.status_code == 401
 
 
 @pytest.mark.django_db
 def test__empty_api_key_cannot_create_a_place(api_client, place_dict):
     api_client.credentials(apikey="")
-    response = api_client.post(reverse("place-list"), place_dict, format="json")
+    response = api_client.post(reverse("places-list"), place_dict, format="json")
     assert response.status_code == 401
 
 
@@ -113,7 +113,7 @@ def test__non_user_editable_resources_cannot_create_a_place(
     data_source.user_editable_resources = False
     data_source.save()
     api_client.force_authenticate(user=user)
-    response = api_client.post(reverse("place-list"), place_dict, format="json")
+    response = api_client.post(reverse("places-list"), place_dict, format="json")
     assert response.status_code == 403
 
 
@@ -125,5 +125,5 @@ def test__user_editable_resources_can_create_a_place(
     data_source.user_editable_resources = True
     data_source.save()
     api_client.force_authenticate(user=user)
-    response = api_client.post(reverse("place-list"), place_dict, format="json")
+    response = api_client.post(reverse("places-list"), place_dict, format="json")
     assert response.status_code == 201

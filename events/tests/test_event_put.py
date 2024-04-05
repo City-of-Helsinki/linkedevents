@@ -927,9 +927,9 @@ def test_multiple_event_update_non_allowed_data_fails(
     minimal_event_dict_2["id"] = resp.data["id"]
 
     minimal_event_dict["name"]["fi"] = "updated_name"
-    minimal_event_dict_2[
-        "data_source"
-    ] = other_data_source.id  # data source not allowed
+    minimal_event_dict_2["data_source"] = (
+        other_data_source.id
+    )  # data source not allowed
 
     response = api_client.put(
         reverse("event-list"), [minimal_event_dict, minimal_event_dict_2], format="json"

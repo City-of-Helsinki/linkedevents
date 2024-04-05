@@ -589,7 +589,7 @@ class KeywordListViewSet(
 
 
 register_view(KeywordViewSet, "keyword")
-register_view(KeywordListViewSet, "keyword")
+register_view(KeywordListViewSet, "keyword", base_name="keywords")
 
 
 class KeywordSetSerializer(LinkedEventsSerializer):
@@ -1012,7 +1012,7 @@ class PlaceListViewSet(
 
 
 register_view(PlaceRetrieveViewSet, "place")
-register_view(PlaceListViewSet, "place")
+register_view(PlaceListViewSet, "place", base_name="places")
 
 
 class LanguageSerializer(LinkedEventsSerializer):
@@ -1187,16 +1187,16 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
             }
 
             fields["web_store_merchants"] = WebStoreMerchantSerializer(
-                instance=self.instance.web_store_merchants.first()
-                if self.instance
-                else None,
+                instance=(
+                    self.instance.web_store_merchants.first() if self.instance else None
+                ),
                 **common_web_store_field_kwargs,
             )
 
             fields["web_store_accounts"] = WebStoreAccountSerializer(
-                instance=self.instance.web_store_accounts.first()
-                if self.instance
-                else None,
+                instance=(
+                    self.instance.web_store_accounts.first() if self.instance else None
+                ),
                 **common_web_store_field_kwargs,
             )
 
@@ -1956,9 +1956,9 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
         self.skip_empties = skip_empties
         if self.context:
             for ext in self.context.get("extensions", ()):
-                self.fields[
-                    "extension_{}".format(ext.identifier)
-                ] = ext.get_extension_serializer()
+                self.fields["extension_{}".format(ext.identifier)] = (
+                    ext.get_extension_serializer()
+                )
 
         user = self.context["request"].user
 

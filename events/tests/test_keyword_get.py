@@ -12,7 +12,7 @@ from .utils import versioned_reverse as reverse
 
 
 def get_list(api_client, version="v1", data=None):
-    list_url = reverse("keyword-list", version=version)
+    list_url = reverse("keywords-list", version=version)
     return get(api_client, list_url, data=data)
 
 
@@ -54,7 +54,9 @@ def test_keyword_id_is_audit_logged_on_get_detail(api_client, keyword):
 
 @pytest.mark.django_db
 def test_keyword_id_is_audit_logged_on_get_list(api_client, keyword, keyword2):
-    response = api_client.get(reverse("keyword-list"), data={"show_all_keywords": True})
+    response = api_client.get(
+        reverse("keywords-list"), data={"show_all_keywords": True}
+    )
     assert response.status_code == status.HTTP_200_OK
 
     audit_log_entry = AuditLogEntry.objects.first()
@@ -89,7 +91,7 @@ def test_get_unknown_keyword_detail_check_404(api_client):
 @pytest.mark.django_db
 def test_get_keyword_list_verify_text_filter(api_client, keyword, keyword2, keyword3):
     response = api_client.get(
-        reverse("keyword-list"), data={"text": "avainsana", "show_all_keywords": True}
+        reverse("keywords-list"), data={"text": "avainsana", "show_all_keywords": True}
     )
     assert keyword.id in [entry["id"] for entry in response.data["data"]]
     assert keyword2.id not in [entry["id"] for entry in response.data["data"]]
@@ -102,7 +104,7 @@ def test_get_keyword_list_verify_alt_labels_filter(
 ):
     keyword2.alt_labels.add(keywordlabel)
     response = api_client.get(
-        reverse("keyword-list"), data={"text": "avainsana", "show_all_keywords": True}
+        reverse("keywords-list"), data={"text": "avainsana", "show_all_keywords": True}
     )
     assert keyword.id in [entry["id"] for entry in response.data["data"]]
     assert keyword2.id in [entry["id"] for entry in response.data["data"]]
