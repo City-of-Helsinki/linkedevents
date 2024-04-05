@@ -209,11 +209,13 @@ def test_authenticated_user_can_create_signups_with_payments(api_client, user_ro
     user = create_user_by_role(
         user_role,
         registration.publisher,
-        additional_roles={
-            "regular_user_without_organization": lambda usr: None,
-        }
-        if user_role == "regular_user_without_organization"
-        else None,
+        additional_roles=(
+            {
+                "regular_user_without_organization": lambda usr: None,
+            }
+            if user_role == "regular_user_without_organization"
+            else None
+        ),
     )
     api_client.force_authenticate(user)
 
@@ -244,9 +246,10 @@ def test_authenticated_user_can_create_signups_with_payments(api_client, user_ro
             payment_amount=registration_price_group.price
         )
     )
-    with translation.override(language.pk), patch(
-        "requests.post"
-    ) as mocked_web_store_api_request:
+    with (
+        translation.override(language.pk),
+        patch("requests.post") as mocked_web_store_api_request,
+    ):
         mocked_web_store_api_request.return_value = mocked_web_store_api_response
 
         response = assert_create_signups(api_client, signups_data)
@@ -339,9 +342,10 @@ def test_create_signup_payment_without_pricetotal_in_response(api_client):
     mocked_web_store_api_response = get_mock_response(
         json_return_value=mocked_web_store_api_json
     )
-    with translation.override(language.pk), patch(
-        "requests.post"
-    ) as mocked_web_store_api_request:
+    with (
+        translation.override(language.pk),
+        patch("requests.post") as mocked_web_store_api_request,
+    ):
         mocked_web_store_api_request.return_value = mocked_web_store_api_response
 
         response = assert_create_signups(api_client, signups_data)
@@ -1668,9 +1672,12 @@ def test_email_sent_on_successful_signup_to_a_recurring_event(
         "signups": [signup_data],
     }
 
-    with translation.override(service_language), patch(
-        "registrations.models.SignUpContactPerson.create_access_code"
-    ) as mocked_access_code:
+    with (
+        translation.override(service_language),
+        patch(
+            "registrations.models.SignUpContactPerson.create_access_code"
+        ) as mocked_access_code,
+    ):
         mocked_access_code.return_value = test_access_code
         response = assert_create_signups(api_client, signups_data)
         assert mocked_access_code.called is True

@@ -23,9 +23,9 @@ class RegistrationAdminForm(forms.ModelForm):
             if "vat_percentage" in self.fields:
                 del self.fields["vat_percentage"]
         elif self.instance.pk and self.instance.registration_price_groups.exists():
-            self.initial[
-                "vat_percentage"
-            ] = self.instance.registration_price_groups.first().vat_percentage
+            self.initial["vat_percentage"] = (
+                self.instance.registration_price_groups.first().vat_percentage
+            )
 
     class Meta:
         model = Registration

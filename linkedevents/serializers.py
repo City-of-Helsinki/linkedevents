@@ -89,9 +89,9 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
                 value = obj[language]  # "musiikkiklubit"
                 if language == settings.LANGUAGES[0][0]:  # default language
                     extra_fields[field_name] = value  # { "name": "musiikkiklubit" }
-                extra_fields[
-                    "{}_{}".format(field_name, language)
-                ] = value  # { "name_fi": "musiikkiklubit" }
+                extra_fields["{}_{}".format(field_name, language)] = (
+                    value  # { "name_fi": "musiikkiklubit" }
+                )
             del data[field_name]  # delete original translated fields
 
         # handle other than translated fields

@@ -53,15 +53,19 @@ class RegistrationSignUpsExportXLSX:
             {"header": _("Phone number"), "accessor": "phone_number"},
             {
                 "header": _("Contact person's email"),
-                "accessor": lambda signup: signup.actual_contact_person.email
-                if signup.actual_contact_person
-                else None,
+                "accessor": lambda signup: (
+                    signup.actual_contact_person.email
+                    if signup.actual_contact_person
+                    else None
+                ),
             },
             {
                 "header": _("Contact person's phone number"),
-                "accessor": lambda signup: signup.actual_contact_person.phone_number
-                if signup.actual_contact_person
-                else None,
+                "accessor": lambda signup: (
+                    signup.actual_contact_person.phone_number
+                    if signup.actual_contact_person
+                    else None
+                ),
             },
             {
                 "header": "Status",  # In the UI, this same word is used for all three languages
@@ -97,9 +101,9 @@ class RegistrationSignUpsExportXLSX:
         table_columns = [
             {
                 "header": column["header"],
-                "format": self.formats.get(column["format"])
-                if "format" in column
-                else None,
+                "format": (
+                    self.formats.get(column["format"]) if "format" in column else None
+                ),
             }
             for column in self.columns
         ]

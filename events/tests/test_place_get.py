@@ -15,7 +15,7 @@ from .utils import versioned_reverse as reverse
 
 
 def get_list(api_client, version="v1", data=None):
-    list_url = reverse("place-list", version=version)
+    list_url = reverse("places-list", version=version)
     return get(api_client, list_url, data=data)
 
 
@@ -107,7 +107,7 @@ def test_get_place_detail_redirect_to_end_of_replace_chain(
 @pytest.mark.django_db
 def test_get_place_list_verify_text_filter(api_client, place, place2, place3):
     response = api_client.get(
-        reverse("place-list"), data={"text": "Paikka", "show_all_places": True}
+        reverse("places-list"), data={"text": "Paikka", "show_all_places": True}
     )
     assert place.id in [entry["id"] for entry in response.data["data"]]
     assert place2.id not in [entry["id"] for entry in response.data["data"]]

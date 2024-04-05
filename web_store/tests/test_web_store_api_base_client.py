@@ -136,8 +136,9 @@ def test_make_failed_request(http_method, status_code):
     client = WebStoreAPIBaseClient()
     mocked_response = get_mock_response(status_code=status_code)
 
-    with patch(f"requests.{http_method}") as mocked_request, pytest.raises(
-        RequestException
+    with (
+        patch(f"requests.{http_method}") as mocked_request,
+        pytest.raises(RequestException),
     ):
         mocked_request.return_value = mocked_response
         client._make_request(DEFAULT_API_URL, http_method)

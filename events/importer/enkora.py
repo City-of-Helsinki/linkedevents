@@ -2464,26 +2464,34 @@ class Kurssidata(Enkora):
                 "description_form": course["description_form"],
                 "season_id": int(course["season_id"]) if course["season_id"] else None,
                 "season_name": course["season_name"],
-                "public_reservation_start": datetime.strptime(
-                    course["public_reservation_start"], "%Y-%m-%d %H:%M:%S"
-                )
-                if course["public_reservation_start"]
-                else None,
-                "public_reservation_end": datetime.strptime(
-                    course["public_reservation_end"], "%Y-%m-%d %H:%M:%S"
-                )
-                if course["public_reservation_end"]
-                else None,
-                "public_visibility_start": datetime.strptime(
-                    course["public_visibility_start"], "%Y-%m-%d %H:%M:%S"
-                )
-                if course["public_visibility_start"]
-                else None,
-                "public_visibility_end": datetime.strptime(
-                    course["public_visibility_end"], "%Y-%m-%d %H:%M:%S"
-                )
-                if course["public_visibility_end"]
-                else None,
+                "public_reservation_start": (
+                    datetime.strptime(
+                        course["public_reservation_start"], "%Y-%m-%d %H:%M:%S"
+                    )
+                    if course["public_reservation_start"]
+                    else None
+                ),
+                "public_reservation_end": (
+                    datetime.strptime(
+                        course["public_reservation_end"], "%Y-%m-%d %H:%M:%S"
+                    )
+                    if course["public_reservation_end"]
+                    else None
+                ),
+                "public_visibility_start": (
+                    datetime.strptime(
+                        course["public_visibility_start"], "%Y-%m-%d %H:%M:%S"
+                    )
+                    if course["public_visibility_start"]
+                    else None
+                ),
+                "public_visibility_end": (
+                    datetime.strptime(
+                        course["public_visibility_end"], "%Y-%m-%d %H:%M:%S"
+                    )
+                    if course["public_visibility_end"]
+                    else None
+                ),
                 "instructor_visibility_start": course["instructor_visibility_start"],
                 "instructor_visibility_end": course["instructor_visibility_end"],
                 "is_course": bool(course["is_course"]),
@@ -2500,21 +2508,23 @@ class Kurssidata(Enkora):
                 "service_name": course["service_name"],
                 "service_at_area_id": int(course["service_at_area_id"]),
                 "service_at_area_name": course["service_at_area_name"],
-                "location_id": int(course["location_id"])
-                if course["location_id"]
-                else None,
+                "location_id": (
+                    int(course["location_id"]) if course["location_id"] else None
+                ),
                 "location_name": course["location_name"],
                 "region_id": int(course["region_id"]) if course["region_id"] else None,
                 "region_name": course["region_name"],
-                "reserved_count": int(course["reserved_count"])
-                if course["reserved_count"]
-                else None,
-                "queue_count": int(course["queue_count"])
-                if course["queue_count"]
-                else None,
-                "fare_products": course["fare_products"]
-                if "fare_products" in course and course["fare_products"]
-                else None,
+                "reserved_count": (
+                    int(course["reserved_count"]) if course["reserved_count"] else None
+                ),
+                "queue_count": (
+                    int(course["queue_count"]) if course["queue_count"] else None
+                ),
+                "fare_products": (
+                    course["fare_products"]
+                    if "fare_products" in course and course["fare_products"]
+                    else None
+                ),
                 "tags": course["tags"] if "tags" in course and course["tags"] else None,
             }
             reservation_event_groups.append(reservation_event_group)
@@ -2563,9 +2573,11 @@ class Kurssidata(Enkora):
                             "reservation_status_name"
                         ],
                         "reserving_user_id": int(reservation_in["reserving_user_id"]),
-                        "sale_event_id": int(reservation_in["sale_event_id"])
-                        if reservation_in["sale_event_id"]
-                        else None,
+                        "sale_event_id": (
+                            int(reservation_in["sale_event_id"])
+                            if reservation_in["sale_event_id"]
+                            else None
+                        ),
                         "reservation_event_group_id": reservation_event_group[
                             "reservation_event_group_id"
                         ],

@@ -726,9 +726,9 @@ def test_multiple_event_creation_non_allowed_data_fails(
 ):
     api_client.force_authenticate(user)
     minimal_event_dict_2 = deepcopy(minimal_event_dict)
-    minimal_event_dict_2[
-        "data_source"
-    ] = other_data_source.id  # non-allowed data source
+    minimal_event_dict_2["data_source"] = (
+        other_data_source.id
+    )  # non-allowed data source
 
     response = api_client.post(
         reverse("event-list"), [minimal_event_dict, minimal_event_dict_2], format="json"

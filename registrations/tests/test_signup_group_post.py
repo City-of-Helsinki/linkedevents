@@ -233,11 +233,13 @@ def test_authenticated_user_can_create_signup_group_with_payment(api_client, use
     user = create_user_by_role(
         user_role,
         registration.publisher,
-        additional_roles={
-            "regular_user_without_organization": lambda usr: None,
-        }
-        if user_role == "regular_user_without_organization"
-        else None,
+        additional_roles=(
+            {
+                "regular_user_without_organization": lambda usr: None,
+            }
+            if user_role == "regular_user_without_organization"
+            else None
+        ),
     )
     api_client.force_authenticate(user)
 
@@ -1668,9 +1670,12 @@ def test_email_sent_on_successful_signup_group_to_a_recurring_event(
 
     assert SignUp.objects.count() == 0
 
-    with translation.override(service_language), patch(
-        "registrations.models.SignUpContactPerson.create_access_code"
-    ) as mocked_access_code:
+    with (
+        translation.override(service_language),
+        patch(
+            "registrations.models.SignUpContactPerson.create_access_code"
+        ) as mocked_access_code,
+    ):
         mocked_access_code.return_value = test_access_code
         assert_create_signup_group(api_client, signup_group_data)
         assert mocked_access_code.called is True

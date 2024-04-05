@@ -16,6 +16,7 @@ documentation is suggesting: http://schema.org/docs/extension.html. Override
 schema_org_type can be used to define custom types. Override jsonld_context
 attribute to change @context when need to define schemas for custom fields.
 """
+
 import datetime
 import logging
 

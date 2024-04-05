@@ -893,10 +893,10 @@ def get_signup_notification_subject(
             and registration.event.super_event_type == Event.SuperEventType.RECURRING
         ):
             # Signup or cancellation for a recurring super event.
-            subject_format_kwargs[
-                "event_period"
-            ] = registration.event.get_start_and_end_time_display(
-                lang=linked_registrations_ui_locale, date_only=True
+            subject_format_kwargs["event_period"] = (
+                registration.event.get_start_and_end_time_display(
+                    lang=linked_registrations_ui_locale, date_only=True
+                )
             )
             notification_subject = (
                 recurring_event_signup_notification_subjects[notification_type]

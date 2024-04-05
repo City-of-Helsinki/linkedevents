@@ -448,9 +448,10 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
             "web_store_merchants-0-business_id",
             "web_store_merchants-0-paytrail_merchant_id",
         ]:
-            with self.subTest(), patch(
-                "requests.post"
-            ) as mocked_update_merchant_request:
+            with (
+                self.subTest(),
+                patch("requests.post") as mocked_update_merchant_request,
+            ):
                 data = self._get_request_data(
                     {
                         "name": "New Org",
@@ -518,9 +519,10 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
         mocked_create_merchant_response = get_mock_response(
             status_code=status.HTTP_400_BAD_REQUEST,
         )
-        with patch(
-            "requests.post"
-        ) as mocked_create_merchant_request, self.assertRaises(WebStoreAPIError):
+        with (
+            patch("requests.post") as mocked_create_merchant_request,
+            self.assertRaises(WebStoreAPIError),
+        ):
             mocked_create_merchant_request.return_value = (
                 mocked_create_merchant_response
             )
@@ -562,9 +564,10 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
         mocked_update_merchant_response = get_mock_response(
             status_code=status.HTTP_400_BAD_REQUEST,
         )
-        with patch(
-            "requests.post"
-        ) as mocked_update_merchant_request, self.assertRaises(WebStoreAPIError):
+        with (
+            patch("requests.post") as mocked_update_merchant_request,
+            self.assertRaises(WebStoreAPIError),
+        ):
             mocked_update_merchant_request.return_value = (
                 mocked_update_merchant_response
             )

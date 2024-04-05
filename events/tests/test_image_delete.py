@@ -17,7 +17,10 @@ def get_image_path(image):
 def assert_create_image(organization, data_source):
     uploaded_image = create_uploaded_image()
     existing_image = Image.objects.create(
-        data_source=data_source, image=uploaded_image, publisher=organization
+        data_source=data_source,
+        image=uploaded_image,
+        publisher=organization,
+        license=None,
     )
 
     assert Image.objects.all().count() == 1

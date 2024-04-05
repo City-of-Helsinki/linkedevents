@@ -77,9 +77,11 @@ def _notify_contact_person(
         return
 
     confirmation_type_mapping = {
-        SignUp.AttendeeStatus.ATTENDING: SignUpNotificationType.CONFIRMATION_WITH_PAYMENT
-        if payment_link
-        else SignUpNotificationType.CONFIRMATION,
+        SignUp.AttendeeStatus.ATTENDING: (
+            SignUpNotificationType.CONFIRMATION_WITH_PAYMENT
+            if payment_link
+            else SignUpNotificationType.CONFIRMATION
+        ),
         SignUp.AttendeeStatus.WAITING_LIST: SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST,
     }
 
@@ -644,7 +646,7 @@ class RegistrationPriceGroupBaseSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(required=False)
     price_group = PriceGroupRelatedField(queryset=PriceGroup.objects.all())
     price = serializers.DecimalField(
-        required=False, max_digits=19, decimal_places=2, min_value=0
+        required=False, max_digits=19, decimal_places=2, min_value=Decimal("0.00")
     )
     price_without_vat = serializers.DecimalField(
         required=False, read_only=True, max_digits=19, decimal_places=2
@@ -656,7 +658,7 @@ class RegistrationPriceGroupBaseSerializer(serializers.ModelSerializer):
         required=False,
         max_digits=4,
         decimal_places=2,
-        min_value=0,
+        min_value=Decimal("0.00"),
         max_value=Decimal("99.99"),
     )
 
@@ -731,9 +733,9 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
         fields = super().get_fields()
 
         if self.instance is None:
-            fields[
-                "registration_user_accesses"
-            ] = RegistrationUserAccessCreateSerializer(many=True, required=False)
+            fields["registration_user_accesses"] = (
+                RegistrationUserAccessCreateSerializer(many=True, required=False)
+            )
         else:
             fields["registration_user_accesses"] = RegistrationUserAccessSerializer(
                 many=True, required=False
@@ -958,9 +960,9 @@ class CreateSignUpsSerializer(serializers.Serializer):
             if capacity_by_attendee_status_map[SignUp.AttendeeStatus.ATTENDING]:
                 cleaned_signup_data["attendee_status"] = SignUp.AttendeeStatus.ATTENDING
             else:
-                cleaned_signup_data[
-                    "attendee_status"
-                ] = SignUp.AttendeeStatus.WAITING_LIST
+                cleaned_signup_data["attendee_status"] = (
+                    SignUp.AttendeeStatus.WAITING_LIST
+                )
 
         signups = []
 

@@ -1,6 +1,7 @@
 """
 Django settings module for linkedevents project.
 """
+
 import importlib.util
 import os
 import subprocess
@@ -620,21 +621,23 @@ if env("REDIS_URL"):
         "default": {
             "BACKEND": "django_redis.cache.RedisCache",
             "LOCATION": env("REDIS_URL"),
-            "OPTIONS": {
-                "CLIENT_CLASS": "django_redis.client.SentinelClient",
-                "CONNECTION_POOL_CLASS": "redis.sentinel.SentinelConnectionPool",
-                "PASSWORD": env("REDIS_PASSWORD"),
-                "SENTINELS": SENTINELS,
-                "SENTINEL_KWARGS": {"password": env("REDIS_PASSWORD")},
-                # Memcached like behavior for redis cache
-                # i.e. don't throw errors if redis is down.
-                "IGNORE_EXCEPTIONS": True,
-            }
-            if SENTINELS
-            else {
-                "CLIENT_CLASS": "django_redis.client.DefaultClient",
-                "IGNORE_EXCEPTIONS": True,
-            },
+            "OPTIONS": (
+                {
+                    "CLIENT_CLASS": "django_redis.client.SentinelClient",
+                    "CONNECTION_POOL_CLASS": "redis.sentinel.SentinelConnectionPool",
+                    "PASSWORD": env("REDIS_PASSWORD"),
+                    "SENTINELS": SENTINELS,
+                    "SENTINEL_KWARGS": {"password": env("REDIS_PASSWORD")},
+                    # Memcached like behavior for redis cache
+                    # i.e. don't throw errors if redis is down.
+                    "IGNORE_EXCEPTIONS": True,
+                }
+                if SENTINELS
+                else {
+                    "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                    "IGNORE_EXCEPTIONS": True,
+                }
+            ),
             "KEY_PREFIX": "linkedevents",
         }
     }
