@@ -41,7 +41,7 @@ pyYAML
 python-dateutil
 python-docx
 pytz
-rdflib==6.1.1
+rdflib==6.3.2
 regex
 requests-cache
 requests
