@@ -162,7 +162,11 @@ class DataSourceOrganizationEditPermission(BasePermission):
                 request.data.get("web_store_merchants")
                 or request.data.get("web_store_accounts")
             ):
-                return request.user.is_authenticated and request.user.is_superuser
+                return request.user.is_authenticated and (
+                    request.user.is_superuser
+                    or request.user.admin_organizations.exists()
+                    and request.user.financial_admin_organizations.exists()
+                )
             elif (
                 request.user.is_authenticated
                 and request.user.admin_organizations.exists()
@@ -189,7 +193,11 @@ class DataSourceOrganizationEditPermission(BasePermission):
             data_keys = request.data.keys()
 
             if len(data_keys) > 1:
-                return request.user.is_superuser
+                return (
+                    request.user.is_superuser
+                    or request.user.is_financial_admin_of(obj)
+                    and utils.organization_can_be_edited_by(obj, request.user)
+                )
             else:
                 return request.user.is_superuser or request.user.is_financial_admin_of(
                     obj

@@ -749,11 +749,15 @@ def test_get_organization_list_html_renders(api_client, event):
     assert response.status_code == status.HTTP_200_OK, str(response.content)
 
 
+@pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
 @pytest.mark.django_db
-def test_superuser_can_create_organization_with_web_store_merchant(
-    data_source, organization, api_client
+def test_superuser_or_financial_and_event_admin_can_create_organization_with_web_store_merchant(
+    data_source, organization, api_client, user_role
 ):
-    user = create_user_by_role("superuser", None)
+    user = create_user_by_role(user_role, organization)
+    if user_role == "financial_admin":
+        user.admin_organizations.add(organization)
+
     api_client.force_authenticate(user)
 
     origin_id = "test_organization2"
@@ -794,11 +798,15 @@ def test_superuser_can_create_organization_with_web_store_merchant(
     )
 
 
+@pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
 @pytest.mark.django_db
-def test_superuser_can_update_organization_with_web_store_merchant(
-    data_source, organization, api_client
+def test_superuser_or_financial_and_event_admin_can_update_organization_with_web_store_merchant(
+    data_source, organization, api_client, user_role
 ):
-    user = create_user_by_role("superuser")
+    user = create_user_by_role(user_role, organization)
+    if user_role == "financial_admin":
+        user.admin_organizations.add(organization)
+
     api_client.force_authenticate(user)
 
     origin_id = "test_organization2"
@@ -974,6 +982,7 @@ def test_superuser_and_financial_can_make_web_store_merchant_inactive(
     "user_role",
     [
         "admin",
+        "financial_admin",
         "registration_admin",
         "regular_user",
         "regular_user_without_organization",
@@ -1014,6 +1023,7 @@ def test_not_allowed_user_roles_cannot_create_an_organization_with_a_web_store_m
     "user_role",
     [
         "admin",
+        "financial_admin",
         "registration_admin",
         "regular_user",
         "regular_user_without_organization",
@@ -1054,6 +1064,7 @@ def test_not_allowed_user_roles_cannot_update_an_organization_with_a_web_store_m
     "user_role",
     [
         "admin",
+        "financial_admin",
         "registration_admin",
         "regular_user",
         "regular_user_without_organization",
@@ -1139,12 +1150,15 @@ def test_not_allowed_user_roles_cannot_patch_an_organizations_web_store_merchant
     assert WebStoreMerchant.objects.count() == 1
 
 
-@pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
+@pytest.mark.parametrize("user_role", ["superuser", "financial_admin", "admin"])
 @pytest.mark.django_db
 def test_superuser_and_financial_admin_can_get_organization_with_all_web_store_merchant_fields(
     data_source, organization, api_client, settings, user_role
 ):
     user = create_user_by_role(user_role, organization)
+    if user_role == "admin":
+        user.financial_admin_organizations.add(organization)
+
     api_client.force_authenticate(user)
 
     settings.WEB_STORE_INTEGRATION_ENABLED = False
