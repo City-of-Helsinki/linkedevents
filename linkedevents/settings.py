@@ -52,7 +52,6 @@ env = environ.Env(
     SECRET_KEY=(str, ''),
     ALLOWED_HOSTS=(list, []),
     ADMINS=(list, []),
-    APPEND_SLASH=False,
     SECURE_PROXY_SSL_HEADER=(tuple, None),
     USE_X_FORWARDED_HOST=(bool, False),
     CUSTOM_X_FORWARDED_PORT_HEADER=(str, 'LINKEDEVENTS-X-FORWARDED-PORT'),
