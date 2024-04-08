@@ -1456,9 +1456,13 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
     def validate(self, data):
         logger.info(f"Data validation for {data} started.")
         # clean all text fields, only description may contain any html
+        logger.info("Clean text fields start.")
         data = clean_text_fields(data, allowed_html_fields=['description'])
 
+        logger.info("Clean text fields finish.")
+        logger.info("Super validate start.")
         data = super().validate(data)
+        logger.info("Super validate finish.")
 
         if 'publication_status' not in data:
             data['publication_status'] = PublicationStatus.PUBLIC
@@ -1531,8 +1535,9 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
 
         if errors:
             raise serializers.ValidationError(errors)
-
+        logger.info("Run extension validations start.")
         data = self.run_extension_validations(data)
+        logger.info("Run extension validations finish.")
         logger.info(f"Data validation for {data} finished.")
         return data
 
