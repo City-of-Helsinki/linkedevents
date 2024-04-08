@@ -1581,7 +1581,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         return event
 
     def update(self, instance, validated_data):
-        logger.trace(f"Update for: {instance.id} started.")
+        logger.info(f"Update for: {instance.id} started.")
         offers = validated_data.pop('offers', None)
         links = validated_data.pop('external_links', None)
         videos = validated_data.pop('videos', None)
@@ -1649,7 +1649,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
 
         # update validated fields
         super().update(instance, validated_data)
-        logger.trace(f"Validated fields for event with id: {instance.id} have been updated.")
+        logger.info(f"Validated fields for event with id: {instance.id} have been updated.")
 
         # update offers
         if isinstance(offers, list):
@@ -1675,7 +1675,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         for ext in extensions:
             ext.post_update_event(request=request, event=instance, data=original_validated_data)
 
-        logger.trace(f"Update for: {instance.id} finished.")
+        logger.info(f"Update for: {instance.id} finished.")
         return instance
 
     def to_representation(self, obj):
@@ -2368,8 +2368,8 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
         # Prevent changing an event that user does not have write permissions
         # For bulk update, the editable queryset is filtered in filter_queryset
         # method
-        logger.trace("Perform update started")
-        logger.debug(f"{serializer.validated_data}")
+        logger.info("Perform update started")
+        logger.info(f"{serializer.validated_data}")
         if isinstance(serializer, EventSerializer) and not self.request.user.can_edit_event(
                 serializer.instance.publisher,
                 serializer.instance.publication_status,
@@ -2390,7 +2390,7 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
                 raise DRFPermissionDenied()
 
         super().perform_update(serializer)
-        logger.trace("Perform update finished.")
+        logger.info("Perform update finished.")
 
     @atomic
     def bulk_update(self, request, *args, **kwargs):
