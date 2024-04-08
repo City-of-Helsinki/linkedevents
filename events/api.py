@@ -1471,6 +1471,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         if (data['publication_status'] == PublicationStatus.DRAFT or
                 data.get('event_status', None) == Event.Status.CANCELLED or
                 (self.context['request'].method == 'PUT' and 'start_time' in data and not data['start_time'])):
+            logger.info("Run extension validations start.")
             data = self.run_extension_validations(data)
             return data
 
@@ -1479,6 +1480,11 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
 
         errors = {}
         lang_error_msg = _('This field must be specified before an event is published.')
+
+        start_time = time.time()
+        logger.info(f"Measuring start time. Start time: {start_time}.")
+        logger.info("len(fields_needed_to_publish)", len(self.fields_needed_to_publish))
+
         for field in self.fields_needed_to_publish:
             if field in self.translated_fields:
                 for lang in languages:
@@ -1493,26 +1499,36 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
             elif not data.get(field):
                 errors[field] = lang_error_msg
 
+        for_loop1 = (time.time() - start_time)
+        logger.info(f"For loop ran in {for_loop1} seconds.")
+
         # published events need price info = at least one offer that is free or not
         offer_exists = False
+
+        logger.info(f"len offers: {len(data.get('offers', []))}")
         for index, offer in enumerate(data.get('offers', [])):
             if 'is_free' in offer:
                 offer_exists = True
             # clean offer text fields
             data['offers'][index] = clean_text_fields(offer)
 
+        logger.info("f offer_exists: {offer_exists}")
         if not offer_exists:
             errors['offers'] = _('Price info must be specified before an event is published.')
 
+        logger.info(f"len external_links: {len(data.get('external_links', []))}")
         # clean link description text
         for index, link in enumerate(data.get('external_links', [])):
             # clean link text fields
             data['external_links'][index] = clean_text_fields(link)
 
+        logger.info(f"len videos: {len(data.get('video', []))}")
         # clean video text fields
         for index, video in enumerate(data.get('video', [])):
             # clean link text fields
             data['video'][index] = clean_text_fields(video)
+
+        logger.info(f"Pass checkpoint in {time.time() - start_time} seconds.")
 
         # If no end timestamp supplied, we treat the event as ending at midnight
         if not data.get('end_time'):
@@ -1535,6 +1551,8 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
 
         if errors:
             raise serializers.ValidationError(errors)
+
+        logger.info(f"Pass checkpoint in {time.time() - start_time} seconds.")
         logger.info("Run extension validations start.")
         data = self.run_extension_validations(data)
         logger.info("Run extension validations finish.")
