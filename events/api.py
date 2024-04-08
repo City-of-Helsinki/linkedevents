@@ -745,7 +745,7 @@ class EditableLinkedEventsObjectSerializer(LinkedEventsSerializer):
 
     def update(self, instance, validated_data):
         validated_data['last_modified_by'] = self.user
-
+        logger.info("EditableLinkedEventsObjectsSerializer update start")
         if 'id' in validated_data:
             if instance.id != validated_data['id']:
                 raise serializers.ValidationError({'id': _("You may not change the id of an existing object.")})
@@ -760,6 +760,7 @@ class EditableLinkedEventsObjectSerializer(LinkedEventsSerializer):
                     {'data_source': _("You may not change the data source of an existing object.")}
                     )
         super().update(instance, validated_data)
+        logger.info("EditableLinkedEventsObjectsSerializer update end")
         return instance
 
 
@@ -1453,6 +1454,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         return data
 
     def validate(self, data):
+        logger.info(f"Data validation for {data} started.")
         # clean all text fields, only description may contain any html
         data = clean_text_fields(data, allowed_html_fields=['description'])
 
@@ -1531,7 +1533,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
             raise serializers.ValidationError(errors)
 
         data = self.run_extension_validations(data)
-
+        logger.info(f"Data validation for {data} finished.")
         return data
 
     def run_extension_validations(self, data):
@@ -2394,7 +2396,10 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
 
     @atomic
     def bulk_update(self, request, *args, **kwargs):
-        return super().bulk_update(request, *args, **kwargs)
+        logger.info("Bulk update start.")
+        value = super().bulk_update(request, *args, **kwargs)
+        logger.info(f"Bulk update finished with {value}")
+        return value
 
     @atomic
     def create(self, request, *args, **kwargs):
