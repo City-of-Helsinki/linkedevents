@@ -2394,7 +2394,10 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
 
     @atomic
     def bulk_update(self, request, *args, **kwargs):
-        return super().bulk_update(request, *args, **kwargs)
+        logger.info("Bulk update start.")
+        value = super().bulk_update(request, *args, **kwargs)
+        logger.info(f"Bulk update finished with {value}")
+        return value
 
     @atomic
     def create(self, request, *args, **kwargs):
