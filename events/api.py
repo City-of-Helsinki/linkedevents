@@ -7,6 +7,7 @@ import re
 import struct
 import time
 import urllib.parse
+import uuid
 from copy import deepcopy
 from datetime import datetime
 from datetime import timezone as dt_timezone
@@ -1452,11 +1453,14 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         return data
 
     def validate(self, data):
+        uuid = uuid.uuid4()
+        start_time = time.time()
+        logger.info(f"context:{uuid} - Start validate at {start_time}.")
+        
         # clean all text fields, only description may contain any html
         data = clean_text_fields(data, allowed_html_fields=['description'])
 
         data = super().validate(data)
-        logger.info("Super validate finish.")
 
         if 'publication_status' not in data:
             data['publication_status'] = PublicationStatus.PUBLIC
@@ -1465,7 +1469,6 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         if (data['publication_status'] == PublicationStatus.DRAFT or
                 data.get('event_status', None) == Event.Status.CANCELLED or
                 (self.context['request'].method == 'PUT' and 'start_time' in data and not data['start_time'])):
-            logger.info("Run extension validations start.")
             data = self.run_extension_validations(data)
             return data
 
@@ -1475,7 +1478,6 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         errors = {}
         lang_error_msg = _('This field must be specified before an event is published.')
 
-        start_time = time.time()
 
         for field in self.fields_needed_to_publish:
             if field in self.translated_fields:
@@ -1490,9 +1492,6 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
 
             elif not data.get(field):
                 errors[field] = lang_error_msg
-
-        for_loop1 = (time.time() - start_time)
-        logger.info(f"For loop ran in {for_loop1} seconds.")
 
         # published events need price info = at least one offer that is free or not
         offer_exists = False
@@ -1511,50 +1510,60 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
             # clean link text fields
             data['external_links'][index] = clean_text_fields(link)
 
-        logger.info(f"len videos: {len(data.get('video', []))}")
         # clean video text fields
         for index, video in enumerate(data.get('video', [])):
             # clean link text fields
             data['video'][index] = clean_text_fields(video)
 
-        checkpoint = (time.time() - start_time)
-        logger.info(f"Pass checkpoint1 in {checkpoint - start_time} seconds.")
+        checkpoint = time.time()
+        logger.debug(f"context:{uuid} - Start tracing performance at {checkpoint}.")
 
         # If no end timestamp supplied, we treat the event as ending at midnight
         if not data.get('end_time'):
             checkpoint = (time.time() - checkpoint)
-            logger.info(f"Pass checkpoint2 in {checkpoint} seconds.")
+            logger.info(f"context:{uuid} - Pass checkpoint1 in {checkpoint} seconds.")
             # The start time may also be null if the event is postponed
             if not data.get('start_time'):
+                checkpoint = (time.time() - checkpoint)
+                logger.info(f"context:{uuid} - Pass checkpoint2 in {checkpoint} seconds.")
                 data['has_end_time'] = False
                 data['end_time'] = None
             else:
+                checkpoint = (time.time() - checkpoint)
+                logger.info(f"context:{uuid} - Pass checkpoint3 in {checkpoint} seconds.")
                 data['has_end_time'] = False
                 data['end_time'] = timezone.localtime(data['start_time'])\
                     .replace(hour=0, minute=0, second=0, microsecond=0).astimezone(pytz.utc)
                 data['end_time'] += timedelta(days=1)
             checkpoint = (time.time() - checkpoint)
-            logger.info(f"Pass checkpoint3 in {checkpoint} seconds.")
+            logger.info(f"context:{uuid} - Pass checkpoint4 in {checkpoint} seconds.")
 
         checkpoint = (time.time() - checkpoint)
-        logger.info(f"Pass checkpoint4 in {checkpoint} seconds.")
+        logger.info(f"context:{uuid} - Pass checkpoint5 in {checkpoint} seconds.")
         past_allowed = self.data_source.create_past_events
+
+        checkpoint = (time.time() - checkpoint)
+        logger.info(f"context:{uuid} - Pass checkpoint6 in {checkpoint} seconds.") 
         if self.instance:
             past_allowed = self.data_source.edit_past_events
 
         checkpoint = (time.time() - checkpoint)
-        logger.info(f"Pass checkpoint5 in {checkpoint} seconds.")
+        logger.info(f"context:{uuid} - Pass checkpoint7 in {checkpoint} seconds.")
         if data.get('end_time') and data['end_time'] < timezone.now() and not past_allowed:
             errors['end_time'] = force_text(_('End time cannot be in the past. Please set a future end time.'))
 
         checkpoint = (time.time() - checkpoint)
-        logger.info(f"Pass checkpoint6 in {checkpoint} seconds.")
+        logger.info(f"context:{uuid} - Pass checkpoint8 in {checkpoint} seconds.")
         if errors:
             raise serializers.ValidationError(errors)
 
         checkpoint = (time.time() - checkpoint)
-        logger.info(f"Pass checkpoint7 in {checkpoint} seconds.")
+        logger.info(f"context:{uuid} - Pass checkpoint9 in {checkpoint} seconds.")
         data = self.run_extension_validations(data)
+        
+        checkpoint = (time.time() - checkpoint)
+        logger.info(f"context:{uuid} - Pass checkpoint10 in {checkpoint} seconds.")
+        logger.info(f"context:{uuid} - finish validation")
         return data
 
     def run_extension_validations(self, data):
