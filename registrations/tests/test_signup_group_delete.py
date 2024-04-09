@@ -414,6 +414,7 @@ def test_email_sent_on_successful_signup_group_deletion_for_a_recurring_event(
 
     #  assert that the email was sent
     message_html_string = str(mail.outbox[0].alternatives[0])
+    print(message_html_string)
     assert mail.outbox[0].subject.startswith(expected_subject)
     assert expected_heading in message_html_string
     assert expected_text in message_html_string
@@ -1198,7 +1199,7 @@ def test_soft_deleted_signup_group_is_not_moved_to_attending_from_waiting_list(
             "sv",
             "Betalning krävs för bekräftelse av registreringen - Foo",
             "Du har blivit utvald att flyttats från väntelistan för evenemanget "
-            "<strong>Foo</strong> till en deltagare. Använd betalningslänken "
+            "<strong>Foo</strong> till att bli en deltagare. Vänligen använd betalningslänken "
             "för att bekräfta ditt deltagande. Betalningslänken går ut efter %(hours)s timmar."
             % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
         ),
@@ -1299,9 +1300,9 @@ def test_group_send_email_with_payment_link_when_moving_participant_from_waitlis
             "sv",
             "Betalning krävs för bekräftelse av registreringen - Serie: Foo",
             "Du har blivit utvald att flyttats från väntelistan för serieevenemanget "
-            "<strong>Foo 1.2.2024 - 29.2.2024</strong> till en deltagare. Använd betalningslänken "
-            "för att bekräfta ditt deltagande. Betalningslänken går ut efter %(hours)s timmar."
-            % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
+            "<strong>Foo 1.2.2024 - 29.2.2024</strong> till att bli en deltagare. Vänligen använd "
+            "betalningslänken för att bekräfta ditt deltagande. Betalningslänken går ut efter "
+            "%(hours)s timmar." % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
         ),
     ],
 )
