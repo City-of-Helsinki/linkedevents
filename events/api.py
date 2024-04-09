@@ -1479,7 +1479,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         checkpoint = new_checkpoint
         logger.info(
             f"context:{myuuid} - "
-            "elapsed:{elapsed} seconds. - "
+            f"elapsed:{elapsed} seconds. - "
             "if PublicationStatus.DRAFT or PublicationStatus.CANCELLED"
         )
         # if the event is a draft, postponed or cancelled, no further validation is performed
@@ -1529,7 +1529,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         checkpoint = new_checkpoint
         logger.info(
             f"context:{myuuid} - "
-            "elapsed:{elapsed} seconds. - "
+            f"elapsed:{elapsed} seconds. - "
             "for index, offer in enumerate(data.get('offers', []):"
         )
         for index, offer in enumerate(data.get('offers', [])):
@@ -1550,7 +1550,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         checkpoint = new_checkpoint
         logger.info(
             f"context:{myuuid} - "
-            "elapsed:{elapsed} seconds. - "
+            f"elapsed:{elapsed} seconds. - "
             "for index, link in enumerate(data.get('external_links', []):"
         )
         # clean link description text
@@ -1563,7 +1563,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         checkpoint = new_checkpoint
         logger.info(
             f"context:{myuuid} - "
-            "elapsed:{elapsed} seconds. - "
+            f"elapsed:{elapsed} seconds. - "
             "for index, video in enumerate(data.get('video', []):"
         )
         # clean video text fields
@@ -1595,7 +1595,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         checkpoint = new_checkpoint
         logger.info(
             f"context:{myuuid} - "
-            "elapsed:{elapsed} seconds. - "
+            f"elapsed:{elapsed} seconds. - "
             "past_allowed = self.data_source.create_past_events"
         )
         past_allowed = self.data_source.create_past_events
@@ -1613,7 +1613,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         checkpoint = new_checkpoint
         logger.info(
             f"context:{myuuid} - "
-            "elapsed:{elapsed} seconds. - "
+            f"elapsed:{elapsed} seconds. - "
             "if data.get('start_time') and data['start_time'] < timezone.now() and not past_allowed:"
         )
         if data.get('end_time') and data['end_time'] < timezone.now() and not past_allowed:
