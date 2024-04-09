@@ -745,7 +745,6 @@ class EditableLinkedEventsObjectSerializer(LinkedEventsSerializer):
 
     def update(self, instance, validated_data):
         validated_data['last_modified_by'] = self.user
-        logger.info("EditableLinkedEventsObjectsSerializer update start")
         if 'id' in validated_data:
             if instance.id != validated_data['id']:
                 raise serializers.ValidationError({'id': _("You may not change the id of an existing object.")})
@@ -760,7 +759,6 @@ class EditableLinkedEventsObjectSerializer(LinkedEventsSerializer):
                     {'data_source': _("You may not change the data source of an existing object.")}
                     )
         super().update(instance, validated_data)
-        logger.info("EditableLinkedEventsObjectsSerializer update end")
         return instance
 
 
@@ -1454,13 +1452,9 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         return data
 
     def validate(self, data):
-        logger.info(f"Data validation for {data} started.")
         # clean all text fields, only description may contain any html
-        logger.info("Clean text fields start.")
         data = clean_text_fields(data, allowed_html_fields=['description'])
 
-        logger.info("Clean text fields finish.")
-        logger.info("Super validate start.")
         data = super().validate(data)
         logger.info("Super validate finish.")
 
@@ -1482,8 +1476,6 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         lang_error_msg = _('This field must be specified before an event is published.')
 
         start_time = time.time()
-        logger.info(f"Measuring start time. Start time: {start_time}.")
-        logger.info("len(fields_needed_to_publish)", len(self.fields_needed_to_publish))
 
         for field in self.fields_needed_to_publish:
             if field in self.translated_fields:
@@ -1505,18 +1497,15 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         # published events need price info = at least one offer that is free or not
         offer_exists = False
 
-        logger.info(f"len offers: {len(data.get('offers', []))}")
         for index, offer in enumerate(data.get('offers', [])):
             if 'is_free' in offer:
                 offer_exists = True
             # clean offer text fields
             data['offers'][index] = clean_text_fields(offer)
 
-        logger.info("f offer_exists: {offer_exists}")
         if not offer_exists:
             errors['offers'] = _('Price info must be specified before an event is published.')
 
-        logger.info(f"len external_links: {len(data.get('external_links', []))}")
         # clean link description text
         for index, link in enumerate(data.get('external_links', [])):
             # clean link text fields
@@ -1528,10 +1517,13 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
             # clean link text fields
             data['video'][index] = clean_text_fields(video)
 
-        logger.info(f"Pass checkpoint in {time.time() - start_time} seconds.")
+        checkpoint = (time.time() - start_time)
+        logger.info(f"Pass checkpoint1 in {checkpoint - start_time} seconds.")
 
         # If no end timestamp supplied, we treat the event as ending at midnight
         if not data.get('end_time'):
+            checkpoint = (time.time() - checkpoint)
+            logger.info(f"Pass checkpoint2 in {checkpoint} seconds.")
             # The start time may also be null if the event is postponed
             if not data.get('start_time'):
                 data['has_end_time'] = False
@@ -1541,22 +1533,28 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
                 data['end_time'] = timezone.localtime(data['start_time'])\
                     .replace(hour=0, minute=0, second=0, microsecond=0).astimezone(pytz.utc)
                 data['end_time'] += timedelta(days=1)
+            checkpoint = (time.time() - checkpoint)
+            logger.info(f"Pass checkpoint3 in {checkpoint} seconds.")
 
+        checkpoint = (time.time() - checkpoint)
+        logger.info(f"Pass checkpoint4 in {checkpoint} seconds.")
         past_allowed = self.data_source.create_past_events
         if self.instance:
             past_allowed = self.data_source.edit_past_events
 
+        checkpoint = (time.time() - checkpoint)
+        logger.info(f"Pass checkpoint5 in {checkpoint} seconds.")
         if data.get('end_time') and data['end_time'] < timezone.now() and not past_allowed:
             errors['end_time'] = force_text(_('End time cannot be in the past. Please set a future end time.'))
 
+        checkpoint = (time.time() - checkpoint)
+        logger.info(f"Pass checkpoint6 in {checkpoint} seconds.")
         if errors:
             raise serializers.ValidationError(errors)
 
-        logger.info(f"Pass checkpoint in {time.time() - start_time} seconds.")
-        logger.info("Run extension validations start.")
+        checkpoint = (time.time() - checkpoint)
+        logger.info(f"Pass checkpoint7 in {checkpoint} seconds.")
         data = self.run_extension_validations(data)
-        logger.info("Run extension validations finish.")
-        logger.info(f"Data validation for {data} finished.")
         return data
 
     def run_extension_validations(self, data):
@@ -1606,7 +1604,6 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         return event
 
     def update(self, instance, validated_data):
-        logger.info(f"Update for: {instance.id} started.")
         offers = validated_data.pop('offers', None)
         links = validated_data.pop('external_links', None)
         videos = validated_data.pop('videos', None)
@@ -1674,7 +1671,6 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
 
         # update validated fields
         super().update(instance, validated_data)
-        logger.info(f"Validated fields for event with id: {instance.id} have been updated.")
 
         # update offers
         if isinstance(offers, list):
@@ -1700,7 +1696,6 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         for ext in extensions:
             ext.post_update_event(request=request, event=instance, data=original_validated_data)
 
-        logger.info(f"Update for: {instance.id} finished.")
         return instance
 
     def to_representation(self, obj):
@@ -2393,8 +2388,6 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
         # Prevent changing an event that user does not have write permissions
         # For bulk update, the editable queryset is filtered in filter_queryset
         # method
-        logger.info("Perform update started")
-        logger.info(f"{serializer.validated_data}")
         if isinstance(serializer, EventSerializer) and not self.request.user.can_edit_event(
                 serializer.instance.publisher,
                 serializer.instance.publication_status,
@@ -2415,14 +2408,10 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
                 raise DRFPermissionDenied()
 
         super().perform_update(serializer)
-        logger.info("Perform update finished.")
 
     @atomic
     def bulk_update(self, request, *args, **kwargs):
-        logger.info("Bulk update start.")
-        value = super().bulk_update(request, *args, **kwargs)
-        logger.info(f"Bulk update finished with {value}")
-        return value
+        return super().bulk_update(request, *args, **kwargs)
 
     @atomic
     def create(self, request, *args, **kwargs):
