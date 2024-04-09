@@ -1453,9 +1453,9 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         return data
 
     def validate(self, data):
-        uuid = uuid.uuid4()
+        myuuid = uuid.uuid4()
         start_time = time.time()
-        logger.info(f"context:{uuid} - Start validate at {start_time}.")
+        logger.info(f"context:{myuuid} - Start validate at {start_time}.")
 
         # clean all text fields, only description may contain any html
         data = clean_text_fields(data, allowed_html_fields=['description'])
@@ -1515,54 +1515,54 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
             data['video'][index] = clean_text_fields(video)
 
         checkpoint = time.time()
-        logger.debug(f"context:{uuid} - Start tracing performance at {checkpoint}.")
+        logger.debug(f"context:{myuuid} - Start tracing performance at {checkpoint}.")
 
         # If no end timestamp supplied, we treat the event as ending at midnight
         if not data.get('end_time'):
             checkpoint = (time.time() - checkpoint)
-            logger.info(f"context:{uuid} - Pass checkpoint1 in {checkpoint} seconds.")
+            logger.info(f"context:{myuuid} - Pass checkpoint1 in {checkpoint} seconds.")
             # The start time may also be null if the event is postponed
             if not data.get('start_time'):
                 checkpoint = (time.time() - checkpoint)
-                logger.info(f"context:{uuid} - Pass checkpoint2 in {checkpoint} seconds.")
+                logger.info(f"context:{myuuid} - Pass checkpoint2 in {checkpoint} seconds.")
                 data['has_end_time'] = False
                 data['end_time'] = None
             else:
                 checkpoint = (time.time() - checkpoint)
-                logger.info(f"context:{uuid} - Pass checkpoint3 in {checkpoint} seconds.")
+                logger.info(f"context:{myuuid} - Pass checkpoint3 in {checkpoint} seconds.")
                 data['has_end_time'] = False
                 data['end_time'] = timezone.localtime(data['start_time'])\
                     .replace(hour=0, minute=0, second=0, microsecond=0).astimezone(pytz.utc)
                 data['end_time'] += timedelta(days=1)
             checkpoint = (time.time() - checkpoint)
-            logger.info(f"context:{uuid} - Pass checkpoint4 in {checkpoint} seconds.")
+            logger.info(f"context:{myuuid} - Pass checkpoint4 in {checkpoint} seconds.")
 
         checkpoint = (time.time() - checkpoint)
-        logger.info(f"context:{uuid} - Pass checkpoint5 in {checkpoint} seconds.")
+        logger.info(f"context:{myuuid} - Pass checkpoint5 in {checkpoint} seconds.")
         past_allowed = self.data_source.create_past_events
 
         checkpoint = (time.time() - checkpoint)
-        logger.info(f"context:{uuid} - Pass checkpoint6 in {checkpoint} seconds.")
+        logger.info(f"context:{myuuid} - Pass checkpoint6 in {checkpoint} seconds.")
         if self.instance:
             past_allowed = self.data_source.edit_past_events
 
         checkpoint = (time.time() - checkpoint)
-        logger.info(f"context:{uuid} - Pass checkpoint7 in {checkpoint} seconds.")
+        logger.info(f"context:{myuuid} - Pass checkpoint7 in {checkpoint} seconds.")
         if data.get('end_time') and data['end_time'] < timezone.now() and not past_allowed:
             errors['end_time'] = force_text(_('End time cannot be in the past. Please set a future end time.'))
 
         checkpoint = (time.time() - checkpoint)
-        logger.info(f"context:{uuid} - Pass checkpoint8 in {checkpoint} seconds.")
+        logger.info(f"context:{myuuid} - Pass checkpoint8 in {checkpoint} seconds.")
         if errors:
             raise serializers.ValidationError(errors)
 
         checkpoint = (time.time() - checkpoint)
-        logger.info(f"context:{uuid} - Pass checkpoint9 in {checkpoint} seconds.")
+        logger.info(f"context:{myuuid} - Pass checkpoint9 in {checkpoint} seconds.")
         data = self.run_extension_validations(data)
- 
+
         checkpoint = (time.time() - checkpoint)
-        logger.info(f"context:{uuid} - Pass checkpoint10 in {checkpoint} seconds.")
-        logger.info(f"context:{uuid} - finish validation")
+        logger.info(f"context:{myuuid} - Pass checkpoint10 in {checkpoint} seconds.")
+        logger.info(f"context:{myuuid} - finish validation")
         return data
 
     def run_extension_validations(self, data):
