@@ -63,10 +63,10 @@ def _assert_email_sent(expected_recipient_email, expected_subject):
             "sv",
             f"Registreringsbetalning har gått ut - {_EVENT_NAME}",
             "Registreringsbetalning har gått ut",
-            f"Anmälan till evenemanget {_EVENT_NAME} har ställts in på grund av en "
-            "utgången betalning.",
-            f"Din registrering till evenemanget <strong>{_EVENT_NAME}</strong> har "
-            "ställts in på grund av att ingen betalning mottagits inom betalningsperioden.",
+            f"Anmälan till evenemanget {_EVENT_NAME} har ställts in på grund av att "
+            "betalningen har gått ut.",
+            f"Din anmälan till evenemanget <strong>{_EVENT_NAME}</strong> har "
+            "ställts in eftersom ingen betalning mottogs inom betalningsperioden.",
         ),
     ],
 )

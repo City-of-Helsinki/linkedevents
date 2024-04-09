@@ -32,7 +32,7 @@ msgstr "Skapad kl"
 
 #: events/admin.py:197
 msgid "Contact info"
-msgstr "Kontaktinformation"
+msgstr "Kontaktuppgifter"
 
 #: events/api.py:294
 #, python-brace-format
@@ -311,7 +311,7 @@ msgstr "Sökordsuppsättningen kan inte ha föråldrade sökord"
 
 #: events/models.py:673
 msgid "Place home page"
-msgstr "Placera hemsida"
+msgstr "Platsens hemsida"
 
 #: events/models.py:675 events/models.py:956
 msgid "Description"
@@ -340,7 +340,7 @@ msgstr "Adressort"
 
 #: events/models.py:696
 msgid "Address region"
-msgstr "Adressort"
+msgstr "Adressregion"
 
 #: events/models.py:699
 msgid "Postal code"
@@ -348,7 +348,7 @@ msgstr "Postnummer"
 
 #: events/models.py:702
 msgid "PO BOX"
-msgstr "PO Box"
+msgstr "Postbox"
 
 #: events/models.py:705
 msgid "Country"
@@ -407,7 +407,7 @@ msgstr "Inomhus"
 
 #: events/models.py:930
 msgid "User name"
-msgstr "Användarens name"
+msgstr "Användarens namn"
 
 #: events/models.py:932
 msgid "User e-mail"
@@ -423,7 +423,7 @@ msgstr "Användarens organisation"
 
 #: events/models.py:941
 msgid "Event organizer information."
-msgstr "Event arrangör information."
+msgstr "Evenemangsarrangörens information."
 
 #: events/models.py:947 registrations/models.py:1039
 msgid "User consent"
@@ -435,7 +435,7 @@ msgstr "Jag samtycker till behandlingen av mina personuppgifter?"
 
 #: events/models.py:954
 msgid "Event home page"
-msgstr "Hemsidan för evenemanget"
+msgstr "Evenemangets hemsida"
 
 #: events/models.py:958
 msgid "Short description"
@@ -783,9 +783,9 @@ msgid ""
 "the participants of the event. This list should be discarded when the event "
 "is over and the attendees have been entered into the system."
 msgstr ""
-"Detta är material som omfattas av dataskydd. Detta material måste behandlas "
+"Detta material omfattas av dataskydd. Materialet måste hanteras "
 "på det sätt som dataskyddet kräver och endast för att verifiera \n"
-"deltagarna i evenemanget. Denna lista ska kasseras när evenemanget är över "
+"deltagarna i evenemanget. Denna lista ska kasseras när evenemanget är avslutat "
 "och deltagarna har lagts in i systemet."
 
 #: registrations/exports.py:90
@@ -793,8 +793,8 @@ msgid ""
 "Please note that the participant and the participant's contact information "
 "may be the information of different persons."
 msgstr ""
-"Observera att deltagarens och deltagarens kontaktuppgifter kan vara "
-"information från olika personer."
+"Observera att deltagaren och deltagarens kontaktuppgifter kan vara "
+"uppgifter för olika personer."
 
 #: registrations/filters.py:85
 msgid "Invalid registration ID(s) given."
@@ -1135,8 +1135,8 @@ msgid ""
 "You have successfully cancelled your registration to the event "
 "<strong>%(event_name)s</strong>."
 msgstr ""
-"Du har avbrutit din registrering till evenemanget <strong>%(event_name)s</"
-"strong>."
+"Du har avbrutit din registrering till evenemanget "
+"<strong>%(event_name)s</strong>."
 
 #: registrations/notifications.py:106
 #, python-format
@@ -1189,8 +1189,9 @@ msgid ""
 "<strong>%(event_name)s</strong>. Your payment for the registration has been "
 "refunded."
 msgstr ""
-"Du har avbrutit din registrering till evenemanget <strong>%(event_name)s</"
-"strong>. Din betalning för registreringen har återbetalats."
+"Du har avbrutit din registrering till evenemanget "
+"<strong>%(event_name)s</strong>. Din betalning för registreringen har "
+"återbetalats."
 
 #: registrations/notifications.py:133
 #, python-format
@@ -1199,8 +1200,9 @@ msgid ""
 "<strong>%(event_name)s</strong>. Your payment for the registration has been "
 "refunded."
 msgstr ""
-"Du har avbrutit din registrering till kursen <strong>%(event_name)s</"
-"strong>.  Din betalning för registreringen har återbetalats."
+"Du har avbrutit din registrering till kursen "
+"<strong>%(event_name)s</strong>.  Din betalning för registreringen har "
+"återbetalats."
 
 #: registrations/notifications.py:138
 #, python-format
@@ -1243,8 +1245,8 @@ msgid ""
 "Congratulations! Your registration has been confirmed for the course "
 "<strong>%(event_name)s</strong>."
 msgstr ""
-"Grattis! Din registrering har bekräftats för kursen <strong>%(event_name)s</"
-"strong>."
+"Grattis! Din registrering har bekräftats för kursen "
+"<strong>%(event_name)s</strong>."
 
 #: registrations/notifications.py:167
 #, python-format
@@ -1301,7 +1303,7 @@ msgid ""
 "<strong>%(event_name)s</strong>. The payment link expires in "
 "%(expiration_hours)s hours."
 msgstr ""
-"Använd betalningslänken för att bekräfta din anmälan till evenemanget "
+"Vänligen använd betalningslänken för att bekräfta din anmälan till evenemanget "
 "<strong>%(event_name)s</strong>. Betalningslänken går ut efter "
 "%(expiration_hours)s timmar."
 
@@ -1312,7 +1314,7 @@ msgid ""
 "<strong>%(event_name)s</strong>. The payment link expires in "
 "%(expiration_hours)s hours."
 msgstr ""
-"Använd betalningslänken för att bekräfta din anmälan till kursen "
+"Vänligen använd betalningslänken för att bekräfta din anmälan till kursen "
 "<strong>%(event_name)s</strong>. Betalningslänken går ut efter "
 "%(expiration_hours)s timmar."
 
@@ -1323,8 +1325,8 @@ msgid ""
 "volunteering <strong>%(event_name)s</strong>. The payment link expires in "
 "%(expiration_hours)s hours."
 msgstr ""
-"Använd betalningslänken för att bekräfta din anmälan till volontärarbetet "
-"<strong>%(event_name)s</strong>. Betalningslänken går ut efter "
+"Vänligen använd betalningslänken för att bekräfta din anmälan till "
+"volontärarbetet <strong>%(event_name)s</strong>. Betalningslänken går ut efter "
 "%(expiration_hours)s timmar."
 
 #: registrations/notifications.py:221
@@ -1492,7 +1494,7 @@ msgid ""
 "%(expiration_hours)s hours."
 msgstr ""
 "Du har blivit utvald att flyttats från väntelistan för evenemanget "
-"<strong>%(event_name)s</strong> till en deltagare. Använd betalningslänken "
+"<strong>%(event_name)s</strong> till att bli en deltagare. Vänligen använd betalningslänken "
 "för att bekräfta ditt deltagande. Betalningslänken går ut efter "
 "%(expiration_hours)s timmar."
 
@@ -1505,7 +1507,7 @@ msgid ""
 "%(expiration_hours)s hours."
 msgstr ""
 "Du har blivit utvald att flyttats från väntelistan för kursen "
-"<strong>%(event_name)s</strong> till en deltagare. Använd betalningslänken "
+"<strong>%(event_name)s</strong> till att bli en deltagare. Vänligen använd betalningslänken "
 "för att bekräfta ditt deltagande. Betalningslänken går ut efter "
 "%(expiration_hours)s timmar."
 
@@ -1518,7 +1520,7 @@ msgid ""
 "%(expiration_hours)s hours."
 msgstr ""
 "Du har blivit utvald att flyttats från väntelistan för volontärarbetet "
-"<strong>%(event_name)s</strong> till en deltagare. Använd betalningslänken "
+"<strong>%(event_name)s</strong> till att bli en deltagare. Vänligen använd betalningslänken "
 "för att bekräfta ditt deltagande. Betalningslänken går ut efter "
 "%(expiration_hours)s timmar."
 
@@ -1532,8 +1534,8 @@ msgid ""
 "Registration to the event %(event_name)s has been cancelled due to an "
 "expired payment."
 msgstr ""
-"Anmälan till evenemanget %(event_name)s har ställts in på grund av en "
-"utgången betalning."
+"Anmälan till evenemanget %(event_name)s har ställts in på grund av att "
+"betalningen har gått ut."
 
 #: registrations/notifications.py:334
 #, python-format
@@ -1541,8 +1543,8 @@ msgid ""
 "Registration to the course %(event_name)s has been cancelled due to an "
 "expired payment."
 msgstr ""
-"Anmälan till kursen %(event_name)s har ställts in på grund av en utgången "
-"betalning."
+"Anmälan till kursen %(event_name)s har ställts in på grund av att "
+"betalningen har gått ut."
 
 #: registrations/notifications.py:338
 #, python-format
@@ -1550,8 +1552,8 @@ msgid ""
 "Registration to the volunteering %(event_name)s has been cancelled due to an "
 "expired payment."
 msgstr ""
-"Anmälan till volontärarbetet %(event_name)s har ställts in på grund av en "
-"utgången betalning."
+"Anmälan till volontärarbetet %(event_name)s har ställts in på grund av att "
+"betalningen har gått ut."
 
 #: registrations/notifications.py:344
 #, python-format
@@ -1559,8 +1561,8 @@ msgid ""
 "Your registration to the event <strong>%(event_name)s</strong> has been "
 "cancelled due no payment received within the payment period."
 msgstr ""
-"Din registrering till evenemanget <strong>%(event_name)s</strong> har "
-"ställts in på grund av att ingen betalning mottagits inom betalningsperioden."
+"Din anmälan till evenemanget <strong>%(event_name)s</strong> har "
+"ställts in eftersom ingen betalning mottogs inom betalningsperioden."
 
 #: registrations/notifications.py:348
 #, python-format
@@ -1568,8 +1570,8 @@ msgid ""
 "Your registration to the course <strong>%(event_name)s</strong> has been "
 "cancelled due no payment received within the payment period."
 msgstr ""
-"Din registrering till kursen <strong>%(event_name)s</strong> har ställts in "
-"på grund av att ingen betalning mottagits inom betalningsperioden."
+"Din anmälan till kursen <strong>%(event_name)s</strong> har "
+"ställts in eftersom ingen betalning mottogs inom betalningsperioden."
 
 #: registrations/notifications.py:352
 #, python-format
@@ -1577,8 +1579,8 @@ msgid ""
 "Your registration to the volunteering <strong>%(event_name)s</strong> has "
 "been cancelled due no payment received within the payment period."
 msgstr ""
-"Din registrering till volontärarbetet <strong>%(event_name)s</strong> har "
-"ställts in på grund av att ingen betalning mottagits inom betalningsperioden."
+"Din anmälan till volontärarbetet <strong>%(event_name)s</strong> har "
+"ställts in eftersom ingen betalning mottogs inom betalningsperioden."
 
 #: registrations/notifications.py:362
 #, python-format
@@ -1796,7 +1798,7 @@ msgid ""
 "event <strong>%(event_name)s %(event_period)s</strong>. The payment link "
 "expires in %(expiration_hours)s hours."
 msgstr ""
-"Använd betalningslänken för att bekräfta din anmälan till serieevenemanget "
+"Vänligen använd betalningslänken för att bekräfta din anmälan till serieevenemanget "
 "<strong>%(event_name)s %(event_period)s</strong>. Betalningslänken går ut "
 "efter %(expiration_hours)s timmar."
 
@@ -1807,7 +1809,7 @@ msgid ""
 "course <strong>%(event_name)s %(event_period)s</strong>. The payment link "
 "expires in %(expiration_hours)s hours."
 msgstr ""
-"Använd betalningslänken för att bekräfta din anmälan till seriekursen "
+"Vänligen använd betalningslänken för att bekräfta din anmälan till seriekursen "
 "<strong>%(event_name)s %(event_period)s</strong>. Betalningslänken går ut "
 "efter %(expiration_hours)s timmar."
 
@@ -1818,7 +1820,7 @@ msgid ""
 "volunteering <strong>%(event_name)s %(event_period)s</strong>. The payment "
 "link expires in %(expiration_hours)s hours."
 msgstr ""
-"Använd betalningslänken för att bekräfta din anmälan till "
+"Vänligen använd betalningslänken för att bekräfta din anmälan till "
 "serievolontärarbetet <strong>%(event_name)s %(event_period)s</strong>. "
 "Betalningslänken går ut efter %(expiration_hours)s timmar."
 
@@ -1939,7 +1941,7 @@ msgid ""
 "expires in %(expiration_hours)s hours."
 msgstr ""
 "Du har blivit utvald att flyttats från väntelistan för serieevenemanget "
-"<strong>%(event_name)s %(event_period)s</strong> till en deltagare. Använd "
+"<strong>%(event_name)s %(event_period)s</strong> till att bli en deltagare. Vänligen använd "
 "betalningslänken för att bekräfta ditt deltagande. Betalningslänken går ut "
 "efter %(expiration_hours)s timmar."
 
@@ -1952,7 +1954,7 @@ msgid ""
 "expires in %(expiration_hours)s hours."
 msgstr ""
 "Du har blivit utvald att flyttats från väntelistan för seriekursen "
-"<strong>%(event_name)s %(event_period)s</strong> till en deltagare. Använd "
+"<strong>%(event_name)s %(event_period)s</strong> till att bli en deltagare. Vänligen använd "
 "betalningslänken för att bekräfta ditt deltagande. Betalningslänken går ut "
 "efter %(expiration_hours)s timmar."
 
@@ -1965,7 +1967,7 @@ msgid ""
 "payment link expires in %(expiration_hours)s hours."
 msgstr ""
 "Du har blivit utvald att flyttats från väntelistan för serievolontärarbetet "
-"<strong>%(event_name)s %(event_period)s</strong> till en deltagare. Använd "
+"<strong>%(event_name)s %(event_period)s</strong> till att bli en deltagare. Vänligen använd "
 "betalningslänken för att bekräfta ditt deltagande. Betalningslänken går ut "
 "efter %(expiration_hours)s timmar."
 

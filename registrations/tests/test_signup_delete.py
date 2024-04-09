@@ -1152,7 +1152,7 @@ def test_soft_deleted_signup_is_not_moved_to_attending_from_waiting_list(
             "sv",
             "Betalning krävs för bekräftelse av registreringen - Foo",
             "Du har blivit utvald att flyttats från väntelistan för evenemanget "
-            "<strong>Foo</strong> till en deltagare. Använd betalningslänken "
+            "<strong>Foo</strong> till att bli en deltagare. Vänligen använd betalningslänken "
             "för att bekräfta ditt deltagande. Betalningslänken går ut efter %(hours)s timmar."
             % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
         ),
@@ -1252,9 +1252,9 @@ def test_send_email_with_payment_link_when_moving_participant_from_waitlist(
             "sv",
             "Betalning krävs för bekräftelse av registreringen - Serie: Foo",
             "Du har blivit utvald att flyttats från väntelistan för serieevenemanget "
-            "<strong>Foo 1.2.2024 - 29.2.2024</strong> till en deltagare. Använd betalningslänken "
-            "för att bekräfta ditt deltagande. Betalningslänken går ut efter %(hours)s timmar."
-            % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
+            "<strong>Foo 1.2.2024 - 29.2.2024</strong> till att bli en deltagare. Vänligen använd "
+            "betalningslänken för att bekräfta ditt deltagande. Betalningslänken går ut efter "
+            "%(hours)s timmar." % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
         ),
     ],
 )
