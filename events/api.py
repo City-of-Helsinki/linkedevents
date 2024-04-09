@@ -1456,7 +1456,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         uuid = uuid.uuid4()
         start_time = time.time()
         logger.info(f"context:{uuid} - Start validate at {start_time}.")
-        
+
         # clean all text fields, only description may contain any html
         data = clean_text_fields(data, allowed_html_fields=['description'])
 
@@ -1477,7 +1477,6 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
 
         errors = {}
         lang_error_msg = _('This field must be specified before an event is published.')
-
 
         for field in self.fields_needed_to_publish:
             if field in self.translated_fields:
@@ -1543,7 +1542,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         past_allowed = self.data_source.create_past_events
 
         checkpoint = (time.time() - checkpoint)
-        logger.info(f"context:{uuid} - Pass checkpoint6 in {checkpoint} seconds.") 
+        logger.info(f"context:{uuid} - Pass checkpoint6 in {checkpoint} seconds.")
         if self.instance:
             past_allowed = self.data_source.edit_past_events
 
@@ -1560,7 +1559,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         checkpoint = (time.time() - checkpoint)
         logger.info(f"context:{uuid} - Pass checkpoint9 in {checkpoint} seconds.")
         data = self.run_extension_validations(data)
-        
+ 
         checkpoint = (time.time() - checkpoint)
         logger.info(f"context:{uuid} - Pass checkpoint10 in {checkpoint} seconds.")
         logger.info(f"context:{uuid} - finish validation")
