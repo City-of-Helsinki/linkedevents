@@ -186,6 +186,19 @@ class CreatedModifiedBaseModel(models.Model):
 
 
 class WebStoreMerchant(CreatedModifiedBaseModel):
+    _TALPA_SYNCED_FIELDS = (
+        "name",
+        "street_address",
+        "zipcode",
+        "city",
+        "email",
+        "phone_number",
+        "url",
+        "terms_of_service_url",
+        "business_id",
+        "paytrail_merchant_id",
+    )
+
     organization = models.ForeignKey(
         Organization,
         related_name="web_store_merchants",
@@ -264,20 +277,34 @@ class WebStoreMerchant(CreatedModifiedBaseModel):
         else:
             raise ValidationError(_("Cannot delete a Talpa merchant."))
 
+    def needs_talpa_sync(self, old_instance=None):
+        if not old_instance:
+            return True
+
+        for field in self._TALPA_SYNCED_FIELDS:
+            if getattr(old_instance, field) != getattr(self, field):
+                return True
+
+        return False
+
     @transaction.atomic
     def save(self, *args, **kwargs):
         created = self.pk is None
+        should_check_talpa_sync = (
+            settings.WEB_STORE_INTEGRATION_ENABLED
+            and self.active
+            and kwargs.get("update_fields") != {"merchant_id"}
+        )
+
+        if should_check_talpa_sync and not created:
+            old_instance = WebStoreMerchant.objects.filter(pk=self.pk).first()
+        else:
+            old_instance = None
 
         super().save(*args, **kwargs)
 
-        if (
-            not settings.WEB_STORE_INTEGRATION_ENABLED
-            or not self.active
-            or kwargs.get("update_fields") == {"merchant_id"}
-        ):
-            return
-
-        create_or_update_web_store_merchant(self, created)
+        if should_check_talpa_sync and self.needs_talpa_sync(old_instance):
+            create_or_update_web_store_merchant(self, created)
 
 
 class PriceGroup(CreatedModifiedBaseModel):

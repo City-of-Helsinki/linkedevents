@@ -584,6 +584,45 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
         )
         self.assertEqual(merchant_last_modified_time, merchant.last_modified_time)
 
+    def test_do_not_update_web_store_merchant_in_talpa_if_data_is_unchanged(self):
+        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+            merchant = WebStoreMerchantFactory(organization=self.organization)
+
+        merchant_data = self._get_merchant_data(
+            update_data={
+                "web_store_merchants-INITIAL_FORMS": "1",
+                "web_store_merchants-0-id": merchant.pk,
+                "web_store_merchants-0-organization": self.organization.pk,
+                **{
+                    f"web_store_merchants-0-{field}": getattr(merchant, field)
+                    for field in WebStoreMerchant._TALPA_SYNCED_FIELDS
+                },
+            }
+        )
+        data = self._get_request_data(merchant_data)
+
+        merchant_attrs_to_skip = ("id", "organization", "active")
+
+        self.assertEqual(WebStoreMerchant.objects.count(), 1)
+
+        self.assertMerchantValuesEqual(
+            merchant, data, attrs_to_skip=merchant_attrs_to_skip
+        )
+
+        with patch("requests.post") as mocked_update_merchant_request:
+            self.client.post(
+                f"/admin/django_orghierarchy/organization/{self.organization.id}/change/",
+                data,
+            )
+            self.assertFalse(mocked_update_merchant_request.called)
+
+        merchant.refresh_from_db()
+        self.assertMerchantValuesEqual(
+            merchant, data, attrs_to_skip=merchant_attrs_to_skip
+        )
+
+        self.assertEqual(WebStoreMerchant.objects.count(), 1)
+
 
 class TestLocalOrganizationAccountAdmin(LocalOrganizationAdminTestCaseMixin, TestCase):
     @staticmethod

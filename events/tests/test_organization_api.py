@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 import pytest
+from django.test import override_settings
 from django.utils import translation
 from django_orghierarchy.models import Organization
 from rest_framework import status
@@ -891,14 +892,15 @@ def test_superuser_and_financial_admin_can_patch_organization_with_web_store_mer
 @pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
 @pytest.mark.django_db
 def test_superuser_and_financial_can_patch_organizations_web_store_merchant(
-    data_source, organization, api_client, settings, user_role
+    data_source, organization, api_client, user_role
 ):
     user = create_user_by_role(user_role, organization)
     api_client.force_authenticate(user)
 
-    settings.WEB_STORE_INTEGRATION_ENABLED = False
-    merchant = WebStoreMerchantFactory(organization=organization, merchant_id="1234")
-    settings.WEB_STORE_INTEGRATION_ENABLED = True
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        merchant = WebStoreMerchantFactory(
+            organization=organization, merchant_id="1234"
+        )
 
     merchants_data = default_web_store_merchants_data[0].copy()
     merchants_data["id"] = merchant.pk
@@ -943,14 +945,15 @@ def test_superuser_and_financial_can_patch_organizations_web_store_merchant(
 @pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
 @pytest.mark.django_db
 def test_superuser_and_financial_can_make_web_store_merchant_inactive(
-    data_source, organization, api_client, settings, user_role
+    data_source, organization, api_client, user_role
 ):
     user = create_user_by_role(user_role, organization)
     api_client.force_authenticate(user)
 
-    settings.WEB_STORE_INTEGRATION_ENABLED = False
-    merchant = WebStoreMerchantFactory(organization=organization, merchant_id="1234")
-    settings.WEB_STORE_INTEGRATION_ENABLED = True
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        merchant = WebStoreMerchantFactory(
+            organization=organization, merchant_id="1234"
+        )
 
     payload = {
         "web_store_merchants": [
@@ -1072,7 +1075,7 @@ def test_not_allowed_user_roles_cannot_update_an_organization_with_a_web_store_m
 )
 @pytest.mark.django_db
 def test_not_allowed_user_roles_cannot_update_an_organizations_web_store_merchant(
-    data_source, organization, api_client, settings, user_role
+    data_source, organization, api_client, user_role
 ):
     user = create_user_by_role(
         user_role,
@@ -1081,9 +1084,10 @@ def test_not_allowed_user_roles_cannot_update_an_organizations_web_store_merchan
     )
     api_client.force_authenticate(user)
 
-    settings.WEB_STORE_INTEGRATION_ENABLED = False
-    merchant = WebStoreMerchantFactory(organization=organization, merchant_id="1234")
-    settings.WEB_STORE_INTEGRATION_ENABLED = True
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        merchant = WebStoreMerchantFactory(
+            organization=organization, merchant_id="1234"
+        )
 
     origin_id = "test_organization2"
 
@@ -1120,7 +1124,7 @@ def test_not_allowed_user_roles_cannot_update_an_organizations_web_store_merchan
 )
 @pytest.mark.django_db
 def test_not_allowed_user_roles_cannot_patch_an_organizations_web_store_merchant(
-    data_source, organization, api_client, settings, user_role
+    data_source, organization, api_client, user_role
 ):
     user = create_user_by_role(
         user_role,
@@ -1129,9 +1133,10 @@ def test_not_allowed_user_roles_cannot_patch_an_organizations_web_store_merchant
     )
     api_client.force_authenticate(user)
 
-    settings.WEB_STORE_INTEGRATION_ENABLED = False
-    merchant = WebStoreMerchantFactory(organization=organization, merchant_id="1234")
-    settings.WEB_STORE_INTEGRATION_ENABLED = True
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        merchant = WebStoreMerchantFactory(
+            organization=organization, merchant_id="1234"
+        )
 
     merchants_data = default_web_store_merchants_data[0].copy()
     merchants_data["id"] = merchant.pk
@@ -1153,7 +1158,7 @@ def test_not_allowed_user_roles_cannot_patch_an_organizations_web_store_merchant
 @pytest.mark.parametrize("user_role", ["superuser", "financial_admin", "admin"])
 @pytest.mark.django_db
 def test_superuser_and_financial_admin_can_get_organization_with_all_web_store_merchant_fields(
-    data_source, organization, api_client, settings, user_role
+    data_source, organization, api_client, user_role
 ):
     user = create_user_by_role(user_role, organization)
     if user_role == "admin":
@@ -1161,9 +1166,8 @@ def test_superuser_and_financial_admin_can_get_organization_with_all_web_store_m
 
     api_client.force_authenticate(user)
 
-    settings.WEB_STORE_INTEGRATION_ENABLED = False
-    WebStoreMerchantFactory(organization=organization, merchant_id="1234")
-    settings.WEB_STORE_INTEGRATION_ENABLED = True
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        WebStoreMerchantFactory(organization=organization, merchant_id="1234")
 
     response = get_organization(api_client, organization.id)
     assert response.status_code == status.HTTP_200_OK
@@ -1183,7 +1187,7 @@ def test_superuser_and_financial_admin_can_get_organization_with_all_web_store_m
 )
 @pytest.mark.django_db
 def test_not_allowed_user_roles_cannot_get_organization_with_all_web_store_merchant_fields(
-    data_source, organization, api_client, settings, user_role
+    data_source, organization, api_client, user_role
 ):
     user = create_user_by_role(
         user_role,
@@ -1192,9 +1196,8 @@ def test_not_allowed_user_roles_cannot_get_organization_with_all_web_store_merch
     )
     api_client.force_authenticate(user)
 
-    settings.WEB_STORE_INTEGRATION_ENABLED = False
-    WebStoreMerchantFactory(organization=organization, merchant_id="1234")
-    settings.WEB_STORE_INTEGRATION_ENABLED = True
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        WebStoreMerchantFactory(organization=organization, merchant_id="1234")
 
     response = get_organization(api_client, organization.id)
     assert response.status_code == status.HTTP_200_OK
@@ -1338,15 +1341,16 @@ def test_cannot_patch_organization_with_more_than_one_web_store_merchant(
 
 @pytest.mark.django_db
 def test_always_update_existing_web_store_merchant(
-    data_source, organization, api_client, settings
+    data_source, organization, api_client
 ):
     user = create_user_by_role("superuser", None)
 
     api_client.force_authenticate(user)
 
-    settings.WEB_STORE_INTEGRATION_ENABLED = False
-    merchant = WebStoreMerchantFactory(organization=organization, merchant_id="1234")
-    settings.WEB_STORE_INTEGRATION_ENABLED = True
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        merchant = WebStoreMerchantFactory(
+            organization=organization, merchant_id="1234"
+        )
 
     origin_id = "test_organization2"
     payload = {
@@ -1401,14 +1405,15 @@ def test_always_update_existing_web_store_merchant(
 @pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
 @pytest.mark.django_db
 def test_always_patch_existing_web_store_merchant(
-    data_source, organization, api_client, settings, user_role
+    data_source, organization, api_client, user_role
 ):
     user = create_user_by_role(user_role, organization)
     api_client.force_authenticate(user)
 
-    settings.WEB_STORE_INTEGRATION_ENABLED = False
-    merchant = WebStoreMerchantFactory(organization=organization, merchant_id="1234")
-    settings.WEB_STORE_INTEGRATION_ENABLED = True
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        merchant = WebStoreMerchantFactory(
+            organization=organization, merchant_id="1234"
+        )
 
     payload = {
         "web_store_merchants": [
@@ -1603,6 +1608,91 @@ def test_update_organization_with_web_store_merchant_api_unknown_exception(
     assert mocked_web_store_api_request.called is True
 
     assert WebStoreMerchant.objects.count() == 0
+
+
+@pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
+@pytest.mark.django_db
+def test_do_not_update_web_store_merchant_in_talpa_if_data_is_unchanged(
+    data_source, organization, api_client, user_role
+):
+    user = create_user_by_role(user_role, organization)
+    if user_role == "financial_admin":
+        user.admin_organizations.add(organization)
+
+    api_client.force_authenticate(user)
+
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        merchant = WebStoreMerchantFactory(organization=organization)
+
+    origin_id = "test_organization2"
+
+    web_store_merchants_data = [
+        {
+            field: getattr(merchant, field)
+            for field in WebStoreMerchant._TALPA_SYNCED_FIELDS
+        }
+    ]
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+        "web_store_merchants": web_store_merchants_data,
+    }
+
+    assert WebStoreMerchant.objects.count() == 1
+
+    with patch("requests.post") as mocked_web_store_api_request:
+        assert_update_organization(api_client, organization.id, payload)
+    assert mocked_web_store_api_request.called is False
+
+    assert WebStoreMerchant.objects.count() == 1
+
+    merchant.refresh_from_db()
+    for field, value in web_store_merchants_data[0].items():
+        assert getattr(merchant, field) == value
+
+
+@pytest.mark.parametrize(
+    "user_role,merchant_attr",
+    [
+        *[("superuser", field) for field in WebStoreMerchant._TALPA_SYNCED_FIELDS],
+        *[
+            ("financial_admin", field)
+            for field in WebStoreMerchant._TALPA_SYNCED_FIELDS
+        ],
+    ],
+)
+@pytest.mark.django_db
+def test_do_not_patch_web_store_merchant_in_talpa_if_data_is_unchanged(
+    data_source, organization, api_client, user_role, merchant_attr
+):
+    user = create_user_by_role(user_role, organization)
+    if user_role == "financial_admin":
+        user.admin_organizations.add(organization)
+
+    api_client.force_authenticate(user)
+
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        merchant = WebStoreMerchantFactory(organization=organization)
+
+    web_store_merchants_data = [{merchant_attr: getattr(merchant, merchant_attr)}]
+    payload = {
+        "web_store_merchants": web_store_merchants_data,
+    }
+
+    assert WebStoreMerchant.objects.count() == 1
+
+    with patch("requests.post") as mocked_web_store_api_request:
+        assert_patch_organization(api_client, organization.id, payload)
+    assert mocked_web_store_api_request.called is False
+
+    assert WebStoreMerchant.objects.count() == 1
+
+    merchant.refresh_from_db()
+    assert (
+        getattr(merchant, merchant_attr) == web_store_merchants_data[0][merchant_attr]
+    )
 
 
 @pytest.mark.django_db
