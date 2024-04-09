@@ -981,6 +981,131 @@ def test_superuser_and_financial_can_make_web_store_merchant_inactive(
     assert merchant.last_modified_time > last_modified_time
 
 
+@pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
+@pytest.mark.django_db
+def test_cannot_post_web_store_merchant_id(
+    data_source, organization, api_client, user_role
+):
+    user = create_user_by_role(user_role, organization)
+    if user_role == "financial_admin":
+        user.admin_organizations.add(organization)
+
+    api_client.force_authenticate(user)
+
+    origin_id = "test_organization2"
+    original_merchant_id = "1234"
+
+    web_store_merchants_data = default_web_store_merchants_data.copy()
+    web_store_merchants_data[0]["merchant_id"] = "4321"
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+        "web_store_merchants": web_store_merchants_data,
+    }
+
+    assert WebStoreMerchant.objects.count() == 0
+
+    json_return_value = DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA.copy()
+    json_return_value["merchantId"] = original_merchant_id
+    mocked_web_store_api_response = get_mock_response(
+        json_return_value=json_return_value,
+    )
+    with patch("requests.post") as mocked_web_store_api_request:
+        mocked_web_store_api_request.return_value = mocked_web_store_api_response
+
+        response = assert_create_organization(api_client, payload)
+    assert mocked_web_store_api_request.called is True
+    assert len(response.data["web_store_merchants"]) == 1
+
+    assert WebStoreMerchant.objects.count() == 1
+    assert (
+        WebStoreMerchant.objects.filter(
+            organization_id=response.data["id"],
+            merchant_id=original_merchant_id,
+        ).count()
+        == 1
+    )
+
+
+@pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
+@pytest.mark.django_db
+def test_cannot_put_web_store_merchant_id(
+    data_source, organization, api_client, user_role
+):
+    user = create_user_by_role(user_role, organization)
+    if user_role == "financial_admin":
+        user.admin_organizations.add(organization)
+
+    api_client.force_authenticate(user)
+
+    origin_id = "test_organization2"
+    original_merchant_id = "1234"
+
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        merchant = WebStoreMerchantFactory(
+            organization=organization, merchant_id=original_merchant_id
+        )
+
+    web_store_merchants_data = default_web_store_merchants_data.copy()
+    web_store_merchants_data[0].update({"id": merchant.pk, "merchant_id": "4321"})
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+        "web_store_merchants": web_store_merchants_data,
+    }
+
+    assert WebStoreMerchant.objects.count() == 1
+
+    with patch("requests.post") as mocked_web_store_api_request:
+        assert_update_organization(api_client, organization.id, payload)
+    assert mocked_web_store_api_request.called is True
+
+    assert WebStoreMerchant.objects.count() == 1
+    merchant.refresh_from_db()
+    assert merchant.merchant_id == original_merchant_id
+
+
+@pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
+@pytest.mark.django_db
+def test_cannot_patch_web_store_merchant_id(
+    data_source, organization, api_client, user_role
+):
+    user = create_user_by_role(user_role, organization)
+    api_client.force_authenticate(user)
+
+    original_merchant_id = "1234"
+
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        merchant = WebStoreMerchantFactory(
+            organization=organization, merchant_id=original_merchant_id
+        )
+
+    payload = {
+        "web_store_merchants": [
+            {
+                "id": merchant.pk,
+                "merchant_id": "4321",
+                "name": "Edited merchant name",
+            }
+        ],
+    }
+
+    assert WebStoreMerchant.objects.count() == 1
+    assert merchant.merchant_id == original_merchant_id
+
+    with patch("requests.post") as mocked_web_store_api_request:
+        assert_patch_organization(api_client, organization.id, payload)
+    assert mocked_web_store_api_request.called is True
+
+    assert WebStoreMerchant.objects.count() == 1
+    merchant.refresh_from_db()
+    assert merchant.merchant_id == original_merchant_id
+
+
 @pytest.mark.parametrize(
     "user_role",
     [
