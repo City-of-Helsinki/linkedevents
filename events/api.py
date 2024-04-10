@@ -2,12 +2,10 @@
 from __future__ import unicode_literals
 
 import base64
-import logging
 import re
 import struct
 import time
 import urllib.parse
-import uuid
 from copy import deepcopy
 from datetime import datetime
 from datetime import timezone as dt_timezone
@@ -78,8 +76,6 @@ def get_view_name(view):
 viewset_classes_by_model = {}
 
 all_views = []
-
-logger = logging.getLogger(__name__)
 
 
 def register_view(klass, name, base_name=None):
@@ -1454,34 +1450,14 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         return data
 
     def validate(self, data):
-        myuuid = uuid.uuid4()
-        start_time = time.time()
-        logger.info(f"context:{myuuid} - Start validate at {start_time}.")
-
         # clean all text fields, only description may contain any html
         data = clean_text_fields(data, allowed_html_fields=['description'])
 
-        new_checkpoint = time.time()
-        elapsed = new_checkpoint - start_time
-        checkpoint = new_checkpoint
-        logger.info(f"context:{myuuid} - elapsed:{elapsed} seconds. - data = super().validate(data)")
         data = super().validate(data)
 
-        new_checkpoint = time.time()
-        elapsed = new_checkpoint - start_time
-        checkpoint = new_checkpoint
-        logger.info(f"context:{myuuid} - elapsed:{elapsed} seconds. - if publication_status not in data:")
         if 'publication_status' not in data:
             data['publication_status'] = PublicationStatus.PUBLIC
 
-        new_checkpoint = time.time()
-        elapsed = new_checkpoint - start_time
-        checkpoint = new_checkpoint
-        logger.info(
-            f"context:{myuuid} - "
-            f"elapsed:{elapsed} seconds. - "
-            "if PublicationStatus.DRAFT or PublicationStatus.CANCELLED"
-        )
         # if the event is a draft, postponed or cancelled, no further validation is performed
         if (data['publication_status'] == PublicationStatus.DRAFT or
                 data.get('event_status', None) == Event.Status.CANCELLED or
@@ -1489,24 +1465,11 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
             data = self.run_extension_validations(data)
             return data
 
-        new_checkpoint = time.time()
-        elapsed = new_checkpoint - start_time
-        checkpoint = new_checkpoint
-        logger.info(f"context:{myuuid} - elapsed:{elapsed} seconds. - languages = utils.get_fixed_lang_codes()")
         # check that published events have a location, keyword and start_time
         languages = utils.get_fixed_lang_codes()
 
-        new_checkpoint = time.time()
-        elapsed = new_checkpoint - start_time
-        checkpoint = new_checkpoint
-        logger.info(f"context:{myuuid} - elapsed:{elapsed} seconds. - set lang_error_msg")
         errors = {}
         lang_error_msg = _('This field must be specified before an event is published.')
-
-        new_checkpoint = time.time()
-        elapsed = new_checkpoint - start_time
-        checkpoint = new_checkpoint
-        logger.info(f"context:{myuuid} - elapsed:{elapsed} seconds. - for field in self.fields_needed_to_publish:")
         for field in self.fields_needed_to_publish:
             if field in self.translated_fields:
                 for lang in languages:
@@ -1523,63 +1486,29 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
 
         # published events need price info = at least one offer that is free or not
         offer_exists = False
-
-        new_checkpoint = time.time()
-        elapsed = new_checkpoint - start_time
-        checkpoint = new_checkpoint
-        logger.info(
-            f"context:{myuuid} - "
-            f"elapsed:{elapsed} seconds. - "
-            "for index, offer in enumerate(data.get('offers', []):"
-        )
         for index, offer in enumerate(data.get('offers', [])):
             if 'is_free' in offer:
                 offer_exists = True
             # clean offer text fields
             data['offers'][index] = clean_text_fields(offer)
 
-        new_checkpoint = time.time()
-        elapsed = new_checkpoint - start_time
-        checkpoint = new_checkpoint
-        logger.info(f"context:{myuuid} - elapsed:{elapsed} seconds. - if not offer_exists:")
         if not offer_exists:
             errors['offers'] = _('Price info must be specified before an event is published.')
 
-        new_checkpoint = time.time()
-        elapsed = new_checkpoint - start_time
-        checkpoint = new_checkpoint
-        logger.info(
-            f"context:{myuuid} - "
-            f"elapsed:{elapsed} seconds. - "
-            "for index, link in enumerate(data.get('external_links', []):"
-        )
         # clean link description text
         for index, link in enumerate(data.get('external_links', [])):
             # clean link text fields
             data['external_links'][index] = clean_text_fields(link)
 
-        new_checkpoint = time.time()
-        elapsed = new_checkpoint - start_time
-        checkpoint = new_checkpoint
-        logger.info(
-            f"context:{myuuid} - "
-            f"elapsed:{elapsed} seconds. - "
-            "for index, video in enumerate(data.get('video', []):"
-        )
         # clean video text fields
         for index, video in enumerate(data.get('video', [])):
             # clean link text fields
             data['video'][index] = clean_text_fields(video)
 
-        new_checkpoint = time.time()
-        elapsed = new_checkpoint - start_time
-        checkpoint = new_checkpoint
-        logger.info(f"context:{myuuid} - elapsed:{elapsed} seconds. - if not data.get('end_time'):")
         # If no end timestamp supplied, we treat the event as ending at midnight
         if not data.get('end_time'):
             # The start time may also be null if the event is postponed
             if not data.get('start_time'):
-                logger.info(f"context:{myuuid} - data.get('start_time') is None")
                 data['has_end_time'] = False
                 data['end_time'] = None
             else:
@@ -1587,56 +1516,19 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
                 data['end_time'] = timezone.localtime(data['start_time'])\
                     .replace(hour=0, minute=0, second=0, microsecond=0).astimezone(pytz.utc)
                 data['end_time'] += timedelta(days=1)
-            checkpoint = (time.time() - checkpoint)
-            logger.info(f"context:{myuuid} - Pass checkpoint4 in {checkpoint} seconds.")
 
-        new_checkpoint = time.time()
-        elapsed = new_checkpoint - start_time
-        checkpoint = new_checkpoint
-        logger.info(
-            f"context:{myuuid} - "
-            f"elapsed:{elapsed} seconds. - "
-            "past_allowed = self.data_source.create_past_events"
-        )
         past_allowed = self.data_source.create_past_events
-
-        new_checkpoint = time.time()
-        elapsed = new_checkpoint - start_time
-        checkpoint = new_checkpoint
-        logger.info(f"context:{myuuid} - elapsed:{elapsed} seconds. - if self.instance:")
         if self.instance:
-            logger.info(f"context:{myuuid} - is instance")
             past_allowed = self.data_source.edit_past_events
 
-        new_checkpoint = time.time()
-        elapsed = new_checkpoint - start_time
-        checkpoint = new_checkpoint
-        logger.info(
-            f"context:{myuuid} - "
-            f"elapsed:{elapsed} seconds. - "
-            "if data.get('start_time') and data['start_time'] < timezone.now() and not past_allowed:"
-        )
         if data.get('end_time') and data['end_time'] < timezone.now() and not past_allowed:
             errors['end_time'] = force_text(_('End time cannot be in the past. Please set a future end time.'))
 
-        new_checkpoint = time.time()
-        elapsed = new_checkpoint - start_time
-        checkpoint = new_checkpoint
-        logger.info(f"context:{myuuid} - elapsed:{elapsed} seconds. - if errors")
         if errors:
-            logger.info(f"context:{myuuid} - errors")
             raise serializers.ValidationError(errors)
 
-        new_checkpoint = time.time()
-        elapsed = new_checkpoint - start_time
-        checkpoint = new_checkpoint
-        logger.info(f"context:{myuuid} - elapsed:{elapsed} seconds. - data = self.run_extension_validations(data)")
         data = self.run_extension_validations(data)
 
-        new_checkpoint = time.time()
-        elapsed = new_checkpoint - start_time
-        checkpoint = new_checkpoint
-        logger.info(f"context:{myuuid} - elapsed:{elapsed} seconds. - return data")
         return data
 
     def run_extension_validations(self, data):
