@@ -742,7 +742,6 @@ class EditableLinkedEventsObjectSerializer(LinkedEventsSerializer):
 
     def update(self, instance, validated_data):
         validated_data['last_modified_by'] = self.user
-
         if 'id' in validated_data:
             if instance.id != validated_data['id']:
                 raise serializers.ValidationError({'id': _("You may not change the id of an existing object.")})
@@ -1518,7 +1517,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
                 data['end_time'] += timedelta(days=1)
 
         past_allowed = self.data_source.create_past_events
-        if self.instance:
+        if None is not self.instance:
             past_allowed = self.data_source.edit_past_events
 
         if data.get('end_time') and data['end_time'] < timezone.now() and not past_allowed:
@@ -1528,7 +1527,6 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
             raise serializers.ValidationError(errors)
 
         data = self.run_extension_validations(data)
-
         return data
 
     def run_extension_validations(self, data):
