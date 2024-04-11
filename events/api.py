@@ -77,6 +77,7 @@ viewset_classes_by_model = {}
 
 all_views = []
 
+
 def register_view(klass, name, base_name=None):
     entry = {'class': klass, 'name': name}
     if base_name is not None:
