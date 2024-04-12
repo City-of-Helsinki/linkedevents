@@ -1581,6 +1581,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
         videos = validated_data.pop('videos', None)
         start_time = validated_data.get('start_time', None)
         end_time = validated_data.get('end_time', None)
+        super_event = validated_data.pop('super_event', None)
 
         if instance.super_event is not None and (
             (
@@ -1642,6 +1643,8 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer,
                 validated_data.pop(field.source)
 
         # update validated fields
+        if None is not super_event:
+            validated_data['super_event'] = super_event
         super().update(instance, validated_data)
 
         # update offers
