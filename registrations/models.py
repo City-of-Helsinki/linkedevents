@@ -1911,23 +1911,21 @@ class WebStoreAccount(CreatedModifiedBaseModel):
 
 
 class RegistrationWebStoreProductMapping(models.Model):
-    _PRODUCT_MAPPING_RELATED_NAME = "web_store_product_mapping"
-
     registration = models.OneToOneField(
         Registration,
-        related_name=_PRODUCT_MAPPING_RELATED_NAME,
+        related_name="web_store_product_mapping",
         on_delete=models.CASCADE,
     )
 
-    merchant = models.OneToOneField(
+    merchant = models.ForeignKey(
         WebStoreMerchant,
-        related_name=_PRODUCT_MAPPING_RELATED_NAME,
+        related_name="web_store_product_mappings",
         on_delete=models.PROTECT,
     )
 
-    account = models.OneToOneField(
+    account = models.ForeignKey(
         WebStoreAccount,
-        related_name=_PRODUCT_MAPPING_RELATED_NAME,
+        related_name="web_store_product_mappings",
         on_delete=models.PROTECT,
     )
 

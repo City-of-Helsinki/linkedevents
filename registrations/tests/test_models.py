@@ -16,7 +16,11 @@ from events.tests.factories import (
 from helevents.tests.factories import UserFactory
 from registrations.enums import VatPercentage
 from registrations.exceptions import PriceGroupValidationError
-from registrations.models import WebStoreAccount, WebStoreMerchant
+from registrations.models import (
+    RegistrationWebStoreProductMapping,
+    WebStoreAccount,
+    WebStoreMerchant,
+)
 from registrations.notifications import SignUpNotificationType
 from registrations.tests.factories import (
     RegistrationFactory,
@@ -1250,3 +1254,41 @@ class TestWebStoreAccount(TestCase):
         self.account.delete(force_delete=True)
 
         self.assertEqual(WebStoreAccount.objects.count(), 0)
+
+
+class TestRegistrationWebStoreProductMapping(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+            cls.product_mapping = RegistrationWebStoreProductMappingFactory()
+
+    def test_can_create_more_than_one_mapping_for_same_merchant(self):
+        self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 1)
+
+        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+            RegistrationWebStoreProductMappingFactory(
+                merchant=self.product_mapping.merchant
+            )
+
+        self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 2)
+
+    def test_can_create_more_than_one_mapping_for_same_account(self):
+        self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 1)
+
+        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+            RegistrationWebStoreProductMappingFactory(
+                account=self.product_mapping.account
+            )
+
+        self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 2)
+
+    def test_can_create_more_than_one_mapping_for_same_merchant_and_account(self):
+        self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 1)
+
+        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+            RegistrationWebStoreProductMappingFactory(
+                merchant=self.product_mapping.merchant,
+                account=self.product_mapping.account,
+            )
+
+        self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 2)
