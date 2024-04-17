@@ -31,3 +31,14 @@ class WebStoreOrderAPIClient(WebStoreAPIBaseClient):
             "post",
             headers={"user": user_uuid},
         )
+
+    def create_instant_refunds(self, data: list[dict]) -> dict:
+        return self._make_request(
+            f"{self.order_api_base_url}refund/instant",
+            "post",
+            params=data,
+            headers={
+                "api-key": self.api_key,
+                "namespace": self.api_namespace,
+            },
+        )

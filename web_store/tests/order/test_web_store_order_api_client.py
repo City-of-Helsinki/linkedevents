@@ -1,7 +1,8 @@
 from unittest.mock import patch
 
 import pytest
-from django.conf import settings
+import requests_mock
+from django.conf import settings as django_settings
 from requests.exceptions import RequestException
 from rest_framework import status
 
@@ -27,7 +28,7 @@ DEFAULT_ITEM = {
 }
 
 DEFAULT_CREATE_ORDER_DATA = {
-    "namespace": settings.WEB_STORE_API_NAMESPACE,
+    "namespace": django_settings.WEB_STORE_API_NAMESPACE,
     "user": "user_uuid",
     "items": [DEFAULT_ITEM.copy()],
     "priceNet": "0.00",
@@ -86,6 +87,55 @@ DEFAULT_CANCEL_ORDER_DATA = {
     "order": DEFAULT_GET_ORDER_DATA.copy(),
     "cancelUrl": f"https://test.dev/order/{DEFAULT_ORDER_ID}/cancel",
 }
+
+DEFAULT_CREATE_INSTANT_REFUNDS_DATA = [
+    {"orderId": DEFAULT_ORDER_ID, "items": [{"orderItemId": "string", "quantity": 1}]}
+]
+
+DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE = {
+    "refunds": [
+        {
+            "refundId": "string",
+            "orderId": DEFAULT_ORDER_ID,
+            "namespace": django_settings.WEB_STORE_API_NAMESPACE,
+            "user": "string",
+            "createdAt": "2024-02-01T12:00:00Z",
+            "status": "draft",
+            "customerFirstName": "string",
+            "customerLastName": "string",
+            "customerEmail": "string",
+            "customerPhone": "string",
+            "refundReason": "string",
+            "items": [
+                {
+                    "refundItemId": "string",
+                    "refundId": "string",
+                    "orderItemId": "string",
+                    "orderId": "string",
+                    "productLabel": "string",
+                    "productDescription": "string",
+                    "originalPriceNet": "string",
+                    "originalPriceVat": "string",
+                    "originalPriceGross": "string",
+                }
+            ],
+            "payment": {
+                "refundPaymentId": "string",
+                "orderId": "string",
+                "userId": "string",
+                "status": "string",
+                "refundMethod": "string",
+                "refundType": "string",
+                "refundGateway": "string",
+                "totalExclTax": 0,
+                "total": 0,
+                "taxAmount": 0,
+                "refundTransactionId": "string",
+            },
+        }
+    ],
+}
+DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE["refunds"][0]["items"][0].update(DEFAULT_ITEM)
 
 
 @pytest.mark.parametrize(
@@ -192,3 +242,39 @@ def test_cancel_order_exception(status_code):
     with patch("requests.post") as mocked_request, pytest.raises(RequestException):
         mocked_request.return_value = mocked_response
         client.cancel_order(order_id=DEFAULT_ORDER_ID, user_uuid=DEFAULT_USER_UUID)
+
+
+def test_create_instant_refunds_success():
+    client = WebStoreOrderAPIClient()
+
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{client.order_api_base_url}refund/instant",
+            status_code=status.HTTP_200_OK,
+            json=DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE,
+        )
+
+        response_json = client.create_instant_refunds(
+            DEFAULT_CREATE_INSTANT_REFUNDS_DATA
+        )
+        assert response_json == DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE
+
+
+@pytest.mark.parametrize(
+    "status_code",
+    [
+        status.HTTP_400_BAD_REQUEST,
+        status.HTTP_403_FORBIDDEN,
+        status.HTTP_500_INTERNAL_SERVER_ERROR,
+    ],
+)
+def test_create_instant_refunds_exception(status_code):
+    client = WebStoreOrderAPIClient()
+
+    with requests_mock.Mocker() as req_mock, pytest.raises(RequestException):
+        req_mock.post(
+            f"{client.order_api_base_url}refund/instant",
+            status_code=status_code,
+        )
+
+        client.create_instant_refunds(DEFAULT_CREATE_INSTANT_REFUNDS_DATA)
