@@ -1,3 +1,4 @@
+from datetime import timedelta
 from decimal import Decimal
 from typing import Optional
 from unittest.mock import Mock
@@ -5,10 +6,12 @@ from uuid import uuid4
 
 from django.conf import settings
 from django.core import mail
+from django.utils.timezone import localtime
 from django_orghierarchy.models import Organization
 from requests import RequestException
 from rest_framework import status
 
+from events.models import Event
 from helevents.models import User
 from helevents.tests.factories import UserFactory
 from registrations.models import (
@@ -17,6 +20,14 @@ from registrations.models import (
     SignUpGroup,
     SignUpPayment,
 )
+from registrations.tests.factories import (
+    RegistrationFactory,
+    SignUpContactPersonFactory,
+    SignUpGroupFactory,
+    SignUpPaymentFactory,
+    SignUpPriceGroupFactory,
+)
+from web_store.tests.order.test_web_store_order_api_client import DEFAULT_ORDER_ID
 
 DEFAULT_CREATE_ORDER_RESPONSE_JSON = {
     "orderId": str(uuid4()),
@@ -225,3 +236,57 @@ def assert_signup_payment_data_is_correct(
     )
     assert signup_payment.created_by_id == user.id
     assert signup_payment.created_time is not None
+
+
+def create_signup_group_with_payment(
+    registration, payment_status=SignUpPayment.PaymentStatus.PAID, service_language=None
+):
+    signup_group = SignUpGroupFactory(registration=registration)
+
+    contact_person_kwargs = {
+        "signup_group": signup_group,
+        "email": "test@test.com",
+    }
+    if service_language:
+        contact_person_kwargs["service_language"] = service_language
+    SignUpContactPersonFactory(**contact_person_kwargs)
+
+    SignUpPaymentFactory(
+        signup_group=signup_group,
+        signup=None,
+        external_order_id=DEFAULT_ORDER_ID,
+        status=payment_status,
+    )
+
+    return signup_group
+
+
+def update_price_group_price(price_group, new_price):
+    price_group.price = new_price
+    price_group.calculate_vat_and_price_without_vat()
+    price_group.save()
+
+
+def create_price_group(price_group_kwargs=None, price=None):
+    price_group_kwargs = price_group_kwargs or {}
+    price_group = SignUpPriceGroupFactory(**price_group_kwargs)
+
+    if price is not None:
+        update_price_group_price(price_group, price)
+
+    return price_group
+
+
+def create_price_group_for_recurring_event(event_name=None, price=None):
+    now = localtime()
+
+    registration_kwargs = {
+        "event__start_time": now,
+        "event__end_time": now + timedelta(days=28),
+        "event__super_event_type": Event.SuperEventType.RECURRING,
+    }
+    if event_name:
+        registration_kwargs["event__name"] = event_name
+    registration = RegistrationFactory(**registration_kwargs)
+
+    return create_price_group({"signup__registration": registration}, price=price)

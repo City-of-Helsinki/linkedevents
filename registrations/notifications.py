@@ -142,6 +142,25 @@ signup_email_texts = {
                 ),
             },
         },
+        "payment_partially_refunded": {
+            "text": {
+                Event.TypeId.GENERAL: _(
+                    "You have successfully cancelled a registration to the event "
+                    "<strong>%(event_name)s</strong>. Your payment has been partially refunded "
+                    "for the amount of the cancelled registration."
+                ),
+                Event.TypeId.COURSE: _(
+                    "You have successfully cancelled a registration to the course "
+                    "<strong>%(event_name)s</strong>. Your payment has been partially refunded "
+                    "for the amount of the cancelled registration."
+                ),
+                Event.TypeId.VOLUNTEERING: _(
+                    "You have successfully cancelled a registration to the volunteering "
+                    "<strong>%(event_name)s</strong>. Your payment has been partially refunded "
+                    "for the amount of the cancelled registration."
+                ),
+            },
+        },
     },
     SignUpNotificationType.CONFIRMATION: {
         "heading": CONFIRMATION_HEADING_WITH_USERNAME,
@@ -463,8 +482,27 @@ recurring_event_signup_email_texts = {
                 ),
                 Event.TypeId.VOLUNTEERING: _(
                     "You have successfully cancelled your registration to the recurring "
-                    "volunteering <strong>%(event_name)s< %(event_period)s/strong>. "
+                    "volunteering <strong>%(event_name)s %(event_period)s</strong>. "
                     "Your payment for the registration has been refunded."
+                ),
+            },
+        },
+        "payment_partially_refunded": {
+            "text": {
+                Event.TypeId.GENERAL: _(
+                    "You have successfully cancelled a registration to the recurring event "
+                    "<strong>%(event_name)s %(event_period)s</strong>. Your payment has been "
+                    "partially refunded for the amount of the cancelled registration."
+                ),
+                Event.TypeId.COURSE: _(
+                    "You have successfully cancelled a registration to the recurring course "
+                    "<strong>%(event_name)s %(event_period)s</strong>. Your payment has been "
+                    "partially refunded for the amount of the cancelled registration."
+                ),
+                Event.TypeId.VOLUNTEERING: _(
+                    "You have successfully cancelled a registration to the recurring volunteering "
+                    "<strong>%(event_name)s %(event_period)s</strong>. Your payment has been "
+                    "partially refunded for the amount of the cancelled registration."
                 ),
             },
         },
@@ -805,6 +843,7 @@ def _format_cancellation_texts(
     event_period,
     contact_person,
     payment_refunded=False,
+    payment_partially_refunded=False,
     payment_cancelled=False,
 ):
     event_text_kwargs = _get_event_text_kwargs(event_name, event_period=event_period)
@@ -822,7 +861,11 @@ def _format_cancellation_texts(
             % event_text_kwargs
         )
 
-    if payment_refunded:
+    if payment_partially_refunded:
+        texts["text"] = text_options["payment_partially_refunded"]["text"][
+            event_type_id
+        ] % event_text_kwargs
+    elif payment_refunded:
         texts["text"] = (
             text_options["payment_refunded"]["text"][event_type_id] % event_text_kwargs
         )
@@ -879,6 +922,7 @@ def get_signup_notification_texts(
     notification_type: SignUpNotificationType,
     is_sub_event_cancellation=False,
     payment_refunded=False,
+    payment_partially_refunded=False,
     payment_cancelled=False,
 ):
     registration = contact_person.registration
@@ -936,6 +980,7 @@ def get_signup_notification_texts(
             event_period,
             contact_person,
             payment_refunded=payment_refunded,
+            payment_partially_refunded=payment_partially_refunded,
             payment_cancelled=payment_cancelled,
         )
     elif notification_type == SignUpNotificationType.CONFIRMATION:

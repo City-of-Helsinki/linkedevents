@@ -33,6 +33,7 @@ from registrations.tests.factories import (
     SignUpGroupFactory,
     SignUpGroupProtectedDataFactory,
     SignUpPaymentFactory,
+    SignUpPaymentRefundFactory,
     SignUpPriceGroupFactory,
     SignUpProtectedDataFactory,
     WebStoreAccountFactory,
@@ -498,6 +499,7 @@ class TestSignUpGroup(TestCase):
         contact_person = SignUpContactPersonFactory(signup_group=self.signup_group)
         protected_data = SignUpGroupProtectedDataFactory(signup_group=self.signup_group)
         payment = SignUpPaymentFactory(signup_group=self.signup_group, signup=None)
+        payment_refund = SignUpPaymentRefundFactory(payment=payment)
 
         self.assertFalse(self.signup_group.deleted)
         self.assertIsNone(self.signup_group.last_modified_by)
@@ -518,6 +520,8 @@ class TestSignUpGroup(TestCase):
         self.assertIsNone(payment.last_modified_by)
         payment_last_modified_time = payment.last_modified_time
 
+        self.assertFalse(payment_refund.deleted)
+
         self.signup_group.last_modified_by = self.user
         self.signup_group.soft_delete()
 
@@ -527,6 +531,7 @@ class TestSignUpGroup(TestCase):
         contact_person.refresh_from_db()
         protected_data.refresh_from_db()
         payment.refresh_from_db()
+        payment_refund.refresh_from_db()
 
         self.assertTrue(self.signup_group.deleted)
         self.assertEqual(self.signup_group.last_modified_by_id, self.user.pk)
@@ -548,6 +553,8 @@ class TestSignUpGroup(TestCase):
         self.assertTrue(payment.deleted)
         self.assertEqual(payment.last_modified_by_id, self.user.pk)
         self.assertTrue(payment.last_modified_time > payment_last_modified_time)
+
+        self.assertTrue(payment_refund.deleted)
 
     def test_undelete(self):
         self.signup_group.deleted = True
@@ -574,6 +581,10 @@ class TestSignUpGroup(TestCase):
             signup=None,
             deleted=True,
         )
+        payment_refund = SignUpPaymentRefundFactory(
+            payment=payment,
+            deleted=True,
+        )
 
         self.assertTrue(self.signup_group.deleted)
         self.assertIsNone(self.signup_group.last_modified_by)
@@ -594,6 +605,8 @@ class TestSignUpGroup(TestCase):
         self.assertIsNone(payment.last_modified_by)
         payment_last_modified_time = payment.last_modified_time
 
+        self.assertTrue(payment_refund.deleted)
+
         self.signup_group.last_modified_by = self.user
         self.signup_group.undelete()
 
@@ -603,6 +616,7 @@ class TestSignUpGroup(TestCase):
         contact_person.refresh_from_db()
         protected_data.refresh_from_db()
         payment.refresh_from_db()
+        payment_refund.refresh_from_db()
 
         self.assertFalse(self.signup_group.deleted)
         self.assertEqual(self.signup_group.last_modified_by_id, self.user.pk)
@@ -624,6 +638,8 @@ class TestSignUpGroup(TestCase):
         self.assertFalse(payment.deleted)
         self.assertEqual(payment.last_modified_by_id, self.user.pk)
         self.assertTrue(payment.last_modified_time > payment_last_modified_time)
+
+        self.assertFalse(payment_refund.deleted)
 
 
 class TestSignUp(TestCase):
@@ -869,6 +885,7 @@ class TestSignUp(TestCase):
         protected_data = SignUpProtectedDataFactory(signup=self.signup)
         price_group = SignUpPriceGroupFactory(signup=self.signup)
         payment = SignUpPaymentFactory(signup=self.signup)
+        payment_refund = SignUpPaymentRefundFactory(payment=payment)
 
         self.assertFalse(self.signup.deleted)
         self.assertIsNone(self.signup.last_modified_by)
@@ -881,6 +898,8 @@ class TestSignUp(TestCase):
         self.assertFalse(payment.deleted)
         self.assertIsNone(payment.last_modified_by)
         payment_last_modified_time = payment.last_modified_time
+
+        self.assertFalse(payment_refund.deleted)
 
         self.signup.last_modified_by = self.user
         self.signup.soft_delete()
@@ -890,6 +909,7 @@ class TestSignUp(TestCase):
         protected_data.refresh_from_db()
         price_group.refresh_from_db()
         payment.refresh_from_db()
+        payment_refund.refresh_from_db()
 
         self.assertTrue(self.signup.deleted)
         self.assertEqual(self.signup.last_modified_by_id, self.user.pk)
@@ -903,6 +923,8 @@ class TestSignUp(TestCase):
         self.assertEqual(payment.last_modified_by_id, self.user.pk)
         self.assertTrue(payment.last_modified_time > payment_last_modified_time)
 
+        self.assertTrue(payment_refund.deleted)
+
     def test_undelete(self):
         self.signup.deleted = True
         self.signup.save(update_fields=["deleted"])
@@ -911,6 +933,7 @@ class TestSignUp(TestCase):
         protected_data = SignUpProtectedDataFactory(signup=self.signup, deleted=True)
         price_group = SignUpPriceGroupFactory(signup=self.signup, deleted=True)
         payment = SignUpPaymentFactory(signup=self.signup, deleted=True)
+        payment_refund = SignUpPaymentRefundFactory(payment=payment, deleted=True)
 
         self.assertTrue(self.signup.deleted)
         self.assertIsNone(self.signup.last_modified_by)
@@ -924,6 +947,8 @@ class TestSignUp(TestCase):
         self.assertIsNone(payment.last_modified_by)
         payment_last_modified_time = payment.last_modified_time
 
+        self.assertTrue(payment_refund.deleted)
+
         self.signup.last_modified_by = self.user
         self.signup.undelete()
 
@@ -932,6 +957,7 @@ class TestSignUp(TestCase):
         protected_data.refresh_from_db()
         price_group.refresh_from_db()
         payment.refresh_from_db()
+        payment_refund.refresh_from_db()
 
         self.assertFalse(self.signup.deleted)
         self.assertEqual(self.signup.last_modified_by_id, self.user.pk)
@@ -944,6 +970,8 @@ class TestSignUp(TestCase):
         self.assertFalse(payment.deleted)
         self.assertEqual(payment.last_modified_by_id, self.user.pk)
         self.assertTrue(payment.last_modified_time > payment_last_modified_time)
+
+        self.assertFalse(payment_refund.deleted)
 
 
 class TestSignUpContactPerson(TestCase):
@@ -1228,6 +1256,44 @@ class TestSignUpPriceGroup(TestCase):
 
         self.price_group.refresh_from_db()
         self.assertFalse(self.price_group.deleted)
+
+
+class TestSignUpPayment(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.payment = SignUpPaymentFactory()
+
+    def test_soft_delete(self):
+        payment_refund = SignUpPaymentRefundFactory(payment=self.payment)
+
+        self.assertFalse(self.payment.deleted)
+        self.assertFalse(payment_refund.deleted)
+
+        self.payment.soft_delete()
+
+        self.payment.refresh_from_db()
+        payment_refund.refresh_from_db()
+
+        self.assertTrue(self.payment.deleted)
+        self.assertTrue(payment_refund.deleted)
+
+    def test_undelete(self):
+        payment_refund = SignUpPaymentRefundFactory(payment=self.payment)
+        self.payment.soft_delete()
+
+        self.payment.refresh_from_db()
+        payment_refund.refresh_from_db()
+
+        self.assertTrue(self.payment.deleted)
+        self.assertTrue(payment_refund.deleted)
+
+        self.payment.undelete()
+
+        self.payment.refresh_from_db()
+        payment_refund.refresh_from_db()
+
+        self.assertFalse(self.payment.deleted)
+        self.assertFalse(payment_refund.deleted)
 
 
 class TestWebStoreMerchant(TestCase):

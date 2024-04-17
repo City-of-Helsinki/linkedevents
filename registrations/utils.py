@@ -11,7 +11,7 @@ from icalendar import Event as CalendarEvent
 from icalendar import vText
 from requests import RequestException
 
-from registrations.exceptions import WebStoreAPIError
+from registrations.exceptions import WebStoreAPIError, WebStoreRefundValidationError
 from web_store.merchant.clients import WebStoreMerchantAPIClient
 from web_store.order.clients import WebStoreOrderAPIClient
 from web_store.payment.clients import WebStorePaymentAPIClient
@@ -194,6 +194,10 @@ def get_web_store_api_error_message(response):
     return error
 
 
+def get_web_store_api_refunds_error_messages(response_json):
+    return [str(error) for error in response_json["errors"]]
+
+
 def create_web_store_api_order(signup_or_group, localized_expiration_datetime):
     user_uuid = (
         signup_or_group.created_by.uuid if signup_or_group.created_by_id else None
@@ -245,6 +249,23 @@ def create_web_store_refund(payment):
     except RequestException as request_exc:
         api_error_message = get_web_store_api_error_message(request_exc.response)
         raise WebStoreAPIError(api_error_message)
+
+    return resp_json
+
+
+def create_web_store_refunds(orders_data):
+    client = WebStoreOrderAPIClient()
+
+    try:
+        resp_json = client.create_instant_refunds(orders_data)
+    except RequestException as request_exc:
+        api_error_message = get_web_store_api_error_message(request_exc.response)
+        raise WebStoreAPIError(api_error_message)
+
+    if orders_data and len(resp_json.get("errors", [])) == len(orders_data):
+        # All refunds have errors => raise exception.
+        refund_error_messages = get_web_store_api_refunds_error_messages(resp_json)
+        raise WebStoreRefundValidationError(refund_error_messages)
 
     return resp_json
 

@@ -20,3 +20,7 @@ class WebStoreAPIError(ValidationError):
 
 class WebStoreProductMappingValidationError(ValidationError):
     pass
+
+
+class WebStoreRefundValidationError(ValidationError):
+    pass

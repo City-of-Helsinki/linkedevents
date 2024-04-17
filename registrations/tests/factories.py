@@ -17,6 +17,7 @@ from registrations.models import (
     SignUpGroup,
     SignUpGroupProtectedData,
     SignUpPayment,
+    SignUpPaymentRefund,
     SignUpPriceGroup,
     SignUpProtectedData,
     WebStoreAccount,
@@ -159,6 +160,14 @@ class SignUpPaymentFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = SignUpPayment
+
+
+class SignUpPaymentRefundFactory(factory.django.DjangoModelFactory):
+    payment = factory.SubFactory(SignUpPaymentFactory)
+    amount = Decimal("5")
+
+    class Meta:
+        model = SignUpPaymentRefund
 
 
 class WebStoreMerchantFactory(factory.django.DjangoModelFactory):
