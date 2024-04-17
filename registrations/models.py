@@ -58,6 +58,7 @@ User = settings.AUTH_USER_MODEL
 
 logger = logging.getLogger(__name__)
 anonymize_replacement = "<DELETED>"
+web_store_price_group_meta_key = "signupPriceGroupId"
 
 VAT_PERCENTAGES = (
     (VatPercentage.VAT_24.value, "24 %"),
@@ -851,6 +852,8 @@ class SignUpMixin:
         kwargs["created_by"] = self.created_by
         kwargs["last_modified_by"] = self.created_by
 
+        SignUpPriceGroup.add_web_store_order_item_ids(api_response)
+
         return SignUpPayment.objects.create(**kwargs)
 
     @property
@@ -898,15 +901,15 @@ class SignUpMixin:
         )
 
         if order_data["items"]:
-            order_data["items"][len(order_data["items"]) - 1]["meta"] = [
+            order_data["items"][len(order_data["items"]) - 1]["meta"].append(
                 {
                     "key": "eventName",
                     "value": self.registration.event.name,
                     "label": str(self.web_store_meta_label),
                     "visibleInCheckout": True,
-                    "ordinal": "0",
+                    "ordinal": "1",
                 }
-            ]
+            )
 
         return order_data
 
@@ -1748,6 +1751,20 @@ class SignUpPriceGroup(RegistrationPriceGroupBaseModel, SoftDeletableBaseModel):
 
     description = models.CharField(max_length=255)
 
+    external_order_item_id = models.CharField(
+        max_length=64,
+        blank=True,
+    )
+
+    @staticmethod
+    def add_web_store_order_item_ids(web_store_order_response_json):
+        for order_item in web_store_order_response_json.get("items", []):
+            for meta_data in order_item.get("meta", []):
+                if meta_data["key"] == web_store_price_group_meta_key:
+                    SignUpPriceGroup.objects.filter(pk=meta_data["value"]).update(
+                        external_order_item_id=order_item["orderItemId"]
+                    )
+
     def to_web_store_order_json(self):
         if not (
             product_mapping := RegistrationWebStoreProductMapping.objects.filter(
@@ -1775,6 +1792,14 @@ class SignUpPriceGroup(RegistrationPriceGroupBaseModel, SoftDeletableBaseModel):
             "priceGross": str(strip_trailing_zeroes_from_decimal(self.price)),
             "priceVat": str(strip_trailing_zeroes_from_decimal(self.vat)),
             "vatPercentage": str(int(self.vat_percentage)),
+            "meta": [
+                {
+                    "key": web_store_price_group_meta_key,
+                    "value": str(self.pk),
+                    "visibleInCheckout": False,
+                    "ordinal": "0",
+                }
+            ],
         }
 
 

@@ -4,6 +4,7 @@ from decimal import Decimal
 from unittest.mock import patch
 
 import pytest
+import requests_mock
 from django.conf import settings
 from django.core import mail
 from django.test import override_settings
@@ -19,11 +20,13 @@ from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
 from registrations.models import (
     MandatoryFields,
+    PriceGroup,
     SeatReservationCode,
     SignUp,
     SignUpContactPerson,
     SignUpPayment,
     SignUpPriceGroup,
+    web_store_price_group_meta_key,
 )
 from registrations.notifications import NotificationType
 from registrations.tests.factories import (
@@ -198,8 +201,10 @@ def test_authenticated_users_can_create_signups(registration, api_client, user_r
         "regular_user_without_organization",
     ],
 )
-@pytest.mark.django_db
+@pytest.mark.django_db(reset_sequences=True)
 def test_authenticated_user_can_create_signups_with_payments(api_client, user_role):
+    PriceGroup.objects.all().delete()  # Delete default price groups due to reset_sequences=True
+
     language = LanguageFactory(pk="fi", service_language=True)
 
     with translation.override(language.pk):
@@ -244,22 +249,45 @@ def test_authenticated_user_can_create_signups_with_payments(api_client, user_ro
         }
     )
 
-    assert SignUpPayment.objects.count() == 0
+    order_item_id = "1234"
 
-    mocked_web_store_api_response = get_mock_response(
-        json_return_value=get_web_store_order_response(
-            payment_amount=registration_price_group.price
-        )
+    assert SignUpPayment.objects.count() == 0
+    assert (
+        SignUpPriceGroup.objects.filter(external_order_item_id=order_item_id).count()
+        == 0
     )
-    with (
-        translation.override(language.pk),
-        patch("requests.post") as mocked_web_store_api_request,
-    ):
-        mocked_web_store_api_request.return_value = mocked_web_store_api_response
+
+    mocked_web_store_json = get_web_store_order_response(
+        payment_amount=registration_price_group.price
+    )
+    mocked_web_store_json["items"] = [
+        {
+            "orderItemId": order_item_id,
+            "meta": [
+                {
+                    "key": web_store_price_group_meta_key,
+                    "value": "1",
+                }
+            ],
+        },
+    ]
+
+    with translation.override(language.pk), requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/",
+            status_code=status.HTTP_201_CREATED,
+            json=mocked_web_store_json,
+        )
 
         response = assert_create_signups(api_client, signups_data)
 
+        assert req_mock.call_count == 1
+
     assert SignUpPayment.objects.count() == 1
+    assert (
+        SignUpPriceGroup.objects.filter(external_order_item_id=order_item_id).count()
+        == 1
+    )
 
     assert_default_signup_created(signups_data, user)
     assert_signup_payment_data_is_correct(

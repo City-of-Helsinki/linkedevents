@@ -4,6 +4,7 @@ from decimal import Decimal
 from unittest.mock import patch
 
 import pytest
+import requests_mock
 from django.conf import settings
 from django.core import mail
 from django.test import override_settings
@@ -19,6 +20,7 @@ from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
 from registrations.models import (
     MandatoryFields,
+    PriceGroup,
     SeatReservationCode,
     SignUp,
     SignUpContactPerson,
@@ -26,6 +28,7 @@ from registrations.models import (
     SignUpGroupProtectedData,
     SignUpPayment,
     SignUpPriceGroup,
+    web_store_price_group_meta_key,
 )
 from registrations.tests.factories import (
     RegistrationFactory,
@@ -228,8 +231,10 @@ def test_registration_substitute_user_can_create_signup_group(api_client, regist
         "regular_user_without_organization",
     ],
 )
-@pytest.mark.django_db
+@pytest.mark.django_db(reset_sequences=True)
 def test_authenticated_user_can_create_signup_group_with_payment(api_client, user_role):
+    PriceGroup.objects.all().delete()  # Delete default price groups due to reset_sequences=True
+
     registration = RegistrationFactory(event__name="Foo")
 
     with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
@@ -275,22 +280,64 @@ def test_authenticated_user_can_create_signup_group_with_payment(api_client, use
         }
     )
 
+    order_item_id = "1234"
+    order_item_id2 = "4321"
+
     assert SignUpPayment.objects.count() == 0
+    assert (
+        SignUpPriceGroup.objects.filter(
+            external_order_item_id__in=(order_item_id, order_item_id2)
+        ).count()
+        == 0
+    )
 
     total_payment_amount = (
         registration_price_group.price + registration_price_group2.price
     )
-    mocked_web_store_api_response = get_mock_response(
-        json_return_value=get_web_store_order_response(
-            payment_amount=total_payment_amount
-        )
+    mocked_web_store_json = get_web_store_order_response(
+        payment_amount=total_payment_amount
     )
-    with patch("requests.post") as mocked_web_store_api_request:
-        mocked_web_store_api_request.return_value = mocked_web_store_api_response
+    mocked_web_store_json["items"] = [
+        {
+            "orderItemId": order_item_id,
+            "meta": [
+                {
+                    "key": web_store_price_group_meta_key,
+                    "value": "1",
+                }
+            ],
+        },
+        {
+            "orderItemId": order_item_id2,
+            "meta": [
+                {
+                    "key": web_store_price_group_meta_key,
+                    "value": "2",
+                }
+            ],
+        },
+    ]
+
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/",
+            status_code=status.HTTP_201_CREATED,
+            json=mocked_web_store_json,
+        )
 
         response = assert_create_signup_group(api_client, signup_group_data)
 
+        assert req_mock.call_count == 1
+
     assert SignUpPayment.objects.count() == 1
+    assert (
+        SignUpPriceGroup.objects.filter(external_order_item_id=order_item_id).count()
+        == 1
+    )
+    assert (
+        SignUpPriceGroup.objects.filter(external_order_item_id=order_item_id2).count()
+        == 1
+    )
 
     assert_signup_payment_data_is_correct(
         response.data["payment"],
