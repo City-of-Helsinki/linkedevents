@@ -27,6 +27,7 @@ from registrations.enums import VatPercentage
 from registrations.exceptions import (
     PriceGroupValidationError,
     WebStoreProductMappingValidationError,
+    WebStoreRefundValidationError,
 )
 from registrations.notifications import (
     get_registration_user_access_invitation_subject,
@@ -48,6 +49,7 @@ from registrations.utils import (
     create_web_store_product_accounting,
     create_web_store_product_mapping,
     create_web_store_refund,
+    create_web_store_refunds,
     get_email_noreply_address,
     get_ui_locales,
     move_first_waitlisted_to_attending,
@@ -913,14 +915,12 @@ class SignUpMixin:
 
         return order_data
 
-    def refund_or_cancel_web_store_payment(self, bypass_web_store_api_calls=False):
+    def refund_or_cancel_web_store_payment(
+        self, payment, bypass_web_store_api_calls=False
+    ):
         refunded = False
         cancelled = False
 
-        if not settings.WEB_STORE_INTEGRATION_ENABLED:
-            return refunded, cancelled
-
-        payment = getattr(self, "payment", None)
         if payment and not bypass_web_store_api_calls:
             if payment.status == SignUpPayment.PaymentStatus.PAID:
                 create_web_store_refund(payment)
@@ -966,10 +966,20 @@ class SignUpGroup(
     def delete(self, *args, **kwargs):
         contact_person = getattr(self, "contact_person", None)
         is_attending = bool(self.attending_signups)
+        payment_refunded = False
+        payment_cancelled = False
 
-        payment_refunded, payment_cancelled = self.refund_or_cancel_web_store_payment(
-            bypass_web_store_api_calls=kwargs.pop("bypass_web_store_api_calls", False)
-        )
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            payment = getattr(self, "payment", None)
+
+            payment_refunded, payment_cancelled = (
+                self.refund_or_cancel_web_store_payment(
+                    payment,
+                    bypass_web_store_api_calls=kwargs.pop(
+                        "bypass_web_store_api_calls", False
+                    ),
+                )
+            )
 
         super().delete(*args, **kwargs)
 
@@ -995,11 +1005,10 @@ class SignUpGroup(
         SignUpGroupProtectedData.objects.filter(signup_group_id=self.pk).update(
             deleted=True
         )
-        SignUpPayment.objects.filter(signup_group_id=self.pk).update(
-            deleted=True,
-            last_modified_by=self.last_modified_by,
-            last_modified_time=self.last_modified_time,
-        )
+
+        for payment in SignUpPayment.objects.filter(signup_group_id=self.pk):
+            payment.last_modified_by = self.last_modified_by
+            payment.soft_delete()
 
     @transaction.atomic
     def undelete(self):
@@ -1015,11 +1024,10 @@ class SignUpGroup(
         SignUpGroupProtectedData.all_objects.filter(signup_group_id=self.pk).update(
             deleted=False
         )
-        SignUpPayment.all_objects.filter(signup_group_id=self.pk).update(
-            deleted=False,
-            last_modified_by=self.last_modified_by,
-            last_modified_time=self.last_modified_time,
-        )
+
+        for payment in SignUpPayment.all_objects.filter(signup_group_id=self.pk):
+            payment.last_modified_by = self.last_modified_by
+            payment.undelete()
 
     @cached_property
     def signups_count(self):
@@ -1309,13 +1317,73 @@ class SignUp(
         {"name": "contact_person"},
     )
 
+    def partially_refund_signup_group_web_store_payment(
+        self, signup_group, bypass_web_store_api_calls=False
+    ):
+        partially_refunded = False
+
+        if (
+            bypass_web_store_api_calls
+            or not (group_payment := getattr(signup_group, "payment", None))
+            or group_payment.is_fully_refunded
+        ):
+            return partially_refunded
+
+        if group_payment.status == SignUpPayment.PaymentStatus.PAID:
+            orders_data = [
+                {
+                    "orderId": group_payment.external_order_id,
+                    "items": [self.price_group.to_web_store_partial_refund_json()],
+                }
+            ]
+            resp_json = create_web_store_refunds(orders_data)
+
+            try:
+                refunded_amount = Decimal(resp_json["refunds"][0]["payment"]["total"])
+            except LookupError as exc:
+                logger.error(exc)
+                refunded_amount = self.price_group.price
+
+            SignUpPaymentRefund.objects.create(
+                payment=group_payment, amount=refunded_amount
+            )
+
+            logger.info(
+                f"{self.__class__.__name__} delete: payment with ID {group_payment.pk} "
+                f"partially refunded for signup group with ID {signup_group.pk}."
+            )
+            partially_refunded = True
+        elif group_payment.status == SignUpPayment.PaymentStatus.CREATED:
+            raise WebStoreRefundValidationError(
+                _("Cannot cancel payment for a participant that belongs to a group.")
+            )
+
+        return partially_refunded
+
     @transaction.atomic
     def delete(self, *args, **kwargs):
-        contact_person = getattr(self, "contact_person", None)
+        contact_person = self.actual_contact_person
+        payment_refunded = False
+        payment_partially_refunded = False
+        payment_cancelled = False
 
-        payment_refunded, payment_cancelled = self.refund_or_cancel_web_store_payment(
-            bypass_web_store_api_calls=kwargs.pop("bypass_web_store_api_calls", False)
-        )
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            payment = getattr(self, "payment", None)
+            bypass_web_store_api_calls = kwargs.pop("bypass_web_store_api_calls", False)
+
+            if not payment and (signup_group := getattr(self, "signup_group", None)):
+                payment_partially_refunded = (
+                    self.partially_refund_signup_group_web_store_payment(
+                        signup_group,
+                        bypass_web_store_api_calls=bypass_web_store_api_calls,
+                    )
+                )
+            else:
+                payment_refunded, payment_cancelled = (
+                    self.refund_or_cancel_web_store_payment(
+                        payment, bypass_web_store_api_calls=bypass_web_store_api_calls
+                    )
+                )
 
         super().delete(*args, **kwargs)
 
@@ -1331,6 +1399,7 @@ class SignUp(
             contact_person.send_notification(
                 SignUpNotificationType.CANCELLATION,
                 payment_refunded=payment_refunded,
+                payment_partially_refunded=payment_partially_refunded,
                 payment_cancelled=payment_cancelled,
             )
 
@@ -1341,11 +1410,10 @@ class SignUp(
         SignUpContactPerson.objects.filter(signup_id=self.pk).update(deleted=True)
         SignUpProtectedData.objects.filter(signup_id=self.pk).update(deleted=True)
         SignUpPriceGroup.objects.filter(signup_id=self.pk).update(deleted=True)
-        SignUpPayment.objects.filter(signup_id=self.pk).update(
-            deleted=True,
-            last_modified_by=self.last_modified_by,
-            last_modified_time=self.last_modified_time,
-        )
+
+        for payment in SignUpPayment.objects.filter(signup_id=self.pk):
+            payment.last_modified_by = self.last_modified_by
+            payment.soft_delete()
 
     @transaction.atomic
     def undelete(self):
@@ -1354,11 +1422,10 @@ class SignUp(
         SignUpContactPerson.all_objects.filter(signup_id=self.pk).update(deleted=False)
         SignUpProtectedData.all_objects.filter(signup_id=self.pk).update(deleted=False)
         SignUpPriceGroup.all_objects.filter(signup_id=self.pk).update(deleted=False)
-        SignUpPayment.all_objects.filter(signup_id=self.pk).update(
-            deleted=False,
-            last_modified_by=self.last_modified_by,
-            last_modified_time=self.last_modified_time,
-        )
+
+        for payment in SignUpPayment.all_objects.filter(signup_id=self.pk):
+            payment.last_modified_by = self.last_modified_by
+            payment.undelete()
 
     @property
     def full_name(self):
@@ -1602,6 +1669,7 @@ class SignUpContactPerson(
         is_sub_event_cancellation=False,
         payment_link=None,
         payment_refunded=False,
+        payment_partially_refunded=False,
         payment_cancelled=False,
     ):
         [_, linked_registrations_ui_locale] = get_ui_locales(self.service_language)
@@ -1633,6 +1701,7 @@ class SignUpContactPerson(
                 notification_type,
                 is_sub_event_cancellation=is_sub_event_cancellation,
                 payment_refunded=payment_refunded,
+                payment_partially_refunded=payment_partially_refunded,
                 payment_cancelled=payment_cancelled,
             )
             email_variables["payment_url"] = payment_link
@@ -1660,6 +1729,7 @@ class SignUpContactPerson(
         is_sub_event_cancellation=False,
         payment_link=None,
         payment_refunded=False,
+        payment_partially_refunded=False,
         payment_cancelled=False,
     ):
         message = self.get_notification_message(
@@ -1668,6 +1738,7 @@ class SignUpContactPerson(
             is_sub_event_cancellation=is_sub_event_cancellation,
             payment_link=payment_link,
             payment_refunded=payment_refunded,
+            payment_partially_refunded=payment_partially_refunded,
             payment_cancelled=payment_cancelled,
         )
         rendered_body = message[1]
@@ -1802,6 +1873,12 @@ class SignUpPriceGroup(RegistrationPriceGroupBaseModel, SoftDeletableBaseModel):
             ],
         }
 
+    def to_web_store_partial_refund_json(self):
+        return {
+            "orderItemId": self.external_order_item_id,
+            "quantity": 1,
+        }
+
 
 class SignUpPayment(
     SignUpOrGroupDependingMixin, CreatedModifiedBaseModel, SoftDeletableBaseModel
@@ -1865,6 +1942,41 @@ class SignUpPayment(
     checkout_url = models.URLField(null=True, blank=True, default=None)
 
     logged_in_checkout_url = models.URLField(null=True, blank=True, default=None)
+
+    @transaction.atomic
+    def soft_delete(self):
+        super().soft_delete()
+
+        SignUpPaymentRefund.objects.filter(payment_id=self.pk).update(deleted=True)
+
+    @transaction.atomic
+    def undelete(self):
+        super().undelete()
+
+        SignUpPaymentRefund.all_objects.filter(payment_id=self.pk).update(deleted=False)
+
+    @property
+    def is_fully_refunded(self):
+        return (
+            self.refunds.aggregate(Sum("amount"))["amount__sum"] or 0
+        ) >= self.amount
+
+
+class SignUpPaymentRefund(SoftDeletableBaseModel):
+    """Used for keeping track of partial refunds for signup group payments."""
+
+    payment = models.ForeignKey(
+        SignUpPayment,
+        related_name="refunds",
+        on_delete=models.CASCADE,
+    )
+
+    amount = models.DecimalField(max_digits=19, decimal_places=2)
+
+    created_time = models.DateTimeField(
+        verbose_name=_("Created at"),
+        auto_now_add=True,
+    )
 
 
 class WebStoreAccount(CreatedModifiedBaseModel):

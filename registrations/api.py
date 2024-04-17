@@ -33,6 +33,7 @@ from registrations.exceptions import (
     PriceGroupValidationError,
     WebStoreAPIError,
     WebStoreProductMappingValidationError,
+    WebStoreRefundValidationError,
 )
 from registrations.exports import RegistrationSignUpsExportXLSX
 from registrations.filters import (
@@ -107,7 +108,7 @@ class SignUpPaymentRefundMixin:
     def perform_destroy(self, instance):
         try:
             super().perform_destroy(instance)
-        except WebStoreAPIError as exc:
+        except (WebStoreAPIError, WebStoreRefundValidationError) as exc:
             raise ValidationError(exc.messages)
 
 
@@ -419,15 +420,6 @@ class SignUpViewSet(
 
     @transaction.atomic
     def perform_destroy(self, instance):
-        if (
-            settings.WEB_STORE_INTEGRATION_ENABLED
-            and instance.signup_group
-            and getattr(instance.signup_group, "payment", None)
-        ):
-            raise ValidationError(
-                _("Cannot delete a participant from a group with a payment.")
-            )
-
         instance._individually_deleted = True
         super().perform_destroy(instance)
 
