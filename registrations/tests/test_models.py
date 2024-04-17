@@ -18,6 +18,7 @@ from registrations.enums import VatPercentage
 from registrations.exceptions import PriceGroupValidationError
 from registrations.models import (
     RegistrationWebStoreProductMapping,
+    web_store_price_group_meta_key,
     WebStoreAccount,
     WebStoreMerchant,
 )
@@ -401,6 +402,14 @@ class TestSignUpGroup(TestCase):
                         "priceGross": price_total,
                         "priceVat": price_vat,
                         "vatPercentage": str(int(price_group.vat_percentage)),
+                        "meta": [
+                            {
+                                "key": web_store_price_group_meta_key,
+                                "value": str(price_group.pk),
+                                "visibleInCheckout": False,
+                                "ordinal": "0",
+                            }
+                        ],
                     },
                     {
                         "productId": product_mapping.external_product_id,
@@ -416,12 +425,18 @@ class TestSignUpGroup(TestCase):
                         "vatPercentage": str(int(price_group2.vat_percentage)),
                         "meta": [
                             {
+                                "key": web_store_price_group_meta_key,
+                                "value": str(price_group2.pk),
+                                "visibleInCheckout": False,
+                                "ordinal": "0",
+                            },
+                            {
                                 "key": "eventName",
                                 "value": self.signup_group.registration.event.name,
                                 "label": self.signup_group.web_store_meta_label,
                                 "visibleInCheckout": True,
-                                "ordinal": "0",
-                            }
+                                "ordinal": "1",
+                            },
                         ],
                     },
                 ],
@@ -802,12 +817,18 @@ class TestSignUp(TestCase):
                         "vatPercentage": str(int(price_group.vat_percentage)),
                         "meta": [
                             {
+                                "key": web_store_price_group_meta_key,
+                                "value": str(price_group.pk),
+                                "visibleInCheckout": False,
+                                "ordinal": "0",
+                            },
+                            {
                                 "key": "eventName",
                                 "value": self.signup.registration.event.name,
                                 "label": self.signup.web_store_meta_label,
                                 "visibleInCheckout": True,
-                                "ordinal": "0",
-                            }
+                                "ordinal": "1",
+                            },
                         ],
                     },
                 ],
@@ -1179,6 +1200,14 @@ class TestSignUpPriceGroup(TestCase):
                 "priceGross": price_total,
                 "priceVat": price_vat,
                 "vatPercentage": str(int(self.price_group.vat_percentage)),
+                "meta": [
+                    {
+                        "key": web_store_price_group_meta_key,
+                        "value": str(self.price_group.pk),
+                        "visibleInCheckout": False,
+                        "ordinal": "0",
+                    }
+                ],
             },
         )
 
