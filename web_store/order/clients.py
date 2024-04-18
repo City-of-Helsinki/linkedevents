@@ -25,9 +25,9 @@ class WebStoreOrderAPIClient(WebStoreAPIBaseClient):
             },
         )
 
-    def cancel_order(self, order_id: str) -> dict:
+    def cancel_order(self, order_id: str, user_uuid: str) -> dict:
         return self._make_request(
-            f"{self.order_api_base_url}/{order_id}/cancel",
+            f"{self.order_api_base_url}{order_id}/cancel",
             "post",
-            headers={"api-key": self.api_key},
+            headers={"user": user_uuid},
         )

@@ -1,6 +1,5 @@
 from decimal import Decimal
 from unittest.mock import patch
-from uuid import uuid4
 
 import pytest
 from django.conf import settings
@@ -12,7 +11,8 @@ from web_store.order.clients import WebStoreOrderAPIClient
 from web_store.order.enums import WebStoreOrderStatus
 from web_store.tests.utils import get_mock_response
 
-DEFAULT_ORDER_ID = str(uuid4())
+DEFAULT_USER_UUID = "f5e87f5c-8d16-4746-8e96-5a5a88b9224e"
+DEFAULT_ORDER_ID = "c7ae2960-8284-4b92-b82e-9da882c452d7"
 DEFAULT_ITEM = {
     "productId": "product_id",
     "productName": "description",
@@ -170,7 +170,9 @@ def test_cancel_order_success():
 
     with patch("requests.post") as mocked_request:
         mocked_request.return_value = mocked_response
-        response_json = client.cancel_order(order_id=DEFAULT_ORDER_ID)
+        response_json = client.cancel_order(
+            order_id=DEFAULT_ORDER_ID, user_uuid=DEFAULT_USER_UUID
+        )
 
         assert response_json == DEFAULT_CANCEL_ORDER_DATA
 
@@ -190,4 +192,4 @@ def test_cancel_order_exception(status_code):
 
     with patch("requests.post") as mocked_request, pytest.raises(RequestException):
         mocked_request.return_value = mocked_response
-        client.cancel_order(order_id=DEFAULT_ORDER_ID)
+        client.cancel_order(order_id=DEFAULT_ORDER_ID, user_uuid=DEFAULT_USER_UUID)

@@ -56,9 +56,13 @@ class Command(BaseCommand):
         payment.status = SignUpPayment.PaymentStatus.EXPIRED
         payment.save(update_fields=["status"])
 
+        user = getattr(payment, "created_by", None)
+
         try:
             # Talpa recommends to cancel the order in this case.
-            order_api_client.cancel_order(payment.external_order_id)
+            order_api_client.cancel_order(
+                payment.external_order_id, user_uuid=str(getattr(user, "uuid", ""))
+            )
         except RequestException as exc:
             status_code = getattr(exc.response, "status_code", None)
 

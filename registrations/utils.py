@@ -263,9 +263,12 @@ def create_web_store_product_mapping(product_mapping_data: dict):
 
 def cancel_web_store_order(payment):
     client = WebStoreOrderAPIClient()
+    user = getattr(payment, "created_by", None)
 
     try:
-        resp_json = client.cancel_order(payment.external_order_id)
+        resp_json = client.cancel_order(
+            payment.external_order_id, user_uuid=str(getattr(user, "uuid", ""))
+        )
     except RequestException as request_exc:
         api_error_message = get_web_store_api_error_message(request_exc.response)
         raise WebStoreAPIError(api_error_message)
