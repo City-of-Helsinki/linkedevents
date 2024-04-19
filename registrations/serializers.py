@@ -12,6 +12,7 @@ from rest_framework.fields import DateTimeField
 
 from events.models import Language
 from events.utils import clean_text_fields
+from helevents.models import User
 from linkedevents.serializers import TranslatedModelSerializer
 from registrations.exceptions import (
     ConflictException,
@@ -102,14 +103,34 @@ def _notify_contact_person(
     )
 
 
-def _validate_registration_enrolment_times(registration: Registration) -> None:
+def _validate_registration_enrolment_times(
+    registration: Registration, user: User
+) -> None:
     enrolment_start_time = registration.enrolment_start_time
     enrolment_end_time = registration.enrolment_end_time
     current_time = localtime()
 
     if enrolment_start_time and current_time < enrolment_start_time:
         raise ConflictException(_("Enrolment is not yet open."))
-    if enrolment_end_time and current_time > enrolment_end_time:
+
+    # Allow a superuser, registration admin, created_by event admin or a substitute user
+    # to add signups to a closed registration.
+    if (
+        enrolment_end_time
+        and current_time > enrolment_end_time
+        and not (
+            user.is_authenticated
+            and (
+                user.is_superuser
+                or user.is_registration_admin_of(registration.publisher)
+                or (
+                    user.id == registration.created_by_id
+                    and user.is_admin_of(registration.publisher)
+                )
+                or user.is_substitute_user_of(registration.registration_user_accesses)
+            )
+        )
+    ):
         raise ConflictException(_("Enrolment is already closed."))
 
 
@@ -862,10 +883,11 @@ class CreateSignUpsSerializer(serializers.Serializer):
         registration = data["registration"]
         # Clean html tags from the text fields
         data = clean_text_fields(data, strip=True)
+        user = self.context["request"].user
 
         # Prevent to signup if enrolment is not open.
         # Raises 409 error if enrolment is not open
-        _validate_registration_enrolment_times(registration)
+        _validate_registration_enrolment_times(registration, user)
 
         try:
             reservation = SeatReservationCode.objects.get(
@@ -1292,10 +1314,11 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(errors)
 
         registration = data["registration"]
+        user = self.context["request"].user
 
         # Prevent to reserve seats if enrolment is not open.
         # Raises 409 error if enrolment is not open
-        _validate_registration_enrolment_times(registration)
+        _validate_registration_enrolment_times(registration, user)
 
         maximum_group_size = registration.maximum_group_size
 
