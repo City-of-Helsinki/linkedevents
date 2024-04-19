@@ -1268,9 +1268,8 @@ def test_group_send_email_with_payment_link_when_moving_participant_from_waitlis
 
     assert SignUpPayment.objects.count() == 1
 
-    # Signup 2 status is not changed until a webhook notification updates the status.
     signup2.refresh_from_db()
-    assert signup2.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
+    assert signup2.attendee_status == SignUp.AttendeeStatus.ATTENDING
 
     assert_payment_link_email_sent(
         contact_person2,
@@ -1313,7 +1312,7 @@ def test_group_send_email_with_payment_link_when_moving_participant_from_waitlis
 )
 @freeze_time("2024-02-01 03:30:00+02:00")
 @pytest.mark.django_db
-def test_group_send_email_with_payment_link_when_moving_participant_from_waitlist_for_recurring_event(
+def test_group_send_email_with_payment_link_when_moving_to_participant_for_recurring_event(
     api_client,
     service_language,
     expected_subject,
@@ -1378,9 +1377,8 @@ def test_group_send_email_with_payment_link_when_moving_participant_from_waitlis
 
     assert SignUpPayment.objects.count() == 1
 
-    # Signup 2 status is not changed until a webhook notification updates the status.
     signup2.refresh_from_db()
-    assert signup2.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
+    assert signup2.attendee_status == SignUp.AttendeeStatus.ATTENDING
 
     assert_payment_link_email_sent(
         contact_person2,

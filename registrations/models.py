@@ -558,6 +558,9 @@ class Registration(CreatedModifiedBaseModel):
         if not payment:
             self.move_first_waitlisted_to_attending(first_on_list)
         else:
+            first_on_list.attendee_status = SignUp.AttendeeStatus.ATTENDING
+            first_on_list.save(update_fields=["attendee_status"])
+
             contact_person = first_on_list.actual_contact_person
             contact_person.send_notification(
                 SignUpNotificationType.TRANSFER_AS_PARTICIPANT_WITH_PAYMENT,

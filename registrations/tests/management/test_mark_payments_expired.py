@@ -332,7 +332,7 @@ def test_mark_payments_expired_signup_moved_to_waitlisted_with_payment_link():
     assert SignUp.objects.count() == 1
 
     waitlisted_signup.refresh_from_db()
-    assert waitlisted_signup.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
+    assert waitlisted_signup.attendee_status == SignUp.AttendeeStatus.ATTENDING
 
     new_payment = SignUpPayment.objects.first()
     assert new_payment.signup_id == waitlisted_signup.pk
@@ -504,7 +504,7 @@ def test_mark_payments_expired_payment_cancelled_signup_moved_to_waitlisted_with
     assert SignUp.objects.count() == 1
 
     waitlisted_signup.refresh_from_db()
-    assert waitlisted_signup.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
+    assert waitlisted_signup.attendee_status == SignUp.AttendeeStatus.ATTENDING
 
     new_payment = SignUpPayment.objects.first()
     assert new_payment.signup_id == waitlisted_signup.pk
