@@ -7,6 +7,8 @@ from rest_framework import status
 from audit_log.models import AuditLogEntry
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
+from registrations.tests.factories import RegistrationUserAccessFactory
+from registrations.tests.utils import create_user_by_role
 
 
 def reserve_seats(api_client, reservation_data):
@@ -111,15 +113,107 @@ def test_cannot_reserve_seats_if_enrolment_is_not_opened(user_api_client, regist
 
 
 @pytest.mark.django_db
-def test_cannot_reserve_seats_if_enrolment_is_closed(user_api_client, registration):
+def test_non_created_event_admin_cannot_reserve_seats_if_enrolment_is_closed(
+    api_client, registration
+):
+    user = create_user_by_role("admin", registration.publisher)
+    api_client.force_authenticate(user)
+
     registration.enrolment_start_time = localtime() - timedelta(days=2)
     registration.enrolment_end_time = localtime() - timedelta(days=1)
     registration.save(update_fields=["enrolment_start_time", "enrolment_end_time"])
 
     reservation_data = {"seats": 1, "registration": registration.id}
-    response = reserve_seats(user_api_client, reservation_data)
+    response = reserve_seats(api_client, reservation_data)
     assert response.status_code == status.HTTP_409_CONFLICT
     assert response.data["detail"] == "Enrolment is already closed."
+
+
+@pytest.mark.django_db
+def test_created_event_admin_can_reserve_seats_if_enrolment_is_closed(
+    api_client, registration
+):
+    user = create_user_by_role("admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    registration.created_by = user
+    registration.enrolment_start_time = localtime() - timedelta(days=2)
+    registration.enrolment_end_time = localtime() - timedelta(days=1)
+    registration.save(
+        update_fields=["created_by", "enrolment_start_time", "enrolment_end_time"]
+    )
+
+    reservation_data = {"seats": 1, "registration": registration.id}
+    assert_reserve_seats(api_client, reservation_data)
+
+
+@pytest.mark.parametrize("user_role", ["regular_user", "admin"])
+@pytest.mark.django_db
+def test_registration_user_access_cannot_reserve_seats_if_enrolment_is_closed(
+    api_client, registration, user_role
+):
+    user = create_user_by_role(user_role, registration.publisher)
+    api_client.force_authenticate(user)
+
+    RegistrationUserAccessFactory(
+        registration=registration,
+        email=user.email,
+    )
+
+    registration.enrolment_start_time = localtime() - timedelta(days=2)
+    registration.enrolment_end_time = localtime() - timedelta(days=1)
+    registration.save(update_fields=["enrolment_start_time", "enrolment_end_time"])
+
+    reservation_data = {"seats": 1, "registration": registration.id}
+    response = reserve_seats(api_client, reservation_data)
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.data["detail"] == "Enrolment is already closed."
+
+
+@pytest.mark.parametrize("user_role", ["superuser", "registration_admin", "admin"])
+@pytest.mark.django_db
+def test_superuser_or_registration_admin_can_reserve_seats_if_enrolment_is_closed(
+    api_client, registration, user_role
+):
+    user = create_user_by_role(user_role, registration.publisher)
+    if user_role == "admin":
+        # A user with both an event admin and a registration admin role.
+        user.registration_admin_organizations.add(registration.publisher)
+
+    api_client.force_authenticate(user)
+
+    registration.enrolment_start_time = localtime() - timedelta(days=2)
+    registration.enrolment_end_time = localtime() - timedelta(days=1)
+    registration.save(update_fields=["enrolment_start_time", "enrolment_end_time"])
+
+    reservation_data = {"seats": 1, "registration": registration.id}
+    assert_reserve_seats(api_client, reservation_data)
+
+
+@pytest.mark.django_db
+def test_substitute_user_can_reserve_seats_if_enrolment_is_closed(
+    api_client, registration
+):
+    user = create_user_by_role("regular_user", registration.publisher)
+    user.email = "user@hel.fi"
+    user.save(update_fields=["email"])
+
+    api_client.force_authenticate(user)
+
+    RegistrationUserAccessFactory(
+        registration=registration,
+        email=user.email,
+        is_substitute_user=True,
+    )
+
+    registration.enrolment_start_time = localtime() - timedelta(days=2)
+    registration.enrolment_end_time = localtime() - timedelta(days=1)
+    registration.save(
+        update_fields=["created_by", "enrolment_start_time", "enrolment_end_time"]
+    )
+
+    reservation_data = {"seats": 1, "registration": registration.id}
+    assert_reserve_seats(api_client, reservation_data)
 
 
 @pytest.mark.django_db

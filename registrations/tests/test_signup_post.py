@@ -841,15 +841,22 @@ def test_add_signups_to_group(user_api_client, languages, registration, user):
     )
 
 
+@pytest.mark.parametrize("user_role", ["regular_user", "admin"])
 @pytest.mark.django_db
-def test_cannot_signup_if_enrolment_is_not_opened(
-    user_api_client, event, registration, user
+def test_registration_user_access_cannot_signup_if_enrolment_is_not_opened(
+    api_client, registration, user_role
 ):
-    user.get_default_organization().registration_admin_users.add(user)
+    user = create_user_by_role(user_role, registration.publisher)
+    api_client.force_authenticate(user)
+
+    RegistrationUserAccessFactory(
+        registration=registration,
+        email=user.email,
+    )
 
     registration.enrolment_start_time = localtime() + timedelta(days=1)
     registration.enrolment_end_time = localtime() + timedelta(days=2)
-    registration.save()
+    registration.save(update_fields=["enrolment_start_time", "enrolment_end_time"])
 
     reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signup_data = {
@@ -865,20 +872,21 @@ def test_cannot_signup_if_enrolment_is_not_opened(
         "reservation_code": reservation.code,
         "signups": [signup_data],
     }
-    response = create_signups(user_api_client, signups_data)
+    response = create_signups(api_client, signups_data)
     assert response.status_code == status.HTTP_409_CONFLICT
     assert response.data["detail"] == "Enrolment is not yet open."
 
 
 @pytest.mark.django_db
-def test_cannot_signup_if_enrolment_is_closed(
-    user_api_client, event, registration, user
+def test_non_created_event_admin_cannot_signup_if_enrolment_is_closed(
+    api_client, registration, user
 ):
-    user.get_default_organization().registration_admin_users.add(user)
+    user = create_user_by_role("admin", registration.publisher)
+    api_client.force_authenticate(user)
 
     registration.enrolment_start_time = localtime() - timedelta(days=2)
     registration.enrolment_end_time = localtime() - timedelta(days=1)
-    registration.save()
+    registration.save(update_fields=["enrolment_start_time", "enrolment_end_time"])
 
     reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signup_data = {
@@ -894,9 +902,108 @@ def test_cannot_signup_if_enrolment_is_closed(
         "reservation_code": reservation.code,
         "signups": [signup_data],
     }
-    response = create_signups(user_api_client, signups_data)
+    response = create_signups(api_client, signups_data)
     assert response.status_code == status.HTTP_409_CONFLICT
     assert response.data["detail"] == "Enrolment is already closed."
+
+
+@pytest.mark.django_db
+def test_created_event_admin_can_signup_if_enrolment_is_closed(
+    api_client, registration, user
+):
+    user = create_user_by_role("admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    registration.created_by = user
+    registration.enrolment_start_time = localtime() - timedelta(days=2)
+    registration.enrolment_end_time = localtime() - timedelta(days=1)
+    registration.save(
+        update_fields=["created_by", "enrolment_start_time", "enrolment_end_time"]
+    )
+
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
+    signup_data = {
+        "first_name": "Michael",
+        "last_name": "Jackson",
+        "contact_person": {
+            "email": test_email1,
+            "phone_number": "0441111111",
+        },
+    }
+    signups_data = {
+        "registration": registration.id,
+        "reservation_code": reservation.code,
+        "signups": [signup_data],
+    }
+    assert_create_signups(api_client, signups_data)
+
+
+@pytest.mark.parametrize("user_role", ["superuser", "registration_admin", "admin"])
+@pytest.mark.django_db
+def test_superuser_or_registration_admin_can_signup_if_enrolment_is_closed(
+    api_client, registration, user_role
+):
+    user = create_user_by_role(user_role, registration.publisher)
+    if user_role == "admin":
+        # A user with both an event admin and a registration admin role.
+        user.registration_admin_organizations.add(registration.publisher)
+
+    api_client.force_authenticate(user)
+
+    registration.enrolment_start_time = localtime() - timedelta(days=2)
+    registration.enrolment_end_time = localtime() - timedelta(days=1)
+    registration.save(update_fields=["enrolment_start_time", "enrolment_end_time"])
+
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
+    signup_data = {
+        "first_name": "Michael",
+        "last_name": "Jackson",
+        "contact_person": {
+            "email": test_email1,
+            "phone_number": "0441111111",
+        },
+    }
+    signups_data = {
+        "registration": registration.id,
+        "reservation_code": reservation.code,
+        "signups": [signup_data],
+    }
+    assert_create_signups(api_client, signups_data)
+
+
+@pytest.mark.django_db
+def test_substitute_user_can_signup_if_enrolment_is_closed(api_client, registration):
+    user = create_user_by_role("regular_user", registration.publisher)
+    user.email = hel_email
+    user.save(update_fields=["email"])
+
+    api_client.force_authenticate(user)
+
+    RegistrationUserAccessFactory(
+        registration=registration,
+        email=user.email,
+        is_substitute_user=True,
+    )
+
+    registration.enrolment_start_time = localtime() - timedelta(days=2)
+    registration.enrolment_end_time = localtime() - timedelta(days=1)
+    registration.save(update_fields=["enrolment_start_time", "enrolment_end_time"])
+
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
+    signup_data = {
+        "first_name": "Michael",
+        "last_name": "Jackson",
+        "contact_person": {
+            "email": test_email1,
+            "phone_number": "0441111111",
+        },
+    }
+    signups_data = {
+        "registration": registration.id,
+        "reservation_code": reservation.code,
+        "signups": [signup_data],
+    }
+    assert_create_signups(api_client, signups_data)
 
 
 @pytest.mark.django_db
