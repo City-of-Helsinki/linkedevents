@@ -429,6 +429,41 @@ recurring_event_signup_email_texts = {
                 "<strong>%(event_name)s %(event_period)s</strong>."
             ),
         },
+        "payment_cancelled": {
+            "text": {
+                Event.TypeId.GENERAL: _(
+                    "Your registration and payment for the recurring event "
+                    "<strong>%(event_name)s %(event_period)s</strong> have been cancelled."
+                ),
+                Event.TypeId.COURSE: _(
+                    "Your registration and payment for the recurring course "
+                    "<strong>%(event_name)s %(event_period)s</strong> have been cancelled."
+                ),
+                Event.TypeId.VOLUNTEERING: _(
+                    "Your registration to the recurring volunteering "
+                    "<strong>%(event_name)s %(event_period)s</strong> has been cancelled."
+                ),
+            },
+        },
+        "payment_refunded": {
+            "text": {
+                Event.TypeId.GENERAL: _(
+                    "You have successfully cancelled your registration to the recurring "
+                    "event <strong>%(event_name)s %(event_period)s</strong>. "
+                    "Your payment for the registration has been refunded."
+                ),
+                Event.TypeId.COURSE: _(
+                    "You have successfully cancelled your registration to the recurring "
+                    "course <strong>%(event_name)s %(event_period)s</strong>. "
+                    "Your payment for the registration has been refunded."
+                ),
+                Event.TypeId.VOLUNTEERING: _(
+                    "You have successfully cancelled your registration to the recurring "
+                    "volunteering <strong>%(event_name)s< %(event_period)s/strong>. "
+                    "Your payment for the registration has been refunded."
+                ),
+            },
+        },
     },
     SignUpNotificationType.CONFIRMATION: {
         "heading": CONFIRMATION_HEADING_WITH_USERNAME,
@@ -750,13 +785,13 @@ def _format_cancellation_texts(
         )
 
     if payment_refunded:
-        texts["text"] = text_options["payment_refunded"]["text"][event_type_id] % {
-            "event_name": event_name
-        }
+        texts["text"] = (
+            text_options["payment_refunded"]["text"][event_type_id] % event_text_kwargs
+        )
     elif payment_cancelled:
-        texts["text"] = text_options["payment_cancelled"]["text"][event_type_id] % {
-            "event_name": event_name
-        }
+        texts["text"] = (
+            text_options["payment_cancelled"]["text"][event_type_id] % event_text_kwargs
+        )
 
 
 def _format_confirmation_texts(

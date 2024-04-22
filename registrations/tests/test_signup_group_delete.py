@@ -3,6 +3,7 @@ from decimal import Decimal
 from unittest.mock import patch, PropertyMock
 
 import pytest
+import requests_mock
 from django.conf import settings
 from django.core import mail
 from django.test import override_settings
@@ -39,6 +40,10 @@ from registrations.tests.utils import (
     assert_payment_link_email_sent,
     create_user_by_role,
     get_web_store_order_response,
+)
+from web_store.tests.order.test_web_store_order_api_client import (
+    DEFAULT_CANCEL_ORDER_DATA,
+    DEFAULT_ORDER_ID,
 )
 from web_store.tests.payment.test_web_store_payment_api_client import (
     DEFAULT_GET_REFUND_DATA,
@@ -1612,6 +1617,171 @@ def test_signup_grop_web_store_automatically_fully_refund_paid_signup_payment(
 
         assert_delete_signup_group(api_client, signup_group.pk)
         assert mocked_web_store_request.called is True
+
+    assert SignUpPayment.objects.count() == 0
+    assert SignUpPriceGroup.objects.count() == 0
+
+    assert len(mail.outbox) == 1
+    assert mail.outbox[0].subject == expected_subject
+    assert expected_text in str(mail.outbox[0].alternatives[0])
+
+
+@pytest.mark.parametrize(
+    "service_lang,expected_subject,expected_text",
+    [
+        (
+            "en",
+            "Registration cancelled - Recurring: Foo",
+            "You have successfully cancelled your registration to the recurring event "
+            "<strong>Foo 1 Feb 2024 - 29 Feb 2024</strong>. Your payment for the registration has "
+            "been refunded.",
+        ),
+        (
+            "fi",
+            "Ilmoittautuminen peruttu - Sarja: Foo",
+            "Olet onnistuneesti peruuttanut ilmoittautumisesi sarjatapahtumaan "
+            "<strong>Foo 1.2.2024 - 29.2.2024</strong>. Ilmoittautumismaksusi on hyvitetty.",
+        ),
+        (
+            "sv",
+            "Registreringen avbruten - Serie: Foo",
+            "Du har avbrutit din registrering till serieevenemanget "
+            "<strong>Foo 1.2.2024 - 29.2.2024</strong>. Din betalning för registreringen har "
+            "återbetalats.",
+        ),
+    ],
+)
+@freeze_time("2024-02-01 03:30:00+02:00")
+@pytest.mark.django_db
+def test_web_store_automatically_fully_refund_paid_signup_group_payment_for_recurring_event(
+    api_client, service_lang, expected_subject, expected_text
+):
+    language = LanguageFactory(pk=service_lang, service_language=True)
+
+    with translation.override(language.pk):
+        now = localtime()
+        registration = RegistrationFactory(
+            event__start_time=now,
+            event__end_time=now + timedelta(days=28),
+            event__super_event_type=Event.SuperEventType.RECURRING,
+            event__name="Foo",
+        )
+        price_group = SignUpPriceGroupFactory(signup__registration=registration)
+
+    signup = price_group.signup
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    signup.signup_group = signup_group
+    signup.save(update_fields=["signup_group"])
+
+    SignUpContactPersonFactory(
+        signup_group=signup_group, email="test@test.com", service_language=language
+    )
+    SignUpPaymentFactory(
+        signup=None,
+        signup_group=signup_group,
+        external_order_id=DEFAULT_ORDER_ID,
+        status=SignUpPayment.PaymentStatus.PAID,
+    )
+
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    assert SignUpPayment.objects.count() == 1
+    assert SignUpPriceGroup.objects.count() == 1
+
+    with (
+        translation.override(language.pk),
+        requests_mock.Mocker() as req_mock,
+    ):
+        req_mock.get(
+            f"{settings.WEB_STORE_API_BASE_URL}payment/refund/instant/{DEFAULT_ORDER_ID}",
+            json=DEFAULT_GET_REFUND_DATA,
+        )
+
+        assert_delete_signup_group(api_client, signup_group.pk)
+
+        assert req_mock.call_count == 1
+
+    assert SignUpPayment.objects.count() == 0
+    assert SignUpPriceGroup.objects.count() == 0
+
+    assert len(mail.outbox) == 1
+    assert mail.outbox[0].subject == expected_subject
+    assert expected_text in str(mail.outbox[0].alternatives[0])
+
+
+@pytest.mark.parametrize(
+    "service_lang,expected_subject,expected_text",
+    [
+        (
+            "en",
+            "Registration cancelled - Recurring: Foo",
+            "Your registration and payment for the recurring event "
+            "<strong>Foo 1 Feb 2024 - 29 Feb 2024</strong> have been cancelled.",
+        ),
+        (
+            "fi",
+            "Ilmoittautuminen peruttu - Sarja: Foo",
+            "Ilmoittautumisesi ja maksusi sarjatapahtumaan "
+            "<strong>Foo 1.2.2024 - 29.2.2024</strong> on peruttu.",
+        ),
+        (
+            "sv",
+            "Registreringen avbruten - Serie: Foo",
+            "Din registrering och betalning för serieevenemanget "
+            "<strong>Foo 1.2.2024 - 29.2.2024</strong> har ställts in.",
+        ),
+    ],
+)
+@freeze_time("2024-02-01 03:30:00+02:00")
+@pytest.mark.django_db
+def test_web_store_cancel_unpaid_created_signup_group_payment_on_delete_for_recurring_event(
+    api_client, service_lang, expected_subject, expected_text
+):
+    language = LanguageFactory(pk=service_lang, service_language=True)
+
+    with translation.override(language.pk):
+        now = localtime()
+        registration = RegistrationFactory(
+            event__start_time=now,
+            event__end_time=now + timedelta(days=28),
+            event__super_event_type=Event.SuperEventType.RECURRING,
+            event__name="Foo",
+        )
+        price_group = SignUpPriceGroupFactory(signup__registration=registration)
+
+    signup = price_group.signup
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    signup.signup_group = signup_group
+    signup.save(update_fields=["signup_group"])
+
+    SignUpContactPersonFactory(
+        signup_group=signup_group, email="test@test.com", service_language=language
+    )
+    SignUpPaymentFactory(
+        signup=None,
+        signup_group=signup_group,
+        external_order_id=DEFAULT_ORDER_ID,
+        status=SignUpPayment.PaymentStatus.CREATED,
+    )
+
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    assert SignUpPayment.objects.count() == 1
+    assert SignUpPriceGroup.objects.count() == 1
+
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/{DEFAULT_ORDER_ID}/cancel",
+            json=DEFAULT_CANCEL_ORDER_DATA,
+        )
+
+        assert_delete_signup_group(api_client, signup_group.pk)
+
+        assert req_mock.call_count == 1
 
     assert SignUpPayment.objects.count() == 0
     assert SignUpPriceGroup.objects.count() == 0
