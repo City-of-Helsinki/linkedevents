@@ -198,6 +198,23 @@ class TestRegistration(TestCase):
                 ):
                     self.registration.get_waitlisted(count=count)
 
+    def test_has_payments_with_signups(self):
+        self.assertFalse(self.registration.has_payments)
+
+        SignUpPaymentFactory(signup__registration=self.registration)
+
+        self.assertTrue(self.registration.has_payments)
+
+    def test_has_payments_with_signup_groups(self):
+        self.assertFalse(self.registration.has_payments)
+
+        SignUpPaymentFactory(
+            signup=None,
+            signup_group=SignUpGroupFactory(registration=self.registration),
+        )
+
+        self.assertTrue(self.registration.has_payments)
+
 
 class TestRegistrationUserAccess(TestCase):
     def setUp(self):
