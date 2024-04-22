@@ -3651,7 +3651,11 @@ class EventViewSet(
         ):
             raise DRFPermissionDenied()
 
-        serializer.save()
+        try:
+            serializer.save()
+        except WebStoreAPIError as exc:
+            raise serializers.ValidationError(exc.messages)
+
         response = Response(data=serializer.data)
 
         original_event = Event.objects.get(id=response.data["id"])
@@ -3682,7 +3686,10 @@ class EventViewSet(
             ):
                 raise DRFPermissionDenied()
 
-        super().perform_update(serializer)
+        try:
+            super().perform_update(serializer)
+        except WebStoreAPIError as exc:
+            raise serializers.ValidationError(exc.messages)
 
     @transaction.atomic
     def bulk_update(self, request, *args, **kwargs):
@@ -3784,7 +3791,11 @@ class EventViewSet(
             instance.publisher, instance.publication_status, instance.created_by
         ):
             raise DRFPermissionDenied()
-        instance.soft_delete()
+
+        try:
+            instance.soft_delete()
+        except WebStoreAPIError as exc:
+            raise serializers.ValidationError(exc.messages)
 
     def retrieve(self, request, *args, **kwargs):
         try:

@@ -10,7 +10,14 @@ from django.core.exceptions import ValidationError
 from django.core.mail import EmailMultiAlternatives, send_mail
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
-from django.db.models import DateTimeField, ExpressionWrapper, F, Sum, UniqueConstraint
+from django.db.models import (
+    DateTimeField,
+    ExpressionWrapper,
+    F,
+    Q,
+    Sum,
+    UniqueConstraint,
+)
 from django.forms.fields import MultipleChoiceField
 from django.template.loader import render_to_string
 from django.utils import translation
@@ -26,6 +33,7 @@ from events.models import Event, Language, Offer
 from registrations.enums import VatPercentage
 from registrations.exceptions import (
     PriceGroupValidationError,
+    WebStoreAPIError,
     WebStoreProductMappingValidationError,
     WebStoreRefundValidationError,
 )
@@ -454,6 +462,13 @@ class Registration(CreatedModifiedBaseModel):
     )
 
     @property
+    def has_payments(self):
+        return (
+            self.signups.filter(payment__isnull=False).exists()
+            or self.signup_groups.filter(payment__isnull=False).exists()
+        )
+
+    @property
     def data_source(self):
         return self.event.data_source
 
@@ -586,6 +601,28 @@ class Registration(CreatedModifiedBaseModel):
         if contact_person:
             contact_person.send_notification(
                 SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT
+            )
+
+    def cancel_signups(self, is_event_cancellation=False):
+        for signup_group in self.signup_groups.all():
+            signup_group.delete(is_event_cancellation=is_event_cancellation)
+
+        for signup in self.signups.filter(signup_group_id__isnull=True):
+            signup._individually_deleted = True
+            signup.delete(is_event_cancellation=is_event_cancellation)
+
+    def send_event_cancellation_notifications(self, is_sub_event_cancellation=False):
+        for contact_person in SignUpContactPerson.objects.filter(
+            Q(email__isnull=False)
+            & ~Q(email="")
+            & (
+                Q(signup__registration_id=self.pk)
+                | Q(signup_group__registration_id=self.pk)
+            )
+        ):
+            contact_person.send_notification(
+                SignUpNotificationType.EVENT_CANCELLATION,
+                is_sub_event_cancellation=is_sub_event_cancellation,
             )
 
     def can_be_edited_by(self, user):
@@ -829,6 +866,19 @@ class SignUpMixin:
     def is_user_editable_resources(self):
         return bool(self.data_source and self.data_source.user_editable_resources)
 
+    def _raise_web_store_refund_or_cancellation_exception(
+        self, exception, is_event_cancellation=False
+    ):
+        if not is_event_cancellation:
+            raise exception
+
+        error_message_with_signup_id = _(
+            "Payment refund or cancellation failed for %(class_name)s with ID %(object_id)s."
+        ) % {"class_name": self.__class__.__name__, "object_id": self.pk}
+        messages = [error_message_with_signup_id]
+        messages.extend(exception.messages)
+        raise WebStoreAPIError(messages)
+
     def create_web_store_payment(self):
         if isinstance(self, SignUp):
             kwargs = {"signup": self}
@@ -970,20 +1020,26 @@ class SignUpGroup(
     def delete(self, *args, **kwargs):
         contact_person = getattr(self, "contact_person", None)
         is_attending = bool(self.attending_signups)
+        is_event_cancellation = kwargs.pop("is_event_cancellation", False)
         payment_refunded = False
         payment_cancelled = False
 
         if settings.WEB_STORE_INTEGRATION_ENABLED:
             payment = getattr(self, "payment", None)
 
-            payment_refunded, payment_cancelled = (
-                self.refund_or_cancel_web_store_payment(
-                    payment,
-                    bypass_web_store_api_calls=kwargs.pop(
-                        "bypass_web_store_api_calls", False
-                    ),
+            try:
+                payment_refunded, payment_cancelled = (
+                    self.refund_or_cancel_web_store_payment(
+                        payment,
+                        bypass_web_store_api_calls=kwargs.pop(
+                            "bypass_web_store_api_calls", False
+                        ),
+                    )
                 )
-            )
+            except (WebStoreAPIError, WebStoreRefundValidationError) as exc:
+                self._raise_web_store_refund_or_cancellation_exception(
+                    exc, is_event_cancellation=is_event_cancellation
+                )
 
         super().delete(*args, **kwargs)
 
@@ -996,6 +1052,11 @@ class SignUpGroup(
                 payment_cancelled=payment_cancelled,
                 payment_refunded=payment_refunded,
             )
+
+            if is_event_cancellation:
+                contact_person.send_notification(
+                    SignUpNotificationType.EVENT_CANCELLATION
+                )
 
     @transaction.atomic
     def soft_delete(self):
@@ -1367,6 +1428,7 @@ class SignUp(
     @transaction.atomic
     def delete(self, *args, **kwargs):
         contact_person = self.actual_contact_person
+        is_event_cancellation = kwargs.pop("is_event_cancellation", False)
         payment_refunded = False
         payment_partially_refunded = False
         payment_cancelled = False
@@ -1375,18 +1437,26 @@ class SignUp(
             payment = getattr(self, "payment", None)
             bypass_web_store_api_calls = kwargs.pop("bypass_web_store_api_calls", False)
 
-            if not payment and (signup_group := getattr(self, "signup_group", None)):
-                payment_partially_refunded = (
-                    self.partially_refund_signup_group_web_store_payment(
-                        signup_group,
-                        bypass_web_store_api_calls=bypass_web_store_api_calls,
+            try:
+                if not payment and (
+                    signup_group := getattr(self, "signup_group", None)
+                ):
+                    payment_partially_refunded = (
+                        self.partially_refund_signup_group_web_store_payment(
+                            signup_group,
+                            bypass_web_store_api_calls=bypass_web_store_api_calls,
+                        )
                     )
-                )
-            else:
-                payment_refunded, payment_cancelled = (
-                    self.refund_or_cancel_web_store_payment(
-                        payment, bypass_web_store_api_calls=bypass_web_store_api_calls
+                else:
+                    payment_refunded, payment_cancelled = (
+                        self.refund_or_cancel_web_store_payment(
+                            payment,
+                            bypass_web_store_api_calls=bypass_web_store_api_calls,
+                        )
                     )
+            except (WebStoreAPIError, WebStoreRefundValidationError) as exc:
+                self._raise_web_store_refund_or_cancellation_exception(
+                    exc, is_event_cancellation=is_event_cancellation
                 )
 
         super().delete(*args, **kwargs)
@@ -1406,6 +1476,11 @@ class SignUp(
                 payment_partially_refunded=payment_partially_refunded,
                 payment_cancelled=payment_cancelled,
             )
+
+            if is_event_cancellation:
+                contact_person.send_notification(
+                    SignUpNotificationType.EVENT_CANCELLATION
+                )
 
     @transaction.atomic
     def soft_delete(self):
