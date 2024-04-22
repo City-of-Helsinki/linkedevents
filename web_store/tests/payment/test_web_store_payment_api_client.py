@@ -59,9 +59,9 @@ DEFAULT_GET_REFUND_DATA = {
                 "refundMethod": "string",
                 "refundType": "string",
                 "refundGateway": "string",
-                "totalExclTax": Decimal(DEFAULT_ITEM["rowPriceNet"]),
-                "total": Decimal(DEFAULT_ITEM["rowPriceTotal"]),
-                "taxAmount": Decimal(DEFAULT_ITEM["rowPriceVat"]),
+                "totalExclTax": DEFAULT_ITEM["rowPriceNet"],
+                "total": DEFAULT_ITEM["rowPriceTotal"],
+                "taxAmount": DEFAULT_ITEM["rowPriceVat"],
                 "refundTransactionId": "string",
             },
         }
