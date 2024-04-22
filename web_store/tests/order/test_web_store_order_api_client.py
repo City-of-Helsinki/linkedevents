@@ -1,4 +1,3 @@
-from decimal import Decimal
 from unittest.mock import patch
 
 import pytest
@@ -31,9 +30,9 @@ DEFAULT_CREATE_ORDER_DATA = {
     "namespace": settings.WEB_STORE_API_NAMESPACE,
     "user": "user_uuid",
     "items": [DEFAULT_ITEM.copy()],
-    "priceNet": Decimal("0"),
-    "priceVat": Decimal("0"),
-    "priceTotal": Decimal("0"),
+    "priceNet": "0.00",
+    "priceVat": "0.00",
+    "priceTotal": "0.00",
     "customer": {
         "firstName": "first_name",
         "lastLame": "last_name",
