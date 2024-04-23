@@ -1654,6 +1654,92 @@ def test_web_store_automatically_fully_refund_paid_signup_payment_for_recurring_
     assert expected_text in str(mail.outbox[0].alternatives[0])
 
 
+@pytest.mark.django_db
+def test_web_store_automatically_fully_refund_paid_signup_payment_allow_404_exception(
+    api_client, price_group
+):
+    language = LanguageFactory(pk="en", service_language=True)
+
+    signup = price_group.signup
+    SignUpContactPersonFactory(
+        signup=signup, email="test@test.com", service_language=language
+    )
+    SignUpPaymentFactory(
+        signup=signup,
+        external_order_id=DEFAULT_ORDER_ID,
+        status=SignUpPayment.PaymentStatus.PAID,
+    )
+
+    user = create_user_by_role("registration_admin", signup.publisher)
+    api_client.force_authenticate(user)
+
+    assert SignUpPayment.objects.count() == 1
+    assert SignUpPriceGroup.objects.count() == 1
+
+    with requests_mock.Mocker() as req_mock:
+        req_mock.get(
+            f"{settings.WEB_STORE_API_BASE_URL}payment/refund/instant/{DEFAULT_ORDER_ID}",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+
+        assert_delete_signup(api_client, signup.pk)
+
+        assert req_mock.call_count == 1
+
+    assert SignUpPayment.objects.count() == 0
+    assert SignUpPriceGroup.objects.count() == 0
+
+    assert len(mail.outbox) == 1
+
+
+@pytest.mark.django_db
+def test_web_store_automatically_fully_refund_paid_signup_payment_errors_in_response(
+    api_client, price_group
+):
+    language = LanguageFactory(pk="en", service_language=True)
+
+    signup = price_group.signup
+    SignUpContactPersonFactory(
+        signup=signup, email="test@test.com", service_language=language
+    )
+    SignUpPaymentFactory(
+        signup=signup,
+        external_order_id=DEFAULT_ORDER_ID,
+        status=SignUpPayment.PaymentStatus.PAID,
+    )
+
+    user = create_user_by_role("registration_admin", signup.publisher)
+    api_client.force_authenticate(user)
+
+    assert SignUpPayment.objects.count() == 1
+    assert SignUpPriceGroup.objects.count() == 1
+
+    mocked_web_store_json = deepcopy(DEFAULT_GET_REFUND_DATA)
+    mocked_web_store_json["errors"] = [
+        {
+            "code": "refund-error",
+            "message": "cannot refund",
+        }
+    ]
+
+    with requests_mock.Mocker() as req_mock:
+        req_mock.get(
+            f"{settings.WEB_STORE_API_BASE_URL}payment/refund/instant/{DEFAULT_ORDER_ID}",
+            json=mocked_web_store_json,
+        )
+
+        response = delete_signup(api_client, signup.pk)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.data[0] == str(mocked_web_store_json["errors"][0])
+
+        assert req_mock.call_count == 1
+
+    assert SignUpPayment.objects.count() == 1
+    assert SignUpPriceGroup.objects.count() == 1
+
+    assert len(mail.outbox) == 0
+
+
 @pytest.mark.parametrize(
     "service_lang,expected_subject,expected_text",
     [
@@ -1763,6 +1849,44 @@ def test_web_store_automatically_cancel_unpaid_created_signup_payment_on_delete(
         "Your registration and payment for the event <strong>Foo</strong> have been cancelled."
         in str(mail.outbox[0].alternatives[0])
     )
+
+
+@pytest.mark.django_db
+def test_web_store_automatically_cancel_unpaid_created_signup_payment_on_delete_allow_404_exception(
+    api_client, price_group
+):
+    language = LanguageFactory(pk="en", service_language=True)
+
+    signup = price_group.signup
+    SignUpContactPersonFactory(
+        signup=signup, email="test@test.com", service_language=language
+    )
+    SignUpPaymentFactory(
+        signup=signup,
+        external_order_id=DEFAULT_ORDER_ID,
+        status=SignUpPayment.PaymentStatus.CREATED,
+    )
+
+    user = create_user_by_role("registration_admin", signup.publisher)
+    api_client.force_authenticate(user)
+
+    assert SignUpPayment.objects.count() == 1
+    assert SignUpPriceGroup.objects.count() == 1
+
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/{DEFAULT_ORDER_ID}/cancel",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+
+        assert_delete_signup(api_client, signup.pk)
+
+        assert req_mock.call_count == 1
+
+    assert SignUpPayment.objects.count() == 0
+    assert SignUpPriceGroup.objects.count() == 0
+
+    assert len(mail.outbox) == 1
 
 
 @pytest.mark.parametrize(
