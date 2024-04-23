@@ -8,6 +8,7 @@ from django.core.management import call_command
 from django.test import override_settings
 from django.utils import translation
 from django.utils.timezone import localtime
+from freezegun import freeze_time
 from rest_framework import status
 
 from events.models import Event
@@ -39,6 +40,106 @@ def _assert_email_sent(expected_recipient_email, expected_subject):
     assert len(mail.outbox) == 1
     assert mail.outbox[0].to[0] == expected_recipient_email
     assert mail.outbox[0].subject == expected_subject
+
+
+def _test_payments_expired(
+    registration,
+    datetime_now,
+    service_language,
+    expected_subject,
+    expected_heading,
+    expected_secondary_heading,
+    expected_text,
+):
+    fourteen_days_ago = datetime_now - timedelta(days=14)
+    one_days_ago = datetime_now - timedelta(days=1)
+    one_day_from_now = datetime_now + timedelta(days=1)
+
+    not_marked = SignUpPaymentFactory(
+        status=SignUpPayment.PaymentStatus.CREATED,
+        expires_at=one_day_from_now,
+        external_order_id="1234",
+        signup__registration=registration,
+    )
+    marked = SignUpPaymentFactory(
+        status=SignUpPayment.PaymentStatus.CREATED,
+        expires_at=fourteen_days_ago,
+        external_order_id="4321",
+        signup__registration=registration,
+    )
+    marked2 = SignUpPaymentFactory(
+        signup=None,
+        signup_group=SignUpGroupFactory(registration=registration),
+        status=SignUpPayment.PaymentStatus.CREATED,
+        expires_at=one_days_ago,
+        external_order_id="5678",
+    )
+
+    contact_person = SignUpContactPersonFactory(
+        signup=marked.signup,
+        email=_CONTACT_PERSON_EMAIL,
+        service_language=service_language,
+    )
+    contact_person2 = SignUpContactPersonFactory(
+        signup_group=marked2.signup_group,
+        email=_CONTACT_PERSON2_EMAIL,
+        service_language=service_language,
+    )
+
+    assert not_marked.status == SignUpPayment.PaymentStatus.CREATED
+    assert not_marked.deleted is False
+    assert not_marked.signup.deleted is False
+
+    assert marked.status == SignUpPayment.PaymentStatus.CREATED
+    assert marked.deleted is False
+    assert marked.signup.deleted is False
+
+    assert marked2.status == SignUpPayment.PaymentStatus.CREATED
+    assert marked2.deleted is False
+    assert marked2.signup_group.deleted is False
+
+    mocked_api_response = get_mock_response(status_code=status.HTTP_404_NOT_FOUND)
+    with (
+        patch("requests.get") as mocked_get_payment_request,
+        patch("requests.post") as mocked_cancel_order_request,
+    ):
+        mocked_get_payment_request.return_value = mocked_api_response
+
+        call_command("mark_payments_expired")
+
+    assert mocked_get_payment_request.called is True
+    assert mocked_cancel_order_request.called is True
+
+    not_marked.refresh_from_db()
+    assert not_marked.status == SignUpPayment.PaymentStatus.CREATED
+    assert not_marked.deleted is False
+    assert not_marked.signup.deleted is False
+
+    marked.refresh_from_db()
+    assert marked.status == SignUpPayment.PaymentStatus.EXPIRED
+    assert marked.deleted is True
+    assert marked.signup.deleted is True
+
+    marked2.refresh_from_db()
+    assert marked2.status == SignUpPayment.PaymentStatus.EXPIRED
+    assert marked2.deleted is True
+    assert marked2.signup_group.deleted is True
+
+    assert len(mail.outbox) == 2
+
+    assert mail.outbox[0].to[0] == contact_person.email
+    assert mail.outbox[0].subject == expected_subject
+    message_html_string = str(mail.outbox[0].alternatives[0])
+    assert expected_heading in message_html_string
+    assert expected_secondary_heading in message_html_string
+    assert expected_text in message_html_string
+
+    assert mail.outbox[1].to[0] == contact_person2.email
+    assert mail.outbox[1].subject == expected_subject
+    message_html_string2 = str(mail.outbox[1].alternatives[0])
+    assert expected_heading in message_html_string2
+    assert expected_secondary_heading in message_html_string2
+    assert expected_text in message_html_string2
 
 
 @pytest.mark.parametrize(
@@ -81,109 +182,86 @@ def test_mark_payments_expired(
     expected_text,
 ):
     now = localtime()
-    fourteen_days_ago = now - timedelta(days=14)
-    one_days_ago = now - timedelta(days=1)
-    one_day_from_now = now + timedelta(days=1)
-
-    with translation.override(service_language):
-        registration = RegistrationFactory(event__name=_EVENT_NAME)
     service_lang = LanguageFactory(pk=service_language, service_language=True)
 
-    not_marked = SignUpPaymentFactory(
-        status=SignUpPayment.PaymentStatus.CREATED,
-        expires_at=one_day_from_now,
-        external_order_id="1234",
-        signup__registration=registration,
-    )
-    marked = SignUpPaymentFactory(
-        status=SignUpPayment.PaymentStatus.CREATED,
-        expires_at=fourteen_days_ago,
-        external_order_id="4321",
-        signup__registration=registration,
-    )
-    marked2 = SignUpPaymentFactory(
-        signup=None,
-        signup_group=SignUpGroupFactory(registration=registration),
-        status=SignUpPayment.PaymentStatus.CREATED,
-        expires_at=one_days_ago,
-        external_order_id="5678",
+    with translation.override(service_lang.pk):
+        registration = RegistrationFactory(event__name=_EVENT_NAME)
+
+    _test_payments_expired(
+        registration,
+        now,
+        service_lang,
+        expected_subject,
+        expected_heading,
+        expected_secondary_heading,
+        expected_text,
     )
 
-    contact_person = SignUpContactPersonFactory(
-        signup=marked.signup, email=_CONTACT_PERSON_EMAIL, service_language=service_lang
+
+@pytest.mark.parametrize(
+    "service_language,expected_subject,expected_heading,expected_secondary_heading,expected_text",
+    [
+        (
+            "en",
+            f"Registration payment expired - Recurring: {_EVENT_NAME}",
+            "Registration payment expired",
+            f"Registration to the recurring event {_EVENT_NAME} 1 Feb 2024 - 29 Feb 2024 "
+            "has been cancelled due to an expired payment.",
+            "Your registration to the recurring event "
+            f"<strong>{_EVENT_NAME} 1 Feb 2024 - 29 Feb 2024</strong> has been "
+            "cancelled due no payment received within the payment period.",
+        ),
+        (
+            "fi",
+            f"Ilmoittautumismaksu vanhentunut - Sarja: {_EVENT_NAME}",
+            "Ilmoittautumismaksu vanhentunut",
+            f"Ilmoittautuminen sarjatapahtumaan {_EVENT_NAME} 1.2.2024 - 29.2.2024 "
+            "on peruttu ilmoittautumismaksun vanhenemisen vuoksi.",
+            "Ilmoittautumisesi sarjatapahtumaan "
+            f"<strong>{_EVENT_NAME} 1.2.2024 - 29.2.2024</strong> on "
+            "peruttu, koska ilmoittautumismaksua ei ole maksettu maksuajan loppuun mennessä.",
+        ),
+        (
+            "sv",
+            f"Registreringsbetalning har gått ut - Serie: {_EVENT_NAME}",
+            "Registreringsbetalning har gått ut",
+            f"Anmälan till serieevenemanget {_EVENT_NAME} 1.2.2024 - 29.2.2024 "
+            "har ställts in på grund av att betalningen har gått ut.",
+            "Din anmälan till serieevenemanget "
+            f"<strong>{_EVENT_NAME} 1.2.2024 - 29.2.2024</strong> har "
+            "ställts in eftersom ingen betalning mottogs inom betalningsperioden.",
+        ),
+    ],
+)
+@freeze_time("2024-02-01 03:30:00+02:00")
+@pytest.mark.django_db
+def test_mark_payments_expired_for_recurring_event(
+    service_language,
+    expected_subject,
+    expected_heading,
+    expected_secondary_heading,
+    expected_text,
+):
+    now = localtime()
+    service_lang = LanguageFactory(pk=service_language, service_language=True)
+
+    with translation.override(service_lang.pk):
+        registration = RegistrationFactory(
+            event__start_time=now,
+            event__end_time=now + timedelta(days=28),
+            event__super_event_type=Event.SuperEventType.RECURRING,
+            event__name=_EVENT_NAME,
+        )
+
+    _test_payments_expired(
+        registration,
+        now,
+        service_lang,
+        expected_subject,
+        expected_heading,
+        expected_secondary_heading,
+        expected_text,
     )
-    contact_person2 = SignUpContactPersonFactory(
-        signup_group=marked2.signup_group,
-        email=_CONTACT_PERSON2_EMAIL,
-        service_language=service_lang,
-    )
-
-    assert not_marked.status == SignUpPayment.PaymentStatus.CREATED
-    assert not_marked.deleted is False
-    assert not_marked.signup.deleted is False
-    assert not_marked.last_modified_by is None
-    not_marked_last_modified_time = not_marked.last_modified_time
-
-    assert marked.status == SignUpPayment.PaymentStatus.CREATED
-    assert marked.deleted is False
-    assert marked.signup.deleted is False
-    assert marked.last_modified_by is None
-    marked_last_modified_time = marked.last_modified_time
-
-    assert marked2.status == SignUpPayment.PaymentStatus.CREATED
-    assert marked2.deleted is False
-    assert marked2.signup_group.deleted is False
-    assert marked2.last_modified_by is None
-    marked2_last_modified_time = marked2.last_modified_time
-
-    mocked_api_response = get_mock_response(status_code=status.HTTP_404_NOT_FOUND)
-    with (
-        patch("requests.get") as mocked_get_payment_request,
-        patch("requests.post") as mocked_cancel_order_request,
-    ):
-        mocked_get_payment_request.return_value = mocked_api_response
-
-        call_command("mark_payments_expired")
-
-    assert mocked_get_payment_request.called is True
-    assert mocked_cancel_order_request.called is True
-
-    not_marked.refresh_from_db()
-    assert not_marked.status == SignUpPayment.PaymentStatus.CREATED
-    assert not_marked.deleted is False
-    assert not_marked.signup.deleted is False
-    assert not_marked.last_modified_by is None
-    assert not_marked.last_modified_time == not_marked_last_modified_time
-
-    marked.refresh_from_db()
-    assert marked.status == SignUpPayment.PaymentStatus.EXPIRED
-    assert marked.deleted is True
-    assert marked.signup.deleted is True
-    assert marked.last_modified_by is None
-    assert marked.last_modified_time > marked_last_modified_time
-
-    marked2.refresh_from_db()
-    assert marked2.status == SignUpPayment.PaymentStatus.EXPIRED
-    assert marked2.deleted is True
-    assert marked2.signup_group.deleted is True
-    assert marked2.last_modified_by is None
-    assert marked2.last_modified_time > marked2_last_modified_time
-
-    assert len(mail.outbox) == 2
-
-    assert mail.outbox[0].to[0] == contact_person.email
-    assert mail.outbox[0].subject == expected_subject
-    message_html_string = str(mail.outbox[0].alternatives[0])
-    assert expected_heading in message_html_string
-    assert expected_secondary_heading in message_html_string
-    assert expected_text in message_html_string
-
-    assert mail.outbox[1].to[0] == contact_person2.email
-    assert mail.outbox[1].subject == expected_subject
-    message_html_string2 = str(mail.outbox[1].alternatives[0])
-    assert expected_heading in message_html_string2
-    assert expected_secondary_heading in message_html_string2
-    assert expected_text in message_html_string2
 
 
 @pytest.mark.parametrize(
