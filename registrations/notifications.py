@@ -17,6 +17,7 @@ CONFIRMATION_WITH_PAYMENT_HEADING_RECURRING = _(
     "Payment required for registration confirmation - Recurring: %(event_name)s"
 )
 EVENT_CANCELLED_TEXT = _("Thank you for your interest in the event.")
+PAYMENT_EXPIRED_HEADING = _("Registration payment expired")
 REGISTRATION_CANCELLED_HEADING = _("Registration cancelled")
 
 
@@ -324,7 +325,7 @@ signup_email_texts = {
         },
     },
     SignUpNotificationType.PAYMENT_EXPIRED: {
-        "heading": _("Registration payment expired"),
+        "heading": PAYMENT_EXPIRED_HEADING,
         "secondary_heading": {
             Event.TypeId.GENERAL: _(
                 "Registration to the event %(event_name)s has been cancelled due to an expired "
@@ -375,6 +376,9 @@ recurring_event_signup_notification_subjects = {
         "Registration confirmation - Recurring: %(event_name)s"
     ),
     SignUpNotificationType.TRANSFER_AS_PARTICIPANT_WITH_PAYMENT: CONFIRMATION_WITH_PAYMENT_HEADING_RECURRING,
+    SignUpNotificationType.PAYMENT_EXPIRED: _(
+        "Registration payment expired - Recurring: %(event_name)s"
+    ),
 }
 
 
@@ -647,6 +651,40 @@ recurring_event_signup_email_texts = {
             ),
         },
     },
+    SignUpNotificationType.PAYMENT_EXPIRED: {
+        "heading": PAYMENT_EXPIRED_HEADING,
+        "secondary_heading": {
+            Event.TypeId.GENERAL: _(
+                "Registration to the recurring event %(event_name)s %(event_period)s "
+                "has been cancelled due to an expired payment."
+            ),
+            Event.TypeId.COURSE: _(
+                "Registration to the recurring course %(event_name)s %(event_period)s "
+                "has been cancelled due to an expired payment."
+            ),
+            Event.TypeId.VOLUNTEERING: _(
+                "Registration to the recurring volunteering %(event_name)s %(event_period)s "
+                "has been cancelled due to an expired payment."
+            ),
+        },
+        "text": {
+            Event.TypeId.GENERAL: _(
+                "Your registration to the recurring event "
+                "<strong>%(event_name)s %(event_period)s</strong> has been cancelled due no "
+                "payment received within the payment period."
+            ),
+            Event.TypeId.COURSE: _(
+                "Your registration to the recurring course "
+                "<strong>%(event_name)s %(event_period)s</strong> has been cancelled due no "
+                "payment received within the payment period."
+            ),
+            Event.TypeId.VOLUNTEERING: _(
+                "Your registration to the recurring volunteering "
+                "<strong>%(event_name)s %(event_period)s</strong> has been cancelled due no "
+                "payment received within the payment period."
+            ),
+        },
+    },
 }
 
 
@@ -826,10 +864,14 @@ def _format_confirmation_to_waiting_list_texts(
         texts["secondary_text"] = text_options["secondary_text"][event_type_id]
 
 
-def _format_payment_expiration_texts(texts, text_options, event_type_id, event_name):
-    texts["secondary_heading"] = text_options["secondary_heading"][event_type_id] % {
-        "event_name": event_name
-    }
+def _format_payment_expiration_texts(
+    texts, text_options, event_type_id, event_name, event_period
+):
+    event_text_kwargs = _get_event_text_kwargs(event_name, event_period=event_period)
+
+    texts["secondary_heading"] = (
+        text_options["secondary_heading"][event_type_id] % event_text_kwargs
+    )
 
 
 def get_signup_notification_texts(
@@ -908,7 +950,9 @@ def get_signup_notification_texts(
     elif notification_type == SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT:
         _format_confirmation_message_texts(texts, confirmation_message)
     elif notification_type == SignUpNotificationType.PAYMENT_EXPIRED:
-        _format_payment_expiration_texts(texts, text_options, event_type_id, event_name)
+        _format_payment_expiration_texts(
+            texts, text_options, event_type_id, event_name, event_period
+        )
 
     return texts
 
