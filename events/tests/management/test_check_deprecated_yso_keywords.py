@@ -39,7 +39,7 @@ yso:test_all_done a skosext:DeprecatedConcept,
 
 @pytest.fixture
 def requests_mock_graph(requests_mock):
-    requests_mock.get("http://finto.fi/rest/v1/yso/data", text=graph)
+    requests_mock.get("https://finto.fi/rest/v1/yso/data", text=graph)
     return requests_mock
 
 

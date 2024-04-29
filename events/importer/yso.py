@@ -16,7 +16,7 @@ from .sync import ModelSyncher
 logger = logging.getLogger(__name__)
 
 yso = rdflib.Namespace("http://www.yso.fi/onto/yso/")
-URL = "http://finto.fi/rest/v1/yso/data"
+URL = "https://finto.fi/rest/v1/yso/data"
 
 YSO_DEPRECATED_MAPS = {
     "yso:p12262": "yso:p4354",  # lapset (kooste) -> lapset (ikään liittyvä rooli), missing YSO replacement
