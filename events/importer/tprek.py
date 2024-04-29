@@ -16,7 +16,7 @@ from .sync import ModelSyncher
 
 logger = logging.getLogger(__name__)
 
-URL_BASE = "http://www.hel.fi/palvelukarttaws/rest/v4/"
+URL_BASE = "https://www.hel.fi/palvelukarttaws/rest/v4/"
 GK25_SRID = 3879
 
 
