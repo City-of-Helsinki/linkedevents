@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.4.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.4.0...linkedevents-v3.4.1) (2024-05-02)
+
+
+### Bug Fixes
+
+* Broken graph.preferredLabel call in YSO importer ([a7c012b](https://github.com/City-of-Helsinki/linkedevents/commit/a7c012b4ca16622f09c116832a057c9e9d5dbd48))
+* Use https for importing yso keywords ([1f95b42](https://github.com/City-of-Helsinki/linkedevents/commit/1f95b424e865d46428f6ffcbe44c9a679eea689e))
+* Use https for tprek importer ([d0c5f42](https://github.com/City-of-Helsinki/linkedevents/commit/d0c5f429554bcf9860d8ba14d7d9cf5abe9570d4))
+
 ## [3.4.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.3.1...linkedevents-v3.4.0) (2024-04-23)
 
 
