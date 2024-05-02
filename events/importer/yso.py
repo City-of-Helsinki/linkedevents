@@ -6,7 +6,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.utils.translation import override
 from django_orghierarchy.models import Organization
 from rdflib import RDF
-from rdflib.namespace import DCTERMS, OWL, SKOS
+from rdflib.namespace import DCTERMS, OWL, RDFS, SKOS
 
 from events.models import BaseModel, DataSource, Keyword, KeywordLabel, Language
 
@@ -73,6 +73,45 @@ def is_aggregate_concept(graph, subject):
 def get_replacement(graph, subject):
     for _subject, _verb, object in graph.triples((subject, DCTERMS.isReplacedBy, None)):
         return object
+
+
+def get_preferred_labels(
+    graph, subject, lang=None, default=None, label_properties=None
+):
+    """
+    A slightly modified copy of
+    https://rdflib.readthedocs.io/en/6.1.1/_modules/rdflib/graph.html#Graph.preferredLabel.
+    """
+
+    if default is None:
+        default = []
+
+    if label_properties is None:
+        label_properties = (SKOS.prefLabel, RDFS.label)
+
+    if lang is None:
+
+        def langfilter(l_):
+            return True
+
+    elif lang == "":
+
+        def langfilter(l_):
+            return l_.language is None
+
+    else:
+
+        def langfilter(l_):
+            return l_.language == lang
+
+    for label_prop in label_properties:
+        labels = list(filter(langfilter, graph.objects(subject, label_prop)))
+        if len(labels) == 0:
+            continue
+        else:
+            return [(label_prop, l_) for l_ in labels]
+
+    return default
 
 
 def deprecate_and_replace(graph, keyword):
@@ -237,7 +276,7 @@ class YsoImporter(Importer):
         return keyword
 
     def update_keyword(self, keyword, graph, subject):
-        for _, literal in graph.preferredLabel(subject):
+        for _, literal in get_preferred_labels(graph, subject):
             if literal.language not in self.supported_languages:
                 continue
             with override(literal.language, deactivate=True):
