@@ -862,9 +862,10 @@ def _format_cancellation_texts(
         )
 
     if payment_partially_refunded:
-        texts["text"] = text_options["payment_partially_refunded"]["text"][
-            event_type_id
-        ] % event_text_kwargs
+        texts["text"] = (
+            text_options["payment_partially_refunded"]["text"][event_type_id]
+            % event_text_kwargs
+        )
     elif payment_refunded:
         texts["text"] = (
             text_options["payment_refunded"]["text"][event_type_id] % event_text_kwargs
