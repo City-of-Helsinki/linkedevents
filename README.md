@@ -1,8 +1,5 @@
 # Linked Events
-
-[![Build status](https://travis-ci.org/City-of-Helsinki/linkedevents.svg)](https://travis-ci.org/City-of-Helsinki/linkedevents)
 [![codecov](https://codecov.io/gh/City-of-Helsinki/linkedevents/branch/master/graph/badge.svg)](https://codecov.io/gh/City-of-Helsinki/linkedevents)
-[![Requirements](https://requires.io/github/City-of-Helsinki/linkedevents/requirements.svg?branch=master)](https://requires.io/github/City-of-Helsinki/linkedevents/requirements/?branch=master)
 [![Gitter](https://img.shields.io/gitter/room/City-of-Helsinki/heldev.svg?maxAge=2592000)](https://gitter.im/City-of-Helsinki/heldev)
 
 ![High-level diagram of Linked Events](./assets/Linked_Events.jpg?raw=true)
@@ -23,7 +20,7 @@ Linked Events was originally developed for City of Helsinki organization and
 you can see the Linked Events API in action for [Helsinki capital region here](https://api.hel.fi/linkedevents/v1/).
 It contains data from all Helsinki City Departments as well as data from Helsinki Marketing and the Helmet metropolitan area public libraries. Viewing the API should give a reasonable view for the kind of information Linked Events is targeted for.
 
-Target audience of this README.md are developers who may or maynot have a lot of Python
+Target audience of this README.md are developers who may or may not have a lot of Python
 experience and would like to get things running as quickly as possible.
 Therefore, instructions written in this README.md should be written accordingly.
 
@@ -266,7 +263,7 @@ as expected, commit the changes.
 This project uses
 [`black`](https://github.com/ambv/black),
 [`flake8`](https://github.com/pycqa/flake8) and
-[`isort`](https://github.com/timothycrosley/isort)
+[`isort`](https://github.com/pycqa/isort)
 for code formatting and quality checking. Project follows the basic
 black config, without any modifications.
 
