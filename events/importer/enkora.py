@@ -40,6 +40,7 @@ class EnkoraImporter(Importer):
     )
 
     ALL_COURSES_KEYWORDS = {"yso:p916"}  # liikunta
+    COURSES = "yso:p9270"  # kurssit
 
     SPORT_ACROBATICS = "yso:p1277"  # akrobatia [voimistelu]
     SPORT_ADAPTED_PE = "yso:p3093"  # erityisliikunta
@@ -125,13 +126,13 @@ class EnkoraImporter(Importer):
     service_map = {
         99: {
             "enkora-name": "Ryhmäliikunta",
-            "keywords": {SPORT_GROUP_EXERCISE},
+            "keywords": {SPORT_GROUP_EXERCISE, COURSES},
             "image": "https://liikunta2.content.api.hel.fi/uploads/sites/9/2023/09/"
             "90b78d1a-jpg-1_senioriliikuntaa_2016_kuva_aki_rask_8.jpg",
         },
         100: {
             "enkora-name": "Uimakoulut",
-            "keywords": {SPORT_SWIMMING_CLASSES, SPORT_SWIMMING_SCHOOL},
+            "keywords": {SPORT_SWIMMING_CLASSES, SPORT_SWIMMING_SCHOOL, COURSES},
             "image": "https://liikunta2.content.api.hel.fi/uploads/sites/9/2023/08/"
             "ff500094-uimakoulu_pirkkolassa_2016_kuva_aki_rask_7.jpg-muokattu.jpg",
         },
@@ -142,7 +143,7 @@ class EnkoraImporter(Importer):
         },  # Huom! Laji voi olla ihan mitä vaan
         102: {
             "enkora-name": "Vesiliikunta",
-            "keywords": {"yso:p6433"},
+            "keywords": {"yso:p6433", COURSES},
             "image": "https://liikunta2.content.api.hel.fi/uploads/sites/9/2023/08/"
             "10440c10-medium_vesiliikunta_pirkkolan_uimahalli_2022_kuva_maarit_hohteri_160.jpg",
         },
@@ -153,7 +154,7 @@ class EnkoraImporter(Importer):
         },  # Huom! Laji voi olla ihan mitä vaan
         132: {
             "enkora-name": "Kuntosalikurssit",
-            "keywords": {SPORT_GYM},
+            "keywords": {SPORT_GYM, COURSES},
             "image": "https://liikunta2.content.api.hel.fi/uploads/sites/9/2023/01/"
             "db2c5be9-soveltava_liikunta_kuntosali_2021_kuva_maarit_hohteri_2-2.jpg-muokattu.jpg",
         },
@@ -901,14 +902,14 @@ class EnkoraImporter(Importer):
         """
         return datetime.now(), timezone.now()
 
-    def import_courses(self) -> None:
+    def import_courses(self, months_back_from_today: int = 5) -> None:
         kurssi_api = self.driver_cls(
             settings.ENKORA_API_USER, settings.ENKORA_API_PASSWORD, request_timeout=20.0
         )
 
         now_is, self.now_tz_is = self._get_timestamps()
 
-        first_date = now_is.date() - relativedelta(months=2)
+        first_date = now_is.date() - relativedelta(months=months_back_from_today)
         last_date = now_is.date() + relativedelta(days=365)
         reservation_event_groups = []
         reservation_events = []
@@ -1081,14 +1082,14 @@ class EnkoraImporter(Importer):
 
         return event.deleted
 
-    def import_places(self):
+    def import_places(self, months_back_from_today: int = 5):
         kurssi_api = self.driver_cls(
             settings.ENKORA_API_USER, settings.ENKORA_API_PASSWORD, request_timeout=20.0
         )
 
         now_is, self.now_tz_is = self._get_timestamps()
 
-        first_date = now_is.date() - relativedelta(months=2)
+        first_date = now_is.date() - relativedelta(months=months_back_from_today)
         last_date = now_is.date() + relativedelta(days=365)
         reservation_event_groups = []
         reservation_events = []

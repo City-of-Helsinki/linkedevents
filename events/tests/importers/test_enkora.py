@@ -2251,6 +2251,13 @@ class TestEnkoraImporter:
             '15:46.275Z", "last_modified_time": "2023-05-31T12:15:46.275Z", "created_by": null, "last_modified_by": n'
             'ull, "publisher": "hy:kansalliskirjasto", "aggregate": false, "deprecated": false, "has_upcoming_events"'
             ': false, "n_events": 0, "n_events_changed": true, "replaced_by": null, "alt_labels": []}}]',
+            # yso:p9270
+            '[{"model": "events.keyword", "pk": "yso:p9270", "fields": {"image": null, "data_source": "yso", "name":'
+            ' "kurssit", "name_fi": "kurssit", "name_sv": "kursser", "name_en": "courses (societal objects)", "n'
+            'ame_zh_hans": null, "name_ru": null, "name_ar": null, "origin_id": null, "created_time": "2023-05-31T12:'
+            '15:46.275Z", "last_modified_time": "2023-05-31T12:15:46.275Z", "created_by": null, "last_modified_by": n'
+            'ull, "publisher": "hy:kansalliskirjasto", "aggregate": false, "deprecated": false, "has_upcoming_events"'
+            ': false, "n_events": 0, "n_events_changed": true, "replaced_by": null, "alt_labels": []}}]',
         ]
         save_cnt = 0
         for test_data in test_input_data:
@@ -2515,6 +2522,7 @@ class TestEnkoraImporter:
             + [
                 EnkoraImporter.SPORT_TENNIS,
                 EnkoraImporter.SPORT_GROUP_EXERCISE,
+                EnkoraImporter.COURSES,
             ],
             "audience": [
                 "yso:p4354",  # AUDIENCE_CHILDREN
