@@ -983,7 +983,7 @@ def test_update_registration_with_product_mapping_and_accounting(
     assert (
         RegistrationWebStoreProductMapping.objects.filter(
             registration=registration,
-            merchant=merchant,
+            external_merchant_id=merchant.merchant_id,
             account=account,
             external_product_id=DEFAULT_PRODUCT_ID,
         ).count()
@@ -995,16 +995,15 @@ def test_update_registration_with_product_mapping_and_accounting(
 def test_update_registration_product_mapping_merchant_changed(
     user_api_client, event, registration, organization2
 ):
-    account = WebStoreAccountFactory(organization=event.publisher)
-
     with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
         product_mapping = RegistrationWebStoreProductMappingFactory(
-            registration=registration,
-            merchant=WebStoreMerchantFactory(organization=organization2),
-            account=account,
+            registration=registration, external_merchant_id="1234"
         )
 
-        merchant = WebStoreMerchantFactory(organization=event.publisher)
+        merchant = WebStoreMerchantFactory(
+            organization=event.publisher, merchant_id="4321"
+        )
+        account = product_mapping.account
 
     default_price_group = PriceGroup.objects.first()
     registration_data = {
@@ -1020,7 +1019,7 @@ def test_update_registration_product_mapping_merchant_changed(
 
     assert RegistrationWebStoreProductMapping.objects.count() == 1
 
-    assert product_mapping.merchant_id != merchant.pk
+    assert product_mapping.external_merchant_id != merchant.merchant_id
     assert product_mapping.account_id == account.pk
 
     with requests_mock.Mocker() as req_mock:
@@ -1038,7 +1037,7 @@ def test_update_registration_product_mapping_merchant_changed(
     assert RegistrationWebStoreProductMapping.objects.count() == 1
 
     product_mapping.refresh_from_db()
-    assert product_mapping.merchant_id == merchant.pk
+    assert product_mapping.external_merchant_id == merchant.merchant_id
     assert product_mapping.account_id == account.pk
 
 
@@ -1047,11 +1046,13 @@ def test_update_registration_product_mapping_account_changed(
     user_api_client, event, registration, organization2
 ):
     with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
-        merchant = WebStoreMerchantFactory(organization=event.publisher)
+        merchant = WebStoreMerchantFactory(
+            organization=event.publisher, merchant_id="1234"
+        )
 
         product_mapping = RegistrationWebStoreProductMappingFactory(
             registration=registration,
-            merchant=merchant,
+            external_merchant_id=merchant.merchant_id,
             account=WebStoreAccountFactory(organization=organization2),
         )
 
@@ -1071,7 +1072,7 @@ def test_update_registration_product_mapping_account_changed(
 
     assert RegistrationWebStoreProductMapping.objects.count() == 1
 
-    assert product_mapping.merchant_id == merchant.pk
+    assert product_mapping.external_merchant_id == merchant.merchant_id
     assert product_mapping.account_id != account.pk
 
     with requests_mock.Mocker() as req_mock:
@@ -1089,7 +1090,7 @@ def test_update_registration_product_mapping_account_changed(
     assert RegistrationWebStoreProductMapping.objects.count() == 1
 
     product_mapping.refresh_from_db()
-    assert product_mapping.merchant_id == merchant.pk
+    assert product_mapping.external_merchant_id == merchant.merchant_id
     assert product_mapping.account_id == account.pk
 
 

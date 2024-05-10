@@ -594,7 +594,7 @@ class TestRegistrationAdmin(TestCase):
         self.assertEqual(
             RegistrationWebStoreProductMapping.objects.filter(
                 registration=Registration.objects.last(),
-                merchant=merchant,
+                external_merchant_id=merchant.merchant_id,
                 account=account,
                 external_product_id=DEFAULT_PRODUCT_ID,
             ).count(),
@@ -649,7 +649,7 @@ class TestRegistrationAdmin(TestCase):
         self.assertEqual(
             RegistrationWebStoreProductMapping.objects.filter(
                 registration=self.registration,
-                merchant=merchant,
+                external_merchant_id=merchant.merchant_id,
                 account=account,
                 external_product_id=DEFAULT_PRODUCT_ID,
             ).count(),
