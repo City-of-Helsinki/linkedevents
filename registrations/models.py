@@ -851,6 +851,15 @@ class SignUpMixin:
         else:
             kwargs = {"signup_group": self}
 
+        if not RegistrationWebStoreProductMapping.objects.filter(
+            registration=self.registration,
+            external_merchant_id=getattr(
+                self.registration.merchant, "merchant_id", None
+            ),
+            account=self.registration.account,
+        ).exists():
+            self.registration.create_or_update_web_store_product_mapping_and_accounting()
+
         kwargs["expires_at"] = localtime() + timedelta(
             hours=settings.WEB_STORE_ORDER_EXPIRATION_HOURS
         )
