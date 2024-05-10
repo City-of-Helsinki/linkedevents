@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.core.exceptions import ValidationError
-from django.test import override_settings, TestCase
+from django.test import TestCase
 
 from events.models import Language
 from events.tests.factories import (
@@ -121,7 +121,7 @@ class TestRegistration(TestCase):
     def test_merchant(self):
         self.assertIsNone(self.registration.merchant)
 
-        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
             merchant = WebStoreMerchantFactory(organization=self.registration.publisher)
         del self.registration.merchant
 
@@ -134,7 +134,7 @@ class TestRegistration(TestCase):
         self.registration.publisher.parent = parent_organization
         self.registration.publisher.save(update_fields=["parent"])
 
-        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
             merchant = WebStoreMerchantFactory(organization=parent_organization)
         del self.registration.merchant
 
@@ -340,7 +340,7 @@ class TestSignUpGroup(TestCase):
         assert signup.last_modified_by is None
 
     def test_to_web_store_order_json(self):
-        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
             product_mapping = RegistrationWebStoreProductMappingFactory(
                 registration=self.signup_group.registration
             )
@@ -790,7 +790,7 @@ class TestSignUp(TestCase):
         assert signup.last_modified_by is None
 
     def test_to_web_store_order_json(self):
-        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
             product_mapping = RegistrationWebStoreProductMappingFactory(
                 registration=self.signup.registration
             )
@@ -1203,7 +1203,7 @@ class TestSignUpPriceGroup(TestCase):
         cls.price_group = SignUpPriceGroupFactory()
 
     def test_to_web_store_order_json(self):
-        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
             product_mapping = RegistrationWebStoreProductMappingFactory(
                 registration=self.price_group.signup.registration
             )
@@ -1299,7 +1299,7 @@ class TestSignUpPayment(TestCase):
 class TestWebStoreMerchant(TestCase):
     @classmethod
     def setUpTestData(cls):
-        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        with cls.settings(cls, WEB_STORE_INTEGRATION_ENABLED=False):
             cls.merchant = WebStoreMerchantFactory()
 
     def test_delete_not_allowed(self):
@@ -1354,13 +1354,13 @@ class TestWebStoreAccount(TestCase):
 class TestRegistrationWebStoreProductMapping(TestCase):
     @classmethod
     def setUpTestData(cls):
-        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        with cls.settings(cls, WEB_STORE_INTEGRATION_ENABLED=False):
             cls.product_mapping = RegistrationWebStoreProductMappingFactory()
 
     def test_can_create_more_than_one_mapping_for_same_merchant(self):
         self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 1)
 
-        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
             RegistrationWebStoreProductMappingFactory(
                 external_merchant_id=self.product_mapping.external_merchant_id
             )
@@ -1370,7 +1370,7 @@ class TestRegistrationWebStoreProductMapping(TestCase):
     def test_can_create_more_than_one_mapping_for_same_account(self):
         self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 1)
 
-        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
             RegistrationWebStoreProductMappingFactory(
                 account=self.product_mapping.account
             )
@@ -1380,7 +1380,7 @@ class TestRegistrationWebStoreProductMapping(TestCase):
     def test_can_create_more_than_one_mapping_for_same_merchant_and_account(self):
         self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 1)
 
-        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
             RegistrationWebStoreProductMappingFactory(
                 external_merchant_id=self.product_mapping.external_merchant_id,
                 account=self.product_mapping.account,

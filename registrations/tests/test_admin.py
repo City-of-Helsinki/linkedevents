@@ -6,7 +6,7 @@ from django.contrib import admin
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth import get_user_model
 from django.core import mail
-from django.test import override_settings, RequestFactory, TestCase
+from django.test import RequestFactory, TestCase
 from django.utils import translation
 from requests import RequestException
 from rest_framework import status
@@ -324,7 +324,7 @@ class TestRegistrationAdmin(TestCase):
         price_group = PriceGroupFactory(description="Adults")
         price_group2 = PriceGroupFactory(description="Children")
 
-        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
             WebStoreMerchantFactory(organization=publisher, merchant_id="1234")
         WebStoreAccountFactory(organization=publisher)
 
@@ -393,7 +393,7 @@ class TestRegistrationAdmin(TestCase):
 
         publisher = self.registration.publisher
 
-        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
             WebStoreMerchantFactory(organization=publisher, merchant_id="1234")
         WebStoreAccountFactory(organization=publisher)
 
@@ -517,7 +517,7 @@ class TestRegistrationAdmin(TestCase):
             price=Decimal("10"),
         )
 
-        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
             RegistrationWebStoreProductMappingFactory(registration=self.registration)
 
         self.assertEqual(RegistrationPriceGroup.objects.count(), 1)
@@ -554,7 +554,7 @@ class TestRegistrationAdmin(TestCase):
 
         price_group = PriceGroup.objects.first()
 
-        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
             merchant = WebStoreMerchantFactory(
                 organization=publisher, merchant_id="1234"
             )
@@ -610,7 +610,7 @@ class TestRegistrationAdmin(TestCase):
 
         publisher = self.registration.publisher
 
-        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
             merchant = WebStoreMerchantFactory(
                 organization=publisher, merchant_id="1234"
             )
@@ -702,7 +702,7 @@ class TestRegistrationAdmin(TestCase):
 
         price_group = PriceGroup.objects.first()
 
-        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
             WebStoreMerchantFactory(organization=publisher, merchant_id="1234")
 
         self.assertEqual(Registration.objects.count(), 1)
@@ -738,7 +738,7 @@ class TestRegistrationAdmin(TestCase):
 
         price_group = PriceGroup.objects.first()
 
-        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
             WebStoreMerchantFactory(organization=publisher, merchant_id="1234")
         WebStoreAccountFactory(organization=publisher)
 
@@ -786,7 +786,7 @@ class TestRegistrationAdmin(TestCase):
 
         publisher = self.registration.publisher
 
-        with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
             WebStoreMerchantFactory(organization=publisher, merchant_id="1234")
         WebStoreAccountFactory(organization=publisher)
 
