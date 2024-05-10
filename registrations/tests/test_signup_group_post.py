@@ -38,6 +38,8 @@ from registrations.tests.factories import (
     SeatReservationCodeFactory,
     SignUpFactory,
     SignUpGroupFactory,
+    WebStoreAccountFactory,
+    WebStoreMerchantFactory,
 )
 from registrations.tests.test_registration_post import hel_email
 from registrations.tests.utils import (
@@ -48,6 +50,10 @@ from registrations.tests.utils import (
     DEFAULT_CREATE_ORDER_ERROR_RESPONSE,
     get_web_store_failed_order_response,
     get_web_store_order_response,
+)
+from web_store.tests.product.test_web_store_product_api_client import (
+    DEFAULT_GET_PRODUCT_MAPPING_DATA,
+    DEFAULT_PRODUCT_ID,
 )
 from web_store.tests.test_web_store_api_base_client import get_mock_response
 
@@ -356,6 +362,96 @@ def test_authenticated_user_can_create_signup_group_with_payment(api_client, use
     )
 
 
+@pytest.mark.parametrize(
+    "user_role",
+    [
+        "superuser",
+        "admin",
+        "registration_admin",
+        "financial_admin",
+        "regular_user",
+        "regular_user_without_organization",
+    ],
+)
+@pytest.mark.django_db
+def test_signup_group_create_web_store_product_mapping_if_missing_during_payment_creation(
+    api_client, registration, user_role
+):
+    LanguageFactory(pk="fi", service_language=True)
+    LanguageFactory(pk="en", service_language=True)
+
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        WebStoreMerchantFactory(organization=registration.publisher)
+    WebStoreAccountFactory(organization=registration.publisher)
+
+    reservation = SeatReservationCodeFactory(seats=2, registration=registration)
+    registration_price_group = RegistrationPriceGroupFactory(registration=registration)
+
+    user = create_user_by_role(
+        user_role,
+        registration.publisher,
+        additional_roles=(
+            {
+                "regular_user_without_organization": lambda usr: None,
+            }
+            if user_role == "regular_user_without_organization"
+            else None
+        ),
+    )
+    api_client.force_authenticate(user)
+
+    signup_group_data = deepcopy(default_signup_group_data)
+    signup_group_data.update(
+        {
+            "registration": registration.pk,
+            "reservation_code": reservation.code,
+            "create_payment": True,
+        }
+    )
+    signup_group_data["signups"][0].update(
+        {
+            "price_group": {"registration_price_group": registration_price_group.pk},
+        }
+    )
+    signup_group_data["signups"][1].update(
+        {
+            "price_group": {"registration_price_group": registration_price_group.pk},
+        }
+    )
+
+    assert SignUpPayment.objects.count() == 0
+
+    total_payment_amount = registration_price_group.price * 2
+    mocked_web_store_json = get_web_store_order_response(
+        payment_amount=total_payment_amount
+    )
+    with requests_mock.Mocker() as req_mock:
+        product_base_url = f"{settings.WEB_STORE_API_BASE_URL}product/"
+        req_mock.post(product_base_url, json=DEFAULT_GET_PRODUCT_MAPPING_DATA)
+        req_mock.post(
+            f"{product_base_url}{DEFAULT_PRODUCT_ID}/accounting",
+            json=DEFAULT_GET_PRODUCT_MAPPING_DATA,
+        )
+
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/",
+            status_code=status.HTTP_201_CREATED,
+            json=mocked_web_store_json,
+        )
+
+        response = assert_create_signup_group(api_client, signup_group_data)
+
+        assert req_mock.call_count == 3
+
+    assert SignUpPayment.objects.count() == 1
+
+    assert_signup_payment_data_is_correct(
+        response.data["payment"],
+        user,
+        signup_group=SignUpGroup.objects.first(),
+    )
+
+
 @pytest.mark.django_db
 def test_can_create_signup_group_with_create_payment_as_false_in_payload(
     registration, api_client
@@ -453,49 +549,6 @@ def test_create_signup_group_payment_without_pricetotal_in_response(api_client):
         "<strong>Foo</strong>. The payment link expires in %(hours)s hours."
         % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
     )
-
-
-@pytest.mark.django_db
-def test_create_signup_group_payment_product_mapping_missing(registration, api_client):
-    reservation = SeatReservationCodeFactory(seats=2, registration=registration)
-
-    LanguageFactory(pk="fi", service_language=True)
-    LanguageFactory(pk="en", service_language=True)
-
-    registration_price_group = RegistrationPriceGroupFactory(registration=registration)
-    registration_price_group2 = RegistrationPriceGroupFactory(registration=registration)
-
-    user = create_user_by_role("registration_admin", registration.publisher)
-    api_client.force_authenticate(user)
-
-    signup_group_data = deepcopy(default_signup_group_data)
-    signup_group_data.update(
-        {
-            "registration": registration.pk,
-            "reservation_code": reservation.code,
-            "create_payment": True,
-        }
-    )
-    signup_group_data["signups"][0].update(
-        {
-            "price_group": {"registration_price_group": registration_price_group.pk},
-        }
-    )
-    signup_group_data["signups"][1].update(
-        {
-            "price_group": {"registration_price_group": registration_price_group2.pk},
-        }
-    )
-
-    assert SignUpPayment.objects.count() == 0
-
-    response = create_signup_group(api_client, signup_group_data)
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.data[0] == (
-        "A RegistrationWebStoreProductMapping is required before a Talpa order can be created."
-    )
-
-    assert SignUpPayment.objects.count() == 0
 
 
 @pytest.mark.django_db
