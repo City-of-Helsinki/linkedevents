@@ -205,10 +205,9 @@ class RegistrationWebStoreProductMappingFactory(factory.django.DjangoModelFactor
     external_product_id = DEFAULT_PRODUCT_ID
 
     @factory.lazy_attribute
-    def merchant(self):
-        return WebStoreMerchantFactory(
-            organization=self.registration.publisher,
-        )
+    def external_merchant_id(self):
+        merchant = WebStoreMerchantFactory(organization=self.registration.publisher)
+        return merchant.merchant_id
 
     @factory.lazy_attribute
     def account(self):

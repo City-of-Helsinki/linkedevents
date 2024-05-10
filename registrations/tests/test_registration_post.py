@@ -856,7 +856,7 @@ def test_create_registration_with_product_mapping_and_accounting(
     assert (
         RegistrationWebStoreProductMapping.objects.filter(
             registration=Registration.objects.first(),
-            merchant=merchant,
+            external_merchant_id=merchant.merchant_id,
             account=account,
             external_product_id=DEFAULT_PRODUCT_ID,
         ).count()
@@ -865,7 +865,7 @@ def test_create_registration_with_product_mapping_and_accounting(
 
 
 @pytest.mark.django_db
-def test_update_registration_with_product_mapping_merchant_missing(
+def test_create_registration_with_product_mapping_merchant_missing(
     user_api_client, event
 ):
     WebStoreAccountFactory(organization=event.publisher)

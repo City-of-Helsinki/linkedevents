@@ -1400,7 +1400,7 @@ class TestRegistrationWebStoreProductMapping(TestCase):
 
         with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
             RegistrationWebStoreProductMappingFactory(
-                merchant=self.product_mapping.merchant
+                external_merchant_id=self.product_mapping.external_merchant_id
             )
 
         self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 2)
@@ -1420,7 +1420,7 @@ class TestRegistrationWebStoreProductMapping(TestCase):
 
         with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
             RegistrationWebStoreProductMappingFactory(
-                merchant=self.product_mapping.merchant,
+                external_merchant_id=self.product_mapping.external_merchant_id,
                 account=self.product_mapping.account,
             )
 

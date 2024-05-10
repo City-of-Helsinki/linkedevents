@@ -680,7 +680,9 @@ class Registration(CreatedModifiedBaseModel):
         if (
             not self.registration_price_groups.exists()
             or RegistrationWebStoreProductMapping.objects.filter(
-                registration_id=self.pk, merchant=self.merchant, account=self.account
+                registration_id=self.pk,
+                external_merchant_id=getattr(self.merchant, "merchant_id", None),
+                account=self.account,
             ).exists()
         ):
             return
@@ -696,7 +698,7 @@ class Registration(CreatedModifiedBaseModel):
         RegistrationWebStoreProductMapping.objects.update_or_create(
             registration=self,
             defaults={
-                "merchant": self.merchant,
+                "external_merchant_id": self.merchant.merchant_id,
                 "account": self.account,
                 "external_product_id": product_id,
             },
@@ -2075,16 +2077,15 @@ class RegistrationWebStoreProductMapping(models.Model):
         on_delete=models.CASCADE,
     )
 
-    merchant = models.ForeignKey(
-        WebStoreMerchant,
-        related_name="web_store_product_mappings",
-        on_delete=models.PROTECT,
-    )
-
     account = models.ForeignKey(
         WebStoreAccount,
         related_name="web_store_product_mappings",
         on_delete=models.PROTECT,
+    )
+
+    external_merchant_id = models.CharField(
+        max_length=64,
+        blank=True,
     )
 
     external_product_id = models.CharField(
