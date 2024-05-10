@@ -249,7 +249,6 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
             "web_store_merchants-0-city": "Test City",
             "web_store_merchants-0-email": "test@test.dev",
             "web_store_merchants-0-phone_number": "+3580000000",
-            "web_store_merchants-0-url": "https://test.dev/homepage/",
             "web_store_merchants-0-terms_of_service_url": "https://test.dev/terms_of_service/",
             "web_store_merchants-0-business_id": "1234567-8",
             "web_store_merchants-0-paytrail_merchant_id": "1234567",
@@ -332,6 +331,8 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
         self.assertEqual(merchant.last_modified_by_id, self.admin_user.pk)
         self.assertIsNotNone(merchant.created_time)
         self.assertIsNotNone(merchant.last_modified_time)
+
+        data["url"] = settings.LINKED_EVENTS_UI_URL
         self.assertMerchantValuesEqual(merchant, data)
 
     def test_can_add_web_store_merchant_to_an_existing_organization(self):
@@ -372,6 +373,8 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
         self.assertEqual(merchant.last_modified_by_id, self.admin_user.pk)
         self.assertIsNotNone(merchant.created_time)
         self.assertIsNotNone(merchant.last_modified_time)
+
+        data["url"] = settings.LINKED_EVENTS_UI_URL
         self.assertMerchantValuesEqual(merchant, data, attrs_to_skip=["organization"])
 
     def test_can_edit_web_store_merchant(self):
@@ -429,6 +432,8 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
         self.assertIsNotNone(merchant.created_time)
         self.assertIsNotNone(merchant.last_modified_time)
         self.assertTrue(merchant.last_modified_time > merchant_last_modified_time)
+
+        data["url"] = settings.LINKED_EVENTS_UI_URL
         self.assertMerchantValuesEqual(
             merchant, data, attrs_to_skip=merchant_attrs_to_skip
         )
@@ -444,7 +449,6 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
             "web_store_merchants-0-city",
             "web_store_merchants-0-email",
             "web_store_merchants-0-phone_number",
-            "web_store_merchants-0-url",
             "web_store_merchants-0-terms_of_service_url",
             "web_store_merchants-0-business_id",
             "web_store_merchants-0-paytrail_merchant_id",
@@ -487,7 +491,6 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
                 "web_store_merchants-0-city": merchant.city,
                 "web_store_merchants-0-email": merchant.email,
                 "web_store_merchants-0-phone_number": merchant.phone_number,
-                "web_store_merchants-0-url": merchant.url,
                 "web_store_merchants-0-terms_of_service_url": merchant.terms_of_service_url,
                 "web_store_merchants-0-business_id": merchant.business_id,
                 "web_store_merchants-0-paytrail_merchant_id": merchant.paytrail_merchant_id,

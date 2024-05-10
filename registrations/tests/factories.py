@@ -179,7 +179,6 @@ class WebStoreMerchantFactory(factory.django.DjangoModelFactory):
     city = factory.Faker("city", locale="fi_FI")
     email = factory.Faker("email")
     phone_number = factory.Faker("phone_number", locale="fi_FI")
-    url = factory.Faker("url")
     terms_of_service_url = factory.Faker("url")
     business_id = factory.Faker("company_business_id", locale="fi_FI")
 
