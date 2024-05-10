@@ -312,6 +312,14 @@ class WebStoreMerchant(CreatedModifiedBaseModel):
         super().save(*args, **kwargs)
 
         if should_check_talpa_sync and self.needs_talpa_sync(old_instance):
+            if (
+                old_instance
+                and old_instance.paytrail_merchant_id != self.paytrail_merchant_id
+            ):
+                # Whenever Paytrail merchant ID is changed, the merchant needs a new secret key
+                # mapping in Talpa and this requires the merchant to be re-created.
+                created = True
+
             create_or_update_web_store_merchant(self, created)
 
 

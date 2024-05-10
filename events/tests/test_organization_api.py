@@ -1,6 +1,8 @@
 from unittest.mock import patch
 
 import pytest
+import requests_mock
+from django.conf import settings
 from django.test import override_settings
 from django.utils import translation
 from django_orghierarchy.models import Organization
@@ -942,6 +944,74 @@ def test_superuser_and_financial_can_patch_organizations_web_store_merchant(
     assert merchant.last_modified_time > last_modified_time
 
 
+@pytest.mark.parametrize("user_role", ["superuser", "financial_admin", "admin"])
+@pytest.mark.django_db
+def test_new_web_store_merchant_created_if_paytrail_merchant_id_changed(
+    data_source, organization, api_client, user_role
+):
+    user = create_user_by_role(user_role, organization)
+    if user_role == "admin":
+        user.financial_admin_organizations.add(organization)
+    elif user_role == "financial_admin":
+        user.admin_organizations.add(organization)
+
+    api_client.force_authenticate(user)
+
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        merchant = WebStoreMerchantFactory(
+            organization=organization, merchant_id="1234"
+        )
+
+    new_merchant_id = "9876"
+    new_paytrail_merchant_id = "4321"
+
+    merchants_data = default_web_store_merchants_data[0].copy()
+    merchants_data["id"] = merchant.pk
+    merchants_data["paytrail_merchant_id"] = new_paytrail_merchant_id
+
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": organization.origin_id,
+        "id": f"{data_source.id}:{organization.origin_id}",
+        "name": organization_name,
+        "web_store_merchants": [merchants_data],
+    }
+
+    assert WebStoreMerchant.objects.count() == 1
+    assert (
+        WebStoreMerchant.objects.filter(
+            organization_id=organization.id,
+            merchant_id=new_merchant_id,
+            **merchants_data,
+        ).count()
+        == 0
+    )
+
+    json_return_value = DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA.copy()
+    json_return_value["merchantId"] = new_merchant_id
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}merchant/create/"
+            f"merchant/{settings.WEB_STORE_API_NAMESPACE}",
+            json=json_return_value,
+        )
+
+        response = assert_update_organization(api_client, organization.id, payload)
+        assert len(response.data["web_store_merchants"]) == 1
+
+        assert req_mock.call_count == 1
+
+    assert WebStoreMerchant.objects.count() == 1
+    assert (
+        WebStoreMerchant.objects.filter(
+            organization_id=organization.id,
+            merchant_id=new_merchant_id,
+            **merchants_data,
+        ).count()
+        == 1
+    )
+
+
 @pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
 @pytest.mark.django_db
 def test_superuser_and_financial_can_make_web_store_merchant_inactive(
@@ -1049,7 +1119,13 @@ def test_cannot_put_web_store_merchant_id(
         )
 
     web_store_merchants_data = default_web_store_merchants_data.copy()
-    web_store_merchants_data[0].update({"id": merchant.pk, "merchant_id": "4321"})
+    web_store_merchants_data[0].update(
+        {
+            "id": merchant.pk,
+            "merchant_id": "4321",
+            "paytrail_merchant_id": merchant.paytrail_merchant_id,
+        }
+    )
     payload = {
         "data_source": data_source.id,
         "origin_id": origin_id,
