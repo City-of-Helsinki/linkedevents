@@ -35,7 +35,6 @@ default_web_store_merchants_data = [
         "city": "Test City",
         "email": "test@test.dev",
         "phone_number": "+3580000000",
-        "url": "https://test.dev/homepage/",
         "terms_of_service_url": "https://test.dev/terms_of_service/",
         "business_id": "1234567-8",
         "paytrail_merchant_id": "1234567",
@@ -783,14 +782,19 @@ def test_superuser_or_financial_and_event_admin_can_create_organization_with_web
         mocked_web_store_api_request.return_value = mocked_web_store_api_response
 
         response = assert_create_organization(api_client, payload)
+
     assert mocked_web_store_api_request.called is True
     assert len(response.data["web_store_merchants"]) == 1
+    assert (
+        response.data["web_store_merchants"][0]["url"] == settings.LINKED_EVENTS_UI_URL
+    )
 
     assert WebStoreMerchant.objects.count() == 1
     assert (
         WebStoreMerchant.objects.filter(
             organization_id=response.data["id"],
             merchant_id=response.data["web_store_merchants"][0]["merchant_id"],
+            url=settings.LINKED_EVENTS_UI_URL,
             created_by=user,
             last_modified_by=user,
             created_time__isnull=False,
@@ -832,14 +836,19 @@ def test_superuser_or_financial_and_event_admin_can_update_organization_with_web
         mocked_web_store_api_request.return_value = mocked_web_store_api_response
 
         response = assert_update_organization(api_client, organization.id, payload)
+
     assert mocked_web_store_api_request.called is True
     assert len(response.data["web_store_merchants"]) == 1
+    assert (
+        response.data["web_store_merchants"][0]["url"] == settings.LINKED_EVENTS_UI_URL
+    )
 
     assert WebStoreMerchant.objects.count() == 1
     assert (
         WebStoreMerchant.objects.filter(
             organization_id=response.data["id"],
             merchant_id=response.data["web_store_merchants"][0]["merchant_id"],
+            url=settings.LINKED_EVENTS_UI_URL,
             created_by=user,
             last_modified_by=user,
             created_time__isnull=False,
@@ -873,14 +882,19 @@ def test_superuser_and_financial_admin_can_patch_organization_with_web_store_mer
         mocked_web_store_api_request.return_value = mocked_web_store_api_response
 
         response = assert_patch_organization(api_client, organization.id, payload)
+
     assert mocked_web_store_api_request.called is True
     assert len(response.data["web_store_merchants"]) == 1
+    assert (
+        response.data["web_store_merchants"][0]["url"] == settings.LINKED_EVENTS_UI_URL
+    )
 
     assert WebStoreMerchant.objects.count() == 1
     assert (
         WebStoreMerchant.objects.filter(
             organization_id=response.data["id"],
             merchant_id=response.data["web_store_merchants"][0]["merchant_id"],
+            url=settings.LINKED_EVENTS_UI_URL,
             created_by=user,
             last_modified_by=user,
             created_time__isnull=False,
@@ -913,7 +927,9 @@ def test_superuser_and_financial_can_patch_organizations_web_store_merchant(
     assert WebStoreMerchant.objects.count() == 1
     assert (
         WebStoreMerchant.objects.filter(
-            organization_id=organization.id, **payload["web_store_merchants"][0]
+            organization_id=organization.id,
+            url=settings.LINKED_EVENTS_UI_URL,
+            **payload["web_store_merchants"][0],
         ).count()
         == 0
     )
@@ -929,13 +945,19 @@ def test_superuser_and_financial_can_patch_organizations_web_store_merchant(
         mocked_web_store_api_request.return_value = mocked_web_store_api_response
 
         response = assert_patch_organization(api_client, organization.id, payload)
+
     assert mocked_web_store_api_request.called is True
     assert len(response.data["web_store_merchants"]) == 1
+    assert (
+        response.data["web_store_merchants"][0]["url"] == settings.LINKED_EVENTS_UI_URL
+    )
 
     assert WebStoreMerchant.objects.count() == 1
     assert (
         WebStoreMerchant.objects.filter(
-            organization_id=organization.id, **payload["web_store_merchants"][0]
+            organization_id=organization.id,
+            url=settings.LINKED_EVENTS_UI_URL,
+            **payload["web_store_merchants"][0],
         ).count()
         == 1
     )
@@ -1053,7 +1075,7 @@ def test_superuser_and_financial_can_make_web_store_merchant_inactive(
 
 @pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
 @pytest.mark.django_db
-def test_cannot_post_web_store_merchant_id(
+def test_cannot_post_web_store_merchant_id_or_url(
     data_source, organization, api_client, user_role
 ):
     user = create_user_by_role(user_role, organization)
@@ -1066,7 +1088,12 @@ def test_cannot_post_web_store_merchant_id(
     original_merchant_id = "1234"
 
     web_store_merchants_data = default_web_store_merchants_data.copy()
-    web_store_merchants_data[0]["merchant_id"] = "4321"
+    web_store_merchants_data[0].update(
+        {
+            "merchant_id": "4321",
+            "url": "http://www.homepage.dev/",
+        }
+    )
     payload = {
         "data_source": data_source.id,
         "origin_id": origin_id,
@@ -1094,6 +1121,7 @@ def test_cannot_post_web_store_merchant_id(
         WebStoreMerchant.objects.filter(
             organization_id=response.data["id"],
             merchant_id=original_merchant_id,
+            url=settings.LINKED_EVENTS_UI_URL,
         ).count()
         == 1
     )
@@ -1101,7 +1129,7 @@ def test_cannot_post_web_store_merchant_id(
 
 @pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
 @pytest.mark.django_db
-def test_cannot_put_web_store_merchant_id(
+def test_cannot_put_web_store_merchant_id_or_url(
     data_source, organization, api_client, user_role
 ):
     user = create_user_by_role(user_role, organization)
@@ -1123,6 +1151,7 @@ def test_cannot_put_web_store_merchant_id(
         {
             "id": merchant.pk,
             "merchant_id": "4321",
+            "url": "http://www.homepage.dev/",
             "paytrail_merchant_id": merchant.paytrail_merchant_id,
         }
     )
@@ -1141,13 +1170,15 @@ def test_cannot_put_web_store_merchant_id(
     assert mocked_web_store_api_request.called is True
 
     assert WebStoreMerchant.objects.count() == 1
+
     merchant.refresh_from_db()
     assert merchant.merchant_id == original_merchant_id
+    assert merchant.url == settings.LINKED_EVENTS_UI_URL
 
 
 @pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
 @pytest.mark.django_db
-def test_cannot_patch_web_store_merchant_id(
+def test_cannot_patch_web_store_merchant_id_or_url(
     data_source, organization, api_client, user_role
 ):
     user = create_user_by_role(user_role, organization)
@@ -1165,6 +1196,7 @@ def test_cannot_patch_web_store_merchant_id(
             {
                 "id": merchant.pk,
                 "merchant_id": "4321",
+                "url": "http://www.homepage.dev/",
                 "name": "Edited merchant name",
             }
         ],
@@ -1178,8 +1210,10 @@ def test_cannot_patch_web_store_merchant_id(
     assert mocked_web_store_api_request.called is True
 
     assert WebStoreMerchant.objects.count() == 1
+
     merchant.refresh_from_db()
     assert merchant.merchant_id == original_merchant_id
+    assert merchant.url == settings.LINKED_EVENTS_UI_URL
 
 
 @pytest.mark.parametrize(
@@ -1568,7 +1602,6 @@ def test_always_update_existing_web_store_merchant(
                 "city": "Test City",
                 "email": "test2@test.dev",
                 "phone_number": "+3580000001",
-                "url": "https://test2.dev/homepage/",
                 "terms_of_service_url": "https://test2.dev/terms_of_service/",
                 "business_id": "1234567-9",
                 "paytrail_merchant_id": "12345678",
@@ -1626,7 +1659,6 @@ def test_always_patch_existing_web_store_merchant(
                 "city": "Test City",
                 "email": "test2@test.dev",
                 "phone_number": "+3580000001",
-                "url": "https://test2.dev/homepage/",
                 "terms_of_service_url": "https://test2.dev/terms_of_service/",
                 "business_id": "1234567-9",
                 "paytrail_merchant_id": "12345678",

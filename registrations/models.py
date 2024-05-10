@@ -241,7 +241,10 @@ class WebStoreMerchant(CreatedModifiedBaseModel):
         verbose_name=_("Phone number"),
         max_length=18,
     )
-    url = models.URLField(verbose_name=_("URL"))
+    url = models.URLField(
+        verbose_name=_("URL"),
+        editable=False,
+    )
     terms_of_service_url = models.URLField(verbose_name=_("Terms of Service URL"))
     business_id = models.CharField(
         verbose_name=_("Business ID"),
@@ -308,6 +311,9 @@ class WebStoreMerchant(CreatedModifiedBaseModel):
             old_instance = WebStoreMerchant.objects.filter(pk=self.pk).first()
         else:
             old_instance = None
+
+        if self.url != settings.LINKED_EVENTS_UI_URL:
+            self.url = settings.LINKED_EVENTS_UI_URL
 
         super().save(*args, **kwargs)
 

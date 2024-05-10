@@ -1546,7 +1546,10 @@ class WebStoreMerchantSerializer(CreatedModifiedBaseSerializer):
             "paytrail_merchant_id",
             "merchant_id",
         ) + CreatedModifiedBaseSerializer.Meta.fields
-        extra_kwargs = {"merchant_id": {"read_only": True}}
+        extra_kwargs = {
+            "merchant_id": {"read_only": True},
+            "url": {"read_only": True},
+        }
 
 
 class WebStoreAccountSerializer(CreatedModifiedBaseSerializer):
