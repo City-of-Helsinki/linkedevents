@@ -39,6 +39,7 @@ charset-normalizer==3.3.2
 cryptography==42.0.7
     # via
     #   authlib
+    #   django-rest-knox
     #   drf-oidc-auth
     #   social-auth-core
 decorator==5.1.1
@@ -68,6 +69,7 @@ django==4.2.13
     #   django-parler
     #   django-parler-rest
     #   django-redis
+    #   django-rest-knox
     #   django-reversion
     #   django-searchable-encrypted-fields
     #   djangorestframework
@@ -123,6 +125,8 @@ django-parler-rest==2.2
     # via django-munigeo
 django-redis==5.4.0
     # via -r requirements.in
+django-rest-knox==4.2.0
+    # via -r requirements.in
 django-reversion==5.0.12
     # via -r requirements.in
 django-searchable-encrypted-fields==0.2.1
@@ -132,6 +136,7 @@ djangorestframework==3.15.1
     #   -r requirements.in
     #   django-orghierarchy
     #   django-parler-rest
+    #   django-rest-knox
     #   djangorestframework-bulk
     #   djangorestframework-gis
     #   drf-oidc-auth
