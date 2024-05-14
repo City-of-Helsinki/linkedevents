@@ -635,39 +635,6 @@ def test_admin_user_from_other_organization_cannot_delete_organization(
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
-@pytest.fixture
-def user2_with_user_type(organization, user2, request):
-    user_type = request.param
-    if user_type == "org_regular":
-        organization.regular_users.add(user2)
-
-    elif user_type == "org_admin":
-        organization.admin_users.add(user2)
-
-    elif user_type == "staff":
-        user2.is_staff = True
-        user2.save()
-
-    elif user_type == "admin":
-        user2.is_staff = True
-        user2.is_admin = True
-        user2.save()
-
-    elif user_type == "superuser":
-        user2.is_staff = True
-        user2.is_admin = True
-        user2.is_superuser = True
-        user2.save()
-
-    elif user_type is None:
-        pass
-
-    else:
-        raise ValueError("user_type was not handled in test")
-
-    return user2
-
-
 @pytest.mark.parametrize(
     "user2_with_user_type, expected_status",
     [
@@ -676,7 +643,7 @@ def user2_with_user_type(organization, user2, request):
         ("org_admin", status.HTTP_201_CREATED),
         ("staff", status.HTTP_403_FORBIDDEN),
         ("admin", status.HTTP_403_FORBIDDEN),
-        ("superuser", status.HTTP_403_FORBIDDEN),
+        ("superuser", status.HTTP_201_CREATED),
     ],
     indirect=["user2_with_user_type"],
 )
@@ -705,7 +672,7 @@ def test_permissions_create_organization(
         ("org_admin", status.HTTP_200_OK),
         ("staff", status.HTTP_403_FORBIDDEN),
         ("admin", status.HTTP_403_FORBIDDEN),
-        ("superuser", status.HTTP_403_FORBIDDEN),
+        ("superuser", status.HTTP_200_OK),
     ],
     indirect=["user2_with_user_type"],
 )
@@ -731,7 +698,7 @@ def test_permissions_update_organization(
         ("org_admin", status.HTTP_204_NO_CONTENT),
         ("staff", status.HTTP_403_FORBIDDEN),
         ("admin", status.HTTP_403_FORBIDDEN),
-        ("superuser", status.HTTP_403_FORBIDDEN),
+        ("superuser", status.HTTP_204_NO_CONTENT),
     ],
     indirect=["user2_with_user_type"],
 )
