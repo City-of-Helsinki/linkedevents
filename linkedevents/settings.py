@@ -5,7 +5,7 @@ Django settings module for linkedevents project.
 import importlib.util
 import os
 import subprocess
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import bleach
 import environ
@@ -245,6 +245,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "rest_framework",
     "rest_framework_gis",
+    "knox",
     "mptt",
     "reversion",
     "haystack",
@@ -265,6 +266,7 @@ INSTALLED_APPS = [
     "registrations",
     "audit_log",
     "web_store",
+    "data_analytics",
 ] + env("EXTRA_INSTALLED_APPS")
 
 # django-extensions is a set of developer friendly tools
@@ -702,6 +704,13 @@ WEB_STORE_API_NAMESPACE = env("WEB_STORE_API_NAMESPACE")
 WEB_STORE_ORDER_EXPIRATION_HOURS = env("WEB_STORE_ORDER_EXPIRATION_HOURS")
 
 SUBSTITUTE_USER_ALLOWED_EMAIL_DOMAINS = env("SUBSTITUTE_USER_ALLOWED_EMAIL_DOMAINS")
+
+REST_KNOX = {
+    "AUTO_REFRESH": True,
+    "TOKEN_MODEL": "data_analytics.DataAnalyticsAuthToken",
+    "TOKEN_PREFIX": "",
+    "TOKEN_TTL": timedelta(days=30),
+}
 
 # local_settings.py can be used to override environment-specific settings
 # like database and email that differ between development and production.

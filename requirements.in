@@ -17,6 +17,7 @@ django-mptt
 django-munigeo
 django-orghierarchy
 django-redis
+django-rest-knox
 django-reversion
 django-searchable-encrypted-fields
 django~=4.2
