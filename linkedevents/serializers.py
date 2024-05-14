@@ -303,50 +303,64 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                 )
         return value
 
+    def _validate_publisher_for_org_user(
+        self, value, field="publisher", allowed_to_regular_user=True
+    ):
+        allowed_organizations = set(
+            self.user.get_admin_organizations_and_descendants()
+        ) | set(
+            map(
+                lambda x: x.replaced_by,
+                self.user.get_admin_organizations_and_descendants(),
+            )
+        )
+
+        # Allow regular users to post if allowed_to_regular_user is True
+        if allowed_to_regular_user:
+            allowed_organizations |= set(
+                self.user.organization_memberships.all()
+            ) | set(
+                map(
+                    lambda x: x.replaced_by,
+                    self.user.organization_memberships.all(),
+                )
+            )
+
+        if value not in allowed_organizations:
+            publisher = self.context.get("publisher")
+            publisher = publisher.replaced_by or publisher if publisher else None
+
+            raise serializers.ValidationError(
+                _(
+                    "Setting %(field)s to %(given)s "
+                    "is not allowed for this user. The %(field)s "
+                    "must be left blank or set to %(required)s or any other organization "
+                    "the user belongs to."
+                )
+                % {
+                    "field": str(field),
+                    "given": str(value),
+                    "required": str(publisher),
+                }
+            )
+
     def validate_publisher(
         self, value, field="publisher", allowed_to_regular_user=True
     ):
         # a single POST always comes from a single source
         if value and self.context["request"].method == "POST":
-            allowed_organizations = set(
-                self.user.get_admin_organizations_and_descendants()
-            ) | set(
-                map(
-                    lambda x: x.replaced_by,
-                    self.user.get_admin_organizations_and_descendants(),
-                )
-            )
-            # Allow regular users to post if allowed_to_regular_user is True
-            if allowed_to_regular_user:
-                allowed_organizations |= set(
-                    self.user.organization_memberships.all()
-                ) | set(
-                    map(
-                        lambda x: x.replaced_by,
-                        self.user.organization_memberships.all(),
-                    )
-                )
-            if value not in allowed_organizations:
-                publisher = self.context["publisher"]
-                publisher = publisher.replaced_by or publisher if publisher else None
+            if self.user.is_superuser:
+                return value.replaced_by if value.replaced_by else value
 
-                raise serializers.ValidationError(
-                    _(
-                        "Setting %(field)s to %(given)s "
-                        "is not allowed for this user. The %(field)s "
-                        "must be left blank or set to %(required)s or any other organization "
-                        "the user belongs to."
-                    )
-                    % {
-                        "field": str(field),
-                        "given": str(value),
-                        "required": str(publisher),
-                    }
-                )
+            self._validate_publisher_for_org_user(
+                value, field=field, allowed_to_regular_user=allowed_to_regular_user
+            )
+
             if value.replaced_by:
                 # for replaced organizations, we automatically update to the current organization
                 # even if the POST uses the old id
                 return value.replaced_by
+
         return value
 
     def validate(self, data):

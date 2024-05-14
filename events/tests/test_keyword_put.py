@@ -21,10 +21,15 @@ def update_with_put(api_client, kw_id, keyword_data, credentials=None):
 # === tests ===
 
 
+@pytest.mark.parametrize(
+    "user2_with_user_type",
+    ["org_admin", "superuser"],
+    indirect=["user2_with_user_type"],
+)
 @pytest.mark.django_db
-def test__update_a_keyword_with_put(api_client, keyword_dict, user):
-    # create an keyword
-    api_client.force_authenticate(user=user)
+def test_update_a_keyword_with_put(api_client, keyword_dict, user2_with_user_type):
+    # create a keyword
+    api_client.force_authenticate(user2_with_user_type)
     response = create_with_post(api_client, keyword_dict)
 
     # set up updates
@@ -55,7 +60,7 @@ def test_keyword_id_is_audit_logged_on_put(user_api_client, keyword, keyword_dic
 
 
 @pytest.mark.django_db
-def test__a_non_admin_cannot_update_a_keyword(api_client, keyword, keyword_dict, user):
+def test_a_non_admin_cannot_update_a_keyword(api_client, keyword, keyword_dict, user):
     keyword.publisher.admin_users.remove(user)
     api_client.force_authenticate(user)
 
@@ -65,7 +70,7 @@ def test__a_non_admin_cannot_update_a_keyword(api_client, keyword, keyword_dict,
 
 
 @pytest.mark.django_db
-def test__an_admin_can_update_an_keyword_from_another_data_source(
+def test_an_admin_can_update_an_keyword_from_another_data_source(
     api_client, keyword2, other_data_source, organization, user
 ):
     other_data_source.owner = organization
@@ -84,7 +89,7 @@ def test__an_admin_can_update_an_keyword_from_another_data_source(
 
 
 @pytest.mark.django_db
-def test__correct_api_key_can_update_a_keyword(
+def test_correct_api_key_can_update_a_keyword(
     api_client, keyword, keyword_dict, data_source, organization
 ):
     data_source.owner = organization
@@ -102,7 +107,7 @@ def test__correct_api_key_can_update_a_keyword(
 
 
 @pytest.mark.django_db
-def test__wrong_api_key_cannot_update_a_keyword(
+def test_wrong_api_key_cannot_update_a_keyword(
     api_client, keyword, keyword_dict, data_source, other_data_source
 ):
     detail_url = reverse("keyword-detail", kwargs={"pk": keyword.pk})
@@ -116,7 +121,7 @@ def test__wrong_api_key_cannot_update_a_keyword(
 
 
 @pytest.mark.django_db
-def test__api_key_without_organization_cannot_update_a_keyword(
+def test_api_key_without_organization_cannot_update_a_keyword(
     api_client, keyword, keyword_dict, data_source
 ):
     detail_url = reverse("keyword-detail", kwargs={"pk": keyword.pk})
@@ -130,7 +135,7 @@ def test__api_key_without_organization_cannot_update_a_keyword(
 
 
 @pytest.mark.django_db
-def test__unknown_api_key_cannot_update_a_keyword(api_client, keyword, keyword_dict):
+def test_unknown_api_key_cannot_update_a_keyword(api_client, keyword, keyword_dict):
     detail_url = reverse("keyword-detail", kwargs={"pk": keyword.pk})
     response = update_with_put(
         api_client, detail_url, keyword_dict, credentials={"apikey": "unknown"}
@@ -139,7 +144,7 @@ def test__unknown_api_key_cannot_update_a_keyword(api_client, keyword, keyword_d
 
 
 @pytest.mark.django_db
-def test__empty_api_key_cannot_update_a_keyword(
+def test_empty_api_key_cannot_update_a_keyword(
     api_client,
     keyword,
     keyword_dict,
@@ -152,7 +157,7 @@ def test__empty_api_key_cannot_update_a_keyword(
 
 
 @pytest.mark.django_db
-def test__non_user_editable_resources_cannot_update_keyword(
+def test_non_user_editable_resources_cannot_update_keyword(
     api_client, keyword, keyword_dict, data_source, organization, user
 ):
     data_source.owner = organization
@@ -165,7 +170,7 @@ def test__non_user_editable_resources_cannot_update_keyword(
 
 
 @pytest.mark.django_db
-def test__user_editable_resources_can_update_keyword(
+def test_user_editable_resources_can_update_keyword(
     api_client, keyword, keyword_dict, data_source, organization, user
 ):
     data_source.owner = organization

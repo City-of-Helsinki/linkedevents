@@ -238,7 +238,7 @@ def get_or_create_default_organization() -> Optional[Organization]:
 
 
 def organization_can_be_edited_by(organization: Organization, user):
-    return organization in user.admin_organizations.all()
+    return user.is_superuser or organization in user.admin_organizations.all()
 
 
 def get_user_data_source_and_organization_from_request(

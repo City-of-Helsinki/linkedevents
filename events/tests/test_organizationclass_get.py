@@ -36,11 +36,16 @@ def assert_get_organization_class(api_client, detail_pk):
     assert response.status_code == status.HTTP_200_OK
 
 
+@pytest.mark.parametrize(
+    "user2_with_user_type",
+    ["org_admin", "superuser"],
+    indirect=["user2_with_user_type"],
+)
 @pytest.mark.django_db
-def test_admin_user_can_get_organization_classes(
-    api_client, organization, organization_class, user
+def test_admin_and_superuser_can_get_organization_classes(
+    api_client, organization, organization_class, user2_with_user_type
 ):
-    api_client.force_authenticate(user)
+    api_client.force_authenticate(user2_with_user_type)
 
     get_list_and_assert_organization_classes(api_client, [organization_class])
 
@@ -90,7 +95,7 @@ def test_regular_user_cannot_get_organization_classes(
 
 
 @pytest.mark.django_db
-def test__api_key_user_can_get_organization_classes(
+def test_api_key_user_can_get_organization_classes(
     api_client, data_source, organization, organization_class
 ):
     data_source.owner = organization
@@ -101,7 +106,5 @@ def test__api_key_user_can_get_organization_classes(
 
 
 @pytest.mark.django_db
-def test__anonymous_user_can_retrieve_organization_class(
-    api_client, organization_class
-):
+def test_anonymous_user_can_retrieve_organization_class(api_client, organization_class):
     assert_get_organization_class(api_client, organization_class.id)

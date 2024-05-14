@@ -32,9 +32,16 @@ def test_keywordset_cannot_have_deprecated_keyword(keyword, keyword_set):
         keyword_set.save()
 
 
+@pytest.mark.parametrize(
+    "user2_with_user_type",
+    ["org_admin", "superuser"],
+    indirect=["user2_with_user_type"],
+)
 @pytest.mark.django_db
-def test_create_keywordset_with_post(user, api_client, keyword_set_dict):
-    api_client.force_authenticate(user)
+def test_create_keywordset_with_post(
+    api_client, keyword_set_dict, user2_with_user_type
+):
+    api_client.force_authenticate(user2_with_user_type)
 
     assert_create_keyword_set(api_client, keyword_set_dict)
 
@@ -61,7 +68,7 @@ def test_cannot_create_keywordset_with_existing_id(user, api_client, keyword_set
 
 
 @pytest.mark.django_db
-def test__unauthenticated_user_cannot_create_keywordset(api_client, keyword_set_dict):
+def test_unauthenticated_user_cannot_create_keywordset(api_client, keyword_set_dict):
     api_client.force_authenticate(None)
 
     response = create_keyword_set(api_client, keyword_set_dict)
@@ -69,7 +76,7 @@ def test__unauthenticated_user_cannot_create_keywordset(api_client, keyword_set_
 
 
 @pytest.mark.django_db
-def test__non_admin_cannot_create_keywordset(api_client, keyword_set_dict, user):
+def test_non_admin_cannot_create_keywordset(api_client, keyword_set_dict, user):
     user.get_default_organization().regular_users.add(user)
     user.get_default_organization().admin_users.remove(user)
     api_client.force_authenticate(user)
@@ -79,7 +86,7 @@ def test__non_admin_cannot_create_keywordset(api_client, keyword_set_dict, user)
 
 
 @pytest.mark.django_db
-def test__user_from_other_organization_cannot_create_keywordset(
+def test_user_from_other_organization_cannot_create_keywordset(
     api_client, keyword_set_dict, user
 ):
     user.get_default_organization().regular_users.remove(user)
@@ -104,7 +111,7 @@ def test_datasource_permission_missing(
 
 
 @pytest.mark.django_db
-def test__api_key_with_organization_can_create_keywordset(
+def test_api_key_with_organization_can_create_keywordset(
     api_client, keyword_set_dict, data_source, organization
 ):
     data_source.owner = organization
@@ -114,7 +121,7 @@ def test__api_key_with_organization_can_create_keywordset(
 
 
 @pytest.mark.django_db
-def test__api_key_without_organization_cannot_create_keywordset(
+def test_api_key_without_organization_cannot_create_keywordset(
     api_client, keyword_set_dict, data_source
 ):
     response = create_keyword_set(api_client, keyword_set_dict, data_source)
@@ -122,21 +129,21 @@ def test__api_key_without_organization_cannot_create_keywordset(
 
 
 @pytest.mark.django_db
-def test__unknown_api_key_cannot_create_keywordset(api_client, keyword_set_dict):
+def test_unknown_api_key_cannot_create_keywordset(api_client, keyword_set_dict):
     api_client.credentials(apikey="unknown")
     response = create_keyword_set(api_client, keyword_set_dict)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.django_db
-def test__empty_api_key_cannot_create_keywordset(api_client, keyword_set_dict):
+def test_empty_api_key_cannot_create_keywordset(api_client, keyword_set_dict):
     api_client.credentials(apikey="")
     response = create_keyword_set(api_client, keyword_set_dict)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.django_db
-def test__non_user_editable_resources_cannot_create_keyword(
+def test_non_user_editable_resources_cannot_create_keyword(
     api_client, keyword_set_dict, data_source, organization, user
 ):
     data_source.owner = organization
@@ -149,7 +156,7 @@ def test__non_user_editable_resources_cannot_create_keyword(
 
 
 @pytest.mark.django_db
-def test__user_editable_resources_can_create_keyword(
+def test_user_editable_resources_can_create_keyword(
     api_client, keyword_set_dict, data_source, organization, user
 ):
     data_source.owner = organization

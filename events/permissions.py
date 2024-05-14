@@ -56,6 +56,9 @@ class UserBelongsToOrganization(UserDataFromRequestMixin, BasePermission):
     message = "User doesn't belong to any organization"
 
     def has_permission(self, request, view):
+        if request.user.is_authenticated and request.user.is_superuser:
+            return True
+
         (
             __,
             user_organization,
@@ -69,6 +72,7 @@ class IsObjectEditableByUser(BasePermission):
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
             return True
+
         return obj.can_be_edited_by(request.user)
 
 
@@ -167,9 +171,8 @@ class DataSourceOrganizationEditPermission(BasePermission):
                     or request.user.admin_organizations.exists()
                     and request.user.financial_admin_organizations.exists()
                 )
-            elif (
-                request.user.is_authenticated
-                and request.user.admin_organizations.exists()
+            elif request.user.is_authenticated and (
+                request.user.is_superuser or request.user.admin_organizations.exists()
             ):
                 return True
 
@@ -215,4 +218,4 @@ class UserIsAdminInAnyOrganization(BasePermission):
         if user.is_anonymous:
             return False
 
-        return user.admin_organizations.exists()
+        return user.is_superuser or user.admin_organizations.exists()

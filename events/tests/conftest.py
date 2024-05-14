@@ -757,3 +757,36 @@ def registration4(event4, user):
         last_modified_by=user,
         waiting_list_capacity=20,
     )
+
+
+@pytest.fixture
+def user2_with_user_type(organization, user2, request):
+    user_type = request.param
+    if user_type == "org_regular":
+        organization.regular_users.add(user2)
+
+    elif user_type == "org_admin":
+        organization.admin_users.add(user2)
+
+    elif user_type == "staff":
+        user2.is_staff = True
+        user2.save()
+
+    elif user_type == "admin":
+        user2.is_staff = True
+        user2.is_admin = True
+        user2.save()
+
+    elif user_type == "superuser":
+        user2.is_staff = True
+        user2.is_admin = True
+        user2.is_superuser = True
+        user2.save()
+
+    elif user_type is None:
+        pass
+
+    else:
+        raise ValueError("user_type was not handled in test")
+
+    return user2

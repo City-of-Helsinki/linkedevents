@@ -32,9 +32,14 @@ def assert_update_keyword_set(api_client, keyword_set, data_source=None):
 # === tests ===
 
 
+@pytest.mark.parametrize(
+    "user2_with_user_type",
+    ["org_admin", "superuser"],
+    indirect=["user2_with_user_type"],
+)
 @pytest.mark.django_db
-def test__update_keywordset(api_client, keyword_set_dict, user):
-    api_client.force_authenticate(user)
+def test_update_keywordset(api_client, keyword_set_dict, user2_with_user_type):
+    api_client.force_authenticate(user2_with_user_type)
 
     response = create_keyword_set(api_client, keyword_set_dict)
 
@@ -58,7 +63,7 @@ def test_keyword_set_id_is_audit_logged_on_put(user_api_client, keyword_set):
 
 
 @pytest.mark.django_db
-def test__non_admin_cannot_update_keywordset(
+def test_non_admin_cannot_update_keywordset(
     api_client, keyword_set, keyword_set_dict, user
 ):
     keyword_set.organization.admin_users.remove(user)
@@ -70,7 +75,7 @@ def test__non_admin_cannot_update_keywordset(
 
 
 @pytest.mark.django_db
-def test__admin_can_update_keywordset_from_another_data_source(
+def test_admin_can_update_keywordset_from_another_data_source(
     api_client, keyword_set2, other_data_source, organization, user
 ):
     other_data_source.owner = organization
@@ -88,7 +93,7 @@ def test__admin_can_update_keywordset_from_another_data_source(
 
 
 @pytest.mark.django_db
-def test__keywordset_id_cannot_be_updated(api_client, keyword_set_dict, user):
+def test_keywordset_id_cannot_be_updated(api_client, keyword_set_dict, user):
     api_client.force_authenticate(user)
 
     response = create_keyword_set(api_client, keyword_set_dict)
@@ -104,7 +109,7 @@ def test__keywordset_id_cannot_be_updated(api_client, keyword_set_dict, user):
 
 
 @pytest.mark.django_db
-def test__keywordset_organization_cannot_be_updated(
+def test_keywordset_organization_cannot_be_updated(
     api_client, keyword_set_dict, organization2, user
 ):
     api_client.force_authenticate(user)
@@ -125,7 +130,7 @@ def test__keywordset_organization_cannot_be_updated(
 
 
 @pytest.mark.django_db
-def test__keywordset_data_source_cannot_be_updated(
+def test_keywordset_data_source_cannot_be_updated(
     api_client, keyword_set_dict, other_data_source, user
 ):
     api_client.force_authenticate(user)
@@ -146,7 +151,7 @@ def test__keywordset_data_source_cannot_be_updated(
 
 
 @pytest.mark.django_db
-def test__correct_api_key_can_update_keywordset(
+def test_correct_api_key_can_update_keywordset(
     api_client, keyword_set, data_source, organization
 ):
     data_source.owner = organization
@@ -156,7 +161,7 @@ def test__correct_api_key_can_update_keywordset(
 
 
 @pytest.mark.django_db
-def test__api_key_from_wrong_data_source_cannot_update_keywordset(
+def test_api_key_from_wrong_data_source_cannot_update_keywordset(
     api_client, keyword_set, keyword_set_dict, other_data_source
 ):
     detail_url = reverse("keywordset-detail", kwargs={"pk": keyword_set.pk})
@@ -167,7 +172,7 @@ def test__api_key_from_wrong_data_source_cannot_update_keywordset(
 
 
 @pytest.mark.django_db
-def test__api_key_without_organization_cannot_update_keywordset(
+def test_api_key_without_organization_cannot_update_keywordset(
     api_client, keyword_set, keyword_set_dict, data_source
 ):
     detail_url = reverse("keywordset-detail", kwargs={"pk": keyword_set.pk})
@@ -181,7 +186,7 @@ def test__api_key_without_organization_cannot_update_keywordset(
 
 
 @pytest.mark.django_db
-def test__unknown_api_key_cannot_update_keywordset(api_client, keyword, keyword_dict):
+def test_unknown_api_key_cannot_update_keywordset(api_client, keyword, keyword_dict):
     api_client.credentials(apikey="unknown")
 
     detail_url = reverse("keyword-detail", kwargs={"pk": keyword.pk})
@@ -190,7 +195,7 @@ def test__unknown_api_key_cannot_update_keywordset(api_client, keyword, keyword_
 
 
 @pytest.mark.django_db
-def test__non_user_editable_resources_cannot_update_keywordset(
+def test_non_user_editable_resources_cannot_update_keywordset(
     api_client, keyword_set, keyword_set_dict, data_source, organization, user
 ):
     data_source.owner = organization
@@ -204,7 +209,7 @@ def test__non_user_editable_resources_cannot_update_keywordset(
 
 
 @pytest.mark.django_db
-def test__user_editable_resources_can_update_keywordset(
+def test_user_editable_resources_can_update_keywordset(
     api_client, keyword_set, keyword_set_dict, data_source, organization, user
 ):
     data_source.owner = organization

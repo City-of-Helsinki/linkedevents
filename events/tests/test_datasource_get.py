@@ -38,9 +38,16 @@ def assert_get_data_source(api_client, detail_pk):
     assert response.status_code == status.HTTP_200_OK
 
 
+@pytest.mark.parametrize(
+    "user2_with_user_type",
+    ["org_admin", "superuser"],
+    indirect=["user2_with_user_type"],
+)
 @pytest.mark.django_db
-def test_admin_user_can_get_data_sources(api_client, data_source, organization, user):
-    api_client.force_authenticate(user)
+def test_admin_and_superuser_can_get_data_sources(
+    api_client, data_source, organization, user2_with_user_type
+):
+    api_client.force_authenticate(user2_with_user_type)
 
     get_list_and_assert_data_sources(api_client, [data_source])
 
@@ -64,7 +71,7 @@ def test_regular_user_cannot_get_data_sources(
 
 
 @pytest.mark.django_db
-def test__api_key_user_can_get_data_sources(
+def test_api_key_user_can_get_data_sources(
     api_client, data_source, organization, other_data_source
 ):
     data_source.owner = organization
@@ -75,7 +82,7 @@ def test__api_key_user_can_get_data_sources(
 
 
 @pytest.mark.django_db
-def test__anonymous_user_can_retrieve_data_source(api_client, data_source):
+def test_anonymous_user_can_retrieve_data_source(api_client, data_source):
     assert_get_data_source(api_client, data_source.id)
 
 
