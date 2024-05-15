@@ -151,16 +151,21 @@ def strip_trailing_zeroes_from_decimal(value: Decimal):
     return value.normalize()
 
 
-def move_first_waitlisted_to_attending(signup_or_signup_group):
-    registration = signup_or_signup_group.registration
-
-    if (
+def move_waitlisted_to_attending(registration, count: int):
+    """Changes given number of wait-listed attendees in a registration to be attending."""
+    waitlisted_signups = registration.get_waitlisted(count=count)
+    price_groups_exist = (
         settings.WEB_STORE_INTEGRATION_ENABLED
         and registration.registration_price_groups.exists()
-    ):
-        registration.move_first_waitlisted_to_attending_with_payment_link()
-    else:
-        registration.move_first_waitlisted_to_attending()
+    )
+
+    for first_on_list in waitlisted_signups:
+        if price_groups_exist:
+            registration.move_first_waitlisted_to_attending_with_payment_link(
+                first_on_list=first_on_list
+            )
+        else:
+            registration.move_first_waitlisted_to_attending(first_on_list=first_on_list)
 
 
 def get_access_code_for_contact_person(contact_person, user):

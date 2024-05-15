@@ -1,6 +1,7 @@
 from decimal import Decimal
 from uuid import uuid4
 
+import pytest
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core import mail
@@ -18,6 +19,7 @@ from registrations.enums import VatPercentage
 from registrations.exceptions import PriceGroupValidationError
 from registrations.models import (
     RegistrationWebStoreProductMapping,
+    SignUp,
     web_store_price_group_meta_key,
     WebStoreAccount,
     WebStoreMerchant,
@@ -159,6 +161,42 @@ class TestRegistration(TestCase):
         del self.registration.account
 
         self.assertEqual(account.pk, self.registration.account.pk)
+
+    def test_get_waitlisted(self):
+        signup = SignUpFactory(
+            registration=self.registration,
+            attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
+        )
+        signup2 = SignUpFactory(
+            registration=self.registration,
+            attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
+        )
+        signup3 = SignUpFactory(
+            registration=self.registration,
+            attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
+        )
+        SignUpFactory(
+            registration=self.registration,
+            attendee_status=SignUp.AttendeeStatus.ATTENDING,
+        )
+        signups = SignUp.objects.filter(
+            pk__in=[signup.pk, signup2.pk, signup3.pk]
+        ).order_by("id")
+
+        for count in [1, 2, 3]:
+            with self.subTest():
+                self.assertQuerySetEqual(
+                    signups[:count],
+                    self.registration.get_waitlisted(count=count),
+                )
+
+    def test_get_waitlisted_count_valueerror(self):
+        for count in [None, -1, 0]:
+            with self.subTest():
+                with pytest.raises(
+                    ValueError, match="get_waitlisted: count must be at least 1"
+                ):
+                    self.registration.get_waitlisted(count=count)
 
 
 class TestRegistrationUserAccess(TestCase):
