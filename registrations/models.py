@@ -52,7 +52,7 @@ from registrations.utils import (
     create_web_store_refunds,
     get_email_noreply_address,
     get_ui_locales,
-    move_first_waitlisted_to_attending,
+    move_waitlisted_to_attending,
     strip_trailing_zeroes_from_decimal,
 )
 
@@ -531,17 +531,21 @@ class Registration(CreatedModifiedBaseModel):
             waiting_list_capacity - waiting_list_count - reserved_seats_amount, 0
         )
 
-    def get_first_waitlisted(self):
+    def get_waitlisted(self, count: int):
+        """Gets given count of wait-listed attendees."""
+        if count is None or count < 1:
+            raise ValueError(_("get_waitlisted: count must be at least 1"))
+
         waitlisted = (
             self.signups.filter(attendee_status=SignUp.AttendeeStatus.WAITING_LIST)
             .select_for_update()
             .order_by("id")
         )
 
-        return waitlisted[0] if waitlisted else None
+        return waitlisted[:count]
 
-    def move_first_waitlisted_to_attending_with_payment_link(self):
-        first_on_list = self.get_first_waitlisted()
+    def move_first_waitlisted_to_attending_with_payment_link(self, first_on_list=None):
+        first_on_list = first_on_list or self.get_waitlisted(count=1)
         if not first_on_list:
             return
 
@@ -571,7 +575,7 @@ class Registration(CreatedModifiedBaseModel):
             )
 
     def move_first_waitlisted_to_attending(self, first_on_list=None):
-        first_on_list = first_on_list or self.get_first_waitlisted()
+        first_on_list = first_on_list or self.get_waitlisted(count=1)
         if not first_on_list:
             return
 
@@ -984,7 +988,7 @@ class SignUpGroup(
         super().delete(*args, **kwargs)
 
         if is_attending:
-            move_first_waitlisted_to_attending(self)
+            move_waitlisted_to_attending(self.registration, count=1)
 
         if contact_person:
             contact_person.send_notification(
@@ -1393,7 +1397,7 @@ class SignUp(
             return
 
         if self.is_attending:
-            move_first_waitlisted_to_attending(self)
+            move_waitlisted_to_attending(self.registration, count=1)
 
         if contact_person:
             contact_person.send_notification(

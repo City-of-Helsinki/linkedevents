@@ -12,7 +12,7 @@ from registrations.models import (
     SignUpGroup,
     SignUpNotificationType,
 )
-from registrations.utils import get_signup_create_url
+from registrations.utils import get_signup_create_url, move_waitlisted_to_attending
 
 
 def _create_signup_link_for_event(registration: Registration) -> None:
@@ -33,9 +33,12 @@ def _recalculate_registration_capacities(registration_id: int) -> None:
         Registration.objects.filter(pk=registration_id).select_for_update().first()
     )
 
-    registration.remaining_attendee_capacity = (
+    new_remaining_attendee_capacity = (
         registration.calculate_remaining_attendee_capacity()
     )
+    old_remaining_attendee_capacity = registration.remaining_attendee_capacity
+    registration.remaining_attendee_capacity = new_remaining_attendee_capacity
+
     registration.remaining_waiting_list_capacity = (
         registration.calculate_remaining_waiting_list_capacity()
     )
@@ -47,6 +50,17 @@ def _recalculate_registration_capacities(registration_id: int) -> None:
             "remaining_waiting_list_capacity",
         ]
     )
+
+    if (
+        new_remaining_attendee_capacity is not None
+        and old_remaining_attendee_capacity is not None
+    ) and new_remaining_attendee_capacity > old_remaining_attendee_capacity:
+        # Registration attendee capacity has been increased
+        # => it's possible to add more attending signups to the registration from the waiting list
+        # => add as many as possible.
+        move_waitlisted_to_attending(
+            registration, count=new_remaining_attendee_capacity
+        )
 
 
 def _send_event_cancellation_notification(event):

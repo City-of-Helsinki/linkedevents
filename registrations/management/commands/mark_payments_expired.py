@@ -13,7 +13,7 @@ from registrations.models import SignUp, SignUpPayment
 from registrations.notifications import SignUpNotificationType
 from registrations.utils import (
     get_access_code_for_contact_person,
-    move_first_waitlisted_to_attending,
+    move_waitlisted_to_attending,
 )
 from web_store.order.clients import WebStoreOrderAPIClient
 from web_store.payment.clients import WebStorePaymentAPIClient
@@ -77,7 +77,7 @@ class Command(BaseCommand):
         if getattr(signup_or_signup_group, "is_attending", None) or getattr(
             signup_or_signup_group, "attending_signups", None
         ):
-            move_first_waitlisted_to_attending(signup_or_signup_group)
+            move_waitlisted_to_attending(signup_or_signup_group.registration, count=1)
 
         contact_person = signup_or_signup_group.actual_contact_person
         if contact_person:

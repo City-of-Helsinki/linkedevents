@@ -2,6 +2,7 @@ from decimal import Decimal
 
 import pytest
 import requests_mock
+from django.conf import settings
 from django.conf import settings as django_settings
 from django.core import mail
 from django.test import override_settings
@@ -20,6 +21,8 @@ from registrations.models import (
     RegistrationPriceGroup,
     RegistrationUserAccess,
     RegistrationWebStoreProductMapping,
+    SignUp,
+    SignUpPayment,
 )
 from registrations.tests.factories import (
     PriceGroupFactory,
@@ -27,6 +30,10 @@ from registrations.tests.factories import (
     RegistrationPriceGroupFactory,
     RegistrationUserAccessFactory,
     RegistrationWebStoreProductMappingFactory,
+    SignUpContactPersonFactory,
+    SignUpFactory,
+    SignUpPaymentFactory,
+    SignUpPriceGroupFactory,
     WebStoreAccountFactory,
     WebStoreMerchantFactory,
 )
@@ -35,6 +42,7 @@ from registrations.tests.utils import (
     assert_invitation_email_is_sent,
     create_user_by_role,
 )
+from web_store.tests.order.test_web_store_order_api_client import DEFAULT_GET_ORDER_DATA
 from web_store.tests.product.test_web_store_product_api_client import (
     DEFAULT_GET_PRODUCT_MAPPING_DATA,
     DEFAULT_PRODUCT_ID,
@@ -1233,3 +1241,224 @@ def test_update_registration_with_product_accounting_api_exception(
         assert req_mock.call_count == 2
 
     assert RegistrationWebStoreProductMapping.objects.count() == 0
+
+
+@pytest.mark.django_db(transaction=True)
+def test_update_registration_increase_attendee_capacity_move_signups_to_attending(
+    api_client, event
+):
+    user = create_user_by_role("registration_admin", event.publisher)
+    api_client.force_authenticate(user)
+
+    registration = RegistrationFactory(event=event, maximum_attendee_capacity=1)
+
+    signup = SignUpFactory(
+        registration=registration, attendee_status=SignUp.AttendeeStatus.ATTENDING
+    )
+    signup2 = SignUpFactory(
+        registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
+    )
+    signup3 = SignUpFactory(
+        registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
+    )
+    signup4 = SignUpFactory(
+        registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
+    )
+
+    registration.refresh_from_db()
+    assert registration.remaining_attendee_capacity == 0
+
+    registration_data = {
+        "event": {"@id": get_event_url(event.id)},
+        "maximum_attendee_capacity": 3,
+    }
+    assert_update_registration(api_client, registration.pk, registration_data)
+
+    # Since two additional attendee spots were added,
+    # two more signups should now be in the "attending" status:
+    signup.refresh_from_db()
+    assert signup.attendee_status == SignUp.AttendeeStatus.ATTENDING
+
+    signup2.refresh_from_db()
+    assert signup2.attendee_status == SignUp.AttendeeStatus.ATTENDING
+
+    signup3.refresh_from_db()
+    assert signup3.attendee_status == SignUp.AttendeeStatus.ATTENDING
+
+    signup4.refresh_from_db()
+    assert signup4.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
+
+    registration.refresh_from_db()
+    assert registration.remaining_attendee_capacity == 0
+
+
+@pytest.mark.django_db(transaction=True)
+def test_update_registration_increase_attendee_capacity_move_signups_to_attending_with_payments(
+    api_client, event
+):
+    user = create_user_by_role("registration_admin", event.publisher)
+    api_client.force_authenticate(user)
+
+    registration = RegistrationFactory(event=event, maximum_attendee_capacity=1)
+    registration_price_group = RegistrationPriceGroupFactory(registration=registration)
+
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        RegistrationWebStoreProductMappingFactory(registration=registration)
+
+    signup = SignUpFactory(
+        registration=registration, attendee_status=SignUp.AttendeeStatus.ATTENDING
+    )
+    SignUpPaymentFactory(signup=signup)
+
+    signup2 = SignUpFactory(
+        registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
+    )
+    SignUpPriceGroupFactory(
+        signup=signup2, registration_price_group=registration_price_group
+    )
+    SignUpContactPersonFactory(signup=signup2, email="signup2@test.dev")
+
+    signup3 = SignUpFactory(
+        registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
+    )
+    SignUpPriceGroupFactory(
+        signup=signup3, registration_price_group=registration_price_group
+    )
+    SignUpContactPersonFactory(signup=signup3, email="signup3@test.dev")
+
+    signup4 = SignUpFactory(
+        registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
+    )
+    SignUpPriceGroupFactory(
+        signup=signup4, registration_price_group=registration_price_group
+    )
+    SignUpContactPersonFactory(signup=signup4, email="signup4@test.dev")
+
+    registration.refresh_from_db()
+    assert registration.remaining_attendee_capacity == 0
+
+    assert SignUpPayment.objects.count() == 1
+
+    registration_data = {
+        "event": {"@id": get_event_url(event.id)},
+        "maximum_attendee_capacity": 3,
+    }
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/",
+            status_code=status.HTTP_201_CREATED,
+            json=DEFAULT_GET_ORDER_DATA,
+        )
+
+        assert_update_registration(api_client, registration.pk, registration_data)
+
+        assert req_mock.call_count == 2
+
+    # Since two additional attendee spots were added,
+    # two more signups should now be in the "attending" status with payments:
+    assert SignUpPayment.objects.count() == 3
+
+    signup.refresh_from_db()
+    assert signup.attendee_status == SignUp.AttendeeStatus.ATTENDING
+
+    signup2.refresh_from_db()
+    assert signup2.attendee_status == SignUp.AttendeeStatus.ATTENDING
+
+    signup3.refresh_from_db()
+    assert signup3.attendee_status == SignUp.AttendeeStatus.ATTENDING
+
+    signup4.refresh_from_db()
+    assert signup4.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
+
+    registration.refresh_from_db()
+    assert registration.remaining_attendee_capacity == 0
+
+
+@pytest.mark.django_db(transaction=True)
+def test_increase_attendee_capacity_move_signups_to_attending_with_payments_api_exception(
+    api_client, event
+):
+    user = create_user_by_role("registration_admin", event.publisher)
+    api_client.force_authenticate(user)
+
+    registration = RegistrationFactory(event=event, maximum_attendee_capacity=1)
+    registration_price_group = RegistrationPriceGroupFactory(registration=registration)
+
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        RegistrationWebStoreProductMappingFactory(registration=registration)
+
+    signup = SignUpFactory(
+        registration=registration, attendee_status=SignUp.AttendeeStatus.ATTENDING
+    )
+    SignUpPaymentFactory(signup=signup)
+
+    signup2 = SignUpFactory(
+        registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
+    )
+    SignUpPriceGroupFactory(
+        signup=signup2, registration_price_group=registration_price_group
+    )
+    SignUpContactPersonFactory(signup=signup2, email="signup2@test.dev")
+
+    signup3 = SignUpFactory(
+        registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
+    )
+    price_group3 = SignUpPriceGroupFactory(
+        signup=signup3, registration_price_group=registration_price_group
+    )
+    SignUpContactPersonFactory(signup=signup3, email="signup3@test.dev")
+
+    signup4 = SignUpFactory(
+        registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
+    )
+    SignUpPriceGroupFactory(
+        signup=signup4, registration_price_group=registration_price_group
+    )
+    SignUpContactPersonFactory(signup=signup4, email="signup4@test.dev")
+
+    def web_store_match_signup3(request):
+        return request.json()["items"][0]["meta"][0]["value"] == str(price_group3.pk)
+
+    registration.refresh_from_db()
+    assert registration.remaining_attendee_capacity == 0
+
+    assert SignUpPayment.objects.count() == 1
+
+    registration_data = {
+        "event": {"@id": get_event_url(event.id)},
+        "maximum_attendee_capacity": 3,
+    }
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/",
+            status_code=status.HTTP_201_CREATED,
+            json=DEFAULT_GET_ORDER_DATA,
+        )
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/",
+            additional_matcher=web_store_match_signup3,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+        assert_update_registration(api_client, registration.pk, registration_data)
+
+        assert req_mock.call_count == 2
+
+    # Two additional attendee spots were added, but the second signup experienced an
+    # API exception after the first one so only the first one was moved to "attending":
+    assert SignUpPayment.objects.count() == 2
+
+    signup.refresh_from_db()
+    assert signup.attendee_status == SignUp.AttendeeStatus.ATTENDING
+
+    signup2.refresh_from_db()
+    assert signup2.attendee_status == SignUp.AttendeeStatus.ATTENDING
+
+    signup3.refresh_from_db()
+    assert signup3.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
+
+    signup4.refresh_from_db()
+    assert signup4.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
+
+    registration.refresh_from_db()
+    assert registration.remaining_attendee_capacity == 1
