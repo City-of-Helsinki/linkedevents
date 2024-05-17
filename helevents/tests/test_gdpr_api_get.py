@@ -37,6 +37,18 @@ from registrations.tests.factories import (
     SignUpProtectedDataFactory,
 )
 
+TRANSLATION_LANGUAGES = sorted(
+    [
+        "sv",
+        "ar",
+        "zh_hans",
+        "fi",
+        "en",
+        "ru",
+    ]
+)
+
+
 # === util methods ===
 
 
@@ -91,6 +103,17 @@ def _get_signup_group_profile_data(signup_group: Optional[SignUpGroup]) -> dict:
     return profile_data
 
 
+def _get_field_translations(obj: object, field_name: str) -> list:
+    return [
+        {
+            "key": f"{field_name}_{lang}".upper(),
+            "value": getattr(obj, f"{field_name}_{lang}"),
+        }
+        for lang in TRANSLATION_LANGUAGES
+        if getattr(obj, f"{field_name}_{lang}", False)
+    ]
+
+
 def _get_event_data(user) -> list:
     events = Event.objects.filter(created_by=user)
 
@@ -108,9 +131,15 @@ def _get_event_data(user) -> list:
         data = {
             "children": [
                 {"key": "ID", "value": e.id},
-                {"key": "NAME", "value": e.name},
-                {"key": "DESCRIPTION", "value": e.description},
-                {"key": "SHORT_DESCRIPTION", "value": e.short_description},
+                {"key": "NAME", "children": _get_field_translations(e, "name")},
+                {
+                    "key": "DESCRIPTION",
+                    "children": _get_field_translations(e, "description"),
+                },
+                {
+                    "key": "SHORT_DESCRIPTION",
+                    "children": _get_field_translations(e, "short_description"),
+                },
                 {"key": "START_TIME", "value": e.start_time},
                 {"key": "END_TIME", "value": e.end_time},
                 (
@@ -146,7 +175,10 @@ def _get_event_data(user) -> list:
                                                     "children": [
                                                         {
                                                             "key": "NAME",
-                                                            "value": keyword_label.language.name,
+                                                            "children": _get_field_translations(
+                                                                keyword_label.language,
+                                                                "name",
+                                                            ),
                                                         },
                                                         {
                                                             "key": "SERVICE_LANGUAGE",
@@ -178,7 +210,12 @@ def _get_event_data(user) -> list:
                         {
                             "children": (
                                 [
-                                    {"key": "NAME", "value": language.name},
+                                    {
+                                        "key": "NAME",
+                                        "children": _get_field_translations(
+                                            language, "name"
+                                        ),
+                                    },
                                     {
                                         "key": "SERVICE_LANGUAGE",
                                         "value": language.service_language,
@@ -196,22 +233,44 @@ def _get_event_data(user) -> list:
                 (
                     {
                         "children": [
-                            {"key": "NAME", "value": e.location.name},
+                            {
+                                "key": "NAME",
+                                "children": _get_field_translations(e.location, "name"),
+                            },
                             {
                                 "key": "PUBLISHER",
                                 "value": f"{e.location.publisher.id} - {e.location.publisher.name}",
                             },
-                            {"key": "INFO_URL", "value": e.location.info_url},
-                            {"key": "DESCRIPTION", "value": e.location.description},
+                            {
+                                "key": "INFO_URL",
+                                "children": _get_field_translations(
+                                    e.location, "info_url"
+                                ),
+                            },
+                            {
+                                "key": "DESCRIPTION",
+                                "children": _get_field_translations(
+                                    e.location, "description"
+                                ),
+                            },
                             {"key": "EMAIL", "value": e.location.email},
-                            {"key": "TELEPHONE", "value": e.location.telephone},
+                            {
+                                "key": "TELEPHONE",
+                                "children": _get_field_translations(
+                                    e.location, "telephone"
+                                ),
+                            },
                             {
                                 "key": "STREET_ADDRESS",
-                                "value": e.location.street_address,
+                                "children": _get_field_translations(
+                                    e.location, "street_address"
+                                ),
                             },
                             {
                                 "key": "ADDRESS_LOCALITY",
-                                "value": e.location.address_locality,
+                                "children": _get_field_translations(
+                                    e.location, "address_locality"
+                                ),
                             },
                             {
                                 "key": "ADDRESS_REGION",
@@ -237,8 +296,18 @@ def _get_event_data(user) -> list:
                         [
                             {
                                 "children": [
-                                    {"key": "PRICE", "value": offer.price},
-                                    {"key": "DESCRIPTION", "value": offer.description},
+                                    {
+                                        "key": "PRICE",
+                                        "children": _get_field_translations(
+                                            offer, "price"
+                                        ),
+                                    },
+                                    {
+                                        "key": "DESCRIPTION",
+                                        "children": _get_field_translations(
+                                            offer, "description"
+                                        ),
+                                    },
                                 ],
                                 "key": "OFFER",
                             }
@@ -281,7 +350,9 @@ def _get_event_data(user) -> list:
                                                     "children": [
                                                         {
                                                             "key": "NAME",
-                                                            "value": audience_label.language.name,
+                                                            "children": _get_field_translations(
+                                                                language, "name"
+                                                            ),
                                                         },
                                                         {
                                                             "key": "SERVICE_LANGUAGE",
@@ -304,7 +375,7 @@ def _get_event_data(user) -> list:
                     if audience
                     else []
                 ),
-                {"key": "INFO_URL", "value": e.info_url},
+                {"key": "INFO_URL", "children": _get_field_translations(e, "info_url")},
             ],
             "key": "EVENT",
         }
