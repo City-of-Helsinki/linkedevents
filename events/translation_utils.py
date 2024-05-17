@@ -1,4 +1,5 @@
 import modeltranslation
+from helsinki_gdpr.models import SerializableMixin
 from modeltranslation.translator import translator
 
 
@@ -19,3 +20,34 @@ def expand_model_fields(model, field_names):
     return [
         expanded for unexpanded in field_names for expanded in expand_field(unexpanded)
     ]
+
+
+class TranslatableSerializableMixin(SerializableMixin):
+    def _resolve_field(self, model, field_description):
+        field_name = field_description.get("name")
+
+        try:
+            options = translator.get_options_for_model(self._meta.model)
+        except modeltranslation.translator.NotRegistered:
+            return super()._resolve_field(model, field_description)
+
+        if field_name in options.get_field_names():
+            fields = sorted([f.name for f in options.fields.get(field_name)])
+            children = [
+                {
+                    "key": f"{translated_field}".upper(),
+                    "value": getattr(model, f"{translated_field}", ""),
+                }
+                for translated_field in fields
+                if getattr(model, f"{translated_field}", False)
+            ]
+
+            return {
+                "key": field_name.upper(),
+                "children": children,
+            }
+
+        return super()._resolve_field(model, field_description)
+
+    class Meta:
+        abstract = True

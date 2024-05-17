@@ -35,7 +35,6 @@ from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from helsinki_gdpr.models import SerializableMixin
 from image_cropping import ImageRatioField
 from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
@@ -45,6 +44,7 @@ from rest_framework.exceptions import ValidationError
 from reversion import revisions as reversion
 
 from events import translation_utils
+from events.translation_utils import TranslatableSerializableMixin
 from notifications.models import (
     NotificationTemplateException,
     NotificationType,
@@ -157,7 +157,7 @@ class BaseQuerySet(models.QuerySet):
         return True
 
 
-class BaseSerializableManager(SerializableMixin.SerializableManager):
+class BaseSerializableManager(TranslatableSerializableMixin.SerializableManager):
     def get_queryset(self):
         return BaseQuerySet(self.model, using=self._db)
 
@@ -178,7 +178,9 @@ class BaseTreeQuerySet(TreeQuerySet, BaseQuerySet):
     undelete.alters_data = True
 
 
-class BaseSerializableTreeManager(TreeManager, SerializableMixin.SerializableManager):
+class BaseSerializableTreeManager(
+    TreeManager, TranslatableSerializableMixin.SerializableManager
+):
     def get_queryset(self):
         return BaseTreeQuerySet(self.model, using=self._db).order_by(
             self.tree_id_attr, self.left_attr
@@ -218,7 +220,7 @@ class License(models.Model):
         return self.name
 
 
-class Image(SerializableMixin):
+class Image(TranslatableSerializableMixin):
     serialize_fields = [{"name": "name"}, {"name": "url"}]
 
     jsonld_type = "ImageObject"
@@ -418,7 +420,7 @@ class BaseModel(models.Model):
         super().save(update_fields=update_fields, **kwargs)
 
 
-class Language(SerializableMixin):
+class Language(TranslatableSerializableMixin):
     serialize_fields = [
         {"name": "name"},
         {"name": "service_language"},
@@ -438,7 +440,7 @@ class Language(SerializableMixin):
         verbose_name_plural = _("languages")
 
 
-class KeywordLabel(SerializableMixin):
+class KeywordLabel(TranslatableSerializableMixin):
     serialize_fields = [
         {"name": "name"},
         {"name": "language"},
@@ -471,7 +473,7 @@ class UpcomingEventsUpdater(BaseSerializableManager):
         qs.exclude(events__end_time__gte=now).update(has_upcoming_events=False)
 
 
-class Keyword(BaseModel, ImageMixin, ReplacedByMixin, SerializableMixin):
+class Keyword(BaseModel, ImageMixin, ReplacedByMixin, TranslatableSerializableMixin):
     serialize_fields = [
         {"name": "alt_labels"},
     ]
@@ -639,7 +641,7 @@ class Place(
     SchemalessFieldMixin,
     ImageMixin,
     ReplacedByMixin,
-    SerializableMixin,
+    TranslatableSerializableMixin,
 ):
     serialize_fields = [
         {"name": "name"},
@@ -841,7 +843,11 @@ class OpeningHoursSpecification(models.Model):
 
 
 class Event(
-    MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin, SerializableMixin
+    MPTTModel,
+    BaseModel,
+    SchemalessFieldMixin,
+    ReplacedByMixin,
+    TranslatableSerializableMixin,
 ):
     jsonld_type = "Event/LinkedEvent"
     objects = BaseSerializableTreeManager()
@@ -1429,7 +1435,7 @@ def keyword_added_or_removed(
             )
 
 
-class Offer(SimpleValueMixin, SerializableMixin):
+class Offer(SimpleValueMixin, TranslatableSerializableMixin):
     serialize_fields = [{"name": "price"}, {"name": "description"}]
 
     event = models.ForeignKey(
@@ -1476,7 +1482,7 @@ class EventLink(models.Model, SimpleValueMixin):
         return ["name", "language_id", "link"]
 
 
-class Video(SimpleValueMixin, SerializableMixin):
+class Video(SimpleValueMixin, TranslatableSerializableMixin):
     serialize_fields = [{"name": "name"}, {"name": "url"}, {"name": "alt_text"}]
 
     name = models.CharField(
