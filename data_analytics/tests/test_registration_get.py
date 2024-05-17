@@ -1,9 +1,12 @@
 from datetime import timedelta
+from typing import Optional
 
+import freezegun
 import pytest
 import requests_mock
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.timezone import localtime
 from helusers.settings import api_token_auth_settings
 from knox import crypto
 from knox.settings import CONSTANTS, knox_settings
@@ -18,7 +21,12 @@ from data_analytics.tests.utils import (
 )
 from events.tests.utils import assert_fields_exist
 from helevents.tests.conftest import get_api_token_for_user_with_scopes
-from registrations.tests.factories import SignUpFactory, SignUpGroupFactory
+from registrations.models import Registration
+from registrations.tests.factories import (
+    RegistrationFactory,
+    SignUpFactory,
+    SignUpGroupFactory,
+)
 
 _LIST_URL = reverse("data_analytics:registration-list")
 
@@ -31,8 +39,13 @@ def get_detail(api_client: APIClient, registration_pk: int):
     return api_client.get(get_detail_url(registration_pk), format="json")
 
 
-def get_list(api_client: APIClient):
-    return api_client.get(_LIST_URL, format="json")
+def get_list(api_client: APIClient, query: Optional[str] = None):
+    url = _LIST_URL
+
+    if query:
+        url += f"?{query}"
+
+    return api_client.get(url, format="json")
 
 
 def assert_registration_fields_exist(data):
@@ -192,3 +205,33 @@ def test_registration_id_is_audit_logged_on_get(
     assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
         registration.pk
     ]
+
+
+@freezegun.freeze_time("2024-05-17 12:00:00+03:00")
+@pytest.mark.parametrize(
+    "last_modified_dt,expected_registrations",
+    [("2024-05-17", 3), ("2024-05-17T16:00:00%2b03:00", 1)],
+)
+@pytest.mark.django_db
+def test_filter_registration_list_by_last_modified_time(
+    user_api_client, last_modified_dt, expected_registrations
+):
+    registration = RegistrationFactory()
+    registration2 = RegistrationFactory()
+    registration3 = RegistrationFactory()
+
+    Registration.objects.filter(pk=registration3.pk).update(
+        last_modified_time=localtime() + timedelta(hours=5)
+    )
+
+    registrations = {
+        3: [registration.pk, registration2.pk, registration3.pk],
+        1: [registration3.pk],
+    }
+
+    get_list_and_assert_objects_in_response(
+        user_api_client,
+        get_list,
+        registrations[expected_registrations],
+        query=f"last_modified_gte={last_modified_dt}",
+    )

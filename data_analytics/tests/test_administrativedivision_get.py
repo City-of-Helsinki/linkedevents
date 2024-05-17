@@ -1,12 +1,16 @@
 from datetime import timedelta
+from typing import Optional
 
+import freezegun
 import pytest
 import requests_mock
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.timezone import localtime
 from helusers.settings import api_token_auth_settings
 from knox import crypto
 from knox.settings import CONSTANTS, knox_settings
+from munigeo.models import AdministrativeDivision
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -32,8 +36,13 @@ def get_detail(api_client: APIClient, division_pk: int):
     return api_client.get(get_detail_url(division_pk), format="json")
 
 
-def get_list(api_client: APIClient):
-    return api_client.get(_LIST_URL, format="json")
+def get_list(api_client: APIClient, query: Optional[str] = None):
+    url = _LIST_URL
+
+    if query:
+        url += f"?{query}"
+
+    return api_client.get(url, format="json")
 
 
 def assert_division_fields_exist(data):
@@ -183,3 +192,53 @@ def test_division_id_is_audit_logged_on_get(
     assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
         administrative_division.pk
     ]
+
+
+@freezegun.freeze_time("2024-05-17 12:00:00+03:00")
+@pytest.mark.parametrize(
+    "last_modified_dt,expected_divisions",
+    [("2024-05-17", 3), ("2024-05-17T16:00:00%2b03:00", 1)],
+)
+@pytest.mark.django_db
+def test_filter_divison_list_by_last_modified_time(
+    user_api_client,
+    administrative_division_type,
+    municipality,
+    last_modified_dt,
+    expected_divisions,
+):
+    administrative_division = AdministrativeDivision.objects.create(
+        type=administrative_division_type,
+        ocd_id="ocd-division/test:1",
+        municipality=municipality,
+    )
+    administrative_division2 = AdministrativeDivision.objects.create(
+        type=administrative_division_type,
+        ocd_id="ocd-division/test:2",
+        municipality=municipality,
+    )
+    administrative_division3 = AdministrativeDivision.objects.create(
+        type=administrative_division_type,
+        ocd_id="ocd-division/test:3",
+        municipality=municipality,
+    )
+
+    AdministrativeDivision.objects.filter(pk=administrative_division3.pk).update(
+        modified_at=localtime() + timedelta(hours=5)
+    )
+
+    administrative_divisions = {
+        3: [
+            administrative_division.pk,
+            administrative_division2.pk,
+            administrative_division3.pk,
+        ],
+        1: [administrative_division3.pk],
+    }
+
+    get_list_and_assert_objects_in_response(
+        user_api_client,
+        get_list,
+        administrative_divisions[expected_divisions],
+        query=f"last_modified_gte={last_modified_dt}",
+    )
