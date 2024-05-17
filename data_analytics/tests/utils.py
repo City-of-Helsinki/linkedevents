@@ -1,4 +1,4 @@
-from typing import Callable, Union
+from typing import Callable, Optional, Union
 
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -25,9 +25,15 @@ def get_detail_and_assert_object_in_response(
 
 
 def get_list_and_assert_objects_in_response(
-    api_client: APIClient, get_list_func: Callable, object_pks: list[Union[str, int]]
+    api_client: APIClient,
+    get_list_func: Callable,
+    object_pks: list[Union[str, int]],
+    query: Optional[str] = None,
 ):
-    response = get_list_func(api_client)
+    if query:
+        response = get_list_func(api_client, query=query)
+    else:
+        response = get_list_func(api_client)
 
     assert response.status_code == status.HTTP_200_OK
     assert_objects_in_response_data(object_pks, response.data["data"])

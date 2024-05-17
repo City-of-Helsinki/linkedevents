@@ -1,3 +1,4 @@
+import django_filters
 from django_orghierarchy.models import Organization
 from knox.auth import TokenAuthentication as KnoxTokenAuthentication
 from munigeo.models import AdministrativeDivision
@@ -5,6 +6,15 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 
 from audit_log.mixins import AuditLogApiViewMixin
+from data_analytics.filters import (
+    DataAnalyticsAdministrativeDivisionFilter,
+    DataAnalyticsEventFilter,
+    DataAnalyticsKeywordFilter,
+    DataAnalyticsOrganizationFilter,
+    DataAnalyticsPlaceFilter,
+    DataAnalyticsRegistrationFilter,
+    DataAnalyticsSignUpFilter,
+)
 from data_analytics.serializers import (
     DataAnalyticsAdministrativeDivisionSerializer,
     DataAnalyticsEventSerializer,
@@ -30,45 +40,59 @@ class DataAnalyticsBaseViewSet(AuditLogApiViewMixin, viewsets.ReadOnlyModelViewS
 
 
 class KeywordViewSet(DataAnalyticsBaseViewSet):
-    queryset = Keyword.objects.all().order_by(_ORDER_BY_CREATED_TIME)
+    queryset = Keyword.objects.order_by(_ORDER_BY_CREATED_TIME)
     serializer_class = DataAnalyticsKeywordSerializer
+    filter_backends = (django_filters.rest_framework.DjangoFilterBackend,)
+    filterset_class = DataAnalyticsKeywordFilter
 
 
 class LanguageViewSet(DataAnalyticsBaseViewSet):
-    queryset = Language.objects.all().order_by(_ORDER_BY_ID)
+    queryset = Language.objects.order_by(_ORDER_BY_ID)
     serializer_class = DataAnalyticsLanguageSerializer
 
 
 class AdministrativeDivisionViewSet(DataAnalyticsBaseViewSet):
-    queryset = AdministrativeDivision.objects.all().order_by(_ORDER_BY_ID)
+    queryset = AdministrativeDivision.objects.order_by(_ORDER_BY_ID)
     serializer_class = DataAnalyticsAdministrativeDivisionSerializer
+    filter_backends = (django_filters.rest_framework.DjangoFilterBackend,)
+    filterset_class = DataAnalyticsAdministrativeDivisionFilter
 
 
 class PlaceViewSet(DataAnalyticsBaseViewSet):
-    queryset = Place.objects.all().order_by(_ORDER_BY_CREATED_TIME)
+    queryset = Place.objects.order_by(_ORDER_BY_CREATED_TIME)
     serializer_class = DataAnalyticsPlaceSerializer
+    filter_backends = (django_filters.rest_framework.DjangoFilterBackend,)
+    filterset_class = DataAnalyticsPlaceFilter
 
 
 class OrganizationViewSet(DataAnalyticsBaseViewSet):
-    queryset = Organization.objects.all().order_by(_ORDER_BY_CREATED_TIME)
+    queryset = Organization.objects.order_by(_ORDER_BY_CREATED_TIME)
     serializer_class = DataAnalyticsOrganizationSerializer
+    filter_backends = (django_filters.rest_framework.DjangoFilterBackend,)
+    filterset_class = DataAnalyticsOrganizationFilter
 
 
 class EventViewSet(DataAnalyticsBaseViewSet):
-    queryset = Event.objects.all().order_by(_ORDER_BY_CREATED_TIME)
+    queryset = Event.objects.order_by(_ORDER_BY_CREATED_TIME)
     serializer_class = DataAnalyticsEventSerializer
+    filter_backends = (django_filters.rest_framework.DjangoFilterBackend,)
+    filterset_class = DataAnalyticsEventFilter
 
 
 class OfferViewSet(DataAnalyticsBaseViewSet):
-    queryset = Offer.objects.all().order_by(_ORDER_BY_ID)
+    queryset = Offer.objects.order_by(_ORDER_BY_ID)
     serializer_class = DataAnalyticsOfferSerializer
 
 
 class RegistrationViewSet(DataAnalyticsBaseViewSet):
-    queryset = Registration.objects.all().order_by(_ORDER_BY_CREATED_TIME)
+    queryset = Registration.objects.order_by(_ORDER_BY_CREATED_TIME)
     serializer_class = DataAnalyticsRegistrationSerializer
+    filter_backends = (django_filters.rest_framework.DjangoFilterBackend,)
+    filterset_class = DataAnalyticsRegistrationFilter
 
 
 class SignUpViewSet(DataAnalyticsBaseViewSet):
-    queryset = SignUp.objects.all().order_by(_ORDER_BY_CREATED_TIME)
+    queryset = SignUp.objects.order_by(_ORDER_BY_CREATED_TIME)
     serializer_class = DataAnalyticsSignUpSerializer
+    filter_backends = (django_filters.rest_framework.DjangoFilterBackend,)
+    filterset_class = DataAnalyticsSignUpFilter

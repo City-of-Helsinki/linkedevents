@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.auth import get_user_model
 from django.utils import timezone
 from knox import crypto
 from knox.models import AuthToken
@@ -6,7 +7,8 @@ from knox.settings import CONSTANTS, knox_settings
 
 from data_analytics.forms import DataAnalyticsAuthTokenAdminForm
 from data_analytics.models import DataAnalyticsAuthToken
-from helevents.models import User
+
+user_model = get_user_model()
 
 
 class DataAnalyticsAuthTokenAdmin(admin.ModelAdmin):
@@ -26,7 +28,7 @@ class DataAnalyticsAuthTokenAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         if not change:
-            user = User.objects.create()
+            user = user_model.objects.create()
             token = form.cleaned_data["digest"]
             digest = crypto.hash_token(token)
 
