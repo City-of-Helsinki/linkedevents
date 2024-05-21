@@ -17,33 +17,31 @@ from easy_thumbnails.conf import Settings as thumbnail_settings  # noqa: N813
 from sentry_sdk.integrations.django import DjangoIntegration
 from sentry_sdk.serializer import add_global_repr_processor
 
+from linkedevents import __version__
+
 CONFIG_FILE_NAME = "config_dev.env"
 
 DEBUG_TOOLBAR_AVAILABLE = importlib.util.find_spec("debug_toolbar") is not None
 DJANGO_EXTENSIONS_AVAILABLE = importlib.util.find_spec("django_extensions") is not None
 
 
-def get_git_revision_hash() -> str:
+def get_release_string() -> str:
     """
-    Retrieve the git hash for the underlying git repository or die trying
+    Retrieve the git hash for the underlying openshift build or git repository.
 
-    We need a way to retrieve git revision hash for sentry reports
-    I assume that if we have a git repository available we will
-    have git-the-comamand as well
+    Will default to the version number if no git hash is available.
     """
+    if build_commit := env("OPENSHIFT_BUILD_COMMIT"):
+        return build_commit
+
     try:
         # We are not interested in gits complaints
         git_hash = subprocess.check_output(
             ["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL, encoding="utf8"
         )
-    # ie. "git" was not found
-    # should we return a more generic meta hash here?
-    # like "undefined"?
-    except FileNotFoundError:
-        git_hash = "git_not_available"
-    except subprocess.CalledProcessError:
-        # Ditto
-        git_hash = "no_repository"
+    # If git or repository is not found, we will use the version number
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        git_hash = __version__
     return git_hash.rstrip()
 
 
@@ -127,6 +125,7 @@ env = environ.Env(
         ["helsinki_adfs", "helsinkiazuread", "helsinkiad", "vantaalinkedevents"],
     ),
     ANONYMIZATION_THRESHOLD_DAYS=(int, 30),
+    OPENSHIFT_BUILD_COMMIT=(str, ""),
     STRONG_IDENTIFICATION_AUTHENTICATION_METHODS=(
         list,
         ["suomi_fi", "heltunnistussuomifi"],
@@ -271,11 +270,12 @@ INSTALLED_APPS = [
 if DJANGO_EXTENSIONS_AVAILABLE:
     INSTALLED_APPS.extend(["django_extensions"])
 
+COMMIT_HASH = get_release_string()
 if env("SENTRY_DSN"):
     sentry_sdk.init(
         dsn=env("SENTRY_DSN"),
         environment=env("SENTRY_ENVIRONMENT"),
-        release=get_git_revision_hash(),
+        release=COMMIT_HASH,
         integrations=[DjangoIntegration()],
     )
 
