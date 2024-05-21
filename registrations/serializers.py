@@ -1,10 +1,12 @@
 from datetime import timedelta
 from decimal import Decimal
+from typing import Optional
 
 import pytz
 from django.conf import settings
 from django.utils.timezone import localdate, localtime
 from django.utils.translation import gettext_lazy as _
+from drf_spectacular.utils import extend_schema_field, OpenApiTypes
 from rest_framework import serializers
 from rest_framework.exceptions import ErrorDetail
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
@@ -182,6 +184,7 @@ class CreatedModifiedBaseSerializer(serializers.ModelSerializer):
 
     is_created_by_current_user = serializers.SerializerMethodField()
 
+    @extend_schema_field(OpenApiTypes.BOOL)
     def get_is_created_by_current_user(self, obj):
         if not (request := self.context.get("request")):
             return False
@@ -242,6 +245,7 @@ class SignUpBaseSerializer(CreatedModifiedBaseSerializer):
     extra_info = serializers.CharField(required=False, allow_blank=True)
     has_contact_person_access = serializers.SerializerMethodField()
 
+    @extend_schema_field(OpenApiTypes.BOOL)
     def get_has_contact_person_access(self, obj):
         if not (request := self.context.get("request")):
             return False
@@ -260,7 +264,7 @@ class SignUpBaseSerializer(CreatedModifiedBaseSerializer):
 class SignUpPriceGroupSerializer(
     TranslatedModelSerializer, serializers.ModelSerializer
 ):
-    id = serializers.IntegerField(required=False)
+    id = serializers.IntegerField(required=False, read_only=True)
     registration_price_group = serializers.PrimaryKeyRelatedField(
         queryset=RegistrationPriceGroup.objects.all(),
     )
@@ -531,8 +535,6 @@ class SignUpSerializer(
 
         errors = {}
 
-        instance_id = validated_data.get("id", getattr(self.instance, "pk", None))
-
         if isinstance(self.instance, SignUp):
             registration = self.instance.registration
         else:
@@ -591,17 +593,6 @@ class SignUpSerializer(
             if not price_group and registration.registration_price_groups.exists():
                 errors["price_group"] = _(
                     "Price group selection is mandatory for this registration."
-                )
-
-            if (
-                price_group.get("id")
-                and instance_id
-                and registration.signups.exclude(pk=instance_id)
-                .filter(price_group=price_group["id"])
-                .exists()
-            ):
-                errors["price_group"] = _(
-                    "Price group is already assigned to another participant."
                 )
 
             if (
@@ -706,6 +697,26 @@ class RegistrationWebStoreAccountSerializer(WebStoreAccountBaseSerializer):
         extra_kwargs = {
             "name": {"read_only": True},
         }
+
+
+class GroupSignUpSerializer(SignUpSerializer):
+    class Meta(SignUpSerializer.Meta):
+        fields = [
+            field
+            for field in SignUpSerializer.Meta.fields
+            if field not in ("contact_person", "create_payment")
+        ]
+        extra_kwargs = {
+            "registration": {"required": False},
+            "signup_group": {"read_only": True},
+        }
+
+
+class GroupSignUpCreateSerializer(GroupSignUpSerializer):
+    class Meta(GroupSignUpSerializer.Meta):
+        fields = [
+            field for field in GroupSignUpSerializer.Meta.fields if field != "payment"
+        ]
 
 
 class RegistrationUserAccessIdField(serializers.PrimaryKeyRelatedField):
@@ -884,6 +895,7 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
 
         return fields
 
+    @extend_schema_field(OpenApiTypes.BOOL)
     def get_has_registration_user_access(self, obj):
         user = self.user
 
@@ -895,12 +907,14 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
 
         return has_registration_user_access or self.get_has_substitute_user_access(obj)
 
+    @extend_schema_field(OpenApiTypes.BOOL)
     def get_has_substitute_user_access(self, obj):
         user = self.user
         return user.is_authenticated and user.is_substitute_user_of(
             obj.registration_user_accesses
         )
 
+    @extend_schema_field(SignUpSerializer(many=True, read_only=True))
     def get_signups(self, obj):
         params = self.context["request"].query_params
 
@@ -918,28 +932,44 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
 
         return None
 
+    @extend_schema_field(OpenApiTypes.INT)
     def get_current_attendee_count(self, obj):
         return obj.current_attendee_count
 
+    @extend_schema_field(OpenApiTypes.INT)
     def get_current_waiting_list_count(self, obj):
         return obj.current_waiting_list_count
 
+    @extend_schema_field(Optional[int])
     def get_remaining_attendee_capacity(self, obj):
         # Because there can be slight delay with capacity calculations in case of seat expiration,
         # calculate the current value on the fly so that front-end gets the most recent information.
         return obj.calculate_remaining_attendee_capacity()
 
+    @extend_schema_field(Optional[int])
     def get_remaining_waiting_list_capacity(self, obj):
         # Because there can be slight delay with capacity calculations in case of seat expiration,
         # calculate the current value on the fly so that front-end gets the most recent information.
         return obj.calculate_remaining_waiting_list_capacity()
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_data_source(self, obj):
         return obj.data_source.id
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_publisher(self, obj):
         return obj.publisher.id
 
+    @extend_schema_field(
+        {
+            "type": "object",
+            "properties": {
+                "en": {"type": "string"},
+                "fi": {"type": "string"},
+                "sv": {"type": "string"},
+            },
+        }
+    )
     def get_signup_url(self, obj):
         return {lang: get_signup_create_url(obj, lang) for lang in ["en", "fi", "sv"]}
 
@@ -1182,6 +1212,7 @@ class SignUpGroupCreateSerializer(
 ):
     reservation_code = serializers.CharField(write_only=True)
     contact_person = SignUpContactPersonSerializer(required=True)
+    signups = GroupSignUpCreateSerializer(many=True, required=True)
 
     def validate(self, data):
         # Clean html tags from the text fields
@@ -1310,7 +1341,7 @@ class SignUpGroupSerializer(
     def get_fields(self):
         fields = super().get_fields()
 
-        fields["signups"] = SignUpSerializer(
+        fields["signups"] = GroupSignUpSerializer(
             many=True, required=False, partial=self.partial
         )
 
@@ -1398,9 +1429,11 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
 
     in_waitlist = serializers.SerializerMethodField()
 
+    @extend_schema_field(OpenApiTypes.DATETIME)
     def get_expiration(self, obj):
         return obj.expiration
 
+    @extend_schema_field(OpenApiTypes.BOOL)
     def get_in_waitlist(self, obj):
         registration = obj.registration
         maximum_attendee_capacity = registration.maximum_attendee_capacity
@@ -1547,12 +1580,18 @@ class MassEmailSerializer(serializers.Serializer):
         required=False,
     )
 
+    class Meta:
+        model = Registration
+
 
 class RegistrationSignupsExportSerializer(serializers.Serializer):
     ui_language = serializers.ChoiceField(
         choices=["en", "sv", "fi"],
         default="fi",
     )
+
+    class Meta:
+        model = Registration
 
 
 class PriceGroupSerializer(TranslatedModelSerializer, CreatedModifiedBaseSerializer):
