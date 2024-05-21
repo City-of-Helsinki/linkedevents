@@ -1,0 +1,35 @@
+{% extends "drf_spectacular/swagger_ui.html" %}
+
+{% block body %}
+  {{ block.super }}
+  <script>
+    // Set Swagger UI server to the current server if there is a server option that matches it.
+    // Timeout is used because the Swagger UI script is loaded from an external server.
+    // Retry 10 times with 200ms intervals before giving up.
+
+    let checkServerTimeout = null;
+    let retries = 0;
+
+    const setServer = () => {
+      if (retries >= 10) {
+        clearTimeout(checkServerTimeout);
+        return;
+      }
+
+      const serverSelect = document.getElementById('servers');
+      if (serverSelect) {
+        for (const option of serverSelect.options) {
+          if (option.value.startsWith(window.location.origin)) {
+            serverSelect.value = option.value;
+            break;
+          }
+        }
+        clearTimeout(checkServerTimeout);
+      }
+
+      retries++;
+    };
+
+    checkServerTimeout = setTimeout(setServer, 200);
+  </script>
+{% endblock %}

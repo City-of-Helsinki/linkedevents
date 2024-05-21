@@ -355,3 +355,14 @@ To implement an extension:
 6) If you want to force the extension to be enabled on every request, add the extension's identifier to `AUTO_ENABLED_EXTENSIONS` in Django settings.
 
 For an example extension implementation, see [course extension](extension_course).
+
+
+## Swagger documentation
+
+Swagger documentation is available at the endpoint `/docs/swagger-ui/`. The schema is generated using [drf-spectacular](https://github.com/tfranzel/drf-spectacular).
+
+To update the .yaml file that the Swagger UI is based on, run the following management command:
+
+```shell
+./manage.py spectacular --file ./linkedevents/static/linked-events.yaml --lang en --validate --fail-on-warn --api-version v1
+```

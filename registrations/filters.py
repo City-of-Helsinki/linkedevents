@@ -1,5 +1,4 @@
 import django_filters
-from django.db import models
 from django.db.models import Q, Value
 from django.db.models.functions import Concat
 from django.utils.functional import cached_property
@@ -26,18 +25,6 @@ class ActionDependingFilter(django_filters.rest_framework.FilterSet):
 
 
 class SignUpBaseFilter(ActionDependingFilter):
-    registration = django_filters.Filter(
-        widget=django_filters.widgets.CSVWidget(),
-        method="filter_registration",
-    )
-
-    attendee_status = django_filters.MultipleChoiceFilter(
-        choices=SignUp.ATTENDEE_STATUSES,
-        widget=django_filters.widgets.CSVWidget(),
-    )
-
-    text = django_filters.CharFilter(method="filter_text")
-
     @cached_property
     def _user_admin_organizations(self):
         return self.request.user.get_admin_organizations_and_descendants()
@@ -155,16 +142,63 @@ class SignUpBaseFilter(ActionDependingFilter):
 
 
 class SignUpFilter(SignUpBaseFilter):
+    registration = django_filters.Filter(
+        widget=django_filters.widgets.CSVWidget(),
+        method="filter_registration",
+        help_text=_(
+            "Search for signups with the given registration as specified by id. "
+            "Multiple ids are separated by comma."
+        ),
+    )
+
+    attendee_status = django_filters.MultipleChoiceFilter(
+        choices=SignUp.ATTENDEE_STATUSES,
+        widget=django_filters.widgets.CSVWidget(),
+        help_text=_(
+            "Search for signups with the given attendee status. "
+            "Multiple types are separated by comma."
+        ),
+    )
+
+    text = django_filters.CharFilter(
+        method="filter_text",
+        help_text=_(
+            "Search (case insensitive) through the text fields of a signup (first_name, last_name) "
+            "and the signup's contact person (email, membership_number and phone_number)."
+        ),
+    )
+
     class Meta:
         model = SignUp
         fields = ("registration", "attendee_status")
 
 
 class SignUpGroupFilter(SignUpBaseFilter):
+    registration = django_filters.Filter(
+        widget=django_filters.widgets.CSVWidget(),
+        method="filter_registration",
+        help_text=_(
+            "Search for signup groups with the given registration as specified by id. "
+            "Multiple ids are separated by comma."
+        ),
+    )
+
     attendee_status = django_filters.MultipleChoiceFilter(
         field_name="signups__attendee_status",
         choices=SignUp.ATTENDEE_STATUSES,
         widget=django_filters.widgets.CSVWidget(),
+        help_text=_(
+            "Search for signup groups with the given attendee status. "
+            "Multiple types are separated by comma."
+        ),
+    )
+
+    text = django_filters.CharFilter(
+        method="filter_text",
+        help_text=_(
+            "Search (case insensitive) through the text fields of signups (first_name, last_name) "
+            "and the contact person (email, membership_number and phone_number) in a signup group."
+        ),
     )
 
     def filter_text(self, queryset, name, value):
@@ -181,6 +215,25 @@ class PriceGroupFilter(ActionDependingFilter):
     publisher = django_filters.Filter(
         widget=django_filters.widgets.CSVWidget(),
         method="filter_publisher",
+        help_text=_(
+            "Search for customer groups belonging to an organization as specified by id. "
+            "Multiple ids are separated by comma. Use the value <code>none</code> for "
+            "default customer groups."
+        ),
+    )
+
+    description = django_filters.CharFilter(
+        lookup_expr="icontains",
+        help_text=_(
+            "Search (case insensitive) through customer groups' multilingual description field."
+        ),
+    )
+
+    is_free = django_filters.BooleanFilter(
+        widget=django_filters.widgets.BooleanWidget(),
+        help_text=_(
+            "Search for customer groups that are free of charge or that have a price."
+        ),
     )
 
     def filter_publisher(self, queryset, name, value: list[str]):
@@ -199,11 +252,3 @@ class PriceGroupFilter(ActionDependingFilter):
     class Meta:
         model = PriceGroup
         fields = ("publisher", "description", "is_free")
-        filter_overrides = {
-            models.CharField: {
-                "filter_class": django_filters.CharFilter,
-                "extra": lambda f: {
-                    "lookup_expr": "icontains",
-                },
-            },
-        }

@@ -47,7 +47,7 @@ class UserModelPermissionMixin:
         self._token_amr_claim = value
 
     @property
-    def is_strongly_identified(self):
+    def is_strongly_identified(self) -> bool:
         """Check if the user is strongly identified"""
 
         return any(
@@ -280,7 +280,7 @@ class User(AbstractUser, UserModelPermissionMixin, SerializableMixin):
             )
         ]
 
-    def get_display_name(self):
+    def get_display_name(self) -> str:
         return "{0} {1}".format(self.first_name, self.last_name).strip()
 
     def get_default_organization(self):
@@ -365,7 +365,7 @@ class User(AbstractUser, UserModelPermissionMixin, SerializableMixin):
         )
 
     @cached_property
-    def is_external(self):
+    def is_external(self) -> bool:
         if any(
             login_method in settings.NON_EXTERNAL_AUTHENTICATION_METHODS
             for login_method in self.token_amr_claim
@@ -380,7 +380,7 @@ class User(AbstractUser, UserModelPermissionMixin, SerializableMixin):
         )
 
     @cached_property
-    def is_substitute_user(self):
+    def is_substitute_user(self) -> bool:
         if not has_allowed_substitute_user_email_domain(self.email):
             return False
 

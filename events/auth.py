@@ -62,7 +62,7 @@ class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
         DataSource, on_delete=models.CASCADE, primary_key=True
     )
 
-    def get_display_name(self):
+    def get_display_name(self) -> str:
         return "API key from data source %s" % self.data_source
 
     def __str__(self):
@@ -139,11 +139,11 @@ class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
         )
 
     @property
-    def is_external(self):
+    def is_external(self) -> bool:
         return False
 
     @property
-    def is_substitute_user(self):
+    def is_substitute_user(self) -> bool:
         return False
 
 

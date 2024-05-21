@@ -7,9 +7,16 @@ from django.contrib.auth.models import AnonymousUser
 from django.db import transaction
 from django.db.models import ProtectedError
 from django.http import HttpResponse
+from django.template.loader import render_to_string
 from django.utils import translation
 from django.utils.timezone import localtime
 from django.utils.translation import gettext as _
+from drf_spectacular.utils import (
+    extend_schema,
+    OpenApiParameter,
+    OpenApiResponse,
+    OpenApiTypes,
+)
 from rest_framework import filters, mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
@@ -22,12 +29,15 @@ from audit_log.mixins import AuditLogApiViewMixin
 from events.api import (
     _filter_event_queryset,
     JSONAPIViewMixin,
-    RegistrationSerializer,
     UserDataSourceAndOrganizationMixin,
 )
 from events.models import Event
 from events.permissions import OrganizationUserEditPermission
 from linkedevents.registry import register_view
+from linkedevents.schema_utils import (
+    get_common_api_error_responses,
+    IncludeOpenApiParameter,
+)
 from registrations.auth import WebStoreWebhookAuthentication
 from registrations.exceptions import (
     ConflictException,
@@ -66,6 +76,7 @@ from registrations.serializers import (
     CreateSignUpsSerializer,
     MassEmailSerializer,
     PriceGroupSerializer,
+    RegistrationSerializer,
     RegistrationSignupsExportSerializer,
     RegistrationUserAccessSerializer,
     SeatReservationCodeSerializer,
@@ -178,6 +189,126 @@ class RegistrationViewSet(
         context["registration_admin_tree_ids"] = registration_admin_tree_ids
         return context
 
+    @extend_schema(
+        summary="Return a list of registrations",
+        description=render_to_string("swagger/registration_list_description.html"),
+        parameters=[
+            OpenApiParameter(
+                name="admin_user",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for registrations to which user has admin role "
+                    "(event admin, registration admin or substitute user)."
+                ),
+            ),
+            OpenApiParameter(
+                name="event_type",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for registrations with the given type. "
+                    "Multiple types are separated by comma."
+                ),
+            ),
+            IncludeOpenApiParameter(
+                description=(
+                    "Embed given reference-type fields, comma-separated if several, directly into "
+                    "the response, otherwise they are returned as URI references. The value "
+                    "<code>signups</code> can be used to include signups' data, and the value "
+                    "<code>event</code> can be used to include the event's data."
+                ),
+            ),
+            OpenApiParameter(
+                name="text",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search (case insensitive) through all event's multilingual text fields "
+                    "(name, description, short_description, info_url) of a registration."
+                ),
+            ),
+        ],
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Return information for single registration",
+        auth=[],
+        responses={
+            404: OpenApiResponse(
+                description="Registration was not found.",
+            ),
+        },
+    )
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Create a new registration",
+        responses={
+            201: OpenApiResponse(
+                RegistrationSerializer,
+                description="Registration has been successfully created.",
+            ),
+            **get_common_api_error_responses(),
+        },
+    )
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Update a registration",
+        description=(
+            "Registration can be updated if the user has appropriate access permissions. The "
+            "original implementation behaves like PATCH, ie. if some field is left out from the "
+            "PUT call, its value is retained in database. In order to ensure consistent behaviour, "
+            "users should always supply every field in PUT call."
+        ),
+        responses={
+            200: OpenApiResponse(
+                RegistrationSerializer,
+                description="Registration has been successfully updated.",
+            ),
+            **get_common_api_error_responses(),
+            404: OpenApiResponse(
+                description="Registration was not found.",
+            ),
+        },
+    )
+    def update(self, request, *args, **kwargs):
+        return super().update(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Partially update a registration",
+        responses={
+            200: OpenApiResponse(
+                RegistrationSerializer,
+                description="Registration has been successfully partially updated.",
+            ),
+            **get_common_api_error_responses(),
+            404: OpenApiResponse(
+                description="Registration was not found.",
+            ),
+        },
+    )
+    def partial_update(self, request, *args, **kwargs):
+        return super().partial_update(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Delete a registration",
+        description="Registration can be deleted if the user has appropriate access permissions.",
+        responses={
+            204: OpenApiResponse(
+                description=_("Registration has been successfully deleted."),
+            ),
+            **get_common_api_error_responses(excluded_codes=[400]),
+            404: OpenApiResponse(
+                description="Registration was not found.",
+            ),
+        },
+    )
+    def destroy(self, request, *args, **kwargs):
+        return super().destroy(request, *args, **kwargs)
+
     @transaction.atomic
     def perform_create(self, serializer):
         try:
@@ -263,6 +394,13 @@ class RegistrationViewSet(
 
         return messages
 
+    @extend_schema(
+        summary="Send a message to attendees",
+        description=(
+            "Email message to registration attendees can be send if the user has appropriate "
+            "access permissions."
+        ),
+    )
     @action(
         methods=["post"],
         detail=True,
@@ -339,6 +477,33 @@ class RegistrationViewSet(
             status=status.HTTP_200_OK,
         )
 
+    @extend_schema(
+        summary="Export attendees as an XLSX file",
+        description=(
+            "Registration attendees XLSX export can be made if the user has appropriate access "
+            "permissions."
+        ),
+        parameters=[
+            OpenApiParameter(
+                name="ui_language",
+                type=OpenApiTypes.STR,
+                description=(
+                    "UI language locale. Can be either <code>fi</code>, <code>sv</code> or "
+                    "<code>en</code>. Defaults to <code>fi</code> if no value given."
+                ),
+            ),
+        ],
+        responses={
+            (
+                200,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ): OpenApiTypes.BINARY,
+            **get_common_api_error_responses(),
+            404: OpenApiResponse(
+                description="Registration not found.",
+            ),
+        },
+    )
     @action(
         methods=["get"],
         detail=True,
@@ -377,6 +542,20 @@ class RegistrationUserAccessViewSet(AuditLogApiViewMixin, viewsets.GenericViewSe
     serializer_class = RegistrationUserAccessSerializer
     permission_classes = [OrganizationUserEditPermission]
 
+    @extend_schema(
+        summary="Send invitation to a single registration user",
+        request={},
+        responses={
+            200: OpenApiResponse(
+                RegistrationUserAccessSerializer,
+                description="Invitation was successfully sent to the registration user.",
+            ),
+            **get_common_api_error_responses(excluded_codes=[400]),
+            404: OpenApiResponse(
+                description="Registration user was not found.",
+            ),
+        },
+    )
     @action(detail=True, methods=["post"])
     def send_invitation(self, request, pk=None, version=None):
         registration_user_access = self.get_object()
@@ -408,6 +587,55 @@ class SignUpViewSet(
     filterset_class = SignUpFilter
     permission_classes = [CanAccessSignup]
 
+    @extend_schema(
+        summary="Return a list of signups",
+        description=render_to_string("swagger/signup_list_description.html"),
+        parameters=[
+            # Rest of the parameters are described in the filter class through help_texts.
+            OpenApiParameter(
+                name="sort",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Sort the returned signups in the given order. Possible sorting criteria are "
+                    "<code>first_name</code> and <code>last_name</code>. The default ordering is "
+                    "<code>first_name,last_name</code>."
+                ),
+            ),
+        ],
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Return information for a single signup",
+        responses={
+            200: OpenApiResponse(
+                SignUpSerializer,
+                description=(
+                    "Single signup object. Signup can be retrieved if the user "
+                    "has appropriate access permissions."
+                ),
+            ),
+            **get_common_api_error_responses(excluded_codes=[400]),
+            404: OpenApiResponse(
+                description="Signup was not found.",
+            ),
+        },
+    )
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Create new signups to a registration",
+        request=CreateSignUpsSerializer,
+        responses={
+            201: OpenApiResponse(
+                CreateSignUpsSerializer,
+                description="Signups have been successfully created.",
+            ),
+            **get_common_api_error_responses(),
+        },
+    )
     @transaction.atomic
     def create(self, request, *args, **kwargs):
         context = super().get_serializer_context()
@@ -445,6 +673,60 @@ class SignUpViewSet(
             data=SignUpSerializer(signup_instances, many=True, context=context).data,
             status=status.HTTP_201_CREATED,
         )
+
+    @extend_schema(
+        summary="Update a signup",
+        description=(
+            "Signup can be updated if the user has appropriate access permissions. The original "
+            "implementation behaves like PATCH, ie. if some field is left out from the PUT call, "
+            "its value is retained in database. In order to ensure consistent behaviour, users "
+            "should always supply every field in PUT call."
+        ),
+        responses={
+            200: OpenApiResponse(
+                SignUpSerializer,
+                description="Signup has been successfully updated.",
+            ),
+            **get_common_api_error_responses(),
+            404: OpenApiResponse(
+                description="Signup was not found.",
+            ),
+        },
+    )
+    def update(self, request, *args, **kwargs):
+        return super().update(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Partially update a signup",
+        responses={
+            200: OpenApiResponse(
+                SignUpSerializer,
+                description="Signup has been successfully partially updated.",
+            ),
+            **get_common_api_error_responses(),
+            404: OpenApiResponse(
+                description="Signup was not found.",
+            ),
+        },
+    )
+    def partial_update(self, request, *args, **kwargs):
+        return super().partial_update(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Delete a signup",
+        description="Signup can be deleted if the user has appropriate access permissions.",
+        responses={
+            204: OpenApiResponse(
+                description="Signup has been successfully deleted.",
+            ),
+            **get_common_api_error_responses(excluded_codes=[400]),
+            404: OpenApiResponse(
+                description="Signup was not found.",
+            ),
+        },
+    )
+    def destroy(self, request, *args, **kwargs):
+        return super().destroy(request, *args, **kwargs)
 
     @transaction.atomic
     def perform_update(self, serializer):
@@ -517,21 +799,114 @@ class SignUpGroupViewSet(
         for signup_data in data["signups"]:
             signup_data["registration"] = registration_id
 
+    @extend_schema(
+        summary="Return a list of signup groups",
+        description=render_to_string("swagger/signup_group_list_description.html"),
+        parameters=[
+            # Rest of the parameters are described in the filter class through help_texts.
+            OpenApiParameter(
+                name="sort",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Sort the returned signup groups in the given order. Possible sorting "
+                    "criteria are <code>first_name</code> and <code>last_name</code>. "
+                    "The default ordering is <code>first_name,last_name</code>."
+                ),
+            ),
+        ],
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Return information for a single signup group",
+        responses={
+            200: OpenApiResponse(
+                SignUpGroupSerializer,
+                description=(
+                    "Single signup group object. Signup group can be retrieved if the user "
+                    "has appropriate access permissions."
+                ),
+            ),
+            **get_common_api_error_responses(excluded_codes=[400]),
+            404: OpenApiResponse(
+                description="Signup group was not found.",
+            ),
+        },
+    )
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Create new a signup group to the registration",
+        responses={
+            201: OpenApiResponse(
+                SignUpGroupSerializer,
+                description="Signup group has been successfully created.",
+            ),
+            **get_common_api_error_responses(),
+        },
+    )
     @transaction.atomic
     def create(self, request, *args, **kwargs):
         self._ensure_shared_request_data(request.data)
         return super().create(request, *args, **kwargs)
 
+    @extend_schema(
+        summary="Update a signup group",
+        description=(
+            "Signup group can be updated if the user has appropriate access permissions. "
+            "The original implementation behaves like PATCH, ie. if some field is left out "
+            "from the PUT call, its value is retained in database. In order to ensure consistent "
+            "behaviour, users should always supply every field in PUT call."
+        ),
+        responses={
+            200: OpenApiResponse(
+                SignUpGroupSerializer,
+                description="Signup group has been successfully updated.",
+            ),
+            **get_common_api_error_responses(),
+            404: OpenApiResponse(
+                description="Signup group was not found.",
+            ),
+        },
+    )
     @transaction.atomic
     def update(self, request, *args, **kwargs):
         self._ensure_shared_request_data(request.data)
         return super().update(request, *args, **kwargs)
 
+    @extend_schema(
+        summary="Partially update a signup group",
+        responses={
+            200: OpenApiResponse(
+                SignUpGroupSerializer,
+                description="Signup group has been successfully partially updated.",
+            ),
+            **get_common_api_error_responses(),
+            404: OpenApiResponse(
+                description="Signup group was not found.",
+            ),
+        },
+    )
     @transaction.atomic
     def partial_update(self, request, *args, **kwargs):
         self._ensure_shared_request_data(request.data)
         return super().partial_update(request, *args, **kwargs)
 
+    @extend_schema(
+        summary="Delete a signup group",
+        description="Signup group can be deleted if the user has appropriate access permissions.",
+        responses={
+            204: OpenApiResponse(
+                description="Signup group has been successfully deleted.",
+            ),
+            **get_common_api_error_responses(excluded_codes=[400]),
+            404: OpenApiResponse(
+                description="Signup group was not found.",
+            ),
+        },
+    )
     @transaction.atomic
     def destroy(self, request, *args, **kwargs):
         return super().destroy(request, *args, **kwargs)
@@ -550,6 +925,45 @@ class SeatReservationViewSet(
     queryset = SeatReservationCode.objects.all()
     http_method_names = ["post", "put", "options"]
     permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Reserve seats for a registration",
+        description="Seats reservation is required when signing to the registration.",
+        responses={
+            201: OpenApiResponse(
+                CreateSignUpsSerializer,
+                description="Seats has been successfully reserved.",
+            ),
+            **get_common_api_error_responses(),
+            409: OpenApiResponse(
+                description="Not enough seats available.",
+            ),
+        },
+    )
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Update a seats reservation",
+        description=(
+            "Seats reservation can be updated if the valid code is added to the payload. The "
+            "original implementation behaves like PATCH, ie. if some field is left out from the "
+            "PUT call, its value is retained in database. In order to ensure consistent "
+            "behaviour, users should always supply every field in PUT call."
+        ),
+        responses={
+            200: OpenApiResponse(
+                CreateSignUpsSerializer,
+                description="Seats reservation has been successfully updated.",
+            ),
+            **get_common_api_error_responses(),
+            409: OpenApiResponse(
+                description="Not enough seats available.",
+            ),
+        },
+    )
+    def update(self, request, *args, **kwargs):
+        return super().update(request, *args, **kwargs)
 
 
 register_view(SeatReservationViewSet, "seats_reservation")
@@ -572,6 +986,64 @@ class PriceGroupViewSet(
     ordering = ("description",)
     permission_classes = [CanAccessPriceGroups]
 
+    @extend_schema(
+        summary="Return a list of customer groups",
+        description=render_to_string("swagger/price_group_list_description.html"),
+        parameters=[
+            # Rest of the parameters are described in the filter class through help_texts.
+            OpenApiParameter(
+                name="sort",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Sort the returned customer groups in the given order by 'description'. "
+                ),
+            ),
+        ],
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Return information for a single customer group",
+        responses={
+            404: OpenApiResponse(
+                description="Customer group was not found.",
+            ),
+        },
+    )
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Create a new customer group",
+        responses={
+            201: OpenApiResponse(
+                PriceGroupSerializer,
+                description="Customer group has been successfully created.",
+            ),
+            **get_common_api_error_responses(),
+        },
+    )
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Update a customer group",
+        description=(
+            "Customer group can be updated if the user has appropriate access permissions. "
+            "Default customer groups cannot be updated."
+        ),
+        responses={
+            200: OpenApiResponse(
+                PriceGroupSerializer,
+                description="Customer group has been successfully updated.",
+            ),
+            **get_common_api_error_responses(),
+            404: OpenApiResponse(
+                description="Customer group was not found.",
+            ),
+        },
+    )
     def update(self, request, *args, **kwargs):
         try:
             return super().update(request, *args, **kwargs)
@@ -581,6 +1053,38 @@ class PriceGroupViewSet(
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+    @extend_schema(
+        summary="Partially update a customer group",
+        responses={
+            200: OpenApiResponse(
+                PriceGroupSerializer,
+                description="Customer group has been successfully partially updated.",
+            ),
+            **get_common_api_error_responses(),
+            404: OpenApiResponse(
+                description="Customer group was not found.",
+            ),
+        },
+    )
+    def partial_update(self, request, *args, **kwargs):
+        return super().partial_update(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Delete a customer group",
+        description=(
+            "Customer group can be deleted if the user has appropriate access permissions. "
+            "Default customer groups cannot be deleted."
+        ),
+        responses={
+            204: OpenApiResponse(
+                description="Customer group has been successfully deleted.",
+            ),
+            **get_common_api_error_responses(excluded_codes=[400]),
+            404: OpenApiResponse(
+                description="Customer group was not found.",
+            ),
+        },
+    )
     def destroy(self, request, *args, **kwargs):
         try:
             return super().destroy(request, *args, **kwargs)
@@ -602,6 +1106,7 @@ class WebStoreWebhookBaseViewSet(AuditLogApiViewMixin, viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
 
+@extend_schema(exclude=True)
 class WebStorePaymentWebhookViewSet(WebStoreWebhookBaseViewSet):
     @staticmethod
     def _get_payment(order_id: str) -> Optional[SignUpPayment]:
@@ -727,6 +1232,7 @@ class WebStorePaymentWebhookViewSet(WebStoreWebhookBaseViewSet):
         return Response(status=status.HTTP_200_OK)
 
 
+@extend_schema(exclude=True)
 class WebStoreRefundWebhookViewSet(WebStoreWebhookBaseViewSet):
     @staticmethod
     def _get_refund(order_id: str, refund_id: str) -> Optional[SignUpPaymentRefund]:

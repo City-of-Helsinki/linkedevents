@@ -1,52 +1,42 @@
-import base64
 import logging
 import re
-import struct
-import time
 import urllib.parse
-from copy import deepcopy
 from datetime import datetime
 from datetime import time as datetime_time
 from datetime import timedelta
 from datetime import timezone as datetime_timezone
 from functools import partial, reduce
 from operator import or_
-from typing import Iterable, Literal, Optional
+from typing import Literal
 
-import django.forms
 import django_filters
 import pytz
 import regex
 from django.conf import settings
 from django.contrib.gis.gdal import GDALException
-from django.contrib.gis.geos import Point
-from django.contrib.gis.measure import D
-from django.contrib.postgres.search import SearchQuery, SearchRank, TrigramSimilarity
+from django.contrib.postgres.search import SearchQuery, TrigramSimilarity
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.db.models import Case, Count
-from django.db.models import DateTimeField as ModelDateTimeField
-from django.db.models import Exists, F, OuterRef, Prefetch, Q, QuerySet, When
+from django.db.models import Count, Exists, F, OuterRef, Prefetch, Q, QuerySet
 from django.db.models.functions import Greatest
-from django.db.utils import IntegrityError
 from django.http import Http404, HttpResponsePermanentRedirect
-from django.utils import timezone, translation
-from django.utils.encoding import force_str
+from django.template.loader import render_to_string
+from django.utils import translation
 from django.utils.functional import cached_property
 from django.utils.timezone import localtime
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization, OrganizationClass
-from haystack.query import AutoQuery
-from isodate import Duration, duration_isoformat, parse_duration
-from munigeo.api import (
-    build_bbox_filter,
-    DEFAULT_SRS,
-    GeoModelAPIView,
-    GeoModelSerializer,
-    srid_to_srs,
+from drf_spectacular.utils import (
+    extend_schema,
+    inline_serializer,
+    OpenApiParameter,
+    OpenApiRequest,
+    OpenApiResponse,
+    OpenApiTypes,
 )
-from munigeo.api import TranslatedModelSerializer as ParlerTranslatedModelSerializer
+from haystack.query import AutoQuery
+from munigeo.api import build_bbox_filter, GeoModelAPIView, srid_to_srs
 from munigeo.models import AdministrativeDivision
 from rest_framework import (
     filters,
@@ -58,19 +48,14 @@ from rest_framework import (
     viewsets,
 )
 from rest_framework.decorators import action
-from rest_framework.exceptions import APIException, ErrorDetail, ParseError
+from rest_framework.exceptions import APIException, ParseError
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.exceptions import ValidationError
-from rest_framework.fields import DateTimeField
 from rest_framework.filters import BaseFilterBackend
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.settings import api_settings
-from rest_framework_bulk import (
-    BulkListSerializer,
-    BulkModelViewSet,
-    BulkSerializerMixin,
-)
+from rest_framework_bulk import BulkModelViewSet
 
 from audit_log.mixins import AuditLogApiViewMixin
 from events import utils
@@ -80,21 +65,23 @@ from events.custom_elasticsearch_search_backend import (
     CustomEsSearchQuerySet as SearchQuerySet,
 )
 from events.extensions import apply_select_and_prefetch, get_extensions_from_request
+from events.filters import (
+    EventFilter,
+    EventOrderingFilter,
+    filter_division,
+    OrganizationFilter,
+    PlaceFilter,
+)
 from events.models import (
     DataSource,
     Event,
-    EventLink,
-    Feedback,
     Image,
     Keyword,
     KeywordSet,
     Language,
-    License,
     Offer,
     Place,
-    PUBLICATION_STATUSES,
     PublicationStatus,
-    Video,
 )
 from events.permissions import (
     DataSourceOrganizationEditPermission,
@@ -107,75 +94,36 @@ from events.permissions import (
     UserIsAdminInAnyOrganization,
 )
 from events.renderers import DOCXRenderer
+from events.serializers import (
+    DataSourceSerializer,
+    EventSerializer,
+    EventSerializerV0_1,
+    FeedbackSerializer,
+    ImageSerializer,
+    KeywordSerializer,
+    KeywordSetSerializer,
+    LanguageSerializer,
+    OrganizationClassSerializer,
+    OrganizationDetailSerializer,
+    OrganizationListSerializer,
+    PlaceSerializer,
+    SearchSerializer,
+    SearchSerializerV0_1,
+)
 from events.translation import EventTranslationOptions, PlaceTranslationOptions
-from events.utils import clean_text_fields
-from helevents.models import User
-from helevents.serializers import UserSerializer
-from linkedevents.fields import JSONLDRelatedField
-from linkedevents.registry import register_view, viewset_classes_by_model
-from linkedevents.serializers import LinkedEventsSerializer, TranslatedModelSerializer
+from linkedevents.registry import register_view
+from linkedevents.schema_utils import (
+    get_common_api_error_responses,
+    IncludeOpenApiParameter,
+)
 from linkedevents.utils import get_fixed_lang_codes
 from registrations.exceptions import WebStoreAPIError
-from registrations.models import (
-    OfferPriceGroup,
-    RegistrationPriceGroup,
-    RegistrationUserAccess,
-    RegistrationWebStoreAccount,
-    RegistrationWebStoreMerchant,
-    RegistrationWebStoreProductMapping,
-    VAT_CODE_MAPPING,
-    WebStoreAccount,
-    WebStoreMerchant,
-)
 from registrations.serializers import (
-    OfferPriceGroupSerializer,
-    RegistrationBaseSerializer,
     WebStoreAccountSerializer,
     WebStoreMerchantSerializer,
 )
 
 logger = logging.getLogger(__name__)
-LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
-EVENT_SERIALIZER_REF = "events.api.EventSerializer"
-
-
-def get_serializer_for_model(model, version="v1"):
-    viewset_cls = viewset_classes_by_model.get(model)
-    if viewset_cls is None:
-        return None
-    serializer = None
-    if hasattr(viewset_cls, "get_serializer_class_for_version"):
-        serializer = viewset_cls.get_serializer_class_for_version(version)
-    elif hasattr(viewset_cls, "serializer_class"):
-        serializer = viewset_cls.serializer_class
-    return serializer
-
-
-def generate_id(namespace):
-    t = time.time() * 1000
-    postfix = base64.b32encode(struct.pack(">Q", int(t)).lstrip(b"\x00"))
-    postfix = postfix.strip(b"=").lower().decode(encoding="UTF-8")
-    return "{}:{}".format(namespace, postfix)
-
-
-def validate_for_duplicates(values, field, error_detail_callback):
-    errors = []
-    checked_values = set()
-    raise_errors = False
-
-    for data in values:
-        value = data[field]
-        if value in checked_values:
-            errors.append({field: [error_detail_callback(value)]})
-            raise_errors = True
-        else:
-            checked_values.add(value)
-            errors.append({})
-
-    if raise_errors:
-        raise serializers.ValidationError(errors)
-
-    return values
 
 
 class UserDataSourceAndOrganizationMixin:
@@ -280,54 +228,6 @@ def parse_digit(val, param):
         raise ParseError(f'{param} must be an integer, you passed "{val}"')
 
 
-class EnumChoiceField(serializers.Field):
-    """
-    Database value of tinyint is converted to and from a string representation
-    of choice field.
-
-    TODO: Find if there's standardized way to render Schema.org enumeration
-    instances in JSON-LD.
-    """
-
-    def __init__(self, choices, prefix="", **kwargs):
-        self.choices = choices
-        self.prefix = prefix
-        super().__init__(**kwargs)
-
-    def to_representation(self, obj):
-        if obj is None:
-            return None
-        return self.prefix + str(utils.get_value_from_tuple_list(self.choices, obj, 1))
-
-    def to_internal_value(self, data):
-        value = utils.get_value_from_tuple_list(
-            self.choices, self.prefix + str(data), 0
-        )
-        if value is None:
-            raise ParseError(_(f'Invalid value "{data}"'))
-        return value
-
-
-class ISO8601DurationField(serializers.Field):
-    def to_representation(self, obj):
-        if obj:
-            d = Duration(milliseconds=obj)
-            return duration_isoformat(d)
-        else:
-            return None
-
-    def to_internal_value(self, data):
-        if data:
-            value = parse_duration(data)
-            return (
-                value.days * 24 * 3600 * 1000000
-                + value.seconds * 1000
-                + value.microseconds / 1000
-            )
-        else:
-            return 0
-
-
 def _text_qset_by_translated_field(field, val):
     # Free text search from all languages of the field
     languages = get_fixed_lang_codes()
@@ -372,111 +272,6 @@ class JSONAPIViewMixin(object):
         return context
 
 
-class EditableLinkedEventsObjectSerializer(LinkedEventsSerializer):
-    def create(self, validated_data):
-        if "data_source" not in validated_data:
-            validated_data["data_source"] = self.context["data_source"]
-        # data source has already been validated
-        if "publisher" not in validated_data:
-            validated_data["publisher"] = self.context["publisher"]
-        # publisher has already been validated
-
-        request = self.context["request"]
-        user = request.user
-        validated_data["created_by"] = user
-        validated_data["last_modified_by"] = user
-
-        try:
-            instance = super().create(validated_data)
-        except IntegrityError as error:
-            if "duplicate" in str(error) and "pkey" in str(error):
-                raise serializers.ValidationError(
-                    {"id": _("An object with given id already exists.")}
-                )
-            else:
-                raise error
-        return instance
-
-    def update(self, instance, validated_data):
-        validated_data["last_modified_by"] = self.user
-
-        if "id" in validated_data and instance.id != validated_data["id"]:
-            raise serializers.ValidationError(
-                {"id": _("You may not change the id of an existing object.")}
-            )
-        if "publisher" in validated_data and validated_data["publisher"] not in (
-            instance.publisher,
-            instance.publisher.replaced_by,
-        ):
-            raise serializers.ValidationError(
-                {
-                    "publisher": _(
-                        "You may not change the publisher of an existing object."
-                    )
-                }
-            )
-        if (
-            "data_source" in validated_data
-            and instance.data_source != validated_data["data_source"]
-        ):
-            raise serializers.ValidationError(
-                {
-                    "data_source": _(
-                        "You may not change the data source of an existing object."
-                    )
-                }
-            )
-        super().update(instance, validated_data)
-        return instance
-
-
-class KeywordSerializer(EditableLinkedEventsObjectSerializer):
-    id = serializers.CharField(required=False)
-    view_name = "keyword-detail"
-    alt_labels = serializers.SlugRelatedField(
-        slug_field="name", read_only=True, many=True
-    )
-    created_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
-    )
-    last_modified_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
-    )
-
-    def validate_id(self, value):
-        if value:
-            id_data_source_prefix = value.split(":", 1)[0]
-            data_source = self.context["data_source"]
-            if id_data_source_prefix != data_source.id:
-                # the object might be from another data source by the same organization, and we are only editing it
-                if (
-                    self.instance
-                    and self.context["publisher"]
-                    .owned_systems.filter(id=id_data_source_prefix)
-                    .exists()
-                ):
-                    return value
-                raise serializers.ValidationError(
-                    _(
-                        "Setting id to %(given)s "
-                        "is not allowed for your organization. The id "
-                        "must be left blank or set to %(data_source)s:desired_id"
-                    )
-                    % {"given": str(value), "data_source": data_source}
-                )
-        return value
-
-    def create(self, validated_data):
-        # if id was not provided, we generate it upon creation:
-        if "id" not in validated_data:
-            validated_data["id"] = generate_id(self.context["data_source"])
-        return super().create(validated_data)
-
-    class Meta:
-        model = Keyword
-        exclude = ("n_events_changed",)
-
-
 class KeywordViewSet(
     UserDataSourceAndOrganizationMixin,
     JSONAPIViewMixin,
@@ -493,12 +288,77 @@ class KeywordViewSet(
         DataSourceResourceEditPermission & OrganizationUserEditPermission
     ]
 
+    @extend_schema(
+        summary="Update a keyword",
+        description=(
+            "Keyword can be updated if the user has appropriate access permissions. The original "
+            "implementation behaves like PATCH, ie. if some field is left out from the PUT call, "
+            "its value is retained in database. In order to ensure consistent behaviour, users "
+            "should always supply every field in PUT call."
+        ),
+        responses={
+            200: OpenApiResponse(
+                KeywordSerializer,
+                description="Keyword has been successfully partially updated.",
+            ),
+            **get_common_api_error_responses(),
+            404: OpenApiResponse(
+                description="Keyword was not found.",
+            ),
+        },
+    )
+    def update(self, request, *args, **kwargs):
+        return super().update(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Partially update a keyword",
+        responses={
+            200: OpenApiResponse(
+                KeywordSerializer,
+                description="Keyword has been successfully partially updated.",
+            ),
+            **get_common_api_error_responses(),
+            404: OpenApiResponse(
+                description="Keyword was not found.",
+            ),
+        },
+    )
+    def partial_update(self, request, *args, **kwargs):
+        return super().partial_update(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Delete a keyword",
+        description="Keyword can be deleted if the user has appropriate access permissions.",
+        responses={
+            204: OpenApiResponse(
+                description="Keyword has been successfully deleted.",
+            ),
+            **get_common_api_error_responses(excluded_codes=[400]),
+            404: OpenApiResponse(
+                description="Keyword was not found.",
+            ),
+        },
+    )
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         instance.deprecate()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @extend_schema(
+        summary="Retrieve information about a single keyword",
+        auth=[],
+        responses={
+            200: OpenApiResponse(
+                KeywordSerializer,
+                description="Keyword record.",
+            ),
+            **get_common_api_error_responses(excluded_codes=[400, 401]),
+            404: OpenApiResponse(
+                description="Keyword was not found.",
+            ),
+        },
+    )
     def retrieve(self, request, *args, **kwargs):
         try:
             keyword = Keyword.objects.get(pk=kwargs["pk"])
@@ -541,6 +401,85 @@ class KeywordListViewSet(
     permission_classes = [
         DataSourceResourceEditPermission & OrganizationUserEditPermission
     ]
+
+    @extend_schema(summary="Create a new keyword")
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Return a list of keywords used for describing events",
+        description=render_to_string("swagger/keyword_list_description.html"),
+        auth=[],
+        parameters=[
+            OpenApiParameter(
+                name="data_source",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for keywords (<b>note</b>: NOT events) that come from the specified "
+                    "data source (see data source in keyword definition)."
+                ),
+            ),
+            IncludeOpenApiParameter(),
+            OpenApiParameter(
+                name="text",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for keywords (<b>note</b>: NOT events) that contain the given string. "
+                    "This applies even when <code>show_all_keywords</code> is specified. "
+                    "Alternative name for the parameter is <code>filter</code>."
+                ),
+            ),
+            OpenApiParameter(
+                name="free_text",
+                type=OpenApiTypes.STR,
+                description=(
+                    "While the <code>text</code> search is looking for the keywords containg "
+                    "exact matches of the search string, <code>free_text</code> retrieves keywords "
+                    "on the basis of similarity. Results are sorted by similarity."
+                ),
+            ),
+            OpenApiParameter(
+                name="has_upcoming_events",
+                type=OpenApiTypes.BOOL,
+                description=(
+                    "To show only the keywords which are used in the upcoming events supply the "
+                    "<code>has_upcoming_events</code> query parameter."
+                ),
+            ),
+            OpenApiParameter(
+                name="show_all_keywords",
+                type=OpenApiTypes.BOOL,
+                description=(
+                    "Show all keywords, including those that are not associated with any events. "
+                    "Otherwise such keywords are hidden. When <code>show_all_keywords</code> is "
+                    "specified, no other filter is applied, <b>except</b> <code>filter</code> and "
+                    "<code>text</code> (match for keywords beginning with string)."
+                ),
+            ),
+            OpenApiParameter(
+                name="show_deprecated",
+                type=OpenApiTypes.BOOL,
+                description=(
+                    "Show all keywords, including those that are deprecated. By default such "
+                    "keywords are hidden. When <code>show_all_keywords</code> is specified, no "
+                    "other filter is applied, <b>except</b> <code>filter</code> and "
+                    "<code>text</code> (match for keywords beginning with string)."
+                ),
+            ),
+            OpenApiParameter(
+                name="sort",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Sort the returned keywords in the given order. Possible sorting criteria are "
+                    "<code>n_events</code>, <code>id</code>, <code>name</code> and "
+                    "<code>data_source</code>. The default ordering is <code>-data_source</code>, "
+                    "<code>-n_events</code>, <code>name</code>."
+                ),
+            ),
+        ],
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
         """
@@ -604,87 +543,6 @@ register_view(KeywordViewSet, "keyword")
 register_view(KeywordListViewSet, "keyword", base_name="keywords")
 
 
-class KeywordSetSerializer(LinkedEventsSerializer):
-    view_name = "keywordset-detail"
-    keywords = JSONLDRelatedField(
-        serializer=KeywordSerializer,
-        many=True,
-        required=False,
-        allow_empty=True,
-        view_name="keyword-detail",
-        queryset=Keyword.objects.none(),
-    )
-    usage = EnumChoiceField(KeywordSet.USAGES)
-    created_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
-    )
-    last_modified_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
-    )
-
-    def to_internal_value(self, data):
-        # extracting ids from the '@id':'http://testserver/v1/keyword/system:tunnettu_avainsana/' type record
-        keyword_ids = [
-            urllib.parse.unquote(i.get("@id", "").rstrip("/").split("/")[-1])
-            for i in data.get("keywords", {})
-        ]
-        self.context["keywords"] = Keyword.objects.filter(id__in=keyword_ids)
-        return super().to_internal_value(data)
-
-    def validate_organization(self, value):
-        return self.validate_publisher(
-            value, field="organization", allowed_to_regular_user=False
-        )
-
-    def create(self, validated_data):
-        validated_data["created_by"] = self.user
-        validated_data["last_modified_by"] = self.user
-
-        if (
-            not isinstance(self.user, ApiKeyUser)
-            and not validated_data["data_source"].user_editable_resources
-        ):
-            raise PermissionDenied()
-
-        return super().create(validated_data)
-
-    def update(self, instance, validated_data):
-        validated_data["last_modified_by"] = self.user
-
-        if "id" in validated_data and instance.id != validated_data["id"]:
-            raise serializers.ValidationError(
-                {"id": _("You may not change the id of an existing object.")}
-            )
-        if "organization" in validated_data and validated_data["organization"] not in (
-            instance.organization,
-            instance.organization.replaced_by,
-        ):
-            raise serializers.ValidationError(
-                {
-                    "organization": _(
-                        "You may not change the organization of an existing object."
-                    )
-                }
-            )
-        if (
-            "data_source" in validated_data
-            and instance.data_source != validated_data["data_source"]
-        ):
-            raise serializers.ValidationError(
-                {
-                    "data_source": _(
-                        "You may not change the data source of an existing object."
-                    )
-                }
-            )
-        super().update(instance, validated_data)
-        return instance
-
-    class Meta:
-        model = KeywordSet
-        fields = "__all__"
-
-
 class KeywordSetViewSet(
     UserDataSourceAndOrganizationMixin,
     JSONAPIViewMixin,
@@ -697,6 +555,115 @@ class KeywordSetViewSet(
         DataSourceResourceEditPermission & OrganizationUserEditPermission
     ]
     permit_regular_user_edit = True
+
+    @extend_schema(
+        summary="Create a new keyword set",
+        responses={
+            201: OpenApiResponse(
+                KeywordSetSerializer,
+                description="Keyword set has been successfully created.",
+            ),
+            **get_common_api_error_responses(),
+        },
+    )
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Update a keyword set",
+        description=(
+            "Keyword set can be updated if the user has appropriate access permissions. The "
+            "original implementation behaves like PATCH, ie. if some field is left out from the "
+            "PUT call, its value is retained in database. In order to ensure consistent "
+            "behaviour, users should always supply every field in PUT call."
+        ),
+        responses={
+            200: OpenApiResponse(
+                KeywordSetSerializer,
+                description="Keyword set has been successfully updated.",
+            ),
+            **get_common_api_error_responses(),
+            404: OpenApiResponse(
+                description="Keyword set was not found.",
+            ),
+        },
+    )
+    def update(self, request, *args, **kwargs):
+        return super().update(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Partially update a keyword set",
+        responses={
+            200: OpenApiResponse(
+                KeywordSetSerializer,
+                description="Keyword set has been successfully partially updated.",
+            ),
+            **get_common_api_error_responses(),
+            404: OpenApiResponse(
+                description="Keyword set was not found.",
+            ),
+        },
+    )
+    def partial_update(self, request, *args, **kwargs):
+        return super().partial_update(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Delete a keyword set",
+        description="Keyword set can be deleted if the user has appropriate access permissions.",
+        responses={
+            204: OpenApiResponse(
+                description="Keyword set has been successfully deleted.",
+            ),
+            404: OpenApiResponse(
+                description="Keyword set was not found.",
+            ),
+        },
+    )
+    def destroy(self, request, *args, **kwargs):
+        return super().destroy(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Return a list of keyword sets for grouping keywords",
+        description=render_to_string("swagger/keyword_set_list_description.html"),
+        auth=[],
+        parameters=[
+            IncludeOpenApiParameter(),
+            OpenApiParameter(
+                name="text",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for keyword sets that contain the given string in name or id fields."
+                ),
+            ),
+            OpenApiParameter(
+                name="sort",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Sort the returned keyword sets in the given order. Possible sorting criteria "
+                    "are <code>name</code>, <code>usage</code> and <code>data_source.</code>"
+                ),
+            ),
+        ],
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Return information about single keyword set",
+        auth=[],
+        responses={
+            200: OpenApiResponse(
+                KeywordSetSerializer,
+                description="Keyword set record.",
+            ),
+            **get_common_api_error_responses(excluded_codes=[400, 401]),
+            404: OpenApiResponse(
+                description="Keyword set was not found.",
+            ),
+        },
+    )
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
 
     def filter_queryset(self, queryset):
         # orderd by name, id, usage
@@ -734,152 +701,6 @@ class KeywordSetViewSet(
 register_view(KeywordSetViewSet, "keyword_set")
 
 
-class DivisionSerializer(ParlerTranslatedModelSerializer):
-    type = serializers.SlugRelatedField(slug_field="type", read_only=True)
-    municipality = serializers.SlugRelatedField(slug_field="name", read_only=True)
-
-    class Meta:
-        model = AdministrativeDivision
-        fields = ("type", "ocd_id", "municipality", "translations")
-
-
-def filter_division(queryset, name: str, value: Iterable[str]):
-    """
-    Allows division filtering by both division name and more specific ocd id (identified by colon in the parameter)
-
-    Depending on the deployment location, offers simpler filtering by appending
-    country and municipality information to ocd ids.
-
-    Examples:
-        /event/?division=kamppi
-        will match any and all divisions with the name Kamppi, regardless of their type.
-
-        /event/?division=ocd-division/country:fi/kunta:helsinki/osa-alue:kamppi
-        /event/?division=ocd-division/country:fi/kunta:helsinki/suurpiiri:kamppi
-        will match different division types with the otherwise identical id kamppi.
-
-        /event/?division=osa-alue:kamppi
-        /event/?division=suurpiiri:kamppi
-        will match different division types with the id kamppi, if correct country and municipality information is
-        present in settings.
-
-        /event/?division=helsinki
-        will match any and all divisions with the name Helsinki, regardless of their type.
-
-        /event/?division=ocd-division/country:fi/kunta:helsinki
-        will match the Helsinki municipality.
-
-        /event/?division=kunta:helsinki
-        will match the Helsinki municipality, if correct country information is present in settings.
-
-    """
-
-    ocd_ids = []
-    names = []
-    for item in value:
-        if ":" in item:
-            # we have a munigeo division
-            if hasattr(settings, "MUNIGEO_MUNI") and hasattr(
-                settings, "MUNIGEO_COUNTRY"
-            ):
-                # append ocd path if we have deployment information
-                if not item.startswith("ocd-division"):
-                    if not item.startswith("country"):
-                        if not item.startswith("kunta"):
-                            item = settings.MUNIGEO_MUNI + "/" + item
-                        item = settings.MUNIGEO_COUNTRY + "/" + item
-                    item = "ocd-division/" + item
-            ocd_ids.append(item)
-        else:
-            # we assume human name
-            names.append(item.title())
-    if hasattr(queryset, "distinct"):
-        # do the join with Q objects (not querysets) in case the queryset has extra fields that would crash qs join
-        query = Q(**{name + "__ocd_id__in": ocd_ids}) | Q(
-            **{name + "__translations__name__in": names}
-        )
-        return queryset.filter(
-            Exists(queryset.model.objects.filter(query, pk=OuterRef("pk")))
-        ).prefetch_related(name + "__translations")
-    else:
-        # Haystack SearchQuerySet does not support distinct, so we only support one type of search at a time:
-        if ocd_ids:
-            return queryset.filter(**{name + "__ocd_id__in": ocd_ids})
-        else:
-            return queryset.filter(**{name + "__name__in": names})
-
-
-class PlaceSerializer(EditableLinkedEventsObjectSerializer, GeoModelSerializer):
-    id = serializers.CharField(required=False)
-    origin_id = serializers.CharField(required=False)
-    data_source = serializers.PrimaryKeyRelatedField(
-        queryset=DataSource.objects.all(), required=False, allow_null=True
-    )
-    publisher = serializers.PrimaryKeyRelatedField(
-        queryset=Organization.objects.all(), required=False, allow_null=True
-    )
-
-    view_name = "place-detail"
-    divisions = DivisionSerializer(many=True, read_only=True)
-    created_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
-    )
-    last_modified_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
-    )
-
-    def _handle_position(self):
-        srs = self.context.get("srs", DEFAULT_SRS)
-        if self.request.data["position"]:
-            coord = self.request.data["position"]["coordinates"]
-            if len(coord) == 2 and all([isinstance(i, float) for i in coord]):
-                return Point(
-                    self.request.data["position"]["coordinates"], srid=srs.srid
-                )
-            else:
-                raise ParseError(
-                    f"Two coordinates have to be provided and they should be float. You provided {coord}"
-                )
-        return None
-
-    def create(self, validated_data):
-        # if id was not provided, we generate it upon creation:
-        if "id" not in validated_data:
-            validated_data["id"] = generate_id(self.context["data_source"])
-        instance = super().create(validated_data)
-        if point := self._handle_position():
-            instance.position = point
-            instance.save()
-        return instance
-
-    def update(self, instance, validated_data):
-        instance = super().update(instance, validated_data)
-        if point := self._handle_position():
-            instance.position = point
-            instance.save()
-        return instance
-
-    class Meta:
-        model = Place
-        exclude = ("n_events_changed",)
-
-
-class PlaceFilter(django_filters.rest_framework.FilterSet):
-    division = django_filters.Filter(
-        field_name="divisions",
-        lookup_expr="in",
-        widget=django_filters.widgets.CSVWidget(),
-        method="filter_division",
-    )
-
-    class Meta:
-        model = Place
-        fields = ("division",)
-
-    def filter_division(self, queryset, name, value):
-        return filter_division(queryset, name, value)
-
-
 class PlaceRetrieveViewSet(
     UserDataSourceAndOrganizationMixin,
     JSONAPIViewMixin,
@@ -902,12 +723,69 @@ class PlaceRetrieveViewSet(
         context.setdefault("skip_fields", set()).add("origin_id")
         return context
 
+    @extend_schema(
+        summary="Update a place",
+        description=(
+            "Place can be updated if the user has appropriate access permissions. The original "
+            "implementation behaves like PATCH, ie. if some field is left out from the PUT call, "
+            "its value is retained in database. In order to ensure consistent behaviour, users "
+            "should always supply every field in PUT call."
+        ),
+        responses={
+            200: OpenApiResponse(
+                PlaceSerializer,
+                description="Place has been successfully updated.",
+            ),
+            **get_common_api_error_responses(),
+            404: OpenApiResponse(
+                description="Place was not found.",
+            ),
+        },
+    )
+    def update(self, request, *args, **kwargs):
+        return super().update(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Partially update a place",
+        responses={
+            200: OpenApiResponse(
+                PlaceSerializer,
+                description="Place has been successfully partially updated.",
+            ),
+            **get_common_api_error_responses(),
+            404: OpenApiResponse(
+                description="Place was not found.",
+            ),
+        },
+    )
+    def partial_update(self, request, *args, **kwargs):
+        return super().partial_update(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Delete a place",
+        description="Place can be deleted if the user has appropriate access permissions.",
+        responses={
+            404: OpenApiResponse(
+                description="Place was not found.",
+            ),
+        },
+    )
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         instance.soft_delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @extend_schema(
+        summary="Return information for a single place",
+        auth=[],
+        responses={
+            200: OpenApiResponse(
+                PlaceSerializer,
+                description="Place record.",
+            ),
+        },
+    )
     def retrieve(self, request, *args, **kwargs):
         try:
             place = Place.objects.get(pk=kwargs["pk"])
@@ -962,6 +840,80 @@ class PlaceListViewSet(
     permission_classes = [
         DataSourceResourceEditPermission & OrganizationUserEditPermission
     ]
+
+    @extend_schema(
+        summary="Return a list of places used for describing events",
+        description=render_to_string("swagger/place_list_description.html"),
+        auth=[],
+        parameters=[
+            OpenApiParameter(
+                name="data_source",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for places that come from the specified source system."
+                ),
+            ),
+            OpenApiParameter(
+                name="text",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for places that contain the given string. This applies even when "
+                    "show_all_places is specified. Alternative name for the parameter is "
+                    "<code>filter</code>."
+                ),
+            ),
+            OpenApiParameter(
+                name="has_upcoming_events",
+                type=OpenApiTypes.BOOL,
+                description=(
+                    "To show only the places which are used in the upcoming events supply the "
+                    "<code>has_upcoming_events</code> query parameter."
+                ),
+            ),
+            OpenApiParameter(
+                name="show_all_places",
+                type=OpenApiTypes.BOOL,
+                description=(
+                    "Show all places, including those that are not hosting any events. "
+                    "Otherwise such places are hidden. When show_all_places is specified, "
+                    "no other filter is applied."
+                ),
+            ),
+            OpenApiParameter(
+                name="show_deleted",
+                type=OpenApiTypes.BOOL,
+                description=(
+                    "Show all keywords, including those that are deleted. "
+                    "By default such keywords are hidden."
+                ),
+            ),
+            OpenApiParameter(
+                name="sort",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Sort the returned places in the given order. Possible sorting criteria are "
+                    "<code>n_events</code>, <code>id</code>, <code>name</code>, "
+                    "<code>street_address</code> and <code>postal_code</code>. "
+                    "The default ordering is <code>-n_events</code>."
+                ),
+            ),
+        ],
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Create a new place",
+        responses={
+            201: OpenApiResponse(
+                PlaceSerializer,
+                description="Place has been successfully created.",
+            ),
+            **get_common_api_error_responses(),
+        },
+    )
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
 
     def get_queryset(self):
         """
@@ -1027,18 +979,6 @@ register_view(PlaceRetrieveViewSet, "place")
 register_view(PlaceListViewSet, "place", base_name="places")
 
 
-class LanguageSerializer(LinkedEventsSerializer):
-    view_name = "language-detail"
-    translation_available = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Language
-        fields = "__all__"
-
-    def get_translation_available(self, obj):
-        return obj.id in get_fixed_lang_codes()
-
-
 class LanguageViewSet(
     JSONAPIViewMixin, AuditLogApiViewMixin, viewsets.ReadOnlyModelViewSet
 ):
@@ -1046,335 +986,33 @@ class LanguageViewSet(
     serializer_class = LanguageSerializer
     filterset_fields = ("service_language",)
 
+    @extend_schema(
+        summary="Return a list of languages used for describing events and registrations",
+        description=render_to_string("swagger/language_list_description.html"),
+        auth=[],
+        parameters=[
+            OpenApiParameter(
+                name="service_language",
+                type=OpenApiTypes.BOOL,
+                description=(
+                    "Show only service languages or languages that are not service languages."
+                ),
+            ),
+        ],
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Return information for a single language",
+        description="Can be used to retrieve translations for a single language.",
+        auth=[],
+    )
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
+
 
 register_view(LanguageViewSet, "language")
-
-
-class OrganizationFilter(django_filters.rest_framework.FilterSet):
-    dissolved = django_filters.BooleanFilter(
-        method="filter_dissolved",
-    )
-
-    class Meta:
-        model = Organization
-        fields = ("dissolved",)
-
-    def filter_dissolved(self, queryset, name, value: Optional[bool]):
-        today = timezone.localdate()
-
-        if value:
-            return queryset.filter(dissolution_date__lte=today)
-
-        return queryset.filter(
-            Q(dissolution_date__gt=today) | Q(dissolution_date__isnull=True)
-        )
-
-
-class OrganizationBaseSerializer(LinkedEventsSerializer):
-    view_name = "organization-detail"
-
-    class Meta:
-        model = Organization
-        fields = "__all__"
-
-
-class OrganizationListSerializer(OrganizationBaseSerializer):
-    parent_organization = serializers.HyperlinkedRelatedField(
-        queryset=Organization.objects.all(),
-        source="parent",
-        view_name="organization-detail",
-        required=False,
-    )
-    sub_organizations = serializers.HyperlinkedRelatedField(
-        view_name="organization-detail", many=True, required=False, read_only=True
-    )
-    affiliated_organizations = serializers.HyperlinkedRelatedField(
-        view_name="organization-detail", many=True, required=False, read_only=True
-    )
-    replaced_by = serializers.HyperlinkedRelatedField(
-        view_name="organization-detail", required=False, read_only=True
-    )
-    is_affiliated = serializers.SerializerMethodField()
-    has_regular_users = serializers.SerializerMethodField()
-    created_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
-    )
-    last_modified_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
-    )
-
-    class Meta:
-        model = Organization
-        fields = (
-            "id",
-            "data_source",
-            "origin_id",
-            "classification",
-            "name",
-            "founding_date",
-            "dissolution_date",
-            "parent_organization",
-            "sub_organizations",
-            "affiliated_organizations",
-            "created_time",
-            "last_modified_time",
-            "created_by",
-            "last_modified_by",
-            "replaced_by",
-            "has_regular_users",
-            "is_affiliated",
-        )
-
-    @staticmethod
-    def get_is_affiliated(obj):
-        return obj.internal_type == Organization.AFFILIATED
-
-    @staticmethod
-    def get_has_regular_users(obj):
-        return obj.regular_users.count() > 0
-
-
-class OrganizationUserField(serializers.SlugRelatedField):
-    def __init__(self, **kwargs):
-        super().__init__(queryset=User.objects.all(), slug_field="username", **kwargs)
-
-    def to_representation(self, obj):
-        return UserSerializer(obj).data
-
-
-class OrganizationDetailSerializer(OrganizationListSerializer):
-    user_fields = [
-        "admin_users",
-        "financial_admin_users",
-        "registration_admin_users",
-        "regular_users",
-    ]
-
-    admin_users = OrganizationUserField(
-        many=True,
-        required=False,
-    )
-
-    registration_admin_users = OrganizationUserField(
-        many=True,
-        required=False,
-    )
-
-    financial_admin_users = OrganizationUserField(
-        many=True,
-        required=False,
-    )
-
-    regular_users = OrganizationUserField(
-        many=True,
-        required=False,
-    )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        instance = self.instance
-        user = self.context["user"]
-
-        if instance:
-            self.fields["data_source"].read_only = True
-            self.fields["origin_id"].read_only = True
-
-            # Show admin users and regular users only to admins
-            if user.is_anonymous or not user.is_admin_of(instance):
-                for field in self.user_fields:
-                    self.fields.pop(field, None)
-
-    def get_fields(self):
-        fields = super().get_fields()
-
-        if settings.WEB_STORE_INTEGRATION_ENABLED:
-            common_web_store_field_kwargs = {
-                "many": True,
-                "required": False,
-                "allow_null": True,
-                "min_length": 0,
-                "context": self.context,
-            }
-
-            fields["web_store_merchants"] = WebStoreMerchantSerializer(
-                instance=(
-                    self.instance.web_store_merchants.all() if self.instance else None
-                ),
-                organization=self.instance,
-                **common_web_store_field_kwargs,
-            )
-
-            fields["web_store_accounts"] = WebStoreAccountSerializer(
-                instance=(
-                    self.instance.web_store_accounts.all() if self.instance else None
-                ),
-                **common_web_store_field_kwargs,
-            )
-
-        return fields
-
-    def validate_parent_organization(self, value):
-        if value:
-            user = self.request.user
-
-            if user.is_anonymous or not utils.organization_can_be_edited_by(
-                value, user
-            ):
-                raise DRFPermissionDenied(_("User has no rights to this organization"))
-
-        return value
-
-    def _create_or_update_web_store_merchants(self, organization, merchants_data):
-        for merchant_data in merchants_data:
-            if not (merchant_id := merchant_data.pop("id", None)):
-                merchant_data["created_by"] = self.request.user
-            merchant_data["last_modified_by"] = self.request.user
-
-            try:
-                WebStoreMerchant.objects.update_or_create(
-                    pk=merchant_id,
-                    organization=organization,
-                    defaults=merchant_data,
-                )
-            except WebStoreAPIError as exc:
-                raise serializers.ValidationError(exc.messages)
-
-    def _create_web_store_accounts(self, organization, accounts_data):
-        web_store_accounts = []
-
-        for account_data in accounts_data:
-            account_data["created_by"] = self.request.user
-            account_data["last_modified_by"] = self.request.user
-
-            web_store_accounts.append(
-                WebStoreAccount(
-                    organization=organization,
-                    **account_data,
-                )
-            )
-
-        WebStoreAccount.objects.bulk_create(web_store_accounts)
-
-    def _update_web_store_accounts(self, organization, accounts_data):
-        new_accounts = []
-
-        for account_data in accounts_data:
-            if not (account_id := account_data.get("id")):
-                new_accounts.append(account_data)
-                continue
-
-            account_data["last_modified_by"] = self.request.user
-            WebStoreAccount.objects.update_or_create(
-                pk=account_id,
-                organization=organization,
-                defaults=account_data,
-            )
-
-        if new_accounts:
-            self._create_web_store_accounts(organization, new_accounts)
-
-    def connect_organizations(self, connected_orgs, created_org):
-        internal_types = {
-            "sub_organizations": Organization.NORMAL,
-            "affiliated_organizations": Organization.AFFILIATED,
-        }
-        for org_type in connected_orgs.keys():
-            conn_org = Organization.objects.filter(
-                id__in=connected_orgs[org_type], internal_type=internal_types[org_type]
-            )
-            created_org.children.add(*conn_org)
-
-    @transaction.atomic
-    def create(self, validated_data):
-        # Add current user to admin users
-        if "admin_users" not in validated_data:
-            validated_data["admin_users"] = []
-
-        if self.user not in validated_data["admin_users"]:
-            validated_data["admin_users"].append(self.user)
-
-        connected_organizations = ["sub_organizations", "affiliated_organizations"]
-        conn_orgs_in_request = {}
-        for org_type in connected_organizations:
-            if org_type in self.request.data.keys():
-                if isinstance(self.request.data[org_type], list):
-                    conn_orgs_in_request[org_type] = [
-                        i.rstrip("/").split("/")[-1]
-                        for i in self.request.data.pop(org_type)
-                    ]
-                else:
-                    raise ParseError(
-                        f"{org_type} should be a list, you provided {type(self.request.data[org_type])}"
-                    )
-
-        web_store_merchants = validated_data.pop("web_store_merchants", None)
-        web_store_accounts = validated_data.pop("web_store_accounts", None)
-
-        org = super().create(validated_data)
-        self.connect_organizations(conn_orgs_in_request, org)
-
-        if not settings.WEB_STORE_INTEGRATION_ENABLED:
-            return org
-
-        if web_store_merchants:
-            self._create_or_update_web_store_merchants(org, web_store_merchants)
-
-        if web_store_accounts:
-            self._create_web_store_accounts(org, web_store_accounts)
-
-        return org
-
-    @transaction.atomic
-    def update(self, instance, validated_data):
-        # Prevent user to accidentally remove himself from admin
-        if validated_data.get("admin_users") is not None:
-            admin_users = validated_data.pop("admin_users")
-            instance.admin_users.set([*admin_users, self.user])
-
-        web_store_merchants = validated_data.pop("web_store_merchants", None)
-        web_store_accounts = validated_data.pop("web_store_accounts", None)
-
-        org = super().update(instance, validated_data)
-
-        if not settings.WEB_STORE_INTEGRATION_ENABLED:
-            return org
-
-        if web_store_merchants:
-            self._create_or_update_web_store_merchants(org, web_store_merchants)
-
-        if web_store_accounts:
-            self._update_web_store_accounts(org, web_store_accounts)
-
-        return org
-
-    class Meta:
-        model = Organization
-        fields = (
-            "id",
-            "data_source",
-            "origin_id",
-            "classification",
-            "name",
-            "founding_date",
-            "dissolution_date",
-            "parent_organization",
-            "sub_organizations",
-            "affiliated_organizations",
-            "created_time",
-            "last_modified_time",
-            "created_by",
-            "last_modified_by",
-            "is_affiliated",
-            "replaced_by",
-            "has_regular_users",
-            "regular_users",
-            "financial_admin_users",
-            "registration_admin_users",
-            "admin_users",
-        )
-        if settings.WEB_STORE_INTEGRATION_ENABLED:
-            fields += ("web_store_merchants", "web_store_accounts")
 
 
 class OrganizationViewSet(
@@ -1388,6 +1026,116 @@ class OrganizationViewSet(
         DataSourceResourceEditPermission & DataSourceOrganizationEditPermission
     ]
     filterset_class = OrganizationFilter
+
+    @extend_schema(
+        summary="Return a list of organizations that publish events",
+        description=render_to_string("swagger/organization_list_description.html"),
+        auth=[],
+        parameters=[
+            # Rest of the parameters are described in the filter class.
+            OpenApiParameter(
+                name="child",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Get the parent organization and all its ancestors for the given "
+                    "organization id."
+                ),
+            ),
+            OpenApiParameter(
+                name="parent",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Get all suborganizations and their descendants for the given organization id."
+                ),
+            ),
+        ],
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Create a new organization",
+        responses={
+            201: OpenApiResponse(
+                OrganizationDetailSerializer,
+                description="Organization has been successfully created.",
+            ),
+            **get_common_api_error_responses(),
+        },
+    )
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Update an organization",
+        description=(
+            "Organization can be updated if the user has appropriate access permissions. "
+            "The original implementation behaves like PATCH, ie. if some field is left out from "
+            "the PUT call, its value is retained in database. In order to ensure consistent "
+            "behaviour, users should always supply every field in PUT call."
+        ),
+        responses={
+            200: OpenApiResponse(
+                OrganizationDetailSerializer,
+                description="Organization has been successfully updated.",
+            ),
+            **get_common_api_error_responses(),
+            404: OpenApiResponse(
+                description=("Organization was not found."),
+            ),
+        },
+    )
+    def update(self, request, *args, **kwargs):
+        return super().update(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Partially update an organization",
+        responses={
+            200: OpenApiResponse(
+                OrganizationDetailSerializer,
+                description="Organization has been successfully partially updated.",
+            ),
+            **get_common_api_error_responses(),
+            404: OpenApiResponse(
+                description="Organization was not found.",
+            ),
+        },
+    )
+    def partial_update(self, request, *args, **kwargs):
+        return super().partial_update(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Delete an organization",
+        description="Organization can be deleted if the user has appropriate access permissions.",
+        responses={
+            204: OpenApiResponse(
+                description="Organization has been successfully deleted.",
+            ),
+            **get_common_api_error_responses(excluded_codes=[400]),
+            404: OpenApiResponse(
+                description="Organization was not found.",
+            ),
+        },
+    )
+    def destroy(self, request, *args, **kwargs):
+        return super().destroy(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Return information for a single organization",
+        auth=[],
+        responses={
+            200: OpenApiResponse(
+                OrganizationDetailSerializer,
+                description="Organization record.",
+            ),
+            **get_common_api_error_responses(excluded_codes=[400, 401]),
+            404: OpenApiResponse(
+                description="Organization was not found.",
+            ),
+        },
+    )
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
 
     def get_serializer_class(self, *args, **kwargs):
         if self.action in ["create", "retrieve", "update", "partial_update"]:
@@ -1451,6 +1199,25 @@ class OrganizationViewSet(
 
         return []
 
+    @extend_schema(
+        exclude=settings.WEB_STORE_INTEGRATION_ENABLED is False,
+        operation_id="organization_merchants_list",
+        summary="Return a list of merchants for an organization",
+        description=(
+            "Returns a list of merchants for an organization. If the organization itself does not "
+            "have merchants, they will be returned from the closest ancestor that has them. "
+            "Only admin users are allowed to use this endpoint."
+        ),
+        responses={
+            200: OpenApiResponse(
+                WebStoreMerchantSerializer(many=True),
+            ),
+            **get_common_api_error_responses(excluded_codes=[400]),
+            404: OpenApiResponse(
+                description="Web store integration is not enabled.",
+            ),
+        },
+    )
     @action(
         methods=["get"],
         detail=True,
@@ -1474,6 +1241,25 @@ class OrganizationViewSet(
             status=status.HTTP_200_OK,
         )
 
+    @extend_schema(
+        exclude=settings.WEB_STORE_INTEGRATION_ENABLED is False,
+        operation_id="organization_accounts_list",
+        summary="Return a list of accounts for an organization",
+        description=(
+            "Returns a list of accounts for an organization. If the organization itself does not "
+            "have accounts, they will be returned from the closest ancestor that has them. "
+            "Only admin users are allowed to use this endpoint."
+        ),
+        responses={
+            200: OpenApiResponse(
+                WebStoreAccountSerializer(many=True),
+            ),
+            **get_common_api_error_responses(excluded_codes=[400]),
+            404: OpenApiResponse(
+                description="Web store integration is not enabled.",
+            ),
+        },
+    )
     @action(
         methods=["get"],
         detail=True,
@@ -1499,14 +1285,6 @@ class OrganizationViewSet(
 register_view(OrganizationViewSet, "organization")
 
 
-class DataSourceSerializer(LinkedEventsSerializer):
-    view_name = "data_source-list"
-
-    class Meta:
-        model = DataSource
-        exclude = ["api_key"]
-
-
 class DataSourceViewSet(
     JSONAPIViewMixin, AuditLogApiViewMixin, viewsets.ReadOnlyModelViewSet
 ):
@@ -1514,16 +1292,28 @@ class DataSourceViewSet(
     serializer_class = DataSourceSerializer
     permission_classes = [GuestRetrieve | UserIsAdminInAnyOrganization]
 
+    @extend_schema(
+        summary="Return a list of data sources",
+        description=(
+            "The returned list describes data sources. Only admin users are allowed to use "
+            "this endpoint."
+        ),
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Return information for a single data source",
+        description=(
+            "Can be used to retrieve a single data source. Only admin users are allowed to "
+            "use this endpoint."
+        ),
+    )
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
+
 
 register_view(DataSourceViewSet, "data_source")
-
-
-class OrganizationClassSerializer(LinkedEventsSerializer):
-    view_name = "organization_class-list"
-
-    class Meta:
-        model = OrganizationClass
-        fields = "__all__"
 
 
 class OrganizationClassViewSet(
@@ -1535,86 +1325,28 @@ class OrganizationClassViewSet(
     serializer_class = OrganizationClassSerializer
     permission_classes = [GuestRetrieve | UserIsAdminInAnyOrganization]
 
+    @extend_schema(
+        summary="Return a list of organization classes",
+        description=(
+            "The returned list describes organization classes used for organization "
+            "classification. Only admin users are allowed to use this endpoint."
+        ),
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Return information for a single organization class",
+        description=(
+            "Can be used to retrieve a single organization class. Only admin users are allowed "
+            "to use this endpoint"
+        ),
+    )
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
+
 
 register_view(OrganizationClassViewSet, "organization_class")
-
-
-class EventLinkSerializer(serializers.ModelSerializer):
-    def to_representation(self, obj):
-        ret = super().to_representation(obj)
-        if not ret["name"]:
-            ret["name"] = None
-        return ret
-
-    class Meta:
-        model = EventLink
-        exclude = ["id", "event"]
-
-
-class OfferSerializer(TranslatedModelSerializer):
-    def get_fields(self):
-        fields = super().get_fields()
-
-        if settings.WEB_STORE_INTEGRATION_ENABLED:
-            fields["offer_price_groups"] = OfferPriceGroupSerializer(
-                many=True,
-                required=False,
-            )
-
-        return fields
-
-    def validate_offer_price_groups(self, value):
-        def error_detail_callback(price_group):
-            return ErrorDetail(
-                _("Offer price group with price_group %(price_group)s already exists.")
-                % {"price_group": price_group},
-                code="unique",
-            )
-
-        return validate_for_duplicates(value, "price_group", error_detail_callback)
-
-    class Meta:
-        model = Offer
-        fields = ["price", "info_url", "description", "is_free"]
-        if settings.WEB_STORE_INTEGRATION_ENABLED:
-            fields += ("offer_price_groups",)
-
-
-class ImageSerializer(EditableLinkedEventsObjectSerializer):
-    view_name = "image-detail"
-    license = serializers.PrimaryKeyRelatedField(
-        queryset=License.objects.all(), required=False
-    )
-    created_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
-    )
-    last_modified_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
-    )
-    created_by = serializers.StringRelatedField(required=False, allow_null=True)
-    last_modified_by = serializers.StringRelatedField(required=False, allow_null=True)
-
-    class Meta:
-        model = Image
-        fields = "__all__"
-
-    def to_representation(self, obj):
-        # the url field is customized based on image and url
-        representation = super().to_representation(obj)
-        if representation["image"]:
-            representation["url"] = representation["image"]
-        representation.pop("image")
-        return representation
-
-    def validate(self, data):
-        # name the image after the file, if name was not provided
-        if "name" not in data or not data["name"]:
-            if "url" in data:
-                data["name"] = str(data["url"]).rsplit("/", 1)[-1]
-            if "image" in data:
-                data["name"] = str(data["image"]).rsplit("/", 1)[-1]
-        super().validate(data)
-        return data
 
 
 class ImageViewSet(
@@ -1632,6 +1364,151 @@ class ImageViewSet(
     ordering_fields = ("last_modified_time", "id", "name")
     ordering = ("-last_modified_time",)
     permission_classes = [DataSourceResourceEditPermission & IsObjectEditableByUser]
+
+    @extend_schema(
+        summary="Return a list of images",
+        description=render_to_string("swagger/image_list_description.html"),
+        auth=[],
+        parameters=[
+            IncludeOpenApiParameter(),
+            OpenApiParameter(
+                name="text",
+                type=OpenApiTypes.STR,
+                description="Search images that contain a specific string.",
+            ),
+            OpenApiParameter(
+                name="publisher",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for images published by the given organization as specified by id. "
+                    "Multiple ids are separated by comma."
+                ),
+            ),
+            OpenApiParameter(
+                name="data_source",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for images that come from the specified source system. "
+                    "Multiple data sources are separated by comma."
+                ),
+            ),
+            OpenApiParameter(
+                name="created_by",
+                type=OpenApiTypes.BOOL,
+                description="Search for images created by the authenticated user.",
+            ),
+            OpenApiParameter(
+                name="sort",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Default ordering is descending order by <code>-last_modified_time</code>. "
+                    "You may also order results by <code>id</code> and <code>name</code>."
+                ),
+            ),
+        ],
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Create a new image",
+        description=(
+            "There are two ways to create an image object. The image file can be posted as a "
+            "multipart request, but the endpoint also accepts a simple JSON object with an "
+            "external url in the url field. This allows using external images for events without "
+            "saving them on the API server."
+        ),
+        request={
+            "multipart/form-data": OpenApiRequest(
+                request=inline_serializer(
+                    "ImageCreateSerializer",
+                    fields={
+                        "image": serializers.ImageField(),
+                    },
+                ),
+            ),
+        },
+        responses={
+            201: OpenApiResponse(
+                ImageSerializer,
+                description="Image has been successfully created.",
+            ),
+            **get_common_api_error_responses(),
+        },
+    )
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Update an image",
+        description=(
+            "Image can be updated if the user has appropriate access permissions. The original "
+            "implementation behaves like PATCH, ie. if some field is left out from the PUT call, "
+            "its value is retained in database. In order to ensure consistent behaviour, users "
+            "should always supply every field in PUT call."
+        ),
+        responses={
+            200: OpenApiResponse(
+                ImageSerializer,
+                description="Image has been successfully updated.",
+            ),
+            **get_common_api_error_responses(),
+            404: OpenApiResponse(
+                description="Image was not found.",
+            ),
+        },
+    )
+    def update(self, request, *args, **kwargs):
+        return super().update(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Partially update an image",
+        responses={
+            200: OpenApiResponse(
+                ImageSerializer,
+                description="Image has been successfully partially updated.",
+            ),
+            **get_common_api_error_responses(),
+            404: OpenApiResponse(
+                description="Image was not found.",
+            ),
+        },
+    )
+    def partial_update(self, request, *args, **kwargs):
+        return super().partial_update(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Delete an image",
+        description="Image can be deleted if the user has appropriate access permissions.",
+        responses={
+            204: OpenApiResponse(
+                description="Image has been successfully deleted.",
+            ),
+            **get_common_api_error_responses(excluded_codes=[400]),
+            404: OpenApiResponse(
+                description="Image was not found.",
+            ),
+        },
+    )
+    def destroy(self, request, *args, **kwargs):
+        return super().destroy(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Return information for a single image",
+        auth=[],
+        responses={
+            200: OpenApiResponse(
+                ImageSerializer,
+                description="Image record.",
+            ),
+            **get_common_api_error_responses(excluded_codes=[400, 401]),
+            404: OpenApiResponse(
+                description="Image was not found.",
+            ),
+        },
+    )
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -1681,1025 +1558,6 @@ class ImageViewSet(
 
 
 register_view(ImageViewSet, "image", base_name="image")
-
-
-class VideoSerializer(serializers.ModelSerializer):
-    def to_representation(self, obj):
-        ret = super().to_representation(obj)
-        if not ret["name"]:
-            ret["name"] = None
-        return ret
-
-    class Meta:
-        model = Video
-        exclude = ["id", "event"]
-
-
-# RegistrationSerializer is in this file to avoid circular imports
-class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer):
-    event = JSONLDRelatedField(
-        serializer=EVENT_SERIALIZER_REF,
-        many=False,
-        view_name="event-detail",
-        queryset=Event.objects.all(),
-    )
-
-    only_admin_visible_fields = (
-        "created_by",
-        "last_modified_by",
-        "registration_user_accesses",
-    )
-
-    def __init__(
-        self,
-        *args,
-        **kwargs,
-    ):
-        super().__init__(*args, **kwargs)
-        context = self.context
-        instance = self.instance
-
-        if instance:
-            self.fields["event"].read_only = True
-
-        self.registration_admin_tree_ids = context.get(
-            "registration_admin_tree_ids", set()
-        )
-
-    # Override this method to allow only_admin_visible_fields also to
-    # registration admin users
-    def are_only_admin_visible_fields_allowed(self, obj):
-        user = self.user
-
-        return not user.is_anonymous and (
-            obj.publisher.tree_id in self.admin_tree_ids
-            or obj.publisher.tree_id in self.registration_admin_tree_ids
-            or user.is_substitute_user_of(obj.registration_user_accesses)
-        )
-
-    @staticmethod
-    def _create_or_update_registration_user_accesses(
-        registration, registration_user_accesses
-    ):
-        for data in registration_user_accesses:
-            if current_obj := data.pop("id", None):
-                current_id = current_obj.id
-            else:
-                current_id = None
-
-            try:
-                RegistrationUserAccess.objects.update_or_create(
-                    id=current_id,
-                    registration=registration,
-                    defaults=data,
-                )
-
-            except IntegrityError as error:
-                if "duplicate key value violates unique constraint" in str(error):
-                    raise serializers.ValidationError(
-                        {
-                            "registration_user_accesses": [
-                                ErrorDetail(
-                                    _(
-                                        "Registration user access with email %(email)s already exists."
-                                    )
-                                    % {"email": data["email"]},
-                                    code="unique",
-                                )
-                            ]
-                        }
-                    )
-                else:
-                    raise
-
-    @staticmethod
-    def _create_or_update_registration_price_groups(
-        registration, registration_price_groups
-    ):
-        price_groups = []
-
-        for data in registration_price_groups:
-            price_groups.append(
-                RegistrationPriceGroup.objects.update_or_create(
-                    id=data.pop("id", None),
-                    registration=registration,
-                    defaults=data,
-                )[0]
-            )
-
-        return price_groups
-
-    @staticmethod
-    def _create_or_update_registration_merchant(registration, registration_merchant):
-        if not registration_merchant:
-            return None, False
-
-        registration_merchant["external_merchant_id"] = registration_merchant[
-            "merchant"
-        ].merchant_id
-
-        instance = getattr(registration, "registration_merchant", None)
-        has_changed = instance is None or instance.data_has_changed(
-            registration_merchant
-        )
-
-        if instance:
-            for field in registration_merchant:
-                setattr(instance, field, registration_merchant[field])
-            instance.save(update_fields=registration_merchant.keys())
-        else:
-            instance = RegistrationWebStoreMerchant.objects.create(
-                registration=registration,
-                **registration_merchant,
-            )
-
-        return instance, has_changed
-
-    @staticmethod
-    def _create_or_update_registration_account(registration, registration_account):
-        if not registration_account:
-            return None, False
-
-        instance = getattr(registration, "registration_account", None)
-        has_changed = instance is None or instance.data_has_changed(
-            registration_account
-        )
-
-        if instance:
-            for field in registration_account:
-                setattr(instance, field, registration_account[field])
-            instance.save(update_fields=registration_account.keys())
-        else:
-            instance = RegistrationWebStoreAccount.objects.create(
-                registration=registration,
-                **registration_account,
-            )
-
-        return instance, has_changed
-
-    @transaction.atomic
-    def create(self, validated_data):
-        user = self.request.user
-        if isinstance(user, ApiKeyUser):
-            # allow creating a registration only if the api key matches event data source
-            if (
-                "event" in validated_data
-                and validated_data["event"].data_source != user.data_source
-            ):
-                raise PermissionDenied(
-                    _("Object data source does not match user data source")
-                )
-
-        registration_user_accesses = validated_data.pop(
-            "registration_user_accesses", []
-        )
-        registration_price_groups = validated_data.pop("registration_price_groups", [])
-        registration_merchant = validated_data.pop("registration_merchant", None)
-        registration_account = validated_data.pop("registration_account", None)
-
-        try:
-            registration = super().create(validated_data)
-        except IntegrityError as error:
-            if "duplicate key value violates unique constraint" in str(error):
-                raise serializers.ValidationError(
-                    {"event": _("Event already has a registration.")}
-                )
-            else:
-                raise
-
-        # Create registration user accesses and send invitation email to them
-        self._create_or_update_registration_user_accesses(
-            registration, registration_user_accesses
-        )
-
-        if settings.WEB_STORE_INTEGRATION_ENABLED:
-            price_groups = self._create_or_update_registration_price_groups(
-                registration, registration_price_groups
-            )
-
-            merchant, __ = self._create_or_update_registration_merchant(
-                registration, registration_merchant
-            )
-
-            account, __ = self._create_or_update_registration_account(
-                registration, registration_account
-            )
-
-            if price_groups and merchant and account:
-                registration.create_or_update_web_store_product_mapping_and_accounting()
-
-        return registration
-
-    @transaction.atomic
-    def update(self, instance, validated_data):
-        registration_user_accesses = validated_data.pop(
-            "registration_user_accesses", None
-        )
-        registration_price_groups = validated_data.pop(
-            "registration_price_groups", None
-        )
-        registration_merchant = validated_data.pop("registration_merchant", None)
-        registration_account = validated_data.pop("registration_account", None)
-
-        # update validated fields
-        super().update(instance, validated_data)
-
-        def update_related(related_data: list, related_name: str):
-            ids = [
-                getattr(
-                    data["id"], "id", data["id"]
-                )  # user access has an object in the "id" field
-                for data in related_data
-                if data.get("id") is not None
-            ]
-
-            # Delete related objects which are not included in the payload
-            getattr(instance, related_name).exclude(pk__in=ids).delete()
-
-            # Update or create related objects
-            return getattr(self, f"_create_or_update_{related_name}")(
-                instance, related_data
-            )
-
-        # update registration users
-        if isinstance(registration_user_accesses, list):
-            update_related(registration_user_accesses, "registration_user_accesses")
-
-        if settings.WEB_STORE_INTEGRATION_ENABLED:
-            if isinstance(registration_price_groups, list):
-                price_groups = update_related(
-                    registration_price_groups, "registration_price_groups"
-                )
-            else:
-                price_groups = None
-
-            __, merchant_has_changed = self._create_or_update_registration_merchant(
-                instance, registration_merchant
-            )
-
-            __, account_has_changed = self._create_or_update_registration_account(
-                instance, registration_account
-            )
-
-            if (
-                merchant_has_changed
-                or account_has_changed
-                or (
-                    price_groups
-                    and not RegistrationWebStoreProductMapping.objects.filter(
-                        registration=instance,
-                        vat_code=VAT_CODE_MAPPING[price_groups[0].vat_percentage],
-                    ).exists()
-                )
-            ):
-                instance.create_or_update_web_store_product_mapping_and_accounting()
-
-        return instance
-
-    def validate_registration_user_accesses(self, value):
-        def error_detail_callback(email):
-            return ErrorDetail(
-                _("Registration user access with email %(email)s already exists.")
-                % {"email": email},
-                code="unique",
-            )
-
-        return validate_for_duplicates(value, "email", error_detail_callback)
-
-    def validate_registration_price_groups(self, value):
-        def duplicate_error_detail_callback(price_group):
-            return ErrorDetail(
-                _(
-                    "Registration price group with price_group %(price_group)s already exists."
-                )
-                % {"price_group": price_group},
-                code="unique",
-            )
-
-        validate_for_duplicates(value, "price_group", duplicate_error_detail_callback)
-
-        if value and not all(
-            [
-                price_group["vat_percentage"] == value[0]["vat_percentage"]
-                for price_group in value
-            ]
-        ):
-            raise serializers.ValidationError(
-                {
-                    "price_group": [
-                        ErrorDetail(
-                            _(
-                                "All registration price groups must have the same VAT percentage."
-                            ),
-                            code="vat_percentage",
-                        )
-                    ]
-                }
-            )
-
-        return value
-
-    def _validate_merchant_and_account(self, data, errors):
-        if not (
-            data.get("registration_price_groups")
-            or self.instance is not None
-            and self.instance.registration_price_groups.exists()
-        ):
-            # Price groups not given or they don't exist => no need to validate.
-            return
-
-        if not data.get("registration_merchant") and (
-            not self.partial or "registration_merchant" in data.keys()
-        ):
-            errors["registration_merchant"] = _(
-                "This field is required when registration has customer groups."
-            )
-
-        if not data.get("registration_account") and (
-            not self.partial or "registration_account" in data.keys()
-        ):
-            errors["registration_account"] = _(
-                "This field is required when registration has customer groups."
-            )
-
-    def _validate_registration_price_groups(self, data, errors):
-        if not (
-            data.get("registration_merchant")
-            or data.get("registration_account")
-            or self.instance is not None
-            and (
-                getattr(self.instance, "registration_merchant", None) is not None
-                or getattr(self.instance, "registration_account", None) is not None
-            )
-        ):
-            # Merchant and account not given or they don't exist => no need to validate.
-            return
-
-        if not data.get("registration_price_groups") and (
-            not self.partial or "registration_price_groups" in data.keys()
-        ):
-            errors["registration_price_groups"] = _(
-                "This field is required when registration has a merchant or account."
-            )
-
-    # LinkedEventsSerializer validates name which doesn't exist in Registration model
-    def validate(self, data):
-        # Clean html tags from the text fields
-        data = clean_text_fields(
-            data, ["confirmation_message", "instructions"], strip=True
-        )
-
-        errors = {}
-
-        if settings.WEB_STORE_INTEGRATION_ENABLED:
-            self._validate_merchant_and_account(data, errors)
-            self._validate_registration_price_groups(data, errors)
-
-        if errors:
-            raise serializers.ValidationError(errors)
-
-        return data
-
-
-class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer):
-    view_name = "event-detail"
-    fields_needed_to_publish = (
-        "keywords",
-        "location",
-        "start_time",
-        "short_description",
-        "description",
-    )
-    # Personal information fields to exclude from the public API.
-    personal_information_fields = (
-        "user_name",
-        "user_email",
-        "user_phone_number",
-        "user_organization",
-        "user_consent",
-    )
-
-    id = serializers.CharField(required=False)
-    location = JSONLDRelatedField(
-        serializer=PlaceSerializer,
-        required=False,
-        allow_null=True,
-        view_name="place-detail",
-    )
-    # provider = OrganizationSerializer(hide_ld_context=True)
-    keywords = JSONLDRelatedField(
-        serializer=KeywordSerializer,
-        many=True,
-        allow_empty=True,
-        required=False,
-        view_name="keyword-detail",
-    )
-    registration = JSONLDRelatedField(
-        serializer=RegistrationSerializer,
-        many=False,
-        allow_empty=True,
-        required=False,
-        view_name="registration-detail",
-        allow_null=True,
-    )
-    super_event = JSONLDRelatedField(
-        serializer=EVENT_SERIALIZER_REF,
-        required=False,
-        view_name="event-detail",
-        allow_null=True,
-        queryset=Event.objects.filter(
-            Q(super_event_type=Event.SuperEventType.RECURRING)
-            | Q(super_event_type=Event.SuperEventType.UMBRELLA)
-        ),
-    )
-    event_status = EnumChoiceField(Event.STATUSES, required=False)
-    type_id = EnumChoiceField(Event.TYPE_IDS, required=False)
-    publication_status = EnumChoiceField(PUBLICATION_STATUSES, required=False)
-    external_links = EventLinkSerializer(many=True, required=False)
-    offers = OfferSerializer(many=True, required=False)
-    data_source = serializers.PrimaryKeyRelatedField(
-        queryset=DataSource.objects.all(), required=False
-    )
-    publisher = serializers.PrimaryKeyRelatedField(
-        queryset=Organization.objects.all(),
-        required=False,
-        allow_null=True,
-    )
-    sub_events = JSONLDRelatedField(
-        serializer=EVENT_SERIALIZER_REF,
-        required=False,
-        view_name="event-detail",
-        many=True,
-        queryset=Event.objects.filter(deleted=False),
-    )
-    images = JSONLDRelatedField(
-        serializer=ImageSerializer,
-        required=False,
-        allow_null=True,
-        many=True,
-        view_name="image-detail",
-        expanded=True,
-    )
-    videos = VideoSerializer(many=True, required=False)
-    in_language = JSONLDRelatedField(
-        serializer=LanguageSerializer,
-        required=False,
-        view_name="language-detail",
-        many=True,
-        queryset=Language.objects.all(),
-    )
-    audience = JSONLDRelatedField(
-        serializer=KeywordSerializer,
-        view_name="keyword-detail",
-        many=True,
-        required=False,
-    )
-
-    created_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
-    )
-    last_modified_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
-    )
-    date_published = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
-    )
-    start_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
-    )
-    end_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
-    created_by = serializers.StringRelatedField(required=False, allow_null=True)
-    last_modified_by = serializers.StringRelatedField(required=False, allow_null=True)
-
-    class Meta:
-        model = Event
-        exclude = (
-            "search_vector_en",
-            "search_vector_fi",
-            "search_vector_sv",
-        )
-        list_serializer_class = BulkListSerializer
-
-    def __init__(self, *args, skip_empties=False, **kwargs):
-        super().__init__(*args, **kwargs)
-        # The following can be used when serializing when
-        # testing and debugging.
-        self.skip_empties = skip_empties
-        if self.context:
-            for ext in self.context.get("extensions", ()):
-                self.fields["extension_{}".format(ext.identifier)] = (
-                    ext.get_extension_serializer()
-                )
-
-        user = self.context["request"].user
-
-        if not settings.ENABLE_EXTERNAL_USER_EVENTS:
-            for field in self.personal_information_fields:
-                self.fields.pop(field, None)
-        elif user.is_authenticated and user.is_external:
-            for field in ("user_name", "maximum_attendee_capacity"):
-                self.fields[field].required = True
-
-    def parse_datetimes(self, data):
-        # here, we also set has_start_time and has_end_time accordingly
-        for field in ["date_published", "start_time", "end_time"]:
-            val = data.get(field, None)
-            if val and isinstance(val, str):
-                if field == "end_time":
-                    dt, is_date = utils.parse_end_time(val)
-                else:
-                    dt, is_date = utils.parse_time(val)
-
-                data[field] = dt
-                data[f"has_{field}"] = not is_date
-        return data
-
-    def to_internal_value(self, data):
-        data = self.parse_datetimes(data)
-        data = super().to_internal_value(data)
-        return data
-
-    def validate_keywords(self, keywords):
-        for kw in keywords:
-            if kw.deprecated:
-                raise serializers.ValidationError(
-                    _("Deprecated keyword not allowed ({})").format(kw.pk)
-                )
-        return keywords
-
-    def validate_audience(self, audiences):
-        return self.validate_keywords(audiences)
-
-    def validate(self, data):
-        context = self.context
-        user = self.context["request"].user
-        # clean all text fields, only description may contain any html
-        data = clean_text_fields(data, allowed_html_fields=["description"])
-
-        data = super().validate(data)
-
-        if "publication_status" not in data:
-            data["publication_status"] = PublicationStatus.PUBLIC
-
-        # If the event is a draft, postponed or cancelled, no further validation is performed
-        # For external users do all validations.
-        if (
-            data["publication_status"] == PublicationStatus.DRAFT
-            or data.get("event_status", None) == Event.Status.CANCELLED
-            or (
-                self.context["request"].method == "PUT"
-                and "start_time" in data
-                and not data["start_time"]
-            )
-        ):
-            data = self.run_extension_validations(data)
-
-            if not (
-                settings.ENABLE_EXTERNAL_USER_EVENTS
-                and user.is_authenticated
-                and user.is_external
-            ):
-                return data
-
-        # check that published events have a location, keyword and start_time
-        languages = get_fixed_lang_codes()
-
-        errors = {}
-
-        if (
-            settings.ENABLE_EXTERNAL_USER_EVENTS
-            and user.is_authenticated
-            and user.is_external
-        ):
-            if not (data.get("user_email") or data.get("user_phone_number")):
-                # External users need to fill either email or phone number
-                error = _("You have to set either user_email or user_phone_number.")
-                errors["user_email"] = error
-                errors["user_phone_number"] = error
-
-        has_filled_personal_information = any(
-            map(lambda x: bool(data.get(x)), self.personal_information_fields)
-        )
-        if has_filled_personal_information and not data.get("user_consent"):
-            errors["user_consent"] = _(
-                "User consent is required if personal information fields are filled."
-            )
-
-        lang_error_msg = _("This field must be specified before an event is published.")
-        for field in self.fields_needed_to_publish:
-            if field in self.translated_fields:
-                for lang in languages:
-                    name = "name_%s" % lang
-                    field_lang = "%s_%s" % (field, lang)
-                    if data.get(name) and not data.get(field_lang):
-                        errors.setdefault(field, {})[lang] = lang_error_msg
-                    if (
-                        data.get(field_lang)
-                        and field == "short_description"
-                        and len(data.get(field_lang, [])) > 160
-                    ):
-                        errors.setdefault(field, {})[lang] = _(
-                            "Short description length must be 160 characters or less"
-                        )
-
-            elif not data.get(field):
-                errors[field] = lang_error_msg
-
-        # published events need price info = at least one offer that is free or not
-        offer_exists = False
-        for index, offer in enumerate(data.get("offers", [])):
-            if "is_free" in offer:
-                offer_exists = True
-            # clean offer text fields
-            data["offers"][index] = clean_text_fields(offer)
-
-        if not offer_exists:
-            errors["offers"] = _(
-                "Price info must be specified before an event is published."
-            )
-
-        # clean link description text
-        for index, link in enumerate(data.get("external_links", [])):
-            # clean link text fields
-            data["external_links"][index] = clean_text_fields(link)
-
-        # clean video text fields
-        for index, video in enumerate(data.get("video", [])):
-            # clean link text fields
-            data["video"][index] = clean_text_fields(video)
-
-        # If no end timestamp supplied, we treat the event as ending at midnight
-        if not data.get("end_time"):
-            # The start time may also be null if the event is postponed
-            if not data.get("start_time"):
-                data["has_end_time"] = False
-                data["end_time"] = None
-            else:
-                data["has_end_time"] = False
-                data["end_time"] = utils.start_of_next_day(data["start_time"])
-
-        data_source = context["data_source"]
-        past_allowed = data_source.create_past_events
-        if self.instance:
-            past_allowed = data_source.edit_past_events
-
-        if (
-            data.get("end_time")
-            and data["end_time"] < timezone.now()
-            and not past_allowed
-        ):
-            errors["end_time"] = force_str(
-                _("End time cannot be in the past. Please set a future end time.")
-            )
-
-        if errors:
-            raise serializers.ValidationError(errors)
-
-        data = self.run_extension_validations(data)
-
-        return data
-
-    def run_extension_validations(self, data):
-        for ext in self.context.get("extensions", ()):
-            new_data = ext.validate_event_data(self, data)
-            if new_data:
-                data = new_data
-        return data
-
-    @staticmethod
-    def _create_or_update_offers(offers, event, update=False):
-        if not isinstance(offers, list):
-            return
-
-        if update:
-            event.offers.all().delete()
-
-        for offer in offers:
-            offer_price_groups = offer.pop("offer_price_groups", [])
-
-            offer = Offer.objects.create(event=event, **offer)
-
-            if not settings.WEB_STORE_INTEGRATION_ENABLED:
-                continue
-
-            for offer_price_group in offer_price_groups:
-                OfferPriceGroup.objects.create(offer=offer, **offer_price_group)
-
-    def create(self, validated_data):
-        # if id was not provided, we generate it upon creation:
-        data_source = self.context["data_source"]
-        request = self.context["request"]
-        user = request.user
-
-        if "id" not in validated_data:
-            validated_data["id"] = generate_id(data_source)
-
-        offers = validated_data.pop("offers", [])
-        links = validated_data.pop("external_links", [])
-        videos = validated_data.pop("videos", [])
-
-        validated_data.update(
-            {
-                "created_by": user,
-                "last_modified_by": user,
-                "created_time": Event.now(),  # we must specify creation time as we are setting id
-                "event_status": Event.Status.SCHEDULED,
-                # mark all newly created events as scheduled
-            }
-        )
-
-        if settings.ENABLE_EXTERNAL_USER_EVENTS and user.is_external:
-            validated_data["publisher"] = (
-                validated_data.get("publisher")
-                or utils.get_or_create_default_organization()
-            )
-
-        # pop out extension related fields because create() cannot stand them
-        original_validated_data = deepcopy(validated_data)
-        for field_name, field in self.fields.items():
-            if field_name.startswith("extension_") and field.source in validated_data:
-                validated_data.pop(field.source)
-
-        event = super().create(validated_data)
-
-        # create and add related objects
-        self._create_or_update_offers(offers, event)
-
-        for link in links:
-            EventLink.objects.create(event=event, **link)
-
-        for video in videos:
-            Video.objects.create(event=event, **video)
-
-        extensions = get_extensions_from_request(request)
-
-        for ext in extensions:
-            ext.post_create_event(
-                request=request, event=event, data=original_validated_data
-            )
-
-        return event
-
-    def update(self, instance, validated_data):
-        offers = validated_data.pop("offers", None)
-        links = validated_data.pop("external_links", None)
-        videos = validated_data.pop("videos", None)
-        data_source = self.context["data_source"]
-        publisher = validated_data.get("publisher") or instance.publisher
-
-        validated_data.update({"publisher": publisher})
-
-        if (
-            instance.end_time
-            and instance.end_time < timezone.now()
-            and not data_source.edit_past_events
-        ):
-            raise DRFPermissionDenied(_("Cannot edit a past event."))
-
-        # The API only allows scheduling and cancelling events.
-        # POSTPONED and RESCHEDULED may not be set, but should be allowed in already set instances.
-        if (
-            validated_data.get("event_status")
-            in (
-                Event.Status.POSTPONED,
-                Event.Status.RESCHEDULED,
-            )
-            and validated_data.get("event_status") != instance.event_status
-        ):
-            raise serializers.ValidationError(
-                {
-                    "event_status": _(
-                        "POSTPONED and RESCHEDULED statuses cannot be set directly."
-                        "Changing event start_time or marking start_time null"
-                        "will reschedule or postpone an event."
-                    )
-                }
-            )
-
-        # Update event_status if a PUBLIC SCHEDULED or CANCELLED event start_time is updated.
-        # DRAFT events will remain SCHEDULED up to publication.
-        # Check that the event is not explicitly CANCELLED at the same time.
-        if (
-            instance.publication_status == PublicationStatus.PUBLIC
-            and validated_data.get("event_status", Event.Status.SCHEDULED)
-            != Event.Status.CANCELLED
-        ):
-            # if the instance was ever CANCELLED, RESCHEDULED or POSTPONED, it may never be SCHEDULED again
-            if instance.event_status != Event.Status.SCHEDULED:
-                if validated_data.get("event_status") == Event.Status.SCHEDULED:
-                    raise serializers.ValidationError(
-                        {
-                            "event_status": _(
-                                "Public events cannot be set back to SCHEDULED if they"
-                                "have already been CANCELLED, POSTPONED or RESCHEDULED."
-                            )
-                        }
-                    )
-                validated_data["event_status"] = instance.event_status
-            try:
-                # if the start_time changes, reschedule the event
-                if validated_data["start_time"] != instance.start_time:
-                    validated_data["event_status"] = Event.Status.RESCHEDULED
-                # if the posted start_time is null, postpone the event
-                if not validated_data["start_time"]:
-                    validated_data["event_status"] = Event.Status.POSTPONED
-            except KeyError:
-                # if the start_time is not provided, do nothing
-                pass
-
-        # pop out extension related fields because update() cannot stand them
-        original_validated_data = deepcopy(validated_data)
-        for field_name, field in self.fields.items():
-            if field_name.startswith("extension_") and field.source in validated_data:
-                validated_data.pop(field.source)
-
-        # update validated fields
-        super().update(instance, validated_data)
-
-        # update offers
-        self._create_or_update_offers(offers, instance, update=True)
-
-        # update ext links
-        if isinstance(links, list):
-            instance.external_links.all().delete()
-            for link in links:
-                EventLink.objects.create(event=instance, **link)
-
-        # update videos
-        if isinstance(videos, list):
-            instance.videos.all().delete()
-            for video in videos:
-                Video.objects.create(event=instance, **video)
-
-        request = self.context["request"]
-        extensions = get_extensions_from_request(request)
-
-        for ext in extensions:
-            ext.post_update_event(
-                request=request, event=instance, data=original_validated_data
-            )
-
-        return instance
-
-    def to_representation(self, obj):
-        ret = super().to_representation(obj)
-
-        if obj.deleted:
-            keys_to_preserve = [
-                "id",
-                "name",
-                "last_modified_time",
-                "deleted",
-                "replaced_by",
-            ]
-            for key in ret.keys() - keys_to_preserve:
-                del ret[key]
-            ret["name"] = utils.get_deleted_object_name()
-            return ret
-
-        # Remove personal information fields from public API
-        user = self.context["request"].user
-        if (
-            not settings.ENABLE_EXTERNAL_USER_EVENTS
-            or not (
-                user.is_authenticated
-                and (
-                    user.is_regular_user_of(obj.publisher)
-                    or user.is_admin_of(obj.publisher)
-                )
-            )
-            and obj.created_by != user
-        ):
-            for field in self.personal_information_fields:
-                if field in ret:
-                    del ret[field]
-
-        if self.context["request"].accepted_renderer.format == "docx":
-            ret["end_time_obj"] = obj.end_time
-            ret["start_time_obj"] = obj.start_time
-            ret["location"] = obj.location
-
-        if obj.start_time and not obj.has_start_time:
-            # Return only the date part
-            ret["start_time"] = obj.start_time.astimezone(LOCAL_TZ).strftime("%Y-%m-%d")
-        if obj.end_time and not obj.has_end_time:
-            # If the event is short (<24h), then no need for end time
-            if obj.start_time and obj.end_time - obj.start_time <= timedelta(days=1):
-                ret["end_time"] = None
-
-            else:
-                # If we're storing only the date part, do not pretend we have the exact time.
-                # Timestamp is of the form %Y-%m-%dT00:00:00, so we report the previous date.
-                ret["end_time"] = utils.start_of_previous_day(obj.end_time).strftime(
-                    "%Y-%m-%d"
-                )
-
-        del ret["has_start_time"]
-        del ret["has_end_time"]
-        if hasattr(obj, "days_left"):
-            ret["days_left"] = int(obj.days_left)
-        if self.skip_empties:
-            for k in list(ret.keys()):
-                val = ret[k]
-                try:
-                    if val is None or len(val) == 0:
-                        del ret[k]
-                except TypeError:
-                    # not list/dict
-                    pass
-        request = self.context.get("request")
-        if request and not request.user.is_authenticated:
-            del ret["publication_status"]
-
-        return ret
-
-
-def _format_images_v0_1(data):
-    if "images" not in data:
-        return
-    images = data.get("images")
-    del data["images"]
-    if len(images) == 0:
-        data["image"] = None
-    else:
-        data["image"] = images[0].get("url", None)
-
-
-def _annotate_queryset_for_filtering_by_enrolment_start_or_end(
-    queryset, ordering, order_field_name: str, db_field_name: str
-):
-    if order_field_name in ordering:
-        # Put events with null enrolment times to the end of the list for
-        # the ascending ordering.
-        events_with_null_times_last = timezone.datetime.max.replace(
-            tzinfo=timezone.get_default_timezone()
-        )
-    else:
-        # Put events with null enrolment times to the end of the list for
-        # the descending ordering.
-        events_with_null_times_last = timezone.datetime.min.replace(
-            tzinfo=datetime_timezone.utc
-        )
-        order_field_name = order_field_name.removeprefix("-")
-
-    return queryset.annotate(
-        **{
-            f"{order_field_name}": Case(
-                When(
-                    **{
-                        f"registration__{db_field_name}__isnull": False,
-                    },
-                    then=F(f"registration__{db_field_name}"),
-                ),
-                When(
-                    **{
-                        f"{db_field_name}__isnull": True,
-                        f"registration__{db_field_name}__isnull": True,
-                    },
-                    then=events_with_null_times_last,
-                ),
-                default=F(f"{db_field_name}"),
-                output_field=ModelDateTimeField(),
-            ),
-        }
-    )
-
-
-class EventSerializerV0_1(EventSerializer):  # noqa: N801
-    def __init__(self, *args, **kwargs):
-        kwargs.setdefault("context", {}).setdefault("include", []).append("image")
-        super().__init__(*args, **kwargs)
-
-    def to_representation(self, obj):
-        ret = super().to_representation(obj)
-        _format_images_v0_1(ret)
-        return ret
-
-
-class LinkedEventsOrderingFilter(filters.OrderingFilter):
-    ordering_param = "sort"
-
-
-class EventOrderingFilter(LinkedEventsOrderingFilter):
-    def filter_queryset(self, request, queryset, view):
-        ordering = self.get_ordering(request, queryset, view)
-        if not ordering:
-            ordering = []
-
-        if "duration" in ordering or "-duration" in ordering:
-            queryset = queryset.extra(select={"duration": "end_time - start_time"})
-
-        if "enrolment_start" in ordering or "-enrolment_start" in ordering:
-            queryset = _annotate_queryset_for_filtering_by_enrolment_start_or_end(
-                queryset, ordering, "enrolment_start", "enrolment_start_time"
-            )
-
-        if "enrolment_end" in ordering or "-enrolment_end" in ordering:
-            queryset = _annotate_queryset_for_filtering_by_enrolment_start_or_end(
-                queryset, ordering, "enrolment_end", "enrolment_end_time"
-            )
-
-        return super().filter_queryset(request, queryset, view)
 
 
 def parse_duration_string(duration):
@@ -3486,183 +2344,6 @@ class EventExtensionFilterBackend(BaseFilterBackend):
         return queryset
 
 
-def in_or_null_filter(field_name, queryset, name, value):
-    # supports filtering objects by several values in the same field; null or none will trigger isnull filter
-    q = Q()
-    if "null" in value or "none" in value:
-        null_query = {field_name + "__isnull": True}
-        q = q | Q(**null_query)
-        if "null" in value:
-            value.remove("null")
-        if "none" in value:
-            value.remove("none")
-    if value:
-        in_query = {field_name + "__in": value}
-        q = q | Q(**in_query)
-    return queryset.filter(q)
-
-
-class DistanceWithinWidget(django_filters.widgets.SuffixedMultiWidget):
-    suffixes = ["origin", "metres"]
-
-    def __init__(self):
-        super().__init__([django_filters.widgets.CSVWidget, django.forms.NumberInput])
-
-
-class EventFilter(django_filters.rest_framework.FilterSet):
-    division = django_filters.Filter(
-        field_name="location__divisions",
-        widget=django_filters.widgets.CSVWidget(),
-        method=filter_division,
-    )
-    super_event_type = django_filters.Filter(
-        field_name="super_event_type",
-        widget=django_filters.widgets.CSVWidget(),
-        method=partial(in_or_null_filter, "super_event_type"),
-    )
-    super_event = django_filters.Filter(
-        field_name="super_event",
-        widget=django_filters.widgets.CSVWidget(),
-        method=partial(in_or_null_filter, "super_event"),
-    )
-    dwithin = django_filters.Filter(
-        method="filter_dwithin", widget=DistanceWithinWidget()
-    )
-    maximum_attendee_capacity_gte = django_filters.NumberFilter(
-        field_name="maximum_attendee_capacity", lookup_expr="gte"
-    )
-    minimum_attendee_capacity_gte = django_filters.NumberFilter(
-        field_name="minimum_attendee_capacity", lookup_expr="gte"
-    )
-    maximum_attendee_capacity_lte = django_filters.NumberFilter(
-        field_name="maximum_attendee_capacity", lookup_expr="lte"
-    )
-    minimum_attendee_capacity_lte = django_filters.NumberFilter(
-        field_name="minimum_attendee_capacity", lookup_expr="lte"
-    )
-    hide_recurring_children = django_filters.BooleanFilter(
-        method="filter_hide_recurring_children"
-    )
-
-    x_full_text = django_filters.CharFilter(method="filter_x_full_text")
-
-    x_ongoing = django_filters.BooleanFilter(method="filter_x_ongoing")
-
-    registration_admin_user = django_filters.BooleanFilter(
-        method="filter_registration_admin_user"
-    )
-
-    enrolment_open_on = django_filters.DateTimeFilter(method="filter_enrolment_open_on")
-
-    class Meta:
-        model = Event
-        fields = {
-            "registration__remaining_attendee_capacity": ["gte", "isnull"],
-            "registration__remaining_waiting_list_capacity": ["gte", "isnull"],
-        }
-
-    def filter_enrolment_open_on(self, queryset, name, value: datetime):
-        value = value.astimezone(pytz.timezone(settings.TIME_ZONE))
-
-        queryset = _annotate_queryset_for_filtering_by_enrolment_start_or_end(
-            queryset, [], "-enrolment_start", "enrolment_start_time"
-        )
-        queryset = _annotate_queryset_for_filtering_by_enrolment_start_or_end(
-            queryset, ["enrolment_end"], "enrolment_end", "enrolment_end_time"
-        )
-
-        return queryset.filter(enrolment_start__lte=value, enrolment_end__gte=value)
-
-    def filter_dwithin(self, queryset, name, value: tuple[tuple[str, str], str]):
-        srs = srid_to_srs(self.request.query_params.get("srid"))
-        origin, metres = value
-        if not (origin and metres):
-            # Need both values for filtering
-            return queryset
-
-        try:
-            origin_x, origin_y = [float(i) for i in origin]
-        except ValueError:
-            raise ParseError("Origin must be a tuple of two numbers")
-        try:
-            metres = float(metres)
-        except ValueError:
-            raise ParseError("Metres must be a number")
-
-        places = Place.objects.filter(
-            position__dwithin=(
-                Point(origin_x, origin_y, srid=srs.srid),
-                D(m=metres),
-            )
-        )
-
-        return queryset.filter(location__in=places)
-
-    def filter_hide_recurring_children(self, queryset, name, value: Optional[bool]):
-        if not value:
-            return queryset
-
-        # There are two different structures that can define a super event
-        # for recurring events.
-        return queryset.exclude(
-            super_event__super_event_type=Event.SuperEventType.RECURRING
-        ).exclude(
-            eventaggregatemember__event_aggregate__super_event__super_event_type=Event.SuperEventType.RECURRING
-        )
-
-    def filter_x_full_text(self, qs, name, value: Optional[str]):
-        if not value:
-            return qs
-
-        language = self.request.query_params.get("x_full_text_language", "fi")
-        if language not in ["fi", "en", "sv"]:
-            raise serializers.ValidationError(
-                {
-                    "x_full_text_language": _(
-                        "x_full_text supports the following languages: fi, en, sv"
-                    )
-                }
-            )
-
-        config_map = {
-            "fi": "finnish",
-            "en": "english",
-            "sv": "swedish",
-        }
-        search_vector_name = f"full_text__search_vector_{language}"
-        search_query = SearchQuery(
-            value, search_type="websearch", config=config_map[language]
-        )
-        search_rank = SearchRank(F(search_vector_name), search_query)
-
-        # Warning: order matters, annotate should follow filter
-        # Otherwise Django creates a redundant LEFT OUTER JOIN for sorting
-        return (
-            qs.filter(**{search_vector_name: search_query})
-            .annotate(rank=search_rank)
-            .order_by("-rank")
-        )
-
-    def filter_x_ongoing(self, qs, name, ongoing: Optional[bool]):
-        if ongoing is None:
-            return qs
-
-        if ongoing:
-            return qs.filter(end_time__gt=datetime.now(datetime_timezone.utc))
-
-        return qs.filter(end_time__lte=datetime.now(datetime_timezone.utc))
-
-    def filter_registration_admin_user(self, queryset, name, value):
-        if not value:
-            return queryset
-
-        if self.request.user.is_authenticated:
-            # displays all events whose registration the user can modify
-            return self.request.user.get_editable_events_for_registration(queryset)
-        else:
-            return queryset.none()
-
-
 class EventDeletedException(APIException):
     status_code = 410
     default_detail = "Event has been deleted."
@@ -3874,6 +2555,25 @@ class EventViewSet(
     def allow_bulk_destroy(self, qs, filtered):
         return False
 
+    @extend_schema(
+        summary="Update an event",
+        description=(
+            "Events can be updated if the user has appropriate access permissions. The original "
+            "implementation behaves like PATCH, ie. if some field is left out from the PUT call, "
+            "its value is retained in database. In order to ensure consistent behaviour, users "
+            "should always supply every field in PUT call."
+        ),
+        responses={
+            200: OpenApiResponse(
+                EventSerializer,
+                description="Event has been successfully updated.",
+            ),
+            **get_common_api_error_responses(),
+            404: OpenApiResponse(
+                description="Event was not found.",
+            ),
+        },
+    )
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(
@@ -3934,6 +2634,24 @@ class EventViewSet(
         except WebStoreAPIError as exc:
             raise serializers.ValidationError(exc.messages)
 
+    @extend_schema(
+        operation_id="event_bulk_update",
+        summary="Bulk update several events",
+        description=(
+            "Events can be updated if the user has appropriate access permissions. The original "
+            "implementation behaves like PATCH, ie. if some field is left out from the PUT call, "
+            "its value is retained in database. In order to ensure consistent behaviour, users "
+            "should always supply every field in PUT call."
+        ),
+        request=EventSerializer(many=True),
+        responses={
+            200: OpenApiResponse(
+                EventSerializer(many=True),
+                description="Events have been successfully updated.",
+            ),
+            **get_common_api_error_responses(),
+        },
+    )
     @transaction.atomic
     def bulk_update(self, request, *args, **kwargs):
         if not isinstance(request.data, list):
@@ -3954,6 +2672,37 @@ class EventViewSet(
         self.perform_bulk_update(serializer)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @extend_schema(exclude=True)
+    def partial_bulk_update(self, request, *args, **kwargs):
+        return self.bulk_update(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Partially update an event",
+        responses={
+            200: OpenApiResponse(
+                EventSerializer,
+                description="Event has been successfully partially updated.",
+            ),
+            **get_common_api_error_responses(),
+            404: OpenApiResponse(
+                description="Event was not found.",
+            ),
+        },
+    )
+    def partial_update(self, request, *args, **kwargs):
+        return super().partial_update(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Create a new event or events",
+        request=EventSerializer(many=True),
+        responses={
+            201: OpenApiResponse(
+                EventSerializer,
+                description="Event has been successfully created.",
+            ),
+            **get_common_api_error_responses(),
+        },
+    )
     @transaction.atomic
     def create(self, *args, **kwargs):
         return super().create(*args, **kwargs)
@@ -4025,6 +2774,19 @@ class EventViewSet(
 
         super().perform_create(serializer)
 
+    @extend_schema(
+        summary="Delete an event",
+        description="Event can be deleted if the user has appropriate access permissions.",
+        responses={
+            204: OpenApiResponse(
+                description="Event has been successfully deleted.",
+            ),
+            **get_common_api_error_responses(excluded_codes=[400]),
+            404: OpenApiResponse(
+                description="Event was not found.",
+            ),
+        },
+    )
     @transaction.atomic
     def destroy(self, request, *args, **kwargs):
         return super().destroy(request, *args, **kwargs)
@@ -4040,6 +2802,20 @@ class EventViewSet(
         except WebStoreAPIError as exc:
             raise serializers.ValidationError(exc.messages)
 
+    @extend_schema(
+        summary="Retrieve information for a single event",
+        auth=[],
+        responses={
+            200: OpenApiResponse(
+                EventSerializer,
+                description="Event record.",
+            ),
+            **get_common_api_error_responses(excluded_codes=[400, 401]),
+            404: OpenApiResponse(
+                description="Event was not found.",
+            ),
+        },
+    )
     def retrieve(self, request, *args, **kwargs):
         try:
             event = Event.objects.get(pk=kwargs["pk"])
@@ -4052,6 +2828,446 @@ class EventViewSet(
             )
         return super().retrieve(request, *args, **kwargs)
 
+    @extend_schema(
+        summary="Return a list of events",
+        description=render_to_string("swagger/event_list_description.html"),
+        auth=[],
+        parameters=[
+            OpenApiParameter(
+                name="x_full_text",
+                exclude=True,
+            ),
+            OpenApiParameter(
+                name="x_ongoing",
+                exclude=True,
+            ),
+            OpenApiParameter(
+                name="local_ongoing_AND",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for local events that are upcoming or have not ended yet. "
+                    "Multiple search terms are separated by comma."
+                ),
+            ),
+            OpenApiParameter(
+                name="local_ongoing_OR",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for local events that are upcoming or have not ended yet. "
+                    "Multiple search terms are separated by comma."
+                ),
+            ),
+            OpenApiParameter(
+                name="internet_ongoing_AND",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for internet events that are upcoming or have not ended yet. "
+                    "Multiple search terms are separated by comma."
+                ),
+            ),
+            OpenApiParameter(
+                name="internet_ongoing_OR",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for internet events that are upcoming or have not ended yet. "
+                    "Multiple search terms are separated by comma."
+                ),
+            ),
+            OpenApiParameter(
+                name="all_ongoing_AND",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for local and internet events that are upcoming or have not ended yet. "
+                    "Multiple search terms are separated by comma."
+                ),
+            ),
+            OpenApiParameter(
+                name="all_ongoing_OR",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for local and internet events that are upcoming or have not ended yet. "
+                    "Multiple search terms are separated by comma."
+                ),
+            ),
+            OpenApiParameter(
+                name="internet_based",
+                type=OpenApiTypes.BOOL,
+                description=("Search only for events that happen in the internet."),
+            ),
+            OpenApiParameter(
+                name="start",
+                type=OpenApiTypes.DATETIME,
+                description=(
+                    "Search for events beginning or ending after this time. Dates can be "
+                    "specified using ISO 8601 (for example, '2024-01-12') and additionally "
+                    "<code>today</code> and <code>now</code>."
+                ),
+            ),
+            OpenApiParameter(
+                name="end",
+                type=OpenApiTypes.DATETIME,
+                description=(
+                    "Search for events beginning or ending before this time. Dates can be "
+                    "specified using ISO 8601 (for example, '2024-01-12') and additionally "
+                    "<code>today</code> and <code>now</code>."
+                ),
+            ),
+            OpenApiParameter(
+                name="days",
+                type=OpenApiTypes.INT,
+                description=(
+                    "Search for events that intersect with the current time and specified "
+                    "amount of days from current time."
+                ),
+            ),
+            OpenApiParameter(
+                name="starts_after",
+                type=OpenApiTypes.STR,
+                description="Search for the events that start after certain time.",
+            ),
+            OpenApiParameter(
+                name="starts_before",
+                type=OpenApiTypes.STR,
+                description="Search for the events that start before certain time.",
+            ),
+            OpenApiParameter(
+                name="ends_after",
+                type=OpenApiTypes.STR,
+                description="Search for the events that end after certain time.",
+            ),
+            OpenApiParameter(
+                name="ends_before",
+                type=OpenApiTypes.STR,
+                description="Search for the events that end before certain time.",
+            ),
+            OpenApiParameter(
+                name="min_duration",
+                type=OpenApiTypes.INT,
+                description=(
+                    "Search for events that are longer than given time in seconds."
+                ),
+            ),
+            OpenApiParameter(
+                name="max_duration",
+                type=OpenApiTypes.INT,
+                description=(
+                    "Search for events that are shorter than given time in seconds."
+                ),
+            ),
+            OpenApiParameter(
+                name="bbox",
+                type={"type": "array", "items": {"type": "string"}},
+                description=(
+                    "Search for events that are within this bounding box. Decimal coordinates "
+                    "are given in order west, south, east, north. Period is used as decimal "
+                    "separator. Coordinate system is EPSG:4326."
+                ),
+            ),
+            OpenApiParameter(
+                name="location",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for events in given locations as specified by id. "
+                    "Multiple ids are separated by comma."
+                ),
+            ),
+            OpenApiParameter(
+                name="dwithin_origin",
+                type={"type": "array", "items": {"type": "string"}},
+                description=(
+                    "To restrict the retrieved events to a certain distance from a point, use "
+                    "the query parameters <code>dwithin_origin</code> and "
+                    "<code>dwithin_metres</code> in the format "
+                    "<code>dwithin_origin=lon,lat&dwithin_metres=distance</code>."
+                ),
+            ),
+            OpenApiParameter(
+                name="dwithin_meters",
+                type=OpenApiTypes.INT,
+                description=(
+                    "To restrict the retrieved events to a certain distance from a point, use "
+                    "the query parameters <code>dwithin_origin</code> and "
+                    "<code>dwithin_metres</code> in the format "
+                    "<code>dwithin_origin=lon,lat&dwithin_metres=distance</code>."
+                ),
+            ),
+            OpenApiParameter(
+                name="keyword",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for events with given keywords as specified by id. "
+                    "Multiple ids are separated by comma."
+                ),
+            ),
+            OpenApiParameter(
+                name="keyword_AND",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for events with all given keywords as specified by id. "
+                    "Multiple ids are separated by comma."
+                ),
+            ),
+            OpenApiParameter(
+                name="keyword!",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for events with given keywords not to be present as specified by id. "
+                    "Multiple ids are separated by comma."
+                ),
+            ),
+            OpenApiParameter(
+                name="keyword_set_AND",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for events that contains any of the keywords of defined keyword set. "
+                    "Multiple keyword sets are separated by comma."
+                ),
+            ),
+            OpenApiParameter(
+                name="keyword_set_OR",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for events that contains any of the keywords of defined keyword set. "
+                    "Multiple keyword sets are separated by comma."
+                ),
+            ),
+            OpenApiParameter(
+                name="last_modified_since",
+                type=OpenApiTypes.DATETIME,
+                description=(
+                    "Search for events that have been modified since or at this time."
+                ),
+            ),
+            OpenApiParameter(
+                name="show_deleted",
+                type=OpenApiTypes.BOOL,
+                description="Include deleted events in the query.",
+            ),
+            OpenApiParameter(
+                name="ids",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for events with specific id, separating values by commas if you wish "
+                    "to query for several event ids."
+                ),
+            ),
+            OpenApiParameter(
+                name="event_status",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for events with the specified status in the "
+                    "<code>event_status</code> field."
+                ),
+            ),
+            OpenApiParameter(
+                name="event_type",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for events with the specified type in the <code>type_id</code> field."
+                ),
+            ),
+            OpenApiParameter(
+                name="text",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search (case insensitive) through all multilingual text fields "
+                    "(name, description, short_description, info_url) of an event "
+                    "(every language). Multilingual fields contain the text that users are "
+                    "expected to care about, thus multilinguality is useful discriminator."
+                ),
+            ),
+            OpenApiParameter(
+                name="combined_text",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for events with exact text match for event text fields but retrieves "
+                    "expected keywords on the basis of similarity."
+                ),
+            ),
+            OpenApiParameter(
+                name="is_free",
+                type=OpenApiTypes.BOOL,
+                description=(
+                    "Search for events that have a price that is free, or not free."
+                ),
+            ),
+            OpenApiParameter(
+                name="language",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for events that have data or are organized in this language."
+                ),
+            ),
+            OpenApiParameter(
+                name="in_language",
+                type=OpenApiTypes.STR,
+                description="Search for events that are organized in this language.",
+            ),
+            OpenApiParameter(
+                name="translation",
+                type=OpenApiTypes.STR,
+                description="Search for events that have data in this language.",
+            ),
+            OpenApiParameter(
+                name="audience_min_age_lt",
+                type=OpenApiTypes.INT,
+                description=(
+                    "Search for events whose minimal age is lower than or equals the "
+                    "specified value."
+                ),
+            ),
+            OpenApiParameter(
+                name="audience_min_age_gt",
+                type=OpenApiTypes.INT,
+                description=(
+                    "Search for events whose minimal age is greater than or equals the "
+                    "specified value."
+                ),
+            ),
+            OpenApiParameter(
+                name="audience_max_age_lt",
+                type=OpenApiTypes.INT,
+                description=(
+                    "Search for events whose maximum age is lower than or equals the "
+                    "specified value."
+                ),
+            ),
+            OpenApiParameter(
+                name="audience_max_age_gt",
+                type=OpenApiTypes.INT,
+                description=(
+                    "Search for events whose maximum age is greater than or equals the "
+                    "specified value."
+                ),
+            ),
+            OpenApiParameter(
+                name="suitable_for",
+                type=OpenApiTypes.INT,
+                description=(
+                    "Search for events that are suitable for the age or age range specified."
+                ),
+            ),
+            OpenApiParameter(
+                name="publisher",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for events published by the given organization as specified by id."
+                ),
+            ),
+            OpenApiParameter(
+                name="publisher_ancestor",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for events published by any suborganization under the given "
+                    "organization as specified by id."
+                ),
+            ),
+            OpenApiParameter(
+                name="data_source",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for events that come from the specified source system."
+                ),
+            ),
+            OpenApiParameter(
+                name="registration",
+                type=OpenApiTypes.BOOL,
+                description="Search for events with or without a registration.",
+            ),
+            OpenApiParameter(
+                name="enrolment_open",
+                type=OpenApiTypes.BOOL,
+                description=(
+                    "Search for events that have connected registrations and have "
+                    "places at the event."
+                ),
+            ),
+            OpenApiParameter(
+                name="enrolment_open_waitlist",
+                type=OpenApiTypes.BOOL,
+                description=(
+                    "Search for events that have connected registrations and have "
+                    "places in the waiting lists."
+                ),
+            ),
+            OpenApiParameter(
+                name="registration__remaining_attendee_capacity__gte",
+                type=OpenApiTypes.INT,
+                description=(
+                    "Search for events where the remaining registration attendee capacity is "
+                    "greater than or equal to the applied parameter."
+                ),
+            ),
+            OpenApiParameter(
+                name="registration__remaining_attendee_capacity__isnull",
+                type=OpenApiTypes.BOOL,
+                description=(
+                    "Search for events where the remaining registration attendee capacity is or "
+                    "is not NULL."
+                ),
+            ),
+            OpenApiParameter(
+                name="registration__remaining_waiting_list_capacity__gte",
+                type=OpenApiTypes.INT,
+                description=(
+                    "Search for events where the remaining registration waiting_list capacity is "
+                    "greater than or equal to the applied parameter."
+                ),
+            ),
+            OpenApiParameter(
+                name="registration__remaining_waiting_list_capacity__isnull",
+                type=OpenApiTypes.BOOL,
+                description=(
+                    "Search for events where the remaining registration waiting_list capacity is "
+                    "or is not NULL."
+                ),
+            ),
+            OpenApiParameter(
+                name="show_all",
+                type=OpenApiTypes.BOOL,
+                description=(
+                    "Search for events that authenticated user can edit, including drafts, "
+                    "and public non-editable events."
+                ),
+            ),
+            OpenApiParameter(
+                name="publication_status",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for events with the given publication status. "
+                    "Multiple values are separated by comma."
+                ),
+            ),
+            OpenApiParameter(
+                name="admin_user",
+                type=OpenApiTypes.BOOL,
+                description=(
+                    "Search for events that authenticated user can edit, including drafts, "
+                    "but no other public events."
+                ),
+            ),
+            OpenApiParameter(
+                name="created_by",
+                type=OpenApiTypes.BOOL,
+                description="Search for events created by the authenticated user.",
+            ),
+            IncludeOpenApiParameter(),
+            OpenApiParameter(
+                name="sort",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Sort the returned events in the given order. Possible sorting criteria are "
+                    "<code>start_time</code>, <code>end_time</code>, <code>name</code>, "
+                    "<code>duration</code>, <code>last_modified_time</code>, "
+                    "<code>enrolment_start_time</code>, <code>enrolment_end_time</code>, "
+                    "<code>registration__enrolment_start_time</code>, "
+                    "<code>registration__enrolment_end_time</code>, <code>enrolment_start</code> "
+                    "and <code>enrolment_end</code>. The default ordering is "
+                    "<code>-last_modified_time</code>."
+                ),
+            ),
+        ],
+    )
     def list(self, request, *args, **kwargs):
         # docx renderer has additional requirements for listing events
         if request.accepted_renderer.format == "docx":
@@ -4083,27 +3299,6 @@ class EventViewSet(
 register_view(EventViewSet, "event")
 
 
-class SearchSerializer(serializers.Serializer):
-    def to_representation(self, search_result):
-        model = search_result.model
-        version = self.context["request"].version
-        ser_class = get_serializer_for_model(model, version=version)
-        assert ser_class is not None, "Serializer for %s not found" % model
-        data = ser_class(search_result.object, context=self.context).data
-        data["resource_type"] = model._meta.model_name
-        data["score"] = search_result.score
-        return data
-
-
-class SearchSerializerV0_1(SearchSerializer):  # noqa: N801
-    def to_representation(self, search_result):
-        ret = super().to_representation(search_result)
-        if "resource_type" in ret:
-            ret["object_type"] = ret["resource_type"]
-            del ret["resource_type"]
-        return ret
-
-
 DATE_DECAY_SCALE = "30d"
 
 
@@ -4114,11 +3309,69 @@ class SearchViewSet(
     AuditLogApiViewMixin,
     generics.ListAPIView,
 ):
+    queryset = Event.objects.none()  # For automated Swagger schema generation.
+
     def get_serializer_class(self):
         if self.request.version == "v0.1":
             return SearchSerializerV0_1
         return SearchSerializer
 
+    @extend_schema(
+        summary="Search through events and places",
+        description=render_to_string("swagger/search_list_description.html"),
+        auth=[],
+        parameters=[
+            OpenApiParameter(
+                name="type",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Comma-separated list of resource types to search for. Currently allowed "
+                    "values are <code>event</code> and <code>place</code>. <code>type=event</code> "
+                    "must be specified for event date filtering and relevancy sorting."
+                ),
+            ),
+            OpenApiParameter(
+                name="q",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Search for events and places matching this string. Mutually exclusive with "
+                    "<code>input</code> typeahead search."
+                ),
+            ),
+            OpenApiParameter(
+                name="input",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Return autocompletition suggestions for this string. Mutually exclusive with "
+                    "<code>q</code> full-text search."
+                ),
+            ),
+            OpenApiParameter(
+                name="start",
+                type=OpenApiTypes.DATETIME,
+                description=(
+                    "Search for events beginning or ending after this time. Dates can be "
+                    "specified using ISO 8601 (for example, '2024-01-12') and additionally "
+                    "<code>today</code> and <code>now</code>."
+                ),
+            ),
+            OpenApiParameter(
+                name="end",
+                type=OpenApiTypes.DATETIME,
+                description=(
+                    "Search for events beginning or ending before this time. Dates can be "
+                    "specified using ISO 8601 (for example, '2024-01-12') and additionally "
+                    "<code>today</code> and <code>now</code>."
+                ),
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(
+                EventSerializer(many=True),
+                description="List of resources.",
+            ),
+        },
+    )
     def list(self, request, *args, **kwargs):
         languages = get_fixed_lang_codes()
         default_language = languages[0] if languages else None
@@ -4217,12 +3470,7 @@ class SearchViewSet(
 register_view(SearchViewSet, "search", base_name="search")
 
 
-class FeedbackSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Feedback
-        fields = "__all__"
-
-
+@extend_schema(exclude=True)
 class FeedbackViewSet(
     AuditLogApiViewMixin, mixins.CreateModelMixin, viewsets.GenericViewSet
 ):
@@ -4232,6 +3480,7 @@ class FeedbackViewSet(
 register_view(FeedbackViewSet, "feedback", base_name="feedback")
 
 
+@extend_schema(exclude=True)
 class GuestFeedbackViewSet(
     AuditLogApiViewMixin, mixins.CreateModelMixin, viewsets.GenericViewSet
 ):

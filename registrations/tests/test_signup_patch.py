@@ -653,15 +653,20 @@ def test_cannot_patch_signup_with_another_signups_price_group(
         },
     }
 
-    response = assert_patch_signup_price_group_failed(
-        api_client,
-        signup,
-        signup_data,
-        signup_price_group,
-        new_registration_price_group,
+    assert_patch_signup(api_client, signup.id, signup_data)
+
+    signup_price_group.refresh_from_db()
+    assert signup_price_group.signup_id == signup.pk
+    assert (
+        signup_price_group.registration_price_group_id
+        == new_registration_price_group.pk
     )
-    assert response.data["price_group"][0] == (
-        "Price group is already assigned to another participant."
+
+    signup_price_group2.refresh_from_db()
+    assert signup_price_group2.signup_id == signup2.pk
+    assert (
+        signup_price_group2.registration_price_group_id
+        != new_registration_price_group.pk
     )
 
 

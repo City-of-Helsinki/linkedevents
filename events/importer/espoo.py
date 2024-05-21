@@ -18,7 +18,7 @@ from urllib3 import Retry
 from events.models import DataSource, Event, Image, Keyword, Language, Place
 from events.translation import EventTranslationOptions
 
-from ..api import generate_id
+from ..serializers import generate_id
 from ..utils import clean_text_fields
 from .base import Importer, register_importer
 from .sync import ModelSyncher
