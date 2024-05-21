@@ -1,0 +1,20 @@
+<h2 id="filtering-retrieved-customer-groups">Filtering retrieved customer groups</h2>
+<p>Query parameters can be used to filter the retrieved customer groups by the following criteria.</p>
+
+<h3 id="customer-group-publisher">Publisher</h3>
+<p>To find out customer groups that belong to a specific organization or that are default customer groups available to all organizations, use the query parameter <code>publisher</code>, separating values by commas if you wish to query for several publishers.</p>
+<p>Existing organizations are found at the <code>organization</code> endpoint. City of Helsinki internal publishers have ids of the form <code>ahjo:origin_id</code> as they originate from the Helsinki Ahjo decisionmaking system, and have a rather complex hierarchy. External publishers may have their own namespaces, ids and hierarchies.</p>
+<p>The id <code>none</code> can be used for default customer groups that do not belong to any specific organization. This id can be combined with actual organization ids using the comma separator.</p>
+<p>Example:</p>
+<pre><code>event/?publisher=ytj:0586977-6</code></pre>
+<pre><code>event/?publisher=none</code></pre>
+
+<h3 id="customer-group-description">Description</h3>
+<p>To find out customer groups that contain a specific string in the "description" field, use the query parameter <code>description</code>.</p>
+<p>Example:</p>
+<pre><code>price_group/?description=adult</code></pre>
+
+<h3 id="customer-group-is-free">Is free</h3>
+<p>To find out customer groups that are free of charge or vice versa, use the query parameter<code>is_free</code>.</p>
+<p>Example:</p>
+<pre><code>price_group/?is_free=true</code></pre>

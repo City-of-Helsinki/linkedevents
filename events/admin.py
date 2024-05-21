@@ -6,7 +6,6 @@ from leaflet.admin import LeafletGeoAdmin
 from modeltranslation.admin import TranslationAdmin
 from reversion.admin import VersionAdmin
 
-from events.api import generate_id
 from events.models import (
     DataSource,
     Event,
@@ -16,6 +15,7 @@ from events.models import (
     License,
     Place,
 )
+from events.serializers import generate_id
 
 
 class BaseAdmin(admin.ModelAdmin):

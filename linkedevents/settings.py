@@ -264,6 +264,7 @@ INSTALLED_APPS = [
     "admin_auto_filters",
     "encrypted_fields",
     "mailer",
+    "drf_spectacular",
     # Local apps
     "linkedevents",
     "helevents",
@@ -437,6 +438,7 @@ REST_FRAMEWORK = {
         "events.auth.ApiTokenAuthentication",
     ),
     "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.URLPathVersioning",
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "VIEW_NAME_FUNCTION": "linkedevents.utils.get_view_name",
 }
 
@@ -743,6 +745,73 @@ EVENT_ADMIN_EXPIRATION_MONTHS = env("EVENT_ADMIN_EXPIRATION_MONTHS")
 FINANCIAL_ADMIN_EXPIRATION_MONTHS = env("FINANCIAL_ADMIN_EXPIRATION_MONTHS")
 REGISTRATION_ADMIN_EXPIRATION_MONTHS = env("REGISTRATION_ADMIN_EXPIRATION_MONTHS")
 REGISTRATION_USER_EXPIRATION_MONTHS = env("REGISTRATION_USER_EXPIRATION_MONTHS")
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Linked Events information API",
+    "DESCRIPTION": (
+        "Linked Events provides categorized data on events and places using JSON-LD format."
+        "\n\n"
+        "Events can be searched by date and location. Location can be exact address or larger "
+        "area such as neighbourhood or borough."
+        "\n\n"
+        "JSON-LD format is streamlined using include mechanism. API users can request that certain "
+        "fields are included directly into the result, instead of being hyperlinks to objects."
+        "\n\n"
+        "Several fields are multilingual. These are implemented as object with each language variant "
+        "as property. In this specification each multilingual field has (fi,sv,en) property triplet as "
+        "example."
+    ),
+    "VERSION": None,
+    "SCHEMA_PATH_PREFIX": r"/v1/",
+    "SCHEMA_PATH_PREFIX_TRIM": True,
+    "PREPROCESSING_HOOKS": ["linkedevents.schema_utils.swagger_endpoint_filter"],
+    "POSTPROCESSING_HOOKS": ["linkedevents.schema_utils.swagger_postprocessing_hook"],
+    "GET_LIB_DOC_EXCLUDES": "linkedevents.schema_utils.swagger_get_lib_doc_excludes",
+    "SERVERS": [
+        {"url": "https://api.hel.fi/linkedevents/v1/"},
+        {"url": "https://linkedevents.api.stage.hel.ninja/v1/"},
+        {"url": "https://linkedevents.api.test.hel.ninja/v1/"},
+        {"url": "https://linkedevents.api.dev.hel.ninja/v1/"},
+    ],
+    "SWAGGER_UI_SETTINGS": {
+        "deepLinking": True,
+        "url": "/static/linked-events.yaml",
+    },
+    "TAGS": [
+        {"name": "event", "description": "Search and edit events"},
+        {"name": "search", "description": "Fulltext search through events and places"},
+        {"name": "image", "description": "Get and upload images"},
+        {"name": "keyword", "description": "Search and edit keywords"},
+        {"name": "keyword_set", "description": "Search and edit keyword sets"},
+        {"name": "organization", "description": "Search and edit organizations"},
+        {"name": "place", "description": "Search and edit places"},
+        {"name": "language", "description": "Get supported languages"},
+        {"name": "data_source", "description": "Get supported data sources"},
+        {
+            "name": "organization_class",
+            "description": "Get supported organization classes",
+        },
+        {"name": "registration", "description": "Search and edit registrations"},
+        {
+            "name": "registration_user_access",
+            "description": "Send invitation email to registration user",
+        },
+        {
+            "name": "seats_reservation",
+            "description": "Create and edit seats reservations",
+        },
+        {"name": "signup", "description": "Search and edit signups"},
+        {"name": "signup_group", "description": "Search and edit signup groups"},
+        {"name": "user", "description": "Get users"},
+    ],
+}
+if WEB_STORE_INTEGRATION_ENABLED:
+    SPECTACULAR_SETTINGS["TAGS"].append(
+        {
+            "name": "price_group",
+            "description": "Create, edit and search customer group selections",
+        }
+    )
 
 # local_settings.py can be used to override environment-specific settings
 # like database and email that differ between development and production.

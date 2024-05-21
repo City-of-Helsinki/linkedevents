@@ -8,7 +8,7 @@ from django.views.generic import RedirectView
 
 from linkedevents import __version__
 
-from .api import LinkedEventsAPIRouter
+from .api import CustomSpectacularSwaggerView, LinkedEventsAPIRouter
 
 api_router = LinkedEventsAPIRouter()
 
@@ -27,6 +27,11 @@ urlpatterns = [
     path("helauth/", include("helusers.urls")),
     path("gdpr-api/", include("helsinki_gdpr.urls")),
     path("data-analytics/", include("data_analytics.urls", namespace="data_analytics")),
+    path(
+        "docs/swagger-ui/",
+        CustomSpectacularSwaggerView.as_view(url_name="schema"),
+        name="schema",
+    ),
     path("", RedirectToAPIRootView.as_view()),
 ]
 

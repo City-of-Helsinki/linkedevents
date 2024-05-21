@@ -1,20 +1,29 @@
 from datetime import timedelta
 from decimal import Decimal
+from typing import Optional
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
+from django.core.exceptions import PermissionDenied
+from django.db import IntegrityError, transaction
 from django.utils.timezone import localdate, localtime
 from django.utils.translation import gettext_lazy as _
+from drf_spectacular.utils import extend_schema_field, OpenApiTypes
 from rest_framework import serializers
 from rest_framework.exceptions import ErrorDetail
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.fields import DateTimeField
 
-from events.models import Language
+from events.auth import ApiKeyUser
+from events.fields import EventJSONLDRelatedField
+from events.models import Event, Language
 from events.utils import clean_text_fields
 from helevents.models import User
-from linkedevents.serializers import TranslatedModelSerializer
-from linkedevents.utils import get_fixed_lang_codes
+from linkedevents.serializers import LinkedEventsSerializer, TranslatedModelSerializer
+from linkedevents.utils import (
+    get_fixed_lang_codes,
+    validate_serializer_field_for_duplicates,
+)
 from registrations.exceptions import (
     ConflictException,
     WebStoreAPIError,
@@ -28,6 +37,7 @@ from registrations.models import (
     RegistrationUserAccess,
     RegistrationWebStoreAccount,
     RegistrationWebStoreMerchant,
+    RegistrationWebStoreProductMapping,
     SeatReservationCode,
     SignUp,
     SignUpContactPerson,
@@ -39,6 +49,7 @@ from registrations.models import (
     SignUpPaymentRefund,
     SignUpPriceGroup,
     SignUpProtectedData,
+    VAT_CODE_MAPPING,
     VAT_PERCENTAGES,
     WebStoreAccount,
     WebStoreMerchant,
@@ -171,6 +182,7 @@ class CreatedModifiedBaseSerializer(serializers.ModelSerializer):
 
     is_created_by_current_user = serializers.SerializerMethodField()
 
+    @extend_schema_field(OpenApiTypes.BOOL)
     def get_is_created_by_current_user(self, obj):
         if not (request := self.context.get("request")):
             return False
@@ -231,6 +243,7 @@ class SignUpBaseSerializer(CreatedModifiedBaseSerializer):
     extra_info = serializers.CharField(required=False, allow_blank=True)
     has_contact_person_access = serializers.SerializerMethodField()
 
+    @extend_schema_field(OpenApiTypes.BOOL)
     def get_has_contact_person_access(self, obj):
         if not (request := self.context.get("request")):
             return False
@@ -247,7 +260,7 @@ class SignUpBaseSerializer(CreatedModifiedBaseSerializer):
 
 
 class SignUpPriceGroupSerializer(TranslatedModelSerializer):
-    id = serializers.IntegerField(required=False)
+    id = serializers.IntegerField(required=False, read_only=True)
     registration_price_group = serializers.PrimaryKeyRelatedField(
         queryset=RegistrationPriceGroup.objects.all()
     )
@@ -702,6 +715,26 @@ class RegistrationWebStoreAccountSerializer(WebStoreAccountBaseSerializer):
         }
 
 
+class GroupSignUpSerializer(SignUpSerializer):
+    class Meta(SignUpSerializer.Meta):
+        fields = [
+            field
+            for field in SignUpSerializer.Meta.fields
+            if field not in ("contact_person", "create_payment")
+        ]
+        extra_kwargs = {
+            "registration": {"required": False},
+            "signup_group": {"read_only": True},
+        }
+
+
+class GroupSignUpCreateSerializer(GroupSignUpSerializer):
+    class Meta(GroupSignUpSerializer.Meta):
+        fields = [
+            field for field in GroupSignUpSerializer.Meta.fields if field != "payment"
+        ]
+
+
 class RegistrationUserAccessIdField(serializers.PrimaryKeyRelatedField):
     def get_queryset(self):
         registration_id = self.context["request"].parser_context["kwargs"].get("pk")
@@ -826,10 +859,21 @@ class RegistrationPriceGroupSerializer(RegistrationPriceGroupBaseSerializer):
         model = RegistrationPriceGroup
 
 
-# Don't use this serializer directly but use events.api.RegistrationSerializer instead.
-# Implement methods to mutate and validate Registration in events.api.RegistrationSerializer
-class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
+class RegistrationSerializer(LinkedEventsSerializer, CreatedModifiedBaseSerializer):
     view_name = "registration-detail"
+
+    only_admin_visible_fields = (
+        "created_by",
+        "last_modified_by",
+        "registration_user_accesses",
+    )
+
+    event = EventJSONLDRelatedField(
+        serializer="events.serializers.EventSerializer",
+        many=False,
+        view_name="event-detail",
+        queryset=Event.objects.all(),
+    )
 
     signups = serializers.SerializerMethodField()
 
@@ -850,6 +894,22 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
     has_substitute_user_access = serializers.SerializerMethodField()
 
     signup_url = serializers.SerializerMethodField()
+
+    def __init__(
+        self,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        context = self.context
+        instance = self.instance
+
+        if instance:
+            self.fields["event"].read_only = True
+
+        self.registration_admin_tree_ids = context.get(
+            "registration_admin_tree_ids", set()
+        )
 
     def get_fields(self):
         fields = super().get_fields()
@@ -878,6 +938,7 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
 
         return fields
 
+    @extend_schema_field(OpenApiTypes.BOOL)
     def get_has_registration_user_access(self, obj):
         user = self.user
 
@@ -889,12 +950,14 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
 
         return has_registration_user_access or self.get_has_substitute_user_access(obj)
 
+    @extend_schema_field(OpenApiTypes.BOOL)
     def get_has_substitute_user_access(self, obj):
         user = self.user
         return user.is_authenticated and user.is_substitute_user_of(
             obj.registration_user_accesses
         )
 
+    @extend_schema_field(SignUpSerializer(many=True, read_only=True))
     def get_signups(self, obj):
         params = self.context["request"].query_params
 
@@ -912,30 +975,384 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
 
         return None
 
+    @extend_schema_field(OpenApiTypes.INT)
     def get_current_attendee_count(self, obj):
         return obj.current_attendee_count
 
+    @extend_schema_field(OpenApiTypes.INT)
     def get_current_waiting_list_count(self, obj):
         return obj.current_waiting_list_count
 
+    @extend_schema_field(Optional[int])
     def get_remaining_attendee_capacity(self, obj):
         # Because there can be slight delay with capacity calculations in case of seat expiration,
         # calculate the current value on the fly so that front-end gets the most recent information.
         return obj.calculate_remaining_attendee_capacity()
 
+    @extend_schema_field(Optional[int])
     def get_remaining_waiting_list_capacity(self, obj):
         # Because there can be slight delay with capacity calculations in case of seat expiration,
         # calculate the current value on the fly so that front-end gets the most recent information.
         return obj.calculate_remaining_waiting_list_capacity()
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_data_source(self, obj):
         return obj.data_source.id
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_publisher(self, obj):
         return obj.publisher.id
 
+    @extend_schema_field(
+        {
+            "type": "object",
+            "properties": {
+                "en": {"type": "string"},
+                "fi": {"type": "string"},
+                "sv": {"type": "string"},
+            },
+        }
+    )
     def get_signup_url(self, obj):
         return {lang: get_signup_create_url(obj, lang) for lang in ["en", "fi", "sv"]}
+
+    # Override this method to allow only_admin_visible_fields also to
+    # registration admin users
+    def are_only_admin_visible_fields_allowed(self, obj):
+        user = self.user
+
+        return not user.is_anonymous and (
+            obj.publisher.tree_id in self.admin_tree_ids
+            or obj.publisher.tree_id in self.registration_admin_tree_ids
+            or user.is_substitute_user_of(obj.registration_user_accesses)
+        )
+
+    @staticmethod
+    def _create_or_update_registration_user_accesses(
+        registration, registration_user_accesses
+    ):
+        for data in registration_user_accesses:
+            if current_obj := data.pop("id", None):
+                current_id = current_obj.id
+            else:
+                current_id = None
+
+            try:
+                RegistrationUserAccess.objects.update_or_create(
+                    id=current_id,
+                    registration=registration,
+                    defaults=data,
+                )
+
+            except IntegrityError as error:
+                if "duplicate key value violates unique constraint" in str(error):
+                    raise serializers.ValidationError(
+                        {
+                            "registration_user_accesses": [
+                                ErrorDetail(
+                                    _(
+                                        "Registration user access with email %(email)s already exists."
+                                    )
+                                    % {"email": data["email"]},
+                                    code="unique",
+                                )
+                            ]
+                        }
+                    )
+                else:
+                    raise
+
+    @staticmethod
+    def _create_or_update_registration_price_groups(
+        registration, registration_price_groups
+    ):
+        price_groups = []
+
+        for data in registration_price_groups:
+            price_groups.append(
+                RegistrationPriceGroup.objects.update_or_create(
+                    id=data.pop("id", None),
+                    registration=registration,
+                    defaults=data,
+                )[0]
+            )
+
+        return price_groups
+
+    @staticmethod
+    def _create_or_update_registration_merchant(registration, registration_merchant):
+        if not registration_merchant:
+            return None, False
+
+        registration_merchant["external_merchant_id"] = registration_merchant[
+            "merchant"
+        ].merchant_id
+
+        instance = getattr(registration, "registration_merchant", None)
+        has_changed = instance is None or instance.data_has_changed(
+            registration_merchant
+        )
+
+        if instance:
+            for field in registration_merchant:
+                setattr(instance, field, registration_merchant[field])
+            instance.save(update_fields=registration_merchant.keys())
+        else:
+            instance = RegistrationWebStoreMerchant.objects.create(
+                registration=registration,
+                **registration_merchant,
+            )
+
+        return instance, has_changed
+
+    @staticmethod
+    def _create_or_update_registration_account(registration, registration_account):
+        if not registration_account:
+            return None, False
+
+        instance = getattr(registration, "registration_account", None)
+        has_changed = instance is None or instance.data_has_changed(
+            registration_account
+        )
+
+        if instance:
+            for field in registration_account:
+                setattr(instance, field, registration_account[field])
+            instance.save(update_fields=registration_account.keys())
+        else:
+            instance = RegistrationWebStoreAccount.objects.create(
+                registration=registration,
+                **registration_account,
+            )
+
+        return instance, has_changed
+
+    @transaction.atomic
+    def create(self, validated_data):
+        user = self.request.user
+        if isinstance(user, ApiKeyUser):
+            # allow creating a registration only if the api key matches event data source
+            if (
+                "event" in validated_data
+                and validated_data["event"].data_source != user.data_source
+            ):
+                raise PermissionDenied(
+                    _("Object data source does not match user data source")
+                )
+
+        registration_user_accesses = validated_data.pop(
+            "registration_user_accesses", []
+        )
+        registration_price_groups = validated_data.pop("registration_price_groups", [])
+        registration_merchant = validated_data.pop("registration_merchant", None)
+        registration_account = validated_data.pop("registration_account", None)
+
+        try:
+            registration = super().create(validated_data)
+        except IntegrityError as error:
+            if "duplicate key value violates unique constraint" in str(error):
+                raise serializers.ValidationError(
+                    {"event": _("Event already has a registration.")}
+                )
+            else:
+                raise
+
+        # Create registration user accesses and send invitation email to them
+        self._create_or_update_registration_user_accesses(
+            registration, registration_user_accesses
+        )
+
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            price_groups = self._create_or_update_registration_price_groups(
+                registration, registration_price_groups
+            )
+
+            merchant, __ = self._create_or_update_registration_merchant(
+                registration, registration_merchant
+            )
+
+            account, __ = self._create_or_update_registration_account(
+                registration, registration_account
+            )
+
+            if price_groups and merchant and account:
+                registration.create_or_update_web_store_product_mapping_and_accounting()
+
+        return registration
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        registration_user_accesses = validated_data.pop(
+            "registration_user_accesses", None
+        )
+        registration_price_groups = validated_data.pop(
+            "registration_price_groups", None
+        )
+        registration_merchant = validated_data.pop("registration_merchant", None)
+        registration_account = validated_data.pop("registration_account", None)
+
+        # update validated fields
+        super().update(instance, validated_data)
+
+        def update_related(related_data: list, related_name: str):
+            ids = [
+                getattr(
+                    data["id"], "id", data["id"]
+                )  # user access has an object in the "id" field
+                for data in related_data
+                if data.get("id") is not None
+            ]
+
+            # Delete related objects which are not included in the payload
+            getattr(instance, related_name).exclude(pk__in=ids).delete()
+
+            # Update or create related objects
+            return getattr(self, f"_create_or_update_{related_name}")(
+                instance, related_data
+            )
+
+        # update registration users
+        if isinstance(registration_user_accesses, list):
+            update_related(registration_user_accesses, "registration_user_accesses")
+
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            if isinstance(registration_price_groups, list):
+                price_groups = update_related(
+                    registration_price_groups, "registration_price_groups"
+                )
+            else:
+                price_groups = None
+
+            __, merchant_has_changed = self._create_or_update_registration_merchant(
+                instance, registration_merchant
+            )
+
+            __, account_has_changed = self._create_or_update_registration_account(
+                instance, registration_account
+            )
+
+            if (
+                merchant_has_changed
+                or account_has_changed
+                or (
+                    price_groups
+                    and not RegistrationWebStoreProductMapping.objects.filter(
+                        registration=instance,
+                        vat_code=VAT_CODE_MAPPING[price_groups[0].vat_percentage],
+                    ).exists()
+                )
+            ):
+                instance.create_or_update_web_store_product_mapping_and_accounting()
+
+        return instance
+
+    def validate_registration_user_accesses(self, value):
+        def error_detail_callback(email):
+            return ErrorDetail(
+                _("Registration user access with email %(email)s already exists.")
+                % {"email": email},
+                code="unique",
+            )
+
+        return validate_serializer_field_for_duplicates(
+            value, "email", error_detail_callback
+        )
+
+    def validate_registration_price_groups(self, value):
+        def duplicate_error_detail_callback(price_group):
+            return ErrorDetail(
+                _(
+                    "Registration price group with price_group %(price_group)s already exists."
+                )
+                % {"price_group": price_group},
+                code="unique",
+            )
+
+        validate_serializer_field_for_duplicates(
+            value, "price_group", duplicate_error_detail_callback
+        )
+
+        if value and not all(
+            [
+                price_group["vat_percentage"] == value[0]["vat_percentage"]
+                for price_group in value
+            ]
+        ):
+            raise serializers.ValidationError(
+                {
+                    "price_group": [
+                        ErrorDetail(
+                            _(
+                                "All registration price groups must have the same VAT percentage."
+                            ),
+                            code="vat_percentage",
+                        )
+                    ]
+                }
+            )
+
+        return value
+
+    def _validate_merchant_and_account(self, data, errors):
+        if not (
+            data.get("registration_price_groups")
+            or self.instance is not None
+            and self.instance.registration_price_groups.exists()
+        ):
+            # Price groups not given or they don't exist => no need to validate.
+            return
+
+        if not data.get("registration_merchant") and (
+            not self.partial or "registration_merchant" in data.keys()
+        ):
+            errors["registration_merchant"] = _(
+                "This field is required when registration has customer groups."
+            )
+
+        if not data.get("registration_account") and (
+            not self.partial or "registration_account" in data.keys()
+        ):
+            errors["registration_account"] = _(
+                "This field is required when registration has customer groups."
+            )
+
+    def _validate_registration_price_groups(self, data, errors):
+        if not (
+            data.get("registration_merchant")
+            or data.get("registration_account")
+            or self.instance is not None
+            and (
+                getattr(self.instance, "registration_merchant", None) is not None
+                or getattr(self.instance, "registration_account", None) is not None
+            )
+        ):
+            # Merchant and account not given or they don't exist => no need to validate.
+            return
+
+        if not data.get("registration_price_groups") and (
+            not self.partial or "registration_price_groups" in data.keys()
+        ):
+            errors["registration_price_groups"] = _(
+                "This field is required when registration has a merchant or account."
+            )
+
+    # LinkedEventsSerializer validates name which doesn't exist in Registration model
+    def validate(self, data):
+        # Clean html tags from the text fields
+        data = clean_text_fields(
+            data, ["confirmation_message", "instructions"], strip=True
+        )
+
+        errors = {}
+
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            self._validate_merchant_and_account(data, errors)
+            self._validate_registration_price_groups(data, errors)
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return data
 
     class Meta(CreatedModifiedBaseSerializer.Meta):
         model = Registration
@@ -1176,6 +1593,7 @@ class SignUpGroupCreateSerializer(
 ):
     reservation_code = serializers.CharField(write_only=True)
     contact_person = SignUpContactPersonSerializer(required=True)
+    signups = GroupSignUpCreateSerializer(many=True, required=True)
 
     def validate(self, data):
         # Clean html tags from the text fields
@@ -1302,7 +1720,7 @@ class SignUpGroupSerializer(
     def get_fields(self):
         fields = super().get_fields()
 
-        fields["signups"] = SignUpSerializer(
+        fields["signups"] = GroupSignUpSerializer(
             many=True, required=False, partial=self.partial
         )
 
@@ -1402,9 +1820,11 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
 
         return fields
 
+    @extend_schema_field(OpenApiTypes.DATETIME)
     def get_expiration(self, obj):
         return obj.expiration
 
+    @extend_schema_field(OpenApiTypes.BOOL)
     def get_in_waitlist(self, obj):
         registration = obj.registration
         maximum_attendee_capacity = registration.maximum_attendee_capacity
@@ -1554,12 +1974,18 @@ class MassEmailSerializer(serializers.Serializer):
         required=False,
     )
 
+    class Meta:
+        model = Registration
+
 
 class RegistrationSignupsExportSerializer(serializers.Serializer):
     ui_language = serializers.ChoiceField(
         choices=["en", "sv", "fi"],
         default="fi",
     )
+
+    class Meta:
+        model = Registration
 
 
 class PriceGroupSerializer(TranslatedModelSerializer, CreatedModifiedBaseSerializer):

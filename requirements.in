@@ -25,6 +25,7 @@ djangorestframework
 djangorestframework-bulk
 djangorestframework-gis
 drf-oidc-auth
+drf-spectacular
 easy_thumbnails
 elasticsearch<8
 helsinki-profile-gdpr-api
