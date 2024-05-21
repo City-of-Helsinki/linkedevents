@@ -5,6 +5,7 @@ Django settings module for linkedevents project.
 import importlib.util
 import os
 import subprocess
+from datetime import datetime
 
 import bleach
 import environ
@@ -714,3 +715,6 @@ if os.path.exists(f):
     module.__file__ = f
     sys.modules[module_name] = module
     exec(open(f, "rb").read())
+
+# get build time from a file in docker image
+APP_BUILD_TIME = datetime.fromtimestamp(os.path.getmtime(__file__))
