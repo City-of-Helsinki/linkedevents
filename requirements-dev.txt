@@ -29,9 +29,7 @@ click==8.1.7
     #   black
     #   pip-tools
 coverage[toml]==7.4.4
-    # via
-    #   coverage
-    #   pytest-cov
+    # via pytest-cov
 django==4.2.11
     # via
     #   -c requirements.txt
@@ -147,7 +145,7 @@ python-jose==3.3.0
     # via
     #   -c requirements.txt
     #   -r requirements-dev.in
-requests==2.31.0
+requests==2.32.0
     # via
     #   -c requirements.txt
     #   django-anymail

@@ -254,7 +254,7 @@ redis==5.0.3
     # via django-redis
 regex==2023.12.25
     # via -r requirements.in
-requests==2.31.0
+requests==2.32.0
     # via
     #   -r requirements.in
     #   django-helusers
