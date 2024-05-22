@@ -9,7 +9,7 @@ from rest_framework.test import APIClient
 from events.tests.factories import OfferFactory
 from events.tests.utils import versioned_reverse as reverse
 from registrations.enums import VatPercentage
-from registrations.models import PriceGroup, RegistrationPriceGroup
+from registrations.models import PriceGroup, RegistrationPriceGroup, VAT_CODE_MAPPING
 from registrations.tests.factories import (
     PriceGroupFactory,
     RegistrationPriceGroupFactory,
@@ -89,7 +89,10 @@ def test_patch_registration_price_group(api_client, user, registration):
     api_client.force_authenticate(user)
 
     with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
-        RegistrationWebStoreProductMappingFactory(registration=registration)
+        RegistrationWebStoreProductMappingFactory(
+            registration=registration,
+            vat_code=VAT_CODE_MAPPING[VatPercentage.VAT_10.value],
+        )
 
     default_price_group = PriceGroup.objects.filter(
         publisher=None, is_free=False

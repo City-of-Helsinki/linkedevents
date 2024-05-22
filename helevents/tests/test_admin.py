@@ -736,7 +736,6 @@ class TestLocalOrganizationAccountAdmin(LocalOrganizationAdminTestCaseMixin, Tes
             "web_store_accounts-MIN_NUM_FORMS": "0",
             "web_store_accounts-0-active": "on",
             "web_store_accounts-0-name": "Test Account",
-            "web_store_accounts-0-vat_code": "33",
             "web_store_accounts-0-company_code": "4444",
             "web_store_accounts-0-main_ledger_account": "555555",
             "web_store_accounts-0-balance_profit_center": "66666",
@@ -786,7 +785,6 @@ class TestLocalOrganizationAccountAdmin(LocalOrganizationAdminTestCaseMixin, Tes
             "web_store_accounts-TOTAL_FORMS": "2",
             "web_store_accounts-1-active": "on",
             "web_store_accounts-1-name": "Test Account 2",
-            "web_store_accounts-1-vat_code": "44",
             "web_store_accounts-1-company_code": "5555",
             "web_store_accounts-1-main_ledger_account": "666666",
             "web_store_accounts-1-balance_profit_center": "77777",
@@ -938,7 +936,6 @@ class TestLocalOrganizationAccountAdmin(LocalOrganizationAdminTestCaseMixin, Tes
 
         for field in [
             "web_store_accounts-0-name",
-            "web_store_accounts-0-vat_code",
             "web_store_accounts-0-company_code",
             "web_store_accounts-0-main_ledger_account",
             "web_store_accounts-0-balance_profit_center",
@@ -968,7 +965,6 @@ class TestLocalOrganizationAccountAdmin(LocalOrganizationAdminTestCaseMixin, Tes
             update_data={
                 "web_store_accounts-INITIAL_FORMS": "1",
                 "web_store_accounts-0-name": account.name,
-                "web_store_accounts-0-vat_code": account.vat_code,
                 "web_store_accounts-0-company_code": account.company_code,
                 "web_store_accounts-0-main_ledger_account": account.main_ledger_account,
                 "web_store_accounts-0-balance_profit_center": account.balance_profit_center,

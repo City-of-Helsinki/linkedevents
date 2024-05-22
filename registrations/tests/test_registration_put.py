@@ -23,6 +23,7 @@ from registrations.models import (
     RegistrationWebStoreProductMapping,
     SignUp,
     SignUpPayment,
+    VAT_CODE_MAPPING,
 )
 from registrations.tests.factories import (
     PriceGroupFactory,
@@ -747,7 +748,10 @@ def test_update_existing_registration_price_group(api_client, event, user):
     )
 
     with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
-        RegistrationWebStoreProductMappingFactory(registration=registration)
+        RegistrationWebStoreProductMappingFactory(
+            registration=registration,
+            vat_code=VAT_CODE_MAPPING[VatPercentage.VAT_0.value],
+        )
 
     assert RegistrationPriceGroup.objects.count() == 1
 
@@ -807,7 +811,10 @@ def test_update_registration_price_groups_excluded_is_deleted(api_client, event,
     )
 
     with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
-        RegistrationWebStoreProductMappingFactory(registration=registration)
+        RegistrationWebStoreProductMappingFactory(
+            registration=registration,
+            vat_code=VAT_CODE_MAPPING[VatPercentage.VAT_0.value],
+        )
 
     assert RegistrationPriceGroup.objects.count() == 1
 

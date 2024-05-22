@@ -20,6 +20,7 @@ from registrations.models import (
     SignUpPaymentRefund,
     SignUpPriceGroup,
     SignUpProtectedData,
+    VAT_CODE_MAPPING,
     WebStoreAccount,
     WebStoreMerchant,
 )
@@ -192,7 +193,6 @@ class WebStoreAccountFactory(factory.django.DjangoModelFactory):
     organization = factory.SubFactory(OrganizationFactory)
 
     name = factory.Sequence(lambda n: "Account {0}".format(n))
-    vat_code = "12"
     company_code = "1234"
     main_ledger_account = "123456"
     balance_profit_center = "1234567890"
@@ -204,6 +204,7 @@ class WebStoreAccountFactory(factory.django.DjangoModelFactory):
 class RegistrationWebStoreProductMappingFactory(factory.django.DjangoModelFactory):
     registration = factory.SubFactory(RegistrationFactory)
     external_product_id = DEFAULT_PRODUCT_ID
+    vat_code = VAT_CODE_MAPPING[VatPercentage.VAT_24.value]
 
     @factory.lazy_attribute
     def external_merchant_id(self):
