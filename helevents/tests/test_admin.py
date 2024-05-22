@@ -236,6 +236,8 @@ class TestLocalOrganizationAdmin(LocalOrganizationAdminTestCaseMixin, TestCase):
 
 
 class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, TestCase):
+    _MERCHANT_ATTR_RE = re.compile(r"web_store_merchants-\d+-(\w+)")
+
     @staticmethod
     def _get_merchant_data(update_data=None):
         data = {
@@ -264,8 +266,8 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
         attrs_to_skip = attrs_to_skip or []
 
         for field, value in data.items():
-            if field.startswith("web_store_merchants-0-"):
-                merchant_attr = field.split("-")[-1]
+            if match := re.match(self._MERCHANT_ATTR_RE, field):
+                merchant_attr = match.group(1)
                 if merchant_attr in attrs_to_skip:
                     continue
 
@@ -279,8 +281,8 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
         attrs_to_skip = attrs_to_skip or []
 
         for field, value in data.items():
-            if field.startswith("web_store_merchants-0-"):
-                merchant_attr = field.split("-")[-1]
+            if match := re.match(self._MERCHANT_ATTR_RE, field):
+                merchant_attr = match.group(1)
                 if merchant_attr in attrs_to_skip:
                     continue
 
@@ -290,26 +292,58 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
                 else:
                     self.assertNotEqual(getattr(merchant, merchant_attr), value)
 
-    def test_can_add_web_store_merchant_to_a_new_organization(self):
+    def test_can_add_web_store_merchants_to_a_new_organization(self):
         self.assertEqual(Organization.objects.count(), 1)
         self.assertEqual(WebStoreMerchant.objects.count(), 0)
 
+        merchant_data = self._get_merchant_data()
+        merchant_data2 = {
+            "web_store_merchants-TOTAL_FORMS": "2",
+            "web_store_merchants-1-active": "on",
+            "web_store_merchants-1-name": "Test Merchant 2",
+            "web_store_merchants-1-street_address": "Street Address 2",
+            "web_store_merchants-1-zipcode": "54321",
+            "web_store_merchants-1-city": "Test City 2",
+            "web_store_merchants-1-email": "test2@test.dev",
+            "web_store_merchants-1-phone_number": "+3581111111",
+            "web_store_merchants-1-terms_of_service_url": "https://test.com/terms_of_service/",
+            "web_store_merchants-1-business_id": "1234567-9",
+            "web_store_merchants-1-paytrail_merchant_id": "7654321",
+        }
         data = self._get_request_data(
             {
                 "name": "New Org",
                 "internal_type": "normal",
-                **self._get_merchant_data(),
             }
         )
+        data.update(merchant_data)
+        data.update(merchant_data2)
 
         json_return_value = DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA.copy()
         json_return_value["merchantId"] = "1234"
-        mocked_create_merchant_response = get_mock_response(
-            json_return_value=json_return_value,
-        )
-        with patch("requests.post") as mocked_create_merchant_request:
-            mocked_create_merchant_request.return_value = (
-                mocked_create_merchant_response
+
+        json_return_value2 = DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA.copy()
+        json_return_value2["merchantId"] = "4321"
+
+        def merchant2_matcher(request):
+            return (
+                request.json()["merchantName"]
+                == merchant_data2["web_store_merchants-1-name"]
+            )
+
+        with requests_mock.Mocker() as req_mock:
+            merchant_create_url = (
+                f"{settings.WEB_STORE_API_BASE_URL}merchant/create/"
+                f"merchant/{settings.WEB_STORE_API_NAMESPACE}"
+            )
+            req_mock.post(
+                merchant_create_url,
+                json=json_return_value,
+            )
+            req_mock.post(
+                merchant_create_url,
+                json=json_return_value2,
+                additional_matcher=merchant2_matcher,
             )
 
             response = self.client.post(
@@ -317,24 +351,28 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
                 data,
             )
             self.assertEqual(response.status_code, status.HTTP_302_FOUND)
-            self.assertTrue(mocked_create_merchant_request.called)
+
+            self.assertEqual(req_mock.call_count, 2)
 
         self.assertEqual(Organization.objects.count(), 2)
-        self.assertEqual(WebStoreMerchant.objects.count(), 1)
+        self.assertEqual(WebStoreMerchant.objects.count(), 2)
 
-        merchant = WebStoreMerchant.objects.first()
-        self.assertEqual(
-            Organization.objects.last().web_store_merchants.first().pk,
-            merchant.pk,
-        )
-        self.assertEqual(merchant.merchant_id, json_return_value["merchantId"])
-        self.assertEqual(merchant.created_by_id, self.admin_user.pk)
-        self.assertEqual(merchant.last_modified_by_id, self.admin_user.pk)
-        self.assertIsNotNone(merchant.created_time)
-        self.assertIsNotNone(merchant.last_modified_time)
+        organization = Organization.objects.last()
+        for merchant_id, merchant_data in [
+            (json_return_value["merchantId"], merchant_data),
+            (json_return_value2["merchantId"], merchant_data2),
+        ]:
+            merchant = WebStoreMerchant.objects.get(
+                merchant_id=merchant_id,
+                organization_id=organization.pk,
+                created_by_id=self.admin_user.pk,
+                last_modified_by_id=self.admin_user.pk,
+            )
+            self.assertIsNotNone(merchant.created_time)
+            self.assertIsNotNone(merchant.last_modified_time)
 
-        data["url"] = settings.LINKED_EVENTS_UI_URL
-        self.assertMerchantValuesEqual(merchant, data)
+            merchant_data["url"] = settings.LINKED_EVENTS_UI_URL
+            self.assertMerchantValuesEqual(merchant, merchant_data)
 
     def test_can_add_web_store_merchant_to_an_existing_organization(self):
         self.assertEqual(Organization.objects.count(), 1)

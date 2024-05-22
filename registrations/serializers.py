@@ -1511,19 +1511,19 @@ class WebStoreMerchantSerializer(CreatedModifiedBaseSerializer):
         "merchant_id",
     ]
 
+    id = serializers.IntegerField(required=False)
+
     def __init__(self, *args, **kwargs):
+        organization = kwargs.pop("organization", None)
+
         super().__init__(*args, **kwargs)
 
-        instance = self.instance
-        if instance:
+        if organization:
             user = self.context["user"]
 
             if not (
                 user.is_authenticated
-                and (
-                    user.is_superuser
-                    or user.is_financial_admin_of(instance.organization)
-                )
+                and (user.is_superuser or user.is_financial_admin_of(organization))
             ):
                 # Show Paytrail and merchant ID fields only to superusers and financial admins.
                 for field in self.admin_only_fields:

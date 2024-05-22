@@ -1187,9 +1187,9 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
 
             fields["web_store_merchants"] = WebStoreMerchantSerializer(
                 instance=(
-                    self.instance.web_store_merchants.first() if self.instance else None
+                    self.instance.web_store_merchants.all() if self.instance else None
                 ),
-                max_length=1,
+                organization=self.instance,
                 **common_web_store_field_kwargs,
             )
 
@@ -1213,15 +1213,20 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
 
         return value
 
-    @staticmethod
-    def _create_or_update_web_store_merchant(organization, web_store_merchants):
-        try:
-            WebStoreMerchant.objects.update_or_create(
-                organization=organization,
-                defaults=web_store_merchants,
-            )
-        except WebStoreAPIError as exc:
-            raise serializers.ValidationError(exc.messages)
+    def _create_or_update_web_store_merchants(self, organization, merchants_data):
+        for merchant_data in merchants_data:
+            if not (merchant_id := merchant_data.pop("id", None)):
+                merchant_data["created_by"] = self.request.user
+            merchant_data["last_modified_by"] = self.request.user
+
+            try:
+                WebStoreMerchant.objects.update_or_create(
+                    pk=merchant_id,
+                    organization=organization,
+                    defaults=merchant_data,
+                )
+            except WebStoreAPIError as exc:
+                raise serializers.ValidationError(exc.messages)
 
     def _create_web_store_accounts(self, organization, accounts_data):
         web_store_accounts = []
@@ -1301,12 +1306,7 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
             return org
 
         if web_store_merchants:
-            merchants_data = web_store_merchants[0]
-
-            merchants_data["created_by"] = self.request.user
-            merchants_data["last_modified_by"] = self.request.user
-
-            self._create_or_update_web_store_merchant(org, merchants_data)
+            self._create_or_update_web_store_merchants(org, web_store_merchants)
 
         if web_store_accounts:
             self._create_web_store_accounts(org, web_store_accounts)
@@ -1329,13 +1329,7 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
             return org
 
         if web_store_merchants:
-            merchants_data = web_store_merchants[0]
-
-            if not org.web_store_merchants.exists():
-                merchants_data["created_by"] = self.request.user
-            merchants_data["last_modified_by"] = self.request.user
-
-            self._create_or_update_web_store_merchant(org, merchants_data)
+            self._create_or_update_web_store_merchants(org, web_store_merchants)
 
         if web_store_accounts:
             self._update_web_store_accounts(org, web_store_accounts)

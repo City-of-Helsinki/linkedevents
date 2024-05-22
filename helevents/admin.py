@@ -16,7 +16,6 @@ class WebStoreMerchantInline(admin.StackedInline):
     model = WebStoreMerchant
     extra = 0
     min_num = 0
-    max_num = 1
     verbose_name = _("Merchant")
     verbose_name_plural = _("Merchants")
 
