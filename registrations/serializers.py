@@ -1561,7 +1561,6 @@ class WebStoreAccountSerializer(CreatedModifiedBaseSerializer):
             "id",
             "active",
             "name",
-            "vat_code",
             "company_code",
             "main_ledger_account",
             "balance_profit_center",

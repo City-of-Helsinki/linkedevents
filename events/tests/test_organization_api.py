@@ -44,7 +44,6 @@ default_web_store_accounts_data = [
     {
         "active": True,
         "name": "Test Account",
-        "vat_code": "12",
         "company_code": "1234",
         "main_ledger_account": "123456",
         "balance_profit_center": "1234567890",
@@ -151,7 +150,6 @@ def assert_account_fields_exist(data):
         "id",
         "active",
         "name",
-        "vat_code",
         "company_code",
         "main_ledger_account",
         "balance_profit_center",
@@ -2182,7 +2180,6 @@ def test_can_create_organization_with_more_than_one_web_store_account(
     account_data2 = {
         "active": True,
         "name": "Test Account 2",
-        "vat_code": "22",
         "company_code": "2234",
         "main_ledger_account": "223456",
         "balance_profit_center": "2234567890",
@@ -2216,7 +2213,6 @@ def test_can_update_organization_with_more_than_one_web_store_account(
     account_data2 = {
         "active": True,
         "name": "Test Account 2",
-        "vat_code": "22",
         "company_code": "2234",
         "main_ledger_account": "223456",
         "balance_profit_center": "2234567890",
@@ -2249,7 +2245,6 @@ def test_can_patch_organization_with_more_than_one_web_store_account(
     account_data2 = {
         "active": True,
         "name": "Test Account 2",
-        "vat_code": "22",
         "company_code": "2234",
         "main_ledger_account": "223456",
         "balance_profit_center": "2234567890",

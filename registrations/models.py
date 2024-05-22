@@ -76,6 +76,19 @@ VAT_PERCENTAGES = (
     (VatPercentage.VAT_10.value, "10 %"),
     (VatPercentage.VAT_0.value, "0 %"),
 )
+VAT_CODE_MAPPING = {
+    VatPercentage.VAT_24.value: "44",
+    VatPercentage.VAT_14.value: "45",
+    VatPercentage.VAT_10.value: "46",
+    VatPercentage.VAT_0.value: "4U",
+}
+
+
+def get_vat_code_mapping_choices():
+    choices = [
+        (VAT_CODE_MAPPING[percentage], label) for percentage, label in VAT_PERCENTAGES
+    ]
+    return choices
 
 
 class MandatoryFields(models.TextChoices):
@@ -684,7 +697,7 @@ class Registration(CreatedModifiedBaseModel):
             "merchantId": merchant.merchant_id,
         }
 
-    def to_web_store_product_accounting_data(self):
+    def to_web_store_product_accounting_data(self, vat_code: str):
         if not (account := self.account):
             raise WebStoreProductMappingValidationError(
                 _(
@@ -693,7 +706,7 @@ class Registration(CreatedModifiedBaseModel):
             )
 
         data = {
-            "vatCode": account.vat_code,
+            "vatCode": vat_code,
             "balanceProfitCenter": account.balance_profit_center,
             "companyCode": account.company_code,
             "mainLedgerAccount": account.main_ledger_account,
@@ -714,18 +727,23 @@ class Registration(CreatedModifiedBaseModel):
         return data
 
     def create_or_update_web_store_product_mapping_and_accounting(self):
-        if (
-            not self.registration_price_groups.exists()
-            or RegistrationWebStoreProductMapping.objects.filter(
-                registration_id=self.pk,
-                external_merchant_id=getattr(self.merchant, "merchant_id", None),
-                account=self.account,
-            ).exists()
-        ):
+        if not self.registration_price_groups.exists():
+            return
+
+        vat_code = VAT_CODE_MAPPING[
+            self.registration_price_groups.first().vat_percentage
+        ]
+
+        if RegistrationWebStoreProductMapping.objects.filter(
+            registration_id=self.pk,
+            external_merchant_id=getattr(self.merchant, "merchant_id", None),
+            account=self.account,
+            vat_code=vat_code,
+        ).exists():
             return
 
         product_mapping_data = self.to_web_store_product_mapping_data()
-        accounting_data = self.to_web_store_product_accounting_data()
+        accounting_data = self.to_web_store_product_accounting_data(vat_code)
 
         resp_json = create_web_store_product_mapping(product_mapping_data)
         product_id = resp_json["productId"]
@@ -738,6 +756,7 @@ class Registration(CreatedModifiedBaseModel):
                 "external_merchant_id": self.merchant.merchant_id,
                 "account": self.account,
                 "external_product_id": product_id,
+                "vat_code": vat_code,
             },
         )
 
@@ -2102,11 +2121,6 @@ class WebStoreAccount(CreatedModifiedBaseModel):
         max_length=255,
     )
 
-    vat_code = models.CharField(
-        verbose_name=_("VAT code"),
-        max_length=2,
-    )
-
     company_code = models.CharField(
         verbose_name=_("SAP company code"),
         max_length=4,
@@ -2173,6 +2187,11 @@ class RegistrationWebStoreProductMapping(models.Model):
         WebStoreAccount,
         related_name="web_store_product_mappings",
         on_delete=models.PROTECT,
+    )
+
+    vat_code = models.CharField(
+        max_length=2,
+        choices=get_vat_code_mapping_choices(),
     )
 
     external_merchant_id = models.CharField(

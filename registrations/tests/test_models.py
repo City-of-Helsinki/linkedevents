@@ -2,6 +2,7 @@ from decimal import Decimal
 from uuid import uuid4
 
 import pytest
+import requests_mock
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core import mail
@@ -18,8 +19,10 @@ from helevents.tests.factories import UserFactory
 from registrations.enums import VatPercentage
 from registrations.exceptions import PriceGroupValidationError
 from registrations.models import (
+    RegistrationPriceGroup,
     RegistrationWebStoreProductMapping,
     SignUp,
+    VAT_CODE_MAPPING,
     web_store_price_group_meta_key,
     WebStoreAccount,
     WebStoreMerchant,
@@ -42,6 +45,10 @@ from registrations.tests.factories import (
     WebStoreMerchantFactory,
 )
 from registrations.utils import strip_trailing_zeroes_from_decimal
+from web_store.tests.product.test_web_store_product_api_client import (
+    DEFAULT_GET_PRODUCT_MAPPING_DATA,
+    DEFAULT_PRODUCT_ID,
+)
 
 contact_person_data = {
     "email": "test@email.com",
@@ -214,6 +221,42 @@ class TestRegistration(TestCase):
         )
 
         self.assertTrue(self.registration.has_payments)
+
+    def test_create_or_update_web_store_product_mapping_and_accounting(self):
+        with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
+            merchant = WebStoreMerchantFactory(
+                organization=self.registration.publisher, merchant_id="1234"
+            )
+        account = WebStoreAccountFactory(organization=self.registration.publisher)
+
+        product_url = f"{settings.WEB_STORE_API_BASE_URL}product/"
+        accounting_url = f"{product_url}{DEFAULT_PRODUCT_ID}/accounting"
+
+        for vat_percentage in [vat.value for vat in VatPercentage]:
+            with self.subTest(), requests_mock.Mocker() as req_mock:
+                RegistrationPriceGroupFactory(
+                    registration=self.registration, vat_percentage=vat_percentage
+                )
+
+                req_mock.post(product_url, json=DEFAULT_GET_PRODUCT_MAPPING_DATA)
+                req_mock.post(accounting_url, json=DEFAULT_GET_PRODUCT_MAPPING_DATA)
+
+                self.registration.create_or_update_web_store_product_mapping_and_accounting()
+
+                self.assertEqual(req_mock.call_count, 2)
+                self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 1)
+                self.assertEqual(
+                    RegistrationWebStoreProductMapping.objects.filter(
+                        registration=self.registration,
+                        external_merchant_id=merchant.merchant_id,
+                        account=account,
+                        vat_code=VAT_CODE_MAPPING[vat_percentage],
+                    ).count(),
+                    1,
+                )
+
+                RegistrationWebStoreProductMapping.objects.all().delete()
+                RegistrationPriceGroup.objects.all().delete()
 
 
 class TestRegistrationUserAccess(TestCase):
