@@ -2022,6 +2022,11 @@ class WebStoreAccount(CreatedModifiedBaseModel):
         default=True,
     )
 
+    name = models.CharField(
+        verbose_name=_("Name"),
+        max_length=255,
+    )
+
     vat_code = models.CharField(
         verbose_name=_("VAT code"),
         max_length=2,
@@ -2070,11 +2075,14 @@ class WebStoreAccount(CreatedModifiedBaseModel):
         default="",
     )
 
+    def __str__(self):
+        return self.name
+
     def delete(self, using=None, keep_parents=False, force_delete=False):
         if force_delete:
             pk = self.pk
             super().delete()
-            logger.info(f"Deleted Talpa account {self.main_ledger_account} (ID: {pk})")
+            logger.info(f"Deleted Talpa account {self.name} (ID: {pk})")
         else:
             raise ValidationError(_("Cannot delete a Talpa account."))
 

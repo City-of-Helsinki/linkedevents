@@ -191,6 +191,7 @@ class WebStoreMerchantFactory(factory.django.DjangoModelFactory):
 class WebStoreAccountFactory(factory.django.DjangoModelFactory):
     organization = factory.SubFactory(OrganizationFactory)
 
+    name = factory.Sequence(lambda n: "Account {0}".format(n))
     vat_code = "12"
     company_code = "1234"
     main_ledger_account = "123456"

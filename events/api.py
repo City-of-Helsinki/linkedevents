@@ -1181,7 +1181,6 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
                 "many": True,
                 "required": False,
                 "allow_null": True,
-                "max_length": 1,
                 "min_length": 0,
                 "context": self.context,
             }
@@ -1190,12 +1189,13 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
                 instance=(
                     self.instance.web_store_merchants.first() if self.instance else None
                 ),
+                max_length=1,
                 **common_web_store_field_kwargs,
             )
 
             fields["web_store_accounts"] = WebStoreAccountSerializer(
                 instance=(
-                    self.instance.web_store_accounts.first() if self.instance else None
+                    self.instance.web_store_accounts.all() if self.instance else None
                 ),
                 **common_web_store_field_kwargs,
             )
@@ -1223,12 +1223,39 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
         except WebStoreAPIError as exc:
             raise serializers.ValidationError(exc.messages)
 
-    @staticmethod
-    def _create_or_update_web_store_account(organization, web_store_account):
-        WebStoreAccount.objects.update_or_create(
-            organization=organization,
-            defaults=web_store_account,
-        )
+    def _create_web_store_accounts(self, organization, accounts_data):
+        web_store_accounts = []
+
+        for account_data in accounts_data:
+            account_data["created_by"] = self.request.user
+            account_data["last_modified_by"] = self.request.user
+
+            web_store_accounts.append(
+                WebStoreAccount(
+                    organization=organization,
+                    **account_data,
+                )
+            )
+
+        WebStoreAccount.objects.bulk_create(web_store_accounts)
+
+    def _update_web_store_accounts(self, organization, accounts_data):
+        new_accounts = []
+
+        for account_data in accounts_data:
+            if not (account_id := account_data.get("id")):
+                new_accounts.append(account_data)
+                continue
+
+            account_data["last_modified_by"] = self.request.user
+            WebStoreAccount.objects.update_or_create(
+                pk=account_id,
+                organization=organization,
+                defaults=account_data,
+            )
+
+        if new_accounts:
+            self._create_web_store_accounts(organization, new_accounts)
 
     def connect_organizations(self, connected_orgs, created_org):
         internal_types = {
@@ -1282,12 +1309,7 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
             self._create_or_update_web_store_merchant(org, merchants_data)
 
         if web_store_accounts:
-            account_data = web_store_accounts[0]
-
-            account_data["created_by"] = self.request.user
-            account_data["last_modified_by"] = self.request.user
-
-            self._create_or_update_web_store_account(org, account_data)
+            self._create_web_store_accounts(org, web_store_accounts)
 
         return org
 
@@ -1316,13 +1338,7 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
             self._create_or_update_web_store_merchant(org, merchants_data)
 
         if web_store_accounts:
-            account_data = web_store_accounts[0]
-
-            if not org.web_store_accounts.exists():
-                account_data["created_by"] = self.request.user
-            account_data["last_modified_by"] = self.request.user
-
-            self._create_or_update_web_store_account(org, account_data)
+            self._update_web_store_accounts(org, web_store_accounts)
 
         return org
 

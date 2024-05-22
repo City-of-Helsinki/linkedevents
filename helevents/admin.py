@@ -33,7 +33,6 @@ class WebStoreAccountInline(admin.StackedInline):
     model = WebStoreAccount
     extra = 0
     min_num = 0
-    max_num = 1
     verbose_name = _("Account")
     verbose_name_plural = _("Accounts")
 

@@ -43,6 +43,7 @@ default_web_store_merchants_data = [
 default_web_store_accounts_data = [
     {
         "active": True,
+        "name": "Test Account",
         "vat_code": "12",
         "company_code": "1234",
         "main_ledger_account": "123456",
@@ -148,6 +149,7 @@ def assert_account_fields_exist(data):
     fields = (
         "id",
         "active",
+        "name",
         "vat_code",
         "company_code",
         "main_ledger_account",
@@ -1998,44 +2000,70 @@ def test_superuser_and_financial_admin_can_patch_organization_with_web_store_acc
 
 @pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
 @pytest.mark.django_db
-def test_superuser_and_financial_can_patch_organizations_web_store_account(
+def test_superuser_and_financial_can_patch_organizations_web_store_accounts(
     data_source, organization, api_client, user_role
 ):
     user = create_user_by_role(user_role, organization)
     api_client.force_authenticate(user)
 
     account = WebStoreAccountFactory(organization=organization)
+    account2 = WebStoreAccountFactory(organization=organization)
 
     accounts_data = default_web_store_accounts_data[0].copy()
     accounts_data["id"] = account.pk
-    accounts_data["profit_center"] = "007"
+
+    accounts_data2 = default_web_store_accounts_data[0].copy()
+    accounts_data2["id"] = account2.pk
+    accounts_data2["name"] = "Test account 2"
+
     payload = {
-        "web_store_accounts": [accounts_data],
+        "web_store_accounts": [accounts_data, accounts_data2],
     }
 
-    assert WebStoreAccount.objects.count() == 1
+    assert WebStoreAccount.objects.count() == 2
     assert (
         WebStoreAccount.objects.filter(
             organization_id=organization.id, **payload["web_store_accounts"][0]
         ).count()
         == 0
     )
+    assert (
+        WebStoreAccount.objects.filter(
+            organization_id=organization.id, **payload["web_store_accounts"][1]
+        ).count()
+        == 0
+    )
+
     assert account.last_modified_by is None
     last_modified_time = account.last_modified_time
 
-    response = assert_patch_organization(api_client, organization.id, payload)
-    assert len(response.data["web_store_accounts"]) == 1
+    assert account2.last_modified_by is None
+    last_modified_time2 = account2.last_modified_time
 
-    assert WebStoreAccount.objects.count() == 1
+    response = assert_patch_organization(api_client, organization.id, payload)
+    assert len(response.data["web_store_accounts"]) == 2
+
+    assert WebStoreAccount.objects.count() == 2
     assert (
         WebStoreAccount.objects.filter(
             organization_id=organization.id, **payload["web_store_accounts"][0]
         ).count()
         == 1
     )
+    assert (
+        WebStoreAccount.objects.filter(
+            organization_id=organization.id, **payload["web_store_accounts"][1]
+        ).count()
+        == 1
+    )
+
     account.refresh_from_db()
     assert account.last_modified_by == user
     assert account.last_modified_time > last_modified_time
+
+    account2.refresh_from_db()
+    assert account2.last_modified_by == user
+    assert account2.last_modified_time > last_modified_time2
 
 
 @pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
@@ -2259,7 +2287,7 @@ def test_users_can_get_organization_with_all_web_store_account_fields(
 
 
 @pytest.mark.django_db
-def test_cannot_create_organization_with_more_than_one_web_store_account(
+def test_can_create_organization_with_more_than_one_web_store_account(
     data_source, organization, api_client
 ):
     user = create_user_by_role("superuser", None)
@@ -2271,6 +2299,7 @@ def test_cannot_create_organization_with_more_than_one_web_store_account(
     accounts_data.append(
         {
             "active": True,
+            "name": "Test Account 2",
             "vat_code": "22",
             "company_code": "2234",
             "main_ledger_account": "223456",
@@ -2288,17 +2317,13 @@ def test_cannot_create_organization_with_more_than_one_web_store_account(
 
     assert WebStoreAccount.objects.count() == 0
 
-    response = create_organization(api_client, payload)
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.data["web_store_accounts"]["non_field_errors"][0] == (
-        "Ensure this field has no more than 1 elements."
-    )
+    assert_create_organization(api_client, payload)
 
-    assert WebStoreAccount.objects.count() == 0
+    assert WebStoreAccount.objects.count() == 2
 
 
 @pytest.mark.django_db
-def test_cannot_update_organization_with_more_than_one_web_store_account(
+def test_can_update_organization_with_more_than_one_web_store_account(
     data_source, organization, api_client
 ):
     user = create_user_by_role("superuser", None)
@@ -2310,6 +2335,7 @@ def test_cannot_update_organization_with_more_than_one_web_store_account(
     accounts_data.append(
         {
             "active": True,
+            "name": "Test Account 2",
             "vat_code": "22",
             "company_code": "2234",
             "main_ledger_account": "223456",
@@ -2326,128 +2352,37 @@ def test_cannot_update_organization_with_more_than_one_web_store_account(
     }
 
     assert WebStoreAccount.objects.count() == 0
-
-    response = update_organization(api_client, organization.id, payload)
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.data["web_store_accounts"]["non_field_errors"][0] == (
-        "Ensure this field has no more than 1 elements."
-    )
-
-    assert WebStoreAccount.objects.count() == 0
-
-
-@pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
-@pytest.mark.django_db
-def test_cannot_patch_organization_with_more_than_one_web_store_account(
-    data_source, organization, api_client, user_role
-):
-    user = create_user_by_role(user_role, organization)
-    api_client.force_authenticate(user)
-
-    accounts_data = default_web_store_accounts_data.copy()
-    accounts_data.append(
-        {
-            "active": True,
-            "vat_code": "22",
-            "company_code": "2234",
-            "main_ledger_account": "223456",
-            "balance_profit_center": "2234567890",
-        }
-    )
-    payload = {
-        "web_store_accounts": accounts_data,
-    }
-
-    assert WebStoreAccount.objects.count() == 0
-
-    response = patch_organization(api_client, organization.id, payload)
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.data["web_store_accounts"]["non_field_errors"][0] == (
-        "Ensure this field has no more than 1 elements."
-    )
-
-    assert WebStoreAccount.objects.count() == 0
-
-
-@pytest.mark.django_db
-def test_always_update_existing_web_store_account(
-    data_source, organization, api_client
-):
-    user = create_user_by_role("superuser", None)
-    api_client.force_authenticate(user)
-
-    account = WebStoreAccountFactory(organization=organization)
-
-    origin_id = "test_organization2"
-    payload = {
-        "data_source": data_source.id,
-        "origin_id": origin_id,
-        "id": f"{data_source.id}:{origin_id}",
-        "name": organization_name,
-        "web_store_accounts": [
-            {
-                "active": True,
-                "vat_code": "22",
-                "company_code": "2234",
-                "main_ledger_account": "223456",
-                "balance_profit_center": "2234567890",
-            },
-        ],
-    }
-
-    assert WebStoreAccount.objects.count() == 1
-    for field, value in payload["web_store_accounts"][0].items():
-        if field == "active":
-            assert getattr(account, field) is value
-        else:
-            assert getattr(account, field) != value
 
     assert_update_organization(api_client, organization.id, payload)
 
-    account.refresh_from_db()
-    assert WebStoreAccount.objects.count() == 1
-    for field, value in payload["web_store_accounts"][0].items():
-        if field == "active":
-            assert getattr(account, field) is value
-        else:
-            assert getattr(account, field) == value
+    assert WebStoreAccount.objects.count() == 2
 
 
 @pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
 @pytest.mark.django_db
-def test_always_patch_existing_web_store_account(
+def test_can_patch_organization_with_more_than_one_web_store_account(
     data_source, organization, api_client, user_role
 ):
     user = create_user_by_role(user_role, organization)
     api_client.force_authenticate(user)
 
-    account = WebStoreAccountFactory(organization=organization)
-
+    accounts_data = default_web_store_accounts_data.copy()
+    accounts_data.append(
+        {
+            "active": True,
+            "name": "Test Account 2",
+            "vat_code": "22",
+            "company_code": "2234",
+            "main_ledger_account": "223456",
+            "balance_profit_center": "2234567890",
+        }
+    )
     payload = {
-        "web_store_accounts": [
-            {
-                "active": True,
-                "vat_code": "22",
-                "company_code": "2234",
-                "main_ledger_account": "223456",
-                "balance_profit_center": "2234567890",
-            },
-        ],
+        "web_store_accounts": accounts_data,
     }
 
-    assert WebStoreAccount.objects.count() == 1
-    for field, value in payload["web_store_accounts"][0].items():
-        if field == "active":
-            assert getattr(account, field) is value
-        else:
-            assert getattr(account, field) != value
+    assert WebStoreAccount.objects.count() == 0
 
     assert_patch_organization(api_client, organization.id, payload)
 
-    account.refresh_from_db()
-    assert WebStoreAccount.objects.count() == 1
-    for field, value in payload["web_store_accounts"][0].items():
-        if field == "active":
-            assert getattr(account, field) is value
-        else:
-            assert getattr(account, field) == value
+    assert WebStoreAccount.objects.count() == 2
