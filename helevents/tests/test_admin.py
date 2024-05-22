@@ -1,3 +1,4 @@
+import re
 from copy import deepcopy
 from unittest.mock import patch
 
@@ -687,14 +688,16 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
 
 
 class TestLocalOrganizationAccountAdmin(LocalOrganizationAdminTestCaseMixin, TestCase):
+    _ACCOUNT_ATTR_RE = re.compile(r"web_store_accounts-\d+-(\w+)")
+
     @staticmethod
     def _get_account_data(update_data=None):
         data = {
             "web_store_accounts-TOTAL_FORMS": "1",
             "web_store_accounts-INITIAL_FORMS": "0",
             "web_store_accounts-MIN_NUM_FORMS": "0",
-            "web_store_accounts-MAX_NUM_FORMS": "1",
             "web_store_accounts-0-active": "on",
+            "web_store_accounts-0-name": "Test Account",
             "web_store_accounts-0-vat_code": "33",
             "web_store_accounts-0-company_code": "4444",
             "web_store_accounts-0-main_ledger_account": "555555",
@@ -710,8 +713,8 @@ class TestLocalOrganizationAccountAdmin(LocalOrganizationAdminTestCaseMixin, Tes
         attrs_to_skip = attrs_to_skip or []
 
         for field, value in data.items():
-            if field.startswith("web_store_accounts-0-"):
-                account_attr = field.split("-")[-1]
+            if match := re.match(self._ACCOUNT_ATTR_RE, field):
+                account_attr = match.group(1)
                 if account_attr in attrs_to_skip:
                     continue
 
@@ -725,8 +728,8 @@ class TestLocalOrganizationAccountAdmin(LocalOrganizationAdminTestCaseMixin, Tes
         attrs_to_skip = attrs_to_skip or []
 
         for field, value in data.items():
-            if field.startswith("web_store_accounts-0-"):
-                account_attr = field.split("-")[-1]
+            if match := re.match(self._ACCOUNT_ATTR_RE, field):
+                account_attr = match.group(1)
                 if account_attr in attrs_to_skip:
                     continue
 
@@ -736,17 +739,28 @@ class TestLocalOrganizationAccountAdmin(LocalOrganizationAdminTestCaseMixin, Tes
                 else:
                     self.assertNotEqual(getattr(account, account_attr), value)
 
-    def test_can_add_web_store_account_to_a_new_organization(self):
+    def test_can_add_web_store_accounts_to_a_new_organization(self):
         self.assertEqual(Organization.objects.count(), 1)
         self.assertEqual(WebStoreAccount.objects.count(), 0)
 
+        account_data = self._get_account_data()
+        account_data2 = {
+            "web_store_accounts-TOTAL_FORMS": "2",
+            "web_store_accounts-1-active": "on",
+            "web_store_accounts-1-name": "Test Account 2",
+            "web_store_accounts-1-vat_code": "44",
+            "web_store_accounts-1-company_code": "5555",
+            "web_store_accounts-1-main_ledger_account": "666666",
+            "web_store_accounts-1-balance_profit_center": "77777",
+        }
         data = self._get_request_data(
             {
                 "name": "New Org",
                 "internal_type": "normal",
-                **self._get_account_data(),
             }
         )
+        data.update(account_data)
+        data.update(account_data2)
 
         response = self.client.post(
             "/admin/django_orghierarchy/organization/add/",
@@ -755,18 +769,22 @@ class TestLocalOrganizationAccountAdmin(LocalOrganizationAdminTestCaseMixin, Tes
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
 
         self.assertEqual(Organization.objects.count(), 2)
-        self.assertEqual(WebStoreAccount.objects.count(), 1)
+        self.assertEqual(WebStoreAccount.objects.count(), 2)
 
-        account = WebStoreAccount.objects.first()
-        self.assertEqual(
-            Organization.objects.last().web_store_accounts.first().pk,
-            account.pk,
-        )
-        self.assertEqual(account.created_by_id, self.admin_user.pk)
-        self.assertEqual(account.last_modified_by_id, self.admin_user.pk)
-        self.assertIsNotNone(account.created_time)
-        self.assertIsNotNone(account.last_modified_time)
-        self.assertAccountValuesEqual(account, data)
+        organization = Organization.objects.last()
+        for account_name, account_data in [
+            ("Test Account", account_data),
+            ("Test Account 2", account_data2),
+        ]:
+            account = WebStoreAccount.objects.get(
+                name=account_name,
+                organization_id=organization.pk,
+                created_by_id=self.admin_user.pk,
+                last_modified_by_id=self.admin_user.pk,
+            )
+            self.assertIsNotNone(account.created_time)
+            self.assertIsNotNone(account.last_modified_time)
+            self.assertAccountValuesEqual(account, account_data)
 
     def test_can_add_web_store_account_to_an_existing_organization(self):
         self.assertEqual(Organization.objects.count(), 1)
@@ -881,6 +899,7 @@ class TestLocalOrganizationAccountAdmin(LocalOrganizationAdminTestCaseMixin, Tes
         self.assertEqual(WebStoreAccount.objects.count(), 0)
 
         for field in [
+            "web_store_accounts-0-name",
             "web_store_accounts-0-vat_code",
             "web_store_accounts-0-company_code",
             "web_store_accounts-0-main_ledger_account",
@@ -910,6 +929,7 @@ class TestLocalOrganizationAccountAdmin(LocalOrganizationAdminTestCaseMixin, Tes
         account_data = self._get_account_data(
             update_data={
                 "web_store_accounts-INITIAL_FORMS": "1",
+                "web_store_accounts-0-name": account.name,
                 "web_store_accounts-0-vat_code": account.vat_code,
                 "web_store_accounts-0-company_code": account.company_code,
                 "web_store_accounts-0-main_ledger_account": account.main_ledger_account,

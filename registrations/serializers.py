@@ -1553,11 +1553,14 @@ class WebStoreMerchantSerializer(CreatedModifiedBaseSerializer):
 
 
 class WebStoreAccountSerializer(CreatedModifiedBaseSerializer):
+    id = serializers.IntegerField(required=False)
+
     class Meta(CreatedModifiedBaseSerializer.Meta):
         model = WebStoreAccount
         fields = (
             "id",
             "active",
+            "name",
             "vat_code",
             "company_code",
             "main_ledger_account",
