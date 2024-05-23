@@ -219,3 +219,20 @@ class UserIsAdminInAnyOrganization(BasePermission):
             return False
 
         return user.is_superuser or user.admin_organizations.exists()
+
+
+class OrganizationWebStoreMerchantsAndAccountsPermission(BasePermission):
+    def has_permission(self, request, view):
+        return (
+            request.user.is_authenticated and request.method in permissions.SAFE_METHODS
+        )
+
+    def has_object_permission(self, request: Request, view, obj):
+        if request.user.is_superuser:
+            return True
+
+        return (
+            request.user.is_admin_of(obj)
+            or request.user.is_registration_admin_of(obj)
+            or request.user.is_financial_admin_of(obj)
+        )

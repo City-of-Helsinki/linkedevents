@@ -56,6 +56,7 @@ from rest_framework import (
     status,
     viewsets,
 )
+from rest_framework.decorators import action
 from rest_framework.exceptions import APIException, ErrorDetail, ParseError
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.fields import DateTimeField
@@ -100,6 +101,7 @@ from events.permissions import (
     GuestRetrieve,
     IsObjectEditableByUser,
     OrganizationUserEditPermission,
+    OrganizationWebStoreMerchantsAndAccountsPermission,
     UserIsAdminInAnyOrganization,
 )
 from events.renderers import DOCXRenderer
@@ -1419,6 +1421,58 @@ class OrganizationViewSet(
             except Organization.DoesNotExist:
                 queryset = queryset.none()
         return queryset
+
+    @staticmethod
+    def _get_web_store_objects(organization, relation_name):
+        for ancestor in organization.get_ancestors(ascending=True, include_self=True):
+            if objects := list(getattr(ancestor, relation_name).filter(active=True)):
+                return objects
+
+        return []
+
+    @action(
+        methods=["get"],
+        detail=True,
+        permission_classes=[OrganizationWebStoreMerchantsAndAccountsPermission],
+    )
+    def merchants(self, request, pk=None, version=None):
+        if not settings.WEB_STORE_INTEGRATION_ENABLED:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        organization = self.get_object(skip_log_ids=True)
+        merchants = self._get_web_store_objects(organization, "web_store_merchants")
+        self._add_audit_logged_object_ids(merchants)
+
+        return Response(
+            data=WebStoreMerchantSerializer(
+                merchants,
+                many=True,
+                context=self.get_serializer_context(),
+                organization=organization,
+            ).data,
+            status=status.HTTP_200_OK,
+        )
+
+    @action(
+        methods=["get"],
+        detail=True,
+        permission_classes=[OrganizationWebStoreMerchantsAndAccountsPermission],
+    )
+    def accounts(self, request, pk=None, version=None):
+        if not settings.WEB_STORE_INTEGRATION_ENABLED:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        organization = self.get_object(skip_log_ids=True)
+        accounts = self._get_web_store_objects(organization, "web_store_accounts")
+        self._add_audit_logged_object_ids(accounts)
+
+        return Response(
+            data=WebStoreAccountSerializer(
+                accounts,
+                many=True,
+            ).data,
+            status=status.HTTP_200_OK,
+        )
 
 
 register_view(OrganizationViewSet, "organization")

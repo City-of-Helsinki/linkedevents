@@ -768,6 +768,12 @@ def user2_with_user_type(organization, user2, request):
     elif user_type == "org_admin":
         organization.admin_users.add(user2)
 
+    elif user_type == "org_registration_admin":
+        organization.registration_admin_users.add(user2)
+
+    elif user_type == "org_financial_admin":
+        organization.financial_admin_users.add(user2)
+
     elif user_type == "staff":
         user2.is_staff = True
         user2.save()

@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import pytest
 import requests_mock
-from django.conf import settings
+from django.conf import settings as django_settings
 from django.test import override_settings
 from django.utils import translation
 from django_orghierarchy.models import Organization
@@ -49,7 +49,10 @@ default_web_store_accounts_data = [
         "balance_profit_center": "1234567890",
     }
 ]
-merchant_create_url = f"{settings.WEB_STORE_API_BASE_URL}merchant/create/merchant/{settings.WEB_STORE_API_NAMESPACE}"
+merchant_create_url = (
+    f"{django_settings.WEB_STORE_API_BASE_URL}merchant/create/"
+    f"merchant/{django_settings.WEB_STORE_API_NAMESPACE}"
+)
 
 
 def organization_id(pk):
@@ -59,6 +62,22 @@ def organization_id(pk):
 
 def get_organization(api_client, pk):
     url = reverse(OrganizationDetailSerializer.view_name, kwargs={"pk": pk})
+
+    response = api_client.get(url, format="json")
+    return response
+
+
+def get_organization_merchants(api_client, pk):
+    base_url = reverse(OrganizationDetailSerializer.view_name, kwargs={"pk": pk})
+    url = f"{base_url}merchants/"
+
+    response = api_client.get(url, format="json")
+    return response
+
+
+def get_organization_accounts(api_client, pk):
+    base_url = reverse(OrganizationDetailSerializer.view_name, kwargs={"pk": pk})
+    url = f"{base_url}accounts/"
 
     response = api_client.get(url, format="json")
     return response
@@ -754,7 +773,8 @@ def test_superuser_or_financial_and_event_admin_can_create_organization_with_web
     assert mocked_web_store_api_request.called is True
     assert len(response.data["web_store_merchants"]) == 1
     assert (
-        response.data["web_store_merchants"][0]["url"] == settings.LINKED_EVENTS_UI_URL
+        response.data["web_store_merchants"][0]["url"]
+        == django_settings.LINKED_EVENTS_UI_URL
     )
 
     assert WebStoreMerchant.objects.count() == 1
@@ -762,7 +782,7 @@ def test_superuser_or_financial_and_event_admin_can_create_organization_with_web
         WebStoreMerchant.objects.filter(
             organization_id=response.data["id"],
             merchant_id=response.data["web_store_merchants"][0]["merchant_id"],
-            url=settings.LINKED_EVENTS_UI_URL,
+            url=django_settings.LINKED_EVENTS_UI_URL,
             created_by=user,
             last_modified_by=user,
             created_time__isnull=False,
@@ -808,7 +828,8 @@ def test_superuser_or_financial_and_event_admin_can_update_organization_with_web
     assert mocked_web_store_api_request.called is True
     assert len(response.data["web_store_merchants"]) == 1
     assert (
-        response.data["web_store_merchants"][0]["url"] == settings.LINKED_EVENTS_UI_URL
+        response.data["web_store_merchants"][0]["url"]
+        == django_settings.LINKED_EVENTS_UI_URL
     )
 
     assert WebStoreMerchant.objects.count() == 1
@@ -816,7 +837,7 @@ def test_superuser_or_financial_and_event_admin_can_update_organization_with_web
         WebStoreMerchant.objects.filter(
             organization_id=response.data["id"],
             merchant_id=response.data["web_store_merchants"][0]["merchant_id"],
-            url=settings.LINKED_EVENTS_UI_URL,
+            url=django_settings.LINKED_EVENTS_UI_URL,
             created_by=user,
             last_modified_by=user,
             created_time__isnull=False,
@@ -854,7 +875,8 @@ def test_superuser_and_financial_admin_can_patch_organization_with_web_store_mer
     assert mocked_web_store_api_request.called is True
     assert len(response.data["web_store_merchants"]) == 1
     assert (
-        response.data["web_store_merchants"][0]["url"] == settings.LINKED_EVENTS_UI_URL
+        response.data["web_store_merchants"][0]["url"]
+        == django_settings.LINKED_EVENTS_UI_URL
     )
 
     assert WebStoreMerchant.objects.count() == 1
@@ -862,7 +884,7 @@ def test_superuser_and_financial_admin_can_patch_organization_with_web_store_mer
         WebStoreMerchant.objects.filter(
             organization_id=response.data["id"],
             merchant_id=response.data["web_store_merchants"][0]["merchant_id"],
-            url=settings.LINKED_EVENTS_UI_URL,
+            url=django_settings.LINKED_EVENTS_UI_URL,
             created_by=user,
             last_modified_by=user,
             created_time__isnull=False,
@@ -896,7 +918,7 @@ def test_superuser_and_financial_can_patch_organizations_web_store_merchant(
     assert (
         WebStoreMerchant.objects.filter(
             organization_id=organization.id,
-            url=settings.LINKED_EVENTS_UI_URL,
+            url=django_settings.LINKED_EVENTS_UI_URL,
             **payload["web_store_merchants"][0],
         ).count()
         == 0
@@ -917,14 +939,15 @@ def test_superuser_and_financial_can_patch_organizations_web_store_merchant(
     assert mocked_web_store_api_request.called is True
     assert len(response.data["web_store_merchants"]) == 1
     assert (
-        response.data["web_store_merchants"][0]["url"] == settings.LINKED_EVENTS_UI_URL
+        response.data["web_store_merchants"][0]["url"]
+        == django_settings.LINKED_EVENTS_UI_URL
     )
 
     assert WebStoreMerchant.objects.count() == 1
     assert (
         WebStoreMerchant.objects.filter(
             organization_id=organization.id,
-            url=settings.LINKED_EVENTS_UI_URL,
+            url=django_settings.LINKED_EVENTS_UI_URL,
             **payload["web_store_merchants"][0],
         ).count()
         == 1
@@ -980,10 +1003,7 @@ def test_new_web_store_merchant_created_if_paytrail_merchant_id_changed(
     json_return_value = DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA.copy()
     json_return_value["merchantId"] = new_merchant_id
     with requests_mock.Mocker() as req_mock:
-        req_mock.post(
-            merchant_create_url,
-            json=json_return_value,
-        )
+        req_mock.post(merchant_create_url, json=json_return_value)
 
         response = assert_update_organization(api_client, organization.id, payload)
         assert len(response.data["web_store_merchants"]) == 1
@@ -1088,7 +1108,7 @@ def test_cannot_post_web_store_merchant_id_or_url(
         WebStoreMerchant.objects.filter(
             organization_id=response.data["id"],
             merchant_id=original_merchant_id,
-            url=settings.LINKED_EVENTS_UI_URL,
+            url=django_settings.LINKED_EVENTS_UI_URL,
         ).count()
         == 1
     )
@@ -1140,7 +1160,7 @@ def test_cannot_put_web_store_merchant_id_or_url(
 
     merchant.refresh_from_db()
     assert merchant.merchant_id == original_merchant_id
-    assert merchant.url == settings.LINKED_EVENTS_UI_URL
+    assert merchant.url == django_settings.LINKED_EVENTS_UI_URL
 
 
 @pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
@@ -1180,7 +1200,7 @@ def test_cannot_patch_web_store_merchant_id_or_url(
 
     merchant.refresh_from_db()
     assert merchant.merchant_id == original_merchant_id
-    assert merchant.url == settings.LINKED_EVENTS_UI_URL
+    assert merchant.url == django_settings.LINKED_EVENTS_UI_URL
 
 
 @pytest.mark.parametrize(
@@ -2258,3 +2278,343 @@ def test_can_patch_organization_with_more_than_one_web_store_account(
     assert_patch_organization(api_client, organization.id, payload)
 
     assert WebStoreAccount.objects.count() == 2
+
+
+@pytest.mark.parametrize(
+    "user2_with_user_type, expected_status",
+    [
+        ("superuser", status.HTTP_200_OK),
+        ("org_admin", status.HTTP_200_OK),
+        ("org_registration_admin", status.HTTP_200_OK),
+        ("org_financial_admin", status.HTTP_200_OK),
+        ("org_regular", status.HTTP_403_FORBIDDEN),
+        ("staff", status.HTTP_403_FORBIDDEN),
+        ("admin", status.HTTP_403_FORBIDDEN),
+        (None, status.HTTP_403_FORBIDDEN),
+    ],
+    indirect=["user2_with_user_type"],
+)
+@pytest.mark.django_db
+def test_get_organization_web_store_merchants(
+    api_client, organization, user2_with_user_type, expected_status
+):
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        WebStoreMerchantFactory(organization=organization)
+        WebStoreMerchantFactory(organization=organization)
+
+    api_client.force_authenticate(user2_with_user_type)
+
+    response = get_organization_merchants(api_client, organization.id)
+    assert response.status_code == expected_status
+
+    if expected_status == status.HTTP_200_OK:
+        assert len(response.data) == 2
+
+
+@pytest.mark.parametrize(
+    "user2_with_user_type, expected_status",
+    [
+        ("superuser", status.HTTP_200_OK),
+        ("org_admin", status.HTTP_200_OK),
+        ("org_registration_admin", status.HTTP_200_OK),
+        ("org_financial_admin", status.HTTP_200_OK),
+        ("org_regular", status.HTTP_403_FORBIDDEN),
+        ("staff", status.HTTP_403_FORBIDDEN),
+        ("admin", status.HTTP_403_FORBIDDEN),
+        (None, status.HTTP_403_FORBIDDEN),
+    ],
+    indirect=["user2_with_user_type"],
+)
+@pytest.mark.django_db
+def test_get_organization_web_store_merchants_from_ancestor(
+    api_client, organization, organization2, user2_with_user_type, expected_status
+):
+    organization2.admin_users.remove(user2_with_user_type)
+
+    organization2.parent = organization
+    organization2.save(update_fields=["parent"])
+
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        WebStoreMerchantFactory(organization=organization)
+        WebStoreMerchantFactory(organization=organization)
+
+    api_client.force_authenticate(user2_with_user_type)
+
+    response = get_organization_merchants(api_client, organization2.id)
+    assert response.status_code == expected_status
+
+    if expected_status == status.HTTP_200_OK:
+        assert len(response.data) == 2
+
+
+@pytest.mark.parametrize(
+    "user2_with_user_type, expected_status",
+    [
+        ("superuser", status.HTTP_200_OK),
+        ("org_admin", status.HTTP_200_OK),
+        ("org_registration_admin", status.HTTP_200_OK),
+        ("org_financial_admin", status.HTTP_200_OK),
+        ("org_regular", status.HTTP_403_FORBIDDEN),
+        ("staff", status.HTTP_403_FORBIDDEN),
+        ("admin", status.HTTP_403_FORBIDDEN),
+        (None, status.HTTP_403_FORBIDDEN),
+    ],
+    indirect=["user2_with_user_type"],
+)
+@pytest.mark.django_db
+def test_get_organization_web_store_accounts(
+    api_client, organization, user2_with_user_type, expected_status
+):
+    WebStoreAccountFactory(organization=organization)
+    WebStoreAccountFactory(organization=organization)
+
+    api_client.force_authenticate(user2_with_user_type)
+
+    response = get_organization_accounts(api_client, organization.id)
+    assert response.status_code == expected_status
+
+    if expected_status == status.HTTP_200_OK:
+        assert len(response.data) == 2
+
+
+@pytest.mark.parametrize(
+    "user2_with_user_type, expected_status",
+    [
+        ("superuser", status.HTTP_200_OK),
+        ("org_admin", status.HTTP_200_OK),
+        ("org_registration_admin", status.HTTP_200_OK),
+        ("org_financial_admin", status.HTTP_200_OK),
+        ("org_regular", status.HTTP_403_FORBIDDEN),
+        ("staff", status.HTTP_403_FORBIDDEN),
+        ("admin", status.HTTP_403_FORBIDDEN),
+        (None, status.HTTP_403_FORBIDDEN),
+    ],
+    indirect=["user2_with_user_type"],
+)
+@pytest.mark.django_db
+def test_get_organization_web_store_accounts_from_ancestor(
+    api_client, organization, organization2, user2_with_user_type, expected_status
+):
+    organization2.admin_users.remove(user2_with_user_type)
+
+    organization2.parent = organization
+    organization2.save(update_fields=["parent"])
+
+    WebStoreAccountFactory(organization=organization)
+    WebStoreAccountFactory(organization=organization)
+
+    api_client.force_authenticate(user2_with_user_type)
+
+    response = get_organization_accounts(api_client, organization2.id)
+    assert response.status_code == expected_status
+
+    if expected_status == status.HTTP_200_OK:
+        assert len(response.data) == 2
+
+
+@pytest.mark.django_db
+def test_own_organization_api_key_can_get_organization_web_store_merchants(
+    api_client, organization, data_source
+):
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        WebStoreMerchantFactory(organization=organization)
+        WebStoreMerchantFactory(organization=organization)
+
+    data_source.user_editable_registrations = True
+    data_source.owner = organization
+    data_source.save(update_fields=["user_editable_registrations", "owner"])
+
+    api_client.credentials(apikey=data_source.api_key)
+
+    response = get_organization_merchants(api_client, organization.id)
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.data) == 2
+
+
+@pytest.mark.django_db
+def test_other_organization_api_key_cannot_get_organization_web_store_merchants(
+    api_client, organization, organization2, data_source
+):
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        WebStoreMerchantFactory(organization=organization)
+        WebStoreMerchantFactory(organization=organization)
+
+    data_source.user_editable_registrations = True
+    data_source.owner = organization2
+    data_source.save(update_fields=["user_editable_registrations", "owner"])
+
+    api_client.credentials(apikey=data_source.api_key)
+
+    response = get_organization_merchants(api_client, organization.id)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_invalid_api_key_cannot_get_organization_web_store_merchants(
+    api_client, organization
+):
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        WebStoreMerchantFactory(organization=organization)
+        WebStoreMerchantFactory(organization=organization)
+
+    api_client.credentials(apikey="wrong")
+
+    response = get_organization_merchants(api_client, organization.id)
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+@pytest.mark.django_db
+def test_own_organization_api_key_can_get_organization_web_store_accounts(
+    api_client, organization, data_source
+):
+    WebStoreAccountFactory(organization=organization)
+    WebStoreAccountFactory(organization=organization)
+
+    data_source.user_editable_registrations = True
+    data_source.owner = organization
+    data_source.save(update_fields=["user_editable_registrations", "owner"])
+
+    api_client.credentials(apikey=data_source.api_key)
+
+    response = get_organization_accounts(api_client, organization.id)
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.data) == 2
+
+
+@pytest.mark.django_db
+def test_other_organization_api_key_cannot_get_organization_web_store_accounts(
+    api_client, organization, organization2, data_source
+):
+    WebStoreAccountFactory(organization=organization)
+    WebStoreAccountFactory(organization=organization)
+
+    data_source.user_editable_registrations = True
+    data_source.owner = organization2
+    data_source.save(update_fields=["user_editable_registrations", "owner"])
+
+    api_client.credentials(apikey=data_source.api_key)
+
+    response = get_organization_accounts(api_client, organization.id)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_invalid_api_key_cannot_get_organization_web_store_accounts(
+    api_client, organization
+):
+    WebStoreAccountFactory(organization=organization)
+    WebStoreAccountFactory(organization=organization)
+
+    api_client.credentials(apikey="wrong")
+
+    response = get_organization_accounts(api_client, organization.id)
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+@pytest.mark.parametrize("method", ["post", "put", "patch", "delete"])
+@pytest.mark.django_db
+def test_organization_web_store_merchants_disallowed_http_methods(
+    user_api_client, organization, method
+):
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        WebStoreMerchantFactory(organization=organization)
+        WebStoreMerchantFactory(organization=organization)
+
+    base_url = reverse(
+        OrganizationDetailSerializer.view_name, kwargs={"pk": organization.pk}
+    )
+    url = f"{base_url}merchants/"
+
+    response = getattr(user_api_client, method)(url, format="json")
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.parametrize("method", ["post", "put", "patch", "delete"])
+@pytest.mark.django_db
+def test_organization_web_store_accounts_disallowed_http_methods(
+    user_api_client, organization, method
+):
+    WebStoreAccountFactory(organization=organization)
+    WebStoreAccountFactory(organization=organization)
+
+    base_url = reverse(
+        OrganizationDetailSerializer.view_name, kwargs={"pk": organization.pk}
+    )
+    url = f"{base_url}accounts/"
+
+    response = getattr(user_api_client, method)(url, format="json")
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.parametrize(
+    "request_function", [get_organization_merchants, get_organization_accounts]
+)
+@pytest.mark.parametrize(
+    "user2_with_user_type",
+    [
+        "superuser",
+        "org_admin",
+        "org_registration_admin",
+        "org_financial_admin",
+    ],
+    indirect=["user2_with_user_type"],
+)
+@pytest.mark.django_db
+def test_get_organization_web_store_merchants_and_accounts_empty_result(
+    api_client, organization, request_function, user2_with_user_type
+):
+    api_client.force_authenticate(user2_with_user_type)
+
+    response = request_function(api_client, organization.id)
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.data) == 0
+
+
+@pytest.mark.parametrize(
+    "user2_with_user_type",
+    [
+        "superuser",
+        "org_admin",
+        "org_registration_admin",
+        "org_financial_admin",
+    ],
+    indirect=["user2_with_user_type"],
+)
+@pytest.mark.django_db
+def test_get_organization_web_store_merchants_integration_disabled_404(
+    api_client, organization, settings, user2_with_user_type
+):
+    settings.WEB_STORE_INTEGRATION_ENABLED = False
+
+    WebStoreMerchantFactory(organization=organization)
+    WebStoreMerchantFactory(organization=organization)
+
+    api_client.force_authenticate(user2_with_user_type)
+
+    response = get_organization_merchants(api_client, organization.id)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.parametrize(
+    "user2_with_user_type",
+    [
+        "superuser",
+        "org_admin",
+        "org_registration_admin",
+        "org_financial_admin",
+    ],
+    indirect=["user2_with_user_type"],
+)
+@pytest.mark.django_db
+def test_get_organization_web_store_accounts_integration_disabled_404(
+    api_client, organization, settings, user2_with_user_type
+):
+    settings.WEB_STORE_INTEGRATION_ENABLED = False
+
+    WebStoreAccountFactory(organization=organization)
+    WebStoreAccountFactory(organization=organization)
+
+    api_client.force_authenticate(user2_with_user_type)
+
+    response = get_organization_accounts(api_client, organization.id)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
