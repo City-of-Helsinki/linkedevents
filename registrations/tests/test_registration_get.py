@@ -112,6 +112,8 @@ def assert_registration_fields_exist(data, is_admin_user=False):
         "is_created_by_current_user",
         "signup_url",
         "registration_price_groups",
+        "registration_merchant",
+        "registration_account",
         "@id",
         "@context",
         "@type",

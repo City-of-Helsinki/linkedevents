@@ -8,12 +8,21 @@ from reversion.admin import VersionAdmin
 
 from events.admin import PublisherFilter
 from events.models import Language
-from registrations.forms import RegistrationAdminForm, RegistrationPriceGroupAdminForm
+from registrations.forms import (
+    RegistrationAdminForm,
+    RegistrationPriceGroupAdminForm,
+    RegistrationWebStoreAccountAdminForm,
+    RegistrationWebStoreMerchantAdminForm,
+)
 from registrations.models import (
     PriceGroup,
     Registration,
     RegistrationPriceGroup,
     RegistrationUserAccess,
+    RegistrationWebStoreAccount,
+    RegistrationWebStoreMerchant,
+    RegistrationWebStoreProductMapping,
+    VAT_CODE_MAPPING,
 )
 
 
@@ -25,6 +34,18 @@ class RegistrationBaseAdmin(admin.ModelAdmin):
             obj.last_modified_by = request.user
 
         super().save_model(request, obj, form, change)
+
+
+class RegistrationWebStoreMerchantAndAccountBaseAdmin(admin.StackedInline):
+    extra = 1
+    min_num = 0
+    max_num = 1
+
+    def has_delete_permission(self, request, obj=None):
+        return (
+            super().has_delete_permission(request, obj)
+            and getattr(obj, "web_store_product_mapping", None) is None
+        )
 
 
 class EventFilter(AutocompleteFilter):
@@ -55,6 +76,24 @@ class RegistrationPriceGroupInline(admin.TabularInline):
     verbose_name_plural = _("Registration price groups")
 
 
+class RegistrationWebStoreMerchantInline(
+    RegistrationWebStoreMerchantAndAccountBaseAdmin
+):
+    model = RegistrationWebStoreMerchant
+    form = RegistrationWebStoreMerchantAdminForm
+    verbose_name = _("Merchant")
+    verbose_name_plural = _("Merchants")
+
+
+class RegistrationWebStoreAccountInline(
+    RegistrationWebStoreMerchantAndAccountBaseAdmin
+):
+    model = RegistrationWebStoreAccount
+    form = RegistrationWebStoreAccountAdminForm
+    verbose_name = _("Account")
+    verbose_name_plural = _("Accounts")
+
+
 class RegistrationAdmin(RegistrationBaseAdmin, TranslationAdmin, VersionAdmin):
     form = RegistrationAdminForm
     list_display = (
@@ -65,14 +104,22 @@ class RegistrationAdmin(RegistrationBaseAdmin, TranslationAdmin, VersionAdmin):
     )
     list_filter = (EventFilter,)
     autocomplete_fields = ("event",)
-    inlines = (RegistrationUserAccessInline, RegistrationPriceGroupInline)
+    inlines = (
+        RegistrationUserAccessInline,
+        RegistrationPriceGroupInline,
+        RegistrationWebStoreMerchantInline,
+        RegistrationWebStoreAccountInline,
+    )
 
     def get_formsets_with_inlines(self, request, obj=None):
         for inline in self.get_inline_instances(request, obj):
-            # hide RegistrationPriceGroupInline if Talpa integration is not enabled
-            if (
-                not isinstance(inline, RegistrationPriceGroupInline)
-                or settings.WEB_STORE_INTEGRATION_ENABLED
+            # hide Talpa-related inline forms if Talpa integration is not enabled
+            if settings.WEB_STORE_INTEGRATION_ENABLED or not any(
+                [
+                    isinstance(inline, RegistrationPriceGroupInline),
+                    isinstance(inline, RegistrationWebStoreMerchantInline),
+                    isinstance(inline, RegistrationWebStoreAccountInline),
+                ]
             ):
                 yield inline.get_formset(request, obj), inline
 
@@ -94,9 +141,31 @@ class RegistrationAdmin(RegistrationBaseAdmin, TranslationAdmin, VersionAdmin):
 
     @transaction.atomic
     def save_related(self, request, form, formsets, change):
+        merchant_or_account_changed = False
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            for formset in formsets:
+                if (
+                    formset.model
+                    in (RegistrationWebStoreMerchant, RegistrationWebStoreAccount)
+                    and formset.has_changed()
+                ):
+                    merchant_or_account_changed = True
+                    break
+
         super().save_related(request, form, formsets, change)
 
-        if settings.WEB_STORE_INTEGRATION_ENABLED:
+        if (
+            settings.WEB_STORE_INTEGRATION_ENABLED
+            and getattr(form.instance, "registration_merchant", None)
+            and getattr(form.instance, "registration_account", None)
+            and (
+                not RegistrationWebStoreProductMapping.objects.filter(
+                    registration=form.instance,
+                    vat_code=VAT_CODE_MAPPING[form.cleaned_data["vat_percentage"]],
+                ).exists()
+                or merchant_or_account_changed
+            )
+        ):
             form.instance.create_or_update_web_store_product_mapping_and_accounting()
 
     def get_readonly_fields(self, request, obj=None):

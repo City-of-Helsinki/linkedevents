@@ -421,7 +421,6 @@ def test_email_sent_on_successful_signup_group_deletion_for_a_recurring_event(
 
     #  assert that the email was sent
     message_html_string = str(mail.outbox[0].alternatives[0])
-    print(message_html_string)
     assert mail.outbox[0].subject.startswith(expected_subject)
     assert expected_heading in message_html_string
     assert expected_text in message_html_string

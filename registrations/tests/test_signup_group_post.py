@@ -34,12 +34,12 @@ from registrations.tests.factories import (
     RegistrationFactory,
     RegistrationPriceGroupFactory,
     RegistrationUserAccessFactory,
+    RegistrationWebStoreAccountFactory,
+    RegistrationWebStoreMerchantFactory,
     RegistrationWebStoreProductMappingFactory,
     SeatReservationCodeFactory,
     SignUpFactory,
     SignUpGroupFactory,
-    WebStoreAccountFactory,
-    WebStoreMerchantFactory,
 )
 from registrations.tests.test_registration_post import hel_email
 from registrations.tests.utils import (
@@ -244,7 +244,9 @@ def test_authenticated_user_can_create_signup_group_with_payment(api_client, use
     registration = RegistrationFactory(event__name="Foo")
 
     with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
-        RegistrationWebStoreProductMappingFactory(registration=registration)
+        RegistrationWebStoreMerchantFactory(registration=registration)
+    RegistrationWebStoreAccountFactory(registration=registration)
+    RegistrationWebStoreProductMappingFactory(registration=registration)
 
     user = create_user_by_role(
         user_role,
@@ -374,15 +376,20 @@ def test_authenticated_user_can_create_signup_group_with_payment(api_client, use
     ],
 )
 @pytest.mark.django_db
-def test_signup_group_create_web_store_product_mapping_if_missing_during_payment_creation(
+def test_signup_group_update_web_store_product_mapping_if_merchant_id_has_changed(
     api_client, registration, user_role
 ):
     LanguageFactory(pk="fi", service_language=True)
     LanguageFactory(pk="en", service_language=True)
 
     with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
-        WebStoreMerchantFactory(organization=registration.publisher)
-    WebStoreAccountFactory(organization=registration.publisher)
+        registration_merchant = RegistrationWebStoreMerchantFactory(
+            registration=registration
+        )
+    RegistrationWebStoreAccountFactory(registration=registration)
+
+    registration_merchant.external_merchant_id = "1234"
+    registration_merchant.save(update_fields=["external_merchant_id"])
 
     reservation = SeatReservationCodeFactory(seats=2, registration=registration)
     registration_price_group = RegistrationPriceGroupFactory(registration=registration)
@@ -485,7 +492,9 @@ def test_create_signup_group_payment_without_pricetotal_in_response(api_client):
     registration = RegistrationFactory(event__name="Foo")
 
     with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
-        RegistrationWebStoreProductMappingFactory(registration=registration)
+        RegistrationWebStoreMerchantFactory(registration=registration)
+    RegistrationWebStoreAccountFactory(registration=registration)
+    RegistrationWebStoreProductMappingFactory(registration=registration)
 
     user = create_user_by_role(
         "registration_admin",
@@ -556,7 +565,9 @@ def test_create_signup_group_payment_web_store_api_field_error(
     registration, api_client
 ):
     with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
-        RegistrationWebStoreProductMappingFactory(registration=registration)
+        RegistrationWebStoreMerchantFactory(registration=registration)
+    RegistrationWebStoreAccountFactory(registration=registration)
+    RegistrationWebStoreProductMappingFactory(registration=registration)
 
     reservation = SeatReservationCodeFactory(seats=2, registration=registration)
 
@@ -613,7 +624,9 @@ def test_create_signup_group_payment_web_store_api_non_field_error(
     registration, api_client
 ):
     with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
-        RegistrationWebStoreProductMappingFactory(registration=registration)
+        RegistrationWebStoreMerchantFactory(registration=registration)
+    RegistrationWebStoreAccountFactory(registration=registration)
+    RegistrationWebStoreProductMappingFactory(registration=registration)
 
     reservation = SeatReservationCodeFactory(seats=2, registration=registration)
 
@@ -791,7 +804,9 @@ def test_create_signup_group_payment_signup_is_waitlisted(
     )
 
     with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
-        RegistrationWebStoreProductMappingFactory(registration=registration)
+        RegistrationWebStoreMerchantFactory(registration=registration)
+    RegistrationWebStoreAccountFactory(registration=registration)
+    RegistrationWebStoreProductMappingFactory(registration=registration)
 
     reservation = SeatReservationCodeFactory(seats=2, registration=registration)
 

@@ -286,6 +286,9 @@ class WebStoreMerchant(CreatedModifiedBaseModel):
         default="",
     )
 
+    def __str__(self):
+        return f"{self.name} ({self.pk})"
+
     def to_web_store_merchant_json(self):
         return {
             "merchantName": self.name,
@@ -661,30 +664,8 @@ class Registration(CreatedModifiedBaseModel):
             or user.is_substitute_user_of(self.registration_user_accesses)
         )
 
-    @cached_property
-    def merchant(self):
-        if merchant := self.publisher.web_store_merchants.filter(active=True).first():
-            return merchant
-
-        for ancestor in self.publisher.get_ancestors(ascending=True):
-            if merchant := ancestor.web_store_merchants.filter(active=True).first():
-                return merchant
-
-        return None
-
-    @cached_property
-    def account(self):
-        if account := self.publisher.web_store_accounts.filter(active=True).first():
-            return account
-
-        for ancestor in self.publisher.get_ancestors(ascending=True):
-            if account := ancestor.web_store_accounts.filter(active=True).first():
-                return account
-
-        return None
-
     def to_web_store_product_mapping_data(self):
-        if not (merchant := self.merchant):
+        if not (merchant := getattr(self, "registration_merchant", None)):
             raise WebStoreProductMappingValidationError(
                 _(
                     "A WebStoreMerchant is required to create a product mapping in Talpa."
@@ -694,11 +675,11 @@ class Registration(CreatedModifiedBaseModel):
         return {
             "namespace": settings.WEB_STORE_API_NAMESPACE,
             "namespaceEntityId": self.pk,
-            "merchantId": merchant.merchant_id,
+            "merchantId": merchant.external_merchant_id,
         }
 
     def to_web_store_product_accounting_data(self, vat_code: str):
-        if not (account := self.account):
+        if not (account := getattr(self, "registration_account", None)):
             raise WebStoreProductMappingValidationError(
                 _(
                     "A WebStoreAccount is required to create product accounting in Talpa."
@@ -734,14 +715,6 @@ class Registration(CreatedModifiedBaseModel):
             self.registration_price_groups.first().vat_percentage
         ]
 
-        if RegistrationWebStoreProductMapping.objects.filter(
-            registration_id=self.pk,
-            external_merchant_id=getattr(self.merchant, "merchant_id", None),
-            account=self.account,
-            vat_code=vat_code,
-        ).exists():
-            return
-
         product_mapping_data = self.to_web_store_product_mapping_data()
         accounting_data = self.to_web_store_product_accounting_data(vat_code)
 
@@ -753,8 +726,6 @@ class Registration(CreatedModifiedBaseModel):
         RegistrationWebStoreProductMapping.objects.update_or_create(
             registration=self,
             defaults={
-                "external_merchant_id": self.merchant.merchant_id,
-                "account": self.account,
                 "external_product_id": product_id,
                 "vat_code": vat_code,
             },
@@ -920,13 +891,18 @@ class SignUpMixin:
         else:
             kwargs = {"signup_group": self}
 
-        if not RegistrationWebStoreProductMapping.objects.filter(
-            registration=self.registration,
-            external_merchant_id=getattr(
-                self.registration.merchant, "merchant_id", None
-            ),
-            account=self.registration.account,
-        ).exists():
+        if (
+            (
+                registration_merchant := getattr(
+                    self.registration, "registration_merchant", None
+                )
+            )
+            and registration_merchant.external_merchant_id
+            != registration_merchant.merchant.merchant_id
+        ):
+            # New merchant has been created in Talpa because of an updated Paytrail merchant ID,
+            # and the registration hasn't been updated after that
+            # => need to update product mapping here.
             self.registration.create_or_update_web_store_product_mapping_and_accounting()
 
         kwargs["expires_at"] = localtime() + timedelta(
@@ -2102,20 +2078,7 @@ class SignUpPaymentRefund(SoftDeletableBaseModel):
     )
 
 
-class WebStoreAccount(CreatedModifiedBaseModel):
-    organization = models.ForeignKey(
-        Organization,
-        related_name="web_store_accounts",
-        on_delete=models.CASCADE,
-    )
-
-    # Since accounts cannot be deleted from Talpa, allow to
-    # toggle their active / inactive status instead in Linked Events.
-    active = models.BooleanField(
-        verbose_name=_("Is active"),
-        default=True,
-    )
-
+class WebStoreAccountBaseModel(models.Model):
     name = models.CharField(
         verbose_name=_("Name"),
         max_length=255,
@@ -2167,6 +2130,24 @@ class WebStoreAccount(CreatedModifiedBaseModel):
     def __str__(self):
         return self.name
 
+    class Meta:
+        abstract = True
+
+
+class WebStoreAccount(CreatedModifiedBaseModel, WebStoreAccountBaseModel):
+    organization = models.ForeignKey(
+        Organization,
+        related_name="web_store_accounts",
+        on_delete=models.CASCADE,
+    )
+
+    # Since accounts cannot be deleted from Talpa, allow to
+    # toggle their active / inactive status instead in Linked Events.
+    active = models.BooleanField(
+        verbose_name=_("Is active"),
+        default=True,
+    )
+
     def delete(self, using=None, keep_parents=False, force_delete=False):
         if force_delete:
             pk = self.pk
@@ -2183,10 +2164,8 @@ class RegistrationWebStoreProductMapping(models.Model):
         on_delete=models.CASCADE,
     )
 
-    account = models.ForeignKey(
-        WebStoreAccount,
-        related_name="web_store_product_mappings",
-        on_delete=models.PROTECT,
+    external_product_id = models.CharField(
+        max_length=64,
     )
 
     vat_code = models.CharField(
@@ -2194,11 +2173,64 @@ class RegistrationWebStoreProductMapping(models.Model):
         choices=get_vat_code_mapping_choices(),
     )
 
-    external_merchant_id = models.CharField(
-        max_length=64,
-        blank=True,
+
+class RegistrationWebStoreMerchant(models.Model):
+    registration = models.OneToOneField(
+        Registration,
+        related_name="registration_merchant",
+        on_delete=models.CASCADE,
+        primary_key=True,
     )
 
-    external_product_id = models.CharField(
+    merchant = models.ForeignKey(
+        WebStoreMerchant,
+        related_name="registration_merchants",
+        on_delete=models.PROTECT,
+    )
+
+    external_merchant_id = models.CharField(
         max_length=64,
     )
+
+    def to_merchant_data_dict(self) -> dict:
+        return {
+            "merchant": self.merchant,
+            "external_merchant_id": self.external_merchant_id,
+        }
+
+    def data_has_changed(self, merchant_data: dict) -> bool:
+        return merchant_data != self.to_merchant_data_dict()
+
+
+class RegistrationWebStoreAccount(WebStoreAccountBaseModel):
+    registration = models.OneToOneField(
+        Registration,
+        related_name="registration_account",
+        on_delete=models.CASCADE,
+        primary_key=True,
+    )
+
+    account = models.ForeignKey(
+        WebStoreAccount,
+        related_name="registration_accounts",
+        on_delete=models.PROTECT,
+    )
+
+    def to_account_data_dict(self) -> dict:
+        return {
+            "account": self.account,
+            "company_code": self.company_code,
+            "main_ledger_account": self.main_ledger_account,
+            "balance_profit_center": self.balance_profit_center,
+            "internal_order": self.internal_order,
+            "profit_center": self.profit_center,
+            "project": self.project,
+            "operation_area": self.operation_area,
+        }
+
+    def data_has_changed(self, account_data: dict) -> bool:
+        for field, value in self.to_account_data_dict().items():
+            if account_data.get(field, "") != value:
+                return True
+
+        return False

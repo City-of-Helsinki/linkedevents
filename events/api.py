@@ -118,6 +118,10 @@ from registrations.models import (
     OfferPriceGroup,
     RegistrationPriceGroup,
     RegistrationUserAccess,
+    RegistrationWebStoreAccount,
+    RegistrationWebStoreMerchant,
+    RegistrationWebStoreProductMapping,
+    VAT_CODE_MAPPING,
     WebStoreAccount,
     WebStoreMerchant,
 )
@@ -1755,12 +1759,66 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
     def _create_or_update_registration_price_groups(
         registration, registration_price_groups
     ):
+        price_groups = []
+
         for data in registration_price_groups:
-            RegistrationPriceGroup.objects.update_or_create(
-                id=data.pop("id", None),
-                registration=registration,
-                defaults=data,
+            price_groups.append(
+                RegistrationPriceGroup.objects.update_or_create(
+                    id=data.pop("id", None),
+                    registration=registration,
+                    defaults=data,
+                )[0]
             )
+
+        return price_groups
+
+    @staticmethod
+    def _create_or_update_registration_merchant(registration, registration_merchant):
+        if not registration_merchant:
+            return None, False
+
+        registration_merchant["external_merchant_id"] = registration_merchant[
+            "merchant"
+        ].merchant_id
+
+        instance = getattr(registration, "registration_merchant", None)
+        has_changed = instance is None or instance.data_has_changed(
+            registration_merchant
+        )
+
+        if instance:
+            for field in registration_merchant:
+                setattr(instance, field, registration_merchant[field])
+            instance.save(update_fields=registration_merchant.keys())
+        else:
+            instance = RegistrationWebStoreMerchant.objects.create(
+                registration=registration,
+                **registration_merchant,
+            )
+
+        return instance, has_changed
+
+    @staticmethod
+    def _create_or_update_registration_account(registration, registration_account):
+        if not registration_account:
+            return None, False
+
+        instance = getattr(registration, "registration_account", None)
+        has_changed = instance is None or instance.data_has_changed(
+            registration_account
+        )
+
+        if instance:
+            for field in registration_account:
+                setattr(instance, field, registration_account[field])
+            instance.save(update_fields=registration_account.keys())
+        else:
+            instance = RegistrationWebStoreAccount.objects.create(
+                registration=registration,
+                **registration_account,
+            )
+
+        return instance, has_changed
 
     @transaction.atomic
     def create(self, validated_data):
@@ -1779,6 +1837,8 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
             "registration_user_accesses", []
         )
         registration_price_groups = validated_data.pop("registration_price_groups", [])
+        registration_merchant = validated_data.pop("registration_merchant", None)
+        registration_account = validated_data.pop("registration_account", None)
 
         try:
             registration = super().create(validated_data)
@@ -1796,10 +1856,20 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
         )
 
         if settings.WEB_STORE_INTEGRATION_ENABLED:
-            # Create registration price groups that signees / participants can choose from
-            self._create_or_update_registration_price_groups(
+            price_groups = self._create_or_update_registration_price_groups(
                 registration, registration_price_groups
             )
+
+            merchant, __ = self._create_or_update_registration_merchant(
+                registration, registration_merchant
+            )
+
+            account, __ = self._create_or_update_registration_account(
+                registration, registration_account
+            )
+
+            if price_groups and merchant and account:
+                registration.create_or_update_web_store_product_mapping_and_accounting()
 
         return registration
 
@@ -1811,6 +1881,8 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
         registration_price_groups = validated_data.pop(
             "registration_price_groups", None
         )
+        registration_merchant = validated_data.pop("registration_merchant", None)
+        registration_account = validated_data.pop("registration_account", None)
 
         # update validated fields
         super().update(instance, validated_data)
@@ -1828,17 +1900,42 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
             getattr(instance, related_name).exclude(pk__in=ids).delete()
 
             # Update or create related objects
-            getattr(self, f"_create_or_update_{related_name}")(instance, related_data)
+            return getattr(self, f"_create_or_update_{related_name}")(
+                instance, related_data
+            )
 
         # update registration users
         if isinstance(registration_user_accesses, list):
             update_related(registration_user_accesses, "registration_user_accesses")
 
-        # update registration price groups
-        if settings.WEB_STORE_INTEGRATION_ENABLED and isinstance(
-            registration_price_groups, list
-        ):
-            update_related(registration_price_groups, "registration_price_groups")
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            if isinstance(registration_price_groups, list):
+                price_groups = update_related(
+                    registration_price_groups, "registration_price_groups"
+                )
+            else:
+                price_groups = None
+
+            __, merchant_has_changed = self._create_or_update_registration_merchant(
+                instance, registration_merchant
+            )
+
+            __, account_has_changed = self._create_or_update_registration_account(
+                instance, registration_account
+            )
+
+            if (
+                merchant_has_changed
+                or account_has_changed
+                or (
+                    price_groups
+                    and not RegistrationWebStoreProductMapping.objects.filter(
+                        registration=instance,
+                        vat_code=VAT_CODE_MAPPING[price_groups[0].vat_percentage],
+                    ).exists()
+                )
+            ):
+                instance.create_or_update_web_store_product_mapping_and_accounting()
 
         return instance
 
@@ -1885,12 +1982,65 @@ class RegistrationSerializer(LinkedEventsSerializer, RegistrationBaseSerializer)
 
         return value
 
+    def _validate_merchant_and_account(self, data, errors):
+        if not (
+            data.get("registration_price_groups")
+            or self.instance is not None
+            and self.instance.registration_price_groups.exists()
+        ):
+            # Price groups not given or they don't exist => no need to validate.
+            return
+
+        if not data.get("registration_merchant") and (
+            not self.partial or "registration_merchant" in data.keys()
+        ):
+            errors["registration_merchant"] = _(
+                "This field is required when registration has customer groups."
+            )
+
+        if not data.get("registration_account") and (
+            not self.partial or "registration_account" in data.keys()
+        ):
+            errors["registration_account"] = _(
+                "This field is required when registration has customer groups."
+            )
+
+    def _validate_registration_price_groups(self, data, errors):
+        if not (
+            data.get("registration_merchant")
+            or data.get("registration_account")
+            or self.instance is not None
+            and (
+                getattr(self.instance, "registration_merchant", None) is not None
+                or getattr(self.instance, "registration_account", None) is not None
+            )
+        ):
+            # Merchant and account not given or they don't exist => no need to validate.
+            return
+
+        if not data.get("registration_price_groups") and (
+            not self.partial or "registration_price_groups" in data.keys()
+        ):
+            errors["registration_price_groups"] = _(
+                "This field is required when registration has a merchant or account."
+            )
+
     # LinkedEventsSerializer validates name which doesn't exist in Registration model
     def validate(self, data):
         # Clean html tags from the text fields
         data = clean_text_fields(
             data, ["confirmation_message", "instructions"], strip=True
         )
+
+        errors = {}
+
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            self._validate_merchant_and_account(data, errors)
+            self._validate_registration_price_groups(data, errors)
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
         return data
 
 

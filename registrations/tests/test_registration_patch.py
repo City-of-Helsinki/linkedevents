@@ -2,6 +2,8 @@ from decimal import Decimal
 from typing import Union
 
 import pytest
+import requests_mock
+from django.conf import settings as django_settings
 from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -9,16 +11,34 @@ from rest_framework.test import APIClient
 from events.tests.factories import OfferFactory
 from events.tests.utils import versioned_reverse as reverse
 from registrations.enums import VatPercentage
-from registrations.models import PriceGroup, RegistrationPriceGroup, VAT_CODE_MAPPING
+from registrations.models import (
+    PriceGroup,
+    Registration,
+    RegistrationPriceGroup,
+    RegistrationWebStoreProductMapping,
+    VAT_CODE_MAPPING,
+)
 from registrations.tests.factories import (
     PriceGroupFactory,
     RegistrationPriceGroupFactory,
     RegistrationUserAccessFactory,
+    RegistrationWebStoreAccountFactory,
+    RegistrationWebStoreMerchantFactory,
     RegistrationWebStoreProductMappingFactory,
+    WebStoreAccountFactory,
+    WebStoreMerchantFactory,
 )
 from registrations.tests.test_registration_post import email
 from registrations.tests.test_registration_put import edited_email, edited_hel_email
-from registrations.tests.utils import create_user_by_role
+from registrations.tests.utils import (
+    create_user_by_role,
+    get_registration_merchant_and_account_data,
+)
+from web_store.tests.product.test_web_store_product_api_client import (
+    DEFAULT_CREATE_PRODUCT_ACCOUNTING_DATA,
+    DEFAULT_GET_PRODUCT_MAPPING_DATA,
+    DEFAULT_PRODUCT_ID,
+)
 
 # === util methods ===
 
@@ -40,7 +60,6 @@ def assert_patch_registration(
     data: dict,
 ):
     response = patch_registration(api_client, pk, data)
-    print(response.data)
     assert response.status_code == status.HTTP_200_OK
 
     return response
@@ -223,3 +242,195 @@ def test_cannot_patch_substitute_user_access_without_helsinki_email(
         response.data["registration_user_accesses"][0]["is_substitute_user"][0]
         == "The user's email domain is not one of the allowed domains for substitute users."
     )
+
+
+@pytest.mark.django_db
+def test_patch_registration_product_mapping_merchant_changed(
+    user_api_client, event, registration
+):
+    RegistrationPriceGroupFactory(registration=registration)
+
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        registration_merchant = RegistrationWebStoreMerchantFactory(
+            registration=registration
+        )
+        new_merchant = WebStoreMerchantFactory(
+            organization=event.publisher, merchant_id="1234"
+        )
+
+    registration_account = RegistrationWebStoreAccountFactory(registration=registration)
+    product_mapping = RegistrationWebStoreProductMappingFactory(
+        registration=registration, external_product_id="4321"
+    )
+
+    registration_data = {
+        **get_registration_merchant_and_account_data(
+            new_merchant, registration_account.account
+        ),
+    }
+
+    assert RegistrationWebStoreProductMapping.objects.count() == 1
+
+    assert registration_merchant.merchant_id != new_merchant.pk
+    assert registration_merchant.external_merchant_id != new_merchant.merchant_id
+
+    assert product_mapping.external_product_id != DEFAULT_PRODUCT_ID
+
+    with requests_mock.Mocker() as req_mock:
+        base_url = f"{django_settings.WEB_STORE_API_BASE_URL}product/"
+        req_mock.post(base_url, json=DEFAULT_GET_PRODUCT_MAPPING_DATA)
+        req_mock.post(
+            f"{base_url}{DEFAULT_PRODUCT_ID}/accounting",
+            json=DEFAULT_CREATE_PRODUCT_ACCOUNTING_DATA,
+        )
+
+        assert_patch_registration(user_api_client, registration.pk, registration_data)
+
+        assert req_mock.call_count == 2
+
+    assert RegistrationWebStoreProductMapping.objects.count() == 1
+
+    registration_merchant.refresh_from_db()
+    assert registration_merchant.merchant_id == new_merchant.pk
+    assert registration_merchant.external_merchant_id == new_merchant.merchant_id
+
+    product_mapping.refresh_from_db()
+    assert product_mapping.external_product_id == DEFAULT_PRODUCT_ID
+
+
+@pytest.mark.django_db
+def test_patch_registration_product_mapping_account_changed(
+    user_api_client, event, registration
+):
+    RegistrationPriceGroupFactory(registration=registration)
+
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        registration_merchant = RegistrationWebStoreMerchantFactory(
+            registration=registration
+        )
+
+    registration_account = RegistrationWebStoreAccountFactory(registration=registration)
+    new_account = WebStoreAccountFactory(organization=event.publisher)
+
+    product_mapping = RegistrationWebStoreProductMappingFactory(
+        registration=registration, external_product_id="4321"
+    )
+
+    registration_data = {
+        **get_registration_merchant_and_account_data(
+            registration_merchant.merchant, new_account
+        ),
+    }
+
+    assert RegistrationWebStoreProductMapping.objects.count() == 1
+
+    assert registration_account.account_id != new_account.pk
+
+    assert product_mapping.external_product_id != DEFAULT_PRODUCT_ID
+
+    with requests_mock.Mocker() as req_mock:
+        base_url = f"{django_settings.WEB_STORE_API_BASE_URL}product/"
+        req_mock.post(base_url, json=DEFAULT_GET_PRODUCT_MAPPING_DATA)
+        req_mock.post(
+            f"{base_url}{DEFAULT_PRODUCT_ID}/accounting",
+            json=DEFAULT_CREATE_PRODUCT_ACCOUNTING_DATA,
+        )
+
+        assert_patch_registration(user_api_client, registration.pk, registration_data)
+
+        assert req_mock.call_count == 2
+
+    assert RegistrationWebStoreProductMapping.objects.count() == 1
+
+    registration_account.refresh_from_db()
+    assert registration_account.account_id == new_account.pk
+
+    product_mapping.refresh_from_db()
+    assert product_mapping.external_product_id == DEFAULT_PRODUCT_ID
+
+
+@pytest.mark.django_db
+def test_patch_registration_with_product_mapping_merchant_missing(
+    user_api_client, event, registration
+):
+    WebStoreAccountFactory(organization=event.publisher)
+
+    default_price_group = PriceGroup.objects.first()
+    registration_data = {
+        "registration_price_groups": [
+            {
+                "price_group": default_price_group.pk,
+                "price": Decimal("10"),
+                "vat_percentage": VatPercentage.VAT_24.value,
+            },
+        ],
+        "registration_merchant": {},
+    }
+
+    assert RegistrationWebStoreProductMapping.objects.count() == 0
+
+    response = patch_registration(user_api_client, registration.pk, registration_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["registration_merchant"][0] == (
+        "This field is required when registration has customer groups."
+    )
+
+    assert RegistrationWebStoreProductMapping.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_patch_registration_with_product_mapping_account_missing(
+    user_api_client, event, registration
+):
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        WebStoreMerchantFactory(organization=event.publisher)
+
+    default_price_group = PriceGroup.objects.first()
+    registration_data = {
+        "registration_price_groups": [
+            {
+                "price_group": default_price_group.pk,
+                "price": Decimal("10"),
+                "vat_percentage": VatPercentage.VAT_24.value,
+            },
+        ],
+        "registration_account": {},
+    }
+
+    assert RegistrationWebStoreProductMapping.objects.count() == 0
+
+    response = patch_registration(user_api_client, registration.pk, registration_data)
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["registration_account"][0] == (
+        "This field is required when registration has customer groups."
+    )
+
+    assert RegistrationWebStoreProductMapping.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_cannot_patch_product_mapping_with_price_groups_missing(
+    user_api_client, event, registration
+):
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        merchant = WebStoreMerchantFactory(organization=event.publisher)
+    account = WebStoreAccountFactory(organization=event.publisher)
+
+    registration_data = {
+        "registration_price_groups": [],
+        **get_registration_merchant_and_account_data(merchant, account),
+    }
+
+    assert Registration.objects.count() == 1
+    assert RegistrationWebStoreProductMapping.objects.count() == 0
+
+    response = patch_registration(user_api_client, registration.pk, registration_data)
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["registration_price_groups"][0] == (
+        "This field is required when registration has a merchant or account."
+    )
+
+    assert Registration.objects.count() == 1
+    assert RegistrationWebStoreProductMapping.objects.count() == 0

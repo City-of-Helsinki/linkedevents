@@ -16,6 +16,8 @@ from events.tests.factories import LanguageFactory
 from registrations.models import SignUp, SignUpPayment
 from registrations.tests.factories import (
     RegistrationFactory,
+    RegistrationWebStoreAccountFactory,
+    RegistrationWebStoreMerchantFactory,
     RegistrationWebStoreProductMappingFactory,
     SignUpContactPersonFactory,
     SignUpFactory,
@@ -355,7 +357,9 @@ def test_mark_payments_expired_signup_moved_to_waitlisted_with_payment_link():
     registration = RegistrationFactory(event__name=_EVENT_NAME)
 
     with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
-        RegistrationWebStoreProductMappingFactory(registration=registration)
+        RegistrationWebStoreMerchantFactory(registration=registration)
+    RegistrationWebStoreAccountFactory(registration=registration)
+    RegistrationWebStoreProductMappingFactory(registration=registration)
 
     service_language = LanguageFactory(pk="en", service_language=True)
 
@@ -525,7 +529,9 @@ def test_mark_payments_expired_payment_cancelled_signup_moved_to_waitlisted_with
     registration = RegistrationFactory(event__name=_EVENT_NAME)
 
     with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
-        RegistrationWebStoreProductMappingFactory(registration=registration)
+        RegistrationWebStoreMerchantFactory(registration=registration)
+    RegistrationWebStoreAccountFactory(registration=registration)
+    RegistrationWebStoreProductMappingFactory(registration=registration)
 
     service_language = LanguageFactory(pk="en", service_language=True)
 
