@@ -25,6 +25,8 @@ from registrations.models import (
     Registration,
     RegistrationPriceGroup,
     RegistrationUserAccess,
+    RegistrationWebStoreAccount,
+    RegistrationWebStoreMerchant,
     SeatReservationCode,
     SignUp,
     SignUpContactPerson,
@@ -605,6 +607,59 @@ class SignUpSerializer(SignUpBaseSerializer, WebStorePaymentBaseSerializer):
         model = SignUp
 
 
+class WebStoreAccountBaseSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = (
+            "name",
+            "company_code",
+            "main_ledger_account",
+            "balance_profit_center",
+            "internal_order",
+            "profit_center",
+            "project",
+            "operation_area",
+        )
+
+
+class WebStoreAccountSerializer(
+    WebStoreAccountBaseSerializer, CreatedModifiedBaseSerializer
+):
+    id = serializers.IntegerField(required=False)
+
+    class Meta(WebStoreAccountBaseSerializer.Meta, CreatedModifiedBaseSerializer.Meta):
+        model = WebStoreAccount
+        fields = (
+            "id",
+            "active",
+        )
+        fields += WebStoreAccountBaseSerializer.Meta.fields
+        fields += CreatedModifiedBaseSerializer.Meta.fields
+
+
+class RegistrationWebStoreMerchantSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RegistrationWebStoreMerchant
+        fields = ("merchant",)
+
+
+class RegistrationWebStoreAccountSerializer(WebStoreAccountBaseSerializer):
+    def validate(self, data):
+        validated_data = super().validate(data)
+
+        if not self.partial or "account" in validated_data:
+            validated_data["name"] = validated_data["account"].name
+
+        return data
+
+    class Meta(WebStoreAccountBaseSerializer.Meta):
+        model = RegistrationWebStoreAccount
+        fields = ("account",)
+        fields += WebStoreAccountBaseSerializer.Meta.fields
+        extra_kwargs = {
+            "name": {"read_only": True},
+        }
+
+
 class RegistrationUserAccessIdField(serializers.PrimaryKeyRelatedField):
     def get_queryset(self):
         registration_id = self.context["request"].parser_context["kwargs"].get("pk")
@@ -771,6 +826,13 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
                 many=True,
                 required=False,
             )
+            fields["registration_merchant"] = RegistrationWebStoreMerchantSerializer(
+                required=False,
+            )
+            fields["registration_account"] = RegistrationWebStoreAccountSerializer(
+                required=False,
+                partial=self.partial,
+            )
 
         return fields
 
@@ -864,7 +926,11 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
         ) + CreatedModifiedBaseSerializer.Meta.fields
 
         if settings.WEB_STORE_INTEGRATION_ENABLED:
-            fields += ("registration_price_groups",)
+            fields += (
+                "registration_price_groups",
+                "registration_merchant",
+                "registration_account",
+            )
 
         model = Registration
 
@@ -1550,22 +1616,3 @@ class WebStoreMerchantSerializer(CreatedModifiedBaseSerializer):
             "merchant_id": {"read_only": True},
             "url": {"read_only": True},
         }
-
-
-class WebStoreAccountSerializer(CreatedModifiedBaseSerializer):
-    id = serializers.IntegerField(required=False)
-
-    class Meta(CreatedModifiedBaseSerializer.Meta):
-        model = WebStoreAccount
-        fields = (
-            "id",
-            "active",
-            "name",
-            "company_code",
-            "main_ledger_account",
-            "balance_profit_center",
-            "internal_order",
-            "profit_center",
-            "project",
-            "operation_area",
-        ) + CreatedModifiedBaseSerializer.Meta.fields

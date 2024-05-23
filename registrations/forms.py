@@ -5,7 +5,99 @@ from django.conf import settings
 from django.utils.translation import gettext as _
 
 from registrations.enums import VatPercentage
-from registrations.models import Registration, RegistrationPriceGroup, VAT_PERCENTAGES
+from registrations.models import (
+    Registration,
+    RegistrationPriceGroup,
+    RegistrationWebStoreAccount,
+    RegistrationWebStoreMerchant,
+    VAT_PERCENTAGES,
+)
+
+_PRODUCT_MAPPING_FIELDS = (
+    "name",
+    "company_code",
+    "main_ledger_account",
+    "balance_profit_center",
+    "internal_order",
+    "profit_center",
+    "project",
+    "operation_area",
+)
+
+
+class RegistrationWebStoreMerchantAdminForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields["external_merchant_id"].required = False
+
+        if self.instance.pk and self.instance.merchant_id:
+            self.initial["external_merchant_id"] = self.instance.merchant.merchant_id
+
+    def has_changed(self):
+        return (
+            super().has_changed()
+            or self.instance.pk
+            and self.instance.merchant_id
+            and self.instance.external_merchant_id != self.instance.merchant.merchant_id
+        )
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        if merchant := cleaned_data.get("merchant"):
+            cleaned_data["external_merchant_id"] = merchant.merchant_id
+
+        return cleaned_data
+
+    class Meta:
+        model = RegistrationWebStoreMerchant
+        fields = (
+            "registration",
+            "merchant",
+            "external_merchant_id",
+        )
+        widgets = {
+            "external_merchant_id": forms.HiddenInput(),
+        }
+
+
+class AccountSelectField(forms.Select):
+    def create_option(
+        self, name, value, label, selected, index, subindex=None, attrs=None
+    ):
+        option = super().create_option(
+            name, value, label, selected, index, subindex, attrs
+        )
+
+        if value:
+            for field in _PRODUCT_MAPPING_FIELDS:
+                option["attrs"][f"data-{field}"] = getattr(value.instance, field, "")
+
+        return option
+
+
+class RegistrationWebStoreAccountAdminForm(forms.ModelForm):
+    class Meta:
+        model = RegistrationWebStoreAccount
+
+        fields = (
+            "registration",
+            "account",
+        )
+        fields += _PRODUCT_MAPPING_FIELDS
+
+        help_texts = {
+            "account": _("Account values can be overwritten with the fields below."),
+        }
+
+        widgets = {
+            "account": AccountSelectField(),
+            "name": forms.HiddenInput(),
+        }
+
+    class Media:
+        js = ("js/set_account_fields.js",)
 
 
 class RegistrationAdminForm(forms.ModelForm):

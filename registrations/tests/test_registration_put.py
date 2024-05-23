@@ -18,8 +18,11 @@ from helevents.tests.factories import UserFactory
 from registrations.enums import VatPercentage
 from registrations.models import (
     PriceGroup,
+    Registration,
     RegistrationPriceGroup,
     RegistrationUserAccess,
+    RegistrationWebStoreAccount,
+    RegistrationWebStoreMerchant,
     RegistrationWebStoreProductMapping,
     SignUp,
     SignUpPayment,
@@ -30,6 +33,8 @@ from registrations.tests.factories import (
     RegistrationFactory,
     RegistrationPriceGroupFactory,
     RegistrationUserAccessFactory,
+    RegistrationWebStoreAccountFactory,
+    RegistrationWebStoreMerchantFactory,
     RegistrationWebStoreProductMappingFactory,
     SignUpContactPersonFactory,
     SignUpFactory,
@@ -42,6 +47,9 @@ from registrations.tests.test_registration_post import email, get_event_url, hel
 from registrations.tests.utils import (
     assert_invitation_email_is_sent,
     create_user_by_role,
+    get_registration_account_data,
+    get_registration_merchant_and_account_data,
+    get_registration_merchant_data,
 )
 from web_store.tests.order.test_web_store_order_api_client import DEFAULT_GET_ORDER_DATA
 from web_store.tests.product.test_web_store_product_api_client import (
@@ -667,18 +675,24 @@ def test_registration_id_is_audit_logged_on_put(registration, user_api_client):
 
 
 @pytest.mark.django_db
-def test_update_price_groups_to_registration(api_client, event, user):
+def test_update_price_groups_with_product_mapping_for_registration(
+    api_client, event, user
+):
     api_client.force_authenticate(user)
 
     registration = RegistrationFactory(event=event)
 
     with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
-        RegistrationWebStoreProductMappingFactory(registration=registration)
+        merchant = WebStoreMerchantFactory(organization=event.publisher)
+    account = WebStoreAccountFactory(organization=event.publisher)
 
     default_price_group = PriceGroup.objects.filter(publisher=None).first()
     custom_price_group = PriceGroupFactory(publisher=event.publisher)
 
     assert RegistrationPriceGroup.objects.count() == 0
+    assert RegistrationWebStoreProductMapping.objects.count() == 0
+    assert RegistrationWebStoreMerchant.objects.count() == 0
+    assert RegistrationWebStoreAccount.objects.count() == 0
 
     registration_data = {
         "event": {"@id": get_event_url(event.id)},
@@ -694,11 +708,23 @@ def test_update_price_groups_to_registration(api_client, event, user):
                 "vat_percentage": VatPercentage.VAT_24.value,
             },
         ],
+        **get_registration_merchant_and_account_data(merchant, account),
     }
 
-    response = assert_update_registration(
-        api_client, registration.pk, registration_data
-    )
+    with requests_mock.Mocker() as req_mock:
+        base_url = f"{django_settings.WEB_STORE_API_BASE_URL}product/"
+        req_mock.post(base_url, json=DEFAULT_GET_PRODUCT_MAPPING_DATA)
+        req_mock.post(
+            f"{base_url}{DEFAULT_PRODUCT_ID}/accounting",
+            json=DEFAULT_GET_PRODUCT_MAPPING_DATA,
+        )
+
+        response = assert_update_registration(
+            api_client, registration.pk, registration_data
+        )
+
+        assert req_mock.call_count == 2
+
     assert len(response.data["registration_price_groups"]) == 2
 
     assert RegistrationPriceGroup.objects.count() == 2
@@ -729,6 +755,32 @@ def test_update_price_groups_to_registration(api_client, event, user):
         == 1
     )
 
+    assert RegistrationWebStoreProductMapping.objects.count() == 1
+    assert RegistrationWebStoreMerchant.objects.count() == 1
+    assert RegistrationWebStoreAccount.objects.count() == 1
+
+    registration = Registration.objects.first()
+    assert (
+        RegistrationWebStoreProductMapping.objects.filter(
+            registration=registration
+        ).count()
+        == 1
+    )
+    assert (
+        RegistrationWebStoreMerchant.objects.filter(
+            registration=registration,
+            merchant=merchant,
+            external_merchant_id=merchant.merchant_id,
+        ).count()
+        == 1
+    )
+    assert (
+        RegistrationWebStoreAccount.objects.filter(
+            registration=registration, **registration_data["registration_account"]
+        ).count()
+        == 1
+    )
+
 
 @pytest.mark.django_db
 def test_update_existing_registration_price_group(api_client, event, user):
@@ -752,6 +804,10 @@ def test_update_existing_registration_price_group(api_client, event, user):
             registration=registration,
             vat_code=VAT_CODE_MAPPING[VatPercentage.VAT_0.value],
         )
+        registration_merchant = RegistrationWebStoreMerchantFactory(
+            registration=registration
+        )
+    registration_account = RegistrationWebStoreAccountFactory(registration=registration)
 
     assert RegistrationPriceGroup.objects.count() == 1
 
@@ -765,6 +821,10 @@ def test_update_existing_registration_price_group(api_client, event, user):
                 "vat_percentage": VatPercentage.VAT_0.value,
             },
         ],
+        **get_registration_merchant_and_account_data(
+            merchant=registration_merchant.merchant,
+            account=registration_account.account,
+        ),
     }
 
     response = assert_update_registration(
@@ -815,7 +875,10 @@ def test_update_registration_price_groups_excluded_is_deleted(api_client, event,
             registration=registration,
             vat_code=VAT_CODE_MAPPING[VatPercentage.VAT_0.value],
         )
-
+        registration_merchant = RegistrationWebStoreMerchantFactory(
+            registration=registration
+        )
+    registration_account = RegistrationWebStoreAccountFactory(registration=registration)
     assert RegistrationPriceGroup.objects.count() == 1
 
     registration_data = {
@@ -827,6 +890,10 @@ def test_update_registration_price_groups_excluded_is_deleted(api_client, event,
                 "vat_percentage": VatPercentage.VAT_0.value,
             },
         ],
+        **get_registration_merchant_and_account_data(
+            merchant=registration_merchant.merchant,
+            account=registration_account.account,
+        ),
     }
 
     response = assert_update_registration(
@@ -960,117 +1027,11 @@ def test_cannot_update_registration_with_duplicate_price_groups(
     ],
 )
 @pytest.mark.django_db
-def test_update_registration_with_product_mapping_and_accounting(
+def test_update_registration_with_with_optional_product_mapping_accounting_fields(
     user_api_client, event, registration, account_kwargs
 ):
     with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
         merchant = WebStoreMerchantFactory(organization=event.publisher)
-
-    account = WebStoreAccountFactory(organization=event.publisher, **account_kwargs)
-
-    default_price_group = PriceGroup.objects.first()
-    registration_data = {
-        "event": {"@id": get_event_url(event.id)},
-        "registration_price_groups": [
-            {
-                "price_group": default_price_group.pk,
-                "price": Decimal("10"),
-                "vat_percentage": VatPercentage.VAT_24.value,
-            },
-        ],
-    }
-
-    assert RegistrationWebStoreProductMapping.objects.count() == 0
-
-    with requests_mock.Mocker() as req_mock:
-        base_url = f"{django_settings.WEB_STORE_API_BASE_URL}product/"
-        req_mock.post(base_url, json=DEFAULT_GET_PRODUCT_MAPPING_DATA)
-        req_mock.post(
-            f"{base_url}{DEFAULT_PRODUCT_ID}/accounting",
-            json=DEFAULT_GET_PRODUCT_MAPPING_DATA,
-        )
-
-        assert_update_registration(user_api_client, registration.pk, registration_data)
-
-        assert req_mock.call_count == 2
-
-    assert RegistrationWebStoreProductMapping.objects.count() == 1
-    assert (
-        RegistrationWebStoreProductMapping.objects.filter(
-            registration=registration,
-            external_merchant_id=merchant.merchant_id,
-            account=account,
-            external_product_id=DEFAULT_PRODUCT_ID,
-        ).count()
-        == 1
-    )
-
-
-@pytest.mark.django_db
-def test_update_registration_product_mapping_merchant_changed(
-    user_api_client, event, registration, organization2
-):
-    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
-        product_mapping = RegistrationWebStoreProductMappingFactory(
-            registration=registration, external_merchant_id="1234"
-        )
-
-        merchant = WebStoreMerchantFactory(
-            organization=event.publisher, merchant_id="4321"
-        )
-        account = product_mapping.account
-
-    default_price_group = PriceGroup.objects.first()
-    registration_data = {
-        "event": {"@id": get_event_url(event.id)},
-        "registration_price_groups": [
-            {
-                "price_group": default_price_group.pk,
-                "price": Decimal("10"),
-                "vat_percentage": VatPercentage.VAT_24.value,
-            },
-        ],
-    }
-
-    assert RegistrationWebStoreProductMapping.objects.count() == 1
-
-    assert product_mapping.external_merchant_id != merchant.merchant_id
-    assert product_mapping.account_id == account.pk
-
-    with requests_mock.Mocker() as req_mock:
-        base_url = f"{django_settings.WEB_STORE_API_BASE_URL}product/"
-        req_mock.post(base_url, json=DEFAULT_GET_PRODUCT_MAPPING_DATA)
-        req_mock.post(
-            f"{base_url}{DEFAULT_PRODUCT_ID}/accounting",
-            json=DEFAULT_GET_PRODUCT_MAPPING_DATA,
-        )
-
-        assert_update_registration(user_api_client, registration.pk, registration_data)
-
-        assert req_mock.call_count == 2
-
-    assert RegistrationWebStoreProductMapping.objects.count() == 1
-
-    product_mapping.refresh_from_db()
-    assert product_mapping.external_merchant_id == merchant.merchant_id
-    assert product_mapping.account_id == account.pk
-
-
-@pytest.mark.django_db
-def test_update_registration_product_mapping_account_changed(
-    user_api_client, event, registration, organization2
-):
-    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
-        merchant = WebStoreMerchantFactory(
-            organization=event.publisher, merchant_id="1234"
-        )
-
-        product_mapping = RegistrationWebStoreProductMappingFactory(
-            registration=registration,
-            external_merchant_id=merchant.merchant_id,
-            account=WebStoreAccountFactory(organization=organization2),
-        )
-
     account = WebStoreAccountFactory(organization=event.publisher)
 
     default_price_group = PriceGroup.objects.first()
@@ -1083,12 +1044,196 @@ def test_update_registration_product_mapping_account_changed(
                 "vat_percentage": VatPercentage.VAT_24.value,
             },
         ],
+        **get_registration_merchant_data(merchant),
+        **get_registration_account_data(account, account_kwargs),
+    }
+
+    assert RegistrationWebStoreProductMapping.objects.count() == 0
+    assert RegistrationWebStoreAccount.objects.count() == 0
+
+    with requests_mock.Mocker() as req_mock:
+        base_url = f"{django_settings.WEB_STORE_API_BASE_URL}product/"
+        req_mock.post(base_url, json=DEFAULT_GET_PRODUCT_MAPPING_DATA)
+        req_mock.post(
+            f"{base_url}{DEFAULT_PRODUCT_ID}/accounting",
+            json=DEFAULT_GET_PRODUCT_MAPPING_DATA,
+        )
+
+        assert_update_registration(user_api_client, registration.pk, registration_data)
+
+        assert req_mock.call_count == 2
+
+    assert RegistrationWebStoreProductMapping.objects.count() == 1
+
+    registration = Registration.objects.first()
+    assert (
+        RegistrationWebStoreProductMapping.objects.filter(
+            registration=registration,
+            external_product_id=DEFAULT_PRODUCT_ID,
+        ).count()
+        == 1
+    )
+    assert (
+        RegistrationWebStoreAccount.objects.filter(
+            registration=registration, **registration_data["registration_account"]
+        ).count()
+        == 1
+    )
+
+
+@pytest.mark.django_db
+def test_update_registration_product_mapping_merchant_changed(
+    user_api_client, event, registration
+):
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        registration_merchant = RegistrationWebStoreMerchantFactory(
+            registration=registration
+        )
+        new_merchant = WebStoreMerchantFactory(
+            organization=event.publisher, merchant_id="1234"
+        )
+
+    registration_account = RegistrationWebStoreAccountFactory(registration=registration)
+    product_mapping = RegistrationWebStoreProductMappingFactory(
+        registration=registration, external_product_id="4321"
+    )
+
+    default_price_group = PriceGroup.objects.first()
+    registration_data = {
+        "event": {"@id": get_event_url(event.id)},
+        "registration_price_groups": [
+            {
+                "price_group": default_price_group.pk,
+                "price": Decimal("10"),
+                "vat_percentage": VatPercentage.VAT_24.value,
+            },
+        ],
+        **get_registration_merchant_and_account_data(
+            new_merchant, registration_account.account
+        ),
     }
 
     assert RegistrationWebStoreProductMapping.objects.count() == 1
 
-    assert product_mapping.external_merchant_id == merchant.merchant_id
-    assert product_mapping.account_id != account.pk
+    assert registration_merchant.merchant_id != new_merchant.pk
+    assert registration_merchant.external_merchant_id != new_merchant.merchant_id
+
+    assert product_mapping.external_product_id != DEFAULT_PRODUCT_ID
+
+    with requests_mock.Mocker() as req_mock:
+        base_url = f"{django_settings.WEB_STORE_API_BASE_URL}product/"
+        req_mock.post(base_url, json=DEFAULT_GET_PRODUCT_MAPPING_DATA)
+        req_mock.post(
+            f"{base_url}{DEFAULT_PRODUCT_ID}/accounting",
+            json=DEFAULT_GET_PRODUCT_MAPPING_DATA,
+        )
+
+        assert_update_registration(user_api_client, registration.pk, registration_data)
+
+        assert req_mock.call_count == 2
+
+    assert RegistrationWebStoreProductMapping.objects.count() == 1
+
+    registration_merchant.refresh_from_db()
+    assert registration_merchant.merchant_id == new_merchant.pk
+    assert registration_merchant.external_merchant_id == new_merchant.merchant_id
+
+    product_mapping.refresh_from_db()
+    assert product_mapping.external_product_id == DEFAULT_PRODUCT_ID
+
+
+@pytest.mark.django_db
+def test_update_registration_product_mapping_account_changed(
+    user_api_client, event, registration
+):
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        registration_merchant = RegistrationWebStoreMerchantFactory(
+            registration=registration
+        )
+
+    registration_account = RegistrationWebStoreAccountFactory(registration=registration)
+    new_account = WebStoreAccountFactory(organization=event.publisher)
+
+    product_mapping = RegistrationWebStoreProductMappingFactory(
+        registration=registration, external_product_id="4321"
+    )
+
+    default_price_group = PriceGroup.objects.first()
+    registration_data = {
+        "event": {"@id": get_event_url(event.id)},
+        "registration_price_groups": [
+            {
+                "price_group": default_price_group.pk,
+                "price": Decimal("10"),
+                "vat_percentage": VatPercentage.VAT_24.value,
+            },
+        ],
+        **get_registration_merchant_and_account_data(
+            registration_merchant.merchant, new_account
+        ),
+    }
+
+    assert RegistrationWebStoreProductMapping.objects.count() == 1
+
+    assert registration_account.account_id != new_account.pk
+
+    assert product_mapping.external_product_id != DEFAULT_PRODUCT_ID
+
+    with requests_mock.Mocker() as req_mock:
+        base_url = f"{django_settings.WEB_STORE_API_BASE_URL}product/"
+        req_mock.post(base_url, json=DEFAULT_GET_PRODUCT_MAPPING_DATA)
+        req_mock.post(
+            f"{base_url}{DEFAULT_PRODUCT_ID}/accounting",
+            json=DEFAULT_GET_PRODUCT_MAPPING_DATA,
+        )
+
+        assert_update_registration(user_api_client, registration.pk, registration_data)
+
+        assert req_mock.call_count == 2
+
+    assert RegistrationWebStoreProductMapping.objects.count() == 1
+
+    registration_account.refresh_from_db()
+    assert registration_account.account_id == new_account.pk
+
+    product_mapping.refresh_from_db()
+    assert product_mapping.external_product_id == DEFAULT_PRODUCT_ID
+
+
+@pytest.mark.django_db
+def test_update_registration_product_mapping_vat_code_changed(
+    user_api_client, event, registration
+):
+    registration_price_group = RegistrationPriceGroupFactory(registration=registration)
+
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        registration_merchant = RegistrationWebStoreMerchantFactory(
+            registration=registration
+        )
+    registration_account = RegistrationWebStoreAccountFactory(registration=registration)
+    product_mapping = RegistrationWebStoreProductMappingFactory(
+        registration=registration, external_product_id="4321"
+    )
+
+    registration_data = {
+        "event": {"@id": get_event_url(event.id)},
+        "registration_price_groups": [
+            {
+                "id": registration_price_group.pk,
+                "price_group": registration_price_group.price_group_id,
+                "price": registration_price_group.price,
+                "vat_percentage": VatPercentage.VAT_10.value,
+            },
+        ],
+        **get_registration_merchant_and_account_data(
+            registration_merchant.merchant, registration_account.account
+        ),
+    }
+
+    assert RegistrationWebStoreProductMapping.objects.count() == 1
+
+    assert product_mapping.external_product_id != DEFAULT_PRODUCT_ID
+    assert product_mapping.vat_code != VAT_CODE_MAPPING[VatPercentage.VAT_10.value]
 
     with requests_mock.Mocker() as req_mock:
         base_url = f"{django_settings.WEB_STORE_API_BASE_URL}product/"
@@ -1105,15 +1250,15 @@ def test_update_registration_product_mapping_account_changed(
     assert RegistrationWebStoreProductMapping.objects.count() == 1
 
     product_mapping.refresh_from_db()
-    assert product_mapping.external_merchant_id == merchant.merchant_id
-    assert product_mapping.account_id == account.pk
+    assert product_mapping.external_product_id == DEFAULT_PRODUCT_ID
+    assert product_mapping.vat_code == VAT_CODE_MAPPING[VatPercentage.VAT_10.value]
 
 
 @pytest.mark.django_db
 def test_update_registration_with_product_mapping_merchant_missing(
     user_api_client, event, registration
 ):
-    WebStoreAccountFactory(organization=event.publisher)
+    account = WebStoreAccountFactory(organization=event.publisher)
 
     default_price_group = PriceGroup.objects.first()
     registration_data = {
@@ -1125,14 +1270,15 @@ def test_update_registration_with_product_mapping_merchant_missing(
                 "vat_percentage": VatPercentage.VAT_24.value,
             },
         ],
+        **get_registration_account_data(account),
     }
 
     assert RegistrationWebStoreProductMapping.objects.count() == 0
 
     response = update_registration(user_api_client, registration.pk, registration_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.data[0] == (
-        "A WebStoreMerchant is required to create a product mapping in Talpa."
+    assert response.data["registration_merchant"][0] == (
+        "This field is required when registration has customer groups."
     )
 
     assert RegistrationWebStoreProductMapping.objects.count() == 0
@@ -1143,7 +1289,7 @@ def test_update_registration_with_product_mapping_account_missing(
     user_api_client, event, registration
 ):
     with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
-        WebStoreMerchantFactory(organization=event.publisher)
+        merchant = WebStoreMerchantFactory(organization=event.publisher)
 
     default_price_group = PriceGroup.objects.first()
     registration_data = {
@@ -1155,6 +1301,7 @@ def test_update_registration_with_product_mapping_account_missing(
                 "vat_percentage": VatPercentage.VAT_24.value,
             },
         ],
+        **get_registration_merchant_data(merchant),
     }
 
     assert RegistrationWebStoreProductMapping.objects.count() == 0
@@ -1162,10 +1309,37 @@ def test_update_registration_with_product_mapping_account_missing(
     response = update_registration(user_api_client, registration.pk, registration_data)
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.data[0] == (
-        "A WebStoreAccount is required to create product accounting in Talpa."
+    assert response.data["registration_account"][0] == (
+        "This field is required when registration has customer groups."
     )
 
+    assert RegistrationWebStoreProductMapping.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_cannot_update_product_mapping_with_price_groups_missing(
+    user_api_client, event, registration
+):
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        merchant = WebStoreMerchantFactory(organization=event.publisher)
+    account = WebStoreAccountFactory(organization=event.publisher)
+
+    registration_data = {
+        "event": {"@id": get_event_url(event.id)},
+        **get_registration_merchant_and_account_data(merchant, account),
+    }
+
+    assert Registration.objects.count() == 1
+    assert RegistrationWebStoreProductMapping.objects.count() == 0
+
+    response = update_registration(user_api_client, registration.pk, registration_data)
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["registration_price_groups"][0] == (
+        "This field is required when registration has a merchant or account."
+    )
+
+    assert Registration.objects.count() == 1
     assert RegistrationWebStoreProductMapping.objects.count() == 0
 
 
@@ -1174,9 +1348,8 @@ def test_update_registration_with_product_mapping_api_exception(
     user_api_client, event, registration
 ):
     with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
-        WebStoreMerchantFactory(organization=event.publisher)
-
-    WebStoreAccountFactory(organization=event.publisher)
+        merchant = WebStoreMerchantFactory(organization=event.publisher)
+    account = WebStoreAccountFactory(organization=event.publisher)
 
     default_price_group = PriceGroup.objects.first()
     registration_data = {
@@ -1188,6 +1361,7 @@ def test_update_registration_with_product_mapping_api_exception(
                 "vat_percentage": VatPercentage.VAT_24.value,
             },
         ],
+        **get_registration_merchant_and_account_data(merchant, account),
     }
 
     assert RegistrationWebStoreProductMapping.objects.count() == 0
@@ -1215,9 +1389,8 @@ def test_update_registration_with_product_accounting_api_exception(
     user_api_client, event, registration
 ):
     with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
-        WebStoreMerchantFactory(organization=event.publisher)
-
-    WebStoreAccountFactory(organization=event.publisher)
+        merchant = WebStoreMerchantFactory(organization=event.publisher)
+    account = WebStoreAccountFactory(organization=event.publisher)
 
     default_price_group = PriceGroup.objects.first()
     registration_data = {
@@ -1229,6 +1402,7 @@ def test_update_registration_with_product_accounting_api_exception(
                 "vat_percentage": VatPercentage.VAT_24.value,
             },
         ],
+        **get_registration_merchant_and_account_data(merchant, account),
     }
 
     assert RegistrationWebStoreProductMapping.objects.count() == 0
@@ -1311,7 +1485,11 @@ def test_update_registration_increase_attendee_capacity_move_signups_to_attendin
     registration_price_group = RegistrationPriceGroupFactory(registration=registration)
 
     with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
-        RegistrationWebStoreProductMappingFactory(registration=registration)
+        registration_merchant = RegistrationWebStoreMerchantFactory(
+            registration=registration
+        )
+    registration_account = RegistrationWebStoreAccountFactory(registration=registration)
+    RegistrationWebStoreProductMappingFactory(registration=registration)
 
     signup = SignUpFactory(
         registration=registration, attendee_status=SignUp.AttendeeStatus.ATTENDING
@@ -1350,6 +1528,17 @@ def test_update_registration_increase_attendee_capacity_move_signups_to_attendin
     registration_data = {
         "event": {"@id": get_event_url(event.id)},
         "maximum_attendee_capacity": 3,
+        "registration_price_groups": [
+            {
+                "id": registration_price_group.pk,
+                "price_group": registration_price_group.price_group_id,
+                "price": registration_price_group.price,
+                "vat_percentage": registration_price_group.vat_percentage,
+            }
+        ],
+        **get_registration_merchant_and_account_data(
+            registration_merchant.merchant, registration_account.account
+        ),
     }
     with requests_mock.Mocker() as req_mock:
         req_mock.post(
@@ -1393,7 +1582,11 @@ def test_increase_attendee_capacity_move_signups_to_attending_with_payments_api_
     registration_price_group = RegistrationPriceGroupFactory(registration=registration)
 
     with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
-        RegistrationWebStoreProductMappingFactory(registration=registration)
+        registration_merchant = RegistrationWebStoreMerchantFactory(
+            registration=registration
+        )
+    registration_account = RegistrationWebStoreAccountFactory(registration=registration)
+    RegistrationWebStoreProductMappingFactory(registration=registration)
 
     signup = SignUpFactory(
         registration=registration, attendee_status=SignUp.AttendeeStatus.ATTENDING
@@ -1435,6 +1628,17 @@ def test_increase_attendee_capacity_move_signups_to_attending_with_payments_api_
     registration_data = {
         "event": {"@id": get_event_url(event.id)},
         "maximum_attendee_capacity": 3,
+        "registration_price_groups": [
+            {
+                "id": registration_price_group.pk,
+                "price_group": registration_price_group.price_group_id,
+                "price": registration_price_group.price,
+                "vat_percentage": registration_price_group.vat_percentage,
+            }
+        ],
+        **get_registration_merchant_and_account_data(
+            registration_merchant.merchant, registration_account.account
+        ),
     }
     with requests_mock.Mocker() as req_mock:
         req_mock.post(

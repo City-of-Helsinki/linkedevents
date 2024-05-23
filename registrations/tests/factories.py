@@ -1,4 +1,5 @@
 from decimal import Decimal
+from uuid import uuid4
 
 import factory
 
@@ -10,6 +11,8 @@ from registrations.models import (
     Registration,
     RegistrationPriceGroup,
     RegistrationUserAccess,
+    RegistrationWebStoreAccount,
+    RegistrationWebStoreMerchant,
     RegistrationWebStoreProductMapping,
     SeatReservationCode,
     SignUp,
@@ -206,16 +209,50 @@ class RegistrationWebStoreProductMappingFactory(factory.django.DjangoModelFactor
     external_product_id = DEFAULT_PRODUCT_ID
     vat_code = VAT_CODE_MAPPING[VatPercentage.VAT_24.value]
 
+    class Meta:
+        model = RegistrationWebStoreProductMapping
+
+
+class RegistrationWebStoreMerchantFactory(factory.django.DjangoModelFactory):
+    registration = factory.SubFactory(RegistrationFactory)
+
+    @factory.lazy_attribute
+    def merchant(self):
+        return WebStoreMerchantFactory(
+            organization=self.registration.publisher,
+            merchant_id=str(uuid4()),
+        )
+
     @factory.lazy_attribute
     def external_merchant_id(self):
-        merchant = WebStoreMerchantFactory(organization=self.registration.publisher)
-        return merchant.merchant_id
+        return self.merchant.merchant_id
+
+    class Meta:
+        model = RegistrationWebStoreMerchant
+
+
+class RegistrationWebStoreAccountFactory(factory.django.DjangoModelFactory):
+    registration = factory.SubFactory(RegistrationFactory)
 
     @factory.lazy_attribute
     def account(self):
-        return WebStoreAccountFactory(
-            organization=self.registration.publisher,
-        )
+        return WebStoreAccountFactory(organization=self.registration.publisher)
+
+    @factory.lazy_attribute
+    def name(self):
+        return self.account.name
+
+    @factory.lazy_attribute
+    def company_code(self):
+        return self.account.company_code
+
+    @factory.lazy_attribute
+    def main_ledger_account(self):
+        return self.account.main_ledger_account
+
+    @factory.lazy_attribute
+    def balance_profit_center(self):
+        return self.account.balance_profit_center
 
     class Meta:
-        model = RegistrationWebStoreProductMapping
+        model = RegistrationWebStoreAccount

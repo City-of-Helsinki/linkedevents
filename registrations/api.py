@@ -138,25 +138,15 @@ class RegistrationViewSet(
 
     @transaction.atomic
     def perform_create(self, serializer):
-        super().perform_create(serializer)
-
-        if not settings.WEB_STORE_INTEGRATION_ENABLED:
-            return
-
         try:
-            serializer.instance.create_or_update_web_store_product_mapping_and_accounting()
+            super().perform_create(serializer)
         except (WebStoreAPIError, WebStoreProductMappingValidationError) as exc:
             raise ValidationError(exc.messages)
 
     @transaction.atomic
     def perform_update(self, serializer):
-        super().perform_update(serializer)
-
-        if not settings.WEB_STORE_INTEGRATION_ENABLED:
-            return
-
         try:
-            serializer.instance.create_or_update_web_store_product_mapping_and_accounting()
+            super().perform_update(serializer)
         except (WebStoreAPIError, WebStoreProductMappingValidationError) as exc:
             raise ValidationError(exc.messages)
 

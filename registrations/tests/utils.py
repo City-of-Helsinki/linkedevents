@@ -290,3 +290,46 @@ def create_price_group_for_recurring_event(event_name=None, price=None):
     registration = RegistrationFactory(**registration_kwargs)
 
     return create_price_group({"signup__registration": registration}, price=price)
+
+
+def get_registration_merchant_data(merchant, update_data=None):
+    data = {
+        "registration_merchant": {
+            "merchant": merchant.pk,
+        },
+    }
+
+    if update_data:
+        data.update(update_data)
+
+    return data
+
+
+def get_registration_account_data(account, update_data=None):
+    data = {
+        "registration_account": {
+            "account": account.pk,
+            "name": account.name,
+            "company_code": account.company_code,
+            "main_ledger_account": account.main_ledger_account,
+            "balance_profit_center": account.balance_profit_center,
+            "internal_order": account.internal_order,
+            "profit_center": account.profit_center,
+            "project": account.project,
+            "operation_area": account.operation_area,
+        },
+    }
+
+    if update_data:
+        data.update(update_data)
+
+    return data
+
+
+def get_registration_merchant_and_account_data(
+    merchant, account, merchant_update_data=None, account_update_data=None
+):
+    return {
+        **get_registration_merchant_data(merchant, update_data=merchant_update_data),
+        **get_registration_account_data(account, update_data=account_update_data),
+    }

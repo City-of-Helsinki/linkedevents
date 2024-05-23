@@ -32,6 +32,8 @@ from registrations.tests.factories import (
     RegistrationFactory,
     RegistrationPriceGroupFactory,
     RegistrationUserAccessFactory,
+    RegistrationWebStoreAccountFactory,
+    RegistrationWebStoreMerchantFactory,
     RegistrationWebStoreProductMappingFactory,
     SignUpContactPersonFactory,
     SignUpFactory,
@@ -127,48 +129,6 @@ class TestRegistration(TestCase):
         can_be_edited = self.registration.can_be_edited_by(self.user)
         self.assertTrue(can_be_edited)
 
-    def test_merchant(self):
-        self.assertIsNone(self.registration.merchant)
-
-        with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
-            merchant = WebStoreMerchantFactory(organization=self.registration.publisher)
-        del self.registration.merchant
-
-        self.assertEqual(merchant.pk, self.registration.merchant.pk)
-
-    def test_merchant_from_ancestor(self):
-        self.assertIsNone(self.registration.merchant)
-
-        parent_organization = OrganizationFactory()
-        self.registration.publisher.parent = parent_organization
-        self.registration.publisher.save(update_fields=["parent"])
-
-        with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
-            merchant = WebStoreMerchantFactory(organization=parent_organization)
-        del self.registration.merchant
-
-        self.assertEqual(merchant.pk, self.registration.merchant.pk)
-
-    def test_account(self):
-        self.assertIsNone(self.registration.account)
-
-        account = WebStoreAccountFactory(organization=self.registration.publisher)
-        del self.registration.account
-
-        self.assertEqual(account.pk, self.registration.account.pk)
-
-    def test_account_from_ancestor(self):
-        self.assertIsNone(self.registration.account)
-
-        parent_organization = OrganizationFactory()
-        self.registration.publisher.parent = parent_organization
-        self.registration.publisher.save(update_fields=["parent"])
-
-        account = WebStoreAccountFactory(organization=parent_organization)
-        del self.registration.account
-
-        self.assertEqual(account.pk, self.registration.account.pk)
-
     def test_get_waitlisted(self):
         signup = SignUpFactory(
             registration=self.registration,
@@ -224,10 +184,10 @@ class TestRegistration(TestCase):
 
     def test_create_or_update_web_store_product_mapping_and_accounting(self):
         with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
-            merchant = WebStoreMerchantFactory(
-                organization=self.registration.publisher, merchant_id="1234"
+            RegistrationWebStoreMerchantFactory(
+                registration=self.registration,
             )
-        account = WebStoreAccountFactory(organization=self.registration.publisher)
+        RegistrationWebStoreAccountFactory(registration=self.registration)
 
         product_url = f"{settings.WEB_STORE_API_BASE_URL}product/"
         accounting_url = f"{product_url}{DEFAULT_PRODUCT_ID}/accounting"
@@ -248,8 +208,7 @@ class TestRegistration(TestCase):
                 self.assertEqual(
                     RegistrationWebStoreProductMapping.objects.filter(
                         registration=self.registration,
-                        external_merchant_id=merchant.merchant_id,
-                        account=account,
+                        external_product_id=DEFAULT_PRODUCT_ID,
                         vat_code=VAT_CODE_MAPPING[vat_percentage],
                     ).count(),
                     1,
@@ -438,10 +397,9 @@ class TestSignUpGroup(TestCase):
         assert signup.last_modified_by is None
 
     def test_to_web_store_order_json(self):
-        with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
-            product_mapping = RegistrationWebStoreProductMappingFactory(
-                registration=self.signup_group.registration
-            )
+        product_mapping = RegistrationWebStoreProductMappingFactory(
+            registration=self.signup_group.registration
+        )
 
         english = LanguageFactory(pk="en", service_language=True)
 
@@ -888,10 +846,9 @@ class TestSignUp(TestCase):
         assert signup.last_modified_by is None
 
     def test_to_web_store_order_json(self):
-        with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
-            product_mapping = RegistrationWebStoreProductMappingFactory(
-                registration=self.signup.registration
-            )
+        product_mapping = RegistrationWebStoreProductMappingFactory(
+            registration=self.signup.registration
+        )
 
         english = LanguageFactory(pk="en", service_language=True)
 
@@ -1301,10 +1258,9 @@ class TestSignUpPriceGroup(TestCase):
         cls.price_group = SignUpPriceGroupFactory()
 
     def test_to_web_store_order_json(self):
-        with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
-            product_mapping = RegistrationWebStoreProductMappingFactory(
-                registration=self.price_group.signup.registration
-            )
+        product_mapping = RegistrationWebStoreProductMappingFactory(
+            registration=self.price_group.signup.registration
+        )
 
         price_net = str(
             strip_trailing_zeroes_from_decimal(self.price_group.price_without_vat)
@@ -1447,41 +1403,3 @@ class TestWebStoreAccount(TestCase):
         self.account.delete(force_delete=True)
 
         self.assertEqual(WebStoreAccount.objects.count(), 0)
-
-
-class TestRegistrationWebStoreProductMapping(TestCase):
-    @classmethod
-    def setUpTestData(cls):
-        with cls.settings(cls, WEB_STORE_INTEGRATION_ENABLED=False):
-            cls.product_mapping = RegistrationWebStoreProductMappingFactory()
-
-    def test_can_create_more_than_one_mapping_for_same_merchant(self):
-        self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 1)
-
-        with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
-            RegistrationWebStoreProductMappingFactory(
-                external_merchant_id=self.product_mapping.external_merchant_id
-            )
-
-        self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 2)
-
-    def test_can_create_more_than_one_mapping_for_same_account(self):
-        self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 1)
-
-        with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
-            RegistrationWebStoreProductMappingFactory(
-                account=self.product_mapping.account
-            )
-
-        self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 2)
-
-    def test_can_create_more_than_one_mapping_for_same_merchant_and_account(self):
-        self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 1)
-
-        with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
-            RegistrationWebStoreProductMappingFactory(
-                external_merchant_id=self.product_mapping.external_merchant_id,
-                account=self.product_mapping.account,
-            )
-
-        self.assertEqual(RegistrationWebStoreProductMapping.objects.count(), 2)
