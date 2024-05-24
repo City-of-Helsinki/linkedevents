@@ -230,36 +230,6 @@ def test_order_webhook_method_not_allowed(api_client, data_source, http_method):
 
 
 @pytest.mark.parametrize(
-    "action_endpoint,event_type",
-    [
-        ("payment", WebStorePaymentWebhookEventType.PAYMENT_PAID.value),
-        ("order", WebStoreOrderWebhookEventType.ORDER_CANCELLED.value),
-    ],
-)
-@pytest.mark.django_db
-def test_not_authorized_without_apikey(api_client, action_endpoint, event_type):
-    payment = create_signup_payment()
-
-    data = get_webhook_data(
-        payment.external_order_id,
-        event_type,
-        {"paymentId": _PAYMENT_ID} if action_endpoint == "payment" else None,
-    )
-
-    assert payment.status == SignUpPayment.PaymentStatus.CREATED
-
-    response = post_webhook(api_client, data, action_endpoint)
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-
-    payment.refresh_from_db()
-    assert payment.status == SignUpPayment.PaymentStatus.CREATED
-
-    assert len(mail.outbox) == 0
-
-    assert AuditLogEntry.objects.count() == 0
-
-
-@pytest.mark.parametrize(
     "created_by_user,has_contact_person",
     [
         (None, True),
@@ -270,10 +240,8 @@ def test_not_authorized_without_apikey(api_client, action_endpoint, event_type):
 )
 @pytest.mark.django_db
 def test_payment_paid_webhook_for_signup_payment(
-    api_client, data_source, created_by_user, has_contact_person
+    api_client, created_by_user, has_contact_person
 ):
-    api_client.credentials(apikey=data_source.api_key)
-
     payment = create_signup_payment(
         user=created_by_user() if callable(created_by_user) else created_by_user,
         create_contact_person=has_contact_person,
@@ -304,11 +272,7 @@ def test_payment_paid_webhook_for_signup_payment(
 
 
 @pytest.mark.django_db
-def test_payment_paid_webhook_for_signup_payment_with_waitlisted_status(
-    api_client, data_source
-):
-    api_client.credentials(apikey=data_source.api_key)
-
+def test_payment_paid_webhook_for_signup_payment_with_waitlisted_status(api_client):
     payment = create_signup_payment(user=UserFactory())
     payment.signup.attendee_status = SignUp.AttendeeStatus.WAITING_LIST
     payment.signup.save(update_fields=["attendee_status"])
@@ -352,10 +316,8 @@ def test_payment_paid_webhook_for_signup_payment_with_waitlisted_status(
 )
 @pytest.mark.django_db
 def test_payment_paid_webhook_for_signup_group_payment(
-    api_client, data_source, created_by_user, has_contact_person
+    api_client, created_by_user, has_contact_person
 ):
-    api_client.credentials(apikey=data_source.api_key)
-
     payment = create_signup_group_payment(
         user=created_by_user() if callable(created_by_user) else created_by_user,
         create_contact_person=has_contact_person,
@@ -386,9 +348,7 @@ def test_payment_paid_webhook_for_signup_group_payment(
 
 
 @pytest.mark.django_db
-def test_payment_cancelled_webhook_for_signup_payment(api_client, data_source):
-    api_client.credentials(apikey=data_source.api_key)
-
+def test_payment_cancelled_webhook_for_signup_payment(api_client):
     payment = create_signup_payment()
 
     assert SignUpPayment.objects.count() == 1
@@ -417,9 +377,7 @@ def test_payment_cancelled_webhook_for_signup_payment(api_client, data_source):
 
 
 @pytest.mark.django_db
-def test_payment_cancelled_webhook_for_signup_group_payment(api_client, data_source):
-    api_client.credentials(apikey=data_source.api_key)
-
+def test_payment_cancelled_webhook_for_signup_group_payment(api_client):
     payment = create_signup_group_payment()
 
     assert SignUpPayment.objects.count() == 1
@@ -448,9 +406,7 @@ def test_payment_cancelled_webhook_for_signup_group_payment(api_client, data_sou
 
 
 @pytest.mark.django_db
-def test_order_cancelled_webhook_for_signup_payment(api_client, data_source):
-    api_client.credentials(apikey=data_source.api_key)
-
+def test_order_cancelled_webhook_for_signup_payment(api_client):
     payment = create_signup_payment()
 
     assert SignUpPayment.objects.count() == 1
@@ -479,9 +435,7 @@ def test_order_cancelled_webhook_for_signup_payment(api_client, data_source):
 
 
 @pytest.mark.django_db
-def test_order_cancelled_webhook_for_signup_group_payment(api_client, data_source):
-    api_client.credentials(apikey=data_source.api_key)
-
+def test_order_cancelled_webhook_for_signup_group_payment(api_client):
     payment = create_signup_group_payment()
 
     assert SignUpPayment.objects.count() == 1
@@ -517,9 +471,7 @@ def test_order_cancelled_webhook_for_signup_group_payment(api_client, data_sourc
     ],
 )
 @pytest.mark.django_db
-def test_invalid_order_id(api_client, data_source, action_endpoint, event_type):
-    api_client.credentials(apikey=data_source.api_key)
-
+def test_invalid_order_id(api_client, action_endpoint, event_type):
     data = get_webhook_data(
         "wrong",
         event_type,
@@ -542,9 +494,7 @@ def test_invalid_order_id(api_client, data_source, action_endpoint, event_type):
     ],
 )
 @pytest.mark.django_db
-def test_invalid_namespace(api_client, data_source, action_endpoint, event_type):
-    api_client.credentials(apikey=data_source.api_key)
-
+def test_invalid_namespace(api_client, action_endpoint, event_type):
     update_data = {"namespace": "wrong"}
     if action_endpoint == "payment":
         update_data["paymentId"] = _PAYMENT_ID
@@ -565,9 +515,7 @@ def test_invalid_namespace(api_client, data_source, action_endpoint, event_type)
 
 @pytest.mark.parametrize("action_endpoint", ["payment", "order"])
 @pytest.mark.django_db
-def test_wrong_event_type(api_client, data_source, action_endpoint):
-    api_client.credentials(apikey=data_source.api_key)
-
+def test_wrong_event_type(api_client, action_endpoint):
     data = get_webhook_data(
         _EXTERNAL_ORDER_ID,
         "wrong",
@@ -590,9 +538,7 @@ def test_wrong_event_type(api_client, data_source, action_endpoint):
     ],
 )
 @pytest.mark.django_db
-def test_payment_not_found(api_client, data_source, action_endpoint, event_type):
-    api_client.credentials(apikey=data_source.api_key)
-
+def test_payment_not_found(api_client, action_endpoint, event_type):
     data = get_webhook_data(
         _EXTERNAL_ORDER_ID,
         event_type,
@@ -639,10 +585,8 @@ def test_payment_not_found(api_client, data_source, action_endpoint, event_type)
 )
 @pytest.mark.django_db
 def test_web_store_api_request_exception(
-    api_client, data_source, action_endpoint, event_type, api_response_status_code
+    api_client, action_endpoint, event_type, api_response_status_code
 ):
-    api_client.credentials(apikey=data_source.api_key)
-
     payment = create_signup_group_payment()
 
     data = get_webhook_data(
@@ -680,10 +624,8 @@ def test_web_store_api_request_exception(
 )
 @pytest.mark.django_db
 def test_webhook_and_web_store_payment_status_mismatch(
-    api_client, data_source, event_type, web_store_payment_status
+    api_client, event_type, web_store_payment_status
 ):
-    api_client.credentials(apikey=data_source.api_key)
-
     payment = create_signup_group_payment()
 
     data = get_webhook_data(
@@ -711,9 +653,7 @@ def test_webhook_and_web_store_payment_status_mismatch(
 
 
 @pytest.mark.django_db
-def test_webhook_and_web_store_order_status_mismatch(api_client, data_source):
-    api_client.credentials(apikey=data_source.api_key)
-
+def test_webhook_and_web_store_order_status_mismatch(api_client):
     payment = create_signup_group_payment()
 
     data = get_webhook_data(

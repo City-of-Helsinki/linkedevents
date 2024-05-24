@@ -566,7 +566,7 @@ if settings.WEB_STORE_INTEGRATION_ENABLED:
 class WebStoreWebhookViewSet(AuditLogApiViewMixin, viewsets.ViewSet):
     serializer_class = None
     http_method_names = ["post"]
-    permission_classes = [IsAuthenticated]
+    permission_classes = []
 
     @staticmethod
     def _get_payment(order_id: str) -> Optional[SignUpPayment]:
