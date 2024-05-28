@@ -1114,6 +1114,42 @@ def test_keywordset_search(
 
 
 @pytest.mark.django_db
+def test_keywordset_search_match_audience(
+    api_client,
+    event,
+    event2,
+    event3,
+    keyword,
+    keyword2,
+    keyword3,
+    keyword_set,
+    keyword_set2,
+):
+    keyword_set.keywords.set([keyword])
+    keyword_set.save()
+    keyword_set2.keywords.set([keyword2])
+    keyword_set.save()
+
+    event.audience.set([keyword, keyword3])
+    event.save()
+    event2.audience.set([keyword2, keyword3])
+    event2.save()
+    event3.audience.set([keyword, keyword2])
+    event3.save()
+
+    get_list_and_assert_events(f"keyword_set_AND={keyword_set.id}", [event, event3])
+    get_list_and_assert_events(f"keyword_set_AND={keyword_set2.id}", [event2, event3])
+    get_list_and_assert_events(
+        f"keyword_set_AND={keyword_set.id},{keyword_set2.id}", [event3]
+    )
+    get_list_and_assert_events(f"keyword_set_OR={keyword_set.id}", [event, event3])
+    get_list_and_assert_events(f"keyword_set_OR={keyword_set2.id}", [event2, event3])
+    get_list_and_assert_events(
+        f"keyword_set_OR={keyword_set.id},{keyword_set2.id}", [event, event2, event3]
+    )
+
+
+@pytest.mark.django_db
 def test_keyword_or_set_search(
     api_client,
     event,
@@ -1130,6 +1166,28 @@ def test_keyword_or_set_search(
     event2.keywords.add(keyword2, keyword3)
     event2.save()
     event3.keywords.add(keyword, keyword2)
+    event3.save()
+    load = f"keyword_OR_set1={keyword.id},{keyword2.id}&keyword_OR_set2={keyword3.id}"
+    get_list_and_assert_events(load, [event, event2])
+
+
+@pytest.mark.django_db
+def test_keyword_or_set_search_match_audience(
+    api_client,
+    event,
+    event2,
+    event3,
+    keyword,
+    keyword2,
+    keyword3,
+    keyword_set,
+    keyword_set2,
+):
+    event.audience.add(keyword, keyword3)
+    event.save()
+    event2.audience.add(keyword2, keyword3)
+    event2.save()
+    event3.audience.add(keyword, keyword2)
     event3.save()
     load = f"keyword_OR_set1={keyword.id},{keyword2.id}&keyword_OR_set2={keyword3.id}"
     get_list_and_assert_events(load, [event, event2])
