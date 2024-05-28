@@ -1,5 +1,42 @@
 # Changelog
 
+## [3.5.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.4.1...linkedevents-v3.5.0) (2024-05-28)
+
+
+### Features
+
+* Add create_instant_refunds method to WebStoreOrderAPIClient ([1c9842c](https://github.com/City-of-Helsinki/linkedevents/commit/1c9842c6c66c4d22e311a91afbb88fd93814b73c))
+* Add readiness and healthz endpoints ([5a6a229](https://github.com/City-of-Helsinki/linkedevents/commit/5a6a2297ad4785ab409e91890ecbb31ff3a8aa02))
+* Allow partial signup payment refunds ([2e4c25a](https://github.com/City-of-Helsinki/linkedevents/commit/2e4c25a498c8de8ef4d526cb1115377b94087ecb))
+* Allow registration admin to signup to closed enrolment ([56fb1ab](https://github.com/City-of-Helsinki/linkedevents/commit/56fb1ab6c509d4ede092abc0333ad8d98d28883c))
+* Cancel signups on event deletion or cancellation ([a898459](https://github.com/City-of-Helsinki/linkedevents/commit/a898459ae1f0ccf08adda11389dbbc1af88ebbd5))
+* Create new merchant in Talpa if Paytrail merchant ID changed ([17b31af](https://github.com/City-of-Helsinki/linkedevents/commit/17b31af63a150015311ca8161c1dc6d01aced474))
+* Create product mapping if missing during signup ([ff52b15](https://github.com/City-of-Helsinki/linkedevents/commit/ff52b154f2d97d20ce5d7bfcd807702e47c50638))
+* Don't require organization membership from superusers ([23ea303](https://github.com/City-of-Helsinki/linkedevents/commit/23ea3035ffb39af0a6f436ca942c85264ed080f3))
+* Improve payment refund and cancellation processing ([d1b0a17](https://github.com/City-of-Helsinki/linkedevents/commit/d1b0a177f849e9f9b088ddd1ef59b7b0fc24a157))
+* Move signups to attending on capacity increase ([5fd2ded](https://github.com/City-of-Helsinki/linkedevents/commit/5fd2deda47a8e97577799231693c9cf2e20dfbb2))
+* Remove apikey auth from web store webhooks ([6a712f5](https://github.com/City-of-Helsinki/linkedevents/commit/6a712f5e06512daf6464a4d6a87edf6879712765))
+* Remove helmet importer ([473c7bd](https://github.com/City-of-Helsinki/linkedevents/commit/473c7bd121e4e2e1dcad8115df60fcd2cb17b3f5))
+* Sentry returns git commit hash ([5b7b4b4](https://github.com/City-of-Helsinki/linkedevents/commit/5b7b4b4e03205be5d4ca6b3c1e535c474dc9370a))
+* Store orderItemId from web store response ([d59dbee](https://github.com/City-of-Helsinki/linkedevents/commit/d59dbee24d89835ff729138f53528548adac8977))
+* Update product mapping if Talpa merchant ID is changed ([5e91cec](https://github.com/City-of-Helsinki/linkedevents/commit/5e91cecb7c8cf0e43ae2279db658989ef6013910))
+* Use LINKED_EVENTS_UI_URL as merchant.url ([5e885c0](https://github.com/City-of-Helsinki/linkedevents/commit/5e885c0113b5e2ca7e0e843f4f6d7b9f33e60ecc))
+
+
+### Bug Fixes
+
+* Change Enkora importer date interval and yso mappings ([46b7e4a](https://github.com/City-of-Helsinki/linkedevents/commit/46b7e4a368bf62cf1bfdd24364ffbd789d23ce6b))
+
+
+### Dependencies
+
+* Upgrade dependencies ([2949084](https://github.com/City-of-Helsinki/linkedevents/commit/2949084a37cdf81577733d86aab59224d6c16601))
+
+
+### Documentation
+
+* Update importer documentation ([d0e8dc0](https://github.com/City-of-Helsinki/linkedevents/commit/d0e8dc05c03dd3e5a1f23be9e22aa916c3dbd249))
+
 ## [3.4.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.4.0...linkedevents-v3.4.1) (2024-05-02)
 
 
