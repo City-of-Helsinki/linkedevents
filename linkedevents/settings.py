@@ -99,8 +99,10 @@ env = environ.Env(
     EXTERNAL_USER_PUBLISHER_ID=(str, "others"),
     ENKORA_API_USER=(str, "JoeEnkora"),
     ENKORA_API_PASSWORD=(str, None),
+    EVENT_ADMIN_EXPIRATION_MONTHS=(int, 12),
     EXTRA_INSTALLED_APPS=(list, []),
     FIELD_ENCRYPTION_KEYS=(list, []),
+    FINANCIAL_ADMIN_EXPIRATION_MONTHS=(int, 6),
     FULL_TEXT_WEIGHT_OVERRIDES=(dict, {}),
     GDPR_API_QUERY_SCOPE=(str, ""),
     GDPR_API_DELETE_SCOPE=(str, ""),
@@ -153,6 +155,8 @@ env = environ.Env(
     TOKEN_AUTH_FIELD_FOR_CONSENTS=(list, ["https://api.hel.fi/auth"]),
     TOKEN_AUTH_REQUIRE_SCOPE_PREFIX=(bool, False),
     TRUST_X_FORWARDED_HOST=(bool, False),
+    REGISTRATION_ADMIN_EXPIRATION_MONTHS=(int, 6),
+    REGISTRATION_USER_EXPIRATION_MONTHS=(int, 2),
     WEB_STORE_API_BASE_URL=(str, ""),
     WEB_STORE_API_KEY=(str, ""),
     WEB_STORE_API_NAMESPACE=(str, ""),
@@ -711,6 +715,11 @@ REST_KNOX = {
     "TOKEN_PREFIX": "",
     "TOKEN_TTL": timedelta(days=30),
 }
+
+EVENT_ADMIN_EXPIRATION_MONTHS = env("EVENT_ADMIN_EXPIRATION_MONTHS")
+FINANCIAL_ADMIN_EXPIRATION_MONTHS = env("FINANCIAL_ADMIN_EXPIRATION_MONTHS")
+REGISTRATION_ADMIN_EXPIRATION_MONTHS = env("REGISTRATION_ADMIN_EXPIRATION_MONTHS")
+REGISTRATION_USER_EXPIRATION_MONTHS = env("REGISTRATION_USER_EXPIRATION_MONTHS")
 
 # local_settings.py can be used to override environment-specific settings
 # like database and email that differ between development and production.
