@@ -2915,7 +2915,10 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
         )
         for kw_set in kw_sets:
             kw_ids = [kw.id for kw in kw_set.keywords.all()]
-            subqs = Event.objects.filter(id=OuterRef("pk"), keywords__in=kw_ids)
+            subqs = Event.objects.filter(
+                Q(id=OuterRef("pk"), keywords__in=kw_ids)
+                | Q(id=OuterRef("pk"), audience__in=kw_ids)
+            )
             queryset = queryset.filter(Exists(subqs))
 
     vals = params.get("keyword_set_OR", None)
@@ -2932,7 +2935,10 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
         kw_qs = Event.keywords.through.objects.filter(
             event=OuterRef("pk"), keyword__in=all_keywords
         )
-        queryset = queryset.filter(Exists(kw_qs))
+        audience_qs = Event.audience.through.objects.filter(
+            event=OuterRef("pk"), keyword__in=all_keywords
+        )
+        queryset = queryset.filter(Exists(kw_qs) | Exists(audience_qs))
 
     if "local_ongoing_OR_set" in "".join(params):
         count = 1
@@ -2999,7 +3005,10 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
                 kw_qs = Event.keywords.through.objects.filter(
                     event=OuterRef("pk"), keyword__in=vals
                 )
-                queryset = queryset.filter(Exists(kw_qs))
+                audience_qs = Event.audience.through.objects.filter(
+                    event=OuterRef("pk"), keyword__in=vals
+                )
+                queryset = queryset.filter(Exists(kw_qs) | Exists(audience_qs))
 
     val = params.get("internet_based", None)
     if val and parse_bool(val, "internet_based"):

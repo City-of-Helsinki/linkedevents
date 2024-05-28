@@ -31,7 +31,6 @@ from linkedevents.tests.conftest import *  # noqa
 from registrations.models import Registration
 
 from ..models import License, PublicationStatus
-from .test_event_get import get_list
 from .utils import versioned_reverse as reverse
 
 TEXT_FI = "testaus"
@@ -686,6 +685,7 @@ def api_get_list(request, event, api_client):
     the module of the test function, or use default API version
     """
     version = getattr(request.module, "version", "v1")
+    from .test_event_get import get_list
 
     def f():
         return get_list(api_client, version)
@@ -700,6 +700,7 @@ def all_api_get_list(request, event, api_client):
     the module of the test function, or use default API version
     """
     version = request.param
+    from .test_event_get import get_list
 
     def f():
         return get_list(api_client, version)
