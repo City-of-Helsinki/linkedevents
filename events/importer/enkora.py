@@ -35,9 +35,7 @@ class EnkoraImporter(Importer):
     COURSE_CONTACT_LINK = (
         "https://www.hel.fi/fi/paatoksenteko-ja-hallinto/liikuntaluuri"
     )
-    COURSE_PROVIDER_CONTACT_INFO = (
-        "Helsingin Kaupunki - Liikuntaluuri, Avoinna ma-to 13-15"
-    )
+    COURSE_PROVIDER_CONTACT_INFO = "Helsingin Kaupunki - Liikuntaluuri"
 
     ALL_COURSES_KEYWORDS = {"yso:p916"}  # liikunta
     COURSES = "yso:p9270"  # kurssit
@@ -119,7 +117,11 @@ class EnkoraImporter(Importer):
         AUDIENCE_SPECIAL_GROUPS,
     }
 
-    PROVIDER = "Helsingin kaupungin liikuntapalvelut"
+    PROVIDER = {
+        "fi": "Helsingin kaupungin liikuntapalvelut",
+        "sv": "Helsingfors stads idrottsservicen",
+        "en": "City of Helsinki Sports Services",
+    }
     ORGANIZATION = "ahjo:u021600"
     DATASOURCE_ORGANIZATION = "kuva-liikunta"
 
@@ -624,6 +626,11 @@ class EnkoraImporter(Importer):
             "epsg:4326": (60.16631379895938, 24.94999595581348),
             "keywords": set(),
         },
+        325: {
+            "enkora-name": "Kuntosali Ruoholahti, Itämerenkatu 21, 4.krs.",  # ELIXIA Ruoholahti / Kuntokeskus
+            "tprek-id": 40101,
+            "keywords": {SPORT_GYM},
+        },
     }
 
     description_word_map = {
@@ -903,6 +910,11 @@ class EnkoraImporter(Importer):
         return datetime.now(), timezone.now()
 
     def import_courses(self, months_back_from_today: int = 5) -> None:
+        """
+        Handles importing courses from Enkora API.
+        :param: months_back_from_today, int determines how many months back from today data should be queried
+        :return: None
+        """
         kurssi_api = self.driver_cls(
             settings.ENKORA_API_USER, settings.ENKORA_API_PASSWORD, request_timeout=20.0
         )
@@ -916,14 +928,20 @@ class EnkoraImporter(Importer):
 
         # Round #1: past data
         for _ in kurssi_api.get_data_for_date_range(
-            first_date, now_is, reservation_event_groups, reservation_events
+            first_date,
+            now_is,
+            reservation_event_groups,
+            reservation_events,
         ):
             # Skip reservations, they're not relevant here.
             pass
 
         # Round #2: future data
         for _ in kurssi_api.get_data_for_date_range(
-            now_is, last_date, reservation_event_groups, reservation_events
+            now_is,
+            last_date,
+            reservation_event_groups,
+            reservation_events,
         ):
             # Skip reservations, they're not relevant here.
             pass
@@ -976,7 +994,6 @@ class EnkoraImporter(Importer):
                     )
                 )
                 continue
-
             # Convert a course into Linked Event
             # Conversion can fail. Failures will be raised at end of iteration
             try:
@@ -1148,11 +1165,6 @@ class EnkoraImporter(Importer):
                 # Skip TPrek places
                 continue
 
-            (
-                location_data,
-                location_extra_info,
-                description_add_text,
-            ) = self.convert_location(course)
             if "street-address" not in location_mapping:
                 # Skip non-Enkora places
                 continue
@@ -1487,13 +1499,21 @@ class EnkoraImporter(Importer):
         Sample data:
         {
          'reservation_event_group_id': 32791,
-         'reservation_event_group_name': 'Koululaisuinti',
+         'reservation_event_group_name_fi': 'Koululaisuinti',
+         'reservation_event_group_name_sv': '',
+         'reservation_event_group_name_en': '',
          'created_timestamp': datetime.datetime(2021, 4, 13, 9, 54, 55),
          'created_user_id': 23698,
          'reservation_group_id': 32791,
          'reservation_group_name': 'Koululaisuinti',
          'description': 'Koululaisuinti',
+         'description_fi': 'Koululaisuinti',
+         'description_sv': '',
+         'description_en': '',
          'description_long': None,
+         'description_long_fi': None,
+         'description_long_sv': None,
+         'description_long_en': None,
          'description_form': None,
          'season_id': 24,
          'season_name': 'Kevät 2021',
@@ -1520,7 +1540,12 @@ class EnkoraImporter(Importer):
          'reserved_count': None,
          'queue_count': None,
          'fare_products': None,
-         'tags': [{'tag_id': '1', 'tag_name': 'Lapset, nuoret ja perheet'}]
+         'tags': [
+                {'tag_id': '1', 'tag_name': 'Lapset, nuoret ja perheet',
+                  'tag_group_id': '1', "tag_group_name": "Kohderyhmä"},
+                {'tag_id': '45', 'tag_name': 'Suomeksi', 'tag_group_id': '5',
+                  'tag_group_name': 'Ohjauskieli'}
+            ]
         }
         Bonus:
         'reservation_events' containing all the dates and times of the event
@@ -1576,36 +1601,32 @@ class EnkoraImporter(Importer):
             queue_capacity = course["queue_capacity"] - course["queue_count"]
             has_queue_capacity = queue_capacity > 0
 
-        # Course title, with additional information
-        main_event_title, sub_event_title = self.convert_title(course)
+        # Infer course language based on tag data
+        language = self.infer_event_language(course["tags"])
+        in_language = [self.languages[language]]
 
-        # Description, as HTML:
+        # Course as dict, which can include translations
+        sub_event_title, main_event_title = self.convert_title(course)
+
+        # Enriched description, as HTML
         description = self.convert_description(
             course, capacity_full, has_queue_capacity
         )
 
-        # Location:
-        (
-            location_data,
-            location_extra_info,
-            description_add_text,
-        ) = self.convert_location(course)
-        if description_add_text:
-            description += description_add_text
+        # Location
+        location_data = self.convert_location(course)
 
         # Keywords
         location_kwids, service_kwids, images = self.convert_keywords(course)
 
         # Audience
         (
-            language,
             audience_kwids,
             sport_kwids,
             audience_min_age,
             audience_max_age,
             liikuntakauppa_fi_link,
         ) = self.convert_audience(course)
-        in_language = [self.languages[language]]
 
         kw_ids = (
             self.ALL_COURSES_KEYWORDS | location_kwids | service_kwids | sport_kwids
@@ -1637,8 +1658,8 @@ class EnkoraImporter(Importer):
         # Wrapping up all details:
         event_data = {
             "type_id": Event.TypeId.COURSE,
-            "name": {"fi": main_event_title},
-            "description": {"fi": description},
+            "name": {**main_event_title},
+            "description": {**description},
             "audience_min_age": audience_min_age,
             "audience_max_age": audience_max_age,
             "audience": audience_keywords,
@@ -1650,8 +1671,10 @@ class EnkoraImporter(Importer):
             "date_published": dates["public_visibility_start"],
             # Obsoleted and should not be used anymore. Offers / URL replaces this.
             "external_links": None,  # {"fi": {"registration": liikuntakauppa_fi_link}},
-            "provider": {"fi": self.PROVIDER},
-            "provider_contact_info": {"fi": self.COURSE_PROVIDER_CONTACT_INFO},
+            "provider": {**self.PROVIDER},
+            "provider_contact_info": {
+                "fi": self.COURSE_PROVIDER_CONTACT_INFO
+            },  # ToDo: hard coded constant currently, needs to be extended upon? /AG
             "enrolment_start_time": dates["public_reservation_start"],
             "enrolment_end_time": dates["public_reservation_end"],
             "maximum_attendee_capacity": capacity,
@@ -1665,7 +1688,7 @@ class EnkoraImporter(Importer):
             "origin_id": course["reservation_event_group_id"],
             "publisher": self.organization,
             "location": location_data,
-            "location_extra_info": location_extra_info,
+            "location_extra_info": None,
             "keywords": keywords,
             "in_language": in_language,
             "offers": offers,
@@ -1674,7 +1697,7 @@ class EnkoraImporter(Importer):
 
         # Sub-events:
         # Literally all Enkora courses are multi-event
-        sub_event_overrides = {"name": {"fi": sub_event_title}}
+        sub_event_overrides = {"name": {**sub_event_title}}
         _, sub_events = self.build_sub_events(course, event_data, sub_event_overrides)
 
         # For development/testing:
@@ -1729,7 +1752,8 @@ class EnkoraImporter(Importer):
 
         return event_data, sub_events
 
-    def convert_keywords(self, course: dict) -> tuple[set, set, list]:
+    @staticmethod
+    def convert_keywords(course: dict) -> tuple[set, set, list]:
         """
         Deduce a set of keywords from course data.
         Also convert service into an image
@@ -1784,16 +1808,26 @@ class EnkoraImporter(Importer):
 
         return kws
 
-    def convert_title(self, course: dict) -> tuple[str, str]:
+    @staticmethod
+    def convert_title(course: dict) -> tuple[dict, Optional[dict]]:
         """
         Add information to course title about event hour and weekday
         :param course: dict, Enkora course information as returned from API
-        :return: tuple[str, str], modified course title
+        :return: tuple[dict, Optional[dict]], dictionary of course titles
+        and modified course titles in supported languages
         """
-        course_title = course["reservation_event_group_name"].strip()
+        course_title = {
+            lang: course.get(f"reservation_event_group_name_{lang}")
+            for lang in EnkoraImporter.supported_languages
+        }
+
+        # If there's no course title found for key: reservation_event_group_name_fi, set the default one
+        if not course_title["fi"]:
+            course_title["fi"] = course.get("reservation_event_group_name")
+
         if not course["reservation_events"]:
             # This should never happen. A course typically has events.
-            return course_title, course_title
+            return (course_title, course_title)
 
         # Iterate course events and collect the weekdays
         start_times = {}
@@ -1819,64 +1853,129 @@ class EnkoraImporter(Importer):
 
         # Weekdays
         wkday_map = {
-            1: "ma",
-            2: "ti",
-            3: "ke",
-            4: "to",
-            5: "pe",
-            6: "la",
-            0: "su",
+            1: {"fi": "ma", "sv": "må", "en": "mo"},
+            2: {"fi": "ti", "sv": "ti", "en": "tu"},
+            3: {"fi": "ke", "sv": "on", "en": "we"},
+            4: {"fi": "to", "sv": "to", "en": "th"},
+            5: {"fi": "pe", "sv": "fr", "en": "fr"},
+            6: {"fi": "la", "sv": "lö", "en": "sa"},
+            0: {"fi": "su", "sv": "sö", "en": "su"},
         }
         weekday_list = [wkday_map[wkday] for wkday in wkday_map if wkday in weekdays]
 
-        # Combine
-        formatted_title = "{} [{} klo {} - {}]".format(
-            course_title, ", ".join(weekday_list), start_time, end_time
+        # Translated texts
+        translated_title_text = {
+            "fi": "klo",
+            "sv": "kl.",
+            "en": "at",
+        }
+        formatted_title_w_transl = {
+            lang: (
+                "{} [{} {} {} - {}]".format(
+                    course_title[lang].strip(),
+                    ", ".join([wk_day[lang] for wk_day in weekday_list]),
+                    translated_title_text[lang],
+                    start_time,
+                    end_time,
+                )
+                if course_title[lang]
+                else None
+            )
+            for lang in EnkoraImporter.supported_languages
+        }
+
+        return (
+            course_title,  # Used for sub-event titles
+            formatted_title_w_transl,  # Used for super-event title
         )
 
-        return formatted_title, course_title
-
+    @staticmethod
     def convert_description(
-        self,
         course: dict,
         capacity_full: Optional[bool],
         has_queue_capacity: Optional[bool],
-    ) -> Optional[str]:
+    ) -> Optional[dict]:
         """
         Convert course description into HTML with additional information on course reservation status
         :param course: dict, Enkora course information as returned from API
         :param capacity_full: bool, if course capacity is known: true, if course is fully booked
         :param has_queue_capacity: bool, if course has a queue: true, if queue has capacity
-        :return: str, HTML-formatted course description
+        :return: dict, HTML-formatted course descriptions per language
         """
-        if course["description_long"]:
-            description = course["description_long"].strip()
-        elif course["description"]:
-            description = course["description"].strip()
-        elif course["reservation_event_group_name"]:
-            description = course["reservation_event_group_name"].strip()
-        else:
-            return None
+        description = {
+            lang: (
+                course.get(f"description_long_{lang}")
+                or course.get(f"description_{lang}")
+                or course.get(f"reservation_event_group_name_{lang}")
+            )
+            for lang in EnkoraImporter.supported_languages
+        }
 
-        # Convert imported plain-text into HTML
-        # Make sure characters are escaped properly, form paragraphs
-        desc_html = html.escape(description)
-        desc_html = "<p>" + re.sub(r"\n+", "</p>\n</p>", desc_html) + "</p>"
+        # If there's no description found for keys:
+        # description_long_fi, description_fi, reservation_event_group_name_fi, set to the default one
+        if not description["fi"]:
+            description["fi"] = (
+                course.get("description_long")
+                or course.get("description")
+                or course.get("reservation_event_group_name")
+            )
 
-        if capacity_full and has_queue_capacity:
-            desc_html = "<p><b>Jonopaikkoja</b></p>\n" + desc_html
-        elif capacity_full:
-            desc_html = "<p><b>Kurssi täynnä</b></p>\n" + desc_html
+        translated_description_text = {
+            "fi": {
+                "has_queue_capacity": "Jonopaikkoja",
+                "capacity_full": "Kurssi täynnä",
+                "add_on_text": "Kurssin lisätiedot",
+            },
+            "sv": {
+                "has_queue_capacity": "Platser i kön",
+                "capacity_full": "Kurssen fullbokad",
+                "add_on_text": "Tilläggsinformation om kursen",
+            },
+            "en": {
+                "has_queue_capacity": "Spots left in queue",
+                "capacity_full": "Course fully booked",
+                "add_on_text": "Additional information about the course",
+            },
+        }
 
-        return desc_html
+        # Iterate over the different translations and form descriptions with proper HTML tags
+        for lang in EnkoraImporter.supported_languages:
+            # Check if the course there's a course description for the language, if there is, add additional info
+            if description[lang]:
+                # Convert imported plain-text into HTML
+                # Make sure characters are escaped properly, form paragraphs
+                desc_html = html.escape(description[lang].strip())
+                desc_html = "<p>" + re.sub(r"\n+", "</p>\n</p>", desc_html) + "</p>"
 
-    def convert_location(self, course: dict) -> tuple[Optional[dict], dict, str]:
+                if capacity_full and has_queue_capacity:
+                    desc_html = (
+                        f"<p><b>{translated_description_text[lang]['has_queue_capacity']}</b></p>\n"
+                        + desc_html
+                    )
+                elif capacity_full:
+                    desc_html = (
+                        f"<p><b>{translated_description_text[lang]['capacity_full']}</b></p>\n"
+                        + desc_html
+                    )
+
+                desc_html += (
+                    f'<p><b>{translated_description_text[lang]["add_on_text"]}</b></p>\n<p>'
+                    f'<a href="{EnkoraImporter.COURSE_CONTACT_LINK}">Liikuntaluuri</a>: '
+                    f'<a href="tel:{EnkoraImporter.COURSE_CONTACT_PHONE}">{EnkoraImporter.COURSE_CONTACT_PHONE}</a></p>'
+                )
+
+                description.update({lang: desc_html})
+
+        return description
+
+    @staticmethod
+    def convert_location(course: dict) -> Optional[dict]:
         """
         Convert Enkora course information into location and extra information.
         Not all locations have Tprek mapping, then a street address will be returned.
         Fallback is to have no location.
         :param course: dict, Enkora course information as returned from API
-        :return: dict/None, dict
+        :return: dict/None
         """
         if course["location_id"] not in EnkoraImporter.place_map:
             raise ValueError(
@@ -1888,7 +1987,6 @@ class EnkoraImporter(Importer):
             )
 
         location = recur_dict()
-        extra_info = recur_dict()
         location_mapping = EnkoraImporter.place_map[course["location_id"]]
         if location_mapping["tprek-id"]:
             tprek_id = "tprek:{}".format(location_mapping["tprek-id"])
@@ -1909,16 +2007,7 @@ class EnkoraImporter(Importer):
         else:
             location = None
 
-        description_addon = (
-            '<p><b>Kurssin lisätiedot</b></p>\n<p><a href="{}">Liikuntaluuri</a>: '
-            '<a href="tel:{}">{}</a></p>'
-        ).format(
-            self.COURSE_CONTACT_LINK,
-            self.COURSE_CONTACT_PHONE,
-            self.COURSE_CONTACT_PHONE,
-        )
-
-        return location, extra_info, description_addon
+        return location
 
     @transaction.atomic
     def _handle_place(self, enkora_place_id: int, info_in: dict) -> None:
@@ -2022,7 +2111,6 @@ class EnkoraImporter(Importer):
         :param course: (dict) course data
         :param description: (str) course description
         :return: Tuple:
-            - str: detected language
             - set of Keyword IDs: detected audience
             - set of Keyword IDs: detected sport
             - int: participant minimum age
@@ -2034,8 +2122,9 @@ class EnkoraImporter(Importer):
 
         for enkora_tag in course["tags"]:
             tag_id = int(enkora_tag["tag_id"])
-            audience_mapping = self.audience_tag_map[tag_id]
-            audience_kw_ids |= audience_mapping["keywords"]
+            if tag_id in self.audience_tag_map:
+                audience_mapping = self.audience_tag_map[tag_id]
+                audience_kw_ids |= audience_mapping["keywords"]
 
         def _ranges_overlap(
             x1: Optional[int], x2: Optional[int], y1: int, y2: int
@@ -2052,16 +2141,14 @@ class EnkoraImporter(Importer):
                 audience_kw_ids |= age_kws
 
         # Parse description
-        event_language = "fi"
         title_kw_ids = self._parse_title_keywords(
             course["reservation_event_group_name"]
         )
-        if self.LANGUAGE_SWEDISH in title_kw_ids:
-            event_language = "sv"
-            title_kw_ids.remove(self.LANGUAGE_SWEDISH)
-        if self.LANGUAGE_ENGLISH in title_kw_ids:
-            event_language = "en"
-            title_kw_ids.remove(self.LANGUAGE_ENGLISH)
+
+        # Discarding title language keywords, as language is determined based on tags
+        title_kw_ids.discard(self.LANGUAGE_SWEDISH)
+        title_kw_ids.discard(self.LANGUAGE_ENGLISH)
+
         for kw_id in title_kw_ids:
             if kw_id in self.AUDIENCES:
                 audience_kw_ids.add(kw_id)
@@ -2072,13 +2159,41 @@ class EnkoraImporter(Importer):
         liikuntakauppa_fi_link = self.liikuntakauppa_link(course)
 
         return (
-            event_language,
             audience_kw_ids,
             sport_kw_ids,
             min_age,
             max_age,
             liikuntakauppa_fi_link,
         )
+
+    @staticmethod
+    def infer_event_language(course_tags: list) -> str:
+        """
+        Infer the event language based on specific language tag_id values.
+        Defaults to 'fi' if there is no match. If there are multiple language tags (shouldn't happen),
+        only the first one encountered will be evaluated.
+        :param course_tags: list, course tag data as a list of dicts
+        :return: str, representing the abbreviated event language
+        """
+        language_tag_id = None
+        event_language = "fi"
+        for tag_group in course_tags:
+            # Checking if tag_group_id = 5, i.e. Ohjauskieli
+            if int(tag_group.get("tag_group_id", -1)) == 5:
+                language_tag_id = int(tag_group.get("tag_id", -1))
+                # Stopping iterations once first language tag encountered, there should only be one
+                break
+
+        if language_tag_id == 45:
+            event_language = "fi"
+
+        elif language_tag_id == 46:
+            event_language = "sv"
+
+        elif language_tag_id == 47:
+            event_language = "en"
+
+        return event_language
 
     @staticmethod
     def liikuntakauppa_link(course: dict) -> str:
@@ -2199,7 +2314,7 @@ class Enkora:
     Base class for Enkora API
     """
 
-    endpoint_base_url = "https://oma.enkora.fi/liikuntavirasto"
+    ENDPOINT_BASE_URL = "https://oma.enkora.fi/liikuntavirasto"
     default_request_timeout = 5.0
     max_retries = 3
 
@@ -2280,8 +2395,10 @@ class Kurssidata(Enkora):
     Enkora API: Kurssit
     """
 
-    endpoint_url = f"{Enkora.endpoint_base_url}/call/api/getReservationEventGroups"
-    list_endpoint_url = f"{Enkora.endpoint_base_url}/call/api/getCourseIds"
+    endpoint_url = (
+        f"{Enkora.ENDPOINT_BASE_URL}/call/api/getReservationEventGroupsWithTranslations"
+    )
+    list_endpoint_url = f"{Enkora.ENDPOINT_BASE_URL}/call/api/getCourseIds"
 
     def __init__(self, username: str, password: str, request_timeout=None):
         super().__init__(username, password, request_timeout)
@@ -2293,6 +2410,7 @@ class Kurssidata(Enkora):
         }
 
         logger.debug("Requesting Enkora course data for ID {}".format(course_id))
+
         response = self._request(self.endpoint_url, payload, retries=3)
         json = response.json()
         if json["errors"]:
@@ -2429,6 +2547,7 @@ class Kurssidata(Enkora):
                 start_date, end_date, region
             )
         )
+
         response = self._request(self.endpoint_url, payload, retries=3)
         json = response.json()
         if json["errors"]:
@@ -2454,6 +2573,15 @@ class Kurssidata(Enkora):
             reservation_event_group = {
                 "reservation_event_group_id": int(course["reservation_event_group_id"]),
                 "reservation_event_group_name": course["reservation_event_group_name"],
+                "reservation_event_group_name_fi": course.get(
+                    "reservation_event_group_name_fi"
+                ),
+                "reservation_event_group_name_sv": course.get(
+                    "reservation_event_group_name_se"
+                ),  # Remapping 'se' to proper 'sv' ISO language code
+                "reservation_event_group_name_en": course.get(
+                    "reservation_event_group_name_en"
+                ),
                 "created_timestamp": datetime.strptime(
                     course["created_timestamp"], "%Y-%m-%d %H:%M:%S"
                 ),
@@ -2461,7 +2589,17 @@ class Kurssidata(Enkora):
                 "reservation_group_id": int(course["reservation_event_group_id"]),
                 "reservation_group_name": course["reservation_group_name"],
                 "description": course["description"],
+                "description_fi": course.get("description_fi"),
+                "description_sv": course.get(
+                    "description_se"
+                ),  # Remapping 'se' to proper 'sv' ISO language code
+                "description_en": course.get("description_en"),
                 "description_long": course["description_long"],
+                "description_long_fi": course.get("description_long_fi"),
+                "description_long_sv": course.get(
+                    "description_long_se"
+                ),  # Remapping 'se' to proper 'sv' ISO language code
+                "description_long_en": course.get("description_long_en"),
                 "description_form": course["description_form"],
                 "season_id": int(course["season_id"]) if course["season_id"] else None,
                 "season_name": course["season_name"],
