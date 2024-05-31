@@ -12,7 +12,6 @@ from events.models import Event
 
 
 class TestEnkoraImporter:
-    @pytest.mark.no_test_audit_log
     @pytest.mark.django_db
     @pytest.mark.parametrize(
         "test_input_descriptions,expected_ages",
@@ -379,7 +378,6 @@ class TestEnkoraImporter:
     ):
         assert EnkoraImporter._parse_title_age(test_input_descriptions) == expected_ages
 
-    @pytest.mark.no_test_audit_log
     @pytest.mark.django_db
     @pytest.mark.parametrize(
         "test_input_descriptions,expected_keywords",
@@ -2081,7 +2079,6 @@ class TestEnkoraImporter:
             ("EASYSPORT TENNIS, ALKEET, 7-9 -vuotiaat", {EnkoraImporter.SPORT_TENNIS}),
         ],
     )
-    @pytest.mark.no_test_audit_log
     def test_parse_keywords_returns_correct_result(
         self, test_input_descriptions, expected_keywords
     ):
@@ -2099,7 +2096,6 @@ class TestEnkoraImporter:
             ("ALKEET YLI 7-vuotiaat", (7, None)),
         ],
     )
-    @pytest.mark.no_test_audit_log
     def test_parse_age_returns_correct_result(
         self, test_input_descriptions, expected_age_ranges
     ):
@@ -2272,7 +2268,6 @@ class TestEnkoraImporter:
 
         return save_cnt
 
-    @pytest.mark.no_test_audit_log
     @pytest.mark.django_db
     @patch("events.importer.enkora.Enkora._request_json")
     @patch("events.importer.enkora.EnkoraImporter._get_timestamps")
@@ -2379,7 +2374,8 @@ class TestEnkoraImporter:
             '"524142", "sale_event_id": null}], "fare_products": [{"fare_product_id": "3605", "fare_produc'
             't_name": "Pohjoinen Ryhm\\u00e4liikunta Lapsi 7-9 -vuotiaat", "fare_product_name_customer": "'
             'Ryhm\\u00e4liikunta", "price": "3000.0000", "vat_percentage": "10", "min_age": "6", "max_age"'
-            ': "10"}], "tags": [{"tag_id": "1", "tag_name": "Lapset, nuoret ja perheet"}]}]}}'
+            ': "10"}], "tags": [{"tag_id": "1", "tag_name": "Lapset, nuoret ja perheet"}, {"tag_group_id":'
+            '"5", "tag_id": "45", "tag_name": "Suomeksi"}]}]}}'
         )
         mock_request.return_value = json.loads(response_str)
 
@@ -2475,15 +2471,15 @@ class TestEnkoraImporter:
             "secondary_headline_zh_hans": None,
             "secondary_headline_ru": None,
             "secondary_headline_ar": None,
-            "provider": EnkoraImporter.PROVIDER,
-            "provider_fi": EnkoraImporter.PROVIDER,
-            "provider_sv": None,
-            "provider_en": None,
+            "provider": EnkoraImporter.PROVIDER["fi"],
+            "provider_fi": EnkoraImporter.PROVIDER["fi"],
+            "provider_sv": EnkoraImporter.PROVIDER["sv"],
+            "provider_en": EnkoraImporter.PROVIDER["en"],
             "provider_zh_hans": None,
             "provider_ru": None,
             "provider_ar": None,
-            "provider_contact_info": "Helsingin Kaupunki - Liikuntaluuri, Avoinna ma-to 13-15",
-            "provider_contact_info_fi": "Helsingin Kaupunki - Liikuntaluuri, Avoinna ma-to 13-15",
+            "provider_contact_info": EnkoraImporter.COURSE_PROVIDER_CONTACT_INFO,
+            "provider_contact_info_fi": EnkoraImporter.COURSE_PROVIDER_CONTACT_INFO,
             "provider_contact_info_sv": None,
             "provider_contact_info_en": None,
             "provider_contact_info_zh_hans": None,
@@ -2542,3 +2538,91 @@ class TestEnkoraImporter:
                 assert (
                     field_value == expected_fields[field_name]
                 ), f"Field {field_name} mismatch!"
+
+    @pytest.mark.parametrize(
+        "test_input_tags,expected_event_language",
+        [
+            # course language: Finnish
+            (
+                [
+                    {"tag_group_id": "5", "tag_name": "Suomeksi", "tag_id": "45"},
+                    {
+                        "tag_group_id": "10",
+                        "tag_name": "Some other tag",
+                        "tag_id": "123",
+                    },
+                ],
+                "fi",
+            ),
+            # course language: Swedish
+            (
+                [
+                    {"tag_group_id": "5", "tag_name": "Ruotsiksi", "tag_id": "46"},
+                    {
+                        "tag_group_id": "10",
+                        "tag_name": "Some other tag",
+                        "tag_id": "123",
+                    },
+                ],
+                "sv",
+            ),
+            # course language: English
+            (
+                [
+                    {"tag_group_id": "5", "tag_name": "Englanniksi", "tag_id": "47"},
+                    {
+                        "tag_group_id": "10",
+                        "tag_name": "Some other tag",
+                        "tag_id": "123",
+                    },
+                ],
+                "en",
+            ),
+            # course language: Sign language, defaults to Finnish as it isn't supported in LE
+            (
+                [
+                    {
+                        "tag_group_id": "5",
+                        "tag_name": "Viittomakielellä",
+                        "tag_id": "48",
+                    },
+                    {
+                        "tag_group_id": "10",
+                        "tag_name": "Some other tag",
+                        "tag_id": "123",
+                    },
+                ],
+                "fi",
+            ),
+            # course language: Tag missing, defaults to Finnish
+            (
+                [{"tag_group_id": "10", "tag_name": "Some other tag", "tag_id": "123"}],
+                "fi",
+            ),
+            # course language: Multiple language tags founds -> ambigous course language,
+            (
+                [
+                    {"tag_group_id": "5", "tag_name": "Suomeksi", "tag_id": "45"},
+                    {
+                        "tag_group_id": "10",
+                        "tag_name": "Some other tag",
+                        "tag_id": "123",
+                    },
+                    {"tag_group_id": "5", "tag_name": "Ruotsiksi", "tag_id": "46"},
+                    {
+                        "tag_group_id": "10",
+                        "tag_name": "Some other tag 2",
+                        "tag_id": "234",
+                    },
+                ],
+                "fi",
+            ),
+        ],
+    )
+    def test_infer_event_language_returns_correct_result(
+        self, test_input_tags, expected_event_language
+    ):
+        assert (
+            EnkoraImporter.infer_event_language(test_input_tags)
+            == expected_event_language
+        )
