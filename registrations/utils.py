@@ -225,7 +225,7 @@ def create_web_store_api_order(
         )
 
     order_data["lastValidPurchaseDateTime"] = localized_expiration_datetime.astimezone(
-        pytz.UTC
+        pytz.timezone("Europe/Helsinki")
     ).strftime("%Y-%m-%dT%H:%M:%S")
 
     client = WebStoreOrderAPIClient()

@@ -2,19 +2,28 @@ from datetime import timedelta
 from unittest.mock import patch
 from uuid import UUID
 
+import freezegun
 import pytest
+import pytz
 import requests_mock
 from django.conf import settings as django_settings
+from django.test import override_settings
 from django.utils import translation
 from django.utils.timezone import localtime
 from rest_framework import status
 
-from events.tests.factories import EventFactory, PlaceFactory
+from events.tests.factories import EventFactory, LanguageFactory, PlaceFactory
 from helevents.tests.factories import UserFactory
 from registrations.exceptions import WebStoreAPIError
-from registrations.tests.factories import SignUpContactPersonFactory, SignUpFactory
+from registrations.tests.factories import (
+    RegistrationWebStoreProductMappingFactory,
+    SignUpContactPersonFactory,
+    SignUpFactory,
+    SignUpPriceGroupFactory,
+)
 from registrations.utils import (
     create_event_ics_file_content,
+    create_web_store_api_order,
     get_access_code_for_contact_person,
     get_checkout_url_with_lang_param,
     get_web_store_order,
@@ -487,3 +496,171 @@ def test_get_web_store_refund_payment_status_request_exception(status_code):
         assert req_mock.call_count == 1
 
     assert exc_info.value.args[1] == status_code
+
+
+@pytest.mark.django_db
+def test_create_web_store_api_order():
+    signup = SignUpFactory()
+
+    SignUpPriceGroupFactory(signup=signup)
+    contact_person = SignUpContactPersonFactory(signup=signup)
+
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        RegistrationWebStoreProductMappingFactory(
+            registration=signup.registration,
+        )
+
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{django_settings.WEB_STORE_API_BASE_URL}order/",
+            json=DEFAULT_GET_ORDER_DATA,
+        )
+
+        resp_json = create_web_store_api_order(signup, contact_person, localtime())
+        assert resp_json == DEFAULT_GET_ORDER_DATA
+
+        assert req_mock.call_count == 1
+
+
+@pytest.mark.parametrize(
+    "created_by, user_uuid",
+    [
+        (None, str(None)),
+        (UserFactory, "123e4567-e89b-12d3-a456-426614174000"),
+    ],
+)
+@pytest.mark.django_db
+def test_create_web_store_api_order_created_by(created_by, user_uuid):
+    signup = SignUpFactory(
+        created_by=created_by(uuid=user_uuid) if created_by else None
+    )
+
+    SignUpPriceGroupFactory(signup=signup)
+    contact_person = SignUpContactPersonFactory(signup=signup)
+
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        RegistrationWebStoreProductMappingFactory(
+            registration=signup.registration,
+        )
+
+    with patch(
+        "web_store.order.clients.WebStoreOrderAPIClient.create_order"
+    ) as mocked_create_order:
+        create_web_store_api_order(signup, contact_person, localtime())
+
+        assert mocked_create_order.called is True
+        assert mocked_create_order.call_args[0][0]["user"] == user_uuid
+
+
+@pytest.mark.parametrize(
+    "contact_person, language_code, customer_data_type",
+    [
+        (None, "fi", type(None)),
+        (SignUpContactPersonFactory, "en", dict),
+    ],
+)
+@pytest.mark.django_db
+def test_create_web_store_api_order_contact_person(
+    contact_person, language_code, customer_data_type
+):
+    signup = SignUpFactory()
+
+    SignUpPriceGroupFactory(signup=signup)
+
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        RegistrationWebStoreProductMappingFactory(
+            registration=signup.registration,
+        )
+
+    if contact_person:
+        language = LanguageFactory(pk=language_code)
+        contact_person = contact_person(signup=signup, service_language=language)
+
+    with patch(
+        "web_store.order.clients.WebStoreOrderAPIClient.create_order"
+    ) as mocked_create_order:
+        create_web_store_api_order(signup, contact_person, localtime())
+
+        assert mocked_create_order.called is True
+        assert mocked_create_order.call_args[0][0]["language"] == language_code
+        assert (
+            isinstance(
+                mocked_create_order.call_args[0][0].get("customer"), customer_data_type
+            )
+            is True
+        )
+
+
+@pytest.mark.parametrize(
+    "expiration_datetime_timezone, expected_timestamp_string",
+    [
+        ("UTC", "2024-06-11T11:00:00"),
+        ("Europe/Helsinki", "2024-06-11T11:00:00"),
+    ],
+)
+@freezegun.freeze_time("2024-06-11 11:00:00+03:00")
+@pytest.mark.django_db
+def test_create_web_store_api_order_expiration_datetime(
+    expiration_datetime_timezone, expected_timestamp_string
+):
+    signup = SignUpFactory()
+
+    SignUpPriceGroupFactory(signup=signup)
+    contact_person = SignUpContactPersonFactory(signup=signup)
+
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        RegistrationWebStoreProductMappingFactory(
+            registration=signup.registration,
+        )
+
+    localized_expiration_datetime = localtime().astimezone(
+        pytz.timezone(expiration_datetime_timezone)
+    )
+    with patch(
+        "web_store.order.clients.WebStoreOrderAPIClient.create_order"
+    ) as mocked_create_order:
+        create_web_store_api_order(
+            signup, contact_person, localized_expiration_datetime
+        )
+
+        assert mocked_create_order.called is True
+        assert (
+            mocked_create_order.call_args[0][0]["lastValidPurchaseDateTime"]
+            == expected_timestamp_string
+        )
+
+
+@pytest.mark.parametrize(
+    "status_code",
+    [
+        status.HTTP_400_BAD_REQUEST,
+        status.HTTP_401_UNAUTHORIZED,
+        status.HTTP_403_FORBIDDEN,
+        status.HTTP_404_NOT_FOUND,
+        status.HTTP_500_INTERNAL_SERVER_ERROR,
+    ],
+)
+@pytest.mark.django_db
+def test_create_web_store_api_order_request_exception(status_code):
+    signup = SignUpFactory()
+
+    SignUpPriceGroupFactory(signup=signup)
+    contact_person = SignUpContactPersonFactory(signup=signup)
+
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        RegistrationWebStoreProductMappingFactory(
+            registration=signup.registration,
+        )
+
+    with (
+        requests_mock.Mocker() as req_mock,
+        pytest.raises(WebStoreAPIError),
+    ):
+        req_mock.post(
+            f"{django_settings.WEB_STORE_API_BASE_URL}order/",
+            status_code=status_code,
+        )
+
+        create_web_store_api_order(signup, contact_person, localtime())
+
+        assert req_mock.call_count == 1
