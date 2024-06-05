@@ -58,6 +58,7 @@ from registrations.utils import (
     create_web_store_product_mapping,
     create_web_store_refund,
     create_web_store_refunds,
+    get_checkout_url_with_lang_param,
     get_email_noreply_address,
     get_ui_locales,
     move_waitlisted_to_attending,
@@ -909,7 +910,11 @@ class SignUpMixin:
             hours=settings.WEB_STORE_ORDER_EXPIRATION_HOURS
         )
 
-        api_response = create_web_store_api_order(self, kwargs["expires_at"])
+        contact_person = getattr(self, "contact_person", None)
+
+        api_response = create_web_store_api_order(
+            self, contact_person, kwargs["expires_at"]
+        )
 
         if api_response.get("orderId"):
             kwargs["external_order_id"] = api_response["orderId"]
@@ -919,11 +924,16 @@ class SignUpMixin:
         else:
             kwargs["amount"] = self.total_payment_amount
 
-        if api_response.get("checkoutUrl"):
-            kwargs["checkout_url"] = api_response["checkoutUrl"]
+        if checkout_url := api_response.get("checkoutUrl"):
+            kwargs["checkout_url"] = get_checkout_url_with_lang_param(
+                checkout_url, getattr(contact_person, "service_language_id", "fi")
+            )
 
-        if api_response.get("loggedInCheckoutUrl"):
-            kwargs["logged_in_checkout_url"] = api_response["loggedInCheckoutUrl"]
+        if logged_in_checkout_url := api_response.get("loggedInCheckoutUrl"):
+            kwargs["logged_in_checkout_url"] = get_checkout_url_with_lang_param(
+                logged_in_checkout_url,
+                getattr(contact_person, "service_language_id", "fi"),
+            )
 
         kwargs["created_by"] = self.created_by
         kwargs["last_modified_by"] = self.created_by

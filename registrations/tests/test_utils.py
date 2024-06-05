@@ -12,7 +12,27 @@ from registrations.tests.factories import SignUpContactPersonFactory, SignUpFact
 from registrations.utils import (
     create_event_ics_file_content,
     get_access_code_for_contact_person,
+    get_checkout_url_with_lang_param,
 )
+
+
+def _get_checkout_url_and_language_code_test_params():
+    test_params = []
+
+    for lang_code in ["fi", "sv", "en"]:
+        for checkout_url, param_prefix in [
+            ("https://checkout.dev/v1/123/?user=abcdefg", "&"),
+            ("https://logged-in-checkout.dev/v1/123/", "?"),
+        ]:
+            test_params.append(
+                (
+                    checkout_url,
+                    lang_code,
+                    f"{checkout_url}{param_prefix}lang={lang_code}",
+                )
+            )
+
+    return test_params
 
 
 @pytest.mark.django_db
@@ -199,3 +219,16 @@ def test_get_access_code_for_contact_person(
         assert str(UUID(access_code)) == access_code
     else:
         assert access_code is None
+
+
+@pytest.mark.parametrize(
+    "checkout_url, lang_code, expected_checkout_url",
+    _get_checkout_url_and_language_code_test_params(),
+)
+def test_get_checkout_url_with_lang_param(
+    checkout_url, lang_code, expected_checkout_url
+):
+    new_checkout_url = get_checkout_url_with_lang_param(checkout_url, lang_code)
+
+    assert new_checkout_url == expected_checkout_url
+    assert checkout_url != new_checkout_url
