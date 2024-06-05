@@ -56,7 +56,6 @@ from registrations.utils import (
     create_web_store_api_order,
     create_web_store_product_accounting,
     create_web_store_product_mapping,
-    create_web_store_refund,
     create_web_store_refunds,
     get_checkout_url_with_lang_param,
     get_email_noreply_address,
@@ -1007,7 +1006,16 @@ class SignUpMixin:
 
         if payment and not bypass_web_store_api_calls:
             if payment.status == SignUpPayment.PaymentStatus.PAID:
-                create_web_store_refund(payment)
+                orders_data = [
+                    {
+                        "orderId": payment.external_order_id,
+                        "items": [
+                            price_group.to_web_store_partial_refund_json()
+                            for price_group in self.price_groups
+                        ],
+                    }
+                ]
+                create_web_store_refunds(orders_data)
                 logger.info(
                     f"{self.__class__.__name__} delete: payment with ID {payment.pk} refunded for "
                     f"object with ID {self.pk}."
@@ -1045,6 +1053,16 @@ class SignUpGroup(
         {"name": "signups_count"},
         {"name": "contact_person"},
     )
+
+    @property
+    def price_groups(self):
+        price_groups = []
+
+        for signup in self.signups.all().select_related("price_group"):
+            if price_group := getattr(signup, "price_group", None):
+                price_groups.append(price_group)
+
+        return price_groups
 
     @transaction.atomic
     def delete(self, *args, **kwargs):
@@ -1411,6 +1429,13 @@ class SignUp(
         {"name": "user_consent"},
         {"name": "contact_person"},
     )
+
+    @property
+    def price_groups(self):
+        if price_group := getattr(self, "price_group", None):
+            return [price_group]
+
+        return []
 
     def partially_refund_signup_group_web_store_payment(
         self, signup_group, bypass_web_store_api_calls=False
