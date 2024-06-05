@@ -47,13 +47,15 @@ def get_list(api_client: APIClient, query: Optional[str] = None):
 def assert_place_fields_exist(data):
     fields = (
         "id",
+        "name",
         "parent",
         "replaced_by",
         "position",
-        "address_region",
         "postal_code",
         "post_office_box_num",
         "address_country",
+        "address_locality",
+        "address_region",
         "divisions",
         "deleted",
         "n_events",

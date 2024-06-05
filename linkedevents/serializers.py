@@ -32,7 +32,7 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
 
         if (
             meta_fields := getattr(self.Meta, "fields", None)
-        ) and meta_fields != "__all__":
+        ) and meta_fields != serializers.ALL_FIELDS:
             self.translated_fields = [
                 field for field in trans_opts.fields.keys() if field in meta_fields
             ]

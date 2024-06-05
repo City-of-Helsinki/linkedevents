@@ -3,6 +3,7 @@ from rest_framework import serializers
 
 from events.api import DivisionSerializer, EnumChoiceField
 from events.models import Event, Keyword, Language, Offer, Place, PUBLICATION_STATUSES
+from linkedevents.serializers import TranslatedModelSerializer
 from registrations.models import Registration, SignUp
 
 
@@ -26,7 +27,9 @@ class DataAnalyticsAdministrativeDivisionSerializer(DivisionSerializer):
         )
 
 
-class DataAnalyticsKeywordSerializer(DataAnalyticsCreatedModifiedBaseSerializer):
+class DataAnalyticsKeywordSerializer(
+    DataAnalyticsCreatedModifiedBaseSerializer, TranslatedModelSerializer
+):
     alt_labels = serializers.SlugRelatedField(
         slug_field="name", many=True, read_only=True
     )
@@ -43,7 +46,9 @@ class DataAnalyticsKeywordSerializer(DataAnalyticsCreatedModifiedBaseSerializer)
         fields += DataAnalyticsCreatedModifiedBaseSerializer.Meta.fields
 
 
-class DataAnalyticsPlaceSerializer(DataAnalyticsCreatedModifiedBaseSerializer):
+class DataAnalyticsPlaceSerializer(
+    DataAnalyticsCreatedModifiedBaseSerializer, TranslatedModelSerializer
+):
     parent = serializers.PrimaryKeyRelatedField(read_only=True)
     replaced_by = serializers.PrimaryKeyRelatedField(read_only=True)
     divisions = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
@@ -52,13 +57,15 @@ class DataAnalyticsPlaceSerializer(DataAnalyticsCreatedModifiedBaseSerializer):
         model = Place
         fields = (
             "id",
+            "name",
             "parent",
             "replaced_by",
             "position",
+            "address_country",
             "address_region",
+            "address_locality",
             "postal_code",
             "post_office_box_num",
-            "address_country",
             "divisions",
             "deleted",
             "n_events",
@@ -66,7 +73,7 @@ class DataAnalyticsPlaceSerializer(DataAnalyticsCreatedModifiedBaseSerializer):
         fields += DataAnalyticsCreatedModifiedBaseSerializer.Meta.fields
 
 
-class DataAnalyticsLanguageSerializer(serializers.ModelSerializer):
+class DataAnalyticsLanguageSerializer(TranslatedModelSerializer):
     class Meta:
         model = Language
         fields = ("id", "name", "service_language")
@@ -82,7 +89,9 @@ class DataAnalyticsOfferSerializer(serializers.ModelSerializer):
         )
 
 
-class DataAnalyticsOrganizationSerializer(DataAnalyticsCreatedModifiedBaseSerializer):
+class DataAnalyticsOrganizationSerializer(
+    DataAnalyticsCreatedModifiedBaseSerializer, TranslatedModelSerializer
+):
     classification = serializers.PrimaryKeyRelatedField(read_only=True)
     parent = serializers.PrimaryKeyRelatedField(read_only=True)
     data_source = serializers.PrimaryKeyRelatedField(read_only=True)
@@ -101,7 +110,9 @@ class DataAnalyticsOrganizationSerializer(DataAnalyticsCreatedModifiedBaseSerial
         fields += DataAnalyticsCreatedModifiedBaseSerializer.Meta.fields
 
 
-class DataAnalyticsEventSerializer(DataAnalyticsCreatedModifiedBaseSerializer):
+class DataAnalyticsEventSerializer(
+    DataAnalyticsCreatedModifiedBaseSerializer, TranslatedModelSerializer
+):
     publisher = serializers.PrimaryKeyRelatedField(read_only=True)
     replaced_by = serializers.PrimaryKeyRelatedField(read_only=True)
     super_event = serializers.PrimaryKeyRelatedField(read_only=True)
@@ -118,6 +129,7 @@ class DataAnalyticsEventSerializer(DataAnalyticsCreatedModifiedBaseSerializer):
         model = Event
         fields = (
             "id",
+            "name",
             "publisher",
             "deleted",
             "date_published",
