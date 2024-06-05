@@ -28,6 +28,7 @@ from django.utils.translation import override
 from django_orghierarchy.models import Organization
 from encrypted_fields import fields
 from helsinki_gdpr.models import SerializableMixin
+from rest_framework import status
 
 from events.models import Event, Language, Offer
 from registrations.enums import VatPercentage
@@ -60,9 +61,13 @@ from registrations.utils import (
     get_checkout_url_with_lang_param,
     get_email_noreply_address,
     get_ui_locales,
+    get_web_store_order_status,
+    get_web_store_payment_status,
     move_waitlisted_to_attending,
     strip_trailing_zeroes_from_decimal,
 )
+from web_store.order.enums import WebStoreOrderStatus
+from web_store.payment.enums import WebStorePaymentStatus
 
 User = settings.AUTH_USER_MODEL
 
@@ -1001,37 +1006,60 @@ class SignUpMixin:
     def refund_or_cancel_web_store_payment(
         self, payment, bypass_web_store_api_calls=False
     ):
-        refunded = False
-        cancelled = False
+        """Returns a tuple of two booleans: (payment_refunded, payment_cancelled)."""
 
-        if payment and not bypass_web_store_api_calls:
-            if payment.status == SignUpPayment.PaymentStatus.PAID:
-                orders_data = [
-                    {
-                        "orderId": payment.external_order_id,
-                        "items": [
-                            price_group.to_web_store_partial_refund_json()
-                            for price_group in self.price_groups
-                        ],
-                    }
-                ]
-                create_web_store_refunds(orders_data)
-                logger.info(
-                    f"{self.__class__.__name__} delete: payment with ID {payment.pk} refunded for "
-                    f"object with ID {self.pk}."
-                )
-                refunded = True
-            elif payment.status == SignUpPayment.PaymentStatus.CREATED:
-                cancel_web_store_order(payment)
-                logger.info(
-                    f"{self.__class__.__name__} delete: payment with ID {payment.pk} cancelled for "
-                    f"object with ID {self.pk}."
-                )
-                cancelled = True
-        elif payment and bypass_web_store_api_calls:
-            cancelled = True
+        if payment and bypass_web_store_api_calls:
+            return False, True
 
-        return refunded, cancelled
+        if not payment or payment.is_expired:
+            return False, False
+
+        try:
+            web_store_payment_status = get_web_store_payment_status(
+                payment.external_order_id
+            )
+        except WebStoreAPIError as exc:
+            if exc.code == status.HTTP_404_NOT_FOUND:
+                web_store_payment_status = None
+            else:
+                raise
+        if web_store_payment_status == WebStorePaymentStatus.PAID.value:
+            orders_data = [
+                {
+                    "orderId": payment.external_order_id,
+                    "items": [
+                        price_group.to_web_store_partial_refund_json()
+                        for price_group in self.price_groups
+                    ],
+                }
+            ]
+            create_web_store_refunds(orders_data)
+            logger.info(
+                f"{self.__class__.__name__} delete: "
+                f"payment with order ID {payment.external_order_id} "
+                f"refunded for object with ID {self.pk}."
+            )
+            return True, False
+
+        try:
+            web_store_order_status = get_web_store_order_status(
+                payment.external_order_id
+            )
+        except WebStoreAPIError as exc:
+            if exc.code == status.HTTP_404_NOT_FOUND:
+                web_store_order_status = None
+            else:
+                raise
+        if web_store_order_status == WebStoreOrderStatus.DRAFT.value:
+            cancel_web_store_order(payment)
+            logger.info(
+                f"{self.__class__.__name__} delete: "
+                f"payment with order ID {payment.external_order_id} cancelled for "
+                f"object with ID {self.pk}."
+            )
+            return False, True
+
+        return False, False
 
 
 class SignUpGroup(
@@ -1440,16 +1468,26 @@ class SignUp(
     def partially_refund_signup_group_web_store_payment(
         self, signup_group, bypass_web_store_api_calls=False
     ):
-        partially_refunded = False
+        """Returns True if the signup group's payment was partially refunded, False otherwise."""
 
         if (
             bypass_web_store_api_calls
             or not (group_payment := getattr(signup_group, "payment", None))
             or group_payment.is_fully_refunded
+            or group_payment.is_expired
         ):
-            return partially_refunded
+            return False
 
-        if group_payment.status == SignUpPayment.PaymentStatus.PAID:
+        try:
+            web_store_payment_status = get_web_store_payment_status(
+                group_payment.external_order_id
+            )
+        except WebStoreAPIError as exc:
+            if exc.code == status.HTTP_404_NOT_FOUND:
+                web_store_payment_status = None
+            else:
+                raise
+        if web_store_payment_status == WebStorePaymentStatus.PAID.value:
             orders_data = [
                 {
                     "orderId": group_payment.external_order_id,
@@ -1469,16 +1507,27 @@ class SignUp(
             )
 
             logger.info(
-                f"{self.__class__.__name__} delete: payment with ID {group_payment.pk} "
+                f"{self.__class__.__name__} delete: "
+                f"payment with order ID {group_payment.external_order_id} "
                 f"partially refunded for signup group with ID {signup_group.pk}."
             )
-            partially_refunded = True
-        elif group_payment.status == SignUpPayment.PaymentStatus.CREATED:
+            return True
+
+        try:
+            web_store_order_status = get_web_store_order_status(
+                group_payment.external_order_id
+            )
+        except WebStoreAPIError as exc:
+            if exc.code == status.HTTP_404_NOT_FOUND:
+                web_store_order_status = None
+            else:
+                raise
+        if web_store_order_status == WebStoreOrderStatus.DRAFT.value:
             raise WebStoreRefundValidationError(
                 _("Cannot cancel payment for a participant that belongs to a group.")
             )
 
-        return partially_refunded
+        return False
 
     @transaction.atomic
     def delete(self, *args, **kwargs):
@@ -2088,6 +2137,10 @@ class SignUpPayment(
         super().undelete()
 
         SignUpPaymentRefund.all_objects.filter(payment_id=self.pk).update(deleted=False)
+
+    @property
+    def is_expired(self):
+        return self.status == SignUpPayment.PaymentStatus.EXPIRED
 
     @property
     def is_fully_refunded(self):

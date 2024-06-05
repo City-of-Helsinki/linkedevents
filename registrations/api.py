@@ -9,7 +9,6 @@ from django.db.models import ProtectedError
 from django.http import HttpResponse
 from django.utils import translation
 from django.utils.translation import gettext as _
-from requests import RequestException
 from rest_framework import filters, mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
@@ -73,10 +72,13 @@ from registrations.serializers import (
     WebStoreOrderWebhookSerializer,
     WebStorePaymentWebhookSerializer,
 )
-from registrations.utils import get_access_code_for_contact_person, send_mass_html_mail
-from web_store.order.clients import WebStoreOrderAPIClient
+from registrations.utils import (
+    get_access_code_for_contact_person,
+    get_web_store_order_status,
+    get_web_store_payment_status,
+    send_mass_html_mail,
+)
 from web_store.order.enums import WebStoreOrderStatus, WebStoreOrderWebhookEventType
-from web_store.payment.clients import WebStorePaymentAPIClient
 from web_store.payment.enums import (
     WebStorePaymentStatus,
     WebStorePaymentWebhookEventType,
@@ -579,25 +581,17 @@ class WebStoreWebhookViewSet(AuditLogApiViewMixin, viewsets.ViewSet):
 
     @staticmethod
     def _get_payment_status_from_web_store_api(order_id: str) -> Optional[str]:
-        payment_api_client = WebStorePaymentAPIClient()
-
         try:
-            resp_json = payment_api_client.get_payment(order_id=order_id)
-        except RequestException:
+            return get_web_store_payment_status(order_id)
+        except WebStoreAPIError:
             raise ConflictException(_("Could not check payment status from Talpa API."))
-
-        return resp_json.get("status")
 
     @staticmethod
     def _get_order_status_from_web_store_api(order_id: str) -> Optional[str]:
-        order_api_client = WebStoreOrderAPIClient()
-
         try:
-            resp_json = order_api_client.get_order(order_id=order_id)
-        except RequestException:
+            return get_web_store_order_status(order_id)
+        except WebStoreAPIError:
             raise ConflictException(_("Could not check order status from Talpa API."))
-
-        return resp_json.get("status")
 
     @staticmethod
     def _confirm_signup(signup_or_signup_group: Union[SignUp, SignUpGroup]) -> None:

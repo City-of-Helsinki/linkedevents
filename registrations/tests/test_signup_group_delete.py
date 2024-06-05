@@ -44,10 +44,11 @@ from registrations.tests.utils import (
 from web_store.tests.order.test_web_store_order_api_client import (
     DEFAULT_CANCEL_ORDER_DATA,
     DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE,
+    DEFAULT_GET_ORDER_DATA,
     DEFAULT_ORDER_ID,
 )
 from web_store.tests.payment.test_web_store_payment_api_client import (
-    DEFAULT_GET_REFUND_DATA,
+    DEFAULT_GET_PAYMENT_DATA,
 )
 from web_store.tests.utils import get_mock_response
 
@@ -1592,10 +1593,10 @@ def test_signup_grop_web_store_automatically_fully_refund_paid_signup_payment(
         signup_group=signup_group, email="test@test.com", service_language=language
     )
 
-    SignUpPaymentFactory(
+    payment = SignUpPaymentFactory(
         signup_group=signup_group,
         signup=None,
-        external_order_id="1234",
+        external_order_id=DEFAULT_ORDER_ID,
         status=SignUpPayment.PaymentStatus.PAID,
     )
 
@@ -1605,18 +1606,22 @@ def test_signup_grop_web_store_automatically_fully_refund_paid_signup_payment(
     assert SignUpPayment.objects.count() == 1
     assert SignUpPriceGroup.objects.count() == 1
 
-    json_return_value = DEFAULT_GET_REFUND_DATA.copy()
-    mocked_web_store_response = get_mock_response(
-        status_code=status.HTTP_200_OK, json_return_value=json_return_value
-    )
     with (
         translation.override(language.pk),
-        patch("requests.post") as mocked_web_store_request,
+        requests_mock.Mocker() as req_mock,
     ):
-        mocked_web_store_request.return_value = mocked_web_store_response
+        req_mock.get(
+            f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{payment.external_order_id}",
+            json=DEFAULT_GET_PAYMENT_DATA,
+        )
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
+            json=DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE,
+        )
 
         assert_delete_signup_group(api_client, signup_group.pk)
-        assert mocked_web_store_request.called is True
+
+        assert req_mock.call_count == 2
 
     assert SignUpPayment.objects.count() == 0
     assert SignUpPriceGroup.objects.count() == 0
@@ -1677,7 +1682,7 @@ def test_web_store_automatically_fully_refund_paid_signup_group_payment_for_recu
     SignUpContactPersonFactory(
         signup_group=signup_group, email="test@test.com", service_language=language
     )
-    SignUpPaymentFactory(
+    payment = SignUpPaymentFactory(
         signup=None,
         signup_group=signup_group,
         external_order_id=DEFAULT_ORDER_ID,
@@ -1694,6 +1699,10 @@ def test_web_store_automatically_fully_refund_paid_signup_group_payment_for_recu
         translation.override(language.pk),
         requests_mock.Mocker() as req_mock,
     ):
+        req_mock.get(
+            f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{payment.external_order_id}",
+            json=DEFAULT_GET_PAYMENT_DATA,
+        )
         req_mock.post(
             f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
             json=DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE,
@@ -1701,7 +1710,7 @@ def test_web_store_automatically_fully_refund_paid_signup_group_payment_for_recu
 
         assert_delete_signup_group(api_client, signup_group.pk)
 
-        assert req_mock.call_count == 1
+        assert req_mock.call_count == 2
 
     assert SignUpPayment.objects.count() == 0
     assert SignUpPriceGroup.objects.count() == 0
@@ -1760,7 +1769,7 @@ def test_web_store_cancel_unpaid_created_signup_group_payment_on_delete_for_recu
     SignUpContactPersonFactory(
         signup_group=signup_group, email="test@test.com", service_language=language
     )
-    SignUpPaymentFactory(
+    payment = SignUpPaymentFactory(
         signup=None,
         signup_group=signup_group,
         external_order_id=DEFAULT_ORDER_ID,
@@ -1774,14 +1783,22 @@ def test_web_store_cancel_unpaid_created_signup_group_payment_on_delete_for_recu
     assert SignUpPriceGroup.objects.count() == 1
 
     with requests_mock.Mocker() as req_mock:
+        req_mock.get(
+            f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{payment.external_order_id}",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+        req_mock.get(
+            f"{settings.WEB_STORE_API_BASE_URL}order/admin/{payment.external_order_id}",
+            json=DEFAULT_GET_ORDER_DATA,
+        )
         req_mock.post(
-            f"{settings.WEB_STORE_API_BASE_URL}order/{DEFAULT_ORDER_ID}/cancel",
+            f"{settings.WEB_STORE_API_BASE_URL}order/{payment.external_order_id}/cancel",
             json=DEFAULT_CANCEL_ORDER_DATA,
         )
 
         assert_delete_signup_group(api_client, signup_group.pk)
 
-        assert req_mock.call_count == 1
+        assert req_mock.call_count == 3
 
     assert SignUpPayment.objects.count() == 0
     assert SignUpPriceGroup.objects.count() == 0
@@ -1809,10 +1826,10 @@ def test_signup_group_web_store_automatically_cancel_unpaid_created_signup_payme
         signup_group=signup_group, email="test@test.com", service_language=language
     )
 
-    SignUpPaymentFactory(
+    payment = SignUpPaymentFactory(
         signup_group=signup_group,
         signup=None,
-        external_order_id="1234",
+        external_order_id=DEFAULT_ORDER_ID,
         status=SignUpPayment.PaymentStatus.CREATED,
     )
 
@@ -1822,12 +1839,23 @@ def test_signup_group_web_store_automatically_cancel_unpaid_created_signup_payme
     assert SignUpPayment.objects.count() == 1
     assert SignUpPriceGroup.objects.count() == 1
 
-    mocked_web_store_response = get_mock_response(status_code=status.HTTP_200_OK)
-    with patch("requests.post") as mocked_web_store_request:
-        mocked_web_store_request.return_value = mocked_web_store_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.get(
+            f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{payment.external_order_id}",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+        req_mock.get(
+            f"{settings.WEB_STORE_API_BASE_URL}order/admin/{payment.external_order_id}",
+            json=DEFAULT_GET_ORDER_DATA,
+        )
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/{payment.external_order_id}/cancel",
+            json=DEFAULT_CANCEL_ORDER_DATA,
+        )
 
         assert_delete_signup_group(api_client, signup_group.pk)
-        assert mocked_web_store_request.called is True
+
+        assert req_mock.call_count == 3
 
     assert SignUpPayment.objects.count() == 0
     assert SignUpPriceGroup.objects.count() == 0
@@ -1852,10 +1880,10 @@ def test_signup_group_web_store_automatically_fully_refund_payment_api_error(
     signup.signup_group = signup_group
     signup.save(update_fields=["signup_group"])
 
-    SignUpPaymentFactory(
+    payment = SignUpPaymentFactory(
         signup_group=signup_group,
         signup=None,
-        external_order_id="1234",
+        external_order_id=DEFAULT_ORDER_ID,
         status=SignUpPayment.PaymentStatus.PAID,
     )
 
@@ -1867,11 +1895,15 @@ def test_signup_group_web_store_automatically_fully_refund_payment_api_error(
     assert SignUpPayment.objects.count() == 1
     assert SignUpPriceGroup.objects.count() == 1
 
-    mocked_web_store_response = get_mock_response(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-    )
-    with patch("requests.post") as mocked_web_store_request:
-        mocked_web_store_request.return_value = mocked_web_store_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.get(
+            f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{payment.external_order_id}",
+            json=DEFAULT_GET_PAYMENT_DATA,
+        )
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
         response = delete_signup_group(api_client, signup_group.pk)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -1879,7 +1911,8 @@ def test_signup_group_web_store_automatically_fully_refund_payment_api_error(
             f"Unknown Talpa web store API error (status_code: "
             f"{status.HTTP_500_INTERNAL_SERVER_ERROR})"
         )
-        assert mocked_web_store_request.called is True
+
+        assert req_mock.call_count == 2
 
     assert SignUpGroup.objects.count() == 1
     assert SignUp.objects.count() == 1
@@ -1901,10 +1934,10 @@ def test_signup_group_web_store_automatically_cancel_unpaid_created_signup_payme
     signup.signup_group = signup_group
     signup.save(update_fields=["signup_group"])
 
-    SignUpPaymentFactory(
+    payment = SignUpPaymentFactory(
         signup_group=signup_group,
         signup=None,
-        external_order_id="1234",
+        external_order_id=DEFAULT_ORDER_ID,
         status=SignUpPayment.PaymentStatus.CREATED,
     )
 
@@ -1916,11 +1949,19 @@ def test_signup_group_web_store_automatically_cancel_unpaid_created_signup_payme
     assert SignUpPayment.objects.count() == 1
     assert SignUpPriceGroup.objects.count() == 1
 
-    mocked_web_store_response = get_mock_response(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-    )
-    with patch("requests.post") as mocked_web_store_request:
-        mocked_web_store_request.return_value = mocked_web_store_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.get(
+            f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{payment.external_order_id}",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+        req_mock.get(
+            f"{settings.WEB_STORE_API_BASE_URL}order/admin/{payment.external_order_id}",
+            json=DEFAULT_GET_ORDER_DATA,
+        )
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/{payment.external_order_id}/cancel",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
         response = delete_signup_group(api_client, signup_group.pk)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -1928,7 +1969,8 @@ def test_signup_group_web_store_automatically_cancel_unpaid_created_signup_payme
             f"Unknown Talpa web store API error (status_code: "
             f"{status.HTTP_500_INTERNAL_SERVER_ERROR})"
         )
-        assert mocked_web_store_request.called is True
+
+        assert req_mock.call_count == 3
 
     assert SignUpGroup.objects.count() == 1
     assert SignUp.objects.count() == 1
