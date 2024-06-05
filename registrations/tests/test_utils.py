@@ -3,16 +3,33 @@ from unittest.mock import patch
 from uuid import UUID
 
 import pytest
+import requests_mock
+from django.conf import settings as django_settings
 from django.utils import translation
 from django.utils.timezone import localtime
+from rest_framework import status
 
 from events.tests.factories import EventFactory, PlaceFactory
 from helevents.tests.factories import UserFactory
+from registrations.exceptions import WebStoreAPIError
 from registrations.tests.factories import SignUpContactPersonFactory, SignUpFactory
 from registrations.utils import (
     create_event_ics_file_content,
     get_access_code_for_contact_person,
     get_checkout_url_with_lang_param,
+    get_web_store_order,
+    get_web_store_order_status,
+    get_web_store_payment,
+    get_web_store_payment_status,
+)
+from web_store.order.enums import WebStoreOrderStatus
+from web_store.payment.enums import WebStorePaymentStatus
+from web_store.tests.order.test_web_store_order_api_client import (
+    DEFAULT_GET_ORDER_DATA,
+    DEFAULT_ORDER_ID,
+)
+from web_store.tests.payment.test_web_store_payment_api_client import (
+    DEFAULT_GET_PAYMENT_DATA,
 )
 
 
@@ -232,3 +249,189 @@ def test_get_checkout_url_with_lang_param(
 
     assert new_checkout_url == expected_checkout_url
     assert checkout_url != new_checkout_url
+
+
+@pytest.mark.parametrize(
+    "order_id",
+    [DEFAULT_ORDER_ID, "1234"],
+)
+def test_get_web_store_order(order_id):
+    with requests_mock.Mocker() as req_mock:
+        req_mock.get(
+            f"{django_settings.WEB_STORE_API_BASE_URL}order/admin/{order_id}",
+            json=DEFAULT_GET_ORDER_DATA,
+        )
+
+        order_response_json = get_web_store_order(order_id)
+
+        assert req_mock.call_count == 1
+
+    assert order_response_json == DEFAULT_GET_ORDER_DATA
+
+
+@pytest.mark.parametrize(
+    "status_code",
+    [
+        status.HTTP_400_BAD_REQUEST,
+        status.HTTP_401_UNAUTHORIZED,
+        status.HTTP_403_FORBIDDEN,
+        status.HTTP_404_NOT_FOUND,
+        status.HTTP_500_INTERNAL_SERVER_ERROR,
+    ],
+)
+def test_get_web_store_order_request_exception(status_code):
+    with (
+        requests_mock.Mocker() as req_mock,
+        pytest.raises(WebStoreAPIError) as exc_info,
+    ):
+        req_mock.get(
+            f"{django_settings.WEB_STORE_API_BASE_URL}order/admin/{DEFAULT_ORDER_ID}",
+            status_code=status_code,
+        )
+
+        get_web_store_order(DEFAULT_ORDER_ID)
+
+        assert req_mock.call_count == 1
+
+    assert exc_info.value.args[1] == status_code
+
+
+@pytest.mark.parametrize(
+    "order_id",
+    [DEFAULT_ORDER_ID, "1234"],
+)
+def test_get_web_store_payment(order_id):
+    with requests_mock.Mocker() as req_mock:
+        req_mock.get(
+            f"{django_settings.WEB_STORE_API_BASE_URL}payment/admin/{order_id}",
+            json=DEFAULT_GET_PAYMENT_DATA,
+        )
+
+        order_response_json = get_web_store_payment(order_id)
+
+        assert req_mock.call_count == 1
+
+    assert order_response_json == DEFAULT_GET_PAYMENT_DATA
+
+
+@pytest.mark.parametrize(
+    "status_code",
+    [
+        status.HTTP_400_BAD_REQUEST,
+        status.HTTP_401_UNAUTHORIZED,
+        status.HTTP_403_FORBIDDEN,
+        status.HTTP_404_NOT_FOUND,
+        status.HTTP_500_INTERNAL_SERVER_ERROR,
+    ],
+)
+def test_get_web_store_payment_request_exception(status_code):
+    with (
+        requests_mock.Mocker() as req_mock,
+        pytest.raises(WebStoreAPIError) as exc_info,
+    ):
+        req_mock.get(
+            f"{django_settings.WEB_STORE_API_BASE_URL}payment/admin/{DEFAULT_ORDER_ID}",
+            status_code=status_code,
+        )
+
+        get_web_store_payment(DEFAULT_ORDER_ID)
+
+        assert req_mock.call_count == 1
+
+    assert exc_info.value.args[1] == status_code
+
+
+@pytest.mark.parametrize("order_id", [DEFAULT_ORDER_ID, "1234"])
+@pytest.mark.parametrize(
+    "order_status", [order_status.value for order_status in WebStoreOrderStatus]
+)
+def test_get_web_store_order_status(order_id, order_status):
+    order_response_json = DEFAULT_GET_ORDER_DATA.copy()
+    order_response_json["status"] = order_status
+
+    with requests_mock.Mocker() as req_mock:
+        req_mock.get(
+            f"{django_settings.WEB_STORE_API_BASE_URL}order/admin/{order_id}",
+            json=order_response_json,
+        )
+
+        order_status = get_web_store_order_status(order_id)
+
+        assert req_mock.call_count == 1
+
+    assert order_response_json["status"] == order_status
+
+
+@pytest.mark.parametrize(
+    "status_code",
+    [
+        status.HTTP_400_BAD_REQUEST,
+        status.HTTP_401_UNAUTHORIZED,
+        status.HTTP_403_FORBIDDEN,
+        status.HTTP_404_NOT_FOUND,
+        status.HTTP_500_INTERNAL_SERVER_ERROR,
+    ],
+)
+def test_get_web_store_order_status_request_exception(status_code):
+    with (
+        requests_mock.Mocker() as req_mock,
+        pytest.raises(WebStoreAPIError) as exc_info,
+    ):
+        req_mock.get(
+            f"{django_settings.WEB_STORE_API_BASE_URL}order/admin/{DEFAULT_ORDER_ID}",
+            status_code=status_code,
+        )
+
+        get_web_store_order_status(DEFAULT_ORDER_ID)
+
+        assert req_mock.call_count == 1
+
+    assert exc_info.value.args[1] == status_code
+
+
+@pytest.mark.parametrize("order_id", [DEFAULT_ORDER_ID, "1234"])
+@pytest.mark.parametrize(
+    "payment_status", [payment_status.value for payment_status in WebStorePaymentStatus]
+)
+def test_get_web_store_order_status(order_id, payment_status):
+    payment_response_json = DEFAULT_GET_PAYMENT_DATA.copy()
+    payment_response_json["status"] = payment_status
+
+    with requests_mock.Mocker() as req_mock:
+        req_mock.get(
+            f"{django_settings.WEB_STORE_API_BASE_URL}payment/admin/{order_id}",
+            json=payment_response_json,
+        )
+
+        payment_status = get_web_store_payment_status(order_id)
+
+        assert req_mock.call_count == 1
+
+    assert payment_response_json["status"] == payment_status
+
+
+@pytest.mark.parametrize(
+    "status_code",
+    [
+        status.HTTP_400_BAD_REQUEST,
+        status.HTTP_401_UNAUTHORIZED,
+        status.HTTP_403_FORBIDDEN,
+        status.HTTP_404_NOT_FOUND,
+        status.HTTP_500_INTERNAL_SERVER_ERROR,
+    ],
+)
+def test_get_web_store_payment_status_request_exception(status_code):
+    with (
+        requests_mock.Mocker() as req_mock,
+        pytest.raises(WebStoreAPIError) as exc_info,
+    ):
+        req_mock.get(
+            f"{django_settings.WEB_STORE_API_BASE_URL}payment/admin/{DEFAULT_ORDER_ID}",
+            status_code=status_code,
+        )
+
+        get_web_store_payment_status(DEFAULT_ORDER_ID)
+
+        assert req_mock.call_count == 1
+
+    assert exc_info.value.args[1] == status_code

@@ -1,4 +1,5 @@
 from decimal import Decimal
+from typing import Optional
 
 import pytz
 from django.conf import settings
@@ -14,6 +15,7 @@ from requests import RequestException
 from registrations.exceptions import WebStoreAPIError, WebStoreRefundValidationError
 from web_store.merchant.clients import WebStoreMerchantAPIClient
 from web_store.order.clients import WebStoreOrderAPIClient
+from web_store.payment.clients import WebStorePaymentAPIClient
 from web_store.product.clients import WebStoreProductAPIClient
 
 
@@ -319,3 +321,41 @@ def create_web_store_product_accounting(product_id: str, product_accounting_data
         raise WebStoreAPIError(api_error_message)
 
     return resp_json
+
+
+def get_web_store_order(order_id: str) -> dict:
+    order_api_client = WebStoreOrderAPIClient()
+
+    try:
+        resp_json = order_api_client.get_order(order_id=order_id)
+    except RequestException as request_exc:
+        api_error_message = get_web_store_api_error_message(request_exc.response)
+        raise WebStoreAPIError(
+            api_error_message, getattr(request_exc.response, "status_code", None)
+        ) from request_exc
+
+    return resp_json
+
+
+def get_web_store_payment(order_id: str) -> dict:
+    client = WebStorePaymentAPIClient()
+
+    try:
+        resp_json = client.get_payment(order_id=order_id)
+    except RequestException as request_exc:
+        api_error_message = get_web_store_api_error_message(request_exc.response)
+        raise WebStoreAPIError(
+            api_error_message, getattr(request_exc.response, "status_code", None)
+        ) from request_exc
+
+    return resp_json
+
+
+def get_web_store_order_status(order_id: str) -> Optional[str]:
+    order_json = get_web_store_order(order_id)
+    return order_json.get("status")
+
+
+def get_web_store_payment_status(order_id: str) -> Optional[str]:
+    payment_json = get_web_store_payment(order_id)
+    return payment_json.get("status")
