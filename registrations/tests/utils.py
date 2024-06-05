@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from django.conf import settings
 from django.core import mail
+from django.utils.html import conditional_escape
 from django.utils.timezone import localtime
 from django_orghierarchy.models import Organization
 from requests import RequestException
@@ -32,7 +33,7 @@ from web_store.tests.order.test_web_store_order_api_client import DEFAULT_ORDER_
 DEFAULT_CREATE_ORDER_RESPONSE_JSON = {
     "orderId": str(uuid4()),
     "priceTotal": "100.00",
-    "checkoutUrl": "https://checkout.dev/v1/123/",
+    "checkoutUrl": "https://checkout.dev/v1/123/?user=abcdefg",
     "loggedInCheckoutUrl": "https://logged-in-checkout.dev/v1/123/",
 }
 DEFAULT_CREATE_ORDER_ERROR_RESPONSE = {
@@ -100,7 +101,7 @@ def assert_payment_link_email_sent(
 
     # Payment link is in the email.
     assert len(signup_payment.checkout_url) > 1
-    assert signup_payment.checkout_url in email_html_body
+    assert conditional_escape(signup_payment.checkout_url) in email_html_body
 
 
 def assert_attending_and_waitlisted_signups(
@@ -192,7 +193,14 @@ def assert_signup_payment_data_is_correct(
     user,
     signup: Optional[SignUp] = None,
     signup_group: Optional[SignUpGroup] = None,
+    service_language: Optional[str] = None,
 ):
+    checkout_url = DEFAULT_CREATE_ORDER_RESPONSE_JSON["checkoutUrl"]
+    logged_in_checkout_url = DEFAULT_CREATE_ORDER_RESPONSE_JSON["loggedInCheckoutUrl"]
+    if service_language:
+        checkout_url += f"&lang={service_language}"
+        logged_in_checkout_url += f"?lang={service_language}"
+
     if signup:
         assert Decimal(payment_data["amount"]) == signup.total_payment_amount
     else:
@@ -202,14 +210,8 @@ def assert_signup_payment_data_is_correct(
         payment_data["external_order_id"]
         == DEFAULT_CREATE_ORDER_RESPONSE_JSON["orderId"]
     )
-    assert (
-        payment_data["checkout_url"]
-        == DEFAULT_CREATE_ORDER_RESPONSE_JSON["checkoutUrl"]
-    )
-    assert (
-        payment_data["logged_in_checkout_url"]
-        == DEFAULT_CREATE_ORDER_RESPONSE_JSON["loggedInCheckoutUrl"]
-    )
+    assert payment_data["checkout_url"] == checkout_url
+    assert payment_data["logged_in_checkout_url"] == logged_in_checkout_url
     assert payment_data["created_by"] == str(user)
     assert payment_data["created_time"] is not None
 
@@ -227,13 +229,8 @@ def assert_signup_payment_data_is_correct(
         signup_payment.external_order_id
         == DEFAULT_CREATE_ORDER_RESPONSE_JSON["orderId"]
     )
-    assert (
-        signup_payment.checkout_url == DEFAULT_CREATE_ORDER_RESPONSE_JSON["checkoutUrl"]
-    )
-    assert (
-        signup_payment.logged_in_checkout_url
-        == DEFAULT_CREATE_ORDER_RESPONSE_JSON["loggedInCheckoutUrl"]
-    )
+    assert signup_payment.checkout_url == checkout_url
+    assert signup_payment.logged_in_checkout_url == logged_in_checkout_url
     assert signup_payment.created_by_id == user.id
     assert signup_payment.created_time is not None
 

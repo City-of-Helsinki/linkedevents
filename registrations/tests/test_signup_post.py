@@ -40,8 +40,6 @@ from registrations.tests.factories import (
     SignUpContactPersonFactory,
     SignUpFactory,
     SignUpGroupFactory,
-    WebStoreAccountFactory,
-    WebStoreMerchantFactory,
 )
 from registrations.tests.test_registration_post import hel_email
 from registrations.tests.test_signup_patch import description_fields
@@ -304,6 +302,7 @@ def test_authenticated_user_can_create_signups_with_payments(api_client, user_ro
         response.data[0]["payment"],
         user,
         SignUp.objects.first(),
+        service_language=language.pk,
     )
 
     # Payment link is sent via email.
@@ -332,7 +331,7 @@ def test_authenticated_user_can_create_signups_with_payments(api_client, user_ro
 def test_update_web_store_product_mapping_if_merchant_id_has_changed(
     api_client, registration, user_role
 ):
-    LanguageFactory(pk="fi", service_language=True)
+    language = LanguageFactory(pk="fi", service_language=True)
 
     with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
         registration_merchant = RegistrationWebStoreMerchantFactory(
@@ -403,6 +402,7 @@ def test_update_web_store_product_mapping_if_merchant_id_has_changed(
         response.data[0]["payment"],
         user,
         SignUp.objects.first(),
+        service_language=language.pk,
     )
 
 
@@ -494,6 +494,7 @@ def test_create_signup_payment_without_pricetotal_in_response(api_client):
         response.data[0]["payment"],
         user,
         SignUp.objects.first(),
+        service_language=language.pk,
     )
 
     # Payment link is sent via email.

@@ -351,6 +351,7 @@ def test_authenticated_user_can_create_signup_group_with_payment(api_client, use
         response.data["payment"],
         user,
         signup_group=SignUpGroup.objects.first(),
+        service_language="en",
     )
 
     # Payment link is sent via email.
@@ -456,6 +457,7 @@ def test_signup_group_update_web_store_product_mapping_if_merchant_id_has_change
         response.data["payment"],
         user,
         signup_group=SignUpGroup.objects.first(),
+        service_language="en",
     )
 
 
@@ -547,6 +549,7 @@ def test_create_signup_group_payment_without_pricetotal_in_response(api_client):
         response.data["payment"],
         user,
         signup_group=SignUpGroup.objects.first(),
+        service_language="en",
     )
 
     # Payment link is sent via email.

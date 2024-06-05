@@ -168,6 +168,13 @@ def move_waitlisted_to_attending(registration, count: int):
             registration.move_first_waitlisted_to_attending(first_on_list=first_on_list)
 
 
+def get_checkout_url_with_lang_param(checkout_url: str, lang_code: str) -> str:
+    if "?" in checkout_url:
+        return f"{checkout_url}&lang={lang_code}"
+    else:
+        return f"{checkout_url}?lang={lang_code}"
+
+
 def get_access_code_for_contact_person(contact_person, user):
     if not contact_person:
         return None
@@ -203,11 +210,12 @@ def get_web_store_api_refunds_error_messages(response_json):
     return [str(error) for error in response_json["errors"]]
 
 
-def create_web_store_api_order(signup_or_group, localized_expiration_datetime):
+def create_web_store_api_order(
+    signup_or_group, contact_person, localized_expiration_datetime
+):
     user_uuid = (
         signup_or_group.created_by.uuid if signup_or_group.created_by_id else None
     )
-    contact_person = getattr(signup_or_group, "contact_person", None)
 
     service_lang = getattr(contact_person, "service_language_id", "fi")
     with translation.override(service_lang):
