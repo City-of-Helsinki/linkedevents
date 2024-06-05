@@ -52,6 +52,7 @@ def get_list(api_client: APIClient, query: Optional[str] = None):
 def assert_event_fields_exist(data):
     fields = (
         "id",
+        "name",
         "publisher",
         "deleted",
         "date_published",
