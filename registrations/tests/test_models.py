@@ -1,3 +1,4 @@
+from collections import Counter
 from decimal import Decimal
 from uuid import uuid4
 
@@ -697,6 +698,27 @@ class TestSignUpGroup(TestCase):
 
         self.assertFalse(payment_refund.deleted)
 
+    def test_price_groups(self):
+        price_group = SignUpPriceGroupFactory(
+            signup__signup_group=self.signup_group,
+            signup__registration=self.signup_group.registration,
+        )
+        price_group2 = SignUpPriceGroupFactory(
+            signup__signup_group=self.signup_group,
+            signup__registration=self.signup_group.registration,
+        )
+
+        # Third price group doesn't belong to the signup group.
+        SignUpPriceGroupFactory(signup__registration=self.signup_group.registration)
+
+        self.assertEqual(
+            Counter(self.signup_group.price_groups),
+            Counter([price_group, price_group2]),
+        )
+
+    def test_price_groups_is_empty_list(self):
+        self.assertEqual(len(self.signup_group.price_groups), 0)
+
 
 class TestSignUp(TestCase):
     @classmethod
@@ -1027,6 +1049,25 @@ class TestSignUp(TestCase):
         self.assertTrue(payment.last_modified_time > payment_last_modified_time)
 
         self.assertFalse(payment_refund.deleted)
+
+    def test_price_groups(self):
+        signup_group = SignUpGroupFactory(registration=self.signup.registration)
+
+        self.signup.signup_group = signup_group
+        self.signup.save(update_fields=["signup_group"])
+
+        price_group = SignUpPriceGroupFactory(signup=self.signup)
+
+        SignUpPriceGroupFactory(signup__registration=self.signup.registration)
+        SignUpPriceGroupFactory(
+            signup__registration=signup_group.registration,
+            signup__signup_group=signup_group,
+        )
+
+        self.assertListEqual(self.signup.price_groups, [price_group])
+
+    def test_price_groups_is_empty_list(self):
+        self.assertEqual(len(self.signup.price_groups), 0)
 
 
 class TestSignUpContactPerson(TestCase):

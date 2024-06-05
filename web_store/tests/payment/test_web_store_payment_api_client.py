@@ -121,34 +121,3 @@ def test_get_payment_exception(status_code):
     with patch("requests.get") as mocked_request, pytest.raises(RequestException):
         mocked_request.return_value = mocked_response
         client.get_payment(order_id=DEFAULT_ORDER_ID)
-
-
-def test_create_refund_success():
-    client = WebStorePaymentAPIClient()
-    mocked_response = get_mock_response(
-        status_code=status.HTTP_200_OK,
-        json_return_value=DEFAULT_GET_REFUND_DATA,
-    )
-
-    with patch("requests.get") as mocked_request:
-        mocked_request.return_value = mocked_response
-        response_json = client.create_instant_refund(DEFAULT_ORDER_ID)
-
-    assert response_json == DEFAULT_GET_REFUND_DATA
-
-
-@pytest.mark.parametrize(
-    "status_code",
-    [
-        status.HTTP_403_FORBIDDEN,
-        status.HTTP_404_NOT_FOUND,
-        status.HTTP_500_INTERNAL_SERVER_ERROR,
-    ],
-)
-def test_create_refund_exception(status_code):
-    client = WebStorePaymentAPIClient()
-    mocked_response = get_mock_response(status_code=status_code)
-
-    with patch("requests.get") as mocked_request, pytest.raises(RequestException):
-        mocked_request.return_value = mocked_response
-        client.create_instant_refund(DEFAULT_ORDER_ID)

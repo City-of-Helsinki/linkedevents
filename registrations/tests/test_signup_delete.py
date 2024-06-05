@@ -1565,7 +1565,7 @@ def test_web_store_automatically_fully_refund_paid_signup_payment(
     )
     with (
         translation.override(language.pk),
-        patch("requests.get") as mocked_web_store_request,
+        patch("requests.post") as mocked_web_store_request,
     ):
         mocked_web_store_request.return_value = mocked_web_store_response
 
@@ -1637,9 +1637,9 @@ def test_web_store_automatically_fully_refund_paid_signup_payment_for_recurring_
         translation.override(language.pk),
         requests_mock.Mocker() as req_mock,
     ):
-        req_mock.get(
-            f"{settings.WEB_STORE_API_BASE_URL}payment/refund/instant/{DEFAULT_ORDER_ID}",
-            json=DEFAULT_GET_REFUND_DATA,
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
+            json=DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE,
         )
 
         assert_delete_signup(api_client, signup.pk)
@@ -1677,8 +1677,8 @@ def test_web_store_automatically_fully_refund_paid_signup_payment_allow_404_exce
     assert SignUpPriceGroup.objects.count() == 1
 
     with requests_mock.Mocker() as req_mock:
-        req_mock.get(
-            f"{settings.WEB_STORE_API_BASE_URL}payment/refund/instant/{DEFAULT_ORDER_ID}",
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
             status_code=status.HTTP_404_NOT_FOUND,
         )
 
@@ -1714,7 +1714,7 @@ def test_web_store_automatically_fully_refund_paid_signup_payment_errors_in_resp
     assert SignUpPayment.objects.count() == 1
     assert SignUpPriceGroup.objects.count() == 1
 
-    mocked_web_store_json = deepcopy(DEFAULT_GET_REFUND_DATA)
+    mocked_web_store_json = deepcopy(DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE)
     mocked_web_store_json["errors"] = [
         {
             "code": "refund-error",
@@ -1723,8 +1723,8 @@ def test_web_store_automatically_fully_refund_paid_signup_payment_errors_in_resp
     ]
 
     with requests_mock.Mocker() as req_mock:
-        req_mock.get(
-            f"{settings.WEB_STORE_API_BASE_URL}payment/refund/instant/{DEFAULT_ORDER_ID}",
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
             json=mocked_web_store_json,
         )
 
@@ -2221,7 +2221,7 @@ def test_web_store_automatically_fully_refund_paid_signup_payment_api_error(api_
     mocked_web_store_response = get_mock_response(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
     )
-    with patch("requests.get") as mocked_web_store_request:
+    with patch("requests.post") as mocked_web_store_request:
         mocked_web_store_request.return_value = mocked_web_store_response
 
         response = delete_signup(api_client, signup.pk)

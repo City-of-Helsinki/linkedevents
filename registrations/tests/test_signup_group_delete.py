@@ -43,6 +43,7 @@ from registrations.tests.utils import (
 )
 from web_store.tests.order.test_web_store_order_api_client import (
     DEFAULT_CANCEL_ORDER_DATA,
+    DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE,
     DEFAULT_ORDER_ID,
 )
 from web_store.tests.payment.test_web_store_payment_api_client import (
@@ -1610,7 +1611,7 @@ def test_signup_grop_web_store_automatically_fully_refund_paid_signup_payment(
     )
     with (
         translation.override(language.pk),
-        patch("requests.get") as mocked_web_store_request,
+        patch("requests.post") as mocked_web_store_request,
     ):
         mocked_web_store_request.return_value = mocked_web_store_response
 
@@ -1693,9 +1694,9 @@ def test_web_store_automatically_fully_refund_paid_signup_group_payment_for_recu
         translation.override(language.pk),
         requests_mock.Mocker() as req_mock,
     ):
-        req_mock.get(
-            f"{settings.WEB_STORE_API_BASE_URL}payment/refund/instant/{DEFAULT_ORDER_ID}",
-            json=DEFAULT_GET_REFUND_DATA,
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
+            json=DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE,
         )
 
         assert_delete_signup_group(api_client, signup_group.pk)
@@ -1869,7 +1870,7 @@ def test_signup_group_web_store_automatically_fully_refund_payment_api_error(
     mocked_web_store_response = get_mock_response(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
     )
-    with patch("requests.get") as mocked_web_store_request:
+    with patch("requests.post") as mocked_web_store_request:
         mocked_web_store_request.return_value = mocked_web_store_response
 
         response = delete_signup_group(api_client, signup_group.pk)

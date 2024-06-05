@@ -36,6 +36,7 @@ from registrations.tests.factories import (
 )
 from web_store.tests.order.test_web_store_order_api_client import (
     DEFAULT_CANCEL_ORDER_DATA,
+    DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE,
     DEFAULT_ORDER_ID,
 )
 from web_store.tests.payment.test_web_store_payment_api_client import (
@@ -303,9 +304,9 @@ class EventCancellationNotificationAPITestCase(APITestCase):
         complex_event_dict["event_status"] = "EventCancelled"
 
         with requests_mock.Mocker() as req_mock:
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/refund/instant/{DEFAULT_ORDER_ID}",
-                json=DEFAULT_GET_REFUND_DATA,
+            req_mock.post(
+                f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
+                json=DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE,
             )
 
             response = self.client.put(
@@ -454,16 +455,16 @@ class EventCancellationNotificationAPITestCase(APITestCase):
         complex_event_dict2["id"] = event2.pk
         complex_event_dict2["event_status"] = "EventCancelled"
 
-        default_get_refund_data2 = deepcopy(DEFAULT_GET_REFUND_DATA)
-        default_get_refund_data2["orderId"] = external_order_id2
+        default_get_refund_data2 = deepcopy(DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE)
+        default_get_refund_data2["refunds"][0]["orderId"] = external_order_id2
 
         with requests_mock.Mocker() as req_mock:
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/refund/instant/{DEFAULT_ORDER_ID}",
-                json=DEFAULT_GET_REFUND_DATA,
+            req_mock.post(
+                f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
+                json=DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE,
             )
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/refund/instant/{external_order_id2}",
+            req_mock.post(
+                f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
                 json=default_get_refund_data2,
             )
 
@@ -665,21 +666,18 @@ class EventCancellationNotificationAPITestCase(APITestCase):
         complex_event_dict2["id"] = event2.pk
         complex_event_dict2["event_status"] = "EventCancelled"
 
-        default_get_refund_data2 = deepcopy(DEFAULT_GET_REFUND_DATA)
-        default_get_refund_data2["orderId"] = external_order_id2
-
         self.assertEqual(Message.objects.count(), 0)
 
         with (
             self.settings(EMAIL_BACKEND="mailer.backend.DbBackend"),
             requests_mock.Mocker() as req_mock,
         ):
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/refund/instant/{DEFAULT_ORDER_ID}",
-                json=DEFAULT_GET_REFUND_DATA,
+            req_mock.post(
+                f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
+                json=DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE,
             )
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/refund/instant/{external_order_id2}",
+            req_mock.post(
+                f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -690,7 +688,7 @@ class EventCancellationNotificationAPITestCase(APITestCase):
             )
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-            self.assertEqual(req_mock.call_count, 3)
+            self.assertEqual(req_mock.call_count, 1)
 
         self.event.refresh_from_db()
         self.assertNotEqual(self.event.event_status, Event.Status.CANCELLED)
@@ -726,8 +724,8 @@ class EventCancellationNotificationAPITestCase(APITestCase):
         complex_event_dict["event_status"] = "EventCancelled"
 
         with requests_mock.Mocker() as req_mock:
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/refund/instant/{DEFAULT_ORDER_ID}",
+            req_mock.post(
+                f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -796,8 +794,8 @@ class EventCancellationNotificationAPITestCase(APITestCase):
             self.settings(EMAIL_BACKEND="mailer.backend.DbBackend"),
             requests_mock.Mocker() as req_mock,
         ):
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/refund/instant/{DEFAULT_ORDER_ID}",
+            req_mock.post(
+                f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -896,9 +894,9 @@ class EventCancellationNotificationAPITestCase(APITestCase):
         )
 
         with requests_mock.Mocker() as req_mock:
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/refund/instant/{DEFAULT_ORDER_ID}",
-                json=DEFAULT_GET_REFUND_DATA,
+            req_mock.post(
+                f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
+                json=DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE,
             )
 
             response = self.client.put(
@@ -995,9 +993,9 @@ class EventCancellationNotificationAPITestCase(APITestCase):
         )
 
         with requests_mock.Mocker() as req_mock:
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/refund/instant/{DEFAULT_ORDER_ID}",
-                json=DEFAULT_GET_REFUND_DATA,
+            req_mock.post(
+                f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
+                json=DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE,
             )
 
             response = self.client.put(
@@ -1079,9 +1077,9 @@ class EventCancellationNotificationAPITestCase(APITestCase):
         complex_event_dict["event_status"] = "EventCancelled"
 
         with requests_mock.Mocker() as req_mock:
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/refund/instant/{DEFAULT_ORDER_ID}",
-                json=DEFAULT_GET_REFUND_DATA,
+            req_mock.post(
+                f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
+                json=DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE,
             )
 
             response = self.client.put(
@@ -1233,9 +1231,9 @@ class EventCancellationNotificationAPITestCase(APITestCase):
         self.assertEqual(SignUpPayment.objects.count(), 2)
 
         with requests_mock.Mocker() as req_mock:
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/refund/instant/{DEFAULT_ORDER_ID}",
-                json=DEFAULT_GET_REFUND_DATA,
+            req_mock.post(
+                f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
+                json=DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE,
             )
 
             response = self.client.delete(
@@ -1309,8 +1307,8 @@ class EventCancellationNotificationAPITestCase(APITestCase):
         self.assertEqual(SignUpPayment.objects.count(), 2)
 
         with requests_mock.Mocker() as req_mock:
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/refund/instant/{DEFAULT_ORDER_ID}",
+            req_mock.post(
+                f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -1357,8 +1355,8 @@ class EventCancellationNotificationAPITestCase(APITestCase):
             self.settings(EMAIL_BACKEND="mailer.backend.DbBackend"),
             requests_mock.Mocker() as req_mock,
         ):
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/refund/instant/{DEFAULT_ORDER_ID}",
+            req_mock.post(
+                f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 

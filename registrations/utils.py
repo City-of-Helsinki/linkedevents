@@ -14,7 +14,6 @@ from requests import RequestException
 from registrations.exceptions import WebStoreAPIError, WebStoreRefundValidationError
 from web_store.merchant.clients import WebStoreMerchantAPIClient
 from web_store.order.clients import WebStoreOrderAPIClient
-from web_store.payment.clients import WebStorePaymentAPIClient
 from web_store.product.clients import WebStoreProductAPIClient
 
 
@@ -254,34 +253,17 @@ def create_or_update_web_store_merchant(merchant, created: bool):
         raise WebStoreAPIError(api_error_message)
 
 
-def create_web_store_refund(payment):
-    client = WebStorePaymentAPIClient()
-
-    try:
-        resp_json = client.create_instant_refund(payment.external_order_id)
-    except RequestException as request_exc:
-        if getattr(request_exc.response, "status_code", 0) == 404:
-            # Order does not exist so no need to refund => interpret as success.
-            # This might otherwise cause unnecessary exceptions in automated refunds.
-            return {}
-
-        api_error_message = get_web_store_api_error_message(request_exc.response)
-        raise WebStoreAPIError(api_error_message)
-
-    if resp_json.get("errors"):
-        # Refund has errors despite a 200/OK status_code => raise exception.
-        refund_error_messages = get_web_store_api_refunds_error_messages(resp_json)
-        raise WebStoreRefundValidationError(refund_error_messages)
-
-    return resp_json
-
-
 def create_web_store_refunds(orders_data):
     client = WebStoreOrderAPIClient()
 
     try:
         resp_json = client.create_instant_refunds(orders_data)
     except RequestException as request_exc:
+        if getattr(request_exc.response, "status_code", 0) == 404:
+            # Order does not exist so no need to refund => interpret as success.
+            # This might otherwise cause unnecessary exceptions in automated refunds.
+            return {}
+
         api_error_message = get_web_store_api_error_message(request_exc.response)
         raise WebStoreAPIError(api_error_message)
 
