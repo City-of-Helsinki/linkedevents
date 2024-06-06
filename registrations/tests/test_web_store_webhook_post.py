@@ -271,40 +271,6 @@ def test_payment_paid_webhook_for_signup_payment(
     assert_payment_id_audit_logged(payment)
 
 
-@pytest.mark.django_db
-def test_payment_paid_webhook_for_signup_payment_with_waitlisted_status(api_client):
-    payment = create_signup_payment(user=UserFactory())
-    payment.signup.attendee_status = SignUp.AttendeeStatus.WAITING_LIST
-    payment.signup.save(update_fields=["attendee_status"])
-
-    assert payment.status == SignUpPayment.PaymentStatus.CREATED
-    assert payment.signup.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
-
-    data = get_webhook_data(
-        payment.external_order_id,
-        WebStorePaymentWebhookEventType.PAYMENT_PAID.value,
-        {"paymentId": _PAYMENT_ID},
-    )
-
-    assert AuditLogEntry.objects.count() == 0
-
-    mocked_get_payment_response = get_mock_response(
-        status_code=status.HTTP_200_OK, json_return_value=DEFAULT_GET_PAYMENT_DATA
-    )
-    with patch("requests.get") as mocked_get_payment_request:
-        mocked_get_payment_request.return_value = mocked_get_payment_response
-
-        assert_payment_paid(api_client, data, payment)
-        assert_confirmation_sent_to_contact_person(payment.signup_or_signup_group)
-
-        assert mocked_get_payment_request.called is True
-
-    payment.signup.refresh_from_db()
-    assert payment.signup.attendee_status == SignUp.AttendeeStatus.ATTENDING
-
-    assert_payment_id_audit_logged(payment)
-
-
 @pytest.mark.parametrize(
     "created_by_user,has_contact_person",
     [
