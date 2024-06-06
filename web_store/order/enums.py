@@ -14,3 +14,8 @@ class WebStoreOrderRefundStatus(Enum):
 
 class WebStoreOrderWebhookEventType(Enum):
     ORDER_CANCELLED = "ORDER_CANCELLED"
+
+
+class WebStoreRefundWebhookEventType(Enum):
+    REFUND_PAID = "REFUND_PAID"
+    REFUND_FAILED = "REFUND_FAILED"

@@ -23,6 +23,7 @@ from registrations.models import (
     SignUp,
     SignUpContactPerson,
     SignUpPayment,
+    SignUpPaymentCancellation,
     SignUpPaymentRefund,
     SignUpPriceGroup,
 )
@@ -43,7 +44,6 @@ from registrations.tests.test_signup_post import assert_create_signups
 from registrations.tests.utils import (
     assert_payment_link_email_sent,
     create_price_group,
-    create_price_group_for_recurring_event,
     create_signup_group_with_payment,
     create_user_by_role,
     get_web_store_order_response,
@@ -57,6 +57,7 @@ from web_store.tests.order.test_web_store_order_api_client import (
 )
 from web_store.tests.payment.test_web_store_payment_api_client import (
     DEFAULT_GET_PAYMENT_DATA,
+    DEFAULT_REFUND_ID,
 )
 from web_store.tests.utils import get_mock_response
 
@@ -1514,159 +1515,8 @@ def test_email_with_payment_link_not_sent_when_moving_participant_if_contact_per
     assert mail.outbox[0].subject == "Registration cancelled - Foo"
 
 
-@pytest.mark.parametrize(
-    "service_lang,expected_subject,expected_text",
-    [
-        (
-            "en",
-            "Registration cancelled - Foo",
-            "You have successfully cancelled your registration to the event "
-            "<strong>Foo</strong>. Your payment for the registration has been refunded.",
-        ),
-        (
-            "fi",
-            "Ilmoittautuminen peruttu - Foo",
-            "Olet onnistuneesti peruuttanut ilmoittautumisesi tapahtumaan "
-            "<strong>Foo</strong>. Ilmoittautumismaksusi on hyvitetty.",
-        ),
-        (
-            "sv",
-            "Registreringen avbruten - Foo",
-            "Du har avbrutit din registrering till evenemanget "
-            "<strong>Foo</strong>. Din betalning för registreringen har återbetalats.",
-        ),
-    ],
-)
 @pytest.mark.django_db
 def test_web_store_automatically_fully_refund_paid_signup_payment(
-    api_client, service_lang, expected_subject, expected_text
-):
-    language = LanguageFactory(pk=service_lang, service_language=True)
-
-    with translation.override(language.pk):
-        price_group = SignUpPriceGroupFactory(signup__registration__event__name="Foo")
-
-    signup = price_group.signup
-    SignUpContactPersonFactory(
-        signup=signup, email="test@test.com", service_language=language
-    )
-    payment = SignUpPaymentFactory(
-        signup=signup,
-        external_order_id=DEFAULT_ORDER_ID,
-        status=SignUpPayment.PaymentStatus.PAID,
-    )
-
-    user = create_user_by_role("registration_admin", signup.publisher)
-    api_client.force_authenticate(user)
-
-    assert SignUpPayment.objects.count() == 1
-    assert SignUpPriceGroup.objects.count() == 1
-
-    with (
-        translation.override(language.pk),
-        requests_mock.Mocker() as req_mock,
-    ):
-        req_mock.get(
-            f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{payment.external_order_id}",
-            json=DEFAULT_GET_PAYMENT_DATA,
-        )
-        req_mock.post(
-            f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
-            json=DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE,
-        )
-
-        assert_delete_signup(api_client, signup.pk)
-
-        assert req_mock.call_count == 2
-
-    assert SignUpPayment.objects.count() == 0
-    assert SignUpPriceGroup.objects.count() == 0
-
-    assert len(mail.outbox) == 1
-    assert mail.outbox[0].subject == expected_subject
-    assert expected_text in str(mail.outbox[0].alternatives[0])
-
-
-@pytest.mark.parametrize(
-    "service_lang,expected_subject,expected_text",
-    [
-        (
-            "en",
-            "Registration cancelled - Recurring: Foo",
-            "You have successfully cancelled your registration to the recurring event "
-            "<strong>Foo 1 Feb 2024 - 29 Feb 2024</strong>. Your payment for the registration has "
-            "been refunded.",
-        ),
-        (
-            "fi",
-            "Ilmoittautuminen peruttu - Sarja: Foo",
-            "Olet onnistuneesti peruuttanut ilmoittautumisesi sarjatapahtumaan "
-            "<strong>Foo 1.2.2024 - 29.2.2024</strong>. Ilmoittautumismaksusi on hyvitetty.",
-        ),
-        (
-            "sv",
-            "Registreringen avbruten - Serie: Foo",
-            "Du har avbrutit din registrering till serieevenemanget "
-            "<strong>Foo 1.2.2024 - 29.2.2024</strong>. Din betalning för registreringen har "
-            "återbetalats.",
-        ),
-    ],
-)
-@freeze_time("2024-02-01 03:30:00+02:00")
-@pytest.mark.django_db
-def test_web_store_automatically_fully_refund_paid_signup_payment_for_recurring_event(
-    api_client, service_lang, expected_subject, expected_text
-):
-    language = LanguageFactory(pk=service_lang, service_language=True)
-
-    with translation.override(language.pk):
-        price_group = create_price_group_for_recurring_event(event_name="Foo")
-
-    signup = price_group.signup
-    registration = signup.registration
-
-    SignUpContactPersonFactory(
-        signup=signup, email="test@test.com", service_language=language
-    )
-    payment = SignUpPaymentFactory(
-        signup=signup,
-        external_order_id=DEFAULT_ORDER_ID,
-        status=SignUpPayment.PaymentStatus.PAID,
-    )
-
-    user = create_user_by_role("registration_admin", registration.publisher)
-    api_client.force_authenticate(user)
-
-    assert SignUpPayment.objects.count() == 1
-    assert SignUpPriceGroup.objects.count() == 1
-
-    with (
-        translation.override(language.pk),
-        requests_mock.Mocker() as req_mock,
-    ):
-        req_mock.get(
-            f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{payment.external_order_id}",
-            json=DEFAULT_GET_PAYMENT_DATA,
-        )
-        req_mock.post(
-            f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
-            json=DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE,
-        )
-
-        assert_delete_signup(api_client, signup.pk)
-
-        assert req_mock.call_count == 2
-
-    assert SignUpPayment.objects.count() == 0
-    assert SignUpPriceGroup.objects.count() == 0
-
-    assert len(mail.outbox) == 1
-    assert mail.outbox[0].subject == expected_subject
-    assert expected_text in str(mail.outbox[0].alternatives[0])
-
-
-@pytest.mark.django_db
-def test_web_store_automatically_fully_refund_paid_signup_payment_allow_404_exception(
     api_client, price_group
 ):
     language = LanguageFactory(pk="en", service_language=True)
@@ -1686,25 +1536,37 @@ def test_web_store_automatically_fully_refund_paid_signup_payment_allow_404_exce
 
     assert SignUpPayment.objects.count() == 1
     assert SignUpPriceGroup.objects.count() == 1
+    assert SignUpPaymentRefund.objects.count() == 0
 
-    with requests_mock.Mocker() as req_mock:
+    with (
+        translation.override(language.pk),
+        requests_mock.Mocker() as req_mock,
+    ):
         req_mock.get(
             f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{payment.external_order_id}",
             json=DEFAULT_GET_PAYMENT_DATA,
         )
         req_mock.post(
             f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
-            status_code=status.HTTP_404_NOT_FOUND,
+            json=DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE,
         )
 
-        assert_delete_signup(api_client, signup.pk)
+        response = delete_signup(api_client, signup.pk)
+        assert response.status_code == status.HTTP_204_NO_CONTENT
 
         assert req_mock.call_count == 2
 
-    assert SignUpPayment.objects.count() == 0
-    assert SignUpPriceGroup.objects.count() == 0
+    assert SignUpPayment.objects.count() == 1
+    assert SignUpPriceGroup.objects.count() == 1
+    assert SignUpPaymentRefund.objects.count() == 1
+    assert (
+        SignUpPaymentRefund.objects.filter(
+            payment=payment, signup=signup, external_refund_id=DEFAULT_REFUND_ID
+        ).count()
+        == 1
+    )
 
-    assert len(mail.outbox) == 1
+    assert len(mail.outbox) == 0
 
 
 @pytest.mark.django_db
@@ -1728,6 +1590,7 @@ def test_web_store_automatically_fully_refund_paid_signup_payment_errors_in_resp
 
     assert SignUpPayment.objects.count() == 1
     assert SignUpPriceGroup.objects.count() == 1
+    assert SignUpPaymentRefund.objects.count() == 0
 
     mocked_web_store_json = deepcopy(DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE)
     mocked_web_store_json["errors"] = [
@@ -1755,142 +1618,13 @@ def test_web_store_automatically_fully_refund_paid_signup_payment_errors_in_resp
 
     assert SignUpPayment.objects.count() == 1
     assert SignUpPriceGroup.objects.count() == 1
+    assert SignUpPaymentRefund.objects.count() == 0
 
     assert len(mail.outbox) == 0
 
 
-@pytest.mark.parametrize(
-    "service_lang,expected_subject,expected_text",
-    [
-        (
-            "en",
-            "Registration cancelled - Recurring: Foo",
-            "Your registration and payment for the recurring event "
-            "<strong>Foo 1 Feb 2024 - 29 Feb 2024</strong> have been cancelled.",
-        ),
-        (
-            "fi",
-            "Ilmoittautuminen peruttu - Sarja: Foo",
-            "Ilmoittautumisesi ja maksusi sarjatapahtumaan "
-            "<strong>Foo 1.2.2024 - 29.2.2024</strong> on peruttu.",
-        ),
-        (
-            "sv",
-            "Registreringen avbruten - Serie: Foo",
-            "Din registrering och betalning för serieevenemanget "
-            "<strong>Foo 1.2.2024 - 29.2.2024</strong> har ställts in.",
-        ),
-    ],
-)
-@freeze_time("2024-02-01 03:30:00+02:00")
-@pytest.mark.django_db
-def test_web_store_automatically_cancel_unpaid_created_signup_payment_on_delete_for_recurring_event(
-    api_client, service_lang, expected_subject, expected_text
-):
-    language = LanguageFactory(pk=service_lang, service_language=True)
-
-    with translation.override(language.pk):
-        price_group = create_price_group_for_recurring_event(event_name="Foo")
-
-    signup = price_group.signup
-    registration = signup.registration
-
-    SignUpContactPersonFactory(
-        signup=signup, email="test@test.com", service_language=language
-    )
-    payment = SignUpPaymentFactory(
-        signup=signup,
-        external_order_id=DEFAULT_ORDER_ID,
-        status=SignUpPayment.PaymentStatus.CREATED,
-    )
-
-    user = create_user_by_role("registration_admin", registration.publisher)
-    api_client.force_authenticate(user)
-
-    assert SignUpPayment.objects.count() == 1
-    assert SignUpPriceGroup.objects.count() == 1
-
-    with requests_mock.Mocker() as req_mock:
-        req_mock.get(
-            f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{payment.external_order_id}",
-            status_code=status.HTTP_404_NOT_FOUND,
-        )
-        req_mock.get(
-            f"{settings.WEB_STORE_API_BASE_URL}order/admin/{payment.external_order_id}",
-            json=DEFAULT_GET_ORDER_DATA,
-        )
-        req_mock.post(
-            f"{settings.WEB_STORE_API_BASE_URL}order/{payment.external_order_id}/cancel",
-            json=DEFAULT_CANCEL_ORDER_DATA,
-        )
-
-        assert_delete_signup(api_client, signup.pk)
-
-        assert req_mock.call_count == 3
-
-    assert SignUpPayment.objects.count() == 0
-    assert SignUpPriceGroup.objects.count() == 0
-
-    assert len(mail.outbox) == 1
-    assert mail.outbox[0].subject == expected_subject
-    assert expected_text in str(mail.outbox[0].alternatives[0])
-
-
 @pytest.mark.django_db
 def test_web_store_automatically_cancel_unpaid_created_signup_payment_on_delete(
-    api_client,
-):
-    language = LanguageFactory(pk="en", service_language=True)
-
-    price_group = SignUpPriceGroupFactory(signup__registration__event__name="Foo")
-
-    signup = price_group.signup
-    SignUpContactPersonFactory(
-        signup=signup, email="test@test.com", service_language=language
-    )
-    payment = SignUpPaymentFactory(
-        signup=signup,
-        external_order_id=DEFAULT_ORDER_ID,
-        status=SignUpPayment.PaymentStatus.CREATED,
-    )
-
-    user = create_user_by_role("registration_admin", signup.publisher)
-    api_client.force_authenticate(user)
-
-    assert SignUpPayment.objects.count() == 1
-    assert SignUpPriceGroup.objects.count() == 1
-
-    with requests_mock.Mocker() as req_mock:
-        req_mock.get(
-            f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{payment.external_order_id}",
-            status_code=status.HTTP_404_NOT_FOUND,
-        )
-        req_mock.get(
-            f"{settings.WEB_STORE_API_BASE_URL}order/admin/{payment.external_order_id}",
-            json=DEFAULT_GET_ORDER_DATA,
-        )
-        req_mock.post(
-            f"{settings.WEB_STORE_API_BASE_URL}order/{payment.external_order_id}/cancel",
-            json=DEFAULT_CANCEL_ORDER_DATA,
-        )
-
-        assert_delete_signup(api_client, signup.pk)
-
-        assert req_mock.call_count == 3
-
-    assert SignUpPayment.objects.count() == 0
-    assert SignUpPriceGroup.objects.count() == 0
-
-    assert len(mail.outbox) == 1
-    assert mail.outbox[0].subject == "Registration cancelled - Foo"
-    assert (
-        "Your registration and payment for the event <strong>Foo</strong> have been cancelled."
-        in str(mail.outbox[0].alternatives[0])
-    )
-
-
-@pytest.mark.django_db
-def test_web_store_automatically_cancel_unpaid_created_signup_payment_on_delete_allow_404_exception(
     api_client, price_group
 ):
     language = LanguageFactory(pk="en", service_language=True)
@@ -1910,6 +1644,7 @@ def test_web_store_automatically_cancel_unpaid_created_signup_payment_on_delete_
 
     assert SignUpPayment.objects.count() == 1
     assert SignUpPriceGroup.objects.count() == 1
+    assert SignUpPaymentCancellation.objects.count() == 0
 
     with requests_mock.Mocker() as req_mock:
         req_mock.get(
@@ -1922,89 +1657,36 @@ def test_web_store_automatically_cancel_unpaid_created_signup_payment_on_delete_
         )
         req_mock.post(
             f"{settings.WEB_STORE_API_BASE_URL}order/{payment.external_order_id}/cancel",
-            status_code=status.HTTP_404_NOT_FOUND,
+            json=DEFAULT_CANCEL_ORDER_DATA,
         )
 
-        assert_delete_signup(api_client, signup.pk)
+        response = delete_signup(api_client, signup.pk)
+        assert response.status_code == status.HTTP_204_NO_CONTENT
 
         assert req_mock.call_count == 3
 
-    assert SignUpPayment.objects.count() == 0
-    assert SignUpPriceGroup.objects.count() == 0
+    assert SignUpPayment.objects.count() == 1
+    assert SignUpPriceGroup.objects.count() == 1
+    assert SignUpPaymentCancellation.objects.count() == 1
+    assert (
+        SignUpPaymentCancellation.objects.filter(
+            payment=payment,
+            signup=signup,
+        ).count()
+        == 1
+    )
 
-    assert len(mail.outbox) == 1
+    assert len(mail.outbox) == 0
 
 
-@pytest.mark.parametrize(
-    "service_lang,recurring_event,expected_subject,expected_text",
-    [
-        (
-            "en",
-            False,
-            "Registration cancelled - Foo",
-            "You have successfully cancelled a registration to the event "
-            "<strong>Foo</strong>. Your payment has been partially refunded "
-            "for the amount of the cancelled registration.",
-        ),
-        (
-            "fi",
-            False,
-            "Ilmoittautuminen peruttu - Foo",
-            "Olet onnistuneesti peruuttanut ilmoittautumisen tapahtumaan "
-            "<strong>Foo</strong>. Ilmoittautumismaksusi on osittain hyvitetty peruutetun "
-            "ilmoittautumisen osuutta vastaavalta osalta.",
-        ),
-        (
-            "sv",
-            False,
-            "Registreringen avbruten - Foo",
-            "Du har avbrutit en registrering till evenemanget "
-            "<strong>Foo</strong>. Din betalning för registreringen har delvits återbetalats "
-            "för beloppet för den avbrutna registreringen.",
-        ),
-        (
-            "en",
-            True,
-            "Registration cancelled - Recurring: Foo",
-            "You have successfully cancelled a registration to the recurring event "
-            "<strong>Foo 1 Feb 2024 - 29 Feb 2024</strong>. Your payment has been partially "
-            "refunded for the amount of the cancelled registration.",
-        ),
-        (
-            "fi",
-            True,
-            "Ilmoittautuminen peruttu - Sarja: Foo",
-            "Olet onnistuneesti peruuttanut ilmoittautumisen sarjatapahtumaan "
-            "<strong>Foo 1.2.2024 - 29.2.2024</strong>. Ilmoittautumismaksusi on osittain "
-            "hyvitetty peruutetun ilmoittautumisen osuutta vastaavalta osalta.",
-        ),
-        (
-            "sv",
-            True,
-            "Registreringen avbruten - Serie: Foo",
-            "Du har avbrutit en registrering till serieevenemanget "
-            "<strong>Foo 1.2.2024 - 29.2.2024</strong>. Din betalning för registreringen "
-            "har delvits återbetalats för beloppet för den avbrutna registreringen.",
-        ),
-    ],
-)
-@freeze_time("2024-02-01 03:30:00+02:00")
 @pytest.mark.django_db
 def test_web_store_partial_refund_when_deleting_signup_from_group_with_payment(
-    api_client, service_lang, recurring_event, expected_subject, expected_text
+    api_client, price_group
 ):
-    language = LanguageFactory(pk=service_lang, service_language=True)
+    language = LanguageFactory(pk="en", service_language=True)
 
-    with translation.override(language.pk):
-        if recurring_event:
-            price_group = create_price_group_for_recurring_event(
-                event_name="Foo", price=_PARTIAL_REFUND_AMOUNT
-            )
-        else:
-            price_group = create_price_group(
-                price_group_kwargs={"signup__registration__event__name": "Foo"},
-                price=_PARTIAL_REFUND_AMOUNT,
-            )
+    price_group.price = _PARTIAL_REFUND_AMOUNT
+    price_group.save()
 
     signup = price_group.signup
     registration = signup.registration
@@ -2039,7 +1721,7 @@ def test_web_store_partial_refund_when_deleting_signup_from_group_with_payment(
     mocked_web_store_json = deepcopy(DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE)
     mocked_web_store_json["refunds"][0]["payment"]["total"] = str(price_group.price)
 
-    with requests_mock.Mocker() as req_mock, translation.override(language.pk):
+    with requests_mock.Mocker() as req_mock:
         req_mock.get(
             f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{payment.external_order_id}",
             json=DEFAULT_GET_PAYMENT_DATA,
@@ -2049,26 +1731,25 @@ def test_web_store_partial_refund_when_deleting_signup_from_group_with_payment(
             json=mocked_web_store_json,
         )
 
-        assert_delete_signup(
-            api_client, signup.pk, signup_count=2, contact_person_count=None
-        )
+        response = delete_signup(api_client, signup.pk)
+        assert response.status_code == status.HTTP_204_NO_CONTENT
 
         assert req_mock.call_count == 2
 
     assert SignUpPayment.objects.count() == 1
-    assert SignUp.objects.count() == 1
+    assert SignUp.objects.count() == 2
     assert SignUpPaymentRefund.objects.count() == 1
+    assert (
+        SignUpPaymentRefund.objects.filter(
+            payment=payment, signup=signup, external_refund_id=DEFAULT_REFUND_ID
+        ).count()
+        == 1
+    )
 
     payment.refresh_from_db()
     assert payment.is_fully_refunded is False
 
-    refund = SignUpPaymentRefund.objects.first()
-    assert refund.payment_id == payment.pk
-    assert refund.amount == _PARTIAL_REFUND_AMOUNT
-
-    assert len(mail.outbox) == 1
-    assert mail.outbox[0].subject == expected_subject
-    assert expected_text in str(mail.outbox[0].alternatives[0])
+    assert len(mail.outbox) == 0
 
 
 @pytest.mark.django_db
@@ -2105,9 +1786,7 @@ def test_web_store_cannot_cancel_payment_when_deleting_signup_from_group_with_pa
 
     assert SignUpPayment.objects.count() == 1
     assert SignUp.objects.count() == 2
-    assert SignUpPaymentRefund.objects.count() == 0
-
-    assert payment.is_fully_refunded is False
+    assert SignUpPaymentCancellation.objects.count() == 0
 
     with requests_mock.Mocker() as req_mock:
         req_mock.get(
@@ -2129,10 +1808,7 @@ def test_web_store_cannot_cancel_payment_when_deleting_signup_from_group_with_pa
 
     assert SignUpPayment.objects.count() == 1
     assert SignUp.objects.count() == 2
-    assert SignUpPaymentRefund.objects.count() == 0
-
-    payment.refresh_from_db()
-    assert payment.is_fully_refunded is False
+    assert SignUpPaymentCancellation.objects.count() == 0
 
     assert len(mail.outbox) == 0
 
@@ -2282,6 +1958,7 @@ def test_web_store_automatically_fully_refund_paid_signup_payment_api_error(api_
 
     assert SignUpPayment.objects.count() == 1
     assert SignUpPriceGroup.objects.count() == 1
+    assert SignUpPaymentRefund.objects.count() == 0
 
     with requests_mock.Mocker() as req_mock:
         req_mock.get(
@@ -2305,6 +1982,52 @@ def test_web_store_automatically_fully_refund_paid_signup_payment_api_error(api_
 
     assert SignUpPayment.objects.count() == 1
     assert SignUpPriceGroup.objects.count() == 1
+    assert SignUpPaymentRefund.objects.count() == 0
+
+    assert len(mail.outbox) == 0
+
+
+@pytest.mark.django_db
+def test_web_store_refund_refund_id_not_found_exception(api_client, price_group):
+    signup = price_group.signup
+    payment = SignUpPaymentFactory(
+        signup=signup,
+        external_order_id=DEFAULT_ORDER_ID,
+        status=SignUpPayment.PaymentStatus.PAID,
+    )
+
+    user = create_user_by_role("registration_admin", signup.publisher)
+    api_client.force_authenticate(user)
+
+    assert SignUpPayment.objects.count() == 1
+    assert SignUpPriceGroup.objects.count() == 1
+    assert SignUpPaymentRefund.objects.count() == 0
+
+    refund_response_without_refund_id = deepcopy(
+        DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE
+    )
+    refund_response_without_refund_id["refunds"][0].pop("refundId")
+
+    with requests_mock.Mocker() as req_mock:
+        req_mock.get(
+            f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{payment.external_order_id}",
+            json=DEFAULT_GET_PAYMENT_DATA,
+        )
+
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
+            json=refund_response_without_refund_id,
+        )
+
+        response = delete_signup(api_client, signup.pk)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.data[0] == "Refund ID not found from the response."
+
+        assert req_mock.call_count == 2
+
+    assert SignUpPayment.objects.count() == 1
+    assert SignUpPriceGroup.objects.count() == 1
+    assert SignUpPaymentRefund.objects.count() == 0
 
     assert len(mail.outbox) == 0
 
@@ -2326,6 +2049,7 @@ def test_web_store_automatically_cancel_unpaid_created_signup_payment_api_error(
 
     assert SignUpPayment.objects.count() == 1
     assert SignUpPriceGroup.objects.count() == 1
+    assert SignUpPaymentCancellation.objects.count() == 0
 
     with requests_mock.Mocker() as req_mock:
         req_mock.get(
@@ -2352,51 +2076,9 @@ def test_web_store_automatically_cancel_unpaid_created_signup_payment_api_error(
 
     assert SignUpPayment.objects.count() == 1
     assert SignUpPriceGroup.objects.count() == 1
+    assert SignUpPaymentCancellation.objects.count() == 0
 
     assert len(mail.outbox) == 0
-
-
-@pytest.mark.django_db
-def test_web_store_cancel_unpaid_signup_if_payment_and_order_not_found_from_web_store(
-    api_client,
-):
-    language = LanguageFactory(pk="en", service_language=True)
-
-    price_group = SignUpPriceGroupFactory()
-    signup = price_group.signup
-    SignUpContactPersonFactory(
-        signup=signup, email="test@test.com", service_language=language
-    )
-    payment = SignUpPaymentFactory(
-        signup=signup,
-        external_order_id=DEFAULT_ORDER_ID,
-        status=SignUpPayment.PaymentStatus.CREATED,
-    )
-
-    user = create_user_by_role("registration_admin", signup.publisher)
-    api_client.force_authenticate(user)
-
-    assert SignUpPayment.objects.count() == 1
-    assert SignUpPriceGroup.objects.count() == 1
-
-    with requests_mock.Mocker() as req_mock:
-        req_mock.get(
-            f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{payment.external_order_id}",
-            status_code=status.HTTP_404_NOT_FOUND,
-        )
-        req_mock.get(
-            f"{settings.WEB_STORE_API_BASE_URL}order/admin/{payment.external_order_id}",
-            status_code=status.HTTP_404_NOT_FOUND,
-        )
-
-        assert_delete_signup(api_client, signup.pk, contact_person_count=None)
-
-        assert req_mock.call_count == 2
-
-    assert SignUpPayment.objects.count() == 0
-    assert SignUpPriceGroup.objects.count() == 0
-
-    assert len(mail.outbox) == 1
 
 
 @pytest.mark.parametrize(
@@ -2428,6 +2110,7 @@ def test_web_store_cancel_unpaid_signup_order_or_payment_status_api_error(
 
     assert SignUpPayment.objects.count() == 1
     assert SignUpPriceGroup.objects.count() == 1
+    assert SignUpPaymentCancellation.objects.count() == 0
 
     with requests_mock.Mocker() as req_mock:
         req_mock.get(
@@ -2451,70 +2134,9 @@ def test_web_store_cancel_unpaid_signup_order_or_payment_status_api_error(
 
     assert SignUpPayment.objects.count() == 1
     assert SignUpPriceGroup.objects.count() == 1
+    assert SignUpPaymentCancellation.objects.count() == 0
 
     assert len(mail.outbox) == 0
-
-
-@pytest.mark.django_db
-def test_web_store_partial_refund_payment_and_order_not_found_from_web_store(
-    api_client, price_group
-):
-    language = LanguageFactory(pk="en", service_language=True)
-
-    signup = price_group.signup
-    registration = signup.registration
-
-    signup_group = create_signup_group_with_payment(
-        signup.registration, service_language=language
-    )
-    payment = getattr(signup_group, "payment")
-
-    signup.signup_group = signup_group
-    signup.save(update_fields=["signup_group"])
-
-    # Second signup price group and signup. Total signup group amount is 10 € (same as the payment).
-    create_price_group(
-        price_group_kwargs={
-            "signup": SignUpFactory(
-                signup_group=signup_group, registration=registration
-            )
-        },
-        price=_PARTIAL_REFUND_AMOUNT,
-    )
-
-    user = create_user_by_role("registration_admin", registration.publisher)
-    api_client.force_authenticate(user)
-
-    assert SignUpPayment.objects.count() == 1
-    assert SignUp.objects.count() == 2
-    assert SignUpPaymentRefund.objects.count() == 0
-
-    assert payment.is_fully_refunded is False
-
-    with requests_mock.Mocker() as req_mock:
-        req_mock.get(
-            f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{payment.external_order_id}",
-            status_code=status.HTTP_404_NOT_FOUND,
-        )
-        req_mock.get(
-            f"{settings.WEB_STORE_API_BASE_URL}order/admin/{payment.external_order_id}",
-            status_code=status.HTTP_404_NOT_FOUND,
-        )
-
-        assert_delete_signup(
-            api_client, signup.pk, signup_count=2, contact_person_count=None
-        )
-
-        assert req_mock.call_count == 2
-
-    assert SignUpPayment.objects.count() == 1
-    assert SignUp.objects.count() == 1
-    assert SignUpPaymentRefund.objects.count() == 0
-
-    payment.refresh_from_db()
-    assert payment.is_fully_refunded is False
-
-    assert len(mail.outbox) == 1
 
 
 @pytest.mark.parametrize(

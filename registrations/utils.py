@@ -261,13 +261,10 @@ def create_web_store_refunds(orders_data):
     try:
         resp_json = client.create_instant_refunds(orders_data)
     except RequestException as request_exc:
-        if getattr(request_exc.response, "status_code", 0) == 404:
-            # Order does not exist so no need to refund => interpret as success.
-            # This might otherwise cause unnecessary exceptions in automated refunds.
-            return {}
-
         api_error_message = get_web_store_api_error_message(request_exc.response)
-        raise WebStoreAPIError(api_error_message)
+        raise WebStoreAPIError(
+            api_error_message, getattr(request_exc.response, "status_code", None)
+        ) from request_exc
 
     if orders_data and len(resp_json.get("errors", [])) == len(orders_data):
         # All refunds have errors => raise exception.
@@ -298,13 +295,10 @@ def cancel_web_store_order(payment):
             payment.external_order_id, user_uuid=str(getattr(user, "uuid", ""))
         )
     except RequestException as request_exc:
-        if getattr(request_exc.response, "status_code", 0) == 404:
-            # Order does not exist so no need to cancel => interpret as success.
-            # This might otherwise cause unnecessary exceptions in automated cancellations.
-            return {}
-
         api_error_message = get_web_store_api_error_message(request_exc.response)
-        raise WebStoreAPIError(api_error_message)
+        raise WebStoreAPIError(
+            api_error_message, getattr(request_exc.response, "status_code", None)
+        ) from request_exc
 
     return resp_json
 
@@ -351,6 +345,20 @@ def get_web_store_payment(order_id: str) -> dict:
     return resp_json
 
 
+def get_web_store_refund_payment(order_id: str) -> dict:
+    client = WebStorePaymentAPIClient()
+
+    try:
+        resp_json = client.get_refund_payment(order_id=order_id)
+    except RequestException as request_exc:
+        api_error_message = get_web_store_api_error_message(request_exc.response)
+        raise WebStoreAPIError(
+            api_error_message, getattr(request_exc.response, "status_code", None)
+        ) from request_exc
+
+    return resp_json
+
+
 def get_web_store_order_status(order_id: str) -> Optional[str]:
     order_json = get_web_store_order(order_id)
     return order_json.get("status")
@@ -358,4 +366,9 @@ def get_web_store_order_status(order_id: str) -> Optional[str]:
 
 def get_web_store_payment_status(order_id: str) -> Optional[str]:
     payment_json = get_web_store_payment(order_id)
+    return payment_json.get("status")
+
+
+def get_web_store_refund_payment_status(order_id: str) -> Optional[str]:
+    payment_json = get_web_store_refund_payment(order_id)
     return payment_json.get("status")

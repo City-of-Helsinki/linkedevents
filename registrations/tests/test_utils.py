@@ -21,8 +21,9 @@ from registrations.utils import (
     get_web_store_order_status,
     get_web_store_payment,
     get_web_store_payment_status,
+    get_web_store_refund_payment_status,
 )
-from web_store.order.enums import WebStoreOrderStatus
+from web_store.order.enums import WebStoreOrderRefundStatus, WebStoreOrderStatus
 from web_store.payment.enums import WebStorePaymentStatus
 from web_store.tests.order.test_web_store_order_api_client import (
     DEFAULT_GET_ORDER_DATA,
@@ -30,6 +31,7 @@ from web_store.tests.order.test_web_store_order_api_client import (
 )
 from web_store.tests.payment.test_web_store_payment_api_client import (
     DEFAULT_GET_PAYMENT_DATA,
+    DEFAULT_GET_REFUND_PAYMENT_DATA,
 )
 
 
@@ -431,6 +433,56 @@ def test_get_web_store_payment_status_request_exception(status_code):
         )
 
         get_web_store_payment_status(DEFAULT_ORDER_ID)
+
+        assert req_mock.call_count == 1
+
+    assert exc_info.value.args[1] == status_code
+
+
+@pytest.mark.parametrize("order_id", [DEFAULT_ORDER_ID, "1234"])
+@pytest.mark.parametrize(
+    "payment_status",
+    [payment_status.value for payment_status in WebStoreOrderRefundStatus],
+)
+def test_get_web_store_refund_payment_status(order_id, payment_status):
+    payment_response_json = DEFAULT_GET_REFUND_PAYMENT_DATA.copy()
+    payment_response_json["status"] = payment_status
+
+    with requests_mock.Mocker() as req_mock:
+        req_mock.get(
+            f"{django_settings.WEB_STORE_API_BASE_URL}payment/admin/refund-payment/{order_id}",
+            json=payment_response_json,
+        )
+
+        payment_status = get_web_store_refund_payment_status(order_id)
+
+        assert req_mock.call_count == 1
+
+    assert payment_response_json["status"] == payment_status
+
+
+@pytest.mark.parametrize(
+    "status_code",
+    [
+        status.HTTP_400_BAD_REQUEST,
+        status.HTTP_401_UNAUTHORIZED,
+        status.HTTP_403_FORBIDDEN,
+        status.HTTP_404_NOT_FOUND,
+        status.HTTP_500_INTERNAL_SERVER_ERROR,
+    ],
+)
+def test_get_web_store_refund_payment_status_request_exception(status_code):
+    with (
+        requests_mock.Mocker() as req_mock,
+        pytest.raises(WebStoreAPIError) as exc_info,
+    ):
+        req_mock.get(
+            f"{django_settings.WEB_STORE_API_BASE_URL}payment/admin/refund-payment/"
+            f"{DEFAULT_ORDER_ID}",
+            status_code=status_code,
+        )
+
+        get_web_store_refund_payment_status(DEFAULT_ORDER_ID)
 
         assert req_mock.call_count == 1
 

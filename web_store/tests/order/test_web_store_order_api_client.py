@@ -13,6 +13,7 @@ from web_store.tests.utils import get_mock_response
 
 DEFAULT_USER_UUID = "f5e87f5c-8d16-4746-8e96-5a5a88b9224e"
 DEFAULT_ORDER_ID = "c7ae2960-8284-4b92-b82e-9da882c452d7"
+DEFAULT_REFUND_ID = "f99166f6-6bca-4161-970e-79eb96b345a8"
 DEFAULT_ITEM = {
     "productId": "product_id",
     "productName": "description",
@@ -95,7 +96,7 @@ DEFAULT_CREATE_INSTANT_REFUNDS_DATA = [
 DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE = {
     "refunds": [
         {
-            "refundId": "string",
+            "refundId": DEFAULT_REFUND_ID,
             "orderId": DEFAULT_ORDER_ID,
             "namespace": django_settings.WEB_STORE_API_NAMESPACE,
             "user": "string",

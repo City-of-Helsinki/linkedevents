@@ -946,6 +946,48 @@ class SignUpMixin:
 
         return SignUpPayment.objects.create(**kwargs)
 
+    def create_web_store_refund(self, payment):
+        orders_data = [
+            {
+                "orderId": payment.external_order_id,
+                "items": [
+                    price_group.to_web_store_partial_refund_json()
+                    for price_group in self.price_groups
+                ],
+            }
+        ]
+        resp_json = create_web_store_refunds(orders_data)
+
+        try:
+            external_refund_id = resp_json["refunds"][0]["refundId"]
+        except LookupError as lookup_exc:
+            logger.error(lookup_exc)
+            raise WebStoreRefundValidationError(
+                _("Refund ID not found from the response.")
+            )
+
+        if isinstance(self, SignUp):
+            signup_relation_kwarg = {"signup": self}
+        else:
+            signup_relation_kwarg = {"signup_group": self}
+        SignUpPaymentRefund.objects.create(
+            **signup_relation_kwarg,
+            payment=payment,
+            amount=self.total_payment_amount,
+            external_refund_id=external_refund_id,
+        )
+
+    def create_web_store_cancellation(self, payment):
+        cancel_web_store_order(payment)
+
+        if isinstance(self, SignUp):
+            signup_relation_kwarg = {"signup": self}
+        else:
+            signup_relation_kwarg = {"signup_group": self}
+        SignUpPaymentCancellation.objects.create(
+            **signup_relation_kwarg, payment=payment
+        )
+
     @property
     def web_store_meta_label(self):
         raise NotImplementedError("web_store_meta_label not implemented")
@@ -1003,13 +1045,8 @@ class SignUpMixin:
 
         return order_data
 
-    def refund_or_cancel_web_store_payment(
-        self, payment, bypass_web_store_api_calls=False
-    ):
+    def refund_or_cancel_web_store_payment(self, payment):
         """Returns a tuple of two booleans: (payment_refunded, payment_cancelled)."""
-
-        if payment and bypass_web_store_api_calls:
-            return False, True
 
         if not payment or payment.is_expired:
             return False, False
@@ -1024,20 +1061,13 @@ class SignUpMixin:
             else:
                 raise
         if web_store_payment_status == WebStorePaymentStatus.PAID.value:
-            orders_data = [
-                {
-                    "orderId": payment.external_order_id,
-                    "items": [
-                        price_group.to_web_store_partial_refund_json()
-                        for price_group in self.price_groups
-                    ],
-                }
-            ]
-            create_web_store_refunds(orders_data)
+            self.create_web_store_refund(payment)
+
+            class_name = self.__class__.__name__
             logger.info(
-                f"{self.__class__.__name__} delete: "
-                f"payment with order ID {payment.external_order_id} "
-                f"refunded for object with ID {self.pk}."
+                f"{class_name} delete: "
+                f"refund created for payment with order ID {payment.external_order_id} "
+                f"({class_name} ID: {self.pk})."
             )
             return True, False
 
@@ -1051,11 +1081,13 @@ class SignUpMixin:
             else:
                 raise
         if web_store_order_status == WebStoreOrderStatus.DRAFT.value:
-            cancel_web_store_order(payment)
+            self.create_web_store_cancellation(payment)
+
+            class_name = self.__class__.__name__
             logger.info(
-                f"{self.__class__.__name__} delete: "
-                f"payment with order ID {payment.external_order_id} cancelled for "
-                f"object with ID {self.pk}."
+                f"{class_name} delete: "
+                f"cancellation created for payment with order ID {payment.external_order_id} "
+                f"({class_name} ID: {self.pk})."
             )
             return False, True
 
@@ -1097,25 +1129,26 @@ class SignUpGroup(
         contact_person = getattr(self, "contact_person", None)
         is_attending = bool(self.attending_signups)
         is_event_cancellation = kwargs.pop("is_event_cancellation", False)
-        payment_refunded = False
-        payment_cancelled = False
 
-        if settings.WEB_STORE_INTEGRATION_ENABLED:
+        payment_refunded = kwargs.pop("payment_refunded", False)
+        payment_cancelled = kwargs.pop("payment_cancelled", False)
+        bypass_web_store_api_calls = kwargs.pop("bypass_web_store_api_calls", False)
+
+        if settings.WEB_STORE_INTEGRATION_ENABLED and not bypass_web_store_api_calls:
             payment = getattr(self, "payment", None)
 
             try:
                 payment_refunded, payment_cancelled = (
-                    self.refund_or_cancel_web_store_payment(
-                        payment,
-                        bypass_web_store_api_calls=kwargs.pop(
-                            "bypass_web_store_api_calls", False
-                        ),
-                    )
+                    self.refund_or_cancel_web_store_payment(payment)
                 )
             except (WebStoreAPIError, WebStoreRefundValidationError) as exc:
                 self._raise_web_store_refund_or_cancellation_exception(
                     exc, is_event_cancellation=is_event_cancellation
                 )
+
+        if (payment_refunded or payment_cancelled) and not bypass_web_store_api_calls:
+            # Signup group will be deleted after the refund or cancellation webhook arrives.
+            return
 
         super().delete(*args, **kwargs)
 
@@ -1182,10 +1215,8 @@ class SignUpGroup(
     def total_payment_amount(self):
         total_payment_amount = Decimal("0")
 
-        for signup in self.signups.select_related("price_group").filter(
-            price_group__isnull=False
-        ):
-            total_payment_amount += signup.total_payment_amount
+        for price_group in self.price_groups:
+            total_payment_amount += price_group.price
 
         return total_payment_amount
 
@@ -1465,14 +1496,11 @@ class SignUp(
 
         return []
 
-    def partially_refund_signup_group_web_store_payment(
-        self, signup_group, bypass_web_store_api_calls=False
-    ):
+    def partially_refund_signup_group_web_store_payment(self, signup_group):
         """Returns True if the signup group's payment was partially refunded, False otherwise."""
 
         if (
-            bypass_web_store_api_calls
-            or not (group_payment := getattr(signup_group, "payment", None))
+            not (group_payment := getattr(signup_group, "payment", None))
             or group_payment.is_fully_refunded
             or group_payment.is_expired
         ):
@@ -1488,28 +1516,12 @@ class SignUp(
             else:
                 raise
         if web_store_payment_status == WebStorePaymentStatus.PAID.value:
-            orders_data = [
-                {
-                    "orderId": group_payment.external_order_id,
-                    "items": [self.price_group.to_web_store_partial_refund_json()],
-                }
-            ]
-            resp_json = create_web_store_refunds(orders_data)
+            self.create_web_store_refund(group_payment)
 
-            try:
-                refunded_amount = Decimal(resp_json["refunds"][0]["payment"]["total"])
-            except LookupError as exc:
-                logger.error(exc)
-                refunded_amount = self.price_group.price
-
-            SignUpPaymentRefund.objects.create(
-                payment=group_payment, amount=refunded_amount
-            )
-
+            class_name = self.__class__.__name__
             logger.info(
-                f"{self.__class__.__name__} delete: "
-                f"payment with order ID {group_payment.external_order_id} "
-                f"partially refunded for signup group with ID {signup_group.pk}."
+                f"{class_name} delete: partial refund created for payment with "
+                f"order ID {group_payment.external_order_id} ({class_name} ID: {signup_group.pk})"
             )
             return True
 
@@ -1533,13 +1545,14 @@ class SignUp(
     def delete(self, *args, **kwargs):
         contact_person = self.actual_contact_person
         is_event_cancellation = kwargs.pop("is_event_cancellation", False)
-        payment_refunded = False
-        payment_partially_refunded = False
-        payment_cancelled = False
 
-        if settings.WEB_STORE_INTEGRATION_ENABLED:
+        payment_refunded = kwargs.pop("payment_refunded", False)
+        payment_partially_refunded = kwargs.pop("payment_partially_refunded", False)
+        payment_cancelled = kwargs.pop("payment_cancelled", False)
+        bypass_web_store_api_calls = kwargs.pop("bypass_web_store_api_calls", False)
+
+        if settings.WEB_STORE_INTEGRATION_ENABLED and not bypass_web_store_api_calls:
             payment = getattr(self, "payment", None)
-            bypass_web_store_api_calls = kwargs.pop("bypass_web_store_api_calls", False)
 
             try:
                 if not payment and (
@@ -1547,21 +1560,23 @@ class SignUp(
                 ):
                     payment_partially_refunded = (
                         self.partially_refund_signup_group_web_store_payment(
-                            signup_group,
-                            bypass_web_store_api_calls=bypass_web_store_api_calls,
+                            signup_group
                         )
                     )
                 else:
                     payment_refunded, payment_cancelled = (
-                        self.refund_or_cancel_web_store_payment(
-                            payment,
-                            bypass_web_store_api_calls=bypass_web_store_api_calls,
-                        )
+                        self.refund_or_cancel_web_store_payment(payment)
                     )
             except (WebStoreAPIError, WebStoreRefundValidationError) as exc:
                 self._raise_web_store_refund_or_cancellation_exception(
                     exc, is_event_cancellation=is_event_cancellation
                 )
+
+        if not bypass_web_store_api_calls and (
+            payment_refunded or payment_partially_refunded or payment_cancelled
+        ):
+            # Signup will be deleted after the refund or cancellation webhook arrives.
+            return
 
         super().delete(*args, **kwargs)
 
@@ -2131,12 +2146,18 @@ class SignUpPayment(
         super().soft_delete()
 
         SignUpPaymentRefund.objects.filter(payment_id=self.pk).update(deleted=True)
+        SignUpPaymentCancellation.objects.filter(payment_id=self.pk).update(
+            deleted=True
+        )
 
     @transaction.atomic
     def undelete(self):
         super().undelete()
 
         SignUpPaymentRefund.all_objects.filter(payment_id=self.pk).update(deleted=False)
+        SignUpPaymentCancellation.all_objects.filter(payment_id=self.pk).update(
+            deleted=False
+        )
 
     @property
     def is_expired(self):
@@ -2149,8 +2170,36 @@ class SignUpPayment(
         ) >= self.amount
 
 
-class SignUpPaymentRefund(SoftDeletableBaseModel):
-    """Used for keeping track of partial refunds for signup group payments."""
+class SignUpPaymentRefundAndCancellationBaseModel(
+    SignUpOrGroupDependingMixin, SoftDeletableBaseModel
+):
+    created_time = models.DateTimeField(
+        verbose_name=_("Created at"),
+        auto_now_add=True,
+    )
+
+    class Meta:
+        abstract = True
+
+
+class SignUpPaymentRefund(SignUpPaymentRefundAndCancellationBaseModel):
+    # For signups that belong to a group.
+    signup_group = models.OneToOneField(
+        SignUpGroup,
+        on_delete=models.CASCADE,
+        related_name="payment_refund",
+        null=True,
+        default=None,
+    )
+
+    # For signups that do not belong to a group.
+    signup = models.OneToOneField(
+        SignUp,
+        on_delete=models.CASCADE,
+        related_name="payment_refund",
+        null=True,
+        default=None,
+    )
 
     payment = models.ForeignKey(
         SignUpPayment,
@@ -2160,9 +2209,32 @@ class SignUpPaymentRefund(SoftDeletableBaseModel):
 
     amount = models.DecimalField(max_digits=19, decimal_places=2)
 
-    created_time = models.DateTimeField(
-        verbose_name=_("Created at"),
-        auto_now_add=True,
+    external_refund_id = models.CharField(max_length=64)
+
+
+class SignUpPaymentCancellation(SignUpPaymentRefundAndCancellationBaseModel):
+    # For signups that belong to a group.
+    signup_group = models.OneToOneField(
+        SignUpGroup,
+        on_delete=models.CASCADE,
+        related_name="payment_cancellation",
+        null=True,
+        default=None,
+    )
+
+    # For signups that do not belong to a group.
+    signup = models.OneToOneField(
+        SignUp,
+        on_delete=models.CASCADE,
+        related_name="payment_cancellation",
+        null=True,
+        default=None,
+    )
+
+    payment = models.OneToOneField(
+        SignUpPayment,
+        related_name="cancellation",
+        on_delete=models.CASCADE,
     )
 
 
